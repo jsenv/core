@@ -3,7 +3,7 @@ import { useContext, useLayoutEffect, useRef } from "preact/hooks";
 import { Box, BoxForwardedPropsContext } from "../../box/box.jsx";
 import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
 import { useAccentColorAttributes } from "../../utils/use_accent_color_attributes.js";
-import { useFieldInterfaceProps } from "../field_hooks.jsx";
+import { useControlInterfaceProps } from "../control_hooks.jsx";
 
 const css = /* css */ `
   @layer navi {
@@ -260,9 +260,9 @@ const InputRangeFieldInterface = (props) => {
     const ratio = (inputValue - input.min) / (input.max - input.min);
     input.parentNode.style.setProperty("--x-fill-ratio", ratio);
   };
-  const [rangeProps, remainingProps] = useFieldInterfaceProps(props, {
+  const [rangeProps, remainingProps] = useControlInterfaceProps(props, {
     primaryInteractionMode: "pointer",
-    fieldType: "input_range",
+    controlType: "input_range",
     statePropName: "value",
     defaultStatePropName: "defaultValue",
     getUIValue: () => {
@@ -327,7 +327,7 @@ const RangeNativeInput = (props) => {
       as="input"
       type="range"
       baseClassName="navi_native_input"
-      navi-rendered-by=".navi_input_range"
+      navi-control-owner=".navi_input_range"
     />
   );
 };

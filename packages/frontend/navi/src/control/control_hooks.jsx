@@ -34,7 +34,7 @@ import {
   dispatchRequestInteraction,
   onRequestAction,
   onRequestInteraction,
-} from "@jsenv/navi/src/field/validation/custom_constraint_validation.js";
+} from "@jsenv/navi/src/control/validation/custom_constraint_validation.js";
 import {
   useDebugAction,
   useDebugFocus,
@@ -45,14 +45,14 @@ import { isSignal } from "@jsenv/navi/src/utils/is_signal.js";
 import {
   ActionContext,
   ActionRequesterContext,
+  ControlNameContext,
+  ControlToInterfaceContext,
   DisabledContext,
-  FieldNameContext,
-  FieldToInterfaceContext,
   LoadingContext,
   MessagePropsRefContext,
   ReadOnlyContext,
   RequiredContext,
-} from "./field_context.js";
+} from "./control_context.js";
 import { addInputEffect } from "./input_effect.js";
 import { resolveActionProp, STRING_ACTIONS } from "./string_actions.js";
 import {
@@ -81,11 +81,11 @@ import { useConstraints } from "./validation/hooks/use_constraints.js";
  *
  * @returns {Object} Props to spread onto the field's root/input element
  */
-export const useFieldInterfaceProps = (
+export const useControlInterfaceProps = (
   props,
   {
     primaryInteractionMode, // "pointer", "keyboard"
-    fieldType,
+    controlType,
     statePropName,
     defaultStatePropName,
     fallbackState,
@@ -110,7 +110,7 @@ export const useFieldInterfaceProps = (
       [statePropName]: state.value,
     };
   }
-  const uiStateController = useUIStateController(props, fieldType, {
+  const uiStateController = useUIStateController(props, controlType, {
     statePropName,
     defaultStatePropName,
     fallbackState,
@@ -138,7 +138,7 @@ export const useFieldInterfaceProps = (
 
   interactions: {
     const { ref } = props;
-    const hasPointerDownInteraction = fieldType === "input_range";
+    const hasPointerDownInteraction = controlType === "input_range";
     const onMouseDown = (e) => {
       props.onMouseDown?.(e);
       if (primaryInteractionMode === "pointer") {
@@ -281,16 +281,16 @@ export const useFieldInterfaceProps = (
  *   by dispatching `navi_request_reset_ui_state` DOM events on each child's DOM element
  * - Overrides `onnavi_action_ready` to track the action requester
  *
- * @param {{ fieldType: string, childComponentType: string, aggregateChildStates: Function }} config
+ * @param {{ controlType: string, childComponentType: string, aggregateChildStates: Function }} config
  * @returns {Object} Props to spread onto the group's root element
  */
-export const useFieldgroupInterfaceProps = (
+export const useControlgroupInterfaceProps = (
   props,
-  { fieldType, childComponentType, aggregateChildStates },
+  { controlType, childComponentType, aggregateChildStates },
 ) => {
   const { action } = props;
   const debugAction = useDebugAction();
-  const uiGroupStateController = useUIGroupStateController(props, fieldType, {
+  const uiGroupStateController = useUIGroupStateController(props, controlType, {
     childComponentType,
     aggregateChildStates,
     debugAction,
@@ -318,7 +318,7 @@ export const useFieldgroupInterfaceProps = (
 
     childrenWithContext = (
       <ParentUIStateControllerContext.Provider value={uiGroupStateController}>
-        <FieldNameContext.Provider value={actionProps.name}>
+        <ControlNameContext.Provider value={actionProps.name}>
           <DisabledContext.Provider value={disabled}>
             <ReadOnlyContext.Provider value={readOnly}>
               <RequiredContext.Provider value={actionProps.required}>
@@ -332,7 +332,7 @@ export const useFieldgroupInterfaceProps = (
               </RequiredContext.Provider>
             </ReadOnlyContext.Provider>
           </DisabledContext.Provider>
-        </FieldNameContext.Provider>
+        </ControlNameContext.Provider>
       </ParentUIStateControllerContext.Provider>
     );
   }
@@ -363,7 +363,7 @@ const fieldPropSet = new Set([
   "type",
   "value",
   "defaultValue",
-  "navi-proxy-for",
+  "navi-control-proxy-for",
   "checked",
   "defaultChecked",
 
@@ -409,12 +409,12 @@ const useActionProps = (
   }
 
   const actionStatus = useActionStatus(boundAction);
-  const fieldToInterfaceContext = useContext(FieldToInterfaceContext);
-  const fieldName = useContext(FieldNameContext);
-  const fieldDisabled = useContext(DisabledContext);
-  const fieldReadOnly = useContext(ReadOnlyContext);
-  const fieldRequired = useContext(RequiredContext);
-  const fieldLoading = useContext(LoadingContext);
+  const controlToInterfaceContext = useContext(ControlToInterfaceContext);
+  const controlName = useContext(ControlNameContext);
+  const controlDisabled = useContext(DisabledContext);
+  const controlReadOnly = useContext(ReadOnlyContext);
+  const controlRequired = useContext(RequiredContext);
+  const controlLoading = useContext(LoadingContext);
   const parentActionRequester = useContext(ActionRequesterContext);
   const debugAction = useDebugAction();
   const debugInteraction = useDebugInteraction();
@@ -436,7 +436,7 @@ const useActionProps = (
   form_props: {
     const {
       id,
-      "navi-proxy-for": naviProxyFor,
+      "navi-control-proxy-for": naviProxyFor,
       name,
       type,
       disabled,
@@ -444,22 +444,22 @@ const useActionProps = (
       readOnly,
       loading,
     } = props;
-    const idResolved = id || fieldToInterfaceContext?.id;
-    const nameResolved = name || fieldName;
-    const disabledResolved = disabled || fieldDisabled;
-    const requiredResolved = required || fieldRequired;
+    const idResolved = id || controlToInterfaceContext?.id;
+    const nameResolved = name || controlName;
+    const disabledResolved = disabled || controlDisabled;
+    const requiredResolved = required || controlRequired;
     const loadingResolved =
       loading ||
       actionStatus.loading ||
-      (fieldLoading && parentActionRequester === ref.current);
+      (controlLoading && parentActionRequester === ref.current);
     const readOnlyResolved =
       readOnly ||
-      fieldReadOnly ||
+      controlReadOnly ||
       loadingResolved ||
       uiStateController.readOnly;
     Object.assign(fieldProps, {
       "id": idResolved,
-      "navi-proxy-for": naviProxyFor,
+      "navi-control-proxy-for": naviProxyFor,
       "name": nameResolved,
       type,
       "required": requiredResolved,
@@ -479,12 +479,12 @@ const useActionProps = (
     }
     // infom any <Field> parent of our readOnly state + that we are interactive
     useLayoutEffect(() => {
-      if (fieldToInterfaceContext) {
-        fieldToInterfaceContext.setInteractive(true);
-        fieldToInterfaceContext.setDisabled(disabledResolved);
-        fieldToInterfaceContext.setReadOnly(readOnlyResolved);
+      if (controlToInterfaceContext) {
+        controlToInterfaceContext.setInteractive(true);
+        controlToInterfaceContext.setDisabled(disabledResolved);
+        controlToInterfaceContext.setReadOnly(readOnlyResolved);
       }
-    }, [fieldToInterfaceContext, disabledResolved, readOnlyResolved]);
+    }, [controlToInterfaceContext, disabledResolved, readOnlyResolved]);
 
     const { constraints } = fieldProps;
     useConstraints(ref, constraints);
@@ -533,9 +533,9 @@ const useActionProps = (
        */
       childrenWithContext = (
         <MessagePropsRefContext.Provider value={undefined}>
-          <FieldToInterfaceContext.Provider value={undefined}>
+          <ControlToInterfaceContext.Provider value={undefined}>
             {children}
-          </FieldToInterfaceContext.Provider>
+          </ControlToInterfaceContext.Provider>
         </MessagePropsRefContext.Provider>
       );
     }
@@ -725,7 +725,7 @@ const useActionProps = (
 
 const getNaviProxyTarget = (event) => {
   const currentTarget = event.currentTarget;
-  const proxyFor = currentTarget.getAttribute("navi-proxy-for");
+  const proxyFor = currentTarget.getAttribute("navi-control-proxy-for");
   if (!proxyFor) {
     return null;
   }

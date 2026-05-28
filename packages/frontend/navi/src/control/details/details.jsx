@@ -5,8 +5,8 @@ import { ActionRenderer } from "../../action/action_renderer.jsx";
 import { Box } from "../../box/box.jsx";
 import { useKeyboardShortcuts } from "../../keyboard/keyboard_shortcuts.js";
 import { useFocusGroup } from "../../utils/focus/use_focus_group.js";
-import { ActionContext } from "../field_context.js";
-import { useFieldInterfaceProps } from "../field_hooks.jsx";
+import { ActionContext } from "../control_context.js";
+import { useControlInterfaceProps } from "../control_hooks.jsx";
 import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
 import { SummaryMarker } from "./summary_marker.jsx";
 
@@ -70,7 +70,7 @@ const DetailsField = (props) => {
     closeKeyShortcut = "ArrowLeft",
     onToggle,
   } = props;
-  const fieldInterfaceProps = useFieldInterfaceProps(
+  const controlInterfaceProps = useControlInterfaceProps(
     {
       resetOnCancel: true,
       resetOnAbort: true,
@@ -81,7 +81,7 @@ const DetailsField = (props) => {
     },
     {
       primaryInteractionMode: "pointer",
-      fieldType: "details",
+      controlType: "details",
       getUIValue: () => {
         const details = ref.current;
         const opened = details.open;
@@ -95,7 +95,7 @@ const DetailsField = (props) => {
       persists,
     },
   );
-  const { value, children } = fieldInterfaceProps;
+  const { value, children } = controlInterfaceProps;
   const open = Boolean(value);
 
   useFocusGroup(ref, {
@@ -178,7 +178,7 @@ const DetailsField = (props) => {
   return (
     <Box
       as="details"
-      {...fieldInterfaceProps}
+      {...controlInterfaceProps}
       baseClassName="navi_details"
       onToggle={(e) => {
         onToggle?.(e);

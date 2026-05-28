@@ -2,11 +2,11 @@ import { dispatchInternalCustomEvent, getElementSignature } from "@jsenv/dom";
 import { isValidElement } from "preact";
 import { useCallback, useLayoutEffect, useRef, useState } from "preact/hooks";
 
-import { useResetErrorBoundary } from "../error_boundary_context.js";
 import {
   addCustomMessage,
   removeCustomMessage,
-} from "../field/validation/custom_message.js";
+} from "../control/validation/custom_message.js";
+import { useResetErrorBoundary } from "../error_boundary_context.js";
 
 let debug = false;
 

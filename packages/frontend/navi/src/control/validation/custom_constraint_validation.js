@@ -63,7 +63,7 @@ import {
 } from "@jsenv/dom";
 
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
-import { findFieldElement } from "../field_context.js";
+import { findControlElement } from "../control_context.js";
 import { openCallout } from "./callout/callout.js";
 import { getConstraintMessage } from "./constraint_message.js";
 import {
@@ -95,9 +95,9 @@ export const dispatchRequestInteraction = (
   event,
   interactionName = "interaction",
 ) => {
-  const fieldOrEl = findFieldElement(element) || element;
+  const controlEl = findControlElement(element) || element;
   const allowed = dispatchInternalCustomEvent(
-    fieldOrEl,
+    controlEl,
     "navi_request_interaction",
     {
       event,
@@ -156,7 +156,7 @@ export const dispatchRequestAction = (element, detail) => {
   if (!detail.event) {
     throw new TypeError("dispatchRequestAction requires an event");
   }
-  const fieldOrEl = findFieldElement(element) || element;
+  const controlEl = findControlElement(element) || element;
   // Spread caller's detail last so explicit fields (e.g. uiState forwarded by a proxy)
   // survive into the dispatched event. Fields absent from the caller's object are
   // intentionally absent — Object.hasOwn checks on the receiving side rely on this
@@ -176,7 +176,7 @@ export const dispatchRequestAction = (element, detail) => {
     */
   };
   const allowed = dispatchInternalCustomEvent(
-    fieldOrEl,
+    controlEl,
     "navi_request_action",
     detail,
   );
@@ -318,7 +318,7 @@ const checkAndReportConstraints = (
   };
 
   let elementToValidate = event.currentTarget;
-  const proxyFor = elementToValidate.getAttribute("navi-proxy-for");
+  const proxyFor = elementToValidate.getAttribute("navi-control-proxy-for");
   if (proxyFor) {
     const proxyTarget = document.getElementById(proxyFor);
     if (proxyTarget) {
@@ -326,9 +326,9 @@ const checkAndReportConstraints = (
     }
   }
   if (!elementToValidate.__validationInterface__) {
-    const fieldElement = findFieldElement(requester);
-    if (fieldElement) {
-      elementToValidate = fieldElement;
+    const controlElement = findControlElement(requester);
+    if (controlElement) {
+      elementToValidate = controlElement;
     }
   }
 
@@ -383,18 +383,18 @@ const DEFAULT_CONSTRAINT_SET = new Set([
   ...NAVI_CONSTRAINT_SET,
 ]);
 
-const getManagedFields = (element) => {
-  let managedFields;
-  dispatchInternalCustomEvent(element, "navi_get_managed_fields", {
+const getManagedControls = (element) => {
+  let managedControls;
+  dispatchInternalCustomEvent(element, "navi_get_managed_controls", {
     respondWith: (fieldOrFields) => {
       if (Array.isArray(fieldOrFields)) {
-        managedFields = fieldOrFields;
+        managedControls = fieldOrFields;
       } else if (fieldOrFields) {
-        managedFields = [fieldOrFields];
+        managedControls = [fieldOrFields];
       }
     },
   });
-  return managedFields || [];
+  return managedControls || [];
 };
 
 export const closeValidationMessage = (
@@ -525,9 +525,9 @@ export const installCustomConstraintValidation = (
     // Always check managed fields first. If any fails, stop immediately and
     // expose the failing interface so the caller can reportValidity on the right element.
     failingManagedValidationInterface = null;
-    const managedFields = getManagedFields(element);
-    for (const managedField of managedFields) {
-      const managedVI = managedField.__validationInterface__;
+    const managedControls = getManagedControls(element);
+    for (const managedControl of managedControls) {
+      const managedVI = managedControl.__validationInterface__;
       if (!managedVI) {
         continue;
       }
@@ -537,7 +537,7 @@ export const installCustomConstraintValidation = (
         requester,
         fromRequestAction,
         skipReadonly:
-          managedField.tagName === "BUTTON" && managedField !== requester,
+          managedControl.tagName === "BUTTON" && managedControl !== requester,
       });
       if (!managedIsValid) {
         failingManagedValidationInterface = managedVI;
@@ -825,7 +825,7 @@ export const installCustomConstraintValidation = (
     // The listener is registered when the callout opens and removed when it closes,
     // so it can never accidentally close the next callout.
     const interactionTarget = (() => {
-      const renderedBy = element.getAttribute("navi-rendered-by");
+      const renderedBy = element.getAttribute("navi-control-owner");
       if (renderedBy) {
         return element.closest(renderedBy) || element;
       }

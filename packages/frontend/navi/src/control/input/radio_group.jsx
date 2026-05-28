@@ -1,14 +1,12 @@
-// TOFIX: select in data then reset, it reset to red/blue instead of red/blue/green
-
 import { useId, useRef } from "preact/hooks";
 
 import { Box } from "../../box/box.jsx";
 import { useFocusGroup } from "../../utils/focus/use_focus_group.js";
-import { useFieldgroupInterfaceProps } from "../field_hooks.jsx";
+import { useControlgroupInterfaceProps } from "../control_hooks.jsx";
 import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
 
 const css = /* css */ `
-  .navi_checkbox_group {
+  .navi_radio_group {
     border-style: solid;
 
     &[data-callout] {
@@ -17,20 +15,20 @@ const css = /* css */ `
   }
 `;
 
-export const CheckboxGroup = (props) => {
+export const RadioGroup = (props) => {
   const refDefault = useRef(null);
   props.ref = props.ref || refDefault;
   const defaultName = useId();
-  props.name = props.name || `checkbox_group_${defaultName}`;
-  const checkboxGroup = <CheckboxGroupInterface {...props} />;
+  props.name = props.name || `radio_group_${defaultName}`;
+  const radioGroup = <RadioGroupInterface {...props} />;
 
-  return checkboxGroup;
+  return radioGroup;
 };
 
-const CheckboxGroupInterface = (props) => {
+const RadioGroupInterface = (props) => {
   import.meta.css = css;
   const { ref, name } = props;
-  const [checkboxGroupProps, remainingProps] = useFieldgroupInterfaceProps(
+  const [radioGroupProps, remainingProps] = useControlgroupInterfaceProps(
     {
       resetOnCancel: true,
       resetOnAbort: true,
@@ -38,16 +36,17 @@ const CheckboxGroupInterface = (props) => {
       ...props,
     },
     {
-      fieldType: "checkbox_group",
-      childComponentType: "checkbox",
+      controlType: "radio_group",
+      childComponentType: "radio",
       aggregateChildStates: (childUIStateControllers) => {
-        const values = [];
+        let activeValue;
         for (const childUIStateController of childUIStateControllers) {
           if (childUIStateController.uiState) {
-            values.push(childUIStateController.uiState);
+            activeValue = childUIStateController.uiState;
+            break;
           }
         }
-        return values.length === 0 ? [] : values;
+        return activeValue;
       },
     },
   );
@@ -56,23 +55,22 @@ const CheckboxGroupInterface = (props) => {
   return (
     <Box
       as="fieldset"
-      {...checkboxGroupProps}
+      {...radioGroupProps}
       {...remainingProps}
       name={undefined}
-      baseClassName="navi_checkbox_group"
-      navi-checkbox-list=""
+      baseClassName="navi_radio_group"
       data-callout-point-to-border-box=""
-      onChange={(e) => {
-        // we rely on change event bubbling but we want to catch only the relevant checkbox change events
+      onInput={(e) => {
+        // we rely on change event bubbling but we want to catch only the relevant radio change events
         const target = e.target;
-        if (target.tagName !== "INPUT" || target.type !== "checkbox") {
+        if (target.tagName !== "INPUT" || target.type !== "radio") {
           return;
         }
         if (target.name !== name) {
           return;
         }
-        const checkboxGroup = ref.current;
-        dispatchRequestAction(checkboxGroup, {
+        const radioGroup = ref.current;
+        dispatchRequestAction(radioGroup, {
           event: e,
           requester: target,
         });

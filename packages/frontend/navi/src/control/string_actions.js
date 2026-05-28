@@ -1,6 +1,6 @@
 import { dispatchCustomEvent } from "@jsenv/dom";
 
-import { findAncestorFieldElement } from "./field_context.js";
+import { findAncestorControlElement } from "./control_context.js";
 import { createUICallback } from "./ui_callback.js";
 import { dispatchRequestSetUIState } from "./ui_state_controller.js";
 import { dispatchRequestAction } from "./validation/custom_constraint_validation.js";
@@ -18,15 +18,15 @@ export const resolveActionProp = (action) => {
 
 const requestUpdate = (event, value) => {
   const currentTarget = event.currentTarget;
-  const parentField = findAncestorFieldElement(currentTarget);
-  if (!parentField) {
+  const parentControl = findAncestorControlElement(currentTarget);
+  if (!parentControl) {
     console.warn(
-      "update triggered but no element with [navi-field] found in event path",
+      "update triggered but no element with [navi-control-input] found in event path",
       event,
     );
     return false;
   }
-  return dispatchRequestSetUIState(parentField, value, { event });
+  return dispatchRequestSetUIState(parentControl, value, { event });
 };
 /**
  * Updates the UI state of the closest ancestor field with the current value.

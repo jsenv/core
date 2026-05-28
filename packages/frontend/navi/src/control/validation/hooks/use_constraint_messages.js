@@ -1,6 +1,6 @@
 import { useCallback, useContext, useLayoutEffect, useRef } from "preact/hooks";
 
-import { MessagePropsRefContext } from "../../field_context.js";
+import { MessagePropsRefContext } from "../../control_context.js";
 import {
   CONSTRAINT_NAME_TO_PROP,
   extractMessageAndRemainingProps,

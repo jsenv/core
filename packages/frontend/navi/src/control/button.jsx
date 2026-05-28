@@ -10,8 +10,8 @@ import { getHrefTargetInfo } from "../nav/browser_integration/href_target_info.j
 import { assertRoute, useRouteStatus } from "../nav/route.js";
 import { Text, markAsOutsideTextFlow } from "../text/text.jsx";
 import { useAccentColorAttributes } from "../utils/use_accent_color_attributes.js";
-import { ActionContext } from "./field_context.js";
-import { useFieldInterfaceProps } from "./field_hooks.jsx";
+import { ActionContext } from "./control_context.js";
+import { useControlInterfaceProps } from "./control_hooks.jsx";
 import { FormContext } from "./form_context.js";
 import { ParentUIStateControllerContext } from "./ui_state_controller.js";
 import {
@@ -543,46 +543,52 @@ const ButtonFieldInterface = (props) => {
   const { ref, onClick, onMouseDown } = props;
   const parentUIStateController = useContext(ParentUIStateControllerContext);
   const ancestorAction = useContext(ActionContext);
-  const [fieldInterfaceProps, remainingProps] = useFieldInterfaceProps(props, {
-    primaryInteractionMode: "pointer",
-    fieldType: "button",
-    statePropName: "value",
-    getUIValue: () => {
-      const button = ref.current;
-      // The button uiState is a combination of its own state (if it has a name)
-      // and its parent state (if the parent is named or is a named collection)
-      const buttonUIState = {};
-      if (parentUIStateController) {
-        const parentName = parentUIStateController.name;
-        const parentUIState = parentUIStateController.uiStateSignal.peek();
-        if (parentName) {
-          buttonUIState[parentName] = parentUIState;
+  const [fieldInterfaceProps, remainingProps] = useControlInterfaceProps(
+    props,
+    {
+      primaryInteractionMode: "pointer",
+      controlType: "button",
+      statePropName: "value",
+      getUIValue: () => {
+        const button = ref.current;
+        // The button uiState is a combination of its own state (if it has a name)
+        // and its parent state (if the parent is named or is a named collection)
+        const buttonUIState = {};
+        if (parentUIStateController) {
+          const parentName = parentUIStateController.name;
+          const parentUIState = parentUIStateController.uiStateSignal.peek();
+          if (parentName) {
+            buttonUIState[parentName] = parentUIState;
+          }
+          // this is how we detect named collection for now (they don't have a name and have an object in their ui state)
+          else if (
+            typeof parentUIState === "object" &&
+            parentUIState !== null
+          ) {
+            Object.assign(buttonUIState, parentUIState);
+          } else {
+            // no name, we don't know where to put that value right?
+          }
         }
-        // this is how we detect named collection for now (they don't have a name and have an object in their ui state)
-        else if (typeof parentUIState === "object" && parentUIState !== null) {
-          Object.assign(buttonUIState, parentUIState);
-        } else {
-          // no name, we don't know where to put that value right?
+        if (button.name) {
+          buttonUIState[button.name] = button.value;
         }
-      }
-      if (button.name) {
-        buttonUIState[button.name] = button.value;
-      }
-      if (!parentUIStateController && !button.name) {
-        return props.value;
-      }
-      return buttonUIState;
+        if (!parentUIStateController && !button.name) {
+          return props.value;
+        }
+        return buttonUIState;
+      },
+      allowNameless: true,
+      // button inherit their ancestor params:
+      // - inside a form button action gets the form params
+      // - inside a radio list or a picker it's the same
+      paramsSignal: ancestorAction ? ancestorAction.paramsSignal : undefined,
     },
-    allowNameless: true,
-    // button inherit their ancestor params:
-    // - inside a form button action gets the form params
-    // - inside a radio list or a picker it's the same
-    paramsSignal: ancestorAction ? ancestorAction.paramsSignal : undefined,
-  });
+  );
 
   return (
     <Next
-      {...fieldInterfaceProps}
+      {...controlInterfaceProps}
       {...remainingProps}
       onMouseDown={(e) => {
         onMouseDown?.(e);

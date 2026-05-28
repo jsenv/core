@@ -4,9 +4,9 @@ import {
   mergeTwoStyles,
 } from "@jsenv/dom";
 
-import { findFieldElement } from "../field/field_context.js";
-import { addInputEffect } from "../field/input_effect.js";
-import { getUIStateFromElement } from "../field/ui_state_controller.js";
+import { findControlElement } from "../control/control_context.js";
+import { addInputEffect } from "../control/input_effect.js";
+import { getUIStateFromElement } from "../control/ui_state_controller.js";
 
 const requestPseudoStateCheck = (element, detail) => {
   dispatchInternalCustomEvent(
@@ -291,7 +291,7 @@ focus_classes: {
       if (el.matches(":focus")) {
         return true;
       }
-      const proxyFor = el.getAttribute("navi-proxy-for");
+      const proxyFor = el.getAttribute("navi-control-proxy-for");
       if (proxyFor) {
         const proxyTarget = document.getElementById(proxyFor);
         if (proxyTarget && proxyTarget.matches(":focus")) {
@@ -326,7 +326,7 @@ focus_classes: {
       if (el.matches(":focus-visible")) {
         return true;
       }
-      const proxyFor = el.getAttribute("navi-proxy-for");
+      const proxyFor = el.getAttribute("navi-control-proxy-for");
       if (proxyFor) {
         const proxyTarget = document.getElementById(proxyFor);
         if (proxyTarget && proxyTarget.matches(":focus-visible")) {
@@ -412,8 +412,8 @@ Object.assign(PSEUDO_CLASSES, {
 definePseudoClass(":-navi-has-value", {
   attribute: "data-has-value",
   setup: (el, callback) => {
-    const fieldOrEl = findFieldElement(el) || el;
-    return addInputEffect(fieldOrEl, callback);
+    const controlEl = findControlElement(el) || el;
+    return addInputEffect(controlEl, callback);
   },
   test: (el) => {
     if (el.hasAttribute("navi-ui-state")) {
@@ -553,7 +553,7 @@ export const initPseudoStyles = (
     elementListeningPseudoState = null;
   }
 
-  const proxyFor = element.getAttribute("navi-proxy-for");
+  const proxyFor = element.getAttribute("navi-control-proxy-for");
 
   const onStateChange = (value, oldValue) => {
     effect?.(value, oldValue);
@@ -569,7 +569,7 @@ export const initPseudoStyles = (
     const id = element.id;
     if (id) {
       const proxy = document.querySelector(
-        `[navi-proxy-for="${CSS.escape(id)}"]`,
+        `[navi-control-proxy-for="${CSS.escape(id)}"]`,
       );
       if (proxy) {
         requestPseudoStateCheck(proxy, {});
@@ -607,7 +607,7 @@ export const initPseudoStyles = (
           currentValue = test(element, pseudoState);
         }
       }
-      // If this element is a proxy for another (navi-proxy-for="targetId"),
+      // If this element is a proxy for another (navi-control-proxy-for="targetId"),
       // inherit the target's active pseudo-state when the element itself isn't in that state.
       // We check the target's elementToImpact (not the target itself) because the
       // data-* attribute may be set on a different element (e.g. pseudoStateSelector).

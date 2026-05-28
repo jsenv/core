@@ -2,7 +2,7 @@ import { createContext } from "preact";
 import { useState } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
-import { Button } from "../field/button.jsx";
+import { Button } from "../control/button.jsx";
 import { CloseSvg } from "../graphic/icons/close_svg.jsx";
 import {
   ErrorSvg,

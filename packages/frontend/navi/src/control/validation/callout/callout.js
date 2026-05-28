@@ -16,7 +16,7 @@ import {
 } from "@jsenv/dom";
 import { isValidElement } from "preact";
 
-import { findFieldElement } from "../../field_context.js";
+import { findControlElement } from "../../control_context.js";
 import { renderIntoCallout } from "./callout.jsx";
 
 /**
@@ -472,13 +472,13 @@ export const openCallout = (
   if (anchorElement) {
     if (anchorElement.id) {
       const proxyElement = document.querySelector(
-        `[navi-proxy-for="${anchorElement.id}"]`,
+        `[navi-control-proxy-for="${anchorElement.id}"]`,
       );
       if (proxyElement) {
         anchorElement = proxyElement;
       }
     }
-    const renderedBy = anchorElement.getAttribute("navi-rendered-by");
+    const renderedBy = anchorElement.getAttribute("navi-control-owner");
     if (renderedBy) {
       const renderedByElement = anchorElement.closest(renderedBy);
       if (renderedByElement) {
@@ -821,7 +821,7 @@ const stickCalloutToAnchor = (
   { debug, originalAnchorElement = anchorElement },
 ) => {
   // Read an attribute from the original anchor first, then the visual anchor.
-  // The visual anchor may differ from the original when navi-rendered-by redirects
+  // The visual anchor may differ from the original when navi-control-owner redirects
   // the anchor to a wrapper element that doesn't carry the data-callout-* attributes.
   const getAnchorAttribute = (name) => {
     return (
@@ -847,8 +847,8 @@ const stickCalloutToAnchor = (
     // Smart default: inputs and buttons are tight boxes where border-box makes sense.
     // For everything else (labels, divs, fieldsets…) content-box maximizes the chance
     // the arrow points at visible text rather than the outer padding/border.
-    const fieldOrEl = findFieldElement(anchorElement) || anchorElement;
-    const tagName = fieldOrEl.tagName;
+    const controlEl = findControlElement(anchorElement) || anchorElement;
+    const tagName = controlEl.tagName;
     if (tagName === "INPUT" || tagName === "BUTTON" || tagName === "FIELDSET") {
       alignToAnchorBox = "border-box";
     } else {

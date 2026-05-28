@@ -17,22 +17,22 @@ import { dispatchInternalCustomEvent } from "@jsenv/dom";
 import { useMemo, useRef } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
-import { useFieldgroupInterfaceProps } from "./field_hooks.jsx";
+import { useControlgroupInterfaceProps } from "./control_hooks.jsx";
 import { FormContext } from "./form_context.js";
 import { dispatchRequestResetUIState } from "./ui_state_controller.js";
 
 export const Form = (props) => {
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
-  const form = <FormField {...props} />;
+  const form = <FormControl {...props} />;
 
   return form;
 };
 
-const FormField = (props) => {
+const FormControl = (props) => {
   const { ref, method = "GET" } = props;
-  const [formProps, remainingProps] = useFieldgroupInterfaceProps(props, {
-    fieldType: "form",
+  const [formProps, remainingProps] = useControlgroupInterfaceProps(props, {
+    controlType: "form",
     childComponentType: "*",
     aggregateChildStates: (childUIStateControllers) => {
       const formValues = {};
@@ -81,8 +81,8 @@ const FormField = (props) => {
           },
         });
       }}
-      onnavi_get_managed_fields={(e) => {
-        e.detail.respondWith(getFormManagedFields(e.currentTarget));
+      onnavi_get_managed_controls={(e) => {
+        e.detail.respondWith(getFormManagedControls(e.currentTarget));
       }}
       onReset={(e) => {
         const form = ref.current;
@@ -108,14 +108,14 @@ const FormPseudoClasses = [
   ":-navi-loading",
 ];
 
-const getFormManagedFields = (form) => {
-  const managedFields = [];
+const getFormManagedControls = (form) => {
+  const managedControls = [];
   for (const element of form.elements) {
     // if (element.name) {
-    managedFields.push(element);
+    managedControls.push(element);
     // }
   }
-  return managedFields;
+  return managedControls;
 };
 
 // const dispatchCustomEventOnFormAndFormElements = (type, options) => {

@@ -18,9 +18,9 @@ import { useContext, useId, useMemo, useRef } from "preact/hooks";
 import { Box } from "@jsenv/navi/src/box/box.jsx";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { useFocusGroup } from "@jsenv/navi/src/utils/focus/use_focus_group.js";
+import { ControlToInterfaceContext } from "../control_context.js";
+import { useControlgroupInterfaceProps } from "../control_hooks.jsx";
 import { Field } from "../field.jsx";
-import { FieldToInterfaceContext } from "../field_context.js";
-import { useFieldgroupInterfaceProps } from "../field_hooks.jsx";
 import { Input } from "../input/input.jsx";
 import { useCheckableProps } from "../input/use_checkable_props.js";
 import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
@@ -81,7 +81,7 @@ const css = /* css */ `
     }
 
     /* opt-in: apply background color to selected items */
-    &[navi-has-selected-background]:not(:has(input[navi-proxy-for])) {
+    &[navi-has-selected-background]:not(:has(input[navi-control-proxy-for])) {
       .navi_list_item[data-selected] {
         --x-list-item-color: var(--list-item-color-selected);
         --x-list-item-background-color: var(
@@ -166,33 +166,36 @@ export const SelectableList = (props) => {
     focusGroupDirection,
     focusGroupWrap,
   } = props;
-  const [listFieldProps, remainingProps] = useFieldgroupInterfaceProps(props, {
-    fieldType: multiple ? "checkbox_group" : "radio_group",
-    childComponentType: multiple ? "checkbox" : "radio",
-    aggregateChildStates: multiple
-      ? (childUIStateControllers) => {
-          const values = [];
-          for (const childUIStateController of childUIStateControllers) {
-            if (childUIStateController.uiState) {
-              values.push(childUIStateController.uiState);
+  const [listFieldProps, remainingProps] = useControlgroupInterfaceProps(
+    props,
+    {
+      controlType: multiple ? "checkbox_group" : "radio_group",
+      childComponentType: multiple ? "checkbox" : "radio",
+      aggregateChildStates: multiple
+        ? (childUIStateControllers) => {
+            const values = [];
+            for (const childUIStateController of childUIStateControllers) {
+              if (childUIStateController.uiState) {
+                values.push(childUIStateController.uiState);
+              }
             }
+            // Return a stable empty-array reference when nothing is selected so
+            // the action always receives an array (never undefined) and signal
+            // comparisons don't see a new reference on every render.
+            return values.length === 0 ? EMPTY_SELECTION : values;
           }
-          // Return a stable empty-array reference when nothing is selected so
-          // the action always receives an array (never undefined) and signal
-          // comparisons don't see a new reference on every render.
-          return values.length === 0 ? EMPTY_SELECTION : values;
-        }
-      : (childUIStateControllers) => {
-          let activeValue;
-          for (const childUIStateController of childUIStateControllers) {
-            if (childUIStateController.uiState) {
-              activeValue = childUIStateController.uiState;
-              break;
+        : (childUIStateControllers) => {
+            let activeValue;
+            for (const childUIStateController of childUIStateControllers) {
+              if (childUIStateController.uiState) {
+                activeValue = childUIStateController.uiState;
+                break;
+              }
             }
-          }
-          return activeValue;
-        },
-  });
+            return activeValue;
+          },
+    },
+  );
   useFocusGroup(ref, {
     direction: focusGroupDirection,
     wrap: focusGroupWrap,
@@ -206,7 +209,7 @@ export const SelectableList = (props) => {
       navi-has-selected-background={
         selectedIndicator === "backgroundColor" ? "" : undefined
       }
-      {...listFieldProps}
+      {...listControlProps}
       {...remainingProps}
       name={undefined}
       selectedIndicator={undefined}
@@ -404,19 +407,19 @@ const SelectableInputProxy = (props) => {
   // Reset FieldToInterfaceContext to ensure we don't read id or report our
   // states (real input should take id and report)
   return (
-    <FieldToInterfaceContext.Provider value={undefined}>
+    <ControlToInterfaceContext.Provider value={undefined}>
       <Input
         {...props}
         {...selectableRealInputProps}
         id={undefined}
-        navi-proxy-for={selectableRealInputProps.id}
+        navi-control-proxy-for={selectableRealInputProps.id}
         // give it a specific name to avoid radio name (would unselect others)
         // (making it unique to the list would be enough, but here it's even more unique)
         name={`${selectableRealInputProps.id}_proxy`}
         aria-hidden="true"
         tabIndex={-1}
       />
-    </FieldToInterfaceContext.Provider>
+    </ControlToInterfaceContext.Provider>
   );
 };
 Selectable.Input = SelectableInputProxy;

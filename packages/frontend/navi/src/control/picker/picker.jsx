@@ -5,7 +5,7 @@ import { ChevronDownSvg } from "@jsenv/navi/src/graphic/icons/chevron_updown_svg
 import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.jsx";
 import { createComponentResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
-import { useFieldInterfaceProps } from "../field_hooks.jsx";
+import { useControlInterfaceProps } from "../control_hooks.jsx";
 import { getFromInputValue, getToInputValue } from "../input/input_textual.jsx";
 import { PickerContext, PickerElementContext } from "./picker_context.jsx";
 import { PickerPlaceholder } from "./picker_placeholder.jsx";
@@ -232,14 +232,14 @@ const PickerButton = (props) => {
   const { ref, type, icon, placeholder, ui } = props;
   const inputRef = useRef(null);
   const fromInputValue = getFromInputValue(type);
-  const [inputProps, pickerRemainingProps] = useFieldInterfaceProps(
+  const [inputProps, pickerRemainingProps] = useControlInterfaceProps(
     {
       ...props,
       ref: inputRef,
     },
     {
       primaryInteractionMode: "pointer",
-      fieldType: "input",
+      controlType: "input",
       statePropName: "value",
       defaultStatePropName: "defaultValue",
       readOnlySupported: true,
@@ -259,7 +259,7 @@ const PickerButton = (props) => {
       ref={ref}
       type="button"
       baseClassName="navi_picker"
-      navi-field=".navi_picker_input"
+      navi-control-input=".navi_picker_input"
       navi-has-placeholder={placeholder ? "" : undefined}
       pseudoClasses={PICKER_BUTTON_PSEUDO_CLASSES}
       disabled={disabled}
@@ -313,27 +313,27 @@ const PickerInput = (props) => {
   return (
     <Box
       as="input"
-      navi-rendered-by=".navi_picker"
+      navi-control-owner=".navi_picker"
       {...props}
       value={toInputValue(props.value)}
       className="navi_picker_input"
       pseudoClasses={PickerInputPseudoClasses}
       tabIndex={-1}
-      onnavi_get_managed_fields={(e) => {
+      onnavi_get_managed_controls={(e) => {
         // we must check for the pickerEl content to search for a valid input because we might be a button used to validate for instance
         // no necessarily the field itself
         const pickerInput = e.currentTarget;
-        let firstField;
+        let firstControl;
         let sibling = pickerInput.nextElementSibling;
         while (sibling) {
-          const candidate = findFieldWithName(sibling);
+          const candidate = findControlWithName(sibling);
           if (candidate) {
-            firstField = candidate;
+            firstControl = candidate;
             break;
           }
           sibling = sibling.nextElementSibling;
         }
-        e.detail.respondWith(firstField);
+        e.detail.respondWith(firstControl);
       }}
     />
   );
@@ -357,7 +357,7 @@ const PickerInputPseudoClasses = [
   ":-navi-expanded",
 ];
 
-const findFieldWithName = (el) => {
+const findControlWithName = (el) => {
   const tag = el.tagName.toLowerCase();
   if (
     (tag === "input" ||
@@ -369,7 +369,7 @@ const findFieldWithName = (el) => {
     return el;
   }
   for (const child of el.children) {
-    const found = findFieldWithName(child);
+    const found = findControlWithName(child);
     if (found) {
       return found;
     }

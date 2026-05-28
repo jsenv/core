@@ -1,4 +1,4 @@
-import { dispatchRequestInteraction } from "@jsenv/navi/src/field/validation/custom_constraint_validation.js";
+import { dispatchRequestInteraction } from "@jsenv/navi/src/control/validation/custom_constraint_validation.js";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 
 const getPickerInputFromButtonEvent = (e) => {

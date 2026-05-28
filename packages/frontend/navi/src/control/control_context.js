@@ -2,13 +2,13 @@ import { createContext } from "preact";
 
 import { CONSTRAINT_ATTRIBUTE_SET } from "./validation/constraint_attribute_set.js";
 
-export const FIELD_PROP_SET = new Set([
+export const CONTROL_PROP_SET = new Set([
   ...CONSTRAINT_ATTRIBUTE_SET,
   "value",
   "id",
   "name",
   "data-testid",
-  "navi-proxy-for",
+  "navi-control-proxy-for",
   "aria-controls",
   "data-callout-arrow-x",
   "data-callout-point-to-border-box",
@@ -18,10 +18,10 @@ export const FIELD_PROP_SET = new Set([
   "data-callout-position-fixed",
 ]);
 
-export const FieldToInterfaceContext = createContext(null);
+export const ControlToInterfaceContext = createContext(null);
 export const MessagePropsRefContext = createContext();
 
-export const FieldNameContext = createContext();
+export const ControlNameContext = createContext();
 export const DisabledContext = createContext();
 export const ReadOnlyContext = createContext();
 export const RequiredContext = createContext();
@@ -31,26 +31,26 @@ export const LoadingElementContext = createContext();
 export const ActionContext = createContext();
 export const ActionRequesterContext = createContext();
 
-export const findFieldElement = (el) => {
-  const naviFieldAttribute = el.getAttribute("navi-field");
-  if (!naviFieldAttribute) {
+export const findControlElement = (el) => {
+  const naviControlInputAttribute = el.getAttribute("navi-control-input");
+  if (!naviControlInputAttribute) {
     return null;
   }
-  const fieldEl = el.querySelector(naviFieldAttribute);
+  const fieldEl = el.querySelector(naviControlInputAttribute);
   return fieldEl;
 };
 
-export const findAncestorFieldElement = (el) => {
+export const findAncestorControlElement = (el) => {
   let ancestor;
-  const renderedBy = el.getAttribute("navi-rendered-by");
+  const renderedBy = el.getAttribute("navi-control-owner");
   if (renderedBy) {
     // event usually occur on inputs that are sometimes wrapped by a custom ui element
-    // these custom ui element have a [navi-field] attribute on them
+    // these custom ui element have a [navi-control-input] attribute on them
     // we want to look for their ancestor otherwise input would consider their wrapper as a field instead of finding a parent field
     ancestor = el.closest(renderedBy).parentNode;
   } else {
     ancestor = el.parentNode;
   }
-  const closestField = ancestor.closest("[navi-field]");
+  const closestField = ancestor.closest("[navi-control-input]");
   return closestField;
 };

@@ -2,14 +2,14 @@ import { useContext, useId, useMemo, useRef, useState } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
 import {
+  ControlNameContext,
+  ControlToInterfaceContext,
   DisabledContext,
-  FieldNameContext,
-  FieldToInterfaceContext,
   LoadingContext,
   MessagePropsRefContext,
   ReadOnlyContext,
   RequiredContext,
-} from "./field_context.js";
+} from "./control_context.js";
 import { extractMessageAndRemainingProps } from "./validation/constraint_message.js";
 
 const css = /* css */ `
@@ -144,17 +144,17 @@ const FieldUI = (props) => {
   const [readOnlyFromChild, setReadOnlyFromChild] = useState(false);
   const [interactiveFromChild, setInteractiveFromChild] = useState(false);
 
-  const parentFieldName = useContext(FieldNameContext);
-  const parentFieldDisabled = useContext(DisabledContext);
-  const parentFieldReadOnly = useContext(ReadOnlyContext);
-  const parentFieldRequired = useContext(RequiredContext);
-  const parentFieldLoading = useContext(LoadingContext);
-  const nameResolved = name || parentFieldName;
-  const disabledResolved = disabled || parentFieldDisabled;
-  const readOnlyResolved = readOnly || parentFieldReadOnly;
-  const requiredResolved = required || parentFieldRequired;
-  const loadingResolved = loading || parentFieldLoading;
-  const fieldToInterfaceContextValue = useMemo(
+  const parentControlName = useContext(ControlNameContext);
+  const parentControlDisabled = useContext(DisabledContext);
+  const parentControlReadOnly = useContext(ReadOnlyContext);
+  const parentControlRequired = useContext(RequiredContext);
+  const parentControlLoading = useContext(LoadingContext);
+  const nameResolved = name || parentControlName;
+  const disabledResolved = disabled || parentControlDisabled;
+  const readOnlyResolved = readOnly || parentControlReadOnly;
+  const requiredResolved = required || parentControlRequired;
+  const loadingResolved = loading || parentControlLoading;
+  const controlToInterfaceContextValue = useMemo(
     () => ({
       id: fieldId,
       setReadOnly: setReadOnlyFromChild,
@@ -168,8 +168,10 @@ const FieldUI = (props) => {
   } else {
     childrenWithContext = (
       <MessagePropsRefContext.Provider value={messagePropsRef}>
-        <FieldToInterfaceContext.Provider value={fieldToInterfaceContextValue}>
-          <FieldNameContext.Provider value={nameResolved}>
+        <ControlToInterfaceContext.Provider
+          value={controlToInterfaceContextValue}
+        >
+          <ControlNameContext.Provider value={nameResolved}>
             <DisabledContext.Provider value={disabledResolved}>
               <ReadOnlyContext.Provider value={readOnlyResolved}>
                 <RequiredContext.Provider value={requiredResolved}>
@@ -179,8 +181,8 @@ const FieldUI = (props) => {
                 </RequiredContext.Provider>
               </ReadOnlyContext.Provider>
             </DisabledContext.Provider>
-          </FieldNameContext.Provider>
-        </FieldToInterfaceContext.Provider>
+          </ControlNameContext.Provider>
+        </ControlToInterfaceContext.Provider>
       </MessagePropsRefContext.Provider>
     );
   }
@@ -227,8 +229,8 @@ const FieldPseudoClasses = [
 
 export const Label = (props) => {
   const { children, htmlFor, ...rest } = props;
-  const fieldToInterface = useContext(FieldToInterfaceContext);
-  const fieldId = fieldToInterface?.id;
+  const controlToInterface = useContext(ControlToInterfaceContext);
+  const fieldId = controlToInterface?.id;
 
   return (
     <Box

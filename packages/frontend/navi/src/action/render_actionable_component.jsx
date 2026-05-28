@@ -1,6 +1,6 @@
 import { useContext } from "preact/hooks";
 
-import { FormContext } from "../field/form_context.js";
+import { FormContext } from "../control/form_context.js";
 
 export const renderActionableComponent = (
   props,

@@ -5,9 +5,9 @@ import { PSEUDO_CLASSES } from "../../box/pseudo_styles.js";
 import {
   SelectionContext,
   useSelectableElement,
-} from "../../field/selection/selection.jsx";
-import { closeValidationMessage } from "../../field/validation/custom_constraint_validation.js";
-import { useConstraints } from "../../field/validation/hooks/use_constraints.js";
+} from "../../control/selection/selection.jsx";
+import { closeValidationMessage } from "../../control/validation/custom_constraint_validation.js";
+import { useConstraints } from "../../control/validation/hooks/use_constraints.js";
 import { EmailSvg } from "../../graphic/icons/email_svg.jsx";
 import {
   LinkAnchorSvg,

@@ -16,7 +16,7 @@ import {
 
 import { useNavState } from "../nav/browser_integration/browser_integration.js";
 import { useInitialValue } from "../state/use_initial_value.js";
-import { findFieldElement } from "./field_context.js";
+import { findControlElement } from "./control_context.js";
 import { FormContext } from "./form_context.js";
 import { PickerElementContext } from "./picker/picker_context.jsx";
 
@@ -80,7 +80,7 @@ export const useUIStateController = (
   const pickerElementContext = useContext(PickerElementContext);
   const { id, name, uiAction, action } = props;
   const ref = props.ref;
-  const isProxy = Boolean(props["navi-proxy-for"]);
+  const isProxy = Boolean(props["navi-control-proxy-for"]);
   const hasStateProp = Object.hasOwn(props, statePropName);
   /**
    * This check is needed only for basic field because
@@ -260,7 +260,7 @@ export const useUIStateController = (
       if (
         componentType === "radio" &&
         newUIState &&
-        !el.hasAttribute("navi-proxy-for")
+        !el.hasAttribute("navi-control-proxy-for")
       ) {
         const { name } = el;
         if (name) {
@@ -288,7 +288,7 @@ export const useUIStateController = (
       // Proxy: forward the state change to the real input
       // The real input will handle its own UIState update + synthetic input.
       if (el) {
-        const proxyFor = el.getAttribute("navi-proxy-for");
+        const proxyFor = el.getAttribute("navi-control-proxy-for");
         if (proxyFor) {
           const naviProxyTarget = document.getElementById(proxyFor);
           if (naviProxyTarget) {
@@ -681,8 +681,8 @@ export const useUIState = (ref, initialValue) => {
 };
 
 export const dispatchRequestSetUIState = (element, value, detail) => {
-  const fieldOrEl = findFieldElement(element) || element;
-  return dispatchInternalCustomEvent(fieldOrEl, "navi_set_ui_state", {
+  const controlEl = findControlElement(element) || element;
+  return dispatchInternalCustomEvent(controlEl, "navi_set_ui_state", {
     ...detail,
     value,
   });

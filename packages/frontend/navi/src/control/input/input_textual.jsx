@@ -33,8 +33,8 @@ import {
   createComponentResolver,
   useNextResolver,
 } from "../../resolver/resolver.jsx";
+import { useControlInterfaceProps } from "../control_hooks.jsx";
 import { Label } from "../field.jsx";
-import { useFieldInterfaceProps } from "../field_hooks.jsx";
 import {
   ListIdContext,
   requestListClose,
@@ -287,7 +287,7 @@ const css = /* css */ `
 export const InputTextual = (props) => {
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
-  const input = renderInput(InputTextualFieldInterface, props);
+  const input = renderInput(InputTextualControlInterface, props);
 
   return input;
 };
@@ -340,22 +340,21 @@ const renderInput = createComponentResolver([
 ]);
 
 const InputTextualHeadless = (props) => {
-  const [textualFieldInterfaceProps, remainingProps] =
+  const [textualControlInterfaceProps, remainingProps] =
     useInputTextualProps(props);
   return (
     <BoxForwardedPropsContext.Provider value={undefined}>
-      <RealInput {...textualFieldInterfaceProps} {...remainingProps} />
+      <RealInput {...textualControlInterfaceProps} {...remainingProps} />
     </BoxForwardedPropsContext.Provider>
   );
 };
 
 const useInputTextualProps = (props) => {
   const { ref, fromInputValue = (v) => v, toInputValue = (v) => v } = props;
-  const [textualFieldInterfaceProps, remainingProps] = useFieldInterfaceProps(
-    props,
-    {
+  const [textualControlInterfaceProps, remainingProps] =
+    useControlInterfaceProps(props, {
       primaryInteractionMode: "keyboard",
-      fieldType: "input",
+      controlType: "input",
       statePropName: "value",
       defaultStatePropName: "defaultValue",
       readOnlySupported: true,
@@ -364,24 +363,23 @@ const useInputTextualProps = (props) => {
         const inputValue = input.value;
         return fromInputValue(inputValue);
       },
-    },
+    });
+  textualControlInterfaceProps.value = toInputValue(
+    textualControlInterfaceProps.value,
   );
-  textualFieldInterfaceProps.value = toInputValue(
-    textualFieldInterfaceProps.value,
-  );
-  return [textualFieldInterfaceProps, remainingProps];
+  return [textualControlInterfaceProps, remainingProps];
 };
 
 const InputNativeContext = createContext(null);
-const InputTextualFieldInterface = (props) => {
+const InputTextualControlInterface = (props) => {
   import.meta.css = css;
   const { ui, discrete } = props;
-  const [textualFieldInterfaceProps, remainingProps] =
+  const [textualControlInterfaceProps, remainingProps] =
     useInputTextualProps(props);
   const idDefault = useId();
-  textualFieldInterfaceProps.id =
-    textualFieldInterfaceProps.id || `input_${idDefault}`;
-  const { id, basePseudoState, children } = textualFieldInterfaceProps;
+  textualControlInterfaceProps.id =
+    textualControlInterfaceProps.id || `input_${idDefault}`;
+  const { id, basePseudoState, children } = textualControlInterfaceProps;
   const disabled = basePseudoState[":disabled"];
   const readOnly = basePseudoState[":read-only"];
   const loading = basePseudoState[":-navi-loading"];
@@ -402,7 +400,7 @@ const InputTextualFieldInterface = (props) => {
       data-discrete={discrete ? "" : undefined}
       discrete={undefined} // handled via data attribute
       styleCSSVars={InputStyleCSSVars}
-      navi-field=".navi_real_input"
+      navi-control-input=".navi_real_input"
       pseudoStateSelector=".navi_real_input"
       visualSelector=".navi_real_input"
       pseudoClasses={InputPseudoClasses}
@@ -415,8 +413,8 @@ const InputTextualFieldInterface = (props) => {
         inset={-1}
       />
       <RealInput
-        navi-rendered-by=".navi_input"
-        {...textualFieldInterfaceProps}
+        navi-control-owner=".navi_input"
+        {...textualControlInterfaceProps}
       />
       {childrenWithContext}
     </Box>
