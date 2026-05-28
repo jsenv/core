@@ -7,13 +7,37 @@ export const getControlProxyTarget = (el) => {
   return realControl;
 };
 
-export const findControlInput = (el) => {
-  const naviControlInputAttribute = el.getAttribute("navi-control-input");
-  if (!naviControlInputAttribute) {
+/**
+ * Returns the host element inside `el` — the element that holds the control's
+ * value, UI state, and constraints (i.e. the element onto which
+ * `useInteractiveProps` spreads `controlProps` and its event handlers).
+ *
+ * When a control is composed of a visual wrapper and a native input, the
+ * wrapper gets `remainingProps` (layout, CSS vars, …) while the inner input
+ * gets `controlProps` — including all the navi event handlers
+ * (`onnavi_request_action`, `onnavi_cancel`, etc.).  To dispatch a navi event
+ * that the control will actually handle, you must target that inner element,
+ * not the wrapper.
+ *
+ * The wrapper signals which element is the host via the
+ * `navi-control-host` attribute whose value is a CSS selector:
+ * ```html
+ * <span navi-control navi-control-host=".navi_control_input">  ← wrapper
+ *   <input class="navi_control_input" />                       ← host element (value, state, constraints)
+ * </span>
+ * ```
+ *
+ * Returns `null` when `el` is itself the host (no separate inner element).
+ * Callers that need "the right target regardless" should use
+ * {@link getControlHostEl} instead.
+ */
+export const findControlHost = (el) => {
+  const naviControlHostAttribute = el.getAttribute("navi-control-host");
+  if (!naviControlHostAttribute) {
     return null;
   }
-  const inputEl = el.querySelector(naviControlInputAttribute);
-  return inputEl;
+  const hostEl = el.querySelector(naviControlHostAttribute);
+  return hostEl;
 };
 
 /**
@@ -27,7 +51,7 @@ export const findControlInput = (el) => {
  * HTML structure:
  * ```html
  * <button navi-control>                              ← outer control (e.g. a Picker button)
- *   <span navi-control navi-control-input="input">   ← inner control wrapper
+ *   <span navi-control navi-control-host="input">   ← inner control wrapper
  *     <input navi-control-owner="[navi-control]" />  ← control input (el), owned by the inner span
  *   </span>
  * </button>

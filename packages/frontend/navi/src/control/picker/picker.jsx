@@ -259,7 +259,7 @@ const PickerButton = (props) => {
       ref={ref}
       type="button"
       baseClassName="navi_picker"
-      navi-control-input=".navi_picker_input"
+      navi-control-host=".navi_picker_input"
       navi-has-placeholder={placeholder ? "" : undefined}
       pseudoClasses={PICKER_BUTTON_PSEUDO_CLASSES}
       disabled={disabled}

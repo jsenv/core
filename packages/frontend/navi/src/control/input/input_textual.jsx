@@ -395,7 +395,7 @@ const InputTextualControlInterface = (props) => {
       data-discrete={discrete ? "" : undefined}
       discrete={undefined} // handled via data attribute
       styleCSSVars={InputStyleCSSVars}
-      navi-control-input=".navi_control_input"
+      navi-control-host=".navi_control_input"
       pseudoStateSelector=".navi_control_input"
       visualSelector=".navi_control_input"
       pseudoClasses={InputPseudoClasses}

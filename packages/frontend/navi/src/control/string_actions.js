@@ -21,7 +21,7 @@ const requestUpdate = (event, value) => {
   const parentControl = getParentControl(currentTarget);
   if (!parentControl) {
     console.warn(
-      "update triggered but no element with [navi-control-input] found in event path",
+      "update triggered but no element with [navi-control] found in event path",
       event,
     );
     return false;
