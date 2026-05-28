@@ -1,20 +1,15 @@
 /**
  * Measures the width of the longest rendered visual line inside an element.
  *
- * Returns `null` when all content fits on a single visual line (no
- * measurement is useful in that case). Returns the width in pixels of the
- * widest line when text wraps to two or more lines.
+ * Useful for solving the CSS "shrinkwrap" problem: when multi-line text sits
+ * inside a `max-width` container, CSS expands the element to fill all
+ * available space, leaving trailing whitespace to the right of the text.
+ * Setting an explicit width equal to the longest line eliminates that gap.
+ * See shrinkwrap_demo.html for a visual explanation.
  *
- * ### Why not just use `element.scrollWidth`?
- * `scrollWidth` gives the total content width, not the width of the longest
- * individual line in a multi-line block.
- *
- * ### Why not `Range.getClientRects()` directly?
- * `getClientRects()` returns one rect **per text node segment**, not per
- * visual line. Multiple adjacent text nodes (e.g. from JSX expressions) that
- * sit on the same visual line each produce their own rect at the same Y
- * position. We group rects by their rounded `top` value so that same-line
- * fragments are summed into a single visual-line width.
+ * Returns `null` when all content fits on a single visual line (nothing to
+ * optimize). Returns the pixel width of the widest line when text wraps to
+ * two or more lines.
  *
  * @param {Element} el - The element whose text content should be measured.
  * @returns {number|null} Width in pixels of the longest visual line,
