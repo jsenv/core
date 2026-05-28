@@ -659,6 +659,7 @@ export const Box = (props) => {
       if (!pseudoStateEl) {
         console.error(
           `pseudoStateSelector "${pseudoStateSelector}" did not match any element inside the box`,
+          boxEl,
         );
       }
       const visualEl = visualSelector

@@ -340,11 +340,10 @@ const renderInput = createComponentResolver([
 ]);
 
 const InputTextualHeadless = (props) => {
-  const [textualControlInterfaceProps, remainingProps] =
-    useInputTextualProps(props);
+  const [inputProps, remainingProps] = useInputTextualProps(props);
   return (
     <BoxForwardedPropsContext.Provider value={undefined}>
-      <RealInput {...textualControlInterfaceProps} {...remainingProps} />
+      <RealInput {...inputProps} {...remainingProps} />
     </BoxForwardedPropsContext.Provider>
   );
 };
@@ -406,6 +405,7 @@ const InputTextualControlInterface = (props) => {
         color="var(--loader-color)"
         inset={-1}
       />
+      <RealInput {...inputProps} />
       {childrenWithContext}
     </Box>
   );
