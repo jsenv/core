@@ -1,24 +1,32 @@
 /**
  * DOM utilities for the proxy control pattern.
  *
- * A proxy is a visible, interactive element that acts on behalf of a hidden
- * real control. The proxy carries `navi-control-proxy-for="<id>"` where `<id>`
- * is the `id` of the real control it represents.
+ * Some components need a native `<input>` internally — for form submission,
+ * constraint validation, or browser autofill — but the user may not want to
+ * display that input at all. In those cases the input is hidden and a separate
+ * visible element (the proxy) takes over the visual and interactive role.
  *
- * This is used when the native input must stay in the DOM for form submission
- * or constraint validation, but cannot be the visible interactive element —
- * e.g. a styled radio/checkbox list item that drives a hidden `<input>`:
+ * The typical use case is `SelectableList`: each list item acts as a styled
+ * radio button, but an actual `<input type="radio">` lives hidden in the DOM
+ * so form submission and validation work natively.  When users DO want to
+ * display the input they want full control over its appearance, so they render
+ * their own element and link it to the real input via `navi-control-proxy-for`:
  *
  * ```html
- * <div>
- *   <input id="color_red" type="radio" name="color" value="red"  /> ← real control (hidden)
- *   <input type="radio" name="proxy" value="red" />                 ← proxy (visible, interactive)
+ *  <div>
+ *   <input id="color_red" type="radio" name="color" value="red"  /> ← real control (hidden, drives form/validation)
+ *   <input type="radio" name="proxy" value="red" />                 ← proxy (visible, delegates interactions to real input)
  * </div>
  * ```
  *
  * When the proxy is interacted with, navi events are forwarded to the real
  * control so validation, state management, and form submission all work
  * through the real input.
+ *
+ * Note: an alternative design would be to require users to always instantiate
+ * the input explicitly — e.g. `<Selectable.Input headless />` when they don't
+ * want to display it. That would remove the need for the proxy mechanism
+ * entirely. For now we keep the proxy pattern.
  */
 
 /**
