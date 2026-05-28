@@ -126,58 +126,10 @@
 
       import { useSignal } from "@preact/signals";
       import { render } from "preact";
-      import { useRef, useState } from "preact/hooks";
-      import {
-        Dialog,
-        Popover,
-        Picker,
-        SelectableList,
-        Selectable,
-      } from "@jsenv/navi";
+      import { Picker, SelectableList, Selectable } from "@jsenv/navi";
       import { windowWidthSignal } from "@jsenv/navi/src/layout/responsive.js";
 
       const OPTIONS = ["Apple", "Banana", "Cherry"];
-
-      // Simplified Picker: reads windowWidthSignal like the real PickerCustom,
-      // renders Dialog (always mounted) or Popover (mounted when open).
-      const SimplePicker = ({ children }) => {
-        const isSmallScreen = windowWidthSignal.value <= 600;
-        const [open, setOpen] = useState(false);
-        const buttonRef = useRef(null);
-        const dialogRef = useRef(null);
-
-        if (isSmallScreen) {
-          return (
-            <>
-              <button
-                ref={buttonRef}
-                onClick={() => {
-                  dialogRef.current.dispatchEvent(
-                    new CustomEvent("navi_request_open", { bubbles: true }),
-                  );
-                }}
-              >
-                Open
-              </button>
-              <Dialog ref={dialogRef} onnavi_close={() => {}}>
-                {children}
-              </Dialog>
-            </>
-          );
-        }
-        return (
-          <>
-            <button ref={buttonRef} onClick={() => setOpen(true)}>
-              Open
-            </button>
-            {open && (
-              <Popover anchor={buttonRef} onnavi_close={() => setOpen(false)}>
-                {children}
-              </Popover>
-            )}
-          </>
-        );
-      };
 
       const App = () => {
         const selectedSignal = useSignal();
