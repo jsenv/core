@@ -7,6 +7,12 @@ export const useCustomValidationRef = (
   { targetSelector, disabled },
 ) => {
   const customValidationRef = useRef();
+  // Capture the call-site stack at render time (outside the layout effect)
+  // so the warning points to the component that called this hook, not Preact internals.
+  const callSiteRef = useRef(null);
+  if (!callSiteRef.current) {
+    callSiteRef.current = new Error("useCustomValidationRef called here").stack;
+  }
 
   useLayoutEffect(() => {
     if (disabled) {
@@ -15,7 +21,8 @@ export const useCustomValidationRef = (
     const element = elementRef.current;
     if (!element) {
       console.warn(
-        "useCustomValidationRef: elementRef.current is null, make sure to pass a ref to an element",
+        `useCustomValidationRef: elementRef.current is null, make sure to pass a ref to an element
+${callSiteRef.current}`,
       );
       /* can happen if the component does this for instance:
       const Component = () => {
