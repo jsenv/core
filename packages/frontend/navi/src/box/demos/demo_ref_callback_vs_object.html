@@ -112,13 +112,11 @@
        * Attempts to reproduce the bug where ref.current is null/undefined
        * inside scrollToItem when the picker dialog is reopened.
        *
-       * Steps to reproduce (try in this order):
-       * 1. Click "Open picker" — list mounts, scroll works
-       * 2. Select an item — note the selection
-       * 3. Close the picker
-       * 4. Click "Simulate re-render" — forces a re-render of everything
-       *    while the dialog is closed (mimics window resize / signal update)
-       * 5. Click "Open picker" again — BUG: scrollToItem may crash
+       * Steps to reproduce:
+       * 1. Resize while closed — simulate re-render while dialog is closed
+       * 2. Open picker + select first item
+       * 3. Close picker
+       * 4. Open picker + select second item → BUG: scrollToItem crashes
        *
        * The list is conditionally rendered (only when dialog is open) and
        * uses a key that changes on each open to force a remount.
@@ -281,26 +279,25 @@
 
             <div className="steps">
               <strong>Steps to reproduce:</strong>
-              1. <b>Open picker</b> → works ✓<br />
-              2. <b>Select an item</b> in the list
+              1. <b>Resize while closed</b> — simulate re-render while dialog is
+              closed
+              <br />
+              2. <b>Open picker</b> + select <b>first item</b>
               <br />
               3. <b>Close picker</b>
               <br />
-              4. <b>Simulate re-render</b> (forces re-render while dialog is
-              closed)
-              <br />
-              5. <b>Open picker again</b> → bug? (check the log)
+              4. <b>Open picker</b> + select <b>second item</b> → BUG?
             </div>
 
             <div className="controls">
+              <button onClick={simulateRerender} disabled={isOpen}>
+                1. Resize while closed #{rerenderCount + 1}
+              </button>
               <button onClick={openPicker} disabled={isOpen}>
-                Open picker (key={openKey + 1})
+                2/4. Open picker (key={openKey + 1})
               </button>
               <button onClick={closePicker} disabled={!isOpen}>
-                Close picker
-              </button>
-              <button onClick={simulateRerender} disabled={isOpen}>
-                Simulate re-render #{rerenderCount + 1}
+                3. Close picker
               </button>
               <button onClick={clearSelection}>Clear selection</button>
               <button onClick={() => setLogs([])}>Clear log</button>
