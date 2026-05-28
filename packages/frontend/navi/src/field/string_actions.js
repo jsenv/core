@@ -109,7 +109,7 @@ const requestClose = (event, { cancel = false } = {}) => {
 };
 /**
  * Clears the value of the closest ancestor field then closes the popup.
- * Combines `update(undefined)` + `close` in one action.
+ * Combines `update('')` + `close` in one action.
  *
  * @example
  * <Button action="clear">Clear</Button>
@@ -117,11 +117,11 @@ const requestClose = (event, { cancel = false } = {}) => {
 const clear = createUICallback({
   name: "clear",
   event: (event) => {
-    update(undefined, { event });
+    update("", { event });
     return requestClose(event);
   },
   action: (v, { event }) => {
-    update(undefined, { event });
+    update("", { event });
     return requestClose(event);
   },
 });
