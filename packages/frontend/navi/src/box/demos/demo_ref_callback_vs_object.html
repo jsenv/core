@@ -127,14 +127,7 @@
       import { useSignal } from "@preact/signals";
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import {
-        Box,
-        Field,
-        Label,
-        Picker,
-        SelectableList,
-        Selectable,
-      } from "@jsenv/navi";
+      import { Box, Picker, SelectableList, Selectable } from "@jsenv/navi";
       import { windowWidthSignal } from "@jsenv/navi/src/layout/responsive.js";
 
       const OPTIONS = [
@@ -159,12 +152,10 @@
 
         const simulateNarrow = () => {
           appendLog(`--- simulate resize: narrow → dialog mode ---`, "warn");
-          // A few values crossing the 600px threshold, spaced one frame apart
-          [1200, 650, 608, 588, 536].forEach((v, i) => {
-            setTimeout(() => {
-              windowWidthSignal.value = v;
-            }, i * 16);
-          });
+          windowWidthSignal.value = 1200;
+          setTimeout(() => {
+            windowWidthSignal.value = 536;
+          }, 16);
         };
 
         // Patch console.debug to capture scrollToItem logs from real list.jsx
@@ -202,39 +193,36 @@
             </div>
 
             <Box flex="y" spacing="m" style={{ marginTop: 16 }}>
-              <Field vertical>
-                <Label>Fruits</Label>
-                <Picker
-                  type="text"
-                  name="repro_picker"
-                  value={selectedArray}
-                  ui={
-                    selectedArray.length === 0
-                      ? "Select fruits"
-                      : selectedArray.join(", ")
-                  }
-                  action={(v) => {
-                    appendLog(`action called: ${JSON.stringify(v)}`, "info");
-                    selectedSignal.value = v;
-                  }}
-                >
-                  <SelectableList multiple action="update">
-                    {OPTIONS.map((opt, i) => (
-                      <Selectable
-                        key={opt}
-                        id={`${opt}_item`}
-                        index={i}
-                        value={opt}
-                        selected={selectedArray.includes(opt)}
-                        padding="s"
-                        spacing="s"
-                      >
-                        {opt}
-                      </Selectable>
-                    ))}
-                  </SelectableList>
-                </Picker>
-              </Field>
+              <Picker
+                type="text"
+                name="repro_picker"
+                value={selectedArray}
+                ui={
+                  selectedArray.length === 0
+                    ? "Select fruits"
+                    : selectedArray.join(", ")
+                }
+                action={(v) => {
+                  appendLog(`action called: ${JSON.stringify(v)}`, "info");
+                  selectedSignal.value = v;
+                }}
+              >
+                <SelectableList multiple action="update">
+                  {OPTIONS.map((opt, i) => (
+                    <Selectable
+                      key={opt}
+                      id={`${opt}_item`}
+                      index={i}
+                      value={opt}
+                      selected={selectedArray.includes(opt)}
+                      padding="s"
+                      spacing="s"
+                    >
+                      {opt}
+                    </Selectable>
+                  ))}
+                </SelectableList>
+              </Picker>
             </Box>
 
             <p style={{ margin: "8px 0", fontSize: "0.85em", color: "#555" }}>
