@@ -126,13 +126,7 @@
 
       import { signal } from "@preact/signals";
       import { render } from "preact";
-      import { forwardRef } from "preact/compat";
-      import {
-        useRef,
-        useState,
-        useCallback,
-        useImperativeHandle,
-      } from "preact/hooks";
+      import { useRef, useState, useCallback } from "preact/hooks";
       import {
         Box,
         Dialog,
@@ -140,8 +134,10 @@
         useDisplayedLayoutEffect,
       } from "@jsenv/navi";
 
-      // ---- Shared state ----
+      // ---- Shared state (module-level signals, like real app) ----
       const selectedIdSignal = signal(null);
+      // Mirrors windowWidthSignal driving isSmallScreen in PickerCustom
+      const modeSignal = signal("popover"); // "popover" | "dialog"
       const ITEMS = [
         { id: "item-1", label: "Apple" },
         { id: "item-2", label: "Banana" },
@@ -162,19 +158,14 @@
       };
 
       // ---- PickerList ----
-      // Mimics SelectableList / useListScrollSync inside the picker popup.
-      // containerRef → outer Box (container), ulRef → inner Box (ul)
+      // Mirrors SelectableList / useListScrollSync inside the picker popup.
+      // containerRef → outer Box (container), ulRef → inner ul Box.
       // useDisplayedLayoutEffect scrolls to selected each time the ancestor opens.
-      const PickerList = ({ instanceId }) => {
+      const PickerList = () => {
         const containerRef = useRef(null);
         const ulRef = useRef(null);
 
         const selectedId = selectedIdSignal.value;
-
-        log(
-          `PickerList[${instanceId}] render — selectedId=${selectedId}`,
-          "info",
-        );
 
         const scrollToItem = useCallback((itemId, reason) => {
           const containerEl = containerRef.current;
@@ -200,22 +191,15 @@
           log(`scrollToItem(${itemId}, "${reason}") OK`, "ok");
         }, []);
 
-        useDisplayedLayoutEffect(
-          containerRef,
-          (el) => {
-            log(
-              `useDisplayedLayoutEffect fired (instanceId=${instanceId})`,
-              "info",
-            );
-            const selected = selectedIdSignal.peek();
-            if (selected) {
-              scrollToItem(selected, "scroll to selected");
-            } else {
-              scrollToItem(ITEMS[0].id, "scroll to top");
-            }
-          },
-          [ulRef],
-        );
+        useDisplayedLayoutEffect(containerRef, () => {
+          log(`useDisplayedLayoutEffect fired`, "info");
+          const selected = selectedIdSignal.peek();
+          if (selected) {
+            scrollToItem(selected, "scroll to selected");
+          } else {
+            scrollToItem(ITEMS[0].id, "scroll to top");
+          }
+        }, [ulRef]);
 
         return (
           <Box ref={containerRef} flex="y" style={{ gap: 0 }}>
@@ -240,43 +224,22 @@
       };
 
       // ---- PickerInsideDialog ----
-      // Mimics PickerContentInsideDialog: Dialog always renders children (list is always mounted).
-      const PickerInsideDialog = forwardRef(({ instanceId, onClose }, ref) => {
-        const dialogRef = useRef(null);
-        useImperativeHandle(ref, () => ({
-          requestOpen: () => {
-            dialogRef.current.dispatchEvent(
-              new CustomEvent("navi_request_open", { bubbles: true }),
-            );
-          },
-        }));
+      // Mirrors PickerContentInsideDialog: Dialog always renders its children.
+      // List is ALWAYS mounted (even when the dialog is closed).
+      // ref passed as regular prop (Preact 11 / React 19 style, no forwardRef).
+      const PickerInsideDialog = ({ ref, onClose }) => {
         return (
-          <Dialog
-            ref={dialogRef}
-            onnavi_open={() => {
-              log(`dialog opened (instanceId=${instanceId})`, "info");
-            }}
-            onnavi_close={onClose}
-          >
+          <Dialog ref={ref} onnavi_close={onClose}>
             <div className="dialog-inner">
-              <div style={{ marginBottom: 8, fontWeight: "bold" }}>
-                Picker — dialog mode ({instanceId})
-              </div>
-              {/* List is ALWAYS mounted (no conditional), matching real Dialog behavior */}
-              <PickerList instanceId={instanceId} />
+              <PickerList />
             </div>
           </Dialog>
         );
-      });
+      };
 
       // ---- PickerInsidePopover ----
-      // Mimics PickerContentInsidePopover: list only mounted when open.
-      const PickerInsidePopover = ({
-        instanceId,
-        isOpen,
-        anchorRef,
-        onClose,
-      }) => {
+      // Mirrors PickerContentInsidePopover: list only mounted when popover is open.
+      const PickerInsidePopover = ({ isOpen, anchorRef, onClose }) => {
         if (!isOpen) {
           return null;
         }
@@ -287,34 +250,47 @@
             style={{ minWidth: 200 }}
           >
             <div className="dialog-inner">
-              <div style={{ marginBottom: 8, fontWeight: "bold" }}>
-                Picker — popover mode ({instanceId})
-              </div>
-              <PickerList instanceId={instanceId} />
+              <PickerList />
             </div>
           </Popover>
         );
       };
 
+      // ---- PickerCustom ----
+      // Mirrors the real PickerCustom component: reads modeSignal (like windowWidthSignal)
+      // and decides whether to render a popover or dialog popup.
+      // Only THIS component re-renders on resize — the App does not.
+      const PickerCustom = ({ isOpen, anchorRef, dialogRef, onClose }) => {
+        const mode = modeSignal.value; // subscribe: only PickerCustom re-renders on mode change
+        if (mode === "dialog") {
+          return <PickerInsideDialog ref={dialogRef} onClose={onClose} />;
+        }
+        return (
+          <PickerInsidePopover
+            isOpen={isOpen}
+            anchorRef={anchorRef}
+            onClose={onClose}
+          />
+        );
+      };
+
       // ---- App ----
+      // Does NOT read modeSignal — does not re-render on resize.
       const App = () => {
         const [logs, setLogs] = useState([]);
         const [isOpen, setIsOpen] = useState(false);
-        const [openCount, setOpenCount] = useState(0);
-        const [mode, setMode] = useState("popover"); // "popover" | "dialog"
         appendLog = (entry) => setLogs((l) => [...l, entry].slice(-40));
 
         const anchorRef = useRef(null);
-        const dialogPickerRef = useRef(null);
+        const dialogRef = useRef(null);
 
         const openPicker = () => {
-          const next = openCount + 1;
-          setOpenCount(next);
           setIsOpen(true);
-          log(`--- openPicker #${next} (mode=${mode}) ---`, "info");
-          if (mode === "dialog") {
-            // Ask the Dialog component to open via its event API
-            dialogPickerRef.current.requestOpen();
+          log(`--- openPicker (mode=${modeSignal.peek()}) ---`, "info");
+          if (modeSignal.peek() === "dialog") {
+            dialogRef.current.dispatchEvent(
+              new CustomEvent("navi_request_open", { bubbles: true }),
+            );
           }
         };
 
@@ -324,8 +300,8 @@
         };
 
         const toggleMode = () => {
-          const next = mode === "popover" ? "dialog" : "popover";
-          setMode(next);
+          const next = modeSignal.peek() === "popover" ? "dialog" : "popover";
+          modeSignal.value = next; // triggers PickerCustom re-render only
           log(`--- resize: switched to ${next} mode ---`, "warn");
         };
 
@@ -350,10 +326,10 @@
 
             <div className="controls">
               <button onClick={toggleMode} disabled={isOpen}>
-                2. Resize (currently: {mode})
+                2. Resize (currently: {modeSignal.value})
               </button>
               <button ref={anchorRef} onClick={openPicker} disabled={isOpen}>
-                3/6. Open picker (open #{openCount + 1})
+                3/6. Open picker
               </button>
             </div>
 
@@ -364,28 +340,16 @@
                 color: "#555",
               }}
             >
-              Selected: {selectedIdSignal.value ?? "(none)"} · Mode: {mode} ·
-              Picker: {isOpen ? "open" : "closed"}
+              Selected: {selectedIdSignal.value ?? "(none)"} · Picker:{" "}
+              {isOpen ? "open" : "closed"}
             </p>
 
-            {/* Each mode renders a completely different component tree, matching the real app.
-                The key on each ensures Preact unmounts/remounts the popup tree on mode switch. */}
-            {mode === "dialog" ? (
-              <PickerInsideDialog
-                key="dialog"
-                instanceId="dialog"
-                onClose={closePicker}
-                ref={dialogPickerRef}
-              />
-            ) : (
-              <PickerInsidePopover
-                key="popover"
-                instanceId={`popover-open${openCount}`}
-                isOpen={isOpen}
-                anchorRef={anchorRef}
-                onClose={closePicker}
-              />
-            )}
+            <PickerCustom
+              isOpen={isOpen}
+              anchorRef={anchorRef}
+              dialogRef={dialogRef}
+              onClose={closePicker}
+            />
 
             <div id="log">
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
