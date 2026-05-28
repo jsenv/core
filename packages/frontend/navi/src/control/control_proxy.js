@@ -10,12 +10,10 @@
  * e.g. a styled radio/checkbox list item that drives a hidden `<input>`:
  *
  * ```html
- * <input id="color_red"                     ← real control (hidden)
- *        type="radio" name="color" value="red" />
- *
- * <li navi-control-proxy-for="color_red">   ← proxy (visible, interactive)
- *   Red
- * </li>
+ * <div>
+ *   <input id="color_red" type="radio" name="color" value="red"  /> ← real control (hidden)
+ *   <input type="radio" name="proxy" value="red" />                 ← proxy (visible, interactive)
+ * </div>
  * ```
  *
  * When the proxy is interacted with, navi events are forwarded to the real
