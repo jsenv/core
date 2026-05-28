@@ -180,8 +180,8 @@
       };
 
       const App = () => {
-        const selectedSignal = useSignal([]);
-        const selectedArray = selectedSignal.value;
+        const selectedSignal = useSignal();
+        const selectedValue = selectedSignal.value;
 
         const simulateNarrow = () => {
           windowWidthSignal.value = 1200;
@@ -200,19 +200,18 @@
             <Picker
               type="text"
               name="repro_picker"
-              value={selectedArray}
+              value={selectedValue}
               action={(v) => {
                 selectedSignal.value = v;
               }}
             >
-              <SelectableList multiple action="update">
+              <SelectableList action="update">
                 {OPTIONS.map((opt, i) => (
                   <Selectable
                     key={opt}
                     id={`${opt}_item`}
                     index={i}
                     value={opt}
-                    selected={selectedArray.includes(opt)}
                   >
                     {opt}
                   </Selectable>
