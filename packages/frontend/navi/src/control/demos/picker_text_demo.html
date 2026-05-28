@@ -64,6 +64,7 @@
         <Box flex="y" spacing="l">
           <BasicDemo />
           <WithActionDemo />
+          <ReadonlyDemo />
         </Box>
       );
 
@@ -200,6 +201,26 @@
                 ))
               )}
             </p>
+          </div>
+        );
+      };
+
+      // ── 3. Readonly ───────────────────────────────────────────────────────
+
+      const ReadonlyDemo = () => {
+        return (
+          <div class="demo-section">
+            <h2>3. Readonly</h2>
+            <p>A readonly text picker cannot be opened.</p>
+            <Field vertical>
+              <Label>Name</Label>
+              <Picker
+                type="text"
+                name="text_readonly"
+                value="John Doe"
+                readOnly
+              />
+            </Field>
           </div>
         );
       };
