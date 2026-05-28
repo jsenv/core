@@ -127,24 +127,16 @@
       import { useSignal } from "@preact/signals";
       import { render } from "preact";
       import { useId, useRef } from "preact/hooks";
-      import { createContext } from "preact";
       import { Picker } from "@jsenv/navi";
       import { Box } from "@jsenv/navi/src/box/box.jsx";
       import { Field } from "@jsenv/navi/src/control/field.jsx";
       import { useControlgroupProps } from "@jsenv/navi/src/control/control_hooks.jsx";
       import { useCheckableProps } from "@jsenv/navi/src/control/input/use_checkable_props.js";
       import { dispatchRequestAction } from "@jsenv/navi/src/control/validation/custom_constraint_validation.js";
-      import {
-        dispatchCustomEvent,
-        dispatchPublicCustomEvent,
-      } from "@jsenv/dom";
       import { List, ListItem } from "@jsenv/navi/src/control/list/list.jsx";
-      import { useFocusGroup } from "@jsenv/navi/src/utils/focus/use_focus_group.js";
       import { windowWidthSignal } from "@jsenv/navi/src/layout/responsive.js";
 
       const OPTIONS = ["Apple", "Banana", "Cherry"];
-
-      const SelectableListMultipleContext = createContext(false);
 
       // Minimal SelectableList: calls useControlgroupProps (the real one) and
       // renders a real <List> (which creates the .navi_list_container used by
@@ -166,65 +158,13 @@
             return undefined;
           },
         });
-        useFocusGroup(listControlProps.ref, {
-          ySelector: "[navi-selectable-real-input]",
-        });
-        const listVnode = (
+        return (
           <List
             as="fieldset"
-            navi-has-selected-background=""
             {...listControlProps}
             {...remainingProps}
             name={undefined}
-            onnavi_list_nav={(e) => {
-              const { item, event } = e.detail;
-              const isAutomaticNav =
-                event.type === "navi_list_nav_top_on_displayed" ||
-                event.type === "navi_list_top_match_change" ||
-                event.type === "navi_scroll_restore";
-              if (item && !isAutomaticNav) {
-                dispatchPublicCustomEvent(
-                  e.currentTarget,
-                  "navi_list_item_point",
-                  { item, event },
-                );
-              }
-            }}
-            onnavi_list_request_nav={(e) => {
-              const { item } = e.detail;
-              if (!item) {
-                return;
-              }
-              dispatchCustomEvent(e.currentTarget, "navi_list_request_scroll", {
-                event: e,
-                item,
-              });
-            }}
-            onnavi_list_request_select={(e) => {
-              const { item } = e.detail;
-              if (!item) {
-                return;
-              }
-              const listEl = e.currentTarget;
-              dispatchCustomEvent(listEl, "navi_list_request_nav", {
-                event: e,
-                item,
-              });
-              dispatchPublicCustomEvent(listEl, "navi_list_select", {
-                item,
-                event: e,
-              });
-              const requester = item
-                ? listEl.querySelector(`#${CSS.escape(item.id)}`)
-                : e.target;
-              dispatchRequestAction(listEl, { event: e, requester });
-            }}
           />
-        );
-        return (
-          <SelectableListMultipleContext.Provider value={false}>
-            {listVnode}
-          </SelectableListMultipleContext.Provider>
         );
       };
 
