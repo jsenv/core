@@ -182,48 +182,47 @@
 
           {/* 3. Single-line overflow → ellipsis */}
           <div class="demo-section">
-            <h2>3. Single-line overflow → ellipsis</h2>
+            <h2>3. singleLine — ellipsis on overflow</h2>
             <p>
-              When text is forced onto one line (via{" "}
-              <code>white-space: nowrap</code> on the content, or because it is
-              a long unbreakable string) and <code>maxHeight</code> is smaller
-              than the line height, the component adds{" "}
-              <code>text-overflow: ellipsis</code> automatically.
+              <code>singleLine</code> forces the text onto one line and adds{" "}
+              <code>text-overflow: ellipsis</code>. The browser shows{" "}
+              <code>…</code> automatically when the text overflows.
             </p>
             <div class="row">
               <div>
-                <div class="label">Unbreakable URL, no maxHeight</div>
+                <div class="label">Short text — no overflow</div>
                 <TextBox
                   padding="s"
                   spacing="s"
                   iconAfter={<EditSvg />}
+                  singleLine
+                  style="max-width: 260px"
+                >
+                  Hello world
+                </TextBox>
+              </div>
+              <div>
+                <div class="label">Unbreakable URL — ellipsis</div>
+                <TextBox
+                  padding="s"
+                  spacing="s"
+                  iconAfter={<EditSvg />}
+                  singleLine
                   style="max-width: 260px"
                 >
                   https://very-long-domain-name.example.com/some/deeply/nested/path/to/a/resource
                 </TextBox>
               </div>
               <div>
-                <div class="label">Same URL + maxHeight="1.5em" → ellipsis</div>
+                <div class="label">Wrapping sentence — forced single line</div>
                 <TextBox
                   padding="s"
                   spacing="s"
                   iconAfter={<EditSvg />}
-                  maxHeight="1.5em"
+                  singleLine
                   style="max-width: 260px"
                 >
-                  https://very-long-domain-name.example.com/some/deeply/nested/path/to/a/resource
-                </TextBox>
-              </div>
-              <div>
-                <div class="label">white-space: nowrap + maxHeight="1.5em"</div>
-                <TextBox
-                  padding="s"
-                  spacing="s"
-                  iconAfter={<EditSvg />}
-                  maxHeight="1.5em"
-                  style="max-width: 260px; white-space: nowrap"
-                >
-                  This sentence would normally wrap but nowrap forces one line
+                  This sentence would normally wrap but singleLine forces one line
                 </TextBox>
               </div>
             </div>

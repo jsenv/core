@@ -16,13 +16,14 @@ const css = /* css */ `
     white-space: normal;
     word-break: break-word;
     overflow-wrap: anywhere;
+  }
 
-    /* When a single unbreakable line overflows, show ellipsis */
-    &[data-overflow-ellipsis] {
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      overflow: hidden;
-    }
+  .navi_text_box[data-single-line] .navi_text_box_content {
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    word-break: normal;
+    overflow: hidden;
+    overflow-wrap: normal;
   }
 `;
 
@@ -39,7 +40,14 @@ const css = /* css */ `
  *   maxHeight  — CSS max-height string; when set, content that cannot wrap gets ellipsis
  *   children   — the text content
  */
-export const TextBox = ({ iconBefore, iconAfter, children, ...rest }) => {
+export const TextBox = ({
+  iconBefore,
+  iconAfter,
+  maxHeight,
+  singleLine,
+  children,
+  ...rest
+}) => {
   import.meta.css = css;
   const boxRef = useRef(null);
   const contentRef = useRef(null);
@@ -50,11 +58,27 @@ export const TextBox = ({ iconBefore, iconAfter, children, ...rest }) => {
     if (!boxEl || !contentEl) {
       return;
     }
-    adjustWidth(boxEl, contentEl);
+    if (maxHeight) {
+      boxEl.style.maxHeight = maxHeight;
+      boxEl.style.overflow = "hidden";
+    } else {
+      boxEl.style.maxHeight = "";
+      boxEl.style.overflow = "";
+    }
+    if (!singleLine) {
+      adjustWidth(boxEl, contentEl);
+    }
   });
 
   return (
-    <Box ref={boxRef} flex inline {...rest} baseClassName="navi_text_box">
+    <Box
+      ref={boxRef}
+      flex
+      inline
+      {...rest}
+      baseClassName="navi_text_box"
+      data-single-line={singleLine ? "" : undefined}
+    >
       {iconBefore}
       <span ref={contentRef} className="navi_text_box_content">
         {children}
