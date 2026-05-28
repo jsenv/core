@@ -16,7 +16,7 @@ import {
 } from "@jsenv/dom";
 import { isValidElement } from "preact";
 
-import { findControlHost } from "../../control_dom.js";
+import { findControlHost, getControlRoot } from "../../control_dom.js";
 import { renderIntoCallout } from "./callout.jsx";
 
 /**
@@ -478,12 +478,9 @@ export const openCallout = (
         anchorElement = proxyElement;
       }
     }
-    const renderedBy = anchorElement.getAttribute("navi-control-owner");
-    if (renderedBy) {
-      const renderedByElement = anchorElement.closest(renderedBy);
-      if (renderedByElement) {
-        anchorElement = renderedByElement;
-      }
+    const controlRoot = getControlRoot(anchorElement);
+    if (controlRoot) {
+      anchorElement = controlRoot;
     }
     const anchorVisuallyVisibleInfo = getVisuallyVisibleInfo(anchorElement, {
       countOffscreenAsVisible: true,
@@ -821,7 +818,7 @@ const stickCalloutToAnchor = (
   { debug, originalAnchorElement = anchorElement },
 ) => {
   // Read an attribute from the original anchor first, then the visual anchor.
-  // The visual anchor may differ from the original when navi-control-owner redirects
+  // The visual anchor may differ from the original when navi-control-root redirects
   // the anchor to a wrapper element that doesn't carry the data-callout-* attributes.
   const getAnchorAttribute = (name) => {
     return (

@@ -404,7 +404,7 @@ const RealInputCheckbox = (props) => {
       as="input"
       type="checkbox"
       baseClassName="navi_control_input"
-      navi-control-owner=".navi_checkbox"
+      navi-control-root=".navi_checkbox"
       data-callout-arrow-x="center"
     />
   );

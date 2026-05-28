@@ -1,4 +1,36 @@
 /**
+ * DOM utilities for navigating the control element hierarchy.
+ *
+ * A control is a self-contained interactive widget. Its DOM structure can be
+ * either flat (host only) or layered (wrapper + host):
+ *
+ * Flat — the element is both the root and the host:
+ * ```html
+ * <button navi-control data-action="submit">Click me</button>
+ * ```
+ *
+ * Layered — a visual wrapper surrounds a native input that is the real host:
+ * ```html
+ * <span
+ *   navi-control                           ← wrapper: root of the control's DOM subtree
+ *   navi-control-host=".navi_input"        ← points to the inner host element
+ *   data-action="submit"
+ * >
+ *   <input
+ *     class="navi_input"                  ← host: holds controlProps, value, UI state, constraints
+ *     navi-control-root="[navi-control]"  ← points back to the wrapper (its root)
+ *   />
+ * </span>
+ * ```
+ *
+ * Attribute roles:
+ *  - `navi-control`             boolean, always on the wrapper/root; marks the control boundary
+ *  - `navi-control-host`        on the wrapper; CSS selector that identifies the inner host element
+ *  - `navi-control-root`        on the host; CSS selector that identifies the wrapper it belongs to
+ *  - `navi-control-proxy-for`   on a proxy element; id of the real control it forwards events to
+ */
+
+/**
  * Returns the nearest ancestor of `el` (exclusive) that has a `[data-action]`
  * attribute.
  *
@@ -61,30 +93,29 @@ export const findControlHost = (el) => {
 };
 
 /**
- * Returns the closest parent control element of `el`.
+ * Returns the closest ancestor control element of `el` — i.e. the nearest
+ * `[navi-control]` element that is not the control `el` belongs to.
  *
- * When `el` has `navi-control-owner` it is a custom UI element rendered in
- * place of the real input. We first jump to its owner wrapper, then walk up
- * from there so we skip the control that owns this input and reach a true
- * ancestor control.
+ * `navi-control` is always on the **wrapper** (the root of a control's DOM
+ * subtree), never on the host (the inner element that holds `controlProps`).
+ * That means a plain `el.closest("[navi-control]")` from the host would return
+ * the host's own wrapper, not a true ancestor control.
  *
- * HTML structure:
+ * When `el` carries `navi-control-root` it is a host element nested inside a
+ * wrapper; the attribute value is a CSS selector that identifies that wrapper.
+ * We jump to the wrapper first, then walk up from there:
+ *
  * ```html
- * <button navi-control>                              ← outer control (e.g. a Picker button)
- *   <span navi-control navi-control-host="input">   ← inner control wrapper
- *     <input navi-control-owner="[navi-control]" />  ← control input (el), owned by the inner span
+ * <button navi-control>                                   ← outer control  (returned)
+ *   <span navi-control navi-control-host="input">         ← inner wrapper  (skipped)
+ *     <input navi-control-root="[navi-control]" />        ← el (host)
  *   </span>
  * </button>
  * ```
- *
- * Cannot simply use `el.closest("[navi-control]")` because when `el` is
- * the control input itself it already sits *inside* the control wrapper — a
- * plain `closest` would return the wrapper the input belongs to, not an
- * ancestor control.
  */
 export const getParentControl = (el) => {
   let ancestor;
-  const renderedBy = el.getAttribute("navi-control-owner");
+  const renderedBy = el.getAttribute("navi-control-root");
   if (renderedBy) {
     ancestor = el.closest(renderedBy).parentNode;
   } else {
@@ -92,4 +123,19 @@ export const getParentControl = (el) => {
   }
   const closestControl = ancestor.closest("[navi-control]");
   return closestControl;
+};
+
+/**
+ * When `el` is a host nested inside a wrapper, returns the wrapper element.
+ * Otherwise returns `null`.
+ *
+ * Useful when the visual anchor for a callout or tooltip should be the
+ * control's visible root rather than the inner host element.
+ */
+export const getControlRoot = (el) => {
+  const rootSelector = el.getAttribute("navi-control-root");
+  if (!rootSelector) {
+    return null;
+  }
+  return el.closest(rootSelector);
 };

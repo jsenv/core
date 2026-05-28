@@ -822,7 +822,7 @@ export const installCustomConstraintValidation = (
     // The listener is registered when the callout opens and removed when it closes,
     // so it can never accidentally close the next callout.
     const interactionTarget = (() => {
-      const renderedBy = element.getAttribute("navi-control-owner");
+      const renderedBy = element.getAttribute("navi-control-root");
       if (renderedBy) {
         return element.closest(renderedBy) || element;
       }

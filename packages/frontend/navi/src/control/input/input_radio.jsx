@@ -454,7 +454,7 @@ const RealInputRadio = (props) => {
       {...props}
       as="input"
       baseClassName="navi_control_input"
-      navi-control-owner=".navi_radio"
+      navi-control-root=".navi_radio"
       data-callout-arrow-x="center"
     />
   );

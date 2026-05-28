@@ -313,7 +313,7 @@ const PickerInput = (props) => {
   return (
     <Box
       as="input"
-      navi-control-owner=".navi_picker"
+      navi-control-root=".navi_picker"
       {...props}
       value={toInputValue(props.value)}
       className="navi_picker_input"

@@ -407,7 +407,7 @@ const InputTextualControlInterface = (props) => {
         color="var(--loader-color)"
         inset={-1}
       />
-      <RealInput navi-control-owner=".navi_input" {...inputProps} />
+      <RealInput navi-control-root=".navi_input" {...inputProps} />
       {childrenWithContext}
     </Box>
   );
