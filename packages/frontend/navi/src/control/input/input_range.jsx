@@ -3,7 +3,7 @@ import { useContext, useLayoutEffect, useRef } from "preact/hooks";
 import { Box, BoxForwardedPropsContext } from "../../box/box.jsx";
 import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
 import { useAccentColorAttributes } from "../../utils/use_accent_color_attributes.js";
-import { useControlInterfaceProps } from "../control_hooks.jsx";
+import { useControlProps } from "../control_hooks.jsx";
 
 const css = /* css */ `
   @layer navi {
@@ -260,7 +260,7 @@ const InputRangeFieldInterface = (props) => {
     const ratio = (inputValue - input.min) / (input.max - input.min);
     input.parentNode.style.setProperty("--x-fill-ratio", ratio);
   };
-  const [rangeProps, remainingProps] = useControlInterfaceProps(props, {
+  const [rangeProps, remainingProps] = useControlProps(props, {
     primaryInteractionMode: "pointer",
     controlType: "input_range",
     statePropName: "value",

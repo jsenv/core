@@ -19,7 +19,7 @@ import { Box } from "@jsenv/navi/src/box/box.jsx";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { useFocusGroup } from "@jsenv/navi/src/utils/focus/use_focus_group.js";
 import { ControlToInterfaceContext } from "../control_context.js";
-import { useControlgroupInterfaceProps } from "../control_hooks.jsx";
+import { useControlgroupProps } from "../control_hooks.jsx";
 import { Field } from "../field.jsx";
 import { Input } from "../input/input.jsx";
 import { useCheckableProps } from "../input/use_checkable_props.js";
@@ -166,36 +166,33 @@ export const SelectableList = (props) => {
     focusGroupDirection,
     focusGroupWrap,
   } = props;
-  const [listFieldProps, remainingProps] = useControlgroupInterfaceProps(
-    props,
-    {
-      controlType: multiple ? "checkbox_group" : "radio_group",
-      childComponentType: multiple ? "checkbox" : "radio",
-      aggregateChildStates: multiple
-        ? (childUIStateControllers) => {
-            const values = [];
-            for (const childUIStateController of childUIStateControllers) {
-              if (childUIStateController.uiState) {
-                values.push(childUIStateController.uiState);
-              }
+  const [listControlProps, remainingProps] = useControlgroupProps(props, {
+    controlType: multiple ? "checkbox_group" : "radio_group",
+    childComponentType: multiple ? "checkbox" : "radio",
+    aggregateChildStates: multiple
+      ? (childUIStateControllers) => {
+          const values = [];
+          for (const childUIStateController of childUIStateControllers) {
+            if (childUIStateController.uiState) {
+              values.push(childUIStateController.uiState);
             }
-            // Return a stable empty-array reference when nothing is selected so
-            // the action always receives an array (never undefined) and signal
-            // comparisons don't see a new reference on every render.
-            return values.length === 0 ? EMPTY_SELECTION : values;
           }
-        : (childUIStateControllers) => {
-            let activeValue;
-            for (const childUIStateController of childUIStateControllers) {
-              if (childUIStateController.uiState) {
-                activeValue = childUIStateController.uiState;
-                break;
-              }
+          // Return a stable empty-array reference when nothing is selected so
+          // the action always receives an array (never undefined) and signal
+          // comparisons don't see a new reference on every render.
+          return values.length === 0 ? EMPTY_SELECTION : values;
+        }
+      : (childUIStateControllers) => {
+          let activeValue;
+          for (const childUIStateController of childUIStateControllers) {
+            if (childUIStateController.uiState) {
+              activeValue = childUIStateController.uiState;
+              break;
             }
-            return activeValue;
-          },
-    },
-  );
+          }
+          return activeValue;
+        },
+  });
   useFocusGroup(ref, {
     direction: focusGroupDirection,
     wrap: focusGroupWrap,

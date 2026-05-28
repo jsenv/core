@@ -4,7 +4,7 @@ import { useId, useRef } from "preact/hooks";
 
 import { Box } from "../../box/box.jsx";
 import { useFocusGroup } from "../../utils/focus/use_focus_group.js";
-import { useControlgroupInterfaceProps } from "../control_hooks.jsx";
+import { useControlgroupProps } from "../control_hooks.jsx";
 import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
 
 const css = /* css */ `
@@ -30,7 +30,7 @@ export const CheckboxGroup = (props) => {
 const CheckboxGroupInterface = (props) => {
   import.meta.css = css;
   const { ref, name } = props;
-  const [checkboxGroupProps, remainingProps] = useControlgroupInterfaceProps(
+  const [checkboxGroupProps, remainingProps] = useControlgroupProps(
     {
       resetOnCancel: true,
       resetOnAbort: true,

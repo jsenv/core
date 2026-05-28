@@ -17,7 +17,7 @@ import { dispatchInternalCustomEvent } from "@jsenv/dom";
 import { useMemo, useRef } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
-import { useControlgroupInterfaceProps } from "./control_hooks.jsx";
+import { useControlgroupProps } from "./control_hooks.jsx";
 import { FormContext } from "./form_context.js";
 import { dispatchRequestResetUIState } from "./ui_state_controller.js";
 
@@ -31,7 +31,7 @@ export const Form = (props) => {
 
 const FormControl = (props) => {
   const { ref, method = "GET" } = props;
-  const [formProps, remainingProps] = useControlgroupInterfaceProps(props, {
+  const [formProps, remainingProps] = useControlgroupProps(props, {
     controlType: "form",
     childComponentType: "*",
     aggregateChildStates: (childUIStateControllers) => {

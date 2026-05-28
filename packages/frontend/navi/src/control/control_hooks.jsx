@@ -81,7 +81,7 @@ import { useConstraints } from "./validation/hooks/use_constraints.js";
  *
  * @returns {Object} Props to spread onto the field's root/input element
  */
-export const useControlInterfaceProps = (
+export const useControlProps = (
   props,
   {
     primaryInteractionMode, // "pointer", "keyboard"
@@ -129,7 +129,7 @@ export const useControlInterfaceProps = (
     paramsSignal,
   );
   const boundAction = externalBoundAction || internalBoundAction;
-  const [fieldProps, remainingProps] = useActionProps(props, {
+  const [controlProps, remainingProps] = useInteractiveProps(props, {
     readOnlySupported,
     boundAction,
     uiStateController,
@@ -256,7 +256,7 @@ export const useControlInterfaceProps = (
       [actionInteraction, actionAfterChange, actionDebounce],
     );
     const refComposed = useComposeElementRef(refCallback, ref);
-    Object.assign(fieldProps, {
+    Object.assign(controlProps, {
       ref: refComposed,
       onMouseDown,
       onClick,
@@ -266,7 +266,7 @@ export const useControlInterfaceProps = (
     });
   }
 
-  return [fieldProps, remainingProps];
+  return [controlProps, remainingProps];
 };
 
 /**
@@ -284,7 +284,7 @@ export const useControlInterfaceProps = (
  * @param {{ controlType: string, childComponentType: string, aggregateChildStates: Function }} config
  * @returns {Object} Props to spread onto the group's root element
  */
-export const useControlgroupInterfaceProps = (
+export const useControlgroupProps = (
   props,
   { controlType, childComponentType, aggregateChildStates },
 ) => {
@@ -300,7 +300,7 @@ export const useControlgroupInterfaceProps = (
     uiGroupStateController.uiStateSignal,
   );
   const [actionRequester, setActionRequester] = useState();
-  const [actionProps, remainingProps] = useActionProps(props, {
+  const [actionProps, remainingProps] = useInteractiveProps(props, {
     boundAction,
     uiStateController: uiGroupStateController,
     getUIValue: () => {
@@ -351,7 +351,7 @@ export const useControlgroupInterfaceProps = (
   ];
 };
 
-const fieldPropSet = new Set([
+const controlPropSet = new Set([
   "ref",
   "action",
   "actionAfterChange",
@@ -394,15 +394,15 @@ const fieldPropSet = new Set([
   "resetOnError",
 ]);
 
-const useActionProps = (
+const useInteractiveProps = (
   props,
   { readOnlySupported, boundAction, uiStateController, getUIValue },
 ) => {
-  const fieldProps = {};
+  const controlProps = {};
   let remainingProps = {};
   const propKeySet = new Set(Object.keys(props));
   for (const key of propKeySet) {
-    if (fieldPropSet.has(key)) {
+    if (controlPropSet.has(key)) {
     } else {
       remainingProps[key] = props[key];
     }
@@ -421,7 +421,7 @@ const useActionProps = (
   const debugFocus = useDebugFocus();
 
   const { ref } = props;
-  Object.assign(fieldProps, { ref });
+  Object.assign(controlProps, { ref });
 
   autofocus: {
     const { autoFocus, autoFocusVisible, autoSelect } = props;
@@ -429,7 +429,7 @@ const useActionProps = (
       focusVisible: autoFocusVisible,
       autoSelect,
     });
-    Object.assign(fieldProps, {
+    Object.assign(controlProps, {
       "navi-autofocus": autoFocus ? "" : undefined,
     });
   }
@@ -457,7 +457,7 @@ const useActionProps = (
       controlReadOnly ||
       loadingResolved ||
       uiStateController.readOnly;
-    Object.assign(fieldProps, {
+    Object.assign(controlProps, {
       "id": idResolved,
       "navi-control-proxy-for": naviProxyFor,
       "name": nameResolved,
@@ -473,9 +473,9 @@ const useActionProps = (
       },
     });
     if (readOnlySupported) {
-      fieldProps.readOnly = readOnlyResolved;
+      controlProps.readOnly = readOnlyResolved;
     } else {
-      fieldProps["aria-readonly"] = readOnlyResolved;
+      controlProps["aria-readonly"] = readOnlyResolved;
     }
     // infom any <Field> parent of our readOnly state + that we are interactive
     useLayoutEffect(() => {
@@ -486,13 +486,13 @@ const useActionProps = (
       }
     }, [controlToInterfaceContext, disabledResolved, readOnlyResolved]);
 
-    const { constraints } = fieldProps;
+    const { constraints } = controlProps;
     useConstraints(ref, constraints);
     remainingProps = useConstraintMessages(ref, remainingProps);
   }
   ui_state_and_value: {
     const uiState = uiStateController.uiStateSignal.value;
-    Object.assign(fieldProps, {
+    Object.assign(controlProps, {
       // for some input navi-ui-state differs (like color where ui-state would be "" while value would be "#000000")
       "navi-ui-state": uiState,
       "onnavi_request_reset_ui_state": (e) => {
@@ -512,10 +512,10 @@ const useActionProps = (
     const { statePropName } = uiStateController;
     if (statePropName) {
       const statePropValueRaw = uiStateController.getPropFromState(uiState);
-      fieldProps[statePropName] = statePropValueRaw;
+      controlProps[statePropName] = statePropValueRaw;
       if (statePropName === "checked") {
         const { value } = props;
-        fieldProps.value = value;
+        controlProps.value = value;
       }
     }
   }
@@ -539,7 +539,7 @@ const useActionProps = (
         </MessagePropsRefContext.Provider>
       );
     }
-    Object.assign(fieldProps, {
+    Object.assign(controlProps, {
       children: childrenWithContext,
     });
   }
@@ -549,7 +549,7 @@ const useActionProps = (
       errorEffect: actionErrorEffect,
       errorMapping,
     });
-    Object.assign(fieldProps, {
+    Object.assign(controlProps, {
       "data-action":
         action === undefined
           ? undefined
@@ -571,7 +571,7 @@ const useActionProps = (
       resetOnAbort,
       resetOnError,
     } = props;
-    Object.assign(fieldProps, {
+    Object.assign(controlProps, {
       onnavi_request_interaction: (e) => {
         transfer_focus_to_target: {
           const naviProxyTarget = getNaviProxyTarget(e);
@@ -720,7 +720,7 @@ const useActionProps = (
     });
   }
 
-  return [fieldProps, remainingProps];
+  return [controlProps, remainingProps];
 };
 
 const getNaviProxyTarget = (event) => {

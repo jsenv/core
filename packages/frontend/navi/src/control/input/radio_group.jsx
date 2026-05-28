@@ -2,7 +2,7 @@ import { useId, useRef } from "preact/hooks";
 
 import { Box } from "../../box/box.jsx";
 import { useFocusGroup } from "../../utils/focus/use_focus_group.js";
-import { useControlgroupInterfaceProps } from "../control_hooks.jsx";
+import { useControlgroupProps } from "../control_hooks.jsx";
 import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
 
 const css = /* css */ `
@@ -28,7 +28,7 @@ export const RadioGroup = (props) => {
 const RadioGroupInterface = (props) => {
   import.meta.css = css;
   const { ref, name } = props;
-  const [radioGroupProps, remainingProps] = useControlgroupInterfaceProps(
+  const [radioGroupProps, remainingProps] = useControlgroupProps(
     {
       resetOnCancel: true,
       resetOnAbort: true,

@@ -6,7 +6,7 @@ import { Box } from "../../box/box.jsx";
 import { useKeyboardShortcuts } from "../../keyboard/keyboard_shortcuts.js";
 import { useFocusGroup } from "../../utils/focus/use_focus_group.js";
 import { ActionContext } from "../control_context.js";
-import { useControlInterfaceProps } from "../control_hooks.jsx";
+import { useControlProps } from "../control_hooks.jsx";
 import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
 import { SummaryMarker } from "./summary_marker.jsx";
 
@@ -70,7 +70,7 @@ const DetailsField = (props) => {
     closeKeyShortcut = "ArrowLeft",
     onToggle,
   } = props;
-  const controlInterfaceProps = useControlInterfaceProps(
+  const [detailsProps, remainingProps] = useControlProps(
     {
       resetOnCancel: true,
       resetOnAbort: true,
@@ -95,7 +95,7 @@ const DetailsField = (props) => {
       persists,
     },
   );
-  const { value, children } = controlInterfaceProps;
+  const { value, children } = detailsProps;
   const open = Boolean(value);
 
   useFocusGroup(ref, {
@@ -178,7 +178,8 @@ const DetailsField = (props) => {
   return (
     <Box
       as="details"
-      {...controlInterfaceProps}
+      {...detailsProps}
+      {...remainingProps}
       baseClassName="navi_details"
       onToggle={(e) => {
         onToggle?.(e);

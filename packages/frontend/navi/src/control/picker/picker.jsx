@@ -5,7 +5,7 @@ import { ChevronDownSvg } from "@jsenv/navi/src/graphic/icons/chevron_updown_svg
 import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.jsx";
 import { createComponentResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
-import { useControlInterfaceProps } from "../control_hooks.jsx";
+import { useControlProps } from "../control_hooks.jsx";
 import { getFromInputValue, getToInputValue } from "../input/input_textual.jsx";
 import { PickerContext, PickerElementContext } from "./picker_context.jsx";
 import { PickerPlaceholder } from "./picker_placeholder.jsx";
@@ -232,7 +232,7 @@ const PickerButton = (props) => {
   const { ref, type, icon, placeholder, ui } = props;
   const inputRef = useRef(null);
   const fromInputValue = getFromInputValue(type);
-  const [inputProps, pickerRemainingProps] = useControlInterfaceProps(
+  const [inputProps, pickerRemainingProps] = useControlProps(
     {
       ...props,
       ref: inputRef,
