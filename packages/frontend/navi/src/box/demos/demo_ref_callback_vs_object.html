@@ -127,18 +127,10 @@
       import { useSignal } from "@preact/signals";
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import { Box, Picker, SelectableList, Selectable } from "@jsenv/navi";
+      import { Picker, SelectableList, Selectable } from "@jsenv/navi";
       import { windowWidthSignal } from "@jsenv/navi/src/layout/responsive.js";
 
-      const OPTIONS = [
-        "Apple",
-        "Banana",
-        "Cherry",
-        "Date",
-        "Elderberry",
-        "Fig",
-        "Grape",
-      ];
+      const OPTIONS = ["Apple", "Banana", "Cherry"];
 
       // ---- App ----
       const App = () => {
@@ -146,7 +138,7 @@
         const selectedArray = selectedSignal.value;
         const [logs, setLogs] = useState([]);
         const appendLog = (text, kind = "info") => {
-          console.debug(`[demo] ${text}`);
+          console.debug(`[demo] [${kind}] ${text}`);
           setLogs((l) => [...l, { text, kind }].slice(-40));
         };
 
@@ -156,19 +148,6 @@
           setTimeout(() => {
             windowWidthSignal.value = 536;
           }, 16);
-        };
-
-        // Patch console.debug to capture scrollToItem logs from real list.jsx
-        const origDebug = console.debug;
-        console.debug = (...args) => {
-          origDebug(...args);
-          const msg = args.join(" ");
-          if (msg.includes("scroll")) {
-            appendLog(
-              msg,
-              msg.includes("null") || msg.includes("undefined") ? "bug" : "ok",
-            );
-          }
         };
 
         return (
@@ -192,62 +171,33 @@
               </button>
             </div>
 
-            <Box flex="y" spacing="m" style={{ marginTop: 16 }}>
-              <Picker
-                type="text"
-                name="repro_picker"
-                value={selectedArray}
-                ui={
-                  selectedArray.length === 0
-                    ? "Select fruits"
-                    : selectedArray.join(", ")
-                }
-                action={(v) => {
-                  appendLog(`action called: ${JSON.stringify(v)}`, "info");
-                  selectedSignal.value = v;
-                }}
-              >
-                <SelectableList multiple action="update">
-                  {OPTIONS.map((opt, i) => (
-                    <Selectable
-                      key={opt}
-                      id={`${opt}_item`}
-                      index={i}
-                      value={opt}
-                      selected={selectedArray.includes(opt)}
-                      padding="s"
-                      spacing="s"
-                    >
-                      {opt}
-                    </Selectable>
-                  ))}
-                </SelectableList>
-              </Picker>
-            </Box>
-
-            <p style={{ margin: "8px 0", fontSize: "0.85em", color: "#555" }}>
-              Selected:{" "}
-              {selectedArray.length === 0 ? "(none)" : selectedArray.join(", ")}
-            </p>
+            <Picker
+              type="text"
+              name="repro_picker"
+              value={selectedArray}
+              action={(v) => {
+                appendLog(`action called: ${JSON.stringify(v)}`, "info");
+                selectedSignal.value = v;
+              }}
+            >
+              <SelectableList multiple action="update">
+                {OPTIONS.map((opt, i) => (
+                  <Selectable
+                    key={opt}
+                    id={`${opt}_item`}
+                    index={i}
+                    value={opt}
+                    selected={selectedArray.includes(opt)}
+                    padding="s"
+                    spacing="s"
+                  >
+                    {opt}
+                  </Selectable>
+                ))}
+              </SelectableList>
+            </Picker>
 
             <div id="log">
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <strong>Log:</strong>
-                <button
-                  onClick={() => {
-                    const text = logs.map((e) => e.text).join("\n");
-                    window.navigator.clipboard.writeText(text);
-                  }}
-                  disabled={logs.length === 0}
-                >
-                  Copy
-                </button>
-              </div>
-              {logs.length === 0 && (
-                <div className="log-entry info">
-                  — open the picker to start —
-                </div>
-              )}
               {logs.map((entry, i) => (
                 <div key={i} className={`log-entry ${entry.kind}`}>
                   {entry.text}
