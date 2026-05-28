@@ -16,7 +16,8 @@ import {
 
 import { useNavState } from "../nav/browser_integration/browser_integration.js";
 import { useInitialValue } from "../state/use_initial_value.js";
-import { findControlHost, getControlProxyTarget } from "./control_dom.js";
+import { findControlHost } from "./control_dom.js";
+import { findControlProxyTarget } from "./control_proxy.js";
 import { FormContext } from "./form_context.js";
 import { PickerElementContext } from "./picker/picker_context.jsx";
 
@@ -288,7 +289,7 @@ export const useUIStateController = (
       // Proxy: forward the state change to the real input
       // The real input will handle its own UIState update + synthetic input.
       if (el) {
-        const naviProxyTarget = getControlProxyTarget(el);
+        const naviProxyTarget = findControlProxyTarget(el);
         if (naviProxyTarget) {
           debugInteraction(
             e,

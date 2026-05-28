@@ -63,11 +63,8 @@ import {
 } from "@jsenv/dom";
 
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
-import {
-  findControlHost,
-  findControlRoot,
-  getControlProxyTarget,
-} from "../control_dom.js";
+import { findControlHost, findControlRoot } from "../control_dom.js";
+import { findControlProxyTarget } from "../control_proxy.js";
 import { openCallout } from "./callout/callout.js";
 import { getConstraintMessage } from "./constraint_message.js";
 import {
@@ -322,7 +319,7 @@ const checkAndReportConstraints = (
   };
 
   let elementToValidate = event.currentTarget;
-  const proxyTarget = getControlProxyTarget(elementToValidate);
+  const proxyTarget = findControlProxyTarget(elementToValidate);
   if (proxyTarget) {
     elementToValidate = proxyTarget;
   }

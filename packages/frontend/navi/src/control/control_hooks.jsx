@@ -53,7 +53,7 @@ import {
   ReadOnlyContext,
   RequiredContext,
 } from "./control_context.js";
-import { getControlProxyTarget } from "./control_dom.js";
+import { findControlProxyTarget } from "./control_proxy.js";
 import { addInputEffect } from "./input_effect.js";
 import { resolveActionProp, STRING_ACTIONS } from "./string_actions.js";
 import {
@@ -575,7 +575,7 @@ const useInteractiveProps = (
     Object.assign(controlProps, {
       onnavi_request_interaction: (e) => {
         transfer_focus_to_target: {
-          const naviProxyTarget = getControlProxyTarget(e.currentTarget);
+          const naviProxyTarget = findControlProxyTarget(e.currentTarget);
           if (!naviProxyTarget) {
             break transfer_focus_to_target;
           }
@@ -662,7 +662,7 @@ const useInteractiveProps = (
           });
           e.detail.uiState = uiState;
         }
-        const naviProxyTarget = getControlProxyTarget(e.currentTarget);
+        const naviProxyTarget = findControlProxyTarget(e.currentTarget);
         if (naviProxyTarget) {
           // Apply the proxy's desired uiState optimistically before dispatching so
           // the target's UI updates immediately, then forward the action.

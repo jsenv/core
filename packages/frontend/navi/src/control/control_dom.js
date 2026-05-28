@@ -19,8 +19,8 @@
  * Attribute roles:
  *  - `navi-control`           boolean, on the wrapper/root; marks the control boundary
  *  - `navi-control-host`      boolean, on the host; set automatically by `useInteractiveProps`
- *  - `navi-control-proxy-for` on a proxy element; id of the real control it forwards events to
  *
+ * See control_proxy.js for the `navi-control-proxy-for` pattern.
  */
 
 /**
@@ -93,13 +93,4 @@ export const findControlRoot = (el) => {
     return el.closest("[navi-control]");
   }
   return null;
-};
-
-export const getControlProxyTarget = (el) => {
-  const proxyFor = el.getAttribute("navi-control-proxy-for");
-  if (!proxyFor) {
-    return null;
-  }
-  const realControl = document.getElementById(proxyFor);
-  return realControl;
 };

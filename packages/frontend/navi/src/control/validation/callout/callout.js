@@ -17,6 +17,7 @@ import {
 import { isValidElement } from "preact";
 
 import { findControlHost, findControlRoot } from "../../control_dom.js";
+import { findControlProxy } from "../../control_proxy.js";
 import { renderIntoCallout } from "./callout.jsx";
 
 /**
@@ -470,13 +471,9 @@ export const openCallout = (
 
   const originalAnchorElement = anchorElement;
   if (anchorElement) {
-    if (anchorElement.id) {
-      const proxyElement = document.querySelector(
-        `[navi-control-proxy-for="${anchorElement.id}"]`,
-      );
-      if (proxyElement) {
-        anchorElement = proxyElement;
-      }
+    const proxyElement = findControlProxy(anchorElement);
+    if (proxyElement) {
+      anchorElement = proxyElement;
     }
     const controlRoot = findControlRoot(anchorElement);
     if (controlRoot) {

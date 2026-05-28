@@ -4,10 +4,11 @@ import {
   mergeTwoStyles,
 } from "@jsenv/dom";
 
+import { findControlHost } from "../control/control_dom.js";
 import {
-  findControlHost,
-  getControlProxyTarget,
-} from "../control/control_dom.js";
+  findControlProxy,
+  findControlProxyTarget,
+} from "../control/control_proxy.js";
 import { addInputEffect } from "../control/input_effect.js";
 import { getUIStateFromElement } from "../control/ui_state_controller.js";
 
@@ -294,7 +295,7 @@ focus_classes: {
       if (el.matches(":focus")) {
         return true;
       }
-      const proxyTarget = getControlProxyTarget(el);
+      const proxyTarget = findControlProxyTarget(el);
       if (proxyTarget && proxyTarget.matches(":focus")) {
         return true;
       }
@@ -326,7 +327,7 @@ focus_classes: {
       if (el.matches(":focus-visible")) {
         return true;
       }
-      const proxyTarget = getControlProxyTarget(el);
+      const proxyTarget = findControlProxyTarget(el);
       if (proxyTarget && proxyTarget.matches(":focus-visible")) {
         return true;
       }
@@ -550,7 +551,7 @@ export const initPseudoStyles = (
     elementListeningPseudoState = null;
   }
 
-  const proxyTarget = getControlProxyTarget(element);
+  const proxyTarget = findControlProxyTarget(element);
 
   const onStateChange = (value, oldValue) => {
     effect?.(value, oldValue);
@@ -563,14 +564,9 @@ export const initPseudoStyles = (
     }
     // When this element's state changes, notify any proxy element that mirrors it
     // so it can re-check and visually reflect the new state.
-    const id = element.id;
-    if (id) {
-      const proxy = document.querySelector(
-        `[navi-control-proxy-for="${CSS.escape(id)}"]`,
-      );
-      if (proxy) {
-        requestPseudoStateCheck(proxy, {});
-      }
+    const proxy = findControlProxy(element);
+    if (proxy) {
+      requestPseudoStateCheck(proxy, {});
     }
   };
 
