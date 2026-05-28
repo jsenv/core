@@ -608,6 +608,7 @@ const useListScrollSync = ({
         container: listScrollContainerEl,
         block,
       });
+      const listEl = ref.current;
       dispatchPublicCustomEvent(listEl, "navi_list_scroll", {
         event,
         item,
@@ -719,7 +720,7 @@ const useListScrollSync = ({
   useLayoutEffect(() => {
     const listContainerEl = containerRef.current;
     if (!listContainerEl) {
-      return;
+      return undefined;
     }
     const listScrollContainerEl = listContainerEl.querySelector(
       `.navi_list_scroll_container`,
@@ -730,7 +731,7 @@ const useListScrollSync = ({
       const savedScroll = savedScrollRef.current;
       if (!savedScroll) {
         // nothing to restore
-        return;
+        return undefined;
       }
       savedScrollRef.current = null;
       debugScroll("Restoring scroll to", savedScroll);
@@ -739,7 +740,7 @@ const useListScrollSync = ({
         savedScroll.renderWindow.end,
         "restore scroll window",
       );
-      requestAnimationFrame(() => {
+      const rafId = requestAnimationFrame(() => {
         const left = savedScroll.left;
         const top = savedScroll.top;
         // use scrollTo to respect eventual css scroll-behavior: smooth;
@@ -768,7 +769,9 @@ const useListScrollSync = ({
           event: new CustomEvent("navi_scroll_restore"),
         });
       });
-      return;
+      return () => {
+        cancelAnimationFrame(rafId);
+      };
     }
     const visibleItems = tracker.visibleItemsSignal.peek();
     const topItems = visibleItems.slice(0, renderBudget);
@@ -778,7 +781,7 @@ const useListScrollSync = ({
     const currentTopMatchScore = topMatchScoresKeyRef.current;
     if (topMatchScoresKey === currentTopMatchScore) {
       // no changes in top matches -> no need to scroll
-      return;
+      return undefined;
     }
     // n items are now more important to see, scrollTop to show them
     topMatchScoresKeyRef.current = topMatchScoresKey;
@@ -794,7 +797,7 @@ const useListScrollSync = ({
     scrollToItem(visibleItems[0], {
       event: new CustomEvent("navi_list_top_match_change"),
     });
-    return;
+    return undefined;
   });
 
   // Scroll listener — slides the window as the user scrolls.
