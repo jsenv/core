@@ -128,13 +128,8 @@
       import { render } from "preact";
       import { useId, useRef } from "preact/hooks";
       import { Picker } from "@jsenv/navi";
-      import { Box } from "@jsenv/navi/src/box/box.jsx";
-      import {
-        useControlProps,
-        useControlgroupProps,
-      } from "@jsenv/navi/src/control/control_hooks.jsx";
+      import { useControlgroupProps } from "@jsenv/navi/src/control/control_hooks.jsx";
       import { dispatchRequestAction } from "@jsenv/navi/src/control/validation/custom_constraint_validation.js";
-      //  import { dispatchRequestSetUIState } from "@jsenv/navi/src/control/ui_state_controller.js";
       import { List, ListItem } from "@jsenv/navi/src/control/list/list.jsx";
       import { windowWidthSignal } from "@jsenv/navi/src/layout/responsive.js";
 
@@ -171,45 +166,26 @@
       };
 
       // Minimal Selectable: calls useCheckableProps (the real one), renders a real
-      // <ListItem> with a visually-hidden radio input. On action, dispatches
-      // navi_request_action on the nearest .navi_list_container — same as the real Selectable.
       const MockSelectable = (props) => {
-        const { id, value, children, index, ...rest } = props;
-        const inputRef = useRef();
-        const [controlProps] = useControlProps(
-          {
-            ...rest,
-            ref: inputRef,
-            id: `${id}_input`,
-            type: "radio",
-            value,
-            action: (v, { event }) => {
-              const listEl = inputRef.current.closest(".navi_list_container");
-              dispatchRequestAction(listEl, { event });
-            },
-          },
-          {
-            primaryInteractionMode: "pointer",
-            controlType: "radio",
-            statePropName: "checked",
-            defaultStatePropName: "defaultChecked",
-            getUIValue: () => (inputRef.current?.checked ? value : undefined),
-            fallbackState: false,
-            getStateFromProp: (checked) => (checked ? value : undefined),
-            getPropFromState: Boolean,
-          },
-        );
-
+        const { id, value, children, index } = props;
+        const spanRef = useRef();
+        const onClick = (e) => {
+          const listEl = spanRef.current.closest(".navi_list_container");
+          dispatchRequestAction(listEl, { event: e, uiState: value });
+        };
         return (
           <ListItem id={id} index={index}>
-            <Box
-              as="input"
-              ref={inputRef}
-              {...controlProps}
-              navi-selectable-real-input=""
-              children={undefined}
-            />
-            {children}
+            <span
+              ref={spanRef}
+              onClick={onClick}
+              style={{
+                padding: "6px 12px",
+                display: "block",
+                cursor: "pointer",
+              }}
+            >
+              {children}
+            </span>
           </ListItem>
         );
       };
