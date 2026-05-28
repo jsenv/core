@@ -242,7 +242,7 @@
         const [isOpen, setIsOpen] = useState(false);
         const [openKey, setOpenKey] = useState(0);
         const [rerenderCount, setRerenderCount] = useState(0);
-        appendLog = (entry) => setLogs((l) => [entry, ...l].slice(0, 40));
+        appendLog = (entry) => setLogs((l) => [...l, entry].slice(-40));
 
         const dialogRef = useRef(null);
 
@@ -329,7 +329,18 @@
             </Dialog>
 
             <div id="log">
-              <strong>Log (newest first):</strong>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <strong>Log:</strong>
+                <button
+                  onClick={() => {
+                    const text = logs.map((e) => e.text).join("\n");
+                    navigator.clipboard.writeText(text);
+                  }}
+                  disabled={logs.length === 0}
+                >
+                  Copy
+                </button>
+              </div>
               {logs.length === 0 && (
                 <div className="log-entry info">
                   — open the picker to start —
