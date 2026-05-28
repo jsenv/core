@@ -268,11 +268,6 @@
           );
         };
 
-        const clearSelection = () => {
-          selectedIdSignal.value = null;
-          log("selection cleared", "info");
-        };
-
         return (
           <div>
             <h2>Ref callback bug repro</h2>
@@ -284,7 +279,7 @@
               <br />
               2. <b>Open picker</b> + select <b>first item</b>
               <br />
-              3. <b>Close picker</b>
+              3. <b>Close picker</b> by clicking outside
               <br />
               4. <b>Open picker</b> + select <b>second item</b> → BUG?
             </div>
@@ -296,11 +291,6 @@
               <button onClick={openPicker} disabled={isOpen}>
                 2/4. Open picker (key={openKey + 1})
               </button>
-              <button onClick={closePicker} disabled={!isOpen}>
-                3. Close picker
-              </button>
-              <button onClick={clearSelection}>Clear selection</button>
-              <button onClick={() => setLogs([])}>Clear log</button>
             </div>
 
             <p
@@ -314,7 +304,7 @@
               {isOpen ? "open" : "closed"} · Re-renders: {rerenderCount}
             </p>
 
-            <Dialog ref={dialogRef}>
+            <Dialog ref={dialogRef} onnavi_close={closePicker}>
               <div className="dialog-inner">
                 <div style={{ marginBottom: 8, fontWeight: "bold" }}>
                   Picker (open #{openKey})
@@ -322,9 +312,6 @@
                 {isOpen && (
                   <PickerList key={openKey} instanceId={`open${openKey}`} />
                 )}
-                <div style={{ marginTop: 8 }}>
-                  <button onClick={closePicker}>Close</button>
-                </div>
               </div>
             </Dialog>
 
