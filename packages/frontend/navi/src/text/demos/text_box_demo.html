@@ -42,6 +42,11 @@
         align-items: flex-start;
         gap: 16px;
       }
+      .column {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
       .label {
         margin-bottom: 4px;
         color: #888;
@@ -60,7 +65,7 @@
     </div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { TextBox } from "@jsenv/navi/src/text/text_box.jsx";
+      import { TextBox } from "@jsenv/navi";
 
       const EditSvg = () => (
         <svg
@@ -188,7 +193,7 @@
               <code>text-overflow: ellipsis</code>. The browser shows{" "}
               <code>…</code> automatically when the text overflows.
             </p>
-            <div class="row">
+            <div class="column">
               <div>
                 <div class="label">Short text — no overflow</div>
                 <TextBox
@@ -222,7 +227,8 @@
                   singleLine
                   style="max-width: 260px"
                 >
-                  This sentence would normally wrap but singleLine forces one line
+                  This sentence would normally wrap but singleLine forces one
+                  line
                 </TextBox>
               </div>
             </div>
@@ -235,7 +241,7 @@
               <code>padding</code> applies around the whole box (text + icons).{" "}
               <code>spacing</code> controls the gap between icons and text.
             </p>
-            <div class="row">
+            <div class="column">
               <div>
                 <div class="label">No padding, no spacing</div>
                 <TextBox iconAfter={<EditSvg />} style="max-width: 180px">
