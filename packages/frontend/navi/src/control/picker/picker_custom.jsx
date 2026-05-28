@@ -178,8 +178,11 @@ export const PickerCustom = (props) => {
   const defaultMode = isSmallScreen ? "dialog" : "popover";
   const { ref, mode = defaultMode } = props;
 
+  const pickerProps = {
+    ...props,
+  };
   const popupProps = {};
-  Object.assign(props, {
+  Object.assign(pickerProps, {
     popupProps,
     actionInteraction: "manual",
   });
@@ -189,7 +192,7 @@ export const PickerCustom = (props) => {
   // aria-controls + id
   id: {
     const popupId = useId();
-    Object.assign(props, {
+    Object.assign(pickerProps, {
       "aria-controls": popupId,
     });
     Object.assign(popupProps, {
@@ -286,8 +289,8 @@ export const PickerCustom = (props) => {
       });
     };
 
-    const { onActionStart } = props;
-    Object.assign(props, {
+    const { onActionStart, children } = props;
+    Object.assign(pickerProps, {
       "aria-expanded": expanded,
       "onActionStart": (e) => {
         onActionStart?.(e);
@@ -300,7 +303,7 @@ export const PickerCustom = (props) => {
       },
       "children": (
         <PickerRequestCloseContext.Provider value={requestClose}>
-          {props.children}
+          {children}
         </PickerRequestCloseContext.Provider>
       ),
     });
@@ -315,7 +318,7 @@ export const PickerCustom = (props) => {
 
     interactions: {
       const { onMouseDown, onClick, onKeyDown } = props;
-      Object.assign(props, {
+      Object.assign(pickerProps, {
         onMouseDown: (e) => {
           onMouseDown?.(e);
           const pickerEl = ref.current;
@@ -404,10 +407,10 @@ export const PickerCustom = (props) => {
   }
 
   if (mode === "popover") {
-    return <PickerContentInsidePopover {...props} />;
+    return <PickerContentInsidePopover {...pickerProps} />;
   }
   if (mode === "dialog") {
-    return <PickerContentInsideDialog {...props} />;
+    return <PickerContentInsideDialog {...pickerProps} />;
   }
   return null;
 };
