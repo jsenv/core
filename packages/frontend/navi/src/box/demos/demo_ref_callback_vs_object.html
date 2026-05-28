@@ -158,18 +158,18 @@
       };
 
       // ---- PickerList ----
-      // Mirrors SelectableList / useListScrollSync inside the picker popup.
-      // containerRef → outer Box (container), ulRef → inner ul Box.
+      // Mirrors ListUI inside the picker popup.
+      // containerRef → outer Box (container, INTERNAL like real ListUI).
+      // ref (ulRef) → inner ul Box, received from props like real ListUI.
       // useDisplayedLayoutEffect scrolls to selected each time the ancestor opens.
-      const PickerList = () => {
+      const PickerList = ({ ref }) => {
         const containerRef = useRef(null);
-        const ulRef = useRef(null);
+        // ref comes from props (mirrors real ListUI where ref is passed from SelectableList)
 
         const selectedId = selectedIdSignal.value;
 
         const scrollToItem = useCallback((itemId, reason) => {
           const containerEl = containerRef.current;
-          const ulEl = ulRef.current;
           if (!containerEl) {
             log(
               `scrollToItem(${itemId}, "${reason}") BUG — containerRef.current is null!`,
@@ -177,9 +177,10 @@
             );
             return;
           }
+          const ulEl = ref.current;
           if (!ulEl) {
             log(
-              `scrollToItem(${itemId}, "${reason}") BUG — ulRef.current is null!`,
+              `scrollToItem(${itemId}, "${reason}") BUG — ref.current (ul) is null!`,
               "bug",
             );
             return;
@@ -199,11 +200,11 @@
           } else {
             scrollToItem(ITEMS[0].id, "scroll to top");
           }
-        }, [ulRef]);
+        }, [ref]);
 
         return (
           <Box ref={containerRef} flex="y" style={{ gap: 0 }}>
-            <Box as="ul" ref={ulRef} className="item-list">
+            <Box as="ul" ref={ref} className="item-list">
               {ITEMS.map((item) => (
                 <li
                   key={item.id}
@@ -223,6 +224,16 @@
         );
       };
 
+      // ---- PickerSelectableList ----
+      // Mirrors SelectableList: creates a default ref if none provided, passes it to PickerList.
+      // This is the key architectural difference: the ul ref is created HERE (outside PickerList)
+      // and passed as a prop, just like SelectableList → List → ListUI in the real app.
+      const PickerSelectableList = (props) => {
+        const defaultRef = useRef(null);
+        props.ref = props.ref || defaultRef;
+        return <PickerList ref={props.ref} />;
+      };
+
       // ---- PickerInsideDialog ----
       // Mirrors PickerContentInsideDialog: Dialog always renders its children.
       // List is ALWAYS mounted (even when the dialog is closed).
@@ -231,7 +242,7 @@
         return (
           <Dialog ref={ref} onnavi_close={onClose}>
             <div className="dialog-inner">
-              <PickerList />
+              <PickerSelectableList />
             </div>
           </Dialog>
         );
@@ -250,7 +261,7 @@
             style={{ minWidth: 200 }}
           >
             <div className="dialog-inner">
-              <PickerList />
+              <PickerSelectableList />
             </div>
           </Popover>
         );
