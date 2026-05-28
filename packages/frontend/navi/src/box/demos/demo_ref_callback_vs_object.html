@@ -199,7 +199,7 @@
         // Mimics useListScrollSync: scroll to selected on display
         useDisplayedLayoutEffect(
           containerRef,
-          (el, openEvent) => {
+          (el) => {
             log(
               `useDisplayedLayoutEffect fired (instanceId=${instanceId}, el=${el ? `<${el.tagName.toLowerCase()}>` : "null"})`,
               el ? "info" : "bug",
@@ -321,7 +321,7 @@
                 <button
                   onClick={() => {
                     const text = logs.map((e) => e.text).join("\n");
-                    navigator.clipboard.writeText(text);
+                    window.navigator.clipboard.writeText(text);
                   }}
                   disabled={logs.length === 0}
                 >
