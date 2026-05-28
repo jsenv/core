@@ -157,18 +157,31 @@
           setLogs((l) => [...l, { text, kind }].slice(-40));
         };
 
+        const fireResizeSequence = (values, label) => {
+          appendLog(`--- simulate resize: ${label} ---`, "warn");
+          values.forEach((v, i) => {
+            setTimeout(() => {
+              windowWidthSignal.value = v;
+            }, i * 16); // ~1 frame apart, like real resize events
+          });
+        };
+
         const simulateWide = () => {
-          windowWidthSignal.value = 1200;
-          appendLog(
-            `--- simulate resize: wide (1200px) → popover mode ---`,
-            "warn",
+          fireResizeSequence(
+            [
+              400, 420, 450, 480, 510, 530, 546, 558, 567, 578, 588, 608, 616,
+              623, 632, 645, 652, 672, 679, 695, 1200,
+            ],
+            "wide (1200px) → popover mode",
           );
         };
         const simulateNarrow = () => {
-          windowWidthSignal.value = 400;
-          appendLog(
-            `--- simulate resize: narrow (400px) → dialog mode ---`,
-            "warn",
+          fireResizeSequence(
+            [
+              1200, 715, 709, 695, 687, 679, 672, 652, 645, 632, 623, 616, 608,
+              588, 578, 567, 558, 546, 543, 539, 537, 536,
+            ],
+            "narrow (536px) → dialog mode",
           );
         };
 
