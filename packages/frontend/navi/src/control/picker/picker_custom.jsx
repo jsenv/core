@@ -247,13 +247,13 @@ export const PickerCustom = (props) => {
       if (!inputEl) {
         return;
       }
+      const valueAtOpen = valueAtOpenRef.current;
       if (isCancel) {
-        dispatchRequestSetUIState(inputEl, valueAtOpenRef.current, {
+        dispatchRequestSetUIState(inputEl, valueAtOpen, {
           event: e,
         });
         return;
       }
-      const valueAtOpen = valueAtOpenRef.current;
       const valueAtClose = getPickerInputUIState(pickerEl);
       if (valueAtClose !== valueAtOpen) {
         dispatchRequestAction(inputEl, { event: e });
