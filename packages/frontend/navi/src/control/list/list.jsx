@@ -847,7 +847,9 @@ const useListScrollSync = ({
       passive: true,
     });
     return () => {
-      listScrollContainerEl.removeEventListener("scroll", onScroll);
+      listScrollContainerEl.removeEventListener("scroll", onScroll, {
+        passive: true,
+      });
     };
   }, [renderBudget]);
 

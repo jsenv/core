@@ -68,7 +68,8 @@ export const useDisplayedLayoutEffect = (ref, callback, deps) => {
       if (!isOpen) {
         return;
       }
-      callbackRef.current(el, e);
+      let lastEl = ref.current;
+      callbackRef.current(lastEl, e);
     };
     ancestor.addEventListener("toggle", onToggle);
     return () => {
