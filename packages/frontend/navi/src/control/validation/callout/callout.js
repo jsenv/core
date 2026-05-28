@@ -10,6 +10,7 @@ import {
   getFirstVisuallyVisibleAncestor,
   getPaddingSizes,
   getVisuallyVisibleInfo,
+  measureLongestVisualLineWidth,
   pickPositionRelativeTo,
   resolveCSSColor,
   visibleRectEffect,
@@ -1177,20 +1178,8 @@ const measureOptimalBodyWidth = (calloutElementClone, { maxHeight } = {}) => {
     calloutMessageElement.style.maxHeight = "";
     calloutMessageElement.style.overflowY = "";
   }
-  const range = document.createRange();
-  range.selectNodeContents(calloutMessageElement);
-  let lineCount = 0;
-  let longestLineWidth = 0;
-  for (const r of range.getClientRects()) {
-    if (r.width === 0) {
-      continue;
-    }
-    lineCount++;
-    if (r.width > longestLineWidth) {
-      longestLineWidth = r.width;
-    }
-  }
-  if (lineCount <= 1) {
+  const longestLineWidth = measureLongestVisualLineWidth(calloutMessageElement);
+  if (longestLineWidth === null) {
     return null;
   }
   const messageRect = calloutMessageElement.getBoundingClientRect();

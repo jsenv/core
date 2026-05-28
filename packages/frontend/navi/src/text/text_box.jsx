@@ -1,3 +1,4 @@
+import { measureLongestVisualLineWidth } from "@jsenv/dom";
 import { useLayoutEffect, useRef } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
@@ -90,41 +91,10 @@ const adjustWidth = (boxEl, contentEl) => {
   contentEl.style.width = "";
   contentEl.removeAttribute("data-overflow-ellipsis");
 
-  const optimalWidth = measureOptimalContentWidth(contentEl);
+  const optimalWidth = measureLongestVisualLineWidth(contentEl);
   if (optimalWidth === null) {
     return;
   }
 
   contentEl.style.width = `${Math.ceil(optimalWidth)}px`;
-};
-
-// Returns the width of the longest rendered text line inside el,
-// or null when there is only one visual line (no optimisation needed).
-const measureOptimalContentWidth = (el) => {
-  const range = document.createRange();
-  range.selectNodeContents(el);
-
-  // getClientRects() returns one rect per text node segment, not per visual
-  // line. Multiple text nodes can share the same Y position (same visual line).
-  // We group by rounded top position to get actual visual line widths.
-  const lineWidthByTop = new Map();
-  for (const r of range.getClientRects()) {
-    if (r.width === 0) {
-      continue;
-    }
-    const top = Math.round(r.top);
-    lineWidthByTop.set(top, (lineWidthByTop.get(top) || 0) + r.width);
-  }
-
-  if (lineWidthByTop.size <= 1) {
-    return null;
-  }
-
-  let longestLineWidth = 0;
-  for (const w of lineWidthByTop.values()) {
-    if (w > longestLineWidth) {
-      longestLineWidth = w;
-    }
-  }
-  return longestLineWidth;
 };
