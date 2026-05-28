@@ -500,7 +500,7 @@ const useInteractiveProps = (
         uiStateController.resetUIState(e);
       },
       "onnavi_get_ui_state": (e) => {
-        e.detail.respondWith(uiState);
+        e.detail.respondWith(uiStateController.uiStateSignal.peek());
       },
       "onnavi_get_ui_value": (e) => {
         e.detail.respondWith(getUIValue(e));

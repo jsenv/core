@@ -258,7 +258,12 @@ export const PickerCustom = (props) => {
         return;
       }
       const valueAtClose = getPickerInputUIState(pickerEl);
-      if (valueAtClose !== valueAtOpen) {
+      if (valueAtClose === valueAtOpen) {
+        debugPopup(
+          e,
+          `picker closed with same value as when it opened (${JSON.stringify(valueAtClose)}), no action dispatched`,
+        );
+      } else {
         dispatchRequestAction(inputEl, { event: e });
       }
     };
