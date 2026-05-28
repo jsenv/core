@@ -250,13 +250,16 @@
           const nextKey = openKey + 1;
           setOpenKey(nextKey);
           setIsOpen(true);
-          dialogRef.current.showModal();
           log(`--- openPicker (key=${nextKey}) ---`, "info");
+          // Use the Dialog component's event API so openedRef is tracked correctly
+          // (needed for backdrop-click to close)
+          dialogRef.current.dispatchEvent(
+            new CustomEvent("navi_request_open", { bubbles: true }),
+          );
         };
 
         const closePicker = () => {
           setIsOpen(false);
-          dialogRef.current.close();
           log("--- closePicker ---", "info");
         };
 
