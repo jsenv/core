@@ -117,6 +117,11 @@ export const useExecuteAction = (
       setError(null);
 
       const element = elementRef.current;
+      if (!element) {
+        throw new Error(
+          "useExecuteAction: elementRef.current is null, make sure to pass a ref to an element",
+        );
+      }
       const validationMessageTarget = requester || element;
       validationMessageTargetRef.current = validationMessageTarget;
 
@@ -178,7 +183,7 @@ export const useExecuteAction = (
         },
       });
     },
-    [errorEffect],
+    [elementRef, errorEffect],
   );
 
   return executeAction;
