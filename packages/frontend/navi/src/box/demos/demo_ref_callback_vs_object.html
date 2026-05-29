@@ -137,16 +137,11 @@
 
       // MockDialog: minimal <dialog> — showModal/close + dispatches navi_close event
       // so onnavi_close on the element is triggered via DOM bubbling.
-      const MockDialog = (props) => {
-        const { ref: refProp, children, ...rest } = props;
-        const defaultRef = useRef(null);
-        const ref = refProp || defaultRef;
-
+      const MockDialog = ({ ref, children, ...rest }) => {
         const close = (e) => {
           ref.current.close();
           dispatchCustomEvent(ref.current, "navi_close", { event: e });
         };
-
         return (
           <dialog
             {...rest}
@@ -181,9 +176,7 @@
 
         const onMouseDown = (e) => {
           e.preventDefault();
-          dispatchCustomEvent(popupRef.current, "navi_request_open", {
-            event: e,
-          });
+          dispatchCustomEvent(popupRef.current, "navi_request_open", {});
         };
 
         const onClose = () => {
