@@ -13,22 +13,6 @@
   <body>
     <div id="app"></div>
     <script type="module" jsenv-type="module/jsx">
-      /**
-       * Reproduces the bug where ref.current is null inside scrollToItem
-       * when the picker is reopened after a resize (popover → dialog mode switch).
-       *
-       * Uses the REAL Picker, SelectableList, Selectable components.
-       * Resize is simulated by setting windowWidthSignal directly:
-       *   - wide  (1200px) → popover mode
-       *   - narrow (400px) → dialog mode
-       *
-       * Steps to reproduce:
-       * 1. Click "Simulate resize → dialog" (while picker is closed)
-       * 2. Open the picker, select an item
-       * 3. Close the picker (click outside / press Escape)
-       * 4. Open the picker again → BUG: scrollToItem crashes with null ref?
-       */
-
       import { useSignal } from "@preact/signals";
       import { render } from "preact";
       import { useRef } from "preact/hooks";
@@ -43,7 +27,7 @@
       // MockDialog: minimal <dialog> — showModal/close + dispatches navi_close event
       // so onnavi_close on the element is triggered via DOM bubbling.
       const MockDialog = ({ ref, onnavi_close, children }) => {
-        const close = (e) => {
+        const close = () => {
           ref.current.close();
           dispatchCustomEvent(ref.current, "navi_close", {});
         };
@@ -53,7 +37,7 @@
             onnavi_close={onnavi_close}
             onCancel={(e) => {
               e.preventDefault();
-              close(e);
+              close();
             }}
           >
             {children}
@@ -104,8 +88,8 @@
         return (
           <div>
             <p>
-              Steps: 1. <b>Simulate resize</b> · 2. <b>Open</b>, select item ·
-              3. <b>Close</b> · 4. <b>Open</b> again → BUG?
+              1. <b>Simulate resize</b> 2. <b>Open</b> 3. <b>Escape</b> 4.{" "}
+              <b>Open again</b> → BUG?
             </p>
             <button onClick={simulateNarrow}>Simulate resize → dialog</button>
             {renderMockPicker("button", {
