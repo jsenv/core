@@ -32,7 +32,6 @@ const GroupItemTrackerContext = createContext(null);
 const PendingScrollRefContext = createContext(null);
 
 export const ListIdContext = createContext();
-export const InsideRealListItemContext = createContext(false);
 
 // When total rendered items exceeds renderBudget, a render window [start, end)
 // is activated to cap the number of DOM nodes. Items outside the window return
@@ -1285,9 +1284,7 @@ const ListItemReal = (props) => {
       hidden={hidden}
       ref={ref}
     >
-      <InsideRealListItemContext.Provider value={true}>
-        {children}
-      </InsideRealListItemContext.Provider>
+      {children}
     </Box>
   );
 };
