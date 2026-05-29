@@ -40,7 +40,6 @@ import {
   useDebugFocus,
   useDebugInteraction,
 } from "@jsenv/navi/src/navi_debug.jsx";
-import { compareTwoJsValues } from "@jsenv/navi/src/utils/compare_two_js_values.js";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import { isSignal } from "@jsenv/navi/src/utils/is_signal.js";
 import {
@@ -214,24 +213,21 @@ export const useControlProps = (
     const lastActionValueRef = useRef();
     const onInput = (e) => {
       props.onInput?.(e);
-      if (!e.isTrusted) {
-        return;
-      }
       const field = ref.current;
-      const eventSameAsAction = e === lastEventRequestingActionRef.current;
-      // Ignore input events that carry the same value as the last action we dispatched.
-      // This avoids showing a spurious "read-only" callout for redundant input events
-      // that browsers fire with no UI change — e.g. range inputs fire several input
-      // events around mouse release even though the value hasn't moved.
       const lastActionValue = lastActionValueRef.current;
       const currentValue = field.value;
       const valueSameAsLastAction =
-        lastActionValue !== undefined &&
-        compareTwoJsValues(currentValue, lastActionValue);
-      const allowed =
-        eventSameAsAction ||
-        valueSameAsLastAction ||
-        dispatchRequestInteraction(field, e);
+        lastActionValue !== undefined && currentValue === lastActionValue;
+
+      let allowed;
+      if (valueSameAsLastAction) {
+        // Ignore input events that carry the same value as the last action we dispatched.
+        // This avoids showing a spurious "read-only" callout for redundant input events
+        // that browsers fire with no UI change — e.g. range inputs fire several input
+        // events around mouse release even though the value hasn't moved.
+      } else {
+        allowed = dispatchRequestInteraction(field, e);
+      }
       if (allowed) {
         uiStateController.requestUIAction(e);
       } else {
