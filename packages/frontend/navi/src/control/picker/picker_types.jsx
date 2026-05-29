@@ -3,6 +3,7 @@ import { useContext } from "preact/hooks";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Color } from "@jsenv/navi/src/text/color.jsx";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
+import { Text } from "@jsenv/navi/src/text/text.jsx";
 import { Time } from "@jsenv/navi/src/text/time.jsx";
 import { PickerPlaceholder } from "./picker_components.jsx";
 import { PickerContext } from "./picker_context.jsx";
@@ -11,6 +12,27 @@ import { parseStepToSeconds } from "./time_helpers.js";
 export const PickerText = (props) => {
   const Next = useNextResolver();
   return <Next icon={<PencilSvg />} {...props} />;
+};
+
+export const PickerArray = (props) => {
+  const Next = useNextResolver();
+  return <Next ui={<PickerArrayUI />} {...props} />;
+};
+const PickerArrayUI = () => {
+  const { value, placeholder } = useContext(PickerContext);
+  if (!value || value.length === 0) {
+    if (!placeholder) {
+      return null;
+    }
+    return <PickerPlaceholder>{placeholder}</PickerPlaceholder>;
+  }
+  return (
+    <Text spacing=", " shrinkWrap>
+      {value.map((item) => {
+        return <span key={item}>{item}</span>;
+      })}
+    </Text>
+  );
 };
 
 export const PickerColor = (props) => {

@@ -2,6 +2,7 @@ import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { PickerCustom } from "./picker_custom.jsx";
 import { PickerNative } from "./picker_native.jsx";
 import {
+  PickerArray,
   PickerColor,
   PickerDatetime,
   PickerDay,
@@ -53,6 +54,9 @@ const PickerTypeResolver = (props) => {
   }
   if (props.type === "text") {
     return <PickerText {...props} />;
+  }
+  if (props.type === "array") {
+    return <PickerArray {...props} />;
   }
   return <Next {...props} />;
 };

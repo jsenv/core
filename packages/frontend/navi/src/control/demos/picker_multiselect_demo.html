@@ -98,7 +98,6 @@
         SelectableList,
         Selectable,
         NaviDebug,
-        Text,
       } from "@jsenv/navi";
 
       const OPTIONS = [
@@ -124,19 +123,9 @@
           "Apple",
           "Banana",
           "Cherry",
-          "Edlerberry",
+          "Elderberry",
         ]);
         const selectedArray = selectedSignal.value;
-
-        const SelectedValues = () => {
-          return (
-            <Text spacing=", " shrinkWrap>
-              {selectedArray.map((selected) => {
-                return <span>{selected}</span>;
-              })}
-            </Text>
-          );
-        };
 
         return (
           <div class="demo-section">
@@ -149,16 +138,10 @@
             <Field vertical>
               <Label>Fruits</Label>
               <Picker
-                type="text"
+                type="array"
                 name="multiselect_text"
+                placeholder="Select fruits…"
                 value={selectedArray}
-                ui={
-                  selectedArray.length === 0 ? (
-                    "Select frhuhuihiuhacsiufdbhidufdbhsiughiuuits"
-                  ) : (
-                    <SelectedValues />
-                  )
-                }
                 uiAction={(v) => {
                   selectedSignal.value = v;
                 }}
