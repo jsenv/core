@@ -153,18 +153,17 @@
         const { ref: refProp, id, children, ...rest } = props;
         const defaultRef = useRef(null);
         const ref = refProp || defaultRef;
-        const openedRef = useRef(false);
 
         const open = (e) => {
           const dialogEl = ref.current;
           dialogEl.showModal();
-          openedRef.current = true;
+
           dispatchCustomEvent(dialogEl, "navi_open", { event: e });
         };
         const close = (e) => {
           const dialogEl = ref.current;
           dialogEl.close();
-          openedRef.current = false;
+
           dispatchCustomEvent(dialogEl, "navi_close", { event: e });
         };
 
@@ -181,21 +180,11 @@
                 close(e);
               }
             }}
-            onCancel={(e) => {
-              e.preventDefault();
-              if (openedRef.current) {
-                close(e);
-              }
-            }}
             onnavi_request_open={(e) => {
-              if (!openedRef.current) {
-                open(e);
-              }
+              open(e);
             }}
             onnavi_request_close={(e) => {
-              if (openedRef.current) {
-                close(e);
-              }
+              close(e);
             }}
           >
             {children}
