@@ -143,7 +143,7 @@
         dispatchRequestSetUIState,
       } from "@jsenv/navi/src/control/ui_state_controller.js";
       import { Box } from "@jsenv/navi/src/box/box.jsx";
-      import { shortcutsViaOnKeyDown } from "@jsenv/navi/src/keyboard/keyboard_shortcuts.js";
+
       import {
         createComponentResolver,
         useNextResolver,
@@ -235,21 +235,6 @@
         Object.assign(pickerProps, { "aria-controls": popupId });
         Object.assign(popupProps, { id: popupId });
 
-        const moveFocusToPicker = (e) => {
-          const pickerEl = ref.current;
-          const mousedownEvent = findEvent(e, "mousedown");
-          if (mousedownEvent) {
-            mousedownEvent.preventDefault();
-            pickerEl.focus({ preventScroll: true });
-            return;
-          }
-          const focusoutEvent = findEvent(e, "focusout");
-          if (focusoutEvent) {
-            return;
-          }
-          pickerEl.focus({ preventScroll: true });
-        };
-
         const [expanded, setExpanded] = useState(false);
         const expandedRef = useRef(expanded);
         expandedRef.current = expanded;
@@ -271,21 +256,15 @@
           setExpanded(false);
           const pickerEl = ref.current;
           const inputEl = getPickerInput(pickerEl);
-          if (!inputEl) {
-            moveFocusToPicker(e);
-            return;
-          }
           const valueAtOpen = valueAtOpenRef.current;
           if (isCancel) {
             dispatchRequestSetUIState(inputEl, valueAtOpen, { event: e });
-            moveFocusToPicker(e);
             return;
           }
           const valueAtClose = getPickerInputUIState(pickerEl);
           if (!compareTwoJsValues(valueAtClose, valueAtOpen)) {
             dispatchRequestAction(inputEl, { event: e, uiState: valueAtClose });
           }
-          moveFocusToPicker(e);
         };
 
         const disableClickFor = useIgnoreClickForMousedown();
@@ -348,7 +327,7 @@
           },
         });
 
-        const { onMouseDown, onClick, onKeyDown } = props;
+        const { onMouseDown, onClick } = props;
         Object.assign(pickerProps, {
           onMouseDown: (e) => {
             onMouseDown?.(e);
@@ -380,38 +359,6 @@
               requestOpen(e);
             }
           },
-          onKeyDown: shortcutsViaOnKeyDown(
-            {
-              arrowdown: (e) => {
-                if (dispatchRequestInteraction(ref.current, e)) {
-                  e.preventDefault();
-                  requestOpen(e);
-                }
-              },
-              arrowup: (e) => {
-                if (dispatchRequestInteraction(ref.current, e)) {
-                  e.preventDefault();
-                  requestOpen(e);
-                }
-              },
-              space: (e) => {
-                if (dispatchRequestInteraction(ref.current, e)) {
-                  e.preventDefault();
-                  requestOpen(e);
-                }
-              },
-              escape: (e) => {
-                if (!expandedRef.current) {
-                  return;
-                }
-                if (dispatchRequestInteraction(ref.current, e)) {
-                  e.preventDefault();
-                  requestClose(e, { cancel: true });
-                }
-              },
-            },
-            onKeyDown,
-          ),
         });
 
         if (isSmallScreen) {
