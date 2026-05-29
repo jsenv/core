@@ -1,11 +1,6 @@
-import {
-  dispatchCustomEvent,
-  dispatchPublicCustomEvent,
-  pickPositionRelativeTo,
-  visibleRectEffect,
-} from "@jsenv/dom";
+import { dispatchCustomEvent } from "@jsenv/dom";
 import { createContext } from "preact";
-import { useContext, useId, useLayoutEffect, useRef } from "preact/hooks";
+import { useContext, useId, useRef } from "preact/hooks";
 
 import { Box, BoxForwardedPropsContext } from "../../box/box.jsx";
 import { Separator } from "../../layout/separator.jsx";
@@ -321,9 +316,6 @@ export const List = (props) => {
 };
 const ListWithPopoverResolver = (props) => {
   const Next = useNextResolver();
-  if (props.popover === true) {
-    return <ListWithPopover {...props} />;
-  }
   return <Next {...props} />;
 };
 const renderList = createComponentResolver([ListWithPopoverResolver]);
@@ -451,81 +443,6 @@ const UnorderedList = ({ tracker, separator, children, ...rest }) => {
         </ListItemTrackerContext.Provider>
       </SeparatorContext.Provider>
     </Box>
-  );
-};
-
-// Popover variant: handles open/close/positioning events and forwards
-// navigate/confirm/clear to the underlying list.
-const ListWithPopover = (props) => {
-  const Next = useNextResolver();
-  const cleanupRef = useRef();
-
-  useLayoutEffect(() => {
-    return () => {
-      cleanupRef.current?.();
-    };
-  }, []);
-
-  return (
-    <Next
-      {...props}
-      popover="manual"
-      onnavi_list_request_open={(e) => {
-        const listEl = e.currentTarget;
-        const listContainerEl = listEl.closest(".navi_list_container");
-        const anchor = e.detail?.anchor;
-        listContainerEl.showPopover();
-        const positionPopover = () => {
-          const anchorRect = anchor.getBoundingClientRect();
-          listContainerEl.style.setProperty(
-            "--list-anchor-width",
-            `${anchorRect.width}px`,
-          );
-          const minLeft = 1;
-          const { left, top } = pickPositionRelativeTo(
-            listContainerEl,
-            anchor,
-            {
-              minLeft,
-            },
-          );
-          listContainerEl.style.top = `${top}px`;
-          const popoverRect = listContainerEl.getBoundingClientRect();
-          const maxWidth = parseFloat(
-            getComputedStyle(listContainerEl).maxWidth,
-          );
-          if (!isNaN(maxWidth) && popoverRect.width >= maxWidth - 1) {
-            const viewportWidth = document.documentElement.clientWidth;
-            const centeredLeft = (viewportWidth - popoverRect.width) / 2;
-            listContainerEl.style.left = `${Math.max(centeredLeft, minLeft)}px`;
-          } else {
-            listContainerEl.style.left = `${Math.max(left, minLeft)}px`;
-          }
-        };
-        const cleanup = visibleRectEffect(anchor, ({ visibilityRatio }) => {
-          if (visibilityRatio <= 0.2) {
-            listContainerEl.setAttribute("data-anchor-hidden", "");
-            return;
-          }
-          listContainerEl.removeAttribute("data-anchor-hidden");
-          positionPopover();
-        });
-        cleanupRef.current = () => cleanup.disconnect();
-        dispatchPublicCustomEvent(listEl, "navi_list_open", {
-          event: e,
-        });
-      }}
-      onnavi_list_request_close={(e) => {
-        const listEl = e.currentTarget;
-        const listContainerEl = listEl.closest(".navi_list_container");
-        cleanupRef.current?.();
-        listContainerEl.removeAttribute("data-anchor-hidden");
-        listContainerEl.hidePopover();
-        dispatchPublicCustomEvent(listEl, "navi_list_close", {
-          event: e,
-        });
-      }}
-    />
   );
 };
 
