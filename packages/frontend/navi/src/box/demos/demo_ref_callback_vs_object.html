@@ -134,7 +134,6 @@
       } from "@jsenv/navi/src/control/validation/custom_constraint_validation.js";
       import { List, ListItem } from "@jsenv/navi/src/control/list/list.jsx";
       import { windowWidthSignal } from "@jsenv/navi/src/layout/responsive.js";
-      import { Dialog } from "@jsenv/navi/src/popup/dialog.jsx";
       import { dispatchCustomEvent, findEvent } from "@jsenv/dom";
       import { compareTwoJsValues } from "@jsenv/navi/src/utils/compare_two_js_values.js";
       import {
@@ -142,11 +141,70 @@
         dispatchRequestSetUIState,
       } from "@jsenv/navi/src/control/ui_state_controller.js";
       import { Box } from "@jsenv/navi/src/box/box.jsx";
+      import { focusFirstAutofocusOrFocusable } from "@jsenv/navi/src/utils/focus/focus_first_autofocus_or_focusable.js";
 
       import {
         createComponentResolver,
         useNextResolver,
       } from "@jsenv/navi/src/resolver/resolver.jsx";
+
+      // MockDialog: real <dialog> via Box (like the real Dialog), with showModal/close.
+      // onnavi_open/onnavi_close stay in ...rest so Box registers them as DOM event
+      // listeners — they fire when navi_open/navi_close bubble up from dispatchCustomEvent.
+      const MockDialog = (props) => {
+        const { ref: refProp, id, children, ...rest } = props;
+        const defaultRef = useRef(null);
+        const ref = refProp || defaultRef;
+        const openedRef = useRef(false);
+
+        const open = (e) => {
+          const dialogEl = ref.current;
+          dialogEl.showModal();
+          focusFirstAutofocusOrFocusable(dialogEl, () => {}, e);
+          openedRef.current = true;
+          dispatchCustomEvent(dialogEl, "navi_open", { event: e });
+        };
+        const close = (e) => {
+          const dialogEl = ref.current;
+          dialogEl.close();
+          openedRef.current = false;
+          dispatchCustomEvent(dialogEl, "navi_close", { event: e });
+        };
+
+        return (
+          <Box
+            {...rest}
+            as="dialog"
+            id={id}
+            ref={ref}
+            onMouseDown={(e) => {
+              rest.onMouseDown?.(e);
+              // backdrop click: target is the <dialog> itself
+              if (e.button === 0 && e.target === ref.current) {
+                close(e);
+              }
+            }}
+            onCancel={(e) => {
+              e.preventDefault();
+              if (openedRef.current) {
+                close(e);
+              }
+            }}
+            onnavi_request_open={(e) => {
+              if (!openedRef.current) {
+                open(e);
+              }
+            }}
+            onnavi_request_close={(e) => {
+              if (openedRef.current) {
+                close(e);
+              }
+            }}
+          >
+            {children}
+          </Box>
+        );
+      };
 
       const useIgnoreClickForMousedown = () => {
         const disableClickFor = () => {
@@ -358,13 +416,9 @@
         if (isSmallScreen) {
           return (
             <Next aria-haspopup="dialog" {...pickerProps}>
-              <Dialog
-                {...popupProps}
-                className="navi_picker_dialog"
-                scrollTrap={true}
-              >
+              <MockDialog {...popupProps} className="navi_picker_dialog">
                 {pickerProps.children}
-              </Dialog>
+              </MockDialog>
             </Next>
           );
         }
