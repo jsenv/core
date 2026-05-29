@@ -90,8 +90,24 @@
           </Paragraph>
           <Box flex="y" spacing="m" alignX="start">
             <Text bold>Just enough to wrap — snaps to longest line</Text>
-            <Box maxWidth="300px" border="2px dotted #aaa" borderRadius="4px">
+            <Box maxWidth="280px" border="2px dotted #aaa" borderRadius="4px">
               <BadgeList>
+                <Badge>HTML</Badge>
+                <Badge>CSS</Badge>
+                <Badge>JavaScript</Badge>
+                <Badge>TypeScript</Badge>
+                <Badge>React</Badge>
+                <Badge>Vue</Badge>
+                <Badge>Node.js</Badge>
+              </BadgeList>
+            </Box>
+
+            <Text bold>
+              Without shrink wrap (<code>shrinkWrap={"{false}"}</code>) — blank
+              space on the right
+            </Text>
+            <Box maxWidth="280px" border="2px dotted #aaa" borderRadius="4px">
+              <BadgeList shrinkWrap={false}>
                 <Badge>HTML</Badge>
                 <Badge>CSS</Badge>
                 <Badge>JavaScript</Badge>
@@ -137,22 +153,6 @@
                 <Badge>WebAssembly</Badge>
                 <Badge>Zig</Badge>
                 <Badge>Infrastructure as Code</Badge>
-              </BadgeList>
-            </Box>
-
-            <Text bold>
-              Without shrink wrap (<code>shrinkWrap={"{false}"}</code>) — blank
-              space on the right
-            </Text>
-            <Box maxWidth="300px" border="2px dotted #aaa" borderRadius="4px">
-              <BadgeList shrinkWrap={false}>
-                <Badge>HTML</Badge>
-                <Badge>CSS</Badge>
-                <Badge>JavaScript</Badge>
-                <Badge>TypeScript</Badge>
-                <Badge>React</Badge>
-                <Badge>Vue</Badge>
-                <Badge>Node.js</Badge>
               </BadgeList>
             </Box>
           </Box>

@@ -31,6 +31,8 @@ export const BadgeList = ({
     if (!el) {
       return undefined;
     }
+    let observer;
+    let rafId;
     const applyWidth = () => {
       el.style.width = "";
       const optimalWidth = measureLongestVisualLineWidth(el);
@@ -41,13 +43,16 @@ export const BadgeList = ({
     };
     applyWidth();
     const parent = el.parentElement;
-    let observer;
     if (parent) {
-      observer = new ResizeObserver(applyWidth);
+      observer = new ResizeObserver(() => {
+        cancelAnimationFrame(rafId);
+        rafId = requestAnimationFrame(applyWidth);
+      });
       observer.observe(parent);
     }
     window.addEventListener("resize", applyWidth);
     return () => {
+      cancelAnimationFrame(rafId);
       observer?.disconnect();
       window.removeEventListener("resize", applyWidth);
     };
