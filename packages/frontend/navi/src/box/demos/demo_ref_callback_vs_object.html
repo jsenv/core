@@ -164,10 +164,9 @@
         );
       };
 
-      const MockPickerButton = (props) => {
-        const { ref, children, onMouseDown } = props;
+      const MockPickerButton = ({ children, onMouseDown }) => {
         return (
-          <button ref={ref} type="button" onMouseDown={onMouseDown}>
+          <button type="button" onMouseDown={onMouseDown}>
             {children}
           </button>
         );
