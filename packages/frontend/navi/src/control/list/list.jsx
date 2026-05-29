@@ -13,8 +13,7 @@ import {
   useId,
   useLayoutEffect,
   useRef,
-  useState,
-} from "preact/hooks";
+  useState,} from "preact/hooks";
 
 import { Box, BoxForwardedPropsContext } from "../../box/box.jsx";
 import { Separator } from "../../layout/separator.jsx";
@@ -357,11 +356,8 @@ const ListUI = (props) => {
   import.meta.css = css;
   const {
     ref,
-    renderBudget = RENDER_BUDGET_DEFAULT,
     id,
     role,
-    fallback,
-    noMatchFallback,
     separator,
     children,
     popover,
@@ -369,14 +365,8 @@ const ListUI = (props) => {
     expand,
     maxHeight,
     onListVisibleItemsChange,
-    virtualItemHeight,
     ...rest
   } = props;
-  if (renderBudget < 30) {
-    console.warn(
-      `List: renderBudget=${renderBudget} is too low. A renderBudget below 30 is not supported: on large screens or when the list grows, items outside the window would appear as blank space instead of rendered content. Use a value of at least 30, or omit the prop to use the default (${RENDER_BUDGET_DEFAULT}).`,
-    );
-  }
 
   const containerRef = useRef(null);
 
@@ -386,11 +376,10 @@ const ListUI = (props) => {
     },
   });
 
-  const { renderWindow, pendingScrollRef } = useListScrollSync({
+  useListScrollSync({
     containerRef,
     ref,
     tracker,
-    renderBudget,
   });
 
   const idDefault = useId();
@@ -409,25 +398,15 @@ const ListUI = (props) => {
       styleCSSVars={LIST_STYLE_CSS_VARS}
       pseudoClasses={LIST_PSEUDO_CLASSES}
       hasChildUsingForwardedProps
-      onnavi_list_request_scroll={(e) => {
-        const { item } = e.detail;
-        if (!item) {
-          return;
-        }
-      }}
     >
       <ListContent
         ref={ref}
         innerId={innerId}
         role={role}
-        fallback={fallback}
-        noMatchFallback={noMatchFallback}
         separator={separator}
         expandX={expandX}
         expand={expand}
         tracker={tracker}
-        renderWindow={renderWindow}
-        pendingScrollRef={pendingScrollRef}
       >
         {children}
       </ListContent>
@@ -438,15 +417,10 @@ const ListContent = ({
   ref,
   innerId,
   role,
-  fallback,
-  noMatchFallback,
   separator,
   expandX,
   expand,
   tracker,
-  renderWindow,
-
-  pendingScrollRef,
   children,
 }) => {
   const listProps = useContext(BoxForwardedPropsContext);
@@ -456,19 +430,14 @@ const ListContent = ({
         ref={ref}
         id={innerId}
         role={role}
-        fallback={fallback}
-        noMatchFallback={noMatchFallback}
         separator={separator === true ? <Separator margin="0" /> : separator}
         expandX={expandX || expand}
         {...listProps}
         tracker={tracker}
-        renderWindow={renderWindow}
       >
-        <PendingScrollRefContext.Provider value={pendingScrollRef}>
-          <ListIdContext.Provider value={innerId}>
-            {children}
-          </ListIdContext.Provider>
-        </PendingScrollRefContext.Provider>
+        <ListIdContext.Provider value={innerId}>
+          {children}
+        </ListIdContext.Provider>
       </UnorderedList>
     </div>
   );
@@ -489,25 +458,8 @@ const LIST_PSEUDO_CLASSES = [
   ":-navi-void",
   ":-navi-expanded",
 ];
-const useListScrollSync = ({ containerRef, ref, tracker, renderBudget }) => {
+const useListScrollSync = ({ containerRef, ref }) => {
   const debugScroll = useDebugScroll();
-
-  const [renderWindow, setRenderWindow] = useState({
-    start: 0,
-    end: renderBudget,
-  });
-  const renderWindowRef = useRef(null);
-  renderWindowRef.current = renderWindow;
-  const updateRenderWindow = (newStart, newEnd, reason) => {
-    const { start, end } = renderWindowRef.current;
-    if (newStart === start && newEnd === end) {
-      return;
-    }
-    debugScroll(`updateRenderWindow(${newStart}, ${newEnd}, "${reason}")`);
-    const renderWindow = { start: newStart, end: newEnd };
-    renderWindowRef.current = renderWindow;
-    setRenderWindow(renderWindow);
-  };
 
   const pendingScrollRef = useRef();
 
@@ -519,132 +471,9 @@ const useListScrollSync = ({ containerRef, ref, tracker, renderBudget }) => {
     console.log(listEl.dispatchEvent);
   }, [ref]);
 
-  // Scroll listener — slides the window as the user scrolls.
-  useLayoutEffect(() => {
-    const listContainerEl = containerRef.current;
-    if (!listContainerEl) {
-      return undefined;
-    }
-    const listScrollContainerEl = listContainerEl.querySelector(
-      `.navi_list_scroll_container`,
-    );
-    const listEl = listContainerEl.querySelector(".navi_list");
-    const onScroll = () => {
-      const visibleItemCount = tracker.visibleCountSignal.peek();
-      if (visibleItemCount <= renderBudget) {
-        return;
-      }
-      const oneRealListItemInDom = Boolean(
-        listEl.querySelector(REAL_LIST_ITEM_SELECTOR),
-      );
-      if (!oneRealListItemInDom) {
-        return;
-      }
-      let reason = "";
-      const scrollInfo = getScrollInfo(
-        { scrollTop: listScrollContainerEl.scrollTop },
-        listScrollContainerEl,
-        tracker,
-        renderWindowRef,
-      );
-      if (!scrollInfo) {
-        return;
-      }
-      const { index, reason: hitReason } = scrollInfo;
-      reason = hitReason;
-      const half = Math.floor(renderBudget / 2);
-      let newStart = Math.max(0, index - half);
-      let newEnd = Math.min(visibleItemCount, newStart + renderBudget);
-      if (newEnd === visibleItemCount) {
-        newStart = Math.max(0, visibleItemCount - renderBudget);
-      }
-      updateRenderWindow(newStart, newEnd, reason);
-    };
-    listScrollContainerEl.addEventListener("scroll", onScroll, {
-      passive: true,
-    });
-    return () => {
-      listScrollContainerEl.removeEventListener("scroll", onScroll, {
-        passive: true,
-      });
-    };
-  }, [ref, renderBudget]);
-
   return {
-    renderWindow,
+    renderWindow: { start: 0, end: Infinity },
     pendingScrollRef,
-  };
-};
-// Returns the item located at the current scroll position of a list container.
-// Uses DOM hit-testing to find visible items/fillers; falls back to index
-// estimation via virtualItemHeight or renderWindow.start.
-// Returns { index, item, reason } or null if nothing can be determined.
-const getScrollInfo = (
-  { scrollTop },
-  listScrollContainerEl,
-  tracker,
-  renderWindowRef,
-) => {
-  const listEl = listScrollContainerEl.querySelector(".navi_list");
-  const items = tracker.itemsSignal.peek();
-  const containerRect = listScrollContainerEl.getBoundingClientRect();
-  let hitEl = null;
-  let hitFiller = null;
-  // Start scanning from the vertical center of the viewport rather than the top.
-  // The render window places half its budget above and half below the hit index.
-  // Anchoring to the center maximises how many rendered items fall within the
-  // visible area: starting from the top would waste the "above" budget on items
-  // already scrolled past, leaving the bottom of the viewport uncovered.
-  // For large lists where renderBudget >> visible item count this never matters
-  // in practice (the window always covers the whole viewport), but it is
-  // strictly better and costs nothing.
-  const scanStartY = (containerRect.top + containerRect.bottom) / 2;
-  for (let y = scanStartY; y < containerRect.bottom; y += 4) {
-    const el = document.elementFromPoint(containerRect.left + 1, y);
-    if (!el || !listEl.contains(el)) {
-      continue;
-    }
-    const realItem = el.closest(REAL_LIST_ITEM_SELECTOR);
-    if (realItem) {
-      hitEl = realItem;
-      break;
-    }
-    const filler = el.closest("[navi-virtual-filler]");
-    if (filler) {
-      hitFiller = filler;
-      break;
-    }
-  }
-  if (hitFiller) {
-    const virtualItemHeight = 30;
-    if (virtualItemHeight === 0) {
-      return null;
-    }
-    const estimatedIndex = Math.floor(scrollTop / virtualItemHeight);
-    const index = Math.min(items.length - 1, estimatedIndex);
-    return {
-      item: items[index],
-      index,
-      reason: `hit filler, estimated at ${index} (${items[index]?.value})`,
-    };
-  }
-  if (hitEl) {
-    const hitId = hitEl.id;
-    const index = items.findIndex((i) => i.id === hitId);
-    if (index === -1) {
-      return null;
-    }
-    return {
-      item: items[index],
-      index,
-      reason: `hit item at ${index} (${items[index].value})`,
-    };
-  }
-  const fallbackIndex = renderWindowRef.current.start;
-  return {
-    item: items[fallbackIndex],
-    index: fallbackIndex,
-    reason: "no hit",
   };
 };
 
