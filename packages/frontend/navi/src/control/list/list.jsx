@@ -344,11 +344,10 @@ const ListUI = (props) => {
     },
   });
 
-  useListScrollSync({
-    containerRef,
-    ref,
-    tracker,
-  });
+  useDisplayedLayoutEffect(containerRef, () => {
+    const listEl = ref.current;
+    console.log(listEl.dispatchEvent);
+  }, [ref]);
 
   const idDefault = useId();
   const innerId = id || idDefault;
@@ -426,12 +425,6 @@ const LIST_PSEUDO_CLASSES = [
   ":-navi-void",
   ":-navi-expanded",
 ];
-const useListScrollSync = ({ containerRef, ref }) => {
-  useDisplayedLayoutEffect(containerRef, () => {
-    const listEl = ref.current;
-    console.log(listEl.dispatchEvent);
-  }, [ref]);
-};
 
 // Inner <ul> — hosts items.
 const UnorderedList = ({ tracker, separator, children, ...rest }) => {
