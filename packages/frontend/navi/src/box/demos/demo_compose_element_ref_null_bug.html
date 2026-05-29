@@ -11,180 +11,86 @@
         padding: 20px;
         font-family: system-ui, sans-serif;
       }
-      button {
-        margin: 4px;
-        padding: 8px 16px;
-        font-family: inherit;
-        background: white;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        cursor: pointer;
-      }
-      button:hover {
-        background: #f0f0f0;
-      }
-      ul {
-        margin: 8px 0;
-        padding: 8px 24px;
-        background: #fafafa;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-      }
-      .log {
-        min-height: 80px;
-        margin-top: 16px;
-        padding: 10px;
-        font-size: 14px;
+      .result {
+        margin-top: 12px;
+        padding: 8px 12px;
         font-family: monospace;
-        background: #fafafa;
-        border: 1px solid #ddd;
         border-radius: 4px;
       }
-      .log-entry {
-        padding: 2px 0;
-      }
-      .log-entry.ok {
+      .result.ok {
         color: #155724;
+        background: #d4edda;
       }
-      .log-entry.bug {
+      .result.bug {
         color: #721c24;
         font-weight: bold;
-      }
-      .log-entry.info {
-        color: #555;
-      }
-      .steps {
-        margin-bottom: 16px;
-        padding: 12px 16px;
-        background: #f8f9fa;
-        border-radius: 4px;
-      }
-      .steps ol {
-        margin: 0;
-        padding-left: 20px;
-      }
-      .steps li {
-        margin: 4px 0;
+        background: #f8d7da;
       }
     </style>
   </head>
   <body>
     <div id="app"></div>
     <script type="module" jsenv-type="module/jsx">
-      import { useSignal } from "@preact/signals";
+      import { signal } from "@preact/signals";
       import { render } from "preact";
-      import { useRef } from "preact/hooks";
+      import { useEffect, useRef } from "preact/hooks";
 
       /**
        * Inline, BUGGY version of useComposeElementRef (no fix).
        *
-       * The refCallback is created once (stable across renders). On each
-       * render we just update externalRefRef.current with the latest
-       * externalRef. When the parent passes a DIFFERENT ref object while
-       * the DOM element is unchanged, Preact does NOT re-fire the
-       * refCallback — so the new external ref's `.current` stays `null`.
+       * The refCallback is created once (stable across renders) and Preact
+       * does not re-fire it while the DOM element is unchanged. So when the
+       * parent passes a DIFFERENT external ref between renders, the new
+       * ref's `.current` stays `null`.
        */
       const useComposeElementRefBuggy = (externalRef) => {
-        const elRef = useRef(null);
         const externalRefRef = useRef(externalRef);
         externalRefRef.current = externalRef;
         const refCallbackRef = useRef(null);
         if (!refCallbackRef.current) {
           refCallbackRef.current = (el) => {
-            elRef.current = el;
-            const currentExternalRef = externalRefRef.current;
-            if (currentExternalRef) {
-              if (typeof currentExternalRef === "function") {
-                currentExternalRef(el);
-              } else {
-                currentExternalRef.current = el;
-              }
-            }
+            const cur = externalRefRef.current;
+            if (cur) cur.current = el;
           };
         }
         return refCallbackRef.current;
       };
 
-      const BoxLike = ({ externalRef, children }) => {
+      const Box = ({ externalRef }) => {
         const refCallback = useComposeElementRefBuggy(externalRef);
-        return <ul ref={refCallback}>{children}</ul>;
+        return <div ref={refCallback} />;
       };
 
+      const refA = { current: null };
+      const refB = { current: null };
+      const whichSignal = signal("A");
+      const checkedSignal = signal(false);
+
       const App = () => {
-        const refA = useRef(null);
-        const refB = useRef(null);
-        const whichSignal = useSignal("A");
-        const logSignal = useSignal([]);
+        const externalRef = whichSignal.value === "A" ? refA : refB;
 
-        const log = (msg, kind = "info") => {
-          logSignal.value = [...logSignal.value, { msg, kind }];
-        };
+        // After initial render: swap to refB. Same DOM <div> is reused so
+        // refCallback is never re-fired → refB.current stays null.
+        useEffect(() => {
+          whichSignal.value = "B";
+          queueMicrotask(() => {
+            checkedSignal.value = true;
+          });
+        }, []);
 
-        const which = whichSignal.value;
-        const externalRef = which === "A" ? refA : refB;
-
-        const swap = () => {
-          const next = which === "A" ? "B" : "A";
-          log(`Swap externalRef: ${which} → ${next} (DOM <ul> unchanged)`);
-          whichSignal.value = next;
-        };
-
-        const readCurrent = () => {
-          const current = (which === "A" ? refA : refB).current;
-          if (current) {
-            log(
-              `✅ ref${which}.current = <${current.tagName.toLowerCase()}> — OK`,
-              "ok",
-            );
-          } else {
-            log(`❌ ref${which}.current = null — BUG!`, "bug");
-          }
-        };
-
+        const el = refB.current;
         return (
           <div>
-            <h2>
-              useComposeElementRef — null ref when external ref identity changes
-            </h2>
-            <div className="steps">
-              <ol>
-                <li>
-                  Initial render passes <code>refA</code>. Click <b>Read ref</b>{" "}
-                  → expects <code>&lt;ul&gt;</code>.
-                </li>
-                <li>
-                  Click <b>Swap externalRef</b> → parent now passes{" "}
-                  <code>refB</code>. The DOM <code>&lt;ul&gt;</code> is
-                  unchanged so Preact does NOT re-fire the refCallback.
-                </li>
-                <li>
-                  Click <b>Read ref</b> again → <code>refB.current</code> is
-                  still <code>null</code> → <b>BUG</b>.
-                </li>
-              </ol>
-            </div>
-
-            <p>
-              Currently passing: <b>ref{which}</b>
-            </p>
-            <button onClick={swap}>Swap externalRef</button>
-            <button onClick={readCurrent}>Read ref{which}.current</button>
-
-            <BoxLike externalRef={externalRef}>
-              <li>Item 1</li>
-              <li>Item 2</li>
-            </BoxLike>
-
-            <div className="log">
-              {logSignal.value.length === 0 && (
-                <span style="color: #999">Events will appear here…</span>
-              )}
-              {logSignal.value.map((entry, i) => (
-                <div key={i} className={`log-entry ${entry.kind}`}>
-                  {entry.msg}
-                </div>
-              ))}
-            </div>
+            <Box externalRef={externalRef} />
+            {!checkedSignal.value ? (
+              <div className="result">Waiting…</div>
+            ) : el ? (
+              <div className="result ok">
+                ✅ refB.current = &lt;{el.tagName.toLowerCase()}&gt;
+              </div>
+            ) : (
+              <div className="result bug">❌ refB.current = null — BUG</div>
+            )}
           </div>
         );
       };
