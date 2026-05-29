@@ -126,7 +126,7 @@
 
       import { useSignal } from "@preact/signals";
       import { render } from "preact";
-      import { useId, useRef, useState } from "preact/hooks";
+      import { useEffect, useId, useRef, useState } from "preact/hooks";
       import { useControlProps } from "@jsenv/navi/src/control/control_hooks.jsx";
       import {
         dispatchRequestAction,
@@ -135,8 +135,8 @@
       import { List, ListItem } from "@jsenv/navi/src/control/list/list.jsx";
       import { windowWidthSignal } from "@jsenv/navi/src/layout/responsive.js";
       import { Dialog } from "@jsenv/navi/src/popup/dialog.jsx";
-      import { Popover } from "@jsenv/navi/src/popup/popover.jsx";
       import { dispatchCustomEvent, findEvent } from "@jsenv/dom";
+      import { createPortal } from "preact/compat";
       import { compareTwoJsValues } from "@jsenv/navi/src/utils/compare_two_js_values.js";
       import {
         getUIStateFromElement,
@@ -148,6 +148,87 @@
         createComponentResolver,
         useNextResolver,
       } from "@jsenv/navi/src/resolver/resolver.jsx";
+
+      // MockPopover: closer to real Popover — uses Box, native popover API, backdrop portal, navi_open/close events.
+      const MockPopover = (props) => {
+        const {
+          ref: refProp,
+          id,
+          onnavi_open,
+          onnavi_close,
+          onMouseDown,
+          onClick,
+          children,
+          ...rest
+        } = props;
+        const defaultRef = useRef(null);
+        const ref = refProp || defaultRef;
+        const [opened, setOpened] = useState(false);
+        const openedRef = useRef(false);
+
+        const open = (e) => {
+          const el = ref.current;
+          el.showPopover();
+          openedRef.current = true;
+          setOpened(true);
+          dispatchCustomEvent(el, "navi_open", { event: e });
+        };
+        const close = (e) => {
+          const el = ref.current;
+          el.hidePopover();
+          openedRef.current = false;
+          setOpened(false);
+          dispatchCustomEvent(el, "navi_close", { event: e });
+        };
+
+        return (
+          <>
+            {opened &&
+              createPortal(
+                <div
+                  style={{
+                    position: "fixed",
+                    inset: 0,
+                    zIndex: 1000,
+                    background: "transparent",
+                  }}
+                  aria-hidden="true"
+                  onMouseDown={(e) => {
+                    if (e.button !== 0) {
+                      return;
+                    }
+                    close(e);
+                  }}
+                />,
+                document.body,
+              )}
+            <Box
+              id={id}
+              popover="manual"
+              {...rest}
+              ref={ref}
+              onnavi_open={onnavi_open}
+              onnavi_close={onnavi_close}
+              onMouseDown={onMouseDown}
+              onClick={onClick}
+              onnavi_request_open={(e) => {
+                if (openedRef.current) {
+                  return;
+                }
+                open(e);
+              }}
+              onnavi_request_close={(e) => {
+                if (!openedRef.current) {
+                  return;
+                }
+                close(e);
+              }}
+            >
+              {children}
+            </Box>
+          </>
+        );
+      };
 
       const useIgnoreClickForMousedown = () => {
         const disableClickFor = () => {
@@ -371,13 +452,13 @@
         }
         return (
           <Next aria-haspopup="listbox" {...pickerProps}>
-            <Popover
+            <MockPopover
               {...popupProps}
               className="navi_picker_popover"
               scrollTrap={true}
             >
               {pickerProps.children}
-            </Popover>
+            </MockPopover>
           </Next>
         );
       };
