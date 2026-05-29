@@ -51,8 +51,7 @@
         const { children } = props;
         const popupRef = useRef(null);
 
-        const onMouseDown = (e) => {
-          e.preventDefault();
+        const onMouseDown = () => {
           popupRef.current.showModal();
         };
 
