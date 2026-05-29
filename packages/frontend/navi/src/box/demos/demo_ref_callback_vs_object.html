@@ -218,42 +218,9 @@
         );
       };
 
-      // ── MockPickerContentInsideDialog (= PickerContentInsideDialog) ────────────
-      const MockPickerContentInsideDialog = (props) => {
-        const Next = useNextResolver();
-        const { popupProps, children, ...rest } = props;
-        return (
-          <Next aria-haspopup="dialog" {...rest} popupProps={popupProps}>
-            <Dialog
-              {...popupProps}
-              className="navi_picker_dialog"
-              scrollTrap={true}
-            >
-              {children}
-            </Dialog>
-          </Next>
-        );
-      };
-
-      // ── MockPickerContentInsidePopover (= PickerContentInsidePopover) ──────────
-      const MockPickerContentInsidePopover = (props) => {
-        const Next = useNextResolver();
-        const { popupProps, children, ...rest } = props;
-        return (
-          <Next aria-haspopup="listbox" {...rest} popupProps={popupProps}>
-            <Popover
-              {...popupProps}
-              className="navi_picker_popover"
-              scrollTrap={true}
-            >
-              {children}
-            </Popover>
-          </Next>
-        );
-      };
-
-      // ── MockPickerCustom (= PickerCustom) ──────────────────────────────────────
+      // ── MockPickerCustom (= PickerCustom + PickerContentInside* merged) ──────────
       const MockPickerCustom = (props) => {
+        const Next = useNextResolver();
         const isSmallScreen = windowWidthSignal.value <= 600;
         const { ref } = props;
 
@@ -448,9 +415,29 @@
         });
 
         if (isSmallScreen) {
-          return <MockPickerContentInsideDialog {...pickerProps} />;
+          return (
+            <Next aria-haspopup="dialog" {...pickerProps}>
+              <Dialog
+                {...popupProps}
+                className="navi_picker_dialog"
+                scrollTrap={true}
+              >
+                {pickerProps.children}
+              </Dialog>
+            </Next>
+          );
         }
-        return <MockPickerContentInsidePopover {...pickerProps} />;
+        return (
+          <Next aria-haspopup="listbox" {...pickerProps}>
+            <Popover
+              {...popupProps}
+              className="navi_picker_popover"
+              scrollTrap={true}
+            >
+              {pickerProps.children}
+            </Popover>
+          </Next>
+        );
       };
 
       // ── Resolver chain (= pickerResolvers + renderPicker) ─────────────────────
