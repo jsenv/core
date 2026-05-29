@@ -194,11 +194,7 @@
         if (isSmallScreen) {
           return (
             <Next {...props} onMouseDown={onMouseDown}>
-              <MockDialog
-                ref={popupRef}
-                onnavi_close={onClose}
-                className="navi_picker_dialog"
-              >
+              <MockDialog ref={popupRef} onnavi_close={onClose}>
                 {children}
               </MockDialog>
             </Next>
@@ -213,14 +209,9 @@
       // ── Resolver chain (= pickerResolvers + renderPicker) ─────────────────────
       const renderMockPicker = createComponentResolver([MockPickerCustom]);
 
-      const MockPicker = (props) => {
-        const defaultRef = useRef(null);
-        props.ref = props.ref || defaultRef;
-        return renderMockPicker(MockPickerButton, props);
-      };
-
       const App = () => {
         const selectedSignal = useSignal();
+        const defaultRef = useRef(null);
 
         const simulateNarrow = () => {
           windowWidthSignal.value = 1200;
@@ -236,18 +227,20 @@
               3. <b>Close</b> · 4. <b>Open</b> again → BUG?
             </p>
             <button onClick={simulateNarrow}>Simulate resize → dialog</button>
-            <MockPicker
-              value={selectedSignal.value}
-              action={() => {
+            {renderMockPicker(MockPickerButton, {
+              ref: defaultRef,
+              value: selectedSignal.value,
+              action: () => {
                 selectedSignal.value = "x";
-              }}
-            >
-              <List>
-                <ListItem index={0}>
-                  <span>Apple</span>
-                </ListItem>
-              </List>
-            </MockPicker>
+              },
+              children: (
+                <List>
+                  <ListItem index={0}>
+                    <span>Apple</span>
+                  </ListItem>
+                </List>
+              ),
+            })}
           </div>
         );
       };
