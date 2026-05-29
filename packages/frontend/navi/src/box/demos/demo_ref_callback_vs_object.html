@@ -267,9 +267,7 @@
         Object.assign(pickerProps, { "aria-controls": popupId });
         Object.assign(popupProps, { id: popupId });
 
-        const [expanded, setExpanded] = useState(false);
-        const expandedRef = useRef(expanded);
-        expandedRef.current = expanded;
+        const openRef = useRef(false);
 
         const onClose = (e) => {
           props.action?.("dummy");
@@ -297,12 +295,11 @@
 
         const { onActionStart, children } = props;
         Object.assign(pickerProps, {
-          "aria-expanded": expanded,
-          "onActionStart": (e) => {
+          onActionStart: (e) => {
             onActionStart?.(e);
             requestClose(e);
           },
-          "onnavi_request_close": (e) => {
+          onnavi_request_close: (e) => {
             if (dispatchRequestInteraction(ref.current, e)) {
               requestClose(e);
             }
@@ -339,7 +336,7 @@
                 "mousedown to open picker",
               )
             ) {
-              if (expandedRef.current) {
+              if (openRef.current) {
                 requestClose(e);
               } else {
                 e.preventDefault();
