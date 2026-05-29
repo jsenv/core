@@ -127,7 +127,6 @@
       import { useSignal } from "@preact/signals";
       import { render } from "preact";
       import { useRef } from "preact/hooks";
-      import { dispatchRequestAction } from "@jsenv/navi/src/control/validation/custom_constraint_validation.js";
       import { List, ListItem } from "@jsenv/navi/src/control/list/list.jsx";
       import { windowWidthSignal } from "@jsenv/navi/src/layout/responsive.js";
       import { dispatchCustomEvent } from "@jsenv/dom";
@@ -264,27 +263,10 @@
         return <List as="fieldset" {...props} />;
       };
 
-      // Minimal Selectable: calls useCheckableProps (the real one), renders a real
-      const MockSelectable = (props) => {
-        const { id, value, children, index } = props;
-        const spanRef = useRef();
-        const onClick = (e) => {
-          const listEl = spanRef.current.closest(".navi_list_container");
-          dispatchRequestAction(listEl, { event: e, uiState: value });
-        };
+      const MockSelectable = ({ index, children }) => {
         return (
-          <ListItem id={id} index={index}>
-            <span
-              ref={spanRef}
-              onClick={onClick}
-              style={{
-                padding: "6px 12px",
-                display: "block",
-                cursor: "pointer",
-              }}
-            >
-              {children}
-            </span>
+          <ListItem index={index}>
+            <span>{children}</span>
           </ListItem>
         );
       };
@@ -317,12 +299,7 @@
             >
               <MockSelectableList action="update">
                 {OPTIONS.map((opt, i) => (
-                  <MockSelectable
-                    key={opt}
-                    id={`${opt}_item`}
-                    index={i}
-                    value={opt}
-                  >
+                  <MockSelectable key={opt} index={i}>
                     {opt}
                   </MockSelectable>
                 ))}
