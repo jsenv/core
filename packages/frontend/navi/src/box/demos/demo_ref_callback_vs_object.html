@@ -195,7 +195,7 @@
 
         const pickerProps = { ...props };
         const popupProps = {};
-        Object.assign(pickerProps, { popupProps, actionInteraction: "manual" });
+        Object.assign(pickerProps, { popupProps });
 
         const popupRef = useRef(null);
         popupProps.ref = popupRef;
