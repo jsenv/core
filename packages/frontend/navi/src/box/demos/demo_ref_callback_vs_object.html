@@ -148,7 +148,7 @@
         useNextResolver,
       } from "@jsenv/navi/src/resolver/resolver.jsx";
 
-      // MockPopover: div with show/hide state, no native popover API.
+      // MockPopover: minimal div, calls onnavi_open/close directly as callbacks.
       const MockPopover = (props) => {
         const {
           ref: refProp,
@@ -158,7 +158,6 @@
           onMouseDown,
           onClick,
           children,
-          ...rest
         } = props;
         const defaultRef = useRef(null);
         const ref = refProp || defaultRef;
@@ -168,12 +167,12 @@
         const open = (e) => {
           openedRef.current = true;
           setOpened(true);
-          dispatchCustomEvent(ref.current, "navi_open", { event: e });
+          onnavi_open?.(e);
         };
         const close = (e) => {
           openedRef.current = false;
           setOpened(false);
-          dispatchCustomEvent(ref.current, "navi_close", { event: e });
+          onnavi_close?.(e);
         };
 
         return (
@@ -183,8 +182,6 @@
             style={{ display: opened ? "" : "none" }}
             onMouseDown={onMouseDown}
             onClick={onClick}
-            onnavi_open={onnavi_open}
-            onnavi_close={onnavi_close}
             onnavi_request_open={(e) => {
               if (!openedRef.current) {
                 open(e);
