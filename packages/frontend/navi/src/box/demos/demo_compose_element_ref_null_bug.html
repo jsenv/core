@@ -1,0 +1,230 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>useComposeElementRef — null ref during remount bug</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: system-ui, sans-serif;
+      }
+
+      button {
+        margin: 4px;
+        padding: 8px 16px;
+        font-family: inherit;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background: #f0f0f0;
+      }
+
+      dialog {
+        min-width: 250px;
+        padding: 16px;
+        border: 1px solid #aaa;
+        border-radius: 8px;
+      }
+
+      .log {
+        min-height: 80px;
+        margin-top: 16px;
+        padding: 10px;
+        font-size: 14px;
+        font-family: monospace;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+      }
+
+      .log-entry {
+        padding: 2px 0;
+      }
+
+      .log-entry.ok {
+        color: #155724;
+      }
+
+      .log-entry.bug {
+        color: #721c24;
+        font-weight: bold;
+      }
+
+      .log-entry.info {
+        color: #555;
+      }
+
+      .steps {
+        margin-bottom: 16px;
+        padding: 12px 16px;
+        background: #f8f9fa;
+        border-radius: 4px;
+      }
+
+      .steps ol {
+        margin: 0;
+        padding-left: 20px;
+      }
+
+      .steps li {
+        margin: 4px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { useSignal } from "@preact/signals";
+      import { render } from "preact";
+      import { useRef } from "preact/hooks";
+      import { useComposeElementRef } from "@jsenv/navi/src/box/use_element_ref.js";
+
+      /**
+       * Simulates what Box does internally: wraps a DOM element and
+       * forwards the ref via useComposeElementRef.
+       *
+       * When this component unmounts, useComposeElementRef calls
+       * externalRef.current = null (the bug).
+       */
+      const BoxLike = ({ as: Tag = "div", externalRef, children }) => {
+        const refCallback = useComposeElementRef(() => {
+          /* no-op syncElement */
+        }, externalRef);
+        return <Tag ref={refCallback}>{children}</Tag>;
+      };
+
+      /**
+       * Two wrapper components with DIFFERENT identities so that switching
+       * between them forces Preact to unmount the old subtree (including
+       * BoxLike) and mount a fresh one.
+       *
+       * This simulates what happens in the real app when selectedSignal
+       * changes and causes a component resolver to switch implementations.
+       */
+      const WrapperA = ({ children }) => (
+        <section style="border: 2px dashed #6c757d; padding: 8px; border-radius: 4px;">
+          <small>Wrapper A</small>
+          {children}
+        </section>
+      );
+      const WrapperB = ({ children }) => (
+        <section style="border: 2px dashed #007bff; padding: 8px; border-radius: 4px;">
+          <small>Wrapper B</small>
+          {children}
+        </section>
+      );
+
+      const App = () => {
+        const dialogRef = useRef(null);
+        const ulRef = useRef(null);
+        const wrapperSignal = useSignal("A");
+        const logSignal = useSignal([]);
+
+        const log = (msg, kind = "info") => {
+          logSignal.value = [...logSignal.value, { msg, kind }];
+        };
+
+        /**
+         * Simulate what useDisplayedLayoutEffect does on toggle open:
+         * read the external ref to access the inner element.
+         */
+        const onDialogToggle = (e) => {
+          if (e.newState !== "open") {
+            return;
+          }
+          const el = ulRef.current;
+          if (el) {
+            log(
+              `✅ toggle "open": ulRef.current = <${el.tagName.toLowerCase()}> — OK`,
+              "ok",
+            );
+          } else {
+            log(`❌ toggle "open": ulRef.current = null — BUG!`, "bug");
+          }
+        };
+
+        const open = () => {
+          log(`Opening dialog…`);
+          dialogRef.current.showModal();
+        };
+
+        const close = () => {
+          dialogRef.current.close();
+          /**
+           * Simulate the side effect of closing: some signal changes
+           * (like selectedSignal.value = "x") which triggers a re-render
+           * that switches the wrapper component — forcing BoxLike to
+           * unmount and remount.
+           *
+           * During unmount, useComposeElementRef sets ulRef.current = null.
+           */
+          const next = wrapperSignal.value === "A" ? "B" : "A";
+          log(
+            `Switching wrapper: ${wrapperSignal.value} → ${next} (BoxLike remounts → ulRef = null)`,
+          );
+          wrapperSignal.value = next;
+        };
+
+        const Wrapper = wrapperSignal.value === "A" ? WrapperA : WrapperB;
+
+        return (
+          <div>
+            <h2>useComposeElementRef — null ref during remount</h2>
+            <div className="steps">
+              <ol>
+                <li>
+                  <b>Open</b> the dialog
+                </li>
+                <li>
+                  <b>Close</b> → wrapper switches, BoxLike remounts, ulRef
+                  becomes null
+                </li>
+                <li>
+                  <b>Open again</b> → toggle fires → ulRef.current is null →{" "}
+                  <b>BUG</b>
+                </li>
+              </ol>
+            </div>
+
+            <button onClick={open}>Open dialog</button>
+
+            <dialog
+              ref={(el) => {
+                dialogRef.current = el;
+                if (el) {
+                  el.addEventListener("toggle", onDialogToggle);
+                }
+              }}
+            >
+              <p style="margin: 0 0 8px">Dialog content:</p>
+              <Wrapper>
+                <BoxLike as="ul" externalRef={ulRef}>
+                  <li>Item 1</li>
+                  <li>Item 2</li>
+                </BoxLike>
+              </Wrapper>
+              <button onClick={close}>Close (triggers wrapper switch)</button>
+            </dialog>
+
+            <div className="log">
+              {logSignal.value.length === 0 && (
+                <span style="color: #999">Events will appear here…</span>
+              )}
+              {logSignal.value.map((entry, i) => (
+                <div key={i} className={`log-entry ${entry.kind}`}>
+                  {entry.msg}
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      };
+
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>
