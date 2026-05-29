@@ -214,13 +214,7 @@
         );
       };
       // ── Resolver chain (= pickerResolvers + renderPicker) ─────────────────────
-      const MockPickerCustomResolver = (props) => {
-        return <MockPickerCustom {...props} />;
-      };
-
-      const renderMockPicker = createComponentResolver([
-        MockPickerCustomResolver,
-      ]);
+      const renderMockPicker = createComponentResolver([MockPickerCustom]);
 
       const MockPicker = (props) => {
         const defaultRef = useRef(null);
