@@ -293,16 +293,10 @@
           });
         };
 
-        const { onActionStart, children } = props;
+        const { children } = props;
         Object.assign(pickerProps, {
-          onActionStart: (e) => {
-            onActionStart?.(e);
-            requestClose(e);
-          },
           onnavi_request_close: (e) => {
-            if (dispatchRequestInteraction(ref.current, e)) {
-              requestClose(e);
-            }
+            requestClose(e);
           },
           children,
         });
@@ -310,48 +304,13 @@
           onnavi_close: (e) => {
             onClose(e);
           },
-          onMouseDown: (e) => {
-            if (e.button !== 0) {
-              return;
-            }
-            e.stopPropagation();
-          },
-          onClick: (e) => {
-            if (e.button !== 0) {
-              return;
-            }
-            e.stopPropagation();
-          },
         });
 
-        const { onMouseDown, onClick } = props;
         Object.assign(pickerProps, {
           onMouseDown: (e) => {
-            onMouseDown?.(e);
-            const pickerEl = ref.current;
-            if (
-              dispatchRequestInteraction(
-                pickerEl,
-                e,
-                "mousedown to open picker",
-              )
-            ) {
-              if (openRef.current) {
-                requestClose(e);
-              } else {
-                e.preventDefault();
-                requestOpen(e);
-              }
-            }
-          },
-          onClick: (e) => {
-            onClick?.(e);
-            if (e.detail === 0) {
-              return;
-            }
-            if (
-              dispatchRequestInteraction(ref.current, e, "click to open picker")
-            ) {
+            if (openRef.current) {
+              requestClose(e);
+            } else {
               e.preventDefault();
               requestOpen(e);
             }
