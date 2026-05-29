@@ -2,9 +2,7 @@ import {
   dispatchCustomEvent,
   dispatchPublicCustomEvent,
   getElementSignature,
-  pickPositionRelativeTo,
   scrollIntoViewScoped,
-  visibleRectEffect,
 } from "@jsenv/dom";
 import { signal } from "@preact/signals";
 import { createContext } from "preact";
@@ -19,10 +17,6 @@ import {
 import { Box, BoxForwardedPropsContext } from "../../box/box.jsx";
 import { Separator } from "../../layout/separator.jsx";
 import { useDebugScroll } from "../../navi_debug.jsx";
-import {
-  createComponentResolver,
-  useNextResolver,
-} from "../../resolver/resolver.jsx";
 import { useItemTracker } from "../../utils/item_tracker/use_item_tracker.js";
 import { useDisplayedLayoutEffect } from "../../utils/use_displayed_layout_effect.js";
 import { useSearchHighlight } from "./search_highlight.js";
@@ -338,18 +332,9 @@ const css = /* css */ `
 export const List = (props) => {
   const refDefault = useRef(null);
   props.ref = props.ref || refDefault;
-  const listVnode = renderList(ListUI, props);
+  const listVnode = <ListUI {...props} />;
   return listVnode;
 };
-const ListWithPopoverResolver = (props) => {
-  const Next = useNextResolver();
-  if (props.popover === true) {
-    return <ListWithPopover {...props} />;
-  }
-  return <Next {...props} />;
-};
-const renderList = createComponentResolver([ListWithPopoverResolver]);
-
 const ListUI = (props) => {
   import.meta.css = css;
   const {
@@ -714,7 +699,7 @@ const useListScrollSync = ({
   useLayoutEffect(() => {
     const listContainerEl = containerRef.current;
     if (!listContainerEl) {
-      return;
+      return undefined;
     }
     const listScrollContainerEl = listContainerEl.querySelector(
       `.navi_list_scroll_container`,
@@ -725,7 +710,7 @@ const useListScrollSync = ({
       const savedScroll = savedScrollRef.current;
       if (!savedScroll) {
         // nothing to restore
-        return;
+        return undefined;
       }
       savedScrollRef.current = null;
       debugScroll("Restoring scroll to", savedScroll);
@@ -734,7 +719,7 @@ const useListScrollSync = ({
         savedScroll.renderWindow.end,
         "restore scroll window",
       );
-      requestAnimationFrame(() => {
+      const raf = requestAnimationFrame(() => {
         const left = savedScroll.left;
         const top = savedScroll.top;
         // use scrollTo to respect eventual css scroll-behavior: smooth;
@@ -763,7 +748,9 @@ const useListScrollSync = ({
           event: new CustomEvent("navi_scroll_restore"),
         });
       });
-      return;
+      return () => {
+        cancelAnimationFrame(raf);
+      };
     }
     const visibleItems = tracker.visibleItemsSignal.peek();
     const topItems = visibleItems.slice(0, renderBudget);
@@ -773,7 +760,7 @@ const useListScrollSync = ({
     const currentTopMatchScore = topMatchScoresKeyRef.current;
     if (topMatchScoresKey === currentTopMatchScore) {
       // no changes in top matches -> no need to scroll
-      return;
+      return undefined;
     }
     // n items are now more important to see, scrollTop to show them
     topMatchScoresKeyRef.current = topMatchScoresKey;
@@ -789,7 +776,7 @@ const useListScrollSync = ({
     scrollToItem(visibleItems[0], {
       event: new CustomEvent("navi_list_top_match_change"),
     });
-    return;
+    return undefined;
   });
 
   // Scroll listener — slides the window as the user scrolls.
@@ -1080,81 +1067,6 @@ const BottomFiller = ({
       aria-hidden
       style={{
         height: `${heightToFillBelow}px`,
-      }}
-    />
-  );
-};
-
-// Popover variant: handles open/close/positioning events and forwards
-// navigate/confirm/clear to the underlying list.
-const ListWithPopover = (props) => {
-  const Next = useNextResolver();
-  const cleanupRef = useRef();
-
-  useLayoutEffect(() => {
-    return () => {
-      cleanupRef.current?.();
-    };
-  }, []);
-
-  return (
-    <Next
-      {...props}
-      popover="manual"
-      onnavi_list_request_open={(e) => {
-        const listEl = e.currentTarget;
-        const listContainerEl = listEl.closest(".navi_list_container");
-        const anchor = e.detail?.anchor;
-        listContainerEl.showPopover();
-        const positionPopover = () => {
-          const anchorRect = anchor.getBoundingClientRect();
-          listContainerEl.style.setProperty(
-            "--list-anchor-width",
-            `${anchorRect.width}px`,
-          );
-          const minLeft = 1;
-          const { left, top } = pickPositionRelativeTo(
-            listContainerEl,
-            anchor,
-            {
-              minLeft,
-            },
-          );
-          listContainerEl.style.top = `${top}px`;
-          const popoverRect = listContainerEl.getBoundingClientRect();
-          const maxWidth = parseFloat(
-            getComputedStyle(listContainerEl).maxWidth,
-          );
-          if (!isNaN(maxWidth) && popoverRect.width >= maxWidth - 1) {
-            const viewportWidth = document.documentElement.clientWidth;
-            const centeredLeft = (viewportWidth - popoverRect.width) / 2;
-            listContainerEl.style.left = `${Math.max(centeredLeft, minLeft)}px`;
-          } else {
-            listContainerEl.style.left = `${Math.max(left, minLeft)}px`;
-          }
-        };
-        const cleanup = visibleRectEffect(anchor, ({ visibilityRatio }) => {
-          if (visibilityRatio <= 0.2) {
-            listContainerEl.setAttribute("data-anchor-hidden", "");
-            return;
-          }
-          listContainerEl.removeAttribute("data-anchor-hidden");
-          positionPopover();
-        });
-        cleanupRef.current = () => cleanup.disconnect();
-        dispatchPublicCustomEvent(listEl, "navi_list_open", {
-          event: e,
-        });
-      }}
-      onnavi_list_request_close={(e) => {
-        const listEl = e.currentTarget;
-        const listContainerEl = listEl.closest(".navi_list_container");
-        cleanupRef.current?.();
-        listContainerEl.removeAttribute("data-anchor-hidden");
-        listContainerEl.hidePopover();
-        dispatchPublicCustomEvent(listEl, "navi_list_close", {
-          event: e,
-        });
       }}
     />
   );
