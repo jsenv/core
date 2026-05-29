@@ -988,12 +988,6 @@ const UnorderedList = ({
         virtualItemHeightSignal={virtualItemHeightSignal}
         renderWindowStart={renderWindow.start}
       />
-      <NoMatchFallback
-        noMatchFallback={noMatchFallback}
-        tracker={tracker}
-        searchText={searchText}
-      />
-      <Fallback fallback={fallback} tracker={tracker} />
       <RenderWindowContext.Provider value={renderWindow}>
         <SeparatorContext.Provider value={separator ?? null}>
           <ListItemTrackerContext.Provider value={tracker}>
@@ -1190,9 +1184,8 @@ export const ListItem = (props) => {
   const idDefault = useId();
   props.id = props.id || idDefault;
   const tracker = useContext(ListItemTrackerContext);
-  if (tracker) {
-    tracker.useTrackItem(props);
-  }
+  tracker.useTrackItem(props);
+
   const { children, id, index, hidden, filtered, selected, value, ...rest } =
     props;
   return (
