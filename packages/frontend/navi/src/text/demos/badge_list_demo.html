@@ -9,87 +9,180 @@
     <div id="app"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { Badge, BadgeList, Box, Title, Paragraph } from "@jsenv/navi";
+      import {
+        Badge,
+        BadgeList,
+        Box,
+        Link,
+        Title,
+        Paragraph,
+        Text,
+      } from "@jsenv/navi";
 
-      const App = () => (
-        <Box padding="l" flex="y" spacing="xl">
-          <Box as="section">
-            <Title as="h2">Default badges</Title>
-            <BadgeList>
-              <Badge>HTML</Badge>
-              <Badge>CSS</Badge>
-              <Badge>JavaScript</Badge>
-              <Badge>TypeScript</Badge>
-              <Badge>React</Badge>
-              <Badge>Vue</Badge>
-              <Badge>Angular</Badge>
-              <Badge>Node.js</Badge>
-              <Badge>Python</Badge>
-              <Badge>Rust</Badge>
-              <Badge>Go</Badge>
-              <Badge>Java</Badge>
-              <Badge>C++</Badge>
-              <Badge>Swift</Badge>
-              <Badge>Kotlin</Badge>
-              <Badge>SQL</Badge>
-            </BadgeList>
+      const TocSection = () => (
+        <Box as="nav" marginBottom="xl">
+          <Title as="h2">Table of contents</Title>
+          <Box flex="y" spacing="xs">
+            <Link href="#default">1. Default badges</Link>
+            <Link href="#colored">2. Colored badges</Link>
+            <Link href="#wrapping">3. Wrapping behavior</Link>
+            <Link href="#spacing">4. Custom spacing</Link>
           </Box>
+        </Box>
+      );
 
-          <Box as="section">
-            <Title as="h2">Colored badges</Title>
-            <BadgeList>
-              <Badge background="#4caf50">Active</Badge>
-              <Badge background="#f44336">Inactive</Badge>
-              <Badge background="#ff9800">Pending</Badge>
-              <Badge background="#9e9e9e">Archived</Badge>
-              <Badge background="#2196f3">Beta</Badge>
-              <Badge background="darkred">Deprecated</Badge>
-              <Badge background="#9c27b0">Pro</Badge>
-              <Badge background="#00bcd4">New</Badge>
-            </BadgeList>
-          </Box>
+      const DefaultSection = () => (
+        <Box as="section" marginBottom="xl">
+          <Title as="h2">
+            <Link anchor href="#default" />
+            Default badges
+          </Title>
+          <BadgeList>
+            <Badge>HTML</Badge>
+            <Badge>CSS</Badge>
+            <Badge>JavaScript</Badge>
+            <Badge>TypeScript</Badge>
+            <Badge>React</Badge>
+            <Badge>Vue</Badge>
+            <Badge>Angular</Badge>
+            <Badge>Node.js</Badge>
+            <Badge>Python</Badge>
+            <Badge>Rust</Badge>
+            <Badge>Go</Badge>
+            <Badge>Java</Badge>
+            <Badge>C++</Badge>
+            <Badge>Swift</Badge>
+            <Badge>Kotlin</Badge>
+            <Badge>SQL</Badge>
+          </BadgeList>
+        </Box>
+      );
 
-          <Box as="section">
-            <Title as="h2">Wrapping behavior</Title>
-            <Paragraph>
-              Badges wrap to the next line when they overflow the container.
-            </Paragraph>
+      const ColoredSection = () => (
+        <Box as="section" marginBottom="xl">
+          <Title as="h2">
+            <Link anchor href="#colored" />
+            Colored badges
+          </Title>
+          <BadgeList>
+            <Badge background="#4caf50">Active</Badge>
+            <Badge background="#f44336">Inactive</Badge>
+            <Badge background="#ff9800">Pending</Badge>
+            <Badge background="#9e9e9e">Archived</Badge>
+            <Badge background="#2196f3">Beta</Badge>
+            <Badge background="darkred">Deprecated</Badge>
+            <Badge background="#9c27b0">Pro</Badge>
+            <Badge background="#00bcd4">New</Badge>
+          </BadgeList>
+        </Box>
+      );
+
+      const WrappingSection = () => (
+        <Box as="section" marginBottom="xl">
+          <Title as="h2">
+            <Link anchor href="#wrapping" />
+            Wrapping behavior
+          </Title>
+          <Paragraph>
+            These examples use a constrained container (dotted border) to
+            observe how the badge list wraps and whether the container shrinks
+            to the longest line or leaves blank space on the right.
+          </Paragraph>
+          <Box flex="y" spacing="m" alignX="start">
+            <Text bold>A — just enough to spill onto a second line</Text>
             <Box
-              maxWidth="400px"
+              maxWidth="300px"
               border="2px dotted #aaa"
-              padding="m"
               borderRadius="4px"
             >
               <BadgeList>
+                <Badge>JS</Badge>
+                <Badge>TypeScript</Badge>
+                <Badge>React</Badge>
+                <Badge>GraphQL</Badge>
+                <Badge>CSS</Badge>
+                <Badge>Node</Badge>
+              </BadgeList>
+            </Box>
+
+            <Text bold>B — three lines, varying badge widths</Text>
+            <Box
+              maxWidth="300px"
+              border="2px dotted #aaa"
+              borderRadius="4px"
+            >
+              <BadgeList>
+                <Badge>HTML</Badge>
+                <Badge>CSS</Badge>
+                <Badge>JavaScript</Badge>
+                <Badge>TypeScript</Badge>
                 <Badge>React</Badge>
                 <Badge>Vue</Badge>
                 <Badge>Svelte</Badge>
                 <Badge>Angular</Badge>
-                <Badge>Preact</Badge>
-                <Badge>Solid</Badge>
-                <Badge>Remix</Badge>
-                <Badge>Next.js</Badge>
-                <Badge>Nuxt</Badge>
-                <Badge>Astro</Badge>
-                <Badge>Qwik</Badge>
-                <Badge>Gatsby</Badge>
+                <Badge>Node.js</Badge>
+                <Badge>GraphQL</Badge>
+                <Badge>REST</Badge>
+                <Badge>WebSockets</Badge>
+                <Badge>SQL</Badge>
+                <Badge>Go</Badge>
+              </BadgeList>
+            </Box>
+
+            <Text bold>C — many lines, mix of very short and very long</Text>
+            <Box
+              maxWidth="300px"
+              border="2px dotted #aaa"
+              borderRadius="4px"
+            >
+              <BadgeList>
+                <Badge>JS</Badge>
+                <Badge>Rust</Badge>
+                <Badge>C++</Badge>
+                <Badge>Machine Learning</Badge>
+                <Badge>Go</Badge>
+                <Badge>Kubernetes</Badge>
+                <Badge>AI</Badge>
+                <Badge>Continuous Integration / Continuous Delivery</Badge>
+                <Badge>SQL</Badge>
+                <Badge>WebAssembly</Badge>
+                <Badge>Zig</Badge>
+                <Badge>Infrastructure as Code</Badge>
+                <Badge>Python</Badge>
+                <Badge>Swift</Badge>
               </BadgeList>
             </Box>
           </Box>
+        </Box>
+      );
 
-          <Box as="section">
-            <Title as="h2">Custom spacing</Title>
-            <Paragraph>
-              Override spacing with the <code>spacing</code> prop.
-            </Paragraph>
-            <BadgeList spacing="m">
-              <Badge>One</Badge>
-              <Badge>Two</Badge>
-              <Badge>Three</Badge>
-              <Badge>Four</Badge>
-              <Badge>Five</Badge>
-            </BadgeList>
-          </Box>
+      const SpacingSection = () => (
+        <Box as="section" marginBottom="xl">
+          <Title as="h2">
+            <Link anchor href="#spacing" />
+            Custom spacing
+          </Title>
+          <Paragraph>
+            Override spacing with the <code>spacing</code> prop.
+          </Paragraph>
+          <BadgeList spacing="m">
+            <Badge>One</Badge>
+            <Badge>Two</Badge>
+            <Badge>Three</Badge>
+            <Badge>Four</Badge>
+            <Badge>Five</Badge>
+          </BadgeList>
+        </Box>
+      );
+
+      const App = () => (
+        <Box padding="l" flex="y" spacing="xl">
+          <Title as="h1">Badge List Demo</Title>
+          <TocSection />
+          <DefaultSection />
+          <ColoredSection />
+          <WrappingSection />
+          <SpacingSection />
         </Box>
       );
 
