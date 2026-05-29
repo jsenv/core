@@ -20,6 +20,20 @@
         Button,
       } from "@jsenv/navi";
 
+      const TocSection = () => (
+        <Box as="nav" marginBottom="xl">
+          <Title as="h2">Table of contents</Title>
+          <Box flex="y" spacing="xs">
+            <Link href="#basic">1. Basic usage</Link>
+            <Link href="#statuses">2. Status badges</Link>
+            <Link href="#inline">3. Inline with text</Link>
+            <Link href="#text-color">4. Automatic text color</Link>
+            <Link href="#font-sizes">5. Font sizes</Link>
+            <Link href="#badge-with-button">6. Badge with button</Link>
+          </Box>
+        </Box>
+      );
+
       const BasicUsageSection = () => (
         <Box as="section" marginBottom="xl">
           <Title as="h2">
@@ -125,6 +139,76 @@
         </Box>
       );
 
+      const BadgeWithButton = ({
+        children,
+        onButtonClick,
+        buttonLabel = "×",
+        buttonAriaLabel = "Remove",
+        ...props
+      }) => (
+        <Badge data-has-button="" {...props}>
+          {children}
+          <span
+            class="navi_badge_button"
+            role="button"
+            aria-label={buttonAriaLabel}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onButtonClick?.();
+            }}
+          >
+            {buttonLabel}
+          </span>
+        </Badge>
+      );
+
+      const BadgeWithButtonSection = () => {
+        const [badges, setBadges] = useState([
+          "One",
+          "Two",
+          "Three",
+          "Four",
+          "Five",
+        ]);
+        return (
+          <Box as="section" marginBottom="xl">
+            <Title as="h2">
+              <Link anchor href="#badge-with-button" />
+              Badge with button
+            </Title>
+            <Paragraph>
+              The button occupies the full right side of the badge and inherits
+              the badge border radius. It is discrete by default and reveals
+              itself on hover.
+            </Paragraph>
+            <Box flex="x" spacing="xs" style="flex-wrap: wrap;">
+              {badges.map((label) => (
+                <BadgeWithButton
+                  key={label}
+                  onButtonClick={() => {
+                    setBadges((prev) => prev.filter((b) => b !== label));
+                  }}
+                >
+                  {label}
+                </BadgeWithButton>
+              ))}
+            </Box>
+            {badges.length === 0 && (
+              <Box marginTop="s">
+                <Button
+                  onClick={() => {
+                    setBadges(["One", "Two", "Three", "Four", "Five"]);
+                  }}
+                >
+                  Reset
+                </Button>
+              </Box>
+            )}
+          </Box>
+        );
+      };
+
       const Demo = () => (
         <div
           style={{
@@ -135,11 +219,13 @@
           }}
         >
           <Title as="h1">Badge Demo</Title>
+          <TocSection />
           <BasicUsageSection />
           <StatusBadgesSection />
           <InlineWithTextSection />
           <DarkBackgroundSection />
           <FontSizesSection />
+          <BadgeWithButtonSection />
         </div>
       );
 

@@ -6,21 +6,18 @@ import { Text } from "./text.jsx";
 
 const css = /* css */ `
   @layer navi {
-    .navi_badge {
-      --light-color: #e6e6e6;
-      --dark-color: #444;
-    }
   }
   .navi_badge {
     --font-size: 0.7em;
-    --color: var(--light-color);
     --padding-x: 0.8em;
     --padding-y: 0.4em;
 
     --x-background: var(--background, light-dark(#e0e0e0, #3a3a3a));
     --x-background-color: var(--background-color, var(--x-background));
-    --x-color-contrasting: var(--navi-color-white);
-    --x-color: var(--color);
+    /* Default: white text — works on colored backgrounds.
+       Overridden to dark when the bg is light enough (data-accent-needs-dark-fg)
+       or when no background prop is passed (data-badge-default-bg). */
+    --x-color: var(--color, white);
 
     position: relative;
     display: inline-block;
@@ -35,9 +32,29 @@ const css = /* css */ `
     background-color: var(--x-background-color);
     border-radius: 1em;
 
+    /* Light colored background needs dark text */
     &[data-accent-needs-dark-fg] {
-      --x-color: var(--dark-color);
-      --x-color-contrasting: var(--navi-color-black);
+      --x-color: var(--color, #333);
+    }
+
+    .navi_badge_button {
+      display: inline-flex;
+      padding: 0 var(--padding-x) 0 0.35em;
+      align-items: center;
+      justify-content: center;
+      color: inherit;
+      border-radius: 0 1em 1em 0;
+      opacity: 0.5;
+      transition:
+        opacity 0.15s,
+        background 0.15s;
+      cursor: pointer;
+      user-select: none;
+
+      &:hover {
+        background: rgba(0, 0, 0, 0.15);
+        opacity: 1;
+      }
     }
   }
 `;
