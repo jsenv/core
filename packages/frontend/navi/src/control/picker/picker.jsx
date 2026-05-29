@@ -8,7 +8,7 @@ import { Icon } from "@jsenv/navi/src/text/icon.jsx";
 import { useControlProps } from "../control_hooks.jsx";
 import { getFromInputValue, getToInputValue } from "../input/input_textual.jsx";
 import { PickerPlaceholder, PickerValue } from "./picker_components.jsx";
-import { PickerContext, PickerElementContext } from "./picker_context.jsx";
+import { PickerContext } from "./picker_context.jsx";
 import { pickerResolvers } from "./picker_resolvers.jsx";
 
 const css = /* css */ `
@@ -89,7 +89,9 @@ const css = /* css */ `
       --picker-padding-right,
       var(--picker-padding-x, var(--picker-padding-x-default))
     );
-    --x-picker-padding-right: var(--x-picker-padding-right-base);
+    --x-picker-padding-right: calc(
+      var(--x-picker-padding-right-base) + var(--picker-right-slot-size)
+    );
     --x-picker-padding-left: var(
       --picker-padding-left,
       var(--picker-padding-x, var(--picker-padding-x-default))
@@ -101,7 +103,7 @@ const css = /* css */ `
     --x-picker-color: var(--picker-color);
 
     position: relative;
-    display: inline-flex;
+    display: inline-block;
     box-sizing: border-box;
     max-width: 100%;
     min-height: 1em;
@@ -110,13 +112,10 @@ const css = /* css */ `
     padding-bottom: var(--x-picker-padding-bottom);
     padding-left: var(--x-picker-padding-left);
     flex-direction: row;
-    justify-content: center;
     color: var(--x-picker-color);
     font-size: var(--picker-font-size);
     text-align: inherit;
-    text-overflow: ellipsis;
     /* overflow-wrap: anywhere; */
-    white-space: nowrap;
     background-color: var(--x-picker-background-color);
     border-width: var(--picker-border-width);
     border-style: solid;
@@ -128,7 +127,13 @@ const css = /* css */ `
     outline-offset: var(--x-picker-outline-offset);
     cursor: var(--x-picker-cursor, pointer);
     user-select: none;
-    overflow: hidden;
+    overflow-wrap: anywhere;
+
+    &[data-single-line] {
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      overflow: hidden;
+    }
 
     .navi_picker_value {
       min-width: 0;
@@ -137,9 +142,11 @@ const css = /* css */ `
       color: var(--picker-placeholder-color);
     }
     .navi_picker_right_slot {
+      position: absolute;
+      top: var(--x-picker-padding-top);
+      right: 0;
       display: inline-flex;
       width: var(--picker-right-slot-size);
-      margin-right: calc(-1 * var(--x-picker-padding-right-base));
       flex-shrink: 0;
       justify-content: center;
       color: var(--x-picker-icon-color, var(--picker-icon-color));
@@ -234,7 +241,7 @@ export const Picker = (props) => {
 const renderPicker = createComponentResolver(pickerResolvers);
 const PickerButton = (props) => {
   import.meta.css = css;
-  const { ref, type, icon, placeholder, ui } = props;
+  const { ref, type, icon, placeholder, singleLine, ui } = props;
   const inputRef = useRef(null);
   const fromInputValue = getFromInputValue(type);
   const [inputProps, pickerRemainingProps] = useControlProps(
@@ -267,7 +274,7 @@ const PickerButton = (props) => {
       navi-has-placeholder={placeholder ? "" : undefined}
       pseudoClasses={PICKER_BUTTON_PSEUDO_CLASSES}
       disabled={disabled}
-      data-action={inputProps["data-action"]}
+      data-single-line={singleLine ? "" : undefined}
       {...pickerRemainingProps}
       basePseudoState={basePseudoState}
       // we must put the id on the button and not the input
@@ -275,6 +282,7 @@ const PickerButton = (props) => {
       id={id}
       icon={undefined}
       ui={undefined}
+      singleLine={undefined}
       // The button is handling the pointer interactions
       onMouseDown={(e) => {
         inputProps.onMouseDown(e);
@@ -288,25 +296,20 @@ const PickerButton = (props) => {
         color="var(--picker-loader-color)"
         inset={-1}
       />
-      <PickerContext.Provider value={{ value, placeholder }}>
-        {ui === undefined ? <PickerDefaultUI /> : ui}
-      </PickerContext.Provider>
       <PickerInput
         {...inputProps}
         // eslint-disable-next-line react/no-children-prop
         children={undefined} // we will render children into the button
         id={undefined}
       />
-
+      <PickerContext.Provider value={{ value, placeholder }}>
+        {ui === undefined ? <PickerDefaultUI /> : ui}
+      </PickerContext.Provider>
       <span className="navi_picker_right_slot">
         <Icon size="m">{icon === undefined ? <ChevronDownSvg /> : icon}</Icon>
       </span>
 
-      {children && (
-        <PickerElementContext.Provider value={ref}>
-          {children}
-        </PickerElementContext.Provider>
-      )}
+      {children}
     </Box>
   );
 };

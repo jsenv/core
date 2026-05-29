@@ -38,7 +38,7 @@ export const useDisplayedLayoutEffect = (ref, callback, deps) => {
     if (!el) {
       return;
     }
-    const ancestor = el.closest("dialog, details, [popover]");
+    const ancestor = el.closest("dialog, details, [popover], [aria-expanded]");
     if (!ancestor) {
       callbackRef.current(el, new CustomEvent("navi_displayed_on_document"));
       return;
@@ -56,19 +56,26 @@ export const useDisplayedLayoutEffect = (ref, callback, deps) => {
     if (!el) {
       return undefined;
     }
-    const ancestor = el.closest("dialog, details, [popover]");
+    const ancestor = el.closest("dialog, details, [popover], [aria-expanded]");
     if (!ancestor) {
       return undefined;
     }
     const onToggle = (e) => {
       // <dialog> and [popover] fire toggle with newState; <details> uses the
       // older toggle event without newState — fall back to checking .open.
-      const isOpen =
-        e.newState !== undefined ? e.newState === "open" : e.target.open;
+      let isOpen;
+      if (typeof e.newState === "string") {
+        isOpen = e.newState === "open";
+      } else if (e.target.open) {
+        isOpen = true;
+      } else if (e.target.getAttribute("aria-expanded") === "true") {
+        isOpen = true;
+      }
       if (!isOpen) {
         return;
       }
-      callbackRef.current(el, e);
+      let lastEl = ref.current;
+      callbackRef.current(lastEl, e);
     };
     ancestor.addEventListener("toggle", onToggle);
     return () => {
@@ -81,6 +88,8 @@ const isAncestorOpen = (ancestor) => {
   if (ancestor.tagName === "DIALOG" || ancestor.hasAttribute("popover")) {
     return ancestor.matches(":popover-open, [open]");
   }
-  // details
-  return ancestor.open;
+  if (ancestor.tagName === "DETAILS") {
+    return ancestor.open;
+  }
+  return ancestor.getAttribute("aria-expanded") === "true";
 };

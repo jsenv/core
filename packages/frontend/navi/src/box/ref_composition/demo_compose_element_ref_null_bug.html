@@ -1,0 +1,298 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>
+      useComposeElementRef — null ref when external ref identity changes
+    </title>
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: system-ui, sans-serif;
+        line-height: 1.5;
+      }
+      .demo {
+        margin-bottom: 32px;
+        padding: 16px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+      }
+      .demo h2 {
+        margin: 0 0 8px;
+        font-size: 16px;
+      }
+      .demo p {
+        margin: 0 0 12px;
+        color: #444;
+        font-size: 14px;
+      }
+      .demo code {
+        padding: 1px 4px;
+        font-size: 13px;
+        background: #eee;
+        border-radius: 3px;
+      }
+      .result {
+        margin-top: 12px;
+        padding: 8px 12px;
+        font-family: monospace;
+        border-radius: 4px;
+      }
+      .result.ok {
+        color: #155724;
+        background: #d4edda;
+      }
+      .result.bug {
+        color: #721c24;
+        font-weight: bold;
+        background: #f8d7da;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { signal } from "@preact/signals";
+      import { render } from "preact";
+      import { useEffect, useRef } from "preact/hooks";
+
+      // ──────────────────────────────────────────────────────────────────
+      // Buggy version of useComposeElementRef (no fix).
+      //
+      // The refCallback is created once (stable across renders). Preact
+      // only re-fires a ref callback when the DOM element it points to
+      // changes. So when the parent passes a DIFFERENT external ref
+      // between renders while the DOM element stays the same, the new
+      // external ref's `.current` is never populated and stays `null`.
+      // ──────────────────────────────────────────────────────────────────
+      const useComposeElementRefBuggy = (externalRef) => {
+        const externalRefRef = useRef(externalRef);
+        externalRefRef.current = externalRef;
+        const refCallbackRef = useRef(null);
+        if (!refCallbackRef.current) {
+          refCallbackRef.current = (el) => {
+            const cur = externalRefRef.current;
+            if (cur) cur.current = el;
+          };
+        }
+        return refCallbackRef.current;
+      };
+
+      const Box = ({ externalRef }) => {
+        const refCallback = useComposeElementRefBuggy(externalRef);
+        return <div ref={refCallback} />;
+      };
+
+      // ──────────────────────────────────────────────────────────────────
+      // Fixed version of useComposeElementRef.
+      //
+      // On every render, compare the external ref to the previous one. If
+      // it changed identity:
+      //   - clear the previous ref's `.current`
+      //   - write the live DOM element into the new ref
+      // This compensates for Preact not re-firing the stable refCallback
+      // when only the parent's ref object changed.
+      // ──────────────────────────────────────────────────────────────────
+      const useComposeElementRefFixed = (externalRef) => {
+        const elRef = useRef(null);
+        const externalRefRef = useRef(externalRef);
+        if (externalRefRef.current !== externalRef) {
+          const prev = externalRefRef.current;
+          if (prev) prev.current = null;
+          if (externalRef && elRef.current) {
+            externalRef.current = elRef.current;
+          }
+          externalRefRef.current = externalRef;
+        }
+        const refCallbackRef = useRef(null);
+        if (!refCallbackRef.current) {
+          refCallbackRef.current = (el) => {
+            elRef.current = el;
+            const cur = externalRefRef.current;
+            if (cur) cur.current = el;
+          };
+        }
+        return refCallbackRef.current;
+      };
+
+      const BoxFixed = ({ externalRef }) => {
+        const refCallback = useComposeElementRefFixed(externalRef);
+        return <div ref={refCallback} />;
+      };
+
+      // ──────────────────────────────────────────────────────────────────
+      // DEMO 1 — bug reproduction
+      //
+      // Two distinct ref objects (refA, refB). Initially we pass refA.
+      // After mount, we swap to refB while the DOM <div> is unchanged.
+      // Result: refB.current is never set → BUG.
+      // ──────────────────────────────────────────────────────────────────
+      const refA = { current: null };
+      const refB = { current: null };
+      const whichSignal = signal("A");
+      const checkedSignal = signal(false);
+
+      const BugDemo = () => {
+        const externalRef = whichSignal.value === "A" ? refA : refB;
+
+        useEffect(() => {
+          // Trigger a re-render with a different external ref. The DOM
+          // <div> is reused so Preact does NOT re-fire the refCallback.
+          whichSignal.value = "B";
+          queueMicrotask(() => {
+            checkedSignal.value = true;
+          });
+        }, []);
+
+        const el = refB.current;
+        return (
+          <div className="demo">
+            <h2>1. Bug — parent swaps the external ref between renders</h2>
+            <p>
+              The parent passes <code>refA</code> on the first render then{" "}
+              <code>refB</code> on the second. The <code>&lt;div&gt;</code> DOM
+              node is unchanged, so Preact never re-invokes the stable{" "}
+              <code>refCallback</code>, leaving <code>refB.current</code> empty.
+            </p>
+            <Box externalRef={externalRef} />
+            {!checkedSignal.value ? (
+              <div className="result">Waiting…</div>
+            ) : el ? (
+              <div className="result ok">
+                ✅ refB.current = &lt;{el.tagName.toLowerCase()}&gt;
+              </div>
+            ) : (
+              <div className="result bug">❌ refB.current = null — BUG</div>
+            )}
+          </div>
+        );
+      };
+
+      // ──────────────────────────────────────────────────────────────────
+      // DEMO 2 — same code, no bug
+      //
+      // The parent keeps the SAME ref object across renders. The external
+      // ref identity never changes, so the stable refCallback wrote into
+      // it once at mount and that value is still valid.
+      // ──────────────────────────────────────────────────────────────────
+      const refStable = { current: null };
+      const tickSignal = signal(0);
+      const checkedStableSignal = signal(false);
+
+      const OkDemo = () => {
+        // Always the same ref object, even though the component re-renders.
+        const externalRef = refStable;
+        tickSignal.value; // subscribe to force a re-render
+
+        useEffect(() => {
+          tickSignal.value = 1;
+          queueMicrotask(() => {
+            checkedStableSignal.value = true;
+          });
+        }, []);
+
+        const el = refStable.current;
+        return (
+          <div className="demo">
+            <h2>2. No bug — parent reuses the same ref object</h2>
+            <p>
+              Same buggy <code>useComposeElementRefBuggy</code> hook, but the
+              parent passes the same <code>refStable</code> object on every
+              render. The external ref identity never changes, so nothing has to
+              be re-synced — <code>refStable.current</code> still points to the
+              DOM node populated at mount.
+            </p>
+            <Box externalRef={externalRef} />
+            {!checkedStableSignal.value ? (
+              <div className="result">Waiting…</div>
+            ) : el ? (
+              <div className="result ok">
+                ✅ refStable.current = &lt;{el.tagName.toLowerCase()}&gt;
+              </div>
+            ) : (
+              <div className="result bug">
+                ❌ refStable.current = null — BUG
+              </div>
+            )}
+          </div>
+        );
+      };
+
+      // ──────────────────────────────────────────────────────────────────
+      // DEMO 3 — props mutation pattern, rescued by the fix
+      //
+      // The child component mutates `props.ref` so that a different ref
+      // object is forwarded across renders (this mirrors what the real
+      // `List` component was doing). Without the fix, this is the same
+      // failure mode as demo 1. With the fixed hook, Box detects the
+      // identity change and syncs the new ref with the live DOM element.
+      // ──────────────────────────────────────────────────────────────────
+      const parentRefSlot = { current: null };
+      const internalDefaultRef = { current: null };
+      const renderTickSignal = signal(0);
+      const checkedFixedSignal = signal(false);
+
+      const MutatingChild = (props) => {
+        // Anti-pattern: mutate the incoming props.ref. On the first render
+        // props.ref is the parent's ref; on the second render the parent
+        // passes nothing, so we substitute our own internal ref instead.
+        // → The external ref forwarded to Box changes identity.
+        props.ref = props.ref || internalDefaultRef;
+        return <BoxFixed externalRef={props.ref} />;
+      };
+
+      const FixedDemo = () => {
+        const tick = renderTickSignal.value;
+        // Render 1: pass parentRefSlot. Render 2: pass nothing so the
+        // child falls back to its internal ref.
+        const childProps = tick === 0 ? { ref: parentRefSlot } : {};
+
+        useEffect(() => {
+          renderTickSignal.value = 1;
+          queueMicrotask(() => {
+            checkedFixedSignal.value = true;
+          });
+        }, []);
+
+        const el = internalDefaultRef.current;
+        return (
+          <div className="demo">
+            <h2>3. Props mutation + fix — rescued</h2>
+            <p>
+              <code>MutatingChild</code> mutates <code>props.ref</code> (like{" "}
+              <code>List</code> used to). Between renders the external ref
+              forwarded to Box changes identity from <code>parentRefSlot</code>{" "}
+              to <code>internalDefaultRef</code>. With{" "}
+              <code>useComposeElementRefFixed</code>, Box notices the swap and
+              copies the live DOM element into the new ref.
+            </p>
+            <MutatingChild {...childProps} />
+            {!checkedFixedSignal.value ? (
+              <div className="result">Waiting…</div>
+            ) : el ? (
+              <div className="result ok">
+                ✅ internalDefaultRef.current = &lt;
+                {el.tagName.toLowerCase()}&gt;
+              </div>
+            ) : (
+              <div className="result bug">
+                ❌ internalDefaultRef.current = null — BUG
+              </div>
+            )}
+          </div>
+        );
+      };
+
+      const App = () => (
+        <div>
+          <BugDemo />
+          <OkDemo />
+          <FixedDemo />
+        </div>
+      );
+
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>

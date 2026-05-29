@@ -19,7 +19,6 @@ import { useInitialValue } from "../state/use_initial_value.js";
 import { findControlHost } from "./control_dom.js";
 import { findControlProxyTarget } from "./control_proxy.js";
 import { FormContext } from "./form_context.js";
-import { PickerElementContext } from "./picker/picker_context.jsx";
 
 const DEBUG_UI_STATE_CONTROLLER = false;
 const DEBUG_UI_GROUP_STATE_CONTROLLER = false;
@@ -78,7 +77,6 @@ export const useUIStateController = (
   const uiStateControllerRef = useRef();
   const parentUIStateController = useContext(ParentUIStateControllerContext);
   const formContext = useContext(FormContext);
-  const pickerElementContext = useContext(PickerElementContext);
   const { id, name, uiAction, action } = props;
   const ref = props.ref;
   const isProxy = Boolean(props["navi-control-proxy-for"]);
@@ -97,7 +95,6 @@ export const useUIStateController = (
     !uiAction &&
     !action &&
     !formContext &&
-    !pickerElementContext &&
     !parentUIStateController &&
     !isProxy;
   const readOnly = uncontrolled && hasStateProp;

@@ -16,7 +16,6 @@ import {
   dispatchRequestAction,
   dispatchRequestInteraction,
 } from "../validation/custom_constraint_validation.js";
-import { PickerRequestCloseContext } from "./picker_context.jsx";
 
 const css = /* css */ `
   .navi_picker {
@@ -246,10 +245,10 @@ export const PickerCustom = (props) => {
       const isCancel = Boolean(cancelEvent);
       expandedRef.current = false;
       setExpanded(false);
-      moveFocusToPicker(e);
       const pickerEl = ref.current;
       const inputEl = getPickerInput(pickerEl);
       if (!inputEl) {
+        moveFocusToPicker(e);
         return;
       }
       const valueAtOpen = valueAtOpenRef.current;
@@ -257,6 +256,7 @@ export const PickerCustom = (props) => {
         dispatchRequestSetUIState(inputEl, valueAtOpen, {
           event: e,
         });
+        moveFocusToPicker(e);
         return;
       }
       const valueAtClose = getPickerInputUIState(pickerEl);
@@ -266,8 +266,9 @@ export const PickerCustom = (props) => {
           `picker closed with same value as when it opened (${JSON.stringify(valueAtClose)}), no action dispatched`,
         );
       } else {
-        dispatchRequestAction(inputEl, { event: e });
+        dispatchRequestAction(inputEl, { event: e, uiState: valueAtClose });
       }
+      moveFocusToPicker(e);
     };
     const disableClickFor = useIgnoreClickForMousedown();
     const requestOpen = (e) => {
@@ -308,11 +309,7 @@ export const PickerCustom = (props) => {
           requestClose(e);
         }
       },
-      "children": (
-        <PickerRequestCloseContext.Provider value={requestClose}>
-          {children}
-        </PickerRequestCloseContext.Provider>
-      ),
+      children,
     });
     Object.assign(popupProps, {
       onnavi_open: (e) => {

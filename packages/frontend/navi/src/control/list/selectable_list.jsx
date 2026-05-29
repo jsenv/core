@@ -154,10 +154,10 @@ const EMPTY_SELECTION = [];
 // and fires it on select. When only uiAction is provided it calls it directly.
 export const SelectableList = (props) => {
   import.meta.css = css;
-  const defaultName = useId();
-  // we allow ourselves to auto-generate a name
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
+  // we allow ourselves to auto-generate a name
+  const defaultName = useId();
   props.name = props.name || `listbox_${defaultName}`;
   const {
     ref,

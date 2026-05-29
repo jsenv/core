@@ -263,7 +263,7 @@ export const onRequestAction = (
     requestActionCustomEvent.preventDefault();
     debugAction(
       requestActionCustomEvent,
-      `action prevented due ${requestStatus.preventReason} -> dispatch navi_action_prevented`,
+      `action prevented (reason: ${requestStatus.preventReason}) -> dispatch navi_action_prevented`,
     );
     dispatchInternalCustomEvent(
       elementHandlingAction,

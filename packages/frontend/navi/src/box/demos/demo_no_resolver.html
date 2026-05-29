@@ -1,0 +1,70 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Bug repro — no resolver</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { useSignal } from "@preact/signals";
+      import { render } from "preact";
+      import { useRef } from "preact/hooks";
+      import { List, ListItem } from "@jsenv/navi";
+      import { dispatchCustomEvent } from "@jsenv/dom";
+
+      const MockDialog = ({ ref, onnavi_close, children }) => {
+        const close = () => {
+          ref.current.close();
+          dispatchCustomEvent(ref.current, "navi_close", {});
+        };
+        return (
+          <dialog
+            ref={ref}
+            onnavi_close={onnavi_close}
+            onCancel={(e) => {
+              e.preventDefault();
+              close();
+            }}
+          >
+            {children}
+          </dialog>
+        );
+      };
+
+      const MockPicker = ({ value, action, children }) => {
+        const popupRef = useRef(null);
+        return (
+          <button onMouseDown={() => popupRef.current.showModal()}>
+            <MockDialog ref={popupRef} onnavi_close={() => action?.("dummy")}>
+              {children}
+            </MockDialog>
+          </button>
+        );
+      };
+
+      const App = () => {
+        const selectedSignal = useSignal();
+        return (
+          <div>
+            <button>Open</button>
+            <MockPicker
+              value={selectedSignal.value}
+              action={() => {
+                selectedSignal.value = "x";
+              }}
+            >
+              <List>
+                <ListItem index={0} value="apple">
+                  Apple
+                </ListItem>
+              </List>
+            </MockPicker>
+          </div>
+        );
+      };
+
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>

@@ -1,0 +1,114 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Ref callback bug repro</title>
+    <style>
+      dialog {
+        border: 1px solid #aaa;
+        border-radius: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { useSignal } from "@preact/signals";
+      import { render } from "preact";
+      import { useRef } from "preact/hooks";
+      import { List, ListItem } from "@jsenv/navi";
+      import { windowWidthSignal } from "@jsenv/navi/src/layout/responsive.js";
+      import { dispatchCustomEvent } from "@jsenv/dom";
+      import {
+        createComponentResolver,
+        useNextResolver,
+      } from "@jsenv/navi/src/resolver/resolver.jsx";
+
+      // --- Picker mock ---
+
+      const MockDialog = ({ ref, onnavi_close, children }) => {
+        const close = () => {
+          ref.current.close();
+          dispatchCustomEvent(ref.current, "navi_close", {});
+        };
+        return (
+          <dialog
+            ref={ref}
+            onnavi_close={onnavi_close}
+            onCancel={(e) => {
+              e.preventDefault();
+              close();
+            }}
+          >
+            {children}
+          </dialog>
+        );
+      };
+
+      const MockPickerCustom = (props) => {
+        const Next = useNextResolver();
+        const isSmallScreen = windowWidthSignal.value <= 600;
+        const { children } = props;
+        const popupRef = useRef(null);
+
+        const onMouseDown = () => {
+          popupRef.current.showModal();
+        };
+        const onClose = () => {
+          props.action?.("dummy");
+        };
+
+        if (isSmallScreen) {
+          return (
+            <Next {...props} onMouseDown={onMouseDown}>
+              <MockDialog ref={popupRef} onnavi_close={onClose}>
+                {children}
+              </MockDialog>
+            </Next>
+          );
+        }
+        return (
+          <Next {...props} onMouseDown={onMouseDown}>
+            <div>{children}</div>
+          </Next>
+        );
+      };
+
+      const renderMockPicker = createComponentResolver([MockPickerCustom]);
+
+      const App = () => {
+        const selectedSignal = useSignal();
+        return (
+          <div>
+            <p>
+              1. <b>Simulate resize</b> 2. <b>Open</b> 3. <b>Escape</b> 4.{" "}
+              <b>Open again</b> → BUG?
+            </p>
+            <button
+              onClick={() => {
+                windowWidthSignal.value = 536;
+              }}
+            >
+              Simulate resize → dialog
+            </button>
+            {renderMockPicker("button", {
+              value: selectedSignal.value,
+              action: () => {
+                selectedSignal.value = "x";
+              },
+              children: (
+                <List>
+                  <ListItem index={0} value="apple">
+                    Apple
+                  </ListItem>
+                </List>
+              ),
+            })}
+          </div>
+        );
+      };
+
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>
