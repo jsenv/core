@@ -129,6 +129,7 @@ export {
 export {
   Selectable,
   SelectableList,
+  requestSelectableListItemUnselect,
 } from "./src/control/list/selectable_list.jsx";
 export { useSearchText } from "./src/control/list/use_search_text.js";
 // --- List end ---

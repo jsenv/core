@@ -240,6 +240,17 @@ export const SelectableList = (props) => {
           item,
         });
       }}
+      onnavi_selectable_list_request_item_unselect={(e) => {
+        const { value } = e.detail;
+        const listEl = e.currentTarget;
+        const valueStr = String(value);
+        const realInput = listEl.querySelector(
+          `[navi-selectable-real-input][value="${valueStr.replaceAll('"', '\\"')}"]`,
+        );
+        if (realInput && realInput.checked) {
+          realInput.click();
+        }
+      }}
       onnavi_list_request_select={(e) => {
         const { item } = e.detail;
         if (!item) {
@@ -269,6 +280,14 @@ export const SelectableList = (props) => {
     <SelectableListMultipleContext.Provider value={multiple}>
       {listVnode}
     </SelectableListMultipleContext.Provider>
+  );
+};
+
+export const requestSelectableListItemUnselect = (listEl, { value, event }) => {
+  return dispatchCustomEvent(
+    listEl,
+    "navi_selectable_list_request_item_unselect",
+    { value, event },
   );
 };
 

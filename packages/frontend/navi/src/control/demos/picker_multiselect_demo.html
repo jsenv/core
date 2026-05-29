@@ -89,6 +89,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useSignal } from "@preact/signals";
+      import { useRef } from "preact/hooks";
       import {
         Box,
         Field,
@@ -98,9 +99,10 @@
         SelectableList,
         Selectable,
         NaviDebug,
+        requestSelectableListItemUnselect,
       } from "@jsenv/navi";
 
-      const OPTIONS = [
+      const FRUIT_OPTIONS = [
         "Apple",
         "Banana",
         "Cherry",
@@ -110,9 +112,29 @@
         "Grape",
       ];
 
+      const SKILL_OPTIONS = [
+        "HTML",
+        "CSS",
+        "JavaScript",
+        "TypeScript",
+        "React",
+        "Vue",
+        "Angular",
+        "Node.js",
+        "Python",
+        "Rust",
+        "Go",
+        "Java",
+        "C++",
+        "Swift",
+        "Kotlin",
+        "SQL",
+      ];
+
       const App = () => (
         <Box flex="y" spacing="l">
           <TextDisplay />
+          <ChipsDisplay />
         </Box>
       );
 
@@ -150,7 +172,7 @@
                 }}
               >
                 <SelectableList multiple action="update">
-                  {OPTIONS.map((opt, i) => (
+                  {FRUIT_OPTIONS.map((opt, i) => (
                     <Selectable
                       key={opt}
                       id={`${opt}_chip`}
@@ -173,82 +195,93 @@
       // ── 2. Chips display ──────────────────────────────────────────────────
 
       const ChipsDisplay = () => {
-        const selectedSignal = useSignal([]);
+        const selectedSignal = useSignal([
+          "HTML",
+          "CSS",
+          "JavaScript",
+          "TypeScript",
+          "React",
+          "Node.js",
+        ]);
+        const listRef = useRef(null);
 
-        const removeSelected = (option) => {
-          selectedSignal.value = selectedSignal.value.filter(
-            (o) => o !== option,
+        const selectedArray = selectedSignal.value;
+
+        const ChipsUI = () => {
+          if (selectedArray.length === 0) {
+            return <span style="color: #999">Select skills…</span>;
+          }
+          return (
+            <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 4px;">
+              {selectedArray.map((opt) => (
+                <span
+                  key={opt}
+                  style="display: inline-flex; align-items: center; flex-shrink: 0; gap: 4px; padding: 0 8px; background: #e0e0e0; border-radius: 999px; font-size: 12px; white-space: nowrap;"
+                >
+                  {opt}
+                  <button
+                    style="display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; padding: 0; background: none; border: none; font-size: 14px; color: #444; cursor: pointer; line-height: 1; flex-shrink: 0;"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      requestSelectableListItemUnselect(listRef.current, {
+                        value: opt,
+                        event: e,
+                      });
+                    }}
+                    aria-label={`Remove ${opt}`}
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
           );
         };
-
-        const count = selectedSignal.value.length;
-        const displayValue =
-          count === 0 ? "" : `${count} fruit${count > 1 ? "s" : ""} selected`;
 
         return (
           <div class="demo-section">
             <h2>2. Chips display</h2>
             <p>
-              Selected items appear as removable chip pills below the picker.
-              Each chip has an × button to deselect without reopening the
-              picker.
+              Selected items appear as chip pills inside the picker, each with
+              an × button to deselect without reopening the dropdown.
             </p>
             <Field vertical>
-              <Label>Fruits</Label>
+              <Label>Skills</Label>
               <Picker
-                type="text"
+                type="array"
                 name="multiselect_chips"
-                value={displayValue}
-                placeholder="Select fruits…"
+                value={selectedArray}
+                ui={<ChipsUI />}
+                uiAction={(v) => {
+                  selectedSignal.value = v;
+                }}
                 action={(v) => {
-                  selectedSignal.value = Array.isArray(v) ? v : [];
+                  selectedSignal.value = v;
                 }}
               >
-                <Box flex="y" spacing="s" padding="s">
-                  <SelectableList
-                    multiple
-                    action="update"
-                    style="min-width: 180px"
-                  >
-                    {OPTIONS.map((opt, i) => (
-                      <Selectable
-                        key={opt}
-                        id={opt}
-                        index={i}
-                        value={opt}
-                        selected={selectedSignal.value.includes(opt)}
-                        padding="s"
-                        spacing="s"
-                      >
-                        {opt}
-                      </Selectable>
-                    ))}
-                  </SelectableList>
-                  <Box flex spacing="s">
-                    <Button action="send">Confirm</Button>
-                    <Button action="cancel">Cancel</Button>
-                  </Box>
-                </Box>
+                <SelectableList
+                  ref={listRef}
+                  multiple
+                  action="update"
+                  style="min-width: 180px"
+                >
+                  {SKILL_OPTIONS.map((opt, i) => (
+                    <Selectable
+                      key={opt}
+                      id={opt}
+                      index={i}
+                      value={opt}
+                      selected={selectedArray.includes(opt)}
+                      padding="s"
+                      spacing="s"
+                    >
+                      {opt}
+                    </Selectable>
+                  ))}
+                </SelectableList>
               </Picker>
             </Field>
-            <div class="chip-list">
-              {selectedSignal.value.length === 0 ? (
-                <em style="color:#999; font-size:13px">No items selected</em>
-              ) : (
-                selectedSignal.value.map((opt) => (
-                  <span key={opt} class="chip">
-                    {opt}
-                    <button
-                      class="chip-remove"
-                      onClick={() => removeSelected(opt)}
-                      aria-label={`Remove ${opt}`}
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))
-              )}
-            </div>
           </div>
         );
       };
