@@ -127,7 +127,6 @@
       import { useSignal } from "@preact/signals";
       import { render } from "preact";
       import { useRef } from "preact/hooks";
-      import { useControlProps } from "@jsenv/navi/src/control/control_hooks.jsx";
       import { dispatchRequestAction } from "@jsenv/navi/src/control/validation/custom_constraint_validation.js";
       import { List, ListItem } from "@jsenv/navi/src/control/list/list.jsx";
       import { windowWidthSignal } from "@jsenv/navi/src/layout/responsive.js";
@@ -172,44 +171,18 @@
 
       const OPTIONS = ["Apple", "Banana", "Cherry"];
 
-      // ── MockPickerButton (= PickerButton) ──────────────────────────────────────
+      // ── MockPickerButton ──────────────────────────────────────────────────────
       const MockPickerButton = (props) => {
-        const { ref, children } = props;
-        const inputRef = useRef(null);
-        const [inputProps, pickerRemainingProps] = useControlProps(
-          { ...props, ref: inputRef },
-          {
-            primaryInteractionMode: "pointer",
-            controlType: "input",
-            statePropName: "value",
-            defaultStatePropName: "defaultValue",
-            getUIValue: () => (inputRef.current ? inputRef.current.value : ""),
-            fallbackState: "",
-            getStateFromProp: (v) => v ?? "",
-            getPropFromState: (s) => s ?? "",
-          },
-        );
+        const {
+          ref,
+          children,
+          onMouseDown,
+          popupProps,
+          actionInteraction,
+          ...rest
+        } = props;
         return (
-          <button
-            ref={ref}
-            type="button"
-            {...pickerRemainingProps}
-            id={inputProps.id}
-            onMouseDown={(e) => {
-              inputProps.onMouseDown(e);
-            }}
-            onClick={(e) => {
-              inputProps.onClick(e);
-            }}
-            popupProps={undefined}
-            actionInteraction={undefined}
-          >
-            <input
-              {...inputProps}
-              className="navi_picker_input"
-              tabIndex={-1}
-            />
-            <span>{inputProps.value || "—"}</span>
+          <button ref={ref} type="button" onMouseDown={onMouseDown}>
             {children}
           </button>
         );
@@ -288,23 +261,7 @@
       const MockSelectableList = (props) => {
         const defaultRef = useRef();
         props.ref = props.ref || defaultRef;
-        const [listControlProps, remainingProps] = useControlProps(props, {
-          controlType: "text",
-          statePropName: "value",
-          defaultStatePropName: "defaultValue",
-          getUIValue: () => undefined,
-          fallbackState: "",
-          getStateFromProp: (v) => v ?? "",
-          getPropFromState: (s) => s,
-        });
-        return (
-          <List
-            as="fieldset"
-            {...listControlProps}
-            {...remainingProps}
-            name={undefined}
-          />
-        );
+        return <List as="fieldset" {...props} />;
       };
 
       // Minimal Selectable: calls useCheckableProps (the real one), renders a real
