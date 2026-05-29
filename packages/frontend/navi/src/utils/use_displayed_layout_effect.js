@@ -38,7 +38,7 @@ export const useDisplayedLayoutEffect = (ref, callback, deps) => {
     if (!el) {
       return;
     }
-    const ancestor = el.closest("dialog, details, [popover]");
+    const ancestor = el.closest("dialog, details, [popover], [aria-expanded]");
     if (!ancestor) {
       callbackRef.current(el, new CustomEvent("navi_displayed_on_document"));
       return;
@@ -88,6 +88,8 @@ const isAncestorOpen = (ancestor) => {
   if (ancestor.tagName === "DIALOG" || ancestor.hasAttribute("popover")) {
     return ancestor.matches(":popover-open, [open]");
   }
-  // details
-  return ancestor.open;
+  if (ancestor.tagName === "DETAILS") {
+    return ancestor.open;
+  }
+  return ancestor.getAttribute("aria-expanded") === "true";
 };
