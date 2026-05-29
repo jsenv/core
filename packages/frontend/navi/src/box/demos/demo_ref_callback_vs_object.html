@@ -238,7 +238,6 @@
 
       const App = () => {
         const selectedSignal = useSignal();
-        const selectedValue = selectedSignal.value;
 
         const simulateNarrow = () => {
           windowWidthSignal.value = 1200;
@@ -255,11 +254,9 @@
             </p>
             <button onClick={simulateNarrow}>Simulate resize → dialog</button>
             <MockPicker
-              type="text"
-              name="repro_picker"
-              value={selectedValue}
-              action={(v) => {
-                selectedSignal.value = v;
+              value={selectedSignal.value}
+              action={() => {
+                selectedSignal.value = "x";
               }}
             >
               <List as="fieldset" action="update">
