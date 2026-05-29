@@ -1,3 +1,6 @@
+import { measureLongestVisualLineWidth } from "@jsenv/dom";
+import { useLayoutEffect, useRef } from "preact/hooks";
+
 import { Box } from "../box/box.jsx";
 import { withPropsClassName } from "../utils/with_props_class_name.js";
 
@@ -9,8 +12,46 @@ const css = /* css */ `
   }
 `;
 
-export const BadgeList = ({ children, className, ...props }) => {
+export const BadgeList = ({
+  children,
+  className,
+  shrinkWrap = true,
+  ...props
+}) => {
   import.meta.css = css;
+  const defaultRef = useRef();
+  props.ref = props.ref || defaultRef;
+  const { ref } = props;
+
+  useLayoutEffect(() => {
+    if (!shrinkWrap) {
+      return undefined;
+    }
+    const el = ref.current;
+    if (!el) {
+      return undefined;
+    }
+    const applyWidth = () => {
+      el.style.width = "";
+      const optimalWidth = measureLongestVisualLineWidth(el);
+      if (optimalWidth === null) {
+        return;
+      }
+      el.style.width = `${Math.ceil(optimalWidth)}px`;
+    };
+    applyWidth();
+    const parent = el.parentElement;
+    let observer;
+    if (parent) {
+      observer = new ResizeObserver(applyWidth);
+      observer.observe(parent);
+    }
+    window.addEventListener("resize", applyWidth);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener("resize", applyWidth);
+    };
+  });
 
   return (
     <Box

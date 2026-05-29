@@ -336,7 +336,7 @@ const css = /* css */ `
     top: 0.1em;
   }
   .navi_title .navi_link[data-reveal-on-interaction] {
-    top: 0.25em;
+    /* top: 0.25em; */
   }
 `;
 

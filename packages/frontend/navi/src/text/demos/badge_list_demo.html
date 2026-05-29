@@ -26,7 +26,8 @@
             <Link href="#default">1. Default badges</Link>
             <Link href="#colored">2. Colored badges</Link>
             <Link href="#wrapping">3. Wrapping behavior</Link>
-            <Link href="#spacing">4. Custom spacing</Link>
+            <Link href="#shrinkwrap">4. Shrink wrap</Link>
+            <Link href="#spacing">5. Custom spacing</Link>
           </Box>
         </Box>
       );
@@ -90,11 +91,7 @@
           </Paragraph>
           <Box flex="y" spacing="m" alignX="start">
             <Text bold>A — just enough to spill onto a second line</Text>
-            <Box
-              maxWidth="300px"
-              border="2px dotted #aaa"
-              borderRadius="4px"
-            >
+            <Box maxWidth="300px" border="2px dotted #aaa" borderRadius="4px">
               <BadgeList>
                 <Badge>JS</Badge>
                 <Badge>TypeScript</Badge>
@@ -106,11 +103,7 @@
             </Box>
 
             <Text bold>B — three lines, varying badge widths</Text>
-            <Box
-              maxWidth="300px"
-              border="2px dotted #aaa"
-              borderRadius="4px"
-            >
+            <Box maxWidth="300px" border="2px dotted #aaa" borderRadius="4px">
               <BadgeList>
                 <Badge>HTML</Badge>
                 <Badge>CSS</Badge>
@@ -130,11 +123,7 @@
             </Box>
 
             <Text bold>C — many lines, mix of very short and very long</Text>
-            <Box
-              maxWidth="300px"
-              border="2px dotted #aaa"
-              borderRadius="4px"
-            >
+            <Box maxWidth="300px" border="2px dotted #aaa" borderRadius="4px">
               <BadgeList>
                 <Badge>JS</Badge>
                 <Badge>Rust</Badge>
@@ -150,6 +139,49 @@
                 <Badge>Infrastructure as Code</Badge>
                 <Badge>Python</Badge>
                 <Badge>Swift</Badge>
+              </BadgeList>
+            </Box>
+          </Box>
+        </Box>
+      );
+
+      const ShrinkWrapSection = () => (
+        <Box as="section" marginBottom="xl">
+          <Title as="h2">
+            <Link anchor href="#shrinkwrap" />
+            Shrink wrap
+          </Title>
+          <Paragraph>
+            With <code>shrinkWrap</code>, the list measures the widest rendered
+            line and sets its own width to that value — eliminating blank space
+            to the right. The dotted border shows the actual element boundary.
+          </Paragraph>
+          <Box flex="y" spacing="m" alignX="start">
+            <Text bold>
+              Without shrinkWrap (default) — blank space on the right
+            </Text>
+            <Box maxWidth="300px" border="2px dotted #aaa" borderRadius="4px">
+              <BadgeList>
+                <Badge>HTML</Badge>
+                <Badge>CSS</Badge>
+                <Badge>JavaScript</Badge>
+                <Badge>TypeScript</Badge>
+                <Badge>React</Badge>
+                <Badge>Vue</Badge>
+                <Badge>Node.js</Badge>
+              </BadgeList>
+            </Box>
+
+            <Text bold>With shrinkWrap — width snaps to longest line</Text>
+            <Box maxWidth="300px" border="2px dotted #aaa" borderRadius="4px">
+              <BadgeList shrinkWrap>
+                <Badge>HTML</Badge>
+                <Badge>CSS</Badge>
+                <Badge>JavaScript</Badge>
+                <Badge>TypeScript</Badge>
+                <Badge>React</Badge>
+                <Badge>Vue</Badge>
+                <Badge>Node.js</Badge>
               </BadgeList>
             </Box>
           </Box>
@@ -182,6 +214,7 @@
           <DefaultSection />
           <ColoredSection />
           <WrappingSection />
+          <ShrinkWrapSection />
           <SpacingSection />
         </Box>
       );
