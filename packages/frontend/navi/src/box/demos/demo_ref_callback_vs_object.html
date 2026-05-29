@@ -150,24 +150,9 @@
 
       // MockPopover: no visibility state, always visible, just calls callbacks.
       const MockPopover = (props) => {
-        const { ref: refProp, id, onnavi_open, onnavi_close, children } = props;
-        const defaultRef = useRef(null);
-        const ref = refProp || defaultRef;
+        const { children } = props;
 
-        return (
-          <div
-            id={id}
-            ref={ref}
-            onnavi_request_open={(e) => {
-              onnavi_open?.(e);
-            }}
-            onnavi_request_close={(e) => {
-              onnavi_close?.(e);
-            }}
-          >
-            {children}
-          </div>
-        );
+        return <div>{children}</div>;
       };
 
       const useIgnoreClickForMousedown = () => {
