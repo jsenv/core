@@ -370,7 +370,6 @@ const ListUI = (props) => {
     maxHeight,
     onListVisibleItemsChange,
     virtualItemHeight,
-    searchText,
     ...rest
   } = props;
   if (renderBudget < 30) {
@@ -398,7 +397,6 @@ const ListUI = (props) => {
     tracker,
     renderBudget,
     virtualItemHeight,
-    searchText,
   });
 
   const idDefault = useId();
@@ -434,7 +432,6 @@ const ListUI = (props) => {
         role={role}
         fallback={fallback}
         noMatchFallback={noMatchFallback}
-        searchText={searchText}
         separator={separator}
         expandX={expandX}
         expand={expand}
@@ -454,7 +451,6 @@ const ListContent = ({
   role,
   fallback,
   noMatchFallback,
-  searchText,
   separator,
   expandX,
   expand,
@@ -473,7 +469,6 @@ const ListContent = ({
         role={role}
         fallback={fallback}
         noMatchFallback={noMatchFallback}
-        searchText={searchText}
         separator={separator === true ? <Separator margin="0" /> : separator}
         expandX={expandX || expand}
         {...listProps}
@@ -512,7 +507,6 @@ const useListScrollSync = ({
   tracker,
   renderBudget,
   virtualItemHeight,
-  searchText,
 }) => {
   const debugScroll = useDebugScroll();
   const virtualItemHeightSignal = useVirtualItemHeightSignal(
@@ -609,43 +603,12 @@ const useListScrollSync = ({
     );
   };
 
-  const currentScrollRef = useRef(null);
-  const updateCurrentScroll = () => {
-    const listContainerEl = containerRef.current;
-    const listScrollContainerEl = listContainerEl.querySelector(
-      `.navi_list_scroll_container`,
-    );
-    const currentScrollLeft = listScrollContainerEl.scrollLeft;
-    const currentScrollTop = listScrollContainerEl.scrollTop;
-    const renderWindow = renderWindowRef.current;
-    currentScrollRef.current = {
-      left: currentScrollLeft,
-      top: currentScrollTop,
-      renderWindow: { ...renderWindow },
-    };
-    debugScroll(
-      `store currentScroll: scrollTop=${currentScrollTop}, renderWindow=[${renderWindow.start}, ${renderWindow.end})`,
-    );
-  };
-
-  const searchTextRef = useRef();
-  let searchTextBecomesActive = false;
-  if (searchTextRef.current === undefined) {
-    searchTextRef.current = searchText;
-  } else {
-    const searchTextPrevious = searchTextRef.current;
-    searchTextRef.current = searchText;
-    if (!searchTextPrevious && searchText) {
-      searchTextBecomesActive = true;
-    }
-  }
   // Scroll to the selected item when the list is first presented on screen.
   // Skipped when inside a closed <dialog>/<details> (scrollIntoView is a no-op
   // on hidden elements); re-runs automatically every time the ancestor opens.
   useDisplayedLayoutEffect(
     containerRef,
     (el, openEvent) => {
-      updateCurrentScroll();
       const items = tracker.itemsSignal.peek();
       const firstSelected = items.find((i) => i.selected);
       if (firstSelected) {
@@ -664,100 +627,6 @@ const useListScrollSync = ({
     },
     [ref],
   );
-  // Watch scores of the top renderBudget items.
-  // When scores change during an active search, scroll to top to reveal the most relevant items.
-  // When search becomes empty, restore the scroll position from before the search started.
-  // We save the first-visible item ID so restoration is item-precise
-  // and survives render-window shifts or item reordering.
-
-  // NOTE POUR LE JOUR OU ON A LE MULTISELECT:
-  // Lorsqu'on selectionne quelque chose pendant une recherche, alors ensuite meme si on clear
-  // on veut pas revenir a la position scroll précédente car on veut garde l'item qu'on a selectionné visible
-  // (pour l'instant pas grave car on travaille pour le mode select qui fermera le dialog au select)
-  const savedScrollRef = useRef(null);
-  const topMatchScoresKeyRef = useRef("");
-  useLayoutEffect(() => {
-    const listContainerEl = containerRef.current;
-    if (!listContainerEl) {
-      return undefined;
-    }
-    const listScrollContainerEl = listContainerEl.querySelector(
-      `.navi_list_scroll_container`,
-    );
-    if (!searchText) {
-      // no search -> try to restore scroll position
-      topMatchScoresKeyRef.current = "";
-      const savedScroll = savedScrollRef.current;
-      if (!savedScroll) {
-        // nothing to restore
-        return undefined;
-      }
-      savedScrollRef.current = null;
-      debugScroll("Restoring scroll to", savedScroll);
-      updateRenderWindow(
-        savedScroll.renderWindow.start,
-        savedScroll.renderWindow.end,
-        "restore scroll window",
-      );
-      const rafId = requestAnimationFrame(() => {
-        const left = savedScroll.left;
-        const top = savedScroll.top;
-        // use scrollTo to respect eventual css scroll-behavior: smooth;
-        debugScroll(
-          `restore scroll: ${getElementSignature(listScrollContainerEl)}.scrollTo({ left: ${left}, top: ${top} })`,
-        );
-        listScrollContainerEl.scrollTo({
-          left: savedScroll.left,
-          top: savedScroll.top,
-        });
-        // The reliable way to restore scroll is to use scrollTop because otherwise we will estimate the item to scroll
-        // based on virtual item height which can wrongly restore the scroll.
-        // However we have a contract with outside to inside which item is scrolled
-        // (used by keyboard nav to enable anchoring the item for list item nav with arrow keys)
-        // so we do our best to give that item back
-        const { item } = getScrollInfo(
-          { scrollTop: savedScroll.top },
-          listScrollContainerEl,
-          tracker,
-          virtualItemHeightSignal,
-          renderWindowRef,
-        );
-        const listEl = ref.current;
-        dispatchPublicCustomEvent(listEl, "navi_list_nav", {
-          item,
-          event: new CustomEvent("navi_scroll_restore"),
-        });
-      });
-      return () => {
-        cancelAnimationFrame(rafId);
-      };
-    }
-    const visibleItems = tracker.visibleItemsSignal.peek();
-    const topItems = visibleItems.slice(0, renderBudget);
-    const topMatchScoresKey = topItems
-      .map((i) => `${i.id}:${i.matchScore ?? ""}`)
-      .join(",");
-    const currentTopMatchScore = topMatchScoresKeyRef.current;
-    if (topMatchScoresKey === currentTopMatchScore) {
-      // no changes in top matches -> no need to scroll
-      return undefined;
-    }
-    // n items are now more important to see, scrollTop to show them
-    topMatchScoresKeyRef.current = topMatchScoresKey;
-    if (searchTextBecomesActive) {
-      // search just started -> save the currently scrolled item id to restore later
-      const currentScroll = currentScrollRef.current;
-      savedScrollRef.current = currentScroll;
-      debugScroll(
-        `Saving scroll: { top: ${currentScroll.top}, renderWindowStart: ${currentScroll.renderWindow.start}, renderWindowEnd: ${currentScroll.renderWindow.end} }`,
-      );
-    }
-    // -> scroll to the top
-    scrollToItem(visibleItems[0], {
-      event: new CustomEvent("navi_list_top_match_change"),
-    });
-    return undefined;
-  });
 
   // Scroll listener — slides the window as the user scrolls.
   useLayoutEffect(() => {
@@ -770,7 +639,6 @@ const useListScrollSync = ({
     );
     const listEl = listContainerEl.querySelector(".navi_list");
     const onScroll = () => {
-      updateCurrentScroll();
       const visibleItemCount = tracker.visibleCountSignal.peek();
       if (visibleItemCount <= renderBudget) {
         return;
