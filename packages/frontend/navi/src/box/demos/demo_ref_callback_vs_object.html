@@ -126,7 +126,7 @@
 
       import { useSignal } from "@preact/signals";
       import { render } from "preact";
-      import { useId, useRef } from "preact/hooks";
+      import { useRef } from "preact/hooks";
       import { useControlProps } from "@jsenv/navi/src/control/control_hooks.jsx";
       import { dispatchRequestAction } from "@jsenv/navi/src/control/validation/custom_constraint_validation.js";
       import { List, ListItem } from "@jsenv/navi/src/control/list/list.jsx";
@@ -228,12 +228,6 @@
         const popupRef = useRef(null);
         popupProps.ref = popupRef;
 
-        const popupId = useId();
-        Object.assign(pickerProps, { "aria-controls": popupId });
-        Object.assign(popupProps, { id: popupId });
-
-        const openRef = useRef(false);
-
         const onClose = (e) => {
           props.action?.("dummy");
         };
@@ -251,12 +245,7 @@
         };
 
         const { children } = props;
-        Object.assign(pickerProps, {
-          onnavi_request_close: (e) => {
-            requestClose(e);
-          },
-          children,
-        });
+        Object.assign(pickerProps, { children });
         Object.assign(popupProps, {
           onnavi_close: (e) => {
             onClose(e);
@@ -264,12 +253,8 @@
         });
         Object.assign(pickerProps, {
           onMouseDown: (e) => {
-            if (openRef.current) {
-              requestClose(e);
-            } else {
-              e.preventDefault();
-              requestOpen(e);
-            }
+            e.preventDefault();
+            requestOpen(e);
           },
         });
 
