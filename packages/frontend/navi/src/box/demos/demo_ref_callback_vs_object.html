@@ -211,7 +211,6 @@
 
       const App = () => {
         const selectedSignal = useSignal();
-        const defaultRef = useRef(null);
 
         const simulateNarrow = () => {
           windowWidthSignal.value = 1200;
@@ -228,7 +227,6 @@
             </p>
             <button onClick={simulateNarrow}>Simulate resize → dialog</button>
             {renderMockPicker(MockPickerButton, {
-              ref: defaultRef,
               value: selectedSignal.value,
               action: () => {
                 selectedSignal.value = "x";
