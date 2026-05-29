@@ -8,16 +8,10 @@ import {
   createComponentResolver,
   useNextResolver,
 } from "../../resolver/resolver.jsx";
-import { useItemTracker } from "../../utils/item_tracker/use_item_tracker.js";
 import { useDisplayedLayoutEffect } from "../../utils/use_displayed_layout_effect.js";
-
-const ListItemTrackerContext = createContext(null);
-const GroupItemTrackerContext = createContext(null);
 
 export const ListIdContext = createContext();
 
-// Carries the separator element/function down to each ListItem so separators
-// are only rendered between items that actually mount (post-filter, post-window).
 const SeparatorContext = createContext(null);
 
 const css = /* css */ `
@@ -331,15 +325,9 @@ const ListUI = (props) => {
     expandX,
     expand,
     maxHeight,
-    onListVisibleItemsChange,
     ...rest
   } = props;
   const containerRef = useRef(null);
-  const tracker = useItemTracker({
-    onChange: () => {
-      onListVisibleItemsChange?.(tracker.visibleItemsSignal.peek());
-    },
-  });
   useDisplayedLayoutEffect(containerRef, () => {
     const listEl = ref.current;
     console.log(listEl.dispatchEvent);
@@ -368,7 +356,6 @@ const ListUI = (props) => {
         separator={separator}
         expandX={expandX}
         expand={expand}
-        tracker={tracker}
       >
         {children}
       </ListContent>
@@ -382,7 +369,6 @@ const ListContent = ({
   separator,
   expandX,
   expand,
-  tracker,
   children,
 }) => {
   const listProps = useContext(BoxForwardedPropsContext);
@@ -395,7 +381,6 @@ const ListContent = ({
         separator={separator === true ? <Separator margin="0" /> : separator}
         expandX={expandX || expand}
         {...listProps}
-        tracker={tracker}
       >
         {children}
       </UnorderedList>
@@ -420,13 +405,11 @@ const LIST_PSEUDO_CLASSES = [
 ];
 
 // Inner <ul> — hosts items.
-const UnorderedList = ({ tracker, separator, children, ...rest }) => {
+const UnorderedList = ({ separator, children, ...rest }) => {
   return (
     <Box as="ul" {...rest} baseClassName="navi_list">
       <SeparatorContext.Provider value={separator ?? null}>
-        <ListItemTrackerContext.Provider value={tracker}>
-          {children}
-        </ListItemTrackerContext.Provider>
+        {children}
       </SeparatorContext.Provider>
     </Box>
   );
@@ -451,10 +434,6 @@ const UnorderedList = ({ tracker, separator, children, ...rest }) => {
 export const ListItem = (props) => {
   const idDefault = useId();
   props.id = props.id || idDefault;
-  const tracker = useContext(ListItemTrackerContext);
-  if (tracker) {
-    tracker.useTrackItem(props);
-  }
   const { children, id, index, hidden, filtered, selected, value, ...rest } =
     props;
   return (
@@ -484,7 +463,6 @@ export const ListItemGroup = ({
   ...rest
 }) => {
   const groupId = useId();
-  const groupTracker = useItemTracker();
   const groupRef = useRef(null);
   const labelRef = useRef(null);
   useDisplayedLayoutEffect(
@@ -525,9 +503,7 @@ export const ListItemGroup = ({
         role="group"
         aria-labelledby={groupId}
       >
-        <GroupItemTrackerContext.Provider value={groupTracker}>
-          {children}
-        </GroupItemTrackerContext.Provider>
+        {children}
       </ul>
     </ListItem>
   );
