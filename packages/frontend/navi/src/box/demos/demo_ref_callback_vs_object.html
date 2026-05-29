@@ -270,13 +270,7 @@
         const [expanded, setExpanded] = useState(false);
         const expandedRef = useRef(expanded);
         expandedRef.current = expanded;
-        const valueAtOpenRef = useRef(null);
 
-        const onOpen = () => {
-          expandedRef.current = true;
-          setExpanded(true);
-          valueAtOpenRef.current = getPickerInputUIState(ref.current);
-        };
         const onClose = (e) => {
           props.action?.("dummy");
         };
@@ -321,9 +315,6 @@
           children,
         });
         Object.assign(popupProps, {
-          onnavi_open: (e) => {
-            onOpen(e);
-          },
           onnavi_close: (e) => {
             onClose(e);
           },
