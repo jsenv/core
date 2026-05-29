@@ -157,13 +157,11 @@
         const open = (e) => {
           const dialogEl = ref.current;
           dialogEl.showModal();
-
-          dispatchCustomEvent(dialogEl, "navi_open", { event: e });
+          rest.onnavi_open?.(e);
         };
         const close = (e) => {
           const dialogEl = ref.current;
           dialogEl.close();
-
           dispatchCustomEvent(dialogEl, "navi_close", { event: e });
         };
 
@@ -173,12 +171,9 @@
             as="dialog"
             id={id}
             ref={ref}
-            onMouseDown={(e) => {
-              rest.onMouseDown?.(e);
-              // backdrop click: target is the <dialog> itself
-              if (e.button === 0 && e.target === ref.current) {
-                close(e);
-              }
+            onCancel={(e) => {
+              e.preventDefault();
+              close(e);
             }}
             onnavi_request_open={(e) => {
               open(e);
