@@ -138,7 +138,7 @@
       // MockDialog: minimal <dialog> — showModal/close + dispatches navi_close event
       // so onnavi_close on the element is triggered via DOM bubbling.
       const MockDialog = (props) => {
-        const { ref: refProp, id, children, ...rest } = props;
+        const { ref: refProp, children, ...rest } = props;
         const defaultRef = useRef(null);
         const ref = refProp || defaultRef;
 
@@ -150,7 +150,6 @@
         return (
           <dialog
             {...rest}
-            id={id}
             ref={ref}
             onCancel={(e) => {
               e.preventDefault();
@@ -158,9 +157,6 @@
             }}
             onnavi_request_open={() => {
               ref.current.showModal();
-            }}
-            onnavi_request_close={(e) => {
-              close(e);
             }}
           >
             {children}
@@ -172,14 +168,7 @@
 
       // ── MockPickerButton ──────────────────────────────────────────────────────
       const MockPickerButton = (props) => {
-        const {
-          ref,
-          children,
-          onMouseDown,
-          popupProps,
-          actionInteraction,
-          ...rest
-        } = props;
+        const { ref, children, onMouseDown } = props;
         return (
           <button ref={ref} type="button" onMouseDown={onMouseDown}>
             {children}
@@ -191,14 +180,13 @@
       const MockPickerCustom = (props) => {
         const Next = useNextResolver();
         const isSmallScreen = windowWidthSignal.value <= 600;
-        const { ref, children } = props;
+        const { children } = props;
         const popupRef = useRef(null);
 
         const onMouseDown = (e) => {
           e.preventDefault();
           dispatchCustomEvent(popupRef.current, "navi_request_open", {
             event: e,
-            anchor: ref.current,
           });
         };
 
@@ -240,13 +228,6 @@
         return renderMockPicker(MockPickerButton, props);
       };
 
-      // Minimal SelectableList: renders a real <List>.
-      const MockSelectableList = (props) => {
-        const defaultRef = useRef();
-        props.ref = props.ref || defaultRef;
-        return <List as="fieldset" {...props} />;
-      };
-
       const MockSelectable = ({ index, children }) => {
         return (
           <ListItem index={index}>
@@ -281,13 +262,13 @@
                 selectedSignal.value = v;
               }}
             >
-              <MockSelectableList action="update">
+              <List as="fieldset" action="update">
                 {OPTIONS.map((opt, i) => (
                   <MockSelectable key={opt} index={i}>
                     {opt}
                   </MockSelectable>
                 ))}
-              </MockSelectableList>
+              </List>
             </MockPicker>
           </div>
         );
