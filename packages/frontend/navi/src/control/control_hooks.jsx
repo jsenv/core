@@ -234,9 +234,6 @@ export const useControlProps = (
       } else {
         e.preventDefault();
       }
-      lastEventRequestingActionRef.current = e;
-      lastActionValueRef.current = field.value;
-      dispatchRequestAction(field, { event: e });
     };
     const refCallback = useCallback(
       (field) => {
@@ -259,9 +256,9 @@ export const useControlProps = (
       },
       [actionInteraction, actionAfterChange, actionDebounce],
     );
-    //  const refComposed = useComposeElementRef(refCallback, ref);
+    const refComposed = useComposeElementRef(refCallback, ref);
     Object.assign(controlProps, {
-      //  ref: refComposed,
+      ref: refComposed,
       onMouseDown,
       onClick,
       onKeyDown,
