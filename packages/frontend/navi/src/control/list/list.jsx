@@ -370,7 +370,6 @@ const ListUI = (props) => {
     maxHeight,
     onListVisibleItemsChange,
     virtualItemHeight,
-    lockSize,
     searchText,
     ...rest
   } = props;
@@ -380,47 +379,7 @@ const ListUI = (props) => {
     );
   }
 
-  // lockSize: capture the container's dimensions on first render so filtering
-  // cannot collapse the layout. Measurement happens on the initial (unfiltered)
-  // state because the parent controls hidden props before any search is applied.
   const containerRef = useRef(null);
-  const sizeLocked = useRef(false);
-  useDisplayedLayoutEffect(
-    containerRef,
-    (listContainerEl) => {
-      if (!lockSize) {
-        return undefined;
-      }
-      const observer = new ResizeObserver((entries) => {
-        const entry = entries[0];
-        // Use borderBoxSize (outer width) not contentRect (which excludes the
-        // scrollbar width). If we used contentRect, min-width would be set to
-        // outerWidth − scrollbarWidth, and the container would shrink by exactly
-        // the scrollbar width when the scrollbar disappears.
-        const borderBoxEntry = entry.borderBoxSize
-          ? entry.borderBoxSize[0]
-          : null;
-        const width = borderBoxEntry
-          ? borderBoxEntry.inlineSize
-          : entry.contentRect.width;
-        const height = borderBoxEntry
-          ? borderBoxEntry.blockSize
-          : entry.contentRect.height;
-        if (width === 0 && height === 0) {
-          return;
-        }
-        listContainerEl.style.minWidth = `${width}px`;
-        listContainerEl.style.minHeight = `${height}px`;
-        sizeLocked.current = true;
-        observer.disconnect();
-      });
-      observer.observe(listContainerEl);
-      return () => {
-        observer.disconnect();
-      };
-    },
-    [lockSize],
-  );
 
   const tracker = useItemTracker({
     onChange: () => {
@@ -965,19 +924,10 @@ const useVirtualItemHeightSignal = (ref, virtualItemHeightProp = 0) => {
   return virtualHeightSignal;
 };
 
-// Inner <ul> — hosts the fillers + items.
-// Creates a virtualItemHeight signal so TopFiller and BottomFiller can
-// subscribe to it independently. When virtualItemHeight is passed as a prop it
-// initialises the signal directly; otherwise UnorderedList measures a rendered
-// item after each commit and writes to the signal, causing only the fillers to
-// re-render.
+// Inner <ul> — hosts items.
 const UnorderedList = ({
   tracker,
   renderWindow,
-  virtualItemHeightSignal,
-  fallback,
-  noMatchFallback,
-  searchText,
   separator,
   children,
   ...rest
@@ -992,91 +942,6 @@ const UnorderedList = ({
         </SeparatorContext.Provider>
       </RenderWindowContext.Provider>
     </Box>
-  );
-};
-
-const NoMatchFallback = ({ tracker, noMatchFallback, searchText }) => {
-  const itemCount = tracker.countSignal.value;
-  const visibleItemCount = tracker.visibleCountSignal.value;
-  const matchCount = tracker.matchCountSignal.value;
-  // Show when all items are filtered out (filtered prop), or when search is
-  // active but no visible item has a positive match score.
-  const allHidden = itemCount > 0 && visibleItemCount === 0;
-  const noneMatch = searchText && visibleItemCount > 0 && matchCount === 0;
-  const showMatchFallback = allHidden || noneMatch;
-
-  if (noMatchFallback === undefined) {
-    noMatchFallback = allHidden
-      ? "Aucun élément ne correspond à cette recherche."
-      : "Aucun élément ne correspond à cette recherche. Le reste est affiché ci-dessous";
-  }
-
-  return (
-    <ListItem
-      role="presentation"
-      className="navi_list_item navi_list_no_match_fallback"
-      hidden={!showMatchFallback}
-      navi-default={typeof noMatchFallback === "string" ? "" : undefined}
-    >
-      {noMatchFallback}
-    </ListItem>
-  );
-};
-const Fallback = ({ tracker, fallback }) => {
-  const itemCount = tracker.countSignal.value;
-  const showFallback = itemCount === 0;
-  if (fallback === undefined) {
-    fallback = "Aucun élément dans cette liste.";
-  }
-
-  return (
-    <ListItem
-      role="presentation"
-      className="navi_list_item navi_list_fallback"
-      hidden={!showFallback}
-      navi-default={typeof fallback === "string" ? "" : undefined}
-    >
-      {fallback}
-    </ListItem>
-  );
-};
-const TopFiller = ({ virtualItemHeightSignal, renderWindowStart }) => {
-  const virtualItemHeight = virtualItemHeightSignal.value;
-  const numberOfItemsAbove = renderWindowStart;
-  const heightToFillAbove = numberOfItemsAbove * virtualItemHeight;
-
-  return (
-    <li
-      className="navi_list_virtual_filler"
-      // eslint-disable-next-line react/no-unknown-property
-      navi-virtual-filler="top"
-      aria-hidden
-      style={{
-        height: `${heightToFillAbove}px`,
-      }}
-    />
-  );
-};
-const BottomFiller = ({
-  virtualItemHeightSignal,
-  renderWindowEnd,
-  tracker,
-}) => {
-  const visibleItemCount = tracker.visibleCountSignal.value;
-  const virtualItemHeight = virtualItemHeightSignal.value;
-  const numberOfItemsBelow = Math.max(visibleItemCount - renderWindowEnd, 0);
-  const heightToFillBelow = numberOfItemsBelow * virtualItemHeight;
-
-  return (
-    <li
-      className="navi_list_virtual_filler"
-      // eslint-disable-next-line react/no-unknown-property
-      navi-virtual-filler="bottom"
-      aria-hidden
-      style={{
-        height: `${heightToFillBelow}px`,
-      }}
-    />
   );
 };
 
