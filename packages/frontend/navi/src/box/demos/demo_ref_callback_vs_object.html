@@ -175,7 +175,7 @@
 
         const onMouseDown = (e) => {
           e.preventDefault();
-          dispatchCustomEvent(popupRef.current, "navi_request_open", {});
+          popupRef.current.showModal();
         };
 
         const onClose = () => {
