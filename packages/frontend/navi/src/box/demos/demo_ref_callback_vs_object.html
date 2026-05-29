@@ -153,23 +153,16 @@
         const { ref: refProp, id, onnavi_open, onnavi_close, children } = props;
         const defaultRef = useRef(null);
         const ref = refProp || defaultRef;
-        const openedRef = useRef(false);
 
         return (
           <div
             id={id}
             ref={ref}
             onnavi_request_open={(e) => {
-              if (!openedRef.current) {
-                openedRef.current = true;
-                onnavi_open?.(e);
-              }
+              onnavi_open?.(e);
             }}
             onnavi_request_close={(e) => {
-              if (openedRef.current) {
-                openedRef.current = false;
-                onnavi_close?.(e);
-              }
+              onnavi_close?.(e);
             }}
           >
             {children}
