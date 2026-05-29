@@ -268,6 +268,8 @@ const css = /* css */ `
       display: inline-flex;
       width: 1em;
       height: 1em;
+      align-items: center;
+      justify-content: center;
       font-size: 1em;
       opacity: 0;
       /* The anchor link is displayed only on :hover */
@@ -284,6 +286,7 @@ const css = /* css */ `
       }
 
       .navi_icon {
+        font-size: 0.7em;
         vertical-align: top;
       }
     }
