@@ -344,19 +344,17 @@ const ListUI = (props) => {
       styleCSSVars={LIST_STYLE_CSS_VARS}
       pseudoClasses={LIST_PSEUDO_CLASSES}
     >
-      <div className="navi_list_scroll_container">
-        <Box
-          as="ul"
-          ref={ref}
-          id={innerId}
-          role={role}
-          expandX={expandX || expand}
-          // {...listProps}
-          baseClassName="navi_list"
-        >
-          {children}
-        </Box>
-      </div>
+      <Box
+        as="ul"
+        ref={ref}
+        id={innerId}
+        role={role}
+        expandX={expandX || expand}
+        // {...listProps}
+        baseClassName="navi_list"
+      >
+        {children}
+      </Box>
     </Box>
   );
 };
