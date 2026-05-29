@@ -1,51 +1,27 @@
 import {
   dispatchCustomEvent,
   dispatchPublicCustomEvent,
-  getElementSignature,
   pickPositionRelativeTo,
-  scrollIntoViewScoped,
   visibleRectEffect,
 } from "@jsenv/dom";
-import { signal } from "@preact/signals";
 import { createContext } from "preact";
-import {
-  useContext,
-  useId,
-  useLayoutEffect,
-  useRef,
-  useState,} from "preact/hooks";
+import { useContext, useId, useLayoutEffect, useRef } from "preact/hooks";
 
 import { Box, BoxForwardedPropsContext } from "../../box/box.jsx";
 import { Separator } from "../../layout/separator.jsx";
-import { useDebugScroll } from "../../navi_debug.jsx";
 import {
   createComponentResolver,
   useNextResolver,
 } from "../../resolver/resolver.jsx";
 import { useItemTracker } from "../../utils/item_tracker/use_item_tracker.js";
 import { useDisplayedLayoutEffect } from "../../utils/use_displayed_layout_effect.js";
-import { useSearchHighlight } from "./search_highlight.js";
 
 const ListItemTrackerContext = createContext(null);
 const GroupItemTrackerContext = createContext(null);
-const PendingScrollRefContext = createContext(null);
 
 export const ListIdContext = createContext();
 export const InsideRealListItemContext = createContext(false);
 
-// When total rendered items exceeds renderBudget, a render window [start, end)
-// is activated to cap the number of DOM nodes. Items outside the window return
-// null. The window slides as the user scrolls, using actual DOM positions
-// (getBoundingClientRect) to find the first visible item — no height estimation.
-const RENDER_BUDGET_DEFAULT = 100;
-
-// Attribute used on <li> elements rendered by ListItemReal so the scroll listener
-// and filler-height calculation can find real items without matching presentation ones.
-const REAL_LIST_ITEM_SELECTOR = `[navi-list-item-real]`;
-
-// Carries the render window {start, end} (or null = render all) from
-// List down to each ListItem.
-const RenderWindowContext = createContext(null);
 // Carries the separator element/function down to each ListItem so separators
 // are only rendered between items that actually mount (post-filter, post-window).
 const SeparatorContext = createContext(null);
@@ -459,41 +435,21 @@ const LIST_PSEUDO_CLASSES = [
   ":-navi-expanded",
 ];
 const useListScrollSync = ({ containerRef, ref }) => {
-  const debugScroll = useDebugScroll();
-
-  const pendingScrollRef = useRef();
-
-  // Scroll to the selected item when the list is first presented on screen.
-  // Skipped when inside a closed <dialog>/<details> (scrollIntoView is a no-op
-  // on hidden elements); re-runs automatically every time the ancestor opens.
   useDisplayedLayoutEffect(containerRef, () => {
     const listEl = ref.current;
     console.log(listEl.dispatchEvent);
   }, [ref]);
-
-  return {
-    renderWindow: { start: 0, end: Infinity },
-    pendingScrollRef,
-  };
 };
 
 // Inner <ul> — hosts items.
-const UnorderedList = ({
-  tracker,
-  renderWindow,
-  separator,
-  children,
-  ...rest
-}) => {
+const UnorderedList = ({ tracker, separator, children, ...rest }) => {
   return (
     <Box as="ul" {...rest} baseClassName="navi_list">
-      <RenderWindowContext.Provider value={renderWindow}>
-        <SeparatorContext.Provider value={separator ?? null}>
-          <ListItemTrackerContext.Provider value={tracker}>
-            {children}
-          </ListItemTrackerContext.Provider>
-        </SeparatorContext.Provider>
-      </RenderWindowContext.Provider>
+      <SeparatorContext.Provider value={separator ?? null}>
+        <ListItemTrackerContext.Provider value={tracker}>
+          {children}
+        </ListItemTrackerContext.Provider>
+      </SeparatorContext.Provider>
     </Box>
   );
 };
@@ -593,8 +549,9 @@ export const ListItem = (props) => {
   const idDefault = useId();
   props.id = props.id || idDefault;
   const tracker = useContext(ListItemTrackerContext);
-  tracker.useTrackItem(props);
-
+  if (tracker) {
+    tracker.useTrackItem(props);
+  }
   const { children, id, index, hidden, filtered, selected, value, ...rest } =
     props;
   return (
@@ -603,140 +560,8 @@ export const ListItem = (props) => {
     </li>
   );
 };
-const ListItemPresentation = (props) => {
-  return <Box as="li" {...props} />;
-};
-const ListItemRealOrVoid = (props) => {
-  if (props.id === undefined) {
-    console.warn(
-      "ListItem is missing an explicit id prop. Provide a stable id so pointed/selected state survives search reordering.",
-    );
-  }
-  if (props.index === undefined) {
-    console.warn(
-      "ListItem is missing an explicit index prop. Provide an index so item ordering is stable regardless of render order.",
-    );
-  }
-  const idDefault = useId();
-  props.id = props.id || idDefault;
-  const renderWindow = useContext(RenderWindowContext);
-  const tracker = useContext(ListItemTrackerContext);
-  const item = props;
-  const visibleIndex = tracker.useTrackItem(item);
-  const groupTracker = useContext(GroupItemTrackerContext);
-  const groupVisibleIndex = groupTracker
-    ? groupTracker.useTrackItem(item)
-    : null;
-  const separator = useContext(SeparatorContext);
 
-  if (props.filtered) {
-    return null;
-  }
-  // html-hidden items: excluded from virtual scroll accounting but always in DOM
-  if (props.hidden) {
-    return <ListItemReal {...props} />;
-  }
-  if (visibleIndex === -1) {
-    return null;
-  }
-  if (visibleIndex < renderWindow.start || visibleIndex >= renderWindow.end) {
-    return <ListItemVoid />;
-  }
-  const listItemVnode = <ListItemReal {...props} />;
-  // Use group-scoped visible index for separator when inside a group,
-  // so separators are only rendered between items within the same group.
-  const separatorIndex =
-    groupVisibleIndex !== null ? groupVisibleIndex : visibleIndex;
-  if (!separator || separatorIndex === 0) {
-    return listItemVnode;
-  }
-
-  const separatorVnode =
-    typeof separator === "function" ? separator(separatorIndex - 1) : separator;
-  return (
-    <>
-      {separatorVnode}
-      {listItemVnode}
-    </>
-  );
-};
-// When an item is outside the render window it cannot render a DOM node.
-// If it wants to scroll into view it sets scrollTop so the scroll event
-// shifts the window; once the item mounts as ListItemReal its layout effect
-// calls scrollIntoViewWithStickyAwareness to fine-tune the position.
-const ListItemVoid = () => {
-  return null;
-};
-const ListItemReal = (props) => {
-  const defaultRef = useRef(null);
-  props.ref = props.ref || defaultRef;
-  const { ref, id, hidden, highlight, children, ...rest } = props;
-  const pendingScrollRef = useContext(PendingScrollRefContext);
-  const pendingScroll = pendingScrollRef.current;
-  const needScrollOnMount = pendingScroll && pendingScroll.id === id;
-  useLayoutEffect(() => {
-    if (!needScrollOnMount) {
-      return;
-    }
-    const itemEl = ref.current;
-    if (!itemEl) {
-      return;
-    }
-    pendingScroll.resolve(itemEl);
-  }, [needScrollOnMount]);
-
-  // CSS Highlight API: mark matching text ranges when highlight prop is set.
-  useSearchHighlight(ref, highlight, [children, hidden]);
-
-  return (
-    <Box
-      as="li"
-      baseClassName="navi_list_item"
-      styleCSSVars={LIST_ITEM_STYLE_CSS_VARS}
-      pseudoClasses={LIST_ITEM_PSEUDO_CLASSES}
-      pseudoElements={LIST_ITEM_PSEUDO_ELEMENTS}
-      id={id}
-      navi-list-item-real=""
-      {...rest}
-      hidden={hidden}
-      ref={ref}
-    >
-      <InsideRealListItemContext.Provider value={true}>
-        {children}
-      </InsideRealListItemContext.Provider>
-    </Box>
-  );
-};
-const LIST_ITEM_STYLE_CSS_VARS = {
-  "paddingX": "--list-item-padding-x",
-  "paddingY": "--list-item-padding-y",
-  "padding": "--list-item-padding",
-  "color": "--list-item-color",
-  "backgroundColor": "--list-item-background-color",
-  "fontWeight": "--list-item-font-weight",
-  ":-navi-pointed": {
-    color: "--list-item-color-keyboard-pointed",
-    backgroundColor: "--list-item-background-color-keyboard-pointed",
-  },
-  ":hover": {
-    color: "--list-item-color-hover",
-    backgroundColor: "--list-item-background-color-hover",
-  },
-  ":-navi-selected": {
-    color: "--list-item-color-selected",
-    backgroundColor: "--list-item-background-color-selected",
-  },
-  ":disabled": {
-    color: "--list-item-color-disabled",
-    backgroundColor: "--list-item-background-color-disabled",
-  },
-  "::highlight": {
-    color: "--suggestion-color-highlight",
-    backgroundColor: "--suggestion-background-color-highlight",
-  },
-};
 export const LIST_ITEM_PSEUDO_CLASSES = [];
-const LIST_ITEM_PSEUDO_ELEMENTS = ["::highlight"];
 
 /**
  * ListGroup — a labeled group of list items.
