@@ -164,9 +164,6 @@
         );
       };
 
-      const OPTIONS = ["Apple", "Banana", "Cherry"];
-
-      // ── MockPickerButton ──────────────────────────────────────────────────────
       const MockPickerButton = (props) => {
         const { ref, children, onMouseDown } = props;
         return (
@@ -246,11 +243,9 @@
               }}
             >
               <List>
-                {OPTIONS.map((opt, i) => (
-                  <ListItem key={opt} index={i}>
-                    <span>{opt}</span>
-                  </ListItem>
-                ))}
+                <ListItem index={0}>
+                  <span>Apple</span>
+                </ListItem>
               </List>
             </MockPicker>
           </div>
