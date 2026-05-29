@@ -136,7 +136,6 @@
       import { windowWidthSignal } from "@jsenv/navi/src/layout/responsive.js";
       import { Dialog } from "@jsenv/navi/src/popup/dialog.jsx";
       import { dispatchCustomEvent, findEvent } from "@jsenv/dom";
-      import { createPortal } from "preact/compat";
       import { compareTwoJsValues } from "@jsenv/navi/src/utils/compare_two_js_values.js";
       import {
         getUIStateFromElement,
@@ -183,25 +182,6 @@
 
         return (
           <>
-            {opened &&
-              createPortal(
-                <div
-                  style={{
-                    position: "fixed",
-                    inset: 0,
-                    zIndex: 1000,
-                    background: "transparent",
-                  }}
-                  aria-hidden="true"
-                  onMouseDown={(e) => {
-                    if (e.button !== 0) {
-                      return;
-                    }
-                    close(e);
-                  }}
-                />,
-                document.body,
-              )}
             <Box
               id={id}
               popover="manual"
