@@ -191,56 +191,40 @@
       const MockPickerCustom = (props) => {
         const Next = useNextResolver();
         const isSmallScreen = windowWidthSignal.value <= 600;
-        const { ref } = props;
-
-        const pickerProps = { ...props };
-        const popupProps = {};
-        Object.assign(pickerProps, { popupProps });
-
+        const { ref, children } = props;
         const popupRef = useRef(null);
-        popupProps.ref = popupRef;
 
-        const onClose = () => {
-          props.action?.("dummy");
-        };
-
-        const requestOpen = (e) => {
+        const onMouseDown = (e) => {
+          e.preventDefault();
           dispatchCustomEvent(popupRef.current, "navi_request_open", {
             event: e,
             anchor: ref.current,
           });
         };
 
-        const { children } = props;
-        Object.assign(pickerProps, { children });
-        Object.assign(popupProps, {
-          onnavi_close: (e) => {
-            onClose(e);
-          },
-        });
-        Object.assign(pickerProps, {
-          onMouseDown: (e) => {
-            e.preventDefault();
-            requestOpen(e);
-          },
-        });
+        const onClose = () => {
+          props.action?.("dummy");
+        };
 
         if (isSmallScreen) {
           return (
-            <Next aria-haspopup="dialog" {...pickerProps}>
-              <MockDialog {...popupProps} className="navi_picker_dialog">
-                {pickerProps.children}
+            <Next {...props} onMouseDown={onMouseDown}>
+              <MockDialog
+                ref={popupRef}
+                onnavi_close={onClose}
+                className="navi_picker_dialog"
+              >
+                {children}
               </MockDialog>
             </Next>
           );
         }
         return (
-          <Next aria-haspopup="listbox" {...pickerProps}>
-            <div>{pickerProps.children}</div>
+          <Next {...props} onMouseDown={onMouseDown}>
+            <div>{children}</div>
           </Next>
         );
       };
-
       // ── Resolver chain (= pickerResolvers + renderPicker) ─────────────────────
       const MockPickerCustomResolver = (props) => {
         return <MockPickerCustom {...props} />;
