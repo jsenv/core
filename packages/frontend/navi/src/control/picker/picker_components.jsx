@@ -1,9 +1,9 @@
-import { Box } from "@jsenv/navi/src/box/box.jsx";
+import { Text } from "@jsenv/navi/src/text/text.jsx";
 
 export const PickerPlaceholder = (props) => {
-  return <Box as="span" className="navi_picker_placeholder" {...props} />;
+  return <Text className="navi_picker_placeholder" {...props} />;
 };
 
 export const PickerValue = (props) => {
-  return <Box as="span" className="navi_picker_value" {...props} />;
+  return <Text className="navi_picker_value" {...props} />;
 };

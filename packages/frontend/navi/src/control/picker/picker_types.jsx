@@ -3,9 +3,8 @@ import { useContext } from "preact/hooks";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Color } from "@jsenv/navi/src/text/color.jsx";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
-import { Text } from "@jsenv/navi/src/text/text.jsx";
 import { Time } from "@jsenv/navi/src/text/time.jsx";
-import { PickerPlaceholder } from "./picker_components.jsx";
+import { PickerPlaceholder, PickerValue } from "./picker_components.jsx";
 import { PickerContext } from "./picker_context.jsx";
 import { parseStepToSeconds } from "./time_helpers.js";
 
@@ -16,7 +15,7 @@ export const PickerText = (props) => {
 
 export const PickerArray = (props) => {
   const Next = useNextResolver();
-  return <Next ui={<PickerArrayUI />} {...props} />;
+  return <Next data-multiline="" ui={<PickerArrayUI />} {...props} />;
 };
 const PickerArrayUI = () => {
   const { value, placeholder } = useContext(PickerContext);
@@ -27,11 +26,11 @@ const PickerArrayUI = () => {
     return <PickerPlaceholder>{placeholder}</PickerPlaceholder>;
   }
   return (
-    <Text spacing=", " shrinkWrap>
+    <PickerValue spacing=", " shrinkWrap>
       {value.map((item) => {
         return <span key={item}>{item}</span>;
       })}
-    </Text>
+    </PickerValue>
   );
 };
 

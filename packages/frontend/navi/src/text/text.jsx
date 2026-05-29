@@ -21,6 +21,9 @@ const css = /* css */ `
       &[data-capitalize] {
         display: inline-block; /* We need inline-block to match the pseudo element */
       }
+      &[data-shrinkwrap] {
+        display: inline-block;
+      }
     }
   }
 
@@ -42,10 +45,6 @@ const css = /* css */ `
       .navi_text_sizer_overlay::first-letter {
         text-transform: uppercase;
       }
-    }
-
-    &[data-shrinkwrap] {
-      display: inline-block;
     }
 
     .navi_text_sizer,

@@ -115,7 +115,8 @@ const css = /* css */ `
     color: var(--x-picker-color);
     font-size: var(--picker-font-size);
     text-align: inherit;
-    /* overflow-wrap: anywhere; */
+    text-overflow: ellipsis;
+    white-space: nowrap;
     background-color: var(--x-picker-background-color);
     border-width: var(--picker-border-width);
     border-style: solid;
@@ -127,19 +128,23 @@ const css = /* css */ `
     outline-offset: var(--x-picker-outline-offset);
     cursor: var(--x-picker-cursor, pointer);
     user-select: none;
-    overflow-wrap: anywhere;
+    overflow: hidden;
 
-    &[data-single-line] {
+    .navi_picker_value {
+      display: block;
+      min-width: 0;
+      max-width: 100%;
       text-overflow: ellipsis;
       white-space: nowrap;
       overflow: hidden;
     }
-
-    .navi_picker_value {
-      min-width: 0;
-    }
     .navi_picker_placeholder {
+      display: block;
+      max-width: 100%;
       color: var(--picker-placeholder-color);
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      overflow: hidden;
     }
     .navi_picker_right_slot {
       position: absolute;
@@ -164,6 +169,17 @@ const css = /* css */ `
       opacity: 0;
       appearance: none;
       pointer-events: none;
+    }
+
+    &[data-multiline] {
+      overflow-wrap: anywhere;
+
+      .navi_picker_placeholder {
+        white-space: normal;
+      }
+      .navi_picker_value {
+        white-space: normal;
+      }
     }
 
     /* Hover */
