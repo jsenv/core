@@ -386,17 +386,11 @@ const ListUI = (props) => {
     },
   });
 
-  const {
-    virtualItemHeightSignal,
-    renderWindow,
-    scrollToItem,
-    pendingScrollRef,
-  } = useListScrollSync({
+  const { renderWindow, scrollToItem, pendingScrollRef } = useListScrollSync({
     containerRef,
     ref,
     tracker,
     renderBudget,
-    virtualItemHeight,
   });
 
   const idDefault = useId();
@@ -437,7 +431,6 @@ const ListUI = (props) => {
         expand={expand}
         tracker={tracker}
         renderWindow={renderWindow}
-        virtualItemHeightSignal={virtualItemHeightSignal}
         pendingScrollRef={pendingScrollRef}
       >
         {children}
@@ -456,7 +449,7 @@ const ListContent = ({
   expand,
   tracker,
   renderWindow,
-  virtualItemHeightSignal,
+
   pendingScrollRef,
   children,
 }) => {
@@ -474,7 +467,6 @@ const ListContent = ({
         {...listProps}
         tracker={tracker}
         renderWindow={renderWindow}
-        virtualItemHeightSignal={virtualItemHeightSignal}
       >
         <PendingScrollRefContext.Provider value={pendingScrollRef}>
           <ListIdContext.Provider value={innerId}>
@@ -501,18 +493,8 @@ const LIST_PSEUDO_CLASSES = [
   ":-navi-void",
   ":-navi-expanded",
 ];
-const useListScrollSync = ({
-  containerRef,
-  ref,
-  tracker,
-  renderBudget,
-  virtualItemHeight,
-}) => {
+const useListScrollSync = ({ containerRef, ref, tracker, renderBudget }) => {
   const debugScroll = useDebugScroll();
-  const virtualItemHeightSignal = useVirtualItemHeightSignal(
-    ref,
-    virtualItemHeight,
-  );
 
   const [renderWindow, setRenderWindow] = useState({
     start: 0,
@@ -654,7 +636,6 @@ const useListScrollSync = ({
         { scrollTop: listScrollContainerEl.scrollTop },
         listScrollContainerEl,
         tracker,
-        virtualItemHeightSignal,
         renderWindowRef,
       );
       if (!scrollInfo) {
@@ -681,7 +662,6 @@ const useListScrollSync = ({
   }, [ref, renderBudget]);
 
   return {
-    virtualItemHeightSignal,
     renderWindow,
     pendingScrollRef,
     scrollToItem,
@@ -695,7 +675,6 @@ const getScrollInfo = (
   { scrollTop },
   listScrollContainerEl,
   tracker,
-  virtualItemHeightSignal,
   renderWindowRef,
 ) => {
   const listEl = listScrollContainerEl.querySelector(".navi_list");
@@ -729,7 +708,7 @@ const getScrollInfo = (
     }
   }
   if (hitFiller) {
-    const virtualItemHeight = virtualItemHeightSignal.peek();
+    const virtualItemHeight = 30;
     if (virtualItemHeight === 0) {
       return null;
     }
@@ -759,37 +738,6 @@ const getScrollInfo = (
     index: fallbackIndex,
     reason: "no hit",
   };
-};
-
-const useVirtualItemHeightSignal = (ref, virtualItemHeightProp = 0) => {
-  const virtualHeightSignalRef = useRef(null);
-  if (!virtualHeightSignalRef.current) {
-    virtualHeightSignalRef.current = signal(virtualItemHeightProp);
-  }
-  const virtualHeightSignal = virtualHeightSignalRef.current;
-  // propagate prop changes to the signal
-  if (
-    virtualItemHeightProp &&
-    virtualHeightSignal.peek() !== virtualItemHeightProp
-  ) {
-    virtualHeightSignal.value = virtualItemHeightProp;
-  }
-  useLayoutEffect(() => {
-    if (virtualHeightSignal.peek() !== 0) {
-      return;
-    }
-    const listEl = ref.current;
-    if (!listEl) {
-      return;
-    }
-    const firstListItem = listEl.querySelector(REAL_LIST_ITEM_SELECTOR);
-    if (!firstListItem) {
-      return;
-    }
-    const measuredHeight = firstListItem.getBoundingClientRect().height;
-    virtualHeightSignal.value = measuredHeight;
-  });
-  return virtualHeightSignal;
 };
 
 // Inner <ul> — hosts items.
