@@ -139,30 +139,6 @@
         </Box>
       );
 
-      const BadgeWithButton = ({
-        children,
-        onButtonClick,
-        buttonLabel = "×",
-        buttonAriaLabel = "Remove",
-        ...props
-      }) => (
-        <Badge data-has-button="" {...props}>
-          {children}
-          <span
-            class="navi_badge_button"
-            role="button"
-            aria-label={buttonAriaLabel}
-            onMouseDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onButtonClick?.();
-            }}
-          >
-            {buttonLabel}
-          </span>
-        </Badge>
-      );
-
       const BadgeWithButtonSection = () => {
         const [badges, setBadges] = useState([
           "One",
@@ -184,15 +160,29 @@
             </Paragraph>
             <Box flex="x" spacing="xs" style="flex-wrap: wrap;">
               {badges.map((label) => (
-                <BadgeWithButton
-                  key={label}
-                  onButtonClick={() => {
-                    setBadges((prev) => prev.filter((b) => b !== label));
+                <Badge key={label}>
+                  {label}
+                  <Badge.Button
+                    onMouseDown={() => {
+                      setBadges((prev) => prev.filter((b) => b !== label));
+                    }}
+                    aria-label={`Remove ${label}`}
+                  >
+                    ×
+                  </Badge.Button>
+                </Badge>
+              ))}
+
+              <Badge key="on_the_left">
+                <Badge.Button
+                  onMouseDown={() => {
+                    console.log("Button on the left");
                   }}
                 >
-                  {label}
-                </BadgeWithButton>
-              ))}
+                  ×
+                </Badge.Button>
+                Left
+              </Badge>
             </Box>
             {badges.length === 0 && (
               <Box marginTop="s">

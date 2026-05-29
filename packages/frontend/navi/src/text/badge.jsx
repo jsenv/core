@@ -1,5 +1,6 @@
 import { useRef } from "preact/hooks";
 
+import { Box } from "../box/box.jsx";
 import { useAccentColorAttributes } from "../utils/use_accent_color_attributes.js";
 import { withPropsClassName } from "../utils/with_props_class_name.js";
 import { Text } from "./text.jsx";
@@ -20,11 +21,12 @@ const css = /* css */ `
     --x-color: var(--color, white);
 
     position: relative;
-    display: inline-block;
+    display: inline-flex;
     padding-top: var(--padding-y);
     padding-right: var(--padding-x);
     padding-bottom: var(--padding-y);
     padding-left: var(--padding-x);
+    align-items: stretch;
     color: var(--x-color);
     font-size: var(--font-size);
     line-height: normal;
@@ -37,23 +39,30 @@ const css = /* css */ `
       --x-color: var(--color, #333);
     }
 
-    .navi_badge_button {
+    [role="button"] {
       display: inline-flex;
-      padding: 0 var(--padding-x) 0 0.35em;
+      margin-top: calc(-1 * var(--padding-y));
+      margin-bottom: calc(-1 * var(--padding-y));
+      padding-right: calc(var(--padding-x) / 2);
+      padding-left: calc(var(--padding-x) / 2);
       align-items: center;
-      justify-content: center;
-      color: inherit;
-      border-radius: 0 1em 1em 0;
-      opacity: 0.5;
-      transition:
-        opacity 0.15s,
-        background 0.15s;
       cursor: pointer;
       user-select: none;
 
+      &:first-child {
+        margin-left: calc(-1 * var(--padding-x));
+        border-top-left-radius: inherit;
+        border-bottom-left-radius: inherit;
+      }
+
+      &:last-child {
+        margin-right: calc(-1 * var(--padding-x));
+        border-top-right-radius: inherit;
+        border-bottom-right-radius: inherit;
+      }
+
       &:hover {
         background: rgba(0, 0, 0, 0.15);
-        opacity: 1;
       }
     }
   }
@@ -72,6 +81,7 @@ export const Badge = ({ children, className, ...props }) => {
       bold
       {...props}
       styleCSSVars={BadgeStyleCSSVars}
+      spacing={<span></span>}
     >
       {children}
     </Text>
@@ -88,3 +98,10 @@ const BadgeStyleCSSVars = {
   color: "--color",
   fontSize: "--font-size",
 };
+
+const BadgeButton = (props) => {
+  return (
+    <Box as="span" className="navi_badge_button" role="button" {...props} />
+  );
+};
+Badge.Button = BadgeButton;
