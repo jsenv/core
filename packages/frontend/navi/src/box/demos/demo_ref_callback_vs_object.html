@@ -171,7 +171,6 @@
         getUIStateFromElement(getPickerInput(pickerEl));
 
       // ── MockPickerButton (= PickerButton) ──────────────────────────────────────
-      // Terminal resolver: renders the actual <button> Box + hidden input + popup.
       const MockPickerButton = (props) => {
         const { ref, popupProps, children } = props;
         const inputRef = useRef(null);
@@ -188,13 +187,10 @@
             getPropFromState: (s) => s ?? "",
           },
         );
-
         return (
           <button
-            as="button"
             ref={ref}
             type="button"
-            baseClassName="navi_picker"
             {...pickerRemainingProps}
             id={inputProps.id}
             onMouseDown={(e) => {
@@ -207,7 +203,6 @@
             actionInteraction={undefined}
           >
             <input
-              as="input"
               {...inputProps}
               className="navi_picker_input"
               tabIndex={-1}
