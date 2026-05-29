@@ -4,104 +4,9 @@
     <meta charset="utf-8" />
     <title>Ref callback bug repro</title>
     <style>
-      body {
-        max-width: 600px;
-        padding: 20px;
-        font-family: monospace;
-      }
-      h2 {
-        margin-top: 0;
-      }
-      .steps {
-        margin-bottom: 16px;
-        padding: 12px 16px;
-        font-size: 0.9em;
-        line-height: 1.8;
-        background: #fffbe6;
-        border: 1px solid #e6c700;
-        border-radius: 6px;
-      }
-      .steps strong {
-        display: block;
-        margin-bottom: 4px;
-      }
-      .controls {
-        display: flex;
-        margin-bottom: 16px;
-        flex-wrap: wrap;
-        gap: 8px;
-      }
-      button {
-        padding: 8px 14px;
-        font-family: monospace;
-        background: #fff;
-        border: 1px solid #aaa;
-        border-radius: 4px;
-        cursor: pointer;
-      }
-      button:disabled {
-        opacity: 0.4;
-        cursor: default;
-      }
       dialog {
-        min-width: 260px;
-        padding: 0;
         border: 1px solid #aaa;
         border-radius: 8px;
-      }
-      .dialog-inner {
-        padding: 16px;
-      }
-      .item-list {
-        max-height: 160px;
-        margin: 8px 0;
-        padding: 0;
-        list-style: none;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        overflow-y: auto;
-      }
-      .item-list li {
-        padding: 6px 12px;
-        border-bottom: 1px solid #f0f0f0;
-        cursor: pointer;
-      }
-      .item-list li:last-child {
-        border-bottom: none;
-      }
-      .item-list li.selected {
-        font-weight: bold;
-        background: #e8f0fe;
-      }
-      .item-list li:hover {
-        background: #f5f5f5;
-      }
-      .item-list li.selected:hover {
-        background: #dce8fd;
-      }
-      #log {
-        margin-top: 16px;
-        padding-top: 8px;
-        border-top: 1px solid #eee;
-      }
-      .log-entry {
-        padding: 3px 0;
-        font-size: 0.85em;
-        white-space: pre-wrap;
-        border-bottom: 1px solid #f5f5f5;
-      }
-      .log-entry.ok {
-        color: #090;
-      }
-      .log-entry.bug {
-        color: #c00;
-        font-weight: bold;
-      }
-      .log-entry.info {
-        color: #555;
-      }
-      .log-entry.warn {
-        color: #c60;
       }
     </style>
   </head>
@@ -140,7 +45,7 @@
       const MockDialog = ({ ref, onnavi_close, children }) => {
         const close = (e) => {
           ref.current.close();
-          dispatchCustomEvent(ref.current, "navi_close", { event: e });
+          dispatchCustomEvent(ref.current, "navi_close", {});
         };
         return (
           <dialog
@@ -153,14 +58,6 @@
           >
             {children}
           </dialog>
-        );
-      };
-
-      const MockPickerButton = ({ children, onMouseDown }) => {
-        return (
-          <button type="button" onMouseDown={onMouseDown}>
-            {children}
-          </button>
         );
       };
 
@@ -211,7 +108,7 @@
               3. <b>Close</b> · 4. <b>Open</b> again → BUG?
             </p>
             <button onClick={simulateNarrow}>Simulate resize → dialog</button>
-            {renderMockPicker(MockPickerButton, {
+            {renderMockPicker("button", {
               value: selectedSignal.value,
               action: () => {
                 selectedSignal.value = "x";
