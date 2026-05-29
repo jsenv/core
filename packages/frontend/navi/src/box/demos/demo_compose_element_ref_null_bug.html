@@ -10,6 +10,28 @@
         margin: 0;
         padding: 20px;
         font-family: system-ui, sans-serif;
+        line-height: 1.5;
+      }
+      .demo {
+        margin-bottom: 32px;
+        padding: 16px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+      }
+      .demo h2 {
+        margin: 0 0 8px;
+        font-size: 16px;
+      }
+      .demo p {
+        margin: 0 0 12px;
+        color: #444;
+        font-size: 14px;
+      }
+      .demo code {
+        padding: 1px 4px;
+        background: #eee;
+        border-radius: 3px;
+        font-size: 13px;
       }
       .result {
         margin-top: 12px;
@@ -35,14 +57,15 @@
       import { render } from "preact";
       import { useEffect, useRef } from "preact/hooks";
 
-      /**
-       * Inline, BUGGY version of useComposeElementRef (no fix).
-       *
-       * The refCallback is created once (stable across renders) and Preact
-       * does not re-fire it while the DOM element is unchanged. So when the
-       * parent passes a DIFFERENT external ref between renders, the new
-       * ref's `.current` stays `null`.
-       */
+      // ──────────────────────────────────────────────────────────────────
+      // Buggy version of useComposeElementRef (no fix).
+      //
+      // The refCallback is created once (stable across renders). Preact
+      // only re-fires a ref callback when the DOM element it points to
+      // changes. So when the parent passes a DIFFERENT external ref
+      // between renders while the DOM element stays the same, the new
+      // external ref's `.current` is never populated and stays `null`.
+      // ──────────────────────────────────────────────────────────────────
       const useComposeElementRefBuggy = (externalRef) => {
         const externalRefRef = useRef(externalRef);
         externalRefRef.current = externalRef;
@@ -61,17 +84,24 @@
         return <div ref={refCallback} />;
       };
 
+      // ──────────────────────────────────────────────────────────────────
+      // DEMO 1 — bug reproduction
+      //
+      // Two distinct ref objects (refA, refB). Initially we pass refA.
+      // After mount, we swap to refB while the DOM <div> is unchanged.
+      // Result: refB.current is never set → BUG.
+      // ──────────────────────────────────────────────────────────────────
       const refA = { current: null };
       const refB = { current: null };
       const whichSignal = signal("A");
       const checkedSignal = signal(false);
 
-      const App = () => {
+      const BugDemo = () => {
         const externalRef = whichSignal.value === "A" ? refA : refB;
 
-        // After initial render: swap to refB. Same DOM <div> is reused so
-        // refCallback is never re-fired → refB.current stays null.
         useEffect(() => {
+          // Trigger a re-render with a different external ref. The DOM
+          // <div> is reused so Preact does NOT re-fire the refCallback.
           whichSignal.value = "B";
           queueMicrotask(() => {
             checkedSignal.value = true;
@@ -80,7 +110,15 @@
 
         const el = refB.current;
         return (
-          <div>
+          <div className="demo">
+            <h2>1. Bug — parent swaps the external ref between renders</h2>
+            <p>
+              The parent passes <code>refA</code> on the first render then{" "}
+              <code>refB</code> on the second. The <code>&lt;div&gt;</code>{" "}
+              DOM node is unchanged, so Preact never re-invokes the stable{" "}
+              <code>refCallback</code>, leaving <code>refB.current</code>{" "}
+              empty.
+            </p>
             <Box externalRef={externalRef} />
             {!checkedSignal.value ? (
               <div className="result">Waiting…</div>
@@ -94,6 +132,63 @@
           </div>
         );
       };
+
+      // ──────────────────────────────────────────────────────────────────
+      // DEMO 2 — same code, no bug
+      //
+      // The parent keeps the SAME ref object across renders. The external
+      // ref identity never changes, so the stable refCallback wrote into
+      // it once at mount and that value is still valid.
+      // ──────────────────────────────────────────────────────────────────
+      const refStable = { current: null };
+      const tickSignal = signal(0);
+      const checkedStableSignal = signal(false);
+
+      const OkDemo = () => {
+        // Always the same ref object, even though the component re-renders.
+        const externalRef = refStable;
+        tickSignal.value; // subscribe to force a re-render
+
+        useEffect(() => {
+          tickSignal.value = 1;
+          queueMicrotask(() => {
+            checkedStableSignal.value = true;
+          });
+        }, []);
+
+        const el = refStable.current;
+        return (
+          <div className="demo">
+            <h2>2. No bug — parent reuses the same ref object</h2>
+            <p>
+              Same buggy <code>useComposeElementRefBuggy</code> hook, but
+              the parent passes the same <code>refStable</code> object on
+              every render. The external ref identity never changes, so
+              nothing has to be re-synced — <code>refStable.current</code>{" "}
+              still points to the DOM node populated at mount.
+            </p>
+            <Box externalRef={externalRef} />
+            {!checkedStableSignal.value ? (
+              <div className="result">Waiting…</div>
+            ) : el ? (
+              <div className="result ok">
+                ✅ refStable.current = &lt;{el.tagName.toLowerCase()}&gt;
+              </div>
+            ) : (
+              <div className="result bug">
+                ❌ refStable.current = null — BUG
+              </div>
+            )}
+          </div>
+        );
+      };
+
+      const App = () => (
+        <div>
+          <BugDemo />
+          <OkDemo />
+        </div>
+      );
 
       render(<App />, document.getElementById("app"));
     </script>
