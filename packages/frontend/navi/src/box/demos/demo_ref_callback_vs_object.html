@@ -126,56 +126,40 @@
 
       import { useSignal } from "@preact/signals";
       import { render } from "preact";
-      import { useEffect, useId, useRef, useState } from "preact/hooks";
+      import { useId, useRef } from "preact/hooks";
       import { useControlProps } from "@jsenv/navi/src/control/control_hooks.jsx";
-      import {
-        dispatchRequestAction,
-        dispatchRequestInteraction,
-      } from "@jsenv/navi/src/control/validation/custom_constraint_validation.js";
+      import { dispatchRequestAction } from "@jsenv/navi/src/control/validation/custom_constraint_validation.js";
       import { List, ListItem } from "@jsenv/navi/src/control/list/list.jsx";
       import { windowWidthSignal } from "@jsenv/navi/src/layout/responsive.js";
-      import { dispatchCustomEvent, findEvent } from "@jsenv/dom";
-      import { compareTwoJsValues } from "@jsenv/navi/src/utils/compare_two_js_values.js";
-      import {
-        getUIStateFromElement,
-        dispatchRequestSetUIState,
-      } from "@jsenv/navi/src/control/ui_state_controller.js";
-      import { Box } from "@jsenv/navi/src/box/box.jsx";
+      import { dispatchCustomEvent } from "@jsenv/dom";
       import {
         createComponentResolver,
         useNextResolver,
       } from "@jsenv/navi/src/resolver/resolver.jsx";
 
-      // MockDialog: real <dialog> via Box (like the real Dialog), with showModal/close.
-      // onnavi_open/onnavi_close stay in ...rest so Box registers them as DOM event
-      // listeners — they fire when navi_open/navi_close bubble up from dispatchCustomEvent.
+      // MockDialog: minimal <dialog> — showModal/close + dispatches navi_close event
+      // so onnavi_close on the element is triggered via DOM bubbling.
       const MockDialog = (props) => {
         const { ref: refProp, id, children, ...rest } = props;
         const defaultRef = useRef(null);
         const ref = refProp || defaultRef;
 
-        const open = (e) => {
-          const dialogEl = ref.current;
-          dialogEl.showModal();
-        };
         const close = (e) => {
-          const dialogEl = ref.current;
-          dialogEl.close();
-          dispatchCustomEvent(dialogEl, "navi_close", { event: e });
+          ref.current.close();
+          dispatchCustomEvent(ref.current, "navi_close", { event: e });
         };
 
         return (
           <dialog
             {...rest}
-            as="dialog"
             id={id}
             ref={ref}
             onCancel={(e) => {
               e.preventDefault();
               close(e);
             }}
-            onnavi_request_open={(e) => {
-              open(e);
+            onnavi_request_open={() => {
+              ref.current.showModal();
             }}
             onnavi_request_close={(e) => {
               close(e);
@@ -186,26 +170,7 @@
         );
       };
 
-      const useIgnoreClickForMousedown = () => {
-        const disableClickFor = () => {
-          const suppressClick = (clickEvent) => {
-            clickEvent.stopPropagation();
-            clickEvent.preventDefault();
-            document.removeEventListener("click", suppressClick, {
-              capture: true,
-            });
-          };
-          document.addEventListener("click", suppressClick, { capture: true });
-        };
-        return disableClickFor;
-      };
-
       const OPTIONS = ["Apple", "Banana", "Cherry"];
-
-      const getPickerInput = (pickerEl) =>
-        pickerEl.querySelector(".navi_picker_input");
-      const getPickerInputUIState = (pickerEl) =>
-        getUIStateFromElement(getPickerInput(pickerEl));
 
       // ── MockPickerButton (= PickerButton) ──────────────────────────────────────
       const MockPickerButton = (props) => {
@@ -274,22 +239,14 @@
         };
 
         const requestOpen = (e) => {
-          const pickerEl = ref.current;
-          pickerEl.scrollIntoView({ block: "nearest" });
-          const popupEl = popupRef.current;
-          return dispatchCustomEvent(popupEl, "navi_request_open", {
+          dispatchCustomEvent(popupRef.current, "navi_request_open", {
             event: e,
-            anchor: pickerEl,
+            anchor: ref.current,
           });
         };
-        const requestClose = (
-          e = new CustomEvent("programmatic"),
-          { cancel = false } = {},
-        ) => {
-          const popupEl = popupRef.current;
-          return dispatchCustomEvent(popupEl, "navi_request_close", {
+        const requestClose = (e = new CustomEvent("programmatic")) => {
+          dispatchCustomEvent(popupRef.current, "navi_request_close", {
             event: e,
-            cancel,
           });
         };
 
@@ -305,7 +262,6 @@
             onClose(e);
           },
         });
-
         Object.assign(pickerProps, {
           onMouseDown: (e) => {
             if (openRef.current) {
