@@ -35,14 +35,7 @@ import {
 } from "../../resolver/resolver.jsx";
 import { useControlProps } from "../control_hooks.jsx";
 import { Label } from "../field.jsx";
-import {
-  ListIdContext,
-  requestListClose,
-  requestListInteractionStateReset,
-  requestListNavFromCurrent,
-  requestListOpen,
-  requestListSelectCurrent,
-} from "../list/list.jsx";
+import { requestListClose, requestListOpen } from "../list/list.jsx";
 import { dispatchRequestSetUIState } from "../ui_state_controller.js";
 import { dispatchRequestInteraction } from "../validation/custom_constraint_validation.js";
 
@@ -295,9 +288,6 @@ export const InputTextual = (props) => {
 const InputTextualWithListResolver = (props) => {
   const Next = useNextResolver();
 
-  if (props.listId) {
-    return <InputControllingList {...props} />;
-  }
   if (props.suggestions) {
     return <InputTextualWithSuggestions {...props} />;
   }
@@ -659,85 +649,6 @@ export const getFromInputValue = (type) => {
   return (v) => v;
 };
 
-const InputControllingList = (props) => {
-  const Next = useNextResolver();
-  const { ref, listId, onKeyDown, ...rest } = props;
-
-  const getListEl = () => {
-    return document.getElementById(listId);
-  };
-
-  const onKeyDownWithShortcuts = shortcutsViaOnKeyDown(
-    {
-      arrowdown: (e) => {
-        const listEl = getListEl();
-        e.stopPropagation(); // when within a list, prevent list from handling it twice
-        return requestListNavFromCurrent(listEl, {
-          event: e,
-          goal: "down",
-        });
-      },
-      arrowup: (e) => {
-        const listEl = getListEl();
-        e.stopPropagation(); // when within a list, prevent list from handling it twice
-        return requestListNavFromCurrent(listEl, {
-          event: e,
-          goal: "up",
-        });
-      },
-      home: (e) => {
-        const listEl = getListEl();
-        e.stopPropagation(); // when within a list, prevent list from handling it twice
-        return requestListNavFromCurrent(listEl, {
-          event: e,
-          goal: "first",
-        });
-      },
-      end: (e) => {
-        const listEl = getListEl();
-        e.stopPropagation(); // when within a list, prevent list from handling it twice
-        return requestListNavFromCurrent(listEl, {
-          event: e,
-          goal: "last",
-        });
-      },
-      enter: (e) => {
-        const listEl = getListEl();
-        e.stopPropagation(); // when within a list, prevent list from handling it twice
-        return requestListSelectCurrent(listEl, { event: e });
-      },
-      escape: (e) => {
-        // prevent escape from reaching eventual <select> ancestor
-        // when the escape is meant to clear the search input (otherwise it would close the select too)
-        if (e.currentTarget.type === "search" && e.currentTarget.value !== "") {
-          e.stopPropagation();
-          return true;
-        }
-        const listEl = getListEl();
-        // here we allow propagation of escape up to the <select> to allow closing if within a select
-        // it also means list might catch escape and reset again but it's ok to reset twice here as it won't cause side effects
-        // (if we need the same pattern for other events where it could be problematic we would have to mark
-        // event as handled somehow to prevent list containing input to react to it)
-        return requestListInteractionStateReset(listEl, { event: e });
-      },
-    },
-    onKeyDown,
-  );
-  return (
-    <ListIdContext.Provider value={null}>
-      <Next
-        aria-controls={listId}
-        aria-autocomplete="list"
-        aria-has-popup="listbox"
-        type="search"
-        autoComplete="off"
-        {...rest}
-        ref={ref}
-        onKeyDown={onKeyDownWithShortcuts}
-      />
-    </ListIdContext.Provider>
-  );
-};
 const InputTextualWithSuggestions = (props) => {
   const Next = useNextResolver();
   const {
@@ -805,67 +716,120 @@ const InputTextualWithSuggestions = (props) => {
   }, [suggestions]);
 
   return (
-    <ListIdContext.Provider value={suggestions}>
-      <Next
-        role="combobox"
-        aria-haspopup="listbox"
-        aria-expanded={expanded}
-        aria-autocomplete="list"
-        basePseudoState={{
-          ":-navi-expanded": expanded,
-        }}
-        onnavi_callout_open={(e) => {
-          hideSuggestions(e);
-        }}
-        {...rest}
-        ref={ref}
-        onFocus={(e) => {
-          onFocus?.(e);
-          showSuggestions(e);
-        }}
-        onBlur={(e) => {
-          onBlur?.(e);
-          hideSuggestions(e);
-        }}
-        onInput={(e) => {
-          onInput?.(e);
-          showSuggestions(e);
-        }}
-        onKeyDown={shortcutsViaOnKeyDown(
-          {
-            arrowdown: (e) => {
-              showSuggestions(e);
-            },
-            arrowup: (e) => {
-              showSuggestions(e);
-            },
-            escape: (e) => {
-              if (!expandedRef.current) {
-                return false;
-              }
-              hideSuggestions(e);
-              return true;
-            },
+    <Next
+      role="combobox"
+      aria-haspopup="listbox"
+      aria-expanded={expanded}
+      aria-autocomplete="list"
+      autoComplete="off"
+      basePseudoState={{
+        ":-navi-expanded": expanded,
+      }}
+      onnavi_callout_open={(e) => {
+        hideSuggestions(e);
+      }}
+      {...rest}
+      ref={ref}
+      onFocus={(e) => {
+        onFocus?.(e);
+        showSuggestions(e);
+      }}
+      onBlur={(e) => {
+        onBlur?.(e);
+        hideSuggestions(e);
+      }}
+      onInput={(e) => {
+        onInput?.(e);
+        showSuggestions(e);
+      }}
+      onKeyDown={shortcutsViaOnKeyDown(
+        {
+          arrowdown: (e) => {
+            showSuggestions(e);
           },
-          onKeyDown,
-        )}
-      >
-        {children || (
-          <InputRightSlot
-            onClick={(e) => {
-              if (expanded) {
-                hideSuggestions(e);
-              } else {
-                showSuggestions(e);
-              }
-            }}
-          >
-            <Icon color="rgba(28, 43, 52, 0.5)">
-              <ChevronDownSvg />
-            </Icon>
-          </InputRightSlot>
-        )}
-      </Next>
-    </ListIdContext.Provider>
+          arrowup: (e) => {
+            showSuggestions(e);
+          },
+          escape: (e) => {
+            if (!expandedRef.current) {
+              return false;
+            }
+            hideSuggestions(e);
+            return true;
+          },
+          home: () => {},
+          end: () => {},
+          enter: () => {},
+        },
+        onKeyDown,
+      )}
+      //  arrowdown: (e) => {
+      //   const listEl = getListEl();
+      //   e.stopPropagation(); // when within a list, prevent list from handling it twice
+      //   return requestListNavFromCurrent(listEl, {
+      //     event: e,
+      //     goal: "down",
+      //   });
+      // },
+      // arrowup: (e) => {
+      //   const listEl = getListEl();
+      //   e.stopPropagation(); // when within a list, prevent list from handling it twice
+      //   return requestListNavFromCurrent(listEl, {
+      //     event: e,
+      //     goal: "up",
+      //   });
+      // },
+      // home: (e) => {
+      //   const listEl = getListEl();
+      //   e.stopPropagation(); // when within a list, prevent list from handling it twice
+      //   return requestListNavFromCurrent(listEl, {
+      //     event: e,
+      //     goal: "first",
+      //   });
+      // },
+      // end: (e) => {
+      //   const listEl = getListEl();
+      //   e.stopPropagation(); // when within a list, prevent list from handling it twice
+      //   return requestListNavFromCurrent(listEl, {
+      //     event: e,
+      //     goal: "last",
+      //   });
+      // },
+      // enter: (e) => {
+      //   const listEl = getListEl();
+      //   e.stopPropagation(); // when within a list, prevent list from handling it twice
+      //   return requestListSelectCurrent(listEl, { event: e });
+      // },
+      // escape: (e) => {
+      //   // prevent escape from reaching eventual <select> ancestor
+      //   // when the escape is meant to clear the search input (otherwise it would close the select too)
+      //   if (e.currentTarget.type === "search" && e.currentTarget.value !== "") {
+      //     e.stopPropagation();
+      //     return true;
+      //   }
+      //   const listEl = getListEl();
+      //   // here we allow propagation of escape up to the <select> to allow closing if within a select
+      //   // it also means list might catch escape and reset again but it's ok to reset twice here as it won't cause side effects
+      //   // (if we need the same pattern for other events where it could be problematic we would have to mark
+      //   // event as handled somehow to prevent list containing input to react to it)
+      //   return requestListInteractionStateReset(listEl, { event: e });
+      // },
+    >
+      {children || (
+        <InputRightSlot
+          onClick={(e) => {
+            if (expanded) {
+              hideSuggestions(e);
+            } else {
+              showSuggestions(e);
+            }
+          }}
+        >
+          <Icon color="rgba(28, 43, 52, 0.5)">
+            <ChevronDownSvg />
+          </Icon>
+        </InputRightSlot>
+      )}
+    </Next>
   );
 };

@@ -31,8 +31,6 @@ const ListItemTrackerContext = createContext(null);
 const GroupItemTrackerContext = createContext(null);
 const PendingScrollRefContext = createContext(null);
 
-export const ListIdContext = createContext();
-
 // When total rendered items exceeds renderBudget, a render window [start, end)
 // is activated to cap the number of DOM nodes. Items outside the window return
 // null. The window slides as the user scrolls, using actual DOM positions
@@ -522,9 +520,7 @@ const ListContent = ({
         virtualItemHeightSignal={virtualItemHeightSignal}
       >
         <PendingScrollRefContext.Provider value={pendingScrollRef}>
-          <ListIdContext.Provider value={innerId}>
-            {children}
-          </ListIdContext.Provider>
+          {children}
         </PendingScrollRefContext.Provider>
       </UnorderedList>
     </div>
