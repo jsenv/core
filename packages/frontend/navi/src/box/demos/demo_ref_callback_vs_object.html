@@ -160,7 +160,6 @@
         const open = (e) => {
           const dialogEl = ref.current;
           dialogEl.showModal();
-          focusFirstAutofocusOrFocusable(dialogEl, () => {}, e);
           openedRef.current = true;
           dispatchCustomEvent(dialogEl, "navi_open", { event: e });
         };
