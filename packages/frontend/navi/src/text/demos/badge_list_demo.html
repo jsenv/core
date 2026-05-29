@@ -14,111 +14,81 @@
       const App = () => (
         <Box padding="l" flex="y" spacing="xl">
           <Box as="section">
-            <Title as="h2">Simple string badges</Title>
-            <Paragraph>
-              Pass a <code>badges</code> array of strings — each becomes a Badge
-              with default styling.
-            </Paragraph>
-            <BadgeList
-              badges={[
-                "HTML",
-                "CSS",
-                "JavaScript",
-                "TypeScript",
-                "React",
-                "Vue",
-                "Angular",
-                "Node.js",
-                "Python",
-                "Rust",
-                "Go",
-                "Java",
-                "C++",
-                "Swift",
-                "Kotlin",
-                "SQL",
-              ]}
-            />
-          </Box>
-
-          <Box as="section">
-            <Title as="h2">Badges with colors</Title>
-            <Paragraph>
-              Pass objects with a <code>label</code> and any Badge props.
-            </Paragraph>
-            <BadgeList
-              badges={[
-                { label: "Active", background: "#4caf50" },
-                { label: "Inactive", background: "#f44336" },
-                { label: "Pending", background: "#ff9800" },
-                { label: "Archived", background: "#9e9e9e" },
-                { label: "Beta", background: "#2196f3" },
-                { label: "Deprecated", background: "darkred" },
-                { label: "Pro", background: "#9c27b0" },
-                { label: "New", background: "#00bcd4" },
-              ]}
-            />
-          </Box>
-
-          <Box as="section">
-            <Title as="h2">Children composition</Title>
-            <Paragraph>
-              You can also use <code>BadgeList</code> as a wrapper and place
-              <code>Badge</code> children directly for full control.
-            </Paragraph>
+            <Title as="h2">Default badges</Title>
             <BadgeList>
-              <Badge background="#4caf50">Frontend</Badge>
-              <Badge background="#2196f3">Backend</Badge>
-              <Badge background="#ff9800">DevOps</Badge>
-              <Badge background="#9c27b0">Security</Badge>
-              <Badge background="#795548">Database</Badge>
-              <Badge background="#607d8b">Cloud</Badge>
-              <Badge background="#e91e63">Mobile</Badge>
-              <Badge background="#009688">API</Badge>
+              <Badge>HTML</Badge>
+              <Badge>CSS</Badge>
+              <Badge>JavaScript</Badge>
+              <Badge>TypeScript</Badge>
+              <Badge>React</Badge>
+              <Badge>Vue</Badge>
+              <Badge>Angular</Badge>
+              <Badge>Node.js</Badge>
+              <Badge>Python</Badge>
+              <Badge>Rust</Badge>
+              <Badge>Go</Badge>
+              <Badge>Java</Badge>
+              <Badge>C++</Badge>
+              <Badge>Swift</Badge>
+              <Badge>Kotlin</Badge>
+              <Badge>SQL</Badge>
+            </BadgeList>
+          </Box>
+
+          <Box as="section">
+            <Title as="h2">Colored badges</Title>
+            <BadgeList>
+              <Badge background="#4caf50">Active</Badge>
+              <Badge background="#f44336">Inactive</Badge>
+              <Badge background="#ff9800">Pending</Badge>
+              <Badge background="#9e9e9e">Archived</Badge>
+              <Badge background="#2196f3">Beta</Badge>
+              <Badge background="darkred">Deprecated</Badge>
+              <Badge background="#9c27b0">Pro</Badge>
+              <Badge background="#00bcd4">New</Badge>
             </BadgeList>
           </Box>
 
           <Box as="section">
             <Title as="h2">Wrapping behavior</Title>
             <Paragraph>
-              Badges wrap naturally to the next line when there are many of
-              them. Resize the window to see wrapping in action.
+              Badges wrap to the next line when they overflow the container.
             </Paragraph>
             <Box
               maxWidth="400px"
-              border="1px solid #ddd"
+              border="2px dotted #aaa"
               padding="m"
               borderRadius="4px"
             >
-              <BadgeList
-                badges={[
-                  "React",
-                  "Vue",
-                  "Svelte",
-                  "Angular",
-                  "Preact",
-                  "Solid",
-                  "Remix",
-                  "Next.js",
-                  "Nuxt",
-                  "Astro",
-                  "Qwik",
-                  "Gatsby",
-                ]}
-              />
+              <BadgeList>
+                <Badge>React</Badge>
+                <Badge>Vue</Badge>
+                <Badge>Svelte</Badge>
+                <Badge>Angular</Badge>
+                <Badge>Preact</Badge>
+                <Badge>Solid</Badge>
+                <Badge>Remix</Badge>
+                <Badge>Next.js</Badge>
+                <Badge>Nuxt</Badge>
+                <Badge>Astro</Badge>
+                <Badge>Qwik</Badge>
+                <Badge>Gatsby</Badge>
+              </BadgeList>
             </Box>
           </Box>
 
           <Box as="section">
-            <Title as="h2">Custom gap</Title>
+            <Title as="h2">Custom spacing</Title>
             <Paragraph>
-              Control spacing between badges with the{" "}
-              <code>--badge-list-gap</code> CSS variable.
+              Override spacing with the <code>spacing</code> prop.
             </Paragraph>
-            <BadgeList
-              style="--badge-list-gap: 1em;"
-              badges={["One", "Two", "Three", "Four", "Five"]}
-            />
+            <BadgeList spacing="m">
+              <Badge>One</Badge>
+              <Badge>Two</Badge>
+              <Badge>Three</Badge>
+              <Badge>Four</Badge>
+              <Badge>Five</Badge>
+            </BadgeList>
           </Box>
         </Box>
       );

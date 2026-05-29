@@ -1,43 +1,26 @@
-import { Badge } from "./badge.jsx";
+import { Box } from "../box/box.jsx";
+import { withPropsClassName } from "../utils/with_props_class_name.js";
 
 const css = /* css */ `
   @layer navi {
   }
   .navi_badge_list {
-    display: flex;
     flex-wrap: wrap;
-    align-items: center;
-    gap: var(--badge-list-gap, 0.5em);
   }
 `;
 
-export const BadgeList = ({ badges, children, className, ...props }) => {
+export const BadgeList = ({ children, className, ...props }) => {
   import.meta.css = css;
-  const resolvedClassName = className
-    ? `navi_badge_list ${className}`
-    : "navi_badge_list";
-
-  if (badges) {
-    return (
-      <div className={resolvedClassName} {...props}>
-        {badges.map((badge, i) => {
-          if (typeof badge === "string") {
-            return <Badge key={i}>{badge}</Badge>;
-          }
-          const { label, ...badgeProps } = badge;
-          return (
-            <Badge key={i} {...badgeProps}>
-              {label}
-            </Badge>
-          );
-        })}
-      </div>
-    );
-  }
 
   return (
-    <div className={resolvedClassName} {...props}>
+    <Box
+      flex="x"
+      alignY="center"
+      spacing="xs"
+      className={withPropsClassName("navi_badge_list", className)}
+      {...props}
+    >
       {children}
-    </div>
+    </Box>
   );
 };

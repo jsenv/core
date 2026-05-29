@@ -6,15 +6,22 @@ import { Text } from "./text.jsx";
 
 const css = /* css */ `
   @layer navi {
+    .navi_badge {
+      --light-color: #e6e6e6;
+      --dark-color: #444;
+    }
   }
   .navi_badge {
     --font-size: 0.7em;
-    --x-background: var(--background);
-    --x-background-color: var(--background-color, var(--x-background));
-    --x-color-contrasting: var(--navi-color-white);
-    --x-color: var(--color, var(--x-color-contrasting));
+    --color: var(--light-color);
     --padding-x: 0.8em;
     --padding-y: 0.4em;
+
+    --x-background: var(--background, light-dark(#e0e0e0, #3a3a3a));
+    --x-background-color: var(--background-color, var(--x-background));
+    --x-color-contrasting: var(--navi-color-white);
+    --x-color: var(--color);
+
     position: relative;
     display: inline-block;
     padding-top: var(--padding-y);
@@ -29,6 +36,7 @@ const css = /* css */ `
     border-radius: 1em;
 
     &[data-accent-needs-dark-fg] {
+      --x-color: var(--dark-color);
       --x-color-contrasting: var(--navi-color-black);
     }
   }
