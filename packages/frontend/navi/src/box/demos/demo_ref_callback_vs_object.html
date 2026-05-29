@@ -181,32 +181,30 @@
         };
 
         return (
-          <>
-            <Box
-              id={id}
-              popover="manual"
-              {...rest}
-              ref={ref}
-              onnavi_open={onnavi_open}
-              onnavi_close={onnavi_close}
-              onMouseDown={onMouseDown}
-              onClick={onClick}
-              onnavi_request_open={(e) => {
-                if (openedRef.current) {
-                  return;
-                }
-                open(e);
-              }}
-              onnavi_request_close={(e) => {
-                if (!openedRef.current) {
-                  return;
-                }
-                close(e);
-              }}
-            >
-              {children}
-            </Box>
-          </>
+          <div
+            id={id}
+            popover="manual"
+            {...rest}
+            ref={ref}
+            onnavi_open={onnavi_open}
+            onnavi_close={onnavi_close}
+            onMouseDown={onMouseDown}
+            onClick={onClick}
+            onnavi_request_open={(e) => {
+              if (openedRef.current) {
+                return;
+              }
+              open(e);
+            }}
+            onnavi_request_close={(e) => {
+              if (!openedRef.current) {
+                return;
+              }
+              close(e);
+            }}
+          >
+            {children}
+          </div>
         );
       };
 
