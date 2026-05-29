@@ -28,7 +28,7 @@ import {
 import { useActionBoundToOneParam } from "@jsenv/navi/src/action/use_action.js";
 import { useActionStatus } from "@jsenv/navi/src/action/use_action_status.js";
 import { useExecuteAction } from "@jsenv/navi/src/action/use_execute_action.js";
-import { useComposeElementRef } from "@jsenv/navi/src/box/use_element_ref.js";
+import { useComposeElementRef } from "@jsenv/navi/src/box/ref_composition/use_element_ref.js";
 import {
   dispatchRequestAction,
   dispatchRequestInteraction,

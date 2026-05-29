@@ -70,7 +70,7 @@ import {
   PSEUDO_NAMED_STYLES_DEFAULT,
   PSEUDO_STATE_DEFAULT,
 } from "./pseudo_styles.js";
-import { useComposeElementRef } from "./use_element_ref.js";
+import { useComposeElementRef } from "./ref_composition/use_element_ref.js";
 import { usePartiallyHidden } from "./use_partially_hidden.js";
 
 export const BoxForwardedPropsContext = createContext({});
