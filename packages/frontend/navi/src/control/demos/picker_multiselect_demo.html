@@ -98,6 +98,7 @@
         SelectableList,
         Selectable,
         NaviDebug,
+        Text,
       } from "@jsenv/navi";
 
       const OPTIONS = [
@@ -119,16 +120,21 @@
       // ── 1. Text display ───────────────────────────────────────────────────
 
       const TextDisplay = () => {
-        const selectedSignal = useSignal([]);
+        const selectedSignal = useSignal([
+          "Apple",
+          "Banana",
+          "Cherry",
+          "Edlerberry",
+        ]);
         const selectedArray = selectedSignal.value;
 
         const SelectedValues = () => {
           return (
-            <Box separator=", ">
+            <Text spacing=", " shrinkWrap>
               {selectedArray.map((selected) => {
                 return <span>{selected}</span>;
               })}
-            </Box>
+            </Text>
           );
         };
 

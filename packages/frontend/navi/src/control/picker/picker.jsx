@@ -90,7 +90,7 @@ const css = /* css */ `
       var(--picker-padding-x, var(--picker-padding-x-default))
     );
     --x-picker-padding-right: calc(
-      var(--x-picker-padding-right-base) + var(--picker-right-slot-size)
+      var(--x-picker-padding-right-base) + var(--picker-right-slot-size) - 2px
     );
     --x-picker-padding-left: var(
       --picker-padding-left,

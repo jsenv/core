@@ -1,8 +1,8 @@
 // https://jsfiddle.net/v5xzJ/4/
 
-import { hasCSSSizeUnit } from "@jsenv/dom";
+import { hasCSSSizeUnit, measureLongestVisualLineWidth } from "@jsenv/dom";
 import { createContext, isValidElement, toChildArray } from "preact";
-import { useContext, useRef, useState } from "preact/hooks";
+import { useContext, useLayoutEffect, useRef, useState } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
 import {
@@ -42,6 +42,10 @@ const css = /* css */ `
       .navi_text_sizer_overlay::first-letter {
         text-transform: uppercase;
       }
+    }
+
+    &[data-shrinkwrap] {
+      display: inline-block;
     }
 
     .navi_text_sizer,
@@ -382,6 +386,9 @@ const TextDispatcher = (props) => {
   if (props.loading || props.skeleton) {
     return <TextSkeleton {...props} />;
   }
+  if (props.shrinkWrap) {
+    return <TextShrinkWrap {...props} />;
+  }
   if (props.overflowEllipsis) {
     return <TextOverflow {...props} />;
   }
@@ -392,6 +399,55 @@ const TextDispatcher = (props) => {
     return <TextWithSelectRange {...props} />;
   }
   return <TextUI {...props} />;
+};
+const TextShrinkWrap = (props) => {
+  const { ref } = props;
+
+  const applyWidth = () => {
+    const text = ref.current;
+    // Reset any previously forced width so we measure the natural size
+    text.style.width = "";
+    const optimalWidth = measureLongestVisualLineWidth(text);
+    if (optimalWidth === null) {
+      return;
+    }
+    text.style.width = `${Math.ceil(optimalWidth)}px`;
+  };
+
+  useLayoutEffect(() => {
+    const text = ref.current;
+    if (!text) {
+      return;
+    }
+    applyWidth();
+  });
+  useLayoutEffect(() => {
+    // Re-compute whenever the parent resizes (covers cases where the parent
+    // has an independent size constraint, e.g. max-width, flex layout).
+    // We also listen to window resize because when the parent's width is
+    // driven solely by the text itself (no external constraint), the parent
+    // won't change size when the viewport changes — so the ResizeObserver
+    // alone would never fire.
+    const text = ref.current;
+    if (!text) {
+      return undefined;
+    }
+    const parent = text.parentElement;
+    let observer;
+    if (parent) {
+      observer = new ResizeObserver(applyWidth);
+      observer.observe(parent);
+    }
+    window.addEventListener("resize", applyWidth);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener("resize", applyWidth);
+    };
+  }, []);
+
+  return (
+    <TextDispatcher {...props} data-shrinkwrap="" shrinkWrap={undefined} />
+  );
 };
 const TextUI = (props) => {
   import.meta.css = css;
@@ -404,6 +460,7 @@ const TextUI = (props) => {
     capitalize,
     children,
     childrenOutsideFlow,
+    shrinkWrap,
     ...rest
   } = props;
   const defaultSpace = preventSpaceUnderlines ? FAKE_SPACE : REGULAR_SPACE;
@@ -411,6 +468,7 @@ const TextUI = (props) => {
   const boxProps = {
     "as": "span",
     "data-capitalize": capitalize ? "" : undefined,
+    "data-shrinkwrap": shrinkWrap ? "" : undefined,
     ...rest,
     ref,
     "baseClassName": withPropsClassName("navi_text", rest.baseClassName),
