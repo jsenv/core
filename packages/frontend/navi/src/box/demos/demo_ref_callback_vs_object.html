@@ -190,7 +190,7 @@
         );
 
         return (
-          <Box
+          <button
             as="button"
             ref={ref}
             type="button"
@@ -206,7 +206,7 @@
             popupProps={undefined}
             actionInteraction={undefined}
           >
-            <Box
+            <input
               as="input"
               {...inputProps}
               className="navi_picker_input"
@@ -214,7 +214,7 @@
             />
             <span>{inputProps.value || "—"}</span>
             {children}
-          </Box>
+          </button>
         );
       };
 
