@@ -278,8 +278,6 @@
           valueAtOpenRef.current = getPickerInputUIState(ref.current);
         };
         const onClose = (e) => {
-          expandedRef.current = false;
-          setExpanded(false);
           props.action?.("dummy");
         };
 
