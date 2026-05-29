@@ -3,7 +3,6 @@ import { createContext } from "preact";
 import { useContext, useId, useRef } from "preact/hooks";
 
 import { Box, BoxForwardedPropsContext } from "../../box/box.jsx";
-import { Separator } from "../../layout/separator.jsx";
 import {
   createComponentResolver,
   useNextResolver,
@@ -11,8 +10,6 @@ import {
 import { useDisplayedLayoutEffect } from "../../utils/use_displayed_layout_effect.js";
 
 export const ListIdContext = createContext();
-
-const SeparatorContext = createContext(null);
 
 const css = /* css */ `
   @layer navi {
@@ -319,7 +316,6 @@ const ListUI = (props) => {
     ref,
     id,
     role,
-    separator,
     children,
     popover,
     expandX,
@@ -353,7 +349,6 @@ const ListUI = (props) => {
         ref={ref}
         innerId={innerId}
         role={role}
-        separator={separator}
         expandX={expandX}
         expand={expand}
       >
@@ -362,28 +357,21 @@ const ListUI = (props) => {
     </Box>
   );
 };
-const ListContent = ({
-  ref,
-  innerId,
-  role,
-  separator,
-  expandX,
-  expand,
-  children,
-}) => {
+const ListContent = ({ ref, innerId, role, expandX, expand, children }) => {
   const listProps = useContext(BoxForwardedPropsContext);
   return (
     <div className="navi_list_scroll_container">
-      <UnorderedList
+      <Box
+        as="ul"
         ref={ref}
         id={innerId}
         role={role}
-        separator={separator === true ? <Separator margin="0" /> : separator}
         expandX={expandX || expand}
         {...listProps}
+        baseClassName="navi_list"
       >
         {children}
-      </UnorderedList>
+      </Box>
     </div>
   );
 };
@@ -403,17 +391,6 @@ const LIST_PSEUDO_CLASSES = [
   ":-navi-void",
   ":-navi-expanded",
 ];
-
-// Inner <ul> — hosts items.
-const UnorderedList = ({ separator, children, ...rest }) => {
-  return (
-    <Box as="ul" {...rest} baseClassName="navi_list">
-      <SeparatorContext.Provider value={separator ?? null}>
-        {children}
-      </SeparatorContext.Provider>
-    </Box>
-  );
-};
 
 /**
  * ListItem — a trackable item that participates in virtualization.
