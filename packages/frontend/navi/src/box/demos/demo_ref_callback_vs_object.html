@@ -148,7 +148,7 @@
         useNextResolver,
       } from "@jsenv/navi/src/resolver/resolver.jsx";
 
-      // MockPopover: closer to real Popover — uses Box, native popover API, backdrop portal, navi_open/close events.
+      // MockPopover: div with show/hide state, no native popover API.
       const MockPopover = (props) => {
         const {
           ref: refProp,
@@ -166,41 +166,34 @@
         const openedRef = useRef(false);
 
         const open = (e) => {
-          const el = ref.current;
-          el.showPopover();
           openedRef.current = true;
           setOpened(true);
-          dispatchCustomEvent(el, "navi_open", { event: e });
+          dispatchCustomEvent(ref.current, "navi_open", { event: e });
         };
         const close = (e) => {
-          const el = ref.current;
-          el.hidePopover();
           openedRef.current = false;
           setOpened(false);
-          dispatchCustomEvent(el, "navi_close", { event: e });
+          dispatchCustomEvent(ref.current, "navi_close", { event: e });
         };
 
         return (
           <div
             id={id}
-            popover="manual"
-            {...rest}
             ref={ref}
-            onnavi_open={onnavi_open}
-            onnavi_close={onnavi_close}
+            style={{ display: opened ? "" : "none" }}
             onMouseDown={onMouseDown}
             onClick={onClick}
+            onnavi_open={onnavi_open}
+            onnavi_close={onnavi_close}
             onnavi_request_open={(e) => {
-              if (openedRef.current) {
-                return;
+              if (!openedRef.current) {
+                open(e);
               }
-              open(e);
             }}
             onnavi_request_close={(e) => {
-              if (!openedRef.current) {
-                return;
+              if (openedRef.current) {
+                close(e);
               }
-              close(e);
             }}
           >
             {children}
