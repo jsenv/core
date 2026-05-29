@@ -1187,10 +1187,19 @@ const ListWithPopover = (props) => {
  *   ...rest   — forwarded to the rendered <li> element
  */
 export const ListItem = (props) => {
-  if (props.role === "presentation") {
-    return <ListItemPresentation {...props} />;
+  const idDefault = useId();
+  props.id = props.id || idDefault;
+  const tracker = useContext(ListItemTrackerContext);
+  if (tracker) {
+    tracker.useTrackItem(props);
   }
-  return <ListItemRealOrVoid {...props} />;
+  const { children, id, index, hidden, filtered, selected, value, ...rest } =
+    props;
+  return (
+    <li id={props.id} {...rest}>
+      {children}
+    </li>
+  );
 };
 const ListItemPresentation = (props) => {
   return <Box as="li" {...props} />;
