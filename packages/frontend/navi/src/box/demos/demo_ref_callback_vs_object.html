@@ -16,7 +16,7 @@
       import { useSignal } from "@preact/signals";
       import { render } from "preact";
       import { useRef } from "preact/hooks";
-      import { List, ListItem } from "@jsenv/navi/src/control/list/list.jsx";
+      import { List, ListItem } from "@jsenv/navi";
       import { windowWidthSignal } from "@jsenv/navi/src/layout/responsive.js";
       import { dispatchCustomEvent } from "@jsenv/dom";
       import {
@@ -24,8 +24,8 @@
         useNextResolver,
       } from "@jsenv/navi/src/resolver/resolver.jsx";
 
-      // MockDialog: minimal <dialog> — showModal/close + dispatches navi_close event
-      // so onnavi_close on the element is triggered via DOM bubbling.
+      // --- Picker mock ---
+
       const MockDialog = ({ ref, onnavi_close, children }) => {
         const close = () => {
           ref.current.close();
@@ -54,7 +54,6 @@
         const onMouseDown = () => {
           popupRef.current.showModal();
         };
-
         const onClose = () => {
           props.action?.("dummy");
         };
@@ -79,18 +78,19 @@
 
       const App = () => {
         const selectedSignal = useSignal();
-
-        const simulateNarrow = () => {
-          windowWidthSignal.value = 536;
-        };
-
         return (
           <div>
             <p>
               1. <b>Simulate resize</b> 2. <b>Open</b> 3. <b>Escape</b> 4.{" "}
               <b>Open again</b> → BUG?
             </p>
-            <button onClick={simulateNarrow}>Simulate resize → dialog</button>
+            <button
+              onClick={() => {
+                windowWidthSignal.value = 536;
+              }}
+            >
+              Simulate resize → dialog
+            </button>
             {renderMockPicker("button", {
               value: selectedSignal.value,
               action: () => {
@@ -98,7 +98,9 @@
               },
               children: (
                 <List>
-                  <ListItem index={0}>Apple</ListItem>
+                  <ListItem index={0} value="apple">
+                    Apple
+                  </ListItem>
                 </List>
               ),
             })}
