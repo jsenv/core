@@ -89,7 +89,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useSignal } from "@preact/signals";
-      import { useRef, useState } from "preact/hooks";
+      import { useRef } from "preact/hooks";
       import {
         Box,
         Field,
@@ -100,6 +100,8 @@
         Selectable,
         NaviDebug,
         dispatchRequestUnselect,
+        Badge,
+        BadgeList,
       } from "@jsenv/navi";
 
       const FRUIT_OPTIONS = [
@@ -194,33 +196,6 @@
 
       // ── 2. Chips display ──────────────────────────────────────────────────
 
-      const ChipRemoveButton = ({ opt, listRef }) => {
-        const [hovered, setHovered] = useState(false);
-        return (
-          <span
-            role="button"
-            aria-label={`Remove ${opt}`}
-            style={`display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; border-radius: 50%; background: ${hovered ? "#444" : "#888"}; color: #fff; font-size: 10px; cursor: pointer; flex-shrink: 0; line-height: 1; user-select: none;`}
-            onMouseEnter={() => {
-              setHovered(true);
-            }}
-            onMouseLeave={() => {
-              setHovered(false);
-            }}
-            onMouseDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              dispatchRequestUnselect(listRef.current, {
-                value: opt,
-                event: e,
-              });
-            }}
-          >
-            ×
-          </span>
-        );
-      };
-
       const ChipsDisplay = () => {
         const selectedSignal = useSignal([
           "HTML",
@@ -239,17 +214,26 @@
             return <span style="color: #999">Select skills…</span>;
           }
           return (
-            <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 4px;">
+            <BadgeList>
               {selectedArray.map((opt) => (
-                <span
-                  key={opt}
-                  style="display: inline-flex; align-items: center; flex-shrink: 0; gap: 4px; padding: 2px 6px 2px 8px; background: #e0e0e0; border-radius: 999px; font-size: 12px; white-space: nowrap;"
-                >
+                <Badge key={opt} data-has-button="">
                   {opt}
-                  <ChipRemoveButton opt={opt} listRef={listRef} />
-                </span>
+                  <Badge.Button
+                    aria-label={`Remove ${opt}`}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      dispatchRequestUnselect(listRef.current, {
+                        value: opt,
+                        event: e,
+                      });
+                    }}
+                  >
+                    ×
+                  </Badge.Button>
+                </Badge>
               ))}
-            </div>
+            </BadgeList>
           );
         };
 

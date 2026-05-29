@@ -154,6 +154,13 @@ const css = /* css */ `
         }
       }
 
+      .navi_list_container {
+        width: 100%;
+        border: none;
+        border-radius: 0;
+        outline: none;
+      }
+
       /* .navi_list_container {
         --list-max-height: none;
         width: 100%;
