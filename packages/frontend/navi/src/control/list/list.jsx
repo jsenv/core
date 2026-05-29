@@ -984,10 +984,6 @@ const UnorderedList = ({
 }) => {
   return (
     <Box as="ul" {...rest} baseClassName="navi_list">
-      <TopFiller
-        virtualItemHeightSignal={virtualItemHeightSignal}
-        renderWindowStart={renderWindow.start}
-      />
       <RenderWindowContext.Provider value={renderWindow}>
         <SeparatorContext.Provider value={separator ?? null}>
           <ListItemTrackerContext.Provider value={tracker}>
@@ -995,11 +991,6 @@ const UnorderedList = ({
           </ListItemTrackerContext.Provider>
         </SeparatorContext.Provider>
       </RenderWindowContext.Provider>
-      <BottomFiller
-        virtualItemHeightSignal={virtualItemHeightSignal}
-        renderWindowEnd={renderWindow.end}
-        tracker={tracker}
-      />
     </Box>
   );
 };
