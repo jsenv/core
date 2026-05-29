@@ -222,14 +222,6 @@
         return renderMockPicker(MockPickerButton, props);
       };
 
-      const MockSelectable = ({ index, children }) => {
-        return (
-          <ListItem index={index}>
-            <span>{children}</span>
-          </ListItem>
-        );
-      };
-
       const App = () => {
         const selectedSignal = useSignal();
 
@@ -253,11 +245,11 @@
                 selectedSignal.value = "x";
               }}
             >
-              <List as="fieldset" action="update">
+              <List>
                 {OPTIONS.map((opt, i) => (
-                  <MockSelectable key={opt} index={i}>
-                    {opt}
-                  </MockSelectable>
+                  <ListItem key={opt} index={i}>
+                    <span>{opt}</span>
+                  </ListItem>
                 ))}
               </List>
             </MockPicker>
