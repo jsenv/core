@@ -1,6 +1,9 @@
 <!doctype html>
 <html>
-  <head><meta charset="utf-8"/><title>resolver minimal</title></head>
+  <head>
+    <meta charset="utf-8" />
+    <title>resolver minimal</title>
+  </head>
   <body>
     <div id="app"></div>
     <script type="module" jsenv-type="module/jsx">
@@ -9,7 +12,10 @@
       import { useRef, useEffect, useCallback } from "preact/hooks";
       import { List, ListItem } from "@jsenv/navi";
       import { dispatchCustomEvent } from "@jsenv/dom";
-      import { createComponentResolver, useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
+      import {
+        createComponentResolver,
+        useNextResolver,
+      } from "@jsenv/navi/src/resolver/resolver.jsx";
 
       const modeSignal = signal("plain");
 
@@ -18,7 +24,9 @@
       const MockDialog = ({ ref, onnavi_close, children }) => {
         useEffect(() => {
           window.__mountTracker.MockDialog++;
-          console.debug(`[MOUNT MockDialog #${window.__mountTracker.MockDialog}]`);
+          console.debug(
+            `[MOUNT MockDialog #${window.__mountTracker.MockDialog}]`,
+          );
           return () => console.debug(`[UNMOUNT MockDialog]`);
         }, []);
         const close = () => {
@@ -26,7 +34,14 @@
           dispatchCustomEvent(ref.current, "navi_close", {});
         };
         return (
-          <dialog ref={ref} onnavi_close={onnavi_close} onCancel={(e) => { e.preventDefault(); close(); }}>
+          <dialog
+            ref={ref}
+            onnavi_close={onnavi_close}
+            onCancel={(e) => {
+              e.preventDefault();
+              close();
+            }}
+          >
             {children}
           </dialog>
         );
@@ -38,7 +53,9 @@
         const isDialogMode = modeSignal.value === "dialog";
         useEffect(() => {
           window.__mountTracker.MockPickerCustom++;
-          console.debug(`[MOUNT MockPickerCustom #${window.__mountTracker.MockPickerCustom}]`);
+          console.debug(
+            `[MOUNT MockPickerCustom #${window.__mountTracker.MockPickerCustom}]`,
+          );
           return () => console.debug(`[UNMOUNT MockPickerCustom]`);
         }, []);
         const onMouseDown = () => popupRef.current?.showModal();
@@ -66,11 +83,25 @@
         const selectedSignal = useSignal();
         return (
           <div>
-            <button onClick={() => { modeSignal.value = "dialog"; }}>Switch to dialog</button>
+            <button
+              onClick={() => {
+                modeSignal.value = "dialog";
+              }}
+            >
+              Switch to dialog
+            </button>
             {renderMockPicker("button", {
               value: selectedSignal.value,
-              action: () => { selectedSignal.value = "x"; },
-              children: (<List key="L"><ListItem index={0} value="apple">Apple</ListItem></List>),
+              action: () => {
+                selectedSignal.value = "x";
+              },
+              children: (
+                <List key="L">
+                  <ListItem index={0} value="apple">
+                    Apple
+                  </ListItem>
+                </List>
+              ),
             })}
           </div>
         );

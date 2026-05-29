@@ -36,10 +36,7 @@
         const popupRef = useRef(null);
         return (
           <button onMouseDown={() => popupRef.current.showModal()}>
-            <MockDialog
-              ref={popupRef}
-              onnavi_close={() => action?.("dummy")}
-            >
+            <MockDialog ref={popupRef} onnavi_close={() => action?.("dummy")}>
               {children}
             </MockDialog>
           </button>
