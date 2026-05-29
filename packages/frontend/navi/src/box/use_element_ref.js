@@ -28,6 +28,27 @@ export const useComposeElementRef = (syncElement, externalRef) => {
   const prevSyncElementRef = useRef(undefined);
   const refCallbackRef = useRef(null);
   const externalRefRef = useRef(externalRef);
+  // Detect external ref identity change between renders. The refCallback is
+  // stable across renders, so when the parent passes a new ref object (or
+  // switches from null to a ref), Preact does NOT re-fire the callback while
+  // the DOM element is unchanged. We must manually clear the old ref and
+  // populate the new one with the current element to avoid leaving the new
+  // ref's `.current` stuck at `null`.
+  const prevExternalRefRef = useRef(externalRef);
+  if (prevExternalRefRef.current !== externalRef) {
+    const previous = prevExternalRefRef.current;
+    if (previous && typeof previous !== "function") {
+      previous.current = null;
+    }
+    if (externalRef && elRef.current) {
+      if (typeof externalRef === "function") {
+        externalRef(elRef.current);
+      } else {
+        externalRef.current = elRef.current;
+      }
+    }
+    prevExternalRefRef.current = externalRef;
+  }
   externalRefRef.current = externalRef;
 
   const runSync = (el) => {

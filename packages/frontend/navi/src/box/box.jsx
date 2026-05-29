@@ -680,10 +680,31 @@ export const Box = (props) => {
       });
     }, styleDeps);
     const externalRefRef = useRef(ref);
-    externalRefRef.current = ref;
+    const lastElRef = useRef(null);
+    // Detect external ref identity change between renders. Our refCallback is
+    // stable, so when the parent passes a new ref object (or switches from
+    // null to a ref), Preact does NOT re-fire the callback while the DOM
+    // element is unchanged. We must manually clear the old ref and populate
+    // the new one with the current element to avoid leaving the new ref's
+    // `.current` stuck at `null`.
+    if (externalRefRef.current !== ref) {
+      const previous = externalRefRef.current;
+      if (previous && typeof previous !== "function") {
+        previous.current = null;
+      }
+      if (ref && lastElRef.current) {
+        if (typeof ref === "function") {
+          ref(lastElRef.current);
+        } else {
+          ref.current = lastElRef.current;
+        }
+      }
+      externalRefRef.current = ref;
+    }
     const refCallbackRef = useRef(null);
     if (!refCallbackRef.current) {
       refCallbackRef.current = (el) => {
+        lastElRef.current = el;
         const currentRef = externalRefRef.current;
         if (currentRef) {
           if (typeof currentRef === "function") {

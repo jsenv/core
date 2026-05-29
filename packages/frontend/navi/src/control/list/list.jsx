@@ -300,8 +300,8 @@ const css = /* css */ `
  */
 export const List = (props) => {
   const refDefault = useRef(null);
-  props.ref = props.ref || refDefault;
-  const listVnode = renderList(ListUI, props);
+  const ref = props.ref || refDefault;
+  const listVnode = renderList(ListUI, { ...props, ref });
   return listVnode;
 };
 const ListWithPopoverResolver = (props) => {
@@ -324,10 +324,16 @@ const ListUI = (props) => {
     ...rest
   } = props;
   const containerRef = useRef(null);
-  useDisplayedLayoutEffect(containerRef, () => {
-    const listEl = ref.current;
-    console.log(listEl.dispatchEvent);
-  }, [ref]);
+  useDisplayedLayoutEffect(
+    containerRef,
+    () => {
+      // Sanity check guarding against the "ref.current null on second open" bug:
+      // when the dialog opens we must be able to read the list element via `ref`.
+      const listEl = ref.current;
+      listEl.dispatchEvent;
+    },
+    [ref],
+  );
   const idDefault = useId();
   const innerId = id || idDefault;
 
