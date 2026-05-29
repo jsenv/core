@@ -1,0 +1,129 @@
+<!doctype html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Badge List Demo</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { Badge, BadgeList, Box, Title, Paragraph } from "@jsenv/navi";
+
+      const App = () => (
+        <Box padding="l" flex="y" spacing="xl">
+          <Box as="section">
+            <Title as="h2">Simple string badges</Title>
+            <Paragraph>
+              Pass a <code>badges</code> array of strings — each becomes a Badge
+              with default styling.
+            </Paragraph>
+            <BadgeList
+              badges={[
+                "HTML",
+                "CSS",
+                "JavaScript",
+                "TypeScript",
+                "React",
+                "Vue",
+                "Angular",
+                "Node.js",
+                "Python",
+                "Rust",
+                "Go",
+                "Java",
+                "C++",
+                "Swift",
+                "Kotlin",
+                "SQL",
+              ]}
+            />
+          </Box>
+
+          <Box as="section">
+            <Title as="h2">Badges with colors</Title>
+            <Paragraph>
+              Pass objects with a <code>label</code> and any Badge props.
+            </Paragraph>
+            <BadgeList
+              badges={[
+                { label: "Active", background: "#4caf50" },
+                { label: "Inactive", background: "#f44336" },
+                { label: "Pending", background: "#ff9800" },
+                { label: "Archived", background: "#9e9e9e" },
+                { label: "Beta", background: "#2196f3" },
+                { label: "Deprecated", background: "darkred" },
+                { label: "Pro", background: "#9c27b0" },
+                { label: "New", background: "#00bcd4" },
+              ]}
+            />
+          </Box>
+
+          <Box as="section">
+            <Title as="h2">Children composition</Title>
+            <Paragraph>
+              You can also use <code>BadgeList</code> as a wrapper and place
+              <code>Badge</code> children directly for full control.
+            </Paragraph>
+            <BadgeList>
+              <Badge background="#4caf50">Frontend</Badge>
+              <Badge background="#2196f3">Backend</Badge>
+              <Badge background="#ff9800">DevOps</Badge>
+              <Badge background="#9c27b0">Security</Badge>
+              <Badge background="#795548">Database</Badge>
+              <Badge background="#607d8b">Cloud</Badge>
+              <Badge background="#e91e63">Mobile</Badge>
+              <Badge background="#009688">API</Badge>
+            </BadgeList>
+          </Box>
+
+          <Box as="section">
+            <Title as="h2">Wrapping behavior</Title>
+            <Paragraph>
+              Badges wrap naturally to the next line when there are many of
+              them. Resize the window to see wrapping in action.
+            </Paragraph>
+            <Box
+              maxWidth="400px"
+              border="1px solid #ddd"
+              padding="m"
+              borderRadius="4px"
+            >
+              <BadgeList
+                badges={[
+                  "React",
+                  "Vue",
+                  "Svelte",
+                  "Angular",
+                  "Preact",
+                  "Solid",
+                  "Remix",
+                  "Next.js",
+                  "Nuxt",
+                  "Astro",
+                  "Qwik",
+                  "Gatsby",
+                ]}
+              />
+            </Box>
+          </Box>
+
+          <Box as="section">
+            <Title as="h2">Custom gap</Title>
+            <Paragraph>
+              Control spacing between badges with the{" "}
+              <code>--badge-list-gap</code> CSS variable.
+            </Paragraph>
+            <BadgeList
+              style="--badge-list-gap: 1em;"
+              badges={["One", "Two", "Three", "Four", "Five"]}
+            />
+          </Box>
+        </Box>
+      );
+
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>

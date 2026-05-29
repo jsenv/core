@@ -129,7 +129,7 @@ export {
 export {
   Selectable,
   SelectableList,
-  requestSelectableListItemUnselect,
+  dispatchRequestUnselect,
 } from "./src/control/list/selectable_list.jsx";
 export { useSearchText } from "./src/control/list/use_search_text.js";
 // --- List end ---
@@ -166,6 +166,7 @@ export { ButtonCopyToClipboard } from "./src/control/button_copy_to_clipboard.js
 export { Address } from "./src/text/address.jsx";
 export { Badge } from "./src/text/badge.jsx";
 export { BadgeCount } from "./src/text/badge_count.jsx";
+export { BadgeList } from "./src/text/badge_list.jsx";
 export { Caption } from "./src/text/caption.jsx";
 export { Code } from "./src/text/code.jsx";
 export { Color } from "./src/text/color.jsx";

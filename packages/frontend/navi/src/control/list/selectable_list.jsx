@@ -23,6 +23,10 @@ import { useControlgroupProps } from "../control_hooks.jsx";
 import { Field } from "../field.jsx";
 import { Input } from "../input/input.jsx";
 import { useCheckableProps } from "../input/use_checkable_props.js";
+import {
+  dispatchRequestSetUIState,
+  getUIStateFromElement,
+} from "../ui_state_controller.js";
 import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
 import { List, LIST_ITEM_PSEUDO_CLASSES, ListItem } from "./list.jsx";
 
@@ -240,16 +244,22 @@ export const SelectableList = (props) => {
           item,
         });
       }}
-      onnavi_selectable_list_request_item_unselect={(e) => {
-        const { value } = e.detail;
+      onnavi_list_request_unselect={(e) => {
+        const { value, event } = e.detail;
         const listEl = e.currentTarget;
         const valueStr = String(value);
         const realInput = listEl.querySelector(
           `[navi-selectable-real-input][value="${valueStr.replaceAll('"', '\\"')}"]`,
         );
         if (realInput && realInput.checked) {
-          realInput.click();
+          dispatchRequestSetUIState(realInput, false, { event });
         }
+        const currentUIState = getUIStateFromElement(listEl) ?? [];
+        const newUIState = currentUIState.filter((v) => String(v) !== valueStr);
+        dispatchRequestAction(listEl, {
+          event,
+          uiState: newUIState,
+        });
       }}
       onnavi_list_request_select={(e) => {
         const { item } = e.detail;
@@ -283,12 +293,11 @@ export const SelectableList = (props) => {
   );
 };
 
-export const requestSelectableListItemUnselect = (listEl, { value, event }) => {
-  return dispatchCustomEvent(
-    listEl,
-    "navi_selectable_list_request_item_unselect",
-    { value, event },
-  );
+export const dispatchRequestUnselect = (listEl, { value, event }) => {
+  return dispatchCustomEvent(listEl, "navi_list_request_unselect", {
+    value,
+    event,
+  });
 };
 
 const SelectableRealInputContext = createContext(null);
