@@ -126,21 +126,349 @@
 
       import { useSignal } from "@preact/signals";
       import { render } from "preact";
-      import { useRef } from "preact/hooks";
-      import { Picker } from "@jsenv/navi";
+      import { useId, useRef, useState } from "preact/hooks";
+      import { useControlProps } from "@jsenv/navi/src/control/control_hooks.jsx";
       import {
-        useControlProps,
-        useControlgroupProps,
-      } from "@jsenv/navi/src/control/control_hooks.jsx";
-      import { dispatchRequestAction } from "@jsenv/navi/src/control/validation/custom_constraint_validation.js";
+        dispatchRequestAction,
+        dispatchRequestInteraction,
+      } from "@jsenv/navi/src/control/validation/custom_constraint_validation.js";
       import { List, ListItem } from "@jsenv/navi/src/control/list/list.jsx";
       import { windowWidthSignal } from "@jsenv/navi/src/layout/responsive.js";
+      import { Dialog } from "@jsenv/navi/src/popup/dialog.jsx";
+      import { Popover } from "@jsenv/navi/src/popup/popover.jsx";
+      import { dispatchCustomEvent, findEvent } from "@jsenv/dom";
+      import { compareTwoJsValues } from "@jsenv/navi/src/utils/compare_two_js_values.js";
+      import {
+        getUIStateFromElement,
+        dispatchRequestSetUIState,
+      } from "@jsenv/navi/src/control/ui_state_controller.js";
+      import { Box } from "@jsenv/navi/src/box/box.jsx";
+      import { shortcutsViaOnKeyDown } from "@jsenv/navi/src/keyboard/keyboard_shortcuts.js";
+      import {
+        createComponentResolver,
+        useNextResolver,
+      } from "@jsenv/navi/src/resolver/resolver.jsx";
+
+      const useIgnoreClickForMousedown = () => {
+        const disableClickFor = () => {
+          const suppressClick = (clickEvent) => {
+            clickEvent.stopPropagation();
+            clickEvent.preventDefault();
+            document.removeEventListener("click", suppressClick, {
+              capture: true,
+            });
+          };
+          document.addEventListener("click", suppressClick, { capture: true });
+        };
+        return disableClickFor;
+      };
 
       const OPTIONS = ["Apple", "Banana", "Cherry"];
 
-      // Minimal SelectableList: calls useControlgroupProps (the real one) and
-      // renders a real <List> (which creates the .navi_list_container used by
-      // useListScrollSync). Skips useFocusGroup and selectedIndicator.
+      const getPickerInput = (pickerEl) =>
+        pickerEl.querySelector(".navi_picker_input");
+      const getPickerInputUIState = (pickerEl) =>
+        getUIStateFromElement(getPickerInput(pickerEl));
+
+      // ── MockPickerButton (= PickerButton) ──────────────────────────────────────
+      // Terminal resolver: renders the actual <button> Box + hidden input + popup.
+      const MockPickerButton = (props) => {
+        const { ref, popupProps, children } = props;
+        const inputRef = useRef(null);
+        const [inputProps, pickerRemainingProps] = useControlProps(
+          { ...props, ref: inputRef },
+          {
+            primaryInteractionMode: "pointer",
+            controlType: "input",
+            statePropName: "value",
+            defaultStatePropName: "defaultValue",
+            getUIValue: () => (inputRef.current ? inputRef.current.value : ""),
+            fallbackState: "",
+            getStateFromProp: (v) => v ?? "",
+            getPropFromState: (s) => s ?? "",
+          },
+        );
+
+        return (
+          <Box
+            as="button"
+            ref={ref}
+            type="button"
+            baseClassName="navi_picker"
+            {...pickerRemainingProps}
+            id={inputProps.id}
+            onMouseDown={(e) => {
+              inputProps.onMouseDown(e);
+            }}
+            onClick={(e) => {
+              inputProps.onClick(e);
+            }}
+            popupProps={undefined}
+            actionInteraction={undefined}
+          >
+            <Box
+              as="input"
+              {...inputProps}
+              className="navi_picker_input"
+              tabIndex={-1}
+            />
+            <span>{inputProps.value || "—"}</span>
+            {children}
+          </Box>
+        );
+      };
+
+      // ── MockPickerContentInsideDialog (= PickerContentInsideDialog) ────────────
+      const MockPickerContentInsideDialog = (props) => {
+        const Next = useNextResolver();
+        const { popupProps, children, ...rest } = props;
+        return (
+          <Next aria-haspopup="dialog" {...rest} popupProps={popupProps}>
+            <Dialog
+              {...popupProps}
+              className="navi_picker_dialog"
+              scrollTrap={true}
+            >
+              {children}
+            </Dialog>
+          </Next>
+        );
+      };
+
+      // ── MockPickerContentInsidePopover (= PickerContentInsidePopover) ──────────
+      const MockPickerContentInsidePopover = (props) => {
+        const Next = useNextResolver();
+        const { popupProps, children, ...rest } = props;
+        return (
+          <Next aria-haspopup="listbox" {...rest} popupProps={popupProps}>
+            <Popover
+              {...popupProps}
+              className="navi_picker_popover"
+              scrollTrap={true}
+            >
+              {children}
+            </Popover>
+          </Next>
+        );
+      };
+
+      // ── MockPickerCustom (= PickerCustom) ──────────────────────────────────────
+      const MockPickerCustom = (props) => {
+        const isSmallScreen = windowWidthSignal.value <= 600;
+        const { ref } = props;
+
+        const pickerProps = { ...props };
+        const popupProps = {};
+        Object.assign(pickerProps, { popupProps, actionInteraction: "manual" });
+
+        const popupRef = useRef(null);
+        popupProps.ref = popupRef;
+
+        const popupId = useId();
+        Object.assign(pickerProps, { "aria-controls": popupId });
+        Object.assign(popupProps, { id: popupId });
+
+        const moveFocusToPicker = (e) => {
+          const pickerEl = ref.current;
+          const mousedownEvent = findEvent(e, "mousedown");
+          if (mousedownEvent) {
+            mousedownEvent.preventDefault();
+            pickerEl.focus({ preventScroll: true });
+            return;
+          }
+          const focusoutEvent = findEvent(e, "focusout");
+          if (focusoutEvent) {
+            return;
+          }
+          pickerEl.focus({ preventScroll: true });
+        };
+
+        const [expanded, setExpanded] = useState(false);
+        const expandedRef = useRef(expanded);
+        expandedRef.current = expanded;
+        const valueAtOpenRef = useRef(null);
+
+        const onOpen = () => {
+          expandedRef.current = true;
+          setExpanded(true);
+          valueAtOpenRef.current = getPickerInputUIState(ref.current);
+        };
+        const onClose = (e) => {
+          const cancelEvent = findEvent(
+            e,
+            (eInChain) =>
+              eInChain.type === "navi_request_close" && eInChain.detail.cancel,
+          );
+          const isCancel = Boolean(cancelEvent);
+          expandedRef.current = false;
+          setExpanded(false);
+          const pickerEl = ref.current;
+          const inputEl = getPickerInput(pickerEl);
+          if (!inputEl) {
+            moveFocusToPicker(e);
+            return;
+          }
+          const valueAtOpen = valueAtOpenRef.current;
+          if (isCancel) {
+            dispatchRequestSetUIState(inputEl, valueAtOpen, { event: e });
+            moveFocusToPicker(e);
+            return;
+          }
+          const valueAtClose = getPickerInputUIState(pickerEl);
+          if (!compareTwoJsValues(valueAtClose, valueAtOpen)) {
+            dispatchRequestAction(inputEl, { event: e, uiState: valueAtClose });
+          }
+          moveFocusToPicker(e);
+        };
+
+        const disableClickFor = useIgnoreClickForMousedown();
+        const requestOpen = (e) => {
+          const pickerEl = ref.current;
+          pickerEl.scrollIntoView({ block: "nearest" });
+          const popupEl = popupRef.current;
+          return dispatchCustomEvent(popupEl, "navi_request_open", {
+            event: e,
+            anchor: pickerEl,
+          });
+        };
+        const requestClose = (
+          e = new CustomEvent("programmatic"),
+          { cancel = false } = {},
+        ) => {
+          const mousedownEvent = findEvent(e, "mousedown");
+          if (mousedownEvent) {
+            disableClickFor();
+          }
+          const popupEl = popupRef.current;
+          return dispatchCustomEvent(popupEl, "navi_request_close", {
+            event: e,
+            cancel,
+          });
+        };
+
+        const { onActionStart, children } = props;
+        Object.assign(pickerProps, {
+          "aria-expanded": expanded,
+          "onActionStart": (e) => {
+            onActionStart?.(e);
+            requestClose(e);
+          },
+          "onnavi_request_close": (e) => {
+            if (dispatchRequestInteraction(ref.current, e)) {
+              requestClose(e);
+            }
+          },
+          children,
+        });
+        Object.assign(popupProps, {
+          onnavi_open: (e) => {
+            onOpen(e);
+          },
+          onnavi_close: (e) => {
+            onClose(e);
+          },
+          onMouseDown: (e) => {
+            if (e.button !== 0) {
+              return;
+            }
+            e.stopPropagation();
+          },
+          onClick: (e) => {
+            if (e.button !== 0) {
+              return;
+            }
+            e.stopPropagation();
+          },
+        });
+
+        const { onMouseDown, onClick, onKeyDown } = props;
+        Object.assign(pickerProps, {
+          onMouseDown: (e) => {
+            onMouseDown?.(e);
+            const pickerEl = ref.current;
+            if (
+              dispatchRequestInteraction(
+                pickerEl,
+                e,
+                "mousedown to open picker",
+              )
+            ) {
+              if (expandedRef.current) {
+                requestClose(e);
+              } else {
+                e.preventDefault();
+                requestOpen(e);
+              }
+            }
+          },
+          onClick: (e) => {
+            onClick?.(e);
+            if (e.detail === 0) {
+              return;
+            }
+            if (
+              dispatchRequestInteraction(ref.current, e, "click to open picker")
+            ) {
+              e.preventDefault();
+              requestOpen(e);
+            }
+          },
+          onKeyDown: shortcutsViaOnKeyDown(
+            {
+              arrowdown: (e) => {
+                if (dispatchRequestInteraction(ref.current, e)) {
+                  e.preventDefault();
+                  requestOpen(e);
+                }
+              },
+              arrowup: (e) => {
+                if (dispatchRequestInteraction(ref.current, e)) {
+                  e.preventDefault();
+                  requestOpen(e);
+                }
+              },
+              space: (e) => {
+                if (dispatchRequestInteraction(ref.current, e)) {
+                  e.preventDefault();
+                  requestOpen(e);
+                }
+              },
+              escape: (e) => {
+                if (!expandedRef.current) {
+                  return;
+                }
+                if (dispatchRequestInteraction(ref.current, e)) {
+                  e.preventDefault();
+                  requestClose(e, { cancel: true });
+                }
+              },
+            },
+            onKeyDown,
+          ),
+        });
+
+        if (isSmallScreen) {
+          return <MockPickerContentInsideDialog {...pickerProps} />;
+        }
+        return <MockPickerContentInsidePopover {...pickerProps} />;
+      };
+
+      // ── Resolver chain (= pickerResolvers + renderPicker) ─────────────────────
+      const MockPickerCustomResolver = (props) => {
+        return <MockPickerCustom {...props} />;
+      };
+
+      const renderMockPicker = createComponentResolver([
+        MockPickerCustomResolver,
+      ]);
+
+      const MockPicker = (props) => {
+        const defaultRef = useRef(null);
+        props.ref = props.ref || defaultRef;
+        return renderMockPicker(MockPickerButton, props);
+      };
+
+      // Minimal SelectableList: renders a real <List>.
       const MockSelectableList = (props) => {
         const defaultRef = useRef();
         props.ref = props.ref || defaultRef;
@@ -206,7 +534,7 @@
               3. <b>Close</b> · 4. <b>Open</b> again → BUG?
             </p>
             <button onClick={simulateNarrow}>Simulate resize → dialog</button>
-            <Picker
+            <MockPicker
               type="text"
               name="repro_picker"
               value={selectedValue}
@@ -226,7 +554,7 @@
                   </MockSelectable>
                 ))}
               </MockSelectableList>
-            </Picker>
+            </MockPicker>
           </div>
         );
       };
