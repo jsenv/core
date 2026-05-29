@@ -284,7 +284,8 @@
           const inputEl = getPickerInput(pickerEl);
           const valueAtClose = getPickerInputUIState(pickerEl);
           if (!compareTwoJsValues(valueAtClose, valueAtOpenRef.current)) {
-            dispatchRequestAction(inputEl, { event: e, uiState: valueAtClose });
+            // Simplified: just trigger a re-render via props.action instead of dispatchRequestAction
+            props.action?.(valueAtClose);
           }
         };
 
