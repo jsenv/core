@@ -15,7 +15,6 @@ const ListItemTrackerContext = createContext(null);
 const GroupItemTrackerContext = createContext(null);
 
 export const ListIdContext = createContext();
-export const InsideRealListItemContext = createContext(false);
 
 // Carries the separator element/function down to each ListItem so separators
 // are only rendered between items that actually mount (post-filter, post-window).
@@ -335,20 +334,16 @@ const ListUI = (props) => {
     onListVisibleItemsChange,
     ...rest
   } = props;
-
   const containerRef = useRef(null);
-
   const tracker = useItemTracker({
     onChange: () => {
       onListVisibleItemsChange?.(tracker.visibleItemsSignal.peek());
     },
   });
-
   useDisplayedLayoutEffect(containerRef, () => {
     const listEl = ref.current;
     console.log(listEl.dispatchEvent);
   }, [ref]);
-
   const idDefault = useId();
   const innerId = id || idDefault;
 
@@ -402,9 +397,7 @@ const ListContent = ({
         {...listProps}
         tracker={tracker}
       >
-        <ListIdContext.Provider value={innerId}>
-          {children}
-        </ListIdContext.Provider>
+        {children}
       </UnorderedList>
     </div>
   );
