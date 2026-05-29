@@ -343,38 +343,24 @@ const ListUI = (props) => {
       maxHeight={maxHeight}
       styleCSSVars={LIST_STYLE_CSS_VARS}
       pseudoClasses={LIST_PSEUDO_CLASSES}
-      hasChildUsingForwardedProps
     >
-      <ListContent
-        ref={ref}
-        innerId={innerId}
-        role={role}
-        expandX={expandX}
-        expand={expand}
-      >
-        {children}
-      </ListContent>
+      <div className="navi_list_scroll_container">
+        <Box
+          as="ul"
+          ref={ref}
+          id={innerId}
+          role={role}
+          expandX={expandX || expand}
+          // {...listProps}
+          baseClassName="navi_list"
+        >
+          {children}
+        </Box>
+      </div>
     </Box>
   );
 };
-const ListContent = ({ ref, innerId, role, expandX, expand, children }) => {
-  const listProps = useContext(BoxForwardedPropsContext);
-  return (
-    <div className="navi_list_scroll_container">
-      <Box
-        as="ul"
-        ref={ref}
-        id={innerId}
-        role={role}
-        expandX={expandX || expand}
-        {...listProps}
-        baseClassName="navi_list"
-      >
-        {children}
-      </Box>
-    </div>
-  );
-};
+
 const LIST_STYLE_CSS_VARS = {
   maxHeight: "--list-max-height",
   borderColor: "--list-border-color",
