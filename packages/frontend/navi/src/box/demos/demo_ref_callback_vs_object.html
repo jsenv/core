@@ -148,48 +148,27 @@
         useNextResolver,
       } from "@jsenv/navi/src/resolver/resolver.jsx";
 
-      // MockPopover: minimal div, calls onnavi_open/close directly as callbacks.
+      // MockPopover: no visibility state, always visible, just calls callbacks.
       const MockPopover = (props) => {
-        const {
-          ref: refProp,
-          id,
-          onnavi_open,
-          onnavi_close,
-          onMouseDown,
-          onClick,
-          children,
-        } = props;
+        const { ref: refProp, id, onnavi_open, onnavi_close, children } = props;
         const defaultRef = useRef(null);
         const ref = refProp || defaultRef;
-        const [opened, setOpened] = useState(false);
         const openedRef = useRef(false);
-
-        const open = (e) => {
-          openedRef.current = true;
-          setOpened(true);
-          onnavi_open?.(e);
-        };
-        const close = (e) => {
-          openedRef.current = false;
-          setOpened(false);
-          onnavi_close?.(e);
-        };
 
         return (
           <div
             id={id}
             ref={ref}
-            style={{ display: opened ? "" : "none" }}
-            onMouseDown={onMouseDown}
-            onClick={onClick}
             onnavi_request_open={(e) => {
               if (!openedRef.current) {
-                open(e);
+                openedRef.current = true;
+                onnavi_open?.(e);
               }
             }}
             onnavi_request_close={(e) => {
               if (openedRef.current) {
-                close(e);
+                openedRef.current = false;
+                onnavi_close?.(e);
               }
             }}
           >
