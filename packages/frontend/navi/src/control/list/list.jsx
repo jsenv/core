@@ -1,15 +1,55 @@
-import { dispatchCustomEvent } from "@jsenv/dom";
+import {
+  dispatchCustomEvent,
+  dispatchPublicCustomEvent,
+  getElementSignature,
+  pickPositionRelativeTo,
+  scrollIntoViewScoped,
+  visibleRectEffect,
+} from "@jsenv/dom";
+import { signal } from "@preact/signals";
 import { createContext } from "preact";
-import { useContext, useId, useRef } from "preact/hooks";
+import {
+  useContext,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "preact/hooks";
 
 import { Box, BoxForwardedPropsContext } from "../../box/box.jsx";
+import { Separator } from "../../layout/separator.jsx";
+import { useDebugScroll } from "../../navi_debug.jsx";
 import {
   createComponentResolver,
   useNextResolver,
 } from "../../resolver/resolver.jsx";
+import { useItemTracker } from "../../utils/item_tracker/use_item_tracker.js";
 import { useDisplayedLayoutEffect } from "../../utils/use_displayed_layout_effect.js";
+import { useSearchHighlight } from "./search_highlight.js";
+
+const ListItemTrackerContext = createContext(null);
+const GroupItemTrackerContext = createContext(null);
+const PendingScrollRefContext = createContext(null);
 
 export const ListIdContext = createContext();
+export const InsideRealListItemContext = createContext(false);
+
+// When total rendered items exceeds renderBudget, a render window [start, end)
+// is activated to cap the number of DOM nodes. Items outside the window return
+// null. The window slides as the user scrolls, using actual DOM positions
+// (getBoundingClientRect) to find the first visible item — no height estimation.
+const RENDER_BUDGET_DEFAULT = 100;
+
+// Attribute used on <li> elements rendered by ListItemReal so the scroll listener
+// and filler-height calculation can find real items without matching presentation ones.
+const REAL_LIST_ITEM_SELECTOR = `[navi-list-item-real]`;
+
+// Carries the render window {start, end} (or null = render all) from
+// List down to each ListItem.
+const RenderWindowContext = createContext(null);
+// Carries the separator element/function down to each ListItem so separators
+// are only rendered between items that actually mount (post-filter, post-window).
+const SeparatorContext = createContext(null);
 
 const css = /* css */ `
   @layer navi {
@@ -300,12 +340,15 @@ const css = /* css */ `
  */
 export const List = (props) => {
   const refDefault = useRef(null);
-  const ref = props.ref || refDefault;
-  const listVnode = renderList(ListUI, { ...props, ref });
+  props.ref = props.ref || refDefault;
+  const listVnode = renderList(ListUI, props);
   return listVnode;
 };
 const ListWithPopoverResolver = (props) => {
   const Next = useNextResolver();
+  if (props.popover === true) {
+    return <ListWithPopover {...props} />;
+  }
   return <Next {...props} />;
 };
 const renderList = createComponentResolver([ListWithPopoverResolver]);
@@ -314,22 +357,91 @@ const ListUI = (props) => {
   import.meta.css = css;
   const {
     ref,
+    renderBudget = RENDER_BUDGET_DEFAULT,
     id,
     role,
+    fallback,
+    noMatchFallback,
+    separator,
     children,
     popover,
     expandX,
     expand,
     maxHeight,
+    onListVisibleItemsChange,
+    virtualItemHeight,
+    lockSize,
+    searchText,
     ...rest
   } = props;
+  if (renderBudget < 30) {
+    console.warn(
+      `List: renderBudget=${renderBudget} is too low. A renderBudget below 30 is not supported: on large screens or when the list grows, items outside the window would appear as blank space instead of rendered content. Use a value of at least 30, or omit the prop to use the default (${RENDER_BUDGET_DEFAULT}).`,
+    );
+  }
+
+  // lockSize: capture the container's dimensions on first render so filtering
+  // cannot collapse the layout. Measurement happens on the initial (unfiltered)
+  // state because the parent controls hidden props before any search is applied.
   const containerRef = useRef(null);
-  useDisplayedLayoutEffect(containerRef, () => {
-    // Sanity check guarding against the "ref.current null on second open" bug:
-    // when the dialog opens we must be able to read the list element via `ref`.
-    const listEl = ref.current;
-    listEl.dispatchEvent;
-  }, [ref]);
+  const sizeLocked = useRef(false);
+  useDisplayedLayoutEffect(
+    containerRef,
+    (listContainerEl) => {
+      if (!lockSize) {
+        return undefined;
+      }
+      const observer = new ResizeObserver((entries) => {
+        const entry = entries[0];
+        // Use borderBoxSize (outer width) not contentRect (which excludes the
+        // scrollbar width). If we used contentRect, min-width would be set to
+        // outerWidth − scrollbarWidth, and the container would shrink by exactly
+        // the scrollbar width when the scrollbar disappears.
+        const borderBoxEntry = entry.borderBoxSize
+          ? entry.borderBoxSize[0]
+          : null;
+        const width = borderBoxEntry
+          ? borderBoxEntry.inlineSize
+          : entry.contentRect.width;
+        const height = borderBoxEntry
+          ? borderBoxEntry.blockSize
+          : entry.contentRect.height;
+        if (width === 0 && height === 0) {
+          return;
+        }
+        listContainerEl.style.minWidth = `${width}px`;
+        listContainerEl.style.minHeight = `${height}px`;
+        sizeLocked.current = true;
+        observer.disconnect();
+      });
+      observer.observe(listContainerEl);
+      return () => {
+        observer.disconnect();
+      };
+    },
+    [lockSize],
+  );
+
+  const tracker = useItemTracker({
+    onChange: () => {
+      onListVisibleItemsChange?.(tracker.visibleItemsSignal.peek());
+    },
+  });
+
+  const {
+    virtualItemHeightSignal,
+    renderWindow,
+    scrollToItem,
+    pendingScrollRef,
+  } = useListScrollSync({
+    containerRef,
+    ref,
+    tracker,
+    renderBudget,
+    virtualItemHeight,
+    searchText,
+  });
+
   const idDefault = useId();
   const innerId = id || idDefault;
 
@@ -345,22 +457,80 @@ const ListUI = (props) => {
       maxHeight={maxHeight}
       styleCSSVars={LIST_STYLE_CSS_VARS}
       pseudoClasses={LIST_PSEUDO_CLASSES}
+      hasChildUsingForwardedProps
+      onnavi_list_request_scroll={(e) => {
+        const { item } = e.detail;
+        if (!item) {
+          return;
+        }
+        scrollToItem(item, {
+          event: e,
+          reason: "navi_request_scroll",
+        });
+      }}
     >
-      <Box
-        as="ul"
+      <ListContent
         ref={ref}
-        id={innerId}
+        innerId={innerId}
         role={role}
-        expandX={expandX || expand}
-        // {...listProps}
-        baseClassName="navi_list"
+        fallback={fallback}
+        noMatchFallback={noMatchFallback}
+        searchText={searchText}
+        separator={separator}
+        expandX={expandX}
+        expand={expand}
+        tracker={tracker}
+        renderWindow={renderWindow}
+        virtualItemHeightSignal={virtualItemHeightSignal}
+        pendingScrollRef={pendingScrollRef}
       >
         {children}
-      </Box>
+      </ListContent>
     </Box>
   );
 };
-
+const ListContent = ({
+  ref,
+  innerId,
+  role,
+  fallback,
+  noMatchFallback,
+  searchText,
+  separator,
+  expandX,
+  expand,
+  tracker,
+  renderWindow,
+  virtualItemHeightSignal,
+  pendingScrollRef,
+  children,
+}) => {
+  const listProps = useContext(BoxForwardedPropsContext);
+  return (
+    <div className="navi_list_scroll_container">
+      <UnorderedList
+        ref={ref}
+        id={innerId}
+        role={role}
+        fallback={fallback}
+        noMatchFallback={noMatchFallback}
+        searchText={searchText}
+        separator={separator === true ? <Separator margin="0" /> : separator}
+        expandX={expandX || expand}
+        {...listProps}
+        tracker={tracker}
+        renderWindow={renderWindow}
+        virtualItemHeightSignal={virtualItemHeightSignal}
+      >
+        <PendingScrollRefContext.Provider value={pendingScrollRef}>
+          <ListIdContext.Provider value={innerId}>
+            {children}
+          </ListIdContext.Provider>
+        </PendingScrollRefContext.Provider>
+      </UnorderedList>
+    </div>
+  );
+};
 const LIST_STYLE_CSS_VARS = {
   maxHeight: "--list-max-height",
   borderColor: "--list-border-color",
@@ -377,6 +547,623 @@ const LIST_PSEUDO_CLASSES = [
   ":-navi-void",
   ":-navi-expanded",
 ];
+const useListScrollSync = ({
+  containerRef,
+  ref,
+  tracker,
+  renderBudget,
+  virtualItemHeight,
+  searchText,
+}) => {
+  const debugScroll = useDebugScroll();
+  const virtualItemHeightSignal = useVirtualItemHeightSignal(
+    ref,
+    virtualItemHeight,
+  );
+
+  const [renderWindow, setRenderWindow] = useState({
+    start: 0,
+    end: renderBudget,
+  });
+  const renderWindowRef = useRef(null);
+  renderWindowRef.current = renderWindow;
+  const updateRenderWindow = (newStart, newEnd, reason) => {
+    const { start, end } = renderWindowRef.current;
+    if (newStart === start && newEnd === end) {
+      return;
+    }
+    debugScroll(`updateRenderWindow(${newStart}, ${newEnd}, "${reason}")`);
+    const renderWindow = { start: newStart, end: newEnd };
+    renderWindowRef.current = renderWindow;
+    setRenderWindow(renderWindow);
+  };
+
+  const pendingScrollRef = useRef();
+  const scrollToItem = (item, { event, reason }) => {
+    if (!item) {
+      return;
+    }
+    const items = tracker.itemsSignal.peek();
+    const itemCount = items.length;
+    if (itemCount === 0) {
+      return;
+    }
+    let index = items.findIndex((i) => i.id === item.id);
+    if (index === -1) {
+      return;
+    }
+    if (index >= itemCount) {
+      index = itemCount - 1;
+    }
+
+    const scrollItemIntoView = (itemEl) => {
+      const trigger = `"${event.type}" on ${getElementSignature(event.target)} (${reason})`;
+      const block = event.type === "keydown" ? "nearest" : "center";
+      const scrollToItemCall = `${getElementSignature(itemEl)}.scrollIntoView({ block: "${block}", container: "nearest" })`;
+      const listScrollContainerEl = containerRef.current.querySelector(
+        `.navi_list_scroll_container`,
+      );
+      debugScroll(`${trigger} -> ${scrollToItemCall}`);
+      scrollIntoViewScoped(itemEl, {
+        container: listScrollContainerEl,
+        block,
+      });
+      dispatchPublicCustomEvent(listEl, "navi_list_scroll", {
+        event,
+        item,
+      });
+    };
+
+    // Dispatch navi_list_nav immediately — do not wait for scroll to complete.
+    const listEl = ref.current;
+    dispatchPublicCustomEvent(listEl, "navi_list_nav", {
+      event,
+      item,
+    });
+
+    const { start, end } = renderWindowRef.current;
+    const isInWindow = index >= start && index < end;
+    if (isInWindow) {
+      const itemEl = document.getElementById(item.id);
+      if (itemEl) {
+        scrollItemIntoView(itemEl);
+        return;
+      }
+    }
+    // Not in DOM — shift the render window. The item will read
+    // pendingScrollRef on mount and scroll into view.
+    pendingScrollRef.current = {
+      id: item.id,
+      resolve: (itemEl) => {
+        pendingScrollRef.current = null;
+        scrollItemIntoView(itemEl);
+      },
+    };
+    const half = Math.floor(renderBudget / 2);
+    const newStart = Math.max(0, index - half);
+    const newEnd = newStart + renderBudget;
+    updateRenderWindow(
+      newStart,
+      newEnd,
+      `item to scroll (at ${index}) is out of render window`,
+    );
+  };
+
+  const currentScrollRef = useRef(null);
+  const updateCurrentScroll = () => {
+    const listContainerEl = containerRef.current;
+    const listScrollContainerEl = listContainerEl.querySelector(
+      `.navi_list_scroll_container`,
+    );
+    const currentScrollLeft = listScrollContainerEl.scrollLeft;
+    const currentScrollTop = listScrollContainerEl.scrollTop;
+    const renderWindow = renderWindowRef.current;
+    currentScrollRef.current = {
+      left: currentScrollLeft,
+      top: currentScrollTop,
+      renderWindow: { ...renderWindow },
+    };
+    debugScroll(
+      `store currentScroll: scrollTop=${currentScrollTop}, renderWindow=[${renderWindow.start}, ${renderWindow.end})`,
+    );
+  };
+
+  const searchTextRef = useRef();
+  let searchTextBecomesActive = false;
+  if (searchTextRef.current === undefined) {
+    searchTextRef.current = searchText;
+  } else {
+    const searchTextPrevious = searchTextRef.current;
+    searchTextRef.current = searchText;
+    if (!searchTextPrevious && searchText) {
+      searchTextBecomesActive = true;
+    }
+  }
+  // Scroll to the selected item when the list is first presented on screen.
+  // Skipped when inside a closed <dialog>/<details> (scrollIntoView is a no-op
+  // on hidden elements); re-runs automatically every time the ancestor opens.
+  useDisplayedLayoutEffect(
+    containerRef,
+    (el, openEvent) => {
+      updateCurrentScroll();
+      const items = tracker.itemsSignal.peek();
+      const firstSelected = items.find((i) => i.selected);
+      if (firstSelected) {
+        scrollToItem(firstSelected, {
+          event: openEvent,
+          reason: "scroll to selected",
+        });
+      } else {
+        scrollToItem(items[0], {
+          event: new CustomEvent("navi_list_nav_top_on_displayed", {
+            detail: { originalEvent: openEvent },
+          }),
+          reason: "scroll to top (no selected item)",
+        });
+      }
+    },
+    [],
+  );
+  // Watch scores of the top renderBudget items.
+  // When scores change during an active search, scroll to top to reveal the most relevant items.
+  // When search becomes empty, restore the scroll position from before the search started.
+  // We save the first-visible item ID so restoration is item-precise
+  // and survives render-window shifts or item reordering.
+
+  // NOTE POUR LE JOUR OU ON A LE MULTISELECT:
+  // Lorsqu'on selectionne quelque chose pendant une recherche, alors ensuite meme si on clear
+  // on veut pas revenir a la position scroll précédente car on veut garde l'item qu'on a selectionné visible
+  // (pour l'instant pas grave car on travaille pour le mode select qui fermera le dialog au select)
+  const savedScrollRef = useRef(null);
+  const topMatchScoresKeyRef = useRef("");
+  useLayoutEffect(() => {
+    const listContainerEl = containerRef.current;
+    if (!listContainerEl) {
+      return;
+    }
+    const listScrollContainerEl = listContainerEl.querySelector(
+      `.navi_list_scroll_container`,
+    );
+    if (!searchText) {
+      // no search -> try to restore scroll position
+      topMatchScoresKeyRef.current = "";
+      const savedScroll = savedScrollRef.current;
+      if (!savedScroll) {
+        // nothing to restore
+        return;
+      }
+      savedScrollRef.current = null;
+      debugScroll("Restoring scroll to", savedScroll);
+      updateRenderWindow(
+        savedScroll.renderWindow.start,
+        savedScroll.renderWindow.end,
+        "restore scroll window",
+      );
+      requestAnimationFrame(() => {
+        const left = savedScroll.left;
+        const top = savedScroll.top;
+        // use scrollTo to respect eventual css scroll-behavior: smooth;
+        debugScroll(
+          `restore scroll: ${getElementSignature(listScrollContainerEl)}.scrollTo({ left: ${left}, top: ${top} })`,
+        );
+        listScrollContainerEl.scrollTo({
+          left: savedScroll.left,
+          top: savedScroll.top,
+        });
+        // The reliable way to restore scroll is to use scrollTop because otherwise we will estimate the item to scroll
+        // based on virtual item height which can wrongly restore the scroll.
+        // However we have a contract with outside to inside which item is scrolled
+        // (used by keyboard nav to enable anchoring the item for list item nav with arrow keys)
+        // so we do our best to give that item back
+        const { item } = getScrollInfo(
+          { scrollTop: savedScroll.top },
+          listScrollContainerEl,
+          tracker,
+          virtualItemHeightSignal,
+          renderWindowRef,
+        );
+        const listEl = ref.current;
+        dispatchPublicCustomEvent(listEl, "navi_list_nav", {
+          item,
+          event: new CustomEvent("navi_scroll_restore"),
+        });
+      });
+      return;
+    }
+    const visibleItems = tracker.visibleItemsSignal.peek();
+    const topItems = visibleItems.slice(0, renderBudget);
+    const topMatchScoresKey = topItems
+      .map((i) => `${i.id}:${i.matchScore ?? ""}`)
+      .join(",");
+    const currentTopMatchScore = topMatchScoresKeyRef.current;
+    if (topMatchScoresKey === currentTopMatchScore) {
+      // no changes in top matches -> no need to scroll
+      return;
+    }
+    // n items are now more important to see, scrollTop to show them
+    topMatchScoresKeyRef.current = topMatchScoresKey;
+    if (searchTextBecomesActive) {
+      // search just started -> save the currently scrolled item id to restore later
+      const currentScroll = currentScrollRef.current;
+      savedScrollRef.current = currentScroll;
+      debugScroll(
+        `Saving scroll: { top: ${currentScroll.top}, renderWindowStart: ${currentScroll.renderWindow.start}, renderWindowEnd: ${currentScroll.renderWindow.end} }`,
+      );
+    }
+    // -> scroll to the top
+    scrollToItem(visibleItems[0], {
+      event: new CustomEvent("navi_list_top_match_change"),
+    });
+    return;
+  });
+
+  // Scroll listener — slides the window as the user scrolls.
+  useLayoutEffect(() => {
+    const listContainerEl = containerRef.current;
+    if (!listContainerEl) {
+      return undefined;
+    }
+    const listScrollContainerEl = listContainerEl.querySelector(
+      `.navi_list_scroll_container`,
+    );
+    const listEl = listContainerEl.querySelector(".navi_list");
+    const onScroll = () => {
+      updateCurrentScroll();
+      const visibleItemCount = tracker.visibleCountSignal.peek();
+      if (visibleItemCount <= renderBudget) {
+        return;
+      }
+      const oneRealListItemInDom = Boolean(
+        listEl.querySelector(REAL_LIST_ITEM_SELECTOR),
+      );
+      if (!oneRealListItemInDom) {
+        return;
+      }
+      let reason = "";
+      const scrollInfo = getScrollInfo(
+        { scrollTop: listScrollContainerEl.scrollTop },
+        listScrollContainerEl,
+        tracker,
+        virtualItemHeightSignal,
+        renderWindowRef,
+      );
+      if (!scrollInfo) {
+        return;
+      }
+      const { index, reason: hitReason } = scrollInfo;
+      reason = hitReason;
+      const half = Math.floor(renderBudget / 2);
+      let newStart = Math.max(0, index - half);
+      let newEnd = Math.min(visibleItemCount, newStart + renderBudget);
+      if (newEnd === visibleItemCount) {
+        newStart = Math.max(0, visibleItemCount - renderBudget);
+      }
+      updateRenderWindow(newStart, newEnd, reason);
+    };
+    listScrollContainerEl.addEventListener("scroll", onScroll, {
+      passive: true,
+    });
+    return () => {
+      listScrollContainerEl.removeEventListener("scroll", onScroll);
+    };
+  }, [renderBudget]);
+
+  return {
+    virtualItemHeightSignal,
+    renderWindow,
+    pendingScrollRef,
+    scrollToItem,
+  };
+};
+// Returns the item located at the current scroll position of a list container.
+// Uses DOM hit-testing to find visible items/fillers; falls back to index
+// estimation via virtualItemHeight or renderWindow.start.
+// Returns { index, item, reason } or null if nothing can be determined.
+const getScrollInfo = (
+  { scrollTop },
+  listScrollContainerEl,
+  tracker,
+  virtualItemHeightSignal,
+  renderWindowRef,
+) => {
+  const listEl = listScrollContainerEl.querySelector(".navi_list");
+  const items = tracker.itemsSignal.peek();
+  const containerRect = listScrollContainerEl.getBoundingClientRect();
+  let hitEl = null;
+  let hitFiller = null;
+  // Start scanning from the vertical center of the viewport rather than the top.
+  // The render window places half its budget above and half below the hit index.
+  // Anchoring to the center maximises how many rendered items fall within the
+  // visible area: starting from the top would waste the "above" budget on items
+  // already scrolled past, leaving the bottom of the viewport uncovered.
+  // For large lists where renderBudget >> visible item count this never matters
+  // in practice (the window always covers the whole viewport), but it is
+  // strictly better and costs nothing.
+  const scanStartY = (containerRect.top + containerRect.bottom) / 2;
+  for (let y = scanStartY; y < containerRect.bottom; y += 4) {
+    const el = document.elementFromPoint(containerRect.left + 1, y);
+    if (!el || !listEl.contains(el)) {
+      continue;
+    }
+    const realItem = el.closest(REAL_LIST_ITEM_SELECTOR);
+    if (realItem) {
+      hitEl = realItem;
+      break;
+    }
+    const filler = el.closest("[navi-virtual-filler]");
+    if (filler) {
+      hitFiller = filler;
+      break;
+    }
+  }
+  if (hitFiller) {
+    const virtualItemHeight = virtualItemHeightSignal.peek();
+    if (virtualItemHeight === 0) {
+      return null;
+    }
+    const estimatedIndex = Math.floor(scrollTop / virtualItemHeight);
+    const index = Math.min(items.length - 1, estimatedIndex);
+    return {
+      item: items[index],
+      index,
+      reason: `hit filler, estimated at ${index} (${items[index]?.value})`,
+    };
+  }
+  if (hitEl) {
+    const hitId = hitEl.id;
+    const index = items.findIndex((i) => i.id === hitId);
+    if (index === -1) {
+      return null;
+    }
+    return {
+      item: items[index],
+      index,
+      reason: `hit item at ${index} (${items[index].value})`,
+    };
+  }
+  const fallbackIndex = renderWindowRef.current.start;
+  return {
+    item: items[fallbackIndex],
+    index: fallbackIndex,
+    reason: "no hit",
+  };
+};
+
+const useVirtualItemHeightSignal = (ref, virtualItemHeightProp = 0) => {
+  const virtualHeightSignalRef = useRef(null);
+  if (!virtualHeightSignalRef.current) {
+    virtualHeightSignalRef.current = signal(virtualItemHeightProp);
+  }
+  const virtualHeightSignal = virtualHeightSignalRef.current;
+  // propagate prop changes to the signal
+  if (
+    virtualItemHeightProp &&
+    virtualHeightSignal.peek() !== virtualItemHeightProp
+  ) {
+    virtualHeightSignal.value = virtualItemHeightProp;
+  }
+  useLayoutEffect(() => {
+    if (virtualHeightSignal.peek() !== 0) {
+      return;
+    }
+    const listEl = ref.current;
+    if (!listEl) {
+      return;
+    }
+    const firstListItem = listEl.querySelector(REAL_LIST_ITEM_SELECTOR);
+    if (!firstListItem) {
+      return;
+    }
+    const measuredHeight = firstListItem.getBoundingClientRect().height;
+    virtualHeightSignal.value = measuredHeight;
+  });
+  return virtualHeightSignal;
+};
+
+// Inner <ul> — hosts the fillers + items.
+// Creates a virtualItemHeight signal so TopFiller and BottomFiller can
+// subscribe to it independently. When virtualItemHeight is passed as a prop it
+// initialises the signal directly; otherwise UnorderedList measures a rendered
+// item after each commit and writes to the signal, causing only the fillers to
+// re-render.
+const UnorderedList = ({
+  tracker,
+  renderWindow,
+  virtualItemHeightSignal,
+  fallback,
+  noMatchFallback,
+  searchText,
+  separator,
+  children,
+  ...rest
+}) => {
+  return (
+    <Box as="ul" {...rest} baseClassName="navi_list">
+      <TopFiller
+        virtualItemHeightSignal={virtualItemHeightSignal}
+        renderWindowStart={renderWindow.start}
+      />
+      <NoMatchFallback
+        noMatchFallback={noMatchFallback}
+        tracker={tracker}
+        searchText={searchText}
+      />
+      <Fallback fallback={fallback} tracker={tracker} />
+      <RenderWindowContext.Provider value={renderWindow}>
+        <SeparatorContext.Provider value={separator ?? null}>
+          <ListItemTrackerContext.Provider value={tracker}>
+            {children}
+          </ListItemTrackerContext.Provider>
+        </SeparatorContext.Provider>
+      </RenderWindowContext.Provider>
+      <BottomFiller
+        virtualItemHeightSignal={virtualItemHeightSignal}
+        renderWindowEnd={renderWindow.end}
+        tracker={tracker}
+      />
+    </Box>
+  );
+};
+
+const NoMatchFallback = ({ tracker, noMatchFallback, searchText }) => {
+  const itemCount = tracker.countSignal.value;
+  const visibleItemCount = tracker.visibleCountSignal.value;
+  const matchCount = tracker.matchCountSignal.value;
+  // Show when all items are filtered out (filtered prop), or when search is
+  // active but no visible item has a positive match score.
+  const allHidden = itemCount > 0 && visibleItemCount === 0;
+  const noneMatch = searchText && visibleItemCount > 0 && matchCount === 0;
+  const showMatchFallback = allHidden || noneMatch;
+
+  if (noMatchFallback === undefined) {
+    noMatchFallback = allHidden
+      ? "Aucun élément ne correspond à cette recherche."
+      : "Aucun élément ne correspond à cette recherche. Le reste est affiché ci-dessous";
+  }
+
+  return (
+    <ListItem
+      role="presentation"
+      className="navi_list_item navi_list_no_match_fallback"
+      hidden={!showMatchFallback}
+      navi-default={typeof noMatchFallback === "string" ? "" : undefined}
+    >
+      {noMatchFallback}
+    </ListItem>
+  );
+};
+const Fallback = ({ tracker, fallback }) => {
+  const itemCount = tracker.countSignal.value;
+  const showFallback = itemCount === 0;
+  if (fallback === undefined) {
+    fallback = "Aucun élément dans cette liste.";
+  }
+
+  return (
+    <ListItem
+      role="presentation"
+      className="navi_list_item navi_list_fallback"
+      hidden={!showFallback}
+      navi-default={typeof fallback === "string" ? "" : undefined}
+    >
+      {fallback}
+    </ListItem>
+  );
+};
+const TopFiller = ({ virtualItemHeightSignal, renderWindowStart }) => {
+  const virtualItemHeight = virtualItemHeightSignal.value;
+  const numberOfItemsAbove = renderWindowStart;
+  const heightToFillAbove = numberOfItemsAbove * virtualItemHeight;
+
+  return (
+    <li
+      className="navi_list_virtual_filler"
+      // eslint-disable-next-line react/no-unknown-property
+      navi-virtual-filler="top"
+      aria-hidden
+      style={{
+        height: `${heightToFillAbove}px`,
+      }}
+    />
+  );
+};
+const BottomFiller = ({
+  virtualItemHeightSignal,
+  renderWindowEnd,
+  tracker,
+}) => {
+  const visibleItemCount = tracker.visibleCountSignal.value;
+  const virtualItemHeight = virtualItemHeightSignal.value;
+  const numberOfItemsBelow = Math.max(visibleItemCount - renderWindowEnd, 0);
+  const heightToFillBelow = numberOfItemsBelow * virtualItemHeight;
+
+  return (
+    <li
+      className="navi_list_virtual_filler"
+      // eslint-disable-next-line react/no-unknown-property
+      navi-virtual-filler="bottom"
+      aria-hidden
+      style={{
+        height: `${heightToFillBelow}px`,
+      }}
+    />
+  );
+};
+
+// Popover variant: handles open/close/positioning events and forwards
+// navigate/confirm/clear to the underlying list.
+const ListWithPopover = (props) => {
+  const Next = useNextResolver();
+  const cleanupRef = useRef();
+
+  useLayoutEffect(() => {
+    return () => {
+      cleanupRef.current?.();
+    };
+  }, []);
+
+  return (
+    <Next
+      {...props}
+      popover="manual"
+      onnavi_list_request_open={(e) => {
+        const listEl = e.currentTarget;
+        const listContainerEl = listEl.closest(".navi_list_container");
+        const anchor = e.detail?.anchor;
+        listContainerEl.showPopover();
+        const positionPopover = () => {
+          const anchorRect = anchor.getBoundingClientRect();
+          listContainerEl.style.setProperty(
+            "--list-anchor-width",
+            `${anchorRect.width}px`,
+          );
+          const minLeft = 1;
+          const { left, top } = pickPositionRelativeTo(
+            listContainerEl,
+            anchor,
+            {
+              minLeft,
+            },
+          );
+          listContainerEl.style.top = `${top}px`;
+          const popoverRect = listContainerEl.getBoundingClientRect();
+          const maxWidth = parseFloat(
+            getComputedStyle(listContainerEl).maxWidth,
+          );
+          if (!isNaN(maxWidth) && popoverRect.width >= maxWidth - 1) {
+            const viewportWidth = document.documentElement.clientWidth;
+            const centeredLeft = (viewportWidth - popoverRect.width) / 2;
+            listContainerEl.style.left = `${Math.max(centeredLeft, minLeft)}px`;
+          } else {
+            listContainerEl.style.left = `${Math.max(left, minLeft)}px`;
+          }
+        };
+        const cleanup = visibleRectEffect(anchor, ({ visibilityRatio }) => {
+          if (visibilityRatio <= 0.2) {
+            listContainerEl.setAttribute("data-anchor-hidden", "");
+            return;
+          }
+          listContainerEl.removeAttribute("data-anchor-hidden");
+          positionPopover();
+        });
+        cleanupRef.current = () => cleanup.disconnect();
+        dispatchPublicCustomEvent(listEl, "navi_list_open", {
+          event: e,
+        });
+      }}
+      onnavi_list_request_close={(e) => {
+        const listEl = e.currentTarget;
+        const listContainerEl = listEl.closest(".navi_list_container");
+        cleanupRef.current?.();
+        listContainerEl.removeAttribute("data-anchor-hidden");
+        listContainerEl.hidePopover();
+        dispatchPublicCustomEvent(listEl, "navi_list_close", {
+          event: e,
+        });
+      }}
+    />
+  );
+};
 
 /**
  * ListItem — a trackable item that participates in virtualization.
@@ -395,18 +1182,145 @@ const LIST_PSEUDO_CLASSES = [
  *   ...rest   — forwarded to the rendered <li> element
  */
 export const ListItem = (props) => {
+  if (props.role === "presentation") {
+    return <ListItemPresentation {...props} />;
+  }
+  return <ListItemRealOrVoid {...props} />;
+};
+const ListItemPresentation = (props) => {
+  return <Box as="li" {...props} />;
+};
+const ListItemRealOrVoid = (props) => {
+  if (props.id === undefined) {
+    console.warn(
+      "ListItem is missing an explicit id prop. Provide a stable id so pointed/selected state survives search reordering.",
+    );
+  }
+  if (props.index === undefined) {
+    console.warn(
+      "ListItem is missing an explicit index prop. Provide an index so item ordering is stable regardless of render order.",
+    );
+  }
   const idDefault = useId();
   props.id = props.id || idDefault;
-  const { children, id, index, hidden, filtered, selected, value, ...rest } =
-    props;
+  const renderWindow = useContext(RenderWindowContext);
+  const tracker = useContext(ListItemTrackerContext);
+  const item = props;
+  const visibleIndex = tracker.useTrackItem(item);
+  const groupTracker = useContext(GroupItemTrackerContext);
+  const groupVisibleIndex = groupTracker
+    ? groupTracker.useTrackItem(item)
+    : null;
+  const separator = useContext(SeparatorContext);
+
+  if (props.filtered) {
+    return null;
+  }
+  // html-hidden items: excluded from virtual scroll accounting but always in DOM
+  if (props.hidden) {
+    return <ListItemReal {...props} />;
+  }
+  if (visibleIndex === -1) {
+    return null;
+  }
+  if (visibleIndex < renderWindow.start || visibleIndex >= renderWindow.end) {
+    return <ListItemVoid />;
+  }
+  const listItemVnode = <ListItemReal {...props} />;
+  // Use group-scoped visible index for separator when inside a group,
+  // so separators are only rendered between items within the same group.
+  const separatorIndex =
+    groupVisibleIndex !== null ? groupVisibleIndex : visibleIndex;
+  if (!separator || separatorIndex === 0) {
+    return listItemVnode;
+  }
+
+  const separatorVnode =
+    typeof separator === "function" ? separator(separatorIndex - 1) : separator;
   return (
-    <li id={props.id} {...rest}>
-      {children}
-    </li>
+    <>
+      {separatorVnode}
+      {listItemVnode}
+    </>
   );
 };
+// When an item is outside the render window it cannot render a DOM node.
+// If it wants to scroll into view it sets scrollTop so the scroll event
+// shifts the window; once the item mounts as ListItemReal its layout effect
+// calls scrollIntoViewWithStickyAwareness to fine-tune the position.
+const ListItemVoid = () => {
+  return null;
+};
+const ListItemReal = (props) => {
+  const defaultRef = useRef(null);
+  props.ref = props.ref || defaultRef;
+  const { ref, id, hidden, highlight, children, ...rest } = props;
+  const pendingScrollRef = useContext(PendingScrollRefContext);
+  const pendingScroll = pendingScrollRef.current;
+  const needScrollOnMount = pendingScroll && pendingScroll.id === id;
+  useLayoutEffect(() => {
+    if (!needScrollOnMount) {
+      return;
+    }
+    const itemEl = ref.current;
+    if (!itemEl) {
+      return;
+    }
+    pendingScroll.resolve(itemEl);
+  }, [needScrollOnMount]);
 
+  // CSS Highlight API: mark matching text ranges when highlight prop is set.
+  useSearchHighlight(ref, highlight, [children, hidden]);
+
+  return (
+    <Box
+      as="li"
+      baseClassName="navi_list_item"
+      styleCSSVars={LIST_ITEM_STYLE_CSS_VARS}
+      pseudoClasses={LIST_ITEM_PSEUDO_CLASSES}
+      pseudoElements={LIST_ITEM_PSEUDO_ELEMENTS}
+      id={id}
+      navi-list-item-real=""
+      {...rest}
+      hidden={hidden}
+      ref={ref}
+    >
+      <InsideRealListItemContext.Provider value={true}>
+        {children}
+      </InsideRealListItemContext.Provider>
+    </Box>
+  );
+};
+const LIST_ITEM_STYLE_CSS_VARS = {
+  "paddingX": "--list-item-padding-x",
+  "paddingY": "--list-item-padding-y",
+  "padding": "--list-item-padding",
+  "color": "--list-item-color",
+  "backgroundColor": "--list-item-background-color",
+  "fontWeight": "--list-item-font-weight",
+  ":-navi-pointed": {
+    color: "--list-item-color-keyboard-pointed",
+    backgroundColor: "--list-item-background-color-keyboard-pointed",
+  },
+  ":hover": {
+    color: "--list-item-color-hover",
+    backgroundColor: "--list-item-background-color-hover",
+  },
+  ":-navi-selected": {
+    color: "--list-item-color-selected",
+    backgroundColor: "--list-item-background-color-selected",
+  },
+  ":disabled": {
+    color: "--list-item-color-disabled",
+    backgroundColor: "--list-item-background-color-disabled",
+  },
+  "::highlight": {
+    color: "--suggestion-color-highlight",
+    backgroundColor: "--suggestion-background-color-highlight",
+  },
+};
 export const LIST_ITEM_PSEUDO_CLASSES = [];
+const LIST_ITEM_PSEUDO_ELEMENTS = ["::highlight"];
 
 /**
  * ListGroup — a labeled group of list items.
@@ -426,6 +1340,7 @@ export const ListItemGroup = ({
   ...rest
 }) => {
   const groupId = useId();
+  const groupTracker = useItemTracker();
   const groupRef = useRef(null);
   const labelRef = useRef(null);
   useDisplayedLayoutEffect(
@@ -466,7 +1381,9 @@ export const ListItemGroup = ({
         role="group"
         aria-labelledby={groupId}
       >
-        {children}
+        <GroupItemTrackerContext.Provider value={groupTracker}>
+          {children}
+        </GroupItemTrackerContext.Provider>
       </ul>
     </ListItem>
   );
