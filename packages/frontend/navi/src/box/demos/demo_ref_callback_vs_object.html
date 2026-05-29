@@ -141,8 +141,6 @@
         dispatchRequestSetUIState,
       } from "@jsenv/navi/src/control/ui_state_controller.js";
       import { Box } from "@jsenv/navi/src/box/box.jsx";
-      import { focusFirstAutofocusOrFocusable } from "@jsenv/navi/src/utils/focus/focus_first_autofocus_or_focusable.js";
-
       import {
         createComponentResolver,
         useNextResolver,
@@ -171,7 +169,7 @@
         };
 
         return (
-          <Box
+          <dialog
             {...rest}
             as="dialog"
             id={id}
@@ -201,7 +199,7 @@
             }}
           >
             {children}
-          </Box>
+          </dialog>
         );
       };
 
