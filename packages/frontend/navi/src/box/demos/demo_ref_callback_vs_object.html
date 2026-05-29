@@ -280,13 +280,7 @@
         const onClose = (e) => {
           expandedRef.current = false;
           setExpanded(false);
-          const pickerEl = ref.current;
-          const inputEl = getPickerInput(pickerEl);
-          const valueAtClose = getPickerInputUIState(pickerEl);
-          if (!compareTwoJsValues(valueAtClose, valueAtOpenRef.current)) {
-            // Simplified: just trigger a re-render via props.action instead of dispatchRequestAction
-            props.action?.(valueAtClose);
-          }
+          props.action?.("dummy");
         };
 
         const disableClickFor = useIgnoreClickForMousedown();
