@@ -174,7 +174,7 @@
 
       // ── MockPickerButton (= PickerButton) ──────────────────────────────────────
       const MockPickerButton = (props) => {
-        const { ref, popupProps, children } = props;
+        const { ref, children } = props;
         const inputRef = useRef(null);
         const [inputProps, pickerRemainingProps] = useControlProps(
           { ...props, ref: inputRef },
@@ -228,7 +228,7 @@
         const popupRef = useRef(null);
         popupProps.ref = popupRef;
 
-        const onClose = (e) => {
+        const onClose = () => {
           props.action?.("dummy");
         };
 
@@ -236,11 +236,6 @@
           dispatchCustomEvent(popupRef.current, "navi_request_open", {
             event: e,
             anchor: ref.current,
-          });
-        };
-        const requestClose = (e = new CustomEvent("programmatic")) => {
-          dispatchCustomEvent(popupRef.current, "navi_request_close", {
-            event: e,
           });
         };
 
