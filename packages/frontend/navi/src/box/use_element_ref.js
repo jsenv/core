@@ -27,6 +27,8 @@ export const useComposeElementRef = (syncElement, externalRef) => {
   const elRef = useRef(null);
   const prevSyncElementRef = useRef(undefined);
   const refCallbackRef = useRef(null);
+  const externalRefRef = useRef(externalRef);
+  externalRefRef.current = externalRef;
 
   const runSync = (el) => {
     if (cleanupRef.current) {
@@ -51,11 +53,12 @@ export const useComposeElementRef = (syncElement, externalRef) => {
       // Keep .current in sync immediately so useEffect callbacks that read
       // ref.current (e.g. usePartiallyHidden) see the element, not null.
       refCallback.current = el;
-      if (externalRef) {
-        if (typeof externalRef === "function") {
-          externalRef(el);
+      const currentExternalRef = externalRefRef.current;
+      if (currentExternalRef) {
+        if (typeof currentExternalRef === "function") {
+          currentExternalRef(el);
         } else {
-          externalRef.current = el;
+          currentExternalRef.current = el;
         }
       }
       if (el) {

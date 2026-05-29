@@ -703,7 +703,7 @@ const useListScrollSync = ({
         });
       }
     },
-    [],
+    [ref],
   );
   // Watch scores of the top renderBudget items.
   // When scores change during an active search, scroll to top to reveal the most relevant items.
@@ -851,7 +851,7 @@ const useListScrollSync = ({
         passive: true,
       });
     };
-  }, [renderBudget]);
+  }, [ref, renderBudget]);
 
   return {
     virtualItemHeightSignal,

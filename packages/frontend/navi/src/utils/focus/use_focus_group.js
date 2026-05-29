@@ -33,5 +33,5 @@ export const useFocusGroup = (
       ySelector,
     });
     return focusGroup.cleanup;
-  }, [direction, wrap, skipTab, name, xSelector, ySelector]);
+  }, [elementRef, direction, wrap, skipTab, name, xSelector, ySelector]);
 };

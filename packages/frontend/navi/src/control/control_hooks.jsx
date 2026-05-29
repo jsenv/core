@@ -234,18 +234,21 @@ export const useControlProps = (
       } else {
         e.preventDefault();
       }
+      lastEventRequestingActionRef.current = e;
+      lastActionValueRef.current = field.value;
+      dispatchRequestAction(field, { event: e });
     };
     const refCallback = useCallback(
-      (input) => {
+      (field) => {
         if (actionInteraction === "manual") {
           return undefined;
         }
         return addInputEffect(
-          input,
+          field,
           (e) => {
             lastEventRequestingActionRef.current = e;
-            lastActionValueRef.current = input.value;
-            dispatchRequestAction(input, { event: e });
+            lastActionValueRef.current = field.value;
+            dispatchRequestAction(field, { event: e });
           },
           {
             waitForChange: actionAfterChange,
@@ -256,9 +259,9 @@ export const useControlProps = (
       },
       [actionInteraction, actionAfterChange, actionDebounce],
     );
-    const refComposed = useComposeElementRef(refCallback, ref);
+    //  const refComposed = useComposeElementRef(refCallback, ref);
     Object.assign(controlProps, {
-      ref: refComposed,
+      //  ref: refComposed,
       onMouseDown,
       onClick,
       onKeyDown,
@@ -398,8 +401,14 @@ const useInteractiveProps = (
   props,
   { readOnlySupported, boundAction, uiStateController, getUIValue },
 ) => {
-  const controlProps = {};
-  let remainingProps = {};
+  const { ref } = props;
+  const controlProps = {
+    ref,
+    "navi-control-host": "",
+  };
+  let remainingProps = {
+    "navi-control": "",
+  };
   const propKeySet = new Set(Object.keys(props));
   for (const key of propKeySet) {
     if (controlPropSet.has(key)) {
@@ -407,7 +416,6 @@ const useInteractiveProps = (
       remainingProps[key] = props[key];
     }
   }
-
   const actionStatus = useActionStatus(boundAction);
   const controlToInterfaceContext = useContext(ControlToInterfaceContext);
   const controlName = useContext(ControlNameContext);
@@ -419,10 +427,6 @@ const useInteractiveProps = (
   const debugAction = useDebugAction();
   const debugInteraction = useDebugInteraction();
   const debugFocus = useDebugFocus();
-
-  const { ref } = props;
-  Object.assign(controlProps, { ref, "navi-control-host": "" });
-  remainingProps["navi-control"] = "";
 
   autofocus: {
     const { autoFocus, autoFocusVisible, autoSelect } = props;

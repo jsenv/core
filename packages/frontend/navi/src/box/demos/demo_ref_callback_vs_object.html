@@ -205,10 +205,7 @@
         const selectedSignal = useSignal();
 
         const simulateNarrow = () => {
-          windowWidthSignal.value = 1200;
-          setTimeout(() => {
-            windowWidthSignal.value = 536;
-          }, 16);
+          windowWidthSignal.value = 536;
         };
 
         return (

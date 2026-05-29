@@ -53,7 +53,7 @@
 
 import { normalizeStyles } from "@jsenv/dom";
 import { createContext, isValidElement, toChildArray } from "preact";
-import { useCallback, useContext } from "preact/hooks";
+import { useCallback, useContext, useRef } from "preact/hooks";
 
 import { withPropsClassName } from "../utils/with_props_class_name.js";
 import { BoxFlowContext } from "./box_flow_context.jsx";
@@ -174,6 +174,7 @@ const PSEUDO_STATE_CHILD_PROP_SET = new Set(["tabIndex", "tabindex"]);
 
 export const Box = (props) => {
   const {
+    ref,
     as = "div",
     baseClassName,
     className,
@@ -209,7 +210,6 @@ export const Box = (props) => {
     separator,
     ...rest
   } = props;
-  let ref;
   const TagName = as;
 
   const defaultDisplay = getDefaultDisplay(TagName);
@@ -288,13 +288,10 @@ export const Box = (props) => {
   const boxFlowIsDefault = boxFlow === defaultDisplay;
 
   const remainingPropKeySet = new Set(Object.keys(rest));
-  // some props not destructured but that are neither
-  // style props, nor should be forwarded to the child
-  remainingPropKeySet.delete("ref");
-
   const innerClassName = withPropsClassName(baseClassName, className);
   const selfForwardedProps = {};
   const childForwardedProps = {};
+  let finalRef;
   styling: {
     const styleDeps = [
       // Layout and alignment props
@@ -682,9 +679,23 @@ export const Box = (props) => {
           visualEl === pseudoStateEl ? null : visualEl,
       });
     }, styleDeps);
-    ref = useComposeElementRef(syncBox, props.ref);
-
-    usePartiallyHidden(ref, Boolean(rest.viewTransitionName));
+    const externalRefRef = useRef(ref);
+    externalRefRef.current = ref;
+    const refCallbackRef = useRef(null);
+    if (!refCallbackRef.current) {
+      refCallbackRef.current = (el) => {
+        const currentRef = externalRefRef.current;
+        if (currentRef) {
+          if (typeof currentRef === "function") {
+            currentRef(el);
+          } else {
+            currentRef.current = el;
+          }
+        }
+      };
+    }
+    finalRef = refCallbackRef.current;
+    usePartiallyHidden(finalRef, Boolean(rest.viewTransitionName));
   }
 
   let innerChildren = children;
@@ -708,7 +719,7 @@ export const Box = (props) => {
 
   return (
     <TagName
-      ref={ref}
+      ref={finalRef}
       className={innerClassName}
       navi-box-flow={boxFlowIsDefault ? undefined : boxFlow}
       navi-box-flow-row={row ? "" : undefined}
