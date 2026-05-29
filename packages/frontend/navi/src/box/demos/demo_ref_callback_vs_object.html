@@ -157,7 +157,6 @@
         const open = (e) => {
           const dialogEl = ref.current;
           dialogEl.showModal();
-          rest.onnavi_open?.(e);
         };
         const close = (e) => {
           const dialogEl = ref.current;
@@ -279,23 +278,12 @@
           valueAtOpenRef.current = getPickerInputUIState(ref.current);
         };
         const onClose = (e) => {
-          const cancelEvent = findEvent(
-            e,
-            (eInChain) =>
-              eInChain.type === "navi_request_close" && eInChain.detail.cancel,
-          );
-          const isCancel = Boolean(cancelEvent);
           expandedRef.current = false;
           setExpanded(false);
           const pickerEl = ref.current;
           const inputEl = getPickerInput(pickerEl);
-          const valueAtOpen = valueAtOpenRef.current;
-          if (isCancel) {
-            dispatchRequestSetUIState(inputEl, valueAtOpen, { event: e });
-            return;
-          }
           const valueAtClose = getPickerInputUIState(pickerEl);
-          if (!compareTwoJsValues(valueAtClose, valueAtOpen)) {
+          if (!compareTwoJsValues(valueAtClose, valueAtOpenRef.current)) {
             dispatchRequestAction(inputEl, { event: e, uiState: valueAtClose });
           }
         };
