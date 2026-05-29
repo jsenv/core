@@ -386,7 +386,7 @@ const ListUI = (props) => {
     },
   });
 
-  const { renderWindow, scrollToItem, pendingScrollRef } = useListScrollSync({
+  const { renderWindow, pendingScrollRef } = useListScrollSync({
     containerRef,
     ref,
     tracker,
@@ -414,10 +414,6 @@ const ListUI = (props) => {
         if (!item) {
           return;
         }
-        scrollToItem(item, {
-          event: e,
-          reason: "navi_request_scroll",
-        });
       }}
     >
       <ListContent
@@ -514,101 +510,14 @@ const useListScrollSync = ({ containerRef, ref, tracker, renderBudget }) => {
   };
 
   const pendingScrollRef = useRef();
-  const scrollToItem = (item, { event, reason }) => {
-    if (!item) {
-      return;
-    }
-    const items = tracker.itemsSignal.peek();
-    const itemCount = items.length;
-    if (itemCount === 0) {
-      return;
-    }
-    let index = items.findIndex((i) => i.id === item.id);
-    if (index === -1) {
-      return;
-    }
-    if (index >= itemCount) {
-      index = itemCount - 1;
-    }
-
-    const scrollItemIntoView = (itemEl) => {
-      const trigger = `"${event.type}" on ${getElementSignature(event.target)} (${reason})`;
-      const block = event.type === "keydown" ? "nearest" : "center";
-      const scrollToItemCall = `${getElementSignature(itemEl)}.scrollIntoView({ block: "${block}", container: "nearest" })`;
-      const listScrollContainerEl = containerRef.current.querySelector(
-        `.navi_list_scroll_container`,
-      );
-      debugScroll(`${trigger} -> ${scrollToItemCall}`);
-      scrollIntoViewScoped(itemEl, {
-        container: listScrollContainerEl,
-        block,
-      });
-      const listEl = ref.current;
-      dispatchPublicCustomEvent(listEl, "navi_list_scroll", {
-        event,
-        item,
-      });
-    };
-
-    // Dispatch navi_list_nav immediately — do not wait for scroll to complete.
-    const listEl = ref.current;
-    dispatchPublicCustomEvent(listEl, "navi_list_nav", {
-      event,
-      item,
-    });
-
-    const { start, end } = renderWindowRef.current;
-    const isInWindow = index >= start && index < end;
-    if (isInWindow) {
-      const itemEl = document.getElementById(item.id);
-      if (itemEl) {
-        scrollItemIntoView(itemEl);
-        return;
-      }
-    }
-    // Not in DOM — shift the render window. The item will read
-    // pendingScrollRef on mount and scroll into view.
-    pendingScrollRef.current = {
-      id: item.id,
-      resolve: (itemEl) => {
-        pendingScrollRef.current = null;
-        scrollItemIntoView(itemEl);
-      },
-    };
-    const half = Math.floor(renderBudget / 2);
-    const newStart = Math.max(0, index - half);
-    const newEnd = newStart + renderBudget;
-    updateRenderWindow(
-      newStart,
-      newEnd,
-      `item to scroll (at ${index}) is out of render window`,
-    );
-  };
 
   // Scroll to the selected item when the list is first presented on screen.
   // Skipped when inside a closed <dialog>/<details> (scrollIntoView is a no-op
   // on hidden elements); re-runs automatically every time the ancestor opens.
-  useDisplayedLayoutEffect(
-    containerRef,
-    (el, openEvent) => {
-      const items = tracker.itemsSignal.peek();
-      const firstSelected = items.find((i) => i.selected);
-      if (firstSelected) {
-        scrollToItem(firstSelected, {
-          event: openEvent,
-          reason: "scroll to selected",
-        });
-      } else {
-        scrollToItem(items[0], {
-          event: new CustomEvent("navi_list_nav_top_on_displayed", {
-            detail: { originalEvent: openEvent },
-          }),
-          reason: "scroll to top (no selected item)",
-        });
-      }
-    },
-    [ref],
-  );
+  useDisplayedLayoutEffect(containerRef, () => {
+    const listEl = ref.current;
+    console.log(listEl.dispatchEvent);
+  }, [ref]);
 
   // Scroll listener — slides the window as the user scrolls.
   useLayoutEffect(() => {
@@ -664,7 +573,6 @@ const useListScrollSync = ({ containerRef, ref, tracker, renderBudget }) => {
   return {
     renderWindow,
     pendingScrollRef,
-    scrollToItem,
   };
 };
 // Returns the item located at the current scroll position of a list container.
