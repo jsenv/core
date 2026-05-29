@@ -148,13 +148,6 @@
         useNextResolver,
       } from "@jsenv/navi/src/resolver/resolver.jsx";
 
-      // MockPopover: no visibility state, always visible, just calls callbacks.
-      const MockPopover = (props) => {
-        const { children } = props;
-
-        return <div>{children}</div>;
-      };
-
       const useIgnoreClickForMousedown = () => {
         const disableClickFor = () => {
           const suppressClick = (clickEvent) => {
@@ -377,13 +370,7 @@
         }
         return (
           <Next aria-haspopup="listbox" {...pickerProps}>
-            <MockPopover
-              {...popupProps}
-              className="navi_picker_popover"
-              scrollTrap={true}
-            >
-              {pickerProps.children}
-            </MockPopover>
+            <div>{pickerProps.children}</div>
           </Next>
         );
       };
