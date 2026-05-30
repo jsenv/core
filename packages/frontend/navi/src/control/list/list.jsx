@@ -364,10 +364,9 @@ const ListUI = (props) => {
   // lockSize: capture the container's dimensions on first render so filtering
   // cannot collapse the layout. Measurement happens on the initial (unfiltered)
   // state because the parent controls hidden props before any search is applied.
-  const containerRef = useRef(null);
   const sizeLocked = useRef(false);
   useDisplayedLayoutEffect(
-    containerRef,
+    ref,
     (listContainerEl) => {
       if (!lockSize) {
         return undefined;
@@ -415,7 +414,6 @@ const ListUI = (props) => {
     scrollToItem,
     pendingScrollRef,
   } = useListScrollSync({
-    containerRef,
     ref,
     tracker,
     renderBudget,
@@ -433,7 +431,7 @@ const ListUI = (props) => {
   return (
     <Box
       {...rest}
-      ref={containerRef}
+      ref={ref}
       baseClassName="navi_list_container"
       popover={popover}
       data-expand-x={expandX || expand ? "" : undefined}
@@ -445,6 +443,10 @@ const ListUI = (props) => {
       hasChildUsingForwardedProps
       onnavi_request_scroll={(e) => {
         if (!Object.hasOwn(e.detail, "id")) {
+          console.warn(
+            `navi_request_scroll event is missing the "id" property in its detail.`,
+            e,
+          );
           return;
         }
         const { id } = e.detail;
@@ -456,7 +458,6 @@ const ListUI = (props) => {
       }}
     >
       <ListContent
-        ref={ref}
         innerId={innerId}
         role={role}
         fallback={fallback}
@@ -476,7 +477,6 @@ const ListUI = (props) => {
   );
 };
 const ListContent = ({
-  ref,
   innerId,
   role,
   fallback,
@@ -495,7 +495,6 @@ const ListContent = ({
   return (
     <div className="navi_list_scroll_container">
       <UnorderedList
-        ref={ref}
         id={innerId}
         role={role}
         fallback={fallback}
@@ -532,7 +531,6 @@ const LIST_PSEUDO_CLASSES = [
   ":-navi-expanded",
 ];
 const useListScrollSync = ({
-  containerRef,
   ref,
   tracker,
   renderBudget,
@@ -584,7 +582,7 @@ const useListScrollSync = ({
       const trigger = `"${event.type}" on ${getElementSignature(event.target)} (${reason})`;
       const block = event.type === "keydown" ? "nearest" : "center";
       const scrollToItemCall = `${getElementSignature(itemEl)}.scrollIntoView({ block: "${block}", container: "nearest" })`;
-      const listScrollContainerEl = containerRef.current.querySelector(
+      const listScrollContainerEl = ref.current.querySelector(
         `.navi_list_scroll_container`,
       );
       debugScroll(`${trigger} -> ${scrollToItemCall}`);
@@ -592,7 +590,7 @@ const useListScrollSync = ({
         container: listScrollContainerEl,
         block,
       });
-      const listEl = ref.current;
+      const listEl = ref.current.querySelector(".navi_list");
       dispatchPublicCustomEvent(listEl, "navi_scroll", {
         event,
         item,
@@ -629,8 +627,7 @@ const useListScrollSync = ({
 
   const currentScrollRef = useRef(null);
   const updateCurrentScroll = () => {
-    const listContainerEl = containerRef.current;
-    const listScrollContainerEl = listContainerEl.querySelector(
+    const listScrollContainerEl = ref.current.querySelector(
       `.navi_list_scroll_container`,
     );
     const currentScrollLeft = listScrollContainerEl.scrollLeft;
@@ -661,7 +658,7 @@ const useListScrollSync = ({
   // Skipped when inside a closed <dialog>/<details> (scrollIntoView is a no-op
   // on hidden elements); re-runs automatically every time the ancestor opens.
   useDisplayedLayoutEffect(
-    containerRef,
+    ref,
     (el, openEvent) => {
       updateCurrentScroll();
       const items = tracker.itemsSignal.peek();
@@ -695,13 +692,12 @@ const useListScrollSync = ({
   const savedScrollRef = useRef(null);
   const topMatchScoresKeyRef = useRef("");
   useLayoutEffect(() => {
-    const listContainerEl = containerRef.current;
-    if (!listContainerEl) {
-      return undefined;
-    }
-    const listScrollContainerEl = listContainerEl.querySelector(
+    const listScrollContainerEl = ref.current?.querySelector(
       `.navi_list_scroll_container`,
     );
+    if (!listScrollContainerEl) {
+      return undefined;
+    }
     if (!searchText) {
       // no search -> try to restore scroll position
       topMatchScoresKeyRef.current = "";
@@ -740,7 +736,7 @@ const useListScrollSync = ({
           left: savedScroll.left,
           top: savedScroll.top,
         });
-        const listEl = ref.current;
+        const listEl = ref.current.querySelector(".navi_list");
         dispatchPublicCustomEvent(listEl, "navi_scroll", {
           item,
           event: new CustomEvent("navi_scroll_restore"),
@@ -779,7 +775,7 @@ const useListScrollSync = ({
 
   // Scroll listener — slides the window as the user scrolls.
   useLayoutEffect(() => {
-    const listContainerEl = containerRef.current;
+    const listContainerEl = ref.current;
     if (!listContainerEl) {
       return undefined;
     }
@@ -926,7 +922,7 @@ const useVirtualItemHeightSignal = (ref, virtualItemHeightProp = 0) => {
     if (virtualHeightSignal.peek() !== 0) {
       return;
     }
-    const listEl = ref.current;
+    const listEl = ref.current?.querySelector(".navi_list");
     if (!listEl) {
       return;
     }

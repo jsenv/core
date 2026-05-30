@@ -213,6 +213,7 @@ export const SelectableList = (props) => {
       selectedIndicator={undefined}
       multiple={undefined}
       onnavi_request_select={(e) => {
+        debugger;
         const { id } = e.detail;
         if (id === undefined) {
           return;
