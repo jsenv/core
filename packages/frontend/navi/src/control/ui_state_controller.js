@@ -198,6 +198,7 @@ export const useUIStateController = (
       }
     },
 
+    id,
     componentType,
     isProxy,
     allowNameless,
@@ -628,6 +629,14 @@ export const useUIGroupStateController = (
       for (const childUIStateController of childUIStateControllerArray) {
         childUIStateController.actionEnd(e);
       }
+    },
+    findChildById: (id) => {
+      for (const childUIStateController of childUIStateControllerArray) {
+        if (childUIStateController.id === id) {
+          return childUIStateController;
+        }
+      }
+      return null;
     },
     subscribe: subscribeUIState,
   };

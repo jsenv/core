@@ -362,35 +362,85 @@
 
       // ── External control ───────────────────────────────────────────────────────
 
+      const EXTERNAL_CTRL_FRUITS = [
+        "Apple",
+        "Banana",
+        "Cherry",
+        "Date",
+        "Elderberry",
+        "Fig",
+        "Grape",
+        "Honeydew",
+        "Kiwi",
+        "Lemon",
+        "Mango",
+        "Nectarine",
+        "Orange",
+        "Papaya",
+        "Quince",
+        "Raspberry",
+        "Strawberry",
+        "Tangerine",
+        "Ugli fruit",
+        "Vanilla bean",
+        "Watermelon",
+        "Ximenia",
+        "Yuzu",
+        "Zucchini",
+        "Açaí",
+        "Blackberry",
+        "Cantaloupe",
+        "Dragonfruit",
+        "Feijoa",
+        "Gooseberry",
+        "Jackfruit",
+        "Kumquat",
+        "Longan",
+        "Mulberry",
+        "Persimmon",
+      ];
+
       const ExternalControlDemo = () => {
         const listRef = useRef(null);
-        const [selectedSingle, setSelectedSingle] = useState("Apple");
-        const [targetFruit, setTargetFruit] = useState(FRUITS[0]);
+        const [selected, setSelected] = useState("Apple");
+        const [actionLog, setActionLog] = useState([]);
+        const [targetFruit, setTargetFruit] = useState(EXTERNAL_CTRL_FRUITS[0]);
         return (
           <div id="external-control" className="demo-section">
             <h2>External control</h2>
             <p>
               External UI can programmatically select or unselect items using{" "}
               <code>dispatchRequestSelect</code> and{" "}
-              <code>dispatchRequestUnselect</code>, which dispatch{" "}
-              <code>navi_request_select</code> /{" "}
-              <code>navi_request_unselect</code> on the list.
+              <code>dispatchRequestUnselect</code>. The list uses{" "}
+              <code>renderBudget={"{30}"}</code> so some items are not in the
+              DOM at any given time — the select/unselect still works via the
+              in-memory UI state controller.
             </p>
             <div className="two-col">
               <div>
-                <div className="col-label">List</div>
+                <div className="col-label">
+                  List (renderBudget=30, {EXTERNAL_CTRL_FRUITS.length} items)
+                </div>
                 <SelectableList
                   ref={listRef}
-                  action={(v) => setSelectedSingle(v)}
+                  renderBudget={30}
+                  action={(v) => {
+                    setSelected(v);
+                    setActionLog((prev) => [
+                      `action → ${v ?? "(none)"}`,
+                      ...prev.slice(0, 9),
+                    ]);
+                  }}
                   expandX
+                  style={{ maxHeight: 200, overflowY: "auto" }}
                 >
-                  {FRUITS.map((fruit, i) => (
+                  {EXTERNAL_CTRL_FRUITS.map((fruit, i) => (
                     <Selectable
                       key={fruit}
                       index={i}
-                      id={`ext_s_${fruit.toLowerCase()}`}
+                      id={`ext_s_${fruit.toLowerCase().replaceAll(" ", "_")}`}
                       value={fruit}
-                      selected={selectedSingle === fruit}
+                      selected={selected === fruit}
                       flex
                       spacing="s"
                     >
@@ -400,7 +450,7 @@
                   ))}
                 </SelectableList>
                 <div className="value-display">
-                  {selectedSingle ?? "(none)"}
+                  Selected: {selected ?? "(none)"}
                 </div>
               </div>
               <div>
@@ -417,7 +467,7 @@
                       border: "1px solid #ccc",
                     }}
                   >
-                    {FRUITS.map((f) => (
+                    {EXTERNAL_CTRL_FRUITS.map((f) => (
                       <option key={f} value={f}>
                         {f}
                       </option>
@@ -427,7 +477,7 @@
                     <Button
                       onClick={() =>
                         dispatchRequestSelect(listRef.current, {
-                          value: targetFruit,
+                          id: targetFruit,
                         })
                       }
                     >
@@ -436,12 +486,20 @@
                     <Button
                       onClick={() =>
                         dispatchRequestUnselect(listRef.current, {
-                          value: targetFruit,
+                          id: targetFruit,
                         })
                       }
                     >
                       Unselect
                     </Button>
+                  </div>
+                  <div className="col-label" style={{ marginTop: 8 }}>
+                    Action log
+                  </div>
+                  <div className="value-display" style={{ minHeight: 80 }}>
+                    {actionLog.length === 0
+                      ? "(no action yet)"
+                      : actionLog.map((entry, i) => <div key={i}>{entry}</div>)}
                   </div>
                 </div>
               </div>

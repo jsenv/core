@@ -23,10 +23,6 @@ import { useControlgroupProps } from "../control_hooks.jsx";
 import { Field } from "../field.jsx";
 import { Input } from "../input/input.jsx";
 import { useCheckableProps } from "../input/use_checkable_props.js";
-import {
-  dispatchRequestSetUIState,
-  getUIStateFromElement,
-} from "../ui_state_controller.js";
 import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
 import { List, LIST_ITEM_PSEUDO_CLASSES, ListItem } from "./list.jsx";
 
@@ -170,33 +166,34 @@ export const SelectableList = (props) => {
     focusGroupDirection,
     focusGroupWrap,
   } = props;
-  const [listControlProps, remainingProps] = useControlgroupProps(props, {
-    controlType: multiple ? "checkbox_group" : "radio_group",
-    childComponentType: multiple ? "checkbox" : "radio",
-    aggregateChildStates: multiple
-      ? (childUIStateControllers) => {
-          const values = [];
-          for (const childUIStateController of childUIStateControllers) {
-            if (childUIStateController.uiState) {
-              values.push(childUIStateController.uiState);
+  const [listControlProps, remainingProps, uiGroupStateController] =
+    useControlgroupProps(props, {
+      controlType: multiple ? "checkbox_group" : "radio_group",
+      childComponentType: multiple ? "checkbox" : "radio",
+      aggregateChildStates: multiple
+        ? (childUIStateControllers) => {
+            const values = [];
+            for (const childUIStateController of childUIStateControllers) {
+              if (childUIStateController.uiState) {
+                values.push(childUIStateController.uiState);
+              }
             }
+            // Return a stable empty-array reference when nothing is selected so
+            // the action always receives an array (never undefined) and signal
+            // comparisons don't see a new reference on every render.
+            return values.length === 0 ? EMPTY_SELECTION : values;
           }
-          // Return a stable empty-array reference when nothing is selected so
-          // the action always receives an array (never undefined) and signal
-          // comparisons don't see a new reference on every render.
-          return values.length === 0 ? EMPTY_SELECTION : values;
-        }
-      : (childUIStateControllers) => {
-          let activeValue;
-          for (const childUIStateController of childUIStateControllers) {
-            if (childUIStateController.uiState) {
-              activeValue = childUIStateController.uiState;
-              break;
+        : (childUIStateControllers) => {
+            let activeValue;
+            for (const childUIStateController of childUIStateControllers) {
+              if (childUIStateController.uiState) {
+                activeValue = childUIStateController.uiState;
+                break;
+              }
             }
-          }
-          return activeValue;
-        },
-  });
+            return activeValue;
+          },
+    });
   useFocusGroup(ref, {
     direction: focusGroupDirection,
     wrap: focusGroupWrap,
@@ -217,36 +214,25 @@ export const SelectableList = (props) => {
       multiple={undefined}
       onnavi_request_select={(e) => {
         const { id } = e.detail;
-        if (!id) {
+        if (id === undefined) {
           return;
         }
-        const listEl = e.currentTarget;
-        dispatchCustomEvent(listEl, "navi_request_scroll", {
-          event: e,
-          id,
-        });
-        // TODO: we should be updating the item checked state here it's not the case for now
+        const childController = uiGroupStateController.findChildById(id);
+        if (!childController) {
+          return;
+        }
+        childController.setUIState(true, e);
       }}
       onnavi_request_unselect={(e) => {
         const { id } = e.detail;
-        const listEl = e.currentTarget;
-        const valueStr = String(value);
-        const realInput = listEl.querySelector(
-          `[navi-selectable-real-input][value="${valueStr.replaceAll('"', '\\"')}"]`,
-        );
-        if (realInput) {
-          dispatchRequestSetUIState(realInput, false, { event });
+        if (id === undefined) {
+          return;
         }
-        // TODO: we should not be updating the ui state like this
-        // instead as the item becomes unselected the selectable list would realize it's no more selected
-        // (as it listens every child ui state controller changes)
-        // and naturally dispatch the uiAction/action
-        const currentUIState = getUIStateFromElement(listEl) ?? [];
-        const newUIState = currentUIState.filter((v) => String(v) !== valueStr);
-        dispatchRequestAction(listEl, {
-          event,
-          uiState: newUIState,
-        });
+        const childController = uiGroupStateController.findChildById(id);
+        if (!childController) {
+          return;
+        }
+        childController.setUIState(false, e);
       }}
     />
   );
@@ -258,16 +244,16 @@ export const SelectableList = (props) => {
   );
 };
 
-export const dispatchRequestSelect = (itemEl, { event, value } = {}) => {
+export const dispatchRequestSelect = (itemEl, { event, id } = {}) => {
   return dispatchCustomEvent(itemEl, "navi_request_select", {
     event,
-    value,
+    id,
   });
 };
-export const dispatchRequestUnselect = (listEl, { event, value }) => {
+export const dispatchRequestUnselect = (listEl, { event, id }) => {
   return dispatchCustomEvent(listEl, "navi_request_unselect", {
     event,
-    value,
+    id,
   });
 };
 

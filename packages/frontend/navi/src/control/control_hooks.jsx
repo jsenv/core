@@ -348,6 +348,7 @@ export const useControlgroupProps = (
       },
     },
     remainingProps,
+    uiGroupStateController,
   ];
 };
 
