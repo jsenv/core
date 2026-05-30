@@ -213,12 +213,13 @@ export const SelectableList = (props) => {
       selectedIndicator={undefined}
       multiple={undefined}
       onnavi_request_select={(e) => {
-        debugger;
         const { id } = e.detail;
         if (id === undefined) {
           return;
         }
-        const childController = uiGroupStateController.findChildById(id);
+        const childController = uiGroupStateController.findChildById(
+          `${id}_input`,
+        );
         if (!childController) {
           return;
         }
@@ -229,7 +230,9 @@ export const SelectableList = (props) => {
         if (id === undefined) {
           return;
         }
-        const childController = uiGroupStateController.findChildById(id);
+        const childController = uiGroupStateController.findChildById(
+          `${id}_input`,
+        );
         if (!childController) {
           return;
         }
@@ -375,6 +378,7 @@ const SelectableRealInput = (props) => {
       navi-selectable-real-input=""
       navi-visually-hidden=""
       data-callout-arrow-x="center"
+      navi-debug
     />
   );
 };

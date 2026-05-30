@@ -20,6 +20,40 @@ import { findControlHost } from "./control_dom.js";
 import { findControlProxyTarget } from "./control_proxy.js";
 import { FormContext } from "./form_context.js";
 
+// In-memory registry for radio controllers, keyed by input name.
+// Allows radio sibling unchecking without querying the DOM — necessary when
+// items are virtualized and their DOM element may not exist at the time.
+// Form scoping is reproduced by comparing parentUIStateController references.
+const radioControllersByName = new Map();
+
+const registerRadioController = (uiStateController) => {
+  const { name } = uiStateController;
+  if (!name) {
+    return;
+  }
+  let set = radioControllersByName.get(name);
+  if (!set) {
+    set = new Set();
+    radioControllersByName.set(name, set);
+  }
+  set.add(uiStateController);
+};
+
+const unregisterRadioController = (uiStateController) => {
+  const { name } = uiStateController;
+  if (!name) {
+    return;
+  }
+  const set = radioControllersByName.get(name);
+  if (!set) {
+    return;
+  }
+  set.delete(uiStateController);
+  if (set.size === 0) {
+    radioControllersByName.delete(name);
+  }
+};
+
 const DEBUG_UI_STATE_CONTROLLER = false;
 const DEBUG_UI_GROUP_STATE_CONTROLLER = false;
 const debugUIState = (...args) => {
@@ -143,7 +177,15 @@ export const useUIStateController = (
   );
   useLayoutEffect(() => {
     notifyParentAboutChildMount();
-    return notifyParentAboutChildUnmount;
+    if (componentType === "radio") {
+      registerRadioController(uiStateControllerRef.current);
+    }
+    return () => {
+      notifyParentAboutChildUnmount();
+      if (componentType === "radio") {
+        unregisterRadioController(uiStateControllerRef.current);
+      }
+    };
   }, []);
 
   const existingUIStateController = uiStateControllerRef.current;
@@ -200,6 +242,7 @@ export const useUIStateController = (
 
     id,
     componentType,
+    parentUIStateController,
     isProxy,
     allowNameless,
     readOnly,
@@ -256,26 +299,37 @@ export const useUIStateController = (
       // We only update their UIState — no parent notification, no synthetic
       // input event (the browser never fires input on the unchecked radios,
       // and we don't want to trigger their action flow with a stale DOM value).
+      // Uses the in-memory registry instead of DOM queries so this works even
+      // when sibling items are virtualized (not in the DOM).
+      // Form scoping is preserved by comparing parentUIStateController references.
+
       if (
         componentType === "radio" &&
         newUIState &&
-        !el.hasAttribute("navi-control-proxy-for")
+        uiStateController.name &&
+        !uiStateController.isProxy
       ) {
-        const { name } = el;
-        if (name) {
-          const radioGroupContainer = el.form || document;
-          const radioInputs = radioGroupContainer.querySelectorAll(
-            `input[type="radio"][name="${name}"]`,
-          );
-          for (const radioInput of radioInputs) {
-            if (radioInput === el) {
-              continue;
-            }
-            dispatchRequestSetUIState(radioInput, false, {
+        const siblings = radioControllersByName.get(uiStateController.name);
+        if (siblings) {
+          const siblingUncheckEvent = new CustomEvent("radio_sibling_uncheck", {
+            detail: {
               event: e,
               suppressParentNotification: true,
               suppressSyntheticInput: true,
-            });
+            },
+          });
+
+          for (const siblingController of siblings) {
+            if (siblingController === uiStateController) {
+              continue;
+            }
+            if (
+              siblingController.parentUIStateController !==
+              parentUIStateController
+            ) {
+              continue;
+            }
+            siblingController.setUIState(false, siblingUncheckEvent);
           }
         }
       }

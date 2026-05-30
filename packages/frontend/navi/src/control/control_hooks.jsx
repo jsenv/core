@@ -104,12 +104,16 @@ export const useControlProps = (
   },
 ) => {
   const debugInteraction = useDebugInteraction();
+  const controlName = useContext(ControlNameContext);
   const state = props[statePropName];
   if (isSignal(state)) {
     props = {
       ...props,
       [statePropName]: state.value,
     };
+  }
+  if (!props.name && controlName) {
+    props.name = controlName;
   }
   const uiStateController = useUIStateController(props, controlType, {
     statePropName,
@@ -300,7 +304,7 @@ export const useControlgroupProps = (
     uiGroupStateController.uiStateSignal,
   );
   const [actionRequester, setActionRequester] = useState();
-  const [actionProps, remainingProps] = useInteractiveProps(props, {
+  const [controlgroupProps, remainingProps] = useInteractiveProps(props, {
     boundAction,
     uiStateController: uiGroupStateController,
     getUIValue: () => {
@@ -308,24 +312,24 @@ export const useControlgroupProps = (
     },
   });
   let childrenWithContext;
-  if (actionProps.children === undefined) {
+  if (controlgroupProps.children === undefined) {
     childrenWithContext = undefined;
   } else {
-    const { basePseudoState } = actionProps;
+    const { basePseudoState } = controlgroupProps;
     const disabled = basePseudoState[":disabled"];
     const readOnly = basePseudoState[":read-only"];
     const loading = basePseudoState[":-navi-loading"];
 
     childrenWithContext = (
       <ParentUIStateControllerContext.Provider value={uiGroupStateController}>
-        <ControlNameContext.Provider value={actionProps.name}>
+        <ControlNameContext.Provider value={controlgroupProps.name}>
           <DisabledContext.Provider value={disabled}>
             <ReadOnlyContext.Provider value={readOnly}>
-              <RequiredContext.Provider value={actionProps.required}>
+              <RequiredContext.Provider value={controlgroupProps.required}>
                 <LoadingContext.Provider value={loading}>
                   <ActionContext.Provider value={boundAction}>
                     <ActionRequesterContext.Provider value={actionRequester}>
-                      {actionProps.children}
+                      {controlgroupProps.children}
                     </ActionRequesterContext.Provider>
                   </ActionContext.Provider>
                 </LoadingContext.Provider>
@@ -338,13 +342,13 @@ export const useControlgroupProps = (
   }
   return [
     {
-      ...actionProps,
+      ...controlgroupProps,
       name: undefined, // useful to children, not the the group itself
       required: undefined, // useful to children, not the the group itself
       children: childrenWithContext,
       onnavi_action_allowed: (e) => {
         setActionRequester(e.detail.requester);
-        actionProps.onnavi_action_allowed(e);
+        controlgroupProps.onnavi_action_allowed(e);
       },
     },
     remainingProps,
@@ -415,7 +419,6 @@ const useInteractiveProps = (
   }
   const actionStatus = useActionStatus(boundAction);
   const controlToInterfaceContext = useContext(ControlToInterfaceContext);
-  const controlName = useContext(ControlNameContext);
   const controlDisabled = useContext(DisabledContext);
   const controlReadOnly = useContext(ReadOnlyContext);
   const controlRequired = useContext(RequiredContext);
@@ -447,7 +450,6 @@ const useInteractiveProps = (
       loading,
     } = props;
     const idResolved = id || controlToInterfaceContext?.id;
-    const nameResolved = name || controlName;
     const disabledResolved = disabled || controlDisabled;
     const requiredResolved = required || controlRequired;
     const loadingResolved =
@@ -462,7 +464,7 @@ const useInteractiveProps = (
     Object.assign(controlProps, {
       "id": idResolved,
       "navi-control-proxy-for": naviProxyFor,
-      "name": nameResolved,
+      name,
       type,
       "required": requiredResolved,
       "disabled": disabledResolved,

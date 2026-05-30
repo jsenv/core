@@ -152,6 +152,12 @@ Consider using unique IDs for each component instance.`,
   return useNavStateBasic(id, initialValue, options);
 };
 
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    idUsageMap.clear();
+  });
+}
+
 const NOT_SET = {};
 const NO_OP = () => {};
 const NO_ID_GIVEN = [undefined, NO_OP, NO_OP];
