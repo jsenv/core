@@ -243,7 +243,6 @@ export const SelectableList = (props) => {
     </SelectableListMultipleContext.Provider>
   );
 };
-
 export const dispatchRequestSelect = (itemEl, { event, id } = {}) => {
   return dispatchCustomEvent(itemEl, "navi_request_select", {
     event,

@@ -404,7 +404,11 @@
         const listRef = useRef(null);
         const [selected, setSelected] = useState("Apple");
         const [actionLog, setActionLog] = useState([]);
-        const [targetFruit, setTargetFruit] = useState(EXTERNAL_CTRL_FRUITS[0]);
+        const toSelectableId = (fruit) =>
+          `ext_s_${fruit.toLowerCase().replaceAll(" ", "_")}`;
+        const [targetId, setTargetId] = useState(
+          toSelectableId(EXTERNAL_CTRL_FRUITS[0]),
+        );
         return (
           <div id="external-control" className="demo-section">
             <h2>External control</h2>
@@ -459,8 +463,8 @@
                   style={{ display: "flex", flexDirection: "column", gap: 8 }}
                 >
                   <select
-                    value={targetFruit}
-                    onChange={(e) => setTargetFruit(e.currentTarget.value)}
+                    value={targetId}
+                    onChange={(e) => setTargetId(e.currentTarget.value)}
                     style={{
                       padding: "6px 8px",
                       borderRadius: 4,
@@ -468,7 +472,7 @@
                     }}
                   >
                     {EXTERNAL_CTRL_FRUITS.map((f) => (
-                      <option key={f} value={f}>
+                      <option key={f} value={toSelectableId(f)}>
                         {f}
                       </option>
                     ))}
@@ -477,7 +481,7 @@
                     <Button
                       onClick={() =>
                         dispatchRequestSelect(listRef.current, {
-                          id: targetFruit,
+                          id: targetId,
                         })
                       }
                     >
@@ -486,7 +490,7 @@
                     <Button
                       onClick={() =>
                         dispatchRequestUnselect(listRef.current, {
-                          id: targetFruit,
+                          id: targetId,
                         })
                       }
                     >
