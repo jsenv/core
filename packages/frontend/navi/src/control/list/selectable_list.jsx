@@ -267,7 +267,7 @@ export const SelectableList = (props) => {
   );
 };
 
-export const requestRequestSelect = (itemEl, { event, value } = {}) => {
+export const dispatchRequestSelect = (itemEl, { event, value } = {}) => {
   return dispatchCustomEvent(itemEl, "navi_request_select", {
     event,
     value,

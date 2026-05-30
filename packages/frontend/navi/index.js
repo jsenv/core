@@ -127,6 +127,7 @@ export {
 export {
   Selectable,
   SelectableList,
+  dispatchRequestSelect,
   dispatchRequestUnselect,
 } from "./src/control/list/selectable_list.jsx";
 export { useSearchText } from "./src/control/list/use_search_text.js";
