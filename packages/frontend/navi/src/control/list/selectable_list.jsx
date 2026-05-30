@@ -216,28 +216,19 @@ export const SelectableList = (props) => {
       selectedIndicator={undefined}
       multiple={undefined}
       onnavi_request_select={(e) => {
-        const { item } = e.detail;
-        if (!item) {
+        const { id } = e.detail;
+        if (!id) {
           return;
         }
-        // TODO: we should be updating the item checked state here it's not the case for now
         const listEl = e.currentTarget;
         dispatchCustomEvent(listEl, "navi_request_scroll", {
           event: e,
-          item,
+          id,
         });
-        // TODO: there should be no need to dispatch this event
-        // the selection of the item should update his ui state which would naturally dispatch the list action
-        const requester = item
-          ? listEl.querySelector(`#${CSS.escape(item.id)}`)
-          : e.target;
-        dispatchRequestAction(listEl, {
-          event: e,
-          requester,
-        });
+        // TODO: we should be updating the item checked state here it's not the case for now
       }}
       onnavi_request_unselect={(e) => {
-        const { value, event } = e.detail;
+        const { id } = e.detail;
         const listEl = e.currentTarget;
         const valueStr = String(value);
         const realInput = listEl.querySelector(

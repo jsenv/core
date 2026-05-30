@@ -90,7 +90,7 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useState } from "preact/hooks";
+      import { useRef, useState } from "preact/hooks";
       import {
         NaviDebug,
         SelectableList,
@@ -98,6 +98,8 @@
         Form,
         Button,
         BadgeCount,
+        dispatchRequestSelect,
+        dispatchRequestUnselect,
       } from "@jsenv/navi";
 
       const App = () => {
@@ -107,6 +109,7 @@
               <TableOfContents />
               <BasicDemo />
               <ReadOnlyDemo />
+              <ExternalControlDemo />
               <FormDemo />
               <ValidationDemo />
               <div id="customization">
@@ -134,6 +137,9 @@
               </li>
               <li>
                 <a href="#readonly">ReadOnly items</a>
+              </li>
+              <li>
+                <a href="#external-control">External control</a>
               </li>
               <li>
                 <a href="#form">Form integration</a>
@@ -347,6 +353,96 @@
                   {selectedMultiple.length
                     ? `Selected: ${selectedMultiple.join(", ")}`
                     : ""}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      // ── External control ───────────────────────────────────────────────────────
+
+      const ExternalControlDemo = () => {
+        const listRef = useRef(null);
+        const [selectedSingle, setSelectedSingle] = useState("Apple");
+        const [targetFruit, setTargetFruit] = useState(FRUITS[0]);
+        return (
+          <div id="external-control" className="demo-section">
+            <h2>External control</h2>
+            <p>
+              External UI can programmatically select or unselect items using{" "}
+              <code>dispatchRequestSelect</code> and{" "}
+              <code>dispatchRequestUnselect</code>, which dispatch{" "}
+              <code>navi_request_select</code> /{" "}
+              <code>navi_request_unselect</code> on the list.
+            </p>
+            <div className="two-col">
+              <div>
+                <div className="col-label">List</div>
+                <SelectableList
+                  ref={listRef}
+                  action={(v) => setSelectedSingle(v)}
+                  expandX
+                >
+                  {FRUITS.map((fruit, i) => (
+                    <Selectable
+                      key={fruit}
+                      index={i}
+                      id={`ext_s_${fruit.toLowerCase()}`}
+                      value={fruit}
+                      selected={selectedSingle === fruit}
+                      flex
+                      spacing="s"
+                    >
+                      <Selectable.Input />
+                      {fruit}
+                    </Selectable>
+                  ))}
+                </SelectableList>
+                <div className="value-display">
+                  {selectedSingle ?? "(none)"}
+                </div>
+              </div>
+              <div>
+                <div className="col-label">External controls</div>
+                <div
+                  style={{ display: "flex", flexDirection: "column", gap: 8 }}
+                >
+                  <select
+                    value={targetFruit}
+                    onChange={(e) => setTargetFruit(e.currentTarget.value)}
+                    style={{
+                      padding: "6px 8px",
+                      borderRadius: 4,
+                      border: "1px solid #ccc",
+                    }}
+                  >
+                    {FRUITS.map((f) => (
+                      <option key={f} value={f}>
+                        {f}
+                      </option>
+                    ))}
+                  </select>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <Button
+                      onClick={() =>
+                        dispatchRequestSelect(listRef.current, {
+                          value: targetFruit,
+                        })
+                      }
+                    >
+                      Select
+                    </Button>
+                    <Button
+                      onClick={() =>
+                        dispatchRequestUnselect(listRef.current, {
+                          value: targetFruit,
+                        })
+                      }
+                    >
+                      Unselect
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>

@@ -423,6 +423,10 @@ const ListUI = (props) => {
     searchText,
   });
 
+  const getItemById = (itemId) => {
+    return tracker.itemsSignal.peek().find((item) => item.id === itemId);
+  };
+
   const idDefault = useId();
   const innerId = id || idDefault;
 
@@ -440,10 +444,11 @@ const ListUI = (props) => {
       pseudoClasses={LIST_PSEUDO_CLASSES}
       hasChildUsingForwardedProps
       onnavi_request_scroll={(e) => {
-        const { item } = e.detail;
-        if (!item) {
+        if (!Object.hasOwn(e.detail, "id")) {
           return;
         }
+        const { id } = e.detail;
+        const item = getItemById(id);
         scrollToItem(item, {
           event: e,
           reason: "navi_request_scroll",
