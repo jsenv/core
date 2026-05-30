@@ -123,8 +123,6 @@ export {
   ListItemFooter,
   ListItemGroup,
   ListItemHeader,
-  requestListClose,
-  requestListOpen,
 } from "./src/control/list/list.jsx";
 export {
   Selectable,

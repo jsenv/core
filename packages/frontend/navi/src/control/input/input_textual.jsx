@@ -35,7 +35,6 @@ import {
 } from "../../resolver/resolver.jsx";
 import { useControlProps } from "../control_hooks.jsx";
 import { Label } from "../field.jsx";
-import { requestListClose, requestListOpen } from "../list/list.jsx";
 import { dispatchRequestSetUIState } from "../ui_state_controller.js";
 import { dispatchRequestInteraction } from "../validation/custom_constraint_validation.js";
 
@@ -681,7 +680,10 @@ const InputTextualWithSuggestions = (props) => {
     }
     const listEl = getListEl();
     if (listEl) {
-      requestListOpen(listEl, { event: e, anchor: ref.current });
+      dispatchCustomEvent(listEl, "navi_request_open", {
+        event: e,
+        anchor: ref.current,
+      });
       expand();
     }
   };
@@ -691,7 +693,7 @@ const InputTextualWithSuggestions = (props) => {
     }
     const listEl = getListEl();
     if (listEl) {
-      requestListClose(listEl, { event: e });
+      dispatchCustomEvent(listEl, "navi_request_close", { event: e });
       collapse();
     }
   };
