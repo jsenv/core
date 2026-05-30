@@ -28,6 +28,14 @@
  * than surrounding text) could be counted as separate lines. This is unlikely
  * to matter in practice for normal text rendering.
  *
+ * Limitation: `range.getClientRects()` returns rects for text nodes and inline
+ * boxes as laid out in the flow, ignoring any `overflow: hidden` or `max-width`
+ * clipping applied to ancestor elements. If child elements clip their own
+ * content (e.g. badges with `overflow: hidden` and `max-width`), the rects
+ * will reflect the unclipped text size, producing a width larger than what is
+ * visually rendered. In that case prefer `measureWidestChildRow`, which uses
+ * each child's own `getBoundingClientRect()` and therefore respects clipping.
+ *
  * @param {Element} el - The element whose text content should be measured.
  * @returns {number|null} Width in pixels of the longest visual line,
  *   or `null` if there is only one visual line.

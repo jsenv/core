@@ -1,4 +1,4 @@
-import { measureLongestVisualLineWidth } from "@jsenv/dom";
+import { measureWidestChildRow } from "@jsenv/dom";
 import { useLayoutEffect, useRef } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
@@ -35,7 +35,7 @@ export const BadgeList = ({
     let rafId;
     const applyWidth = () => {
       el.style.width = "";
-      const optimalWidth = measureLongestVisualLineWidth(el);
+      const optimalWidth = measureWidestChildRow(el);
       if (optimalWidth === null) {
         return;
       }

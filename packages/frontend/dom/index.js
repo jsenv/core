@@ -142,6 +142,7 @@ export { getMinWidth } from "./src/size/get_min_width.js";
 export { getPaddingSizes } from "./src/size/get_padding_sizes.js";
 export { getWidth } from "./src/size/get_width.js";
 export { measureLongestVisualLineWidth } from "./src/size/measure_longest_visual_line_width.js";
+export { measureWidestChildRow } from "./src/size/measure_widest_child_row.js";
 export { resolveCSSSize } from "./src/size/resolve_css_size.js";
 export { snapToPixel } from "./src/size/snap_to_pixel.js";
 // size hooks
