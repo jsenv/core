@@ -18,6 +18,8 @@
         Paragraph,
         Link,
         Button,
+        Field,
+        Label,
       } from "@jsenv/navi";
 
       const TocSection = () => (
@@ -30,6 +32,7 @@
             <Link href="#text-color">4. Automatic text color</Link>
             <Link href="#font-sizes">5. Font sizes</Link>
             <Link href="#badge-with-button">6. Badge with button</Link>
+            <Link href="#overflow">7. Overflow with long text</Link>
           </Box>
         </Box>
       );
@@ -199,6 +202,56 @@
         );
       };
 
+      const OverflowSection = () => {
+        const [maxWidth, setMaxWidth] = useState(120);
+        const longLabel = "Very long badge label that overflows";
+        return (
+          <Box as="section" marginBottom="xl">
+            <Title as="h2">
+              <Link anchor href="#overflow" />
+              Overflow with long text
+            </Title>
+            <Paragraph>
+              Badge has a default <code>max-width</code>. When text is longer,
+              it is truncated with an ellipsis. The button stays pinned at the
+              right edge regardless.
+            </Paragraph>
+            <Field>
+              <Label>max-width: {maxWidth}px</Label>
+              <input
+                type="range"
+                min="40"
+                max="300"
+                value={maxWidth}
+                onInput={(e) => setMaxWidth(Number(e.currentTarget.value))}
+              />
+            </Field>
+            <Box flex="y" spacing="s" alignX="start" marginTop="s">
+              <Box flex="x" spacing="xs" alignY="center">
+                <Text>No button:</Text>
+                <Badge style={{ maxWidth: `${maxWidth}px` }}>{longLabel}</Badge>
+              </Box>
+              <Box flex="x" spacing="xs" alignY="center">
+                <Text>Button on the right (pinned):</Text>
+                <Badge style={{ maxWidth: `${maxWidth}px` }}>
+                  {longLabel}
+                  <Badge.Button aria-label="Remove">×</Badge.Button>
+                </Badge>
+              </Box>
+              <Box flex="x" spacing="xs" alignY="center">
+                <Text>Button on the left (not pinned):</Text>
+                <Badge style={{ maxWidth: `${maxWidth}px` }}>
+                  <Badge.Button left aria-label="Remove">
+                    ×
+                  </Badge.Button>
+                  {longLabel}
+                </Badge>
+              </Box>
+            </Box>
+          </Box>
+        );
+      };
+
       const Demo = () => (
         <div
           style={{
@@ -216,6 +269,7 @@
           <DarkBackgroundSection />
           <FontSizesSection />
           <BadgeWithButtonSection />
+          <OverflowSection />
         </div>
       );
 

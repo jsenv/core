@@ -1,6 +1,5 @@
 import { useRef } from "preact/hooks";
 
-import { Box } from "../box/box.jsx";
 import { useAccentColorAttributes } from "../utils/use_accent_color_attributes.js";
 import { withPropsClassName } from "../utils/with_props_class_name.js";
 import { Text } from "./text.jsx";
@@ -22,6 +21,7 @@ const css = /* css */ `
 
     position: relative;
     display: inline-flex;
+    max-width: 100px;
     padding-top: var(--padding-y);
     padding-right: var(--padding-x);
     padding-bottom: var(--padding-y);
@@ -79,6 +79,7 @@ export const Badge = ({ children, className, ...props }) => {
     <Text
       className={withPropsClassName("navi_badge", className)}
       bold
+      overflowEllipsis
       {...props}
       styleCSSVars={BadgeStyleCSSVars}
       spacing={<span></span>}
@@ -101,7 +102,12 @@ const BadgeStyleCSSVars = {
 
 const BadgeButton = (props) => {
   return (
-    <Box as="span" className="navi_badge_button" role="button" {...props} />
+    <Text
+      overflowPinned
+      className="navi_badge_button"
+      role="button"
+      {...props}
+    />
   );
 };
 Badge.Button = BadgeButton;
