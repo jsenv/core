@@ -39,6 +39,11 @@ const css = /* css */ `
       --x-color: var(--color, #333);
     }
 
+    &[data-text-overflow] .navi_text_overflow_wrapper {
+      /* Keep badge text and button together */
+      gap: 0;
+    }
+
     [role="button"] {
       display: inline-flex;
       margin-top: calc(-1 * var(--padding-y));

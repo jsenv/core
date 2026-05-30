@@ -178,6 +178,7 @@
 
               <Badge key="on_the_left">
                 <Badge.Button
+                  overflowPinned="start"
                   onMouseDown={() => {
                     console.log("Button on the left");
                   }}
@@ -241,7 +242,7 @@
               <Box flex="x" spacing="xs" alignY="center">
                 <Text>Button on the left (not pinned):</Text>
                 <Badge style={{ maxWidth: `${maxWidth}px` }}>
-                  <Badge.Button left aria-label="Remove">
+                  <Badge.Button overflowPinned="start" aria-label="Remove">
                     ×
                   </Badge.Button>
                   {longLabel}

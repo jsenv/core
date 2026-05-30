@@ -318,7 +318,7 @@ const shouldInjectSpacingBetween = (left, right) => {
   return true;
 };
 
-const OverflowPinnedElementContext = createContext(null);
+const OverflowPinnedContext = createContext(null);
 /**
  * Text component for rendering inline or block text with layout-stable style changes.
  *
@@ -568,7 +568,7 @@ const TextSkeleton = ({ loading, children, ...props }) => {
   );
 };
 const TextOverflow = ({ noWrap, spacing, children, ...rest }) => {
-  const [OverflowPinnedElement, setOverflowPinnedElement] = useState(null);
+  const [overflowPinned, setOverflowPinned] = useState(null);
 
   return (
     <TextDispatcher
@@ -585,30 +585,38 @@ const TextOverflow = ({ noWrap, spacing, children, ...rest }) => {
       spacing="pre"
     >
       <span className="navi_text_overflow_wrapper">
-        <OverflowPinnedElementContext.Provider value={setOverflowPinnedElement}>
+        {overflowPinned && overflowPinned.position === "start"
+          ? overflowPinned.vnode
+          : null}
+        <OverflowPinnedContext.Provider value={setOverflowPinned}>
           <Text className="navi_text_overflow_text" spacing={spacing}>
             {children}
           </Text>
-        </OverflowPinnedElementContext.Provider>
-        {OverflowPinnedElement}
+        </OverflowPinnedContext.Provider>
+        {overflowPinned && overflowPinned.position === "end"
+          ? overflowPinned.vnode
+          : null}
       </span>
     </TextDispatcher>
   );
 };
 const TextOverflowPinned = ({ overflowPinned, ...props }) => {
-  const setOverflowPinnedElement = useContext(OverflowPinnedElementContext);
+  const setOverflowPinned = useContext(OverflowPinnedContext);
   const text = <Text {...props} data-overflow-pinned=""></Text>;
-  if (!setOverflowPinnedElement) {
+  if (!setOverflowPinned) {
     console.warn(
       "<Text overflowPinned> declared outside a <Text overflowEllipsis>",
     );
     return text;
   }
   if (overflowPinned) {
-    setOverflowPinnedElement(text);
+    setOverflowPinned({
+      vnode: text,
+      position: overflowPinned === true ? "end" : overflowPinned,
+    });
     return null;
   }
-  setOverflowPinnedElement(null);
+  setOverflowPinned(null);
   return text;
 };
 const TextWithSelectRange = ({ ref, selectRange, ...props }) => {
