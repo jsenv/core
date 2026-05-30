@@ -331,6 +331,7 @@ export const PickerCustom = (props) => {
       const { onMouseDown, onClick, onKeyDown } = props;
       Object.assign(pickerProps, {
         onMouseDown: (e) => {
+          console.log("mousedown on trigger", e);
           onMouseDown?.(e);
           const pickerEl = ref.current;
           if (

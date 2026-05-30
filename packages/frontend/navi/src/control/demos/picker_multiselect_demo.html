@@ -221,6 +221,7 @@
                   <Badge.Button
                     aria-label={`Remove ${opt}`}
                     onMouseDown={(e) => {
+                      console.log("mousedown on button");
                       e.preventDefault();
                       e.stopPropagation();
                       dispatchRequestUnselect(listRef.current, {

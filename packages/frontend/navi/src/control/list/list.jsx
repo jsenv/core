@@ -1,5 +1,4 @@
 import {
-  dispatchCustomEvent,
   dispatchPublicCustomEvent,
   getElementSignature,
   scrollIntoViewScoped,
@@ -440,7 +439,7 @@ const ListUI = (props) => {
       styleCSSVars={LIST_STYLE_CSS_VARS}
       pseudoClasses={LIST_PSEUDO_CLASSES}
       hasChildUsingForwardedProps
-      onnavi_list_request_scroll={(e) => {
+      onnavi_request_scroll={(e) => {
         const { item } = e.detail;
         if (!item) {
           return;
@@ -588,18 +587,12 @@ const useListScrollSync = ({
         container: listScrollContainerEl,
         block,
       });
-      dispatchPublicCustomEvent(listEl, "navi_list_scroll", {
+      const listEl = ref.current;
+      dispatchPublicCustomEvent(listEl, "navi_scroll", {
         event,
         item,
       });
     };
-
-    // Dispatch navi_list_nav immediately — do not wait for scroll to complete.
-    const listEl = ref.current;
-    dispatchPublicCustomEvent(listEl, "navi_list_nav", {
-      event,
-      item,
-    });
 
     const { start, end } = renderWindowRef.current;
     const isInWindow = index >= start && index < end;
@@ -726,10 +719,6 @@ const useListScrollSync = ({
         debugScroll(
           `restore scroll: ${getElementSignature(listScrollContainerEl)}.scrollTo({ left: ${left}, top: ${top} })`,
         );
-        listScrollContainerEl.scrollTo({
-          left: savedScroll.left,
-          top: savedScroll.top,
-        });
         // The reliable way to restore scroll is to use scrollTop because otherwise we will estimate the item to scroll
         // based on virtual item height which can wrongly restore the scroll.
         // However we have a contract with outside to inside which item is scrolled
@@ -742,8 +731,12 @@ const useListScrollSync = ({
           virtualItemHeightSignal,
           renderWindowRef,
         );
+        listScrollContainerEl.scrollTo({
+          left: savedScroll.left,
+          top: savedScroll.top,
+        });
         const listEl = ref.current;
-        dispatchPublicCustomEvent(listEl, "navi_list_nav", {
+        dispatchPublicCustomEvent(listEl, "navi_scroll", {
           item,
           event: new CustomEvent("navi_scroll_restore"),
         });
@@ -1344,41 +1337,4 @@ export const ListItemFooter = (props) => {
       baseClassName="navi_list_item_footer"
     />
   );
-};
-
-export const requestListNavFromCurrent = (listEl, { event, goal }) => {
-  return dispatchCustomEvent(listEl, "navi_list_request_nav_from_current", {
-    event,
-    goal,
-  });
-};
-export const requestListSelectCurrent = (listEl, { event }) => {
-  return dispatchCustomEvent(listEl, "navi_list_request_select_current", {
-    event,
-  });
-};
-export const requestListItemSelect = (itemEl, { event } = {}) => {
-  return dispatchCustomEvent(itemEl, "navi_list_item_request_select", {
-    event,
-  });
-};
-export const requestListInteractionStateReset = (listEl, { event }) => {
-  return dispatchCustomEvent(
-    listEl,
-    "navi_list_request_interaction_state_reset",
-    {
-      event,
-    },
-  );
-};
-export const requestListOpen = (listEl, { event, anchor }) => {
-  return dispatchCustomEvent(listEl, "navi_list_request_open", {
-    event,
-    anchor,
-  });
-};
-export const requestListClose = (listEl, { event }) => {
-  return dispatchCustomEvent(listEl, "navi_list_request_close", {
-    event,
-  });
 };

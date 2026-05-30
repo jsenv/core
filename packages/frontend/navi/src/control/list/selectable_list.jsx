@@ -11,7 +11,7 @@
  * mais pilote cet input décoratif
  */
 
-import { dispatchCustomEvent, dispatchPublicCustomEvent } from "@jsenv/dom";
+import { dispatchCustomEvent } from "@jsenv/dom";
 import { createContext } from "preact";
 import { useContext, useId, useMemo, useRef } from "preact/hooks";
 
@@ -215,72 +215,46 @@ export const SelectableList = (props) => {
       name={undefined}
       selectedIndicator={undefined}
       multiple={undefined}
-      onnavi_list_nav={(e) => {
-        const { item, event } = e.detail;
-        // const id = item ? item.id : null;
-        // const isNonUserNav =
-        //   event.type === "navi_list_nav_top_on_displayed" ||
-        //   event.type === "navi_list_top_match_change";
-        const isAutomaticNav =
-          event.type === "navi_list_nav_top_on_displayed" ||
-          event.type === "navi_list_top_match_change" ||
-          event.type === "navi_scroll_restore";
-        if (item && !isAutomaticNav) {
-          const listEl = e.currentTarget;
-          dispatchPublicCustomEvent(listEl, "navi_list_item_point", {
-            item,
-            event,
-          });
-        }
-      }}
-      onnavi_list_request_nav={(e) => {
+      onnavi_request_select={(e) => {
         const { item } = e.detail;
         if (!item) {
           return;
         }
+        // TODO: we should be updating the item checked state here it's not the case for now
         const listEl = e.currentTarget;
-        dispatchCustomEvent(listEl, "navi_list_request_scroll", {
+        dispatchCustomEvent(listEl, "navi_request_scroll", {
           event: e,
           item,
         });
-      }}
-      onnavi_list_request_unselect={(e) => {
-        const { value, event } = e.detail;
-        const listEl = e.currentTarget;
-        const valueStr = String(value);
-        const realInput = listEl.querySelector(
-          `[navi-selectable-real-input][value="${valueStr.replaceAll('"', '\\"')}"]`,
-        );
-        if (realInput && realInput.checked) {
-          dispatchRequestSetUIState(realInput, false, { event });
-        }
-        const currentUIState = getUIStateFromElement(listEl) ?? [];
-        const newUIState = currentUIState.filter((v) => String(v) !== valueStr);
-        dispatchRequestAction(listEl, {
-          event,
-          uiState: newUIState,
-        });
-      }}
-      onnavi_list_request_select={(e) => {
-        const { item } = e.detail;
-        if (!item) {
-          return;
-        }
-        const listEl = e.currentTarget;
-        dispatchCustomEvent(listEl, "navi_list_request_nav", {
-          event: e,
-          item,
-        });
-        dispatchPublicCustomEvent(listEl, "navi_list_select", {
-          item,
-          event: e,
-        });
+        // TODO: there should be no need to dispatch this event
+        // the selection of the item should update his ui state which would naturally dispatch the list action
         const requester = item
           ? listEl.querySelector(`#${CSS.escape(item.id)}`)
           : e.target;
         dispatchRequestAction(listEl, {
           event: e,
           requester,
+        });
+      }}
+      onnavi_request_unselect={(e) => {
+        const { value, event } = e.detail;
+        const listEl = e.currentTarget;
+        const valueStr = String(value);
+        const realInput = listEl.querySelector(
+          `[navi-selectable-real-input][value="${valueStr.replaceAll('"', '\\"')}"]`,
+        );
+        if (realInput) {
+          dispatchRequestSetUIState(realInput, false, { event });
+        }
+        // TODO: we should not be updating the ui state like this
+        // instead as the item becomes unselected the selectable list would realize it's no more selected
+        // (as it listens every child ui state controller changes)
+        // and naturally dispatch the uiAction/action
+        const currentUIState = getUIStateFromElement(listEl) ?? [];
+        const newUIState = currentUIState.filter((v) => String(v) !== valueStr);
+        dispatchRequestAction(listEl, {
+          event,
+          uiState: newUIState,
         });
       }}
     />
@@ -293,10 +267,16 @@ export const SelectableList = (props) => {
   );
 };
 
-export const dispatchRequestUnselect = (listEl, { value, event }) => {
-  return dispatchCustomEvent(listEl, "navi_list_request_unselect", {
-    value,
+export const requestRequestSelect = (itemEl, { event, value } = {}) => {
+  return dispatchCustomEvent(itemEl, "navi_request_select", {
     event,
+    value,
+  });
+};
+export const dispatchRequestUnselect = (listEl, { event, value }) => {
+  return dispatchCustomEvent(listEl, "navi_request_unselect", {
+    event,
+    value,
   });
 };
 
