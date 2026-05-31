@@ -21,6 +21,7 @@ import {
   useCallback,
   useContext,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from "preact/hooks";
@@ -65,6 +66,50 @@ import {
 } from "./ui_state_controller.js";
 import { useConstraintMessages } from "./validation/hooks/use_constraint_messages.js";
 import { useConstraints } from "./validation/hooks/use_constraints.js";
+
+// Resets field-specific contexts so nested fields inside this component
+// don't inherit the current field's id, message props, or interface reporting.
+const ControlChildrenWrapper = ({ children }) => (
+  <MessagePropsRefContext.Provider value={undefined}>
+    <ControlToInterfaceContext.Provider value={undefined}>
+      {children}
+    </ControlToInterfaceContext.Provider>
+  </MessagePropsRefContext.Provider>
+);
+
+export const ControlgroupChildrenWrapper = ({
+  children,
+  uiGroupStateController,
+  name,
+  required,
+  disabled,
+  readOnly,
+  loading,
+  boundAction,
+  actionRequester,
+}) => (
+  <MessagePropsRefContext.Provider value={undefined}>
+    <ControlToInterfaceContext.Provider value={undefined}>
+      <ParentUIStateControllerContext.Provider value={uiGroupStateController}>
+        <ControlNameContext.Provider value={name}>
+          <DisabledContext.Provider value={disabled}>
+            <ReadOnlyContext.Provider value={readOnly}>
+              <RequiredContext.Provider value={required}>
+                <LoadingContext.Provider value={loading}>
+                  <ActionContext.Provider value={boundAction}>
+                    <ActionRequesterContext.Provider value={actionRequester}>
+                      {children}
+                    </ActionRequesterContext.Provider>
+                  </ActionContext.Provider>
+                </LoadingContext.Provider>
+              </RequiredContext.Provider>
+            </ReadOnlyContext.Provider>
+          </DisabledContext.Provider>
+        </ControlNameContext.Provider>
+      </ParentUIStateControllerContext.Provider>
+    </ControlToInterfaceContext.Provider>
+  </MessagePropsRefContext.Provider>
+);
 
 /**
  * Core hook for interactive field components (InputText, InputCheckbox, etc.).
@@ -324,28 +369,27 @@ export const useControlgroupProps = (
   const readOnly = basePseudoState[":read-only"];
   const loading = basePseudoState[":-navi-loading"];
 
-  const ControlgroupChildrenWrapper = ({ children }) => (
-    <MessagePropsRefContext.Provider value={undefined}>
-      <ControlToInterfaceContext.Provider value={undefined}>
-        <ParentUIStateControllerContext.Provider value={uiGroupStateController}>
-          <ControlNameContext.Provider value={controlgroupProps.name}>
-            <DisabledContext.Provider value={disabled}>
-              <ReadOnlyContext.Provider value={readOnly}>
-                <RequiredContext.Provider value={controlgroupProps.required}>
-                  <LoadingContext.Provider value={loading}>
-                    <ActionContext.Provider value={boundAction}>
-                      <ActionRequesterContext.Provider value={actionRequester}>
-                        {children}
-                      </ActionRequesterContext.Provider>
-                    </ActionContext.Provider>
-                  </LoadingContext.Provider>
-                </RequiredContext.Provider>
-              </ReadOnlyContext.Provider>
-            </DisabledContext.Provider>
-          </ControlNameContext.Provider>
-        </ParentUIStateControllerContext.Provider>
-      </ControlToInterfaceContext.Provider>
-    </MessagePropsRefContext.Provider>
+  const childrenWrapperProps = useMemo(
+    () => ({
+      uiGroupStateController,
+      name: controlgroupProps.name,
+      required: controlgroupProps.required,
+      disabled,
+      readOnly,
+      loading,
+      boundAction,
+      actionRequester,
+    }),
+    [
+      uiGroupStateController,
+      controlgroupProps.name,
+      controlgroupProps.required,
+      disabled,
+      readOnly,
+      loading,
+      boundAction,
+      actionRequester,
+    ],
   );
 
   return [
@@ -359,7 +403,7 @@ export const useControlgroupProps = (
       },
     },
     remainingProps,
-    ControlgroupChildrenWrapper,
+    childrenWrapperProps,
     uiGroupStateController,
   ];
 };
@@ -717,14 +761,5 @@ const useInteractiveProps = (
     });
   }
 
-  // Resets field-specific contexts so nested fields inside this component
-  // don't inherit the current field's id, message props, or interface reporting.
-  const ControlChildrenWrapper = ({ children }) => (
-    <MessagePropsRefContext.Provider value={undefined}>
-      <ControlToInterfaceContext.Provider value={undefined}>
-        {children}
-      </ControlToInterfaceContext.Provider>
-    </MessagePropsRefContext.Provider>
-  );
   return [controlProps, remainingProps, ControlChildrenWrapper];
 };

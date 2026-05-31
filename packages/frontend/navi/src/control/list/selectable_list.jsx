@@ -18,7 +18,10 @@ import { Box } from "@jsenv/navi/src/box/box.jsx";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { useFocusGroup } from "@jsenv/navi/src/utils/focus/use_focus_group.js";
 import { ControlToInterfaceContext } from "../control_context.js";
-import { useControlgroupProps } from "../control_hooks.jsx";
+import {
+  ControlgroupChildrenWrapper,
+  useControlgroupProps,
+} from "../control_hooks.jsx";
 import { Field } from "../field.jsx";
 import { Input } from "../input/input.jsx";
 import { useCheckableProps } from "../input/use_checkable_props.js";
@@ -168,7 +171,7 @@ export const SelectableList = (props) => {
   const [
     listControlProps,
     remainingProps,
-    ChildrenWrapper,
+    childrenWrapperProps,
     uiGroupStateController,
   ] = useControlgroupProps(props, {
     controlType: multiple ? "checkbox_group" : "radio_group",
@@ -242,7 +245,9 @@ export const SelectableList = (props) => {
         childController.setUIState(false, e);
       }}
     >
-      <ChildrenWrapper>{props.children}</ChildrenWrapper>
+      <ControlgroupChildrenWrapper {...childrenWrapperProps}>
+        {props.children}
+      </ControlgroupChildrenWrapper>
     </List>
   );
 

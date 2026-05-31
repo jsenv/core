@@ -17,7 +17,10 @@ import { dispatchInternalCustomEvent } from "@jsenv/dom";
 import { useMemo, useRef } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
-import { useControlgroupProps } from "./control_hooks.jsx";
+import {
+  ControlgroupChildrenWrapper,
+  useControlgroupProps,
+} from "./control_hooks.jsx";
 import { FormContext } from "./form_context.js";
 import { dispatchRequestResetUIState } from "./ui_state_controller.js";
 
@@ -31,9 +34,8 @@ export const Form = (props) => {
 
 const FormControl = (props) => {
   const { ref, method = "GET" } = props;
-  const [formProps, remainingProps, FormChildrenWrapper] = useControlgroupProps(
-    props,
-    {
+  const [formProps, remainingProps, childrenWrapperProps] =
+    useControlgroupProps(props, {
       controlType: "form",
       childComponentType: "*",
       aggregateChildStates: (childUIStateControllers) => {
@@ -53,8 +55,7 @@ const FormControl = (props) => {
         }
         return formValues;
       },
-    },
-  );
+    });
   const { basePseudoState, children } = formProps;
   // const disabled = basePseudoState[":disabled"];
   // const readOnly = basePseudoState[":read-only"];
@@ -96,7 +97,9 @@ const FormControl = (props) => {
       }}
     >
       <FormContext.Provider value={formContextValue}>
-        <FormChildrenWrapper>{children}</FormChildrenWrapper>
+        <ControlgroupChildrenWrapper {...childrenWrapperProps}>
+          {children}
+        </ControlgroupChildrenWrapper>
       </FormContext.Provider>
     </Box>
   );
