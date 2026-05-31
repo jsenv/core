@@ -339,6 +339,78 @@
                 </Box>
               </fieldset>
             </div>
+
+            <div class="states-section">
+              <div class="states-title">Inside a form</div>
+              <p class="states-description">
+                A button inside a <code>&lt;form&gt;</code> should submit the
+                form when clicked (unless it has its own <code>action</code>{" "}
+                prop, in which case the navi action takes over and form
+                submission is skipped).
+              </p>
+
+              <fieldset>
+                <legend>Plain button — submits the native form</legend>
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    // eslint-disable-next-line no-alert
+                    window.alert("Form submitted!");
+                  }}
+                >
+                  <Box flex="y" spacing="s" alignX="start" alignY="center">
+                    <input
+                      type="text"
+                      name="username"
+                      placeholder="Type something…"
+                      style={{
+                        padding: "6px 10px",
+                        borderRadius: "4px",
+                        border: "1px solid #ccc",
+                      }}
+                    />
+                    <Button type="submit">Submit form</Button>
+                  </Box>
+                </form>
+              </fieldset>
+
+              <fieldset>
+                <legend>Button with action — does NOT submit the form</legend>
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    // eslint-disable-next-line no-alert
+                    window.alert("Form submitted! (this should not appear)");
+                  }}
+                >
+                  <Box flex="y" spacing="s" alignX="start" alignY="center">
+                    <input
+                      type="text"
+                      name="username"
+                      placeholder="Type something…"
+                      style={{
+                        padding: "6px 10px",
+                        borderRadius: "4px",
+                        border: "1px solid #ccc",
+                      }}
+                    />
+                    <Button
+                      type="submit"
+                      action={async () => {
+                        await new Promise((r) => setTimeout(r, 600));
+                        return "navi action ran, form was not submitted";
+                      }}
+                      onActionEnd={(value) => {
+                        // eslint-disable-next-line no-alert
+                        window.alert(value);
+                      }}
+                    >
+                      Submit (with action)
+                    </Button>
+                  </Box>
+                </form>
+              </fieldset>
+            </div>
           </div>
         );
       };
