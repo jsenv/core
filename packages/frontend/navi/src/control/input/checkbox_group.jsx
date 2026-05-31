@@ -30,27 +30,28 @@ export const CheckboxGroup = (props) => {
 const CheckboxGroupInterface = (props) => {
   import.meta.css = css;
   const { ref, name } = props;
-  const [checkboxGroupProps, remainingProps] = useControlgroupProps(
-    {
-      resetOnCancel: true,
-      resetOnAbort: true,
-      resetOnError: true,
-      ...props,
-    },
-    {
-      controlType: "checkbox_group",
-      childComponentType: "checkbox",
-      aggregateChildStates: (childUIStateControllers) => {
-        const values = [];
-        for (const childUIStateController of childUIStateControllers) {
-          if (childUIStateController.uiState) {
-            values.push(childUIStateController.uiState);
-          }
-        }
-        return values.length === 0 ? [] : values;
+  const [checkboxGroupProps, remainingProps, ChildrenWrapper] =
+    useControlgroupProps(
+      {
+        resetOnCancel: true,
+        resetOnAbort: true,
+        resetOnError: true,
+        ...props,
       },
-    },
-  );
+      {
+        controlType: "checkbox_group",
+        childComponentType: "checkbox",
+        aggregateChildStates: (childUIStateControllers) => {
+          const values = [];
+          for (const childUIStateController of childUIStateControllers) {
+            if (childUIStateController.uiState) {
+              values.push(childUIStateController.uiState);
+            }
+          }
+          return values.length === 0 ? [] : values;
+        },
+      },
+    );
   useFocusGroup(ref, { wrap: "both" });
 
   return (
@@ -77,6 +78,8 @@ const CheckboxGroupInterface = (props) => {
           requester: target,
         });
       }}
-    />
+    >
+      <ChildrenWrapper>{props.children}</ChildrenWrapper>
+    </Box>
   );
 };

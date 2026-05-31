@@ -31,27 +31,30 @@ export const Form = (props) => {
 
 const FormControl = (props) => {
   const { ref, method = "GET" } = props;
-  const [formProps, remainingProps] = useControlgroupProps(props, {
-    controlType: "form",
-    childComponentType: "*",
-    aggregateChildStates: (childUIStateControllers) => {
-      const formValues = {};
-      for (const childUIStateController of childUIStateControllers) {
-        const { name, uiState, allowNameless } = childUIStateController;
-        if (!name) {
-          if (!allowNameless) {
-            console.warn(
-              "A form child component is missing a name property, its state won't be included in the form state",
-              childUIStateController,
-            );
+  const [formProps, remainingProps, FormChildrenWrapper] = useControlgroupProps(
+    props,
+    {
+      controlType: "form",
+      childComponentType: "*",
+      aggregateChildStates: (childUIStateControllers) => {
+        const formValues = {};
+        for (const childUIStateController of childUIStateControllers) {
+          const { name, uiState, allowNameless } = childUIStateController;
+          if (!name) {
+            if (!allowNameless) {
+              console.warn(
+                "A form child component is missing a name property, its state won't be included in the form state",
+                childUIStateController,
+              );
+            }
+            continue;
           }
-          continue;
+          formValues[name] = uiState;
         }
-        formValues[name] = uiState;
-      }
-      return formValues;
+        return formValues;
+      },
     },
-  });
+  );
   const { basePseudoState, children } = formProps;
   // const disabled = basePseudoState[":disabled"];
   // const readOnly = basePseudoState[":read-only"];
@@ -93,7 +96,7 @@ const FormControl = (props) => {
       }}
     >
       <FormContext.Provider value={formContextValue}>
-        {children}
+        <FormChildrenWrapper>{children}</FormChildrenWrapper>
       </FormContext.Provider>
     </Box>
   );

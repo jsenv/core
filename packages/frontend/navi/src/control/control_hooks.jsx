@@ -134,7 +134,7 @@ export const useControlProps = (
     paramsSignal,
   );
   const boundAction = externalBoundAction || internalBoundAction;
-  const [controlProps, remainingProps, ChildrenContextWrapper] =
+  const [controlProps, remainingProps, ControlChildrenWrapper] =
     useInteractiveProps(props, {
       readOnlySupported,
       boundAction,
@@ -277,7 +277,7 @@ export const useControlProps = (
     });
   }
 
-  return [controlProps, remainingProps, ChildrenContextWrapper];
+  return [controlProps, remainingProps, ControlChildrenWrapper];
 };
 
 /**
@@ -318,55 +318,48 @@ export const useControlgroupProps = (
       return uiGroupStateController.uiStateSignal.peek();
     },
   });
-  let childrenWithContext;
-  if (controlgroupProps.children === undefined) {
-    childrenWithContext = undefined;
-  } else {
-    const { basePseudoState } = controlgroupProps;
-    const disabled = basePseudoState[":disabled"];
-    const readOnly = basePseudoState[":read-only"];
-    const loading = basePseudoState[":-navi-loading"];
 
-    childrenWithContext = (
-      <MessagePropsRefContext.Provider value={undefined}>
-        <ControlToInterfaceContext.Provider value={undefined}>
-          <ParentUIStateControllerContext.Provider
-            value={uiGroupStateController}
-          >
-            <ControlNameContext.Provider value={controlgroupProps.name}>
-              <DisabledContext.Provider value={disabled}>
-                <ReadOnlyContext.Provider value={readOnly}>
-                  <RequiredContext.Provider value={controlgroupProps.required}>
-                    <LoadingContext.Provider value={loading}>
-                      <ActionContext.Provider value={boundAction}>
-                        <ActionRequesterContext.Provider
-                          value={actionRequester}
-                        >
-                          {controlgroupProps.children}
-                        </ActionRequesterContext.Provider>
-                      </ActionContext.Provider>
-                    </LoadingContext.Provider>
-                  </RequiredContext.Provider>
-                </ReadOnlyContext.Provider>
-              </DisabledContext.Provider>
-            </ControlNameContext.Provider>
-          </ParentUIStateControllerContext.Provider>
-        </ControlToInterfaceContext.Provider>
-      </MessagePropsRefContext.Provider>
-    );
-  }
+  const { basePseudoState } = controlgroupProps;
+  const disabled = basePseudoState[":disabled"];
+  const readOnly = basePseudoState[":read-only"];
+  const loading = basePseudoState[":-navi-loading"];
+
+  const ControlgroupChildrenWrapper = ({ children }) => (
+    <MessagePropsRefContext.Provider value={undefined}>
+      <ControlToInterfaceContext.Provider value={undefined}>
+        <ParentUIStateControllerContext.Provider value={uiGroupStateController}>
+          <ControlNameContext.Provider value={controlgroupProps.name}>
+            <DisabledContext.Provider value={disabled}>
+              <ReadOnlyContext.Provider value={readOnly}>
+                <RequiredContext.Provider value={controlgroupProps.required}>
+                  <LoadingContext.Provider value={loading}>
+                    <ActionContext.Provider value={boundAction}>
+                      <ActionRequesterContext.Provider value={actionRequester}>
+                        {children}
+                      </ActionRequesterContext.Provider>
+                    </ActionContext.Provider>
+                  </LoadingContext.Provider>
+                </RequiredContext.Provider>
+              </ReadOnlyContext.Provider>
+            </DisabledContext.Provider>
+          </ControlNameContext.Provider>
+        </ParentUIStateControllerContext.Provider>
+      </ControlToInterfaceContext.Provider>
+    </MessagePropsRefContext.Provider>
+  );
+
   return [
     {
       ...controlgroupProps,
       name: undefined, // useful to children, not the the group itself
       required: undefined, // useful to children, not the the group itself
-      children: childrenWithContext,
       onnavi_action_allowed: (e) => {
         setActionRequester(e.detail.requester);
         controlgroupProps.onnavi_action_allowed(e);
       },
     },
     remainingProps,
+    ControlgroupChildrenWrapper,
     uiGroupStateController,
   ];
 };
@@ -726,12 +719,12 @@ const useInteractiveProps = (
 
   // Resets field-specific contexts so nested fields inside this component
   // don't inherit the current field's id, message props, or interface reporting.
-  const ChildrenContextWrapper = ({ children }) => (
+  const ControlChildrenWrapper = ({ children }) => (
     <MessagePropsRefContext.Provider value={undefined}>
       <ControlToInterfaceContext.Provider value={undefined}>
         {children}
       </ControlToInterfaceContext.Provider>
     </MessagePropsRefContext.Provider>
   );
-  return [controlProps, remainingProps, ChildrenContextWrapper];
+  return [controlProps, remainingProps, ControlChildrenWrapper];
 };

@@ -165,34 +165,38 @@ export const SelectableList = (props) => {
     focusGroupDirection,
     focusGroupWrap,
   } = props;
-  const [listControlProps, remainingProps, uiGroupStateController] =
-    useControlgroupProps(props, {
-      controlType: multiple ? "checkbox_group" : "radio_group",
-      childComponentType: multiple ? "checkbox" : "radio",
-      aggregateChildStates: multiple
-        ? (childUIStateControllers) => {
-            const values = [];
-            for (const childUIStateController of childUIStateControllers) {
-              if (childUIStateController.uiState) {
-                values.push(childUIStateController.uiState);
-              }
+  const [
+    listControlProps,
+    remainingProps,
+    ChildrenWrapper,
+    uiGroupStateController,
+  ] = useControlgroupProps(props, {
+    controlType: multiple ? "checkbox_group" : "radio_group",
+    childComponentType: multiple ? "checkbox" : "radio",
+    aggregateChildStates: multiple
+      ? (childUIStateControllers) => {
+          const values = [];
+          for (const childUIStateController of childUIStateControllers) {
+            if (childUIStateController.uiState) {
+              values.push(childUIStateController.uiState);
             }
-            // Return a stable empty-array reference when nothing is selected so
-            // the action always receives an array (never undefined) and signal
-            // comparisons don't see a new reference on every render.
-            return values.length === 0 ? EMPTY_SELECTION : values;
           }
-        : (childUIStateControllers) => {
-            let activeValue;
-            for (const childUIStateController of childUIStateControllers) {
-              if (childUIStateController.uiState) {
-                activeValue = childUIStateController.uiState;
-                break;
-              }
+          // Return a stable empty-array reference when nothing is selected so
+          // the action always receives an array (never undefined) and signal
+          // comparisons don't see a new reference on every render.
+          return values.length === 0 ? EMPTY_SELECTION : values;
+        }
+      : (childUIStateControllers) => {
+          let activeValue;
+          for (const childUIStateController of childUIStateControllers) {
+            if (childUIStateController.uiState) {
+              activeValue = childUIStateController.uiState;
+              break;
             }
-            return activeValue;
-          },
-    });
+          }
+          return activeValue;
+        },
+  });
   useFocusGroup(ref, {
     direction: focusGroupDirection,
     wrap: focusGroupWrap,
@@ -237,7 +241,9 @@ export const SelectableList = (props) => {
         }
         childController.setUIState(false, e);
       }}
-    />
+    >
+      <ChildrenWrapper>{props.children}</ChildrenWrapper>
+    </List>
   );
 
   return (

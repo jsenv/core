@@ -28,28 +28,29 @@ export const RadioGroup = (props) => {
 const RadioGroupInterface = (props) => {
   import.meta.css = css;
   const { ref, name } = props;
-  const [radioGroupProps, remainingProps] = useControlgroupProps(
-    {
-      resetOnCancel: true,
-      resetOnAbort: true,
-      resetOnError: true,
-      ...props,
-    },
-    {
-      controlType: "radio_group",
-      childComponentType: "radio",
-      aggregateChildStates: (childUIStateControllers) => {
-        let activeValue;
-        for (const childUIStateController of childUIStateControllers) {
-          if (childUIStateController.uiState) {
-            activeValue = childUIStateController.uiState;
-            break;
-          }
-        }
-        return activeValue;
+  const [radioGroupProps, remainingProps, ChildrenWrapper] =
+    useControlgroupProps(
+      {
+        resetOnCancel: true,
+        resetOnAbort: true,
+        resetOnError: true,
+        ...props,
       },
-    },
-  );
+      {
+        controlType: "radio_group",
+        childComponentType: "radio",
+        aggregateChildStates: (childUIStateControllers) => {
+          let activeValue;
+          for (const childUIStateController of childUIStateControllers) {
+            if (childUIStateController.uiState) {
+              activeValue = childUIStateController.uiState;
+              break;
+            }
+          }
+          return activeValue;
+        },
+      },
+    );
   useFocusGroup(ref, { wrap: "both" });
 
   return (
@@ -75,6 +76,8 @@ const RadioGroupInterface = (props) => {
           requester: target,
         });
       }}
-    />
+    >
+      <ChildrenWrapper>{props.children}</ChildrenWrapper>
+    </Box>
   );
 };
