@@ -331,6 +331,8 @@ const css = /* css */ `
 export const List = (props) => {
   const refDefault = useRef(null);
   props.ref = props.ref || refDefault;
+  const idDefault = useId();
+  props.id = props.id || idDefault;
   const listVnode = <ListUI {...props} />;
   return listVnode;
 };
@@ -339,7 +341,6 @@ const ListUI = (props) => {
   const {
     ref,
     renderBudget = RENDER_BUDGET_DEFAULT,
-    id,
     role,
     fallback,
     noMatchFallback,
@@ -425,9 +426,6 @@ const ListUI = (props) => {
     return tracker.itemsSignal.peek().find((item) => item.id === itemId);
   };
 
-  const idDefault = useId();
-  const innerId = id || idDefault;
-
   return (
     <Box
       {...rest}
@@ -458,7 +456,6 @@ const ListUI = (props) => {
       }}
     >
       <ListContent
-        innerId={innerId}
         role={role}
         fallback={fallback}
         noMatchFallback={noMatchFallback}
@@ -477,7 +474,6 @@ const ListUI = (props) => {
   );
 };
 const ListContent = ({
-  innerId,
   role,
   fallback,
   noMatchFallback,
@@ -495,7 +491,6 @@ const ListContent = ({
   return (
     <div className="navi_list_scroll_container">
       <UnorderedList
-        id={innerId}
         role={role}
         fallback={fallback}
         noMatchFallback={noMatchFallback}

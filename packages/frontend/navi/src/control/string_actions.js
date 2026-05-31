@@ -271,8 +271,9 @@ const getActionTarget = (e, actionName) => {
         `action-target="${actionTargetAttribute}" specified but no element with that id found in the document`,
         e,
       );
+      return null;
     }
-    return null;
+    return actionTarget;
   }
   const parentControl = getParentControl(currentTarget);
   if (!parentControl) {
