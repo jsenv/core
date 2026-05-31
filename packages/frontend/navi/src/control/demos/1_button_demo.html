@@ -160,6 +160,7 @@
       import {
         Button,
         Box,
+        Form,
         Icon,
         EyeSvg,
         EyeClosedSvg,
@@ -351,7 +352,7 @@
 
               <fieldset>
                 <legend>Plain button — submits the native form</legend>
-                <form
+                <Form
                   onSubmit={(e) => {
                     e.preventDefault();
                     // eslint-disable-next-line no-alert
@@ -371,12 +372,12 @@
                     />
                     <Button type="submit">Submit form</Button>
                   </Box>
-                </form>
+                </Form>
               </fieldset>
 
               <fieldset>
                 <legend>Button with action — does NOT submit the form</legend>
-                <form
+                <Form
                   onSubmit={(e) => {
                     e.preventDefault();
                     // eslint-disable-next-line no-alert
@@ -408,7 +409,7 @@
                       Submit (with action)
                     </Button>
                   </Box>
-                </form>
+                </Form>
               </fieldset>
             </div>
           </div>
@@ -759,7 +760,7 @@
                 enhanced styling and consistent behavior.
               </p>
 
-              <Box column spacing="sm">
+              <Box flex spacing="s">
                 <fieldset>
                   <legend>Default</legend>
                   <Box flex="y" spacing="s" alignX="start">
@@ -795,7 +796,7 @@
                 available in standard HTML buttons.
               </p>
 
-              <Box column spacing="sm">
+              <Box flex spacing="s">
                 <fieldset>
                   <legend>:read-only</legend>
                   <Box flex="y" spacing="s" alignX="start">
