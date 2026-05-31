@@ -55,7 +55,7 @@ import {
 } from "./control_context.js";
 import { findControlProxyTarget } from "./control_proxy.js";
 import { addInputEffect } from "./input_effect.js";
-import { resolveActionProp, STRING_ACTIONS } from "./string_actions.js";
+import { resolveActionProp } from "./string_actions.js";
 import {
   dispatchRequestResetUIState,
   dispatchRequestSetUIState,
@@ -182,7 +182,7 @@ export const useControlProps = (
     const onKeyDown = (e) => {
       props.onKeyDown?.(e);
       if (e.key === "Enter") {
-        STRING_ACTIONS.submit(e);
+        resolveActionProp("submit")(e);
         return;
       }
       const input = e.currentTarget;

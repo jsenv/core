@@ -11,7 +11,6 @@
  * mais pilote cet input décoratif
  */
 
-import { dispatchCustomEvent } from "@jsenv/dom";
 import { createContext } from "preact";
 import { useContext, useId, useMemo, useRef } from "preact/hooks";
 
@@ -247,18 +246,6 @@ export const SelectableList = (props) => {
     </SelectableListMultipleContext.Provider>
   );
 };
-export const dispatchRequestSelect = (itemEl, { event, id } = {}) => {
-  return dispatchCustomEvent(itemEl, "navi_request_select", {
-    event,
-    id,
-  });
-};
-export const dispatchRequestUnselect = (listEl, { event, id }) => {
-  return dispatchCustomEvent(listEl, "navi_request_unselect", {
-    event,
-    id,
-  });
-};
 
 const SelectableRealInputContext = createContext(null);
 
@@ -378,7 +365,7 @@ const SelectableRealInput = (props) => {
       navi-selectable-real-input=""
       navi-visually-hidden=""
       data-callout-arrow-x="center"
-      navi-debug
+      // navi-debug
     />
   );
 };

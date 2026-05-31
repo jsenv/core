@@ -98,8 +98,6 @@
         Form,
         Button,
         BadgeCount,
-        dispatchRequestSelect,
-        dispatchRequestUnselect,
       } from "@jsenv/navi";
 
       const App = () => {
@@ -426,6 +424,7 @@
                   List (renderBudget=30, {EXTERNAL_CTRL_FRUITS.length} items)
                 </div>
                 <SelectableList
+                  id="external-control-list"
                   ref={listRef}
                   renderBudget={30}
                   action={(v) => {
@@ -479,22 +478,24 @@
                   </select>
                   <div style={{ display: "flex", gap: 8 }}>
                     <Button
-                      onClick={() =>
-                        dispatchRequestSelect(listRef.current, {
-                          id: targetId,
-                        })
-                      }
+                      action="select"
+                      action-target="external-control-list"
+                      value={targetId}
                     >
                       Select
                     </Button>
                     <Button
-                      onClick={() =>
-                        dispatchRequestUnselect(listRef.current, {
-                          id: targetId,
-                        })
-                      }
+                      action="unselect"
+                      action-target="external-control-list"
+                      value={targetId}
                     >
                       Unselect
+                    </Button>
+                    <Button
+                      action="scroll"
+                      action-target="external-control-list"
+                    >
+                      Scroll into view
                     </Button>
                   </div>
                   <div className="col-label" style={{ marginTop: 8 }}>

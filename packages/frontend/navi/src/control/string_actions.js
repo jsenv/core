@@ -19,18 +19,89 @@ export const resolveActionProp = (action) => {
   return action;
 };
 
-const requestUpdate = (event, value) => {
-  const currentTarget = event.currentTarget;
-  const parentControl = getParentControl(currentTarget);
-  if (!parentControl) {
+const scroll = createUICallback({
+  name: "scroll",
+  event: (e) => {
+    return requestScroll(e, () => getActionParam(e));
+  },
+  action: (value, { event }) => {
+    return requestScroll(event, () => value);
+  },
+});
+const requestScroll = (e, getScrollParam) => {
+  const scrollTarget = getActionTarget(e, "scroll");
+  if (!scrollTarget) {
+    return false;
+  }
+  const param = getScrollParam();
+  if (!param) {
     console.warn(
-      "update triggered but no element with [navi-control] found in event path",
-      event,
+      `scroll action triggered but no action-param specified or returned by getScrollParam callback`,
+      e,
     );
     return false;
   }
-  return dispatchRequestSetUIState(parentControl, value, { event });
+  return dispatchCustomEvent(scrollTarget, "navi_request_scroll", {
+    event: e,
+    id: param,
+  });
 };
+
+const select = createUICallback({
+  name: "select",
+  event: (e) => {
+    return requestSelect(e, () => getActionParam(e));
+  },
+  action: (value, { event }) => {
+    return requestSelect(event, () => value);
+  },
+});
+const unselect = createUICallback({
+  name: "unselect",
+  event: (e) => {
+    return requestUnselect(e, () => getActionParam(e));
+  },
+  action: (value, { event }) => {
+    return requestUnselect(event, () => value);
+  },
+});
+const requestSelect = (e, getSelectParam) => {
+  const selectTarget = getActionTarget(e, "select");
+  if (!selectTarget) {
+    return false;
+  }
+  const param = getSelectParam();
+  if (!param) {
+    console.warn(
+      `select action triggered but no action-param specified or returned by getSelectParam callback`,
+      e,
+    );
+    return false;
+  }
+  return dispatchCustomEvent(selectTarget, "request_select", {
+    event: e,
+    id: param,
+  });
+};
+const requestUnselect = (e, getUnselectParam) => {
+  const selectTarget = getActionTarget(e, "select");
+  if (!selectTarget) {
+    return false;
+  }
+  const param = getUnselectParam();
+  if (!param) {
+    console.warn(
+      `select action triggered but no action-param specified or returned by getSelectParam callback`,
+      e,
+    );
+    return false;
+  }
+  return dispatchCustomEvent(selectTarget, "request_select", {
+    event: e,
+    id: param,
+  });
+};
+
 /**
  * Updates the UI state of the closest ancestor field with the current value.
  * Use inside a custom picker popup on an input so the parent picker reflects
@@ -45,7 +116,29 @@ const update = createUICallback({
     return requestUpdate(event, value);
   },
 });
+const requestUpdate = (event, value) => {
+  const actionTarget = getActionTarget(event);
+  if (!actionTarget) {
+    return false;
+  }
+  return dispatchRequestSetUIState(actionTarget, value, { event });
+};
 
+/**
+ * Triggers the action of the closest ancestor field.
+ * Equivalent to clicking the first submit button of a form.
+ * Use on a `<Button>` inside a field or form to confirm the current value.
+ *
+ * @example
+ * <Button action="submit">Confirm</Button>
+ */
+const submit = createUICallback({
+  name: "submit",
+  event: (e) => requestClosestAction(e),
+  action: (_, { event }) => {
+    return requestClosestAction(event);
+  },
+});
 const requestClosestAction = (event) => {
   const currentTarget = event.currentTarget;
   const target = event.target;
@@ -78,37 +171,7 @@ const requestClosestAction = (event) => {
   }
   return allowed;
 };
-/**
- * Triggers the action of the closest ancestor field.
- * Equivalent to clicking the first submit button of a form.
- * Use on a `<Button>` inside a field or form to confirm the current value.
- *
- * @example
- * <Button action="submit">Confirm</Button>
- */
-const submit = createUICallback({
-  name: "submit",
-  event: (e) => requestClosestAction(e),
-  action: (_, { event }) => {
-    return requestClosestAction(event);
-  },
-});
 
-const requestClose = (event, { cancel = false } = {}) => {
-  const currentTarget = event.currentTarget;
-  const expandableEl = currentTarget.closest("[aria-expanded]");
-  if (!expandableEl) {
-    console.warn(
-      "close action triggered but no element with [aria-expanded] found in event path",
-      event,
-    );
-    return false;
-  }
-  return dispatchCustomEvent(expandableEl, "navi_request_close", {
-    event,
-    cancel,
-  });
-};
 /**
  * Clears the value of the closest ancestor field then closes the popup.
  * Combines `update('')` + `close` in one action.
@@ -182,11 +245,62 @@ const send = createUICallback({
     return requestClose(event);
   },
 });
+const requestClose = (event, { cancel = false } = {}) => {
+  const currentTarget = event.currentTarget;
+  const expandableEl = currentTarget.closest("[aria-expanded]");
+  if (!expandableEl) {
+    console.warn(
+      "close action triggered but no element with [aria-expanded] found in event path",
+      event,
+    );
+    return false;
+  }
+  return dispatchCustomEvent(expandableEl, "navi_request_close", {
+    event,
+    cancel,
+  });
+};
 
-export const STRING_ACTIONS = {
+const getActionTarget = (e, actionName) => {
+  const currentTarget = e.currentTarget;
+  const actionTargetAttribute = currentTarget.getAttribute("action-target");
+  if (actionTargetAttribute) {
+    const actionTarget = document.getElementById(actionTargetAttribute);
+    if (!actionTarget) {
+      console.warn(
+        `action-target="${actionTargetAttribute}" specified but no element with that id found in the document`,
+        e,
+      );
+    }
+    return null;
+  }
+  const parentControl = getParentControl(currentTarget);
+  if (!parentControl) {
+    console.warn(
+      `${actionName} triggered but no element with [navi-control] found in event path`,
+      e,
+    );
+    return null;
+  }
+  return parentControl;
+};
+const getActionParam = (e) => {
+  const currentTarget = e.currentTarget;
+  const actionParamAttribute = currentTarget.getAttribute("action-param");
+  if (actionParamAttribute) {
+    return actionParamAttribute;
+  }
+  return null;
+};
+
+const STRING_ACTIONS = {
+  scroll,
+  select,
+  unselect,
+  update,
+
   submit,
 
-  update,
   close,
   clear,
   cancel,
