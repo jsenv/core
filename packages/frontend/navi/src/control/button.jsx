@@ -339,42 +339,48 @@ const ButtonUI = (props) => {
   } = props;
   const parentUIStateController = useContext(ParentUIStateControllerContext);
   const ancestorAction = useContext(ActionContext);
-  const [buttonProps, remainingProps] = useControlProps(props, {
-    primaryInteractionMode: "pointer",
-    controlType: "button",
-    statePropName: "value",
-    getUIValue: () => {
-      const button = ref.current;
-      // The button uiState is a combination of its own state (if it has a name)
-      // and its parent state (if the parent is named or is a named collection)
-      const buttonUIState = {};
-      if (parentUIStateController) {
-        const parentName = parentUIStateController.name;
-        const parentUIState = parentUIStateController.uiStateSignal.peek();
-        if (parentName) {
-          buttonUIState[parentName] = parentUIState;
+  const [buttonProps, remainingProps, ControlChildrenWrapper] = useControlProps(
+    props,
+    {
+      primaryInteractionMode: "pointer",
+      controlType: "button",
+      statePropName: "value",
+      getUIValue: () => {
+        const button = ref.current;
+        // The button uiState is a combination of its own state (if it has a name)
+        // and its parent state (if the parent is named or is a named collection)
+        const buttonUIState = {};
+        if (parentUIStateController) {
+          const parentName = parentUIStateController.name;
+          const parentUIState = parentUIStateController.uiStateSignal.peek();
+          if (parentName) {
+            buttonUIState[parentName] = parentUIState;
+          }
+          // this is how we detect named collection for now (they don't have a name and have an object in their ui state)
+          else if (
+            typeof parentUIState === "object" &&
+            parentUIState !== null
+          ) {
+            Object.assign(buttonUIState, parentUIState);
+          } else {
+            // no name, we don't know where to put that value right?
+          }
         }
-        // this is how we detect named collection for now (they don't have a name and have an object in their ui state)
-        else if (typeof parentUIState === "object" && parentUIState !== null) {
-          Object.assign(buttonUIState, parentUIState);
-        } else {
-          // no name, we don't know where to put that value right?
+        if (button.name) {
+          buttonUIState[button.name] = button.value;
         }
-      }
-      if (button.name) {
-        buttonUIState[button.name] = button.value;
-      }
-      if (!parentUIStateController && !button.name) {
-        return props.value;
-      }
-      return buttonUIState;
+        if (!parentUIStateController && !button.name) {
+          return props.value;
+        }
+        return buttonUIState;
+      },
+      allowNameless: true,
+      // button inherit their ancestor params:
+      // - inside a form button action gets the form params
+      // - inside a radio list or a picker it's the same
+      paramsSignal: ancestorAction ? ancestorAction.paramsSignal : undefined,
     },
-    allowNameless: true,
-    // button inherit their ancestor params:
-    // - inside a form button action gets the form params
-    // - inside a radio list or a picker it's the same
-    paramsSignal: ancestorAction ? ancestorAction.paramsSignal : undefined,
-  });
+  );
   const { basePseudoState, children } = buttonProps;
   const loading = basePseudoState[":-navi-loading"];
 
@@ -406,6 +412,7 @@ const ButtonUI = (props) => {
       {...remainingProps}
       // eslint-disable-next-line react/no-children-prop
       children={undefined}
+      spacing={undefined}
       ref={ref}
       as={as}
       href={href}
@@ -444,15 +451,17 @@ const ButtonUI = (props) => {
         inset={-1}
         color="var(--button-loader-color)"
       />
-      <ButtonContent spacing={spacing}>{children}</ButtonContent>
+      <ControlChildrenWrapper>
+        <ButtonContent spacing={spacing}>{children}</ButtonContent>
+      </ControlChildrenWrapper>
     </Box>
   );
 };
 const ButtonContent = ({ spacing, children }) => {
-  const buttonProps = useContext(BoxForwardedPropsContext);
+  const boxForwardedProps = useContext(BoxForwardedPropsContext);
   return (
     <Text
-      {...buttonProps}
+      {...boxForwardedProps}
       display="inherit"
       spacing={spacing}
       className="navi_button_content"

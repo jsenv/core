@@ -339,27 +339,31 @@ const InputTextualHeadless = (props) => {
 
 const useInputTextualProps = (props) => {
   const { ref, fromInputValue = (v) => v, toInputValue = (v) => v } = props;
-  const [inputProps, remainingProps] = useControlProps(props, {
-    primaryInteractionMode: "keyboard",
-    controlType: "input",
-    statePropName: "value",
-    defaultStatePropName: "defaultValue",
-    readOnlySupported: true,
-    getUIValue: () => {
-      const input = ref.current;
-      const inputValue = input.value;
-      return fromInputValue(inputValue);
+  const [inputProps, remainingProps, ControlChildrenWrapper] = useControlProps(
+    props,
+    {
+      primaryInteractionMode: "keyboard",
+      controlType: "input",
+      statePropName: "value",
+      defaultStatePropName: "defaultValue",
+      readOnlySupported: true,
+      getUIValue: () => {
+        const input = ref.current;
+        const inputValue = input.value;
+        return fromInputValue(inputValue);
+      },
     },
-  });
+  );
   inputProps.value = toInputValue(inputProps.value);
-  return [inputProps, remainingProps];
+  return [inputProps, remainingProps, ControlChildrenWrapper];
 };
 
 const InputNativeContext = createContext(null);
 const InputTextualControlInterface = (props) => {
   import.meta.css = css;
   const { ui, discrete } = props;
-  const [inputProps, remainingProps] = useInputTextualProps(props);
+  const [inputProps, remainingProps, ControlChildrenWrapper] =
+    useInputTextualProps(props);
   const idDefault = useId();
   inputProps.id = inputProps.id || `input_${idDefault}`;
   const { id, basePseudoState, children } = inputProps;
@@ -367,9 +371,11 @@ const InputTextualControlInterface = (props) => {
   const readOnly = basePseudoState[":read-only"];
   const loading = basePseudoState[":-navi-loading"];
   const childrenWithContext = (
-    <InputNativeContext.Provider value={{ id, readOnly, disabled }}>
-      {children || ui}
-    </InputNativeContext.Provider>
+    <ControlChildrenWrapper>
+      <InputNativeContext.Provider value={{ id, readOnly, disabled }}>
+        {children || ui}
+      </InputNativeContext.Provider>
+    </ControlChildrenWrapper>
   );
 
   return (

@@ -260,24 +260,25 @@ const PickerButton = (props) => {
   const { ref, type, icon, placeholder, singleLine, ui } = props;
   const inputRef = useRef(null);
   const fromInputValue = getFromInputValue(type);
-  const [inputProps, pickerRemainingProps] = useControlProps(
-    {
-      ...props,
-      ref: inputRef,
-    },
-    {
-      primaryInteractionMode: "pointer",
-      controlType: "input",
-      statePropName: "value",
-      defaultStatePropName: "defaultValue",
-      readOnlySupported: true,
-      getUIValue: () => {
-        const input = inputRef.current;
-        const inputValue = input.value;
-        return fromInputValue(inputValue);
+  const [inputProps, pickerRemainingProps, ControlChildrenWrapper] =
+    useControlProps(
+      {
+        ...props,
+        ref: inputRef,
       },
-    },
-  );
+      {
+        primaryInteractionMode: "pointer",
+        controlType: "input",
+        statePropName: "value",
+        defaultStatePropName: "defaultValue",
+        readOnlySupported: true,
+        getUIValue: () => {
+          const input = inputRef.current;
+          const inputValue = input.value;
+          return fromInputValue(inputValue);
+        },
+      },
+    );
   const { id, value, basePseudoState, disabled, children } = inputProps;
   const loading = basePseudoState[":-navi-loading"];
 
@@ -324,8 +325,7 @@ const PickerButton = (props) => {
       <span className="navi_picker_right_slot">
         <Icon size="m">{icon === undefined ? <ChevronDownSvg /> : icon}</Icon>
       </span>
-
-      {children}
+      <ControlChildrenWrapper>{children}</ControlChildrenWrapper>
     </Box>
   );
 };

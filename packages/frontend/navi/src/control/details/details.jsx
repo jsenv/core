@@ -70,31 +70,32 @@ const DetailsField = (props) => {
     closeKeyShortcut = "ArrowLeft",
     onToggle,
   } = props;
-  const [detailsProps, remainingProps] = useControlProps(
-    {
-      resetOnCancel: true,
-      resetOnAbort: true,
-      resetOnError: true,
-      // errors are shown by ActionRenderer inside <details>, not as validation messages
-      actionErrorEffect: "none",
-      ...props,
-    },
-    {
-      primaryInteractionMode: "pointer",
-      controlType: "details",
-      getUIValue: () => {
-        const details = ref.current;
-        const opened = details.open;
-        return opened ? props.value : undefined;
+  const [detailsProps, remainingProps, ControlChildrenWrapper] =
+    useControlProps(
+      {
+        resetOnCancel: true,
+        resetOnAbort: true,
+        resetOnError: true,
+        // errors are shown by ActionRenderer inside <details>, not as validation messages
+        actionErrorEffect: "none",
+        ...props,
       },
-      statePropName: "open",
-      defaultStatePropName: "defaultOpen",
-      fallbackState: false,
-      getStateFromProp: (open) => (open ? props.value : undefined),
-      getPropFromState: Boolean,
-      persists,
-    },
-  );
+      {
+        primaryInteractionMode: "pointer",
+        controlType: "details",
+        getUIValue: () => {
+          const details = ref.current;
+          const opened = details.open;
+          return opened ? props.value : undefined;
+        },
+        statePropName: "open",
+        defaultStatePropName: "defaultOpen",
+        fallbackState: false,
+        getStateFromProp: (open) => (open ? props.value : undefined),
+        getPropFromState: Boolean,
+        persists,
+      },
+    );
   const { value, children } = detailsProps;
   const open = Boolean(value);
 
@@ -199,7 +200,9 @@ const DetailsField = (props) => {
           <div className="navi_summary_label">{label}</div>
         </div>
       </summary>
-      <DetailsFieldContent>{children}</DetailsFieldContent>
+      <DetailsFieldContent>
+        <ControlChildrenWrapper>{children}</ControlChildrenWrapper>
+      </DetailsFieldContent>
     </Box>
   );
 };

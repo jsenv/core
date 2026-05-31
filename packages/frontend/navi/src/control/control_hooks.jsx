@@ -134,12 +134,13 @@ export const useControlProps = (
     paramsSignal,
   );
   const boundAction = externalBoundAction || internalBoundAction;
-  const [controlProps, remainingProps] = useInteractiveProps(props, {
-    readOnlySupported,
-    boundAction,
-    uiStateController,
-    getUIValue,
-  });
+  const [controlProps, remainingProps, ChildrenContextWrapper] =
+    useInteractiveProps(props, {
+      readOnlySupported,
+      boundAction,
+      uiStateController,
+      getUIValue,
+    });
 
   interactions: {
     const { ref } = props;
@@ -276,7 +277,7 @@ export const useControlProps = (
     });
   }
 
-  return [controlProps, remainingProps];
+  return [controlProps, remainingProps, ChildrenContextWrapper];
 };
 
 /**
@@ -327,23 +328,31 @@ export const useControlgroupProps = (
     const loading = basePseudoState[":-navi-loading"];
 
     childrenWithContext = (
-      <ParentUIStateControllerContext.Provider value={uiGroupStateController}>
-        <ControlNameContext.Provider value={controlgroupProps.name}>
-          <DisabledContext.Provider value={disabled}>
-            <ReadOnlyContext.Provider value={readOnly}>
-              <RequiredContext.Provider value={controlgroupProps.required}>
-                <LoadingContext.Provider value={loading}>
-                  <ActionContext.Provider value={boundAction}>
-                    <ActionRequesterContext.Provider value={actionRequester}>
-                      {controlgroupProps.children}
-                    </ActionRequesterContext.Provider>
-                  </ActionContext.Provider>
-                </LoadingContext.Provider>
-              </RequiredContext.Provider>
-            </ReadOnlyContext.Provider>
-          </DisabledContext.Provider>
-        </ControlNameContext.Provider>
-      </ParentUIStateControllerContext.Provider>
+      <MessagePropsRefContext.Provider value={undefined}>
+        <ControlToInterfaceContext.Provider value={undefined}>
+          <ParentUIStateControllerContext.Provider
+            value={uiGroupStateController}
+          >
+            <ControlNameContext.Provider value={controlgroupProps.name}>
+              <DisabledContext.Provider value={disabled}>
+                <ReadOnlyContext.Provider value={readOnly}>
+                  <RequiredContext.Provider value={controlgroupProps.required}>
+                    <LoadingContext.Provider value={loading}>
+                      <ActionContext.Provider value={boundAction}>
+                        <ActionRequesterContext.Provider
+                          value={actionRequester}
+                        >
+                          {controlgroupProps.children}
+                        </ActionRequesterContext.Provider>
+                      </ActionContext.Provider>
+                    </LoadingContext.Provider>
+                  </RequiredContext.Provider>
+                </ReadOnlyContext.Provider>
+              </DisabledContext.Provider>
+            </ControlNameContext.Provider>
+          </ParentUIStateControllerContext.Provider>
+        </ControlToInterfaceContext.Provider>
+      </MessagePropsRefContext.Provider>
     );
   }
   return [
@@ -531,27 +540,10 @@ const useInteractiveProps = (
   }
   children_prop: {
     const { children } = props;
-    let childrenWithContext;
-    if (children === undefined) {
-      childrenWithContext = undefined;
-    } else {
-      /**
-       * We are a field ourselve, which can contain other fields that should not inherit some of the context:
-       * - id was used by this field, no other field use it
-       * - message props are not meant to be propagated either, they are specific to a given field
-       * - readonly/required reporting is specific to this field interface. No other field interface should be able to report to parent
-       */
-      childrenWithContext = (
-        <MessagePropsRefContext.Provider value={undefined}>
-          <ControlToInterfaceContext.Provider value={undefined}>
-            {children}
-          </ControlToInterfaceContext.Provider>
-        </MessagePropsRefContext.Provider>
-      );
-    }
-    Object.assign(controlProps, {
-      children: childrenWithContext,
-    });
+    // Children are returned raw so callers decide how to wrap them.
+    // Use the returned ChildrenContextWrapper to reset field-specific contexts
+    // (MessagePropsRef, ControlToInterface) around the content you render.
+    Object.assign(controlProps, { children });
   }
   action_props: {
     const { action, actionErrorEffect, errorMapping } = props;
@@ -732,5 +724,14 @@ const useInteractiveProps = (
     });
   }
 
-  return [controlProps, remainingProps];
+  // Resets field-specific contexts so nested fields inside this component
+  // don't inherit the current field's id, message props, or interface reporting.
+  const ChildrenContextWrapper = ({ children }) => (
+    <MessagePropsRefContext.Provider value={undefined}>
+      <ControlToInterfaceContext.Provider value={undefined}>
+        {children}
+      </ControlToInterfaceContext.Provider>
+    </MessagePropsRefContext.Provider>
+  );
+  return [controlProps, remainingProps, ChildrenContextWrapper];
 };
