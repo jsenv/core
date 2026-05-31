@@ -1053,7 +1053,7 @@ export const createAction = (callback, rootOptions = {}) => {
           const data = dataSignal.peek();
           return data;
         };
-        const onRunError = (e) => {
+        const onRunError = (error) => {
           if (abortSignal) {
             abortSignal.removeEventListener("abort", onAbortFromSpecific);
           }
@@ -1063,40 +1063,40 @@ export const createAction = (callback, rootOptions = {}) => {
           actionAbortMap.delete(action);
           actionPromiseMap.delete(action);
           const isAbort =
-            (internalAbortSignal.aborted && e === internalAbortSignal.reason) ||
-            e.name === "AbortError";
+            (internalAbortSignal.aborted &&
+              error === internalAbortSignal.reason) ||
+            error.name === "AbortError";
           if (isAbort) {
             runningStateSignal.value = ABORTED;
             if (isPrerun && abortSignal.aborted) {
               prerunProtectionRegistry.unprotect(action);
             }
-            onAbort?.(e, action);
-            return e;
+            onAbort?.(error, { event, action, args });
+            return error;
           }
           if (DEBUG) {
             console.log(
-              `"${action}": failed (error: ${e}, handled by ui: ${ui.hasRenderers})`,
+              `"${action}": failed (error: ${error}, handled by ui: ${ui.hasRenderers})`,
             );
           }
           batch(() => {
-            errorSignal.value = e;
+            errorSignal.value = error;
             runningStateSignal.value = FAILED;
-            onError?.(e, action);
+            onError?.(error, { event, action, args });
           });
 
           if (ui.hasRenderers || onError) {
             // When inside suspense this console.error is redundant with the error thrown by preact debug at
             // https://github.com/preactjs/preact/blob/21dd6d04c1a9a43e5b60976bb5eb7d856253195b/debug/src/debug.js#L109
-            console.error(e);
-
+            console.error(error);
             // For UI-bound actions: error is properly handled by logging + UI display
             // Return error instead of throwing to signal it's handled and prevent:
             // - jsenv error overlay from appearing
             // - error being treated as unhandled by runtime
-            return e;
+            return error;
           }
-          e.action = action;
-          throw e;
+          error.action = action;
+          throw error;
         };
 
         try {

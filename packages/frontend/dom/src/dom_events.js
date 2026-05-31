@@ -93,6 +93,9 @@ const resolveEventDetail = (customEventDetail) => {
  *   findEvent(e, (e) => e.type === "navi_list_select")
  */
 export const findEvent = (event, predicate) => {
+  if (!event) {
+    return undefined;
+  }
   const match = resolveEventPredicate(predicate);
   if (match(event)) {
     return event;

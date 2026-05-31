@@ -758,11 +758,11 @@ export const installCustomConstraintValidation = (
     const addCustomMessage = (
       key,
       message,
-      { status = "info", removeOnRequestAction = false } = {},
+      { event, status = "info", removeOnRequestAction = false } = {},
     ) => {
       customMessageMap.set(key, { message, status, removeOnRequestAction });
-      checkValidity();
-      reportValidity();
+      checkValidity({ event });
+      reportValidity({ event });
       return () => {
         removeCustomMessage(key);
       };
@@ -798,7 +798,7 @@ export const installCustomConstraintValidation = (
 
     let waitPointerRelease;
     onCalloutOpen((openingEvent) => {
-      if (findEvent(openingEvent, "mousedown")) {
+      if (openingEvent && findEvent(openingEvent, "mousedown")) {
         waitPointerRelease = true;
         const onMouseUp = () => {
           setTimeout(() => {
@@ -836,7 +836,8 @@ export const installCustomConstraintValidation = (
     // so it can never accidentally close the next callout.
     const interactionTarget = findControlRoot(element) || element;
     onCalloutOpen((openingEvent) => {
-      const openingMousedownEvent = findEvent(openingEvent, "mousedown");
+      const openingMousedownEvent =
+        openingEvent && findEvent(openingEvent, "mousedown");
       const onmousedown = (e) => {
         if (e.button !== 0) {
           return;

@@ -29,7 +29,7 @@ export const useExecuteAction = (
   }, [error]);
 
   const validationMessageTargetRef = useRef(null);
-  const addErrorMessage = (error) => {
+  const addErrorMessage = (error, { event } = {}) => {
     let calloutAnchor = validationMessageTargetRef.current;
     let message;
     if (errorMapping) {
@@ -51,6 +51,7 @@ export const useExecuteAction = (
       message = error;
     }
     addCustomMessage(calloutAnchor, "action_error", message, {
+      event,
       status: "error",
       // This error should not prevent <form> submission
       // so whenever user tries to submit the form the error is cleared
@@ -148,7 +149,7 @@ export const useExecuteAction = (
             });
           }
         },
-        onError: (error) => {
+        onError: (error, { event }) => {
           const element = elementRef.current;
           if (
             // at this stage the action side effect might have removed the <element> from the DOM
@@ -162,7 +163,7 @@ export const useExecuteAction = (
             });
           }
           if (errorEffect === "show_validation_message") {
-            addErrorMessage(error);
+            addErrorMessage(error, { event });
           } else if (errorEffect === "throw") {
             setError(error);
           }
