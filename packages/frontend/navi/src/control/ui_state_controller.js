@@ -312,13 +312,8 @@ export const useUIStateController = (
         const siblings = radioControllersByName.get(uiStateController.name);
         if (siblings) {
           const siblingUncheckEvent = new CustomEvent("radio_sibling_uncheck", {
-            detail: {
-              event: e,
-              suppressParentNotification: true,
-              suppressSyntheticInput: true,
-            },
+            detail: { event: e, internalBehavior: true },
           });
-
           for (const siblingController of siblings) {
             if (siblingController === uiStateController) {
               continue;
@@ -335,12 +330,25 @@ export const useUIStateController = (
       }
       debugInteraction(e, `publishUIState(${JSON.stringify(newUIState)})`);
       publishUIState(newUIState, e);
-      if (!e.detail?.suppressParentNotification) {
-        notifyParentAboutChildUIStateChange(e);
-      }
-      // Proxy: forward the state change to the real input
-      // The real input will handle its own UIState update + synthetic input.
+      // Always notify the element that its UI state changed.
+      // Listeners use this to stay in sync (e.g. input_effect.js tracks currentState,
+      // useUIState subscribes for reactive updates). Separate from navi_set_ui_state
+      // which is the command; navi_ui_state_change is the notification.
       if (el) {
+        dispatchInternalCustomEvent(el, "navi_ui_state_change", {
+          event: e,
+          value: newUIState,
+        });
+      }
+      const internalBehavior = e.detail?.internalBehavior;
+      if (internalBehavior) {
+        return true;
+      }
+      notifyParentAboutChildUIStateChange(e);
+
+      if (el) {
+        // Proxy: forward the state change to the real input
+        // The real input will handle its own UIState update + synthetic input.
         const naviProxyTarget = findControlProxyTarget(el);
         if (naviProxyTarget) {
           debugInteraction(
@@ -351,12 +359,8 @@ export const useUIStateController = (
             event: e.detail?.event ?? e,
           });
         }
-      }
-      // Dispatch a synthetic "input" event so external listeners see the new
-      // value. Skip when:
-      // - suppressSyntheticInput is set (e.g. radio sibling uncheck)
-      // - an input event on this element already exists in the event chain
-      if (el && !e.detail?.suppressSyntheticInput) {
+        // Dispatch a synthetic "input" event so external listeners see the new
+        // value. Skip when an input event on this element already exists in the chain.
         const existingInputEvent = findEvent(e, (eInChain) => {
           return eInChain.type === "input" && eInChain.target === el;
         });
@@ -698,6 +702,28 @@ export const useUIGroupStateController = (
   return uiStateController;
 };
 
+export const dispatchRequestSetUIState = (element, value, detail) => {
+  const controlHost = findControlHost(element) || element;
+  return dispatchInternalCustomEvent(controlHost, "navi_set_ui_state", {
+    ...detail,
+    value,
+  });
+};
+export const dispatchRequestResetUIState = (element, e) => {
+  return dispatchInternalCustomEvent(element, "navi_request_reset_ui_state", {
+    event: e,
+  });
+};
+export const getUIStateFromElement = (el) => {
+  let uiState;
+  dispatchInternalCustomEvent(el, "navi_get_ui_state", {
+    respondWith: (v) => {
+      uiState = v;
+    },
+  });
+  return uiState;
+};
+
 /**
  * Hook to subscribe to the UI state of a field from its DOM element ref.
  *
@@ -727,35 +753,16 @@ export const useUIState = (ref, initialValue) => {
     if (!inputEl) {
       return undefined;
     }
-    const onnavi_set_ui_state = (e) => {
+    const onnavi_ui_state_change = (e) => {
       setUIState(e.detail.value);
     };
-    inputEl.addEventListener("navi_set_ui_state", onnavi_set_ui_state);
+    inputEl.addEventListener("navi_ui_state_change", onnavi_ui_state_change);
     return () => {
-      inputEl.removeEventListener("navi_set_ui_state", onnavi_set_ui_state);
+      inputEl.removeEventListener(
+        "navi_ui_state_change",
+        onnavi_ui_state_change,
+      );
     };
   }, [ref]);
-  return uiState;
-};
-
-export const dispatchRequestSetUIState = (element, value, detail) => {
-  const controlHost = findControlHost(element) || element;
-  return dispatchInternalCustomEvent(controlHost, "navi_set_ui_state", {
-    ...detail,
-    value,
-  });
-};
-export const dispatchRequestResetUIState = (element, e) => {
-  return dispatchInternalCustomEvent(element, "navi_request_reset_ui_state", {
-    event: e,
-  });
-};
-export const getUIStateFromElement = (el) => {
-  let uiState;
-  dispatchInternalCustomEvent(el, "navi_get_ui_state", {
-    respondWith: (v) => {
-      uiState = v;
-    },
-  });
   return uiState;
 };

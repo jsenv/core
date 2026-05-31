@@ -115,16 +115,12 @@ export const addInputEffect = (
   });
 
   if (input.type === "radio") {
-    // radios are unchecked by an internal set_ui_state event dispatched when an other radio is checked
-    // we must update our internal state in that case otherwise we keep thinking it's checked when it's not
-    input.addEventListener("navi_set_ui_state", (e) => {
-      if (e.detail.suppressSyntheticInput) {
-        debugInteraction(
-          e,
-          `radio unchecked via navi_set_ui_state, updating internal state`,
-        );
-        currentState = getState();
-      }
+    // radios are unchecked by an internal setUIState call when another radio is checked.
+    // navi_ui_state_change is dispatched whenever setUIState changes state, so we
+    // listen here to keep currentState in sync — otherwise input_effect thinks the
+    // radio is still checked and ignores the next user click as "state unchanged".
+    input.addEventListener("navi_ui_state_change", () => {
+      currentState = getState();
     });
   }
 
