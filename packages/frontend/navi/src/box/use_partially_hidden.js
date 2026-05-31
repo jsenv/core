@@ -27,19 +27,23 @@ export const usePartiallyHidden = (ref, enabled) => {
     if (!el || !enabled) {
       return undefined;
     }
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.intersectionRatio >= 0.99) {
-          el.removeAttribute("navi-partially-hidden");
-        } else {
-          el.setAttribute("navi-partially-hidden", "");
-        }
-      },
-      { threshold: 0.99 },
-    );
-    observer.observe(el);
-    return () => {
-      observer.disconnect();
-    };
+    return setupPartiallyHidden(el);
   }, [enabled]);
+};
+
+export const setupPartiallyHidden = (el) => {
+  const observer = new IntersectionObserver(
+    ([entry]) => {
+      if (entry.intersectionRatio >= 0.99) {
+        el.removeAttribute("navi-partially-hidden");
+      } else {
+        el.setAttribute("navi-partially-hidden", "");
+      }
+    },
+    { threshold: 0.99 },
+  );
+  observer.observe(el);
+  return () => {
+    observer.disconnect();
+  };
 };

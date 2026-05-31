@@ -311,11 +311,11 @@ const ButtonRouteResolver = (props) => {
   }
   return <Next {...props} />;
 };
-const ButtonFieldResolver = (props) => {
+const ButtonControlResolver = (props) => {
   const Next = useNextResolver();
 
   if (props.name || props.action || Object.hasOwn(props, "value")) {
-    return <ButtonFieldInterface {...props} />;
+    return <ButtonControl {...props} />;
   }
   return <Next {...props} />;
 };
@@ -332,7 +332,7 @@ const ButtonInsideFormResolver = (props) => {
 const renderButton = createComponentResolver([
   ButtonRouteResolver,
   ButtonInsideFormResolver,
-  ButtonFieldResolver,
+  ButtonControlResolver,
 ]);
 
 const ButtonUI = (props) => {
@@ -538,7 +538,7 @@ const ButtonInsideForm = (props) => {
     />
   );
 };
-const ButtonFieldInterface = (props) => {
+const ButtonControl = (props) => {
   const Next = useNextResolver();
   const { ref, onClick, onMouseDown } = props;
   const parentUIStateController = useContext(ParentUIStateControllerContext);

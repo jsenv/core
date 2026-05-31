@@ -162,6 +162,11 @@ export const useControlProps = (
       props.onClick?.(e);
       if (primaryInteractionMode === "pointer") {
         const field = ref.current;
+        if (controlType === "button") {
+          // Buttons have no input event — click IS the action trigger.
+          dispatchRequestAction(field, { event: e });
+          return;
+        }
         if (hasPointerDownInteraction) {
           // click on range input does nothing if interaction is not allowed, so we can just ignore it here
           return;
@@ -240,7 +245,8 @@ export const useControlProps = (
     };
     const refCallback = useCallback(
       (field) => {
-        if (actionInteraction === "manual") {
+        if (actionInteraction === "manual" || controlType === "button") {
+          // buttons have no input event; they trigger actions via onClick
           return undefined;
         }
         return addInputEffect(
