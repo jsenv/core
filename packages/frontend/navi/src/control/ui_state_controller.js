@@ -17,8 +17,13 @@ import {
 import { useNavState } from "../nav/browser_integration/browser_integration.js";
 import { useInitialValue } from "../state/use_initial_value.js";
 import { findControlHost } from "./control_dom.js";
-import { findControlProxyTarget } from "./control_proxy.js";
 import { FormContext } from "./form_context.js";
+
+// In-memory registry of all mounted ui state controllers keyed by their id.
+// Allows direct controller access without dispatching DOM events — used by external
+// callers (e.g. selectable_list) to call setUIState by id instead of via the DOM.
+const controllersById = new Map();
+const getUIStateControllerById = (id) => controllersById.get(id);
 
 // In-memory registry for radio controllers, keyed by input name.
 // Allows radio sibling unchecking without querying the DOM — necessary when
@@ -176,14 +181,21 @@ export const useUIStateController = (
     componentType,
   );
   useLayoutEffect(() => {
+    const controller = uiStateControllerRef.current;
+    if (id) {
+      controllersById.set(id, controller);
+    }
     notifyParentAboutChildMount();
     if (componentType === "radio") {
-      registerRadioController(uiStateControllerRef.current);
+      registerRadioController(controller);
     }
     return () => {
+      if (id) {
+        controllersById.delete(id);
+      }
       notifyParentAboutChildUnmount();
       if (componentType === "radio") {
-        unregisterRadioController(uiStateControllerRef.current);
+        unregisterRadioController(controller);
       }
     };
   }, []);
@@ -198,6 +210,7 @@ export const useUIStateController = (
       hasStateProp,
       stateInitial,
       state,
+      props,
     });
     return existingUIStateController;
   }
@@ -216,12 +229,14 @@ export const useUIStateController = (
       hasStateProp,
       stateInitial,
       state,
+      props,
     }) => {
       uiStateController.readOnly = readOnly;
       uiStateController.name = name;
       uiStateController.getPropFromState = getPropFromState;
       uiStateController.getStateFromProp = getStateFromProp;
       uiStateController.stateInitial = stateInitial;
+      uiStateController.props = props;
 
       if (hasStateProp) {
         uiStateController.hasStateProp = true;
@@ -247,6 +262,7 @@ export const useUIStateController = (
     allowNameless,
     readOnly,
     name,
+    props,
     statePropName,
     defaultStatePropName,
     hasStateProp,
@@ -303,11 +319,13 @@ export const useUIStateController = (
       // when sibling items are virtualized (not in the DOM).
       // Form scoping is preserved by comparing parentUIStateController references.
 
+      const controlProxyFor = uiStateController.props["navi-control-proxy-for"];
+
       if (
         componentType === "radio" &&
         newUIState &&
         uiStateController.name &&
-        !uiStateController.isProxy
+        !controlProxyFor
       ) {
         const siblings = radioControllersByName.get(uiStateController.name);
         if (siblings) {
@@ -345,20 +363,19 @@ export const useUIStateController = (
         return true;
       }
       notifyParentAboutChildUIStateChange(e);
-
-      if (el) {
+      if (controlProxyFor) {
         // Proxy: forward the state change to the real input
         // The real input will handle its own UIState update + synthetic input.
-        const naviProxyTarget = findControlProxyTarget(el);
-        if (naviProxyTarget) {
+        const targetController = getUIStateControllerById(controlProxyFor);
+        if (targetController) {
           debugInteraction(
             e,
-            `forwarding set_ui_state "${prop}" to ${getElementSignature(naviProxyTarget)}`,
+            `forwarding set_ui_state "${prop}" to ${getElementSignature(targetController.elementRef.current)}`,
           );
-          dispatchRequestSetUIState(naviProxyTarget, prop, {
-            event: e.detail?.event ?? e,
-          });
+          targetController.setUIState(prop, e);
         }
+      }
+      if (el) {
         // Dispatch a synthetic "input" event so external listeners see the new
         // value. Skip when an input event on this element already exists in the chain.
         const existingInputEvent = findEvent(e, (eInChain) => {
