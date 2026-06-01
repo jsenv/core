@@ -114,7 +114,7 @@ export const addInputEffect = (
     input.removeEventListener("paste", onEvent);
   });
 
-  if (input.type === "radio") {
+  if (input.type === "radio" && !input.hasAttribute("navi-control-proxy-for")) {
     // radios are unchecked by an internal setUIState call when another radio is checked.
     // navi_ui_state_change is dispatched whenever setUIState changes state, so we
     // listen here to keep currentState in sync — otherwise input_effect thinks the

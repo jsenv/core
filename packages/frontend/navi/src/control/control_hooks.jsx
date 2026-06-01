@@ -332,7 +332,7 @@ export const useControlProps = (
           },
         );
       },
-      [actionInteraction, actionAfterChange, actionDebounce],
+      [actionInteraction, actionAfterChange, actionDebounce, inputEffect],
     );
     const refComposed = useComposeElementRef(refCallback, ref);
     Object.assign(controlProps, {
