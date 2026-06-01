@@ -83,11 +83,6 @@ const DetailsField = (props) => {
       {
         primaryInteractionMode: "pointer",
         controlType: "details",
-        getUIValue: () => {
-          const details = ref.current;
-          const opened = details.open;
-          return opened ? props.value : undefined;
-        },
         statePropName: "open",
         defaultStatePropName: "defaultOpen",
         fallbackState: false,

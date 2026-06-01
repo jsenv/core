@@ -10,10 +10,8 @@ import { getHrefTargetInfo } from "../nav/browser_integration/href_target_info.j
 import { assertRoute, useRouteStatus } from "../nav/route.js";
 import { Text, markAsOutsideTextFlow } from "../text/text.jsx";
 import { useAccentColorAttributes } from "../utils/use_accent_color_attributes.js";
-import { ActionContext } from "./control_context.js";
 import { useControlProps } from "./control_hooks.jsx";
 import { FormContext } from "./form_context.js";
-import { ParentUIStateControllerContext } from "./ui_state_controller.js";
 
 /**
  * Notes on Button uiAction and action behavior regarding their context (form, radio list, picker):
@@ -337,46 +335,13 @@ const ButtonUI = (props) => {
     discrete = icon && !revealOnInteraction,
     spacing,
   } = props;
-  const parentUIStateController = useContext(ParentUIStateControllerContext);
-  const ancestorAction = useContext(ActionContext);
   const [buttonProps, remainingProps, ControlChildrenWrapper] = useControlProps(
     props,
     {
       primaryInteractionMode: "pointer",
       controlType: "button",
       statePropName: "value",
-      getUIValue: () => {
-        const button = ref.current;
-        // The button uiState is a combination of its own state (if it has a name)
-        // and its parent state (if the parent is named or is a named collection)
-        const buttonUIState = {};
-        if (
-          parentUIStateController &&
-          parentUIStateController.type === "form"
-        ) {
-          const formName = parentUIStateController.name;
-          const formUIState = parentUIStateController.uiStateSignal.peek();
-          if (formName) {
-            buttonUIState[formName] = formUIState;
-          }
-          // this is how we detect named collection for now (they don't have a name and have an object in their ui state)
-          else {
-            Object.assign(buttonUIState, formUIState);
-          }
-        }
-        if (button.name) {
-          buttonUIState[button.name] = button.value;
-        }
-        if (!parentUIStateController && !button.name) {
-          return props.value;
-        }
-        return buttonUIState;
-      },
       allowNameless: true,
-      // button inherit their ancestor params:
-      // - inside a form button action gets the form params
-      // - inside a radio list or a picker it's the same
-      paramsSignal: ancestorAction ? ancestorAction.paramsSignal : undefined,
     },
   );
   const { basePseudoState, children } = buttonProps;

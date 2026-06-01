@@ -41,7 +41,7 @@ const RadioGroupInterface = (props) => {
       },
       {
         controlType: "radio_group",
-        childComponentType: "radio",
+        childControlType: "radio",
         aggregateChildStates: (childUIStateControllers) => {
           let activeValue;
           for (const childUIStateController of childUIStateControllers) {

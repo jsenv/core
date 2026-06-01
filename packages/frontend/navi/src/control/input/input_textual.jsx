@@ -37,6 +37,7 @@ import { useControlProps } from "../control_hooks.jsx";
 import { Label } from "../field.jsx";
 import { dispatchRequestSetUIState } from "../ui_state_controller.js";
 import { dispatchRequestInteraction } from "../validation/custom_constraint_validation.js";
+import { getToInputValue } from "./input_value.js";
 
 const css = /* css */ `
   @layer navi {
@@ -338,7 +339,7 @@ const InputTextualHeadless = (props) => {
 };
 
 const useInputTextualProps = (props) => {
-  const { ref, fromInputValue = (v) => v, toInputValue = (v) => v } = props;
+  const toInputValue = getToInputValue(props.type);
   const [inputProps, remainingProps, ControlChildrenWrapper] = useControlProps(
     props,
     {
@@ -347,11 +348,6 @@ const useInputTextualProps = (props) => {
       statePropName: "value",
       defaultStatePropName: "defaultValue",
       readOnlySupported: true,
-      getUIValue: () => {
-        const input = ref.current;
-        const inputValue = input.value;
-        return fromInputValue(inputValue);
-      },
     },
   );
   inputProps.value = toInputValue(inputProps.value);
@@ -582,76 +578,15 @@ const InputTelUI = ({ icon }) => {
 };
 const InputNumber = (props) => {
   const Next = useNextResolver();
-  return <Next toInputValue={numberToInputValue} {...props} />;
-};
-const numberToInputValue = (uiState) => {
-  const inputValueAsNumber = Number(uiState);
-  if (isNaN(inputValueAsNumber)) {
-    return uiState;
-  }
-  return inputValueAsNumber;
+  return <Next {...props} />;
 };
 const InputColor = (props) => {
   const Next = useNextResolver();
-  return <Next toInputValue={colorToInputValue} {...props} />;
+  return <Next {...props} />;
 };
-// Browser requires a non-empty value for <input type="color">.
-// When our logical value is empty we give it #000000 so it doesn't choke.
-// The UI uses the original (possibly empty) value to show the checkerboard.
-const colorToInputValue = (uiState) => uiState || "#000000";
 const InputDatetimeLocal = (props) => {
   const Next = useNextResolver();
-  return (
-    <Next
-      fromInputValue={convertToUTCTimezone}
-      toInputValue={convertToLocalTimezone}
-      {...props}
-    />
-  );
-};
-// As explained in https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/datetime-local#setting_timezones
-// datetime-local does not support timezones
-const convertToLocalTimezone = (dateTimeString) => {
-  const date = new Date(dateTimeString);
-  if (isNaN(date.getTime())) {
-    return dateTimeString;
-  }
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
-  const seconds = String(date.getSeconds()).padStart(2, "0");
-  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
-};
-const convertToUTCTimezone = (localDateTimeString) => {
-  if (!localDateTimeString) {
-    return localDateTimeString;
-  }
-  const localDate = new Date(localDateTimeString);
-  if (isNaN(localDate.getTime())) {
-    return localDateTimeString;
-  }
-  return localDate.toISOString();
-};
-
-export const getToInputValue = (type) => {
-  if (type === "number") {
-    return numberToInputValue;
-  }
-  if (type === "color") {
-    return colorToInputValue;
-  }
-  if (type === "datetime-local") {
-    return convertToLocalTimezone;
-  }
-  return (v) => v;
-};
-export const getFromInputValue = (type) => {
-  if (type === "datetime-local") {
-    return convertToUTCTimezone;
-  }
-  return (v) => v;
+  return <Next {...props} />;
 };
 
 const InputTextualWithSuggestions = (props) => {

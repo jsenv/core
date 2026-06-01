@@ -173,7 +173,7 @@ export const SelectableList = (props) => {
   ] = useControlgroupProps(props, {
     stateType: multiple ? "array" : "",
     controlType: multiple ? "checkbox_group" : "radio_group",
-    childComponentType: multiple ? "checkbox" : "radio",
+    childControlType: multiple ? "checkbox" : "radio",
     aggregateChildStates: multiple
       ? (childUIStateControllers) => {
           const values = [];

@@ -4,7 +4,7 @@ import {
   findEvent,
   getElementSignature,
 } from "@jsenv/dom";
-import { signal } from "@preact/signals";
+import { computed, signal } from "@preact/signals";
 import { createContext } from "preact";
 import {
   useContext,
@@ -219,7 +219,17 @@ export const useUIStateController = (
     JSON.stringify(stateInitial),
   );
   const [publishUIState, subscribeUIState] = createPubSub();
-  const uiStateSignal = signal(stateInitial);
+  const ownUIStateSignal = signal(stateInitial);
+  const inherit =
+    controlType === "button" && !hasStateProp && parentUIStateController;
+  const uiStateSignal = inherit
+    ? computed(() => {
+        const parentUIState = parentUIStateController.uiStateSignal.value;
+        const ownUIState = ownUIStateSignal.value;
+        return ownUIState || parentUIState;
+      })
+    : ownUIStateSignal;
+
   const uiStateController = {
     _checkForUpdates: ({
       readOnly,
@@ -272,13 +282,6 @@ export const useUIStateController = (
     elementRef: ref,
     getPropFromState,
     getStateFromProp,
-    requestUIAction: (e) => {
-      if (uiAction || uiActionInternal) {
-        const uiState = getUIStateFromElement(e.currentTarget);
-        uiActionInternal?.(uiState, e);
-        uiAction?.(uiState, e);
-      }
-    },
     setUIState: (prop, e) => {
       const newUIState = uiStateController.getStateFromProp(prop);
       if (persists) {
@@ -310,7 +313,11 @@ export const useUIStateController = (
         el[statePropName] = propValue;
       }
       uiStateController.uiState = newUIState;
-      uiStateSignal.value = newUIState;
+      ownUIStateSignal.value = newUIState;
+      if (uiAction || uiActionInternal) {
+        uiActionInternal?.(newUIState, e);
+        uiAction?.(newUIState, e);
+      }
       // Radio group: when a radio becomes checked, uncheck all siblings.
       // We only update their UIState — no parent notification, no synthetic
       // input event (the browser never fires input on the unchecked radios,
@@ -318,9 +325,7 @@ export const useUIStateController = (
       // Uses the in-memory registry instead of DOM queries so this works even
       // when sibling items are virtualized (not in the DOM).
       // Form scoping is preserved by comparing parentUIStateController references.
-
       const controlProxyFor = uiStateController.props["navi-control-proxy-for"];
-
       if (
         controlType === "radio" &&
         newUIState &&
@@ -573,14 +578,14 @@ export const useUIGroupStateController = (
       childUIStateControllerArray,
       fallbackState,
     );
-    const newUIState =
+    const groupUIState =
       aggChildState === undefined ? fallbackState : aggChildState;
     debugAction(
       e,
-      `${controlType}.aggregateChildStates -> ${JSON.stringify(newUIState)}`,
+      `${controlType}.getUIState -> ${JSON.stringify(groupUIState)}`,
     );
     const uiStateController = uiStateControllerRef.current;
-    uiStateController.setUIState(newUIState, e, { notifyExternal });
+    uiStateController.setUIState(groupUIState, e, { notifyExternal });
   };
 
   useLayoutEffect(() => {
@@ -645,14 +650,14 @@ export const useUIGroupStateController = (
       if (!isMonitoringChild(childUIStateController)) {
         return;
       }
-      const childComponentType = childUIStateController.componentType;
+      const childControlType = childUIStateController.controlType;
       childUIStateControllerArray.push(childUIStateController);
       debugUIGroup(
-        `${controlType}.registerChild("${childComponentType}") -> registered (total: ${childUIStateControllerArray.length})`,
+        `${controlType}.registerChild("${childControlType}") -> registered (total: ${childUIStateControllerArray.length})`,
       );
       onChange(
         childUIStateController,
-        new CustomEvent(`${childComponentType}_mount`),
+        new CustomEvent(`${childControlType}_mount`),
         { notifyExternal: false },
       );
     },

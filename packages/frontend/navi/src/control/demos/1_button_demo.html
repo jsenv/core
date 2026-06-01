@@ -197,9 +197,27 @@
                 <a href="#states">Button States</a>
               </li>
               <li>
-                <a href="#interactivity">
-                  Interactivity (uiAction &amp; action)
-                </a>
+                Interactivity
+                <ol style={{ paddingLeft: "20px" }}>
+                  <li>
+                    <a href="#interactivity-outside-form">Outside a form</a>
+                  </li>
+                  <li>
+                    <a href="#interactivity-form-simple">
+                      Inside a form — simple
+                    </a>
+                  </li>
+                  <li>
+                    <a href="#interactivity-form-named-buttons">
+                      Inside a form — named buttons
+                    </a>
+                  </li>
+                  <li>
+                    <a href="#interactivity-form-own-action">
+                      Inside a form — own action
+                    </a>
+                  </li>
+                </ol>
               </li>
               <li>
                 <a href="#sizes">Size Variations</a>
@@ -236,132 +254,100 @@
         );
       };
 
-      const InteractivityDemo = () => {
-        const [lastUIAction, setLastUIAction] = useState(null);
-        const [asyncResult, setAsyncResult] = useState(null);
-        const [formResult1, setFormResult1] = useState(null);
-        const [actionLog2, setActionLog2] = useState(null);
+      const ActionResult = ({ value }) => (
+        <span
+          style={{ fontSize: "0.85rem", color: "#555", fontStyle: "italic" }}
+        >
+          {value === null ? "—" : <code>{String(value)}</code>}
+        </span>
+      );
+
+      const OutsideFormDemo = () => {
+        const [syncResult, setSyncResult] = useState(null);
+        const [asyncSuccessResult, setAsyncSuccessResult] = useState(null);
 
         return (
-          <div class="demo-section" id="interactivity">
-            <h2>Interactivity</h2>
-
-            <div class="states-section">
-              <div class="states-title">uiAction</div>
-              <p class="states-description">
-                <code>uiAction</code> is called synchronously with the button's
-                value when the user clicks. A read-only button does not trigger
-                it.
-              </p>
-
-              <fieldset>
-                <legend>Button with uiAction</legend>
-                <Box row spacing="sm" alignX="start" alignY="center">
-                  <Button
-                    name="my-button"
-                    value="hello"
-                    action={(value) => {
-                      console.log("uiAction called with value:", value);
-                      setLastUIAction(value);
-                    }}
-                  >
-                    Click me
-                  </Button>
-                  {lastUIAction !== null && (
-                    <span style={{ fontSize: "0.85rem", color: "#555" }}>
-                      Last value logged:{" "}
-                      <code>{JSON.stringify(lastUIAction)}</code>
-                    </span>
-                  )}
-                </Box>
-              </fieldset>
-
-              <fieldset>
-                <legend>Read-only button — uiAction is not triggered</legend>
-                <Button
-                  name="readonly-button"
-                  value="ignored"
-                  readOnly
-                  uiAction={(value) => {
-                    console.log("this should never log", value);
-                  }}
-                >
-                  Read-only
-                </Button>
-              </fieldset>
-            </div>
+          <div class="demo-section" id="interactivity-outside-form">
+            <h2>Interactivity — outside a form</h2>
 
             <div class="states-section">
               <div class="states-title">action</div>
               <p class="states-description">
-                <code>action</code> is an async function. The button enters a
-                loading state while it runs. On failure the error is surfaced;
+                <code>action</code> is the primary way to react to a button
+                click. It can be sync or async. When async, the button enters a
+                loading state while it runs — on failure the error is surfaced,
                 on success you can react to the resolved value.
               </p>
 
               <fieldset>
-                <legend>Async action that fails</legend>
-                <Box flex="y" spacing="s" alignX="start" alignY="center">
+                <legend>Sync action</legend>
+                <Box flex="y" spacing="s" alignX="start">
                   <Button
-                    action={async () => {
-                      await new Promise((r) => setTimeout(r, 800));
-                      throw new Error("Something went wrong");
-                    }}
-                    onActionError={(err) => {
-                      setAsyncResult({ ok: false, message: err.message });
+                    action={() => {
+                      setSyncResult("Clicked!");
                     }}
                   >
-                    Fail after 800ms
+                    Click me
                   </Button>
-                  {asyncResult && !asyncResult.ok && (
-                    <span style={{ fontSize: "0.85rem", color: "#c00" }}>
-                      Error: {asyncResult.message}
-                    </span>
-                  )}
+                  <ActionResult value={syncResult} />
                 </Box>
               </fieldset>
 
               <fieldset>
+                <legend>Async action that fails</legend>
+                <Button
+                  action={async () => {
+                    await new Promise((r) => setTimeout(r, 800));
+                    throw new Error("Something went wrong");
+                  }}
+                >
+                  Fail after 800ms
+                </Button>
+              </fieldset>
+
+              <fieldset>
                 <legend>Async action that succeeds</legend>
-                <Box flex="y" spacing="s" alignX="start" alignY="center">
+                <Box flex="y" spacing="s" alignX="start">
                   <Button
                     action={async () => {
                       await new Promise((r) => setTimeout(r, 800));
                       return "done!";
                     }}
                     onActionEnd={(value) => {
-                      setAsyncResult({ ok: true, message: value });
+                      setAsyncSuccessResult(value);
                     }}
                   >
                     Succeed after 800ms
                   </Button>
-                  {asyncResult && asyncResult.ok && (
-                    <span style={{ fontSize: "0.85rem", color: "#2a7a2a" }}>
-                      Success: {asyncResult.message}
-                    </span>
-                  )}
+                  <ActionResult value={asyncSuccessResult} />
                 </Box>
               </fieldset>
             </div>
+          </div>
+        );
+      };
+
+      const InsideFormSimpleDemo = () => {
+        const [result, setResult] = useState(null);
+
+        return (
+          <div class="demo-section" id="interactivity-form-simple">
+            <h2>Interactivity — inside a form (simple)</h2>
 
             <div class="states-section">
-              <div class="states-title">Inside a form</div>
+              <div class="states-title">Single submit button</div>
               <p class="states-description">
-                A button inside a <code>&lt;Form&gt;</code> triggers the form's{" "}
-                <code>action</code> when clicked. If the button has its own{" "}
-                <code>action</code> prop, that runs instead and the form action
-                is skipped.
+                A plain button inside a <code>&lt;Form&gt;</code> triggers the
+                form's <code>action</code>. The whole form goes into
+                loading/readonly while the action runs.
               </p>
 
               <fieldset>
-                <legend>Plain button — triggers form action</legend>
+                <legend>Submit button triggers form action</legend>
                 <Form
                   action={async ({ username }) => {
-                    await new Promise((r) => setTimeout(r, 600));
-                    setFormResult1({
-                      username,
-                      result: `Hello, ${username || "stranger"}!`,
-                    });
+                    await new Promise((r) => setTimeout(r, 800));
+                    setResult(`Hello, ${username || "stranger"}!`);
                   }}
                 >
                   <Box flex="y" spacing="s" alignX="start">
@@ -369,71 +355,12 @@
                       type="text"
                       name="username"
                       placeholder="Type your name…"
+                      // defaultValue="toto"
                     />
                     <Button type="submit">Submit</Button>
-                    {formResult1 && (
+                    {result && (
                       <span style={{ fontSize: "0.85rem", color: "#2a7a2a" }}>
-                        form action received{" "}
-                        <code>username = "{formResult1.username}"</code> →{" "}
-                        <code>"{formResult1.result}"</code>
-                      </span>
-                    )}
-                  </Box>
-                </Form>
-              </fieldset>
-
-              <fieldset>
-                <legend>
-                  Two buttons — one with its own action, one plain
-                </legend>
-                <p
-                  style={{
-                    margin: "0 0 8px",
-                    fontSize: "0.85rem",
-                    color: "#555",
-                  }}
-                >
-                  "Submit (own action)" runs the button's <code>action</code> —
-                  form action is skipped and the button receives the form value.
-                  "Submit (form action)" runs the form action as usual.
-                </p>
-                <Form
-                  action={async ({ username }) => {
-                    await new Promise((r) => setTimeout(r, 600));
-                    setActionLog2({
-                      source: "form action",
-                      result: `Hello from form, ${username || "stranger"}! (username="${username}")`,
-                    });
-                  }}
-                >
-                  <Box flex="y" spacing="s" alignX="start">
-                    <Input
-                      type="text"
-                      name="username"
-                      placeholder="Type your name…"
-                    />
-                    <Box row spacing="s">
-                      <Button
-                        type="submit"
-                        action={async ({ username }) => {
-                          await new Promise((r) => setTimeout(r, 600));
-                          return `Button ran with username="${username || "stranger"}"`;
-                        }}
-                        onActionEnd={(result) => {
-                          setActionLog2({
-                            source: "button own action",
-                            result,
-                          });
-                        }}
-                      >
-                        Submit (own action)
-                      </Button>
-                      <Button type="submit">Submit (form action)</Button>
-                    </Box>
-                    {actionLog2 && (
-                      <span style={{ fontSize: "0.85rem", color: "#2a7a2a" }}>
-                        <strong>{actionLog2.source}</strong> →{" "}
-                        <code>"{actionLog2.result}"</code>
+                        <code>{result}</code>
                       </span>
                     )}
                   </Box>
@@ -441,6 +368,130 @@
               </fieldset>
             </div>
           </div>
+        );
+      };
+
+      const InsideFormNamedButtonsDemo = () => {
+        const [result, setResult] = useState(null);
+
+        return (
+          <div class="demo-section" id="interactivity-form-named-buttons">
+            <h2>Interactivity — inside a form (named buttons)</h2>
+
+            <div class="states-section">
+              <div class="states-title">Two named submit buttons</div>
+              <p class="states-description">
+                Both buttons submit the same form. Each has a unique{" "}
+                <code>name</code> + <code>value</code> so the form action can
+                branch on which one was clicked. The whole form goes into
+                loading/readonly when either button is clicked.
+              </p>
+
+              <fieldset>
+                <legend>
+                  Two named buttons — form knows which one was clicked
+                </legend>
+                <Form
+                  action={async ({ title, submitAction }) => {
+                    await new Promise((r) => setTimeout(r, 800));
+                    if (submitAction === "save") {
+                      setResult(`Saved draft: "${title || "untitled"}"`);
+                    } else {
+                      setResult(`Published: "${title || "untitled"}"`);
+                    }
+                  }}
+                >
+                  <Box flex="y" spacing="s" alignX="start">
+                    <Input
+                      type="text"
+                      name="title"
+                      placeholder="Article title…"
+                    />
+                    <Box row spacing="s">
+                      <Button type="submit" name="submitAction" value="save">
+                        Save draft
+                      </Button>
+                      <Button type="submit" name="submitAction" value="publish">
+                        Publish
+                      </Button>
+                    </Box>
+                    {result && (
+                      <span style={{ fontSize: "0.85rem", color: "#2a7a2a" }}>
+                        <code>{result}</code>
+                      </span>
+                    )}
+                  </Box>
+                </Form>
+              </fieldset>
+            </div>
+          </div>
+        );
+      };
+
+      const InsideFormOwnActionDemo = () => {
+        const [result, setResult] = useState(null);
+
+        return (
+          <div class="demo-section" id="interactivity-form-own-action">
+            <h2>Interactivity — inside a form (own action)</h2>
+
+            <div class="states-section">
+              <div class="states-title">Button with its own action</div>
+              <p class="states-description">
+                "Preview" has its own <code>action</code> and inherits the
+                form's current state as params. While it runs, only that button
+                is loading/readonly — the form and its other button remain fully
+                interactive.
+              </p>
+
+              <fieldset>
+                <legend>
+                  Button with its own action — only the button goes loading
+                </legend>
+                <Form
+                  action={async ({ query }) => {
+                    await new Promise((r) => setTimeout(r, 800));
+                    setResult(`Searched for: "${query || ""}"`);
+                  }}
+                >
+                  <Box flex="y" spacing="s" alignX="start">
+                    <Input
+                      type="text"
+                      name="query"
+                      placeholder="Search query…"
+                    />
+                    <Box row spacing="s">
+                      <Button
+                        action={async ({ query }) => {
+                          await new Promise((r) => setTimeout(r, 800));
+                          setResult(`Preview for: "${query || ""}"`);
+                        }}
+                      >
+                        Preview
+                      </Button>
+                      <Button type="submit">Search</Button>
+                    </Box>
+                    {result && (
+                      <span style={{ fontSize: "0.85rem", color: "#2a7a2a" }}>
+                        <code>{result}</code>
+                      </span>
+                    )}
+                  </Box>
+                </Form>
+              </fieldset>
+            </div>
+          </div>
+        );
+      };
+
+      const InteractivityDemo = () => {
+        return (
+          <>
+            <OutsideFormDemo />
+            <InsideFormSimpleDemo />
+            <InsideFormNamedButtonsDemo />
+            <InsideFormOwnActionDemo />
+          </>
         );
       };
 

@@ -262,13 +262,9 @@ const InputRangeFieldInterface = (props) => {
   };
   const [rangeProps, remainingProps] = useControlProps(props, {
     primaryInteractionMode: "pointer",
-    controlType: "input_range",
+    controlType: "input",
     statePropName: "value",
     defaultStatePropName: "defaultValue",
-    getUIValue: () => {
-      const input = ref.current;
-      return input.valueAsNumber;
-    },
     uiActionInternal: () => {
       updateFillRatio();
     },

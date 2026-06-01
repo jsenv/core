@@ -6,7 +6,7 @@ import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.
 import { createComponentResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
 import { useControlProps } from "../control_hooks.jsx";
-import { getFromInputValue, getToInputValue } from "../input/input_textual.jsx";
+import { getToInputValue } from "../input/input_value.js";
 import { PickerPlaceholder, PickerValue } from "./picker_components.jsx";
 import { PickerContext } from "./picker_context.jsx";
 import { pickerResolvers } from "./picker_resolvers.jsx";
@@ -257,9 +257,8 @@ export const Picker = (props) => {
 const renderPicker = createComponentResolver(pickerResolvers);
 const PickerButton = (props) => {
   import.meta.css = css;
-  const { ref, type, icon, placeholder, singleLine, ui } = props;
+  const { ref, icon, placeholder, singleLine, ui } = props;
   const inputRef = useRef(null);
-  const fromInputValue = getFromInputValue(type);
   const [inputProps, pickerRemainingProps, ControlChildrenWrapper] =
     useControlProps(
       {
@@ -272,11 +271,6 @@ const PickerButton = (props) => {
         statePropName: "value",
         defaultStatePropName: "defaultValue",
         readOnlySupported: true,
-        getUIValue: () => {
-          const input = inputRef.current;
-          const inputValue = input.value;
-          return fromInputValue(inputValue);
-        },
       },
     );
   const { id, value, basePseudoState, disabled, children } = inputProps;

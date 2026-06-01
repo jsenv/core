@@ -38,7 +38,7 @@ const FormControl = (props) => {
     useControlgroupProps(props, {
       stateType: "object",
       controlType: "form",
-      childComponentType: "*",
+      childControlType: "*",
       aggregateChildStates: (childUIStateControllers) => {
         const formValues = {};
         for (const childUIStateController of childUIStateControllers) {

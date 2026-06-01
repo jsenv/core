@@ -139,6 +139,7 @@ const submit = createUICallback({
     return requestClosestAction(event);
   },
 });
+const submitSelector = `button[type="submit"], input[type="submit"], input[type="image"], [data-action="submit"]`;
 const requestClosestAction = (event) => {
   const currentTarget = event.currentTarget;
   const target = event.target;
@@ -151,20 +152,23 @@ const requestClosestAction = (event) => {
     return false;
   }
   let requester = target;
-  const { form } = currentTarget;
-  // when present, we use first button submitting the form as the requester
-  // not the input, it aligns with browser behavior where
-  // hitting Enter in a text input triggers the first submit button of the form, not the input itself
-  const firstButtonSubmitting = controlWithAction.querySelector(
-    `button[type="submit"], input[type="submit"], input[type="image"], [data-action="submit"]`,
-  );
-  if (firstButtonSubmitting) {
-    requester = firstButtonSubmitting;
+  if (currentTarget.matches(submitSelector)) {
+    requester = currentTarget;
+  } else {
+    // when present, we use first button submitting the form as the requester
+    // not the input, it aligns with browser behavior where
+    // hitting Enter in a text input triggers the first submit button of the form, not the input itself
+    const firstButtonSubmitting =
+      controlWithAction.querySelector(submitSelector);
+    if (firstButtonSubmitting) {
+      requester = firstButtonSubmitting;
+    }
   }
   const allowed = dispatchRequestAction(controlWithAction, {
     event,
     requester,
   });
+  const { form } = currentTarget;
   if (form) {
     // prevent form submission when cliking buttons or pressing enter on inputs
     const initiator = event.detail ? event.detail.eventChain[0] : event;
