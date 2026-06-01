@@ -151,7 +151,7 @@ const requestClosestAction = (event) => {
     return false;
   }
   let requester = target;
-  const { form } = target;
+  const { form } = currentTarget;
   // when present, we use first button submitting the form as the requester
   // not the input, it aligns with browser behavior where
   // hitting Enter in a text input triggers the first submit button of the form, not the input itself
@@ -167,7 +167,8 @@ const requestClosestAction = (event) => {
   });
   if (form) {
     // prevent form submission when cliking buttons or pressing enter on inputs
-    event.preventDefault();
+    const initiator = event.detail ? event.detail.eventChain[0] : event;
+    initiator.preventDefault();
   }
   return allowed;
 };
