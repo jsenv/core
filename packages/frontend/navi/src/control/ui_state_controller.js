@@ -170,6 +170,7 @@ export const useUIStateController = (
     }
     return getStateFromProp(fallbackState);
   });
+  const isRadio = controlType === "input" && props.type === "radio";
 
   const [
     notifyParentAboutChildMount,
@@ -186,7 +187,7 @@ export const useUIStateController = (
       controllersById.set(id, controller);
     }
     notifyParentAboutChildMount();
-    if (controlType === "radio") {
+    if (isRadio) {
       registerRadioController(controller);
     }
     return () => {
@@ -194,7 +195,7 @@ export const useUIStateController = (
         controllersById.delete(id);
       }
       notifyParentAboutChildUnmount();
-      if (controlType === "radio") {
+      if (isRadio) {
         unregisterRadioController(controller);
       }
     };
@@ -326,12 +327,7 @@ export const useUIStateController = (
       // when sibling items are virtualized (not in the DOM).
       // Form scoping is preserved by comparing parentUIStateController references.
       const controlProxyFor = uiStateController.props["navi-control-proxy-for"];
-      if (
-        controlType === "radio" &&
-        newUIState &&
-        uiStateController.name &&
-        !controlProxyFor
-      ) {
+      if (isRadio && newUIState && uiStateController.name && !controlProxyFor) {
         const siblings = radioControllersByName.get(uiStateController.name);
         if (siblings) {
           const siblingUncheckEvent = new CustomEvent("radio_sibling_uncheck", {

@@ -280,10 +280,16 @@ export const openCallout = (
     ".navi_callout_close_button",
   );
   calloutCloseButton.onmousedown = (e) => {
+    if (e.button !== 0) {
+      return;
+    }
     requestClose(e, "mousedown_close_button");
   };
   // "click" is received for enter/space
   calloutCloseButton.onclick = (e) => {
+    if (e.button !== 0) {
+      return;
+    }
     requestClose(e, "click_close_button");
   };
   const calloutId = `navi_callout_${Date.now()}`;
@@ -344,6 +350,10 @@ export const openCallout = (
   close_on_click_outside: {
     const handleClickOutside = (event) => {
       if (!closeOnClickOutside) {
+        return;
+      }
+      if (event.button !== 0) {
+        // right click
         return;
       }
       const clickTarget = event.target;
