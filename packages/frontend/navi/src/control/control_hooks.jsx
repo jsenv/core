@@ -177,9 +177,9 @@ export const useControlProps = (
   );
   const [controlProps, remainingProps, ControlChildrenWrapper] =
     useInteractiveProps(props, {
-      readOnlySupported,
-      boundAction,
       uiStateController,
+      boundAction,
+      readOnlySupported,
     });
 
   interactions: {
@@ -361,8 +361,8 @@ export const useControlgroupProps = (
   );
   const [actionRequester, setActionRequester] = useState();
   const [controlgroupProps, remainingProps] = useInteractiveProps(props, {
-    boundAction,
     uiStateController: uiGroupStateController,
+    boundAction,
   });
 
   const { basePseudoState } = controlgroupProps;
@@ -453,7 +453,7 @@ const controlPropSet = new Set([
 ]);
 const useInteractiveProps = (
   props,
-  { readOnlySupported, boundAction, uiStateController },
+  { uiStateController, boundAction, readOnlySupported },
 ) => {
   const { ref } = props;
   const controlProps = {
@@ -461,7 +461,7 @@ const useInteractiveProps = (
     "navi-control-host": "",
   };
   let remainingProps = {
-    "navi-control": "",
+    "navi-control": uiStateController.controlType,
   };
   const propKeySet = new Set(Object.keys(props));
   for (const key of propKeySet) {

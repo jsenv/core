@@ -38,6 +38,17 @@ export const REQUIRED_CONSTRAINT = {
     if (field.type === "checkbox") {
       const name = field.name;
       if (name) {
+        const groupContainer = field.closest('[navi-control="checkbox_group"]');
+        if (groupContainer) {
+          const groupUIState = getUIStateFromElement(groupContainer);
+          if (groupUIState.length === 0) {
+            return {
+              message: naviI18n("constraint.required.checkbox_group"),
+              target: groupContainer,
+            };
+          }
+          return null;
+        }
         const checkboxGroupContainer = field.form || document;
         const checkboxSelector = `input[type="checkbox"][name="${CSS.escape(name)}"]`;
         const checkboxArray =
@@ -70,6 +81,17 @@ export const REQUIRED_CONSTRAINT = {
       // For radio buttons, check if any radio with the same name is selected
       const name = field.name;
       if (name) {
+        const groupContainer = field.closest('[navi-control="radio_group"]');
+        if (groupContainer) {
+          const groupUIState = getUIStateFromElement(groupContainer);
+          if (groupUIState === undefined) {
+            return {
+              message: naviI18n("constraint.required.radio"),
+              target: groupContainer,
+            };
+          }
+          return null;
+        }
         const radioGroupContainer = field.form || document;
         // Check if any radio with the same name is checked
         const radioSelector = `input[type="radio"][name="${CSS.escape(name)}"]`;
