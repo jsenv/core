@@ -78,7 +78,7 @@ const requestSelect = (e, getSelectParam) => {
     );
     return false;
   }
-  return dispatchCustomEvent(selectTarget, "request_select", {
+  return dispatchCustomEvent(selectTarget, "navi_request_select", {
     event: e,
     id: param,
   });
@@ -96,7 +96,7 @@ const requestUnselect = (e, getUnselectParam) => {
     );
     return false;
   }
-  return dispatchCustomEvent(selectTarget, "request_select", {
+  return dispatchCustomEvent(selectTarget, "navi_request_unselect", {
     event: e,
     id: param,
   });

@@ -409,7 +409,6 @@ const RealInput = (props) => {
       {...props}
       as="input"
       baseClassName="navi_control_input"
-      navi-ui-state={props.value}
     />
   );
 };
