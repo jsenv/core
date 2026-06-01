@@ -55,6 +55,7 @@ import {
   RequiredContext,
 } from "./control_context.js";
 import { findControlProxyTarget } from "./control_proxy.js";
+import { getFromInputValue } from "./input/input_value.js";
 import { addInputEffect } from "./input_effect.js";
 import { resolveActionProp } from "./string_actions.js";
 import {
@@ -141,10 +142,7 @@ export const useControlProps = (
     allowNameless,
     persists,
 
-    getUIValue,
     uiActionInternal,
-    paramsSignal,
-    externalBoundAction,
     readOnlySupported,
   },
 ) => {
@@ -172,20 +170,17 @@ export const useControlProps = (
     debugInteraction,
     uiActionInternal,
   });
-
-  paramsSignal = paramsSignal || uiStateController.uiStateSignal;
-  const [internalBoundAction] = useActionBoundToOneParam(
-    externalBoundAction ? undefined : resolveActionProp(props.action),
-    paramsSignal,
+  const [boundAction] = useActionBoundToOneParam(
+    resolveActionProp(props.action),
+    uiStateController.uiStateSignal,
   );
-  const boundAction = externalBoundAction || internalBoundAction;
   const [controlProps, remainingProps, ControlChildrenWrapper] =
     useInteractiveProps(props, {
       readOnlySupported,
       boundAction,
       uiStateController,
-      getUIValue,
     });
+  const fromInputValue = getFromInputValue(props.type);
 
   interactions: {
     const { ref } = props;
@@ -284,7 +279,8 @@ export const useControlProps = (
         allowed = dispatchRequestInteraction(field, e);
       }
       if (allowed) {
-        uiStateController.requestUIAction(e);
+        const uiState = fromInputValue(currentValue);
+        uiStateController.setUIState(uiState, e);
       } else {
         e.preventDefault();
       }
@@ -337,18 +333,18 @@ export const useControlProps = (
  *   by dispatching `navi_request_reset_ui_state` DOM events on each child's DOM element
  * - Overrides `onnavi_action_ready` to track the action requester
  *
- * @param {{ controlType: string, childComponentType: string, aggregateChildStates: Function }} config
+ * @param {{ controlType: string, childControlType: string, aggregateChildStates: Function }} config
  * @returns {Object} Props to spread onto the group's root element
  */
 export const useControlgroupProps = (
   props,
-  { stateType, controlType, childComponentType, aggregateChildStates },
+  { stateType, controlType, childControlType, aggregateChildStates },
 ) => {
   const { action } = props;
   const debugAction = useDebugAction();
   const uiGroupStateController = useUIGroupStateController(props, controlType, {
     stateType,
-    childComponentType,
+    childControlType,
     aggregateChildStates,
     debugAction,
   });
@@ -360,9 +356,6 @@ export const useControlgroupProps = (
   const [controlgroupProps, remainingProps] = useInteractiveProps(props, {
     boundAction,
     uiStateController: uiGroupStateController,
-    getUIValue: () => {
-      return uiGroupStateController.uiStateSignal.peek();
-    },
   });
 
   const { basePseudoState } = controlgroupProps;
@@ -453,7 +446,7 @@ const controlPropSet = new Set([
 ]);
 const useInteractiveProps = (
   props,
-  { readOnlySupported, boundAction, uiStateController, getUIValue },
+  { readOnlySupported, boundAction, uiStateController },
 ) => {
   const { ref } = props;
   const controlProps = {
@@ -557,9 +550,6 @@ const useInteractiveProps = (
       },
       "onnavi_get_ui_state": (e) => {
         e.detail.respondWith(uiStateController.uiStateSignal.peek());
-      },
-      "onnavi_get_ui_value": (e) => {
-        e.detail.respondWith(getUIValue(e));
       },
       "onnavi_set_ui_state": (e) => {
         uiStateController.setUIState(e.detail.value, e);
@@ -690,11 +680,11 @@ const useInteractiveProps = (
           // the optimistic update and return undefined for radio)
           uiState = e.detail.uiState;
         } else {
-          dispatchInternalCustomEvent(e.currentTarget, "navi_get_ui_value", {
+          dispatchInternalCustomEvent(e.currentTarget, "navi_get_ui_state", {
             respondWith: (v) => {
               debugAction(
                 e,
-                `navi_get_ui_value.respondWith(${JSON.stringify(v)})`,
+                `navi_get_ui_state.respondWith(${JSON.stringify(v)})`,
               );
               uiState = v;
             },
