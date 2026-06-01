@@ -291,12 +291,22 @@ export const useControlProps = (
     const onInput = (e) => {
       props.onInput?.(e);
       const field = ref.current;
-      const lastActionValue = lastActionValueRef.current;
       const currentValue = getFieldValue();
+      if (isCheckable) {
+        const allowed = dispatchRequestAction(field, {
+          event: e,
+          uiState: currentValue,
+        });
+        if (!allowed) {
+          debugInteraction(e, "input.preventDefault()");
+          e.preventDefault();
+          return;
+        }
+      }
+      const lastActionValue = lastActionValueRef.current;
       const valueSameAsLastAction =
         lastActionValue !== undefined &&
         compareTwoJsValues(currentValue, lastActionValue);
-
       let allowed;
       if (valueSameAsLastAction) {
         // Ignore input events that carry the same value as the last action we dispatched.
@@ -307,9 +317,7 @@ export const useControlProps = (
         allowed = dispatchRequestInteraction(field, e);
       }
       if (allowed) {
-        if (!isCheckable) {
-          uiStateController.setUIState(currentValue, e);
-        }
+        uiStateController.setUIState(currentValue, e);
       } else {
         e.preventDefault();
       }
