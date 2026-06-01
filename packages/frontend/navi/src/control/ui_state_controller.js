@@ -532,7 +532,7 @@ const useParentControllerNotifiers = (
 export const useUIGroupStateController = (
   props,
   controlType,
-  { stateType, childControlType, aggregateChildStates, debugAction },
+  { stateType, childControlFilter, aggregateChildStates, debugAction },
 ) => {
   if (typeof aggregateChildStates !== "function") {
     throw new TypeError("aggregateChildStates must be a function");
@@ -607,9 +607,7 @@ export const useUIGroupStateController = (
     return existingUIStateController;
   }
   debugUIGroup(
-    childControlType === "*"
-      ? `Creating "${controlType}" ui state controller (monitoring all descendants ui state(s))"`
-      : `Creating "${controlType}" ui state controller (monitoring "${childControlType}" ui state(s))`,
+    `Creating "${controlType}" ui state controller (monitoring some descendants ui state(s))"`,
   );
 
   const [publishUIState, subscribeUIState] = createPubSub();
@@ -618,10 +616,10 @@ export const useUIGroupStateController = (
     if (childUIStateController.isProxy) {
       return false;
     }
-    if (childControlType === "*") {
-      return true;
+    if (childControlFilter && !childControlFilter(childUIStateController)) {
+      return false;
     }
-    return childUIStateController.controlType === childControlType;
+    return true;
   };
   const uiStateController = {
     controlType,
@@ -665,6 +663,7 @@ export const useUIGroupStateController = (
       if (!isMonitoringChild(childUIStateController)) {
         return;
       }
+      const childControlType = childUIStateController.controlType;
       debugUIGroup(
         `${controlType}.onChildUIStateChange("${childControlType}") to ${JSON.stringify(
           childUIStateController.uiState,
