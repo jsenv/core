@@ -194,6 +194,7 @@ export const useControlProps = (
     let clickEffect;
     let inputEffect;
     let keydownEffect = "browser_action";
+    let isCheckable = false;
     if (controlType === "button") {
       if (actionOnMouseDown) {
         mousedownEffect = "action";
@@ -201,10 +202,11 @@ export const useControlProps = (
         clickEffect = "action";
       }
     } else if (controlType === "input") {
+      isCheckable = props.type === "radio" || props.type === "checkbox";
       inputEffect = "action";
       if (props.type === "range") {
         mousedownEffect = "browser_action";
-      } else if (props.type === "radio" || props.type === "checkbox") {
+      } else if (isCheckable) {
         clickEffect = "browser_action";
       }
     }
@@ -305,7 +307,9 @@ export const useControlProps = (
         allowed = dispatchRequestInteraction(field, e);
       }
       if (allowed) {
-        uiStateController.setUIState(currentValue, e);
+        if (!isCheckable) {
+          uiStateController.setUIState(currentValue, e);
+        }
       } else {
         e.preventDefault();
       }
