@@ -236,7 +236,14 @@
                 <Text>Button on the right (pinned):</Text>
                 <Badge style={{ maxWidth: `${maxWidth}px` }}>
                   {longLabel}
-                  <Badge.Button aria-label="Remove">×</Badge.Button>
+                  <Badge.Button
+                    action={() => {
+                      console.log("Remove badge");
+                    }}
+                    aria-label="Remove"
+                  >
+                    ×
+                  </Badge.Button>
                 </Badge>
               </Box>
               <Box flex="x" spacing="xs" alignY="center">

@@ -456,6 +456,12 @@ const controlPropSet = new Set([
   "autoFocusVisible",
   "autoSelect",
 
+  "onMouseDown",
+  "onClick",
+  "onKeyDown",
+  "onPaste",
+  "onInput",
+
   "onCancel",
   "cancelOnBlurInvalid",
   "cancelOnEscape",

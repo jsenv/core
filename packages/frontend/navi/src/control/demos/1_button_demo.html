@@ -284,7 +284,12 @@
                 <Box flex="y" spacing="s" alignX="start">
                   <Button
                     action={() => {
-                      setSyncResult("Clicked!");
+                      console.log("action call");
+                      setSyncResult("Clicked! (action)");
+                    }}
+                    onClick={() => {
+                      console.log("onClick call");
+                      setSyncResult("Clicked! (onClick)");
                     }}
                   >
                     Click me
