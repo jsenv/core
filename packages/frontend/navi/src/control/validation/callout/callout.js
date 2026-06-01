@@ -440,6 +440,7 @@ export const openCallout = (
   close_on_escape_from_anchor: {
     if (!anchorElement) break close_on_escape_from_anchor;
     calloutCloseButton.tabIndex = -1;
+    calloutCloseButton.setAttribute("navi-focusnav", "ignore");
     const onAnchorKeydown = (e) => {
       if (e.key === "Escape") {
         requestClose(e, "escape_key");

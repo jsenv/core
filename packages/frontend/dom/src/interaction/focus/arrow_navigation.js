@@ -82,6 +82,7 @@ export const performArrowNavigation = (
   // A role="table" or an element with display: table could be used too but for now we need only TABLE support
   if (element.tagName === "TABLE") {
     const tablePredicate = (candidate) =>
+      candidate.getAttribute("navi-focusnav") !== "ignore" &&
       elementIsFocusable(candidate, { excludeAriaHidden });
     const tableLoop = wrap === "both" || wrap === "x" || wrap === "y";
     const targetInGrid = getTargetInTableFocusGroup(event, element, {
@@ -124,6 +125,9 @@ export const performArrowNavigation = (
   }
 
   const predicate = (candidate) => {
+    if (candidate.getAttribute("navi-focusnav") === "ignore") {
+      return false;
+    }
     // cssSelector check first: cheaper than elementIsFocusable.
     // Guard against nodes without matches() (e.g. text nodes).
     if (axisCssSelector) {
