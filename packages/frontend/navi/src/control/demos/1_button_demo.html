@@ -161,6 +161,7 @@
         Button,
         Box,
         Form,
+        Input,
         Icon,
         EyeSvg,
         EyeClosedSvg,
@@ -239,7 +240,7 @@
         const [lastUIAction, setLastUIAction] = useState(null);
         const [asyncResult, setAsyncResult] = useState(null);
         const [formResult1, setFormResult1] = useState(null);
-        const [formResult2, setFormResult2] = useState(null);
+        const [actionLog2, setActionLog2] = useState(null);
 
         return (
           <div class="demo-section" id="interactivity">
@@ -357,27 +358,24 @@
                 <Form
                   action={async ({ username }) => {
                     await new Promise((r) => setTimeout(r, 600));
-                    return `Hello, ${username || "stranger"}!`;
-                  }}
-                  onActionEnd={(result) => {
-                    setFormResult1(result);
+                    setFormResult1({
+                      username,
+                      result: `Hello, ${username || "stranger"}!`,
+                    });
                   }}
                 >
                   <Box flex="y" spacing="s" alignX="start">
-                    <input
+                    <Input
                       type="text"
                       name="username"
                       placeholder="Type your name…"
-                      style={{
-                        padding: "6px 10px",
-                        borderRadius: "4px",
-                        border: "1px solid #ccc",
-                      }}
                     />
                     <Button type="submit">Submit</Button>
                     {formResult1 && (
                       <span style={{ fontSize: "0.85rem", color: "#2a7a2a" }}>
-                        Form result: <code>{formResult1}</code>
+                        form action received{" "}
+                        <code>username = "{formResult1.username}"</code> →{" "}
+                        <code>"{formResult1.result}"</code>
                       </span>
                     )}
                   </Box>
@@ -386,47 +384,59 @@
 
               <fieldset>
                 <legend>
-                  Button with its own action — form action is NOT called
+                  Two buttons — one with its own action, one plain
                 </legend>
-                <Form
-                  action={async () => {
-                    console.warn(
-                      "Form action should not be called when the button has its own action",
-                    );
+                <p
+                  style={{
+                    margin: "0 0 8px",
+                    fontSize: "0.85rem",
+                    color: "#555",
                   }}
-                  flex="y"
-                  spacing="s"
-                  alignX="start"
                 >
-                  <input
-                    type="text"
-                    name="username"
-                    placeholder="Type something…"
-                    style={{
-                      padding: "6px 10px",
-                      borderRadius: "4px",
-                      border: "1px solid #ccc",
-                    }}
-                  />
-                  <Box flex="y" spacing="s">
-                    <Button
-                      action={async () => {
-                        await new Promise((r) => setTimeout(r, 600));
-                        return "Button's own action ran";
-                      }}
-                      onActionEnd={(result) => {
-                        setFormResult2(result);
-                      }}
-                    >
-                      Submit (own action)
-                    </Button>
-                    <Button type="submit">Submit (form action)</Button>
+                  "Submit (own action)" runs the button's <code>action</code> —
+                  form action is skipped and the button receives the form value.
+                  "Submit (form action)" runs the form action as usual.
+                </p>
+                <Form
+                  action={async ({ username }) => {
+                    await new Promise((r) => setTimeout(r, 600));
+                    setActionLog2({
+                      source: "form action",
+                      result: `Hello from form, ${username || "stranger"}! (username="${username}")`,
+                    });
+                  }}
+                >
+                  <Box flex="y" spacing="s" alignX="start">
+                    <Input
+                      type="text"
+                      name="username"
+                      placeholder="Type your name…"
+                    />
+                    <Box row spacing="s">
+                      <Button
+                        type="submit"
+                        action={async ({ username }) => {
+                          await new Promise((r) => setTimeout(r, 600));
+                          return `Button ran with username="${username || "stranger"}"`;
+                        }}
+                        onActionEnd={(result) => {
+                          setActionLog2({
+                            source: "button own action",
+                            result,
+                          });
+                        }}
+                      >
+                        Submit (own action)
+                      </Button>
+                      <Button type="submit">Submit (form action)</Button>
+                    </Box>
+                    {actionLog2 && (
+                      <span style={{ fontSize: "0.85rem", color: "#2a7a2a" }}>
+                        <strong>{actionLog2.source}</strong> →{" "}
+                        <code>"{actionLog2.result}"</code>
+                      </span>
+                    )}
                   </Box>
-                  {formResult2 && (
-                    <span style={{ fontSize: "0.85rem", color: "#2a7a2a" }}>
-                      Result: <code>{formResult2}</code>
-                    </span>
-                  )}
                 </Form>
               </fieldset>
             </div>
