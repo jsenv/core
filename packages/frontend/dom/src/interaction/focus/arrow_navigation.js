@@ -81,9 +81,18 @@ export const performArrowNavigation = (
   // Grid navigation: we support only TABLE element for now
   // A role="table" or an element with display: table could be used too but for now we need only TABLE support
   if (element.tagName === "TABLE") {
-    const tablePredicate = (candidate) =>
-      candidate.getAttribute("navi-focusnav") !== "ignore" &&
-      elementIsFocusable(candidate, { excludeAriaHidden });
+    const tablePredicate = (candidate) => {
+      if (!candidate.matches) {
+        return false;
+      }
+      if (candidate.getAttribute("navi-focusnav") === "ignore") {
+        return false;
+      }
+      if (!elementIsFocusable(candidate, { excludeAriaHidden })) {
+        return false;
+      }
+      return true;
+    };
     const tableLoop = wrap === "both" || wrap === "x" || wrap === "y";
     const targetInGrid = getTargetInTableFocusGroup(event, element, {
       loop: tableLoop,
@@ -125,20 +134,21 @@ export const performArrowNavigation = (
   }
 
   const predicate = (candidate) => {
+    if (typeof candidate.matches !== "function") {
+      // Guard against nodes without matches() (e.g. text nodes).
+      return false;
+    }
     if (candidate.getAttribute("navi-focusnav") === "ignore") {
       return false;
     }
     // cssSelector check first: cheaper than elementIsFocusable.
-    // Guard against nodes without matches() (e.g. text nodes).
-    if (axisCssSelector) {
-      if (typeof candidate.matches !== "function") {
-        return false;
-      }
-      if (!candidate.matches(axisCssSelector)) {
-        return false;
-      }
+    if (axisCssSelector && !candidate.matches(axisCssSelector)) {
+      return false;
     }
-    return elementIsFocusable(candidate, { excludeAriaHidden });
+    if (!elementIsFocusable(candidate, { excludeAriaHidden })) {
+      return false;
+    }
+    return true;
   };
 
   const targetInLinearGroup = getTargetInLinearFocusGroup(event, element, {
