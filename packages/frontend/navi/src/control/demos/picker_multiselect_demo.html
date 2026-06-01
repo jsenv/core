@@ -219,6 +219,7 @@
                   {opt}
                   <Badge.Button
                     action="unselect"
+                    action-target="skills_list"
                     actionOnMouseDown
                     value={opt}
                     aria-label={`Remove ${opt}`}
@@ -261,6 +262,7 @@
                 <SelectableList
                   ref={listRef}
                   multiple
+                  id="skills_list"
                   action="update"
                   style="min-width: 180px"
                 >
