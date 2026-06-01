@@ -42,6 +42,7 @@ const CheckboxGroupInterface = (props) => {
         ...props,
       },
       {
+        stateType: "array",
         controlType: "checkbox_group",
         childComponentType: "checkbox",
         aggregateChildStates: (childUIStateControllers) => {
@@ -51,7 +52,7 @@ const CheckboxGroupInterface = (props) => {
               values.push(childUIStateController.uiState);
             }
           }
-          return values.length === 0 ? [] : values;
+          return values.length === 0 ? undefined : values;
         },
       },
     );

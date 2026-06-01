@@ -36,6 +36,7 @@ const FormControl = (props) => {
   const { ref, method = "GET" } = props;
   const [formProps, remainingProps, childrenWrapperProps] =
     useControlgroupProps(props, {
+      stateType: "object",
       controlType: "form",
       childComponentType: "*",
       aggregateChildStates: (childUIStateControllers) => {

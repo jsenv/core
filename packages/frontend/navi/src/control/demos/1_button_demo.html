@@ -238,6 +238,8 @@
       const InteractivityDemo = () => {
         const [lastUIAction, setLastUIAction] = useState(null);
         const [asyncResult, setAsyncResult] = useState(null);
+        const [formResult1, setFormResult1] = useState(null);
+        const [formResult2, setFormResult2] = useState(null);
 
         return (
           <div class="demo-section" id="interactivity">
@@ -344,47 +346,56 @@
             <div class="states-section">
               <div class="states-title">Inside a form</div>
               <p class="states-description">
-                A button inside a <code>&lt;form&gt;</code> should submit the
-                form when clicked (unless it has its own <code>action</code>{" "}
-                prop, in which case the navi action takes over and form
-                submission is skipped).
+                A button inside a <code>&lt;Form&gt;</code> triggers the form's{" "}
+                <code>action</code> when clicked. If the button has its own{" "}
+                <code>action</code> prop, that runs instead and the form action
+                is skipped.
               </p>
 
               <fieldset>
-                <legend>Plain button — submits the native form</legend>
+                <legend>Plain button — triggers form action</legend>
                 <Form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    // eslint-disable-next-line no-alert
-                    window.alert("Form submitted!");
+                  action={async ({ username }) => {
+                    await new Promise((r) => setTimeout(r, 600));
+                    return `Hello, ${username || "stranger"}!`;
+                  }}
+                  onActionEnd={(result) => {
+                    setFormResult1(result);
                   }}
                 >
-                  <Box flex="y" spacing="s" alignX="start" alignY="center">
+                  <Box flex="y" spacing="s" alignX="start">
                     <input
                       type="text"
                       name="username"
-                      placeholder="Type something…"
+                      placeholder="Type your name…"
                       style={{
                         padding: "6px 10px",
                         borderRadius: "4px",
                         border: "1px solid #ccc",
                       }}
                     />
-                    <Button type="submit">Submit form</Button>
+                    <Button type="submit">Submit</Button>
+                    {formResult1 && (
+                      <span style={{ fontSize: "0.85rem", color: "#2a7a2a" }}>
+                        Form result: <code>{formResult1}</code>
+                      </span>
+                    )}
                   </Box>
                 </Form>
               </fieldset>
 
               <fieldset>
-                <legend>Button with action — does NOT submit the form</legend>
+                <legend>
+                  Button with its own action — form action is NOT called
+                </legend>
                 <Form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    // eslint-disable-next-line no-alert
-                    window.alert("Form submitted! (this should not appear)");
+                  action={async () => {
+                    console.warn(
+                      "Form action should not be called when the button has its own action",
+                    );
                   }}
                 >
-                  <Box flex="y" spacing="s" alignX="start" alignY="center">
+                  <Box flex="y" spacing="s" alignX="start">
                     <input
                       type="text"
                       name="username"
@@ -395,19 +406,26 @@
                         border: "1px solid #ccc",
                       }}
                     />
-                    <Button
-                      type="submit"
-                      action={async () => {
-                        await new Promise((r) => setTimeout(r, 600));
-                        return "navi action ran, form was not submitted";
-                      }}
-                      onActionEnd={(value) => {
-                        // eslint-disable-next-line no-alert
-                        window.alert(value);
-                      }}
-                    >
-                      Submit (with action)
-                    </Button>
+                    <Box flex="y" spacing="s">
+                      <Button
+                        type="submit"
+                        action={async () => {
+                          await new Promise((r) => setTimeout(r, 600));
+                          return "Button's own action ran";
+                        }}
+                        onActionEnd={(result) => {
+                          setFormResult2(result);
+                        }}
+                      >
+                        Submit (own action)
+                      </Button>
+                      <Button type="submit">Submit (form action)</Button>
+                    </Box>
+                    {formResult2 && (
+                      <span style={{ fontSize: "0.85rem", color: "#2a7a2a" }}>
+                        Result: <code>{formResult2}</code>
+                      </span>
+                    )}
                   </Box>
                 </Form>
               </fieldset>

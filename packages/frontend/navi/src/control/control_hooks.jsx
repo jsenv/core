@@ -342,11 +342,12 @@ export const useControlProps = (
  */
 export const useControlgroupProps = (
   props,
-  { controlType, childComponentType, aggregateChildStates },
+  { stateType, controlType, childComponentType, aggregateChildStates },
 ) => {
   const { action } = props;
   const debugAction = useDebugAction();
   const uiGroupStateController = useUIGroupStateController(props, controlType, {
+    stateType,
     childComponentType,
     aggregateChildStates,
     debugAction,

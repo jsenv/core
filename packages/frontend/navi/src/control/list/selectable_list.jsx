@@ -147,9 +147,6 @@ const css = /* css */ `
 `;
 
 const SelectableListMultipleContext = createContext(false);
-// Stable reference for an empty selection so the action always receives an
-// array (never undefined) and callers don't get a new reference each render.
-const EMPTY_SELECTION = [];
 
 // Interactive variant: manages hover/keyboard/selection state and handles the
 // navi event protocol. When an action is provided it binds the action to ui state
@@ -174,6 +171,7 @@ export const SelectableList = (props) => {
     childrenWrapperProps,
     uiGroupStateController,
   ] = useControlgroupProps(props, {
+    stateType: multiple ? "array" : "",
     controlType: multiple ? "checkbox_group" : "radio_group",
     childComponentType: multiple ? "checkbox" : "radio",
     aggregateChildStates: multiple
@@ -184,10 +182,7 @@ export const SelectableList = (props) => {
               values.push(childUIStateController.uiState);
             }
           }
-          // Return a stable empty-array reference when nothing is selected so
-          // the action always receives an array (never undefined) and signal
-          // comparisons don't see a new reference on every render.
-          return values.length === 0 ? EMPTY_SELECTION : values;
+          return values.length === 0 ? undefined : values;
         }
       : (childUIStateControllers) => {
           let activeValue;

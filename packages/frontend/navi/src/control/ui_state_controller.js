@@ -526,16 +526,10 @@ const useParentControllerNotifiers = (
  * - **Form Section**: Groups related inputs for validation and reset operations
  * - **Dynamic Lists**: Handles variable number of repeated input groups
  */
-
 export const useUIGroupStateController = (
   props,
   componentType,
-  {
-    childComponentType,
-    aggregateChildStates,
-    emptyState = undefined,
-    debugAction,
-  },
+  { stateType, childComponentType, aggregateChildStates, debugAction },
 ) => {
   if (typeof aggregateChildStates !== "function") {
     throw new TypeError("aggregateChildStates must be a function");
@@ -543,6 +537,12 @@ export const useUIGroupStateController = (
   const parentUIStateController = useContext(ParentUIStateControllerContext);
   const { name, value } = props;
   const ref = props.ref;
+  const fallbackState =
+    stateType === "array"
+      ? EMPTY_ARRAY
+      : stateType === "object"
+        ? EMPTY_OBJECT
+        : undefined;
   const childUIStateControllerArrayRef = useRef([]);
   const childUIStateControllerArray = childUIStateControllerArrayRef.current;
   const uiStateControllerRef = useRef();
@@ -571,10 +571,12 @@ export const useUIGroupStateController = (
       pendingChangeRef.current = true;
       return;
     }
-    const newUIState = aggregateChildStates(
+    const aggChildState = aggregateChildStates(
       childUIStateControllerArray,
-      emptyState,
+      fallbackState,
     );
+    const newUIState =
+      aggChildState === undefined ? fallbackState : aggChildState;
     debugAction(
       e,
       `${componentType}.aggregateChildStates -> ${JSON.stringify(newUIState)}`,
@@ -608,7 +610,7 @@ export const useUIGroupStateController = (
   );
 
   const [publishUIState, subscribeUIState] = createPubSub();
-  const uiStateSignal = signal(emptyState);
+  const uiStateSignal = signal(fallbackState);
   const isMonitoringChild = (childUIStateController) => {
     if (childUIStateController.isProxy) {
       return false;
@@ -622,7 +624,7 @@ export const useUIGroupStateController = (
     componentType,
     name,
     value,
-    uiState: emptyState,
+    uiState: fallbackState,
     uiStateSignal,
     elementRef: ref,
     getPropFromState: (uiState) => uiState,
@@ -718,6 +720,10 @@ export const useUIGroupStateController = (
   uiStateControllerRef.current = uiStateController;
   return uiStateController;
 };
+// Stable reference for an empty selection so the action always receives an
+// array (never undefined) and callers don't get a new reference each render.
+const EMPTY_ARRAY = [];
+const EMPTY_OBJECT = {};
 
 export const dispatchRequestSetUIState = (element, value, detail) => {
   const controlHost = findControlHost(element) || element;
