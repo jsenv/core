@@ -1,5 +1,6 @@
 import { useRef } from "preact/hooks";
 
+import { useControlProps } from "../control/control_hooks.jsx";
 import { useAccentColorAttributes } from "../utils/use_accent_color_attributes.js";
 import { withPropsClassName } from "../utils/with_props_class_name.js";
 import { Text } from "./text.jsx";
@@ -106,12 +107,22 @@ const BadgeStyleCSSVars = {
 };
 
 const BadgeButton = (props) => {
+  const defaultRef = useRef();
+  props.ref = props.ref || defaultRef;
+  const [buttonProps, remainingProps] = useControlProps(props, {
+    primaryInteractionMode: "pointer",
+    controlType: "button",
+    statePropName: "value",
+    allowNameless: true,
+  });
+
   return (
     <Text
       overflowPinned
       className="navi_badge_button"
       role="button"
-      {...props}
+      {...buttonProps}
+      {...remainingProps}
     />
   );
 };

@@ -183,19 +183,48 @@ export const useControlProps = (
     });
 
   interactions: {
-    const { ref } = props;
-    const hasPointerDownInteraction = controlType === "input_range";
+    const {
+      ref,
+      actionInteraction,
+      actionOnMouseDown = actionInteraction === "mousedown",
+      actionAfterChange = actionInteraction === "change",
+      actionDebounce,
+    } = props;
+    let mousedownEffect;
+    let clickEffect;
+    let inputEffect;
+    let keydownEffect = "browser_action";
+    if (controlType === "button") {
+      if (actionOnMouseDown) {
+        mousedownEffect = "action";
+      } else {
+        clickEffect = "action";
+      }
+    } else if (controlType === "input") {
+      inputEffect = "action";
+      if (props.type === "range") {
+        mousedownEffect = "browser_action";
+      } else if (props.type === "radio" || props.type === "checkbox") {
+        clickEffect = "browser_action";
+      }
+    }
+
     const onMouseDown = (e) => {
       props.onMouseDown?.(e);
       if (primaryInteractionMode === "pointer") {
         const field = ref.current;
+        if (mousedownEffect === "action" && actionInteraction !== "manual") {
+          dispatchRequestAction(field, { event: e });
+          return;
+        }
         const allowed = dispatchRequestInteraction(
           field,
           e,
           "mousedown to interact with input",
         );
-        if (hasPointerDownInteraction && !allowed) {
-          e.preventDefault();
+        if (mousedownEffect && !allowed) {
+          debugInteraction(e, "mousedown.preventDefault()");
+          e.preventDefault(); // on input range prevent browser updating value
         }
       }
     };
@@ -203,13 +232,8 @@ export const useControlProps = (
       props.onClick?.(e);
       if (primaryInteractionMode === "pointer") {
         const field = ref.current;
-        if (controlType === "button") {
-          // Buttons have no input event — click IS the action trigger.
+        if (clickEffect === "action" && actionInteraction !== "manual") {
           dispatchRequestAction(field, { event: e });
-          return;
-        }
-        if (hasPointerDownInteraction) {
-          // click on range input does nothing if interaction is not allowed, so we can just ignore it here
           return;
         }
         const allowed = dispatchRequestInteraction(
@@ -217,10 +241,10 @@ export const useControlProps = (
           e,
           "click to interact with input",
         );
-        if (!allowed) {
+        if (clickEffect && !allowed) {
+          debugInteraction(e, "click.preventDefault()");
           // Here we want to prevent:
           // - toggle of radio/checkbox on click
-          debugInteraction(e, "click.preventDefault()");
           e.preventDefault();
         }
       }
@@ -237,7 +261,7 @@ export const useControlProps = (
         e,
         "keydown to interact with field",
       );
-      if (!allowed) {
+      if (keydownEffect && !allowed) {
         // Here we want to prevent
         // - space to toggle radio/checkbox
         // - space to scroll scrollable container (usually document)
@@ -254,11 +278,6 @@ export const useControlProps = (
         e.preventDefault();
       }
     };
-    const {
-      actionInteraction = "input",
-      actionAfterChange = actionInteraction === "change",
-      actionDebounce,
-    } = props;
     const lastEventRequestingActionRef = useRef();
     const lastActionValueRef = useRef();
 
@@ -293,8 +312,7 @@ export const useControlProps = (
     };
     const refCallback = useCallback(
       (field) => {
-        if (actionInteraction === "manual" || controlType === "button") {
-          // buttons have no input event; they trigger actions via onClick
+        if (!inputEffect || actionInteraction === "manual") {
           return undefined;
         }
         return addInputEffect(
@@ -303,7 +321,9 @@ export const useControlProps = (
             lastEventRequestingActionRef.current = e;
             const value = getFieldValue();
             lastActionValueRef.current = value;
-            dispatchRequestAction(field, { event: e });
+            if (inputEffect === "action") {
+              dispatchRequestAction(field, { event: e });
+            }
           },
           {
             waitForChange: actionAfterChange,

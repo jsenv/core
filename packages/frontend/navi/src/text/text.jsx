@@ -600,9 +600,12 @@ const TextOverflow = ({ noWrap, spacing, children, ...rest }) => {
     </TextDispatcher>
   );
 };
-const TextOverflowPinned = ({ overflowPinned, ...props }) => {
+const TextOverflowPinned = (props) => {
+  const { overflowPinned } = props;
   const setOverflowPinned = useContext(OverflowPinnedContext);
-  const text = <Text {...props} data-overflow-pinned=""></Text>;
+  const text = (
+    <Text {...props} data-overflow-pinned="" overflowPinned={undefined} />
+  );
   if (!setOverflowPinned) {
     console.warn(
       "<Text overflowPinned> declared outside a <Text overflowEllipsis>",
@@ -621,5 +624,6 @@ const TextOverflowPinned = ({ overflowPinned, ...props }) => {
 };
 const TextWithSelectRange = ({ ref, selectRange, ...props }) => {
   useInitialTextSelection(ref, selectRange);
+
   return <TextDispatcher {...props} ref={ref} selectRange={undefined} />;
 };

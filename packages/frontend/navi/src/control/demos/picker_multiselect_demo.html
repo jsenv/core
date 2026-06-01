@@ -99,7 +99,6 @@
         SelectableList,
         Selectable,
         NaviDebug,
-        dispatchRequestUnselect,
         Badge,
         BadgeList,
       } from "@jsenv/navi";
@@ -219,15 +218,18 @@
                 <Badge key={opt} data-has-button="">
                   {opt}
                   <Badge.Button
+                    action="unselect"
+                    value={opt}
                     aria-label={`Remove ${opt}`}
                     onMouseDown={(e) => {
                       console.log("mousedown on button");
-                      e.preventDefault();
+                      // e.preventDefault();
                       e.stopPropagation();
-                      dispatchRequestUnselect(listRef.current, {
-                        value: opt,
-                        event: e,
-                      });
+                    }}
+                    onClick={(e) => {
+                      console.log("click on button");
+                      // e.preventDefault();
+                      e.stopPropagation();
                     }}
                   >
                     ×
