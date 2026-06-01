@@ -342,9 +342,7 @@ export const InputRadio = (props) => {
 };
 
 const InputRadioHeadless = (props) => {
-  const [radioProps, remainingProps] = useCheckableProps(props, {
-    multiple: false,
-  });
+  const [radioProps, remainingProps] = useCheckableProps(props);
 
   return (
     <RealInputRadio
@@ -359,9 +357,7 @@ const InputRadioHeadless = (props) => {
 const APPEARANCE_SET = new Set(["icon", "button", "radio"]);
 const InputRadioFieldInterface = (props) => {
   import.meta.css = css;
-  const [radioProps, remainingProps] = useCheckableProps(props, {
-    multiple: false,
-  });
+  const [radioProps, remainingProps] = useCheckableProps(props);
   const { icon, appearance } = props;
   let appearanceResolved = appearance || (icon ? "icon" : "radio");
   if (appearance && !APPEARANCE_SET.has(appearance)) {

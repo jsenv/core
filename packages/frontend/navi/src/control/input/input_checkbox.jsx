@@ -306,9 +306,7 @@ export const InputCheckbox = (props) => {
 };
 
 const InputCheckboxHeadless = (props) => {
-  const [checkboxProps, remainingProps] = useCheckableProps(props, {
-    multiple: true,
-  });
+  const [checkboxProps, remainingProps] = useCheckableProps(props);
 
   return (
     <RealInputCheckbox
@@ -322,9 +320,7 @@ const InputCheckboxHeadless = (props) => {
 
 const InputCheckboxFieldInterface = (props) => {
   import.meta.css = css;
-  const [checkboxProps, remainingProps] = useCheckableProps(props, {
-    multiple: true,
-  });
+  const [checkboxProps, remainingProps] = useCheckableProps(props);
   const {
     icon,
     switch: switchProp,

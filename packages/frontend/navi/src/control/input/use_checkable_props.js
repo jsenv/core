@@ -1,9 +1,9 @@
 import { useControlProps } from "../control_hooks.jsx";
 
-export const useCheckableProps = (props, { multiple }) => {
+export const useCheckableProps = (props) => {
   const result = useControlProps(props, {
     primaryInteractionMode: "pointer",
-    controlType: multiple ? "checkbox" : "radio",
+    controlType: "input",
     statePropName: "checked",
     defaultStatePropName: "defaultChecked",
     fallbackState: false,
