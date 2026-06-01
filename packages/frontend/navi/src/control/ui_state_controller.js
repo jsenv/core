@@ -16,6 +16,7 @@ import {
 
 import { useNavState } from "../nav/browser_integration/browser_integration.js";
 import { useInitialValue } from "../state/use_initial_value.js";
+import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import { findControlHost } from "./control_dom.js";
 import { FormContext } from "./form_context.js";
 
@@ -285,21 +286,31 @@ export const useUIStateController = (
     getStateFromProp,
     setUIState: (prop, e) => {
       const newUIState = uiStateController.getStateFromProp(prop);
+      const controllerSig = getElementSignature(e.currentTarget || ref.current);
       if (persists) {
         setNavState(prop);
       }
       const currentUIState = uiStateController.uiState;
-      if (newUIState === currentUIState) {
+      const stateIsTheSame = compareTwoJsValues(newUIState, currentUIState);
+      if (stateIsTheSame) {
+        if (controlType === "button") {
+          debugInteraction(
+            e,
+            `${controllerSig}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> trigger button action`,
+          );
+          uiActionInternal?.(newUIState, e);
+          uiAction?.(newUIState, e);
+          return true;
+        }
         debugInteraction(
           e,
-          `setUIState called with "${newUIState}" but state is unchanged, ignoring`,
+          `${controllerSig}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> state unchanged, no update needed`,
         );
         return false;
       }
-      const controllerSig = getElementSignature(e.currentTarget || ref.current);
       debugInteraction(
         e,
-        `${controllerSig}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> updating to ${JSON.stringify(newUIState)}`,
+        `${controllerSig}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> updating from ${JSON.stringify(currentUIState)}`,
       );
       const el = ref.current;
       if (el) {
@@ -315,10 +326,6 @@ export const useUIStateController = (
       }
       uiStateController.uiState = newUIState;
       ownUIStateSignal.value = newUIState;
-      if (uiAction || uiActionInternal) {
-        uiActionInternal?.(newUIState, e);
-        uiAction?.(newUIState, e);
-      }
       // Radio group: when a radio becomes checked, uncheck all siblings.
       // We only update their UIState — no parent notification, no synthetic
       // input event (the browser never fires input on the unchecked radios,
@@ -408,6 +415,8 @@ export const useUIStateController = (
           // TODO: select, textarea
         }
       }
+      uiActionInternal?.(newUIState, e);
+      uiAction?.(newUIState, e);
       return true;
     },
     resetUIState: (e) => {

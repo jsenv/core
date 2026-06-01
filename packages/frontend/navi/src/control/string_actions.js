@@ -53,6 +53,7 @@ const select = createUICallback({
     return requestSelect(e, () => getActionParam(e));
   },
   action: (value, { event }) => {
+    debugger;
     return requestSelect(event, () => value);
   },
 });
