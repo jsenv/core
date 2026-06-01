@@ -25,7 +25,10 @@ import {
 import { Field } from "../field.jsx";
 import { Input } from "../input/input.jsx";
 import { useCheckableProps } from "../input/use_checkable_props.js";
-import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
+import {
+  dispatchRequestAction,
+  dispatchRequestInteraction,
+} from "../validation/custom_constraint_validation.js";
 import { List, LIST_ITEM_PSEUDO_CLASSES, ListItem } from "./list.jsx";
 
 const css = /* css */ `
@@ -218,26 +221,40 @@ export const SelectableList = (props) => {
         if (id === undefined) {
           return;
         }
-        const childController = uiGroupStateController.findChildById(
-          `${id}_input`,
-        );
+        const inputId = `${id}_input`;
+        const childController = uiGroupStateController.findChildById(inputId);
         if (!childController) {
           return;
         }
-        childController.setUIState(true, e);
+        const list = ref.current;
+        const allowed = dispatchRequestInteraction(list, e, "select");
+        if (!allowed) {
+          e.preventDefault();
+          return;
+        }
+        if (childController.setUIState(true, e)) {
+          dispatchRequestAction(list, { event: e });
+        }
       }}
       onnavi_request_unselect={(e) => {
         const { id } = e.detail;
         if (id === undefined) {
           return;
         }
-        const childController = uiGroupStateController.findChildById(
-          `${id}_input`,
-        );
+        const inputId = `${id}_input`;
+        const childController = uiGroupStateController.findChildById(inputId);
         if (!childController) {
           return;
         }
-        childController.setUIState(false, e);
+        const list = ref.current;
+        const allowed = dispatchRequestInteraction(list, e, "unselect");
+        if (!allowed) {
+          e.preventDefault();
+          return;
+        }
+        if (childController.setUIState(false, e)) {
+          dispatchRequestAction(list, { event: e });
+        }
       }}
     >
       <ControlgroupChildrenWrapper {...childrenWrapperProps}>
