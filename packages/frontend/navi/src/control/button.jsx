@@ -350,20 +350,18 @@ const ButtonUI = (props) => {
         // The button uiState is a combination of its own state (if it has a name)
         // and its parent state (if the parent is named or is a named collection)
         const buttonUIState = {};
-        if (parentUIStateController) {
-          const parentName = parentUIStateController.name;
-          const parentUIState = parentUIStateController.uiStateSignal.peek();
-          if (parentName) {
-            buttonUIState[parentName] = parentUIState;
+        if (
+          parentUIStateController &&
+          parentUIStateController.type === "form"
+        ) {
+          const formName = parentUIStateController.name;
+          const formUIState = parentUIStateController.uiStateSignal.peek();
+          if (formName) {
+            buttonUIState[formName] = formUIState;
           }
           // this is how we detect named collection for now (they don't have a name and have an object in their ui state)
-          else if (
-            typeof parentUIState === "object" &&
-            parentUIState !== null
-          ) {
-            Object.assign(buttonUIState, parentUIState);
-          } else {
-            // no name, we don't know where to put that value right?
+          else {
+            Object.assign(buttonUIState, formUIState);
           }
         }
         if (button.name) {

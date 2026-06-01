@@ -99,7 +99,7 @@ export const ParentUIStateControllerContext = createContext();
  */
 export const useUIStateController = (
   props,
-  componentType,
+  controlType,
   {
     statePropName,
     defaultStatePropName,
@@ -139,7 +139,7 @@ export const useUIStateController = (
   const readOnly = uncontrolled && hasStateProp;
   if (readOnly && import.meta.dev) {
     console.warn(
-      `"${componentType}" is controlled by "${statePropName}" prop. Replace it by "${defaultStatePropName}" or pass "uiAction"/"action" to make field interactive.`,
+      `"${controlType}" is controlled by "${statePropName}" prop. Replace it by "${defaultStatePropName}" or pass "uiAction"/"action" to make field interactive.`,
     );
     console.log(props);
   }
@@ -178,7 +178,7 @@ export const useUIStateController = (
   ] = useParentControllerNotifiers(
     parentUIStateController,
     uiStateControllerRef,
-    componentType,
+    controlType,
   );
   useLayoutEffect(() => {
     const controller = uiStateControllerRef.current;
@@ -186,7 +186,7 @@ export const useUIStateController = (
       controllersById.set(id, controller);
     }
     notifyParentAboutChildMount();
-    if (componentType === "radio") {
+    if (controlType === "radio") {
       registerRadioController(controller);
     }
     return () => {
@@ -194,7 +194,7 @@ export const useUIStateController = (
         controllersById.delete(id);
       }
       notifyParentAboutChildUnmount();
-      if (componentType === "radio") {
+      if (controlType === "radio") {
         unregisterRadioController(controller);
       }
     };
@@ -215,7 +215,7 @@ export const useUIStateController = (
     return existingUIStateController;
   }
   debugUIState(
-    `Creating "${componentType}" ui state controller - initial state:`,
+    `Creating "${controlType}" ui state controller - initial state:`,
     JSON.stringify(stateInitial),
   );
   const [publishUIState, subscribeUIState] = createPubSub();
@@ -256,7 +256,7 @@ export const useUIStateController = (
     },
 
     id,
-    componentType,
+    controlType,
     parentUIStateController,
     isProxy,
     allowNameless,
@@ -322,7 +322,7 @@ export const useUIStateController = (
       const controlProxyFor = uiStateController.props["navi-control-proxy-for"];
 
       if (
-        componentType === "radio" &&
+        controlType === "radio" &&
         newUIState &&
         uiStateController.name &&
         !controlProxyFor
@@ -415,7 +415,7 @@ export const useUIStateController = (
       });
     },
     actionEnd: () => {
-      debugUIState(`"${componentType}" actionEnd called`);
+      debugUIState(`"${controlType}" actionEnd called`);
       if (persists) {
         setNavState(undefined);
       }
@@ -430,26 +430,24 @@ const NO_PARENT = [() => {}, () => {}, () => {}];
 const useParentControllerNotifiers = (
   parentUIStateController,
   uiStateControllerRef,
-  componentType,
+  controlType,
 ) => {
   return useMemo(() => {
     if (!parentUIStateController) {
       return NO_PARENT;
     }
 
-    const parentComponentType = parentUIStateController.componentType;
+    const parentControlType = parentUIStateController.controlType;
     const notifyParentAboutChildMount = () => {
       const uiStateController = uiStateControllerRef.current;
-      debugUIState(
-        `"${componentType}" registering into "${parentComponentType}"`,
-      );
+      debugUIState(`"${controlType}" registering into "${parentControlType}"`);
       parentUIStateController.registerChild(uiStateController);
     };
 
     const notifyParentAboutChildUIStateChange = (e) => {
       const uiStateController = uiStateControllerRef.current;
       debugUIState(
-        `"${componentType}" notifying "${parentComponentType}" of ui state change`,
+        `"${controlType}" notifying "${parentControlType}" of ui state change`,
       );
       parentUIStateController.onChildUIStateChange(uiStateController, e);
     };
@@ -457,7 +455,7 @@ const useParentControllerNotifiers = (
     const notifyParentAboutChildUnmount = () => {
       const uiStateController = uiStateControllerRef.current;
       debugUIState(
-        `"${componentType}" unregistering from "${parentComponentType}"`,
+        `"${controlType}" unregistering from "${parentControlType}"`,
       );
       parentUIStateController.unregisterChild(uiStateController);
     };
@@ -513,9 +511,9 @@ const useParentControllerNotifiers = (
  * - Group state updates trigger notifications to external code
  *
  * @param {Object} props - Component props containing onUIStateChange callback
- * @param {string} componentType - Type identifier for this group controller
+ * @param {string} controlType - Type identifier for this group controller
  * @param {Object} config - Configuration object
- * @param {string} [config.childComponentType] - Filter children by this type (e.g., "checkbox")
+ * @param {string} [config.childControlType] - Filter children by this type (e.g., "checkbox")
  * @param {Function} config.aggregateChildStates - Function to aggregate child states
  * @param {any} [config.emptyState] - State to use when no children have values
  * @returns {Object} UI group state controller
@@ -528,8 +526,8 @@ const useParentControllerNotifiers = (
  */
 export const useUIGroupStateController = (
   props,
-  componentType,
-  { stateType, childComponentType, aggregateChildStates, debugAction },
+  controlType,
+  { stateType, childControlType, aggregateChildStates, debugAction },
 ) => {
   if (typeof aggregateChildStates !== "function") {
     throw new TypeError("aggregateChildStates must be a function");
@@ -559,7 +557,7 @@ export const useUIGroupStateController = (
   ] = useParentControllerNotifiers(
     parentUIStateController,
     uiStateControllerRef,
-    componentType,
+    controlType,
   );
   useLayoutEffect(() => {
     notifyParentAboutChildMount();
@@ -579,7 +577,7 @@ export const useUIGroupStateController = (
       aggChildState === undefined ? fallbackState : aggChildState;
     debugAction(
       e,
-      `${componentType}.aggregateChildStates -> ${JSON.stringify(newUIState)}`,
+      `${controlType}.aggregateChildStates -> ${JSON.stringify(newUIState)}`,
     );
     const uiStateController = uiStateControllerRef.current;
     uiStateController.setUIState(newUIState, e, { notifyExternal });
@@ -591,7 +589,7 @@ export const useUIGroupStateController = (
       pendingChangeRef.current = false;
       onChange(
         null,
-        new CustomEvent(`${componentType}_batched_ui_state_update`),
+        new CustomEvent(`${controlType}_batched_ui_state_update`),
         { notifyExternal: false },
       );
     }
@@ -604,9 +602,9 @@ export const useUIGroupStateController = (
     return existingUIStateController;
   }
   debugUIGroup(
-    childComponentType === "*"
-      ? `Creating "${componentType}" ui state controller (monitoring all descendants ui state(s))"`
-      : `Creating "${componentType}" ui state controller (monitoring "${childComponentType}" ui state(s))`,
+    childControlType === "*"
+      ? `Creating "${controlType}" ui state controller (monitoring all descendants ui state(s))"`
+      : `Creating "${controlType}" ui state controller (monitoring "${childControlType}" ui state(s))`,
   );
 
   const [publishUIState, subscribeUIState] = createPubSub();
@@ -615,13 +613,13 @@ export const useUIGroupStateController = (
     if (childUIStateController.isProxy) {
       return false;
     }
-    if (childComponentType === "*") {
+    if (childControlType === "*") {
       return true;
     }
-    return childUIStateController.componentType === childComponentType;
+    return childUIStateController.controlType === childControlType;
   };
   const uiStateController = {
-    componentType,
+    controlType,
     name,
     value,
     uiState: fallbackState,
@@ -636,7 +634,7 @@ export const useUIGroupStateController = (
       uiStateController.uiState = newUIState;
       uiStateSignal.value = newUIState;
       debugUIGroup(
-        `${componentType}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> updates from ${JSON.stringify(currentUIState)} to ${JSON.stringify(newUIState)}`,
+        `${controlType}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> updates from ${JSON.stringify(currentUIState)} to ${JSON.stringify(newUIState)}`,
       );
       publishUIState(newUIState);
       if (notifyExternal) {
@@ -650,7 +648,7 @@ export const useUIGroupStateController = (
       const childComponentType = childUIStateController.componentType;
       childUIStateControllerArray.push(childUIStateController);
       debugUIGroup(
-        `${componentType}.registerChild("${childComponentType}") -> registered (total: ${childUIStateControllerArray.length})`,
+        `${controlType}.registerChild("${childComponentType}") -> registered (total: ${childUIStateControllerArray.length})`,
       );
       onChange(
         childUIStateController,
@@ -663,7 +661,7 @@ export const useUIGroupStateController = (
         return;
       }
       debugUIGroup(
-        `${componentType}.onChildUIStateChange("${childComponentType}") to ${JSON.stringify(
+        `${controlType}.onChildUIStateChange("${childControlType}") to ${JSON.stringify(
           childUIStateController.uiState,
         )}`,
       );
@@ -673,21 +671,21 @@ export const useUIGroupStateController = (
       if (!isMonitoringChild(childUIStateController)) {
         return;
       }
-      const childComponentType = childUIStateController.componentType;
+      const childControlType = childUIStateController.controlType;
       const index = childUIStateControllerArray.indexOf(childUIStateController);
       if (index === -1) {
         debugUIGroup(
-          `${componentType}.unregisterChild("${childComponentType}") -> not found`,
+          `${controlType}.unregisterChild("${childControlType}") -> not found`,
         );
         return;
       }
       childUIStateControllerArray.splice(index, 1);
       debugUIGroup(
-        `${componentType}.unregisterChild("${childComponentType}") -> unregisteed (remaining: ${childUIStateControllerArray.length})`,
+        `${controlType}.unregisterChild("${childControlType}") -> unregisteed (remaining: ${childUIStateControllerArray.length})`,
       );
       onChange(
         childUIStateController,
-        new CustomEvent(`${childComponentType}_unmount`),
+        new CustomEvent(`${childControlType}_unmount`),
         { notifyExternal: false },
       );
     },
