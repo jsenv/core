@@ -1,7 +1,7 @@
 import { dispatchCustomEvent, findEvent } from "@jsenv/dom";
 import { useId, useRef, useState } from "preact/hooks";
 
-import { shortcutsViaOnKeyDown } from "@jsenv/navi/src/keyboard/keyboard_shortcuts.js";
+import { createOnKeyDownForShortcuts } from "@jsenv/navi/src/keyboard/keyboard_shortcuts.js";
 import { windowWidthSignal } from "@jsenv/navi/src/layout/responsive.js";
 import { useDebugFocus, useDebugPopup } from "@jsenv/navi/src/navi_debug.jsx";
 import { Dialog } from "@jsenv/navi/src/popup/dialog.jsx";
@@ -329,6 +329,36 @@ export const PickerCustom = (props) => {
 
     interactions: {
       const { onMouseDown, onClick, onKeyDown } = props;
+      const onKeyDownShortcuts = createOnKeyDownForShortcuts({
+        arrowdown: (e) => {
+          if (dispatchRequestInteraction(ref.current, e)) {
+            e.preventDefault(); // prevent container scroll
+            requestOpen(e);
+          }
+        },
+        arrowup: (e) => {
+          if (dispatchRequestInteraction(ref.current, e)) {
+            e.preventDefault(); // prevent container scroll
+            requestOpen(e);
+          }
+        },
+        space: (e) => {
+          if (dispatchRequestInteraction(ref.current, e)) {
+            e.preventDefault(); // prevent scroll
+            requestOpen(e);
+          }
+        },
+        escape: (e) => {
+          if (!expandedRef.current) {
+            return;
+          }
+          if (dispatchRequestInteraction(ref.current, e)) {
+            e.preventDefault();
+            requestClose(e, { cancel: true });
+          }
+        },
+      });
+
       Object.assign(pickerProps, {
         onMouseDown: (e) => {
           onMouseDown?.(e);
@@ -363,38 +393,10 @@ export const PickerCustom = (props) => {
             requestOpen(e);
           }
         },
-        onKeyDown: shortcutsViaOnKeyDown(
-          {
-            arrowdown: (e) => {
-              if (dispatchRequestInteraction(ref.current, e)) {
-                e.preventDefault(); // prevent container scroll
-                requestOpen(e);
-              }
-            },
-            arrowup: (e) => {
-              if (dispatchRequestInteraction(ref.current, e)) {
-                e.preventDefault(); // prevent container scroll
-                requestOpen(e);
-              }
-            },
-            space: (e) => {
-              if (dispatchRequestInteraction(ref.current, e)) {
-                e.preventDefault(); // prevent scroll
-                requestOpen(e);
-              }
-            },
-            escape: (e) => {
-              if (!expandedRef.current) {
-                return;
-              }
-              if (dispatchRequestInteraction(ref.current, e)) {
-                e.preventDefault();
-                requestClose(e, { cancel: true });
-              }
-            },
-          },
-          onKeyDown,
-        ),
+        onKeyDown: (e) => {
+          onKeyDown?.(e);
+          onKeyDownShortcuts(e);
+        },
       });
       Object.assign(popupProps, {
         onMouseDown: (e) => {

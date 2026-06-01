@@ -27,7 +27,7 @@ import { EmailSvg } from "@jsenv/navi/src/graphic/icons/email_svg.jsx";
 import { PhoneSvg } from "@jsenv/navi/src/graphic/icons/phone_svg.jsx";
 import { SearchSvg } from "@jsenv/navi/src/graphic/icons/search_svg.jsx";
 import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.jsx";
-import { shortcutsViaOnKeyDown } from "@jsenv/navi/src/keyboard/keyboard_shortcuts.js";
+import { createOnKeyDownForShortcuts } from "@jsenv/navi/src/keyboard/keyboard_shortcuts.js";
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
 import {
   createComponentResolver,
@@ -657,6 +657,25 @@ const InputTextualWithSuggestions = (props) => {
     };
   }, [suggestions]);
 
+  const onKeyDownShortcuts = createOnKeyDownForShortcuts({
+    arrowdown: (e) => {
+      showSuggestions(e);
+    },
+    arrowup: (e) => {
+      showSuggestions(e);
+    },
+    escape: (e) => {
+      if (!expandedRef.current) {
+        return false;
+      }
+      hideSuggestions(e);
+      return true;
+    },
+    home: () => {},
+    end: () => {},
+    enter: () => {},
+  });
+
   return (
     <Next
       role="combobox"
@@ -684,27 +703,10 @@ const InputTextualWithSuggestions = (props) => {
         onInput?.(e);
         showSuggestions(e);
       }}
-      onKeyDown={shortcutsViaOnKeyDown(
-        {
-          arrowdown: (e) => {
-            showSuggestions(e);
-          },
-          arrowup: (e) => {
-            showSuggestions(e);
-          },
-          escape: (e) => {
-            if (!expandedRef.current) {
-              return false;
-            }
-            hideSuggestions(e);
-            return true;
-          },
-          home: () => {},
-          end: () => {},
-          enter: () => {},
-        },
-        onKeyDown,
-      )}
+      onKeyDown={(e) => {
+        onKeyDown?.(e);
+        onKeyDownShortcuts(e);
+      }}
       //  arrowdown: (e) => {
       //   const listEl = getListEl();
       //   e.stopPropagation(); // when within a list, prevent list from handling it twice

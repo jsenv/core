@@ -150,7 +150,7 @@ export const useKeyboardShortcuts = (
     );
     shortcut.action = useAction(shortcut.action);
   }
-  const onKeyDown = createOnKeyDownForShortcuts(
+  const onKeyDown = createOnKeyDownForShortcutArray(
     shortcuts,
     shortcutActionIsBusyRef,
   );
@@ -171,7 +171,7 @@ export const useKeyboardShortcuts = (
   }, [shortcutDeps]);
 };
 
-export const createOnKeyDownForShortcuts = (shortcuts, busyRef) => {
+const createOnKeyDownForShortcutArray = (shortcuts, busyRef) => {
   const shortcutsCopy = [];
   for (const shortcutCandidate of shortcuts) {
     shortcutsCopy.push({
@@ -205,7 +205,7 @@ export const createOnKeyDownForShortcuts = (shortcuts, busyRef) => {
     applyKeyboardShortcuts(shortcutsCopy, keyboardEvent);
   };
 };
-export const shortcutsViaOnKeyDown = (shortcuts, onKeyDown) => {
+export const createOnKeyDownForShortcuts = (shortcuts) => {
   const shortcutsArray = [];
   for (const key of Object.keys(shortcuts)) {
     const value = shortcuts[key];
@@ -217,11 +217,7 @@ export const shortcutsViaOnKeyDown = (shortcuts, onKeyDown) => {
     }
     shortcutsArray.push(shortcut);
   }
-  const onKeyDownForShortcuts = createOnKeyDownForShortcuts(shortcutsArray);
-  return (e) => {
-    onKeyDownForShortcuts(e);
-    onKeyDown?.(e);
-  };
+  return createOnKeyDownForShortcutArray(shortcutsArray);
 };
 
 const applyKeyboardShortcuts = (shortcuts, keyboardEvent) => {
