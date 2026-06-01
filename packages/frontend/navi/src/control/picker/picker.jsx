@@ -301,6 +301,12 @@ const PickerButton = (props) => {
       onClick={(e) => {
         inputProps.onClick(e);
       }}
+      onKeyDown={(e) => {
+        // The button has the focus so he is the one handling keydown interactions
+        // it's also the one wrapping other elements so keydown bubbling will reach the button
+        // but neevr the input
+        inputProps.onKeyDown(e);
+      }}
     >
       <LoadingOutline
         loading={loading}
@@ -312,6 +318,9 @@ const PickerButton = (props) => {
         // eslint-disable-next-line react/no-children-prop
         children={undefined} // we will render children into the button
         id={undefined}
+        onMouseDown={undefined}
+        onClick={undefined}
+        onKeyDown={undefined}
       />
       <PickerContext.Provider value={{ value, placeholder }}>
         {ui === undefined ? <PickerDefaultUI /> : ui}

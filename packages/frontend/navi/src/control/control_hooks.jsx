@@ -252,7 +252,6 @@ export const useControlProps = (
       }
     };
     const onKeyDown = (e) => {
-      debugger;
       props.onKeyDown?.(e);
       if (e.key === "Enter") {
         resolveActionProp("submit")(e);
