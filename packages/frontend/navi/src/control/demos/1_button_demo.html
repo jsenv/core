@@ -394,39 +394,39 @@
                       "Form action should not be called when the button has its own action",
                     );
                   }}
+                  flex="y"
+                  spacing="s"
+                  alignX="start"
                 >
-                  <Box flex="y" spacing="s" alignX="start">
-                    <input
-                      type="text"
-                      name="username"
-                      placeholder="Type something…"
-                      style={{
-                        padding: "6px 10px",
-                        borderRadius: "4px",
-                        border: "1px solid #ccc",
+                  <input
+                    type="text"
+                    name="username"
+                    placeholder="Type something…"
+                    style={{
+                      padding: "6px 10px",
+                      borderRadius: "4px",
+                      border: "1px solid #ccc",
+                    }}
+                  />
+                  <Box flex="y" spacing="s">
+                    <Button
+                      action={async () => {
+                        await new Promise((r) => setTimeout(r, 600));
+                        return "Button's own action ran";
                       }}
-                    />
-                    <Box flex="y" spacing="s">
-                      <Button
-                        type="submit"
-                        action={async () => {
-                          await new Promise((r) => setTimeout(r, 600));
-                          return "Button's own action ran";
-                        }}
-                        onActionEnd={(result) => {
-                          setFormResult2(result);
-                        }}
-                      >
-                        Submit (own action)
-                      </Button>
-                      <Button type="submit">Submit (form action)</Button>
-                    </Box>
-                    {formResult2 && (
-                      <span style={{ fontSize: "0.85rem", color: "#2a7a2a" }}>
-                        Result: <code>{formResult2}</code>
-                      </span>
-                    )}
+                      onActionEnd={(result) => {
+                        setFormResult2(result);
+                      }}
+                    >
+                      Submit (own action)
+                    </Button>
+                    <Button type="submit">Submit (form action)</Button>
                   </Box>
+                  {formResult2 && (
+                    <span style={{ fontSize: "0.85rem", color: "#2a7a2a" }}>
+                      Result: <code>{formResult2}</code>
+                    </span>
+                  )}
                 </Form>
               </fieldset>
             </div>
