@@ -1,5 +1,7 @@
 import { dispatchCustomEvent } from "@jsenv/dom";
 
+import { getUIStateFromElement } from "../ui_state_controller.js";
+
 export const getToInputValue = (type) => {
   if (type === "datetime-local") {
     return toDatetimeLocal;
@@ -43,14 +45,21 @@ const toColor = (jsValue) => {
 const toInputValue = (jsValue) => jsValue;
 
 export const readInputValue = (input) => {
-  if (input.type === "number" || input.type === "range") {
+  // important: input.type = "navi_picker" followed by input.type returns "text"
+  // so use getAttribute
+  const type = input.getAttribute("type");
+
+  if (type === "number" || type === "range") {
     return readNumberFromInput(input);
   }
-  if (input.type === "checkbox" || input.type === "radio") {
+  if (type === "checkbox" || type === "radio") {
     return readValueFromCheckableInput(input);
   }
-  if (input.type === "datetime-local") {
+  if (type === "datetime-local") {
     return readDatetimeLocalFromInput(input);
+  }
+  if (type === "navi_picker") {
+    return getUIStateFromElement(input);
   }
   return readValueFromInput(input);
 };

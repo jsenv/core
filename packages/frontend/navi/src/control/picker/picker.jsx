@@ -331,6 +331,7 @@ const PickerInput = (props) => {
     <Box
       as="input"
       {...props}
+      type="navi_picker"
       value={toInputValue(props.value)}
       className="navi_picker_input"
       pseudoClasses={PickerInputPseudoClasses}
