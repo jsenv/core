@@ -41,6 +41,7 @@ import {
   useDebugFocus,
   useDebugInteraction,
 } from "@jsenv/navi/src/navi_debug.jsx";
+import { compareTwoJsValues } from "@jsenv/navi/src/utils/compare_two_js_values.js";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import { isSignal } from "@jsenv/navi/src/utils/is_signal.js";
 import {
@@ -55,7 +56,7 @@ import {
   RequiredContext,
 } from "./control_context.js";
 import { findControlProxyTarget } from "./control_proxy.js";
-import { getFromInputValue } from "./input/input_value.js";
+import { readInputValue } from "./input/input_value.js";
 import { addInputEffect } from "./input_effect.js";
 import { resolveActionProp } from "./string_actions.js";
 import {
@@ -180,7 +181,6 @@ export const useControlProps = (
       boundAction,
       uiStateController,
     });
-  const fromInputValue = getFromInputValue(props.type);
 
   interactions: {
     const { ref } = props;
@@ -261,13 +261,20 @@ export const useControlProps = (
     } = props;
     const lastEventRequestingActionRef = useRef();
     const lastActionValueRef = useRef();
+
+    const getFieldValue = () => {
+      const field = ref.current;
+      return readInputValue(field);
+    };
+
     const onInput = (e) => {
       props.onInput?.(e);
       const field = ref.current;
       const lastActionValue = lastActionValueRef.current;
-      const currentValue = field.value;
+      const currentValue = getFieldValue();
       const valueSameAsLastAction =
-        lastActionValue !== undefined && currentValue === lastActionValue;
+        lastActionValue !== undefined &&
+        compareTwoJsValues(currentValue, lastActionValue);
 
       let allowed;
       if (valueSameAsLastAction) {
@@ -279,8 +286,7 @@ export const useControlProps = (
         allowed = dispatchRequestInteraction(field, e);
       }
       if (allowed) {
-        const uiState = fromInputValue(currentValue);
-        uiStateController.setUIState(uiState, e);
+        uiStateController.setUIState(currentValue, e);
       } else {
         e.preventDefault();
       }
@@ -295,7 +301,8 @@ export const useControlProps = (
           field,
           (e) => {
             lastEventRequestingActionRef.current = e;
-            lastActionValueRef.current = field.value;
+            const value = getFieldValue();
+            lastActionValueRef.current = value;
             dispatchRequestAction(field, { event: e });
           },
           {

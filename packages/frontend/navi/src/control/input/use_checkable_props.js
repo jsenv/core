@@ -10,5 +10,8 @@ export const useCheckableProps = (props, { multiple }) => {
     getStateFromProp: (checked) => (checked ? props.value : undefined),
     getPropFromState: Boolean,
   });
+  result[0].onnavi_get_value = (e) => {
+    e.detail.respondWith(props.value);
+  };
   return result;
 };

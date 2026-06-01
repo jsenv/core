@@ -1,3 +1,5 @@
+import { dispatchCustomEvent } from "@jsenv/dom";
+
 export const getToInputValue = (type) => {
   if (type === "datetime-local") {
     return toDatetimeLocal;
@@ -40,16 +42,20 @@ const toColor = (jsValue) => {
 };
 const toInputValue = (jsValue) => jsValue;
 
-export const getFromInputValue = (type) => {
-  if (type === "datetime-local") {
-    return fromDatetimeLocal;
+export const readInputValue = (input) => {
+  if (input.type === "number" || input.type === "range") {
+    return readNumberFromInput(input);
   }
-  if (type === "number" || type === "range") {
-    return fromNumber;
+  if (input.type === "checkbox" || input.type === "radio") {
+    return readValueFromCheckableInput(input);
   }
-  return fromInputValue;
+  if (input.type === "datetime-local") {
+    return readDatetimeLocalFromInput(input);
+  }
+  return readValueFromInput(input);
 };
-const fromDatetimeLocal = (localDateTimeString) => {
+const readDatetimeLocalFromInput = (input) => {
+  const localDateTimeString = input.value;
   if (!localDateTimeString) {
     return localDateTimeString;
   }
@@ -59,14 +65,37 @@ const fromDatetimeLocal = (localDateTimeString) => {
   }
   return localDate.toISOString();
 };
-const fromNumber = (inputValue) => {
-  if (inputValue === "") {
+const readNumberFromInput = (input) => {
+  const numberString = input.value;
+  if (numberString === "") {
     return "";
   }
-  const asNumber = Number(inputValue);
+  const asNumber = Number(numberString);
   if (isNaN(asNumber)) {
-    return inputValue;
+    return numberString;
   }
   return asNumber;
 };
-const fromInputValue = (inputValue) => inputValue;
+const readValueFromCheckableInput = (input) => {
+  const checked = input.checked;
+  if (!checked) {
+    return undefined;
+  }
+  // prefer the value given as prop (respect original type, browser would convert to string)
+  let responded;
+  let value;
+  dispatchCustomEvent(input, "navi_get_value", {
+    respondWith: (jsValue) => {
+      responded = true;
+      value = jsValue;
+    },
+  });
+  if (responded) {
+    return value;
+  }
+  return input.value;
+};
+const readValueFromInput = (input) => {
+  const value = input.value;
+  return value;
+};
