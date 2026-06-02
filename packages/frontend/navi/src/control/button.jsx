@@ -343,6 +343,9 @@ const ButtonUI = (props) => {
       allowNameless: true,
     },
   );
+  buttonProps.onnavi_get_value = (e) => {
+    e.detail.respondWith(props.value);
+  };
   const { basePseudoState, children } = buttonProps;
   const loading = basePseudoState[":-navi-loading"];
 
