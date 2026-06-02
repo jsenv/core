@@ -2,20 +2,37 @@ import { dispatchCustomEvent } from "@jsenv/dom";
 
 import { getUIStateFromElement } from "./ui_state_controller.js";
 
-export const asControlHostValue = (value, { controlType, type }) => {
+/**
+ * Converts a JS value into the form expected by the browser DOM property for a
+ * given control type/input type combination.
+ *
+ * For example:
+ * - `datetime-local` inputs expect a local datetime string without timezone
+ * - `number`/`range` inputs expect a numeric string or number
+ * - `color` inputs require a non-empty hex string (falls back to `#000000`)
+ * - All other inputs receive the value as-is (undefined → "")
+ *
+ * Returns either the converted value directly, or a converter function when the
+ * conversion depends on the runtime value (e.g. plain inputs return `asInputValue`).
+ *
+ * @param {any} value - The JS value to convert.
+ * @param {{ controlType: string, type: string }} options
+ * @returns {any} The DOM-compatible value or a converter function.
+ */
+export const asControlHostValue = (jsValue, { controlType, type }) => {
   if (controlType === "input") {
     if (type === "datetime-local") {
-      return asDatetimeLocalString(value);
+      return asDatetimeLocalString(jsValue);
     }
     if (type === "number" || type === "range") {
-      return asNumberString(value);
+      return asNumberString(jsValue);
     }
     if (type === "color") {
-      return asColorString(value);
+      return asColorString(jsValue);
     }
     return asInputValue;
   }
-  return value;
+  return jsValue;
 };
 // As explained in https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/datetime-local#setting_timezones
 // datetime-local does not support timezones
@@ -36,11 +53,7 @@ const asNumberString = (jsValue) => {
   if (jsValue === undefined) {
     return "";
   }
-  const asNumber = Number(jsValue);
-  if (isNaN(asNumber)) {
-    return jsValue;
-  }
-  return asNumber;
+  return jsValue;
 };
 // Browser requires a non-empty value for <input type="color">.
 // When our logical value is empty we give it #000000 so it doesn't choke.
@@ -55,6 +68,21 @@ const asInputValue = (jsValue) => {
   return jsValue;
 };
 
+/**
+ * Reads the current logical JS value from a control host DOM element.
+ *
+ * Handles all navi control host element types:
+ * - `<button>` — reads via `navi_get_value` custom event, falls back to `button.value`
+ * - `<input type="number|range">` — parses as a number, returns `undefined` when empty
+ * - `<input type="checkbox|radio">` — returns `undefined` when unchecked, otherwise reads
+ *   via `navi_get_value` custom event (to preserve the original JS type of the value prop)
+ * - `<input type="datetime-local">` — converts the local datetime string to an ISO 8601 string
+ * - `<input type="navi_picker">` — delegates to the controller via `navi_get_ui_state`
+ * - All other inputs — returns `input.value` as a string
+ *
+ * @param {HTMLElement} controlHost - The control host DOM element to read from.
+ * @returns {any} The current logical value of the control.
+ */
 export const readControlValue = (controlHost) => {
   if (controlHost.tagName === "BUTTON") {
     return readValueFromButton(controlHost);
