@@ -201,11 +201,17 @@
         const selectedArray = selectedSignal.value;
 
         const ChipsUI = () => {
-          if (selectedArray.length === 0) {
-            return <span style="color: #999">Select skills…</span>;
-          }
           return (
-            <BadgeList>
+            <BadgeList
+              fallback={
+                <Badge
+                  background="transparent"
+                  color="var(--picker-placeholder-color)"
+                >
+                  Select skills…
+                </Badge>
+              }
+            >
               {selectedArray.map((opt) => (
                 <Badge key={opt}>{opt}</Badge>
               ))}

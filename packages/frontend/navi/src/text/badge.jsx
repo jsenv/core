@@ -22,7 +22,7 @@ const css = /* css */ `
 
     position: relative;
     display: inline-flex;
-    max-width: 100px;
+    max-width: 200px;
     padding-top: var(--padding-y);
     padding-right: var(--padding-x);
     padding-bottom: var(--padding-y);

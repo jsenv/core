@@ -1,4 +1,5 @@
 import { measureWidestChildRow } from "@jsenv/dom";
+import { toChildArray } from "preact";
 import { useLayoutEffect, useRef } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
@@ -13,6 +14,7 @@ const css = /* css */ `
 `;
 
 export const BadgeList = ({
+  fallback,
   children,
   className,
   shrinkWrap = true,
@@ -58,6 +60,7 @@ export const BadgeList = ({
     };
   });
 
+  const childArray = toChildArray(children);
   return (
     <Box
       flex="x"
@@ -66,7 +69,7 @@ export const BadgeList = ({
       className={withPropsClassName("navi_badge_list", className)}
       {...props}
     >
-      {children}
+      {childArray.length ? children : fallback}
     </Box>
   );
 };
