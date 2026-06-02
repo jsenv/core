@@ -381,12 +381,20 @@ export const PickerCustom = (props) => {
           }
         },
         onClick: (e) => {
+          if (e.detail === 0) {
+            // disable enter to open that would happen because it's a <button>
+            // but we want to keep the input behavior here
+            // (space to open, enter to submit)
+            return;
+          }
           onClick?.(e);
           if (
             dispatchRequestInteraction(
               ref.current,
               e,
-              e.detail === 0 ? "enter to open picker" : "click to open picker",
+              e.detail === 0
+                ? "keyboard click to open picker"
+                : "click to open picker",
             )
           ) {
             // When a label is clicked it transfers focus to the select

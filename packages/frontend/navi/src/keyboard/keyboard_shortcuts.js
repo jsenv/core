@@ -221,9 +221,20 @@ export const createOnKeyDownForShortcuts = (shortcuts) => {
 };
 
 const applyKeyboardShortcuts = (shortcuts, keyboardEvent) => {
-  const defaultAction = getKeyboardEventDefaultAction(keyboardEvent);
-  const canIntercept =
-    !defaultAction || defaultAction === "scroll" || defaultAction === "dismiss";
+  const currentTarget = keyboardEvent.currentTarget;
+  const target = keyboardEvent.target;
+  let canIntercept;
+  if (target === currentTarget) {
+    // the event occurs on the element itself so we are sure we won't interfere with native behaviors of child elements
+    canIntercept = true;
+  } else {
+    // we need to check if the default action is something that we can allow to be intercepted
+    const defaultAction = getKeyboardEventDefaultAction(keyboardEvent);
+    canIntercept =
+      !defaultAction ||
+      defaultAction === "scroll" ||
+      defaultAction === "dismiss";
+  }
   if (!canIntercept) {
     return null;
   }
