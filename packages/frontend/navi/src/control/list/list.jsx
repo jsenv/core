@@ -57,6 +57,7 @@ const css = /* css */ `
       --list-item-padding: var(--list-item-padding-y) var(--list-item-padding-x);
       --list-item-color: inherit;
       --list-item-font-weight: inherit;
+      --list-item-background-color: transparent;
 
       /* Highlight (CSS Highlight API match) */
       --list-item-color-highlight: inherit;
@@ -167,6 +168,7 @@ const css = /* css */ `
     --x-list-item-color: var(--list-item-color);
     --x-list-item-background-color: var(--list-item-background-color);
     --x-list-item-font-weight: var(--list-item-font-weight);
+
     box-sizing: border-box;
     min-width: 100%;
     padding: var(--list-item-padding);

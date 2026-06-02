@@ -32,35 +32,45 @@ import {
 import { List, LIST_ITEM_PSEUDO_CLASSES, ListItem } from "./list.jsx";
 
 const css = /* css */ `
+  @layer navi {
+    .navi_list_container {
+      --list-outline-color: var(--navi-focus-outline-color);
+      --list-item-outline-color: var(--navi-focus-outline-color);
+      --list-item-outline-width: 2px;
+      /* Hover (mouse) */
+      --list-item-color-hover: var(--list-item-color);
+      --list-item-background-color-hover: light-dark(#f5f5f5, #2a2a2a);
+      /* Pointed by mouse — subtle, just a shade above background */
+      --list-item-color-mouse-pointed: var(--list-item-color);
+      --list-item-background-color-mouse-pointed: light-dark(#ebebeb, #303030);
+      /* Pointed by keyboard — subtle light blue highlight */
+      --list-item-color-keyboard-pointed: var(--list-item-color);
+      --list-item-background-color-keyboard-pointed: light-dark(
+        #c2dcff,
+        #1c3a6e
+      );
+      /* Pointed by proxy */
+      --list-item-color-pointed: var(--list-item-color);
+      --list-item-background-color-pointed: light-dark(#dbeafe, #1c3a6e);
+      /* Selected — vivid blue accent */
+      --list-item-color-selected: light-dark(#ffffff, #ffffff);
+      --list-item-background-color-selected: light-dark(#1a73e8, #2b5fcc);
+      /* Disabled */
+      --list-item-color-disabled: light-dark(#aaa, #555);
+      --list-item-background-color-disabled: var(--list-item-background-color);
+    }
+  }
+
   fieldset.navi_list_container {
     margin: 0; /* Reset margin that might come from fieldset */
     padding: 0; /* Reset padding that might come from fieldset */
   }
 
   .navi_list_container {
-    --list-outline-color: var(--navi-focus-outline-color);
     --x-list-outline-width: calc(
       var(--list-outline-width) + var(--list-border-width)
     );
     --x-list-outline-offset: calc(-1 * var(--list-border-width));
-    /* Hover (mouse) */
-    --list-item-color-hover: var(--list-item-color);
-    --list-item-background-color-hover: light-dark(#f5f5f5, #2a2a2a);
-    /* Pointed by mouse — subtle, just a shade above background */
-    --list-item-color-mouse-pointed: var(--list-item-color);
-    --list-item-background-color-mouse-pointed: light-dark(#ebebeb, #303030);
-    /* Pointed by keyboard — subtle light blue highlight */
-    --list-item-color-keyboard-pointed: var(--list-item-color);
-    --list-item-background-color-keyboard-pointed: light-dark(#c2dcff, #1c3a6e);
-    /* Pointed by proxy */
-    --list-item-color-pointed: var(--list-item-color);
-    --list-item-background-color-pointed: light-dark(#dbeafe, #1c3a6e);
-    /* Selected — vivid blue accent */
-    --list-item-color-selected: light-dark(#ffffff, #ffffff);
-    --list-item-background-color-selected: light-dark(#1a73e8, #2b5fcc);
-    /* Disabled */
-    --list-item-color-disabled: light-dark(#aaa, #555);
-    --list-item-background-color-disabled: var(--list-item-background-color);
 
     outline-width: var(--x-list-outline-width);
     outline-color: var(--x-list-outline-color);
@@ -73,52 +83,18 @@ const css = /* css */ `
     &[data-focus-visible] {
       outline-style: solid;
     }
-
     &[data-callout] {
       --x-list-border-color: var(--callout-color);
-    }
-
-    .navi_list_item:has([data-focus-visible]) {
-      --x-list-item-color: var(--list-item-color-keyboard-pointed);
-      --x-list-item-background-color: var(
-        --list-item-background-color-keyboard-pointed
-      );
-    }
-
-    /* opt-in: apply background color to selected items */
-    &[navi-has-selected-background]:not(:has(input[navi-control-proxy-for])) {
-      .navi_list_item[data-selected] {
-        --x-list-item-color: var(--list-item-color-selected);
-        --x-list-item-background-color: var(
-          --list-item-background-color-selected
-        );
-        &[data-hover] {
-          --x-list-item-background-color: var(
-            --list-item-background-color-selected,
-            var(--list-item-background-color-mouse-pointed)
-          ) !important;
-        }
-      }
-      &[data-focus-within] {
-        /* Selected must win over keyboard-pointed */
-        .navi_list_item[data-selected] {
-          --x-list-item-color: var(--list-item-color-selected);
-          --x-list-item-background-color: var(
-            --list-item-background-color-selected
-          );
-          &:has([data-focus-visible]) {
-            --x-list-item-background-color: var(
-              --list-item-background-color-selected,
-              var(--list-item-background-color-keyboard-pointed)
-            );
-          }
-        }
-      }
     }
   }
 
   .navi_list_item {
+    --x-list-item-border-color: var(--x-list-item-background-color);
+
     position: relative;
+    border-width: var(--list-item-outline-width);
+    border-style: solid;
+    border-color: var(--x-list-item-border-color);
 
     &[data-interactive] {
       cursor: pointer;
@@ -133,6 +109,34 @@ const css = /* css */ `
     &[data-pointed] {
       --x-list-item-color: var(--list-item-color-pointed);
       --x-list-item-background-color: var(--list-item-background-color-pointed);
+    }
+    /* Focus */
+    &:has([data-focus-visible]) {
+      --x-list-item-color: var(--list-item-color-keyboard-pointed);
+      --x-list-item-background-color: var(
+        --list-item-background-color-keyboard-pointed
+      );
+      --x-list-item-border-color: var(--list-item-outline-color);
+      /* Selected must win over keyboard-pointed */
+      &[data-selected] {
+        --x-list-item-background-color: var(
+          --list-item-background-color-selected,
+          var(--list-item-background-color-keyboard-pointed)
+        );
+      }
+    }
+    /* Selected */
+    &[data-selected]:not(:has(input[navi-control-proxy-for]])) {
+      --x-list-item-color: var(--list-item-color-selected);
+      --x-list-item-background-color: var(
+        --list-item-background-color-selected
+      );
+      &[data-hover] {
+        --x-list-item-background-color: var(
+          --list-item-background-color-selected,
+          var(--list-item-background-color-mouse-pointed)
+        ) !important;
+      }
     }
     &[data-disabled] {
       --x-list-item-color: var(--list-item-color-disabled);
