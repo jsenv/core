@@ -325,7 +325,7 @@ export const useControlProps = (
         name: "navi_change",
         callback: asAction,
       };
-      enterEffect = (e) => resolveActionProp("submit")(e);
+      enterEffect = (e) => resolveActionProp("send")(e);
       if (picker) {
         mousedownInteraction = {
           name: "mousedown to open picker",

@@ -125,17 +125,31 @@ const requestUpdate = (event, value) => {
 };
 
 /**
- * Triggers the action of the closest ancestor field.
- * Equivalent to clicking the first submit button of a form.
- * Use on a `<Button>` inside a field or form to confirm the current value.
+ * Submits the closest ancestor field's action.
+ * When triggered inside a popup (an element with `[aria-expanded]`), behaves
+ * like `send` instead: closes the popup and, if a value is available, updates
+ * the parent field with that value before closing.
  *
  * @example
- * <Button action="submit">Confirm</Button>
+ * <Button action="send">Confirm</Button>
  */
-const submit = createUICallback({
-  name: "submit",
-  event: (e) => requestClosestAction(e),
-  action: (_, { event }) => {
+const send = createUICallback({
+  name: "send",
+  event: (e) => {
+    const expandableEl = e.currentTarget.closest("[aria-expanded]");
+    if (expandableEl) {
+      return requestClose(e);
+    }
+    return requestClosestAction(e);
+  },
+  action: (value, { event }) => {
+    const expandableEl = event.currentTarget.closest("[aria-expanded]");
+    if (expandableEl) {
+      if (value !== undefined) {
+        requestUpdate(event, value);
+      }
+      return requestClose(event);
+    }
     return requestClosestAction(event);
   },
 });
@@ -232,28 +246,6 @@ const cancel = createUICallback({
     return requestClose(event, { cancel: true });
   },
 });
-/**
- * Updates the field value with the current value then closes the popup,
- * combining `update` + `close` in one action. Useful for custom pickers
- * where the inner input value should be committed on close.
- * If the action callback provides no value (`undefined`), the update step
- * is skipped and only the close is performed.
- *
- * @example
- * <Button action="send">Send</Button>
- */
-const send = createUICallback({
-  name: "send",
-  event: (event) => {
-    return requestClose(event);
-  },
-  action: (value, { event }) => {
-    if (value !== undefined) {
-      requestUpdate(event, value);
-    }
-    return requestClose(event);
-  },
-});
 const requestClose = (event, { cancel = false } = {}) => {
   const currentTarget = event.currentTarget;
   const expandableEl = currentTarget.closest("[aria-expanded]");
@@ -309,10 +301,9 @@ const STRING_ACTIONS = {
   unselect,
   update,
 
-  submit,
+  send,
 
   close,
   clear,
   cancel,
-  send,
 };
