@@ -160,7 +160,7 @@
                 placeholder="Click to edit…"
                 action={async (v) => {
                   actionCallsSignal.value = [...actionCallsSignal.value, v];
-                  await sleep(60000);
+                  await sleep(600);
                   valueSignal.value = v;
                   savedSignal.value = v;
                 }}

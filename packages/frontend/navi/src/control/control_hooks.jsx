@@ -253,7 +253,7 @@ export const useControlProps = (
     };
     const onKeyDown = (e) => {
       props.onKeyDown?.(e);
-      if (e.key === "Enter") {
+      if (e.key === "Enter" && controlType === "input") {
         resolveActionProp("submit")(e);
         return;
       }

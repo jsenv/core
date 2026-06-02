@@ -12,9 +12,17 @@
  * - `"scroll"`       — key scrolls the page or a scrollable container
  * - `""`             — no meaningful browser default; safe to intercept freely
  */
+export const normalizeKeyboardKey = (rawKey) => {
+  // The browser sends " " for the Space bar; map it to the friendly name "space"
+  if (rawKey === " ") {
+    return "space";
+  }
+  return rawKey.toLowerCase();
+};
+
 export const getKeyboardEventDefaultAction = (keyboardEvent) => {
   const target = keyboardEvent.target;
-  const key = keyboardEvent.key;
+  const key = normalizeKeyboardKey(keyboardEvent.key);
 
   // Nothing special occurs when the target or an ancestor is disabled/inert
   if (
@@ -55,13 +63,13 @@ const isTypingIntent = (e) => {
   if (e.metaKey || e.ctrlKey) {
     return false;
   }
-  const { key } = e;
+  const key = normalizeKeyboardKey(e.key);
   // Single printable character — the user is typing
-  if (key.length === 1) {
+  if (e.key.length === 1) {
     return true;
   }
   // Editing keys that would modify the text
-  if (key === "Backspace" || key === "Delete") {
+  if (key === "backspace" || key === "delete") {
     return true;
   }
   return false;
@@ -72,21 +80,21 @@ const DEFAULT_BEHAVIORS = [
     test: () => true,
     keys: {
       // Tab moves focus on any element
-      Tab: "focus_nav",
+      tab: "focus_nav",
       // Escape dismisses on any element (dialog, search clear, dropdown close, etc.)
-      Escape: "dismiss",
+      escape: "dismiss",
     },
     // no fallback: only claims Tab/Escape, other keys continue to next entries
   },
   {
     test: (el) => el.matches("input[type='radio'], input[type='checkbox']"),
     keys: {
-      Space: "activate",
-      Enter: (e) => (e.target.form ? "form_submit" : ""),
-      ArrowLeft: "focus_nav",
-      ArrowRight: "focus_nav",
-      ArrowUp: "focus_nav",
-      ArrowDown: "focus_nav",
+      space: "activate",
+      enter: (e) => (e.target.form ? "form_submit" : ""),
+      arrowleft: "focus_nav",
+      arrowright: "focus_nav",
+      arrowup: "focus_nav",
+      arrowdown: "focus_nav",
     },
   },
   {
@@ -95,41 +103,41 @@ const DEFAULT_BEHAVIORS = [
         "input:not([type]), input[type='text'], input[type='search'], input[type='url'], input[type='email'], input[type='password'], input[type='tel']",
       ),
     keys: {
-      Enter: (e) => (e.target.form ? "form_submit" : ""),
-      ArrowLeft: "cursor_move",
-      ArrowRight: "cursor_move",
-      ArrowUp: "cursor_move",
-      ArrowDown: "cursor_move",
-      Home: "cursor_move",
-      End: "cursor_move",
+      enter: (e) => (e.target.form ? "form_submit" : ""),
+      arrowleft: "cursor_move",
+      arrowright: "cursor_move",
+      arrowup: "cursor_move",
+      arrowdown: "cursor_move",
+      home: "cursor_move",
+      end: "cursor_move",
     },
     fallback: (e) => (isTypingIntent(e) ? "type" : undefined),
   },
   {
     test: (el) => el.matches("input[type='range']"),
     keys: {
-      Space: "scroll",
-      Enter: (e) => (e.target.form ? "form_submit" : ""),
-      ArrowLeft: "value_change",
-      ArrowRight: "value_change",
-      ArrowUp: "value_change",
-      ArrowDown: "value_change",
-      Home: "value_change",
-      End: "value_change",
-      PageUp: "value_change",
-      PageDown: "value_change",
+      space: "scroll",
+      enter: (e) => (e.target.form ? "form_submit" : ""),
+      arrowleft: "value_change",
+      arrowright: "value_change",
+      arrowup: "value_change",
+      arrowdown: "value_change",
+      home: "value_change",
+      end: "value_change",
+      pageup: "value_change",
+      pagedown: "value_change",
     },
   },
   {
     test: (el) => el.matches("input[type='number']"),
     keys: {
-      Enter: (e) => (e.target.form ? "form_submit" : ""),
-      ArrowLeft: "cursor_move",
-      ArrowRight: "cursor_move",
-      ArrowUp: "value_change",
-      ArrowDown: "value_change",
-      Home: "cursor_move",
-      End: "cursor_move",
+      enter: (e) => (e.target.form ? "form_submit" : ""),
+      arrowleft: "cursor_move",
+      arrowright: "cursor_move",
+      arrowup: "value_change",
+      arrowdown: "value_change",
+      home: "cursor_move",
+      end: "cursor_move",
     },
     fallback: (e) => (isTypingIntent(e) ? "type" : undefined),
   },
@@ -139,28 +147,28 @@ const DEFAULT_BEHAVIORS = [
         "input[type='date'], input[type='time'], input[type='datetime-local'], input[type='month'], input[type='week']",
       ),
     keys: {
-      Space: "activate",
-      Enter: (e) => (e.target.form ? "form_submit" : ""),
-      ArrowLeft: "value_change",
-      ArrowRight: "value_change",
-      ArrowUp: "value_change",
-      ArrowDown: "value_change",
+      space: "activate",
+      enter: (e) => (e.target.form ? "form_submit" : ""),
+      arrowleft: "value_change",
+      arrowright: "value_change",
+      arrowup: "value_change",
+      arrowdown: "value_change",
     },
   },
   {
     // Color input: Space opens the color picker, Enter submits the form
     test: (el) => el.matches("input[type='color']"),
     keys: {
-      Space: "activate",
-      Enter: (e) => (e.target.form ? "form_submit" : ""),
+      space: "activate",
+      enter: (e) => (e.target.form ? "form_submit" : ""),
     },
   },
   {
     // File input: Space opens the picker, Enter submits the form
     test: (el) => el.matches("input[type='file']"),
     keys: {
-      Space: "activate",
-      Enter: (e) => (e.target.form ? "form_submit" : ""),
+      space: "activate",
+      enter: (e) => (e.target.form ? "form_submit" : ""),
     },
   },
   {
@@ -175,13 +183,13 @@ const DEFAULT_BEHAVIORS = [
       el.contentEditable === "true" ||
       el.isContentEditable,
     keys: {
-      Enter: "type",
-      ArrowLeft: "cursor_move",
-      ArrowRight: "cursor_move",
-      ArrowUp: "cursor_move",
-      ArrowDown: "cursor_move",
-      Home: "cursor_move",
-      End: "cursor_move",
+      enter: "type",
+      arrowleft: "cursor_move",
+      arrowright: "cursor_move",
+      arrowup: "cursor_move",
+      arrowdown: "cursor_move",
+      home: "cursor_move",
+      end: "cursor_move",
     },
     fallback: (e) => (isTypingIntent(e) ? "type" : undefined),
   },
@@ -192,16 +200,16 @@ const DEFAULT_BEHAVIORS = [
       el.tagName === "A" ||
       el.getAttribute("role") === "button",
     keys: {
-      Space: "activate",
-      Enter: "activate",
+      space: "activate",
+      enter: "activate",
     },
   },
   {
     // details/summary: Space/Enter toggle the disclosure widget
     test: (el) => el.tagName === "DETAILS" || el.tagName === "SUMMARY",
     keys: {
-      Space: "activate",
-      Enter: "activate",
+      space: "activate",
+      enter: "activate",
     },
   },
   {
@@ -213,15 +221,15 @@ const DEFAULT_BEHAVIORS = [
     // Non-interactive elements: browser scrolls on Space and arrow keys
     test: () => true,
     keys: {
-      Space: "scroll",
-      ArrowUp: "scroll",
-      ArrowDown: "scroll",
-      ArrowLeft: "scroll",
-      ArrowRight: "scroll",
-      PageUp: "scroll",
-      PageDown: "scroll",
-      Home: "scroll",
-      End: "scroll",
+      space: "scroll",
+      arrowup: "scroll",
+      arrowdown: "scroll",
+      arrowleft: "scroll",
+      arrowright: "scroll",
+      pageup: "scroll",
+      pagedown: "scroll",
+      home: "scroll",
+      end: "scroll",
     },
   },
 ];
