@@ -1004,10 +1004,20 @@
               <div>
                 <div className="col-label">Proxy buttons (try mousedown)</div>
                 <Box flex="y" spacing="s">
-                  <Button navi-proxy-for="radio_being_proxied" value={true}>
+                  <Button
+                    action="update"
+                    action-target="radio_being_proxied"
+                    value={true}
+                    navi-proxy-for="radio_being_proxied"
+                  >
                     Enable
                   </Button>
-                  <Button navi-proxy-for="radio_being_proxied" value={false}>
+                  <Button
+                    action="update"
+                    action-target="radio_being_proxied"
+                    value={false}
+                    navi-proxy-for="radio_being_proxied"
+                  >
                     Disable
                   </Button>
                 </Box>
