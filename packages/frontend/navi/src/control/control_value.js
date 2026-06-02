@@ -30,7 +30,7 @@ export const asControlHostValue = (jsValue, { controlType, type }) => {
     if (type === "color") {
       return asColorString(jsValue);
     }
-    return asInputValue;
+    return asInputValue(jsValue);
   }
   return jsValue;
 };
