@@ -98,6 +98,9 @@ export const readControlValue = (controlHost) => {
     if (type === "number" || type === "range") {
       return readNumberFromInput(controlHost);
     }
+    if (type === "color") {
+      return readValueFromControlHost(controlHost);
+    }
     if (type === "checkbox" || type === "radio") {
       return readValueFromCheckableInput(controlHost);
     }
@@ -111,12 +114,15 @@ export const readControlValue = (controlHost) => {
   }
   if (controlHost.hasAttribute("navi-control-host")) {
     // Non-button, non-input navi controls (e.g. Badge.Button rendered as span)
-    return readValueFromNaviCustomEvent(controlHost, controlHost.value);
+    return readValueFromControlHost(controlHost);
   }
   return readValueFromElement(controlHost);
 };
+const readValueFromControlHost = (controlHost) => {
+  return readValueFromNaviCustomEvent(controlHost, controlHost.value);
+};
 const readValueFromButton = (button) => {
-  return readValueFromNaviCustomEvent(button, button.value);
+  return readValueFromControlHost(button);
 };
 const readDatetimeLocalFromInput = (input) => {
   const localDateTimeString = input.value;
@@ -145,7 +151,7 @@ const readValueFromCheckableInput = (input) => {
   if (!checked) {
     return undefined;
   }
-  return readValueFromNaviCustomEvent(input, input.value);
+  return readValueFromControlHost(input);
 };
 const readValueFromInput = (input) => {
   const value = input.value;

@@ -13,6 +13,7 @@ const getPickerInput = (pickerButton) => {
 
 export const PickerNative = (props) => {
   const Next = useNextResolver();
+  const { onClick } = props;
 
   return (
     <Next
@@ -22,7 +23,8 @@ export const PickerNative = (props) => {
       // cause spurious state updates (e.g. when closing the color dialog on form submit).
       actionInteraction={props.action ? "change" : undefined}
       onClick={(e) => {
-        props.onClick?.(e);
+        console.log("got click", e);
+        onClick?.(e);
         const pickerInput = getPickerInputFromButtonEvent(e);
         const allowed = dispatchRequestInteraction(
           pickerInput,

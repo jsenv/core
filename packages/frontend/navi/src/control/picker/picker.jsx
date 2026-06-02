@@ -340,7 +340,6 @@ const PickerInput = (props) => {
     <Box
       as="input"
       {...props}
-      type="navi_picker"
       value={asControlHostValue(props.value, { controlType: "input", type })}
       className="navi_picker_input"
       pseudoClasses={PickerInputPseudoClasses}

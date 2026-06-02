@@ -15,7 +15,14 @@ export const PickerText = (props) => {
 
 export const PickerArray = (props) => {
   const Next = useNextResolver();
-  return <Next data-multiline="" ui={<PickerArrayUI />} {...props} />;
+  return (
+    <Next
+      data-multiline=""
+      ui={<PickerArrayUI />}
+      {...props}
+      type="navi_picker"
+    />
+  );
 };
 const PickerArrayUI = () => {
   const { value, placeholder } = useContext(PickerContext);
