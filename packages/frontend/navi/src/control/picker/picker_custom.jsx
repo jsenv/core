@@ -382,10 +382,6 @@ export const PickerCustom = (props) => {
         },
         onClick: (e) => {
           onClick?.(e);
-          if (e.detail === 0) {
-            // click triggered by enter won't open the popover
-            return;
-          }
           if (
             dispatchRequestInteraction(ref.current, e, "click to open picker")
           ) {
