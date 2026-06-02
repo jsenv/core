@@ -286,6 +286,11 @@ export const useControlProps = (
       name: "keydown",
       effect: asBrowserAction,
     };
+    // Effect to run when the Enter key is pressed.
+    // For most inputs Enter submits the surrounding form; for checkables Enter
+    // synthesizes a click so the browser's native checkbox/radio activation runs
+    // (which then fires input -> goes through the action pipeline).
+    let enterEffect;
     // a custom concept being combination of "input", "change" and may other events
     // this even if trigerred when value changes and can be controlled by actionDebounce and actionAfterChange
     let naviChangeInteraction;
@@ -309,6 +314,7 @@ export const useControlProps = (
         name: "navi_change",
         effect: asAction,
       };
+      enterEffect = (e) => resolveActionProp("submit")(e);
       if (picker) {
         mousedownInteraction = {
           name: "mousedown to open picker",
@@ -320,6 +326,12 @@ export const useControlProps = (
         };
       }
       if (isCheckable) {
+        // For checkables, click does NOT update state — it only gates the
+        // browser's native check/uncheck via interaction constraints (e.g.
+        // readOnly). State actually changes via the "input" event that the
+        // browser fires right after, which routes through asAction so the
+        // full action pipeline (constraints, navi_action_allowed, sibling
+        // uncheck for radios…) runs in one place.
         clickInteraction = {
           name: "click",
           effect: asBrowserAction,
@@ -329,6 +341,7 @@ export const useControlProps = (
           effect: asAction,
         };
         naviChangeInteraction = undefined;
+        enterEffect = (e) => e.currentTarget.click();
       } else if (props.type === "range") {
         mousedownInteraction = {
           name: "mousedown",
@@ -349,13 +362,8 @@ export const useControlProps = (
     };
     const onKeyDown = (e) => {
       props.onKeyDown?.(e);
-      const currentTarget = e.currentTarget;
-      if (e.key === "Enter" && controlType === "input") {
-        if (isCheckable) {
-          currentTarget.click();
-          return;
-        }
-        resolveActionProp("submit")(e);
+      if (e.key === "Enter" && enterEffect) {
+        enterEffect(e);
         return;
       }
       applyInteraction(keydownInteraction, e);
