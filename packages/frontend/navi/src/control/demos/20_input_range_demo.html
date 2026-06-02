@@ -228,6 +228,12 @@
         min: 0,
         max: 100,
       });
+      const whiteValueSignal = stateSignal(50, {
+        id: "white_value",
+        type: "number",
+        min: 0,
+        max: 100,
+      });
       const smallThumbSignal = stateSignal(30, {
         id: "small_thumb",
         type: "number",
@@ -923,12 +929,14 @@
               </fieldset>
               <fieldset style={{ background: "#1e1e1e" }}>
                 <legend style={{ color: "white" }}>White Theme</legend>
-                <Box row spacing="sm" alignX="start">
+                <Box flex="y" spacing="s" alignX="start">
                   <div className="range-group">
                     <Input
                       type="range"
                       value="50"
-                      uiAction={() => {}}
+                      action={(v) => {
+                        whiteValueSignal.value = v;
+                      }}
                       min="0"
                       max="100"
                       accentColor="white"
@@ -937,14 +945,16 @@
                       className="value-display"
                       style={{ background: "black", color: "white" }}
                     >
-                      50
+                      {whiteValueSignal}
                     </div>
                   </div>
                   <div className="range-group">
                     <input
                       type="range"
                       value="50"
-                      onChange={() => {}}
+                      onChange={(e) => {
+                        whiteValueSignal.value = e.target.valueAsNumber;
+                      }}
                       min="0"
                       max="100"
                       style={{ accentColor: "white" }}
@@ -953,7 +963,7 @@
                       className="value-display"
                       style={{ background: "black", color: "white" }}
                     >
-                      50
+                      {whiteValueSignal}
                     </div>
                   </div>
                 </Box>
