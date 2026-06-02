@@ -14,7 +14,6 @@
  */
 import {
   dispatchInternalCustomEvent,
-  findEvent,
   findFocusDelegateTarget,
   getElementSignature,
 } from "@jsenv/dom";
@@ -212,12 +211,35 @@ export const useControlProps = (
       }
     }
 
+    const transferFocusToTarget = (pointerEvent) => {
+      const naviProxyTarget =
+        findFocusDelegateTarget(pointerEvent.currentTarget) ||
+        findControlProxyTarget(pointerEvent.currentTarget);
+      if (!naviProxyTarget) {
+        return false;
+      }
+      // We also transfer on click even if mousedown is there because:
+      // - it's possible to receive a click without a mousedown (<label>)
+      // - so it's possible to end up focused by the browser without having a chance to preventDefault on the mousedown
+      // -> We do it also on click
+      // No need to preventDefault here though
+      // -> This ensure browser don't complain we try to focus a aria-hidden element
+      // and ensure the focus ends up where it should
+      if (pointerEvent.type === "mousedown") {
+        pointerEvent.preventDefault();
+      }
+      naviProxyTarget.focus({ focusVisible: false });
+      return true;
+    };
+
     const onMouseDown = (e) => {
       props.onMouseDown?.(e);
+
       if (primaryInteractionMode === "pointer") {
         const field = ref.current;
         if (mousedownEffect === "action" && actionInteraction !== "manual") {
-          dispatchRequestAction(field, { event: e });
+          const allowed = dispatchRequestAction(field, { event: e });
+          transferFocusToTarget(e, allowed);
           return;
         }
         const allowed = dispatchRequestInteraction(
@@ -225,6 +247,7 @@ export const useControlProps = (
           e,
           "mousedown to interact with input",
         );
+        transferFocusToTarget(e, allowed);
         if (mousedownEffect && !allowed) {
           debugInteraction(e, "mousedown.preventDefault()");
           e.preventDefault(); // on input range prevent browser updating value
@@ -236,7 +259,8 @@ export const useControlProps = (
       if (primaryInteractionMode === "pointer") {
         const field = ref.current;
         if (clickEffect === "action" && actionInteraction !== "manual") {
-          dispatchRequestAction(field, { event: e });
+          const allowed = dispatchRequestAction(field, { event: e });
+          transferFocusToTarget(e, allowed);
           return;
         }
         const allowed = dispatchRequestInteraction(
@@ -244,6 +268,7 @@ export const useControlProps = (
           e,
           "click to interact with input",
         );
+        transferFocusToTarget(e, allowed);
         if (clickEffect && !allowed) {
           debugInteraction(e, "click.preventDefault()");
           // Here we want to prevent:
@@ -665,44 +690,6 @@ const useInteractiveProps = (
         }
       },
       onnavi_request_interaction: (e) => {
-        transfer_focus_to_target: {
-          const naviProxyTarget =
-            findFocusDelegateTarget(e.currentTarget) ||
-            findControlProxyTarget(e.currentTarget);
-          if (!naviProxyTarget) {
-            break transfer_focus_to_target;
-          }
-          const mousedownEvent = findEvent(e, "mousedown");
-          if (mousedownEvent) {
-            if (mousedownEvent.defaultPrevented) {
-              // not really used but any code calling preventDefault can also prevent navi custom behaviors
-              break transfer_focus_to_target;
-            }
-            debugFocus(
-              e,
-              `move focus to proxy (mousedown.preventDefault() + ${getElementSignature(naviProxyTarget)}.focus({ focusVisible: false })`,
-            );
-            mousedownEvent.preventDefault();
-            naviProxyTarget.focus({ focusVisible: false });
-            break transfer_focus_to_target;
-          }
-          // We also transfer on click even if mousedown is there because:
-          // - it's possible to receive a click without a mousedown (<label>)
-          // - so it's possible to end up focused by the browser without having a chance to preventDefault on the mousedown
-          // -> We do it also on click
-          // No need to preventDefault here though
-          // -> This ensure browser don't complain we try to focus a aria-hidden element
-          // and ensure the focus ends up where it should
-          const clickEvent = findEvent(e, "click");
-          if (clickEvent) {
-            if (clickEvent.defaultPrevented) {
-              // not really used but any code calling preventDefault can also prevent navi custom behavior
-              break transfer_focus_to_target;
-            }
-            naviProxyTarget.focus({ focusVisible: false });
-            break transfer_focus_to_target;
-          }
-        }
         onRequestInteraction(e, { debugInteraction });
       },
       onnavi_cancel: (e) => {
