@@ -339,9 +339,16 @@ const checkAndReportConstraints = (
     requester,
   });
   if (!isValid) {
+    // checkValidity delegates to the proxy target's VI when the element is a proxy.
+    // In that case validationInterface has no failedConstraintInfo — the target's VI does.
+    // Resolve the proxy target's VI so onInvalid reads failedConstraintInfo from the right place.
+    const proxyTarget = findControlProxyTarget(elementToValidate);
+    const resolvedValidationInterface = proxyTarget
+      ? proxyTarget.__validationInterface__ || validationInterface
+      : validationInterface;
     const failingInterface =
-      validationInterface.failingManagedValidationInterface ||
-      validationInterface;
+      resolvedValidationInterface.failingManagedValidationInterface ||
+      resolvedValidationInterface;
     onInvalid(failingInterface);
   }
 };
