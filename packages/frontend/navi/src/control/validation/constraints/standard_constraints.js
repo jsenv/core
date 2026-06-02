@@ -124,7 +124,7 @@ export const REQUIRED_CONSTRAINT = {
       // The color input always has a value (#000000 when empty) so we rely on
       // uiState to know the user hasn't actually chosen a color
       if (uiState === undefined || uiState === "") {
-        return naviI18n("picker.required.color");
+        return naviI18n("constraint.required.color");
       }
       return null;
     }
@@ -140,6 +140,26 @@ export const REQUIRED_CONSTRAINT = {
       return field.hasAttribute("data-same-as")
         ? naviI18n("constraint.required.email.confirm")
         : naviI18n("constraint.required.email");
+    }
+    if (field.type === "date") {
+      return naviI18n("constraint.required.date");
+    }
+    if (field.type === "month") {
+      return naviI18n("constraint.required.month");
+    }
+    if (field.type === "week") {
+      return naviI18n("constraint.required.week");
+    }
+    if (field.type === "time") {
+      return naviI18n("constraint.required.time");
+    }
+    if (field.type === "datetime-local") {
+      return naviI18n("constraint.required.datetime");
+    }
+    if (field.type === "file") {
+      return field.multiple
+        ? naviI18n("constraint.required.file.multiple")
+        : naviI18n("constraint.required.file");
     }
     if (field.hasAttribute("data-same-as")) {
       return naviI18n("constraint.required.confirm");

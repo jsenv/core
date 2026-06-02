@@ -95,53 +95,37 @@ naviI18n.addAll({
     fr: '"[value]" est utilisé. Veuillez entrer une autre valeur.',
     en: '"[value]" is already taken. Please enter a different value.',
   },
-  "picker.required.day": {
+  "constraint.required.date": {
     fr: "Veuillez sélectionner un jour.",
     en: "Please select a day.",
   },
-  "picker.required.month": {
+  "constraint.required.month": {
     fr: "Veuillez sélectionner un mois.",
     en: "Please select a month.",
   },
-  "picker.required.week": {
+  "constraint.required.week": {
     fr: "Veuillez sélectionner une semaine.",
     en: "Please select a week.",
   },
-  "picker.required.time": {
+  "constraint.required.time": {
     fr: "Veuillez sélectionner une heure.",
     en: "Please select a time.",
   },
-  "picker.required.datetime": {
+  "constraint.required.datetime": {
     fr: "Veuillez sélectionner une date et une heure.",
     en: "Please select a date and time.",
   },
-  "picker.required.color": {
+  "constraint.required.color": {
     fr: "Veuillez sélectionner une couleur.",
     en: "Please select a color.",
   },
-  "picker.required.file": {
+  "constraint.required.file": {
     fr: "Veuillez sélectionner un fichier.",
     en: "Please select a file.",
   },
-  "picker.required.file.multiple": {
+  "constraint.required.file.multiple": {
     fr: "Veuillez sélectionner au moins un fichier.",
     en: "Please select at least one file.",
-  },
-  "picker.hour.no_slots": {
-    fr: "Aucune heure disponible.",
-    en: "No available time slots.",
-  },
-  "picker.hour.readonly_slot": {
-    fr: "Cet horaire n'est pas disponible.",
-    en: "This time slot is not available.",
-  },
-  "list_item.required": {
-    fr: "Veuillez sélectionner une option.",
-    en: "Please select an option.",
-  },
-  "list_item.readonly": {
-    fr: "Cette option n'est pas disponible.",
-    en: "This option is not available.",
   },
   "constraint.disabled": {
     fr: "[field] est désactivé.",
@@ -158,6 +142,10 @@ naviI18n.addAll({
   "constraint.readonly.button_busy": {
     fr: "Cette action est en cours...",
     en: "This action is in progress...",
+  },
+  "constraint.readonly.option": {
+    fr: "Cette option n'est pas disponible.",
+    en: "This option is not available.",
   },
   "constraint.readonly.default": {
     fr: "Cet élément est en lecture seule et ne peut pas être modifié.",

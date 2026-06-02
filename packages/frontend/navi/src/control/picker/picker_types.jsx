@@ -2,11 +2,10 @@ import { useContext } from "preact/hooks";
 
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Color } from "@jsenv/navi/src/text/color.jsx";
-import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { Time } from "@jsenv/navi/src/text/time.jsx";
+import { useInputProps } from "../input/use_input_props.js";
 import { PickerPlaceholder, PickerValue } from "./picker_components.jsx";
 import { PickerContext } from "./picker_context.jsx";
-import { parseStepToSeconds } from "./time_helpers.js";
 
 export const PickerText = (props) => {
   const Next = useNextResolver();
@@ -44,13 +43,7 @@ const PickerArrayUI = () => {
 export const PickerColor = (props) => {
   const Next = useNextResolver();
   return (
-    <Next
-      requiredMessage={naviI18n(`picker.required.color`)}
-      ui={<PickerColorUI />}
-      icon={<ColorSvg />}
-      type="color"
-      {...props}
-    />
+    <Next ui={<PickerColorUI />} icon={<ColorSvg />} type="color" {...props} />
   );
 };
 const PickerColorUI = () => {
@@ -66,18 +59,14 @@ const PickerColorUI = () => {
 
 export const PickerDay = (props) => {
   const Next = useNextResolver();
-  const min = resolveDateProp(props.min, toInputDay);
-  const max = resolveDateProp(props.max, toInputDay);
+  const inputProps = useInputProps(props);
 
   return (
     <Next
-      requiredMessage={naviI18n(`picker.required.day`)}
       ui={<PickerDayUI />}
       icon={<CalendarSvg />}
-      min={min}
-      max={max}
+      {...inputProps}
       type="date"
-      {...props}
     />
   );
 };
@@ -94,26 +83,16 @@ const PickerDayUI = () => {
     </Time>
   );
 };
-const toInputDay = (date) => {
-  const yyyy = date.getFullYear();
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  const dd = String(date.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
-};
 export const PickerMonth = (props) => {
   const Next = useNextResolver();
-  const min = resolveDateProp(props.min, toInputMonth);
-  const max = resolveDateProp(props.max, toInputMonth);
+  const inputProps = useInputProps(props);
 
   return (
     <Next
-      requiredMessage={naviI18n(`picker.required.month`)}
       ui={<PickerMonthUI />}
       icon={<CalendarSvg />}
+      {...inputProps}
       type="month"
-      min={min}
-      max={max}
-      {...props}
     />
   );
 };
@@ -128,25 +107,16 @@ const PickerMonthUI = () => {
     </Time>
   );
 };
-const toInputMonth = (date) => {
-  const yyyy = date.getFullYear();
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  return `${yyyy}-${mm}`;
-};
 export const PickerWeek = (props) => {
   const Next = useNextResolver();
-  const min = resolveDateProp(props.min, toInputWeek);
-  const max = resolveDateProp(props.max, toInputWeek);
+  const inputProps = useInputProps(props);
 
   return (
     <Next
-      requiredMessage={naviI18n(`picker.required.week`)}
       ui={<PickerWeekUI />}
       icon={<CalendarSvg />}
+      {...inputProps}
       type="week"
-      min={min}
-      max={max}
-      {...props}
     />
   );
 };
@@ -161,34 +131,16 @@ const PickerWeekUI = () => {
     </Time>
   );
 };
-const toInputWeek = (date) => {
-  // ISO week number
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
-  const yearStart = new Date(d.getFullYear(), 0, 4);
-  const week =
-    Math.round(
-      ((d - yearStart) / 86400000 - 3 + ((yearStart.getDay() + 6) % 7)) / 7,
-    ) + 1;
-  return `${d.getFullYear()}-W${String(week).padStart(2, "0")}`;
-};
 export const PickerTime = (props) => {
   const Next = useNextResolver();
-  const min = resolveDateProp(props.min, toInputTime);
-  const max = resolveDateProp(props.max, toInputTime);
-  const step = parseStepToSeconds(props.step);
+  const inputProps = useInputProps(props);
 
   return (
     <Next
-      requiredMessage={naviI18n(`picker.required.time`)}
       ui={<PickerTimeUI />}
       icon={<ClockSvg />}
+      {...inputProps}
       type="time"
-      min={min}
-      max={max}
-      step={step}
-      {...props}
     />
   );
 };
@@ -199,27 +151,16 @@ const PickerTimeUI = () => {
   }
   return <Time type="time">{value}</Time>;
 };
-const toInputTime = (date) => {
-  const hh = String(date.getHours()).padStart(2, "0");
-  const min = String(date.getMinutes()).padStart(2, "0");
-  return `${hh}:${min}`;
-};
 export const PickerDatetime = (props) => {
   const Next = useNextResolver();
-  const min = resolveDateProp(props.min, toInputDatetime);
-  const max = resolveDateProp(props.max, toInputDatetime);
-  const step = parseStepToSeconds(props.step);
+  const inputProps = useInputProps(props);
 
   return (
     <Next
-      requiredMessage={naviI18n(`picker.required.datetime`)}
       ui={<PickerDatetimeUI />}
       icon={<CalendarSvg />}
+      {...inputProps}
       type="datetime-local"
-      min={min}
-      max={max}
-      step={step}
-      {...props}
     />
   );
 };
@@ -230,28 +171,11 @@ const PickerDatetimeUI = () => {
   }
   return <Time type="datetime">{value}</Time>;
 };
-const toInputDatetime = (date) => {
-  const yyyy = date.getFullYear();
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  const dd = String(date.getDate()).padStart(2, "0");
-  const hh = String(date.getHours()).padStart(2, "0");
-  const min = String(date.getMinutes()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
-};
 
 export const PickerFile = (props) => {
   const Next = useNextResolver();
-  const requiredMessage = props.multiple
-    ? naviI18n(`picker.required.file.multiple`)
-    : naviI18n(`picker.required.file`);
   return (
-    <Next
-      requiredMessage={requiredMessage}
-      ui={<PickerFileUI />}
-      icon={<FileSvg />}
-      type="file"
-      {...props}
-    />
+    <Next ui={<PickerFileUI />} icon={<FileSvg />} type="file" {...props} />
   );
 };
 const PickerFileUI = () => {
@@ -263,15 +187,6 @@ const PickerFileUI = () => {
   return <span>{value}</span>;
 };
 
-const resolveDateProp = (value, formatter) => {
-  if (value === undefined || value === null) {
-    return undefined;
-  }
-  if (value instanceof Date) {
-    return formatter(value);
-  }
-  return value;
-};
 const PencilSvg = () => {
   return (
     <svg

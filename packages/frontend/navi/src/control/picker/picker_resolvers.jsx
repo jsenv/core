@@ -12,12 +12,12 @@ import {
   PickerTime,
   PickerWeek,
 } from "./picker_types.jsx";
-import { PickerHour } from "./preset/picker_hour.jsx";
+import { PickerNaviTime } from "./preset/picker_navi_time.jsx";
 
 const PickerPresetResolver = (props) => {
   const Next = useNextResolver();
-  if (props.type === "hour") {
-    return <PickerHour {...props} />;
+  if (props.type === "navi_time") {
+    return <PickerNaviTime {...props} />;
   }
   return <Next {...props} />;
 };

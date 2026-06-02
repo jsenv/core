@@ -38,6 +38,7 @@ import { asControlHostValue } from "../control_value.js";
 import { Label } from "../field.jsx";
 import { dispatchRequestSetUIState } from "../ui_state_controller.js";
 import { dispatchRequestInteraction } from "../validation/custom_constraint_validation.js";
+import { useInputProps } from "./use_input_props.js";
 
 const css = /* css */ `
   @layer navi {
@@ -339,20 +340,19 @@ const InputTextualHeadless = (props) => {
 };
 
 const useInputTextualProps = (props) => {
-  const [inputProps, remainingProps, ControlChildrenWrapper] = useControlProps(
-    props,
-    {
+  props = useInputProps(props);
+  const [controlProps, remainingProps, ControlChildrenWrapper] =
+    useControlProps(props, {
       controlType: "input",
       statePropName: "value",
       defaultStatePropName: "defaultValue",
       readOnlySupported: true,
-    },
-  );
-  inputProps.value = asControlHostValue(inputProps.value, {
+    });
+  controlProps.value = asControlHostValue(controlProps.value, {
     controlType: "input",
     type: props.type,
   });
-  return [inputProps, remainingProps, ControlChildrenWrapper];
+  return [controlProps, remainingProps, ControlChildrenWrapper];
 };
 
 const InputNativeContext = createContext(null);

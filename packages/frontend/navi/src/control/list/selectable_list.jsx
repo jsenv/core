@@ -311,7 +311,7 @@ export const Selectable = (props) => {
   const inputId = `${id}_input`;
   const [checkableProps, remainingProps, ChildrenContextWrapper] =
     useCheckableProps({
-      readOnlyMessage: naviI18n(`list_item.readonly`, props),
+      readOnlyMessage: naviI18n(`constraints.readonly.option`, props),
       ...rest,
       ref: inputRef,
       id: inputId,
