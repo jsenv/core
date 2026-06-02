@@ -185,6 +185,7 @@
         setupRoutes,
         stateSignal,
       } from "@jsenv/navi";
+      import { CallLog, useCallLog } from "./utils/call_log.jsx";
 
       const basicDefaultSignal = stateSignal(50, {
         id: "basic_default",
@@ -619,6 +620,9 @@
         const [immediateCallCount, setImmediateCallCount] = useState(0);
         const [slowCallCount, setSlowCallCount] = useState(0);
         const [debouncedCallCount, setDebouncedCallCount] = useState(0);
+        const [immediateLog, pushImmediateLog] = useCallLog();
+        const [slowLog, pushSlowLog] = useCallLog();
+        const [debouncedLog, pushDebouncedLog] = useCallLog();
 
         const slowAction = async (value, setter, counter, setCounter) => {
           setCounter((c) => c + 1);
@@ -660,6 +664,7 @@
           const [uiValue, setUIValue] = useState(50); // Immediate UI state
           const [processedRadius, setProcessedRadius] = useState(50); // Async processed state
           const [afterChangeCallCount, setAfterChangeCallCount] = useState(0);
+          const [afterChangeLog, pushAfterChangeLog] = useCallLog();
 
           return (
             <fieldset>
@@ -677,12 +682,12 @@
                   min="10"
                   max="100"
                   value={uiValue}
-                  onInput={(e) => {
-                    // Immediate UI update
-                    setUIValue(e.target.valueAsNumber);
+                  uiAction={(value) => {
+                    setUIValue(value);
+                    pushAfterChangeLog("uiAction", value);
                   }}
                   action={(value) => {
-                    // Async processing - only updates processed state
+                    pushAfterChangeLog("action", value);
                     return slowAction(
                       value,
                       setProcessedRadius,
@@ -708,6 +713,7 @@
                     callCount={afterChangeCallCount}
                   />
                 </Box>
+                <CallLog entries={afterChangeLog} />
               </Box>
             </fieldset>
           );
@@ -728,9 +734,13 @@
                   min="10"
                   max="100"
                   value={immediateRadiusSignal}
+                  uiAction={(value) => {
+                    pushImmediateLog("uiAction", value);
+                  }}
                   action={(value) => {
                     immediateRadiusSignal.value = value;
                     setImmediateCallCount((c) => c + 1);
+                    pushImmediateLog("action", value);
                   }}
                 />
                 <CircleVisualization
@@ -738,6 +748,7 @@
                   label="Immediate Response"
                   callCount={immediateCallCount}
                 />
+                <CallLog entries={immediateLog} />
               </Box>
             </fieldset>
 
@@ -754,22 +765,27 @@
                   min="10"
                   max="100"
                   value={slowRadiusSignal}
-                  action={(value) =>
-                    slowAction(
+                  uiAction={(value) => {
+                    pushSlowLog("uiAction", value);
+                  }}
+                  action={(value) => {
+                    pushSlowLog("action", value);
+                    return slowAction(
                       parseInt(value),
                       (v) => {
                         slowRadiusSignal.value = v;
                       },
                       slowCallCount,
                       setSlowCallCount,
-                    )
-                  }
+                    );
+                  }}
                 />
                 <CircleVisualization
                   radius={slowRadiusSignal.value}
                   label="Slow Response (1.5s delay)"
                   callCount={slowCallCount}
                 />
+                <CallLog entries={slowLog} />
               </Box>
             </fieldset>
 
@@ -786,16 +802,20 @@
                   min="10"
                   max="100"
                   value={debouncedRadiusSignal}
-                  action={(value) =>
-                    slowAction(
+                  uiAction={(value) => {
+                    pushDebouncedLog("uiAction", value);
+                  }}
+                  action={(value) => {
+                    pushDebouncedLog("action", value);
+                    return slowAction(
                       parseInt(value),
                       (v) => {
                         debouncedRadiusSignal.value = v;
                       },
                       debouncedCallCount,
                       setDebouncedCallCount,
-                    )
-                  }
+                    );
+                  }}
                   actionDebounce={400}
                 />
                 <CircleVisualization
@@ -803,6 +823,7 @@
                   label="Debounced Response (300ms + 1.5s delay)"
                   callCount={debouncedCallCount}
                 />
+                <CallLog entries={debouncedLog} />
               </Box>
             </fieldset>
 

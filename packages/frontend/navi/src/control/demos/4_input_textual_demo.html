@@ -154,38 +154,6 @@
         border-left: 4px solid #007bff;
         border-radius: 0 4px 4px 0;
       }
-      .call-log {
-        min-height: 28px;
-        margin-top: 10px;
-        padding: 8px 12px;
-        font-size: 12px;
-        font-family: monospace;
-        background: #f9f9f9;
-        border: 1px solid #e0e0e0;
-        border-radius: 6px;
-      }
-      .call-log-entry {
-        display: flex;
-        align-items: baseline;
-        gap: 8px;
-        line-height: 1.6;
-      }
-      .call-log-entry .count {
-        min-width: 24px;
-        color: #888;
-        font-size: 11px;
-      }
-      .call-log-entry .label-ui {
-        color: #c07000;
-        font-weight: bold;
-      }
-      .call-log-entry .label-action {
-        color: #1a56cc;
-        font-weight: bold;
-      }
-      .call-log-entry .value {
-        color: #333;
-      }
     </style>
   </head>
   <body>
@@ -194,7 +162,7 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useState, useRef } from "preact/hooks";
+      import { useState } from "preact/hooks";
       import {
         Input,
         Box,
@@ -207,6 +175,7 @@
         route,
         setupRoutes,
       } from "@jsenv/navi";
+      import { CallLog, useCallLog } from "./utils/call_log.jsx";
 
       const searchValueSignal = stateSignal("", {
         id: "search",
@@ -218,41 +187,6 @@
       setupRoutes([DEMO_ROUTE]);
 
       const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-      const CallLog = ({ entries }) => {
-        if (entries.length === 0) {
-          return (
-            <div class="call-log" style="color: #aaa">
-              No calls yet…
-            </div>
-          );
-        }
-        return (
-          <div class="call-log">
-            {entries.map((entry, i) => (
-              <div key={i} class="call-log-entry">
-                <span class="count">#{i + 1}</span>
-                <span
-                  class={
-                    entry.type === "uiAction" ? "label-ui" : "label-action"
-                  }
-                >
-                  {entry.type}
-                </span>
-                <span class="value">← {JSON.stringify(entry.value)}</span>
-              </div>
-            ))}
-          </div>
-        );
-      };
-
-      const useCallLog = () => {
-        const [entries, setEntries] = useState([]);
-        const push = (type, value) => {
-          setEntries((prev) => [...prev, { type, value }]);
-        };
-        return [entries, push];
-      };
 
       const App = () => {
         return (
