@@ -192,7 +192,7 @@ export const PickerCustom = (props) => {
   const popupProps = {};
   Object.assign(pickerProps, {
     popupProps,
-    actionInteraction: "manual",
+    actionInteraction: "custom",
   });
   // ref
   const popupRef = useRef(null);

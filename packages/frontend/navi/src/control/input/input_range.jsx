@@ -261,13 +261,9 @@ const InputRangeFieldInterface = (props) => {
     input.parentNode.style.setProperty("--x-fill-ratio", ratio);
   };
   const [rangeProps, remainingProps] = useControlProps(props, {
-    primaryInteractionMode: "pointer",
     controlType: "input",
     statePropName: "value",
     defaultStatePropName: "defaultValue",
-    uiActionInternal: () => {
-      updateFillRatio();
-    },
     readOnlySupported: true,
   });
   const { basePseudoState } = rangeProps;
@@ -321,6 +317,9 @@ const RangeNativeInput = (props) => {
       {...props}
       {...rangeBoxProps}
       updateFillRatio={undefined}
+      onnavi_ui_state_change={() => {
+        updateFillRatio();
+      }}
       as="input"
       type="range"
       baseClassName="navi_control_input"

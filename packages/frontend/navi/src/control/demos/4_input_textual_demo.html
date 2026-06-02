@@ -154,6 +154,38 @@
         border-left: 4px solid #007bff;
         border-radius: 0 4px 4px 0;
       }
+      .call-log {
+        min-height: 28px;
+        margin-top: 10px;
+        padding: 8px 12px;
+        font-size: 12px;
+        font-family: monospace;
+        background: #f9f9f9;
+        border: 1px solid #e0e0e0;
+        border-radius: 6px;
+      }
+      .call-log-entry {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        line-height: 1.6;
+      }
+      .call-log-entry .count {
+        min-width: 24px;
+        color: #888;
+        font-size: 11px;
+      }
+      .call-log-entry .label-ui {
+        color: #c07000;
+        font-weight: bold;
+      }
+      .call-log-entry .label-action {
+        color: #1a56cc;
+        font-weight: bold;
+      }
+      .call-log-entry .value {
+        color: #333;
+      }
     </style>
   </head>
   <body>
@@ -186,6 +218,41 @@
       setupRoutes([DEMO_ROUTE]);
 
       const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+      const CallLog = ({ entries }) => {
+        if (entries.length === 0) {
+          return (
+            <div class="call-log" style="color: #aaa">
+              No calls yet…
+            </div>
+          );
+        }
+        return (
+          <div class="call-log">
+            {entries.map((entry, i) => (
+              <div key={i} class="call-log-entry">
+                <span class="count">#{i + 1}</span>
+                <span
+                  class={
+                    entry.type === "uiAction" ? "label-ui" : "label-action"
+                  }
+                >
+                  {entry.type}
+                </span>
+                <span class="value">← {JSON.stringify(entry.value)}</span>
+              </div>
+            ))}
+          </div>
+        );
+      };
+
+      const useCallLog = () => {
+        const [entries, setEntries] = useState([]);
+        const push = (type, value) => {
+          setEntries((prev) => [...prev, { type, value }]);
+        };
+        return [entries, push];
+      };
 
       const App = () => {
         return (
@@ -544,6 +611,7 @@
 
       const ActionValueDemo = () => {
         const [controlledValue, setControlledValue] = useState("Controlled");
+        const [entries, push] = useCallLog();
 
         return (
           <fieldset>
@@ -559,6 +627,9 @@
                 <Input
                   defaultValue="Hello World!"
                   placeholder="Enter text..."
+                  uiAction={(v) => {
+                    push("uiAction", v);
+                  }}
                 />
               </div>
               <div>
@@ -567,18 +638,24 @@
                 </label>
                 <Input
                   value={controlledValue}
-                  action={setControlledValue}
+                  uiAction={(v) => {
+                    push("uiAction", v);
+                  }}
+                  action={(v) => {
+                    push("action", v);
+                    setControlledValue(v);
+                  }}
                   placeholder="Controlled input"
                 />
-                <div className="value-display">{controlledValue}</div>
               </div>
             </Box>
+            <CallLog entries={entries} />
           </fieldset>
         );
       };
 
       const ActionBasicSyncDemo = () => {
-        const [uiStateValue, setUiStateValue] = useState("");
+        const [entries, push] = useCallLog();
 
         return (
           <fieldset>
@@ -587,19 +664,24 @@
               <code>action</code> fires on every user interaction, reflecting
               what the input currently shows.
             </p>
-            <Box flex spacing="s">
-              <Input placeholder="Type something..." action={setUiStateValue} />
-              <div className="value-display">
-                Current value: "{uiStateValue}"
-              </div>
+            <Box flex="y" spacing="s">
+              <Input
+                placeholder="Type something..."
+                uiAction={(v) => {
+                  push("uiAction", v);
+                }}
+                action={(v) => {
+                  push("action", v);
+                }}
+              />
+              <CallLog entries={entries} />
             </Box>
           </fieldset>
         );
       };
 
       const ActionAsyncDemo = () => {
-        const [basicActionValue, setBasicActionValue] = useState("");
-        const [basicActionCallCount, setBasicActionCallCount] = useState(0);
+        const [entries, push] = useCallLog();
 
         return (
           <fieldset>
@@ -610,26 +692,25 @@
               overlapping calls — the displayed value jumps as each one
               resolves. Use the options below to avoid this.
             </p>
-            <Box flex spacing="s">
+            <Box flex="y" spacing="s">
               <Input
                 placeholder="Type something..."
+                uiAction={(v) => {
+                  push("uiAction", v);
+                }}
                 action={async (value) => {
-                  setBasicActionCallCount((c) => c + 1);
+                  push("action", value);
                   await delay(1000);
-                  setBasicActionValue(value);
                 }}
               />
-              <div className="value-display">
-                Value: "{basicActionValue}" | Calls: {basicActionCallCount}
-              </div>
+              <CallLog entries={entries} />
             </Box>
           </fieldset>
         );
       };
 
       const ActionDebouncedDemo = () => {
-        const [debouncedValue, setDebouncedValue] = useState("");
-        const [debouncedCallCount, setDebouncedCallCount] = useState(0);
+        const [entries, push] = useCallLog();
 
         return (
           <fieldset>
@@ -639,27 +720,26 @@
               typing before calling the action. Ideal for search queries or any
               slow async operation.
             </p>
-            <Box flex spacing="s">
+            <Box flex="y" spacing="s">
               <Input
                 placeholder="Type something (debounced 600ms)..."
-                value={debouncedValue}
+                uiAction={(v) => {
+                  push("uiAction", v);
+                }}
                 action={async (value) => {
-                  setDebouncedCallCount((c) => c + 1);
+                  push("action", value);
                   await new Promise((resolve) => setTimeout(resolve, 1500));
-                  setDebouncedValue(value);
                 }}
                 actionDebounce={600}
               />
-              <div className="value-display">
-                Value: "{debouncedValue}" | Calls: {debouncedCallCount}
-              </div>
+              <CallLog entries={entries} />
             </Box>
           </fieldset>
         );
       };
 
       const ActionDebouncedWithSignalDemo = () => {
-        const [callCount, setCallCount] = useState(0);
+        const [entries, push] = useCallLog();
 
         return (
           <fieldset>
@@ -669,28 +749,28 @@
               connected to the URL search param <code>?search=</code>. The value
               persists across page reloads.
             </p>
-            <Box flex spacing="s">
+            <Box flex="y" spacing="s">
               <Input
                 placeholder="Type something (debounced 600ms)..."
                 value={searchValueSignal}
+                uiAction={(v) => {
+                  push("uiAction", v);
+                }}
                 action={async (value) => {
-                  setCallCount((c) => c + 1);
+                  push("action", value);
                   await new Promise((resolve) => setTimeout(resolve, 1500));
                   searchValueSignal.value = value;
                 }}
                 actionDebounce={600}
               />
-              <div className="value-display">
-                Value: "{searchValueSignal}" | Calls: {callCount}
-              </div>
+              <CallLog entries={entries} />
             </Box>
           </fieldset>
         );
       };
 
       const ActionAfterChangeDemo = () => {
-        const [afterChangeValue, setAfterChangeValue] = useState("");
-        const [afterChangeCallCount, setAfterChangeCallCount] = useState(0);
+        const [entries, push] = useCallLog();
 
         return (
           <fieldset>
@@ -700,33 +780,30 @@
               Enter. The input shows a loading state and becomes read-only while
               the action is running.
             </p>
-            <Box flex spacing="s">
+            <Box flex="y" spacing="s">
               <Input
                 placeholder="Type and press Enter or blur..."
+                uiAction={(v) => {
+                  push("uiAction", v);
+                }}
                 action={async (value) => {
-                  setAfterChangeCallCount((c) => c + 1);
+                  push("action", value);
                   await new Promise((resolve) => setTimeout(resolve, 1500));
-                  setAfterChangeValue(value);
                 }}
                 actionAfterChange
               />
-              <div className="value-display">
-                Value: "{afterChangeValue}" | Calls: {afterChangeCallCount}
-              </div>
+              <CallLog entries={entries} />
             </Box>
           </fieldset>
         );
       };
 
       const ActionWithAbortDemo = () => {
-        const [abortValue, setAbortValue] = useState("");
-        const [abortCallCount, setAbortCallCount] = useState(0);
-        const [abortedCount, setAbortedCount] = useState(0);
+        const [entries, push] = useCallLog();
         const currentAbortControllerRef = useRef(null);
         const cancelPrevious = () => {
           if (currentAbortControllerRef.current) {
             currentAbortControllerRef.current.abort();
-            setAbortedCount((c) => c + 1);
           }
           const controller = new AbortController();
           currentAbortControllerRef.current = controller;
@@ -741,23 +818,23 @@
               <code>AbortController</code> to cancel in-flight async work when a
               new value arrives.
             </p>
-            <Box flex spacing="s">
+            <Box flex="y" spacing="s">
               <Input
                 placeholder="Type something (with abort)..."
+                uiAction={(v) => {
+                  push("uiAction", v);
+                }}
                 action={(value) => {
                   const abortSignal = cancelPrevious();
-                  setAbortCallCount((c) => c + 1);
+                  push("action", value);
                   setTimeout(() => {
                     if (!abortSignal.aborted) {
-                      setAbortValue(value);
+                      push("action resolved", value);
                     }
                   }, 1500);
                 }}
               />
-              <div className="value-display">
-                Value: "{abortValue}" | Calls: {abortCallCount} | Aborted:{" "}
-                {abortedCount}
-              </div>
+              <CallLog entries={entries} />
             </Box>
           </fieldset>
         );
@@ -765,15 +842,15 @@
 
       const FormBasicDemo = () => {
         const [username, setUsername] = useState("dam");
-        const [formResult, setFormResult] = useState("");
+        const [entries, push] = useCallLog();
 
         return (
           <fieldset>
             <legend>Basic form submission</legend>
             <Form
               action={async ({ username }) => {
+                push("[form] action", { username });
                 await delay(1000);
-                setFormResult(`Submitted! Username: "${username}"`);
               }}
             >
               <Box flex="y" spacing="s" alignX="start">
@@ -782,7 +859,13 @@
                   <Input
                     name="username"
                     value={username}
-                    action={setUsername}
+                    uiAction={(v) => {
+                      push("uiAction", v);
+                    }}
+                    action={(v) => {
+                      push("action", v);
+                      setUsername(v);
+                    }}
                     placeholder="Enter username"
                   />
                 </Field>
@@ -797,9 +880,7 @@
                     Reset
                   </Button>
                 </Box>
-                {formResult ? (
-                  <div className="value-display">{formResult}</div>
-                ) : null}
+                <CallLog entries={entries} />
               </Box>
             </Form>
           </fieldset>
@@ -807,8 +888,7 @@
       };
 
       const FormWithInputActionDemo = () => {
-        const [actionLog, setActionLog] = useState("");
-        const [formResult, setFormResult] = useState("");
+        const [entries, push] = useCallLog();
 
         return (
           <fieldset>
@@ -822,10 +902,8 @@
             </p>
             <Form
               action={async ({ search, note }) => {
+                push("[form] action", { search, note });
                 await delay(800);
-                setFormResult(
-                  `Form submitted! search: "${search}", note: "${note}"`,
-                );
               }}
             >
               <Box flex="y" spacing="s" alignX="start">
@@ -834,10 +912,12 @@
                   <Input
                     name="search"
                     defaultValue="cats"
+                    uiAction={(v) => {
+                      push("uiAction", v);
+                    }}
                     action={async (value) => {
-                      setActionLog(`action called with: "${value}"`);
+                      push("action", value);
                       await delay(600);
-                      setActionLog(`action done: "${value}"`);
                     }}
                     actionAfterChange
                   />
@@ -847,12 +927,7 @@
                   <Input name="note" defaultValue="cute" />
                 </Field>
                 <Button type="submit">Submit form</Button>
-                {actionLog ? (
-                  <div className="value-display">Input action: {actionLog}</div>
-                ) : null}
-                {formResult ? (
-                  <div className="value-display">Form: {formResult}</div>
-                ) : null}
+                <CallLog entries={entries} />
               </Box>
             </Form>
           </fieldset>

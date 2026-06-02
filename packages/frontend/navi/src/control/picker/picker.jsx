@@ -266,11 +266,11 @@ const PickerButton = (props) => {
         ref: inputRef,
       },
       {
-        primaryInteractionMode: "pointer",
         controlType: "input",
         statePropName: "value",
         defaultStatePropName: "defaultValue",
         readOnlySupported: true,
+        picker: true,
       },
     );
   const { id, value, basePseudoState, disabled, children } = inputProps;

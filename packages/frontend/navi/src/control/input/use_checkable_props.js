@@ -2,7 +2,6 @@ import { useControlProps } from "../control_hooks.jsx";
 
 export const useCheckableProps = (props) => {
   const result = useControlProps(props, {
-    primaryInteractionMode: "pointer",
     controlType: "input",
     statePropName: "checked",
     defaultStatePropName: "defaultChecked",

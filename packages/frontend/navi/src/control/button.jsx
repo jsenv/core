@@ -338,7 +338,6 @@ const ButtonUI = (props) => {
   const [buttonProps, remainingProps, ControlChildrenWrapper] = useControlProps(
     props,
     {
-      primaryInteractionMode: "pointer",
       controlType: "button",
       statePropName: "value",
       allowNameless: true,

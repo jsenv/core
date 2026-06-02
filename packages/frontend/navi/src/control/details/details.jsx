@@ -81,7 +81,6 @@ const DetailsField = (props) => {
         ...props,
       },
       {
-        primaryInteractionMode: "pointer",
         controlType: "details",
         statePropName: "open",
         defaultStatePropName: "defaultOpen",

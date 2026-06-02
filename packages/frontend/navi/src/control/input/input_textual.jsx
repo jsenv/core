@@ -342,7 +342,6 @@ const useInputTextualProps = (props) => {
   const [inputProps, remainingProps, ControlChildrenWrapper] = useControlProps(
     props,
     {
-      primaryInteractionMode: "keyboard",
       controlType: "input",
       statePropName: "value",
       defaultStatePropName: "defaultValue",

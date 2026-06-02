@@ -132,7 +132,6 @@ export const ControlgroupChildrenWrapper = ({
 export const useControlProps = (
   props,
   {
-    primaryInteractionMode, // "pointer", "keyboard"
     controlType,
     statePropName,
     defaultStatePropName,
@@ -145,6 +144,7 @@ export const useControlProps = (
 
     uiActionInternal,
     readOnlySupported,
+    picker,
   },
 ) => {
   const debugInteraction = useDebugInteraction();
@@ -190,26 +190,7 @@ export const useControlProps = (
       actionAfterChange = actionInteraction === "change",
       actionDebounce,
     } = props;
-    let mousedownEffect;
-    let clickEffect;
-    let inputEffect;
-    let keydownEffect = "browser_action";
     let isCheckable = false;
-    if (controlType === "button") {
-      if (actionOnMouseDown) {
-        mousedownEffect = "action";
-      } else {
-        clickEffect = "action";
-      }
-    } else if (controlType === "input") {
-      isCheckable = props.type === "radio" || props.type === "checkbox";
-      inputEffect = "action";
-      if (props.type === "range") {
-        mousedownEffect = "browser_action";
-      } else if (isCheckable) {
-        clickEffect = "browser_action";
-      }
-    }
 
     const transferFocusToTarget = (pointerEvent) => {
       const naviProxyTarget =
@@ -231,51 +212,130 @@ export const useControlProps = (
       naviProxyTarget.focus({ focusVisible: false });
       return true;
     };
+    const asInteraction = (interaction, e) => {
+      const control = ref.current;
+      const allowed = dispatchRequestInteraction(control, e, interaction.name);
+      if (!allowed) {
+        debugInteraction(e, `${e.type}.preventDefault()`);
+        e.preventDefault();
+        return false;
+      }
+      const value = readControlValue(control);
+      uiStateController.setUIState(value, e);
+      return true;
+    };
+    const asBrowserAction = (interaction, e) => {
+      return asInteraction(interaction, e);
+    };
+    const lastEventRequestingActionRef = useRef();
+    const lastActionValueRef = useRef();
+    const asAction = (interaction, e, { ifValueModified }) => {
+      if (actionInteraction === "custom") {
+        return false;
+      }
+      const control = ref.current;
+      const currentValue = readControlValue(control);
+      if (ifValueModified) {
+        // Ignore input events that carry the same value as the last action we dispatched.
+        // This avoids showing a spurious "read-only" callout for redundant input events
+        // that browsers fire with no UI change — e.g. range inputs fire several input
+        // events around mouse release even though the value hasn't moved.
+        const lastActionValue = lastActionValueRef.current;
+        const valueSameAsLastAction =
+          lastActionValue !== undefined &&
+          compareTwoJsValues(currentValue, lastActionValue);
+        if (valueSameAsLastAction) {
+          e.preventDefault();
+          return false;
+        }
+      }
+      lastEventRequestingActionRef.current = e;
+      lastActionValueRef.current = currentValue;
+      const allowed = dispatchRequestAction(control, {
+        event: e,
+        uiState: currentValue,
+      });
+      if (!allowed) {
+        debugInteraction(e, `${e.type}.preventDefault()`);
+        e.preventDefault();
+        return false;
+      }
+      return true;
+    };
+    const applyInteraction = (interaction, e, { ifValueModified } = {}) => {
+      if (!interaction) {
+        return false;
+      }
+      return interaction.effect(interaction, e, { ifValueModified });
+    };
+
+    let mousedownInteraction;
+    let clickInteraction;
+    let inputInteraction;
+    let keydownInteraction = {
+      name: "keydown",
+      effect: asBrowserAction,
+    };
+    // a custom concept being combination of "input", "change" and may other events
+    // this even if trigerred when value changes and can be controlled by actionDebounce and actionAfterChange
+    let naviChangeInteraction;
+    if (controlType === "button") {
+      mousedownInteraction = {
+        name: "mousedown",
+        effect: actionOnMouseDown ? asAction : asInteraction,
+      };
+      clickInteraction = {
+        name: "click",
+        effect: actionOnMouseDown ? asInteraction : asAction,
+      };
+    } else if (controlType === "input") {
+      isCheckable = props.type === "radio" || props.type === "checkbox";
+      // on input we just check if we can do stuff (readonly)
+      inputInteraction = {
+        name: "input",
+        effect: asInteraction,
+      };
+      naviChangeInteraction = {
+        name: "navi_change",
+        effect: asAction,
+      };
+      if (picker) {
+        mousedownInteraction = {
+          name: "mousedown to open picker",
+          effect: asInteraction,
+        };
+        clickInteraction = {
+          name: "click to open picker",
+          effect: asInteraction,
+        };
+      }
+      if (isCheckable) {
+        clickInteraction = {
+          name: "click",
+          effect: asBrowserAction,
+        };
+        inputInteraction = {
+          name: "input",
+          effect: asAction,
+        };
+        naviChangeInteraction = undefined;
+      } else if (props.type === "range") {
+        mousedownInteraction = {
+          name: "mousedown",
+          effect: asBrowserAction,
+        };
+      }
+    }
 
     const onMouseDown = (e) => {
       props.onMouseDown?.(e);
-
-      if (primaryInteractionMode === "pointer") {
-        const field = ref.current;
-        if (mousedownEffect === "action" && actionInteraction !== "manual") {
-          const allowed = dispatchRequestAction(field, { event: e });
-          transferFocusToTarget(e, allowed);
-          return;
-        }
-        const allowed = dispatchRequestInteraction(
-          field,
-          e,
-          "mousedown to interact with input",
-        );
-        transferFocusToTarget(e, allowed);
-        if (mousedownEffect && !allowed) {
-          debugInteraction(e, "mousedown.preventDefault()");
-          e.preventDefault(); // on input range prevent browser updating value
-        }
-      }
+      applyInteraction(mousedownInteraction, e);
+      transferFocusToTarget(e);
     };
     const onClick = (e) => {
       props.onClick?.(e);
-      if (primaryInteractionMode === "pointer") {
-        const field = ref.current;
-        if (clickEffect === "action" && actionInteraction !== "manual") {
-          const allowed = dispatchRequestAction(field, { event: e });
-          transferFocusToTarget(e, allowed);
-          return;
-        }
-        const allowed = dispatchRequestInteraction(
-          field,
-          e,
-          "click to interact with input",
-        );
-        transferFocusToTarget(e, allowed);
-        if (clickEffect && !allowed) {
-          debugInteraction(e, "click.preventDefault()");
-          // Here we want to prevent:
-          // - toggle of radio/checkbox on click
-          e.preventDefault();
-        }
-      }
+      applyInteraction(clickInteraction, e);
+      transferFocusToTarget(e);
     };
     const onKeyDown = (e) => {
       props.onKeyDown?.(e);
@@ -288,79 +348,24 @@ export const useControlProps = (
         resolveActionProp("submit")(e);
         return;
       }
-      const allowed = dispatchRequestInteraction(
-        currentTarget,
-        e,
-        "keydown to interact with field",
-      );
-      if (keydownEffect && !allowed) {
-        // Here we want to prevent
-        // - space to toggle radio/checkbox
-        // - space to scroll scrollable container (usually document)
-        // - any keyboard interaction that would affect input value
-        // or would not make sense on a readonly field
-        debugInteraction(e, "keydown.preventDefault()");
-        e.preventDefault();
-      }
+      applyInteraction(keydownInteraction, e);
     };
-    const onPaste = (e) => {
-      props.onPaste?.(e);
-      const allowed = dispatchRequestInteraction(ref.current, e);
-      if (!allowed) {
-        e.preventDefault();
-      }
-    };
-    const lastEventRequestingActionRef = useRef();
-    const lastActionValueRef = useRef();
-
     const onInput = (e) => {
       props.onInput?.(e);
-      const field = ref.current;
-      const currentValue = readControlValue(field);
-      if (isCheckable) {
-        const allowed = dispatchRequestAction(field, {
-          event: e,
-          uiState: currentValue,
-        });
-        if (!allowed) {
-          debugInteraction(e, "input.preventDefault()");
-          e.preventDefault();
-          return;
-        }
-      }
-      const lastActionValue = lastActionValueRef.current;
-      const valueSameAsLastAction =
-        lastActionValue !== undefined &&
-        compareTwoJsValues(currentValue, lastActionValue);
-      let allowed;
-      if (valueSameAsLastAction) {
-        // Ignore input events that carry the same value as the last action we dispatched.
-        // This avoids showing a spurious "read-only" callout for redundant input events
-        // that browsers fire with no UI change — e.g. range inputs fire several input
-        // events around mouse release even though the value hasn't moved.
-      } else {
-        allowed = dispatchRequestInteraction(field, e);
-      }
-      if (allowed) {
-        uiStateController.setUIState(currentValue, e);
-      } else {
-        e.preventDefault();
-      }
+      applyInteraction(inputInteraction, e, { ifValueModified: true });
     };
+    const hasNaviChangeInteraction = Boolean(naviChangeInteraction);
     const refCallback = useCallback(
       (field) => {
-        if (!inputEffect || actionInteraction === "manual" || isCheckable) {
+        if (!hasNaviChangeInteraction || actionInteraction === "custom") {
           return undefined;
         }
         return addInputEffect(
           field,
           (e) => {
-            lastEventRequestingActionRef.current = e;
-            const value = readControlValue(field);
-            lastActionValueRef.current = value;
-            if (inputEffect === "action") {
-              dispatchRequestAction(field, { event: e });
-            }
+            applyInteraction(naviChangeInteraction, e, {
+              ifValueModified: true,
+            });
           },
           {
             waitForChange: actionAfterChange,
@@ -369,9 +374,21 @@ export const useControlProps = (
           },
         );
       },
-      [actionInteraction, actionAfterChange, actionDebounce, inputEffect],
+      [
+        actionInteraction,
+        actionAfterChange,
+        actionDebounce,
+        hasNaviChangeInteraction,
+      ],
     );
     const refComposed = useComposeElementRef(refCallback, ref);
+    const onPaste = (e) => {
+      props.onPaste?.(e);
+      const allowed = dispatchRequestInteraction(ref.current, e);
+      if (!allowed) {
+        e.preventDefault();
+      }
+    };
     Object.assign(controlProps, {
       ref: refComposed,
       onMouseDown,

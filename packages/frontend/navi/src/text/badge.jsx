@@ -110,7 +110,6 @@ const BadgeButton = (props) => {
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
   const [buttonProps, remainingProps] = useControlProps(props, {
-    primaryInteractionMode: "pointer",
     controlType: "button",
     statePropName: "value",
     allowNameless: true,
