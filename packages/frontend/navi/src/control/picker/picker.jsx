@@ -345,6 +345,7 @@ const PickerInput = (props) => {
       className="navi_picker_input"
       pseudoClasses={PickerInputPseudoClasses}
       tabIndex={-1}
+      navi-focusnav="ignore"
     />
   );
 };
