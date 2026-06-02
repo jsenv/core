@@ -191,6 +191,16 @@ export const useControlProps = (
       actionDebounce,
     } = props;
     let isCheckable = false;
+    // Effect to run when the Enter key is pressed.
+    // For most inputs Enter submits the surrounding form; for checkables Enter
+    // synthesizes a click so the browser's native checkbox/radio activation runs
+    // (which then fires input -> goes through the action pipeline).
+    let enterEffect;
+
+    const updateUIState = (e) => {
+      const value = readControlValue(ref.current);
+      uiStateController.setUIState(value, e);
+    };
 
     const transferFocusToTarget = (pointerEvent) => {
       const naviProxyTarget =
@@ -220,10 +230,7 @@ export const useControlProps = (
         e.preventDefault();
         return false;
       }
-      if (!isCheckable) {
-        const value = readControlValue(control);
-        uiStateController.setUIState(value, e);
-      }
+      interaction.effect?.(e);
       return true;
     };
     const asBrowserAction = (interaction, e) => {
@@ -238,7 +245,6 @@ export const useControlProps = (
     controlProps.onnavi_ui_state_change = (e) => {
       lastActionValueRef.current = e.detail.value;
     };
-
     const asAction = (interaction, e, { ifValueModified }) => {
       if (actionInteraction === "custom") {
         return false;
@@ -270,13 +276,14 @@ export const useControlProps = (
         e.preventDefault();
         return false;
       }
+      interaction.effect?.(e);
       return true;
     };
     const applyInteraction = (interaction, e, { ifValueModified } = {}) => {
       if (!interaction) {
         return false;
       }
-      return interaction.effect(interaction, e, { ifValueModified });
+      return interaction.callback(interaction, e, { ifValueModified });
     };
 
     let mousedownInteraction;
@@ -286,43 +293,39 @@ export const useControlProps = (
       name: "keydown",
       effect: asBrowserAction,
     };
-    // Effect to run when the Enter key is pressed.
-    // For most inputs Enter submits the surrounding form; for checkables Enter
-    // synthesizes a click so the browser's native checkbox/radio activation runs
-    // (which then fires input -> goes through the action pipeline).
-    let enterEffect;
     // a custom concept being combination of "input", "change" and may other events
     // this even if trigerred when value changes and can be controlled by actionDebounce and actionAfterChange
     let naviChangeInteraction;
     if (controlType === "button") {
       mousedownInteraction = {
         name: "mousedown",
-        effect: actionOnMouseDown ? asAction : asInteraction,
+        callback: actionOnMouseDown ? asAction : asInteraction,
       };
       clickInteraction = {
         name: "click",
-        effect: actionOnMouseDown ? asInteraction : asAction,
+        callback: actionOnMouseDown ? asInteraction : asAction,
       };
     } else if (controlType === "input") {
       isCheckable = props.type === "radio" || props.type === "checkbox";
       // on input we just check if we can do stuff (readonly)
       inputInteraction = {
         name: "input",
-        effect: asInteraction,
+        callback: asInteraction,
+        effect: updateUIState,
       };
       naviChangeInteraction = {
         name: "navi_change",
-        effect: asAction,
+        callback: asAction,
       };
       enterEffect = (e) => resolveActionProp("submit")(e);
       if (picker) {
         mousedownInteraction = {
           name: "mousedown to open picker",
-          effect: asInteraction,
+          callback: asInteraction,
         };
         clickInteraction = {
           name: "click to open picker",
-          effect: asInteraction,
+          callback: asInteraction,
         };
       }
       if (isCheckable) {
@@ -334,19 +337,21 @@ export const useControlProps = (
         // uncheck for radios…) runs in one place.
         clickInteraction = {
           name: "click",
-          effect: asBrowserAction,
+          callback: asBrowserAction,
         };
         inputInteraction = {
           name: "input",
-          effect: asAction,
+          callback: asAction,
         };
         naviChangeInteraction = undefined;
         enterEffect = (e) => e.currentTarget.click();
       } else if (props.type === "range") {
         mousedownInteraction = {
           name: "mousedown",
-          effect: asBrowserAction,
+          callback: asBrowserAction,
         };
+      } else if (props.type === "color") {
+        // inputInteraction.effect = undefined;
       }
     }
 
