@@ -135,7 +135,8 @@
       const App = () => (
         <Box flex="y" spacing="l">
           <TextDisplay />
-          <ChipsDisplay />
+          <ChipsSimpleDisplay />
+          <ChipsWithDeleteDisplay />
         </Box>
       );
 
@@ -193,9 +194,76 @@
         );
       };
 
-      // ── 2. Chips display ──────────────────────────────────────────────────
+      // ── 2. Chips display (no delete) ──────────────────────────────────────
 
-      const ChipsDisplay = () => {
+      const ChipsSimpleDisplay = () => {
+        const selectedSignal = useSignal(["HTML"]);
+        const selectedArray = selectedSignal.value;
+
+        const ChipsUI = () => {
+          if (selectedArray.length === 0) {
+            return <span style="color: #999">Select skills…</span>;
+          }
+          return (
+            <BadgeList>
+              {selectedArray.map((opt) => (
+                <Badge key={opt}>{opt}</Badge>
+              ))}
+            </BadgeList>
+          );
+        };
+
+        return (
+          <div class="demo-section">
+            <h2>2. Chips display</h2>
+            <p>
+              Selected items appear as chip pills inside the picker. Clicking
+              anywhere on the picker opens the dropdown where items can be
+              toggled.
+            </p>
+            <Field vertical>
+              <Label>Skills</Label>
+              <Picker
+                type="array"
+                name="multiselect_chips_simple"
+                value={selectedArray}
+                ui={<ChipsUI />}
+                uiAction={(v) => {
+                  selectedSignal.value = v;
+                }}
+                action={(v) => {
+                  selectedSignal.value = v;
+                }}
+              >
+                <SelectableList
+                  multiple
+                  id="skills_list_simple"
+                  action="update"
+                  style="min-width: 180px"
+                >
+                  {SKILL_OPTIONS.map((opt, i) => (
+                    <Selectable
+                      key={opt}
+                      id={`simple_${opt}`}
+                      index={i}
+                      value={opt}
+                      selected={selectedArray.includes(opt)}
+                      padding="s"
+                      spacing="s"
+                    >
+                      {opt}
+                    </Selectable>
+                  ))}
+                </SelectableList>
+              </Picker>
+            </Field>
+          </div>
+        );
+      };
+
+      // ── 3. Chips display (with delete button on badge) ────────────────────
+
+      const ChipsWithDeleteDisplay = () => {
         const selectedSignal = useSignal([
           "HTML",
           "CSS",
@@ -219,7 +287,7 @@
                   {opt}
                   <Badge.Button
                     action="unselect"
-                    action-target="skills_list"
+                    action-target="skills_list_delete"
                     actionOnMouseDown
                     value={opt}
                     aria-label={`Remove ${opt}`}
@@ -240,16 +308,20 @@
 
         return (
           <div class="demo-section">
-            <h2>2. Chips display</h2>
+            <h2>3. Chips with delete button</h2>
             <p>
-              Selected items appear as chip pills inside the picker, each with
-              an × button to deselect without reopening the dropdown.
+              Each chip has an × button to deselect without reopening the
+              dropdown. Two UX drawbacks to be aware of: the interaction target
+              is very small (the tiny × icon), and clicking the chip label
+              itself — outside the × button — opens the picker instead of
+              removing the chip, which can surprise users who expect the whole
+              chip to be the delete target.
             </p>
             <Field vertical>
               <Label>Skills</Label>
               <Picker
                 type="array"
-                name="multiselect_chips"
+                name="multiselect_chips_delete"
                 value={selectedArray}
                 ui={<ChipsUI />}
                 uiAction={(v) => {
@@ -262,7 +334,7 @@
                 <SelectableList
                   ref={listRef}
                   multiple
-                  id="skills_list"
+                  id="skills_list_delete"
                   action="update"
                   style="min-width: 180px"
                 >
