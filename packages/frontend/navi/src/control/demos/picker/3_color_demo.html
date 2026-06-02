@@ -370,7 +370,7 @@
       ];
 
       const CustomizationDemo = () => {
-        const colorSignal = useSignal(null);
+        const colorSignal = useSignal("#3b82f6");
         return (
           <div class="demo-section" id="customization">
             <h2>5. Customization</h2>
@@ -380,42 +380,34 @@
               <code>Selectable</code>. La couleur sélectionnée est mise en
               évidence et le popover se ferme automatiquement.
             </p>
-            <Field vertical>
-              <Label>Couleur de badge</Label>
-              <Picker
-                name="badge_color"
-                type="color"
-                value={colorSignal.value}
-                action={(v) => {
-                  colorSignal.value = v;
-                }}
-              >
-                <SelectableList action="send">
-                  {SWATCHES.map(({ label, value }, i) => (
-                    <Selectable
-                      key={value}
-                      id={value}
-                      index={i}
-                      value={value}
-                      selected={colorSignal.value === value}
-                      flex
-                      alignY="center"
-                      spacing="s"
-                      padding="s"
-                    >
-                      <Color
-                        circle
-                        border="1px solid rgba(0,0,0,0.15)"
-                        height="18"
-                      >
-                        {value}
-                      </Color>
-                      {label}
-                    </Selectable>
-                  ))}
-                </SelectableList>
-              </Picker>
-            </Field>
+            <Box flex="y" spacing="m">
+              <Field vertical>
+                <Label>Interactive</Label>
+                <SwatchPicker
+                  name="badge_color"
+                  value={colorSignal.value}
+                  action={(v) => {
+                    colorSignal.value = v;
+                  }}
+                />
+              </Field>
+              <Field vertical>
+                <Label>Readonly</Label>
+                <SwatchPicker
+                  name="badge_color_readonly"
+                  value={colorSignal.value}
+                  readOnly
+                />
+              </Field>
+              <Field vertical>
+                <Label>Loading</Label>
+                <SwatchPicker
+                  name="badge_color_loading"
+                  value={colorSignal.value}
+                  loading
+                />
+              </Field>
+            </Box>
             <p class="value-display">
               Valeur :{" "}
               {colorSignal.value ? (
@@ -429,6 +421,38 @@
           </div>
         );
       };
+
+      const SwatchPicker = ({ name, value, action, readOnly, loading }) => (
+        <Picker
+          name={name}
+          type="color"
+          value={value}
+          action={action}
+          readOnly={readOnly}
+          loading={loading}
+        >
+          <SelectableList action="send">
+            {SWATCHES.map(({ label, value: swatchValue }, i) => (
+              <Selectable
+                key={swatchValue}
+                id={swatchValue}
+                index={i}
+                value={swatchValue}
+                selected={value === swatchValue}
+                flex
+                alignY="center"
+                spacing="s"
+                padding="s"
+              >
+                <Color circle border="1px solid rgba(0,0,0,0.15)" height="18">
+                  {swatchValue}
+                </Color>
+                {label}
+              </Selectable>
+            ))}
+          </SelectableList>
+        </Picker>
+      );
 
       render(
         <NaviDebug debugAction debugInteraction debugPopup>
