@@ -146,7 +146,7 @@ const requestClosestAction = (event) => {
   const controlWithAction = findClosestControlWithAction(currentTarget);
   if (!controlWithAction) {
     console.warn(
-      "submit event triggered but no control with [data-action] found in event path",
+      `submit event triggered but no control with [data-action] found in event path`,
       event,
     );
     return false;
@@ -168,10 +168,14 @@ const requestClosestAction = (event) => {
     event,
     requester,
   });
+  const initiator = event.detail ? event.detail.eventChain[0] : event;
   const { form } = currentTarget;
   if (form) {
     // prevent form submission when cliking buttons or pressing enter on inputs
-    const initiator = event.detail ? event.detail.eventChain[0] : event;
+    initiator.preventDefault();
+  } else if (initiator.type === "keydown" && initiator.key === "Enter") {
+    // prevent triggering click on such button, they are already performing submit
+    // (this ensure enter inside a picker won't trigger picker button click)
     initiator.preventDefault();
   }
   return allowed;

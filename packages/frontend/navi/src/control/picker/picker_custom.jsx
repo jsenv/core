@@ -415,6 +415,13 @@ export const PickerCustom = (props) => {
           debugPopup(e, `popover click stopPropagation`);
           e.stopPropagation();
         },
+        onKeyDown: (e) => {
+          // some keys pressed inside popover should not reach the picker button
+          // (like enter that would try to request action of closest form otherwise for instance)
+          if (e.key === "Enter") {
+            e.stopPropagation();
+          }
+        },
       });
     }
   }
