@@ -140,7 +140,11 @@
             <p>
               Clicking an item highlights it but keeps the popover open. The
               value is committed only when the popover closes (click outside,
-              Escape…). Rarely appropriate for single-select.
+              Enter, …). Pressing Escape cancels and restores the previous value
+              — analogous to releasing the mouse outside a button to cancel a
+              click. This is useful when selecting an option has visible side
+              effects (e.g. a color preview): the user can browse options and
+              decide to confirm or bail out before committing.
             </p>
             <Field vertical>
               <Label>Fruit</Label>
