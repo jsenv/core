@@ -298,8 +298,8 @@ export const openCallout = (
   const update = (newMessage, options = {}) => {
     // Connect callout with target element for accessibility
     if (options.status && options.status !== callout.status) {
-      callout.status = status;
-      updateStatus(status);
+      callout.status = options.status;
+      updateStatus(options.status);
     }
 
     if (options.closeOnClickOutside) {
@@ -467,7 +467,7 @@ export const openCallout = (
     update,
     requestClose,
   });
-  addStatusEffect(() => {
+  addStatusEffect((status) => {
     if (status) {
       calloutElement.setAttribute("data-status", status);
     } else {
