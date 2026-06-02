@@ -65,91 +65,36 @@
         "Grape",
       ];
 
-      const SKILL_OPTIONS = [
-        "HTML",
-        "CSS",
-        "JavaScript",
-        "TypeScript",
-        "React",
-        "Vue",
-        "Angular",
-        "Node.js",
-        "Python",
-        "Rust",
-        "Go",
-        "Java",
-        "C++",
-        "Swift",
-        "Kotlin",
-        "SQL",
-      ];
-
       const App = () => (
         <Box flex="y" spacing="l">
-          <BasicSelect />
-          <PreselectedSelect />
-          <ManyOptionsSelect />
+          <SelectWithSend />
+          <SelectWithUpdate />
         </Box>
       );
 
-      // ── 1. Basic single select ─────────────────────────────────────────────
+      // ── 1. action="send" — closes on click ────────────────────────────────
+      // Required for single-select: each click sends the value immediately and
+      // closes the popover. Without it the picker stays open and the user must
+      // close it manually, which makes no sense for a single-value selection.
 
-      const BasicSelect = () => {
-        const selectedSignal = useSignal(null);
-        const selected = selectedSignal.value;
-
-        return (
-          <div class="demo-section">
-            <h2>1. Basic single select</h2>
-            <p>
-              No pre-selected value. Clicking an item commits immediately via
-              the action callback and closes the picker.
-            </p>
-            <Field vertical>
-              <Label>Fruit</Label>
-              <Picker
-                name="basic_select"
-                placeholder="Select a fruit…"
-                value={selected}
-                action={(v) => {
-                  selectedSignal.value = v;
-                }}
-              >
-                <SelectableList action="send">
-                  {FRUIT_OPTIONS.map((opt, i) => (
-                    <Selectable
-                      key={opt}
-                      id={`basic_${opt}`}
-                      index={i}
-                      value={opt}
-                      selected={selected === opt}
-                      padding="s"
-                      spacing="s"
-                    >
-                      {opt}
-                    </Selectable>
-                  ))}
-                </SelectableList>
-              </Picker>
-            </Field>
-          </div>
-        );
-      };
-
-      // ── 2. Pre-selected value ─────────────────────────────────────────────
-
-      const PreselectedSelect = () => {
+      const SelectWithSend = () => {
         const selectedSignal = useSignal("Banana");
         const selected = selectedSignal.value;
 
         return (
           <div class="demo-section">
-            <h2>2. Pre-selected value</h2>
-            <p>Opens with "Banana" already selected.</p>
+            <h2>
+              1. <code>action="send"</code> — closes on click
+            </h2>
+            <p>
+              Each click immediately commits the value and closes the picker.
+              This is the correct behavior for single-select: once a value is
+              chosen, there is nothing left to do in the popover.
+            </p>
             <Field vertical>
               <Label>Fruit</Label>
               <Picker
-                name="preselected_select"
+                name="select_send"
                 placeholder="Select a fruit…"
                 value={selected}
                 action={(v) => {
@@ -160,7 +105,7 @@
                   {FRUIT_OPTIONS.map((opt, i) => (
                     <Selectable
                       key={opt}
-                      id={`preselected_${opt}`}
+                      id={`send_${opt}`}
                       index={i}
                       value={opt}
                       selected={selected === opt}
@@ -177,31 +122,41 @@
         );
       };
 
-      // ── 3. Many options ───────────────────────────────────────────────────
+      // ── 2. action="update" — stays open until closed ──────────────────────
+      // Clicking an item updates the picker's pending value but keeps the
+      // popover open. The value is committed only when the popover closes
+      // (e.g. clicking outside or pressing Escape). Rarely useful for
+      // single-select, but shown here for comparison.
 
-      const ManyOptionsSelect = () => {
-        const selectedSignal = useSignal(null);
+      const SelectWithUpdate = () => {
+        const selectedSignal = useSignal("Banana");
         const selected = selectedSignal.value;
 
         return (
           <div class="demo-section">
-            <h2>3. Many options</h2>
-            <p>Longer list to verify scroll behavior inside the popover.</p>
+            <h2>
+              2. <code>action="update"</code> — stays open until closed
+            </h2>
+            <p>
+              Clicking an item highlights it but keeps the popover open. The
+              value is committed only when the popover closes (click outside,
+              Escape…). Rarely appropriate for single-select.
+            </p>
             <Field vertical>
-              <Label>Skill</Label>
+              <Label>Fruit</Label>
               <Picker
-                name="many_options_select"
-                placeholder="Select a skill…"
+                name="select_update"
+                placeholder="Select a fruit…"
                 value={selected}
                 action={(v) => {
                   selectedSignal.value = v;
                 }}
               >
-                <SelectableList action="send" style="min-width: 180px">
-                  {SKILL_OPTIONS.map((opt, i) => (
+                <SelectableList action="update">
+                  {FRUIT_OPTIONS.map((opt, i) => (
                     <Selectable
                       key={opt}
-                      id={`many_${opt}`}
+                      id={`update_${opt}`}
                       index={i}
                       value={opt}
                       selected={selected === opt}
