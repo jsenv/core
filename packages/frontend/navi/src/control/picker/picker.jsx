@@ -6,7 +6,7 @@ import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.
 import { createComponentResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
 import { useControlProps } from "../control_hooks.jsx";
-import { getToInputValue } from "../input/input_value.js";
+import { getToInputValue } from "../field_value_bridge.js";
 import { PickerPlaceholder, PickerValue } from "./picker_components.jsx";
 import { PickerContext } from "./picker_context.jsx";
 import { pickerResolvers } from "./picker_resolvers.jsx";

@@ -104,7 +104,7 @@ export const useUIStateController = (
   {
     statePropName,
     defaultStatePropName,
-    fallbackState = "",
+    fallbackState = undefined,
     getStateFromProp = (prop) => prop,
     getPropFromState = (state) => state,
     getStateFromParent,

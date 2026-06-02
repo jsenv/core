@@ -1,6 +1,6 @@
 import { dispatchCustomEvent } from "@jsenv/dom";
 
-import { getUIStateFromElement } from "../ui_state_controller.js";
+import { getUIStateFromElement } from "./ui_state_controller.js";
 
 export const getToInputValue = (type) => {
   if (type === "datetime-local") {
@@ -30,6 +30,9 @@ const toDatetimeLocal = (dateTimeString) => {
   return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
 };
 const toNumber = (jsValue) => {
+  if (jsValue === undefined) {
+    return "";
+  }
   const asNumber = Number(jsValue);
   if (isNaN(asNumber)) {
     return jsValue;
@@ -42,31 +45,41 @@ const toNumber = (jsValue) => {
 const toColor = (jsValue) => {
   return jsValue || "#000000";
 };
-const toInputValue = (jsValue) => jsValue;
+const toInputValue = (jsValue) => {
+  return jsValue === undefined ? "" : jsValue;
+};
 
-export const readInputValue = (input) => {
-  // important: input.type = "navi_picker" followed by input.type returns "text"
-  // so use getAttribute
-  const type = input.getAttribute("type");
+export const readFieldValue = (field) => {
+  if (field.tagName === "BUTTON") {
+    return readValueFromButton(field);
+  }
+  if (field.tagName === "INPUT") {
+    // important: input.type = "navi_picker" followed by input.type returns "text"
+    // so use getAttribute
+    const type = field.getAttribute("type");
 
-  if (type === "number" || type === "range") {
-    return readNumberFromInput(input);
+    if (type === "number" || type === "range") {
+      return readNumberFromInput(field);
+    }
+    if (type === "checkbox" || type === "radio") {
+      return readValueFromCheckableInput(field);
+    }
+    if (type === "datetime-local") {
+      return readDatetimeLocalFromInput(field);
+    }
+    if (type === "navi_picker") {
+      return getUIStateFromElement(field);
+    }
   }
-  if (type === "checkbox" || type === "radio") {
-    return readValueFromCheckableInput(input);
-  }
-  if (type === "datetime-local") {
-    return readDatetimeLocalFromInput(input);
-  }
-  if (type === "navi_picker") {
-    return getUIStateFromElement(input);
-  }
-  return readValueFromInput(input);
+  return readValueFromInput(field);
+};
+const readValueFromButton = (button) => {
+  return readValueFromNaviCustomEvent(button, button.value);
 };
 const readDatetimeLocalFromInput = (input) => {
   const localDateTimeString = input.value;
-  if (!localDateTimeString) {
-    return localDateTimeString;
+  if (localDateTimeString === "") {
+    return undefined;
   }
   const localDate = new Date(localDateTimeString);
   if (isNaN(localDate.getTime())) {
@@ -77,7 +90,7 @@ const readDatetimeLocalFromInput = (input) => {
 const readNumberFromInput = (input) => {
   const numberString = input.value;
   if (numberString === "") {
-    return "";
+    return undefined;
   }
   const asNumber = Number(numberString);
   if (isNaN(asNumber)) {
@@ -90,10 +103,18 @@ const readValueFromCheckableInput = (input) => {
   if (!checked) {
     return undefined;
   }
+  return readValueFromNaviCustomEvent(input, input.value);
+};
+const readValueFromInput = (input) => {
+  const value = input.value;
+  return value;
+};
+
+const readValueFromNaviCustomEvent = (field, fallback) => {
   // prefer the value given as prop (respect original type, browser would convert to string)
   let responded;
   let value;
-  dispatchCustomEvent(input, "navi_get_value", {
+  dispatchCustomEvent(field, "navi_get_value", {
     respondWith: (jsValue) => {
       responded = true;
       value = jsValue;
@@ -102,9 +123,5 @@ const readValueFromCheckableInput = (input) => {
   if (responded) {
     return value;
   }
-  return input.value;
-};
-const readValueFromInput = (input) => {
-  const value = input.value;
-  return value;
+  return fallback;
 };

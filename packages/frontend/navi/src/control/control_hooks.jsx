@@ -56,7 +56,7 @@ import {
   RequiredContext,
 } from "./control_context.js";
 import { findControlProxyTarget } from "./control_proxy.js";
-import { readInputValue } from "./input/input_value.js";
+import { readFieldValue } from "./field_value_bridge.js";
 import { addInputEffect } from "./input_effect.js";
 import { resolveActionProp } from "./string_actions.js";
 import {
@@ -285,7 +285,7 @@ export const useControlProps = (
 
     const getFieldValue = () => {
       const field = ref.current;
-      return readInputValue(field);
+      return readFieldValue(field);
     };
 
     const onInput = (e) => {

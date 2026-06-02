@@ -35,9 +35,9 @@ import {
 } from "../../resolver/resolver.jsx";
 import { useControlProps } from "../control_hooks.jsx";
 import { Label } from "../field.jsx";
+import { getToInputValue } from "../field_value_bridge.js";
 import { dispatchRequestSetUIState } from "../ui_state_controller.js";
 import { dispatchRequestInteraction } from "../validation/custom_constraint_validation.js";
-import { getToInputValue } from "./input_value.js";
 
 const css = /* css */ `
   @layer navi {
