@@ -1892,7 +1892,7 @@
       };
 
       const ProxyDemo = () => {
-        const [entries, push] = useCallLog();
+        const [entries, push, clear] = useCallLog();
         return (
           <div id="proxy" className="demo-section">
             <h2>Proxy</h2>
@@ -1967,7 +1967,7 @@
                 </Field>
               </div>
             </div>
-            <CallLog entries={entries} />
+            <CallLog entries={entries} onClear={clear} />
           </div>
         );
       };

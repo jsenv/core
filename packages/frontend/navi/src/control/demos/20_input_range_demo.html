@@ -617,9 +617,9 @@
       };
 
       const ActionHandlingDemo = () => {
-        const [immediateLog, pushImmediateLog] = useCallLog();
-        const [slowLog, pushSlowLog] = useCallLog();
-        const [debouncedLog, pushDebouncedLog] = useCallLog();
+        const [immediateLog, pushImmediateLog, clearImmediateLog] = useCallLog();
+        const [slowLog, pushSlowLog, clearSlowLog] = useCallLog();
+        const [debouncedLog, pushDebouncedLog, clearDebouncedLog] = useCallLog();
 
         const slowAction = async (value, setter) => {
           await new Promise((resolve) => setTimeout(resolve, 1500));
@@ -676,7 +676,7 @@
         const AfterChangeDemo = () => {
           const [uiValue, setUIValue] = useState(50);
           const [processedRadius, setProcessedRadius] = useState(50);
-          const [afterChangeLog, pushAfterChangeLog] = useCallLog();
+          const [afterChangeLog, pushAfterChangeLog, clearAfterChangeLog] = useCallLog();
 
           return (
             <fieldset>
@@ -734,7 +734,7 @@
                   <CircleVisualization radius={processedRadius} />
                 </div>
               </div>
-              <CallLog entries={afterChangeLog} />
+              <CallLog entries={afterChangeLog} onClear={clearAfterChangeLog} />
             </fieldset>
           );
         };
@@ -794,7 +794,7 @@
                   <CircleVisualization radius={immediateRadiusSignal.value} />
                 </div>
               </div>
-              <CallLog entries={immediateLog} />
+              <CallLog entries={immediateLog} onClear={clearImmediateLog} />
             </fieldset>
 
             <fieldset>
@@ -852,7 +852,7 @@
                   <CircleVisualization radius={slowRadiusSignal.value} />
                 </div>
               </div>
-              <CallLog entries={slowLog} />
+              <CallLog entries={slowLog} onClear={clearSlowLog} />
             </fieldset>
 
             <fieldset>
@@ -910,7 +910,7 @@
                   <CircleVisualization radius={debouncedRadiusSignal.value} />
                 </div>
               </div>
-              <CallLog entries={debouncedLog} />
+              <CallLog entries={debouncedLog} onClear={clearDebouncedLog} />
             </fieldset>
 
             <AfterChangeDemo />

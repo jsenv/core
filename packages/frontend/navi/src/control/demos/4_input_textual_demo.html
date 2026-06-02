@@ -545,7 +545,7 @@
 
       const ActionValueDemo = () => {
         const [controlledValue, setControlledValue] = useState("Controlled");
-        const [entries, push] = useCallLog();
+        const [entries, push, clear] = useCallLog();
 
         return (
           <fieldset>
@@ -583,13 +583,13 @@
                 />
               </div>
             </Box>
-            <CallLog entries={entries} />
+            <CallLog entries={entries} onClear={clear} />
           </fieldset>
         );
       };
 
       const ActionBasicSyncDemo = () => {
-        const [entries, push] = useCallLog();
+        const [entries, push, clear] = useCallLog();
 
         return (
           <fieldset>
@@ -608,14 +608,14 @@
                   push("action", v);
                 }}
               />
-              <CallLog entries={entries} />
+              <CallLog entries={entries} onClear={clear} />
             </Box>
           </fieldset>
         );
       };
 
       const ActionAsyncDemo = () => {
-        const [entries, push] = useCallLog();
+        const [entries, push, clear] = useCallLog();
 
         return (
           <fieldset>
@@ -637,14 +637,14 @@
                   await delay(1000);
                 }}
               />
-              <CallLog entries={entries} />
+              <CallLog entries={entries} onClear={clear} />
             </Box>
           </fieldset>
         );
       };
 
       const ActionDebouncedDemo = () => {
-        const [entries, push] = useCallLog();
+        const [entries, push, clear] = useCallLog();
 
         return (
           <fieldset>
@@ -666,14 +666,14 @@
                 }}
                 actionDebounce={600}
               />
-              <CallLog entries={entries} />
+              <CallLog entries={entries} onClear={clear} />
             </Box>
           </fieldset>
         );
       };
 
       const ActionDebouncedWithSignalDemo = () => {
-        const [entries, push] = useCallLog();
+        const [entries, push, clear] = useCallLog();
 
         return (
           <fieldset>
@@ -697,14 +697,14 @@
                 }}
                 actionDebounce={600}
               />
-              <CallLog entries={entries} />
+              <CallLog entries={entries} onClear={clear} />
             </Box>
           </fieldset>
         );
       };
 
       const ActionAfterChangeDemo = () => {
-        const [entries, push] = useCallLog();
+        const [entries, push, clear] = useCallLog();
 
         return (
           <fieldset>
@@ -726,14 +726,14 @@
                 }}
                 actionAfterChange
               />
-              <CallLog entries={entries} />
+              <CallLog entries={entries} onClear={clear} />
             </Box>
           </fieldset>
         );
       };
 
       const ActionWithAbortDemo = () => {
-        const [entries, push] = useCallLog();
+        const [entries, push, clear] = useCallLog();
         const currentAbortControllerRef = useRef(null);
         const cancelPrevious = () => {
           if (currentAbortControllerRef.current) {
@@ -768,7 +768,7 @@
                   }, 1500);
                 }}
               />
-              <CallLog entries={entries} />
+              <CallLog entries={entries} onClear={clear} />
             </Box>
           </fieldset>
         );
@@ -776,7 +776,7 @@
 
       const FormBasicDemo = () => {
         const [username, setUsername] = useState("dam");
-        const [entries, push] = useCallLog();
+        const [entries, push, clear] = useCallLog();
 
         return (
           <fieldset>
@@ -814,7 +814,7 @@
                     Reset
                   </Button>
                 </Box>
-                <CallLog entries={entries} />
+                <CallLog entries={entries} onClear={clear} />
               </Box>
             </Form>
           </fieldset>
@@ -822,7 +822,7 @@
       };
 
       const FormWithInputActionDemo = () => {
-        const [entries, push] = useCallLog();
+        const [entries, push, clear] = useCallLog();
 
         return (
           <fieldset>
@@ -861,7 +861,7 @@
                   <Input name="note" defaultValue="cute" />
                 </Field>
                 <Button type="submit">Submit form</Button>
-                <CallLog entries={entries} />
+                <CallLog entries={entries} onClear={clear} />
               </Box>
             </Form>
           </fieldset>

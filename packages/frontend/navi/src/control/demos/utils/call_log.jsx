@@ -32,6 +32,10 @@ const css = /* css */ `
     color: #1a56cc;
     font-weight: bold;
   }
+  .call-log-entry .label-other {
+    color: #7a3ca3;
+    font-weight: bold;
+  }
   .call-log-entry .value {
     color: #333;
   }
@@ -49,9 +53,33 @@ const css = /* css */ `
   .call-log-summary .summary-action {
     color: #1a56cc;
   }
+  .call-log-summary .summary-other {
+    color: #7a3ca3;
+  }
+  .call-log-header {
+    display: flex;
+    margin-top: 10px;
+    margin-bottom: 2px;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .call-log-clear {
+    padding: 1px 8px;
+    color: #888;
+    font-size: 11px;
+    font-family: monospace;
+    background: none;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  .call-log-clear:hover {
+    color: #555;
+    background: #f0f0f0;
+  }
 `;
 
-export const CallLog = ({ entries }) => {
+export const CallLog = ({ entries, onClear }) => {
   import.meta.css = css;
   const containerRef = useRef(null);
   useEffect(() => {
@@ -62,6 +90,12 @@ export const CallLog = ({ entries }) => {
 
   const uiActionCount = entries.filter((e) => e.type === "uiAction").length;
   const actionCount = entries.filter((e) => e.type === "action").length;
+  const otherCounts = {};
+  for (const entry of entries) {
+    if (entry.type !== "uiAction" && entry.type !== "action") {
+      otherCounts[entry.type] = (otherCounts[entry.type] || 0) + 1;
+    }
+  }
 
   if (entries.length === 0) {
     return (
@@ -72,13 +106,37 @@ export const CallLog = ({ entries }) => {
   }
   return (
     <div>
+      <div className="call-log-header">
+        <div className="call-log-summary">
+          {uiActionCount > 0 && (
+            <span className="summary-ui">uiAction: {uiActionCount}</span>
+          )}
+          {actionCount > 0 && (
+            <span className="summary-action">action: {actionCount}</span>
+          )}
+          {Object.entries(otherCounts).map(([type, count]) => (
+            <span key={type} className="summary-other">
+              {type}: {count}
+            </span>
+          ))}
+        </div>
+        {onClear && (
+          <button className="call-log-clear" onClick={onClear}>
+            clear
+          </button>
+        )}
+      </div>
       <div className="call-log" ref={containerRef}>
         {entries.map((entry, i) => (
           <div key={i} className="call-log-entry">
             <span className="count">#{i + 1}</span>
             <span
               className={
-                entry.type === "uiAction" ? "label-ui" : "label-action"
+                entry.type === "uiAction"
+                  ? "label-ui"
+                  : entry.type === "action"
+                    ? "label-action"
+                    : "label-other"
               }
             >
               {entry.type}
@@ -86,14 +144,6 @@ export const CallLog = ({ entries }) => {
             <span className="value">← {formatValue(entry.value)}</span>
           </div>
         ))}
-      </div>
-      <div className="call-log-summary">
-        {uiActionCount > 0 && (
-          <span className="summary-ui">uiAction: {uiActionCount}</span>
-        )}
-        {actionCount > 0 && (
-          <span className="summary-action">action: {actionCount}</span>
-        )}
       </div>
     </div>
   );
@@ -110,5 +160,8 @@ export const useCallLog = () => {
   const push = (type, value) => {
     setEntries((prev) => [...prev, { type, value }]);
   };
-  return [entries, push];
+  const clear = () => {
+    setEntries([]);
+  };
+  return [entries, push, clear];
 };
