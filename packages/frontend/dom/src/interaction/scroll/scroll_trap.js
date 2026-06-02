@@ -30,13 +30,19 @@ import { measureScrollbar } from "./scrollbar_size.js";
 export const trapScrollInside = (element) => {
   const cleanupCallbackSet = new Set();
   const lockScroll = (el) => {
+    const savedScrollTop = el.scrollTop;
+    const savedScrollLeft = el.scrollLeft;
     const scrollbarGutter = getStyle(el, "scrollbar-gutter");
     const hasScrollbarGutterStrategy =
       scrollbarGutter && scrollbarGutter !== "auto";
     if (hasScrollbarGutterStrategy) {
       // The element manages its own gutter — just hide overflow, no padding needed.
       const removeScrollLockStyles = setStyles(el, { overflow: "hidden" });
-      cleanupCallbackSet.add(removeScrollLockStyles);
+      cleanupCallbackSet.add(() => {
+        removeScrollLockStyles();
+        el.scrollTop = savedScrollTop;
+        el.scrollLeft = savedScrollLeft;
+      });
       return;
     }
     const [scrollbarWidth, scrollbarHeight] = measureScrollbar(el);
@@ -46,7 +52,11 @@ export const trapScrollInside = (element) => {
       "padding-bottom": `${bottom + scrollbarHeight}px`,
       "overflow": "hidden",
     });
-    cleanupCallbackSet.add(removeScrollLockStyles);
+    cleanupCallbackSet.add(() => {
+      removeScrollLockStyles();
+      el.scrollTop = savedScrollTop;
+      el.scrollLeft = savedScrollLeft;
+    });
   };
   let previous = element.previousSibling;
   while (previous) {
