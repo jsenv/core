@@ -383,7 +383,11 @@ export const PickerCustom = (props) => {
         onClick: (e) => {
           onClick?.(e);
           if (
-            dispatchRequestInteraction(ref.current, e, "click to open picker")
+            dispatchRequestInteraction(
+              ref.current,
+              e,
+              e.detail === 0 ? "enter to open picker" : "click to open picker",
+            )
           ) {
             // When a label is clicked it transfers focus to the select
             // in that case we want to open it (otherwise we have already opened on mousedown interaction)
