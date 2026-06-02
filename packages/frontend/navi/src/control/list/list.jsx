@@ -651,13 +651,22 @@ const useListScrollSync = ({
       searchTextBecomesActive = true;
     }
   }
-  // Scroll to the selected item when the list is first presented on screen.
+  // Scroll to the selected item only the FIRST time the list is presented on screen,
+  // so the user can see what's selected on initial open. On subsequent re-displays
+  // (e.g. reopening a popover containing the list), we intentionally keep the previous
+  // scroll position — it's less disruptive UX to land where the user last was, even
+  // if that means the selected item isn't currently visible.
   // Skipped when inside a closed <dialog>/<details> (scrollIntoView is a no-op
   // on hidden elements); re-runs automatically every time the ancestor opens.
+  const hasBeenDisplayedRef = useRef(false);
   useDisplayedLayoutEffect(
     ref,
     (el, openEvent) => {
       updateCurrentScroll();
+      if (hasBeenDisplayedRef.current) {
+        return;
+      }
+      hasBeenDisplayedRef.current = true;
       const items = tracker.itemsSignal.peek();
       const firstSelected = items.find((i) => i.selected);
       if (firstSelected) {
