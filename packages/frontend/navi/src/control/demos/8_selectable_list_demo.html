@@ -90,7 +90,7 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useRef, useState } from "preact/hooks";
+      import { useLayoutEffect, useRef, useState } from "preact/hooks";
       import {
         NaviDebug,
         SelectableList,
@@ -690,7 +690,193 @@
                 </div>
               </div>
             </div>
+            <h3 style={{ marginTop: 24, marginBottom: 8 }}>
+              Required + virtualized list (selected item scrolled out of DOM)
+            </h3>
+            <p>
+              Apple is selected but the list is scrolled to the bottom so its
+              DOM node is not rendered. <code>required</code> must still pass
+              because selection is tracked in-memory, not via DOM queries.
+            </p>
+            <VirtualizedRequiredDemo />
+            <h3 style={{ marginTop: 24, marginBottom: 8 }}>
+              Required + filter hiding the selected item
+            </h3>
+            <p>
+              Apple is selected but filtered out of the visible list. Its DOM
+              node is absent yet <code>required</code> must still pass.
+            </p>
+            <FilteredRequiredDemo />
           </div>
+        );
+      };
+
+      const LONG_FRUITS = [
+        "Apple",
+        "Apricot",
+        "Avocado",
+        "Banana",
+        "Blackberry",
+        "Blueberry",
+        "Cherry",
+        "Clementine",
+        "Coconut",
+        "Cranberry",
+        "Date",
+        "Dragonfruit",
+        "Elderberry",
+        "Fig",
+        "Gooseberry",
+        "Grape",
+        "Grapefruit",
+        "Guava",
+        "Jackfruit",
+        "Kiwi",
+        "Kumquat",
+        "Lemon",
+        "Lime",
+        "Lychee",
+        "Mandarin",
+        "Mango",
+        "Melon",
+        "Nectarine",
+        "Orange",
+        "Papaya",
+        "Peach",
+        "Pear",
+        "Persimmon",
+        "Pineapple",
+        "Plum",
+        "Pomelo",
+        "Raspberry",
+        "Starfruit",
+        "Strawberry",
+        "Tangerine",
+        "Watermelon",
+      ];
+
+      const VirtualizedRequiredDemo = () => {
+        const [selected, setSelected] = useState("Apple");
+        const [submitted, setSubmitted] = useState(null);
+        const listRef = useRef(null);
+
+        useLayoutEffect(() => {
+          const list = listRef.current;
+          if (list) {
+            const listScrollContainer = list.querySelector(
+              ".navi_list_scroll_container",
+            );
+            listScrollContainer.scrollTop = listScrollContainer.scrollHeight;
+          }
+        }, []);
+
+        return (
+          <Form
+            flex="y"
+            alignX="start"
+            spacing="m"
+            action={({ fruit }) => {
+              setSubmitted(fruit ?? "(none)");
+              setSelected(fruit);
+            }}
+          >
+            <SelectableList
+              ref={listRef}
+              name="fruit"
+              required
+              renderBudget={10}
+              style={{ maxHeight: 160, overflowY: "auto" }}
+              action={(v) => {
+                setSelected(v ?? null);
+              }}
+            >
+              {LONG_FRUITS.map((fruit, i) => (
+                <Selectable
+                  key={fruit}
+                  index={i}
+                  id={`vreq_${fruit.toLowerCase()}`}
+                  value={fruit}
+                  selected={selected === fruit}
+                  flex
+                  spacing="s"
+                >
+                  <Selectable.Input />
+                  {fruit}
+                </Selectable>
+              ))}
+            </SelectableList>
+            <Button type="submit">Submit</Button>
+            <div className="value-display">
+              {submitted !== null ? `Submitted: ${submitted}` : ""}
+            </div>
+          </Form>
+        );
+      };
+
+      const FilteredRequiredDemo = () => {
+        const [selected, setSelected] = useState("Apple");
+        const [filter, setFilter] = useState("ban");
+        const [submitted, setSubmitted] = useState(null);
+        const visibleFruits = FRUITS.filter((f) =>
+          f.toLowerCase().includes(filter.toLowerCase()),
+        );
+
+        return (
+          <Form
+            action={({ fruit }) => {
+              setSubmitted(fruit ?? "(none)");
+              setSelected(fruit);
+            }}
+          >
+            <input
+              type="text"
+              placeholder="Filter fruits…"
+              value={filter}
+              onInput={(e) => setFilter(e.currentTarget.value)}
+              style={{
+                marginBottom: 8,
+                padding: "6px 8px",
+                borderRadius: 4,
+                border: "1px solid #ccc",
+                width: "100%",
+                boxSizing: "border-box",
+              }}
+            />
+            <SelectableList
+              name="fruit"
+              required
+              action={(v) => {
+                setSelected(v ?? null);
+              }}
+            >
+              {visibleFruits.map((fruit, i) => (
+                <Selectable
+                  key={fruit}
+                  index={i}
+                  id={`freqd_${fruit.toLowerCase()}`}
+                  value={fruit}
+                  selected={selected === fruit}
+                  flex
+                  spacing="s"
+                >
+                  <Selectable.Input />
+                  {fruit}
+                </Selectable>
+              ))}
+            </SelectableList>
+            <div style={{ marginTop: 8, fontSize: "0.85rem", color: "#666" }}>
+              Selected: <strong>{selected ?? "(none)"}</strong>
+              {selected && !visibleFruits.includes(selected)
+                ? " (hidden by filter)"
+                : ""}
+            </div>
+            <Button type="submit" style={{ marginTop: 12 }}>
+              Submit (should succeed — Apple selected even if filtered out)
+            </Button>
+            <div className="value-display">
+              {submitted !== null ? `Submitted: ${submitted}` : ""}
+            </div>
+          </Form>
         );
       };
 
