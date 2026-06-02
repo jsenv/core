@@ -291,7 +291,7 @@ export const useControlProps = (
     let inputInteraction;
     let keydownInteraction = {
       name: "keydown",
-      effect: asBrowserAction,
+      callback: asBrowserAction,
     };
     // a custom concept being combination of "input", "change" and may other events
     // this even if trigerred when value changes and can be controlled by actionDebounce and actionAfterChange
@@ -307,7 +307,7 @@ export const useControlProps = (
       };
     } else if (controlType === "input") {
       isCheckable = props.type === "radio" || props.type === "checkbox";
-      // on input we just check if we can do stuff (readonly)
+      // On input, gate the interaction (readonly check) and update UI state to reflect the new value.
       inputInteraction = {
         name: "input",
         callback: asInteraction,
@@ -349,9 +349,9 @@ export const useControlProps = (
         mousedownInteraction = {
           name: "mousedown",
           callback: asBrowserAction,
+          effect: updateUIState,
         };
       } else if (props.type === "color") {
-        // inputInteraction.effect = undefined;
       }
     }
 
