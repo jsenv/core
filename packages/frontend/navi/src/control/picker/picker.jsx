@@ -212,6 +212,12 @@ const css = /* css */ `
     &[data-callout] {
       --x-picker-border-color: var(--callout-color);
     }
+
+    .navi_picker_input + .navi_badge_list {
+      /* Padding of the badge */
+      margin-top: -0.4em;
+      margin-bottom: -0.4em;
+    }
   }
 `;
 
