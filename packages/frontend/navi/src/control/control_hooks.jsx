@@ -242,8 +242,16 @@ export const useControlProps = (
     // (e.g. radio_sibling_uncheck when another radio in the group becomes checked).
     // Otherwise the dedup below would wrongly skip a real user click that re-checks a radio
     // whose lastActionValueRef still matched a value from a previous interaction.
+    //
+    // We only sync for these external sources — NOT for every UI state change.
+    // Syncing on every change would also capture our own updateUIState calls fired
+    // from the input event, which would then make asAction (triggered later via
+    // navi_change / debounce) think the value is unchanged and skip the action.
     controlProps.onnavi_ui_state_change = (e) => {
-      lastActionValueRef.current = e.detail.value;
+      const originatingEvent = e.detail.event;
+      if (originatingEvent?.type === "radio_sibling_uncheck") {
+        lastActionValueRef.current = e.detail.value;
+      }
     };
     const asAction = (interaction, e, { ifValueModified }) => {
       if (actionInteraction === "custom") {
