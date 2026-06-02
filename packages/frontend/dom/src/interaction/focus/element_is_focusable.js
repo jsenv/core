@@ -16,6 +16,9 @@ export const elementIsFocusable = (node, { excludeAriaHidden } = {}) => {
   if (node.nodeType !== 1) {
     return false;
   }
+  if (node.hasAttribute("navi-focus-delegate")) {
+    return false;
+  }
   if (!canInteract(node)) {
     return false;
   }

@@ -15,6 +15,7 @@
 import {
   dispatchInternalCustomEvent,
   findEvent,
+  findFocusDelegateTarget,
   getElementSignature,
 } from "@jsenv/dom";
 import {
@@ -648,9 +649,25 @@ const useInteractiveProps = (
       resetOnError,
     } = props;
     Object.assign(controlProps, {
+      onFocus: (e) => {
+        // Transfer programmatic focus to the delegate target (navi-focus-delegate or navi-control-proxy-for)
+        const focusProxyTarget =
+          findFocusDelegateTarget(e.currentTarget) ||
+          findControlProxyTarget(e.currentTarget);
+        if (focusProxyTarget) {
+          const focusVisible = e.currentTarget.matches(":focus-visible");
+          debugFocus(
+            e,
+            `focus event: redirecting to ${getElementSignature(focusProxyTarget)}.focus({ focusVisible: ${focusVisible} })`,
+          );
+          focusProxyTarget.focus({ focusVisible });
+        }
+      },
       onnavi_request_interaction: (e) => {
         transfer_focus_to_target: {
-          const naviProxyTarget = findControlProxyTarget(e.currentTarget);
+          const naviProxyTarget =
+            findFocusDelegateTarget(e.currentTarget) ||
+            findControlProxyTarget(e.currentTarget);
           if (!naviProxyTarget) {
             break transfer_focus_to_target;
           }

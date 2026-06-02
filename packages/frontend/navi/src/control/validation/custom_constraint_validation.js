@@ -58,6 +58,7 @@ import {
   dispatchInternalCustomEvent,
   dispatchPublicCustomEvent,
   findEvent,
+  findFocusDelegateTarget,
   getElementSignature,
   getKeyboardEventDefaultAction,
 } from "@jsenv/dom";
@@ -693,13 +694,15 @@ export const installCustomConstraintValidation = (
       // skip focus on proxy (which uses aria-hidden and are not meant to be focused)
       !anchorElement.closest('[aria-hidden="true"]')
     ) {
+      const focusTarget =
+        findFocusDelegateTarget(anchorElement) || anchorElement;
       if (debug) {
         debug(
           event,
-          `opening callout, give focus to anchor -> ${getElementSignature(anchorElement)}.focus()`,
+          `opening callout, give focus to anchor -> ${getElementSignature(focusTarget)}.focus()`,
         );
       }
-      anchorElement.focus();
+      focusTarget.focus();
     }
     const removeCloseOnCleanup = addTeardown(() => {
       closeElementValidationMessage(new CustomEvent("cleanup"), "cleanup");
@@ -727,16 +730,18 @@ export const installCustomConstraintValidation = (
           focusWithinCallout &&
           !element.closest('[aria-hidden="true"]') // do not focus invalid proxy
         ) {
+          const focusTarget =
+            findFocusDelegateTarget(anchorElement) || anchorElement;
           if (debug) {
             debug(
               event,
-              `callout is closing with focus, give focus back to the control ${getElementSignature(anchorElement)}.focus()`,
+              `callout is closing with focus, give focus back to the control ${getElementSignature(focusTarget)}.focus()`,
             );
           }
           // focus is withing callout and we are closing it
           // if we don't do anything browser will move focus to the body
           // it's better to have it back to the field
-          anchorElement.focus();
+          focusTarget.focus();
         }
       },
     });

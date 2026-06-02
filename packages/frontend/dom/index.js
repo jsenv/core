@@ -81,6 +81,7 @@ export {
   getFocusVisibilityInfo,
   getVisuallyVisibleInfo,
 } from "./src/interaction/focus/element_visibility.js";
+export { findFocusDelegateTarget } from "./src/interaction/focus/find_focus_delegate_target.js";
 export { findFocusable } from "./src/interaction/focus/find_focusable.js";
 export { initFocusGroup } from "./src/interaction/focus/focus_group.js";
 export { preventFocusNavViaKeyboard } from "./src/interaction/focus/focus_nav.js";

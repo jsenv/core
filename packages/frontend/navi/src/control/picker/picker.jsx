@@ -344,8 +344,8 @@ const PickerInput = (props) => {
       value={asControlHostValue(props.value, { controlType: "input", type })}
       className="navi_picker_input"
       pseudoClasses={PickerInputPseudoClasses}
-      tabIndex={-1}
-      navi-focusnav="ignore"
+      tabIndex={-1} // Make input non tabbable
+      navi-focus-delegate="" // Ensure callout focus the button and not the input
     />
   );
 };
