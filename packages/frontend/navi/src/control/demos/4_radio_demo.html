@@ -181,6 +181,7 @@
         Button,
         NaviDebug,
       } from "@jsenv/navi";
+      import { CallLog, useCallLog } from "./utils/call_log.jsx";
 
       const App = () => {
         return (
@@ -987,10 +988,7 @@
       };
 
       const ProxyDemo = () => {
-        const [log, setLog] = useState([]);
-        const addLog = (msg) => {
-          setLog((prev) => [...prev, msg]);
-        };
+        const [entries, push] = useCallLog();
         return (
           <div id="proxy" className="demo-section">
             <h2>Proxy</h2>
@@ -1002,7 +1000,7 @@
             </p>
             <div className="two-col">
               <div>
-                <div className="col-label">Proxy buttons (try mousedown)</div>
+                <div className="col-label">Proxy buttons</div>
                 <Box flex="y" spacing="s">
                   <Button
                     action="update"
@@ -1030,23 +1028,14 @@
                     id="radio_being_proxied"
                     name="radio_being_proxied"
                     value="on"
-                    action={(v) => addLog(`action called with ${v}`)}
-                    onnavi_action_end={() => addLog("action ended")}
-                    onInput={(e) => {
-                      addLog(
-                        `input event on radio (checked=${e.target.checked})`,
-                      );
-                    }}
+                    uiAction={(v) => push("uiAction", v)}
+                    action={(v) => push("action", v)}
                   />
                   Option
                 </Field>
-                <div className="value-display">
-                  {log.length === 0
-                    ? null
-                    : log.map((msg, i) => <div key={i}>{msg}</div>)}
-                </div>
               </div>
             </div>
+            <CallLog entries={entries} />
           </div>
         );
       };
