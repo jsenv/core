@@ -17,45 +17,50 @@ import { parseStepToSeconds } from "../picker/time_helpers.js";
  */
 export const useInputProps = (props) => {
   const { type } = props;
-  const formatter = TYPE_TO_DATE_FORMATTER[type];
-  const hasTimeStep = TYPES_WITH_TIME_STEP.has(type);
-  if (!formatter && !hasTimeStep) {
-    return props;
+  const minMaxFormatter = MIN_MAX_FORMATTER_BY_TYPE[type];
+  const stepFormatter = STEP_FORMATTER_BY_TYPE[type];
+  if (minMaxFormatter) {
+    props.min = minMaxFormatter(props.min);
+    props.max = minMaxFormatter(props.max);
   }
-  if (formatter) {
-    props.min = resolveDateProp(props.min, formatter);
-    props.max = resolveDateProp(props.max, formatter);
-  }
-  if (hasTimeStep && props.step !== undefined) {
-    props.step = parseStepToSeconds(props.step);
+  if (stepFormatter) {
+    props.step = stepFormatter(props.step);
   }
   return props;
 };
 
-const resolveDateProp = (value, formatter) => {
-  if (value === null) {
-    return undefined;
+const toInputDay = (value) => {
+  if (value === undefined || value === null) {
+    return value;
   }
-  if (value instanceof Date) {
-    return formatter(value);
+  if (!(value instanceof Date)) {
+    return value;
   }
-  return value;
-};
-
-const toInputDay = (date) => {
-  const yyyy = date.getFullYear();
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  const dd = String(date.getDate()).padStart(2, "0");
+  const yyyy = value.getFullYear();
+  const mm = String(value.getMonth() + 1).padStart(2, "0");
+  const dd = String(value.getDate()).padStart(2, "0");
   return `${yyyy}-${mm}-${dd}`;
 };
-const toInputMonth = (date) => {
-  const yyyy = date.getFullYear();
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
+const toInputMonth = (value) => {
+  if (value === undefined || value === null) {
+    return value;
+  }
+  if (!(value instanceof Date)) {
+    return value;
+  }
+  const yyyy = value.getFullYear();
+  const mm = String(value.getMonth() + 1).padStart(2, "0");
   return `${yyyy}-${mm}`;
 };
-const toInputWeek = (date) => {
+const toInputWeek = (value) => {
+  if (value === undefined || value === null) {
+    return value;
+  }
+  if (!(value instanceof Date)) {
+    return value;
+  }
   // ISO week number
-  const d = new Date(date);
+  const d = new Date(value);
   d.setHours(0, 0, 0, 0);
   d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
   const yearStart = new Date(d.getFullYear(), 0, 4);
@@ -65,21 +70,33 @@ const toInputWeek = (date) => {
     ) + 1;
   return `${d.getFullYear()}-W${String(week).padStart(2, "0")}`;
 };
-const toInputTime = (date) => {
-  const hh = String(date.getHours()).padStart(2, "0");
-  const mm = String(date.getMinutes()).padStart(2, "0");
+const toInputTime = (value) => {
+  if (value === undefined || value === null) {
+    return value;
+  }
+  if (!(value instanceof Date)) {
+    return value;
+  }
+  const hh = String(value.getHours()).padStart(2, "0");
+  const mm = String(value.getMinutes()).padStart(2, "0");
   return `${hh}:${mm}`;
 };
-const toInputDatetime = (date) => {
-  const yyyy = date.getFullYear();
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  const dd = String(date.getDate()).padStart(2, "0");
-  const hh = String(date.getHours()).padStart(2, "0");
-  const min = String(date.getMinutes()).padStart(2, "0");
+const toInputDatetime = (value) => {
+  if (value === undefined || value === null) {
+    return value;
+  }
+  if (!(value instanceof Date)) {
+    return value;
+  }
+  const yyyy = value.getFullYear();
+  const mm = String(value.getMonth() + 1).padStart(2, "0");
+  const dd = String(value.getDate()).padStart(2, "0");
+  const hh = String(value.getHours()).padStart(2, "0");
+  const min = String(value.getMinutes()).padStart(2, "0");
   return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
 };
 
-const TYPE_TO_DATE_FORMATTER = {
+const MIN_MAX_FORMATTER_BY_TYPE = {
   "date": toInputDay,
   "day": toInputDay,
   "month": toInputMonth,
@@ -89,4 +106,8 @@ const TYPE_TO_DATE_FORMATTER = {
   "datetime": toInputDatetime,
 };
 
-const TYPES_WITH_TIME_STEP = new Set(["time", "datetime-local", "datetime"]);
+const STEP_FORMATTER_BY_TYPE = {
+  "time": parseStepToSeconds,
+  "datetime-local": parseStepToSeconds,
+  "datetime": parseStepToSeconds,
+};
