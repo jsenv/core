@@ -163,6 +163,7 @@
         createAction,
         Label,
       } from "@jsenv/navi";
+      import { CallLog, useCallLog } from "./utils/call_log.jsx";
 
       const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -178,6 +179,7 @@
               <SwitchAppearanceDemo />
               <IconDemo />
               <InteractiveDemo />
+              <ProxyDemo />
             </div>
           </NaviDebug>
         );
@@ -208,6 +210,9 @@
               </li>
               <li>
                 <a href="#interactive-controls">Interactive Controls</a>
+              </li>
+              <li>
+                <a href="#proxy">Proxy</a>
               </li>
               <li>
                 <a href="./3_checkbox_group_demo.html">CheckboxGroup demo</a>
@@ -1883,6 +1888,87 @@
             />
             Newsletter subscription
           </Field>
+        );
+      };
+
+      const ProxyDemo = () => {
+        const [entries, push] = useCallLog();
+        return (
+          <div id="proxy" className="demo-section">
+            <h2>Proxy</h2>
+            <p>
+              Any element can act as a proxy for a checkbox using the{" "}
+              <code>navi-control-proxy-for</code> attribute. On mousedown the
+              checkbox receives focus; on click the proxy's <code>value</code>{" "}
+              prop is forwarded as the new checked state.
+            </p>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "24px",
+              }}
+            >
+              <div>
+                <div
+                  style={{
+                    marginBottom: "8px",
+                    color: "#888",
+                    fontWeight: "600",
+                    fontSize: "0.75rem",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.06em",
+                  }}
+                >
+                  Proxy buttons
+                </div>
+                <Box flex="y" spacing="s">
+                  <Button
+                    action="update"
+                    action-target="checkbox_being_proxied"
+                    value={true}
+                    navi-control-proxy-for="checkbox_being_proxied"
+                  >
+                    Check
+                  </Button>
+                  <Button
+                    action="update"
+                    action-target="checkbox_being_proxied"
+                    value={false}
+                    navi-control-proxy-for="checkbox_being_proxied"
+                  >
+                    Uncheck
+                  </Button>
+                </Box>
+              </div>
+              <div>
+                <div
+                  style={{
+                    marginBottom: "8px",
+                    color: "#888",
+                    fontWeight: "600",
+                    fontSize: "0.75rem",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.06em",
+                  }}
+                >
+                  Checkbox (the actual field)
+                </div>
+                <Field>
+                  <Input
+                    type="checkbox"
+                    id="checkbox_being_proxied"
+                    name="checkbox_being_proxied"
+                    uiAction={(v) => push("uiAction", v)}
+                    action={(v) => push("action", v)}
+                    onInput={(e) => push("input", e.target.checked)}
+                  />
+                  Option
+                </Field>
+              </div>
+            </div>
+            <CallLog entries={entries} />
+          </div>
         );
       };
 

@@ -83,7 +83,7 @@ export const CallLog = ({ entries }) => {
             >
               {entry.type}
             </span>
-            <span className="value">← {JSON.stringify(entry.value)}</span>
+            <span className="value">← {formatValue(entry.value)}</span>
           </div>
         ))}
       </div>
@@ -97,6 +97,12 @@ export const CallLog = ({ entries }) => {
       </div>
     </div>
   );
+};
+const formatValue = (value) => {
+  if (value === undefined) {
+    return "undefined";
+  }
+  return JSON.stringify(value);
 };
 
 export const useCallLog = () => {
