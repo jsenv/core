@@ -98,6 +98,8 @@
         Form,
         Button,
         BadgeCount,
+        useSearchText,
+        Input,
       } from "@jsenv/navi";
 
       const App = () => {
@@ -815,10 +817,11 @@
 
       const FilteredRequiredDemo = () => {
         const [selected, setSelected] = useState("Apple");
-        const [filter, setFilter] = useState("ban");
         const [submitted, setSubmitted] = useState(null);
-        const visibleFruits = FRUITS.filter((f) =>
-          f.toLowerCase().includes(filter.toLowerCase()),
+        const [searchText, setSearchText] = useState("ban");
+        const [matchingFruits, getFruitMatchInfo] = useSearchText(
+          searchText,
+          FRUITS,
         );
 
         return (
@@ -828,19 +831,18 @@
               setSelected(fruit);
             }}
           >
-            <input
-              type="text"
+            <Input
+              type="search"
               placeholder="Filter fruits…"
-              value={filter}
-              onInput={(e) => setFilter(e.currentTarget.value)}
-              style={{
-                marginBottom: 8,
-                padding: "6px 8px",
-                borderRadius: 4,
-                border: "1px solid #ccc",
-                width: "100%",
-                boxSizing: "border-box",
+              value={searchText}
+              action={(v) => {
+                setSearchText(v);
               }}
+              marginBottom="m"
+              borderRadius="xs"
+              paddingX="s"
+              paddingY="xs"
+              expandX
             />
             <SelectableList
               name="fruit"
@@ -848,25 +850,32 @@
               action={(v) => {
                 setSelected(v ?? null);
               }}
+              expandX
             >
-              {visibleFruits.map((fruit, i) => (
-                <Selectable
-                  key={fruit}
-                  index={i}
-                  id={`freqd_${fruit.toLowerCase()}`}
-                  value={fruit}
-                  selected={selected === fruit}
-                  flex
-                  spacing="s"
-                >
-                  <Selectable.Input />
-                  {fruit}
-                </Selectable>
-              ))}
+              {matchingFruits.map((fruit, i) => {
+                const { match, score, ranges } = getFruitMatchInfo(fruit);
+                return (
+                  <Selectable
+                    key={fruit}
+                    index={i}
+                    id={`freqd_${fruit.toLowerCase()}`}
+                    value={fruit}
+                    selected={selected === fruit}
+                    highlight={ranges}
+                    matchScore={score}
+                    filtered={!match}
+                    flex
+                    spacing="s"
+                  >
+                    <Selectable.Input />
+                    {fruit}
+                  </Selectable>
+                );
+              })}
             </SelectableList>
             <div style={{ marginTop: 8, fontSize: "0.85rem", color: "#666" }}>
               Selected: <strong>{selected ?? "(none)"}</strong>
-              {selected && !visibleFruits.includes(selected)
+              {selected && !matchingFruits.includes(selected)
                 ? " (hidden by filter)"
                 : ""}
             </div>
