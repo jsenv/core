@@ -231,6 +231,14 @@ export const useControlProps = (
     };
     const lastEventRequestingActionRef = useRef();
     const lastActionValueRef = useRef();
+    // Keep lastActionValueRef in sync with state changes that happen outside of asAction
+    // (e.g. radio_sibling_uncheck when another radio in the group becomes checked).
+    // Otherwise the dedup below would wrongly skip a real user click that re-checks a radio
+    // whose lastActionValueRef still matched a value from a previous interaction.
+    controlProps.onnavi_ui_state_change = (e) => {
+      lastActionValueRef.current = e.detail.value;
+    };
+
     const asAction = (interaction, e, { ifValueModified }) => {
       if (actionInteraction === "custom") {
         return false;

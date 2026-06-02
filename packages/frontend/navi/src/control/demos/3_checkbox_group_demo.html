@@ -46,6 +46,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
+      import { CallLog, useCallLog } from "./utils/call_log.jsx";
       import {
         Button,
         Form,
@@ -71,7 +72,7 @@
       };
 
       const StandaloneDemo = () => {
-        const [lastCall, setLastCall] = useState(undefined);
+        const [entries, push, clear] = useCallLog();
         return (
           <div class="demo-section">
             <h2>Standalone</h2>
@@ -83,7 +84,7 @@
             <CheckboxGroup
               name="standalone_options"
               action={(values) => {
-                setLastCall(values);
+                push("action", values);
               }}
             >
               <legend>Pick options</legend>
@@ -102,20 +103,7 @@
                 </Field>
               </Box>
             </CheckboxGroup>
-            <p
-              style={{
-                marginTop: "12px",
-                color: "#555",
-                fontFamily: "monospace",
-              }}
-            >
-              Last action call:{" "}
-              {lastCall === undefined ? (
-                <em>none</em>
-              ) : (
-                JSON.stringify(lastCall)
-              )}
-            </p>
+            <CallLog entries={entries} onClear={clear} />
           </div>
         );
       };
