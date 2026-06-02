@@ -439,7 +439,9 @@ export const useControlgroupProps = (
 const controlPropSet = new Set([
   "ref",
   "action",
+  "actionInteraction",
   "actionAfterChange",
+  "actionOnMouseDown",
   "actionDebounce",
   "children",
 
@@ -619,13 +621,17 @@ const useInteractiveProps = (
       errorEffect: actionErrorEffect,
       errorMapping,
     });
+    const dataAction =
+      action === undefined
+        ? undefined
+        : typeof action === "string"
+          ? action
+          : boundAction.callSource;
     Object.assign(controlProps, {
-      "data-action":
-        action === undefined
-          ? undefined
-          : typeof action === "string"
-            ? action
-            : boundAction.callSource,
+      "data-action": dataAction,
+    });
+    Object.assign(remainingProps, {
+      "data-action": dataAction,
     });
 
     const {

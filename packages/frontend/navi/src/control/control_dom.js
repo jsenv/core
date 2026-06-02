@@ -38,21 +38,29 @@ export const findControlHost = (el) => {
 };
 
 /**
- * Returns the nearest ancestor of `el` (exclusive) that has a `[data-action]`
- * attribute.
+ * Returns the nearest ancestor of `el` (exclusive of `el`'s own control) that
+ * has a `[data-action]` attribute.
  *
- * Because [data-action] is set on the host we can use .closest
+ * `data-action` is set on both the control host and the control root/wrapper,
+ * so we must first escape `el`'s own control boundary before searching — otherwise
+ * `.closest("[data-action]")` would land on the wrapper of the same control.
  *
  * ```html
- * <form data-action="something_else">                      ← found by closest
- *   <span navi-control>                                    ← wrapper, no data-action
- *     <input navi-control-host data-action="something" />  ← el, might have data-action
+ * <form data-action="something_else">                      ← found
+ *   <span navi-control data-action="something">            ← own root, skipped
+ *     <input navi-control-host data-action="something" />  ← el
  *   </span>
  * </form>
  * ```
  */
 export const findClosestControlWithAction = (el) => {
-  return el.parentNode.closest("[data-action]");
+  // Walk up to the own control root first (same as getParentControl does),
+  // then look for [data-action] on an ancestor. This is needed because
+  // data-action is now set on both the host and the control root/wrapper,
+  // so starting from el.parentNode alone could hit the wrapper of the same
+  // control rather than a true ancestor control.
+  const ownControlRoot = el.closest("[navi-control]") || el;
+  return ownControlRoot.parentNode.closest("[data-action]");
 };
 
 /**
