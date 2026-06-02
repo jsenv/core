@@ -275,10 +275,10 @@
                 <legend>Sync action</legend>
                 <Button
                   action={() => {
-                    push("action");
+                    push("Button action");
                   }}
                   onClick={() => {
-                    push("onClick");
+                    push("Button onClick");
                   }}
                 >
                   Click me
@@ -286,15 +286,45 @@
               </fieldset>
 
               <fieldset>
+                <legend>Sync action — button with value</legend>
+                <Box flex="y" alignX="start" spacing="s">
+                  <Button
+                    name="choice"
+                    value={true}
+                    action={({ choice }) => {
+                      push("Button action", { choice });
+                    }}
+                    onClick={() => {
+                      push("Button onClick");
+                    }}
+                  >
+                    Yes
+                  </Button>
+                  <Button
+                    name="choice"
+                    value={false}
+                    action={({ choice }) => {
+                      push("Button action", { choice });
+                    }}
+                    onClick={() => {
+                      push("Button onClick");
+                    }}
+                  >
+                    No
+                  </Button>
+                </Box>
+              </fieldset>
+
+              <fieldset>
                 <legend>Async action that fails</legend>
                 <Button
                   action={async () => {
-                    push("action");
+                    push("Button action");
                     await new Promise((r) => setTimeout(r, 800));
                     throw new Error("Something went wrong");
                   }}
                   onClick={() => {
-                    push("onClick");
+                    push("Button onClick");
                   }}
                 >
                   Fail after 800ms
@@ -305,11 +335,11 @@
                 <legend>Async action that succeeds</legend>
                 <Button
                   action={async () => {
-                    push("action");
+                    push("Button action");
                     await new Promise((r) => setTimeout(r, 800));
                   }}
                   onClick={() => {
-                    push("onClick");
+                    push("Button onClick");
                   }}
                 >
                   Succeed after 800ms
@@ -341,7 +371,7 @@
                 <legend>Submit button triggers form action</legend>
                 <Form
                   action={async ({ username }) => {
-                    push("action", { username });
+                    push("Form action", { username });
                     await new Promise((r) => setTimeout(r, 800));
                   }}
                 >
@@ -354,7 +384,7 @@
                     <Button
                       type="submit"
                       onClick={() => {
-                        push("onClick");
+                        push("Button onClick");
                       }}
                     >
                       Submit
@@ -391,7 +421,7 @@
                 </legend>
                 <Form
                   action={async ({ title, submitAction }) => {
-                    push("action", { title, submitAction });
+                    push("Form action", { title, submitAction });
                     await new Promise((r) => setTimeout(r, 800));
                   }}
                 >
@@ -407,7 +437,7 @@
                         name="submitAction"
                         value="save"
                         onClick={() => {
-                          push("onClick", "save");
+                          push("Button onClick", "save");
                         }}
                       >
                         Save draft
@@ -417,7 +447,7 @@
                         name="submitAction"
                         value="publish"
                         onClick={() => {
-                          push("onClick", "publish");
+                          push("Button onClick", "publish");
                         }}
                       >
                         Publish
@@ -455,7 +485,7 @@
                 </legend>
                 <Form
                   action={async ({ query }) => {
-                    push("action", { query });
+                    push("Form action", { query });
                     await new Promise((r) => setTimeout(r, 800));
                   }}
                 >
@@ -468,11 +498,11 @@
                     <Box row spacing="s">
                       <Button
                         action={async ({ query }) => {
-                          push("action (preview)", { query });
+                          push("Button action", { query });
                           await new Promise((r) => setTimeout(r, 800));
                         }}
                         onClick={() => {
-                          push("onClick", "preview");
+                          push("Button onClick", "preview");
                         }}
                       >
                         Preview
@@ -480,7 +510,7 @@
                       <Button
                         type="submit"
                         onClick={() => {
-                          push("onClick", "search");
+                          push("Button onClick", "search");
                         }}
                       >
                         Search
