@@ -258,7 +258,9 @@ export const useUIStateController = (
           uiStateController.state = stateFromProp;
           uiStateController.setUIState(
             uiStateController.getPropFromState(state),
-            new CustomEvent("state_prop"),
+            new CustomEvent("state_prop", {
+              detail: { internalBehavior: true },
+            }),
           );
         }
       } else if (uiStateController.hasStateProp) {

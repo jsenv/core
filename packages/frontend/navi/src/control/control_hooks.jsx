@@ -324,7 +324,7 @@ export const useControlProps = (
     };
     const refCallback = useCallback(
       (field) => {
-        if (!inputEffect || actionInteraction === "manual") {
+        if (!inputEffect || actionInteraction === "manual" || isCheckable) {
           return undefined;
         }
         return addInputEffect(
