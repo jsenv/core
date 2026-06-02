@@ -390,10 +390,7 @@
                   colorSignal.value = v;
                 }}
               >
-                <SelectableList
-                  selectedIndicator="backgroundColor"
-                  action="submit"
-                >
+                <SelectableList action="send">
                   {SWATCHES.map(({ label, value }, i) => (
                     <Selectable
                       key={value}

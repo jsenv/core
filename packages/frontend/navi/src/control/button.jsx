@@ -493,7 +493,7 @@ const ButtonInsideForm = (props) => {
   return (
     <Next
       // The default action for a button inside a form is to request form action
-      action="submit"
+      action="send"
       {...props}
     />
   );
