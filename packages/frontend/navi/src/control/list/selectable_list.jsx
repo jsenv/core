@@ -353,6 +353,7 @@ export const Selectable = (props) => {
         ...basePseudoState,
       }}
       aria-selected={checked}
+      selected={checked}
     >
       <Field
         as={selectableArea === "manual" ? "div" : undefined}
