@@ -288,6 +288,7 @@ const PickerButton = (props) => {
       data-single-line={singleLine ? "" : undefined}
       {...pickerRemainingProps}
       basePseudoState={basePseudoState}
+      styleCSSVars={PickerStyleCSSVars}
       // we must put the id on the button and not the input
       // so that a <label> tries to give focus to the button and not the input
       id={id}
@@ -366,6 +367,36 @@ const PickerInputPseudoClasses = [
   ":-navi-has-value",
   ":-navi-expanded",
 ];
+
+const PickerStyleCSSVars = {
+  "outlineWidth": "--picker-outline-width",
+  "borderWidth": "--picker-border-width",
+  "borderRadius": "--picker-border-radius",
+  "padding": "--picker-padding",
+  "paddingX": "--picker-padding-x",
+  "paddingY": "--picker-padding-y",
+  "paddingTop": "--picker-padding-top",
+  "paddingRight": "--picker-padding-right",
+  "paddingBottom": "--picker-padding-bottom",
+  "paddingLeft": "--picker-padding-left",
+  "borderColor": "--picker-border-color",
+  "backgroundColor": "--picker-background-color",
+  "color": "--picker-color",
+  ":hover": {
+    backgroundColor: "--picker-background-color-hover",
+    borderColor: "--picker-border-color-hover",
+  },
+  ":read-only": {
+    backgroundColor: "--picker-background-color-readonly",
+    borderColor: "--picker-border-color-readonly",
+    color: "--picker-color-readonly",
+  },
+  ":disabled": {
+    backgroundColor: "--picker-background-color-disabled",
+    borderColor: "--picker-border-color-disabled",
+    color: "--picker-color-disabled",
+  },
+};
 
 const PickerDefaultUI = () => {
   const { value, placeholder } = useContext(PickerContext);
