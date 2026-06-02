@@ -22,6 +22,38 @@
         border-radius: 8px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       }
+      .call-log {
+        min-height: 32px;
+        margin-top: 16px;
+        padding: 10px 12px;
+        font-size: 12px;
+        font-family: monospace;
+        background: #f9f9f9;
+        border: 1px solid #e0e0e0;
+        border-radius: 6px;
+      }
+      .call-log-entry {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        line-height: 1.6;
+      }
+      .call-log-entry .count {
+        min-width: 20px;
+        color: #888;
+        font-size: 11px;
+      }
+      .call-log-entry .label-ui {
+        color: #c07000;
+        font-weight: bold;
+      }
+      .call-log-entry .label-action {
+        color: #1a56cc;
+        font-weight: bold;
+      }
+      .call-log-entry .value {
+        color: #333;
+      }
       h1 {
         margin-bottom: 24px;
         font-size: 1.4rem;
@@ -65,6 +97,33 @@
         "Grape",
       ];
 
+      const CallLog = ({ entries }) => {
+        if (entries.length === 0) {
+          return (
+            <div class="call-log" style="color: #aaa">
+              No calls yet…
+            </div>
+          );
+        }
+        return (
+          <div class="call-log">
+            {entries.map((entry, i) => (
+              <div key={i} class="call-log-entry">
+                <span class="count">#{i + 1}</span>
+                <span
+                  class={
+                    entry.type === "uiAction" ? "label-ui" : "label-action"
+                  }
+                >
+                  {entry.type}
+                </span>
+                <span class="value">← {JSON.stringify(entry.value)}</span>
+              </div>
+            ))}
+          </div>
+        );
+      };
+
       const App = () => (
         <Box flex="y" spacing="l">
           <SelectWithSend />
@@ -80,6 +139,11 @@
       const SelectWithSend = () => {
         const selectedSignal = useSignal("Banana");
         const selected = selectedSignal.value;
+        const logSignal = useSignal([]);
+
+        const pushLog = (type, value) => {
+          logSignal.value = [...logSignal.value, { type, value }];
+        };
 
         return (
           <div class="demo-section">
@@ -97,7 +161,11 @@
                 name="select_send"
                 placeholder="Select a fruit…"
                 value={selected}
+                uiAction={(v) => {
+                  pushLog("uiAction", v);
+                }}
                 action={(v) => {
+                  pushLog("action", v);
                   selectedSignal.value = v;
                 }}
                 minWidth="200"
@@ -119,6 +187,7 @@
                 </SelectableList>
               </Picker>
             </Field>
+            <CallLog entries={logSignal.value} />
           </div>
         );
       };
@@ -132,6 +201,11 @@
       const SelectWithUpdate = () => {
         const selectedSignal = useSignal("Banana");
         const selected = selectedSignal.value;
+        const logSignal = useSignal([]);
+
+        const pushLog = (type, value) => {
+          logSignal.value = [...logSignal.value, { type, value }];
+        };
 
         return (
           <div class="demo-section">
@@ -153,7 +227,11 @@
                 name="select_update"
                 placeholder="Select a fruit…"
                 value={selected}
+                uiAction={(v) => {
+                  pushLog("uiAction", v);
+                }}
                 action={(v) => {
+                  pushLog("action", v);
                   selectedSignal.value = v;
                 }}
                 minWidth="200"
@@ -175,6 +253,7 @@
                 </SelectableList>
               </Picker>
             </Field>
+            <CallLog entries={logSignal.value} />
           </div>
         );
       };
