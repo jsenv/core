@@ -320,6 +320,7 @@ const RangeNativeInput = (props) => {
     <Box
       {...props}
       {...rangeBoxProps}
+      updateFillRatio={undefined}
       as="input"
       type="range"
       baseClassName="navi_control_input"
