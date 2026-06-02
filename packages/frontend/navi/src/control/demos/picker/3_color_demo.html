@@ -81,7 +81,6 @@
       const App = () => (
         <Box flex="y" spacing="l">
           <TableOfContents />
-          <InteractivityDemo />
           <StatesDemo />
           <WithActionDemo />
           <InFormDemo />
@@ -95,16 +94,18 @@
           <h2>Table of contents</h2>
           <ol style={{ margin: 0, paddingLeft: "20px", lineHeight: "2" }}>
             <li>
-              <a href="#interactivity">Interactivity</a>
-            </li>
-            <li>
               <a href="#states">États</a>
             </li>
             <li>
-              <a href="#with-action">Avec une action</a>
-            </li>
-            <li>
-              <a href="#in-form">Dans un form</a>
+              Interactivity
+              <ol style={{ paddingLeft: "20px" }}>
+                <li>
+                  <a href="#outside-form">Outside a form</a>
+                </li>
+                <li>
+                  <a href="#inside-form">Inside a form</a>
+                </li>
+              </ol>
             </li>
             <li>
               <a href="#validation">Validation</a>
@@ -115,37 +116,6 @@
           </ol>
         </div>
       );
-
-      // ── 0. Interactivity ─────────────────────────────────────────────────
-
-      const InteractivityDemo = () => {
-        const [entries, push, clear] = useCallLog();
-
-        return (
-          <div class="demo-section" id="interactivity">
-            <h2>0. Interactivity</h2>
-            <p class="desc">
-              Observe when <code>uiAction</code> and <code>action</code> are
-              called and with what value.
-            </p>
-            <Field vertical>
-              <Label>Color</Label>
-              <Picker
-                name="interactivity_color"
-                type="color"
-                defaultValue="#3b82f6"
-                uiAction={(v) => {
-                  push("Picker uiAction", v);
-                }}
-                action={(v) => {
-                  push("Picker action", v);
-                }}
-              />
-            </Field>
-            <CallLog entries={entries} onClear={clear} />
-          </div>
-        );
-      };
 
       // ── 1. États ──────────────────────────────────────────────────────────
 
@@ -245,60 +215,57 @@
         );
       };
 
-      // ── 2. Avec une action ────────────────────────────────────────────────
+      // ── 2. Interactivity — outside a form ───────────────────────────────────
 
       const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
       const WithActionDemo = () => {
+        const [entries, push, clear] = useCallLog();
         const colorSignal = useSignal("#3b82f6");
-        const savedColorSignal = useSignal("#3b82f6");
 
         return (
-          <div class="demo-section" id="with-action">
-            <h2>2. Avec une action</h2>
+          <div class="demo-section" id="outside-form">
+            <h2>2. Interactivity — outside a form</h2>
             <p class="desc">
               L'action est asynchrone (simule un appel réseau de 800 ms). Le
               picker passe en état loading pendant ce temps.
             </p>
-            <Box flex="y" spacing="s" alignX="start">
-              <Field vertical>
-                <Label>Couleur du thème</Label>
-                <Picker
-                  name="theme_color"
-                  type="color"
-                  value={colorSignal.value}
-                  action={async (v) => {
-                    await sleep(800);
-                    colorSignal.value = v;
-                    savedColorSignal.value = v;
-                  }}
-                />
-              </Field>
-              <p class="value-display">
-                Dernière valeur sauvegardée :{" "}
-                <strong style={{ color: savedColorSignal.value }}>
-                  {savedColorSignal.value}
-                </strong>
-              </p>
-            </Box>
+            <Field vertical>
+              <Label>Couleur du thème</Label>
+              <Picker
+                name="theme_color"
+                type="color"
+                value={colorSignal.value}
+                uiAction={(v) => {
+                  push("Picker uiAction", v);
+                }}
+                action={async (v) => {
+                  push("Picker action", v);
+                  await sleep(800);
+                  colorSignal.value = v;
+                }}
+              />
+            </Field>
+            <CallLog entries={entries} onClear={clear} />
           </div>
         );
       };
 
-      // ── 3. Dans un form ───────────────────────────────────────────────────
+      // ── 3. Interactivity — inside a form ─────────────────────────────────
 
       const InFormDemo = () => {
-        const submittedSignal = useSignal(null);
+        const [entries, push, clear] = useCallLog();
+
         return (
-          <div class="demo-section" id="in-form">
-            <h2>3. Dans un form</h2>
+          <div class="demo-section" id="inside-form">
+            <h2>3. Interactivity — inside a form</h2>
             <p class="desc">
               Le picker participe à la soumission du formulaire comme n'importe
               quel champ.
             </p>
             <Form
               action={(values) => {
-                submittedSignal.value = values;
+                push("Form action", values);
               }}
               flex="y"
               spacing="m"
@@ -306,19 +273,27 @@
             >
               <Field vertical>
                 <Label>Couleur principale</Label>
-                <Picker name="primary_color" type="color" />
+                <Picker
+                  name="primary_color"
+                  type="color"
+                  uiAction={(v) => {
+                    push("Picker uiAction (primary)", v);
+                  }}
+                />
               </Field>
               <Field vertical>
                 <Label>Couleur secondaire</Label>
-                <Picker name="secondary_color" type="color" />
+                <Picker
+                  name="secondary_color"
+                  type="color"
+                  uiAction={(v) => {
+                    push("Picker uiAction (secondary)", v);
+                  }}
+                />
               </Field>
               <Button type="submit">Soumettre</Button>
-              {submittedSignal.value && (
-                <pre style="margin:0;font-size:12px;background:#f0f0f0;padding:8px;border-radius:4px;width:100%;box-sizing:border-box;">
-                  {JSON.stringify(submittedSignal.value, null, 2)}
-                </pre>
-              )}
             </Form>
+            <CallLog entries={entries} onClear={clear} />
           </div>
         );
       };
