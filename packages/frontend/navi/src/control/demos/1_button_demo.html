@@ -291,8 +291,8 @@
                   <Button
                     name="choice"
                     value={true}
-                    action={({ choice }) => {
-                      push("Button action", { choice });
+                    action={(value) => {
+                      push("Button action", value);
                     }}
                     onClick={() => {
                       push("Button onClick");
@@ -303,8 +303,8 @@
                   <Button
                     name="choice"
                     value={false}
-                    action={({ choice }) => {
-                      push("Button action", { choice });
+                    action={(value) => {
+                      push("Button action", value);
                     }}
                     onClick={() => {
                       push("Button onClick");
