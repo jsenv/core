@@ -617,104 +617,124 @@
       };
 
       const ActionHandlingDemo = () => {
-        const [immediateCallCount, setImmediateCallCount] = useState(0);
-        const [slowCallCount, setSlowCallCount] = useState(0);
-        const [debouncedCallCount, setDebouncedCallCount] = useState(0);
         const [immediateLog, pushImmediateLog] = useCallLog();
         const [slowLog, pushSlowLog] = useCallLog();
         const [debouncedLog, pushDebouncedLog] = useCallLog();
 
-        const slowAction = async (value, setter, counter, setCounter) => {
-          setCounter((c) => c + 1);
+        const slowAction = async (value, setter) => {
           await new Promise((resolve) => setTimeout(resolve, 1500));
           setter(value);
         };
 
-        const CircleVisualization = ({ radius, label, callCount }) => {
-          const circleMaxRadius = 100 * 0.2;
-          const circleRadius = radius * 0.2;
+        const CircleVisualization = ({ radius }) => {
+          const maxSize = 100;
+          const size = radius * 0.8;
           return (
-            <Box row>
-              <Box
-                row
-                relative
-                align="center"
-                width={circleMaxRadius}
-                height={circleMaxRadius}
-                background="#eee"
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: "6px",
+              }}
+            >
+              <div
+                style={{
+                  width: `${maxSize}px`,
+                  height: `${maxSize}px`,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  background: "#f0f4f8",
+                  borderRadius: "6px",
+                  border: "1px solid #dde3ea",
+                }}
               >
-                <Box
-                  width={circleRadius}
-                  height={circleRadius}
-                  circle
-                  background="linear-gradient(135deg, #007bff, #0056b3)"
+                <div
+                  style={{
+                    width: `${size}px`,
+                    height: `${size}px`,
+                    borderRadius: "50%",
+                    background: "linear-gradient(135deg, #007bff, #0056b3)",
+                    transition: "width 0.15s, height 0.15s",
+                  }}
                 />
-              </Box>
-              <Box>
-                <div style={{ fontSize: "0.8rem", color: "#666" }}>{label}</div>
-                <div style={{ fontSize: "0.75rem", color: "#999" }}>
-                  Radius: {radius}px | Calls: {callCount}
-                </div>
-              </Box>
-            </Box>
+              </div>
+              <div
+                style={{
+                  fontSize: "0.75rem",
+                  color: "#888",
+                  fontFamily: "monospace",
+                }}
+              >
+                r = {radius}px
+              </div>
+            </div>
           );
         };
 
         const AfterChangeDemo = () => {
-          const [uiValue, setUIValue] = useState(50); // Immediate UI state
-          const [processedRadius, setProcessedRadius] = useState(50); // Async processed state
-          const [afterChangeCallCount, setAfterChangeCallCount] = useState(0);
+          const [uiValue, setUIValue] = useState(50);
+          const [processedRadius, setProcessedRadius] = useState(50);
           const [afterChangeLog, pushAfterChangeLog] = useCallLog();
 
           return (
             <fieldset>
-              <legend>Action After Change with Separate UI State</legend>
+              <legend>Action After Change</legend>
               <p className="states-description">
-                Using <code>uiAction</code> for immediate UI updates and{" "}
-                <code>actionAfterChange</code>
-                for async processing. The slider shows the current UI value
-                instantly, but the circle radius represents the processed result
-                updated only after the action completes.
+                <code>uiAction</code> updates the slider display immediately;{" "}
+                <code>actionAfterChange</code> fires the async action only once
+                the user stops dragging.
               </p>
-              <Box column spacing="sm">
-                <Input
-                  type="range"
-                  min="10"
-                  max="100"
-                  value={uiValue}
-                  uiAction={(value) => {
-                    setUIValue(value);
-                    pushAfterChangeLog("uiAction", value);
-                  }}
-                  action={(value) => {
-                    pushAfterChangeLog("action", value);
-                    return slowAction(
-                      value,
-                      setProcessedRadius,
-                      afterChangeCallCount,
-                      setAfterChangeCallCount,
-                    );
-                  }}
-                  actionAfterChange
-                />
-                <Box flex spacing="s">
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "16px",
+                  alignItems: "center",
+                }}
+              >
+                <div>
                   <div
                     style={{
-                      fontSize: "0.85rem",
+                      fontSize: "0.8rem",
                       color: "#666",
-                      textAlign: "center",
+                      marginBottom: "6px",
                     }}
                   >
-                    UI Value: {uiValue}px (immediate)
+                    Slider (immediate UI)
                   </div>
-                  <CircleVisualization
-                    radius={processedRadius}
-                    label="Processed Radius (updates after action completes)"
-                    callCount={afterChangeCallCount}
+                  <Input
+                    type="range"
+                    min="10"
+                    max="100"
+                    value={uiValue}
+                    uiAction={(value) => {
+                      setUIValue(value);
+                      pushAfterChangeLog("uiAction", value);
+                    }}
+                    action={(value) => {
+                      pushAfterChangeLog("action", value);
+                      return slowAction(value, setProcessedRadius);
+                    }}
+                    actionAfterChange
                   />
-                </Box>
-                <CallLog entries={afterChangeLog} />
-              </Box>
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: "4px",
+                  }}
+                >
+                  <div style={{ fontSize: "0.8rem", color: "#666" }}>
+                    Circle (after action)
+                  </div>
+                  <CircleVisualization radius={processedRadius} />
+                </div>
+              </div>
+              <CallLog entries={afterChangeLog} />
             </fieldset>
           );
         };
@@ -726,105 +746,171 @@
             <fieldset>
               <legend>Immediate Action</legend>
               <p className="states-description">
-                Basic action called immediately on every input value change.
+                Action called immediately on every input change.
               </p>
-              <Box column spacing="sm" alignX="start" alignY="center">
-                <Input
-                  type="range"
-                  min="10"
-                  max="100"
-                  value={immediateRadiusSignal}
-                  uiAction={(value) => {
-                    pushImmediateLog("uiAction", value);
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "16px",
+                  alignItems: "center",
+                }}
+              >
+                <div>
+                  <div
+                    style={{
+                      fontSize: "0.8rem",
+                      color: "#666",
+                      marginBottom: "6px",
+                    }}
+                  >
+                    Slider
+                  </div>
+                  <Input
+                    type="range"
+                    min="10"
+                    max="100"
+                    value={immediateRadiusSignal}
+                    uiAction={(value) => {
+                      pushImmediateLog("uiAction", value);
+                    }}
+                    action={(value) => {
+                      immediateRadiusSignal.value = value;
+                      pushImmediateLog("action", value);
+                    }}
+                  />
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: "4px",
                   }}
-                  action={(value) => {
-                    immediateRadiusSignal.value = value;
-                    setImmediateCallCount((c) => c + 1);
-                    pushImmediateLog("action", value);
-                  }}
-                />
-                <CircleVisualization
-                  radius={immediateRadiusSignal.value}
-                  label="Immediate Response"
-                  callCount={immediateCallCount}
-                />
-                <CallLog entries={immediateLog} />
-              </Box>
+                >
+                  <div style={{ fontSize: "0.8rem", color: "#666" }}>
+                    Circle
+                  </div>
+                  <CircleVisualization radius={immediateRadiusSignal.value} />
+                </div>
+              </div>
+              <CallLog entries={immediateLog} />
             </fieldset>
 
             <fieldset>
-              <legend>Slow Action (Poor UX)</legend>
+              <legend>Async Action (Poor UX)</legend>
               <p className="states-description">
-                When the action takes time, it blocks and creates poor user
-                experience.
+                When the action takes time it blocks interaction — the input
+                stays loading until it finishes.
               </p>
-              <Box column spacing="sm">
-                <Input
-                  type="range"
-                  name="slow_action"
-                  min="10"
-                  max="100"
-                  value={slowRadiusSignal}
-                  uiAction={(value) => {
-                    pushSlowLog("uiAction", value);
-                  }}
-                  action={(value) => {
-                    pushSlowLog("action", value);
-                    return slowAction(
-                      parseInt(value),
-                      (v) => {
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "16px",
+                  alignItems: "center",
+                }}
+              >
+                <div>
+                  <div
+                    style={{
+                      fontSize: "0.8rem",
+                      color: "#666",
+                      marginBottom: "6px",
+                    }}
+                  >
+                    Slider
+                  </div>
+                  <Input
+                    type="range"
+                    name="slow_action"
+                    min="10"
+                    max="100"
+                    value={slowRadiusSignal}
+                    uiAction={(value) => {
+                      pushSlowLog("uiAction", value);
+                    }}
+                    action={(value) => {
+                      pushSlowLog("action", value);
+                      return slowAction(parseInt(value), (v) => {
                         slowRadiusSignal.value = v;
-                      },
-                      slowCallCount,
-                      setSlowCallCount,
-                    );
+                      });
+                    }}
+                  />
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: "4px",
                   }}
-                />
-                <CircleVisualization
-                  radius={slowRadiusSignal.value}
-                  label="Slow Response (1.5s delay)"
-                  callCount={slowCallCount}
-                />
-                <CallLog entries={slowLog} />
-              </Box>
+                >
+                  <div style={{ fontSize: "0.8rem", color: "#666" }}>
+                    Circle (1.5s delay)
+                  </div>
+                  <CircleVisualization radius={slowRadiusSignal.value} />
+                </div>
+              </div>
+              <CallLog entries={slowLog} />
             </fieldset>
 
             <fieldset>
               <legend>Debounced Action (Better UX)</legend>
               <p className="states-description">
-                Using <code>actionDebounce={"300"}</code> waits 300ms before
-                executing the slow action, making the experience much smoother
-                during dragging.
+                <code>actionDebounce={400}</code> waits 400ms after the user
+                stops dragging before firing the async action.
               </p>
-              <Box flex spacing="s">
-                <Input
-                  type="range"
-                  min="10"
-                  max="100"
-                  value={debouncedRadiusSignal}
-                  uiAction={(value) => {
-                    pushDebouncedLog("uiAction", value);
-                  }}
-                  action={(value) => {
-                    pushDebouncedLog("action", value);
-                    return slowAction(
-                      parseInt(value),
-                      (v) => {
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "16px",
+                  alignItems: "center",
+                }}
+              >
+                <div>
+                  <div
+                    style={{
+                      fontSize: "0.8rem",
+                      color: "#666",
+                      marginBottom: "6px",
+                    }}
+                  >
+                    Slider
+                  </div>
+                  <Input
+                    type="range"
+                    min="10"
+                    max="100"
+                    value={debouncedRadiusSignal}
+                    uiAction={(value) => {
+                      pushDebouncedLog("uiAction", value);
+                    }}
+                    action={(value) => {
+                      pushDebouncedLog("action", value);
+                      return slowAction(parseInt(value), (v) => {
                         debouncedRadiusSignal.value = v;
-                      },
-                      debouncedCallCount,
-                      setDebouncedCallCount,
-                    );
+                      });
+                    }}
+                    actionDebounce={400}
+                  />
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: "4px",
                   }}
-                  actionDebounce={400}
-                />
-                <CircleVisualization
-                  radius={debouncedRadiusSignal.value}
-                  label="Debounced Response (300ms + 1.5s delay)"
-                  callCount={debouncedCallCount}
-                />
-                <CallLog entries={debouncedLog} />
-              </Box>
+                >
+                  <div style={{ fontSize: "0.8rem", color: "#666" }}>
+                    Circle (400ms + 1.5s delay)
+                  </div>
+                  <CircleVisualization radius={debouncedRadiusSignal.value} />
+                </div>
+              </div>
+              <CallLog entries={debouncedLog} />
             </fieldset>
 
             <AfterChangeDemo />

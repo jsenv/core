@@ -35,6 +35,20 @@ const css = /* css */ `
   .call-log-entry .value {
     color: #333;
   }
+  .call-log-summary {
+    display: flex;
+    margin-top: 6px;
+    gap: 16px;
+    color: #888;
+    font-size: 11px;
+    font-family: monospace;
+  }
+  .call-log-summary .summary-ui {
+    color: #c07000;
+  }
+  .call-log-summary .summary-action {
+    color: #1a56cc;
+  }
 `;
 
 export const CallLog = ({ entries }) => {
@@ -45,6 +59,10 @@ export const CallLog = ({ entries }) => {
       containerRef.current.scrollTop = containerRef.current.scrollHeight;
     }
   }, [entries]);
+
+  const uiActionCount = entries.filter((e) => e.type === "uiAction").length;
+  const actionCount = entries.filter((e) => e.type === "action").length;
+
   if (entries.length === 0) {
     return (
       <div className="call-log" style="color: #aaa">
@@ -53,18 +71,30 @@ export const CallLog = ({ entries }) => {
     );
   }
   return (
-    <div className="call-log" ref={containerRef}>
-      {entries.map((entry, i) => (
-        <div key={i} className="call-log-entry">
-          <span className="count">#{i + 1}</span>
-          <span
-            className={entry.type === "uiAction" ? "label-ui" : "label-action"}
-          >
-            {entry.type}
-          </span>
-          <span className="value">← {JSON.stringify(entry.value)}</span>
-        </div>
-      ))}
+    <div>
+      <div className="call-log" ref={containerRef}>
+        {entries.map((entry, i) => (
+          <div key={i} className="call-log-entry">
+            <span className="count">#{i + 1}</span>
+            <span
+              className={
+                entry.type === "uiAction" ? "label-ui" : "label-action"
+              }
+            >
+              {entry.type}
+            </span>
+            <span className="value">← {JSON.stringify(entry.value)}</span>
+          </div>
+        ))}
+      </div>
+      <div className="call-log-summary">
+        {uiActionCount > 0 && (
+          <span className="summary-ui">uiAction: {uiActionCount}</span>
+        )}
+        {actionCount > 0 && (
+          <span className="summary-action">action: {actionCount}</span>
+        )}
+      </div>
     </div>
   );
 };
