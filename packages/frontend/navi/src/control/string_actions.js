@@ -91,7 +91,7 @@ const requestUnselect = (e, getUnselectParam) => {
   const param = getUnselectParam();
   if (!param) {
     console.warn(
-      `select action triggered but no action-param specified or returned by getSelectParam callback`,
+      `unselect action triggered but no action-param specified or returned by getSelectParam callback`,
       e,
     );
     return false;

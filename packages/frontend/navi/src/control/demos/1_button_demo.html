@@ -157,6 +157,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
+      import { CallLog, useCallLog } from "./utils/call_log.jsx";
       import {
         Button,
         Box,
@@ -254,17 +255,8 @@
         );
       };
 
-      const ActionResult = ({ value }) => (
-        <span
-          style={{ fontSize: "0.85rem", color: "#555", fontStyle: "italic" }}
-        >
-          {value === null ? "—" : <code>{String(value)}</code>}
-        </span>
-      );
-
       const OutsideFormDemo = () => {
-        const [syncResult, setSyncResult] = useState(null);
-        const [asyncSuccessResult, setAsyncSuccessResult] = useState(null);
+        const [entries, push, clear] = useCallLog();
 
         return (
           <div class="demo-section" id="interactivity-outside-form">
@@ -281,29 +273,28 @@
 
               <fieldset>
                 <legend>Sync action</legend>
-                <Box flex="y" spacing="s" alignX="start">
-                  <Button
-                    action={() => {
-                      console.log("action call");
-                      setSyncResult("Clicked! (action)");
-                    }}
-                    onClick={() => {
-                      console.log("onClick call");
-                      setSyncResult("Clicked! (onClick)");
-                    }}
-                  >
-                    Click me
-                  </Button>
-                  <ActionResult value={syncResult} />
-                </Box>
+                <Button
+                  action={() => {
+                    push("action");
+                  }}
+                  onClick={() => {
+                    push("onClick");
+                  }}
+                >
+                  Click me
+                </Button>
               </fieldset>
 
               <fieldset>
                 <legend>Async action that fails</legend>
                 <Button
                   action={async () => {
+                    push("action");
                     await new Promise((r) => setTimeout(r, 800));
                     throw new Error("Something went wrong");
+                  }}
+                  onClick={() => {
+                    push("onClick");
                   }}
                 >
                   Fail after 800ms
@@ -312,28 +303,27 @@
 
               <fieldset>
                 <legend>Async action that succeeds</legend>
-                <Box flex="y" spacing="s" alignX="start">
-                  <Button
-                    action={async () => {
-                      await new Promise((r) => setTimeout(r, 800));
-                      return "done!";
-                    }}
-                    onActionEnd={(value) => {
-                      setAsyncSuccessResult(value);
-                    }}
-                  >
-                    Succeed after 800ms
-                  </Button>
-                  <ActionResult value={asyncSuccessResult} />
-                </Box>
+                <Button
+                  action={async () => {
+                    push("action");
+                    await new Promise((r) => setTimeout(r, 800));
+                  }}
+                  onClick={() => {
+                    push("onClick");
+                  }}
+                >
+                  Succeed after 800ms
+                </Button>
               </fieldset>
+
+              <CallLog entries={entries} onClear={clear} />
             </div>
           </div>
         );
       };
 
       const InsideFormSimpleDemo = () => {
-        const [result, setResult] = useState(null);
+        const [entries, push, clear] = useCallLog();
 
         return (
           <div class="demo-section" id="interactivity-form-simple">
@@ -351,8 +341,8 @@
                 <legend>Submit button triggers form action</legend>
                 <Form
                   action={async ({ username }) => {
+                    push("action", { username });
                     await new Promise((r) => setTimeout(r, 800));
-                    setResult(`Hello, ${username || "stranger"}!`);
                   }}
                 >
                   <Box flex="y" spacing="s" alignX="start">
@@ -360,24 +350,27 @@
                       type="text"
                       name="username"
                       placeholder="Type your name…"
-                      // defaultValue="toto"
                     />
-                    <Button type="submit">Submit</Button>
-                    {result && (
-                      <span style={{ fontSize: "0.85rem", color: "#2a7a2a" }}>
-                        <code>{result}</code>
-                      </span>
-                    )}
+                    <Button
+                      type="submit"
+                      onClick={() => {
+                        push("onClick");
+                      }}
+                    >
+                      Submit
+                    </Button>
                   </Box>
                 </Form>
               </fieldset>
+
+              <CallLog entries={entries} onClear={clear} />
             </div>
           </div>
         );
       };
 
       const InsideFormNamedButtonsDemo = () => {
-        const [result, setResult] = useState(null);
+        const [entries, push, clear] = useCallLog();
 
         return (
           <div class="demo-section" id="interactivity-form-named-buttons">
@@ -398,12 +391,8 @@
                 </legend>
                 <Form
                   action={async ({ title, submitAction }) => {
+                    push("action", { title, submitAction });
                     await new Promise((r) => setTimeout(r, 800));
-                    if (submitAction === "save") {
-                      setResult(`Saved draft: "${title || "untitled"}"`);
-                    } else {
-                      setResult(`Published: "${title || "untitled"}"`);
-                    }
                   }}
                 >
                   <Box flex="y" spacing="s" alignX="start">
@@ -413,28 +402,39 @@
                       placeholder="Article title…"
                     />
                     <Box row spacing="s">
-                      <Button type="submit" name="submitAction" value="save">
+                      <Button
+                        type="submit"
+                        name="submitAction"
+                        value="save"
+                        onClick={() => {
+                          push("onClick", "save");
+                        }}
+                      >
                         Save draft
                       </Button>
-                      <Button type="submit" name="submitAction" value="publish">
+                      <Button
+                        type="submit"
+                        name="submitAction"
+                        value="publish"
+                        onClick={() => {
+                          push("onClick", "publish");
+                        }}
+                      >
                         Publish
                       </Button>
                     </Box>
-                    {result && (
-                      <span style={{ fontSize: "0.85rem", color: "#2a7a2a" }}>
-                        <code>{result}</code>
-                      </span>
-                    )}
                   </Box>
                 </Form>
               </fieldset>
+
+              <CallLog entries={entries} onClear={clear} />
             </div>
           </div>
         );
       };
 
       const InsideFormOwnActionDemo = () => {
-        const [result, setResult] = useState(null);
+        const [entries, push, clear] = useCallLog();
 
         return (
           <div class="demo-section" id="interactivity-form-own-action">
@@ -455,8 +455,8 @@
                 </legend>
                 <Form
                   action={async ({ query }) => {
+                    push("action", { query });
                     await new Promise((r) => setTimeout(r, 800));
-                    setResult(`Searched for: "${query || ""}"`);
                   }}
                 >
                   <Box flex="y" spacing="s" alignX="start">
@@ -468,22 +468,29 @@
                     <Box row spacing="s">
                       <Button
                         action={async ({ query }) => {
+                          push("action (preview)", { query });
                           await new Promise((r) => setTimeout(r, 800));
-                          setResult(`Preview for: "${query || ""}"`);
+                        }}
+                        onClick={() => {
+                          push("onClick", "preview");
                         }}
                       >
                         Preview
                       </Button>
-                      <Button type="submit">Search</Button>
+                      <Button
+                        type="submit"
+                        onClick={() => {
+                          push("onClick", "search");
+                        }}
+                      >
+                        Search
+                      </Button>
                     </Box>
-                    {result && (
-                      <span style={{ fontSize: "0.85rem", color: "#2a7a2a" }}>
-                        <code>{result}</code>
-                      </span>
-                    )}
                   </Box>
                 </Form>
               </fieldset>
+
+              <CallLog entries={entries} onClear={clear} />
             </div>
           </div>
         );
