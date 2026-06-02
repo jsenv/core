@@ -230,22 +230,38 @@
               L'action est asynchrone (simule un appel réseau de 800 ms). Le
               picker passe en état loading pendant ce temps.
             </p>
-            <Field vertical>
-              <Label>Couleur du thème</Label>
-              <Picker
-                name="theme_color"
-                type="color"
-                value={colorSignal.value}
-                uiAction={(v) => {
-                  push("Picker uiAction", v);
-                }}
-                action={async (v) => {
-                  push("Picker action", v);
-                  await sleep(800);
-                  colorSignal.value = v;
-                }}
-              />
-            </Field>
+            <Box flex="y" spacing="m">
+              <Field vertical>
+                <Label>No initial color</Label>
+                <Picker
+                  name="theme_color_empty"
+                  type="color"
+                  uiAction={(v) => {
+                    push("Picker uiAction", v);
+                  }}
+                  action={async (v) => {
+                    push("Picker action", v);
+                    await sleep(800);
+                  }}
+                />
+              </Field>
+              <Field vertical>
+                <Label>With initial color</Label>
+                <Picker
+                  name="theme_color"
+                  type="color"
+                  value={colorSignal.value}
+                  uiAction={(v) => {
+                    push("Picker uiAction", v);
+                  }}
+                  action={async (v) => {
+                    push("Picker action", v);
+                    await sleep(800);
+                    colorSignal.value = v;
+                  }}
+                />
+              </Field>
+            </Box>
             <CallLog entries={entries} onClear={clear} />
           </div>
         );
