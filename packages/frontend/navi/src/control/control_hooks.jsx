@@ -220,8 +220,10 @@ export const useControlProps = (
         e.preventDefault();
         return false;
       }
-      const value = readControlValue(control);
-      uiStateController.setUIState(value, e);
+      if (!isCheckable) {
+        const value = readControlValue(control);
+        uiStateController.setUIState(value, e);
+      }
       return true;
     };
     const asBrowserAction = (interaction, e) => {

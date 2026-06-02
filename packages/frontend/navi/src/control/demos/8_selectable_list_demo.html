@@ -101,6 +101,7 @@
         useSearchText,
         Input,
       } from "@jsenv/navi";
+      import { CallLog, useCallLog } from "./utils/call_log.jsx";
 
       const App = () => {
         return (
@@ -182,8 +183,8 @@
           "Apple",
           "Cherry",
         ]);
-        const [singleLog, setSingleLog] = useState([]);
-        const [multipleLog, setMultipleLog] = useState([]);
+        const [singleLog, pushSingleLog] = useCallLog();
+        const [multipleLog, pushMultipleLog] = useCallLog();
         return (
           <div id="basic" className="demo-section">
             <h2>Basic (with Selectable.Input)</h2>
@@ -198,7 +199,7 @@
                 <SelectableList
                   action={(v) => {
                     setSelectedSingle(v);
-                    setSingleLog((prev) => [...prev, v ?? "(none)"]);
+                    pushSingleLog("action", v ?? "(none)");
                   }}
                   expandX
                 >
@@ -217,11 +218,7 @@
                     </Selectable>
                   ))}
                 </SelectableList>
-                <div className="value-display">
-                  {singleLog.length
-                    ? singleLog.map((v, i) => <div key={i}>→ {v}</div>)
-                    : "(no action yet)"}
-                </div>
+                <CallLog entries={singleLog} />
               </div>
               <div>
                 <div className="col-label">Multiple</div>
@@ -229,10 +226,10 @@
                   multiple
                   action={(v) => {
                     setSelectedMultiple(v);
-                    setMultipleLog((prev) => [
-                      ...prev,
+                    pushMultipleLog(
+                      "action",
                       v && v.length ? v.join(", ") : "(none)",
-                    ]);
+                    );
                   }}
                   expandX
                 >
@@ -251,11 +248,7 @@
                     </Selectable>
                   ))}
                 </SelectableList>
-                <div className="value-display">
-                  {multipleLog.length
-                    ? multipleLog.map((v, i) => <div key={i}>→ {v}</div>)
-                    : "(no action yet)"}
-                </div>
+                <CallLog entries={multipleLog} />
               </div>
             </div>
           </div>
@@ -403,7 +396,7 @@
       const ExternalControlDemo = () => {
         const listRef = useRef(null);
         const [selected, setSelected] = useState("Apple");
-        const [actionLog, setActionLog] = useState([]);
+        const [actionLog, pushActionLog] = useCallLog();
         const toSelectableId = (fruit) =>
           `ext_s_${fruit.toLowerCase().replaceAll(" ", "_")}`;
         const [targetId, setTargetId] = useState(
@@ -431,10 +424,7 @@
                   renderBudget={30}
                   action={(v) => {
                     setSelected(v);
-                    setActionLog((prev) => [
-                      `action → ${v ?? "(none)"}`,
-                      ...prev.slice(0, 9),
-                    ]);
+                    pushActionLog("action", v ?? "(none)");
                   }}
                   expandX
                   style={{ maxHeight: 200, overflowY: "auto" }}
@@ -504,11 +494,7 @@
                   <div className="col-label" style={{ marginTop: 8 }}>
                     Action log
                   </div>
-                  <div className="value-display" style={{ minHeight: 80 }}>
-                    {actionLog.length === 0
-                      ? "(no action yet)"
-                      : actionLog.map((entry, i) => <div key={i}>{entry}</div>)}
-                  </div>
+                  <CallLog entries={actionLog} />
                 </div>
               </div>
             </div>
