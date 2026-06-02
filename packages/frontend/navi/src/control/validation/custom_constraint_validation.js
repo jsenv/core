@@ -724,7 +724,7 @@ export const installCustomConstraintValidation = (
           // focus is withing callout and we are closing it
           // if we don't do anything browser will move focus to the body
           // it's better to have it back to the field
-          element.focus();
+          anchorElement.focus();
         }
       },
     });
