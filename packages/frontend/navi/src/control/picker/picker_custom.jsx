@@ -331,19 +331,21 @@ export const PickerCustom = (props) => {
       const { onMouseDown, onClick, onKeyDown } = props;
       const onKeyDownShortcuts = createOnKeyDownForShortcuts({
         arrowdown: (e) => {
-          if (dispatchRequestInteraction(ref.current, e)) {
+          if (
+            dispatchRequestInteraction(ref.current, e, "arrow_down_to_open")
+          ) {
             e.preventDefault(); // prevent container scroll
             requestOpen(e);
           }
         },
         arrowup: (e) => {
-          if (dispatchRequestInteraction(ref.current, e)) {
+          if (dispatchRequestInteraction(ref.current, e, "arrow_up_to_open")) {
             e.preventDefault(); // prevent container scroll
             requestOpen(e);
           }
         },
         space: (e) => {
-          if (dispatchRequestInteraction(ref.current, e)) {
+          if (dispatchRequestInteraction(ref.current, e, "space_to_open")) {
             e.preventDefault(); // prevent scroll
             requestOpen(e);
           }
@@ -352,7 +354,7 @@ export const PickerCustom = (props) => {
           if (!expandedRef.current) {
             return;
           }
-          if (dispatchRequestInteraction(ref.current, e)) {
+          if (dispatchRequestInteraction(ref.current, e, "escape_to_cancel")) {
             e.preventDefault();
             requestClose(e, { cancel: true });
           }
