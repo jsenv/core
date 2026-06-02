@@ -2,21 +2,24 @@ import { dispatchCustomEvent } from "@jsenv/dom";
 
 import { getUIStateFromElement } from "./ui_state_controller.js";
 
-export const getToInputValue = (type) => {
-  if (type === "datetime-local") {
-    return toDatetimeLocal;
+export const asControlHostValue = (value, { controlType, type }) => {
+  if (controlType === "input") {
+    if (type === "datetime-local") {
+      return asDatetimeLocalString(value);
+    }
+    if (type === "number" || type === "range") {
+      return asNumberString(value);
+    }
+    if (type === "color") {
+      return asColorString(value);
+    }
+    return asInputValue;
   }
-  if (type === "number" || type === "range") {
-    return toNumber;
-  }
-  if (type === "color") {
-    return toColor;
-  }
-  return toInputValue;
+  return value;
 };
 // As explained in https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/datetime-local#setting_timezones
 // datetime-local does not support timezones
-const toDatetimeLocal = (dateTimeString) => {
+const asDatetimeLocalString = (dateTimeString) => {
   const date = new Date(dateTimeString);
   if (isNaN(date.getTime())) {
     return dateTimeString;
@@ -29,7 +32,7 @@ const toDatetimeLocal = (dateTimeString) => {
   const seconds = String(date.getSeconds()).padStart(2, "0");
   return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
 };
-const toNumber = (jsValue) => {
+const asNumberString = (jsValue) => {
   if (jsValue === undefined) {
     return "";
   }
@@ -42,36 +45,39 @@ const toNumber = (jsValue) => {
 // Browser requires a non-empty value for <input type="color">.
 // When our logical value is empty we give it #000000 so it doesn't choke.
 // The UI uses the original (possibly empty) value to show the checkerboard.
-const toColor = (jsValue) => {
+const asColorString = (jsValue) => {
   return jsValue || "#000000";
 };
-const toInputValue = (jsValue) => {
-  return jsValue === undefined ? "" : jsValue;
+const asInputValue = (jsValue) => {
+  if (jsValue === undefined) {
+    return "";
+  }
+  return jsValue;
 };
 
-export const readFieldValue = (field) => {
-  if (field.tagName === "BUTTON") {
-    return readValueFromButton(field);
+export const readControlValue = (controlHost) => {
+  if (controlHost.tagName === "BUTTON") {
+    return readValueFromButton(controlHost);
   }
-  if (field.tagName === "INPUT") {
+  if (controlHost.tagName === "INPUT") {
     // important: input.type = "navi_picker" followed by input.type returns "text"
     // so use getAttribute
-    const type = field.getAttribute("type");
+    const type = controlHost.getAttribute("type");
 
     if (type === "number" || type === "range") {
-      return readNumberFromInput(field);
+      return readNumberFromInput(controlHost);
     }
     if (type === "checkbox" || type === "radio") {
-      return readValueFromCheckableInput(field);
+      return readValueFromCheckableInput(controlHost);
     }
     if (type === "datetime-local") {
-      return readDatetimeLocalFromInput(field);
+      return readDatetimeLocalFromInput(controlHost);
     }
     if (type === "navi_picker") {
-      return getUIStateFromElement(field);
+      return getUIStateFromElement(controlHost);
     }
   }
-  return readValueFromInput(field);
+  return readValueFromInput(controlHost);
 };
 const readValueFromButton = (button) => {
   return readValueFromNaviCustomEvent(button, button.value);
@@ -109,7 +115,6 @@ const readValueFromInput = (input) => {
   const value = input.value;
   return value;
 };
-
 const readValueFromNaviCustomEvent = (field, fallback) => {
   // prefer the value given as prop (respect original type, browser would convert to string)
   let responded;

@@ -34,8 +34,8 @@ import {
   useNextResolver,
 } from "../../resolver/resolver.jsx";
 import { useControlProps } from "../control_hooks.jsx";
+import { asControlHostValue } from "../control_value.js";
 import { Label } from "../field.jsx";
-import { getToInputValue } from "../field_value_bridge.js";
 import { dispatchRequestSetUIState } from "../ui_state_controller.js";
 import { dispatchRequestInteraction } from "../validation/custom_constraint_validation.js";
 
@@ -339,7 +339,6 @@ const InputTextualHeadless = (props) => {
 };
 
 const useInputTextualProps = (props) => {
-  const toInputValue = getToInputValue(props.type);
   const [inputProps, remainingProps, ControlChildrenWrapper] = useControlProps(
     props,
     {
@@ -350,7 +349,10 @@ const useInputTextualProps = (props) => {
       readOnlySupported: true,
     },
   );
-  inputProps.value = toInputValue(inputProps.value);
+  inputProps.value = asControlHostValue(inputProps.value, {
+    controlType: "input",
+    type: props.type,
+  });
   return [inputProps, remainingProps, ControlChildrenWrapper];
 };
 

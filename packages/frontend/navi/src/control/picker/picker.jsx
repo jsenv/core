@@ -6,7 +6,7 @@ import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.
 import { createComponentResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
 import { useControlProps } from "../control_hooks.jsx";
-import { getToInputValue } from "../field_value_bridge.js";
+import { asControlHostValue } from "../control_value.js";
 import { PickerPlaceholder, PickerValue } from "./picker_components.jsx";
 import { PickerContext } from "./picker_context.jsx";
 import { pickerResolvers } from "./picker_resolvers.jsx";
@@ -336,13 +336,12 @@ const PickerButton = (props) => {
 
 const PickerInput = (props) => {
   const { type } = props;
-  const toInputValue = getToInputValue(type);
   return (
     <Box
       as="input"
       {...props}
       type="navi_picker"
-      value={toInputValue(props.value)}
+      value={asControlHostValue(props.value, { controlType: "input", type })}
       className="navi_picker_input"
       pseudoClasses={PickerInputPseudoClasses}
       tabIndex={-1}

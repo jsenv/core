@@ -56,7 +56,7 @@ import {
   RequiredContext,
 } from "./control_context.js";
 import { findControlProxyTarget } from "./control_proxy.js";
-import { readFieldValue } from "./field_value_bridge.js";
+import { readControlValue } from "./control_value.js";
 import { addInputEffect } from "./input_effect.js";
 import { resolveActionProp } from "./string_actions.js";
 import {
@@ -283,15 +283,10 @@ export const useControlProps = (
     const lastEventRequestingActionRef = useRef();
     const lastActionValueRef = useRef();
 
-    const getFieldValue = () => {
-      const field = ref.current;
-      return readFieldValue(field);
-    };
-
     const onInput = (e) => {
       props.onInput?.(e);
       const field = ref.current;
-      const currentValue = getFieldValue();
+      const currentValue = readControlValue(field);
       if (isCheckable) {
         const allowed = dispatchRequestAction(field, {
           event: e,
@@ -331,7 +326,7 @@ export const useControlProps = (
           field,
           (e) => {
             lastEventRequestingActionRef.current = e;
-            const value = getFieldValue();
+            const value = readControlValue(field);
             lastActionValueRef.current = value;
             if (inputEffect === "action") {
               dispatchRequestAction(field, { event: e });
