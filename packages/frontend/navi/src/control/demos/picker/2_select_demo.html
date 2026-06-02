@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Select Picker Demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 40px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      #container {
+        max-width: 600px;
+        margin: 0 auto;
+      }
+      .demo-section {
+        margin-bottom: 24px;
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      h1 {
+        margin-bottom: 24px;
+        font-size: 1.4rem;
+      }
+      h2 {
+        margin: 0 0 6px;
+        font-size: 1rem;
+      }
+      p {
+        margin: 0 0 16px;
+        color: #555;
+        font-size: 13px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <h1>Select Picker Demo</h1>
+      <div id="app"></div>
+    </div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useSignal } from "@preact/signals";
+      import {
+        Box,
+        Field,
+        Label,
+        Picker,
+        SelectableList,
+        Selectable,
+        NaviDebug,
+      } from "@jsenv/navi";
+
+      const FRUIT_OPTIONS = [
+        "Apple",
+        "Banana",
+        "Cherry",
+        "Date",
+        "Elderberry",
+        "Fig",
+        "Grape",
+      ];
+
+      const SKILL_OPTIONS = [
+        "HTML",
+        "CSS",
+        "JavaScript",
+        "TypeScript",
+        "React",
+        "Vue",
+        "Angular",
+        "Node.js",
+        "Python",
+        "Rust",
+        "Go",
+        "Java",
+        "C++",
+        "Swift",
+        "Kotlin",
+        "SQL",
+      ];
+
+      const App = () => (
+        <Box flex="y" spacing="l">
+          <BasicSelect />
+          <PreselectedSelect />
+          <ManyOptionsSelect />
+        </Box>
+      );
+
+      // ── 1. Basic single select ─────────────────────────────────────────────
+
+      const BasicSelect = () => {
+        const selectedSignal = useSignal(null);
+        const selected = selectedSignal.value;
+
+        return (
+          <div class="demo-section">
+            <h2>1. Basic single select</h2>
+            <p>
+              No pre-selected value. Clicking an item commits immediately via
+              the action callback and closes the picker.
+            </p>
+            <Field vertical>
+              <Label>Fruit</Label>
+              <Picker
+                name="basic_select"
+                placeholder="Select a fruit…"
+                value={selected}
+                action={(v) => {
+                  selectedSignal.value = v;
+                }}
+              >
+                <SelectableList>
+                  {FRUIT_OPTIONS.map((opt, i) => (
+                    <Selectable
+                      key={opt}
+                      index={i}
+                      value={opt}
+                      selected={selected === opt}
+                      padding="s"
+                      spacing="s"
+                    >
+                      {opt}
+                    </Selectable>
+                  ))}
+                </SelectableList>
+              </Picker>
+            </Field>
+          </div>
+        );
+      };
+
+      // ── 2. Pre-selected value ─────────────────────────────────────────────
+
+      const PreselectedSelect = () => {
+        const selectedSignal = useSignal("Banana");
+        const selected = selectedSignal.value;
+
+        return (
+          <div class="demo-section">
+            <h2>2. Pre-selected value</h2>
+            <p>Opens with "Banana" already selected.</p>
+            <Field vertical>
+              <Label>Fruit</Label>
+              <Picker
+                name="preselected_select"
+                placeholder="Select a fruit…"
+                value={selected}
+                action={(v) => {
+                  selectedSignal.value = v;
+                }}
+              >
+                <SelectableList>
+                  {FRUIT_OPTIONS.map((opt, i) => (
+                    <Selectable
+                      key={opt}
+                      index={i}
+                      value={opt}
+                      selected={selected === opt}
+                      padding="s"
+                      spacing="s"
+                    >
+                      {opt}
+                    </Selectable>
+                  ))}
+                </SelectableList>
+              </Picker>
+            </Field>
+          </div>
+        );
+      };
+
+      // ── 3. Many options ───────────────────────────────────────────────────
+
+      const ManyOptionsSelect = () => {
+        const selectedSignal = useSignal(null);
+        const selected = selectedSignal.value;
+
+        return (
+          <div class="demo-section">
+            <h2>3. Many options</h2>
+            <p>Longer list to verify scroll behavior inside the popover.</p>
+            <Field vertical>
+              <Label>Skill</Label>
+              <Picker
+                name="many_options_select"
+                placeholder="Select a skill…"
+                value={selected}
+                action={(v) => {
+                  selectedSignal.value = v;
+                }}
+              >
+                <SelectableList style="min-width: 180px">
+                  {SKILL_OPTIONS.map((opt, i) => (
+                    <Selectable
+                      key={opt}
+                      index={i}
+                      value={opt}
+                      selected={selected === opt}
+                      padding="s"
+                      spacing="s"
+                    >
+                      {opt}
+                    </Selectable>
+                  ))}
+                </SelectableList>
+              </Picker>
+            </Field>
+          </div>
+        );
+      };
+
+      render(
+        <NaviDebug debugAction debugInteraction debugPopup>
+          <App />
+        </NaviDebug>,
+        document.getElementById("app"),
+      );
+    </script>
+  </body>
+</html>
