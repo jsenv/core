@@ -279,14 +279,17 @@ export const useControlProps = (
     };
     const onKeyDown = (e) => {
       props.onKeyDown?.(e);
-      // const currentTarget = e.currentTarget;
+      const currentTarget = e.currentTarget;
       if (e.key === "Enter" && controlType === "input") {
+        if (isCheckable) {
+          currentTarget.click();
+          return;
+        }
         resolveActionProp("submit")(e);
         return;
       }
-      const input = e.currentTarget;
       const allowed = dispatchRequestInteraction(
-        input,
+        currentTarget,
         e,
         "keydown to interact with field",
       );

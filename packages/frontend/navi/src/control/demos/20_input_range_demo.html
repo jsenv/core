@@ -260,9 +260,10 @@
         return (
           <NaviDebug debugInteraction debugAction>
             <div>
+              <TableOfContents />
               <BasicStatesDemo />
               <FocusStatesDemo />
-              <ActionHandlingDemo />
+              <InteractivityDemo />
               <ColorVariationsDemo />
               <ThumbCustomizationDemo />
             </div>
@@ -270,11 +271,44 @@
         );
       };
 
+      const TableOfContents = () => {
+        return (
+          <div className="demo-section">
+            <h2>Table of contents</h2>
+            <ol style={{ margin: 0, paddingLeft: "20px", lineHeight: "2" }}>
+              <li>
+                <a href="#states">Range Input States</a>
+              </li>
+              <li>
+                <a href="#focus">Focus States</a>
+              </li>
+              <li>
+                <a href="#interactivity">Interactivity</a>
+                <ol style={{ margin: 0, paddingLeft: "20px", lineHeight: "2" }}>
+                  <li>
+                    <a href="#interactivity-outside-form">Outside Form</a>
+                  </li>
+                  <li>
+                    <a href="#interactivity-inside-form">Inside Form</a>
+                  </li>
+                </ol>
+              </li>
+              <li>
+                <a href="#colors">Color Variations</a>
+              </li>
+              <li>
+                <a href="#thumb">Thumb Customization</a>
+              </li>
+            </ol>
+          </div>
+        );
+      };
+
       const BasicStatesDemo = () => {
         const [disabledValue] = useState(75);
 
         return (
-          <div className="demo-section">
+          <div className="demo-section" id="states">
             <h2>Range Input States</h2>
 
             <div className="states-section">
@@ -419,7 +453,7 @@
 
       const FocusStatesDemo = () => {
         return (
-          <div className="demo-section">
+          <div className="demo-section" id="focus">
             <h2>Focus States</h2>
             <p className="states-description">
               Focus states are crucial for accessibility and keyboard
@@ -454,7 +488,6 @@
                       }}
                       min="0"
                       max="100"
-                      autoFocus
                     />
                     <div className="value-display">{focusValueSignal}</div>
                   </div>
@@ -523,6 +556,55 @@
                 accessibility.
               </p>
             </div>
+          </div>
+        );
+      };
+
+      const InteractivityDemo = () => {
+        return (
+          <>
+            <ActionHandlingDemo />
+            <RangeInsideFormDemo />
+          </>
+        );
+      };
+
+      const RangeInsideFormDemo = () => {
+        const [submitValue, setSubmitValue] = useState(null);
+        return (
+          <div className="demo-section" id="interactivity-inside-form">
+            <h2>Interactivity — Inside Form</h2>
+            <p className="states-description">
+              When a range input is inside a <code>Form</code>, its{" "}
+              <code>name</code> is included in the form data on submit.
+            </p>
+            <fieldset>
+              <legend>Form submit</legend>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const data = new FormData(e.currentTarget);
+                  setSubmitValue(data.get("volume"));
+                }}
+              >
+                <Box column spacing="sm">
+                  <Input
+                    type="range"
+                    name="volume"
+                    min="0"
+                    max="100"
+                    defaultValue="50"
+                    action={() => {}}
+                  />
+                  <button type="submit">Submit</button>
+                  {submitValue !== null && (
+                    <div className="value-display">
+                      Submitted: volume = {submitValue}
+                    </div>
+                  )}
+                </Box>
+              </form>
+            </fieldset>
           </div>
         );
       };
@@ -626,8 +708,8 @@
         };
 
         return (
-          <div className="demo-section">
-            <h2>Action Handling</h2>
+          <div className="demo-section" id="interactivity-outside-form">
+            <h2>Interactivity — Outside Form</h2>
 
             <fieldset>
               <legend>Immediate Action</legend>
@@ -725,7 +807,7 @@
 
       const ColorVariationsDemo = () => {
         return (
-          <div className="demo-section">
+          <div className="demo-section" id="colors">
             <h2>Color Variations</h2>
             <p className="states-description">
               Range inputs can be styled with different colors. Native inputs
@@ -883,7 +965,7 @@
 
       const ThumbCustomizationDemo = () => {
         return (
-          <div className="demo-section">
+          <div className="demo-section" id="thumb">
             <h2>Thumb Customization</h2>
             <p className="states-description">
               Customize the slider thumb (draggable handle) size and color. Navi
