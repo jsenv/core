@@ -886,8 +886,10 @@
           "Cherry",
         ]);
         const [bgColor, setBgColor] = useState("rgb(3, 30, 60)");
+        const [borderRadius, setBorderRadius] = useState(4);
         const customStyle = {
           "--list-item-background-color-selected": bgColor,
+          "--list-border-radius": `${borderRadius}px`,
         };
         const renderList = ({ multiple, selected, setSelected }) => (
           <SelectableList
@@ -961,6 +963,37 @@
                 }}
               >
                 {bgColor}
+              </span>
+            </div>
+            <div
+              style={{
+                marginBottom: 16,
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+              }}
+            >
+              <label style={{ fontSize: "0.85rem", color: "#555" }}>
+                Border radius:
+              </label>
+              <input
+                type="range"
+                min={0}
+                max={24}
+                value={borderRadius}
+                onInput={(e) => {
+                  setBorderRadius(Number(e.currentTarget.value));
+                }}
+                style={{ cursor: "pointer" }}
+              />
+              <span
+                style={{
+                  fontFamily: "monospace",
+                  fontSize: "0.85rem",
+                  color: "#555",
+                }}
+              >
+                {borderRadius}px
               </span>
             </div>
             <div className="two-col">
