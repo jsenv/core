@@ -1,8 +1,8 @@
 import { parseStepToSeconds } from "../picker/time_helpers.js";
 
 /**
- * useInputProps — normalizes input-related props that are shared across
- * `<Picker>`, `<Input>` (textual) and `<Range>`.
+ * resolveInputProps — normalizes input-related props that are shared across
+ * `<Picker>`, `<Input>` (textual) and `<Range>`. Mutates the props object in place.
  *
  * Currently it normalizes:
  * - `min` / `max`: accepts a `Date` instance and converts it to the string
@@ -11,11 +11,8 @@ import { parseStepToSeconds } from "../picker/time_helpers.js";
  *   `datetime-local`).
  * - `step`: for time-based types (`time`, `datetime-local`/`datetime`)
  *   accepts an `"HH:MM"` string and converts it to seconds.
- *
- * The function is a plain (non-hook) helper. It is idempotent: passing
- * already-normalized values returns them unchanged.
  */
-export const useInputProps = (props) => {
+export const resolveInputProps = (props) => {
   const { type } = props;
   const minMaxFormatter = MIN_MAX_FORMATTER_BY_TYPE[type];
   const stepFormatter = STEP_FORMATTER_BY_TYPE[type];
@@ -26,7 +23,6 @@ export const useInputProps = (props) => {
   if (stepFormatter) {
     props.step = stepFormatter(props.step);
   }
-  return props;
 };
 
 const toInputDay = (value) => {

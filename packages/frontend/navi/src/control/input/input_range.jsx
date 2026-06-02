@@ -4,7 +4,7 @@ import { Box, BoxForwardedPropsContext } from "../../box/box.jsx";
 import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
 import { useAccentColorAttributes } from "../../utils/use_accent_color_attributes.js";
 import { useControlProps } from "../control_hooks.jsx";
-import { useInputProps } from "./use_input_props.js";
+import { resolveInputProps } from "./resolve_input_props.js";
 
 const css = /* css */ `
   @layer navi {
@@ -261,7 +261,7 @@ const InputRangeFieldInterface = (props) => {
     const ratio = (inputValue - input.min) / (input.max - input.min);
     input.parentNode.style.setProperty("--x-fill-ratio", ratio);
   };
-  props = useInputProps(props);
+  resolveInputProps(props);
   const [rangeProps, remainingProps] = useControlProps(props, {
     controlType: "input",
     statePropName: "value",

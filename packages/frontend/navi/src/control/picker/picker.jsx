@@ -7,6 +7,7 @@ import { createComponentResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
 import { useControlProps } from "../control_hooks.jsx";
 import { asControlHostValue } from "../control_value.js";
+import { resolveInputProps } from "../input/resolve_input_props.js";
 import { PickerPlaceholder, PickerValue } from "./picker_components.jsx";
 import { PickerContext } from "./picker_context.jsx";
 import { pickerResolvers } from "./picker_resolvers.jsx";
@@ -257,6 +258,7 @@ export const Picker = (props) => {
 const renderPicker = createComponentResolver(pickerResolvers);
 const PickerButton = (props) => {
   import.meta.css = css;
+  resolveInputProps(props);
   const { ref, icon, placeholder, singleLine, ui } = props;
   const inputRef = useRef(null);
   const [inputProps, pickerRemainingProps, ControlChildrenWrapper] =

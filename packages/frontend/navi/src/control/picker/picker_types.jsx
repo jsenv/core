@@ -3,7 +3,6 @@ import { useContext } from "preact/hooks";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Color } from "@jsenv/navi/src/text/color.jsx";
 import { Time } from "@jsenv/navi/src/text/time.jsx";
-import { useInputProps } from "../input/use_input_props.js";
 import { PickerPlaceholder, PickerValue } from "./picker_components.jsx";
 import { PickerContext } from "./picker_context.jsx";
 
@@ -59,15 +58,9 @@ const PickerColorUI = () => {
 
 export const PickerDay = (props) => {
   const Next = useNextResolver();
-  const inputProps = useInputProps(props);
 
   return (
-    <Next
-      ui={<PickerDayUI />}
-      icon={<CalendarSvg />}
-      {...inputProps}
-      type="date"
-    />
+    <Next ui={<PickerDayUI />} icon={<CalendarSvg />} {...props} type="date" />
   );
 };
 const PickerDayUI = () => {
@@ -85,13 +78,12 @@ const PickerDayUI = () => {
 };
 export const PickerMonth = (props) => {
   const Next = useNextResolver();
-  const inputProps = useInputProps(props);
 
   return (
     <Next
       ui={<PickerMonthUI />}
       icon={<CalendarSvg />}
-      {...inputProps}
+      {...props}
       type="month"
     />
   );
@@ -109,15 +101,9 @@ const PickerMonthUI = () => {
 };
 export const PickerWeek = (props) => {
   const Next = useNextResolver();
-  const inputProps = useInputProps(props);
 
   return (
-    <Next
-      ui={<PickerWeekUI />}
-      icon={<CalendarSvg />}
-      {...inputProps}
-      type="week"
-    />
+    <Next ui={<PickerWeekUI />} icon={<CalendarSvg />} {...props} type="week" />
   );
 };
 const PickerWeekUI = () => {
@@ -133,15 +119,9 @@ const PickerWeekUI = () => {
 };
 export const PickerTime = (props) => {
   const Next = useNextResolver();
-  const inputProps = useInputProps(props);
 
   return (
-    <Next
-      ui={<PickerTimeUI />}
-      icon={<ClockSvg />}
-      {...inputProps}
-      type="time"
-    />
+    <Next ui={<PickerTimeUI />} icon={<ClockSvg />} {...props} type="time" />
   );
 };
 const PickerTimeUI = () => {
@@ -153,13 +133,12 @@ const PickerTimeUI = () => {
 };
 export const PickerDatetime = (props) => {
   const Next = useNextResolver();
-  const inputProps = useInputProps(props);
 
   return (
     <Next
       ui={<PickerDatetimeUI />}
       icon={<CalendarSvg />}
-      {...inputProps}
+      {...props}
       type="datetime-local"
     />
   );
