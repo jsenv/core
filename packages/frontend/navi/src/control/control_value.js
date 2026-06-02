@@ -84,7 +84,10 @@ const asInputValue = (jsValue) => {
  * @returns {any} The current logical value of the control.
  */
 export const readControlValue = (controlHost) => {
-  if (controlHost.tagName === "BUTTON") {
+  if (
+    controlHost.tagName === "BUTTON" ||
+    controlHost.getAttribute("role") === "button"
+  ) {
     return readValueFromButton(controlHost);
   }
   if (controlHost.tagName === "INPUT") {
@@ -104,8 +107,13 @@ export const readControlValue = (controlHost) => {
     if (type === "navi_picker") {
       return getUIStateFromElement(controlHost);
     }
+    return readValueFromInput(controlHost);
   }
-  return readValueFromInput(controlHost);
+  if (controlHost.hasAttribute("navi-control-host")) {
+    // Non-button, non-input navi controls (e.g. Badge.Button rendered as span)
+    return readValueFromNaviCustomEvent(controlHost, controlHost.value);
+  }
+  return readValueFromElement(controlHost);
 };
 const readValueFromButton = (button) => {
   return readValueFromNaviCustomEvent(button, button.value);
@@ -141,6 +149,10 @@ const readValueFromCheckableInput = (input) => {
 };
 const readValueFromInput = (input) => {
   const value = input.value;
+  return value;
+};
+const readValueFromElement = (element) => {
+  const value = element.value;
   return value;
 };
 const readValueFromNaviCustomEvent = (field, fallback) => {

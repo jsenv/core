@@ -151,6 +151,10 @@ export const getElementSignature = (element) => {
       const parentSignature = getElementSignature(element.parentElement);
       return `${parentSignature} > button:empty`;
     }
+    const role = element.getAttribute("role");
+    if (role) {
+      return `${tagName}[role="${role}"]`;
+    }
     const className = element.className;
     if (className) {
       return `${tagName}.${className.split(" ").join(".")}`;

@@ -120,6 +120,9 @@ const BadgeButton = (props) => {
       overflowPinned
       className="navi_badge_button"
       role="button"
+      onnavi_get_value={(e) => {
+        e.detail.respondWith(props.value);
+      }}
       {...buttonProps}
       {...remainingProps}
     />

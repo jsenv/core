@@ -343,9 +343,6 @@ const ButtonUI = (props) => {
       allowNameless: true,
     },
   );
-  buttonProps.onnavi_get_value = (e) => {
-    e.detail.respondWith(props.value);
-  };
   const { basePseudoState, children } = buttonProps;
   const loading = basePseudoState[":-navi-loading"];
 
@@ -383,6 +380,9 @@ const ButtonUI = (props) => {
       href={href}
       target={innerTarget}
       rel={innerRel}
+      onnavi_get_value={(e) => {
+        e.detail.respondWith(props.value);
+      }}
       onContextMenu={(e) => {
         if (as === "a") {
           // For link we keep context menu to allow "open in new tab" and other browser features
