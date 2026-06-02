@@ -404,7 +404,7 @@ const SelectableRealInput = (props) => {
       navi-selectable-real-input=""
       navi-visually-hidden=""
       data-callout-arrow-x="center"
-      navi-debug
+      // navi-debug
     />
   );
 };
