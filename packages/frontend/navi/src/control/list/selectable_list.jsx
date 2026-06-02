@@ -53,8 +53,8 @@ const css = /* css */ `
       --list-item-color-pointed: var(--list-item-color);
       --list-item-background-color-pointed: light-dark(#dbeafe, #1c3a6e);
       /* Selected — vivid blue accent */
-      --list-item-color-selected: light-dark(#ffffff, #ffffff);
-      --list-item-background-color-selected: light-dark(#1a73e8, #2b5fcc);
+      --list-item-color-selected: white;
+      --list-item-background-color-selected: rgb(3, 30, 60);
       /* Disabled */
       --list-item-color-disabled: light-dark(#aaa, #555);
       --list-item-background-color-disabled: var(--list-item-background-color);
@@ -110,34 +110,38 @@ const css = /* css */ `
       --x-list-item-color: var(--list-item-color-pointed);
       --x-list-item-background-color: var(--list-item-background-color-pointed);
     }
-    /* Focus */
-    &:has([data-focus-visible]) {
-      --x-list-item-color: var(--list-item-color-keyboard-pointed);
-      --x-list-item-background-color: var(
-        --list-item-background-color-keyboard-pointed
-      );
-      --x-list-item-border-color: var(--list-item-outline-color);
-      /* Selected must win over keyboard-pointed */
-      &[data-selected] {
+    /* No input proxy: focused,selected */
+    &:not(:has(input[navi-control-proxy-for])) {
+      &:has([data-focus-visible]) {
+        --x-list-item-color: var(--list-item-color-keyboard-pointed);
         --x-list-item-background-color: var(
-          --list-item-background-color-selected,
-          var(--list-item-background-color-keyboard-pointed)
+          --list-item-background-color-keyboard-pointed
         );
+        --x-list-item-border-color: var(--list-item-outline-color);
+
+        /* Selected must win over keyboard-pointed */
+        &[data-selected] {
+          --x-list-item-background-color: var(
+            --list-item-background-color-selected,
+            var(--list-item-background-color-keyboard-pointed)
+          );
+        }
       }
-    }
-    /* Selected */
-    &[data-selected]:not(:has(input[navi-control-proxy-for]])) {
-      --x-list-item-color: var(--list-item-color-selected);
-      --x-list-item-background-color: var(
-        --list-item-background-color-selected
-      );
-      &[data-hover] {
+
+      &[data-selected] {
+        --x-list-item-color: var(--list-item-color-selected);
         --x-list-item-background-color: var(
-          --list-item-background-color-selected,
-          var(--list-item-background-color-mouse-pointed)
-        ) !important;
+          --list-item-background-color-selected
+        );
+        &[data-hover] {
+          --x-list-item-background-color: var(
+            --list-item-background-color-selected,
+            var(--list-item-background-color-mouse-pointed)
+          ) !important;
+        }
       }
     }
+
     &[data-disabled] {
       --x-list-item-color: var(--list-item-color-disabled);
       --x-list-item-background-color: var(
