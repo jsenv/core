@@ -115,10 +115,11 @@
                   selectedSignal.value = v;
                 }}
               >
-                <SelectableList>
+                <SelectableList action="send">
                   {FRUIT_OPTIONS.map((opt, i) => (
                     <Selectable
                       key={opt}
+                      id={`basic_${opt}`}
                       index={i}
                       value={opt}
                       selected={selected === opt}
@@ -155,10 +156,11 @@
                   selectedSignal.value = v;
                 }}
               >
-                <SelectableList>
+                <SelectableList action="send">
                   {FRUIT_OPTIONS.map((opt, i) => (
                     <Selectable
                       key={opt}
+                      id={`preselected_${opt}`}
                       index={i}
                       value={opt}
                       selected={selected === opt}
@@ -195,10 +197,11 @@
                   selectedSignal.value = v;
                 }}
               >
-                <SelectableList style="min-width: 180px">
+                <SelectableList action="send" style="min-width: 180px">
                   {SKILL_OPTIONS.map((opt, i) => (
                     <Selectable
                       key={opt}
+                      id={`many_${opt}`}
                       index={i}
                       value={opt}
                       selected={selected === opt}
