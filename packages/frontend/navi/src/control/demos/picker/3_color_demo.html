@@ -64,6 +64,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useSignal } from "@preact/signals";
+      import { CallLog, useCallLog } from "../utils/call_log.jsx";
       import {
         Box,
         Field,
@@ -79,6 +80,8 @@
 
       const App = () => (
         <Box flex="y" spacing="l">
+          <TableOfContents />
+          <InteractivityDemo />
           <StatesDemo />
           <WithActionDemo />
           <InFormDemo />
@@ -87,14 +90,70 @@
         </Box>
       );
 
+      const TableOfContents = () => (
+        <div class="demo-section">
+          <h2>Table of contents</h2>
+          <ol style={{ margin: 0, paddingLeft: "20px", lineHeight: "2" }}>
+            <li>
+              <a href="#interactivity">Interactivity</a>
+            </li>
+            <li>
+              <a href="#states">États</a>
+            </li>
+            <li>
+              <a href="#with-action">Avec une action</a>
+            </li>
+            <li>
+              <a href="#in-form">Dans un form</a>
+            </li>
+            <li>
+              <a href="#validation">Validation</a>
+            </li>
+            <li>
+              <a href="#customization">Customization</a>
+            </li>
+          </ol>
+        </div>
+      );
+
+      // ── 0. Interactivity ─────────────────────────────────────────────────
+
+      const InteractivityDemo = () => {
+        const [entries, push, clear] = useCallLog();
+
+        return (
+          <div class="demo-section" id="interactivity">
+            <h2>0. Interactivity</h2>
+            <p class="desc">
+              Observe when <code>uiAction</code> and <code>action</code> are
+              called and with what value.
+            </p>
+            <Field vertical>
+              <Label>Color</Label>
+              <Picker
+                name="interactivity_color"
+                type="color"
+                defaultValue="#3b82f6"
+                uiAction={(v) => {
+                  push("Picker uiAction", v);
+                }}
+                action={(v) => {
+                  push("Picker action", v);
+                }}
+              />
+            </Field>
+            <CallLog entries={entries} onClear={clear} />
+          </div>
+        );
+      };
+
       // ── 1. États ──────────────────────────────────────────────────────────
 
       const DEFAULT_COLOR = "#4caf50";
 
       const StatesDemo = () => {
         return (
-          <div class="demo-section">
-            <h2>1. États</h2>
+          <div class="demo-section" id="states">
             <p class="desc">
               Chaque état du picker couleur jsenv. La colonne native est fournie
               à titre de comparaison (elle ne supporte pas l'état "vide").
@@ -193,14 +252,9 @@
       const WithActionDemo = () => {
         const colorSignal = useSignal("#3b82f6");
         const savedColorSignal = useSignal("#3b82f6");
-        const logSignal = useSignal([]);
-
-        const appendLog = (msg) => {
-          logSignal.value = [...logSignal.value.slice(-4), msg];
-        };
 
         return (
-          <div class="demo-section">
+          <div class="demo-section" id="with-action">
             <h2>2. Avec une action</h2>
             <p class="desc">
               L'action est asynchrone (simule un appel réseau de 800 ms). Le
@@ -214,11 +268,9 @@
                   type="color"
                   value={colorSignal.value}
                   action={async (v) => {
-                    appendLog(`→ saving ${v}…`);
                     await sleep(800);
                     colorSignal.value = v;
                     savedColorSignal.value = v;
-                    appendLog(`✓ saved ${v}`);
                   }}
                 />
               </Field>
@@ -228,11 +280,6 @@
                   {savedColorSignal.value}
                 </strong>
               </p>
-              {logSignal.value.length > 0 && (
-                <pre style="margin:0;font-size:12px;background:#f0f0f0;padding:8px;border-radius:4px;width:100%;box-sizing:border-box;">
-                  {logSignal.value.join("\n")}
-                </pre>
-              )}
             </Box>
           </div>
         );
@@ -243,7 +290,7 @@
       const InFormDemo = () => {
         const submittedSignal = useSignal(null);
         return (
-          <div class="demo-section">
+          <div class="demo-section" id="in-form">
             <h2>3. Dans un form</h2>
             <p class="desc">
               Le picker participe à la soumission du formulaire comme n'importe
@@ -281,7 +328,7 @@
       const ValidationDemo = () => {
         const submittedSignal = useSignal(null);
         return (
-          <div class="demo-section">
+          <div class="demo-section" id="validation">
             <h2>4. Validation dans un form (required)</h2>
             <p class="desc">
               Champ obligatoire — la soumission échoue si aucune couleur n'est
@@ -334,7 +381,7 @@
       const CustomizationDemo = () => {
         const colorSignal = useSignal(null);
         return (
-          <div class="demo-section">
+          <div class="demo-section" id="customization">
             <h2>5. Customization</h2>
             <p class="desc">
               On passe des enfants au Picker pour afficher une palette de
