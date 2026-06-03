@@ -68,6 +68,9 @@
         Form,
         Button,
         NaviDebug,
+        isToday,
+        getNowHours,
+        stateSignal,
       } from "@jsenv/navi";
 
       const App = () => (
@@ -77,6 +80,7 @@
           <WithActionDemo />
           <InFormDemo />
           <CustomizationDemo />
+          <DateTimeComboDemo />
         </Box>
       );
 
@@ -100,6 +104,9 @@
             </li>
             <li>
               <a href="#customization">Customization</a>
+            </li>
+            <li>
+              <a href="#date-time-combo">Date + Time combo</a>
             </li>
           </ol>
         </div>
@@ -402,6 +409,78 @@
           </div>
         </div>
       );
+
+      // ── 5. Date + Time combo ─────────────────────────────────────────────
+
+      const now = new Date();
+      const in30days = new Date(now);
+      in30days.setDate(now.getDate() + 30);
+
+      const dateSignalCombo = stateSignal(DEFAULT_DATE, {
+        type: "date",
+        min: now,
+        autoFix: true,
+      });
+
+      const DateTimeComboDemo = () => {
+        const [entries, push, clear] = useCallLog();
+        const hourSignal = useSignal("09:00");
+
+        return (
+          <div class="demo-section" id="date-time-combo">
+            <h2>5. Date + Time combo</h2>
+            <p class="desc">
+              Cas avancé combinant un picker de date et un picker d'heure. Le
+              picker d'heure ne propose que les créneaux disponibles — si le
+              jour sélectionné est aujourd'hui, les heures déjà passées sont
+              masquées automatiquement.
+            </p>
+            <Form
+              action={(values) => {
+                push("Form action", values);
+              }}
+              flex="y"
+              spacing="m"
+              alignX="start"
+            >
+              <Field vertical>
+                <Label>Jour</Label>
+                <Box flex spacing="s">
+                  <Picker
+                    name="combo_date"
+                    type="date"
+                    required
+                    value={dateSignalCombo.value}
+                    action={(v) => {
+                      dateSignalCombo.value = v;
+                    }}
+                    min={now}
+                    max={in30days}
+                  />
+                  <Picker
+                    name="combo_time"
+                    type="navi_time"
+                    required
+                    min={
+                      isToday(dateSignalCombo.value)
+                        ? getNowHours(-5)
+                        : undefined
+                    }
+                    max="21:00"
+                    step="00:30"
+                    value={hourSignal.value}
+                    action={(v) => {
+                      hourSignal.value = v;
+                    }}
+                  />
+                </Box>
+              </Field>
+              <Button type="submit">Soumettre</Button>
+            </Form>
+            <CallLog entries={entries} onClear={clear} />
+          </div>
+        );
+      };
 
       render(
         <NaviDebug debugAction debugInteraction debugPopup>
