@@ -62,7 +62,6 @@
     </div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useSignal } from "@preact/signals";
       import {
         Box,
         Field,
@@ -79,16 +78,48 @@
 
       // ── State signals (persisted in URL search params) ────────────────────
 
-      const outsideFormValueSignal = stateSignal(42, {
-        id: "outside_form_value",
+      const outsideSyncSignal = stateSignal(42, {
+        id: "outside_sync",
+        type: "number",
+      });
+      const outsideAsyncSignal = stateSignal(42, {
+        id: "outside_async",
+        type: "number",
+      });
+      const insideFormSignal = stateSignal(10, {
+        id: "inside_form",
+        type: "number",
+      });
+      const valRequiredSignal = stateSignal(null, {
+        id: "val_required",
+        type: "number",
+      });
+      const valMinSignal = stateSignal(3, {
+        id: "val_min",
+        type: "number",
+        min: 10,
+      });
+      const valMaxSignal = stateSignal(150, {
+        id: "val_max",
+        type: "number",
+        max: 100,
+      });
+      const valStepSignal = stateSignal(7, {
+        id: "val_step",
         type: "number",
         min: 0,
-        max: 100,
+        step: 5,
       });
 
       const DEMO_ROUTE = route("", {
         searchParams: {
-          outside_form_value: outsideFormValueSignal,
+          outside_sync: outsideSyncSignal,
+          outside_async: outsideAsyncSignal,
+          inside_form: insideFormSignal,
+          val_required: valRequiredSignal,
+          val_min: valMinSignal,
+          val_max: valMaxSignal,
+          val_step: valStepSignal,
         },
       });
       setupRoutes([DEMO_ROUTE]);
@@ -217,7 +248,6 @@
 
       const InteractivityDemo = () => {
         const [entries, push, clear] = useCallLog();
-        const insideFormValueSignal = useSignal(10);
 
         return (
           <div class="demo-section">
@@ -236,15 +266,13 @@
                 <Input
                   name="num_outside_sync"
                   type="number"
-                  min={0}
-                  max={100}
-                  value={outsideFormValueSignal.value}
+                  value={outsideSyncSignal.value}
                   uiAction={(v) => {
                     push("uiAction", v);
                   }}
                   action={(v) => {
                     push("action", v);
-                    outsideFormValueSignal.value = v;
+                    outsideSyncSignal.value = v;
                   }}
                 />
               </Field>
@@ -270,14 +298,14 @@
                 <Input
                   name="num_outside_async"
                   type="number"
-                  min={0}
-                  max={100}
+                  value={outsideAsyncSignal.value}
                   uiAction={(v) => {
                     push("uiAction", v);
                   }}
                   action={async (v) => {
                     push("action (start)", v);
                     await sleep(800);
+                    outsideAsyncSignal.value = v;
                     push("action (done)", v);
                   }}
                   actionAfterChange
@@ -302,7 +330,7 @@
               action={async (values) => {
                 push("Form action", values);
                 await sleep(800);
-                insideFormValueSignal.value = values.num_inside;
+                insideFormSignal.value = values.num_inside;
               }}
               flex="y"
               spacing="m"
@@ -313,7 +341,7 @@
                 <Input
                   name="num_inside"
                   type="number"
-                  value={insideFormValueSignal.value}
+                  value={insideFormSignal.value}
                   uiAction={(v) => {
                     push("uiAction", v);
                   }}
@@ -344,6 +372,7 @@
             <Form
               action={(values) => {
                 push("Form action (required)", values);
+                valRequiredSignal.value = values.val_required;
               }}
               flex="y"
               spacing="m"
@@ -351,7 +380,12 @@
             >
               <Field vertical>
                 <Label>Nombre (required)</Label>
-                <Input name="val_required" type="number" required />
+                <Input
+                  name="val_required"
+                  type="number"
+                  required
+                  value={valRequiredSignal.value}
+                />
               </Field>
               <Button type="submit">Soumettre</Button>
             </Form>
@@ -373,6 +407,7 @@
             <Form
               action={(values) => {
                 push("Form action (min)", values);
+                valMinSignal.value = values.val_min;
               }}
               flex="y"
               spacing="m"
@@ -385,7 +420,7 @@
                   type="number"
                   required
                   min={10}
-                  defaultValue={3}
+                  value={valMinSignal.value}
                 />
               </Field>
               <Button type="submit">Soumettre</Button>
@@ -408,6 +443,7 @@
             <Form
               action={(values) => {
                 push("Form action (max)", values);
+                valMaxSignal.value = values.val_max;
               }}
               flex="y"
               spacing="m"
@@ -420,7 +456,7 @@
                   type="number"
                   required
                   max={100}
-                  defaultValue={150}
+                  value={valMaxSignal.value}
                 />
               </Field>
               <Button type="submit">Soumettre</Button>
@@ -443,6 +479,7 @@
             <Form
               action={(values) => {
                 push("Form action (step)", values);
+                valStepSignal.value = values.val_step;
               }}
               flex="y"
               spacing="m"
@@ -456,7 +493,7 @@
                   required
                   min={0}
                   step={5}
-                  defaultValue={7}
+                  value={valStepSignal.value}
                 />
               </Field>
               <Button type="submit">Soumettre</Button>
