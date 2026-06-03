@@ -109,6 +109,7 @@
                 </li>
                 <li>
                   <a href="#validation-max">Max</a>
+                  <a href="#validation-step">Step</a>
                 </li>
               </ol>
             </li>
@@ -409,6 +410,46 @@
                   required
                   max="18:00"
                   defaultValue="20:00"
+                />
+              </Field>
+              <Button type="submit">Soumettre</Button>
+            </Form>
+
+            <hr
+              style={{
+                margin: "20px 0",
+                border: "none",
+                borderTop: "1px solid #eee",
+              }}
+            />
+
+            <h3
+              id="validation-step"
+              style={{ margin: "0 0 8px", fontSize: "0.95rem" }}
+            >
+              3.4 Step
+            </h3>
+            <p class="desc">
+              Le picker est pré-rempli avec <code>09:07</code> alors que{" "}
+              <code>step="900"</code> (toutes les 15 minutes). Soumettre
+              déclenche le callout de validation.
+            </p>
+            <Form
+              action={(values) => {
+                push("Form action (step)", values);
+              }}
+              flex="y"
+              spacing="m"
+              alignX="start"
+            >
+              <Field vertical>
+                <Label>Heure (step 15 min, required)</Label>
+                <Picker
+                  name="val_step"
+                  type="time"
+                  required
+                  step="900"
+                  defaultValue="09:07"
                 />
               </Field>
               <Button type="submit">Soumettre</Button>

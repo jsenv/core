@@ -490,7 +490,20 @@ export const STEP_CONSTRAINT = {
       });
     }
     if (field.type === "time") {
-      return naviI18n("constraint.step.time.default", {
+      const stepSeconds = parseFloat(stepString);
+      if (!isNaN(stepSeconds)) {
+        if (stepSeconds % 3600 === 0) {
+          return naviI18n("constraint.step.time.hours", {
+            step: String(stepSeconds / 3600),
+          });
+        }
+        if (stepSeconds % 60 === 0) {
+          return naviI18n("constraint.step.time.minutes", {
+            step: String(stepSeconds / 60),
+          });
+        }
+      }
+      return naviI18n("constraint.step.time.seconds", {
         step: stepString,
       });
     }

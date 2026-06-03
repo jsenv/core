@@ -295,6 +295,22 @@ naviI18n.addAll({
     fr: "Ce nombre doit être un multiple de <strong>[step]</strong>.",
     en: "This number must be a multiple of <strong>[step]</strong>.",
   },
+  "constraint.step.time.hours": {
+    fr: "Veuillez saisir une heure correspondant à un multiple de <strong>[step]</strong> heure(s).",
+    en: "Please enter a time that is a multiple of <strong>[step]</strong> hour(s).",
+  },
+  "constraint.step.time.minutes": {
+    fr: "Veuillez saisir une heure correspondant à un multiple de <strong>[step]</strong> minute(s).",
+    en: "Please enter a time that is a multiple of <strong>[step]</strong> minute(s).",
+  },
+  "constraint.step.time.seconds": {
+    fr: "Veuillez saisir une heure correspondant à un multiple de <strong>[step]</strong> seconde(s).",
+    en: "Please enter a time that is a multiple of <strong>[step]</strong> second(s).",
+  },
+  "constraint.step.date.default": {
+    fr: "Cette date ne correspond pas au pas configuré.",
+    en: "This date does not match the configured step.",
+  },
   "constraint.max.time.default": {
     fr: "L'heure doit être <strong>[max]</strong> ou moins.",
     en: "The time must be <strong>[max]</strong> or earlier.",
