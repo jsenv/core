@@ -225,16 +225,16 @@
 
             <h3 id="outside-form">2.1 Outside a form</h3>
             <p class="desc">
-              <code>uiAction</code> est appelé immédiatement à chaque frappe.{" "}
-              <code>action</code> est asynchrone (800 ms) : l'input passe en
-              état loading pendant ce temps. La valeur est persistée dans l'URL
-              via <code>stateSignal</code>.
+              <strong>Action sync</strong> — <code>uiAction</code> est appelé à
+              chaque frappe, <code>action</code> est synchrone et met à jour le
+              signal immédiatement. La valeur est persistée dans l'URL via{" "}
+              <code>stateSignal</code>.
             </p>
             <Box flex="y" spacing="m">
               <Field vertical>
                 <Label>Nombre (0 – 100)</Label>
                 <Input
-                  name="num_outside"
+                  name="num_outside_sync"
                   type="number"
                   min={0}
                   max={100}
@@ -242,12 +242,45 @@
                   uiAction={(v) => {
                     push("uiAction", v);
                   }}
+                  action={(v) => {
+                    push("action", v);
+                    outsideFormValueSignal.value = v;
+                  }}
+                />
+              </Field>
+            </Box>
+
+            <hr
+              style={{
+                margin: "20px 0",
+                border: "none",
+                borderTop: "1px solid #eee",
+              }}
+            />
+
+            <p class="desc">
+              <strong>Action async avec actionAfterChange</strong> —{" "}
+              <code>actionAfterChange</code> retarde le déclenchement de{" "}
+              <code>action</code> jusqu'au blur ou à la touche Entrée. L'input
+              passe en état loading pendant les 800 ms de l'action async.
+            </p>
+            <Box flex="y" spacing="m">
+              <Field vertical>
+                <Label>Nombre (0 – 100)</Label>
+                <Input
+                  name="num_outside_async"
+                  type="number"
+                  min={0}
+                  max={100}
+                  uiAction={(v) => {
+                    push("uiAction", v);
+                  }}
                   action={async (v) => {
                     push("action (start)", v);
                     await sleep(800);
-                    outsideFormValueSignal.value = v;
                     push("action (done)", v);
                   }}
+                  actionAfterChange
                 />
               </Field>
             </Box>
