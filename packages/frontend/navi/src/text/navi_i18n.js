@@ -264,8 +264,8 @@ naviI18n.addAll({
     en: "This field must be greater than or equal to <strong>[min]</strong>.",
   },
   "constraint.min.time.default": {
-    fr: "Ce champ doit être <strong>[min]</strong> ou plus.",
-    en: "This field must be <strong>[min]</strong> or later.",
+    fr: "L'heure doit être <strong>[min]</strong> ou plus.",
+    en: "The time must be <strong>[min]</strong> or later.",
   },
   "constraint.min.date.today.default": {
     fr: "La date doit être aujourd'hui ou dans le futur.",
@@ -288,8 +288,8 @@ naviI18n.addAll({
     en: "This field must be <strong>[max]</strong> or less.",
   },
   "constraint.max.time.default": {
-    fr: "Ce champ doit être <strong>[max]</strong> ou moins.",
-    en: "This field must be <strong>[max]</strong> or less.",
+    fr: "L'heure doit être <strong>[max]</strong> ou moins.",
+    en: "The time must be <strong>[max]</strong> or earlier.",
   },
   "constraint.single_space.start.default": {
     fr: "Ce champ ne doit pas commencer par un espace.",
