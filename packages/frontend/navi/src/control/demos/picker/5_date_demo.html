@@ -462,9 +462,7 @@
                     type="navi_time"
                     required
                     min={
-                      isToday(dateSignalCombo.value)
-                        ? getNowHours(-5)
-                        : undefined
+                      isToday(dateSignalCombo.value) ? getNowHours(-5) : "7:00"
                     }
                     max="21:00"
                     step="00:30"
