@@ -106,6 +106,14 @@
         id: "val_step",
         type: "number",
       });
+      const hoursSignal = stateSignal(9, {
+        id: "hours",
+        type: "number",
+      });
+      const minutesSignal = stateSignal(30, {
+        id: "minutes",
+        type: "number",
+      });
 
       const DEMO_ROUTE = route("", {
         searchParams: {
@@ -116,6 +124,8 @@
           val_min: valMinSignal,
           val_max: valMaxSignal,
           val_step: valStepSignal,
+          hours: hoursSignal,
+          minutes: minutesSignal,
         },
       });
       setupRoutes([DEMO_ROUTE]);
@@ -129,6 +139,7 @@
             <StatesDemo />
             <InteractivityDemo />
             <ValidationDemo />
+            <TimeInputDemo />
           </Box>
         </NaviDebug>
       );
@@ -167,6 +178,9 @@
                   <a href="#validation-step">Step</a>
                 </li>
               </ol>
+            </li>
+            <li>
+              <a href="#time-input">Heures &amp; minutes</a>
             </li>
           </ol>
         </div>
@@ -492,6 +506,112 @@
                   value={valStepSignal.value}
                 />
               </Field>
+              <Button type="submit">Soumettre</Button>
+            </Form>
+
+            <CallLog entries={entries} onClear={clear} />
+          </div>
+        );
+      };
+
+      // ── 4. Heures & minutes ───────────────────────────────────────────────
+
+      const TimeInputDemo = () => {
+        const [entries, push, clear] = useCallLog();
+
+        return (
+          <div class="demo-section" id="time-input">
+            <h2>4. Heures &amp; minutes</h2>
+            <p class="desc">
+              Exemple d'utilisation de <code>type="navi_hours"</code> /{" "}
+              <code>type="navi_minutes"</code> pour saisir une heure
+              manuellement. Les min/max/step sont définis automatiquement. Les
+              inputs sont persistés dans l'URL.
+            </p>
+
+            <Box flex spacing="s" alignY="end">
+              <Field vertical>
+                <Label>Heures</Label>
+                <Input
+                  name="hours"
+                  type="navi_hours"
+                  value={hoursSignal.value}
+                  uiAction={(v) => {
+                    push("uiAction hours", v);
+                  }}
+                  action={(v) => {
+                    push("action hours", v);
+                    hoursSignal.value = v;
+                  }}
+                  actionAfterChange
+                />
+              </Field>
+              <span style={{ paddingBottom: "6px", fontWeight: "bold" }}>
+                :
+              </span>
+              <Field vertical>
+                <Label>Minutes</Label>
+                <Input
+                  name="minutes"
+                  type="navi_minutes"
+                  step={5}
+                  value={minutesSignal.value}
+                  uiAction={(v) => {
+                    push("uiAction minutes", v);
+                  }}
+                  action={(v) => {
+                    push("action minutes", v);
+                    minutesSignal.value = v;
+                  }}
+                  actionAfterChange
+                />
+              </Field>
+            </Box>
+
+            <hr
+              style={{
+                margin: "20px 0",
+                border: "none",
+                borderTop: "1px solid #eee",
+              }}
+            />
+
+            <p class="desc">
+              Même chose dans un <code>Form</code>, avec validation. Tester step
+              en mettant 7 dans les minutes (valeurs valides : 0, 5, 10…).
+            </p>
+            <Form
+              action={(values) => {
+                push("Form action", values);
+              }}
+              flex="y"
+              spacing="m"
+              alignX="start"
+            >
+              <Box flex spacing="s" alignY="end">
+                <Field vertical>
+                  <Label>Heures (0–23, required)</Label>
+                  <Input
+                    name="form_hours"
+                    type="navi_hours"
+                    required
+                    defaultValue={9}
+                  />
+                </Field>
+                <span style={{ paddingBottom: "6px", fontWeight: "bold" }}>
+                  :
+                </span>
+                <Field vertical>
+                  <Label>Minutes (pas de 5, required)</Label>
+                  <Input
+                    name="form_minutes"
+                    type="navi_minutes"
+                    required
+                    step={5}
+                    defaultValue={7}
+                  />
+                </Field>
+              </Box>
               <Button type="submit">Soumettre</Button>
             </Form>
 

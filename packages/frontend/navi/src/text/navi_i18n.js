@@ -267,6 +267,22 @@ naviI18n.addAll({
     fr: "Ce nombre doit être <strong>[min]</strong> ou plus.",
     en: "This number must be <strong>[min]</strong> or greater.",
   },
+  "constraint.min.navi_hours.default": {
+    fr: "Les heures doivent être <strong>[min]</strong> ou plus.",
+    en: "The hours must be <strong>[min]</strong> or greater.",
+  },
+  "constraint.min.navi_minutes.default": {
+    fr: "Les minutes doivent être <strong>[min]</strong> ou plus.",
+    en: "The minutes must be <strong>[min]</strong> or greater.",
+  },
+  "constraint.min.navi_seconds.default": {
+    fr: "Les secondes doivent être <strong>[min]</strong> ou plus.",
+    en: "The seconds must be <strong>[min]</strong> or greater.",
+  },
+  "constraint.min.navi_percentage.default": {
+    fr: "Le pourcentage doit être <strong>[min]</strong> ou plus.",
+    en: "The percentage must be <strong>[min]</strong> or greater.",
+  },
   "constraint.min.time.default": {
     fr: "L'heure doit être <strong>[min]</strong> ou plus.",
     en: "The time must be <strong>[min]</strong> or later.",
@@ -291,9 +307,41 @@ naviI18n.addAll({
     fr: "Ce nombre doit être <strong>[max]</strong> ou moins.",
     en: "This number must be <strong>[max]</strong> or less.",
   },
+  "constraint.max.navi_hours.default": {
+    fr: "Les heures doivent être <strong>[max]</strong> ou moins.",
+    en: "The hours must be <strong>[max]</strong> or less.",
+  },
+  "constraint.max.navi_minutes.default": {
+    fr: "Les minutes doivent être <strong>[max]</strong> ou moins.",
+    en: "The minutes must be <strong>[max]</strong> or less.",
+  },
+  "constraint.max.navi_seconds.default": {
+    fr: "Les secondes doivent être <strong>[max]</strong> ou moins.",
+    en: "The seconds must be <strong>[max]</strong> or less.",
+  },
+  "constraint.max.navi_percentage.default": {
+    fr: "Le pourcentage doit être <strong>[max]</strong> ou moins.",
+    en: "The percentage must be <strong>[max]</strong> or less.",
+  },
   "constraint.step.number.default": {
     fr: "Ce nombre doit être un multiple de <strong>[step]</strong> (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
     en: "This number must be a multiple of <strong>[step]</strong> (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
+  },
+  "constraint.step.navi_hours.default": {
+    fr: "Les heures doivent être un multiple de <strong>[step]</strong> (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
+    en: "The hours must be a multiple of <strong>[step]</strong> (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
+  },
+  "constraint.step.navi_minutes.default": {
+    fr: "Les minutes doivent être un multiple de <strong>[step]</strong> (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
+    en: "The minutes must be a multiple of <strong>[step]</strong> (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
+  },
+  "constraint.step.navi_seconds.default": {
+    fr: "Les secondes doivent être un multiple de <strong>[step]</strong> (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
+    en: "The seconds must be a multiple of <strong>[step]</strong> (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
+  },
+  "constraint.step.navi_percentage.default": {
+    fr: "Le pourcentage doit être un multiple de <strong>[step]</strong> (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
+    en: "The percentage must be a multiple of <strong>[step]</strong> (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
   },
   "constraint.step.time.hours": {
     fr: "L'heure doit être dans un intervalle de <strong>[step]</strong> heure(s) (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",

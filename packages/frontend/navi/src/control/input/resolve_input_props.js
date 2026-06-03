@@ -11,8 +11,25 @@ import { parseStepToSeconds } from "../picker/time_helpers.js";
  *   `datetime-local`).
  * - `step`: for time-based types (`time`, `datetime-local`/`datetime`)
  *   accepts an `"HH:MM"` string and converts it to seconds.
+ * - Navi conceptual number types (`navi_hours`, `navi_minutes`, `navi_seconds`,
+ *   `navi_percentage`): converted to `type="number"` with sensible min/max/step
+ *   defaults and a `data-navi-input-type` attribute for constraint messages.
  */
 export const resolveInputProps = (props) => {
+  const naviTypeDefaults = NAVI_NUMBER_TYPE_DEFAULTS[props.type];
+  if (naviTypeDefaults) {
+    props["data-navi-input-type"] = props.type;
+    props.type = naviTypeDefaults.type;
+    if (props.min === undefined) {
+      props.min = naviTypeDefaults.min;
+    }
+    if (props.max === undefined) {
+      props.max = naviTypeDefaults.max;
+    }
+    if (props.step === undefined) {
+      props.step = naviTypeDefaults.step;
+    }
+  }
   const { type } = props;
   const minMaxFormatter = MIN_MAX_FORMATTER_BY_TYPE[type];
   const stepFormatter = STEP_FORMATTER_BY_TYPE[type];
@@ -23,6 +40,16 @@ export const resolveInputProps = (props) => {
   if (stepFormatter) {
     props.step = stepFormatter(props.step);
   }
+};
+
+// Conceptual number types: define defaults and map to native type="number".
+// The `data-navi-input-type` attribute is set so constraint messages can use
+// domain-specific wording instead of the generic "Ce nombre doit être...".
+const NAVI_NUMBER_TYPE_DEFAULTS = {
+  navi_hours: { type: "number", min: 0, max: 23, step: 1 },
+  navi_minutes: { type: "number", min: 0, max: 59, step: 1 },
+  navi_seconds: { type: "number", min: 0, max: 59, step: 1 },
+  navi_percentage: { type: "number", min: 0, max: 100, step: 1 },
 };
 
 const toInputDate = (value) => {

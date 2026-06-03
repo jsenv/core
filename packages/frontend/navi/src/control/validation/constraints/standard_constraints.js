@@ -353,7 +353,8 @@ export const MIN_CONSTRAINT = {
         return null;
       }
       if (valueAsNumber < minNumber) {
-        return naviI18n("constraint.min.number.default", {
+        const naviInputType = field.getAttribute("data-navi-input-type");
+        return naviI18n(`constraint.min.${naviInputType || "number"}.default`, {
           min: minString,
         });
       }
@@ -417,7 +418,8 @@ export const MAX_CONSTRAINT = {
         return null;
       }
       if (valueAsNumber > maxNumber) {
-        return naviI18n("constraint.max.number.default", {
+        const naviInputType = field.getAttribute("data-navi-input-type");
+        return naviI18n(`constraint.max.${naviInputType || "number"}.default`, {
           max: maxString,
         });
       }
@@ -492,7 +494,8 @@ export const STEP_CONSTRAINT = {
       const before = base + Math.floor((valueAsNumber - base) / step) * step;
       const after = before + step;
       const decimals = (stepString.split(".")[1] || "").length;
-      return naviI18n("constraint.step.number.default", {
+      const naviInputType = field.getAttribute("data-navi-input-type");
+      return naviI18n(`constraint.step.${naviInputType || "number"}.default`, {
         step: stepString,
         before: before.toFixed(decimals),
         after: after.toFixed(decimals),
