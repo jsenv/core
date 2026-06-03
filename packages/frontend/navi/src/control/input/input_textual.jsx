@@ -76,7 +76,11 @@ const css = /* css */ `
         transparent
       );
       --background-color-readonly: var(--background-color);
-      --color-readonly: var(--color-dimmed);
+      --color-readonly: color-mix(
+        in srgb,
+        var(--picker-border-color) 45%,
+        transparent
+      );
       /* Disabled */
       --border-color-disabled: var(--border-color-readonly);
       --background-color-disabled: color-mix(
@@ -84,7 +88,7 @@ const css = /* css */ `
         var(--background-color) 95%,
         grey
       );
-      --color-disabled: color-mix(in srgb, var(--color) 95%, grey);
+      --color-disabled: var(--color-dimmed);
 
       --left-slot-size: 1.2em;
       --right-slot-size: 1.2em;

@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Input Number Demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 40px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      #container {
+        max-width: 900px;
+        margin: 0 auto;
+      }
+      h1 {
+        margin: 0 0 32px;
+        font-size: 1.4rem;
+      }
+      h2 {
+        margin: 0 0 4px;
+        font-size: 1.1rem;
+      }
+      h3 {
+        margin: 16px 0 8px;
+        font-size: 0.95rem;
+      }
+      .demo-section {
+        margin-bottom: 24px;
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      p.desc {
+        margin: 0 0 16px;
+        color: #555;
+        font-size: 13px;
+      }
+      .states-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        align-items: start;
+        gap: 16px;
+      }
+      .states-col-header {
+        margin-bottom: 12px;
+        color: #888;
+        font-weight: 600;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <h1>Input Number Demo</h1>
+      <div id="app"></div>
+    </div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useSignal } from "@preact/signals";
+      import {
+        Box,
+        Field,
+        Label,
+        Input,
+        Form,
+        Button,
+        NaviDebug,
+        route,
+        setupRoutes,
+        stateSignal,
+      } from "@jsenv/navi";
+      import { CallLog, useCallLog } from "./utils/call_log.jsx";
+
+      // ── State signals (persisted in URL search params) ────────────────────
+
+      const outsideFormValueSignal = stateSignal(42, {
+        id: "outside_form_value",
+        type: "number",
+        min: 0,
+        max: 100,
+      });
+
+      const DEMO_ROUTE = route("", {
+        searchParams: {
+          outside_form_value: outsideFormValueSignal,
+        },
+      });
+      setupRoutes([DEMO_ROUTE]);
+
+      // ── App ───────────────────────────────────────────────────────────────
+
+      const App = () => (
+        <NaviDebug debugInteraction debugAction>
+          <Box flex="y" spacing="l">
+            <TableOfContents />
+            <StatesDemo />
+            <InteractivityDemo />
+            <ValidationDemo />
+          </Box>
+        </NaviDebug>
+      );
+
+      const TableOfContents = () => (
+        <div class="demo-section">
+          <h2>Table of contents</h2>
+          <ol style={{ margin: 0, paddingLeft: "20px", lineHeight: "2" }}>
+            <li>
+              <a href="#states">États</a>
+            </li>
+            <li>
+              Interactivity
+              <ol style={{ paddingLeft: "20px" }}>
+                <li>
+                  <a href="#outside-form">Outside a form</a>
+                </li>
+                <li>
+                  <a href="#inside-form">Inside a form</a>
+                </li>
+              </ol>
+            </li>
+            <li>
+              Validation
+              <ol style={{ paddingLeft: "20px" }}>
+                <li>
+                  <a href="#validation-required">Required</a>
+                </li>
+                <li>
+                  <a href="#validation-min">Min</a>
+                </li>
+                <li>
+                  <a href="#validation-max">Max</a>
+                </li>
+                <li>
+                  <a href="#validation-step">Step</a>
+                </li>
+              </ol>
+            </li>
+          </ol>
+        </div>
+      );
+
+      // ── 1. États ──────────────────────────────────────────────────────────
+
+      const StatesDemo = () => (
+        <div class="demo-section" id="states">
+          <h2>1. États</h2>
+          <p class="desc">
+            États principaux de l'input number jsenv. La colonne native est
+            fournie à titre de comparaison.
+          </p>
+          <div class="states-grid">
+            <div>
+              <div class="states-col-header">Navi Input</div>
+              <Box flex="y" spacing="s">
+                <Field vertical>
+                  <Label>Vide</Label>
+                  <Input name="num_empty" type="number" />
+                </Field>
+                <Field vertical>
+                  <Label>Avec valeur</Label>
+                  <Input name="num_value" type="number" defaultValue={42} />
+                </Field>
+                <Field vertical>
+                  <Label>Readonly</Label>
+                  <Input
+                    name="num_readonly"
+                    type="number"
+                    defaultValue={42}
+                    readOnly
+                  />
+                </Field>
+                <Field vertical>
+                  <Label>Disabled</Label>
+                  <Input
+                    name="num_disabled"
+                    type="number"
+                    defaultValue={42}
+                    disabled
+                  />
+                </Field>
+              </Box>
+            </div>
+            <div>
+              <div class="states-col-header">User agent</div>
+              <Box flex="y" spacing="s">
+                <Field vertical>
+                  <Label>Vide</Label>
+                  <input type="number" />
+                </Field>
+                <Field vertical>
+                  <Label>Avec valeur</Label>
+                  <input type="number" defaultValue={42} />
+                </Field>
+                <Field vertical>
+                  <Label>Readonly</Label>
+                  <input type="number" defaultValue={42} readOnly />
+                </Field>
+                <Field vertical>
+                  <Label>Disabled</Label>
+                  <input type="number" defaultValue={42} disabled />
+                </Field>
+              </Box>
+            </div>
+          </div>
+        </div>
+      );
+
+      // ── 2. Interactivity ─────────────────────────────────────────────────
+
+      const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+      const InteractivityDemo = () => {
+        const [entries, push, clear] = useCallLog();
+        const insideFormValueSignal = useSignal(10);
+
+        return (
+          <div class="demo-section">
+            <h2>2. Interactivity</h2>
+
+            <h3 id="outside-form">2.1 Outside a form</h3>
+            <p class="desc">
+              <code>uiAction</code> est appelé immédiatement à chaque frappe.{" "}
+              <code>action</code> est asynchrone (800 ms) : l'input passe en
+              état loading pendant ce temps. La valeur est persistée dans l'URL
+              via <code>stateSignal</code>.
+            </p>
+            <Box flex="y" spacing="m">
+              <Field vertical>
+                <Label>Nombre (0 – 100)</Label>
+                <Input
+                  name="num_outside"
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={outsideFormValueSignal.value}
+                  uiAction={(v) => {
+                    push("uiAction", v);
+                  }}
+                  action={async (v) => {
+                    push("action (start)", v);
+                    await sleep(800);
+                    outsideFormValueSignal.value = v;
+                    push("action (done)", v);
+                  }}
+                />
+              </Field>
+            </Box>
+
+            <hr
+              style={{
+                margin: "20px 0",
+                border: "none",
+                borderTop: "1px solid #eee",
+              }}
+            />
+
+            <h3 id="inside-form">2.2 Inside a form</h3>
+            <p class="desc">
+              <code>uiAction</code> est appelé à chaque frappe. L'action du{" "}
+              <code>Form</code> se déclenche uniquement au submit.
+            </p>
+            <Form
+              action={async (values) => {
+                push("Form action", values);
+                await sleep(800);
+                insideFormValueSignal.value = values.num_inside;
+              }}
+              flex="y"
+              spacing="m"
+              alignX="start"
+            >
+              <Field vertical>
+                <Label>Nombre</Label>
+                <Input
+                  name="num_inside"
+                  type="number"
+                  value={insideFormValueSignal.value}
+                  uiAction={(v) => {
+                    push("uiAction", v);
+                  }}
+                />
+              </Field>
+              <Button type="submit">Soumettre</Button>
+            </Form>
+
+            <CallLog entries={entries} onClear={clear} />
+          </div>
+        );
+      };
+
+      // ── 3. Validation ─────────────────────────────────────────────────────
+
+      const ValidationDemo = () => {
+        const [entries, push, clear] = useCallLog();
+
+        return (
+          <div class="demo-section" id="validation">
+            <h2>3. Validation</h2>
+
+            <h3 id="validation-required">3.1 Required</h3>
+            <p class="desc">
+              Champ obligatoire vide. Soumettre déclenche le callout de
+              validation.
+            </p>
+            <Form
+              action={(values) => {
+                push("Form action (required)", values);
+              }}
+              flex="y"
+              spacing="m"
+              alignX="start"
+            >
+              <Field vertical>
+                <Label>Nombre (required)</Label>
+                <Input name="val_required" type="number" required />
+              </Field>
+              <Button type="submit">Soumettre</Button>
+            </Form>
+
+            <hr
+              style={{
+                margin: "20px 0",
+                border: "none",
+                borderTop: "1px solid #eee",
+              }}
+            />
+
+            <h3 id="validation-min">3.2 Min</h3>
+            <p class="desc">
+              Valeur pré-remplie à <code>3</code> alors que{" "}
+              <code>min="10"</code>. Soumettre déclenche le callout de
+              validation.
+            </p>
+            <Form
+              action={(values) => {
+                push("Form action (min)", values);
+              }}
+              flex="y"
+              spacing="m"
+              alignX="start"
+            >
+              <Field vertical>
+                <Label>Nombre (min 10, required)</Label>
+                <Input
+                  name="val_min"
+                  type="number"
+                  required
+                  min={10}
+                  defaultValue={3}
+                />
+              </Field>
+              <Button type="submit">Soumettre</Button>
+            </Form>
+
+            <hr
+              style={{
+                margin: "20px 0",
+                border: "none",
+                borderTop: "1px solid #eee",
+              }}
+            />
+
+            <h3 id="validation-max">3.3 Max</h3>
+            <p class="desc">
+              Valeur pré-remplie à <code>150</code> alors que{" "}
+              <code>max="100"</code>. Soumettre déclenche le callout de
+              validation.
+            </p>
+            <Form
+              action={(values) => {
+                push("Form action (max)", values);
+              }}
+              flex="y"
+              spacing="m"
+              alignX="start"
+            >
+              <Field vertical>
+                <Label>Nombre (max 100, required)</Label>
+                <Input
+                  name="val_max"
+                  type="number"
+                  required
+                  max={100}
+                  defaultValue={150}
+                />
+              </Field>
+              <Button type="submit">Soumettre</Button>
+            </Form>
+
+            <hr
+              style={{
+                margin: "20px 0",
+                border: "none",
+                borderTop: "1px solid #eee",
+              }}
+            />
+
+            <h3 id="validation-step">3.4 Step</h3>
+            <p class="desc">
+              Valeur pré-remplie à <code>7</code> alors que{" "}
+              <code>step="5"</code> (valeurs acceptées : 0, 5, 10…). Soumettre
+              déclenche le callout de validation.
+            </p>
+            <Form
+              action={(values) => {
+                push("Form action (step)", values);
+              }}
+              flex="y"
+              spacing="m"
+              alignX="start"
+            >
+              <Field vertical>
+                <Label>Nombre (step 5, required)</Label>
+                <Input
+                  name="val_step"
+                  type="number"
+                  required
+                  min={0}
+                  step={5}
+                  defaultValue={7}
+                />
+              </Field>
+              <Button type="submit">Soumettre</Button>
+            </Form>
+
+            <CallLog entries={entries} onClear={clear} />
+          </div>
+        );
+      };
+
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>
