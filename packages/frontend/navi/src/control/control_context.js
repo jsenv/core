@@ -14,6 +14,7 @@ export const CONTROL_ATTRIBUTE_SET = new Set([
   "value",
   "checked",
 
+  "navi-input-type",
   "navi-control-proxy-for",
   "aria-controls",
 

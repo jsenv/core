@@ -494,7 +494,7 @@ export const STEP_CONSTRAINT = {
       const before = base + Math.floor((valueAsNumber - base) / step) * step;
       const after = before + step;
       const decimals = (stepString.split(".")[1] || "").length;
-      const naviInputType = field.getAttribute("data-navi-input-type");
+      const naviInputType = field.getAttribute("navi-input-type");
       return naviI18n(`constraint.step.${naviInputType || "number"}.default`, {
         step: stepString,
         before: before.toFixed(decimals),

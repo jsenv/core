@@ -18,7 +18,7 @@ import { parseStepToSeconds } from "../picker/time_helpers.js";
 export const resolveInputProps = (props) => {
   const naviTypeDefaults = NAVI_NUMBER_TYPE_DEFAULTS[props.type];
   if (naviTypeDefaults) {
-    props["data-navi-input-type"] = props.type;
+    props["navi-input-type"] = props.type;
     props.type = naviTypeDefaults.type;
     if (props.min === undefined) {
       props.min = naviTypeDefaults.min;
