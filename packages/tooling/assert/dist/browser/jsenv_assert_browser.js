@@ -1,4 +1,4 @@
-import { stripAnsi, emojiRegex, eastAsianWidth } from "./jsenv_assert_node_modules.js";
+import { stripAnsi, eastAsianWidth } from "./jsenv_assert_node_modules.js";
 
 // https://github.com/Marak/colors.js/blob/master/lib/styles.js
 // https://stackoverflow.com/a/75985833/2634179
@@ -6032,89 +6032,150 @@ const cleanup = () => {
   restore();
 };
 
+// Whole-cluster zero-width: Default_Ignorable, Control, Format, Mark, Surrogate
+const zeroWidthClusterRegex = /^[\p{Default_Ignorable_Code_Point}\p{Control}\p{Format}\p{Mark}\p{Surrogate}]+$/v;
+
+// Strip leading non-printing chars to get the first visible scalar of a cluster
+const leadingNonPrintingRegex = /^[\p{Default_Ignorable_Code_Point}\p{Control}\p{Format}\p{Mark}\p{Surrogate}]+/v;
+
+// RGI emoji sequences (e.g. flag sequences, ZWJ families, keycap+VS16)
+const rgiEmojiRegex = /^\p{RGI_Emoji}$/v;
+
+// Unqualified keycap: digit/# /* + combining enclosing keycap (no VS16)
+const unqualifiedKeycapRegex = /^[\d#*]\u20E3$/;
+const extendedPictographicRegex = /\p{Extended_Pictographic}/gv;
+const isDoubleWidthNonRgiEmojiSequence = segment => {
+  if (segment.length > 50) {
+    return false;
+  }
+  if (unqualifiedKeycapRegex.test(segment)) {
+    return true;
+  }
+  // ZWJ sequences with 2+ Extended_Pictographic
+  if (segment.includes("\u200D")) {
+    const pictographics = segment.match(extendedPictographicRegex);
+    return pictographics !== null && pictographics.length >= 2;
+  }
+  return false;
+};
+const baseVisible = segment => {
+  return segment.replace(leadingNonPrintingRegex, "");
+};
+const isHangulLeadingJamo = cp => {
+  return cp >= 0x1100 && cp <= 0x115f || cp >= 0xa960 && cp <= 0xa97c;
+};
+const isHangulVowelJamo = cp => {
+  return cp >= 0x1160 && cp <= 0x11a7 || cp >= 0xd7b0 && cp <= 0xd7c6;
+};
+const isHangulTrailingJamo = cp => {
+  return cp >= 0x11a8 && cp <= 0x11ff || cp >= 0xd7cb && cp <= 0xd7fb;
+};
+const isHangulJamo = cp => {
+  return isHangulLeadingJamo(cp) || isHangulVowelJamo(cp) || isHangulTrailingJamo(cp);
+};
+const hangulClusterWidth = (visibleSegment, eastAsianWidthOptions) => {
+  const codePoints = [];
+  for (const character of visibleSegment) {
+    if (zeroWidthClusterRegex.test(character)) {
+      continue;
+    }
+    codePoints.push(character.codePointAt(0));
+  }
+  if (codePoints.length === 0) {
+    return undefined;
+  }
+  let width = 0;
+  for (let index = 0; index < codePoints.length; index++) {
+    const codePoint = codePoints[index];
+    if (!isHangulJamo(codePoint)) {
+      if (width === 0) {
+        return undefined;
+      }
+      for (let remaining = index; remaining < codePoints.length; remaining++) {
+        width += eastAsianWidth(codePoints[remaining], eastAsianWidthOptions);
+      }
+      return width;
+    }
+    if (isHangulLeadingJamo(codePoint) && isHangulVowelJamo(codePoints[index + 1])) {
+      width += 2;
+      index += isHangulTrailingJamo(codePoints[index + 2]) ? 2 : 1;
+      continue;
+    }
+    width += eastAsianWidth(codePoint, eastAsianWidthOptions);
+  }
+  return width;
+};
+const trailingHalfwidthWidth = (visibleSegment, eastAsianWidthOptions) => {
+  let extra = 0;
+  let first = true;
+  for (const character of visibleSegment) {
+    if (first) {
+      first = false;
+      continue;
+    }
+    if (character >= "\uFF00" && character <= "\uFFEF") {
+      extra += eastAsianWidth(character.codePointAt(0), eastAsianWidthOptions);
+    }
+  }
+  return extra;
+};
 const createMeasureTextWidth = ({
   stripAnsi
 }) => {
   const segmenter = new Intl.Segmenter();
-  const defaultIgnorableCodePointRegex = /^(?:[\xAD\u034F\u061C\u115F\u1160\u17B4\u17B5\u180B-\u180F\u200B-\u200F\u202A-\u202E\u2060-\u206F\u3164\uFE00-\uFE0F\uFEFF\uFFA0\uFFF0-\uFFF8]|\uD82F[\uDCA0-\uDCA3]|\uD834[\uDD73-\uDD7A]|[\uDB40-\uDB43][\uDC00-\uDFFF])$/;
   const measureTextWidth = (string, {
     ambiguousIsNarrow = true,
-    countAnsiEscapeCodes = false,
-    skipEmojis = false
+    countAnsiEscapeCodes = false
   } = {}) => {
     if (typeof string !== "string" || string.length === 0) {
       return 0;
     }
-    if (!countAnsiEscapeCodes) {
+
+    // Only strip ANSI when escape codes are actually present
+    if (!countAnsiEscapeCodes && (string.includes("\u001B") || string.includes("\u009B"))) {
       string = stripAnsi(string);
     }
     if (string.length === 0) {
       return 0;
+    }
+
+    // Fast path: printable ASCII needs no segmenter or EAW lookup
+    if (/^[\u0020-\u007E]*$/.test(string)) {
+      return string.length;
     }
     let width = 0;
     const eastAsianWidthOptions = {
       ambiguousAsWide: !ambiguousIsNarrow
     };
     for (const {
-      segment: character
+      segment
     } of segmenter.segment(string)) {
-      const codePoint = character.codePointAt(0);
-
-      // Ignore control characters
-      if (codePoint <= 0x1f || codePoint >= 0x7f && codePoint <= 0x9f) {
+      if (zeroWidthClusterRegex.test(segment)) {
         continue;
       }
 
-      // Ignore zero-width characters
-      if (codePoint >= 0x200b && codePoint <= 0x200f ||
-      // Zero-width space, non-joiner, joiner, left-to-right mark, right-to-left mark
-      codePoint === 0xfeff // Zero-width no-break space
-      ) {
-        continue;
-      }
-
-      // Ignore combining characters
-      if (codePoint >= 0x300 && codePoint <= 0x36f ||
-      // Combining diacritical marks
-      codePoint >= 0x1ab0 && codePoint <= 0x1aff ||
-      // Combining diacritical marks extended
-      codePoint >= 0x1dc0 && codePoint <= 0x1dff ||
-      // Combining diacritical marks supplement
-      codePoint >= 0x20d0 && codePoint <= 0x20ff ||
-      // Combining diacritical marks for symbols
-      codePoint >= 0xfe20 && codePoint <= 0xfe2f // Combining half marks
-      ) {
-        continue;
-      }
-
-      // Ignore surrogate pairs
-      if (codePoint >= 0xd800 && codePoint <= 0xdfff) {
-        continue;
-      }
-
-      // Ignore variation selectors
-      if (codePoint >= 0xfe00 && codePoint <= 0xfe0f) {
-        continue;
-      }
-
-      // This covers some of the above cases, but we still keep them for performance reasons.
-      if (defaultIgnorableCodePointRegex.test(character)) {
-        continue;
-      }
-      if (!skipEmojis && emojiRegex().test(character)) {
-        if (process.env.CAPTURING_SIDE_EFFECTS) {
-          if (character === "✔️") {
-            width += 2;
-            continue;
-          }
+      // RGI emoji + unqualified emoji sequences are double-width
+      if (rgiEmojiRegex.test(segment) || isDoubleWidthNonRgiEmojiSequence(segment)) {
+        if (process.env.CAPTURING_SIDE_EFFECTS && segment === "✔️") {
+          width += 2;
+          continue;
         }
-        width += measureTextWidth(character, {
-          skipEmojis: true,
-          countAnsiEscapeCodes: true // to skip call to stripAnsi
-        });
+        width += 2;
         continue;
       }
+      const visibleSegment = baseVisible(segment);
+      const hangulWidth = hangulClusterWidth(visibleSegment, eastAsianWidthOptions);
+      if (hangulWidth !== undefined) {
+        width += hangulWidth;
+        continue;
+      }
+
+      // EAW of the cluster's first visible scalar
+      const codePoint = visibleSegment.codePointAt(0);
       width += eastAsianWidth(codePoint, eastAsianWidthOptions);
+
+      // Add width for trailing Halfwidth/Fullwidth Forms (e.g. ﾞ, ﾟ, ｰ)
+      width += trailingHalfwidthWidth(visibleSegment, eastAsianWidthOptions);
     }
     return width;
   };

@@ -3,7 +3,7 @@ import { isValidElement, createContext, h, toChildArray, render, Fragment, clone
 import { useErrorBoundary, useLayoutEffect, useEffect, useContext, useMemo, useRef, useState, useCallback, useId } from "preact/hooks";
 import { jsxs, jsx, Fragment as Fragment$1 } from "preact/jsx-runtime";
 import { signal, effect, computed, batch, useSignal } from "@preact/signals";
-import { createIterableWeakSet, createEventGroupLogger, mergeOneStyle, normalizeStyle, createPubSub, dispatchInternalCustomEvent, mergeTwoStyles, normalizeStyles, createGroupTransitionController, getElementSignature, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, findBefore, findAfter, createValueEffect, eventInvolves, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, createStyleController, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, dispatchCustomEvent, resolveCSSSize, canInterceptKeys, activeElementSignal, hasCSSSizeUnit, resolveOklchLightness, contrastColor, initFocusGroup, elementIsFocusable, scrollIntoViewScoped, findFocusable, trapScrollInside, trapFocusInside, snapToPixel, formatEventSideEffect, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
+import { createIterableWeakSet, createEventGroupLogger, mergeOneStyle, normalizeStyle, createPubSub, dispatchInternalCustomEvent, getElementSignature, findEvent, mergeTwoStyles, normalizeStyles, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, findBefore, findAfter, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, createStyleController, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, measureLongestVisualLineWidth, findFocusDelegateTarget, getKeyboardEventDefaultAction, resolveCSSSize, activeElementSignal, hasCSSSizeUnit, resolveOklchLightness, contrastColor, dispatchCustomEvent, initFocusGroup, elementIsFocusable, findFocusable, trapScrollInside, trapFocusInside, snapToPixel, scrollIntoViewScoped, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement, measureWidestChildRow } from "@jsenv/dom";
 export { contrastColor, startDragToReorder } from "@jsenv/dom";
 import { prefixFirstAndIndentRemainingLines } from "@jsenv/humanize";
 import { createValidity } from "@jsenv/validity";
@@ -71,7 +71,7 @@ const useActionStatus = (action) => {
   };
 };
 
-installImportMetaCssBuild(import.meta);const css$I = /* css */`
+installImportMetaCssBuild(import.meta);const css$P = /* css */`
   .action_error {
     margin-top: 0;
     margin-bottom: 20px;
@@ -96,7 +96,7 @@ const ActionRenderer = ({
   children,
   disabled
 }) => {
-  import.meta.css = [css$I, "@jsenv/navi/src/action/action_renderer.jsx"];
+  import.meta.css = [css$P, "@jsenv/navi/src/action/action_renderer.jsx"];
   if (action === undefined) {
     throw new Error("ActionRenderer requires an action to render, but none was provided.");
   }
@@ -953,13 +953,11 @@ const setActionDispatcher = (value) => {
 
 const getActionDispatcher = () => dispatchActions;
 
-const rerunActions = async (
-  actionSet,
-  { reason = "rerunActions was called" } = {},
-) => {
+const rerunActions = async (actionSet, options) => {
   return dispatchActions({
     rerunSet: actionSet,
-    reason,
+    reason: "rerunActions was calle",
+    ...options,
   });
 };
 
@@ -1080,6 +1078,7 @@ const updateActions = ({
   abortSignal,
   isReplace = false,
   reason,
+  event,
   prerunSet = new Set(),
   runSet = new Set(),
   rerunSet = new Set(),
@@ -1273,6 +1272,7 @@ ${lines.join("\n")}`);
         getActionPrivateProperties(actionToReset);
       actionToResetPrivateProperties.performReset({
         reason,
+        event,
         willRunOrPrerun:
           willRunSet.has(actionToReset) || willPrerunSet.has(actionToReset),
       });
@@ -1295,6 +1295,7 @@ ${lines.join("\n")}`);
         globalAbortSignal,
         abortSignal: effectiveSignal,
         reason,
+        event,
         isPrerun,
         onComplete,
         onAbort,
@@ -1744,6 +1745,7 @@ const createAction = (callback, rootOptions = {}) => {
           globalAbortSignal,
           abortSignal,
           reason,
+          event,
           isPrerun,
           onComplete,
           onAbort,
@@ -1793,7 +1795,12 @@ const createAction = (callback, rootOptions = {}) => {
 
         const args = [];
         args.push(params);
-        args.push({ signal: internalAbortSignal, reason, isPrerun });
+        args.push({
+          reason,
+          event,
+          signal: internalAbortSignal,
+          isPrerun,
+        });
         const returnValue = sideEffect(...args);
         if (typeof returnValue === "function") {
           sideEffectCleanup = returnValue;
@@ -1848,7 +1855,7 @@ const createAction = (callback, rootOptions = {}) => {
           const data = dataSignal.peek();
           return data;
         };
-        const onRunError = (e) => {
+        const onRunError = (error) => {
           if (abortSignal) {
             abortSignal.removeEventListener("abort", onAbortFromSpecific);
           }
@@ -1858,40 +1865,40 @@ const createAction = (callback, rootOptions = {}) => {
           actionAbortMap.delete(action);
           actionPromiseMap.delete(action);
           const isAbort =
-            (internalAbortSignal.aborted && e === internalAbortSignal.reason) ||
-            e.name === "AbortError";
+            (internalAbortSignal.aborted &&
+              error === internalAbortSignal.reason) ||
+            error.name === "AbortError";
           if (isAbort) {
             runningStateSignal.value = ABORTED;
             if (isPrerun && abortSignal.aborted) {
               prerunProtectionRegistry.unprotect(action);
             }
-            onAbort?.(e, action);
-            return e;
+            onAbort?.(error, { event, action, args });
+            return error;
           }
           if (DEBUG$3) {
             console.log(
-              `"${action}": failed (error: ${e}, handled by ui: ${ui.hasRenderers})`,
+              `"${action}": failed (error: ${error}, handled by ui: ${ui.hasRenderers})`,
             );
           }
           batch(() => {
-            errorSignal.value = e;
+            errorSignal.value = error;
             runningStateSignal.value = FAILED;
-            onError?.(e, action);
+            onError?.(error, { event, action, args });
           });
 
           if (ui.hasRenderers || onError) {
             // When inside suspense this console.error is redundant with the error thrown by preact debug at
             // https://github.com/preactjs/preact/blob/21dd6d04c1a9a43e5b60976bb5eb7d856253195b/debug/src/debug.js#L109
-            console.error(e);
-
+            console.error(error);
             // For UI-bound actions: error is properly handled by logging + UI display
             // Return error instead of throwing to signal it's handled and prevent:
             // - jsenv error overlay from appearing
             // - error being treated as unhandled by runtime
-            return e;
+            return error;
           }
-          e.action = action;
-          throw e;
+          error.action = action;
+          throw error;
         };
 
         try {
@@ -2468,19 +2475,21 @@ const useRunOnMount = (action, Component) => {
   }, []);
 };
 
-const DebugFocusContext = createContext(false);
-const DebugScrollContext = createContext(false);
+const DebugInteractionContext = createContext(false);
 const DebugPopupContext = createContext(false);
 const DebugActionContext = createContext(false);
-const DebugActionVerboseContext = createContext(false);
 const debugNoop = () => {};
 const sharedEventGroupLogger = createEventGroupLogger();
+const useDebugInteraction = () => {
+  const debug = useContext(DebugInteractionContext);
+  return debug || debugNoop;
+};
 const useDebugFocus = () => {
-  const debug = useContext(DebugFocusContext);
+  const debug = useContext(DebugInteractionContext);
   return debug || debugNoop;
 };
 const useDebugScroll = () => {
-  const debug = useContext(DebugScrollContext);
+  const debug = useContext(DebugInteractionContext);
   return debug || debugNoop;
 };
 const useDebugPopup = () => {
@@ -2491,34 +2500,25 @@ const useDebugAction = () => {
   const debug = useContext(DebugActionContext);
   return debug || debugNoop;
 };
-const useDebugActionVerbose = () => {
-  const debug = useContext(DebugActionVerboseContext);
-  return debug || debugNoop;
-};
 
 /**
  * NaviDebug — enables debug logging for navi UI interactions within its subtree.
  *
  * Props:
- *   debugFocus   — log focus moves (autoFocus, restoring previous focus, etc.)
- *   debugScroll  — log virtual scroll window updates and scroll-to-item calls
- *   debugPopup — log popover open/close/positioning decisions
+ *   debugInteraction — log focus moves and virtual scroll updates (enables debugFocus + debugScroll)
+ *   debugPopup       — log popover open/close/positioning decisions
+ *   debugAction      — log action lifecycle events
  *
  * Pass a boolean `true` to use `console.debug`, or pass a custom function.
  */
 const NaviDebug = ({
-  debugFocus,
-  debugScroll,
+  debugInteraction,
   debugPopup,
   debugAction,
-  debugActionVerbose,
   children
 }) => {
-  if (debugFocus === true) {
-    debugFocus = sharedEventGroupLogger;
-  }
-  if (debugScroll === true) {
-    debugScroll = sharedEventGroupLogger;
+  if (debugInteraction === true) {
+    debugInteraction = sharedEventGroupLogger;
   }
   if (debugPopup === true) {
     debugPopup = sharedEventGroupLogger;
@@ -2526,24 +2526,13 @@ const NaviDebug = ({
   if (debugAction === true) {
     debugAction = sharedEventGroupLogger;
   }
-  if (debugActionVerbose === true) {
-    debugActionVerbose = (e, label) => {
-      console.debug(label);
-    };
-  }
-  return jsx(DebugFocusContext.Provider, {
-    value: debugFocus,
-    children: jsx(DebugScrollContext.Provider, {
-      value: debugScroll,
-      children: jsx(DebugPopupContext.Provider, {
-        value: debugPopup,
-        children: jsx(DebugActionContext.Provider, {
-          value: debugAction,
-          children: jsx(DebugActionVerboseContext.Provider, {
-            value: debugActionVerbose,
-            children: children
-          })
-        })
+  return jsx(DebugInteractionContext.Provider, {
+    value: debugInteraction,
+    children: jsx(DebugPopupContext.Provider, {
+      value: debugPopup,
+      children: jsx(DebugActionContext.Provider, {
+        value: debugAction,
+        children: children
       })
     })
   });
@@ -5355,6 +5344,20 @@ const generateSignalId = () => {
  * const childTab = stateSignal(parentTab);
  * // childTab follows parentTab changes unless explicitly set
  */
+const stringUndefinedAliasSet = new Set([""]);
+const stringTypeSet = new Set([
+  "string",
+  "day",
+  "month",
+  "week",
+  "time",
+  "datetime",
+  "date",
+  "url",
+  "email",
+  "percentage",
+  "color",
+]);
 const stateSignal = (defaultValue, options = {}) => {
   const {
     id,
@@ -5367,7 +5370,14 @@ const stateSignal = (defaultValue, options = {}) => {
     debug,
     default: staticFallback,
     ignoreArrayOrder,
+    undefinedAlias,
   } = options;
+  const undefinedAliasSet =
+    undefinedAlias === undefined
+      ? stringTypeSet.has(type)
+        ? stringUndefinedAliasSet
+        : undefined
+      : new Set(undefinedAlias);
 
   // Check if defaultValue is a signal (dynamic default) or static value
   const isDynamicDefault =
@@ -5483,6 +5493,9 @@ const stateSignal = (defaultValue, options = {}) => {
     if (value === undefined) {
       return undefined;
     }
+    if (undefinedAliasSet && undefinedAliasSet.has(value)) {
+      return undefined;
+    }
     const wasValid = validity.valid;
     updateValidity(value);
     if (validity.valid) {
@@ -5529,25 +5542,23 @@ const stateSignal = (defaultValue, options = {}) => {
   };
   const preactSignal = signal(processValue(getFallbackValue()));
 
-  // Create wrapper signal that applies step rounding on setValue
-  const facadeSignal = {
-    get value() {
-      return preactSignal.value;
+  // Override the value setter on the instance to intercept writes and apply processValue.
+  // We do this on the instance (not the prototype) so preactSignal remains a real Signal
+  // instance — Preact's JSX integration requires instanceof Signal to render signals as children.
+  const signalProto = Object.getPrototypeOf(preactSignal);
+  const valueDescriptor = Object.getOwnPropertyDescriptor(signalProto, "value");
+  Object.defineProperty(preactSignal, "value", {
+    get() {
+      return valueDescriptor.get.call(preactSignal);
     },
-    set value(newValue) {
-      preactSignal.value = processValue(newValue);
+    set(newValue) {
+      valueDescriptor.set.call(preactSignal, processValue(newValue));
     },
-    peek() {
-      return preactSignal.peek();
-    },
-    subscribe(fn) {
-      return preactSignal.subscribe(fn);
-    },
-    valueOf() {
-      return preactSignal.valueOf();
-    },
-  };
+    enumerable: true,
+    configurable: true,
+  });
 
+  const facadeSignal = preactSignal;
   facadeSignal.validity = validity;
   facadeSignal.__signalId = signalIdString;
   facadeSignal.toString = () => `{navi_state_signal:${signalIdString}}`;
@@ -6887,7 +6898,12 @@ const getStylePropGroup = (name) => {
   return null;
 };
 const getStringifier = (key) => {
-  if (key === "borderRadius") {
+  if (
+    key === "borderRadius" ||
+    key === "spacing" ||
+    key === "spacingX" ||
+    key === "spacingY"
+  ) {
     return stringifySpacingStyle;
   }
   const group = getStylePropGroup(key);
@@ -7128,62 +7144,248 @@ const getDefaultDisplay = (tagName) => {
   return TAG_NAME_TO_DEFAULT_DISPLAY.get(normalizedTagName) || "inline";
 };
 
-const listenInputValue = (
+/**
+ * DOM utilities for navigating the control element hierarchy.
+ *
+ * A control is a self-contained interactive widget. Its DOM structure can be
+ * either flat (host only) or layered (wrapper + host):
+ *
+ * Flat — the element is both the root and the host:
+ * ```html
+ * <button navi-control navi-control-host>Click me</button>
+ * ```
+ *
+ * Layered — a visual wrapper surrounds a native input that is the real host:
+ * ```html
+ * <span navi-control>           ← wrapper: root of the control's DOM subtree
+ *   <input navi-control-host /> ← host: holds controlProps, value, UI state, constraints
+ * </span>
+ * ```
+ *
+ * Attribute roles:
+ *  - `navi-control`           boolean, on the wrapper/root; marks the control boundary
+ *  - `navi-control-host`      boolean, on the host; set automatically by `useInteractiveProps`
+ *
+ * See control_proxy.js for the `navi-control-proxy-for` pattern.
+ */
+
+/**
+ * Returns the host element inside `el` — the element that holds the control's
+ * value, UI state, and constraints (i.e. the element onto which
+ * `useInteractiveProps` spreads `controlProps` and its event handlers).
+ *
+ * Returns `null` when `el` is itself the host (no separate wrapper).
+ */
+const findControlHost = (el) => {
+  if (el.hasAttribute("navi-control-host")) {
+    return el;
+  }
+  return el.querySelector("[navi-control-host]");
+};
+
+/**
+ * Returns the nearest ancestor of `el` (exclusive of `el`'s own control) that
+ * has a `[data-action]` attribute.
+ *
+ * `data-action` is set on both the control host and the control root/wrapper,
+ * so we must first escape `el`'s own control boundary before searching — otherwise
+ * `.closest("[data-action]")` would land on the wrapper of the same control.
+ *
+ * ```html
+ * <form data-action="something_else">                      ← found
+ *   <span navi-control data-action="something">            ← own root, skipped
+ *     <input navi-control-host data-action="something" />  ← el
+ *   </span>
+ * </form>
+ * ```
+ */
+const findClosestControlWithAction = (el) => {
+  // Walk up to the own control root first (same as getParentControl does),
+  // then look for [data-action] on an ancestor. This is needed because
+  // data-action is now set on both the host and the control root/wrapper,
+  // so starting from el.parentNode alone could hit the wrapper of the same
+  // control rather than a true ancestor control.
+  const ownControlRoot = el.closest("[navi-control]") || el;
+  return ownControlRoot.parentNode.closest("[data-action]");
+};
+
+/**
+ * Returns the closest ancestor control element of `el` — i.e. the nearest
+ * `[navi-control]` element that is not the control `el` belongs to.
+ *
+ * `navi-control` is only on wrapper elements, never on hosts. So
+ * `el.closest("[navi-control]")` from a host returns that host's own wrapper,
+ * and one more `.parentNode.closest("[navi-control]")` reaches a true ancestor:
+ *
+ * ```html
+ * <button navi-control>              ← outer control  (returned)
+ *   <span navi-control>              ← inner wrapper  (skipped via parentNode)
+ *     <input navi-control-host />    ← el
+ *   </span>
+ * </button>
+ * ```
+ */
+const getParentControl = (el) => {
+  const ownControlRoot = el.closest("[navi-control]");
+  const parentControlRoot = ownControlRoot.parentNode.closest("[navi-control]");
+  return parentControlRoot;
+};
+
+/**
+ * Returns the root element of the control that `el` belongs to, or `null` if
+ * `el` is not part of a control.
+ *
+ * Use this when you have an element that may be a host (inner input) and need
+ * the visual boundary of its control — e.g. to anchor a callout, track
+ * mousedown interactions, or measure the control's bounding box.
+ */
+const findControlRoot = (el) => {
+  if (el.hasAttribute("navi-control")) {
+    return el;
+  }
+  if (el.hasAttribute("navi-control-host")) {
+    return el.closest("[navi-control]");
+  }
+  return null;
+};
+
+/**
+ * DOM utilities for the proxy control pattern.
+ *
+ * Some components need a native `<input>` internally — for form submission,
+ * constraint validation, or browser autofill — but the user may not want to
+ * display that input at all. In those cases the input is hidden and a separate
+ * visible element (the proxy) takes over the visual and interactive role.
+ *
+ * The typical use case is `SelectableList`: each list item acts as a styled
+ * radio button, but an actual `<input type="radio">` lives hidden in the DOM
+ * so form submission and validation work natively.  When users DO want to
+ * display the input they want full control over its appearance, so they render
+ * their own element and link it to the real input via `navi-control-proxy-for`:
+ *
+ * ```html
+ *  <div>
+ *   <input id="color_red" type="radio" name="color" value="red"  /> ← real control (hidden, drives form/validation)
+ *   <input type="radio" name="proxy" value="red" />                 ← proxy (visible, delegates interactions to real input)
+ * </div>
+ * ```
+ *
+ * When the proxy is interacted with, navi events are forwarded to the real
+ * control so validation, state management, and form submission all work
+ * through the real input.
+ *
+ * Note: an alternative design would be to require users to always instantiate
+ * the input explicitly — e.g. `<Selectable.Input headless />` when they don't
+ * want to display it. That would remove the need for the proxy mechanism
+ * entirely. For now we keep the proxy pattern.
+ */
+
+/**
+ * Given a proxy element, returns the real control it represents.
+ * Returns `null` when `el` is not a proxy.
+ */
+const findControlProxyTarget = (el) => {
+  const proxyFor = el.getAttribute("navi-control-proxy-for");
+  if (!proxyFor) {
+    return null;
+  }
+  return document.getElementById(proxyFor);
+};
+
+/**
+ * Given a real control element, returns the proxy that visually represents it.
+ *
+ * Use when you need to update or recheck the proxy's visual state after the
+ * real control's state changes, or when anchoring a callout to the visible
+ * element rather than the hidden real input.
+ *
+ * Returns `null` when no proxy exists for `el`.
+ */
+const findControlProxy = (el) => {
+  if (!el.id) {
+    return null;
+  }
+  return document.querySelector(
+    `[navi-control-proxy-for="${CSS.escape(el.id)}"]`,
+  );
+};
+
+const addInputEffect = (
   input,
   callback,
-  { waitForChange = false, debounce = 0 } = {},
+  { waitForChange = false, debounce = 0, debugInteraction = () => {} } = {},
 ) => {
+  const getState =
+    input.type === "checkbox" || input.type === "radio"
+      ? () => input.checked
+      : () => input.value;
+
   if (waitForChange) {
-    return listenInputValueChange(input, callback);
+    return listenInputStateChange(input, callback, { getState });
   }
+
   const [teardown, addTeardown] = createPubSub();
-  let currentValue = input.value;
+  let currentState = getState();
   let timeout;
   let debounceTimeout;
-
-  const onAsyncEvent = (e, options) => {
-    timeout = setTimeout(() => {
-      onEvent(e, options);
-    }, 0);
-  };
-
   let onEvent;
   if (debounce) {
     onEvent = (e, { skipDebounce } = {}) => {
       clearTimeout(timeout);
       clearTimeout(debounceTimeout);
-
-      const value = input.value;
-      if (value === currentValue) {
+      const state = getState();
+      if (state === currentState) {
+        debugInteraction(
+          e,
+          `interaction ignored (state unchanged: "${state}")`,
+        );
         return;
       }
 
       if (skipDebounce) {
-        currentValue = value;
+        debugInteraction(e, `skip debounce, callback called with "${state}"`);
+        currentState = state;
         callback(e);
       } else {
+        debugInteraction(
+          e,
+          `debounced ${debounce}ms, pending callback with "${state}"`,
+        );
         debounceTimeout = setTimeout(() => {
-          currentValue = value;
+          debugInteraction(
+            e,
+            `debounce elapsed, callback called with "${state}"`,
+          );
+          currentState = state;
           callback(e);
         }, debounce);
       }
     };
     // no need to wait for change events (blur, enter key)
     // we consider this as strong interactions requesting an immediate response
-    const stop = listenInputValueChange(input, (e) => {
-      onEvent(e, { skipDebounce: true });
-    });
+    const stop = listenInputStateChange(
+      input,
+      (e) => {
+        onEvent(e, { skipDebounce: true });
+      },
+      { getState },
+    );
     addTeardown(() => {
       stop();
     });
   } else {
     onEvent = (e) => {
       clearTimeout(timeout);
-      const value = input.value;
-      if (value === currentValue) {
+      const state = getState();
+      if (state === currentState) {
+        debugInteraction(
+          e,
+          `interaction ignored (state unchanged: "${state}")`,
+        );
         return;
       }
-      currentValue = value;
+      debugInteraction(e, `callback called with "${state}"`);
+      currentState = state;
       callback(e);
     };
     // Autocomplete, programmatic changes, form restoration
@@ -7192,6 +7394,13 @@ const listenInputValue = (
       input.removeEventListener("change", onEvent);
     });
   }
+
+  const onAsyncEvent = (e, options) => {
+    debugInteraction(e, `async event, scheduling callback`);
+    timeout = setTimeout(() => {
+      onEvent(e, options);
+    }, 0);
+  };
 
   // Standard user input (typing)
   input.addEventListener("input", onEvent);
@@ -7215,35 +7424,38 @@ const listenInputValue = (
     input.removeEventListener("paste", onEvent);
   });
 
-  // Focus events to catch programmatic changes that don't fire other events
-  // (like when value is set before user interaction)
-  input.addEventListener("focus", onEvent);
-  addTeardown(() => {
-    input.removeEventListener("focus", onEvent);
-  });
+  if (input.type === "radio") {
+    // radios are unchecked by an internal setUIState call when another radio is checked.
+    // navi_ui_state_change is dispatched whenever setUIState changes state, so we
+    // listen here to keep currentState in sync — otherwise input_effect thinks the
+    // radio is still checked and ignores the next user click as "state unchanged".
+    input.addEventListener("navi_ui_state_change", () => {
+      currentState = getState();
+    });
+  }
 
-  const onNaviDeleteContent = (e) => {
-    // "navi_delete_content" behaves like an async event
+  const onNaviClear = (e) => {
+    // "navi_clear" behaves like an async event
     // a bit like form reset because
     // our action will be updated async after the component re-renders
     // and we need to wait that to happen to properly call action with the right value
+    debugInteraction(e, `navi_clear received, scheduling callback`);
     onAsyncEvent(e, { skipDebounce: true });
   };
-  input.addEventListener("navi_delete_content", onNaviDeleteContent);
+  input.addEventListener("navi_clear", onNaviClear);
   addTeardown(() => {
-    input.removeEventListener("navi_delete_content", onNaviDeleteContent);
+    input.removeEventListener("navi_clear", onNaviClear);
   });
-  return () => {
-    teardown();
-  };
+
+  return teardown;
 };
 
-const listenInputValueChange = (input, callback) => {
+const listenInputStateChange = (input, callback, { getState }) => {
   const [teardown, addTeardown] = createPubSub();
 
-  let valueAtInteraction;
+  let stateAtInteraction;
   const oninput = () => {
-    valueAtInteraction = undefined;
+    stateAtInteraction = undefined;
   };
   const onkeydown = (e) => {
     if (e.key === "Enter") {
@@ -7252,7 +7464,7 @@ const listenInputValueChange = (input, callback) => {
        * if the input value has changed.
        * We need to prevent the next change event otherwise we would request action twice
        */
-      valueAtInteraction = input.value;
+      stateAtInteraction = getState();
     }
     if (e.key === "Escape") {
       /**
@@ -7261,15 +7473,12 @@ const listenInputValueChange = (input, callback) => {
        * We need to prevent the next change event otherwise we would request action when
        * we actually want to cancel
        */
-      valueAtInteraction = input.value;
+      stateAtInteraction = getState();
     }
   };
   const onchange = (e) => {
-    if (
-      valueAtInteraction !== undefined &&
-      e.target.value === valueAtInteraction
-    ) {
-      valueAtInteraction = undefined;
+    if (stateAtInteraction !== undefined && getState() === stateAtInteraction) {
+      stateAtInteraction = undefined;
       return;
     }
     callback(e);
@@ -7305,12 +7514,12 @@ const listenInputValueChange = (input, callback) => {
     //
     // We achieve this by checking if the input value has changed between focus and blur without any user interaction
     // if yes we fire the callback because input value did change
-    let valueAtStart = input.value;
+    let stateAtStart = getState();
     let interacted = false;
 
     const onfocus = () => {
       interacted = false;
-      valueAtStart = input.value;
+      stateAtStart = getState();
     };
     const oninput = (e) => {
       if (!e.isTrusted) {
@@ -7324,7 +7533,7 @@ const listenInputValueChange = (input, callback) => {
       if (interacted) {
         return;
       }
-      if (valueAtStart === input.value) {
+      if (stateAtStart === getState()) {
         return;
       }
       callback(e);
@@ -7341,2592 +7550,6 @@ const listenInputValueChange = (input, callback) => {
   }
 
   return teardown;
-};
-
-const requestPseudoStateCheck = (element, detail) => {
-  dispatchInternalCustomEvent(
-    element,
-    "navi_pseudo_state_request_check",
-    detail,
-  );
-};
-const NAVI_PSEUDO_STATE_CUSTOM_EVENT = "navi_pseudo_state";
-const dispatchPseudoStateCustomEvent = (element, value, oldValue) => {
-  dispatchInternalCustomEvent(element, NAVI_PSEUDO_STATE_CUSTOM_EVENT, {
-    pseudoState: value,
-    oldPseudoState: oldValue,
-  });
-};
-
-const PSEUDO_CLASSES = {};
-Object.assign(PSEUDO_CLASSES, {
-  ":valid": {
-    attribute: "data-valid",
-    test: (el) => el.matches(":valid"),
-  },
-  ":invalid": {
-    attribute: "data-invalid",
-    test: (el) => el.matches(":invalid"),
-  },
-  ":visited": {
-    attribute: "data-visited",
-  },
-});
-const definePseudoClass = (pseudoClass, definition) => {
-  PSEUDO_CLASSES[pseudoClass] = definition;
-};
-
-definePseudoClass(":hover", {
-  attribute: "data-hover",
-  setup: (el, callback) => {
-    let onmouseenter = () => {
-      callback();
-    };
-    let onmouseleave = () => {
-      callback();
-    };
-
-    if (el.tagName === "LABEL") {
-      // input.matches(":hover") is true when hovering the label
-      // so when label is hovered/not hovered we need to recheck the input too
-      const recheckInput = (e) => {
-        if (el.htmlFor) {
-          const input = document.getElementById(el.htmlFor);
-          if (!input) {
-            // cannot find the input for this label in the DOM
-            return;
-          }
-          requestPseudoStateCheck(input, { event: e });
-          return;
-        }
-        const input = el.querySelector("input, textarea, select");
-        if (!input) {
-          // label does not contain an input
-          return;
-        }
-        requestPseudoStateCheck(input, { event: e });
-      };
-      onmouseenter = (e) => {
-        callback();
-        recheckInput(e);
-      };
-      onmouseleave = (e) => {
-        callback();
-        recheckInput(e);
-      };
-    }
-
-    el.addEventListener("mouseenter", onmouseenter);
-    el.addEventListener("mouseleave", onmouseleave);
-    return () => {
-      el.removeEventListener("mouseenter", onmouseenter);
-      el.removeEventListener("mouseleave", onmouseleave);
-    };
-  },
-  test: (el) => el.matches(":hover"),
-});
-definePseudoClass(":disabled", {
-  attribute: "data-disabled",
-  add: (el) => {
-    if (
-      el.tagName === "BUTTON" ||
-      el.tagName === "INPUT" ||
-      el.tagName === "SELECT" ||
-      el.tagName === "TEXTAREA"
-    ) {
-      el.disabled = true;
-    }
-  },
-  remove: (el) => {
-    if (
-      el.tagName === "BUTTON" ||
-      el.tagName === "INPUT" ||
-      el.tagName === "SELECT" ||
-      el.tagName === "TEXTAREA"
-    ) {
-      el.disabled = false;
-    }
-  },
-});
-definePseudoClass(":read-only", {
-  attribute: "data-readonly",
-  add: (el) => {
-    if (
-      el.tagName === "INPUT" ||
-      el.tagName === "SELECT" ||
-      el.tagName === "TEXTAREA"
-    ) {
-      if (el.type === "checkbox" || el.type === "radio") {
-        // there is no readOnly for checkboxes/radios
-        return;
-      }
-      el.readOnly = true;
-    }
-  },
-  remove: (el) => {
-    if (
-      el.tagName === "INPUT" ||
-      el.tagName === "SELECT" ||
-      el.tagName === "TEXTAREA"
-    ) {
-      if (el.type === "checkbox" || el.type === "radio") {
-        // there is no readOnly for checkboxes/radios
-        return;
-      }
-      el.readOnly = false;
-    }
-  },
-});
-definePseudoClass(":checked", {
-  attribute: "data-checked",
-  setup: (el, callback) => {
-    if (el.type === "checkbox") {
-      // Listen to user interactions
-      el.addEventListener("input", callback);
-      // Intercept programmatic changes to .checked property
-      const originalDescriptor = Object.getOwnPropertyDescriptor(
-        HTMLInputElement.prototype,
-        "checked",
-      );
-      Object.defineProperty(el, "checked", {
-        get: originalDescriptor.get,
-        set(value) {
-          originalDescriptor.set.call(this, value);
-          callback();
-        },
-        configurable: true,
-      });
-      return () => {
-        // Restore original property descriptor
-        Object.defineProperty(el, "checked", originalDescriptor);
-        el.removeEventListener("input", callback);
-      };
-    }
-    if (el.type === "radio") {
-      // Listen to changes on the radio group
-      const radioSet =
-        el.closest("[data-radio-list], fieldset, form") || document;
-      radioSet.addEventListener("input", callback);
-
-      // Intercept programmatic changes to .checked property
-      const originalDescriptor = Object.getOwnPropertyDescriptor(
-        HTMLInputElement.prototype,
-        "checked",
-      );
-      Object.defineProperty(el, "checked", {
-        get: originalDescriptor.get,
-        set(value) {
-          originalDescriptor.set.call(this, value);
-          callback();
-        },
-        configurable: true,
-      });
-      return () => {
-        radioSet.removeEventListener("input", callback);
-        // Restore original property descriptor
-        Object.defineProperty(el, "checked", originalDescriptor);
-      };
-    }
-    if (el.tagName === "INPUT") {
-      el.addEventListener("input", callback);
-      return () => {
-        el.removeEventListener("input", callback);
-      };
-    }
-    return () => {};
-  },
-  test: (el) => el.matches(":checked"),
-});
-definePseudoClass(":active", {
-  attribute: "data-active",
-  setup: (el, callback) => {
-    // I'ts recommended to use :-navi-pressed over :active for interactive elements.
-    const onPointerDown = () => {
-      const onRelease = () => {
-        document.removeEventListener("pointercancel", onRelease, true);
-        document.removeEventListener("pointerup", onRelease, true);
-        callback();
-      };
-      document.addEventListener("pointercancel", onRelease, true);
-      document.addEventListener("pointerup", onRelease, true);
-      callback();
-    };
-    el.addEventListener("pointerdown", onPointerDown);
-    return () => {
-      el.removeEventListener("pointerdown", onPointerDown);
-    };
-  },
-  test: (el) => el.matches(":active"),
-});
-{
-  // We implement :focus and :focus-visible with enriched semantics:
-  // an element is considered focused not only when it natively has focus, but also
-  // when a "focus proxy" element has focus (e.g. a read-only range input delegates
-  // focus to a sibling span) or when a controlling element has focus (e.g. a combobox
-  // input with aria-controls pointing to a listbox — the listbox should appear focused
-  // while the input is focused).
-  //
-  // We intentionally reuse the native :focus / :focus-visible names rather than
-  // introducing new navi-specific pseudo-classes (e.g. :-navi-focus). This is a
-  // deliberate exception: all existing CSS and code written as [data-focus] or
-  // [data-focus-visible] automatically benefits from the enriched behavior without
-  // any changes. A separate navi-specific class would require updating every
-  // component.
-  //
-  // When a controller element (e.g. combobox input) gains or loses focus,
-  // notify the elements it controls via aria-controls so they re-check their focus state.
-  const notifyAriaControlled = (el, e) => {
-    const controlledIds = el.getAttribute("aria-controls");
-    if (!controlledIds) {
-      return;
-    }
-    for (const id of controlledIds.split(" ")) {
-      const controlled = document.getElementById(id);
-      if (controlled) {
-        requestPseudoStateCheck(controlled, { event: e });
-      }
-    }
-  };
-  // Check if any element whose aria-controls includes el's id currently has focus.
-  const isControlledByFocusedElement = (
-    el,
-    { requireFocusVisible = false } = {},
-  ) => {
-    const id = el.id;
-    if (!id) {
-      return false;
-    }
-    const controllers = document.querySelectorAll(`[aria-controls~="${id}"]`);
-    for (const controller of controllers) {
-      // If the controller is inside the element it controls, the element already
-      // receives native :focus/:focus-within — no need to inherit focus from it.
-      if (el.contains(controller)) {
-        continue;
-      }
-      const pseudoClass = requireFocusVisible ? ":focus-visible" : ":focus";
-      if (controller.matches(pseudoClass)) {
-        return true;
-      }
-    }
-    return false;
-  };
-
-  definePseudoClass(":focus", {
-    attribute: "data-focus",
-    setup: (el, callback) => {
-      const onFocusChange = (e) => {
-        callback();
-        notifyAriaControlled(el, e);
-      };
-      el.addEventListener("focusin", onFocusChange);
-      el.addEventListener("focusout", onFocusChange);
-      return () => {
-        el.removeEventListener("focusin", onFocusChange);
-        el.removeEventListener("focusout", onFocusChange);
-      };
-    },
-    test: (el) => {
-      if (el.matches(":focus")) {
-        return true;
-      }
-      const focusProxy = el.getAttribute("focus-proxy");
-      if (focusProxy) {
-        return document.querySelector(`#${focusProxy}`).matches(":focus");
-      }
-      if (isControlledByFocusedElement(el)) {
-        return true;
-      }
-      return false;
-    },
-  });
-  definePseudoClass(":focus-visible", {
-    attribute: "data-focus-visible",
-    setup: (el, callback) => {
-      const onFocusChange = (e) => {
-        callback();
-        notifyAriaControlled(el, e);
-      };
-      document.addEventListener("keydown", callback);
-      document.addEventListener("keyup", callback);
-      el.addEventListener("focusin", onFocusChange);
-      el.addEventListener("focusout", onFocusChange);
-      return () => {
-        document.removeEventListener("keydown", callback);
-        document.removeEventListener("keyup", callback);
-        el.removeEventListener("focusin", onFocusChange);
-        el.removeEventListener("focusout", onFocusChange);
-      };
-    },
-    test: (el) => {
-      if (el.matches(":focus-visible")) {
-        return true;
-      }
-      const focusProxy = el.getAttribute("focus-proxy");
-      if (focusProxy) {
-        return document
-          .querySelector(`#${focusProxy}`)
-          .matches(":focus-visible");
-      }
-      if (isControlledByFocusedElement(el, { requireFocusVisible: true })) {
-        return true;
-      }
-      return false;
-    },
-  });
-  definePseudoClass(":focus-within", {
-    attribute: "data-focus-within",
-    setup: (el, callback) => {
-      const onFocusChange = (e) => {
-        callback();
-        notifyAriaControlled(el, e);
-      };
-      el.addEventListener("focusin", onFocusChange);
-      el.addEventListener("focusout", onFocusChange);
-      return () => {
-        el.removeEventListener("focusin", onFocusChange);
-        el.removeEventListener("focusout", onFocusChange);
-      };
-    },
-    test: (el) => {
-      if (el.matches(":focus-within")) {
-        return true;
-      }
-      if (isControlledByFocusedElement(el)) {
-        return true;
-      }
-      if (el.contains(document.activeElement)) {
-        // for some reason :focus-within sometimes is false while focus is within...
-        // (popover with chrome for some reason)
-        return true;
-      }
-      return false;
-    },
-  });
-}
-
-Object.assign(PSEUDO_CLASSES, {
-  ":-navi-pointed": {
-    attribute: "data-pointed",
-  },
-  ":-navi-pointed-by-mouse": {
-    attribute: "data-pointed-by-mouse",
-  },
-  ":-navi-pointed-by-keyboard": {
-    attribute: "data-pointed-by-keyboard",
-  },
-  ":-navi-pointed-by-proxy": {
-    attribute: "data-pointed-by-proxy",
-  },
-  ":-navi-selected": {
-    attribute: "data-selected",
-  },
-  ":-navi-loading": {
-    attribute: "data-loading",
-  },
-  ":-navi-status-info": {
-    attribute: "data-status-info",
-  },
-  ":-navi-status-success": {
-    attribute: "data-status-success",
-  },
-  ":-navi-status-warning": {
-    attribute: "data-status-warning",
-  },
-  ":-navi-status-error": {
-    attribute: "data-status-error",
-  },
-  ":-navi-expanded": {
-    attribute: "data-expanded",
-  },
-  ":-navi-void": {
-    attribute: "data-void",
-  },
-  "::highlight": {},
-});
-definePseudoClass(":-navi-has-value", {
-  attribute: "data-has-value",
-  setup: (el, callback) => {
-    return listenInputValue(el, callback);
-  },
-  test: (el) => {
-    if (el.value === "") {
-      return false;
-    }
-    return true;
-  },
-});
-{
-  const pressedElements = new WeakSet();
-  definePseudoClass(":-navi-pressed", {
-    attribute: "data-pressed",
-    setup: (el, callback) => {
-      // Prefer :-navi-pressed over :active for interactive elements because:
-      // - :active only tracks the primary (left) button; right-click and touch
-      //   long-press do not trigger :active reliably across browsers.
-      // - :-navi-pressed explicitly ignores non-primary buttons (e.g. right-click)
-      //   and correctly clears pressed state when a context menu opens on long-press,
-      //   which would otherwise leave the element stuck in a pressed appearance.
-
-      // Note: it might be tempting to use el.setPointerCapture() here so that pointerup
-      // always fires on el regardless of where the pointer is released. However,
-      // pointer capture routes all subsequent pointer events to the capturing element,
-      // which means any other element in the tree that expects to receive pointerup,
-      // mouseup, click, etc. after a pointerdown will silently not get them.
-      // For example a <label> that reacts to mousedown + click, or a third-party
-      // library that attaches its own listeners, would break because an ancestor
-      // grabbed the pointer out from under them.
-      // To avoid forcing every such element to declare an opt-out attribute
-      // (e.g. navi-own-pointer-capture) we simply listen on document instead,
-      // which is safe and does not interfere with anyone else's event flow.
-      const onPointerDown = (e) => {
-        if (e.button !== 0) {
-          // only left pointer (mouse left click, touch, pen)
-          return;
-        }
-        pressedElements.add(el);
-        const onRelease = () => {
-          pressedElements.delete(el);
-          document.removeEventListener("pointercancel", onRelease, true);
-          document.removeEventListener("pointerup", onRelease, true);
-          document.removeEventListener("contextmenu", onContextMenu, true);
-          callback();
-        };
-        const onContextMenu = (e) => {
-          // On touch devices, a long-press triggers the context menu.
-          // If the context menu is not prevented, it means it will open and the
-          // pointer events (pointerup, lostpointercapture) won't fire normally,
-          // leaving the element stuck in pressed state. We clear it manually.
-          // e.button === -1 means the event was synthesized from a long-press (not a real mouse click).
-          if (e.button === -1 && !e.defaultPrevented) {
-            pressedElements.delete(el);
-            document.removeEventListener("pointercancel", onRelease, true);
-            document.removeEventListener("pointerup", onRelease, true);
-            document.removeEventListener("contextmenu", onContextMenu, true);
-            callback();
-          }
-        };
-        document.addEventListener("pointercancel", onRelease, true);
-        document.addEventListener("pointerup", onRelease, true);
-        document.addEventListener("contextmenu", onContextMenu, true);
-        callback();
-      };
-      el.addEventListener("pointerdown", onPointerDown);
-      return () => {
-        el.removeEventListener("pointerdown", onPointerDown);
-        pressedElements.delete(el);
-      };
-    },
-    test: (el) => pressedElements.has(el),
-  });
-}
-
-{
-  definePseudoClass(":-navi-drag-grabbed", {
-    attribute: "navi-drag-grabbed",
-    setup: (el, callback) => {
-      const onGrab = () => {
-        callback();
-        const onRelease = () => {
-          el.removeEventListener("navi_drag_release", onRelease);
-          callback();
-        };
-        el.addEventListener("navi_drag_release", onRelease);
-      };
-      el.addEventListener("navi_drag_grab", onGrab);
-      return () => {
-        el.removeEventListener("navi_drag_grab", onGrab);
-      };
-    },
-    test: (el) => el.hasAttribute("data-drag-grabbed"),
-  });
-  definePseudoClass(":-navi-dragging", {
-    attribute: "navi-dragging",
-    setup: (el, callback) => {
-      const onStart = () => {
-        callback();
-        const onRelease = () => {
-          el.removeEventListener("navi_drag_release", onRelease);
-          callback();
-        };
-        el.addEventListener("navi_drag_release", onRelease);
-      };
-      el.addEventListener("navi_drag_start", onStart);
-      return () => {
-        el.removeEventListener("navi_drag_start", onStart);
-      };
-    },
-    test: (el) => el.hasAttribute("data-dragging"),
-  });
-}
-
-const EMPTY_STATE = {};
-const initPseudoStyles = (
-  element,
-  {
-    pseudoClasses,
-    pseudoState, // ":disabled", ":read-only", ":-navi-loading", etc...
-    effect,
-    elementToImpact = element,
-    elementListeningPseudoState,
-  },
-) => {
-  if (elementListeningPseudoState === element) {
-    console.warn(
-      `elementListeningPseudoState should not be the same as element to avoid infinite loop`,
-    );
-    elementListeningPseudoState = null;
-  }
-
-  const onStateChange = (value, oldValue) => {
-    effect?.(value, oldValue);
-    if (elementListeningPseudoState) {
-      dispatchPseudoStateCustomEvent(
-        elementListeningPseudoState,
-        value,
-        oldValue,
-      );
-    }
-  };
-
-  if (!pseudoClasses || pseudoClasses.length === 0) {
-    onStateChange(EMPTY_STATE);
-    return () => {};
-  }
-
-  const [teardown, addTeardown] = createPubSub();
-
-  let state;
-  const checkPseudoClasses = () => {
-    let someChange = false;
-    const currentState = {};
-    for (const pseudoClass of pseudoClasses) {
-      const pseudoClassDefinition = PSEUDO_CLASSES[pseudoClass];
-      if (!pseudoClassDefinition) {
-        console.warn(`Unknown pseudo class: ${pseudoClass}`);
-        continue;
-      }
-      let currentValue;
-      if (
-        pseudoState &&
-        Object.hasOwn(pseudoState, pseudoClass) &&
-        pseudoState[pseudoClass] !== undefined
-      ) {
-        currentValue = pseudoState[pseudoClass];
-      } else {
-        const { test } = pseudoClassDefinition;
-        if (test) {
-          currentValue = test(element, pseudoState);
-        }
-      }
-      currentState[pseudoClass] = currentValue;
-      const oldValue = state ? state[pseudoClass] : undefined;
-      if (oldValue !== currentValue || !state) {
-        someChange = true;
-        const { attribute, add, remove } = pseudoClassDefinition;
-        if (currentValue) {
-          if (attribute) {
-            elementToImpact.setAttribute(attribute, "");
-          }
-          add?.(element);
-        } else {
-          if (attribute) {
-            elementToImpact.removeAttribute(attribute);
-          }
-          remove?.(element);
-        }
-      }
-    }
-    if (!someChange) {
-      return;
-    }
-    const oldState = state;
-    state = currentState;
-    onStateChange(state, oldState);
-  };
-
-  element.addEventListener(NAVI_PSEUDO_STATE_CUSTOM_EVENT, (event) => {
-    const oldState = event.detail.oldPseudoState;
-    state = event.detail.pseudoState;
-    onStateChange(state, oldState);
-  });
-  element.addEventListener("navi_pseudo_state_request_check", () => {
-    checkPseudoClasses();
-  });
-
-  for (const pseudoClass of pseudoClasses) {
-    const pseudoClassDefinition = PSEUDO_CLASSES[pseudoClass];
-    if (!pseudoClassDefinition) {
-      console.warn(`Unknown pseudo class: ${pseudoClass}`);
-      continue;
-    }
-    const { setup } = pseudoClassDefinition;
-    if (setup) {
-      const cleanup = setup(element, () => {
-        checkPseudoClasses();
-      });
-      addTeardown(cleanup);
-    }
-  }
-  checkPseudoClasses();
-  // just in case + catch use forcing them in chrome devtools
-  const interval = setInterval(() => {
-    checkPseudoClasses();
-  }, 1_000);
-  addTeardown(() => {
-    clearInterval(interval);
-  });
-
-  return teardown;
-};
-
-const applyStyle = (
-  element,
-  style,
-  pseudoState,
-  pseudoNamedStyles,
-  preventInitialTransition,
-) => {
-  if (!element) {
-    return;
-  }
-  const styleToApply = getStyleToApply(style, pseudoState, pseudoNamedStyles);
-  updateStyle(element, styleToApply, preventInitialTransition);
-};
-
-const PSEUDO_STATE_DEFAULT = {};
-const PSEUDO_NAMED_STYLES_DEFAULT = {};
-const getStyleToApply = (styles, pseudoState, pseudoNamedStyles) => {
-  if (
-    !pseudoState ||
-    pseudoState === PSEUDO_STATE_DEFAULT ||
-    !pseudoNamedStyles ||
-    pseudoNamedStyles === PSEUDO_NAMED_STYLES_DEFAULT
-  ) {
-    return styles;
-  }
-
-  const isMatching = (pseudoKey) => {
-    if (pseudoKey.startsWith("::")) {
-      const nextColonIndex = pseudoKey.indexOf(":", 2);
-      if (nextColonIndex === -1) {
-        return true;
-      }
-      // Handle pseudo-elements with states like "::-navi-loader:checked:disabled"
-      const pseudoStatesString = pseudoKey.slice(nextColonIndex);
-      return isMatching(pseudoStatesString);
-    }
-    const nextColonIndex = pseudoKey.indexOf(":", 1);
-    if (nextColonIndex === -1) {
-      return pseudoState[pseudoKey];
-    }
-    // Handle compound pseudo-states like ":checked:disabled"
-    return pseudoKey
-      .slice(1)
-      .split(":")
-      .every((state) => pseudoState[state]);
-  };
-
-  const styleToAddSet = new Set();
-  for (const pseudoKey of Object.keys(pseudoNamedStyles)) {
-    if (isMatching(pseudoKey)) {
-      const stylesToApply = pseudoNamedStyles[pseudoKey];
-      styleToAddSet.add(stylesToApply);
-    }
-  }
-  if (styleToAddSet.size === 0) {
-    return styles;
-  }
-  let style = styles || {};
-  for (const styleToAdd of styleToAddSet) {
-    style = mergeTwoStyles(style, styleToAdd, "css");
-  }
-  return style;
-};
-
-const styleKeySetWeakMap = new WeakMap();
-const elementTransitionWeakMap = new WeakMap();
-const elementRenderedWeakSet = new WeakSet();
-const NO_STYLE_KEY_SET = new Set();
-const updateStyle = (element, style, preventInitialTransition) => {
-  const styleKeySet = style ? new Set(Object.keys(style)) : NO_STYLE_KEY_SET;
-  const oldStyleKeySet = styleKeySetWeakMap.get(element) || NO_STYLE_KEY_SET;
-  // TRANSITION ANTI-FLICKER STRATEGY:
-  // Problem: When setting both transition and styled properties simultaneously
-  // (e.g., el.style.transition = "border-radius 0.3s ease"; el.style.borderRadius = "20px"),
-  // the browser will immediately perform a transition even if no transition existed before.
-  //
-  // Solution: Temporarily disable transitions during initial style application by setting
-  // transition to "none", then restore the intended transition after the frame completes.
-  // We handle multiple updateStyle calls in the same frame gracefully - only one
-  // requestAnimationFrame is scheduled per element, and the final transition value wins.
-  let styleKeySetToApply = styleKeySet;
-  if (!elementRenderedWeakSet.has(element)) {
-    const hasTransition = styleKeySet.has("transition");
-    if (hasTransition || preventInitialTransition) {
-      if (elementTransitionWeakMap.has(element)) {
-        elementTransitionWeakMap.set(element, style?.transition);
-      } else {
-        element.style.transition = "none";
-        elementTransitionWeakMap.set(element, style?.transition);
-      }
-      // Don't apply the transition property now - we've set it to "none" temporarily
-      styleKeySetToApply = new Set(styleKeySet);
-      styleKeySetToApply.delete("transition");
-    }
-    requestAnimationFrame(() => {
-      if (elementTransitionWeakMap.has(element)) {
-        const transitionToRestore = elementTransitionWeakMap.get(element);
-        if (transitionToRestore === undefined) {
-          element.style.transition = "";
-        } else {
-          element.style.transition = transitionToRestore;
-        }
-        elementTransitionWeakMap.delete(element);
-      }
-      elementRenderedWeakSet.add(element);
-    });
-  }
-
-  // Apply all styles normally (excluding transition during anti-flicker)
-  const keysToDelete = new Set(oldStyleKeySet);
-  for (const key of styleKeySetToApply) {
-    const value = style[key];
-    if (value === undefined || value === null) {
-      // Treat undefined/null as "remove" — leave key in keysToDelete
-      continue;
-    }
-    keysToDelete.delete(key);
-    if (key.startsWith("--")) {
-      element.style.setProperty(key, value);
-    } else {
-      element.style[key] = value;
-    }
-  }
-
-  // Remove obsolete styles
-  for (const key of keysToDelete) {
-    if (key.startsWith("--")) {
-      element.style.removeProperty(key);
-    } else {
-      element.style[key] = "";
-    }
-  }
-
-  styleKeySetWeakMap.set(element, styleKeySet);
-};
-
-/**
- * Keeps a DOM element in sync with `syncElement(el)` whenever deps change.
- * - If element is already mounted: runs syncElement immediately during render.
- * - If not yet mounted: runs syncElement in the ref callback when element arrives.
- * - Calls cleanup (if returned by syncElement) before each re-run and on unmount.
- *
- * @param {function|object|null} externalRef - Optional ref to forward to
- * @param {function} syncElement - Called with the DOM element when deps change
- * @param {Array} deps - syncElement is re-called only when deps change
- */
-const useElementRefEffect = (externalRef, syncElement, deps) => {
-  const cleanupRef = useRef(null);
-  const elRef = useRef(null);
-  const prevDepsRef = useRef(undefined);
-  const refCallbackRef = useRef(null);
-
-  const runSync = (el) => {
-    if (cleanupRef.current) {
-      cleanupRef.current();
-      cleanupRef.current = null;
-    }
-    prevDepsRef.current = deps;
-    const cleanup = syncElement(el);
-    if (typeof cleanup === "function") {
-      cleanupRef.current = cleanup;
-    }
-  };
-
-  // If element already mounted, check deps and sync during render.
-  if (elRef.current) {
-    const prevDeps = prevDepsRef.current;
-    let depsChanged;
-    if (!prevDeps || prevDeps.length !== deps.length) {
-      depsChanged = true;
-    } else {
-      depsChanged = false;
-      for (let i = 0; i < deps.length; i++) {
-        if (!Object.is(deps[i], prevDeps[i])) {
-          depsChanged = true;
-          break;
-        }
-      }
-    }
-    if (depsChanged) {
-      runSync(elRef.current);
-    }
-  }
-
-  if (!refCallbackRef.current) {
-    const refCallback = (el) => {
-      elRef.current = el;
-      // Keep .current in sync immediately so useEffect callbacks that read
-      // ref.current (e.g. usePartiallyHidden) see the element, not null.
-      refCallback.current = el;
-      if (externalRef) {
-        if (typeof externalRef === "function") {
-          externalRef(el);
-        } else {
-          externalRef.current = el;
-        }
-      }
-      if (el) {
-        runSync(el);
-      } else {
-        if (cleanupRef.current) {
-          cleanupRef.current();
-          cleanupRef.current = null;
-        }
-        prevDepsRef.current = undefined;
-      }
-    };
-    refCallbackRef.current = refCallback;
-  }
-
-  const refCallback = refCallbackRef.current;
-  refCallback.current = elRef.current;
-  return refCallback;
-};
-
-/**
- * Tracks whether an element is fully visible in its scroll container and sets
- * the `navi-partially-hidden` attribute when any part of it is clipped.
- *
- * This is used to suppress `view-transition-name` on elements that are partially
- * outside the viewport or a scrollable container. Without this, a partially clipped
- * element would still participate in view transitions, producing ghost animations or
- * incorrect cross-fade effects.
- *
- * CSS usage:
- * ```css
- * [navi-partially-hidden] {
- *   view-transition-name: none !important;
- * }
- * ```
- *
- * `Box` enables this hook automatically when a `viewTransitionName` prop is provided.
- *
- * @param {import("preact").RefObject} ref - Ref to the element to observe.
- * @param {boolean} enabled - Only observe when true (typically when view-transition-name is set).
- */
-const usePartiallyHidden = (ref, enabled) => {
-  useEffect(() => {
-    const el = ref.current;
-    if (!el || !enabled) {
-      return undefined;
-    }
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.intersectionRatio >= 0.99) {
-          el.removeAttribute("navi-partially-hidden");
-        } else {
-          el.setAttribute("navi-partially-hidden", "");
-        }
-      },
-      { threshold: 0.99 },
-    );
-    observer.observe(el);
-    return () => {
-      observer.disconnect();
-    };
-  }, [enabled]);
-};
-
-installImportMetaCssBuild(import.meta);/**
- * Box - A Swiss Army Knife for Layout
- *
- * A regular div by default, enhanced with styling props for spacing, sizing,
- * and layout. The main value is a friendlier API over raw CSS Flexbox.
- *
- * ## Display & Layout
- *
- * - `flex` — horizontal flex container (items side by side)
- * - `flex="y"` — vertical flex container (items stacked). The prop name makes
- *   the axis explicit, avoiding the classic CSS trap where `flex-direction: column`
- *   actually stacks items vertically despite "column" feeling horizontal.
- * - `grid` — grid container
- * - `inline` — switches to inline display (works with flex and grid too)
- *
- * ## Alignment
- *
- * Instead of CSS's justify-content/align-items which swap meaning based on flex-direction:
- * - `alignX` — horizontal alignment, always
- * - `alignY` — vertical alignment, always
- *
- * ## Spacing & Sizing
- *
- * Props for margin, padding, gap, width, height, expand, shrink, and more.
- *
- * ## Pseudo-class Styles
- *
- * The `style` prop supports pseudo-class keys alongside regular CSS properties.
- * This lets you express hover, focus, and custom interaction states in one object,
- * without writing CSS or adding class names:
- *
- * ```jsx
- * <Box
- *   style={{
- *     backgroundColor: "blue",
- *     ":-navi:pressed": {
- *       backgroundColor: "darkblue",
- *     },
- *     ":hover": {
- *       backgroundColor: "lightblue",
- *     },
- *   }}
- * />
- * ```
- *
- * Styles are applied directly to the DOM (not via Preact's style prop) for two reasons:
- * 1. **Pseudo-class support**: reacting to `:hover`, `:focus`, or custom states like
- *    `:-navi:pressed` without re-rendering the component on every pseudo state change.
- * 2. **Correct initial render**: pseudo-class state must be read from the DOM node at
- *    mount time. Preact's style prop runs before the DOM exists, so the right initial
- *    style can only be determined once the node is available.
- */
-import.meta.css = [/* css */`
-  @layer navi {
-    /*
-    When using square/circle/aspectRatio prop we expect box to respect the aspect ratio.
-    But within flex containers or stuff like that the min-width/min-height auto
-    will prevent the item from shrinking to respect aspect-ratio
-    We put that in a layer navi + a specific attribute so that it's very easy to override this
-    */
-    [navi-aspect-ratio] {
-      min-width: 0;
-      min-height: 0;
-    }
-  }
-
-  /* We force a given display style using html attribute instead of inline style */
-  /* No particular reason for this, logic could be moved to inline style like the rest */
-  /* It was an attempt to see if attributes where a good candidate to set style based on props */
-  /* Actullay it's not that much as it make the attribute and CSS complexity explode */
-  /* For now it's kept here and must be outside layer navi to be able to override any given display
-  Set by navi itself on their default display */
-  [navi-box-flow="inline"] {
-    display: inline;
-  }
-  [navi-box-flow="block"] {
-    display: block;
-  }
-  [navi-box-flow="inline-block"] {
-    display: inline-block;
-  }
-  [navi-box-flow="flex-x"] {
-    display: flex;
-  }
-  [navi-box-flow="flex-y"] {
-    display: flex;
-    flex-direction: column;
-  }
-  [navi-box-flow="inline-flex-x"] {
-    display: inline-flex;
-  }
-  [navi-box-flow="inline-flex-y"] {
-    display: inline-flex;
-    flex-direction: column;
-  }
-  [navi-box-flow="grid"] {
-    display: grid;
-    &[navi-box-flow-column] {
-      grid-auto-flow: column;
-    }
-    &[navi-box-flow-row] {
-      grid-auto-flow: row;
-    }
-    &[navi-box-flow-column][navi-box-flow-row] {
-      grid-auto-flow: unset;
-    }
-  }
-  [navi-box-flow="inline-grid"] {
-    display: inline-grid;
-    &[navi-box-flow-column] {
-      grid-auto-flow: column;
-    }
-    &[navi-box-flow-row] {
-      grid-auto-flow: row;
-    }
-    &[navi-box-flow-column][navi-box-flow-row] {
-      grid-auto-flow: unset;
-    }
-  }
-  /*
-
-  It's very common to declare a display on component as follow
-  .component_class { display: component_display; }
-
-  This kill the default behavior of [hidden] attribute and we need to explicitly handle it with:
-  .component_class[hidden] { display: none; }
-
-  To avoid this extra work and potential mistakes we force the default behavior of [hidden] attribute.
-  */
-  [hidden] {
-    display: none !important;
-  }
-
-  /* Partially hidden (or fully hidden) element should not participate in view transition no matter what */
-  /* Otherwise they appear immedatly and fully visible from a fully/partially hidden state */
-  [navi-partially-hidden] {
-    view-transition-name: none !important;
-  }
-`, "@jsenv/navi/src/box/box.jsx"];
-const PSEUDO_CLASSES_DEFAULT = [];
-const PSEUDO_ELEMENTS_DEFAULT = [];
-const STYLE_CSS_VARS_DEFAULT = {};
-const PROPS_CSS_VARS_DEFAULT = {};
-// When only pseudoStateSelector is set (no visualSelector), the box owns its
-// visual identity. Only event handlers and these explicit props are forwarded
-// to the inner semantic/interactive child element.
-const PSEUDO_STATE_CHILD_PROP_SET = new Set(["tabIndex", "tabindex"]);
-const Box = props => {
-  const {
-    as = "div",
-    baseClassName,
-    className,
-    baseStyle,
-    // style management
-    style,
-    styleCSSVars = STYLE_CSS_VARS_DEFAULT,
-    propsCSSVars = PROPS_CSS_VARS_DEFAULT,
-    basePseudoState,
-    pseudoState,
-    // for demo purposes it's possible to control pseudo state from props
-    pseudoClasses = PSEUDO_CLASSES_DEFAULT,
-    pseudoElements = PSEUDO_ELEMENTS_DEFAULT,
-    // visualSelector convey the following:
-    // The box itself is visually "invisible", one of its descendant is responsible for visual representation
-    // - Some styles will be used on the box itself (for instance margins)
-    // - Some styles will be used on the visual element (for instance paddings, backgroundColor)
-    // -> introduced for <Button /> with transform:scale on press
-    visualSelector,
-    // pseudoStateSelector convey the following:
-    // The box contains content that holds pseudoState
-    // -> introduced for <Input /> with a wrapped for loading, checkboxes, etc
-    pseudoStateSelector,
-    hasChildFunction,
-    baseChildPropSet,
-    childPropSet,
-    // preventInitialTransition can be used to prevent transition on mount
-    // (when transition is set via props, this is done automatically)
-    // so this prop is useful only when transition is enabled from "outside" (via CSS)
-    preventInitialTransition,
-    children,
-    separator,
-    ...rest
-  } = props;
-  let ref;
-  const TagName = as;
-  const defaultDisplay = getDefaultDisplay(TagName);
-  // Read the parent flow early so we can use it when display="inherit" is requested.
-  const parentBoxFlow = useContext(BoxFlowContext);
-  let {
-    inline,
-    block,
-    flex,
-    grid,
-    row,
-    column
-  } = rest;
-  // To obtain flex direction we have the following deprecated props:
-  // - [deprecated] <Box column> -> <Box flex> or <Box flex="x">
-  // - [deprecated] <Box row> -> <Box flex="y">
-  // - [deprecated] <Box flex column> -> <Box flex="x">
-  // - [deprecated] <Box flex row> -> <Box flex="y">
-
-  if (flex === true) {
-    flex = row ? "y" : "x";
-  }
-  if (flex === undefined && grid === undefined) {
-    if (column) {
-      flex = "x";
-    } else if (row) {
-      flex = "y";
-    }
-  }
-  if (defaultDisplay === "inline") {
-    if (inline === undefined && !block) {
-      inline = true;
-    }
-  } else if (defaultDisplay === "block") {
-    if (block === undefined && !flex && !grid) {
-      block = true;
-    }
-  } else if (defaultDisplay === "inline-block") {
-    if (inline === undefined && !block) {
-      inline = true;
-    }
-    if (block === undefined && !flex && !grid) {
-      block = true;
-    }
-  }
-  if (inline && (rest.width !== undefined || rest.height !== undefined) && flex === undefined) {
-    flex = "x";
-  }
-  let boxFlow;
-  if (inline) {
-    if (flex === "x") {
-      boxFlow = "inline-flex-x";
-    } else if (flex === "y") {
-      boxFlow = "inline-flex-y";
-    } else if (grid) {
-      boxFlow = "inline-grid";
-    } else if (block) {
-      boxFlow = "inline-block";
-    } else {
-      boxFlow = "inline";
-    }
-  } else if (flex === "x") {
-    boxFlow = "flex-x";
-  } else if (flex === "y") {
-    boxFlow = "flex-y";
-  } else if (grid) {
-    boxFlow = "grid";
-  } else if (block) {
-    boxFlow = "block";
-  } else {
-    boxFlow = defaultDisplay;
-  }
-  // When display="inherit" is passed, adopt the parent's flow instead of computing one.
-  // This lets a child Box mirror its parent's flex/grid/block layout without repeating
-  // the same layout props, and is used e.g. by Button's inner content element.
-  if (rest.display === "inherit") {
-    boxFlow = parentBoxFlow;
-  }
-  const boxFlowIsDefault = boxFlow === defaultDisplay;
-  const remainingPropKeySet = new Set(Object.keys(rest));
-  // some props not destructured but that are neither
-  // style props, nor should be forwarded to the child
-  remainingPropKeySet.delete("ref");
-  const innerClassName = withPropsClassName(baseClassName, className);
-  const selfForwardedProps = {};
-  const childForwardedProps = {};
-  {
-    const styleDeps = [
-    // Layout and alignment props
-    parentBoxFlow, boxFlow,
-    // Style context dependencies
-    styleCSSVars, pseudoClasses, pseudoElements,
-    // Selectors
-    visualSelector, pseudoStateSelector, preventInitialTransition];
-    let innerPseudoState;
-    if (basePseudoState && pseudoState) {
-      innerPseudoState = {};
-      const baseStateKeys = Object.keys(basePseudoState);
-      const pseudoStateKeySet = new Set(Object.keys(pseudoState));
-      for (const key of baseStateKeys) {
-        if (pseudoStateKeySet.has(key)) {
-          pseudoStateKeySet.delete(key);
-          const value = pseudoState[key];
-          styleDeps.push(value);
-          innerPseudoState[key] = value;
-        } else {
-          const value = basePseudoState[key];
-          styleDeps.push(value);
-          innerPseudoState[key] = value;
-        }
-      }
-      for (const key of pseudoStateKeySet) {
-        const value = pseudoState[key];
-        styleDeps.push(value);
-        innerPseudoState[key] = value;
-      }
-    } else if (basePseudoState) {
-      innerPseudoState = basePseudoState;
-      for (const key of Object.keys(basePseudoState)) {
-        const value = basePseudoState[key];
-        styleDeps.push(value);
-      }
-    } else if (pseudoState) {
-      innerPseudoState = pseudoState;
-      for (const key of Object.keys(pseudoState)) {
-        const value = pseudoState[key];
-        styleDeps.push(value);
-      }
-    } else {
-      innerPseudoState = PSEUDO_STATE_DEFAULT;
-    }
-    const boxStyles = {};
-    const styleContext = {
-      parentBoxFlow,
-      boxFlow,
-      styleCSSVars,
-      pseudoState: innerPseudoState,
-      pseudoClasses,
-      pseudoElements,
-      remainingProps: rest,
-      styles: boxStyles
-    };
-    let boxPseudoNamedStyles = PSEUDO_NAMED_STYLES_DEFAULT;
-    const shouldForwardAllToChild = visualSelector && pseudoStateSelector;
-    const addStyle = (value, name, styleContext, stylesTarget, context) => {
-      const mergedValue = prepareStyleValue(stylesTarget[name], value, name, styleContext, context);
-      const cssVar = styleContext.styleCSSVars[name];
-      if (cssVar) {
-        addCSSVar(mergedValue, cssVar, stylesTarget);
-        if (name === "borderRadius" && value === "inherit") {
-          // "inherit" cannot be expressed via a CSS variable — a var() reference
-          // never propagates the inherit keyword itself. So when borderRadius="inherit"
-          // we must also set the inline style directly so the element actually
-          // inherits the radius from its parent.
-          styleDeps.push(name, value);
-          stylesTarget[name] = mergedValue;
-        }
-        return true;
-      }
-      styleDeps.push(name, value); // impact box style -> add to deps
-      stylesTarget[name] = mergedValue;
-      return false;
-    };
-    const addCSSVar = (value, name, stylesTarget) => {
-      styleDeps.push(name, value); // impact box style -> add to deps
-      stylesTarget[name] = value;
-    };
-    const addStyleMaybeForwarding = (value, name, styleContext, stylesTarget, context, visualChildPropStrategy) => {
-      if (!visualChildPropStrategy) {
-        addStyle(value, name, styleContext, stylesTarget, context);
-        return false;
-      }
-      const cssVar = styleCSSVars[name];
-      if (cssVar) {
-        // css var wins over visual child handling
-        addStyle(value, name, styleContext, stylesTarget, context);
-        return false;
-      }
-      if (visualChildPropStrategy === "copy") {
-        // we stylyze ourself + forward prop to the child
-        addStyle(value, name, styleContext, stylesTarget, context);
-      }
-      return true;
-    };
-
-    // By default ":hover", ":active" are not tracked.
-    // But if code explicitely do something like:
-    // style={{ ":hover": { backgroundColor: "red" } }}
-    // then we'll track ":hover" state changes even for basic elements like <div>
-    const pseudoClassesFromStyleSet = new Set();
-    boxPseudoNamedStyles = {};
-    const visitProp = (value, name, styleContext, boxStylesTarget, styleOrigin) => {
-      const isPseudoElement = name.startsWith("::");
-      const isPseudoClass = name.startsWith(":");
-      if (isPseudoElement || isPseudoClass) {
-        styleDeps.push(name);
-        pseudoClassesFromStyleSet.add(name);
-        const pseudoStyleContext = {
-          ...styleContext,
-          styleCSSVars: {
-            ...styleCSSVars,
-            ...styleCSSVars[name]
-          },
-          pseudoName: name
-        };
-        const pseudoStyleKeys = Object.keys(value);
-        if (isPseudoElement) {
-          const pseudoElementStyles = {};
-          for (const key of pseudoStyleKeys) {
-            visitProp(value[key], key, pseudoStyleContext, pseudoElementStyles, "pseudo_style");
-          }
-          boxPseudoNamedStyles[name] = pseudoElementStyles;
-          return;
-        }
-        const pseudoClassStyles = {};
-        for (const key of pseudoStyleKeys) {
-          visitProp(value[key], key, pseudoStyleContext, pseudoClassStyles, "pseudo_style");
-          boxPseudoNamedStyles[name] = pseudoClassStyles;
-        }
-        return;
-      }
-      const context = styleOrigin === "base_style" ? "js" : "css";
-      const isCss = styleOrigin === "base_style" || styleOrigin === "style";
-      if (isCss) {
-        addStyle(value, name, styleContext, boxStylesTarget, context);
-        return;
-      }
-      if (name.startsWith("--")) {
-        addStyle(value, name, styleContext, boxStylesTarget, context);
-        return;
-      }
-      const propCssVar = propsCSSVars[name];
-      if (propCssVar) {
-        if (value !== undefined) {
-          addCSSVar(value, propCssVar, boxStylesTarget);
-        }
-        return;
-      }
-      const isPseudoStyle = styleOrigin === "pseudo_style";
-      if (isStyleProp(name)) {
-        // it's a style prop, we need first to check if we have css var to handle them
-        // otherwise we decide to put it either on self or child
-        const visualChildPropStrategy = visualSelector && getVisualChildStylePropStrategy(name);
-        const getStyle = getHowToHandleStyleProp(name);
-        if (
-        // prop name === css style name
-        !getStyle) {
-          const needForwarding = addStyleMaybeForwarding(value, name, styleContext, boxStylesTarget, context, visualChildPropStrategy);
-          if (needForwarding) {
-            if (isPseudoStyle) ; else {
-              childForwardedProps[name] = value;
-            }
-          }
-          return;
-        }
-        const cssValues = getStyle(value, styleContext);
-        if (!cssValues) {
-          return;
-        }
-        let needForwarding = false;
-        for (const styleName of Object.keys(cssValues)) {
-          const cssValue = cssValues[styleName];
-          needForwarding = addStyleMaybeForwarding(cssValue, styleName, styleContext, boxStylesTarget, context, visualChildPropStrategy);
-        }
-        if (needForwarding) {
-          if (isPseudoStyle) ; else {
-            childForwardedProps[name] = value;
-          }
-        }
-        return;
-      }
-      // not a style prop what do we do with it?
-      // When pseudoStateSelector is set, the child element is the semantic/interactive one
-      // When both selectors are set the child IS the component (e.g. Button with scale
-      // transform) — forward everything so it behaves like a normal element.
-      // When only pseudoStateSelector is set, the box keeps its own visual identity
-      // (border, background, overflow…) and the child is just the interactive/semantic
-      // element inside it. Only event handlers (onXxx) belong on that child; everything
-      // else stays on the box.
-      if (isPseudoStyle) {
-        if (shouldForwardAllToChild) ; else {
-          console.warn(`unsupported pseudo style key "${name}"`);
-          selfForwardedProps[name] = value;
-        }
-      } else if (shouldForwardAllToChild) {
-        childForwardedProps[name] = value;
-      } else {
-        selfForwardedProps[name] = value;
-      }
-      return;
-    };
-    if (baseStyle) {
-      for (const key of baseStyle) {
-        const value = baseStyle[key];
-        visitProp(value, key, styleContext, boxStyles, "baseStyle");
-      }
-    }
-    for (const propName of remainingPropKeySet) {
-      const propValue = rest[propName];
-      if (baseChildPropSet?.has(propName) || childPropSet?.has(propName)) {
-        childForwardedProps[propName] = propValue;
-        continue;
-      }
-      const isDataAttribute = propName.startsWith("data-");
-      if (isDataAttribute) {
-        selfForwardedProps[propName] = propValue;
-        continue;
-      }
-      // At some point I'd like to transform all data-* attribute in the DOM
-      // into navi-* attribute so that when you look at the DOM you can easily understand which attributes
-      // where added by navi or your code.
-      // This help human to better scan the DOM
-      const isNaviAttribute = propName.startsWith("navi-");
-      if (isNaviAttribute) {
-        selfForwardedProps[propName] = propValue;
-        continue;
-      }
-      const isEventHandler = propName.startsWith("on");
-      if (isEventHandler) {
-        if (pseudoStateSelector) {
-          childForwardedProps[propName] = propValue;
-          continue;
-        }
-        selfForwardedProps[propName] = propValue;
-        continue;
-      }
-      if (pseudoStateSelector && PSEUDO_STATE_CHILD_PROP_SET.has(propName)) {
-        childForwardedProps[propName] = propValue;
-        continue;
-      }
-      visitProp(propValue, propName, styleContext, boxStyles, "prop");
-    }
-    if (typeof style === "string") {
-      const styleObject = normalizeStyles(style, "css");
-      for (const styleName of Object.keys(styleObject)) {
-        const styleValue = styleObject[styleName];
-        visitProp(styleValue, styleName, styleContext, boxStyles, "style");
-      }
-    } else if (style && typeof style === "object") {
-      for (const styleName of Object.keys(style)) {
-        const styleValue = style[styleName];
-        visitProp(styleValue, styleName, styleContext, boxStyles, "style");
-      }
-    }
-    styleDeps.push(pseudoStateSelector, innerPseudoState);
-    let innerPseudoClasses;
-    if (pseudoClassesFromStyleSet.size) {
-      innerPseudoClasses = [...pseudoClasses];
-      if (pseudoClasses !== PSEUDO_CLASSES_DEFAULT) {
-        styleDeps.push(...pseudoClasses);
-      }
-      for (const key of pseudoClassesFromStyleSet) {
-        innerPseudoClasses.push(key);
-        styleDeps.push(key);
-      }
-    } else {
-      innerPseudoClasses = pseudoClasses;
-      if (pseudoClasses !== PSEUDO_CLASSES_DEFAULT) {
-        styleDeps.push(...pseudoClasses);
-      }
-    }
-    ref = useElementRefEffect(props.ref, boxEl => {
-      const pseudoStateEl = pseudoStateSelector ? boxEl.querySelector(pseudoStateSelector) : boxEl;
-      const visualEl = visualSelector ? boxEl.querySelector(visualSelector) : null;
-      return initPseudoStyles(pseudoStateEl, {
-        pseudoClasses: innerPseudoClasses,
-        pseudoState: innerPseudoState,
-        effect: state => {
-          applyStyle(boxEl, boxStyles, state, boxPseudoNamedStyles, preventInitialTransition);
-        },
-        elementToImpact: boxEl,
-        elementListeningPseudoState: visualEl === pseudoStateEl ? null : visualEl
-      });
-    }, styleDeps);
-    usePartiallyHidden(ref, Boolean(rest.viewTransitionName));
-  }
-
-  // When hasChildFunction is used it means
-  // Some/all the children needs to access remainingProps
-  // to render and will provide a function to do so.
-  let innerChildren;
-  if (hasChildFunction) {
-    if (Array.isArray(children)) {
-      innerChildren = children.map(child => typeof child === "function" ? child(childForwardedProps) : child);
-    } else if (typeof children === "function") {
-      innerChildren = children(childForwardedProps);
-    } else {
-      innerChildren = children;
-    }
-  } else {
-    innerChildren = children;
-  }
-  if (separator) {
-    // Flatten nested arrays (e.g., from .map()) to treat each element as individual child
-    innerChildren = applySeparatorOnChildren(innerChildren, separator);
-  }
-  const aspectRatio = rest.square || rest.circle ? "1/1" : rest.aspectRatio;
-  return jsx(TagName, {
-    ref: ref,
-    className: innerClassName,
-    "navi-box-flow": boxFlowIsDefault ? undefined : boxFlow,
-    "navi-box-flow-row": row ? "" : undefined,
-    "navi-box-flow-column": column ? "" : undefined,
-    "navi-aspect-ratio": aspectRatio ? aspectRatio : undefined,
-    "data-visual-selector": visualSelector,
-    ...selfForwardedProps,
-    children: jsx(BoxFlowContext.Provider, {
-      value: boxFlow,
-      children: innerChildren
-    })
-  });
-};
-const applySeparatorOnChildren = (children, separator) => {
-  const flattenedChildren = toChildArray(children);
-  if (flattenedChildren.length <= 1) {
-    return children;
-  }
-  const childrenWithSeparators = [];
-  let i = 0;
-  while (true) {
-    const child = flattenedChildren[i];
-    childrenWithSeparators.push(child);
-    i++;
-    const isLast = i === flattenedChildren.length;
-    if (isLast) {
-      break;
-    }
-    const nextChild = flattenedChildren[i];
-    if (!shouldInjectSeparatorBetween(child, nextChild)) {
-      continue;
-    }
-    // Support function separators that receive separator index
-    const separatorElement = typeof separator === "function" ? separator(i - 1) // i-1 because i was incremented after pushing child
-    : separator;
-    childrenWithSeparators.push(separatorElement);
-  }
-  return childrenWithSeparators;
-};
-const shouldInjectSeparatorBetween = (left, right) => {
-  if (isValidElement(left) && left.props?.hidden) {
-    return false;
-  }
-  if (isValidElement(right) && right.props?.hidden) {
-    return false;
-  }
-  return true;
-};
-
-const ensureDocumentStartViewTransition = () => {
-  if (document.startViewTransition) {
-    return;
-  }
-  document.startViewTransition = (updateCallback) => {
-    updateCallback();
-    return {
-      ready: Promise.resolve(),
-      finished: Promise.resolve(),
-    };
-  };
-};
-
-/**
- * Fix alignment behavior for flex/grid containers that use `height: 100%`.
- *
- * Context:
- * - When a flex/grid container has `height: 100%`, it is "height-locked".
- * - If its content becomes taller than the container, alignment rules like
- *   `align-items: center` will cause content to be partially clipped.
- *
- * Goal:
- * - Center content only when it fits.
- * - Align content at start when it overflows.
- *
- * How:
- * - Temporarily remove height-constraint (`height:auto`) to measure natural height.
- * - Compare natural height to container height.
- * - Add/remove an attribute so CSS can adapt alignment.
- *
- * Usage:
- *   monitorItemsOverflow(containerElement);
- *
- * CSS example:
- *   .container { align-items: center; }
- *   .container[data-items-height-overflow] { align-items: flex-start; }
- */
-
-
-const WIDTH_ATTRIBUTE_NAME = "data-items-width-overflow";
-const HEIGHT_ATTRIBUTE_NAME = "data-items-height-overflow";
-const monitorItemsOverflow = (container) => {
-  let widthIsOverflowing;
-  let heightIsOverflowing;
-  const onItemsWidthOverflowChange = () => {
-    if (widthIsOverflowing) {
-      container.setAttribute(WIDTH_ATTRIBUTE_NAME, "");
-    } else {
-      container.removeAttribute(WIDTH_ATTRIBUTE_NAME);
-    }
-  };
-  const onItemsHeightOverflowChange = () => {
-    if (heightIsOverflowing) {
-      container.setAttribute(HEIGHT_ATTRIBUTE_NAME, "");
-    } else {
-      container.removeAttribute(HEIGHT_ATTRIBUTE_NAME);
-    }
-  };
-
-  const update = () => {
-    // Save current manual height constraint
-    const prevWidth = container.style.width;
-    const prevHeight = container.style.height;
-    // Remove constraint → get true content dimension
-    container.style.width = "auto";
-    container.style.height = "auto";
-    const naturalWidth = container.scrollWidth;
-    const naturalHeight = container.scrollHeight;
-    if (prevWidth) {
-      container.style.width = prevWidth;
-    } else {
-      container.style.removeProperty("width");
-    }
-    if (prevHeight) {
-      container.style.height = prevHeight;
-    } else {
-      container.style.removeProperty("height");
-    }
-
-    const lockedWidth = container.clientWidth;
-    const lockedHeight = container.clientHeight;
-    const currentWidthIsOverflowing = naturalWidth > lockedWidth;
-    const currentHeightIsOverflowing = naturalHeight > lockedHeight;
-    if (currentWidthIsOverflowing !== widthIsOverflowing) {
-      widthIsOverflowing = currentWidthIsOverflowing;
-      onItemsWidthOverflowChange();
-    }
-    if (currentHeightIsOverflowing !== heightIsOverflowing) {
-      heightIsOverflowing = currentHeightIsOverflowing;
-      onItemsHeightOverflowChange();
-    }
-  };
-
-  const [teardown, addTeardown] = createPubSub();
-
-  update();
-
-  // mutation observer
-  const mutationObserver = new MutationObserver(() => {
-    update();
-  });
-  mutationObserver.observe(container, {
-    childList: true,
-    characterData: true,
-  });
-  addTeardown(() => {
-    mutationObserver.disconnect();
-  });
-
-  // resize observer
-  const resizeObserver = new ResizeObserver(update);
-  resizeObserver.observe(container);
-  addTeardown(() => {
-    resizeObserver.disconnect();
-  });
-
-  const destroy = () => {
-    teardown();
-    container.removeAttribute(WIDTH_ATTRIBUTE_NAME);
-    container.removeAttribute(HEIGHT_ATTRIBUTE_NAME);
-  };
-  return destroy;
-};
-
-installImportMetaCssBuild(import.meta);/**
- * UI Transition - Core Implementation
- * Provides smooth resize transitions with cross-fade effects between content states
- *
- * Content Types and Terminology:
- *
- * - ui: What the user currently sees rendered in the UI
- * - dom_nodes: The actual DOM elements that make up the visual representation
- * - content_id: Unique identifier for a content and its content_phase(s)
- * - content_phase: Intermediate states (loading spinners, error messages, empty states)
- * - content: The primary/final content we want to display (e.g., car details, user profile)
- *
- * Required HTML structure:
- *
- * <div class="ui_transition">
- *   <div class="ui_transition_active_group">
- *     <div class="ui_transition_target_slot"></div>
- *     <div class="ui_transition_outgoing_slot"></div>
- *   </div>
- *   <div class="ui_transition_previous_group">
- *     <div class="ui_transition_previous_target_slot"></div>
- *     <div class="ui_transition_previous_outgoing_slot"></div>
- *   </div>
- * </div>
- *
- * Architecture Overview:
- *
- * .ui_transition
- *   The main container that handles dimensional transitions. Its width and height animate
- *   smoothly from current to target dimensions. Has overflow:hidden to clip ui during transitions.
- *
- * .active_group
- *   Contains the ui that should be active after the transition completes. Groups both the target
- *   ui (.target_slot) and transitional ui (.outgoing_slot) as a single unit that can
- *   be manipulated together (e.g., applying transforms or slides).
- *
- * .target_slot
- *   Always contains the target ui - what should be displayed at the end of the transition.
- *   Whether transitioning to content or content_phase, this slot receives the new dom_nodes.
- *   Receives fade-in transitions (opacity 0 → 1) during all transition types.
- *
- * .outgoing_slot
- *   Holds content_phase that's being replaced during content_phase transitions. When transitioning
- *   from one content_phase to another, or from content_phase to content, the old content_phase moves
- *   here for fade-out. Receives fade-out transitions (opacity 1 → 0).
- *
- * .previous_group
- *   Used for content-to-content transitions. When switching between content (not phases),
- *   the entire .active_group dom_nodes are cloned here to fade out while the new content fades in.
- *   Can slide out when sliding transitions are enabled, otherwise fades out.
- *
- * Transition Scenarios:
- * - content → content: Car A details → Car B details (clone to previous_group)
- * - content_phase → content_phase: Loading state → Error state (move to outgoing_slot, same content_id)
- * - content → content_phase: Car A details → Loading Car B (use outgoing_slot for cross-fade)
- * - content_phase → content: Loading Car B → Car B details (use outgoing_slot for cross-fade)
- *
- * Size Transition Handling:
- * During dimensional transitions, both .target_slot and .outgoing_slot have their dimensions
- * explicitly set to prevent dom_nodes reflow and maintain visual consistency.
- */
-import.meta.css = [/* css */`
-  * {
-    box-sizing: border-box;
-  }
-
-  .ui_transition {
-    --transition-duration: 300ms;
-    --justify-content: center;
-    --align-items: center;
-
-    --x-transition-duration: var(--transition-duration);
-    --x-justify-content: var(--justify-content);
-    --x-align-items: var(--align-items);
-
-    position: relative;
-  }
-  /* Alignment controls */
-  .ui_transition[data-align-x="start"] {
-    --x-justify-content: flex-start;
-  }
-  .ui_transition[data-align-x="center"] {
-    --x-justify-content: center;
-  }
-  .ui_transition[data-align-x="end"] {
-    --x-justify-content: flex-end;
-  }
-  .ui_transition[data-align-y="start"] {
-    --x-align-items: flex-start;
-  }
-  .ui_transition[data-align-y="center"] {
-    --x-align-items: center;
-  }
-  .ui_transition[data-align-y="end"] {
-    --x-align-items: flex-end;
-  }
-
-  .ui_transition,
-  .ui_transition_active_group,
-  .ui_transition_previous_group,
-  .ui_transition_target_slot,
-  .ui_transition_previous_target_slot,
-  .ui_transition_outgoing_slot,
-  .ui_transition_previous_outgoing_slot {
-    width: 100%;
-    height: 100%;
-  }
-
-  .ui_transition_target_slot,
-  .ui_transition_outgoing_slot,
-  .ui_transition_previous_target_slot,
-  .ui_transition_previous_outgoing_slot {
-    display: flex;
-    align-items: var(--x-align-items);
-    justify-content: var(--x-justify-content);
-  }
-  .ui_transition_target_slot[data-items-width-overflow],
-  .ui_transition_previous_target_slot[data-items-width-overflow],
-  .ui_transition_previous_target_slot[data-items-width-overflow],
-  .ui_transition_previous_outgoing_slot[data-items-width-overflow] {
-    --x-justify-content: flex-start;
-  }
-  .ui_transition_target_slot[data-items-height-overflow],
-  .ui_transition_previous_slot[data-items-height-overflow],
-  .ui_transition_previous_target_slot[data-items-height-overflow],
-  .ui_transition_previous_outgoing_slot[data-items-height-overflow] {
-    --x-align-items: flex-start;
-  }
-
-  .ui_transition_active_group {
-    position: relative;
-  }
-  .ui_transition_target_slot {
-    position: relative;
-  }
-  .ui_transition_outgoing_slot,
-  .ui_transition_previous_outgoing_slot {
-    position: absolute;
-    top: 0;
-    left: 0;
-  }
-  .ui_transition_previous_group {
-    position: absolute;
-    inset: 0;
-  }
-  .ui_transition[data-only-previous-group] .ui_transition_previous_group {
-    position: relative;
-  }
-
-  .ui_transition_target_slot_background {
-    position: absolute;
-    top: 0;
-    left: 0;
-    z-index: -1;
-    display: none;
-    width: var(--target-slot-width, 100%);
-    height: var(--target-slot-height, 100%);
-    background: var(--target-slot-background, transparent);
-    pointer-events: none;
-  }
-  .ui_transition[data-transitioning] .ui_transition_target_slot_background {
-    display: block;
-  }
-`, "@jsenv/navi/src/transition/ui_transition.js"];
-const CONTENT_ID_ATTRIBUTE = "data-content-id";
-const CONTENT_PHASE_ATTRIBUTE = "data-content-phase";
-const UNSET = {
-  domNodes: [],
-  domNodesClone: [],
-  isEmpty: true,
-  type: "unset",
-  contentId: "unset",
-  contentPhase: undefined,
-  isContentPhase: false,
-  isContent: false,
-  toString: () => "unset"
-};
-const isSameConfiguration = (configA, configB) => {
-  return configA.toString() === configB.toString();
-};
-const createUITransitionController = (root, {
-  duration = 300,
-  alignX = "center",
-  alignY = "center",
-  onStateChange = () => {},
-  pauseBreakpoints = []
-} = {}) => {
-  const debugConfig = {
-    detection: root.hasAttribute("data-debug-detection"),
-    size: root.hasAttribute("data-debug-size")
-  };
-  const hasDebugLogs = debugConfig.size;
-  const debugDetection = message => {
-    if (!debugConfig.detection) return;
-    console.debug(`[detection]`, message);
-  };
-  const debugSize = message => {
-    if (!debugConfig.size) return;
-    console.debug(`[size]`, message);
-  };
-  const activeGroup = root.querySelector(".ui_transition_active_group");
-  const targetSlot = root.querySelector(".ui_transition_target_slot");
-  const outgoingSlot = root.querySelector(".ui_transition_outgoing_slot");
-  const previousGroup = root.querySelector(".ui_transition_previous_group");
-  const previousTargetSlot = previousGroup?.querySelector(".ui_transition_previous_target_slot");
-  const previousOutgoingSlot = previousGroup?.querySelector(".ui_transition_previous_outgoing_slot");
-  if (!root || !activeGroup || !targetSlot || !outgoingSlot || !previousGroup || !previousTargetSlot || !previousOutgoingSlot) {
-    throw new Error("createUITransitionController requires element with .active_group, .target_slot, .outgoing_slot, .previous_group, .previous_target_slot, and .previous_outgoing_slot elements");
-  }
-
-  // we maintain a background copy behind target slot to avoid showing
-  // the body flashing during the fade-in
-  const targetSlotBackground = document.createElement("div");
-  targetSlotBackground.className = "ui_transition_target_slot_background";
-  activeGroup.insertBefore(targetSlotBackground, targetSlot);
-  root.style.setProperty("--x-transition-duration", `${duration}ms`);
-  outgoingSlot.setAttribute("inert", "");
-  previousGroup.setAttribute("inert", "");
-  const detectConfiguration = (slot, {
-    contentId,
-    contentPhase
-  } = {}) => {
-    const domNodes = Array.from(slot.childNodes);
-    if (!domNodes) {
-      return UNSET;
-    }
-    const isEmpty = domNodes.length === 0;
-    let textNodeCount = 0;
-    let elementNodeCount = 0;
-    let firstElementNode;
-    const domNodesClone = [];
-    if (isEmpty) {
-      if (contentPhase === undefined) {
-        contentPhase = "empty";
-      }
-    } else {
-      const contentIdSlotAttr = slot.getAttribute(CONTENT_ID_ATTRIBUTE);
-      let contentIdChildAttr;
-      for (const domNode of domNodes) {
-        if (domNode.nodeType === Node.TEXT_NODE) {
-          textNodeCount++;
-        } else {
-          if (!firstElementNode) {
-            firstElementNode = domNode;
-          }
-          elementNodeCount++;
-          if (domNode.hasAttribute("data-content-phase")) {
-            const contentPhaseAttr = domNode.getAttribute("data-content-phase");
-            contentPhase = contentPhaseAttr || "attr";
-          }
-          if (domNode.hasAttribute("data-content-key")) {
-            contentIdChildAttr = domNode.getAttribute("data-content-key");
-          }
-        }
-        const domNodeClone = domNode.cloneNode(true);
-        domNodesClone.push(domNodeClone);
-      }
-      if (contentIdSlotAttr && contentIdChildAttr) {
-        console.warn(`Slot and slot child both have a [${CONTENT_ID_ATTRIBUTE}]. Slot is ${contentIdSlotAttr} and child is ${contentIdChildAttr}, using the child.`);
-      }
-      if (contentId === undefined) {
-        contentId = contentIdChildAttr || contentIdSlotAttr || undefined;
-      }
-    }
-    const isOnlyTextNodes = elementNodeCount === 0 && textNodeCount > 1;
-    const singleElementNode = elementNodeCount === 1 ? firstElementNode : null;
-    contentId = contentId || getElementSignature(domNodes[0]);
-    if (!contentPhase && isEmpty) {
-      // Imagine code rendering null while switching to a new content
-      // or even while staying on the same content.
-      // In the UI we want to consider this as an "empty" phase.
-      // meaning the ui will keep the same size until something else happens
-      // This prevent layout shifts of code not properly handling
-      // intermediate states.
-      contentPhase = "empty";
-    }
-    let width;
-    let height;
-    let borderRadius;
-    let border;
-    let background;
-    if (isEmpty) {
-      debugSize(`measureSlot(".${slot.className}") -> it is empty`);
-    } else if (singleElementNode) {
-      const visualSelector = singleElementNode.getAttribute("data-visual-selector");
-      const visualElement = visualSelector ? singleElementNode.querySelector(visualSelector) || singleElementNode : singleElementNode;
-      const rect = visualElement.getBoundingClientRect();
-      width = rect.width;
-      height = rect.height;
-      debugSize(`measureSlot(".${slot.className}") -> [${width}x${height}]`);
-      borderRadius = getBorderRadius(visualElement);
-      border = getComputedStyle(visualElement).border;
-      background = getComputedStyle(visualElement).background;
-    } else {
-      // text, multiple elements
-      const rect = slot.getBoundingClientRect();
-      width = rect.width;
-      height = rect.height;
-      debugSize(`measureSlot(".${slot.className}") -> [${width}x${height}]`);
-    }
-    const commonProperties = {
-      domNodes,
-      domNodesClone,
-      isEmpty,
-      isOnlyTextNodes,
-      singleElementNode,
-      width,
-      height,
-      borderRadius,
-      border,
-      background,
-      contentId
-    };
-    if (contentPhase) {
-      return {
-        ...commonProperties,
-        type: "content_phase",
-        contentPhase,
-        isContentPhase: true,
-        isContent: false,
-        toString: () => `content(${contentId}).phase(${contentPhase})`
-      };
-    }
-    return {
-      ...commonProperties,
-      type: "content",
-      contentPhase: undefined,
-      isContentPhase: false,
-      isContent: true,
-      toString: () => `content(${contentId})`
-    };
-  };
-  const targetSlotInitialConfiguration = detectConfiguration(targetSlot);
-  const outgoingSlotInitialConfiguration = detectConfiguration(outgoingSlot, {
-    contentPhase: "true"
-  });
-  let targetSlotConfiguration = targetSlotInitialConfiguration;
-  let outgoingSlotConfiguration = outgoingSlotInitialConfiguration;
-  let previousTargetSlotConfiguration = UNSET;
-  const updateSlotAttributes = () => {
-    if (targetSlotConfiguration.isEmpty && outgoingSlotConfiguration.isEmpty) {
-      root.setAttribute("data-only-previous-group", "");
-    } else {
-      root.removeAttribute("data-only-previous-group");
-    }
-  };
-  const updateAlignment = () => {
-    // Set data attributes for CSS-based alignment
-    root.setAttribute("data-align-x", alignX);
-    root.setAttribute("data-align-y", alignY);
-  };
-  const moveConfigurationIntoSlot = (configuration, slot) => {
-    slot.innerHTML = "";
-    for (const domNode of configuration.domNodesClone) {
-      slot.appendChild(domNode);
-    }
-    // in case border or stuff like that have changed we re-detect the config
-    const updatedConfig = detectConfiguration(slot);
-    if (slot === targetSlot) {
-      targetSlotConfiguration = updatedConfig;
-    } else if (slot === outgoingSlot) {
-      outgoingSlotConfiguration = updatedConfig;
-    } else if (slot === previousTargetSlot) {
-      previousTargetSlotConfiguration = updatedConfig;
-    } else if (slot === previousOutgoingSlot) ; else {
-      throw new Error("Unknown slot for applyConfiguration");
-    }
-  };
-  updateAlignment();
-  let transitionType = "none";
-  const groupTransitionOptions = {
-    // debugBreakpoints: [0.25],
-    pauseBreakpoints,
-    lifecycle: {
-      setup: () => {
-        updateSlotAttributes();
-        root.setAttribute("data-transitioning", "");
-        onStateChange({
-          isTransitioning: true
-        });
-        return {
-          teardown: () => {
-            root.removeAttribute("data-transitioning");
-            updateSlotAttributes(); // Update positioning after transition
-            onStateChange({
-              isTransitioning: false
-            });
-          }
-        };
-      }
-    }
-  };
-  const transitionController = createGroupTransitionController(groupTransitionOptions);
-  const elementToClip = root;
-  const morphContainerIntoTarget = () => {
-    const morphTransitions = [];
-    {
-      // TODO: ideally when scrollContainer is document AND we transition
-      // from a layout with scrollbar to a layout without
-      // we have clip path detecting we go from a given width/height to a new width/height
-      // that might just be the result of scrollbar appearing/disappearing
-      // we should detect when this happens to avoid clipping what correspond to the scrollbar presence toggling
-      const fromWidth = previousTargetSlotConfiguration.width || 0;
-      const fromHeight = previousTargetSlotConfiguration.height || 0;
-      const toWidth = targetSlotConfiguration.width || 0;
-      const toHeight = targetSlotConfiguration.height || 0;
-      debugSize(`transition from [${fromWidth}x${fromHeight}] to [${toWidth}x${toHeight}]`);
-      const restoreOverflow = preventIntermediateScrollbar(root, {
-        fromWidth,
-        fromHeight,
-        toWidth,
-        toHeight,
-        onPrevent: ({
-          x,
-          y,
-          scrollContainer
-        }) => {
-          if (x) {
-            debugSize(`Temporarily hiding horizontal overflow during transition on ${getElementSignature(scrollContainer)}`);
-          }
-          if (y) {
-            debugSize(`Temporarily hiding vertical overflow during transition on ${getElementSignature(scrollContainer)}`);
-          }
-        },
-        onRestore: () => {
-          debugSize(`Restored overflow after transition`);
-        }
-      });
-      const onSizeTransitionFinished = () => {
-        // Restore overflow when transition is complete
-        restoreOverflow();
-      };
-
-      // https://emilkowal.ski/ui/the-magic-of-clip-path
-      const elementToClipRect = elementToClip.getBoundingClientRect();
-      const elementToClipWidth = elementToClipRect.width;
-      const elementToClipHeight = elementToClipRect.height;
-      // Calculate where content is positioned within the large container
-      const getAlignedPosition = (containerSize, contentSize, align) => {
-        switch (align) {
-          case "start":
-            return 0;
-          case "end":
-            return containerSize - contentSize;
-          case "center":
-          default:
-            return (containerSize - contentSize) / 2;
-        }
-      };
-      // Position of "from" content within large container
-      const fromLeft = getAlignedPosition(elementToClipWidth, fromWidth, alignX);
-      const fromTop = getAlignedPosition(elementToClipHeight, fromHeight, alignY);
-      // Position of target content within large container
-      const targetLeft = getAlignedPosition(elementToClipWidth, toWidth, alignX);
-      const targetTop = getAlignedPosition(elementToClipHeight, toHeight, alignY);
-      debugSize(`Positions in container: from [${fromLeft},${fromTop}] ${fromWidth}x${fromHeight} to [${targetLeft},${targetTop}] ${toWidth}x${toHeight}`);
-      // Get border-radius values
-      const fromBorderRadius = previousTargetSlotConfiguration.borderRadius || 0;
-      const toBorderRadius = targetSlotConfiguration.borderRadius || 0;
-      const startInsetTop = fromTop;
-      const startInsetRight = elementToClipWidth - (fromLeft + fromWidth);
-      const startInsetBottom = elementToClipHeight - (fromTop + fromHeight);
-      const startInsetLeft = fromLeft;
-      const endInsetTop = targetTop;
-      const endInsetRight = elementToClipWidth - (targetLeft + toWidth);
-      const endInsetBottom = elementToClipHeight - (targetTop + toHeight);
-      const endInsetLeft = targetLeft;
-      const startClipPath = `inset(${startInsetTop}px ${startInsetRight}px ${startInsetBottom}px ${startInsetLeft}px round ${fromBorderRadius}px)`;
-      const endClipPath = `inset(${endInsetTop}px ${endInsetRight}px ${endInsetBottom}px ${endInsetLeft}px round ${toBorderRadius}px)`;
-      // Create clip-path animation using Web Animations API
-      const clipAnimation = elementToClip.animate([{
-        clipPath: startClipPath
-      }, {
-        clipPath: endClipPath
-      }], {
-        duration,
-        easing: "ease",
-        fill: "forwards"
-      });
-
-      // Handle finish
-      clipAnimation.finished.then(() => {
-        // Clear clip-path to restore normal behavior
-        elementToClip.style.clipPath = "";
-        clipAnimation.cancel();
-        onSizeTransitionFinished();
-      }).catch(() => {
-        // Animation was cancelled
-      });
-      clipAnimation.play();
-    }
-    return morphTransitions;
-  };
-  const fadeInTargetSlot = () => {
-    targetSlotBackground.style.setProperty("--target-slot-background", targetSlotConfiguration.background);
-    targetSlotBackground.style.setProperty("--target-slot-width", `${targetSlotConfiguration.width || 0}px`);
-    targetSlotBackground.style.setProperty("--target-slot-height", `${targetSlotConfiguration.height || 0}px`);
-    return createOpacityTransition(targetSlot, 1, {
-      from: 0,
-      duration,
-      styleSynchronizer: "inline_style",
-      onFinish: targetSlotOpacityTransition => {
-        targetSlotBackground.style.removeProperty("--target-slot-background");
-        targetSlotBackground.style.removeProperty("--target-slot-width");
-        targetSlotBackground.style.removeProperty("--target-slot-height");
-        targetSlotOpacityTransition.cancel();
-      }
-    });
-  };
-  const fadeOutPreviousGroup = () => {
-    return createOpacityTransition(previousGroup, 0, {
-      from: 1,
-      duration,
-      styleSynchronizer: "inline_style",
-      onFinish: previousGroupOpacityTransition => {
-        previousGroupOpacityTransition.cancel();
-        previousGroup.style.opacity = "0"; // keep previous group visually hidden
-      }
-    });
-  };
-  const fadeOutOutgoingSlot = () => {
-    return createOpacityTransition(outgoingSlot, 0, {
-      duration,
-      from: 1,
-      styleSynchronizer: "inline_style",
-      onFinish: outgoingSlotOpacityTransition => {
-        outgoingSlotOpacityTransition.cancel();
-        outgoingSlot.style.opacity = "0"; // keep outgoing slot visually hidden
-      }
-    });
-  };
-
-  // content_to_content transition (uses previous_group)
-  const applyContentToContentTransition = toConfiguration => {
-    // 1. move target slot to previous
-    moveConfigurationIntoSlot(targetSlotConfiguration, previousTargetSlot);
-    targetSlotConfiguration = toConfiguration;
-    // 2. move outgoing slot to previous
-    moveConfigurationIntoSlot(outgoingSlotConfiguration, previousOutgoingSlot);
-    moveConfigurationIntoSlot(UNSET, outgoingSlot);
-    const transitions = [...morphContainerIntoTarget(), fadeInTargetSlot(), fadeOutPreviousGroup()];
-    const transition = transitionController.update(transitions, {
-      onFinish: () => {
-        moveConfigurationIntoSlot(UNSET, previousTargetSlot);
-        moveConfigurationIntoSlot(UNSET, previousOutgoingSlot);
-        if (hasDebugLogs) {
-          console.groupEnd();
-        }
-      }
-    });
-    transition.play();
-  };
-  // content_phase_to_content_phase transition (uses outgoing_slot)
-  const applyContentPhaseToContentPhaseTransition = toConfiguration => {
-    // 1. Move target slot to outgoing
-    moveConfigurationIntoSlot(targetSlotConfiguration, outgoingSlot);
-    targetSlotConfiguration = toConfiguration;
-    const transitions = [...morphContainerIntoTarget(), fadeInTargetSlot(), fadeOutOutgoingSlot()];
-    const transition = transitionController.update(transitions, {
-      onFinish: () => {
-        moveConfigurationIntoSlot(UNSET, outgoingSlot);
-        if (hasDebugLogs) {
-          console.groupEnd();
-        }
-      }
-    });
-    transition.play();
-  };
-  // any_to_empty transition
-  const applyToEmptyTransition = () => {
-    // 1. move target slot to previous
-    moveConfigurationIntoSlot(targetSlotConfiguration, previousTargetSlot);
-    targetSlotConfiguration = UNSET;
-    // 2. move outgoing slot to previous
-    moveConfigurationIntoSlot(outgoingSlotConfiguration, previousOutgoingSlot);
-    outgoingSlotConfiguration = UNSET;
-    const transitions = [...morphContainerIntoTarget(), fadeOutPreviousGroup()];
-    const transition = transitionController.update(transitions, {
-      onFinish: () => {
-        moveConfigurationIntoSlot(UNSET, previousTargetSlot);
-        moveConfigurationIntoSlot(UNSET, previousOutgoingSlot);
-        if (hasDebugLogs) {
-          console.groupEnd();
-        }
-      }
-    });
-    transition.play();
-  };
-  // Main transition method
-  const transitionTo = (newContentElement, {
-    contentPhase,
-    contentId
-  } = {}) => {
-    if (contentId) {
-      targetSlot.setAttribute(CONTENT_ID_ATTRIBUTE, contentId);
-    } else {
-      targetSlot.removeAttribute(CONTENT_ID_ATTRIBUTE);
-    }
-    if (contentPhase) {
-      targetSlot.setAttribute(CONTENT_PHASE_ATTRIBUTE, contentPhase);
-    } else {
-      targetSlot.removeAttribute(CONTENT_PHASE_ATTRIBUTE);
-    }
-    if (newContentElement) {
-      targetSlot.innerHTML = "";
-      targetSlot.appendChild(newContentElement);
-    } else {
-      targetSlot.innerHTML = "";
-    }
-  };
-  // Reset to initial content
-  const resetContent = () => {
-    transitionController.cancel();
-    moveConfigurationIntoSlot(targetSlotInitialConfiguration, targetSlot);
-    moveConfigurationIntoSlot(outgoingSlotInitialConfiguration, outgoingSlot);
-    moveConfigurationIntoSlot(UNSET, previousTargetSlot);
-    moveConfigurationIntoSlot(UNSET, previousOutgoingSlot);
-  };
-  const targetSlotEffect = reasons => {
-    if (root.hasAttribute("data-disabled")) {
-      return;
-    }
-    const fromConfiguration = targetSlotConfiguration;
-    const toConfiguration = detectConfiguration(targetSlot);
-    if (hasDebugLogs) {
-      console.group(`targetSlotEffect()`);
-      console.debug(`reasons:`);
-      console.debug(`- ${reasons.join("\n- ")}`);
-    }
-    if (isSameConfiguration(fromConfiguration, toConfiguration)) {
-      debugDetection(`already in desired state (${toConfiguration}) -> early return`);
-      if (hasDebugLogs) {
-        console.groupEnd();
-      }
-      return;
-    }
-    const fromConfigType = fromConfiguration.type;
-    const toConfigType = toConfiguration.type;
-    transitionType = `${fromConfigType}_to_${toConfigType}`;
-    debugDetection(`Prepare "${transitionType}" transition (${fromConfiguration} -> ${toConfiguration})`);
-    // content_to_empty / content_phase_to_empty
-    if (toConfiguration.isEmpty) {
-      applyToEmptyTransition();
-      return;
-    }
-    // content_phase_to_content_phase
-    if (fromConfiguration.isContentPhase && toConfiguration.isContentPhase) {
-      applyContentPhaseToContentPhaseTransition(toConfiguration);
-      return;
-    }
-    // content_phase_to_content
-    if (fromConfiguration.isContentPhase && toConfiguration.isContent) {
-      applyContentPhaseToContentPhaseTransition(toConfiguration);
-      return;
-    }
-    // content_to_content_phase
-    if (fromConfiguration.isContent && toConfiguration.isContentPhase) {
-      applyContentPhaseToContentPhaseTransition(toConfiguration);
-      return;
-    }
-    // content_to_content (default case)
-    applyContentToContentTransition(toConfiguration);
-  };
-  const [teardown, addTeardown] = createPubSub();
-  {
-    const mutationObserver = new MutationObserver(mutations => {
-      const reasonParts = [];
-      for (const mutation of mutations) {
-        if (mutation.type === "childList") {
-          const added = mutation.addedNodes.length;
-          const removed = mutation.removedNodes.length;
-          if (added && removed) {
-            reasonParts.push(`addedNodes(${added}) removedNodes(${removed})`);
-          } else if (added) {
-            reasonParts.push(`addedNodes(${added})`);
-          } else {
-            reasonParts.push(`removedNodes(${removed})`);
-          }
-          continue;
-        }
-        if (mutation.type === "attributes") {
-          const {
-            attributeName
-          } = mutation;
-          if (attributeName === CONTENT_ID_ATTRIBUTE || attributeName === CONTENT_PHASE_ATTRIBUTE) {
-            const {
-              oldValue
-            } = mutation;
-            if (oldValue === null) {
-              const value = targetSlot.getAttribute(attributeName);
-              reasonParts.push(value ? `added [${attributeName}=${value}]` : `added [${attributeName}]`);
-            } else if (targetSlot.hasAttribute(attributeName)) {
-              const value = targetSlot.getAttribute(attributeName);
-              reasonParts.push(`[${attributeName}] ${oldValue} -> ${value}`);
-            } else {
-              reasonParts.push(oldValue ? `removed [${attributeName}=${oldValue}]` : `removed [${attributeName}]`);
-            }
-          }
-        }
-      }
-      if (reasonParts.length === 0) {
-        return;
-      }
-      targetSlotEffect(reasonParts);
-    });
-    mutationObserver.observe(targetSlot, {
-      childList: true,
-      attributes: true,
-      attributeFilter: [CONTENT_ID_ATTRIBUTE, CONTENT_PHASE_ATTRIBUTE],
-      characterData: false
-    });
-    addTeardown(() => {
-      mutationObserver.disconnect();
-    });
-  }
-  {
-    const slots = [targetSlot, outgoingSlot, previousTargetSlot, previousOutgoingSlot];
-    for (const slot of slots) {
-      addTeardown(monitorItemsOverflow(slot));
-    }
-  }
-  const setDuration = newDuration => {
-    duration = newDuration;
-    // Update CSS variable immediately
-    root.style.setProperty("--x-transition-duration", `${duration}ms`);
-  };
-  const setAlignment = (newAlignX, newAlignY) => {
-    alignX = newAlignX;
-    alignY = newAlignY;
-    updateAlignment();
-  };
-  return {
-    updateContentId: value => {
-      if (value) {
-        targetSlot.setAttribute(CONTENT_ID_ATTRIBUTE, value);
-      } else {
-        targetSlot.removeAttribute(CONTENT_ID_ATTRIBUTE);
-      }
-    },
-    transitionTo,
-    resetContent,
-    setDuration,
-    setAlignment,
-    updateAlignment,
-    setPauseBreakpoints: value => {
-      groupTransitionOptions.pauseBreakpoints = value;
-    },
-    cleanup: () => {
-      teardown();
-    }
-  };
-};
-
-/**
- * UITransition
- *
- * A Preact component that enables smooth animated transitions between its children when the content changes.
- * It observes content keys and phases to create different types of transitions.
- *
- * Features:
- * - Content transitions: Between different content keys (e.g., user profiles, search results)
- * - Phase transitions: Between loading/content/error states for the same content key
- * - Automatic size animation to accommodate content changes
- * - Configurable transition types: "slide-left", "cross-fade"
- * - Independent duration control for content and phase transitions
- *
- * Usage:
- * - Wrap dynamic content in <UITransition> to animate between states
- * - Set a unique `data-content-id` on your rendered content to identify each content variant
- * - Use `data-content-phase` to mark loading/error states for phase transitions
- * - Configure transition types and durations for both content and phase changes
- *
- * Example:
- *
- *   <UITransition>
- *     {isLoading
- *       ? <Spinner data-content-key={userId} data-content-phase />
- *       : <UserProfile user={user} data-content-key={userId} />}
- *   </UITransition>
- *
- * When `data-content-id` changes, UITransition animates content transitions.
- * When `data-content-phase` changes for the same key, it animates phase transitions.
- */
-
-const UITransitionContentIdContext = createContext();
-const UITransition = ({
-  children,
-  contentId,
-  type,
-  duration,
-  debugDetection,
-  debugContent,
-  debugSize,
-  disabled,
-  uiTransitionRef,
-  alignX,
-  alignY,
-  ...props
-}) => {
-  const contentIdRef = useRef(contentId);
-  const updateContentId = () => {
-    const uiTransition = uiTransitionRef.current;
-    if (!uiTransition) {
-      return;
-    }
-    const value = contentIdRef.current;
-    uiTransition.updateContentId(value);
-  };
-  const uiTransitionContentIdContextValue = useMemo(() => {
-    const set = new Set();
-    const onSetChange = () => {
-      const value = Array.from(set).join("|");
-      contentIdRef.current = value;
-      updateContentId();
-    };
-    const update = (part, newPart) => {
-      if (!set.has(part)) {
-        if (set.size === 0) {
-          console.warn(`UITransition: content id update "${part}" -> "${newPart}" ignored because content id set is empty`);
-          return;
-        }
-        console.warn(`UITransition: content id update "${part}" -> "${newPart}" ignored because content id not found in set, only got [${Array.from(set).join(", ")}]`);
-        return;
-      }
-      set.delete(part);
-      set.add(newPart);
-      onSetChange();
-    };
-    const add = part => {
-      if (!part) {
-        return;
-      }
-      if (set.has(part)) {
-        return;
-      }
-      set.add(part);
-      onSetChange();
-    };
-    const remove = part => {
-      if (!part) {
-        return;
-      }
-      if (!set.has(part)) {
-        return;
-      }
-      set.delete(part);
-      onSetChange();
-    };
-    return {
-      add,
-      update,
-      remove
-    };
-  }, []);
-  const ref = useRef();
-  const uiTransitionRefDefault = useRef();
-  uiTransitionRef = uiTransitionRef || uiTransitionRefDefault;
-  useLayoutEffect(() => {
-    const uiTransition = createUITransitionController(ref.current, {
-      alignX,
-      alignY
-    });
-    uiTransitionRef.current = uiTransition;
-    return () => {
-      uiTransition.cleanup();
-    };
-  }, [disabled, alignX, alignY]);
-  return jsxs("div", {
-    ref: ref,
-    ...props,
-    className: "ui_transition",
-    "data-disabled": disabled ? "" : undefined,
-    "data-transition-type": type,
-    "data-transition-duration": duration,
-    "data-debug-detection": debugDetection ? "" : undefined,
-    "data-debug-size": debugSize ? "" : undefined,
-    "data-debug-content": debugContent ? "" : undefined,
-    children: [jsxs("div", {
-      className: "ui_transition_active_group",
-      children: [jsx("div", {
-        className: "ui_transition_target_slot",
-        "data-content-id": contentIdRef.current ? contentIdRef.current : undefined,
-        children: jsx(UITransitionContentIdContext.Provider, {
-          value: uiTransitionContentIdContextValue,
-          children: children
-        })
-      }), jsx("div", {
-        className: "ui_transition_outgoing_slot",
-        inert: true
-      })]
-    }), jsxs("div", {
-      className: "ui_transition_previous_group",
-      inert: true,
-      children: [jsx("div", {
-        className: "ui_transition_previous_target_slot"
-      }), jsx("div", {
-        className: "ui_transition_previous_outgoing_slot"
-      })]
-    })]
-  });
-};
-
-/**
- * The goal of this hook is to allow a component to set a "content key"
- * Meaning all content within the component is identified by that key
- *
- * When the key changes, UITransition will be able to detect that and consider the content
- * as changed even if the component is still the same
- *
- * This is used by <Route> to set the content key to the route path
- * When the route becomes inactive it will call useUITransitionContentId(undefined)
- * And if a sibling route becones active it will call useUITransitionContentId with its own path
- *
- */
-const useUITransitionContentId = value => {
-  const contentId = useContext(UITransitionContentIdContext);
-  const valueRef = useRef();
-  if (contentId !== undefined && valueRef.current !== value) {
-    const previousValue = valueRef.current;
-    valueRef.current = value;
-    if (previousValue === undefined) {
-      contentId.add(value);
-    } else {
-      contentId.update(previousValue, value);
-    }
-  }
-  useLayoutEffect(() => {
-    if (contentId === undefined) {
-      return null;
-    }
-    return () => {
-      contentId.remove(valueRef.current);
-    };
-  }, []);
 };
 
 /**
@@ -10004,6 +7627,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
   const applyOn = (url) => {
     const result = matchUrl(parsedPattern, url, {
       baseUrl,
+      baseFileUrl,
       queryConnectionMap,
       patternObj: patternObject,
     });
@@ -12351,7 +9975,7 @@ const tryExtractChildParameters = (
 const matchUrl = (
   parsedPattern,
   url,
-  { baseUrl, queryConnectionMap, patternObj = null },
+  { baseUrl, baseFileUrl, queryConnectionMap, patternObj = null },
 ) => {
   // Parse the URL
   const urlObj = new URL(url, baseUrl);
@@ -12378,10 +10002,16 @@ const matchUrl = (
       return extractSearchParams(urlObj, queryConnectionMap);
     }
 
-    // Special case: if URL exactly matches baseUrl, treat as root route
+    // Special case: if URL exactly matches baseUrl or baseFileUrl (the HTML root file), treat as root route
     if (baseUrl) {
       const baseUrlObj = new URL(baseUrl);
       if (originalPathname === baseUrlObj.pathname) {
+        return extractSearchParams(urlObj, queryConnectionMap);
+      }
+    }
+    if (baseFileUrl) {
+      const baseFileUrlObj = new URL(baseFileUrl);
+      if (originalPathname === baseFileUrlObj.pathname) {
         return extractSearchParams(urlObj, queryConnectionMap);
       }
     }
@@ -13798,17 +11428,18 @@ This prevents cross-test pollution and ensures clean state.`,
   onAllRouteReady(updateRoutes);
 
   // for unit test purposes code can call updateRoutes and clearRoutes
+  const clearRoutes = () => {
+    for (const route of routeSet) {
+      const routePrivateProperties = getRoutePrivateProperties(route);
+      routePrivateProperties.cleanup();
+      routePrivatePropertiesMap.delete(route);
+    }
+    routeSet.clear();
+    setupRoutesCalled = false;
+  };
   return {
     updateRoutes,
-    clearRoutes: () => {
-      for (const route of routeSet) {
-        const routePrivateProperties = getRoutePrivateProperties(route);
-        routePrivateProperties.cleanup();
-        routePrivatePropertiesMap.delete(route);
-      }
-      routeSet.clear();
-      setupRoutesCalled = false;
-    },
+    clearRoutes,
   };
 };
 
@@ -14477,6 +12108,3342 @@ const useNavStateBasic = (id, initialValue, { debug } = {}) => {
 
 const useNavState = useNavStateBasic;
 
+const FormContext = createContext();
+
+// In-memory registry of all mounted ui state controllers keyed by their id.
+// Allows direct controller access without dispatching DOM events — used by external
+// callers (e.g. selectable_list) to call setUIState by id instead of via the DOM.
+const controllersById = new Map();
+const getUIStateControllerById = (id) => controllersById.get(id);
+
+// In-memory registry for radio controllers, keyed by input name.
+// Allows radio sibling unchecking without querying the DOM — necessary when
+// items are virtualized and their DOM element may not exist at the time.
+// Form scoping is reproduced by comparing parentUIStateController references.
+const radioControllersByName = new Map();
+
+const registerRadioController = (uiStateController) => {
+  const { name } = uiStateController;
+  if (!name) {
+    return;
+  }
+  let set = radioControllersByName.get(name);
+  if (!set) {
+    set = new Set();
+    radioControllersByName.set(name, set);
+  }
+  set.add(uiStateController);
+};
+
+const unregisterRadioController = (uiStateController) => {
+  const { name } = uiStateController;
+  if (!name) {
+    return;
+  }
+  const set = radioControllersByName.get(name);
+  if (!set) {
+    return;
+  }
+  set.delete(uiStateController);
+  if (set.size === 0) {
+    radioControllersByName.delete(name);
+  }
+};
+const debugUIState = (...args) => {
+};
+const debugUIGroup = (...args) => {
+};
+
+const ParentUIStateControllerContext = createContext();
+
+/**
+ * UI State Controller Hook
+ *
+ * Manages the relationship between external state (props) and UI state (what user sees).
+ * Allows UI state to diverge temporarily for responsive interactions, with mechanisms
+ * to sync back to external state when needed.
+ *
+ * Key features:
+ * - Immediate UI updates for responsive interactions
+ * - State divergence with sync capabilities (resetUIState)
+ * - Group integration for coordinated form inputs
+ * - External control via DOM events (navi_set_ui_state / navi_request_reset_ui_state)
+ * - Error recovery and form reset support
+ *
+ * State change flow:
+ * All state changes (interaction, action result, external reset) go through DOM events:
+ * - `navi_set_ui_state` dispatched on the field's DOM element triggers setUIState
+ * - `navi_request_reset_ui_state` dispatched on the field's DOM element resets to controller.state
+ * This ensures any subscriber (e.g. useUIState) receives every state change regardless of origin.
+ *
+ * The controller stores `elementRef` so parent group controllers can dispatch DOM events
+ * directly on child DOM elements when performing group-level operations like resetUIState.
+ */
+const useUIStateController = (
+  props,
+  controlType,
+  {
+    statePropName,
+    defaultStatePropName,
+    fallbackState = undefined,
+    getStateFromProp = (prop) => prop,
+    getPropFromState = (state) => state,
+    getStateFromParent,
+    uiActionInternal,
+    persists,
+    allowNameless = false,
+    debugInteraction,
+  } = {},
+) => {
+  const uiStateControllerRef = useRef();
+  const parentUIStateController = useContext(ParentUIStateControllerContext);
+  const formContext = useContext(FormContext);
+  const { id, name, uiAction, action } = props;
+  const ref = props.ref;
+  const isProxy = Boolean(props["navi-control-proxy-for"]);
+  const hasStateProp = Object.hasOwn(props, statePropName);
+  /**
+   * This check is needed only for basic field because
+   * When using action/form we consider the action/form code
+   * will have a side effect that will re-render the component with the up-to-date state
+   *
+   * In practice we set the checked from the backend state
+   * We use action to fetch the new state and update the local state
+   * The component re-renders so it's the action/form that is considered as responsible
+   * to update the state and as a result allowed to have "checked"/"value" prop without "onUIStateChange"
+   */
+  const uncontrolled =
+    !uiAction &&
+    !action &&
+    !formContext &&
+    !parentUIStateController &&
+    !isProxy;
+  const readOnly = uncontrolled && hasStateProp;
+
+  if (persists === undefined && formContext) {
+    persists = true;
+  }
+  const [navState, setNavState] = useNavState(id);
+  const state = props[statePropName];
+  const stateValue = state;
+  const defaultState = props[defaultStatePropName];
+  const stateInitial = useInitialValue(() => {
+    if (hasStateProp) {
+      // controlled by state prop ("value" or "checked")
+      return getStateFromProp(stateValue);
+    }
+    if (defaultState) {
+      // not controlled but want an initial state (a value or being checked)
+      return getStateFromProp(defaultState);
+    }
+    if (persists && navState) {
+      // not controlled but want to use value from nav state
+      // (I think this should likely move earlier to win over the hasUIStateProp when it's undefined)
+      return getStateFromProp(navState);
+    }
+    if (parentUIStateController && getStateFromParent) {
+      return getStateFromParent(parentUIStateController);
+    }
+    return getStateFromProp(fallbackState);
+  });
+  const isRadio = controlType === "input" && props.type === "radio";
+
+  const [
+    notifyParentAboutChildMount,
+    notifyParentAboutChildUIStateChange,
+    notifyParentAboutChildUnmount,
+  ] = useParentControllerNotifiers(
+    parentUIStateController,
+    uiStateControllerRef);
+  useLayoutEffect(() => {
+    const controller = uiStateControllerRef.current;
+    if (id) {
+      controllersById.set(id, controller);
+    }
+    notifyParentAboutChildMount();
+    if (isRadio) {
+      registerRadioController(controller);
+    }
+    return () => {
+      if (id) {
+        controllersById.delete(id);
+      }
+      notifyParentAboutChildUnmount();
+      if (isRadio) {
+        unregisterRadioController(controller);
+      }
+    };
+  }, []);
+
+  const existingUIStateController = uiStateControllerRef.current;
+  if (existingUIStateController) {
+    existingUIStateController._checkForUpdates({
+      readOnly,
+      name,
+      getPropFromState,
+      getStateFromProp,
+      hasStateProp,
+      stateInitial,
+      state,
+      props,
+    });
+    return existingUIStateController;
+  }
+  debugUIState(
+    `Creating "${controlType}" ui state controller - initial state:`,
+    JSON.stringify(stateInitial),
+  );
+  const [publishUIState, subscribeUIState] = createPubSub();
+  const ownUIStateSignal = signal(stateInitial);
+  const inherit =
+    controlType === "button" && !hasStateProp && parentUIStateController;
+  const uiStateSignal = inherit
+    ? computed(() => {
+        const parentUIState = parentUIStateController.uiStateSignal.value;
+        const ownUIState = ownUIStateSignal.value;
+        return ownUIState || parentUIState;
+      })
+    : ownUIStateSignal;
+
+  const uiStateController = {
+    _checkForUpdates: ({
+      readOnly,
+      name,
+      getPropFromState,
+      getStateFromProp,
+      hasStateProp,
+      stateInitial,
+      state,
+      props,
+    }) => {
+      uiStateController.readOnly = readOnly;
+      uiStateController.name = name;
+      uiStateController.getPropFromState = getPropFromState;
+      uiStateController.getStateFromProp = getStateFromProp;
+      uiStateController.stateInitial = stateInitial;
+      uiStateController.props = props;
+
+      if (hasStateProp) {
+        uiStateController.hasStateProp = true;
+        const currentState = uiStateController.state;
+        const stateFromProp = getStateFromProp(state);
+        if (stateFromProp !== currentState) {
+          uiStateController.state = stateFromProp;
+          uiStateController.setUIState(
+            uiStateController.getPropFromState(state),
+            new CustomEvent("state_prop", {
+              detail: { internalBehavior: true },
+            }),
+          );
+        }
+      } else if (uiStateController.hasStateProp) {
+        uiStateController.hasStateProp = false;
+        uiStateController.state = uiStateController.stateInitial;
+      }
+    },
+
+    id,
+    controlType,
+    parentUIStateController,
+    isProxy,
+    allowNameless,
+    readOnly,
+    name,
+    props,
+    statePropName,
+    defaultStatePropName,
+    hasStateProp,
+    state: stateInitial,
+    uiState: stateInitial,
+    uiStateSignal,
+    elementRef: ref,
+    getPropFromState,
+    getStateFromProp,
+    setUIState: (prop, e) => {
+      const newUIState = uiStateController.getStateFromProp(prop);
+      const controllerSig = getElementSignature(e.currentTarget || ref.current);
+      if (persists) {
+        setNavState(prop);
+      }
+      const currentUIState = uiStateController.uiState;
+      const stateIsTheSame = compareTwoJsValues(newUIState, currentUIState);
+      if (stateIsTheSame) {
+        if (controlType === "button") {
+          debugInteraction(
+            e,
+            `${controllerSig}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> trigger button action`,
+          );
+          uiActionInternal?.(newUIState, e);
+          uiAction?.(newUIState, e);
+          return true;
+        }
+        debugInteraction(
+          e,
+          `${controllerSig}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> state unchanged, no update needed`,
+        );
+        return false;
+      }
+      debugInteraction(
+        e,
+        `${controllerSig}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> updating from ${JSON.stringify(currentUIState)}`,
+      );
+      const el = ref.current;
+      if (el) {
+        // set immediatly (don't wait for preact re-render) so ui is in the right state for:
+        // - side effect
+        // - any "input" event that might be dispatched below
+        const propValue = uiStateController.getPropFromState(newUIState);
+        debugInteraction(
+          e,
+          `[${statePropName}] = ${JSON.stringify(propValue)};`,
+        );
+        el[statePropName] = propValue;
+      }
+      uiStateController.uiState = newUIState;
+      ownUIStateSignal.value = newUIState;
+      // Radio group: when a radio becomes checked, uncheck all siblings.
+      // We only update their UIState — no parent notification, no synthetic
+      // input event (the browser never fires input on the unchecked radios,
+      // and we don't want to trigger their action flow with a stale DOM value).
+      // Uses the in-memory registry instead of DOM queries so this works even
+      // when sibling items are virtualized (not in the DOM).
+      // Form scoping is preserved by comparing parentUIStateController references.
+      const controlProxyFor = uiStateController.props["navi-control-proxy-for"];
+      if (isRadio && newUIState && uiStateController.name && !controlProxyFor) {
+        const siblings = radioControllersByName.get(uiStateController.name);
+        if (siblings) {
+          const siblingUncheckEvent = new CustomEvent("radio_sibling_uncheck", {
+            detail: { event: e, internalBehavior: true },
+          });
+          for (const siblingController of siblings) {
+            if (siblingController === uiStateController) {
+              continue;
+            }
+            if (
+              siblingController.parentUIStateController !==
+              parentUIStateController
+            ) {
+              continue;
+            }
+            siblingController.setUIState(false, siblingUncheckEvent);
+          }
+        }
+      }
+      debugInteraction(e, `publishUIState(${JSON.stringify(newUIState)})`);
+      publishUIState(newUIState, e);
+      // Always notify the element that its UI state changed.
+      // Listeners use this to stay in sync (e.g. input_effect.js tracks currentState,
+      // useUIState subscribes for reactive updates). Separate from navi_set_ui_state
+      // which is the command; navi_ui_state_change is the notification.
+      if (el) {
+        dispatchInternalCustomEvent(el, "navi_ui_state_change", {
+          event: e,
+          value: newUIState,
+        });
+      }
+      const internalBehavior = e.detail?.internalBehavior;
+      if (internalBehavior) {
+        return true;
+      }
+      notifyParentAboutChildUIStateChange(e);
+      if (controlProxyFor) {
+        // Proxy: forward the state change to the real input
+        // The real input will handle its own UIState update + synthetic input.
+        const targetController = getUIStateControllerById(controlProxyFor);
+        if (targetController) {
+          debugInteraction(
+            e,
+            `forwarding set_ui_state "${prop}" to ${getElementSignature(targetController.elementRef.current)}`,
+          );
+          targetController.setUIState(prop, e);
+        }
+      }
+      if (el) {
+        // Dispatch a synthetic "input" event so external listeners see the new
+        // value. Skip when an input event on this element already exists in the chain.
+        const existingInputEvent = findEvent(e, (eInChain) => {
+          return eInChain.type === "input" && eInChain.target === el;
+        });
+        if (!existingInputEvent) {
+          if (el.tagName === "INPUT") {
+            if (el.type === "radio" || el.type === "checkbox") {
+              debugInteraction(
+                e,
+                "dispatching synthetic input event without data for checkbox/radio",
+              );
+              el.dispatchEvent(new Event("input", { bubbles: true }));
+            } else {
+              debugInteraction(
+                e,
+                `dispatching synthetic input event with data "${newUIState}" for input`,
+              );
+              el.dispatchEvent(
+                new InputEvent("input", {
+                  bubbles: true,
+                  cancelable: true,
+                  inputType: "insertText",
+                  data: newUIState,
+                }),
+              );
+            }
+          }
+          // TODO: select, textarea
+        }
+      }
+      uiActionInternal?.(newUIState, e);
+      uiAction?.(newUIState, e);
+      return true;
+    },
+    resetUIState: (e) => {
+      dispatchRequestSetUIState(e.currentTarget, uiStateController.state, {
+        event: e,
+      });
+    },
+    actionEnd: () => {
+      if (persists) {
+        setNavState(undefined);
+      }
+    },
+    subscribe: subscribeUIState,
+  };
+  uiStateControllerRef.current = uiStateController;
+  return uiStateController;
+};
+
+const NO_PARENT = [() => {}, () => {}, () => {}];
+const useParentControllerNotifiers = (
+  parentUIStateController,
+  uiStateControllerRef,
+  controlType,
+) => {
+  return useMemo(() => {
+    if (!parentUIStateController) {
+      return NO_PARENT;
+    }
+
+    parentUIStateController.controlType;
+    const notifyParentAboutChildMount = () => {
+      const uiStateController = uiStateControllerRef.current;
+      parentUIStateController.registerChild(uiStateController);
+    };
+
+    const notifyParentAboutChildUIStateChange = (e) => {
+      const uiStateController = uiStateControllerRef.current;
+      parentUIStateController.onChildUIStateChange(uiStateController, e);
+    };
+
+    const notifyParentAboutChildUnmount = () => {
+      const uiStateController = uiStateControllerRef.current;
+      parentUIStateController.unregisterChild(uiStateController);
+    };
+
+    return [
+      notifyParentAboutChildMount,
+      notifyParentAboutChildUIStateChange,
+      notifyParentAboutChildUnmount,
+    ];
+  }, []);
+};
+
+/**
+ * UI Group State Controller Hook
+ *
+ * This hook manages a collection of child UI state controllers and aggregates their states
+ * into a unified group state. It provides a way to coordinate multiple form inputs that
+ * work together as a logical unit.
+ *
+ * What it provides:
+ *
+ * 1. **Child State Aggregation**:
+ *    - Collects state from multiple child UI controllers
+ *    - Combines them into a single meaningful group state
+ *    - Updates group state automatically when any child changes
+ *
+ * 2. **Child Filtering**:
+ *    - Can filter which child controllers to include based on component type
+ *    - Useful for mixed content where only specific inputs matter
+ *    - Enables type-safe aggregation patterns
+ *
+ * 3. **Group Operations**:
+ *    - Provides `resetUIState()` that cascades to all monitored children
+ *    - Dispatches `navi_request_reset_ui_state` DOM events on each child's DOM element
+ *    - Children handle the event independently, allowing nested groups to cascade further
+ *    - Enables group-level operations like "clear all" or "reset form section"
+ *
+ * 4. **External State Management**:
+ *    - Notifies external code of group state changes via `onUIStateChange`
+ *    - Allows external systems to react to group-level state changes
+ *    - Supports complex form validation and submission logic
+ *
+ * Why use it:
+ * - When you have multiple related inputs that should be treated as one logical unit
+ * - For implementing checkbox lists, radio groups, or form sections
+ * - When you need to perform operations on multiple inputs simultaneously
+ * - To aggregate input states for validation or submission
+ *
+ * How it works:
+ * - Child controllers automatically register themselves when mounted
+ * - Group controller listens for child state changes and re-aggregates
+ * - Custom aggregation function determines how child states combine
+ * - Group state updates trigger notifications to external code
+ *
+ * @param {Object} props - Component props containing onUIStateChange callback
+ * @param {string} controlType - Type identifier for this group controller
+ * @param {Object} config - Configuration object
+ * @param {string} [config.childControlType] - Filter children by this type (e.g., "checkbox")
+ * @param {Function} config.aggregateChildStates - Function to aggregate child states
+ * @param {any} [config.emptyState] - State to use when no children have values
+ * @returns {Object} UI group state controller
+ *
+ * Usage Examples:
+ * - **Checkbox List**: Aggregates multiple checkboxes into array of checked values
+ * - **Radio Group**: Manages radio buttons to ensure single selection
+ * - **Form Section**: Groups related inputs for validation and reset operations
+ * - **Dynamic Lists**: Handles variable number of repeated input groups
+ */
+const useUIGroupStateController = (
+  props,
+  controlType,
+  { stateType, childControlFilter, aggregateChildStates, debugAction },
+) => {
+  if (typeof aggregateChildStates !== "function") {
+    throw new TypeError("aggregateChildStates must be a function");
+  }
+  const parentUIStateController = useContext(ParentUIStateControllerContext);
+  const { name, value } = props;
+  const ref = props.ref;
+  const fallbackState =
+    stateType === "array"
+      ? EMPTY_ARRAY
+      : stateType === "object"
+        ? EMPTY_OBJECT
+        : undefined;
+  const childUIStateControllerArrayRef = useRef([]);
+  const childUIStateControllerArray = childUIStateControllerArrayRef.current;
+  const uiStateControllerRef = useRef();
+
+  const groupIsRenderingRef = useRef(false);
+  const pendingChangeRef = useRef(false);
+  groupIsRenderingRef.current = true;
+  pendingChangeRef.current = false;
+
+  const [
+    notifyParentAboutChildMount,
+    notifyParentAboutChildUIStateChange,
+    notifyParentAboutChildUnmount,
+  ] = useParentControllerNotifiers(
+    parentUIStateController,
+    uiStateControllerRef);
+  useLayoutEffect(() => {
+    notifyParentAboutChildMount();
+    return notifyParentAboutChildUnmount;
+  }, []);
+
+  const onChange = (_, e, { notifyExternal = true } = {}) => {
+    if (groupIsRenderingRef.current) {
+      pendingChangeRef.current = true;
+      return;
+    }
+    const aggChildState = aggregateChildStates(
+      childUIStateControllerArray,
+      fallbackState,
+    );
+    const groupUIState =
+      aggChildState === undefined ? fallbackState : aggChildState;
+    debugAction(
+      e,
+      `${controlType}.getUIState -> ${JSON.stringify(groupUIState)}`,
+    );
+    const uiStateController = uiStateControllerRef.current;
+    uiStateController.setUIState(groupUIState, e, { notifyExternal });
+  };
+
+  useLayoutEffect(() => {
+    groupIsRenderingRef.current = false;
+    if (pendingChangeRef.current) {
+      pendingChangeRef.current = false;
+      onChange(
+        null,
+        new CustomEvent(`${controlType}_batched_ui_state_update`),
+        { notifyExternal: false },
+      );
+    }
+  });
+
+  const existingUIStateController = uiStateControllerRef.current;
+  if (existingUIStateController) {
+    existingUIStateController.name = name;
+    existingUIStateController.value = value;
+    return existingUIStateController;
+  }
+
+  const [publishUIState, subscribeUIState] = createPubSub();
+  const uiStateSignal = signal(fallbackState);
+  const isMonitoringChild = (childUIStateController) => {
+    if (childUIStateController.isProxy) {
+      return false;
+    }
+    if (childControlFilter && !childControlFilter(childUIStateController)) {
+      return false;
+    }
+    return true;
+  };
+  const uiStateController = {
+    controlType,
+    name,
+    value,
+    uiState: fallbackState,
+    uiStateSignal,
+    elementRef: ref,
+    getPropFromState: (uiState) => uiState,
+    setUIState: (newUIState, e, { notifyExternal = true } = {}) => {
+      const currentUIState = uiStateController.uiState;
+      if (newUIState === currentUIState) {
+        return;
+      }
+      uiStateController.uiState = newUIState;
+      uiStateSignal.value = newUIState;
+      debugUIGroup(
+        `${controlType}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> updates from ${JSON.stringify(currentUIState)} to ${JSON.stringify(newUIState)}`,
+      );
+      publishUIState(newUIState);
+      if (notifyExternal) {
+        notifyParentAboutChildUIStateChange(e);
+      }
+    },
+    registerChild: (childUIStateController) => {
+      if (!isMonitoringChild(childUIStateController)) {
+        return;
+      }
+      const childControlType = childUIStateController.controlType;
+      childUIStateControllerArray.push(childUIStateController);
+      debugUIGroup(
+        `${controlType}.registerChild("${childControlType}") -> registered (total: ${childUIStateControllerArray.length})`,
+      );
+      onChange(
+        childUIStateController,
+        new CustomEvent(`${childControlType}_mount`),
+        { notifyExternal: false },
+      );
+    },
+    onChildUIStateChange: (childUIStateController, e) => {
+      if (!isMonitoringChild(childUIStateController)) {
+        return;
+      }
+      const childControlType = childUIStateController.controlType;
+      debugUIGroup(
+        `${controlType}.onChildUIStateChange("${childControlType}") to ${JSON.stringify(
+          childUIStateController.uiState,
+        )}`,
+      );
+      onChange(childUIStateController, e);
+    },
+    unregisterChild: (childUIStateController) => {
+      if (!isMonitoringChild(childUIStateController)) {
+        return;
+      }
+      const childControlType = childUIStateController.controlType;
+      const index = childUIStateControllerArray.indexOf(childUIStateController);
+      if (index === -1) {
+        return;
+      }
+      childUIStateControllerArray.splice(index, 1);
+      debugUIGroup(
+        `${controlType}.unregisterChild("${childControlType}") -> unregisteed (remaining: ${childUIStateControllerArray.length})`,
+      );
+      onChange(
+        childUIStateController,
+        new CustomEvent(`${childControlType}_unmount`),
+        { notifyExternal: false },
+      );
+    },
+    resetUIState: (e) => {
+      for (const childUIStateController of childUIStateControllerArray) {
+        if (!isMonitoringChild(childUIStateController)) {
+          continue;
+        }
+        const el = childUIStateController.elementRef?.current;
+        if (el) {
+          dispatchRequestResetUIState(el, e);
+        }
+      }
+    },
+    actionEnd: (e) => {
+      for (const childUIStateController of childUIStateControllerArray) {
+        childUIStateController.actionEnd(e);
+      }
+    },
+    findChildById: (id) => {
+      for (const childUIStateController of childUIStateControllerArray) {
+        if (childUIStateController.id === id) {
+          return childUIStateController;
+        }
+      }
+      return null;
+    },
+    subscribe: subscribeUIState,
+  };
+  uiStateControllerRef.current = uiStateController;
+  return uiStateController;
+};
+// Stable reference for an empty selection so the action always receives an
+// array (never undefined) and callers don't get a new reference each render.
+const EMPTY_ARRAY = [];
+const EMPTY_OBJECT = {};
+
+const dispatchRequestSetUIState = (element, value, detail) => {
+  const controlHost = findControlHost(element) || element;
+  return dispatchInternalCustomEvent(controlHost, "navi_set_ui_state", {
+    ...detail,
+    value,
+  });
+};
+const dispatchRequestResetUIState = (element, e) => {
+  return dispatchInternalCustomEvent(element, "navi_request_reset_ui_state", {
+    event: e,
+  });
+};
+const getUIStateFromElement = (el) => {
+  let uiState;
+  dispatchInternalCustomEvent(el, "navi_get_ui_state", {
+    respondWith: (v) => {
+      uiState = v;
+    },
+  });
+  return uiState;
+};
+
+const requestPseudoStateCheck = (element, detail) => {
+  dispatchInternalCustomEvent(
+    element,
+    "navi_pseudo_state_request_check",
+    detail,
+  );
+};
+const NAVI_PSEUDO_STATE_CUSTOM_EVENT = "navi_pseudo_state";
+const dispatchPseudoStateCustomEvent = (element, value, oldValue) => {
+  dispatchInternalCustomEvent(element, NAVI_PSEUDO_STATE_CUSTOM_EVENT, {
+    pseudoState: value,
+    oldPseudoState: oldValue,
+  });
+};
+
+const PSEUDO_CLASSES = {};
+Object.assign(PSEUDO_CLASSES, {
+  ":valid": {
+    attribute: "data-valid",
+    test: (el) => el.matches(":valid"),
+  },
+  ":invalid": {
+    attribute: "data-invalid",
+    test: (el) => el.matches(":invalid"),
+  },
+  ":visited": {
+    attribute: "data-visited",
+  },
+});
+const definePseudoClass = (pseudoClass, definition) => {
+  PSEUDO_CLASSES[pseudoClass] = definition;
+};
+
+definePseudoClass(":hover", {
+  attribute: "data-hover",
+  setup: (el, callback) => {
+    let onmouseenter = () => {
+      callback();
+    };
+    let onmouseleave = () => {
+      callback();
+    };
+
+    if (el.tagName === "LABEL") {
+      // input.matches(":hover") is true when hovering the label
+      // so when label is hovered/not hovered we need to recheck the input too
+      const recheckInput = (e) => {
+        if (el.htmlFor) {
+          const input = document.getElementById(el.htmlFor);
+          if (!input) {
+            // cannot find the input for this label in the DOM
+            return;
+          }
+          requestPseudoStateCheck(input, { event: e });
+          return;
+        }
+        const input = el.querySelector("input, textarea, select");
+        if (!input) {
+          // label does not contain an input
+          return;
+        }
+        requestPseudoStateCheck(input, { event: e });
+      };
+      onmouseenter = (e) => {
+        callback();
+        recheckInput(e);
+      };
+      onmouseleave = (e) => {
+        callback();
+        recheckInput(e);
+      };
+    }
+
+    el.addEventListener("mouseenter", onmouseenter);
+    el.addEventListener("mouseleave", onmouseleave);
+    return () => {
+      el.removeEventListener("mouseenter", onmouseenter);
+      el.removeEventListener("mouseleave", onmouseleave);
+    };
+  },
+  test: (el) => el.matches(":hover"),
+});
+definePseudoClass(":disabled", {
+  attribute: "data-disabled",
+  add: (el) => {
+    if (
+      el.tagName === "BUTTON" ||
+      el.tagName === "INPUT" ||
+      el.tagName === "SELECT" ||
+      el.tagName === "TEXTAREA"
+    ) {
+      el.disabled = true;
+    }
+  },
+  remove: (el) => {
+    if (
+      el.tagName === "BUTTON" ||
+      el.tagName === "INPUT" ||
+      el.tagName === "SELECT" ||
+      el.tagName === "TEXTAREA"
+    ) {
+      el.disabled = false;
+    }
+  },
+});
+definePseudoClass(":read-only", {
+  attribute: "data-readonly",
+  add: (el) => {
+    if (
+      el.tagName === "INPUT" ||
+      el.tagName === "SELECT" ||
+      el.tagName === "TEXTAREA"
+    ) {
+      if (el.type === "checkbox" || el.type === "radio") {
+        // there is no readOnly for checkboxes/radios
+        return;
+      }
+      // el.readOnly = true;
+    }
+  },
+  remove: (el) => {
+    if (
+      el.tagName === "INPUT" ||
+      el.tagName === "SELECT" ||
+      el.tagName === "TEXTAREA"
+    ) {
+      if (el.type === "checkbox" || el.type === "radio") {
+        // there is no readOnly for checkboxes/radios
+        return;
+      }
+      // el.readOnly = false;
+    }
+  },
+});
+definePseudoClass(":checked", {
+  attribute: "data-checked",
+  setup: (el, callback) => {
+    if (el.type === "checkbox") {
+      // Listen to user interactions
+      el.addEventListener("input", callback);
+      // Intercept programmatic changes to .checked property
+      const originalDescriptor = Object.getOwnPropertyDescriptor(
+        HTMLInputElement.prototype,
+        "checked",
+      );
+      Object.defineProperty(el, "checked", {
+        get: originalDescriptor.get,
+        set(value) {
+          originalDescriptor.set.call(this, value);
+          callback();
+        },
+        configurable: true,
+      });
+      return () => {
+        // Restore original property descriptor
+        Object.defineProperty(el, "checked", originalDescriptor);
+        el.removeEventListener("input", callback);
+      };
+    }
+    if (el.type === "radio") {
+      // Listen to changes on the radio
+      el.addEventListener("input", callback);
+      // Intercept programmatic changes to .checked property
+      const originalDescriptor = Object.getOwnPropertyDescriptor(
+        HTMLInputElement.prototype,
+        "checked",
+      );
+      Object.defineProperty(el, "checked", {
+        get: originalDescriptor.get,
+        set(value) {
+          originalDescriptor.set.call(this, value);
+          callback();
+        },
+        configurable: true,
+      });
+      return () => {
+        el.removeEventListener("input", callback);
+        // Restore original property descriptor
+        Object.defineProperty(el, "checked", originalDescriptor);
+      };
+    }
+    if (el.tagName === "INPUT") {
+      el.addEventListener("input", callback);
+      return () => {
+        el.removeEventListener("input", callback);
+      };
+    }
+    return () => {};
+  },
+  test: (el) => el.matches(":checked"),
+});
+definePseudoClass(":active", {
+  attribute: "data-active",
+  setup: (el, callback) => {
+    // I'ts recommended to use :-navi-pressed over :active for interactive elements.
+    const onPointerDown = () => {
+      const onRelease = () => {
+        document.removeEventListener("pointercancel", onRelease, true);
+        document.removeEventListener("pointerup", onRelease, true);
+        callback();
+      };
+      document.addEventListener("pointercancel", onRelease, true);
+      document.addEventListener("pointerup", onRelease, true);
+      callback();
+    };
+    el.addEventListener("pointerdown", onPointerDown);
+    return () => {
+      el.removeEventListener("pointerdown", onPointerDown);
+    };
+  },
+  test: (el) => el.matches(":active"),
+});
+{
+  // We implement :focus and :focus-visible with enriched semantics:
+  // an element is considered focused not only when it natively has focus, but also
+  // when a "focus proxy" element has focus (e.g. a read-only range input delegates
+  // focus to a sibling span) or when a controlling element has focus (e.g. a combobox
+  // input with aria-controls pointing to a listbox — the listbox should appear focused
+  // while the input is focused).
+  //
+  // We intentionally reuse the native :focus / :focus-visible names rather than
+  // introducing new navi-specific pseudo-classes (e.g. :-navi-focus). This is a
+  // deliberate exception: all existing CSS and code written as [data-focus] or
+  // [data-focus-visible] automatically benefits from the enriched behavior without
+  // any changes. A separate navi-specific class would require updating every
+  // component.
+  //
+  // When a controller element (e.g. combobox input) gains or loses focus,
+  // notify the elements it controls via aria-controls so they re-check their focus state.
+  const notifyAriaControlled = (el, e) => {
+    const controlledIds = el.getAttribute("aria-controls");
+    if (!controlledIds) {
+      return;
+    }
+    for (const id of controlledIds.split(" ")) {
+      const controlled = document.getElementById(id);
+      if (controlled) {
+        requestPseudoStateCheck(controlled, { event: e });
+      }
+    }
+  };
+  // Check if any element whose aria-controls includes el's id currently has focus.
+  const isControlledByFocusedElement = (
+    el,
+    { requireFocusVisible = false } = {},
+  ) => {
+    const id = el.id;
+    if (!id) {
+      return false;
+    }
+    const controllers = document.querySelectorAll(`[aria-controls~="${id}"]`);
+    for (const controller of controllers) {
+      // If the controller is inside the element it controls, the element already
+      // receives native :focus/:focus-within — no need to inherit focus from it.
+      if (el.contains(controller)) {
+        continue;
+      }
+      const pseudoClass = requireFocusVisible ? ":focus-visible" : ":focus";
+      if (controller.matches(pseudoClass)) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  definePseudoClass(":focus", {
+    attribute: "data-focus",
+    setup: (el, callback) => {
+      const onFocusChange = (e) => {
+        callback();
+        notifyAriaControlled(el, e);
+      };
+      el.addEventListener("focusin", onFocusChange);
+      el.addEventListener("focusout", onFocusChange);
+      return () => {
+        el.removeEventListener("focusin", onFocusChange);
+        el.removeEventListener("focusout", onFocusChange);
+      };
+    },
+    test: (el) => {
+      if (el.matches(":focus")) {
+        return true;
+      }
+      const proxyTarget = findControlProxyTarget(el);
+      if (proxyTarget && proxyTarget.matches(":focus")) {
+        return true;
+      }
+      if (isControlledByFocusedElement(el)) {
+        return true;
+      }
+      return false;
+    },
+  });
+  definePseudoClass(":focus-visible", {
+    attribute: "data-focus-visible",
+    setup: (el, callback) => {
+      const onFocusChange = (e) => {
+        callback();
+        notifyAriaControlled(el, e);
+      };
+      document.addEventListener("keydown", callback);
+      document.addEventListener("keyup", callback);
+      el.addEventListener("focusin", onFocusChange);
+      el.addEventListener("focusout", onFocusChange);
+      return () => {
+        document.removeEventListener("keydown", callback);
+        document.removeEventListener("keyup", callback);
+        el.removeEventListener("focusin", onFocusChange);
+        el.removeEventListener("focusout", onFocusChange);
+      };
+    },
+    test: (el) => {
+      if (el.matches(":focus-visible")) {
+        return true;
+      }
+      const proxyTarget = findControlProxyTarget(el);
+      if (proxyTarget && proxyTarget.matches(":focus-visible")) {
+        return true;
+      }
+      if (isControlledByFocusedElement(el, { requireFocusVisible: true })) {
+        return true;
+      }
+      return false;
+    },
+  });
+  definePseudoClass(":focus-within", {
+    attribute: "data-focus-within",
+    setup: (el, callback) => {
+      const onFocusChange = (e) => {
+        callback();
+        notifyAriaControlled(el, e);
+      };
+      el.addEventListener("focusin", onFocusChange);
+      el.addEventListener("focusout", onFocusChange);
+      return () => {
+        el.removeEventListener("focusin", onFocusChange);
+        el.removeEventListener("focusout", onFocusChange);
+      };
+    },
+    test: (el) => {
+      if (el.matches(":focus-within")) {
+        return true;
+      }
+      if (isControlledByFocusedElement(el)) {
+        return true;
+      }
+      if (el.contains(document.activeElement)) {
+        // for some reason :focus-within sometimes is false while focus is within...
+        // (popover with chrome for some reason)
+        return true;
+      }
+      return false;
+    },
+  });
+}
+
+Object.assign(PSEUDO_CLASSES, {
+  ":-navi-pointed": {
+    attribute: "data-pointed",
+  },
+  ":-navi-pointed-by-mouse": {
+    attribute: "data-pointed-by-mouse",
+  },
+  ":-navi-pointed-by-keyboard": {
+    attribute: "data-pointed-by-keyboard",
+  },
+  ":-navi-pointed-by-proxy": {
+    attribute: "data-pointed-by-proxy",
+  },
+  ":-navi-selected": {
+    attribute: "data-selected",
+  },
+  ":-navi-loading": {
+    attribute: "data-loading",
+  },
+  ":-navi-status-info": {
+    attribute: "data-status-info",
+  },
+  ":-navi-status-success": {
+    attribute: "data-status-success",
+  },
+  ":-navi-status-warning": {
+    attribute: "data-status-warning",
+  },
+  ":-navi-status-error": {
+    attribute: "data-status-error",
+  },
+  ":-navi-expanded": {
+    attribute: "data-expanded",
+  },
+  ":-navi-void": {
+    attribute: "data-void",
+  },
+  "::highlight": {},
+});
+definePseudoClass(":-navi-has-value", {
+  attribute: "data-has-value",
+  setup: (el, callback) => {
+    const controlHost = findControlHost(el) || el;
+    return addInputEffect(controlHost, callback);
+  },
+  test: (el) => {
+    if (el.hasAttribute("navi-ui-state")) {
+      const uiState = getUIStateFromElement(el);
+      if (uiState === undefined || uiState === "") {
+        return false;
+      }
+      return true;
+    }
+    if (el.value === "") {
+      return false;
+    }
+    return true;
+  },
+});
+{
+  const pressedElements = new WeakSet();
+  definePseudoClass(":-navi-pressed", {
+    attribute: "data-pressed",
+    setup: (el, callback) => {
+      // Prefer :-navi-pressed over :active for interactive elements because:
+      // - :active only tracks the primary (left) button; right-click and touch
+      //   long-press do not trigger :active reliably across browsers.
+      // - :-navi-pressed explicitly ignores non-primary buttons (e.g. right-click)
+      //   and correctly clears pressed state when a context menu opens on long-press,
+      //   which would otherwise leave the element stuck in a pressed appearance.
+
+      // Note: it might be tempting to use el.setPointerCapture() here so that pointerup
+      // always fires on el regardless of where the pointer is released. However,
+      // pointer capture routes all subsequent pointer events to the capturing element,
+      // which means any other element in the tree that expects to receive pointerup,
+      // mouseup, click, etc. after a pointerdown will silently not get them.
+      // For example a <label> that reacts to mousedown + click, or a third-party
+      // library that attaches its own listeners, would break because an ancestor
+      // grabbed the pointer out from under them.
+      // To avoid forcing every such element to declare an opt-out attribute
+      // (e.g. navi-own-pointer-capture) we simply listen on document instead,
+      // which is safe and does not interfere with anyone else's event flow.
+      const onPointerDown = (e) => {
+        if (e.button !== 0) {
+          // only left pointer (mouse left click, touch, pen)
+          return;
+        }
+        pressedElements.add(el);
+        const onRelease = () => {
+          pressedElements.delete(el);
+          document.removeEventListener("pointercancel", onRelease, true);
+          document.removeEventListener("pointerup", onRelease, true);
+          document.removeEventListener("contextmenu", onContextMenu, true);
+          callback();
+        };
+        const onContextMenu = (e) => {
+          // On touch devices, a long-press triggers the context menu.
+          // If the context menu is not prevented, it means it will open and the
+          // pointer events (pointerup, lostpointercapture) won't fire normally,
+          // leaving the element stuck in pressed state. We clear it manually.
+          // e.button === -1 means the event was synthesized from a long-press (not a real mouse click).
+          if (e.button === -1 && !e.defaultPrevented) {
+            pressedElements.delete(el);
+            document.removeEventListener("pointercancel", onRelease, true);
+            document.removeEventListener("pointerup", onRelease, true);
+            document.removeEventListener("contextmenu", onContextMenu, true);
+            callback();
+          }
+        };
+        document.addEventListener("pointercancel", onRelease, true);
+        document.addEventListener("pointerup", onRelease, true);
+        document.addEventListener("contextmenu", onContextMenu, true);
+        callback();
+      };
+      el.addEventListener("pointerdown", onPointerDown);
+      return () => {
+        el.removeEventListener("pointerdown", onPointerDown);
+        pressedElements.delete(el);
+      };
+    },
+    test: (el) => pressedElements.has(el),
+  });
+}
+
+{
+  definePseudoClass(":-navi-drag-grabbed", {
+    attribute: "navi-drag-grabbed",
+    setup: (el, callback) => {
+      const onGrab = () => {
+        callback();
+        const onRelease = () => {
+          el.removeEventListener("navi_drag_release", onRelease);
+          callback();
+        };
+        el.addEventListener("navi_drag_release", onRelease);
+      };
+      el.addEventListener("navi_drag_grab", onGrab);
+      return () => {
+        el.removeEventListener("navi_drag_grab", onGrab);
+      };
+    },
+    test: (el) => el.hasAttribute("data-drag-grabbed"),
+  });
+  definePseudoClass(":-navi-dragging", {
+    attribute: "navi-dragging",
+    setup: (el, callback) => {
+      const onStart = () => {
+        callback();
+        const onRelease = () => {
+          el.removeEventListener("navi_drag_release", onRelease);
+          callback();
+        };
+        el.addEventListener("navi_drag_release", onRelease);
+      };
+      el.addEventListener("navi_drag_start", onStart);
+      return () => {
+        el.removeEventListener("navi_drag_start", onStart);
+      };
+    },
+    test: (el) => el.hasAttribute("data-dragging"),
+  });
+}
+
+const EMPTY_STATE = {};
+const elementToImpactWeakMap = new WeakMap();
+const initPseudoStyles = (
+  element,
+  {
+    pseudoClasses,
+    pseudoState, // ":disabled", ":read-only", ":-navi-loading", etc...
+    effect,
+    elementToImpact = element,
+    elementListeningPseudoState,
+  },
+) => {
+  elementToImpactWeakMap.set(element, elementToImpact);
+  if (elementListeningPseudoState === element) {
+    console.warn(
+      `elementListeningPseudoState should not be the same as element to avoid infinite loop`,
+    );
+    elementListeningPseudoState = null;
+  }
+
+  const proxyTarget = findControlProxyTarget(element);
+
+  const onStateChange = (value, oldValue) => {
+    effect?.(value, oldValue);
+    if (elementListeningPseudoState) {
+      dispatchPseudoStateCustomEvent(
+        elementListeningPseudoState,
+        value,
+        oldValue,
+      );
+    }
+    // When this element's state changes, notify any proxy element that mirrors it
+    // so it can re-check and visually reflect the new state.
+    const proxy = findControlProxy(element);
+    if (proxy) {
+      requestPseudoStateCheck(proxy, {});
+    }
+  };
+
+  if (!pseudoClasses || pseudoClasses.length === 0) {
+    onStateChange(EMPTY_STATE);
+    return () => {};
+  }
+
+  const [teardown, addTeardown] = createPubSub();
+
+  let state;
+  const checkPseudoClasses = () => {
+    let someChange = false;
+    const currentState = {};
+    for (const pseudoClass of pseudoClasses) {
+      const pseudoClassDefinition = PSEUDO_CLASSES[pseudoClass];
+      if (!pseudoClassDefinition) {
+        console.warn(`Unknown pseudo class: ${pseudoClass}`);
+        continue;
+      }
+      let currentValue;
+      if (
+        pseudoState &&
+        Object.hasOwn(pseudoState, pseudoClass) &&
+        pseudoState[pseudoClass] !== undefined
+      ) {
+        currentValue = pseudoState[pseudoClass];
+      } else {
+        const { test } = pseudoClassDefinition;
+        if (test) {
+          currentValue = test(element, pseudoState);
+        }
+      }
+      // If this element is a proxy for another (navi-control-proxy-for="targetId"),
+      // inherit the target's active pseudo-state when the element itself isn't in that state.
+      // We check the target's elementToImpact (not the target itself) because the
+      // data-* attribute may be set on a different element (e.g. pseudoStateSelector).
+      if (!currentValue && proxyTarget) {
+        const { attribute } = pseudoClassDefinition;
+        if (attribute) {
+          const targetElementToImpact =
+            elementToImpactWeakMap.get(proxyTarget) || proxyTarget;
+          if (targetElementToImpact.hasAttribute(attribute)) {
+            currentValue = true;
+          }
+        }
+      }
+      currentState[pseudoClass] = currentValue;
+      const oldValue = state ? state[pseudoClass] : undefined;
+      if (oldValue !== currentValue || !state) {
+        someChange = true;
+        const { attribute, add, remove } = pseudoClassDefinition;
+        if (currentValue) {
+          if (attribute) {
+            elementToImpact.setAttribute(attribute, "");
+          }
+          add?.(element);
+        } else {
+          if (attribute) {
+            elementToImpact.removeAttribute(attribute);
+          }
+          remove?.(element);
+        }
+      }
+    }
+    if (!someChange) {
+      return;
+    }
+    const oldState = state;
+    state = currentState;
+    onStateChange(state, oldState);
+  };
+
+  element.addEventListener(NAVI_PSEUDO_STATE_CUSTOM_EVENT, (event) => {
+    const oldState = event.detail.oldPseudoState;
+    state = event.detail.pseudoState;
+    onStateChange(state, oldState);
+  });
+  element.addEventListener("navi_pseudo_state_request_check", () => {
+    checkPseudoClasses();
+  });
+
+  for (const pseudoClass of pseudoClasses) {
+    const pseudoClassDefinition = PSEUDO_CLASSES[pseudoClass];
+    if (!pseudoClassDefinition) {
+      console.warn(`Unknown pseudo class: ${pseudoClass}`);
+      continue;
+    }
+    const { setup } = pseudoClassDefinition;
+    if (setup) {
+      const cleanup = setup(element, () => {
+        checkPseudoClasses();
+      });
+      addTeardown(cleanup);
+    }
+  }
+  checkPseudoClasses();
+
+  return teardown;
+};
+
+const applyStyle = (
+  element,
+  style,
+  pseudoState,
+  pseudoNamedStyles,
+  preventInitialTransition,
+) => {
+  if (!element) {
+    return;
+  }
+  const styleToApply = getStyleToApply(style, pseudoState, pseudoNamedStyles);
+  updateStyle(element, styleToApply, preventInitialTransition);
+};
+
+const PSEUDO_STATE_DEFAULT = {};
+const PSEUDO_NAMED_STYLES_DEFAULT = {};
+const getStyleToApply = (styles, pseudoState, pseudoNamedStyles) => {
+  if (
+    !pseudoState ||
+    pseudoState === PSEUDO_STATE_DEFAULT ||
+    !pseudoNamedStyles ||
+    pseudoNamedStyles === PSEUDO_NAMED_STYLES_DEFAULT
+  ) {
+    return styles;
+  }
+
+  const isMatching = (pseudoKey) => {
+    if (pseudoKey.startsWith("::")) {
+      const nextColonIndex = pseudoKey.indexOf(":", 2);
+      if (nextColonIndex === -1) {
+        return true;
+      }
+      // Handle pseudo-elements with states like "::-navi-loader:checked:disabled"
+      const pseudoStatesString = pseudoKey.slice(nextColonIndex);
+      return isMatching(pseudoStatesString);
+    }
+    const nextColonIndex = pseudoKey.indexOf(":", 1);
+    if (nextColonIndex === -1) {
+      return pseudoState[pseudoKey];
+    }
+    // Handle compound pseudo-states like ":checked:disabled"
+    return pseudoKey
+      .slice(1)
+      .split(":")
+      .every((state) => pseudoState[state]);
+  };
+
+  const styleToAddSet = new Set();
+  for (const pseudoKey of Object.keys(pseudoNamedStyles)) {
+    if (isMatching(pseudoKey)) {
+      const stylesToApply = pseudoNamedStyles[pseudoKey];
+      styleToAddSet.add(stylesToApply);
+    }
+  }
+  if (styleToAddSet.size === 0) {
+    return styles;
+  }
+  let style = styles || {};
+  for (const styleToAdd of styleToAddSet) {
+    style = mergeTwoStyles(style, styleToAdd, "css");
+  }
+  return style;
+};
+
+const styleKeySetWeakMap = new WeakMap();
+const elementTransitionWeakMap = new WeakMap();
+const elementRenderedWeakSet = new WeakSet();
+const NO_STYLE_KEY_SET = new Set();
+const updateStyle = (element, style, preventInitialTransition) => {
+  const styleKeySet = style ? new Set(Object.keys(style)) : NO_STYLE_KEY_SET;
+  const oldStyleKeySet = styleKeySetWeakMap.get(element) || NO_STYLE_KEY_SET;
+  // TRANSITION ANTI-FLICKER STRATEGY:
+  // Problem: When setting both transition and styled properties simultaneously
+  // (e.g., el.style.transition = "border-radius 0.3s ease"; el.style.borderRadius = "20px"),
+  // the browser will immediately perform a transition even if no transition existed before.
+  //
+  // Solution: Temporarily disable transitions during initial style application by setting
+  // transition to "none", then restore the intended transition after the frame completes.
+  // We handle multiple updateStyle calls in the same frame gracefully - only one
+  // requestAnimationFrame is scheduled per element, and the final transition value wins.
+  let styleKeySetToApply = styleKeySet;
+  if (!elementRenderedWeakSet.has(element)) {
+    const hasTransition = styleKeySet.has("transition");
+    if (hasTransition || preventInitialTransition) {
+      if (elementTransitionWeakMap.has(element)) {
+        elementTransitionWeakMap.set(element, style?.transition);
+      } else {
+        element.style.transition = "none";
+        elementTransitionWeakMap.set(element, style?.transition);
+      }
+      // Don't apply the transition property now - we've set it to "none" temporarily
+      styleKeySetToApply = new Set(styleKeySet);
+      styleKeySetToApply.delete("transition");
+    }
+    requestAnimationFrame(() => {
+      if (elementTransitionWeakMap.has(element)) {
+        const transitionToRestore = elementTransitionWeakMap.get(element);
+        if (transitionToRestore === undefined) {
+          element.style.transition = "";
+        } else {
+          element.style.transition = transitionToRestore;
+        }
+        elementTransitionWeakMap.delete(element);
+      }
+      elementRenderedWeakSet.add(element);
+    });
+  }
+
+  // Apply all styles normally (excluding transition during anti-flicker)
+  const keysToDelete = new Set(oldStyleKeySet);
+  for (const key of styleKeySetToApply) {
+    const value = style[key];
+    if (value === undefined || value === null) {
+      // Treat undefined/null as "remove" — leave key in keysToDelete
+      continue;
+    }
+    keysToDelete.delete(key);
+    if (key.startsWith("--")) {
+      element.style.setProperty(key, value);
+    } else {
+      element.style[key] = value;
+    }
+  }
+
+  // Remove obsolete styles
+  for (const key of keysToDelete) {
+    if (key.startsWith("--")) {
+      element.style.removeProperty(key);
+    } else {
+      element.style[key] = "";
+    }
+  }
+
+  styleKeySetWeakMap.set(element, styleKeySet);
+};
+
+/**
+ * Keeps a DOM element in sync with `syncElement(el)` whenever syncElement changes.
+ * - If element is already mounted: runs syncElement immediately during render.
+ * - If not yet mounted: runs syncElement in the ref callback when element arrives.
+ * - Calls cleanup (if returned by syncElement) before each re-run and on unmount.
+ *
+ * Wrap `syncElement` in `useCallback(fn, deps)` at the call site to control
+ * when re-sync happens.
+ *
+ * @param {function} syncElement - Called with the DOM element when its reference changes
+ * @param {function|object|null} externalRef - Optional ref to forward to
+ */
+const useComposeElementRef = (syncElement, externalRef) => {
+  const cleanupRef = useRef(null);
+  const elRef = useRef(null);
+  const prevSyncElementRef = useRef(undefined);
+  const refCallbackRef = useRef(null);
+  const externalRefRef = useRef(externalRef);
+  // Detect external ref identity change between renders. The refCallback is
+  // stable across renders, so when the parent passes a new ref object (or
+  // switches from null to a ref), Preact does NOT re-fire the callback while
+  // the DOM element is unchanged. We must manually clear the old ref and
+  // populate the new one with the current element to avoid leaving the new
+  // ref's `.current` stuck at `null`.
+  const prevExternalRefRef = useRef(externalRef);
+  if (prevExternalRefRef.current !== externalRef) {
+    const previous = prevExternalRefRef.current;
+    if (previous && typeof previous !== "function") {
+      previous.current = null;
+    }
+    if (externalRef && elRef.current) {
+      if (typeof externalRef === "function") {
+        externalRef(elRef.current);
+      } else {
+        externalRef.current = elRef.current;
+      }
+    }
+    prevExternalRefRef.current = externalRef;
+  }
+  externalRefRef.current = externalRef;
+
+  const runSync = (el) => {
+    if (cleanupRef.current) {
+      cleanupRef.current();
+      cleanupRef.current = null;
+    }
+    prevSyncElementRef.current = syncElement;
+    const cleanup = syncElement(el);
+    if (typeof cleanup === "function") {
+      cleanupRef.current = cleanup;
+    }
+  };
+
+  // If element already mounted, re-sync when syncElement reference changed.
+  if (elRef.current && syncElement !== prevSyncElementRef.current) {
+    runSync(elRef.current);
+  }
+
+  if (!refCallbackRef.current) {
+    const refCallback = (el) => {
+      elRef.current = el;
+      // Keep .current in sync immediately so useEffect callbacks that read
+      // ref.current (e.g. usePartiallyHidden) see the element, not null.
+      refCallback.current = el;
+      const currentExternalRef = externalRefRef.current;
+      if (currentExternalRef) {
+        if (typeof currentExternalRef === "function") {
+          currentExternalRef(el);
+        } else {
+          currentExternalRef.current = el;
+        }
+      }
+      if (el) {
+        runSync(el);
+      } else {
+        if (cleanupRef.current) {
+          cleanupRef.current();
+          cleanupRef.current = null;
+        }
+        prevSyncElementRef.current = undefined;
+      }
+    };
+    refCallbackRef.current = refCallback;
+  }
+
+  const refCallback = refCallbackRef.current;
+  refCallback.current = elRef.current;
+  return refCallback;
+};
+
+/**
+ * Tracks whether an element is fully visible in its scroll container and sets
+ * the `navi-partially-hidden` attribute when any part of it is clipped.
+ *
+ * This is used to suppress `view-transition-name` on elements that are partially
+ * outside the viewport or a scrollable container. Without this, a partially clipped
+ * element would still participate in view transitions, producing ghost animations or
+ * incorrect cross-fade effects.
+ *
+ * CSS usage:
+ * ```css
+ * [navi-partially-hidden] {
+ *   view-transition-name: none !important;
+ * }
+ * ```
+ *
+ * `Box` enables this hook automatically when a `viewTransitionName` prop is provided.
+ *
+ * @param {import("preact").RefObject} ref - Ref to the element to observe.
+ * @param {boolean} enabled - Only observe when true (typically when view-transition-name is set).
+ */
+const usePartiallyHidden = (ref, enabled) => {
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || !enabled) {
+      return undefined;
+    }
+    return setupPartiallyHidden(el);
+  }, [enabled]);
+};
+
+const setupPartiallyHidden = (el) => {
+  const observer = new IntersectionObserver(
+    ([entry]) => {
+      if (entry.intersectionRatio >= 0.99) {
+        el.removeAttribute("navi-partially-hidden");
+      } else {
+        el.setAttribute("navi-partially-hidden", "");
+      }
+    },
+    { threshold: 0.99 },
+  );
+  observer.observe(el);
+  return () => {
+    observer.disconnect();
+  };
+};
+
+installImportMetaCssBuild(import.meta);/**
+ * Box - A Swiss Army Knife for Layout
+ *
+ * A regular div by default, enhanced with styling props for spacing, sizing,
+ * and layout. The main value is a friendlier API over raw CSS Flexbox.
+ *
+ * ## Display & Layout
+ *
+ * - `flex` — horizontal flex container (items side by side)
+ * - `flex="y"` — vertical flex container (items stacked). The prop name makes
+ *   the axis explicit, avoiding the classic CSS trap where `flex-direction: column`
+ *   actually stacks items vertically despite "column" feeling horizontal.
+ * - `grid` — grid container
+ * - `inline` — switches to inline display (works with flex and grid too)
+ *
+ * ## Alignment
+ *
+ * Instead of CSS's justify-content/align-items which swap meaning based on flex-direction:
+ * - `alignX` — horizontal alignment, always
+ * - `alignY` — vertical alignment, always
+ *
+ * ## Spacing & Sizing
+ *
+ * Props for margin, padding, gap, width, height, expand, shrink, and more.
+ *
+ * ## Pseudo-class Styles
+ *
+ * The `style` prop supports pseudo-class keys alongside regular CSS properties.
+ * This lets you express hover, focus, and custom interaction states in one object,
+ * without writing CSS or adding class names:
+ *
+ * ```jsx
+ * <Box
+ *   style={{
+ *     backgroundColor: "blue",
+ *     ":-navi:pressed": {
+ *       backgroundColor: "darkblue",
+ *     },
+ *     ":hover": {
+ *       backgroundColor: "lightblue",
+ *     },
+ *   }}
+ * />
+ * ```
+ *
+ * Styles are applied directly to the DOM (not via Preact's style prop) for two reasons:
+ * 1. **Pseudo-class support**: reacting to `:hover`, `:focus`, or custom states like
+ *    `:-navi:pressed` without re-rendering the component on every pseudo state change.
+ * 2. **Correct initial render**: pseudo-class state must be read from the DOM node at
+ *    mount time. Preact's style prop runs before the DOM exists, so the right initial
+ *    style can only be determined once the node is available.
+ */
+const BoxForwardedPropsContext = createContext({});
+import.meta.css = [/* css */`
+  @layer navi {
+    /*
+    When using square/circle/aspectRatio prop we expect box to respect the aspect ratio.
+    But within flex containers or stuff like that the min-width/min-height auto
+    will prevent the item from shrinking to respect aspect-ratio
+    We put that in a layer navi + a specific attribute so that it's very easy to override this
+    */
+    [navi-aspect-ratio] {
+      min-width: 0;
+      min-height: 0;
+    }
+  }
+
+  /* We force a given display style using html attribute instead of inline style */
+  /* No particular reason for this, logic could be moved to inline style like the rest */
+  /* It was an attempt to see if attributes where a good candidate to set style based on props */
+  /* Actullay it's not that much as it make the attribute and CSS complexity explode */
+  /* For now it's kept here and must be outside layer navi to be able to override any given display
+  Set by navi itself on their default display */
+  [navi-box-flow="inline"] {
+    display: inline;
+  }
+  [navi-box-flow="block"] {
+    display: block;
+  }
+  [navi-box-flow="inline-block"] {
+    display: inline-block;
+  }
+  [navi-box-flow="flex-x"] {
+    display: flex;
+  }
+  [navi-box-flow="flex-y"] {
+    display: flex;
+    flex-direction: column;
+  }
+  [navi-box-flow="inline-flex-x"] {
+    display: inline-flex;
+  }
+  [navi-box-flow="inline-flex-y"] {
+    display: inline-flex;
+    flex-direction: column;
+  }
+  [navi-box-flow="grid"] {
+    display: grid;
+    &[navi-box-flow-column] {
+      grid-auto-flow: column;
+    }
+    &[navi-box-flow-row] {
+      grid-auto-flow: row;
+    }
+    &[navi-box-flow-column][navi-box-flow-row] {
+      grid-auto-flow: unset;
+    }
+  }
+  [navi-box-flow="inline-grid"] {
+    display: inline-grid;
+    &[navi-box-flow-column] {
+      grid-auto-flow: column;
+    }
+    &[navi-box-flow-row] {
+      grid-auto-flow: row;
+    }
+    &[navi-box-flow-column][navi-box-flow-row] {
+      grid-auto-flow: unset;
+    }
+  }
+  /*
+
+  It's very common to declare a display on component as follow
+  .component_class { display: component_display; }
+
+  This kill the default behavior of [hidden] attribute and we need to explicitly handle it with:
+  .component_class[hidden] { display: none; }
+
+  To avoid this extra work and potential mistakes we force the default behavior of [hidden] attribute.
+  */
+  [hidden] {
+    display: none !important;
+  }
+
+  /* Partially hidden (or fully hidden) element should not participate in view transition no matter what */
+  /* Otherwise they appear immedatly and fully visible from a fully/partially hidden state */
+  [navi-partially-hidden] {
+    view-transition-name: none !important;
+  }
+`, "@jsenv/navi/src/box/box.jsx"];
+const PSEUDO_CLASSES_DEFAULT = [];
+const PSEUDO_ELEMENTS_DEFAULT = [];
+const STYLE_CSS_VARS_DEFAULT = {};
+const PROPS_CSS_VARS_DEFAULT = {};
+// When only pseudoStateSelector is set (no visualSelector), the box owns its
+// visual identity. Only event handlers and these explicit props are forwarded
+// to the inner semantic/interactive child element.
+const PSEUDO_STATE_CHILD_PROP_SET = new Set(["tabIndex", "tabindex"]);
+const Box = props => {
+  const {
+    ref,
+    as = "div",
+    baseClassName,
+    className,
+    baseStyle,
+    // style management
+    style,
+    styleCSSVars = STYLE_CSS_VARS_DEFAULT,
+    propsCSSVars = PROPS_CSS_VARS_DEFAULT,
+    basePseudoState,
+    pseudoState,
+    // for demo purposes it's possible to control pseudo state from props
+    pseudoClasses = PSEUDO_CLASSES_DEFAULT,
+    pseudoElements = PSEUDO_ELEMENTS_DEFAULT,
+    // visualSelector convey the following:
+    // The box itself is visually "invisible", one of its descendant is responsible for visual representation
+    // - Some styles will be used on the box itself (for instance margins)
+    // - Some styles will be used on the visual element (for instance paddings, backgroundColor)
+    // -> introduced for <Button /> with transform:scale on press
+    visualSelector,
+    // pseudoStateSelector convey the following:
+    // The box contains content that holds pseudoState
+    // -> introduced for <Input /> with a wrapped for loading, checkboxes, etc
+    pseudoStateSelector,
+    hasChildUsingForwardedProps,
+    baseChildPropSet,
+    childPropSet,
+    // preventInitialTransition can be used to prevent transition on mount
+    // (when transition is set via props, this is done automatically)
+    // so this prop is useful only when transition is enabled from "outside" (via CSS)
+    preventInitialTransition,
+    children,
+    separator,
+    ...rest
+  } = props;
+  const TagName = as;
+  const defaultDisplay = getDefaultDisplay(TagName);
+  // Read the parent flow early so we can use it when display="inherit" is requested.
+  const parentBoxFlow = useContext(BoxFlowContext);
+  let {
+    inline,
+    block,
+    flex,
+    grid,
+    row,
+    column
+  } = rest;
+  // To obtain flex direction we have the following deprecated props:
+  // - [deprecated] <Box column> -> <Box flex> or <Box flex="x">
+  // - [deprecated] <Box row> -> <Box flex="y">
+  // - [deprecated] <Box flex column> -> <Box flex="x">
+  // - [deprecated] <Box flex row> -> <Box flex="y">
+
+  if (flex === true) {
+    flex = row ? "y" : "x";
+  }
+  if (flex === undefined && grid === undefined) {
+    if (column) {
+      flex = "x";
+    } else if (row) {
+      flex = "y";
+    }
+  }
+  if (defaultDisplay === "inline") {
+    if (inline === undefined && !block) {
+      inline = true;
+    }
+  } else if (defaultDisplay === "block") {
+    if (block === undefined && !flex && !grid) {
+      block = true;
+    }
+  } else if (defaultDisplay === "inline-block") {
+    if (inline === undefined && !block) {
+      inline = true;
+    }
+    if (block === undefined && !flex && !grid) {
+      block = true;
+    }
+  }
+  if (inline && (rest.width !== undefined || rest.height !== undefined) && flex === undefined) {
+    flex = "x";
+  }
+  let boxFlow;
+  if (inline) {
+    if (flex === "x") {
+      boxFlow = "inline-flex-x";
+    } else if (flex === "y") {
+      boxFlow = "inline-flex-y";
+    } else if (grid) {
+      boxFlow = "inline-grid";
+    } else if (block) {
+      boxFlow = "inline-block";
+    } else {
+      boxFlow = "inline";
+    }
+  } else if (flex === "x") {
+    boxFlow = "flex-x";
+  } else if (flex === "y") {
+    boxFlow = "flex-y";
+  } else if (grid) {
+    boxFlow = "grid";
+  } else if (block) {
+    boxFlow = "block";
+  } else {
+    boxFlow = defaultDisplay;
+  }
+  // When display="inherit" is passed, adopt the parent's flow instead of computing one.
+  // This lets a child Box mirror its parent's flex/grid/block layout without repeating
+  // the same layout props, and is used e.g. by Button's inner content element.
+  if (rest.display === "inherit") {
+    boxFlow = parentBoxFlow;
+  }
+  const boxFlowIsDefault = boxFlow === defaultDisplay;
+  const remainingPropKeySet = new Set(Object.keys(rest));
+  const innerClassName = withPropsClassName(baseClassName, className);
+  const selfForwardedProps = {};
+  const childForwardedProps = {};
+  let finalRef;
+  {
+    const styleDeps = [
+    // Layout and alignment props
+    parentBoxFlow, boxFlow,
+    // Style context dependencies
+    styleCSSVars, pseudoClasses, pseudoElements,
+    // Selectors
+    visualSelector, pseudoStateSelector, preventInitialTransition];
+    let innerPseudoState;
+    if (basePseudoState && pseudoState) {
+      innerPseudoState = {};
+      const baseStateKeys = Object.keys(basePseudoState);
+      const pseudoStateKeySet = new Set(Object.keys(pseudoState));
+      for (const key of baseStateKeys) {
+        if (pseudoStateKeySet.has(key)) {
+          pseudoStateKeySet.delete(key);
+          const value = pseudoState[key];
+          styleDeps.push(value);
+          innerPseudoState[key] = value;
+        } else {
+          const value = basePseudoState[key];
+          styleDeps.push(value);
+          innerPseudoState[key] = value;
+        }
+      }
+      for (const key of pseudoStateKeySet) {
+        const value = pseudoState[key];
+        styleDeps.push(value);
+        innerPseudoState[key] = value;
+      }
+    } else if (basePseudoState) {
+      innerPseudoState = basePseudoState;
+      for (const key of Object.keys(basePseudoState)) {
+        const value = basePseudoState[key];
+        styleDeps.push(value);
+      }
+    } else if (pseudoState) {
+      innerPseudoState = pseudoState;
+      for (const key of Object.keys(pseudoState)) {
+        const value = pseudoState[key];
+        styleDeps.push(value);
+      }
+    } else {
+      innerPseudoState = PSEUDO_STATE_DEFAULT;
+    }
+    const boxStyles = {};
+    const styleContext = {
+      parentBoxFlow,
+      boxFlow,
+      styleCSSVars,
+      pseudoState: innerPseudoState,
+      pseudoClasses,
+      pseudoElements,
+      remainingProps: rest,
+      styles: boxStyles
+    };
+    let boxPseudoNamedStyles = PSEUDO_NAMED_STYLES_DEFAULT;
+    const canForwardToChild = hasChildUsingForwardedProps;
+    const shouldForwardAllToChild = canForwardToChild && visualSelector && pseudoStateSelector;
+    const addStyle = (value, name, styleContext, stylesTarget, context) => {
+      const mergedValue = prepareStyleValue(stylesTarget[name], value, name, styleContext, context);
+      const cssVar = styleContext.styleCSSVars[name];
+      if (cssVar) {
+        addCSSVar(mergedValue, cssVar, stylesTarget);
+        if (name === "borderRadius" && value === "inherit") {
+          // "inherit" cannot be expressed via a CSS variable — a var() reference
+          // never propagates the inherit keyword itself. So when borderRadius="inherit"
+          // we must also set the inline style directly so the element actually
+          // inherits the radius from its parent.
+          styleDeps.push(name, value);
+          stylesTarget[name] = mergedValue;
+        }
+        return true;
+      }
+      styleDeps.push(name, value); // impact box style -> add to deps
+      stylesTarget[name] = mergedValue;
+      return false;
+    };
+    const addCSSVar = (value, name, stylesTarget) => {
+      styleDeps.push(name, value); // impact box style -> add to deps
+      stylesTarget[name] = value;
+    };
+    const addStyleMaybeForwarding = (value, name, styleContext, stylesTarget, context, visualChildPropStrategy) => {
+      if (!visualChildPropStrategy) {
+        addStyle(value, name, styleContext, stylesTarget, context);
+        return false;
+      }
+      const cssVar = styleCSSVars[name];
+      if (cssVar) {
+        // css var wins over visual child handling
+        addStyle(value, name, styleContext, stylesTarget, context);
+        return false;
+      }
+      if (visualChildPropStrategy === "copy") {
+        // we stylyze ourself + forward prop to the child
+        addStyle(value, name, styleContext, stylesTarget, context);
+      }
+      if (!canForwardToChild) {
+        return false;
+      }
+      return true;
+    };
+
+    // By default ":hover", ":active" are not tracked.
+    // But if code explicitely do something like:
+    // style={{ ":hover": { backgroundColor: "red" } }}
+    // then we'll track ":hover" state changes even for basic elements like <div>
+    const pseudoClassesFromStyleSet = new Set();
+    boxPseudoNamedStyles = {};
+    const visitProp = (value, name, styleContext, boxStylesTarget, styleOrigin) => {
+      const isPseudoElement = name.startsWith("::");
+      const isPseudoClass = name.startsWith(":");
+      if (isPseudoElement || isPseudoClass) {
+        styleDeps.push(name);
+        pseudoClassesFromStyleSet.add(name);
+        const pseudoStyleContext = {
+          ...styleContext,
+          styleCSSVars: {
+            ...styleCSSVars,
+            ...styleCSSVars[name]
+          },
+          pseudoName: name
+        };
+        const pseudoStyleKeys = Object.keys(value);
+        if (isPseudoElement) {
+          const pseudoElementStyles = {};
+          for (const key of pseudoStyleKeys) {
+            visitProp(value[key], key, pseudoStyleContext, pseudoElementStyles, "pseudo_style");
+          }
+          boxPseudoNamedStyles[name] = pseudoElementStyles;
+          return;
+        }
+        const pseudoClassStyles = {};
+        for (const key of pseudoStyleKeys) {
+          visitProp(value[key], key, pseudoStyleContext, pseudoClassStyles, "pseudo_style");
+          boxPseudoNamedStyles[name] = pseudoClassStyles;
+        }
+        return;
+      }
+      const context = styleOrigin === "base_style" ? "js" : "css";
+      const isCss = styleOrigin === "base_style" || styleOrigin === "style";
+      if (isCss) {
+        addStyle(value, name, styleContext, boxStylesTarget, context);
+        return;
+      }
+      if (name.startsWith("--")) {
+        addStyle(value, name, styleContext, boxStylesTarget, context);
+        return;
+      }
+      const propCssVar = propsCSSVars[name];
+      if (propCssVar) {
+        if (value !== undefined) {
+          addCSSVar(value, propCssVar, boxStylesTarget);
+        }
+        return;
+      }
+      const isPseudoStyle = styleOrigin === "pseudo_style";
+      if (isStyleProp(name)) {
+        // it's a style prop, we need first to check if we have css var to handle them
+        // otherwise we decide to put it either on self or child
+        const visualChildPropStrategy = visualSelector && getVisualChildStylePropStrategy(name);
+        const getStyle = getHowToHandleStyleProp(name);
+        if (
+        // prop name === css style name
+        !getStyle) {
+          const needForwarding = addStyleMaybeForwarding(value, name, styleContext, boxStylesTarget, context, visualChildPropStrategy);
+          if (needForwarding) {
+            if (isPseudoStyle) ; else {
+              childForwardedProps[name] = value;
+            }
+          }
+          return;
+        }
+        const cssValues = getStyle(value, styleContext);
+        if (!cssValues) {
+          return;
+        }
+        let needForwarding = false;
+        for (const styleName of Object.keys(cssValues)) {
+          const cssValue = cssValues[styleName];
+          needForwarding = addStyleMaybeForwarding(cssValue, styleName, styleContext, boxStylesTarget, context, visualChildPropStrategy);
+        }
+        if (needForwarding) {
+          if (isPseudoStyle) ; else {
+            childForwardedProps[name] = value;
+          }
+        }
+        return;
+      }
+      // not a style prop what do we do with it?
+      // When pseudoStateSelector is set, the child element is the semantic/interactive one
+      // When both selectors are set the child IS the component (e.g. Button with scale
+      // transform) — forward everything so it behaves like a normal element.
+      // When only pseudoStateSelector is set, the box keeps its own visual identity
+      // (border, background, overflow…) and the child is just the interactive/semantic
+      // element inside it. Only event handlers (onXxx) belong on that child; everything
+      // else stays on the box.
+      if (isPseudoStyle) {
+        if (shouldForwardAllToChild) ; else {
+          console.warn(`unsupported pseudo style key "${name}"`);
+          selfForwardedProps[name] = value;
+        }
+      } else if (shouldForwardAllToChild) {
+        childForwardedProps[name] = value;
+      } else {
+        selfForwardedProps[name] = value;
+      }
+      return;
+    };
+    if (baseStyle) {
+      for (const key of baseStyle) {
+        const value = baseStyle[key];
+        visitProp(value, key, styleContext, boxStyles, "baseStyle");
+      }
+    }
+    for (const propName of remainingPropKeySet) {
+      const propValue = rest[propName];
+      if (baseChildPropSet?.has(propName) || childPropSet?.has(propName)) {
+        if (canForwardToChild) {
+          childForwardedProps[propName] = propValue;
+        } else {
+          selfForwardedProps[propName] = propValue;
+        }
+        continue;
+      }
+      if (canForwardToChild && toCopySet.has(propName)) {
+        childForwardedProps[propName] = propValue;
+      }
+      const isDataAttribute = propName.startsWith("data-");
+      if (isDataAttribute) {
+        selfForwardedProps[propName] = propValue;
+        continue;
+      }
+      // At some point I'd like to transform all data-* attribute in the DOM
+      // into navi-* attribute so that when you look at the DOM you can easily understand which attributes
+      // where added by navi or your code.
+      // This help human to better scan the DOM
+      const isNaviAttribute = propName.startsWith("navi-");
+      if (isNaviAttribute) {
+        selfForwardedProps[propName] = propValue;
+        continue;
+      }
+      const isEventHandler = propName.startsWith("on");
+      if (isEventHandler) {
+        if (shouldForwardAllToChild) {
+          childForwardedProps[propName] = propValue;
+          continue;
+        }
+        selfForwardedProps[propName] = propValue;
+        continue;
+      }
+      if (canForwardToChild && pseudoStateSelector && PSEUDO_STATE_CHILD_PROP_SET.has(propName)) {
+        childForwardedProps[propName] = propValue;
+        continue;
+      }
+      visitProp(propValue, propName, styleContext, boxStyles, "prop");
+    }
+    if (typeof style === "string") {
+      const styleObject = normalizeStyles(style, "css");
+      for (const styleName of Object.keys(styleObject)) {
+        const styleValue = styleObject[styleName];
+        visitProp(styleValue, styleName, styleContext, boxStyles, "style");
+      }
+    } else if (style && typeof style === "object") {
+      for (const styleName of Object.keys(style)) {
+        const styleValue = style[styleName];
+        visitProp(styleValue, styleName, styleContext, boxStyles, "style");
+      }
+    }
+    styleDeps.push(pseudoStateSelector, innerPseudoState);
+    let innerPseudoClasses;
+    if (pseudoClassesFromStyleSet.size) {
+      innerPseudoClasses = [...pseudoClasses];
+      if (pseudoClasses !== PSEUDO_CLASSES_DEFAULT) {
+        styleDeps.push(...pseudoClasses);
+      }
+      for (const key of pseudoClassesFromStyleSet) {
+        innerPseudoClasses.push(key);
+        styleDeps.push(key);
+      }
+    } else {
+      innerPseudoClasses = pseudoClasses;
+      if (pseudoClasses !== PSEUDO_CLASSES_DEFAULT) {
+        styleDeps.push(...pseudoClasses);
+      }
+    }
+    const syncBox = useCallback(boxEl => {
+      const pseudoStateEl = pseudoStateSelector ? boxEl.querySelector(pseudoStateSelector) : boxEl;
+      if (!pseudoStateEl) {
+        console.error(`pseudoStateSelector "${pseudoStateSelector}" did not match any element inside the box`, boxEl);
+      }
+      const visualEl = visualSelector ? boxEl.querySelector(visualSelector) : null;
+      return initPseudoStyles(pseudoStateEl, {
+        pseudoClasses: innerPseudoClasses,
+        pseudoState: innerPseudoState,
+        effect: state => {
+          applyStyle(boxEl, boxStyles, state, boxPseudoNamedStyles, preventInitialTransition);
+        },
+        elementToImpact: boxEl,
+        elementListeningPseudoState: visualEl === pseudoStateEl ? null : visualEl
+      });
+    }, styleDeps);
+    finalRef = useComposeElementRef(syncBox, ref);
+    usePartiallyHidden(finalRef, Boolean(rest.viewTransitionName));
+  }
+  let innerChildren = children;
+  if (separator) {
+    // Flatten nested arrays (e.g., from .map()) to treat each element as individual child
+    innerChildren = applySeparatorOnChildren(innerChildren, separator);
+  }
+
+  // When hasChildUsingForwardedProps is used it means
+  // Some/all the children needs to access remainingProps
+  // to render and will provide a function to do so.
+  if (hasChildUsingForwardedProps) {
+    innerChildren = jsx(BoxForwardedPropsContext.Provider, {
+      value: childForwardedProps,
+      children: innerChildren
+    });
+  }
+  const aspectRatio = rest.square || rest.circle ? "1/1" : rest.aspectRatio;
+  return jsx(TagName, {
+    ref: finalRef,
+    className: innerClassName,
+    "navi-box-flow": boxFlowIsDefault ? undefined : boxFlow,
+    "navi-box-flow-row": row ? "" : undefined,
+    "navi-box-flow-column": column ? "" : undefined,
+    "navi-aspect-ratio": aspectRatio ? aspectRatio : undefined,
+    "data-visual-selector": visualSelector,
+    ...selfForwardedProps,
+    children: jsx(BoxFlowContext.Provider, {
+      value: boxFlow,
+      children: innerChildren
+    })
+  });
+};
+const toCopySet = new Set([]);
+const applySeparatorOnChildren = (children, separator) => {
+  const flattenedChildren = toChildArray(children);
+  if (flattenedChildren.length <= 1) {
+    return children;
+  }
+  const childrenWithSeparators = [];
+  let i = 0;
+  while (true) {
+    const child = flattenedChildren[i];
+    childrenWithSeparators.push(child);
+    i++;
+    const isLast = i === flattenedChildren.length;
+    if (isLast) {
+      break;
+    }
+    const nextChild = flattenedChildren[i];
+    if (!shouldInjectSeparatorBetween(child, nextChild)) {
+      continue;
+    }
+    // Support function separators that receive separator index
+    const separatorElement = typeof separator === "function" ? separator(i - 1) // i-1 because i was incremented after pushing child
+    : separator;
+    childrenWithSeparators.push(separatorElement);
+  }
+  return childrenWithSeparators;
+};
+const shouldInjectSeparatorBetween = (left, right) => {
+  if (isValidElement(left) && left.props?.hidden) {
+    return false;
+  }
+  if (isValidElement(right) && right.props?.hidden) {
+    return false;
+  }
+  return true;
+};
+
+const ensureDocumentStartViewTransition = () => {
+  if (document.startViewTransition) {
+    return;
+  }
+  document.startViewTransition = (updateCallback) => {
+    updateCallback();
+    return {
+      ready: Promise.resolve(),
+      finished: Promise.resolve(),
+    };
+  };
+};
+
+/**
+ * Fix alignment behavior for flex/grid containers that use `height: 100%`.
+ *
+ * Context:
+ * - When a flex/grid container has `height: 100%`, it is "height-locked".
+ * - If its content becomes taller than the container, alignment rules like
+ *   `align-items: center` will cause content to be partially clipped.
+ *
+ * Goal:
+ * - Center content only when it fits.
+ * - Align content at start when it overflows.
+ *
+ * How:
+ * - Temporarily remove height-constraint (`height:auto`) to measure natural height.
+ * - Compare natural height to container height.
+ * - Add/remove an attribute so CSS can adapt alignment.
+ *
+ * Usage:
+ *   monitorItemsOverflow(containerElement);
+ *
+ * CSS example:
+ *   .container { align-items: center; }
+ *   .container[data-items-height-overflow] { align-items: flex-start; }
+ */
+
+
+const WIDTH_ATTRIBUTE_NAME = "data-items-width-overflow";
+const HEIGHT_ATTRIBUTE_NAME = "data-items-height-overflow";
+const monitorItemsOverflow = (container) => {
+  let widthIsOverflowing;
+  let heightIsOverflowing;
+  const onItemsWidthOverflowChange = () => {
+    if (widthIsOverflowing) {
+      container.setAttribute(WIDTH_ATTRIBUTE_NAME, "");
+    } else {
+      container.removeAttribute(WIDTH_ATTRIBUTE_NAME);
+    }
+  };
+  const onItemsHeightOverflowChange = () => {
+    if (heightIsOverflowing) {
+      container.setAttribute(HEIGHT_ATTRIBUTE_NAME, "");
+    } else {
+      container.removeAttribute(HEIGHT_ATTRIBUTE_NAME);
+    }
+  };
+
+  const update = () => {
+    // Save current manual height constraint
+    const prevWidth = container.style.width;
+    const prevHeight = container.style.height;
+    // Remove constraint → get true content dimension
+    container.style.width = "auto";
+    container.style.height = "auto";
+    const naturalWidth = container.scrollWidth;
+    const naturalHeight = container.scrollHeight;
+    if (prevWidth) {
+      container.style.width = prevWidth;
+    } else {
+      container.style.removeProperty("width");
+    }
+    if (prevHeight) {
+      container.style.height = prevHeight;
+    } else {
+      container.style.removeProperty("height");
+    }
+
+    const lockedWidth = container.clientWidth;
+    const lockedHeight = container.clientHeight;
+    const currentWidthIsOverflowing = naturalWidth > lockedWidth;
+    const currentHeightIsOverflowing = naturalHeight > lockedHeight;
+    if (currentWidthIsOverflowing !== widthIsOverflowing) {
+      widthIsOverflowing = currentWidthIsOverflowing;
+      onItemsWidthOverflowChange();
+    }
+    if (currentHeightIsOverflowing !== heightIsOverflowing) {
+      heightIsOverflowing = currentHeightIsOverflowing;
+      onItemsHeightOverflowChange();
+    }
+  };
+
+  const [teardown, addTeardown] = createPubSub();
+
+  update();
+
+  // mutation observer
+  const mutationObserver = new MutationObserver(() => {
+    update();
+  });
+  mutationObserver.observe(container, {
+    childList: true,
+    characterData: true,
+  });
+  addTeardown(() => {
+    mutationObserver.disconnect();
+  });
+
+  // resize observer
+  const resizeObserver = new ResizeObserver(update);
+  resizeObserver.observe(container);
+  addTeardown(() => {
+    resizeObserver.disconnect();
+  });
+
+  const destroy = () => {
+    teardown();
+    container.removeAttribute(WIDTH_ATTRIBUTE_NAME);
+    container.removeAttribute(HEIGHT_ATTRIBUTE_NAME);
+  };
+  return destroy;
+};
+
+installImportMetaCssBuild(import.meta);/**
+ * UI Transition - Core Implementation
+ * Provides smooth resize transitions with cross-fade effects between content states
+ *
+ * Content Types and Terminology:
+ *
+ * - ui: What the user currently sees rendered in the UI
+ * - dom_nodes: The actual DOM elements that make up the visual representation
+ * - content_id: Unique identifier for a content and its content_phase(s)
+ * - content_phase: Intermediate states (loading spinners, error messages, empty states)
+ * - content: The primary/final content we want to display (e.g., car details, user profile)
+ *
+ * Required HTML structure:
+ *
+ * <div class="ui_transition">
+ *   <div class="ui_transition_active_group">
+ *     <div class="ui_transition_target_slot"></div>
+ *     <div class="ui_transition_outgoing_slot"></div>
+ *   </div>
+ *   <div class="ui_transition_previous_group">
+ *     <div class="ui_transition_previous_target_slot"></div>
+ *     <div class="ui_transition_previous_outgoing_slot"></div>
+ *   </div>
+ * </div>
+ *
+ * Architecture Overview:
+ *
+ * .ui_transition
+ *   The main container that handles dimensional transitions. Its width and height animate
+ *   smoothly from current to target dimensions. Has overflow:hidden to clip ui during transitions.
+ *
+ * .active_group
+ *   Contains the ui that should be active after the transition completes. Groups both the target
+ *   ui (.target_slot) and transitional ui (.outgoing_slot) as a single unit that can
+ *   be manipulated together (e.g., applying transforms or slides).
+ *
+ * .target_slot
+ *   Always contains the target ui - what should be displayed at the end of the transition.
+ *   Whether transitioning to content or content_phase, this slot receives the new dom_nodes.
+ *   Receives fade-in transitions (opacity 0 → 1) during all transition types.
+ *
+ * .outgoing_slot
+ *   Holds content_phase that's being replaced during content_phase transitions. When transitioning
+ *   from one content_phase to another, or from content_phase to content, the old content_phase moves
+ *   here for fade-out. Receives fade-out transitions (opacity 1 → 0).
+ *
+ * .previous_group
+ *   Used for content-to-content transitions. When switching between content (not phases),
+ *   the entire .active_group dom_nodes are cloned here to fade out while the new content fades in.
+ *   Can slide out when sliding transitions are enabled, otherwise fades out.
+ *
+ * Transition Scenarios:
+ * - content → content: Car A details → Car B details (clone to previous_group)
+ * - content_phase → content_phase: Loading state → Error state (move to outgoing_slot, same content_id)
+ * - content → content_phase: Car A details → Loading Car B (use outgoing_slot for cross-fade)
+ * - content_phase → content: Loading Car B → Car B details (use outgoing_slot for cross-fade)
+ *
+ * Size Transition Handling:
+ * During dimensional transitions, both .target_slot and .outgoing_slot have their dimensions
+ * explicitly set to prevent dom_nodes reflow and maintain visual consistency.
+ */
+import.meta.css = [/* css */`
+  * {
+    box-sizing: border-box;
+  }
+
+  .ui_transition {
+    --transition-duration: 300ms;
+    --justify-content: center;
+    --align-items: center;
+
+    --x-transition-duration: var(--transition-duration);
+    --x-justify-content: var(--justify-content);
+    --x-align-items: var(--align-items);
+
+    position: relative;
+  }
+  /* Alignment controls */
+  .ui_transition[data-align-x="start"] {
+    --x-justify-content: flex-start;
+  }
+  .ui_transition[data-align-x="center"] {
+    --x-justify-content: center;
+  }
+  .ui_transition[data-align-x="end"] {
+    --x-justify-content: flex-end;
+  }
+  .ui_transition[data-align-y="start"] {
+    --x-align-items: flex-start;
+  }
+  .ui_transition[data-align-y="center"] {
+    --x-align-items: center;
+  }
+  .ui_transition[data-align-y="end"] {
+    --x-align-items: flex-end;
+  }
+
+  .ui_transition,
+  .ui_transition_active_group,
+  .ui_transition_previous_group,
+  .ui_transition_target_slot,
+  .ui_transition_previous_target_slot,
+  .ui_transition_outgoing_slot,
+  .ui_transition_previous_outgoing_slot {
+    width: 100%;
+    height: 100%;
+  }
+
+  .ui_transition_target_slot,
+  .ui_transition_outgoing_slot,
+  .ui_transition_previous_target_slot,
+  .ui_transition_previous_outgoing_slot {
+    display: flex;
+    align-items: var(--x-align-items);
+    justify-content: var(--x-justify-content);
+  }
+  .ui_transition_target_slot[data-items-width-overflow],
+  .ui_transition_previous_target_slot[data-items-width-overflow],
+  .ui_transition_previous_target_slot[data-items-width-overflow],
+  .ui_transition_previous_outgoing_slot[data-items-width-overflow] {
+    --x-justify-content: flex-start;
+  }
+  .ui_transition_target_slot[data-items-height-overflow],
+  .ui_transition_previous_slot[data-items-height-overflow],
+  .ui_transition_previous_target_slot[data-items-height-overflow],
+  .ui_transition_previous_outgoing_slot[data-items-height-overflow] {
+    --x-align-items: flex-start;
+  }
+
+  .ui_transition_active_group {
+    position: relative;
+  }
+  .ui_transition_target_slot {
+    position: relative;
+  }
+  .ui_transition_outgoing_slot,
+  .ui_transition_previous_outgoing_slot {
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+  .ui_transition_previous_group {
+    position: absolute;
+    inset: 0;
+  }
+  .ui_transition[data-only-previous-group] .ui_transition_previous_group {
+    position: relative;
+  }
+
+  .ui_transition_target_slot_background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: -1;
+    display: none;
+    width: var(--target-slot-width, 100%);
+    height: var(--target-slot-height, 100%);
+    background: var(--target-slot-background, transparent);
+    pointer-events: none;
+  }
+  .ui_transition[data-transitioning] .ui_transition_target_slot_background {
+    display: block;
+  }
+`, "@jsenv/navi/src/transition/ui_transition.js"];
+const CONTENT_ID_ATTRIBUTE = "data-content-id";
+const CONTENT_PHASE_ATTRIBUTE = "data-content-phase";
+const UNSET = {
+  domNodes: [],
+  domNodesClone: [],
+  isEmpty: true,
+  type: "unset",
+  contentId: "unset",
+  contentPhase: undefined,
+  isContentPhase: false,
+  isContent: false,
+  toString: () => "unset"
+};
+const isSameConfiguration = (configA, configB) => {
+  return configA.toString() === configB.toString();
+};
+const createUITransitionController = (root, {
+  duration = 300,
+  alignX = "center",
+  alignY = "center",
+  onStateChange = () => {},
+  pauseBreakpoints = []
+} = {}) => {
+  const debugConfig = {
+    detection: root.hasAttribute("data-debug-detection"),
+    size: root.hasAttribute("data-debug-size")
+  };
+  const hasDebugLogs = debugConfig.size;
+  const debugDetection = message => {
+    if (!debugConfig.detection) return;
+    console.debug(`[detection]`, message);
+  };
+  const debugSize = message => {
+    if (!debugConfig.size) return;
+    console.debug(`[size]`, message);
+  };
+  const activeGroup = root.querySelector(".ui_transition_active_group");
+  const targetSlot = root.querySelector(".ui_transition_target_slot");
+  const outgoingSlot = root.querySelector(".ui_transition_outgoing_slot");
+  const previousGroup = root.querySelector(".ui_transition_previous_group");
+  const previousTargetSlot = previousGroup?.querySelector(".ui_transition_previous_target_slot");
+  const previousOutgoingSlot = previousGroup?.querySelector(".ui_transition_previous_outgoing_slot");
+  if (!root || !activeGroup || !targetSlot || !outgoingSlot || !previousGroup || !previousTargetSlot || !previousOutgoingSlot) {
+    throw new Error("createUITransitionController requires element with .active_group, .target_slot, .outgoing_slot, .previous_group, .previous_target_slot, and .previous_outgoing_slot elements");
+  }
+
+  // we maintain a background copy behind target slot to avoid showing
+  // the body flashing during the fade-in
+  const targetSlotBackground = document.createElement("div");
+  targetSlotBackground.className = "ui_transition_target_slot_background";
+  activeGroup.insertBefore(targetSlotBackground, targetSlot);
+  root.style.setProperty("--x-transition-duration", `${duration}ms`);
+  outgoingSlot.setAttribute("inert", "");
+  previousGroup.setAttribute("inert", "");
+  const detectConfiguration = (slot, {
+    contentId,
+    contentPhase
+  } = {}) => {
+    const domNodes = Array.from(slot.childNodes);
+    if (!domNodes) {
+      return UNSET;
+    }
+    const isEmpty = domNodes.length === 0;
+    let textNodeCount = 0;
+    let elementNodeCount = 0;
+    let firstElementNode;
+    const domNodesClone = [];
+    if (isEmpty) {
+      if (contentPhase === undefined) {
+        contentPhase = "empty";
+      }
+    } else {
+      const contentIdSlotAttr = slot.getAttribute(CONTENT_ID_ATTRIBUTE);
+      let contentIdChildAttr;
+      for (const domNode of domNodes) {
+        if (domNode.nodeType === Node.TEXT_NODE) {
+          textNodeCount++;
+        } else {
+          if (!firstElementNode) {
+            firstElementNode = domNode;
+          }
+          elementNodeCount++;
+          if (domNode.hasAttribute("data-content-phase")) {
+            const contentPhaseAttr = domNode.getAttribute("data-content-phase");
+            contentPhase = contentPhaseAttr || "attr";
+          }
+          if (domNode.hasAttribute("data-content-key")) {
+            contentIdChildAttr = domNode.getAttribute("data-content-key");
+          }
+        }
+        const domNodeClone = domNode.cloneNode(true);
+        domNodesClone.push(domNodeClone);
+      }
+      if (contentIdSlotAttr && contentIdChildAttr) {
+        console.warn(`Slot and slot child both have a [${CONTENT_ID_ATTRIBUTE}]. Slot is ${contentIdSlotAttr} and child is ${contentIdChildAttr}, using the child.`);
+      }
+      if (contentId === undefined) {
+        contentId = contentIdChildAttr || contentIdSlotAttr || undefined;
+      }
+    }
+    const isOnlyTextNodes = elementNodeCount === 0 && textNodeCount > 1;
+    const singleElementNode = elementNodeCount === 1 ? firstElementNode : null;
+    contentId = contentId || getElementSignature(domNodes[0]);
+    if (!contentPhase && isEmpty) {
+      // Imagine code rendering null while switching to a new content
+      // or even while staying on the same content.
+      // In the UI we want to consider this as an "empty" phase.
+      // meaning the ui will keep the same size until something else happens
+      // This prevent layout shifts of code not properly handling
+      // intermediate states.
+      contentPhase = "empty";
+    }
+    let width;
+    let height;
+    let borderRadius;
+    let border;
+    let background;
+    if (isEmpty) {
+      debugSize(`measureSlot(".${slot.className}") -> it is empty`);
+    } else if (singleElementNode) {
+      const visualSelector = singleElementNode.getAttribute("data-visual-selector");
+      const visualElement = visualSelector ? singleElementNode.querySelector(visualSelector) || singleElementNode : singleElementNode;
+      const rect = visualElement.getBoundingClientRect();
+      width = rect.width;
+      height = rect.height;
+      debugSize(`measureSlot(".${slot.className}") -> [${width}x${height}]`);
+      borderRadius = getBorderRadius(visualElement);
+      border = getComputedStyle(visualElement).border;
+      background = getComputedStyle(visualElement).background;
+    } else {
+      // text, multiple elements
+      const rect = slot.getBoundingClientRect();
+      width = rect.width;
+      height = rect.height;
+      debugSize(`measureSlot(".${slot.className}") -> [${width}x${height}]`);
+    }
+    const commonProperties = {
+      domNodes,
+      domNodesClone,
+      isEmpty,
+      isOnlyTextNodes,
+      singleElementNode,
+      width,
+      height,
+      borderRadius,
+      border,
+      background,
+      contentId
+    };
+    if (contentPhase) {
+      return {
+        ...commonProperties,
+        type: "content_phase",
+        contentPhase,
+        isContentPhase: true,
+        isContent: false,
+        toString: () => `content(${contentId}).phase(${contentPhase})`
+      };
+    }
+    return {
+      ...commonProperties,
+      type: "content",
+      contentPhase: undefined,
+      isContentPhase: false,
+      isContent: true,
+      toString: () => `content(${contentId})`
+    };
+  };
+  const targetSlotInitialConfiguration = detectConfiguration(targetSlot);
+  const outgoingSlotInitialConfiguration = detectConfiguration(outgoingSlot, {
+    contentPhase: "true"
+  });
+  let targetSlotConfiguration = targetSlotInitialConfiguration;
+  let outgoingSlotConfiguration = outgoingSlotInitialConfiguration;
+  let previousTargetSlotConfiguration = UNSET;
+  const updateSlotAttributes = () => {
+    if (targetSlotConfiguration.isEmpty && outgoingSlotConfiguration.isEmpty) {
+      root.setAttribute("data-only-previous-group", "");
+    } else {
+      root.removeAttribute("data-only-previous-group");
+    }
+  };
+  const updateAlignment = () => {
+    // Set data attributes for CSS-based alignment
+    root.setAttribute("data-align-x", alignX);
+    root.setAttribute("data-align-y", alignY);
+  };
+  const moveConfigurationIntoSlot = (configuration, slot) => {
+    slot.innerHTML = "";
+    for (const domNode of configuration.domNodesClone) {
+      slot.appendChild(domNode);
+    }
+    // in case border or stuff like that have changed we re-detect the config
+    const updatedConfig = detectConfiguration(slot);
+    if (slot === targetSlot) {
+      targetSlotConfiguration = updatedConfig;
+    } else if (slot === outgoingSlot) {
+      outgoingSlotConfiguration = updatedConfig;
+    } else if (slot === previousTargetSlot) {
+      previousTargetSlotConfiguration = updatedConfig;
+    } else if (slot === previousOutgoingSlot) ; else {
+      throw new Error("Unknown slot for applyConfiguration");
+    }
+  };
+  updateAlignment();
+  let transitionType = "none";
+  const groupTransitionOptions = {
+    // debugBreakpoints: [0.25],
+    pauseBreakpoints,
+    lifecycle: {
+      setup: () => {
+        updateSlotAttributes();
+        root.setAttribute("data-transitioning", "");
+        onStateChange({
+          isTransitioning: true
+        });
+        return {
+          teardown: () => {
+            root.removeAttribute("data-transitioning");
+            updateSlotAttributes(); // Update positioning after transition
+            onStateChange({
+              isTransitioning: false
+            });
+          }
+        };
+      }
+    }
+  };
+  const transitionController = createGroupTransitionController(groupTransitionOptions);
+  const elementToClip = root;
+  const morphContainerIntoTarget = () => {
+    const morphTransitions = [];
+    {
+      // TODO: ideally when scrollContainer is document AND we transition
+      // from a layout with scrollbar to a layout without
+      // we have clip path detecting we go from a given width/height to a new width/height
+      // that might just be the result of scrollbar appearing/disappearing
+      // we should detect when this happens to avoid clipping what correspond to the scrollbar presence toggling
+      const fromWidth = previousTargetSlotConfiguration.width || 0;
+      const fromHeight = previousTargetSlotConfiguration.height || 0;
+      const toWidth = targetSlotConfiguration.width || 0;
+      const toHeight = targetSlotConfiguration.height || 0;
+      debugSize(`transition from [${fromWidth}x${fromHeight}] to [${toWidth}x${toHeight}]`);
+      const restoreOverflow = preventIntermediateScrollbar(root, {
+        fromWidth,
+        fromHeight,
+        toWidth,
+        toHeight,
+        onPrevent: ({
+          x,
+          y,
+          scrollContainer
+        }) => {
+          if (x) {
+            debugSize(`Temporarily hiding horizontal overflow during transition on ${getElementSignature(scrollContainer)}`);
+          }
+          if (y) {
+            debugSize(`Temporarily hiding vertical overflow during transition on ${getElementSignature(scrollContainer)}`);
+          }
+        },
+        onRestore: () => {
+          debugSize(`Restored overflow after transition`);
+        }
+      });
+      const onSizeTransitionFinished = () => {
+        // Restore overflow when transition is complete
+        restoreOverflow();
+      };
+
+      // https://emilkowal.ski/ui/the-magic-of-clip-path
+      const elementToClipRect = elementToClip.getBoundingClientRect();
+      const elementToClipWidth = elementToClipRect.width;
+      const elementToClipHeight = elementToClipRect.height;
+      // Calculate where content is positioned within the large container
+      const getAlignedPosition = (containerSize, contentSize, align) => {
+        switch (align) {
+          case "start":
+            return 0;
+          case "end":
+            return containerSize - contentSize;
+          case "center":
+          default:
+            return (containerSize - contentSize) / 2;
+        }
+      };
+      // Position of "from" content within large container
+      const fromLeft = getAlignedPosition(elementToClipWidth, fromWidth, alignX);
+      const fromTop = getAlignedPosition(elementToClipHeight, fromHeight, alignY);
+      // Position of target content within large container
+      const targetLeft = getAlignedPosition(elementToClipWidth, toWidth, alignX);
+      const targetTop = getAlignedPosition(elementToClipHeight, toHeight, alignY);
+      debugSize(`Positions in container: from [${fromLeft},${fromTop}] ${fromWidth}x${fromHeight} to [${targetLeft},${targetTop}] ${toWidth}x${toHeight}`);
+      // Get border-radius values
+      const fromBorderRadius = previousTargetSlotConfiguration.borderRadius || 0;
+      const toBorderRadius = targetSlotConfiguration.borderRadius || 0;
+      const startInsetTop = fromTop;
+      const startInsetRight = elementToClipWidth - (fromLeft + fromWidth);
+      const startInsetBottom = elementToClipHeight - (fromTop + fromHeight);
+      const startInsetLeft = fromLeft;
+      const endInsetTop = targetTop;
+      const endInsetRight = elementToClipWidth - (targetLeft + toWidth);
+      const endInsetBottom = elementToClipHeight - (targetTop + toHeight);
+      const endInsetLeft = targetLeft;
+      const startClipPath = `inset(${startInsetTop}px ${startInsetRight}px ${startInsetBottom}px ${startInsetLeft}px round ${fromBorderRadius}px)`;
+      const endClipPath = `inset(${endInsetTop}px ${endInsetRight}px ${endInsetBottom}px ${endInsetLeft}px round ${toBorderRadius}px)`;
+      // Create clip-path animation using Web Animations API
+      const clipAnimation = elementToClip.animate([{
+        clipPath: startClipPath
+      }, {
+        clipPath: endClipPath
+      }], {
+        duration,
+        easing: "ease",
+        fill: "forwards"
+      });
+
+      // Handle finish
+      clipAnimation.finished.then(() => {
+        // Clear clip-path to restore normal behavior
+        elementToClip.style.clipPath = "";
+        clipAnimation.cancel();
+        onSizeTransitionFinished();
+      }).catch(() => {
+        // Animation was cancelled
+      });
+      clipAnimation.play();
+    }
+    return morphTransitions;
+  };
+  const fadeInTargetSlot = () => {
+    targetSlotBackground.style.setProperty("--target-slot-background", targetSlotConfiguration.background);
+    targetSlotBackground.style.setProperty("--target-slot-width", `${targetSlotConfiguration.width || 0}px`);
+    targetSlotBackground.style.setProperty("--target-slot-height", `${targetSlotConfiguration.height || 0}px`);
+    return createOpacityTransition(targetSlot, 1, {
+      from: 0,
+      duration,
+      styleSynchronizer: "inline_style",
+      onFinish: targetSlotOpacityTransition => {
+        targetSlotBackground.style.removeProperty("--target-slot-background");
+        targetSlotBackground.style.removeProperty("--target-slot-width");
+        targetSlotBackground.style.removeProperty("--target-slot-height");
+        targetSlotOpacityTransition.cancel();
+      }
+    });
+  };
+  const fadeOutPreviousGroup = () => {
+    return createOpacityTransition(previousGroup, 0, {
+      from: 1,
+      duration,
+      styleSynchronizer: "inline_style",
+      onFinish: previousGroupOpacityTransition => {
+        previousGroupOpacityTransition.cancel();
+        previousGroup.style.opacity = "0"; // keep previous group visually hidden
+      }
+    });
+  };
+  const fadeOutOutgoingSlot = () => {
+    return createOpacityTransition(outgoingSlot, 0, {
+      duration,
+      from: 1,
+      styleSynchronizer: "inline_style",
+      onFinish: outgoingSlotOpacityTransition => {
+        outgoingSlotOpacityTransition.cancel();
+        outgoingSlot.style.opacity = "0"; // keep outgoing slot visually hidden
+      }
+    });
+  };
+
+  // content_to_content transition (uses previous_group)
+  const applyContentToContentTransition = toConfiguration => {
+    // 1. move target slot to previous
+    moveConfigurationIntoSlot(targetSlotConfiguration, previousTargetSlot);
+    targetSlotConfiguration = toConfiguration;
+    // 2. move outgoing slot to previous
+    moveConfigurationIntoSlot(outgoingSlotConfiguration, previousOutgoingSlot);
+    moveConfigurationIntoSlot(UNSET, outgoingSlot);
+    const transitions = [...morphContainerIntoTarget(), fadeInTargetSlot(), fadeOutPreviousGroup()];
+    const transition = transitionController.update(transitions, {
+      onFinish: () => {
+        moveConfigurationIntoSlot(UNSET, previousTargetSlot);
+        moveConfigurationIntoSlot(UNSET, previousOutgoingSlot);
+        if (hasDebugLogs) {
+          console.groupEnd();
+        }
+      }
+    });
+    transition.play();
+  };
+  // content_phase_to_content_phase transition (uses outgoing_slot)
+  const applyContentPhaseToContentPhaseTransition = toConfiguration => {
+    // 1. Move target slot to outgoing
+    moveConfigurationIntoSlot(targetSlotConfiguration, outgoingSlot);
+    targetSlotConfiguration = toConfiguration;
+    const transitions = [...morphContainerIntoTarget(), fadeInTargetSlot(), fadeOutOutgoingSlot()];
+    const transition = transitionController.update(transitions, {
+      onFinish: () => {
+        moveConfigurationIntoSlot(UNSET, outgoingSlot);
+        if (hasDebugLogs) {
+          console.groupEnd();
+        }
+      }
+    });
+    transition.play();
+  };
+  // any_to_empty transition
+  const applyToEmptyTransition = () => {
+    // 1. move target slot to previous
+    moveConfigurationIntoSlot(targetSlotConfiguration, previousTargetSlot);
+    targetSlotConfiguration = UNSET;
+    // 2. move outgoing slot to previous
+    moveConfigurationIntoSlot(outgoingSlotConfiguration, previousOutgoingSlot);
+    outgoingSlotConfiguration = UNSET;
+    const transitions = [...morphContainerIntoTarget(), fadeOutPreviousGroup()];
+    const transition = transitionController.update(transitions, {
+      onFinish: () => {
+        moveConfigurationIntoSlot(UNSET, previousTargetSlot);
+        moveConfigurationIntoSlot(UNSET, previousOutgoingSlot);
+        if (hasDebugLogs) {
+          console.groupEnd();
+        }
+      }
+    });
+    transition.play();
+  };
+  // Main transition method
+  const transitionTo = (newContentElement, {
+    contentPhase,
+    contentId
+  } = {}) => {
+    if (contentId) {
+      targetSlot.setAttribute(CONTENT_ID_ATTRIBUTE, contentId);
+    } else {
+      targetSlot.removeAttribute(CONTENT_ID_ATTRIBUTE);
+    }
+    if (contentPhase) {
+      targetSlot.setAttribute(CONTENT_PHASE_ATTRIBUTE, contentPhase);
+    } else {
+      targetSlot.removeAttribute(CONTENT_PHASE_ATTRIBUTE);
+    }
+    if (newContentElement) {
+      targetSlot.innerHTML = "";
+      targetSlot.appendChild(newContentElement);
+    } else {
+      targetSlot.innerHTML = "";
+    }
+  };
+  // Reset to initial content
+  const resetContent = () => {
+    transitionController.cancel();
+    moveConfigurationIntoSlot(targetSlotInitialConfiguration, targetSlot);
+    moveConfigurationIntoSlot(outgoingSlotInitialConfiguration, outgoingSlot);
+    moveConfigurationIntoSlot(UNSET, previousTargetSlot);
+    moveConfigurationIntoSlot(UNSET, previousOutgoingSlot);
+  };
+  const targetSlotEffect = reasons => {
+    if (root.hasAttribute("data-disabled")) {
+      return;
+    }
+    const fromConfiguration = targetSlotConfiguration;
+    const toConfiguration = detectConfiguration(targetSlot);
+    if (hasDebugLogs) {
+      console.group(`targetSlotEffect()`);
+      console.debug(`reasons:`);
+      console.debug(`- ${reasons.join("\n- ")}`);
+    }
+    if (isSameConfiguration(fromConfiguration, toConfiguration)) {
+      debugDetection(`already in desired state (${toConfiguration}) -> early return`);
+      if (hasDebugLogs) {
+        console.groupEnd();
+      }
+      return;
+    }
+    const fromConfigType = fromConfiguration.type;
+    const toConfigType = toConfiguration.type;
+    transitionType = `${fromConfigType}_to_${toConfigType}`;
+    debugDetection(`Prepare "${transitionType}" transition (${fromConfiguration} -> ${toConfiguration})`);
+    // content_to_empty / content_phase_to_empty
+    if (toConfiguration.isEmpty) {
+      applyToEmptyTransition();
+      return;
+    }
+    // content_phase_to_content_phase
+    if (fromConfiguration.isContentPhase && toConfiguration.isContentPhase) {
+      applyContentPhaseToContentPhaseTransition(toConfiguration);
+      return;
+    }
+    // content_phase_to_content
+    if (fromConfiguration.isContentPhase && toConfiguration.isContent) {
+      applyContentPhaseToContentPhaseTransition(toConfiguration);
+      return;
+    }
+    // content_to_content_phase
+    if (fromConfiguration.isContent && toConfiguration.isContentPhase) {
+      applyContentPhaseToContentPhaseTransition(toConfiguration);
+      return;
+    }
+    // content_to_content (default case)
+    applyContentToContentTransition(toConfiguration);
+  };
+  const [teardown, addTeardown] = createPubSub();
+  {
+    const mutationObserver = new MutationObserver(mutations => {
+      const reasonParts = [];
+      for (const mutation of mutations) {
+        if (mutation.type === "childList") {
+          const added = mutation.addedNodes.length;
+          const removed = mutation.removedNodes.length;
+          if (added && removed) {
+            reasonParts.push(`addedNodes(${added}) removedNodes(${removed})`);
+          } else if (added) {
+            reasonParts.push(`addedNodes(${added})`);
+          } else {
+            reasonParts.push(`removedNodes(${removed})`);
+          }
+          continue;
+        }
+        if (mutation.type === "attributes") {
+          const {
+            attributeName
+          } = mutation;
+          if (attributeName === CONTENT_ID_ATTRIBUTE || attributeName === CONTENT_PHASE_ATTRIBUTE) {
+            const {
+              oldValue
+            } = mutation;
+            if (oldValue === null) {
+              const value = targetSlot.getAttribute(attributeName);
+              reasonParts.push(value ? `added [${attributeName}=${value}]` : `added [${attributeName}]`);
+            } else if (targetSlot.hasAttribute(attributeName)) {
+              const value = targetSlot.getAttribute(attributeName);
+              reasonParts.push(`[${attributeName}] ${oldValue} -> ${value}`);
+            } else {
+              reasonParts.push(oldValue ? `removed [${attributeName}=${oldValue}]` : `removed [${attributeName}]`);
+            }
+          }
+        }
+      }
+      if (reasonParts.length === 0) {
+        return;
+      }
+      targetSlotEffect(reasonParts);
+    });
+    mutationObserver.observe(targetSlot, {
+      childList: true,
+      attributes: true,
+      attributeFilter: [CONTENT_ID_ATTRIBUTE, CONTENT_PHASE_ATTRIBUTE],
+      characterData: false
+    });
+    addTeardown(() => {
+      mutationObserver.disconnect();
+    });
+  }
+  {
+    const slots = [targetSlot, outgoingSlot, previousTargetSlot, previousOutgoingSlot];
+    for (const slot of slots) {
+      addTeardown(monitorItemsOverflow(slot));
+    }
+  }
+  const setDuration = newDuration => {
+    duration = newDuration;
+    // Update CSS variable immediately
+    root.style.setProperty("--x-transition-duration", `${duration}ms`);
+  };
+  const setAlignment = (newAlignX, newAlignY) => {
+    alignX = newAlignX;
+    alignY = newAlignY;
+    updateAlignment();
+  };
+  return {
+    updateContentId: value => {
+      if (value) {
+        targetSlot.setAttribute(CONTENT_ID_ATTRIBUTE, value);
+      } else {
+        targetSlot.removeAttribute(CONTENT_ID_ATTRIBUTE);
+      }
+    },
+    transitionTo,
+    resetContent,
+    setDuration,
+    setAlignment,
+    updateAlignment,
+    setPauseBreakpoints: value => {
+      groupTransitionOptions.pauseBreakpoints = value;
+    },
+    cleanup: () => {
+      teardown();
+    }
+  };
+};
+
+/**
+ * UITransition
+ *
+ * A Preact component that enables smooth animated transitions between its children when the content changes.
+ * It observes content keys and phases to create different types of transitions.
+ *
+ * Features:
+ * - Content transitions: Between different content keys (e.g., user profiles, search results)
+ * - Phase transitions: Between loading/content/error states for the same content key
+ * - Automatic size animation to accommodate content changes
+ * - Configurable transition types: "slide-left", "cross-fade"
+ * - Independent duration control for content and phase transitions
+ *
+ * Usage:
+ * - Wrap dynamic content in <UITransition> to animate between states
+ * - Set a unique `data-content-id` on your rendered content to identify each content variant
+ * - Use `data-content-phase` to mark loading/error states for phase transitions
+ * - Configure transition types and durations for both content and phase changes
+ *
+ * Example:
+ *
+ *   <UITransition>
+ *     {isLoading
+ *       ? <Spinner data-content-key={userId} data-content-phase />
+ *       : <UserProfile user={user} data-content-key={userId} />}
+ *   </UITransition>
+ *
+ * When `data-content-id` changes, UITransition animates content transitions.
+ * When `data-content-phase` changes for the same key, it animates phase transitions.
+ */
+
+const UITransitionContentIdContext = createContext();
+const UITransition = ({
+  children,
+  contentId,
+  type,
+  duration,
+  debugDetection,
+  debugContent,
+  debugSize,
+  disabled,
+  uiTransitionRef,
+  alignX,
+  alignY,
+  ...props
+}) => {
+  const contentIdRef = useRef(contentId);
+  const updateContentId = () => {
+    const uiTransition = uiTransitionRef.current;
+    if (!uiTransition) {
+      return;
+    }
+    const value = contentIdRef.current;
+    uiTransition.updateContentId(value);
+  };
+  const uiTransitionContentIdContextValue = useMemo(() => {
+    const set = new Set();
+    const onSetChange = () => {
+      const value = Array.from(set).join("|");
+      contentIdRef.current = value;
+      updateContentId();
+    };
+    const update = (part, newPart) => {
+      if (!set.has(part)) {
+        if (set.size === 0) {
+          console.warn(`UITransition: content id update "${part}" -> "${newPart}" ignored because content id set is empty`);
+          return;
+        }
+        console.warn(`UITransition: content id update "${part}" -> "${newPart}" ignored because content id not found in set, only got [${Array.from(set).join(", ")}]`);
+        return;
+      }
+      set.delete(part);
+      set.add(newPart);
+      onSetChange();
+    };
+    const add = part => {
+      if (!part) {
+        return;
+      }
+      if (set.has(part)) {
+        return;
+      }
+      set.add(part);
+      onSetChange();
+    };
+    const remove = part => {
+      if (!part) {
+        return;
+      }
+      if (!set.has(part)) {
+        return;
+      }
+      set.delete(part);
+      onSetChange();
+    };
+    return {
+      add,
+      update,
+      remove
+    };
+  }, []);
+  const ref = useRef();
+  const uiTransitionRefDefault = useRef();
+  uiTransitionRef = uiTransitionRef || uiTransitionRefDefault;
+  useLayoutEffect(() => {
+    const uiTransition = createUITransitionController(ref.current, {
+      alignX,
+      alignY
+    });
+    uiTransitionRef.current = uiTransition;
+    return () => {
+      uiTransition.cleanup();
+    };
+  }, [disabled, alignX, alignY]);
+  return jsxs("div", {
+    ref: ref,
+    ...props,
+    className: "ui_transition",
+    "data-disabled": disabled ? "" : undefined,
+    "data-transition-type": type,
+    "data-transition-duration": duration,
+    "data-debug-detection": debugDetection ? "" : undefined,
+    "data-debug-size": debugSize ? "" : undefined,
+    "data-debug-content": debugContent ? "" : undefined,
+    children: [jsxs("div", {
+      className: "ui_transition_active_group",
+      children: [jsx("div", {
+        className: "ui_transition_target_slot",
+        "data-content-id": contentIdRef.current ? contentIdRef.current : undefined,
+        children: jsx(UITransitionContentIdContext.Provider, {
+          value: uiTransitionContentIdContextValue,
+          children: children
+        })
+      }), jsx("div", {
+        className: "ui_transition_outgoing_slot",
+        inert: true
+      })]
+    }), jsxs("div", {
+      className: "ui_transition_previous_group",
+      inert: true,
+      children: [jsx("div", {
+        className: "ui_transition_previous_target_slot"
+      }), jsx("div", {
+        className: "ui_transition_previous_outgoing_slot"
+      })]
+    })]
+  });
+};
+
+/**
+ * The goal of this hook is to allow a component to set a "content key"
+ * Meaning all content within the component is identified by that key
+ *
+ * When the key changes, UITransition will be able to detect that and consider the content
+ * as changed even if the component is still the same
+ *
+ * This is used by <Route> to set the content key to the route path
+ * When the route becomes inactive it will call useUITransitionContentId(undefined)
+ * And if a sibling route becones active it will call useUITransitionContentId with its own path
+ *
+ */
+const useUITransitionContentId = value => {
+  const contentId = useContext(UITransitionContentIdContext);
+  const valueRef = useRef();
+  if (contentId !== undefined && valueRef.current !== value) {
+    const previousValue = valueRef.current;
+    valueRef.current = value;
+    if (previousValue === undefined) {
+      contentId.add(value);
+    } else {
+      contentId.update(previousValue, value);
+    }
+  }
+  useLayoutEffect(() => {
+    if (contentId === undefined) {
+      return null;
+    }
+    return () => {
+      contentId.remove(valueRef.current);
+    };
+  }, []);
+};
+
 const NEVER_SET = {};
 const useUrlSearchParam = (paramName, defaultValue) => {
   const documentUrl = documentUrlSignal.value;
@@ -14796,10 +15763,6 @@ const anyMatchingRouteSignal = (routes) => {
   });
   return anyMatchingSignal;
 };
-
-const FormContext = createContext();
-
-const FormActionContext = createContext();
 
 const renderActionableComponent = (props, {
   Basic,
@@ -16280,22 +17243,6 @@ const isComposite = value => {
 };
 const isPrimitive = value => !isComposite(value);
 
-const addManyEventListeners = (element, events) => {
-  const cleanupCallbackSet = new Set();
-  for (const event of Object.keys(events)) {
-    const callback = events[event];
-    element.addEventListener(event, callback);
-    cleanupCallbackSet.add(() => {
-      element.removeEventListener(event, callback);
-    });
-  }
-  return () => {
-    for (const cleanupCallback of cleanupCallbackSet) {
-      cleanupCallback();
-    }
-  };
-};
-
 const CalloutRequestCloseContext = createContext();
 const useCalloutRequestClose = () => {
   return useContext(CalloutRequestCloseContext);
@@ -16321,7 +17268,7 @@ installImportMetaCssBuild(import.meta);
  * - Centers in viewport when no anchor element provided or anchor is too big
  */
 
-const css$H = /* css */`
+const css$O = /* css */`
   @layer navi {
     .navi_callout {
       --callout-success-color: #4caf50;
@@ -16341,12 +17288,19 @@ const css$H = /* css */`
     --x-callout-background-color: var(--callout-background-color);
     --x-callout-icon-color: var(--x-callout-status-color);
 
+    /* Popover resets */
     position: absolute;
+    inset: auto;
     top: 0;
     left: 0;
-    z-index: var(--callout-z-index);
+    /* Callout styles */
     display: block;
     height: auto;
+    margin: 0;
+    padding: 0;
+    color: revert; /* Do no inherit element color, callout is inside the element it should use document color though */
+    background: transparent;
+    border: none;
     opacity: 0;
     /* will be positioned with transform: translate */
     transition: opacity 0.2s ease-in-out;
@@ -16392,7 +17346,8 @@ const css$H = /* css */`
       .navi_callout_body {
         position: relative;
         display: flex;
-        max-width: 47vw;
+        /* 85vw on small screens (<500px), then 47vw to not grow too large capped at 1000px */
+        max-width: min(85dvw, max(47dvw, 500px), 1000px);
         padding: var(--callout-padding);
         flex-direction: row;
         gap: 10px;
@@ -16421,6 +17376,7 @@ const css$H = /* css */`
           box-sizing: border-box;
           box-decoration-break: clone;
           align-self: center;
+          white-space: normal; /* Override in case ancetor sets nowrap */
           word-break: break-word;
           overflow-wrap: anywhere;
 
@@ -16492,11 +17448,15 @@ const openCallout = (message, {
   status = "",
   onClose,
   closeOnClickOutside = status === "info",
+  closeOnBlur = closeOnClickOutside,
   openingEvent,
   showErrorStack,
-  debug
+  debug = () => {}
 } = {}) => {
-  import.meta.css = [css$H, "@jsenv/navi/src/field/validation/callout/callout.js"];
+  import.meta.css = [css$O, "@jsenv/navi/src/control/validation/callout/callout.js"];
+  if (debug === true) {
+    debug = (e, ...args) => console.debug(`"${e.type}" -> `, ...args);
+  }
   const callout = {
     opened: true,
     close: null,
@@ -16505,9 +17465,7 @@ const openCallout = (message, {
     updatePosition: null,
     element: null
   };
-  if (debug) {
-    debug(openingEvent, `open callout on ${getElementSignature(anchorElement)} (status=${status})`);
-  }
+  debug(openingEvent, `open callout on ${getElementSignature(anchorElement)} (status=${status})`);
   const [teardown, addTeardown] = createPubSub(true);
   const requestClose = (event, reason) => {
     if (!callout.opened) {
@@ -16516,11 +17474,28 @@ const openCallout = (message, {
     if (debug) {
       debug(event, `callout close (reason: ${reason})`);
     }
+    if (event.type === "mousedown") {
+      debug(event, "preventing mousedown default to avoid focus change on callout close");
+      event.preventDefault(); // prevent focus change to the callout, let it on the input
+    }
     callout.opened = false;
-    teardown(reason);
+    teardown({
+      event,
+      reason
+    });
   };
   if (onClose) {
-    addTeardown(onClose);
+    addTeardown(({
+      event,
+      reason
+    }) => {
+      const focusWithinCallout = callout.element.contains(document.activeElement);
+      onClose({
+        event,
+        reason,
+        focusWithinCallout
+      });
+    });
   }
   const [updateStatus, addStatusEffect, cleanupStatusEffects] = createValueEffect(undefined);
   addTeardown(cleanupStatusEffects);
@@ -16529,7 +17504,17 @@ const openCallout = (message, {
   const calloutElement = createCalloutElement();
   const calloutMessageElement = calloutElement.querySelector(".navi_callout_message");
   const calloutCloseButton = calloutElement.querySelector(".navi_callout_close_button");
+  calloutCloseButton.onmousedown = e => {
+    if (e.button !== 0) {
+      return;
+    }
+    requestClose(e, "mousedown_close_button");
+  };
+  // "click" is received for enter/space
   calloutCloseButton.onclick = e => {
+    if (e.button !== 0) {
+      return;
+    }
     requestClose(e, "click_close_button");
   };
   const calloutId = `navi_callout_${Date.now()}`;
@@ -16540,14 +17525,13 @@ const openCallout = (message, {
   const update = (newMessage, options = {}) => {
     // Connect callout with target element for accessibility
     if (options.status && options.status !== callout.status) {
-      callout.status = status;
-      updateStatus(status);
+      callout.status = options.status;
+      updateStatus(options.status);
     }
     if (options.closeOnClickOutside) {
       closeOnClickOutside = options.closeOnClickOutside;
     }
     if (isValidElement(newMessage)) {
-      calloutMessageElement.innerHTML = "";
       renderIntoCallout(newMessage, calloutMessageElement, {
         requestClose
       });
@@ -16594,28 +17578,39 @@ const openCallout = (message, {
       if (!closeOnClickOutside) {
         return;
       }
+      if (event.button !== 0) {
+        // right click
+        return;
+      }
       const clickTarget = event.target;
       if (clickTarget === calloutElement || calloutElement.contains(clickTarget)) {
         return;
       }
-      // if (
-      //   clickTarget === targetElement ||
-      //   targetElement.contains(clickTarget)
-      // ) {
-      //   return;
-      // }
       requestClose(event, "click_outside");
+    };
+    const handleSpaceOutside = event => {
+      if (!closeOnClickOutside) {
+        return;
+      }
+      if (event.key !== " ") {
+        return;
+      }
+      const keyTarget = event.target;
+      if (keyTarget === calloutElement || calloutElement.contains(keyTarget)) {
+        return;
+      }
+      requestClose(event, "space_outside");
     };
     const registerClickOutsideListener = () => {
       document.addEventListener("click", handleClickOutside, true);
+      document.addEventListener("keydown", handleSpaceOutside, true);
       addTeardown(() => {
         document.removeEventListener("click", handleClickOutside, true);
+        document.removeEventListener("keydown", handleSpaceOutside, true);
       });
     };
-    if (closeOnClickOutside && openingEvent && eventInvolves(openingEvent, e => e.type === "mousedown")) {
-      if (debug) {
-        debug(openingEvent, "deferring click-outside listener registration to avoid immediate close");
-      }
+    if (closeOnClickOutside && openingEvent && findEvent(openingEvent, "mousedown")) {
+      debug(openingEvent, "deferring click-outside listener registration to avoid immediate close");
       // The callout was opened during a mousedown — wait for the corresponding
       // mouseup before registering the click-outside listener, otherwise the
       // upcoming click event from the same gesture would immediately close it.
@@ -16637,6 +17632,43 @@ const openCallout = (message, {
     }
   }
   {
+    if (closeOnBlur && anchorElement) {
+      const handleFocusOut = event => {
+        // relatedTarget is the element receiving focus; null means focus left the document
+        const {
+          relatedTarget
+        } = event;
+        if (relatedTarget && anchorElement.contains(relatedTarget)) {
+          return;
+        }
+        if (relatedTarget && calloutElement.contains(relatedTarget)) {
+          return;
+        }
+        requestClose(event, "blur_outside");
+      };
+      anchorElement.addEventListener("focusout", handleFocusOut);
+      addTeardown(() => {
+        anchorElement.removeEventListener("focusout", handleFocusOut);
+      });
+    }
+  }
+  close_on_escape_from_anchor: {
+    if (!anchorElement) break close_on_escape_from_anchor;
+    calloutCloseButton.tabIndex = -1;
+    calloutCloseButton.setAttribute("navi-focus-delegate", "");
+    const onAnchorKeydown = e => {
+      if (e.key === "Escape") {
+        requestClose(e, "escape_key");
+        e.stopPropagation();
+        e.preventDefault();
+      }
+    };
+    anchorElement.addEventListener("keydown", onAnchorKeydown);
+    addTeardown(() => {
+      anchorElement.removeEventListener("keydown", onAnchorKeydown);
+    });
+  }
+  {
     const handleCustomCloseEvent = e => {
       requestClose(e, "custom_event");
     };
@@ -16647,7 +17679,7 @@ const openCallout = (message, {
     update,
     requestClose
   });
-  addStatusEffect(() => {
+  addStatusEffect(status => {
     if (status) {
       calloutElement.setAttribute("data-status", status);
     } else {
@@ -16659,23 +17691,61 @@ const openCallout = (message, {
       calloutElement.setAttribute("role", "alert");
     }
   });
-  document.body.appendChild(calloutElement);
-  addTeardown(() => {
-    calloutElement.remove();
-  });
+  const originalAnchorElement = anchorElement;
   if (anchorElement) {
+    const proxyElement = findControlProxy(anchorElement);
+    if (proxyElement) {
+      anchorElement = proxyElement;
+    }
+    const controlRoot = findControlRoot(anchorElement);
+    if (controlRoot) {
+      anchorElement = controlRoot;
+    }
     const anchorVisuallyVisibleInfo = getVisuallyVisibleInfo(anchorElement, {
       countOffscreenAsVisible: true
     });
     if (!anchorVisuallyVisibleInfo.visible) {
-      console.warn(`anchor element is not visually visible (${anchorVisuallyVisibleInfo.reason}) -> will be anchored to first visually visible ancestor`);
       anchorElement = getFirstVisuallyVisibleAncestor(anchorElement);
       if (!anchorElement) {
         // anchorElement is not in the DOM anymore, fallback to body
         anchorElement = document.body;
       }
+      console.warn(`anchor is not visually visible (${anchorVisuallyVisibleInfo.reason}) -> callout will anchor to first visually visible ancestor (${getElementSignature(anchorElement)})`);
     }
-    allowWheelThrough(calloutElement, anchorElement);
+  }
+  // Resolve the visual anchor for positioning: when data-callout-anchor is set,
+  // use the inner element it points to. anchorElement remains the container
+  // that receives data-callout and CSS vars.
+  let visualAnchorElement = anchorElement;
+  if (anchorElement && anchorElement !== document.body) {
+    const calloutAnchorSelector = anchorElement.getAttribute("data-callout-anchor");
+    if (calloutAnchorSelector) {
+      const resolvedAnchor = anchorElement.querySelector(calloutAnchorSelector);
+      if (resolvedAnchor) {
+        visualAnchorElement = resolvedAnchor;
+      }
+    }
+  }
+  const calloutContainer = (() => {
+    if (!anchorElement || anchorElement === document.body) {
+      return document.body;
+    }
+    // Some elements (e.g. <input>) cannot have children
+    if (canContainCallout(anchorElement)) {
+      return anchorElement;
+    }
+    return anchorElement.parentNode || document.body;
+  })();
+  if (debug) {
+    debug(openingEvent, `append callout into ${getElementSignature(calloutContainer)}`);
+  }
+  calloutContainer.appendChild(calloutElement);
+  calloutElement.showPopover();
+  addTeardown(() => {
+    calloutElement.remove();
+  });
+  if (anchorElement) {
+    allowWheelThrough(calloutElement, visualAnchorElement);
     anchorElement.setAttribute("data-callout", calloutId);
     addTeardown(() => {
       anchorElement.removeAttribute("data-callout");
@@ -16698,9 +17768,6 @@ const openCallout = (message, {
       if (!status) {
         return () => {};
       }
-      // todo:
-      // - dispatch something on the element to indicate the status
-      // and that would in turn be used by pseudo styles system to eventually apply styles
       const statusColor = resolveCSSColor(`var(--callout-${status}-color)`, calloutElement);
       anchorElement.setAttribute("data-callout-status", status);
       anchorElement.style.setProperty("--callout-color", statusColor);
@@ -16711,34 +17778,18 @@ const openCallout = (message, {
     });
     addStatusEffect(status => {
       if (!status || status === "info" || status === "success") {
-        anchorElement.setAttribute("aria-describedby", calloutId);
+        visualAnchorElement.setAttribute("aria-describedby", calloutId);
         return () => {
-          anchorElement.removeAttribute("aria-describedby");
+          visualAnchorElement.removeAttribute("aria-describedby");
         };
       }
-      anchorElement.setAttribute("aria-errormessage", calloutId);
-      anchorElement.setAttribute("aria-invalid", "true");
+      visualAnchorElement.setAttribute("aria-errormessage", calloutId);
+      visualAnchorElement.setAttribute("aria-invalid", "true");
       return () => {
-        anchorElement.removeAttribute("aria-errormessage");
-        anchorElement.removeAttribute("aria-invalid");
+        visualAnchorElement.removeAttribute("aria-errormessage");
+        visualAnchorElement.removeAttribute("aria-invalid");
       };
     });
-    {
-      const onfocus = e => {
-        if (status === "error") {
-          // error messages must be explicitely closed by the user
-          return;
-        }
-        if (anchorElement.hasAttribute("data-callout-stay-on-focus")) {
-          return;
-        }
-        requestClose(e, "target_element_focus");
-      };
-      anchorElement.addEventListener("focus", onfocus);
-      addTeardown(() => {
-        anchorElement.removeEventListener("focus", onfocus);
-      });
-    }
     anchorElement.callout = callout;
     addTeardown(() => {
       delete anchorElement.callout;
@@ -16753,11 +17804,11 @@ const openCallout = (message, {
     let positioner;
     let strategy;
     const determine = () => {
-      if (!anchorElement) {
+      if (!visualAnchorElement) {
         return "centered";
       }
       // Check if anchor element is too big to reasonably position callout relative to it
-      const anchorRect = anchorElement.getBoundingClientRect();
+      const anchorRect = visualAnchorElement.getBoundingClientRect();
       const viewportHeight = window.innerHeight;
       const anchorTooBig = anchorRect.height > viewportHeight - 50;
       if (anchorTooBig) {
@@ -16777,7 +17828,10 @@ const openCallout = (message, {
           documentScrollTopAtOpen
         });
       } else {
-        positioner = stickCalloutToAnchor(calloutElement, anchorElement);
+        positioner = stickCalloutToAnchor(calloutElement, visualAnchorElement, {
+          debug,
+          originalAnchorElement
+        });
       }
       strategy = newStrategy;
     };
@@ -16808,7 +17862,10 @@ const ARROW_SPACING = 8;
 
 // HTML template for the callout
 const calloutTemplate = /* html */`
-  <div class="navi_callout">
+  <div
+    class="navi_callout"
+    popover="manual"
+  >
     <div class="navi_callout_box">
       <div class="navi_callout_frame"></div>
       <div class="navi_callout_body">
@@ -16879,24 +17936,28 @@ const centerCalloutInViewport = (calloutElement, {
     const {
       height
     } = calloutElementClone.getBoundingClientRect();
-    calloutElementClone.remove();
 
     // Handle content overflow when viewport is too small
     const viewportHeight = window.innerHeight;
     const maxAllowedHeight = viewportHeight - 40; // Leave some margin from viewport edges
 
+    let maxHeight;
     if (height > maxAllowedHeight) {
       const paddingSizes = getPaddingSizes(calloutBodyElement);
       const paddingY = paddingSizes.top + paddingSizes.bottom;
       const spaceNeededAroundContent = BORDER_WIDTH * 2 + paddingY;
-      const spaceAvailableForContent = maxAllowedHeight - spaceNeededAroundContent;
-      calloutMessageElement.style.maxHeight = `${spaceAvailableForContent}px`;
+      maxHeight = maxAllowedHeight - spaceNeededAroundContent;
+      calloutMessageElement.style.maxHeight = `${maxHeight}px`;
       calloutMessageElement.style.overflowY = "scroll";
     } else {
-      // Reset overflow styles if not needed
       calloutMessageElement.style.maxHeight = "";
       calloutMessageElement.style.overflowY = "";
     }
+    const optimalBodyWidth = measureOptimalBodyWidth(calloutElementClone, {
+      maxHeight
+    });
+    calloutElementClone.remove();
+    calloutBodyElement.style.width = optimalBodyWidth !== null ? `${optimalBodyWidth}px` : "";
 
     // Get final dimensions after potential overflow adjustments
     const {
@@ -16937,12 +17998,38 @@ const centerCalloutInViewport = (calloutElement, {
  * @param {HTMLElement} anchorElement - The anchor element to stick to
  * @returns {Object} - Object with update and stop functions
  */
-const stickCalloutToAnchor = (calloutElement, anchorElement) => {
+const stickCalloutToAnchor = (calloutElement, anchorElement, {
+  debug,
+  originalAnchorElement = anchorElement
+}) => {
+  // Read an attribute from the original anchor first, then the visual anchor.
+  // the anchor to a wrapper element that doesn't carry the data-callout-* attributes.
+  const getAnchorAttribute = name => {
+    return originalAnchorElement.getAttribute(name) ?? anchorElement.getAttribute(name);
+  };
   // Get references to callout parts
   const calloutBoxElement = calloutElement.querySelector(".navi_callout_box");
   const calloutFrameElement = calloutElement.querySelector(".navi_callout_frame");
   const calloutBodyElement = calloutElement.querySelector(".navi_callout_body");
   const calloutMessageElement = calloutElement.querySelector(".navi_callout_message");
+  let alignToAnchorBox;
+  if (anchorElement.hasAttribute("data-callout-point-to-border-box")) {
+    alignToAnchorBox = "border-box";
+  } else if (anchorElement.hasAttribute("data-callout-point-to-content-box")) {
+    alignToAnchorBox = "content-box";
+  } else {
+    // Smart default: inputs and buttons are tight boxes where border-box makes sense.
+    // For everything else (labels, divs, fieldsets…) content-box maximizes the chance
+    // the arrow points at visible text rather than the outer padding/border.
+    const controHost = findControlHost(anchorElement) || anchorElement;
+    const tagName = controHost.tagName;
+    if (tagName === "INPUT" || tagName === "BUTTON" || tagName === "FIELDSET") {
+      alignToAnchorBox = "border-box";
+    } else {
+      alignToAnchorBox = "content-box";
+    }
+  }
+  calloutElement.setAttribute("data-anchor-box", alignToAnchorBox);
 
   // Set initial border styles
   calloutBoxElement.style.borderWidth = `${BORDER_WIDTH}px`;
@@ -16952,7 +18039,25 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
     left: anchorLeft,
     right: anchorRight,
     visibilityRatio
+  }, {
+    event,
+    ancestorClosed
   }) => {
+    if (ancestorClosed) {
+      if (calloutElement.matches(":popover-open")) {
+        if (debug) {
+          debug(event, "hiding callout because an ancestor popover/dialog/details is closed");
+        }
+        calloutElement.hidePopover();
+      }
+      return;
+    }
+    if (!calloutElement.matches(":popover-open")) {
+      if (debug) {
+        debug(event, "showing callout because anchor is visible again");
+      }
+      calloutElement.showPopover();
+    }
     const calloutElementClone = cloneCalloutToMeasureNaturalSize(calloutElement);
     const {
       positionY,
@@ -16966,48 +18071,55 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
       alignToViewportEdgeWhenAnchorNearEdge: 20,
       minLeft: 1,
       positionX: "center",
-      positionY: anchorElement.getAttribute("data-callout-position") || "below",
-      positionYFixed: anchorElement.getAttribute("data-callout-position-fixed")
+      positionY: getAnchorAttribute("data-callout-position") || "below",
+      positionYFixed: getAnchorAttribute("data-callout-position-fixed"),
+      spacing: ARROW_HEIGHT,
+      alignToAnchorBox,
+      viewportSpacing: originalAnchorElement.hasAttribute("data-callout-viewport-spacing") || anchorElement.hasAttribute("data-callout-viewport-spacing") ? Number(getAnchorAttribute("data-callout-viewport-spacing")) : 0
     });
     // data-position-y-current is written to the clone by pickPositionRelativeTo,
     // copy it back to the real element so stickiness works on next call
+    const previousPositionY = calloutElement.getAttribute("data-position-y-current");
     const positionYCurrent = calloutElementClone.getAttribute("data-position-y-current");
     if (positionYCurrent) {
       calloutElement.setAttribute("data-position-y-current", positionYCurrent);
     } else {
       calloutElement.removeAttribute("data-position-y-current");
     }
-    calloutElementClone.remove();
+    if (debug && positionY !== previousPositionY) {
+      const anchorRect = anchorElement.getBoundingClientRect();
+      debug(event, `callout position changed: ${previousPositionY ?? "(none)"} -> ${positionY} (spaceAbove: ${spaceAbove.toFixed(0)}px, spaceBelow: ${spaceBelow.toFixed(0)}px, anchorTop: ${anchorRect.top.toFixed(0)}px, anchorBottom: ${anchorRect.bottom.toFixed(0)}px)`);
+    }
 
     // Calculate arrow position to point at anchorElement element
     let arrowLeftPosOnCallout;
     // Determine arrow target position based on attribute
-    const arrowPositionAttribute = anchorElement.getAttribute("data-callout-arrow-x");
+    const arrowPositionAttribute = getAnchorAttribute("data-callout-arrow-x");
     let arrowAnchorLeft;
     if (arrowPositionAttribute === "center") {
       // Target the center of the anchorElement element
       arrowAnchorLeft = (anchorLeft + anchorRight) / 2;
     } else if (arrowPositionAttribute === "end") {
       const anchorBorderSizes = getBorderSizes(anchorElement);
-      // Target the right edge of the anchorElement element (before borders)
-      arrowAnchorLeft = anchorRight - anchorBorderSizes.right;
+      const anchorPaddingSizes = getPaddingSizes(anchorElement);
+      // Target the right edge of the anchorElement text content (before borders + padding)
+      arrowAnchorLeft = anchorRight - anchorBorderSizes.right - anchorPaddingSizes.right;
     } else {
       const anchorBorderSizes = getBorderSizes(anchorElement);
-      // Default behavior: target the left edge of the anchorElement element (after borders)
-      arrowAnchorLeft = anchorLeft + anchorBorderSizes.left;
+      const anchorPaddingSizes = getPaddingSizes(anchorElement);
+      // Default behavior: target the left edge of the anchorElement text content (after borders + padding)
+      arrowAnchorLeft = anchorLeft + anchorBorderSizes.left + anchorPaddingSizes.left;
     }
 
-    // Calculate arrow position within the callout
-    if (calloutLeft < arrowAnchorLeft) {
-      // Callout is left of the target point, move arrow right
-      const diff = arrowAnchorLeft - calloutLeft;
-      arrowLeftPosOnCallout = diff;
-    } else if (calloutLeft + calloutWidth < arrowAnchorLeft) {
-      // Edge case: target point is beyond right edge of callout
+    // arrowAnchorLeft is viewport-relative (from visibleRectEffect).
+    // calloutLeft is document-relative (pickPositionRelativeTo adds scrollLeft).
+    // Subtract scrollLeft to bring calloutLeft to viewport coordinates before diffing.
+    const calloutViewportLeft = calloutLeft - document.documentElement.scrollLeft;
+    if (calloutViewportLeft + calloutWidth < arrowAnchorLeft) {
+      // Arrow target is beyond the right edge of the callout — pin arrow to far right
       arrowLeftPosOnCallout = calloutWidth - ARROW_WIDTH;
     } else {
-      // Target point is within callout width
-      arrowLeftPosOnCallout = arrowAnchorLeft - calloutLeft;
+      arrowLeftPosOnCallout = arrowAnchorLeft - calloutViewportLeft;
     }
 
     // Ensure arrow stays within callout bounds with some padding
@@ -17020,38 +18132,46 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
     const spaceAvailable = positionY === "above" || positionY === "above-overlap" ? spaceAbove : spaceBelow;
     const paddingSizes = getPaddingSizes(calloutBodyElement);
     const paddingY = paddingSizes.top + paddingSizes.bottom;
-    const spaceNeededAroundContent = ARROW_HEIGHT + BORDER_WIDTH * 2 + paddingY;
+    // spaceAbove/spaceBelow already exclude ARROW_HEIGHT (via spacing: ARROW_HEIGHT passed to pickPositionRelativeTo)
+    const spaceNeededAroundContent = BORDER_WIDTH * 2 + paddingY;
     const spaceAvailableForContent = spaceAvailable - spaceNeededAroundContent;
-    const contentHeight = calloutHeight - spaceNeededAroundContent;
+    const contentHeight = calloutHeight - BORDER_WIDTH * 2 - paddingY;
     const spaceRemainingAfterContent = spaceAvailableForContent - contentHeight;
+    let maxHeight;
     if (spaceRemainingAfterContent < 2) {
-      const maxHeight = spaceAvailableForContent;
+      maxHeight = spaceAvailableForContent;
       calloutMessageElement.style.maxHeight = `${maxHeight}px`;
       calloutMessageElement.style.overflowY = "scroll";
     } else {
       calloutMessageElement.style.maxHeight = "";
       calloutMessageElement.style.overflowY = "";
     }
+    const optimalBodyWidth = measureOptimalBodyWidth(calloutElementClone, {
+      maxHeight
+    });
+    calloutElementClone.remove();
+    calloutBodyElement.style.width = optimalBodyWidth !== null ? `${optimalBodyWidth}px` : "";
     const {
       width,
       height
     } = calloutElement.getBoundingClientRect();
     if (positionY === "above" || positionY === "above-overlap") {
-      // Position above target element
+      // Arrow at bottom, extending below the element
       calloutBoxElement.style.marginTop = "";
-      calloutBoxElement.style.marginBottom = `${ARROW_HEIGHT}px`;
+      calloutBoxElement.style.marginBottom = "";
       calloutFrameElement.style.top = `-${BORDER_WIDTH}px`;
       calloutFrameElement.style.bottom = `-${BORDER_WIDTH + ARROW_HEIGHT - 0.5}px`;
-      calloutFrameElement.innerHTML = generateSvgWithBottomArrow(width, height, arrowLeftPosOnCallout);
+      calloutFrameElement.innerHTML = generateSvgWithBottomArrow(width, height + ARROW_HEIGHT, arrowLeftPosOnCallout);
     } else {
-      calloutBoxElement.style.marginTop = `${ARROW_HEIGHT}px`;
+      // Arrow at top, extending above the element
+      calloutBoxElement.style.marginTop = "";
       calloutBoxElement.style.marginBottom = "";
       calloutFrameElement.style.top = `-${BORDER_WIDTH + ARROW_HEIGHT - 0.5}px`;
       calloutFrameElement.style.bottom = `-${BORDER_WIDTH}px`;
-      calloutFrameElement.innerHTML = generateSvgWithTopArrow(width, height, arrowLeftPosOnCallout);
+      calloutFrameElement.innerHTML = generateSvgWithTopArrow(width, height + ARROW_HEIGHT, arrowLeftPosOnCallout);
     }
     calloutStyleController.set(calloutElement, {
-      opacity: visibilityRatio > 0 ? 1 : 0,
+      opacity: visibilityRatio > 0.2 ? 1 : 0,
       transform: {
         translateX: calloutLeft,
         translateY: calloutTop
@@ -17059,7 +18179,7 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
     });
   });
   const calloutSizeChangeObserver = observeCalloutSizeChange(calloutMessageElement, (width, height) => {
-    anchorVisibleRectEffect.check(`callout_size_change (${width}x${height})`);
+    anchorVisibleRectEffect.check(new CustomEvent(`callout_size_change (${width}x${height})`));
   });
   anchorVisibleRectEffect.onBeforeAutoCheck(() => {
     // prevent feedback loop because check triggers size change which triggers check...
@@ -17111,6 +18231,19 @@ const observeCalloutSizeChange = (elementSizeToObserve, callback) => {
     }
   };
 };
+
+// Void elements and replaced elements cannot have children
+const VOID_ELEMENT_TAG_NAMES = new Set(["AREA", "BASE", "BR", "COL", "EMBED", "HR", "IMG", "INPUT", "LINK", "META", "PARAM", "SOURCE", "TRACK", "WBR"]);
+const canContainCallout = element => {
+  if (VOID_ELEMENT_TAG_NAMES.has(element.tagName)) {
+    return false;
+  }
+  if (element.tagName === "BUTTON") {
+    // callout itself contains a button, browser would not let that happen
+    return false;
+  }
+  return true;
+};
 const escapeHtml = string => {
   return string.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 };
@@ -17130,17 +18263,66 @@ const isHtmlDocument = content => {
 };
 
 // It's ok to do this because the element is absolutely positioned
+// maxHeight, when provided, is applied to the clone's message so the measurement
+// accounts for the scrollbar width that will appear on the real element.
+//
+// Goal: shrink-wrap the callout body so it hugs the wrapped text with no blank
+// space to the right of shorter lines.
+//
+// The CSS "shrink-to-fit" algorithm (display:inline-block / fit-content) expands
+// the element to the widest line it *could* have given the max-width constraint,
+// not to the widest line that actually rendered. This leaves trailing whitespace
+// when text wraps at a point shorter than max-width.
+// See: https://github.com/w3c/csswg-drafts/issues/191
+//
+// Fix: use Range.getClientRects() to get one rect per rendered text line, find
+// the widest one, and set an explicit width on the body equal to that line width
+// (adjusted for the body's box-sizing and the non-message siblings — icon, gap,
+// close button). After the explicit width is set the element is exactly as wide
+// as its longest line, so no blank area remains to the right of shorter lines.
+const measureOptimalBodyWidth = (calloutElementClone, {
+  maxHeight
+} = {}) => {
+  const calloutBodyElement = calloutElementClone.querySelector(".navi_callout_body");
+  const calloutMessageElement = calloutElementClone.querySelector(".navi_callout_message");
+  if (maxHeight !== undefined) {
+    calloutMessageElement.style.maxHeight = `${maxHeight}px`;
+    calloutMessageElement.style.overflowY = "scroll";
+  } else {
+    calloutMessageElement.style.maxHeight = "";
+    calloutMessageElement.style.overflowY = "";
+  }
+  const longestLineWidth = measureLongestVisualLineWidth(calloutMessageElement);
+  if (longestLineWidth === null) {
+    return null;
+  }
+  const messageRect = calloutMessageElement.getBoundingClientRect();
+  // bodyRect.width is always the border-box size (content + padding + border).
+  // style.width interprets differently depending on box-sizing:
+  //   border-box → sets total width (includes padding) → use bodyRect.width directly
+  //   content-box → sets content only → subtract body horizontal padding first
+  const bodyRect = calloutBodyElement.getBoundingClientRect();
+  const bodyStyle = getComputedStyle(calloutBodyElement);
+  if (bodyStyle.boxSizing === "border-box") {
+    return Math.ceil(bodyRect.width - messageRect.width + longestLineWidth);
+  }
+  const bodyPaddingH = parseFloat(bodyStyle.paddingLeft) + parseFloat(bodyStyle.paddingRight);
+  return Math.ceil(bodyRect.width - bodyPaddingH - messageRect.width + longestLineWidth);
+};
 const cloneCalloutToMeasureNaturalSize = calloutElement => {
   // Create invisible clone to measure natural size
   const calloutElementClone = calloutElement.cloneNode(true);
   calloutElementClone.style.visibility = "hidden";
+  const calloutBodyElementClone = calloutElementClone.querySelector(".navi_callout_body");
   const calloutMessageElementClone = calloutElementClone.querySelector(".navi_callout_message");
-  // Reset any overflow constraints on the clone
+  // Reset any constrained styles on the clone so it measures natural size
+  calloutBodyElementClone.style.width = "";
   calloutMessageElementClone.style.maxHeight = "";
   calloutMessageElementClone.style.overflowY = "";
 
   // Add clone to DOM to measure
   calloutElement.parentNode.appendChild(calloutElementClone);
+  calloutElementClone.showPopover();
   return calloutElementClone;
 };
 
@@ -17324,29 +18506,7 @@ const generateSvgWithoutArrow = (width, height) => {
     </svg>`;
 };
 
-/**
- * Returns a stable event handler to attach as onnavi_constraint_message on a DOM element.
- * messageMap keys are constraint names (e.g. "readonly"), values are the message
- * to display — either a string or a Preact element.
- *
- * @example
- * const onNaviConstraintMessage = useOnNaviConstraintMessage({ readOnlyMessage: <MyMessage item={item} /> });
- * return <li onnavi_constraint_message={onNaviConstraintMessage} />;
- */
-const useOnNaviConstraintMessage = (props) => {
-  const propsRef = useRef(props);
-  propsRef.current = props;
-
-  return useCallback((e) => {
-    const propName = MAPPING[e.detail.constraintName];
-    const message = propsRef.current[propName];
-    if (message !== undefined && message !== null) {
-      e.detail.respondMessage(message);
-    }
-  }, []);
-};
-
-const MAPPING = {
+const CONSTRAINT_NAME_TO_PROP = {
   disabled: "disabledMessage",
   required: "requiredMessage",
   pattern: "patternMessage",
@@ -17365,6 +18525,24 @@ const MAPPING = {
   one_of: "oneOfMessage",
   readonly: "readOnlyMessage",
   available: "availableMessage",
+};
+
+const CONSTRAINT_MESSAGE_PROP_NAME_SET = new Set(
+  Object.values(CONSTRAINT_NAME_TO_PROP),
+);
+
+const extractMessageAndRemainingProps = (props) => {
+  const ownMessages = {};
+  const remaining = {};
+  const keyToVisit = new Set(Object.keys(props));
+  for (const key of keyToVisit) {
+    if (CONSTRAINT_MESSAGE_PROP_NAME_SET.has(key)) {
+      ownMessages[key] = props[key];
+    } else {
+      remaining[key] = props[key];
+    }
+  }
+  return [ownMessages, remaining];
 };
 
 const getConstraintMessage = (
@@ -17424,8 +18602,6 @@ const getConstraintMessage = (
   // 3. Fall back to generated message
   return { message: generatedMessage, origin: "generated message" };
 };
-
-const CONSTRAINT_ATTRIBUTE_SET = new Set();
 
 /**
  * Interpolates a template string, replacing [key] placeholders with values.
@@ -17765,83 +18941,115 @@ naviI18n.addAll({
   },
 });
 
-// Field name substitutions used in constraint messages
-naviI18n.addAll({
-  "constraint.field.password": {
-    fr: "Ce mot de passe",
-    en: "This password",
-  },
-  "constraint.field.email": {
-    fr: "Cette adresse e-mail",
-    en: "This email address",
-  },
-  "constraint.field.checkbox": {
-    fr: "Cette case",
-    en: "This checkbox",
-  },
-  "constraint.field.radio": {
-    fr: "Cette option",
-    en: "This option",
-  },
-  "constraint.field.default": {
-    fr: "Ce champ",
-    en: "This field",
-  },
-});
-
 // Constraint validation messages — override any key to customize error messages
 naviI18n.addAll({
   "constraint.available": {
     fr: '"[value]" est utilisé. Veuillez entrer une autre valeur.',
     en: '"[value]" is already taken. Please enter a different value.',
   },
-  "picker.required.day": {
-    fr: "Veuillez sélectionner un jour.",
-    en: "Please select a day.",
+  "constraint.required.date": {
+    fr: "Veuillez sélectionner une date.",
+    en: "Please select a date.",
   },
-  "picker.required.month": {
+  "constraint.required.month": {
     fr: "Veuillez sélectionner un mois.",
     en: "Please select a month.",
   },
-  "picker.required.week": {
+  "constraint.required.week": {
     fr: "Veuillez sélectionner une semaine.",
     en: "Please select a week.",
   },
-  "picker.required.time": {
+  "constraint.required.time": {
     fr: "Veuillez sélectionner une heure.",
     en: "Please select a time.",
   },
-  "picker.required.datetime": {
+  "constraint.required.number": {
+    fr: "Veuillez saisir un nombre.",
+    en: "Please enter a number.",
+  },
+  "constraint.required.datetime": {
     fr: "Veuillez sélectionner une date et une heure.",
     en: "Please select a date and time.",
   },
-  "picker.required.color": {
+  "constraint.required.color": {
     fr: "Veuillez sélectionner une couleur.",
     en: "Please select a color.",
   },
-  "picker.hour.no_slots": {
-    fr: "Aucune heure disponible.",
-    en: "No available time slots.",
+  "constraint.required.file": {
+    fr: "Veuillez sélectionner un fichier.",
+    en: "Please select a file.",
   },
-  "picker.hour.readonly_slot": {
-    fr: "Cet horaire n'est pas disponible.",
-    en: "This time slot is not available.",
+  "constraint.required.file.multiple": {
+    fr: "Veuillez sélectionner au moins un fichier.",
+    en: "Please select at least one file.",
   },
-  "list_item.required": {
-    fr: "Veuillez sélectionner une option.",
-    en: "Please select an option.",
+  "constraint.disabled.password": {
+    fr: "Ce mot de passe est désactivé.",
+    en: "This password is disabled.",
   },
-  "list_item.readonly": {
+  "constraint.disabled.email": {
+    fr: "Cette adresse e-mail est désactivée.",
+    en: "This email address is disabled.",
+  },
+  "constraint.disabled.checkbox": {
+    fr: "Cette case est désactivée.",
+    en: "This checkbox is disabled.",
+  },
+  "constraint.disabled.radio": {
+    fr: "Cette option est désactivée.",
+    en: "This option is disabled.",
+  },
+  "constraint.disabled.default": {
+    fr: "Ce champ est désactivé.",
+    en: "This field is disabled.",
+  },
+  "constraint.readonly.busy": {
+    fr: "Cet élément est occupé.",
+    en: "This element is busy.",
+  },
+  "constraint.readonly.button": {
+    fr: "Cette action n'est pas disponible pour l'instant.",
+    en: "This action is not available right now.",
+  },
+  "constraint.readonly.button_busy": {
+    fr: "Cette action est en cours...",
+    en: "This action is in progress...",
+  },
+  "constraint.readonly.option": {
     fr: "Cette option n'est pas disponible.",
     en: "This option is not available.",
   },
-  "constraint.disabled": {
-    fr: "[field] est désactivé.",
-    en: "[field] is disabled.",
+  "constraint.readonly.default": {
+    fr: "Cet élément est en lecture seule et ne peut pas être modifié.",
+    en: "This element is read-only and cannot be modified.",
+  },
+  "constraint.one_of.no_match": {
+    fr: "Aucune suggestion ne correspond à votre saisie.",
+    en: "No suggestion matches your input.",
+  },
+  "constraint.one_of.default": {
+    fr: "Veuillez choisir une valeur parmi les suggestions.",
+    en: "Please choose a value from the suggestions.",
+  },
+  "constraint.same_as.password": {
+    fr: "Ce mot de passe doit être identique au précédent.",
+    en: "This password must match the previous one.",
+  },
+  "constraint.same_as.email": {
+    fr: "Cette adresse e-mail doit être identique a la précédente.",
+    en: "This email address must match the previous one.",
+  },
+  "constraint.same_as.default": {
+    fr: "Ce champ doit être identique au précédent.",
+    en: "This field must match the previous one.",
   },
   "constraint.required.checkbox": {
     fr: "Veuillez cocher cette case.",
     en: "Please check this box.",
+  },
+  "constraint.required.checkbox_group": {
+    fr: "Veuillez sélectionner au moins une option.",
+    en: "Please select at least one option.",
   },
   "constraint.required.radio": {
     fr: "Veuillez sélectionner une option.",
@@ -17867,17 +19075,21 @@ naviI18n.addAll({
     fr: "Veuillez confirmer le champ précédent.",
     en: "Please confirm the previous field.",
   },
-  "constraint.required.select": {
-    fr: "Veuillez sélectionner une option.",
-    en: "Please select an option.",
-  },
   "constraint.required.default": {
     fr: "Veuillez remplir ce champ.",
     en: "Please fill in this field.",
   },
-  "constraint.pattern": {
-    fr: "[field] ne correspond pas au format requis.",
-    en: "[field] does not match the required format.",
+  "constraint.pattern.password": {
+    fr: "Ce mot de passe ne correspond pas au format requis.",
+    en: "This password does not match the required format.",
+  },
+  "constraint.pattern.email": {
+    fr: "Cette adresse e-mail ne correspond pas au format requis.",
+    en: "This email address does not match the required format.",
+  },
+  "constraint.pattern.default": {
+    fr: "Ce champ ne correspond pas au format requis.",
+    en: "This field does not match the required format.",
   },
   "constraint.type.email.at": {
     fr: 'Veuillez inclure "@" dans l\'adresse e-mail. Il manque un symbole "@" dans [value].',
@@ -17887,105 +19099,302 @@ naviI18n.addAll({
     fr: "Veuillez saisir une adresse e-mail valide.",
     en: "Please enter a valid email address.",
   },
-  "constraint.min_length.singular": {
-    fr: "[field] doit contenir au moins [min] caractère (il contient actuellement un seul caractère).",
-    en: "[field] must contain at least [min] character (it currently contains only one character).",
+  "constraint.min_length.singular.password": {
+    fr: "Ce mot de passe doit contenir au moins [min] caractère (il contient actuellement un seul caractère).",
+    en: "This password must contain at least [min] character (it currently contains only one character).",
   },
-  "constraint.min_length.plural": {
-    fr: "[field] doit contenir au moins [min] caractères (il contient actuellement [count] caractères).",
-    en: "[field] must contain at least [min] characters (it currently contains [count] characters).",
+  "constraint.min_length.singular.email": {
+    fr: "Cette adresse e-mail doit contenir au moins [min] caractère (il contient actuellement un seul caractère).",
+    en: "This email address must contain at least [min] character (it currently contains only one character).",
   },
-  "constraint.max_length": {
-    fr: "[field] doit contenir au maximum [max] caractères (il contient actuellement [count] caractères).",
-    en: "[field] must contain at most [max] characters (it currently contains [count] characters).",
+  "constraint.min_length.singular.default": {
+    fr: "Ce champ doit contenir au moins [min] caractère (il contient actuellement un seul caractère).",
+    en: "This field must contain at least [min] character (it currently contains only one character).",
   },
-  "constraint.type.number": {
-    fr: "[field] doit être un nombre.",
-    en: "[field] must be a number.",
+  "constraint.min_length.plural.password": {
+    fr: "Ce mot de passe doit contenir au moins [min] caractères (il contient actuellement [count] caractères).",
+    en: "This password must contain at least [min] characters (it currently contains [count] characters).",
   },
-  "constraint.min.number": {
-    fr: "[field] doit être supérieur ou égal à <strong>[min]</strong>.",
-    en: "[field] must be greater than or equal to <strong>[min]</strong>.",
+  "constraint.min_length.plural.email": {
+    fr: "Cette adresse e-mail doit contenir au moins [min] caractères (il contient actuellement [count] caractères).",
+    en: "This email address must contain at least [min] characters (it currently contains [count] characters).",
   },
-  "constraint.min.time": {
-    fr: "[field] doit être <strong>[min]</strong> ou plus.",
-    en: "[field] must be <strong>[min]</strong> or later.",
+  "constraint.min_length.plural.default": {
+    fr: "Ce champ doit contenir au moins [min] caractères (il contient actuellement [count] caractères).",
+    en: "This field must contain at least [min] characters (it currently contains [count] characters).",
   },
-  "constraint.max.number": {
-    fr: "[field] doit être <strong>[max]</strong> ou moins.",
-    en: "[field] must be <strong>[max]</strong> or less.",
+  "constraint.max_length.password": {
+    fr: "Ce mot de passe doit contenir au maximum [max] caractères (il contient actuellement [count] caractères).",
+    en: "This password must contain at most [max] characters (it currently contains [count] characters).",
   },
-  "constraint.max.time": {
-    fr: "[field] doit être <strong>[max]</strong> ou moins.",
-    en: "[field] must be <strong>[max]</strong> or less.",
+  "constraint.max_length.email": {
+    fr: "Cette adresse e-mail doit contenir au maximum [max] caractères (il contient actuellement [count] caractères).",
+    en: "This email address must contain at most [max] characters (it currently contains [count] characters).",
   },
-  "constraint.single_space.start": {
-    fr: "[field] ne doit pas commencer par un espace.",
-    en: "[field] must not start with a space.",
+  "constraint.max_length.default": {
+    fr: "Ce champ doit contenir au maximum [max] caractères (il contient actuellement [count] caractères).",
+    en: "This field must contain at most [max] characters (it currently contains [count] characters).",
   },
-  "constraint.single_space.end": {
-    fr: "[field] ne doit pas finir par un espace.",
-    en: "[field] must not end with a space.",
+  "constraint.type.number.default": {
+    fr: "Ce champ doit être un nombre.",
+    en: "This field must be a number.",
   },
-  "constraint.single_space.consecutive": {
-    fr: "[field] ne doit pas contenir plusieurs espaces consécutifs.",
-    en: "[field] must not contain consecutive spaces.",
+  "constraint.min.number.default": {
+    fr: "Ce nombre doit être <strong>[min]</strong> ou plus.",
+    en: "This number must be <strong>[min]</strong> or greater.",
   },
-  "constraint.min_lower_letter.singular": {
-    fr: "[field] doit contenir au moins une lettre minuscule.",
-    en: "[field] must contain at least one lowercase letter.",
+  "constraint.min.navi_hours.default": {
+    fr: "Les heures doivent être <strong>[min]</strong> ou plus.",
+    en: "The hours must be <strong>[min]</strong> or greater.",
   },
-  "constraint.min_lower_letter.plural": {
-    fr: "[field] contenir au moins [min] lettres minuscules.",
-    en: "[field] must contain at least [min] lowercase letters.",
+  "constraint.min.navi_minutes.default": {
+    fr: "Les minutes doivent être <strong>[min]</strong> ou plus.",
+    en: "The minutes must be <strong>[min]</strong> or greater.",
   },
-  "constraint.min_upper_letter.singular": {
-    fr: "[field] doit contenir au moins une lettre majuscule.",
-    en: "[field] must contain at least one uppercase letter.",
+  "constraint.min.navi_seconds.default": {
+    fr: "Les secondes doivent être <strong>[min]</strong> ou plus.",
+    en: "The seconds must be <strong>[min]</strong> or greater.",
   },
-  "constraint.min_upper_letter.plural": {
-    fr: "[field] contenir au moins [min] lettres majuscules.",
-    en: "[field] must contain at least [min] uppercase letters.",
+  "constraint.min.navi_percentage.default": {
+    fr: "Le pourcentage doit être <strong>[min]</strong> ou plus.",
+    en: "The percentage must be <strong>[min]</strong> or greater.",
   },
-  "constraint.min_digit.singular": {
-    fr: "[field] doit contenir au moins un chiffre.",
-    en: "[field] must contain at least one digit.",
+  "constraint.min.time.default": {
+    fr: "L'heure doit être <strong>[min]</strong> ou plus.",
+    en: "The time must be <strong>[min]</strong> or later.",
   },
-  "constraint.min_digit.plural": {
-    fr: "[field] doit contenir au moins [min] chiffres.",
-    en: "[field] must contain at least [min] digits.",
+  "constraint.min.date.today.default": {
+    fr: "La date doit être aujourd'hui ou dans le futur.",
+    en: "The date must be today or in the future.",
   },
-  "constraint.min_special_char.singular": {
-    fr: "[field] doit contenir au moins un caractère spécial. ([charset])",
-    en: "[field] must contain at least one special character. ([charset])",
+  "constraint.min.date.default": {
+    fr: "La date doit être à partir du <strong>[min]</strong>.",
+    en: "The date must be on or after <strong>[min]</strong>.",
   },
-  "constraint.min_special_char.plural": {
-    fr: "[field] doit contenir au moins [min] caractères spéciaux. ([charset])",
-    en: "[field] must contain at least [min] special characters. ([charset])",
+  "constraint.max.date.today.default": {
+    fr: "La date doit être aujourd'hui ou dans le passé.",
+    en: "The date must be today or in the past.",
+  },
+  "constraint.max.date.default": {
+    fr: "La date doit être au plus tard le <strong>[max]</strong>.",
+    en: "The date must be on or before <strong>[max]</strong>.",
+  },
+  "constraint.max.number.default": {
+    fr: "Ce nombre doit être <strong>[max]</strong> ou moins.",
+    en: "This number must be <strong>[max]</strong> or less.",
+  },
+  "constraint.max.navi_hours.default": {
+    fr: "Les heures doivent être <strong>[max]</strong> ou moins.",
+    en: "The hours must be <strong>[max]</strong> or less.",
+  },
+  "constraint.max.navi_minutes.default": {
+    fr: "Les minutes doivent être <strong>[max]</strong> ou moins.",
+    en: "The minutes must be <strong>[max]</strong> or less.",
+  },
+  "constraint.max.navi_seconds.default": {
+    fr: "Les secondes doivent être <strong>[max]</strong> ou moins.",
+    en: "The seconds must be <strong>[max]</strong> or less.",
+  },
+  "constraint.max.navi_percentage.default": {
+    fr: "Le pourcentage doit être <strong>[max]</strong> ou moins.",
+    en: "The percentage must be <strong>[max]</strong> or less.",
+  },
+  "constraint.step.number.default": {
+    fr: "Ce nombre doit être un multiple de <strong>[step]</strong> (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
+    en: "This number must be a multiple of <strong>[step]</strong> (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
+  },
+  "constraint.step.navi_hours.default": {
+    fr: "Les heures doivent être un multiple de <strong>[step]</strong> (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
+    en: "The hours must be a multiple of <strong>[step]</strong> (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
+  },
+  "constraint.step.navi_minutes.default": {
+    fr: "Les minutes doivent être un multiple de <strong>[step]</strong> (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
+    en: "The minutes must be a multiple of <strong>[step]</strong> (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
+  },
+  "constraint.step.navi_seconds.default": {
+    fr: "Les secondes doivent être un multiple de <strong>[step]</strong> (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
+    en: "The seconds must be a multiple of <strong>[step]</strong> (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
+  },
+  "constraint.step.navi_percentage.default": {
+    fr: "Le pourcentage doit être un multiple de <strong>[step]</strong> (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
+    en: "The percentage must be a multiple of <strong>[step]</strong> (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
+  },
+  "constraint.step.time.hours": {
+    fr: "L'heure doit être dans un intervalle de <strong>[step]</strong> heure(s) (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
+    en: "The time must be within an interval of <strong>[step]</strong> hour(s) (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
+  },
+  "constraint.step.time.minutes": {
+    fr: "L'heure doit être dans un intervalle de <strong>[step]</strong> minute(s) (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
+    en: "The time must be within an interval of <strong>[step]</strong> minute(s) (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
+  },
+  "constraint.step.time.seconds": {
+    fr: "L'heure doit être dans un intervalle de <strong>[step]</strong> seconde(s) (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
+    en: "The time must be within an interval of <strong>[step]</strong> second(s) (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
+  },
+  "constraint.step.date.default": {
+    fr: "La date doit correspondre à un intervalle de <strong>[step]</strong> jour(s) (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
+    en: "The date must correspond to an interval of <strong>[step]</strong> day(s) (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
+  },
+  "constraint.max.time.default": {
+    fr: "L'heure doit être <strong>[max]</strong> ou moins.",
+    en: "The time must be <strong>[max]</strong> or earlier.",
+  },
+  "constraint.single_space.start.default": {
+    fr: "Ce champ ne doit pas commencer par un espace.",
+    en: "This field must not start with a space.",
+  },
+  "constraint.single_space.end.default": {
+    fr: "Ce champ ne doit pas finir par un espace.",
+    en: "This field must not end with a space.",
+  },
+  "constraint.single_space.consecutive.default": {
+    fr: "Ce champ ne doit pas contenir plusieurs espaces consécutifs.",
+    en: "This field must not contain consecutive spaces.",
+  },
+  "constraint.min_lower_letter.singular.password": {
+    fr: "Ce mot de passe doit contenir au moins une lettre minuscule.",
+    en: "This password must contain at least one lowercase letter.",
+  },
+  "constraint.min_lower_letter.singular.default": {
+    fr: "Ce champ doit contenir au moins une lettre minuscule.",
+    en: "This field must contain at least one lowercase letter.",
+  },
+  "constraint.min_lower_letter.plural.password": {
+    fr: "Ce mot de passe doit contenir au moins [min] lettres minuscules.",
+    en: "This password must contain at least [min] lowercase letters.",
+  },
+  "constraint.min_lower_letter.plural.default": {
+    fr: "Ce champ doit contenir au moins [min] lettres minuscules.",
+    en: "This field must contain at least [min] lowercase letters.",
+  },
+  "constraint.min_upper_letter.singular.password": {
+    fr: "Ce mot de passe doit contenir au moins une lettre majuscule.",
+    en: "This password must contain at least one uppercase letter.",
+  },
+  "constraint.min_upper_letter.singular.default": {
+    fr: "Ce champ doit contenir au moins une lettre majuscule.",
+    en: "This field must contain at least one uppercase letter.",
+  },
+  "constraint.min_upper_letter.plural.password": {
+    fr: "Ce mot de passe doit contenir au moins [min] lettres majuscules.",
+    en: "This password must contain at least [min] uppercase letters.",
+  },
+  "constraint.min_upper_letter.plural.default": {
+    fr: "Ce champ doit contenir au moins [min] lettres majuscules.",
+    en: "This field must contain at least [min] uppercase letters.",
+  },
+  "constraint.min_digit.singular.password": {
+    fr: "Ce mot de passe doit contenir au moins un chiffre.",
+    en: "This password must contain at least one digit.",
+  },
+  "constraint.min_digit.singular.default": {
+    fr: "Ce champ doit contenir au moins un chiffre.",
+    en: "This field must contain at least one digit.",
+  },
+  "constraint.min_digit.plural.password": {
+    fr: "Ce mot de passe doit contenir au moins [min] chiffres.",
+    en: "This password must contain at least [min] digits.",
+  },
+  "constraint.min_digit.plural.default": {
+    fr: "Ce champ doit contenir au moins [min] chiffres.",
+    en: "This field must contain at least [min] digits.",
+  },
+  "constraint.min_special_char.singular.password": {
+    fr: "Ce mot de passe doit contenir au moins un caractère spécial. ([charset])",
+    en: "This password must contain at least one special character. ([charset])",
+  },
+  "constraint.min_special_char.singular.default": {
+    fr: "Ce champ doit contenir au moins un caractère spécial. ([charset])",
+    en: "This field must contain at least one special character. ([charset])",
+  },
+  "constraint.min_special_char.plural.password": {
+    fr: "Ce mot de passe doit contenir au moins [min] caractères spéciaux. ([charset])",
+    en: "This password must contain at least [min] special characters. ([charset])",
+  },
+  "constraint.min_special_char.plural.default": {
+    fr: "Ce champ doit contenir au moins [min] caractères spéciaux. ([charset])",
+    en: "This field must contain at least [min] special characters. ([charset])",
   },
 });
 
-const generateFieldInvalidMessage = (key, { field, ...vars } = {}) => {
-  return naviI18n(key, {
-    field: () => generateThisFieldText(field),
-    ...vars,
-  });
-};
+// Date/time placeholder tokens — shown when no value is selected
+// Override any key to adapt to your language conventions
+naviI18n.addAll({
+  "time.placeholder.day": {
+    fr: "jj",
+    en: "dd",
+    de: "TT",
+    es: "dd",
+    it: "gg",
+    pt: "dd",
+    nl: "dd",
+  },
+  "time.placeholder.month": {
+    fr: "mm",
+    en: "mm",
+    de: "MM",
+    es: "mm",
+    it: "mm",
+    pt: "mm",
+    nl: "mm",
+  },
+  "time.placeholder.year": {
+    fr: "aaaa",
+    en: "yyyy",
+    de: "JJJJ",
+    es: "aaaa",
+    it: "aaaa",
+    pt: "aaaa",
+    nl: "jjjj",
+  },
+  "time.placeholder.hour": {
+    fr: "hh",
+    en: "hh",
+    de: "hh",
+    es: "hh",
+    it: "hh",
+    pt: "hh",
+    nl: "uu",
+  },
+  "time.placeholder.minute": {
+    fr: "mm",
+    en: "mm",
+    de: "mm",
+    es: "mm",
+    it: "mm",
+    pt: "mm",
+    nl: "mm",
+  },
+  "time.placeholder.week": {
+    fr: "sem.",
+    en: "wk",
+    de: "KW",
+    es: "sem.",
+    it: "sett.",
+    pt: "sem.",
+    nl: "wk",
+  },
+});
 
-const generateThisFieldText = (field) => {
+const CONSTRAINT_ATTRIBUTE_SET = new Set();
+
+const fieldTypeSuffix = (field) => {
+  if (!field) {
+    return "default";
+  }
   if (field.type === "password") {
-    return naviI18n("constraint.field.password");
+    return "password";
   }
   if (field.type === "email") {
-    return naviI18n("constraint.field.email");
+    return "email";
   }
   if (field.type === "checkbox") {
-    return naviI18n("constraint.field.checkbox");
+    return "checkbox";
   }
   if (field.type === "radio") {
-    return naviI18n("constraint.field.radio");
+    return "radio";
   }
-  return naviI18n("constraint.field.default");
+  return "default";
 };
 
 const MIN_LOWER_LETTER_CONSTRAINT = {
@@ -18009,21 +19418,21 @@ const MIN_LOWER_LETTER_CONSTRAINT = {
     }
     if (numberOfLowercaseChars < min) {
       if (min === 1) {
-        return generateFieldInvalidMessage(
-          "constraint.min_lower_letter.singular",
-          { field },
+        return naviI18n(
+          `constraint.min_lower_letter.singular.${fieldTypeSuffix(field)}`,
         );
       }
-      return generateFieldInvalidMessage("constraint.min_lower_letter.plural", {
-        field,
-        min: String(min),
-      });
+      return naviI18n(
+        `constraint.min_lower_letter.plural.${fieldTypeSuffix(field)}`,
+        {
+          min: String(min),
+        },
+      );
     }
     return "";
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("data-min-lower-letter");
-CONSTRAINT_ATTRIBUTE_SET.add("data-min-lower-letter-message");
 
 const MIN_UPPER_LETTER_CONSTRAINT = {
   name: "min_upper_letter",
@@ -18046,21 +19455,21 @@ const MIN_UPPER_LETTER_CONSTRAINT = {
     }
     if (numberOfUppercaseChars < min) {
       if (min === 1) {
-        return generateFieldInvalidMessage(
-          "constraint.min_upper_letter.singular",
-          { field },
+        return naviI18n(
+          `constraint.min_upper_letter.singular.${fieldTypeSuffix(field)}`,
         );
       }
-      return generateFieldInvalidMessage("constraint.min_upper_letter.plural", {
-        field,
-        min: String(min),
-      });
+      return naviI18n(
+        `constraint.min_upper_letter.plural.${fieldTypeSuffix(field)}`,
+        {
+          min: String(min),
+        },
+      );
     }
     return "";
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("data-min-upper-letter");
-CONSTRAINT_ATTRIBUTE_SET.add("data-min-upper-letter-message");
 
 const MIN_DIGIT_CONSTRAINT = {
   name: "min_digit",
@@ -18083,12 +19492,11 @@ const MIN_DIGIT_CONSTRAINT = {
     }
     if (numberOfDigitChars < min) {
       if (min === 1) {
-        return generateFieldInvalidMessage("constraint.min_digit.singular", {
-          field,
-        });
+        return naviI18n(
+          `constraint.min_digit.singular.${fieldTypeSuffix(field)}`,
+        );
       }
-      return generateFieldInvalidMessage("constraint.min_digit.plural", {
-        field,
+      return naviI18n(`constraint.min_digit.plural.${fieldTypeSuffix(field)}`, {
         min: String(min),
       });
     }
@@ -18096,7 +19504,6 @@ const MIN_DIGIT_CONSTRAINT = {
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("data-min-digit");
-CONSTRAINT_ATTRIBUTE_SET.add("data-min-digit-message");
 
 const MIN_SPECIAL_CHAR_CONSTRAINT = {
   name: "min_special_char",
@@ -18124,26 +19531,21 @@ const MIN_SPECIAL_CHAR_CONSTRAINT = {
     }
     if (numberOfSpecialChars < min) {
       if (min === 1) {
-        return generateFieldInvalidMessage(
-          "constraint.min_special_char.singular",
-          {
-            field,
-            charset: specialCharset,
-          },
+        return naviI18n(
+          `constraint.min_special_char.singular.${fieldTypeSuffix(field)}`,
+          { charset: specialCharset },
         );
       }
-      return generateFieldInvalidMessage("constraint.min_special_char.plural", {
-        field,
-        min: String(min),
-        charset: specialCharset,
-      });
+      return naviI18n(
+        `constraint.min_special_char.plural.${fieldTypeSuffix(field)}`,
+        { min: String(min), charset: specialCharset },
+      );
     }
     return "";
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("data-special-charset");
 CONSTRAINT_ATTRIBUTE_SET.add("data-min-special-char");
-CONSTRAINT_ATTRIBUTE_SET.add("data-min-special-char-message");
 
 const ONE_OF_CONSTRAINT = {
   name: "one_of",
@@ -18178,16 +19580,12 @@ const ONE_OF_CONSTRAINT = {
     const message = field.getAttribute("data-one-of-message");
     const noMatchMessage = field.getAttribute("data-one-of-no-match-message");
     if (isNoMatch) {
-      return (
-        noMatchMessage || `Aucune suggestion ne correspond à votre saisie.`
-      );
+      return noMatchMessage || naviI18n("constraint.one_of.no_match");
     }
-    return message || `Veuillez choisir une valeur parmi les suggestions.`;
+    return message || naviI18n("constraint.one_of.default");
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("data-one-of");
-CONSTRAINT_ATTRIBUTE_SET.add("data-one-of-message");
-CONSTRAINT_ATTRIBUTE_SET.add("data-one-of-no-match-message");
 
 const collectAllowedValues = (listEl) => {
   const values = new Set();
@@ -18210,7 +19608,11 @@ const READONLY_CONSTRAINT = {
     if (skipReadonly) {
       return null;
     }
-    if (!field.readonly && !field.hasAttribute("data-readonly")) {
+    if (
+      !field.readOnly &&
+      !field.hasAttribute("data-readonly") &&
+      field.getAttribute("aria-readonly") !== "true"
+    ) {
       return null;
     }
     if (field.type === "hidden") {
@@ -18225,22 +19627,23 @@ const READONLY_CONSTRAINT = {
     if (isBusy) {
       return {
         target: field,
-        message: `Cette action est en cours. Veuillez patienter.`,
+        message: isButton
+          ? naviI18n("constraint.readonly.button_busy")
+          : naviI18n("constraint.readonly.busy"),
         status: "info",
       };
     }
     return {
       target: field,
       message: isButton
-        ? `Cet action n'est pas disponible pour l'instant.`
-        : `Cet élément est en lecture seule et ne peut pas être modifié.`,
+        ? naviI18n("constraint.readonly.button")
+        : naviI18n("constraint.readonly.default"),
       status: "info",
     };
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("readOnly");
 CONSTRAINT_ATTRIBUTE_SET.add("data-readonly");
-CONSTRAINT_ATTRIBUTE_SET.add("data-readonly-message");
 CONSTRAINT_ATTRIBUTE_SET.add("data-readonly-silent");
 
 const SAME_AS_CONSTRAINT = {
@@ -18272,16 +19675,15 @@ const SAME_AS_CONSTRAINT = {
     }
     const type = field.type;
     if (type === "password") {
-      return `Ce mot de passe doit être identique au précédent.`;
+      return naviI18n("constraint.same_as.password");
     }
     if (type === "email") {
-      return `Cette adresse e-mail doit être identique a la précédente.`;
+      return naviI18n("constraint.same_as.email");
     }
-    return `Ce champ doit être identique au précédent.`;
+    return naviI18n("constraint.same_as.default");
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("data-same-as");
-CONSTRAINT_ATTRIBUTE_SET.add("data-same-as-message");
 
 const SINGLE_SPACE_CONSTRAINT = {
   name: "single_space",
@@ -18297,25 +19699,379 @@ const SINGLE_SPACE_CONSTRAINT = {
     const hasDoubleSpace = fieldValue.includes("  ");
     if (hasLeadingSpace || hasDoubleSpace || hasTrailingSpace) {
       if (hasLeadingSpace) {
-        return generateFieldInvalidMessage("constraint.single_space.start", {
-          field,
-        });
+        return naviI18n("constraint.single_space.start.default");
       }
       if (hasTrailingSpace) {
-        return generateFieldInvalidMessage("constraint.single_space.end", {
-          field,
-        });
+        return naviI18n("constraint.single_space.end.default");
       }
-      return generateFieldInvalidMessage(
-        "constraint.single_space.consecutive",
-        { field },
-      );
+      return naviI18n("constraint.single_space.consecutive.default");
     }
     return "";
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("data-single-space");
-CONSTRAINT_ATTRIBUTE_SET.add("data-single-space-message");
+
+/**
+ * Pure vanilla JS time formatting utilities.
+ * All functions accept an optional `{ now }` parameter for testability.
+ */
+
+
+const DEFAULT_LANG = "en";
+
+/**
+ * Formats a date as a human-readable day, appending "(aujourd'hui)" or
+ * "(demain)" when the date matches today or tomorrow.
+ *
+ * @example
+ * formatDay(new Date(), "fr") // "lundi 11 mai (aujourd'hui)"
+ * formatDay(tomorrow, "fr")   // "mardi 12 mai (demain)"
+ * formatDay(nextWeek, "fr")   // "lundi 18 mai"
+ */
+const formatDay = (date, locale, { long = false } = {}) => {
+  return new Intl.DateTimeFormat(locale, {
+    weekday: long ? "long" : "short",
+    day: "numeric",
+    month: long ? "long" : "short",
+  }).format(date);
+};
+
+/**
+ * Returns the day offset relative to now: -1 (yesterday), 0 (today), 1 (tomorrow), or the
+ * actual number of days difference for any other date.
+ */
+const getRelativeDay = (date, { now = new Date() } = {}) => {
+  const dateKey = toLocalDayKey(date);
+
+  const yesterdayDate = new Date(now);
+  yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+  if (dateKey === toLocalDayKey(yesterdayDate)) {
+    return -1;
+  }
+
+  if (dateKey === toLocalDayKey(now)) {
+    return 0;
+  }
+
+  const tomorrowDate = new Date(now);
+  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+  if (dateKey === toLocalDayKey(tomorrowDate)) {
+    return 1;
+  }
+
+  const nowMidnight = new Date(now);
+  nowMidnight.setHours(0, 0, 0, 0);
+  const dateMidnight = new Date(date);
+  dateMidnight.setHours(0, 0, 0, 0);
+  return Math.round((dateMidnight - nowMidnight) / DAY);
+};
+
+/**
+ * Formats a relative day offset (-1/0/1) as a locale-aware label: "hier", "aujourd'hui", "demain".
+ */
+// ── Placeholder helpers ────────────────────────────────────────────────────
+// Derive locale-aware format placeholders from Intl.DateTimeFormat.formatToParts
+// using a sentinel date whose parts are unambiguous (day=28, month=11, year=9999).
+// Per-language token tables cover the most common locales; unknown langs fall
+// back to "dd/mm/yyyy".
+
+const SENTINEL_DATE = new Date(9999, 10, 28); // 28 Nov 9999 — day≠month, both 2-digit
+
+const getToken = (key, locale) =>
+  naviI18n(`time.placeholder.${key}`, undefined, { lang: locale });
+
+const formatDatePlaceholder = (locale) => {
+  const parts = new Intl.DateTimeFormat(locale, {
+    day: "numeric",
+    month: "numeric",
+    year: "numeric",
+  }).formatToParts(SENTINEL_DATE);
+  return parts
+    .map((p) => {
+      if (p.type === "day") {
+        return getToken("day", locale);
+      }
+      if (p.type === "month") {
+        return getToken("month", locale);
+      }
+      if (p.type === "year") {
+        return getToken("year", locale);
+      }
+      return p.value;
+    })
+    .join("");
+};
+
+const formatMonthPlaceholder = (locale) => {
+  const parts = new Intl.DateTimeFormat(locale, {
+    month: "numeric",
+    year: "numeric",
+  }).formatToParts(SENTINEL_DATE);
+  return parts
+    .map((p) => {
+      if (p.type === "month") {
+        return getToken("month", locale);
+      }
+      if (p.type === "year") {
+        return getToken("year", locale);
+      }
+      return p.value;
+    })
+    .join("");
+};
+
+const formatWeekPlaceholder = (locale) => {
+  return `${getToken("week", locale)} xx / ${getToken("year", locale)}`;
+};
+
+const formatDatetimePlaceholder = (locale) => {
+  const datePart = formatDatePlaceholder(locale);
+  return `${datePart}, ${getToken("hour", locale)}:${getToken("minute", locale)}`;
+};
+
+// ── End placeholder helpers ────────────────────────────────────────────────
+
+const formatDayRelative = (offset, locale) => {
+  const relativeDay = new Intl.RelativeTimeFormat(locale, {
+    numeric: "auto",
+  }).format(offset, "day");
+  return relativeDay;
+};
+
+const formatMonth = (date, locale) => {
+  return new Intl.DateTimeFormat(locale, {
+    month: "long",
+    year: "numeric",
+  }).format(date);
+};
+
+/**
+ * Formats a date as "lun. 11 mai, 14:30".
+ */
+const formatDatetime = (date, locale) => {
+  return new Intl.DateTimeFormat(locale, {
+    weekday: "short",
+    day: "numeric",
+    month: "long",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+};
+
+/**
+ * Formats a date as "14:30".
+ */
+const formatTime = (date, locale) => {
+  return new Intl.DateTimeFormat(locale, {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+};
+
+/**
+ * Formats a date relative to now: "il y a 3 jours", "dans 2 heures", etc.
+ */
+const formatTimeAgo = (date, locale, { now = new Date(), bare } = {}) => {
+  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
+  const nowMs = now instanceof Date ? now.getTime() : now;
+  const diff = date.getTime() - nowMs;
+  const absDiff = Math.abs(diff);
+
+  let value;
+  let unit;
+  if (absDiff < MINUTE) {
+    value = Math.round(diff / 1000);
+    unit = "second";
+  } else if (absDiff < HOUR) {
+    value = Math.round(diff / MINUTE);
+    unit = "minute";
+  } else if (absDiff < DAY) {
+    value = Math.round(diff / HOUR);
+    unit = "hour";
+  } else if (absDiff < 7 * DAY) {
+    value = Math.round(diff / DAY);
+    unit = "day";
+  } else if (absDiff < 30 * DAY) {
+    value = Math.round(diff / (7 * DAY));
+    unit = "week";
+  } else if (absDiff < YEAR) {
+    value = Math.round(diff / (30 * DAY));
+    unit = "month";
+  } else {
+    value = Math.round(diff / YEAR);
+    unit = "year";
+  }
+
+  if (!bare || value >= 0) {
+    return rtf.format(value, unit);
+  }
+  // Drop the leading past-tense literal ("il y a ", "ago ") — keep only integer + unit.
+  const parts = rtf.formatToParts(value, unit);
+  const integerIndex = parts.findIndex((p) => p.type === "integer");
+  return parts
+    .slice(integerIndex)
+    .map((p) => p.value)
+    .join("")
+    .trim();
+};
+
+/**
+ * Formats a timed event with an optional duration window.
+ *
+ * States:
+ * - Future  (now < start)              → "dans 1 heure 30", "demain à 15h", …
+ * - Ongoing (start ≤ now < start+dur)  → "En cours"
+ * - Past    (now ≥ start+dur)          → relative ("il y a 2 heures", …)
+ *
+ * @param {Date|number} start      Start of the event (Date or ms timestamp)
+ * @param {number}      durationMs Duration in milliseconds (0 = instant event)
+ * @param {string}      locale     BCP 47 locale tag
+ * @param {{ now?: Date|number }} options
+ *
+ * @example
+ * // 90 min from now
+ * formatDuration(Date.now() + 90 * 60_000, 0, "fr") // "dans 1 heure 30"
+ * // currently happening (30 min window)
+ * formatDuration(Date.now() - 5 * 60_000, 30 * 60_000, "fr") // "En cours"
+ * // ended 2 hours ago
+ * formatDuration(Date.now() - 3 * 3_600_000, 3_600_000, "fr") // "il y a 2 heures"
+ */
+const formatTimeRelative = (
+  start,
+  durationMs = 0,
+  locale,
+  { now = new Date(), bare } = {},
+) => {
+  const startMs = start instanceof Date ? start.getTime() : Number(start);
+  const endMs = startMs + durationMs;
+  const nowMs = now instanceof Date ? now.getTime() : Number(now);
+
+  if (nowMs >= startMs && nowMs < endMs) {
+    return getOngoingText(locale);
+  }
+  if (nowMs >= endMs) {
+    const refDate = endMs > startMs ? new Date(endMs) : new Date(startMs);
+    return formatTimeAgo(refDate, locale, { now, bare });
+  }
+
+  const diff = startMs - nowMs;
+  return formatFuture(new Date(startMs), diff, locale, { now });
+};
+
+const formatFuture = (date, diff, locale, { now }) => {
+  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
+  const nowDate = now instanceof Date ? now : new Date(now);
+
+  // < 1 min
+  if (diff < MINUTE) {
+    return getLessThanMinuteText(locale);
+  }
+
+  // < 1 hour → "dans X minutes"
+  if (diff < HOUR) {
+    return rtf.format(Math.ceil(diff / MINUTE), "minute");
+  }
+
+  // 1h to 2h → "dans 1 heure 30"
+  if (diff < 2 * HOUR) {
+    const hours = Math.floor(diff / HOUR);
+    const minutes = Math.round((diff % HOUR) / MINUTE);
+    if (minutes === 0) {
+      return rtf.format(hours, "hour");
+    }
+    return formatHoursAndMinutes(hours, minutes, locale);
+  }
+
+  // < 6h → "dans X heures" (precise enough, skip tomorrow label)
+  if (diff < 6 * HOUR) {
+    return rtf.format(Math.round(diff / HOUR), "hour");
+  }
+
+  // Tomorrow (calendar day) and within ~30h → "demain à 15h"
+  const tomorrowDate = new Date(nowDate);
+  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+  if (diff < 30 * HOUR && toLocalDayKey(date) === toLocalDayKey(tomorrowDate)) {
+    return formatTomorrowAt(date, locale);
+  }
+
+  // < 24h → "dans X heures"
+  if (diff < DAY) {
+    return rtf.format(Math.round(diff / HOUR), "hour");
+  }
+
+  // < 7 days → "dans X jours"
+  if (diff < 7 * DAY) {
+    return rtf.format(Math.round(diff / DAY), "day");
+  }
+
+  // < 30 days → "dans X semaines"
+  if (diff < 30 * DAY) {
+    return rtf.format(Math.round(diff / (7 * DAY)), "week");
+  }
+
+  // months (Intl handles "le mois prochain" when value = 1)
+  if (diff < YEAR) {
+    return rtf.format(Math.round(diff / (30 * DAY)), "month");
+  }
+
+  return rtf.format(Math.round(diff / YEAR), "year");
+};
+
+const formatTomorrowAt = (date, locale) => {
+  const dayLabel = new Intl.RelativeTimeFormat(locale, {
+    numeric: "auto",
+  }).format(1, "day");
+  const hasMinutes = date.getMinutes() !== 0;
+  const timeLabel = new Intl.DateTimeFormat(locale, {
+    hour: "numeric",
+    ...(hasMinutes ? { minute: "2-digit" } : {}),
+  }).format(date);
+  const atTemplate = naviI18n("time.tomorrow_at", undefined, {
+    lang: locale,
+  });
+  // atTemplate is e.g. "[day] à [time]" — replace placeholders
+  if (atTemplate !== "time.tomorrow_at") {
+    return atTemplate.replace("[day]", dayLabel).replace("[time]", timeLabel);
+  }
+  // fallback: concatenate with a space
+  return `${dayLabel} ${timeLabel}`;
+};
+
+// "dans 1 heure 30" — colloquial format, built per language.
+// The plural suffix is applied inline because it depends on the count;
+// a plain string template cannot express this, so we keep it in JS.
+const formatHoursAndMinutes = (hours, minutes, locale) => {
+  const lang = (locale || "").split("-")[0];
+  const templates = {
+    fr: (h, m) => `dans ${h} heure${h > 1 ? "s" : ""} ${m}`,
+    en: (h, m) => `in ${h} hour${h > 1 ? "s" : ""} ${m}`,
+    de: (h, m) => `in ${h} Stunde${h > 1 ? "n" : ""} ${m}`,
+    es: (h, m) => `en ${h} hora${h > 1 ? "s" : ""} ${m}`,
+    it: (h, m) => `tra ${h} ora${h > 1 ? "e" : ""} ${m}`,
+    pt: (h, m) => `em ${h} hora${h > 1 ? "s" : ""} ${m}`,
+    nl: (h, m) => `over ${h} uur ${m}`,
+  };
+  const template = templates[lang] || templates[DEFAULT_LANG];
+  return template(hours, minutes);
+};
+
+const getLessThanMinuteText = (locale) => {
+  return naviI18n("time.less_than_minute", undefined, { lang: locale });
+};
+
+const getOngoingText = (locale) => {
+  return naviI18n("time.ongoing", undefined, { lang: locale });
+};
+
+const MINUTE = 60_000;
+const HOUR = 60 * MINUTE;
+const DAY = 24 * HOUR;
+const YEAR = 365 * DAY;
+
+// Compares calendar days in local time (ignores the clock time)
+const toLocalDayKey = (date) => {
+  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+};
 
 /**
  * https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Constraint_validation
@@ -18329,23 +20085,61 @@ const DISABLED_CONSTRAINT = {
   messageAttribute: "data-disabled-message",
   check: (field) => {
     if (field.disabled) {
-      return generateFieldInvalidMessage("constraint.disabled", { field });
+      return naviI18n(`constraint.disabled.${fieldTypeSuffix(field)}`);
     }
     return null;
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("disabled");
 CONSTRAINT_ATTRIBUTE_SET.add("data-disabled");
-CONSTRAINT_ATTRIBUTE_SET.add("data-disabled-message");
 
 const REQUIRED_CONSTRAINT = {
   name: "required",
   messageAttribute: "data-required-message",
-  check: (field, { registerChange }) => {
+  check: (field, { skipRequired, registerChange }) => {
     if (!field.required) {
       return null;
     }
+    if (skipRequired) {
+      return null;
+    }
     if (field.type === "checkbox") {
+      const name = field.name;
+      if (name) {
+        const groupContainer = field.closest('[navi-control="checkbox_group"]');
+        if (groupContainer) {
+          const groupUIState = getUIStateFromElement(groupContainer);
+          if (groupUIState.length === 0) {
+            return {
+              message: naviI18n("constraint.required.checkbox_group"),
+              target: groupContainer,
+            };
+          }
+          return null;
+        }
+        const checkboxGroupContainer = field.form || document;
+        const checkboxSelector = `input[type="checkbox"][name="${CSS.escape(name)}"]`;
+        const checkboxArray =
+          checkboxGroupContainer.querySelectorAll(checkboxSelector);
+        if (checkboxArray.length > 1) {
+          for (const checkbox of checkboxArray) {
+            if (checkbox.checked) {
+              return null;
+            }
+            registerChange((onChange) => {
+              checkbox.addEventListener("input", onChange);
+              return () => {
+                checkbox.removeEventListener("input", onChange);
+              };
+            });
+          }
+          return {
+            message: naviI18n("constraint.required.checkbox_group"),
+            target: field.closest("fieldset") || undefined,
+          };
+        }
+      }
+      // no name or single checkbox with that name
       if (!field.checked) {
         return naviI18n("constraint.required.checkbox");
       }
@@ -18354,38 +20148,53 @@ const REQUIRED_CONSTRAINT = {
     if (field.type === "radio") {
       // For radio buttons, check if any radio with the same name is selected
       const name = field.name;
-      if (!name) {
-        // If no name, check just this radio
-        if (!field.checked) {
-          return naviI18n("constraint.required.radio");
+      if (name) {
+        const groupContainer = field.closest('[navi-control="radio_group"]');
+        if (groupContainer) {
+          const groupUIState = getUIStateFromElement(groupContainer);
+          if (groupUIState === undefined) {
+            return {
+              message: naviI18n("constraint.required.radio"),
+              target: groupContainer,
+            };
+          }
+          return null;
         }
-        return null;
-      }
-
-      const closestFieldset = field.closest("fieldset");
-      // Find the container (form or closest fieldset)
-      const container = field.form || closestFieldset || document;
-      // Check if any radio with the same name is checked
-      const radioSelector = `input[type="radio"][name="${CSS.escape(name)}"]`;
-      const radiosWithSameName = container.querySelectorAll(radioSelector);
-      for (const radio of radiosWithSameName) {
-        if (radio.checked) {
-          return null; // At least one radio is selected
+        const radioGroupContainer = field.form || document;
+        // Check if any radio with the same name is checked
+        const radioSelector = `input[type="radio"][name="${CSS.escape(name)}"]`;
+        const radiosWithSameName =
+          radioGroupContainer.querySelectorAll(radioSelector);
+        for (const radio of radiosWithSameName) {
+          if (radio.checked) {
+            return null; // At least one radio is selected
+          }
+          registerChange((onChange) => {
+            radio.addEventListener("change", onChange);
+            return () => {
+              radio.removeEventListener("change", onChange);
+            };
+          });
         }
-        registerChange((onChange) => {
-          radio.addEventListener("change", onChange);
-          return () => {
-            radio.removeEventListener("change", onChange);
-          };
-        });
+        return {
+          message: naviI18n("constraint.required.radio"),
+          target: field.closest("fieldset") || undefined,
+        };
       }
-
-      return {
-        message: naviI18n("constraint.required.radio"),
-        target: closestFieldset
-          ? closestFieldset.querySelector("legend")
-          : undefined,
-      };
+      // If no name, check just this radio
+      if (!field.checked) {
+        return naviI18n("constraint.required.radio");
+      }
+      return null;
+    }
+    if (field.type === "color") {
+      const uiState = getUIStateFromElement(field);
+      // The color input always has a value (#000000 when empty) so we rely on
+      // uiState to know the user hasn't actually chosen a color
+      if (uiState === undefined || uiState === "") {
+        return naviI18n("constraint.required.color");
+      }
+      return null;
     }
     if (field.value) {
       return null;
@@ -18400,20 +20209,36 @@ const REQUIRED_CONSTRAINT = {
         ? naviI18n("constraint.required.email.confirm")
         : naviI18n("constraint.required.email");
     }
+    if (field.type === "date") {
+      return naviI18n("constraint.required.date");
+    }
+    if (field.type === "month") {
+      return naviI18n("constraint.required.month");
+    }
+    if (field.type === "week") {
+      return naviI18n("constraint.required.week");
+    }
+    if (field.type === "time") {
+      return naviI18n("constraint.required.time");
+    }
+    if (field.type === "number") {
+      return naviI18n("constraint.required.number");
+    }
+    if (field.type === "datetime-local") {
+      return naviI18n("constraint.required.datetime");
+    }
+    if (field.type === "file") {
+      return field.multiple
+        ? naviI18n("constraint.required.file.multiple")
+        : naviI18n("constraint.required.file");
+    }
     if (field.hasAttribute("data-same-as")) {
       return naviI18n("constraint.required.confirm");
-    }
-    if (field.getAttribute("data-rendered-by") === ".navi_list_container") {
-      return naviI18n("constraint.required.select");
-    }
-    if (field.getAttribute("data-rendered-by") === ".navi_select") {
-      return naviI18n("constraint.required.select");
     }
     return naviI18n("constraint.required.default");
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("required");
-CONSTRAINT_ATTRIBUTE_SET.add("data-required-message");
 
 const PATTERN_CONSTRAINT = {
   name: "pattern",
@@ -18427,11 +20252,11 @@ const PATTERN_CONSTRAINT = {
     if (!value && !field.required) {
       return null;
     }
-    const regex = new RegExp(pattern);
+    const regex = new RegExp(`^(?:${pattern})$`);
     if (regex.test(value)) {
       return null;
     }
-    let message = generateFieldInvalidMessage("constraint.pattern", { field });
+    let message = naviI18n(`constraint.pattern.${fieldTypeSuffix(field)}`);
     const title = field.title;
     if (title) {
       message += `<br />${title}`;
@@ -18440,7 +20265,6 @@ const PATTERN_CONSTRAINT = {
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("pattern");
-CONSTRAINT_ATTRIBUTE_SET.add("data-pattern-message");
 
 // https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/email#validation
 const emailregex =
@@ -18453,7 +20277,7 @@ const TYPE_EMAIL_CONSTRAINT = {
       return null;
     }
     const value = field.value;
-    if (!value && !field.required) {
+    if (!value) {
       return null;
     }
     if (!value.includes("@")) {
@@ -18465,7 +20289,6 @@ const TYPE_EMAIL_CONSTRAINT = {
     return null;
   },
 };
-CONSTRAINT_ATTRIBUTE_SET.add("data-type-message");
 
 const MIN_LENGTH_CONSTRAINT = {
   name: "min_length",
@@ -18483,7 +20306,7 @@ const MIN_LENGTH_CONSTRAINT = {
       return null;
     }
     const value = field.value;
-    if (!value && !field.required) {
+    if (!value) {
       return null;
     }
     const valueLength = value.length;
@@ -18491,20 +20314,20 @@ const MIN_LENGTH_CONSTRAINT = {
       return null;
     }
     if (valueLength === 1) {
-      return generateFieldInvalidMessage("constraint.min_length.singular", {
-        field,
-        min: String(minLength),
-      });
+      return naviI18n(
+        `constraint.min_length.singular.${fieldTypeSuffix(field)}`,
+        {
+          min: String(minLength),
+        },
+      );
     }
-    return generateFieldInvalidMessage("constraint.min_length.plural", {
-      field,
+    return naviI18n(`constraint.min_length.plural.${fieldTypeSuffix(field)}`, {
       min: String(minLength),
       count: String(valueLength),
     });
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("minLength");
-CONSTRAINT_ATTRIBUTE_SET.add("data-min-length-message");
 const INPUT_TYPE_SUPPORTING_MIN_LENGTH_SET = new Set([
   "text",
   "search",
@@ -18534,15 +20357,13 @@ const MAX_LENGTH_CONSTRAINT = {
     if (valueLength <= maxLength) {
       return null;
     }
-    return generateFieldInvalidMessage("constraint.max_length", {
-      field,
+    return naviI18n(`constraint.max_length.${fieldTypeSuffix(field)}`, {
       max: String(maxLength),
       count: String(valueLength),
     });
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("maxLength");
-CONSTRAINT_ATTRIBUTE_SET.add("data-max-length-message");
 const INPUT_TYPE_SUPPORTING_MAX_LENGTH_SET = new Set(
   INPUT_TYPE_SUPPORTING_MIN_LENGTH_SET,
 );
@@ -18564,12 +20385,21 @@ const TYPE_NUMBER_CONSTRAINT = {
     const valueAsNumber = field.valueAsNumber;
     const valueAsNumberIsNaN = isNaN(valueAsNumber);
     if (valueAsNumberIsNaN) {
-      return generateFieldInvalidMessage("constraint.type.number", { field });
+      return naviI18n("constraint.type.number.default");
     }
     return null;
   },
 };
-CONSTRAINT_ATTRIBUTE_SET.add("data-type-message");
+
+// ISO date strings (YYYY-MM-DD, YYYY-MM, YYYY-Www, YYYY-MM-DDTHH:MM) are
+// zero-padded big-endian, so lexicographic comparison is equivalent to
+// chronological comparison — no need to parse into Date objects.
+const DATE_INPUT_TYPE_SET = new Set([
+  "date",
+  "month",
+  "week",
+  "datetime-local",
+]);
 
 const MIN_CONSTRAINT = {
   name: "min",
@@ -18578,11 +20408,11 @@ const MIN_CONSTRAINT = {
     if (field.tagName !== "INPUT") {
       return null;
     }
+    const minString = field.min;
+    if (minString === "") {
+      return null;
+    }
     if (field.type === "number") {
-      const minString = field.min;
-      if (minString === "") {
-        return null;
-      }
       const minNumber = parseFloat(minString);
       if (isNaN(minNumber)) {
         return null;
@@ -18592,39 +20422,49 @@ const MIN_CONSTRAINT = {
         return null;
       }
       if (valueAsNumber < minNumber) {
-        return generateFieldInvalidMessage("constraint.min.number", {
-          field,
+        const naviInputType = field.getAttribute("data-navi-input-type");
+        return naviI18n(`constraint.min.${naviInputType || "number"}.default`, {
           min: minString,
         });
       }
       return null;
     }
     if (field.type === "time") {
-      const min = field.min;
-      if (min === undefined) {
+      const value = field.value;
+      if (value === "") {
         return null;
       }
-      const [minHours, minMinutes] = min.split(":").map(Number);
-      const value = field.value;
+      const [minHours, minMinutes] = minString.split(":").map(Number);
       const [hours, minutes] = value.split(":").map(Number);
-      if (hours < minHours || (hours === minHours && minMinutes < minutes)) {
-        return generateFieldInvalidMessage("constraint.min.time", {
-          field,
-          min,
+      if (hours < minHours || (hours === minHours && minutes < minMinutes)) {
+        return naviI18n("constraint.min.time.default", {
+          min: minString,
         });
       }
       return null;
     }
-    // "range"
-    // - user interface do not let user enter anything outside the boundaries
-    // - when setting value via js browser enforce boundaries too
-    // "date", "month", "week", "datetime-local"
-    // - same as "range"
+    // range inputs enforce boundaries via their UI and browser clamping for programmatic updates
+    // so they never need a min/max validation message.
+    if (DATE_INPUT_TYPE_SET.has(field.type)) {
+      const value = field.value;
+      if (!value) {
+        return null;
+      }
+      if (value < minString) {
+        const todayIso = getTodayIso(field.type);
+        if (minString === todayIso) {
+          return naviI18n("constraint.min.date.today.default");
+        }
+        return naviI18n("constraint.min.date.default", {
+          min: formatDateIso(minString, field.type),
+        });
+      }
+      return null;
+    }
     return null;
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("min");
-CONSTRAINT_ATTRIBUTE_SET.add("data-min-message");
 
 const MAX_CONSTRAINT = {
   name: "max",
@@ -18633,12 +20473,12 @@ const MAX_CONSTRAINT = {
     if (field.tagName !== "INPUT") {
       return null;
     }
+    const maxString = field.max;
+    if (maxString === "") {
+      return null;
+    }
     if (field.type === "number") {
-      const maxAttribute = field.max;
-      if (maxAttribute === "") {
-        return null;
-      }
-      const maxNumber = parseFloat(maxAttribute);
+      const maxNumber = parseFloat(maxString);
       if (isNaN(maxNumber)) {
         return null;
       }
@@ -18647,25 +20487,39 @@ const MAX_CONSTRAINT = {
         return null;
       }
       if (valueAsNumber > maxNumber) {
-        return generateFieldInvalidMessage("constraint.max.number", {
-          field,
-          max: maxAttribute,
+        const naviInputType = field.getAttribute("data-navi-input-type");
+        return naviI18n(`constraint.max.${naviInputType || "number"}.default`, {
+          max: maxString,
         });
       }
       return null;
     }
     if (field.type === "time") {
-      const max = field.max;
-      if (max === undefined) {
+      const value = field.value;
+      if (value === "") {
         return null;
       }
-      const [maxHours, maxMinutes] = max.split(":").map(Number);
-      const value = field.value;
+      const [maxHours, maxMinutes] = maxString.split(":").map(Number);
       const [hours, minutes] = value.split(":").map(Number);
-      if (hours > maxHours || (hours === maxHours && maxMinutes > minutes)) {
-        return generateFieldInvalidMessage("constraint.max.time", {
-          field,
-          max,
+      if (hours > maxHours || (hours === maxHours && minutes > maxMinutes)) {
+        return naviI18n("constraint.max.time.default", {
+          max: maxString,
+        });
+      }
+      return null;
+    }
+    if (DATE_INPUT_TYPE_SET.has(field.type)) {
+      const value = field.value;
+      if (!value) {
+        return null;
+      }
+      if (value > maxString) {
+        const todayIso = getTodayIso(field.type);
+        if (maxString === todayIso) {
+          return naviI18n("constraint.max.date.today.default");
+        }
+        return naviI18n("constraint.max.date.default", {
+          max: formatDateIso(maxString, field.type),
         });
       }
       return null;
@@ -18674,7 +20528,154 @@ const MAX_CONSTRAINT = {
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("max");
-CONSTRAINT_ATTRIBUTE_SET.add("data-max-message");
+
+const STEP_SUPPORTED_TYPE_SET = new Set([
+  "number",
+  "time",
+  "date",
+  "month",
+  "week",
+  "datetime-local",
+]);
+
+const STEP_CONSTRAINT = {
+  name: "step",
+  messageAttribute: "data-step-message",
+  check: (field) => {
+    if (field.tagName !== "INPUT") {
+      return null;
+    }
+    if (!STEP_SUPPORTED_TYPE_SET.has(field.type)) {
+      return null;
+    }
+    const stepString = field.step;
+    if (stepString === "" || stepString === "any") {
+      return null;
+    }
+    if (!field.validity.stepMismatch) {
+      return null;
+    }
+    if (field.type === "number") {
+      const step = parseFloat(stepString);
+      const minString = field.min;
+      const base = minString !== "" ? parseFloat(minString) : 0;
+      const valueAsNumber = field.valueAsNumber;
+      const before = base + Math.floor((valueAsNumber - base) / step) * step;
+      const after = before + step;
+      const decimals = (stepString.split(".")[1] || "").length;
+      const naviInputType = field.getAttribute("navi-input-type");
+      return naviI18n(`constraint.step.${naviInputType || "number"}.default`, {
+        step: stepString,
+        before: before.toFixed(decimals),
+        after: after.toFixed(decimals),
+      });
+    }
+    if (field.type === "time") {
+      const stepSeconds = parseFloat(stepString);
+      if (!isNaN(stepSeconds)) {
+        const stepMs = stepSeconds * 1000;
+        const valueMs = field.valueAsNumber;
+        const minString = field.min;
+        const baseMs = minString !== "" ? timeStringToMs(minString) : 0;
+        const remainder = (((valueMs - baseMs) % stepMs) + stepMs) % stepMs;
+        const beforeMs = valueMs - remainder;
+        const afterMs = beforeMs + stepMs;
+        const showSeconds = stepSeconds % 60 !== 0;
+        const before = formatMsToTime(beforeMs, showSeconds);
+        const after = formatMsToTime(afterMs, showSeconds);
+        if (stepSeconds % 3600 === 0) {
+          return naviI18n("constraint.step.time.hours", {
+            step: String(stepSeconds / 3600),
+            before,
+            after,
+          });
+        }
+        if (stepSeconds % 60 === 0) {
+          return naviI18n("constraint.step.time.minutes", {
+            step: String(stepSeconds / 60),
+            before,
+            after,
+          });
+        }
+        return naviI18n("constraint.step.time.seconds", {
+          step: stepString,
+          before,
+          after,
+        });
+      }
+    }
+    {
+      const step = parseInt(stepString, 10);
+      const value = field.value;
+      const minString = field.min;
+      const baseDate = minString
+        ? new Date(`${minString}T00:00:00`)
+        : new Date(0);
+      const valueDate = new Date(`${value}T00:00:00`);
+      const diffDays = Math.round((valueDate - baseDate) / 86400000);
+      const beforeDays = Math.floor(diffDays / step) * step;
+      const afterDays = beforeDays + step;
+      const beforeDate = new Date(baseDate);
+      beforeDate.setDate(beforeDate.getDate() + beforeDays);
+      const afterDate = new Date(baseDate);
+      afterDate.setDate(afterDate.getDate() + afterDays);
+      return naviI18n("constraint.step.date.default", {
+        step: stepString,
+        before: formatDateIso(
+          beforeDate.toISOString().slice(0, 10),
+          field.type,
+        ),
+        after: formatDateIso(afterDate.toISOString().slice(0, 10), field.type),
+      });
+    }
+  },
+};
+CONSTRAINT_ATTRIBUTE_SET.add("step");
+
+const timeStringToMs = (timeString) => {
+  const parts = timeString.split(":").map(Number);
+  const h = parts[0] || 0;
+  const m = parts[1] || 0;
+  const s = parts[2] || 0;
+  return (h * 3600 + m * 60 + s) * 1000;
+};
+
+const formatMsToTime = (ms, showSeconds) => {
+  const totalSec = Math.round(ms / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  const hh = String(h).padStart(2, "0");
+  const mm = String(m).padStart(2, "0");
+  if (!showSeconds) {
+    return `${hh}:${mm}`;
+  }
+  const ss = String(s).padStart(2, "0");
+  return `${hh}:${mm}:${ss}`;
+};
+
+const getTodayIso = (inputType) => {
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const dd = String(now.getDate()).padStart(2, "0");
+  if (inputType === "month") {
+    return `${yyyy}-${mm}`;
+  }
+  return `${yyyy}-${mm}-${dd}`;
+};
+
+const formatDateIso = (iso, inputType) => {
+  const locale = langSignal.value;
+  if (inputType === "month") {
+    const date = new Date(`${iso}-01T00:00:00`);
+    return formatMonth(date, locale);
+  }
+  // date, week, datetime-local: parse and use formatDay
+  const dateStr = iso.slice(0, 10);
+  const date = new Date(`${dateStr}T00:00:00`);
+  return formatDay(date, locale, { long: true });
+};
 
 /**
  * Custom form validation implementation
@@ -18721,6 +20722,269 @@ CONSTRAINT_ATTRIBUTE_SET.add("data-max-message");
 
 const NAVI_VALIDITY_CHANGE_CUSTOM_EVENT = "navi_validity_change";
 
+const dispatchRequestInteraction = (
+  element,
+  event,
+  interactionName = "interaction",
+) => {
+  const controlHost = findControlHost(element) || element;
+  const allowed = dispatchInternalCustomEvent(
+    controlHost,
+    "navi_request_interaction",
+    {
+      event,
+      interactionName,
+    },
+  );
+  return allowed;
+};
+const onRequestInteraction = (
+  requestInteractionCustomEvent,
+  { debugInteraction },
+) => {
+  const { event, interactionName } = requestInteractionCustomEvent.detail;
+  const requestStatus = { canProceed: true, preventReason: undefined };
+
+  if (requestStatus.canProceed) {
+    checkEvent(requestStatus, event);
+  }
+  if (requestStatus.canProceed) {
+    let skipConstraints = false;
+    if (event.type === "keydown") {
+      const defaultAction = getKeyboardEventDefaultAction(event);
+      if (
+        defaultAction === "type" ||
+        defaultAction === "value_change" ||
+        defaultAction === "activate" ||
+        defaultAction === "scroll" ||
+        defaultAction === "cursor_move"
+      ) ; else {
+        // "focus_nav", "form_submit", "dismiss"
+        skipConstraints = true;
+      }
+    }
+    if (!skipConstraints) {
+      checkAndReportConstraints(requestStatus, INTERACTION_CONSTRAINTS, {
+        event: requestInteractionCustomEvent,
+        requester: event.target,
+        debug: debugInteraction,
+      });
+    }
+  }
+  if (!requestStatus.canProceed) {
+    debugInteraction(
+      event,
+      `"${interactionName}" prevented (${requestStatus.preventReason})`,
+    );
+    requestInteractionCustomEvent.preventDefault();
+    return false;
+  }
+  debugInteraction(event, `"${interactionName}" allowed`);
+  return true;
+};
+
+const dispatchRequestAction = (element, detail) => {
+  if (!detail.event) {
+    throw new TypeError("dispatchRequestAction requires an event");
+  }
+  const controlHost = findControlHost(element) || element;
+  // Spread caller's detail last so explicit fields (e.g. uiState forwarded by a proxy)
+  // survive into the dispatched event. Fields absent from the caller's object are
+  // intentionally absent — Object.hasOwn checks on the receiving side rely on this
+  // to distinguish "caller provided a value" from "no value was given".
+  detail = {
+    requester: element,
+    actionOrigin: "action_prop",
+    ...detail,
+    /*
+    event,
+    requester,
+    actionOrigin,
+    action,
+    confirmMessage,
+    meta,
+    uiState,
+    */
+  };
+  const allowed = dispatchInternalCustomEvent(
+    controlHost,
+    "navi_request_action",
+    detail,
+  );
+  return allowed;
+};
+const onRequestAction = (
+  requestActionCustomEvent,
+  {
+    method = "rerun", // not used for now
+    debugAction = () => {},
+  } = {},
+) => {
+  const {
+    event,
+    actionOrigin,
+    action,
+    requester = event.target,
+    uiState,
+    meta = {},
+    confirmMessage,
+  } = requestActionCustomEvent.detail;
+
+  if (!action || !action.isAction) {
+    throw new TypeError("First argument of onRequestAction must be an action");
+  }
+  if (!actionOrigin) {
+    console.warn("requestAction: actionOrigin is required");
+  }
+  const elementHandlingAction = requestActionCustomEvent.currentTarget;
+  if (requester === elementHandlingAction) {
+    debugAction(
+      requestActionCustomEvent,
+      `${getElementSignature(elementHandlingAction)} action requested`,
+    );
+  } else {
+    debugAction(
+      requestActionCustomEvent,
+      `${getElementSignature(elementHandlingAction)} action requested by ${getElementSignature(requester)}`,
+    );
+  }
+
+  const requestStatus = { canProceed: true, preventReason: undefined };
+  if (requestStatus.canProceed) {
+    checkEvent(requestStatus, event);
+  }
+  if (requestStatus.canProceed) {
+    checkAndReportConstraints(requestStatus, DEFAULT_CONSTRAINT_SET, {
+      event: requestActionCustomEvent,
+      requester,
+      debug: debugAction,
+      fromRequestAction: true,
+    });
+  }
+  if (requestStatus.canProceed) {
+    // NOTE for future: confirmation must move to to action execution (be part of it when set)
+    // because it's actually once everything is valid that we perform this so it's conceptually part of the action execution
+    // also because in order to allow people to put their own ui it will becomes async
+    // so must be inside action execution code path
+    const effectiveConfirmMessage =
+      confirmMessage ||
+      elementHandlingAction.getAttribute("data-confirm-message");
+    if (effectiveConfirmMessage) {
+      // eslint-disable-next-line no-alert
+      if (!window.confirm(effectiveConfirmMessage)) {
+        Object.assign(requestStatus, {
+          canProceed: false,
+          preventReason: "user cancelled on confirm message",
+        });
+      }
+    }
+  }
+
+  const customEventDetail = {
+    event: requestActionCustomEvent,
+    requester,
+    uiState,
+    actionOrigin,
+    action,
+    method,
+    meta,
+  };
+  if (!requestStatus.canProceed) {
+    requestActionCustomEvent.preventDefault();
+    debugAction(
+      requestActionCustomEvent,
+      `action prevented (reason: ${requestStatus.preventReason}) -> dispatch navi_action_prevented`,
+    );
+    dispatchInternalCustomEvent(
+      elementHandlingAction,
+      "navi_action_prevented",
+      customEventDetail,
+    );
+    return false;
+  }
+  debugAction(
+    requestActionCustomEvent,
+    `${DEFAULT_CONSTRAINT_SET.size} constraints verified -> ${getElementSignature(elementHandlingAction)}.dispatchEvent("navi_action_allowed")`,
+  );
+  dispatchInternalCustomEvent(
+    elementHandlingAction,
+    "navi_action_allowed",
+    customEventDetail,
+  );
+  return true;
+};
+
+const checkEvent = (requestStatus, event) => {
+  if (event.defaultPrevented) {
+    Object.assign(requestStatus, {
+      canProceed: false,
+      preventReason: "event.defaultPrevented is true",
+    });
+    return;
+  }
+  if (pointerEventTypeSet.has(event.type) && event.button !== 0) {
+    Object.assign(requestStatus, {
+      canProceed: false,
+      preventReason: `non-primary pointer button (button ${event.button})`,
+    });
+    return;
+  }
+};
+
+const checkAndReportConstraints = (
+  requestStatus,
+  constraints,
+  { event, requester, debug, fromRequestAction } = {},
+) => {
+  const onInvalid = (failedValidationInterface) => {
+    Object.assign(requestStatus, {
+      canProceed: false,
+      preventReason: `failing constraint "${failedValidationInterface.failedConstraintInfo.name}"`,
+    });
+    failedValidationInterface.reportValidity({
+      event,
+      requester,
+      debug,
+    });
+  };
+
+  let elementToValidate = event.currentTarget;
+  if (!elementToValidate.__validationInterface__) {
+    const controlHost = findControlHost(requester);
+    if (controlHost) {
+      elementToValidate = controlHost;
+    }
+  }
+
+  // all manageds fields (if any) are checked inside checkValidity
+  let validationInterface = elementToValidate.__validationInterface__;
+  if (!validationInterface) {
+    validationInterface = installCustomConstraintValidation(elementToValidate);
+  }
+  const isValid = validationInterface.checkValidity({
+    event,
+    constraints,
+    fromRequestAction,
+    requester,
+  });
+  if (!isValid) {
+    // checkValidity delegates to the proxy target's VI when the element is a proxy.
+    // In that case validationInterface has no failedConstraintInfo — the target's VI does.
+    // Resolve the proxy target's VI so onInvalid reads failedConstraintInfo from the right place.
+    const proxyTarget = findControlProxyTarget(elementToValidate);
+    const resolvedValidationInterface = proxyTarget
+      ? proxyTarget.__validationInterface__ || validationInterface
+      : validationInterface;
+    const failingInterface =
+      resolvedValidationInterface.failingManagedValidationInterface ||
+      resolvedValidationInterface;
+    onInvalid(failingInterface);
+  }
+};
+
+const INTERACTION_CONSTRAINTS = [DISABLED_CONSTRAINT, READONLY_CONSTRAINT];
+const pointerEventTypeSet = new Set(["pointerdown", "mousedown", "click"]);
+
 const STANDARD_CONSTRAINT_SET = new Set([
   DISABLED_CONSTRAINT,
   REQUIRED_CONSTRAINT,
@@ -18731,6 +20995,7 @@ const STANDARD_CONSTRAINT_SET = new Set([
   MAX_LENGTH_CONSTRAINT,
   MIN_CONSTRAINT,
   MAX_CONSTRAINT,
+  STEP_CONSTRAINT,
 ]);
 const NAVI_CONSTRAINT_SET = new Set([
   // the order matters here, the last constraint is picked first when multiple constraints fail
@@ -18750,171 +21015,18 @@ const DEFAULT_CONSTRAINT_SET = new Set([
   ...NAVI_CONSTRAINT_SET,
 ]);
 
-const validationInProgressWeakSet = new WeakSet();
-
-const onRequestAction = (
-  action,
-  event,
-  {
-    target = event.currentTarget,
-    requester = event.detail?.requester,
-    actionOrigin = event.detail?.actionOrigin,
-    method = "rerun",
-    meta = event.detail?.meta || {},
-    confirmMessage,
-    debugAction = () => {},
-  } = {},
-) => {
-  if (!action || !action.isAction) {
-    throw new TypeError("First argument of onRequestAction must be an action");
-  }
-  if (!event || !(event instanceof Event)) {
-    throw new TypeError("Second argument of onRequestAction must be an Event");
-  }
-
-  if (!actionOrigin) {
-    console.warn("requestAction: actionOrigin is required");
-  }
-  let elementToValidate = requester;
-  if (!elementToValidate.__validationInterface__) {
-    const fieldElement = findFieldElement(requester);
-    if (fieldElement) {
-      elementToValidate = fieldElement;
-    }
-  }
-
-  let validationInterface = elementToValidate.__validationInterface__;
-  if (!validationInterface) {
-    validationInterface = installCustomConstraintValidation(elementToValidate);
-  }
-
-  const customEventDetail = {
-    action,
-    actionOrigin,
-    method,
-    event,
-    requester,
-    meta,
-  };
-
-  const initiatorTarget = event.detail?.event?.target;
-  const requesterInfo =
-    requester && requester !== initiatorTarget
-      ? ` requester=${getElementSignature(requester)}`
-      : "";
-  debugAction(
-    event,
-    `action requested by ${requesterInfo} (event: "${event?.type}")`,
-  );
-
-  // Determine what needs to be validated and how to handle the result
-  const isForm = elementToValidate.tagName === "FORM";
-  const formToValidate = isForm ? elementToValidate : elementToValidate.form;
-
-  let isValid = false;
-  let elementForConfirmation = elementToValidate;
-  let elementForDispatch = elementToValidate;
-  let failedValidationInterface;
-
-  if (formToValidate) {
-    // Form validation case
-    if (validationInProgressWeakSet.has(formToValidate)) {
-      debugAction(
-        event,
-        `validation already in progress for ${formToValidate?.id || formToValidate?.tagName}`,
-      );
-      return false;
-    }
-    validationInProgressWeakSet.add(formToValidate);
-    setTimeout(() => {
-      validationInProgressWeakSet.delete(formToValidate);
-    });
-
-    // Validate all form elements
-    const formElements = formToValidate.elements;
-    isValid = true; // Assume valid until proven otherwise
-    for (const formElement of formElements) {
-      const elementValidationInterface = formElement.__validationInterface__;
-      if (!elementValidationInterface) {
-        continue;
+const getManagedControls = (element) => {
+  let managedControls;
+  dispatchInternalCustomEvent(element, "navi_get_managed_controls", {
+    respondWith: (fieldOrFields) => {
+      if (Array.isArray(fieldOrFields)) {
+        managedControls = fieldOrFields;
+      } else if (fieldOrFields) {
+        managedControls = [fieldOrFields];
       }
-
-      const elementIsValid = elementValidationInterface.checkValidity({
-        event,
-        fromRequestAction: true,
-        skipReadonly:
-          formElement.tagName === "BUTTON" && formElement !== requester,
-        debugAction,
-      });
-      if (!elementIsValid) {
-        failedValidationInterface = elementValidationInterface;
-        isValid = false;
-        break;
-      }
-    }
-    elementForConfirmation = formToValidate;
-    elementForDispatch = target;
-  } else {
-    // Single element validation case
-    isValid = validationInterface.checkValidity({
-      event,
-      fromRequestAction: true,
-      debugAction,
-    });
-    if (!isValid) {
-      failedValidationInterface = validationInterface;
-    }
-    elementForConfirmation = target;
-    elementForDispatch = target;
-  }
-
-  // If validation failed, dispatch actionprevented and return
-  if (!isValid) {
-    debugAction(
-      event,
-      `validation failed for "${getFailedConstraintName(failedValidationInterface)}" -> dispatch navi_action_prevented`,
-    );
-    dispatchCustomEvent(
-      elementForDispatch,
-      "navi_action_prevented",
-      customEventDetail,
-    );
-    failedValidationInterface.reportValidity({
-      event,
-      debugAction,
-      requester,
-    });
-    return false;
-  }
-
-  // Validation passed, check for confirmation
-  confirmMessage =
-    confirmMessage ||
-    elementForConfirmation.getAttribute("data-confirm-message");
-  if (confirmMessage) {
-    // eslint-disable-next-line no-alert
-    if (!window.confirm(confirmMessage)) {
-      debugAction(
-        event,
-        `action cancelled by user -> dispatch navi_action_prevented`,
-      );
-      dispatchCustomEvent(
-        elementForDispatch,
-        "navi_action_prevented",
-        customEventDetail,
-      );
-      return false;
-    }
-  }
-
-  debugAction(event, `element is valid -> dispatch navi_action`);
-  dispatchCustomEvent(
-    elementForDispatch,
-    "navi_action_ready",
-    customEventDetail,
-  );
-
-  return true;
+    },
+  });
+  return managedControls || [];
 };
 
 const closeValidationMessage = (
@@ -18957,8 +21069,6 @@ const installCustomConstraintValidation = (
   }
 
   const isForm = element.tagName === "FORM";
-  const isInput = element.tagName === "INPUT" || element.tagName === "TEXTAREA";
-  const isCheckbox = element.tagName === "INPUT" && element.type === "checkbox";
   if (isForm) {
     formInstrumentedWeakSet.add(element);
     addTeardown(() => {
@@ -18974,7 +21084,7 @@ const installCustomConstraintValidation = (
   }
 
   const dispatchCancelCustomEvent = (detail) => {
-    return dispatchCustomEvent(element, "navi_cancel", detail);
+    return dispatchInternalCustomEvent(element, "navi_cancel", detail);
   };
   const closeElementValidationMessage = (event, reason) => {
     if (validationInterface.validationMessage) {
@@ -18984,7 +21094,7 @@ const installCustomConstraintValidation = (
     return false;
   };
 
-  const constraintSet = new Set(DEFAULT_CONSTRAINT_SET);
+  const dynamicConstraintSet = new Set();
 
   {
     validationInterface.registerConstraint = (constraint) => {
@@ -18994,14 +21104,15 @@ const installCustomConstraintValidation = (
           check: constraint,
         };
       }
-      constraintSet.add(constraint);
+      dynamicConstraintSet.add(constraint);
       return () => {
-        constraintSet.delete(constraint);
+        dynamicConstraintSet.delete(constraint);
       };
     };
   }
 
   let failedConstraintInfo = null;
+  let failingManagedValidationInterface = null;
   const validityInfoMap = new Map();
   const hasTitleAttribute = element.hasAttribute("title");
 
@@ -19010,7 +21121,7 @@ const installCustomConstraintValidation = (
   validationInterface.getConstraintValidityState = getConstraintValidityState;
 
   const resetValidity = ({ fromRequestAction } = {}) => {
-    if (fromRequestAction && failedConstraintInfo) {
+    if (fromRequestAction) {
       for (const [key, customMessage] of customMessageMap) {
         if (customMessage.removeOnRequestAction) {
           customMessageMap.delete(key);
@@ -19024,14 +21135,64 @@ const installCustomConstraintValidation = (
     }
     validityInfoMap.clear();
     failedConstraintInfo = null;
+    failingManagedValidationInterface = null;
   };
   addTeardown(resetValidity);
 
-  const checkValidity = ({ event, fromRequestAction, skipReadonly } = {}) => {
-    let newConstraintValidityState = { valid: true };
+  const checkValidity = ({
+    constraints,
+    event,
+    requester = element,
+    fromRequestAction,
+    skipReadonly,
+  } = {}) => {
+    // Never validate a proxy — always delegate to the underlying element
+    const proxyTarget = findControlProxyTarget(element);
+    if (proxyTarget) {
+      let targetVI = proxyTarget.__validationInterface__;
+      if (!targetVI) {
+        targetVI = installCustomConstraintValidation(proxyTarget);
+      }
+      return targetVI.checkValidity({
+        constraints,
+        event,
+        fromRequestAction,
+        requester,
+        skipReadonly,
+      });
+    }
 
+    // Always check managed fields first. If any fails, stop immediately and
+    // expose the failing interface so the caller can reportValidity on the right element.
+    failingManagedValidationInterface = null;
+    const managedControls = getManagedControls(element);
+    for (const managedControl of managedControls) {
+      const managedVI = managedControl.__validationInterface__;
+      if (!managedVI) {
+        continue;
+      }
+      const managedIsValid = managedVI.checkValidity({
+        constraints,
+        event,
+        requester,
+        fromRequestAction,
+        skipReadonly:
+          managedControl.tagName === "BUTTON" && managedControl !== requester,
+      });
+      if (!managedIsValid) {
+        failingManagedValidationInterface = managedVI;
+        return false;
+      }
+    }
+
+    let newConstraintValidityState = { valid: true };
+    // When constraints are explicitly provided (e.g. pointer interaction), use only those.
+    // Otherwise use default set merged with dynamic constraints.
+    const effectiveConstraints = constraints
+      ? constraints
+      : new Set([...DEFAULT_CONSTRAINT_SET, ...dynamicConstraintSet]);
     resetValidity({ fromRequestAction });
-    for (const constraint of constraintSet) {
+    for (const constraint of effectiveConstraints) {
       const fieldForConstraint = element;
       const constraintCleanupSet = new Set();
       const registerChange = (register) => {
@@ -19052,6 +21213,7 @@ const installCustomConstraintValidation = (
       const checkResult = constraint.check(fieldForConstraint, {
         fromRequestAction,
         skipReadonly,
+        skipRequired: element === requester,
         registerChange,
       });
       if (!checkResult) {
@@ -19119,13 +21281,8 @@ const installCustomConstraintValidation = (
     return newConstraintValidityState.valid;
   };
 
-  const [notifyCalloutOpen, onCalloutOpen] = createPubSub(true);
-  const reportValidity = ({
-    skipFocus,
-    event,
-    debugAction,
-    requester,
-  } = {}) => {
+  const [notifyCalloutOpen, onCalloutOpen] = createPubSub();
+  const reportValidity = ({ event, requester, debug, skipFocus } = {}) => {
     if (!failedConstraintInfo) {
       closeElementValidationMessage(event, "becomes_valid");
       return;
@@ -19134,89 +21291,106 @@ const installCustomConstraintValidation = (
       closeElementValidationMessage(event, "invalid_silent");
       return;
     }
+
+    // Always resolve the right message first (handles custom messages, attributes, fallback).
+    const { message, origin } = getConstraintMessage(
+      element,
+      failedConstraintInfo.constraint,
+      failedConstraintInfo.message,
+      { requester },
+    );
+    if (debug) {
+      debug(
+        event,
+        `constraint message for "${failedConstraintInfo.constraint.name}": ${origin}`,
+      );
+    }
+
     if (validationInterface.validationMessage) {
-      const { message, status, closeOnClickOutside } = failedConstraintInfo;
+      const { status, closeOnClickOutside } = failedConstraintInfo;
       validationInterface.validationMessage.update(message, {
         status,
         closeOnClickOutside,
       });
       return;
     }
-    if (!skipFocus) {
-      element.focus();
+    const anchorElement =
+      failedConstraintInfo.target || elementReceivingValidationMessage;
+    if (
+      !skipFocus &&
+      // skip focus on proxy (which uses aria-hidden and are not meant to be focused)
+      !anchorElement.closest('[aria-hidden="true"]')
+    ) {
+      const focusTarget =
+        findFocusDelegateTarget(anchorElement) || anchorElement;
+      if (debug) {
+        debug(
+          event,
+          `opening callout, give focus to anchor -> ${getElementSignature(focusTarget)}.focus()`,
+        );
+      }
+      focusTarget.focus();
     }
     const removeCloseOnCleanup = addTeardown(() => {
       closeElementValidationMessage(new CustomEvent("cleanup"), "cleanup");
     });
 
-    const anchorElement = (() => {
-      const base =
-        failedConstraintInfo.target || elementReceivingValidationMessage;
-      const renderedBy = base.getAttribute("data-rendered-by");
-      if (renderedBy) {
-        const renderedByElement = base.closest(renderedBy);
-        if (renderedByElement) {
-          return renderedByElement;
+    validationInterface.validationMessage = openCallout(message, {
+      anchorElement,
+      status: failedConstraintInfo.status,
+      closeOnClickOutside: failedConstraintInfo.closeOnClickOutside,
+      openingEvent: event,
+      debug,
+      onClose: ({ event, focusWithinCallout }) => {
+        removeCloseOnCleanup();
+        for (const result of results) {
+          if (typeof result === "function") {
+            result();
+          }
         }
-      }
-      if (base.tagName === "INPUT" && base.type === "hidden") {
-        return base.form || document.body;
-      }
-      return base;
-    })();
-
-    let messageOrCustomMessage;
-    if (failedConstraintInfo.constraint.messageAttribute) {
-      const { message, origin } = getConstraintMessage(
-        element,
-        failedConstraintInfo.constraint,
-        failedConstraintInfo.message,
-        { requester },
-      );
-      if (debugAction) {
-        debugAction(
-          event,
-          `constraint message for "${failedConstraintInfo.constraint.name}": ${origin}`,
-        );
-      }
-      messageOrCustomMessage = message;
-    } else {
-      messageOrCustomMessage = failedConstraintInfo.message;
-    }
-    validationInterface.validationMessage = openCallout(
-      messageOrCustomMessage,
-      {
-        anchorElement,
-        status: failedConstraintInfo.status,
-        closeOnClickOutside: failedConstraintInfo.closeOnClickOutside,
-        openingEvent: event,
-        debug: debugAction,
-        onClose: () => {
-          removeCloseOnCleanup();
-          for (const result of results) {
-            if (typeof result === "function") {
-              result();
-            }
+        validationInterface.validationMessage = null;
+        if (failedConstraintInfo) {
+          failedConstraintInfo.reportStatus = "closed";
+        }
+        if (
+          !skipFocus &&
+          focusWithinCallout &&
+          !element.closest('[aria-hidden="true"]') // do not focus invalid proxy
+        ) {
+          const focusTarget =
+            findFocusDelegateTarget(anchorElement) || anchorElement;
+          if (debug) {
+            debug(
+              event,
+              `callout is closing with focus, give focus back to the control ${getElementSignature(focusTarget)}.focus()`,
+            );
           }
-          validationInterface.validationMessage = null;
-          if (failedConstraintInfo) {
-            failedConstraintInfo.reportStatus = "closed";
-          }
-          if (!skipFocus) {
-            element.focus();
-          }
-        },
+          // focus is withing callout and we are closing it
+          // if we don't do anything browser will move focus to the body
+          // it's better to have it back to the field
+          focusTarget.focus();
+        }
       },
-    );
+    });
     const results = notifyCalloutOpen(event);
     failedConstraintInfo.reportStatus = "reported";
   };
   validationInterface.checkValidity = checkValidity;
   validationInterface.reportValidity = reportValidity;
+  Object.defineProperty(validationInterface, "failedConstraintInfo", {
+    get: () => failedConstraintInfo,
+  });
+  Object.defineProperty(
+    validationInterface,
+    "failingManagedValidationInterface",
+    {
+      get: () => failingManagedValidationInterface,
+    },
+  );
 
   const customMessageMap = new Map();
   {
-    constraintSet.add({
+    dynamicConstraintSet.add({
       name: "custom_message",
       check: () => {
         for (const [, { message, status }] of customMessageMap) {
@@ -19228,11 +21402,11 @@ const installCustomConstraintValidation = (
     const addCustomMessage = (
       key,
       message,
-      { status = "info", removeOnRequestAction = false } = {},
+      { event, status = "info", removeOnRequestAction = false } = {},
     ) => {
       customMessageMap.set(key, { message, status, removeOnRequestAction });
-      checkValidity();
-      reportValidity();
+      checkValidity({ event });
+      reportValidity({ event });
       return () => {
         removeCustomMessage(key);
       };
@@ -19261,8 +21435,35 @@ const installCustomConstraintValidation = (
     checkValidity({ event: e });
   };
 
-  {
+  close_and_check_on_input: {
+    if (element.type === "range") {
+      break close_and_check_on_input; // range inputs have a special behavior where "input" is triggered on pointer release, so we don't need to wait for it
+    }
+
+    let waitPointerRelease;
+    onCalloutOpen((openingEvent) => {
+      if (openingEvent && findEvent(openingEvent, "mousedown")) {
+        waitPointerRelease = true;
+        const onMouseUp = () => {
+          setTimeout(() => {
+            waitPointerRelease = false;
+          });
+        };
+        document.addEventListener("mouseup", onMouseUp, {
+          once: true,
+          capture: true,
+        });
+        return () => {
+          document.removeEventListener("mouseup", onMouseUp, true);
+        };
+      }
+      return undefined;
+    });
+
     const oninput = (e) => {
+      if (waitPointerRelease) {
+        return;
+      }
       resetOnInteraction(e);
     };
     element.addEventListener("input", oninput);
@@ -19277,19 +21478,15 @@ const installCustomConstraintValidation = (
     // and dismiss the callout — unless the status is "error", which requires explicit action.
     // The listener is registered when the callout opens and removed when it closes,
     // so it can never accidentally close the next callout.
-    const interactionTarget = (() => {
-      const renderedBy = element.getAttribute("data-rendered-by");
-      if (renderedBy) {
-        return element.closest(renderedBy) || element;
-      }
-      return element;
-    })();
+    const interactionTarget = findControlRoot(element) || element;
     onCalloutOpen((openingEvent) => {
+      const openingMousedownEvent =
+        openingEvent && findEvent(openingEvent, "mousedown");
       const onmousedown = (e) => {
         if (e.button !== 0) {
           return;
         }
-        if (e === openingEvent) {
+        if (e === openingMousedownEvent) {
           // The callout was opened during this same mousedown — don't close it immediately.
           return;
         }
@@ -19298,43 +21495,38 @@ const installCustomConstraintValidation = (
         }
         resetOnInteraction(e);
       };
+
+      let label;
+      const closestLabel = element.closest("label");
+      if (closestLabel && closestLabel !== element) {
+        label = closestLabel;
+      } else {
+        const id = element.id;
+        if (id) {
+          label = document.querySelector(`label[for="${CSS.escape(id)}"]`);
+        }
+      }
+      let removeLabelListener;
+      if (label) {
+        label.addEventListener("mousedown", onmousedown);
+        removeLabelListener = () => {
+          label.removeEventListener("mousedown", onmousedown);
+        };
+      }
       interactionTarget.addEventListener("mousedown", onmousedown);
       return () => {
         interactionTarget.removeEventListener("mousedown", onmousedown);
+        removeLabelListener?.();
       };
-    });
-  }
-
-  check_on_hidden_input_value: {
-    // Hidden inputs (used by Select, List) don't fire "input" or "change" events
-    // when their value is set programmatically. We intercept the value setter to
-    // detect those changes and re-run validation.
-    if (element.type !== "hidden") {
-      break check_on_hidden_input_value;
-    }
-    const nativeDescriptor = Object.getOwnPropertyDescriptor(
-      HTMLInputElement.prototype,
-      "value",
-    );
-    Object.defineProperty(element, "value", {
-      get() {
-        return nativeDescriptor.get.call(this);
-      },
-      set(newValue) {
-        nativeDescriptor.set.call(this, newValue);
-        resetOnInteraction(new CustomEvent("programmatic_value_change"));
-      },
-      configurable: true,
-    });
-    addTeardown(() => {
-      delete element.value;
     });
   }
 
   {
     // this ensure we re-check validity (and remove message no longer relevant)
     // once the action ends (used to remove the NOT_BUSY_CONSTRAINT message)
-    const onNaviActionEnd = (e) => {
+    const onNaviActionEnd = async (e) => {
+      // wait a tick for preact to have time to remove attrs (like data-readonly) as "navi_action_end" side effects are executed
+      await new Promise((r) => requestAnimationFrame(r));
       checkValidity({ event: e });
     };
     element.addEventListener("navi_action_end", onNaviActionEnd);
@@ -19353,242 +21545,12 @@ const installCustomConstraintValidation = (
     });
   }
 
-  request_on_enter: {
-    const isNaviSelect =
-      element.tagName === "BUTTON" && element.classList.contains("navi_select");
-    if (element.tagName !== "INPUT" && !isNaviSelect) {
-      // maybe we want it too for checkboxes etc, we'll see
-      break request_on_enter;
-    }
-    const onkeydown = (keydownEvent) => {
-      if (keydownEvent.defaultPrevented) {
-        return;
-      }
-      if (keydownEvent.key !== "Enter") {
-        return;
-      }
-      const elementWithAction = closestElementWithAction(element);
-      if (!elementWithAction) {
-        return;
-      }
-
-      const determineClosestFormSubmitTargetForEnterKeyEvent = () => {
-        if (keydownEvent.defaultPrevented) {
-          return null;
-        }
-        const keydownTarget = keydownEvent.target;
-        const { form } = keydownTarget;
-        if (!form) {
-          return null;
-        }
-        if (keydownTarget.tagName === "BUTTON") {
-          if (
-            keydownTarget.type !== "submit" &&
-            keydownTarget.type !== "image"
-          ) {
-            // navi_select acts like a native <select>: Enter on the closed select
-            // triggers form submission rather than toggling the popover.
-            if (isNaviSelect) {
-              return getFirstButtonSubmittingForm(form) || keydownTarget;
-            }
-            return null;
-          }
-          return keydownTarget;
-        }
-        if (keydownTarget.tagName === "INPUT") {
-          if (
-            ![
-              "text",
-              "email",
-              "password",
-              "search",
-              "number",
-              "url",
-              "tel",
-            ].includes(keydownTarget.type)
-          ) {
-            return null;
-          }
-          // when present, we use first button submitting the form as the requester
-          // not the input, it aligns with browser behavior where
-          // hitting Enter in a text input triggers the first submit button of the form, not the input itself
-          return getFirstButtonSubmittingForm(keydownTarget) || keydownTarget;
-        }
-        return null;
-      };
-      const formSubmitTarget =
-        determineClosestFormSubmitTargetForEnterKeyEvent();
-      if (formSubmitTarget) {
-        // preventDefault on keydown prevents the browser from firing a synthetic
-        // click on the button, so request_on_button_click won't double-fire.
-        keydownEvent.preventDefault();
-      }
-      dispatchRequestAction(elementWithAction, {
-        event: keydownEvent,
-        requester: formSubmitTarget || element,
-      });
-    };
-    element.addEventListener("keydown", onkeydown);
-    addTeardown(() => {
-      element.removeEventListener("keydown", onkeydown);
-    });
-  }
-
-  {
-    const onclick = (clickEvent) => {
-      if (clickEvent.defaultPrevented) {
-        return;
-      }
-      if (element.tagName !== "BUTTON") {
-        return;
-      }
-      const button = element;
-      const elementWithAction = closestElementWithAction(button);
-      if (!elementWithAction) {
-        return;
-      }
-      const determineClosestFormSubmitTargetForClickEvent = () => {
-        if (clickEvent.defaultPrevented) {
-          return null;
-        }
-        const clickTarget = clickEvent.target;
-        const { form } = clickTarget;
-        if (!form) {
-          // reset button are not associated to the from
-          // so they early return here
-          return null;
-        }
-        const wouldSubmitFormByType =
-          button.type === "submit" || button.type === "image";
-        if (wouldSubmitFormByType) {
-          return button;
-        }
-        if (button.type) {
-          // "reset", "button" or any other non submit type, it won't submit the form
-          return null;
-        }
-        const firstButtonSubmittingForm = getFirstButtonSubmittingForm(form);
-        if (button !== firstButtonSubmittingForm) {
-          // an other button is explicitly submitting the form, this one would not submit it
-          return null;
-        }
-        // this is the only button inside the form without type attribute, so it defaults to type="submit"
-        return button;
-      };
-      const formSubmitTarget = determineClosestFormSubmitTargetForClickEvent();
-      if (formSubmitTarget) {
-        // prevent from submission
-        clickEvent.preventDefault();
-      }
-      if (button.type === "reset") {
-        // reset button got their own behavior
-        return;
-      }
-      // dispatch only if the button
-      dispatchRequestAction(elementWithAction, {
-        event: clickEvent,
-        requester: formSubmitTarget || button,
-      });
-    };
-    element.addEventListener("click", onclick);
-    addTeardown(() => {
-      element.removeEventListener("click", onclick);
-    });
-  }
-
-  request_on_input_value_change: {
-    if (!isInput) {
-      break request_on_input_value_change;
-    }
-    const elementWithAction = closestElementWithAction(element);
-    if (!elementWithAction) {
-      break request_on_input_value_change;
-    }
-    const closestElementWithActionAttr = element.closest("[data-action]");
-    if (closestElementWithActionAttr.tagName === "FORM") {
-      break request_on_input_value_change;
-    }
-    const stop = listenInputValue(
-      element,
-      (e) => {
-        dispatchRequestAction(elementWithAction, {
-          event: e,
-          requester: element,
-        });
-      },
-      {
-        waitForChange: closestElementWithActionAttr.hasAttribute(
-          "data-action-after-change",
-        ),
-        debounce: closestElementWithActionAttr.hasAttribute(
-          "data-action-debounce",
-        )
-          ? parseFloat(
-              closestElementWithActionAttr.getAttribute("data-action-debounce"),
-            )
-          : undefined,
-      },
-    );
-    addTeardown(() => {
-      stop();
-    });
-  }
-
-  request_on_checkbox_change: {
-    if (!isCheckbox) {
-      break request_on_checkbox_change;
-    }
-    const onchange = (e) => {
-      if (element.parentNode.hasAttribute("data-action")) {
-        dispatchRequestAction(element, {
-          event: e,
-          requester: element,
-        });
-        return;
-      }
-    };
-    element.addEventListener("change", onchange);
-    addTeardown(() => {
-      element.removeEventListener("change", onchange);
-    });
-  }
-
-  execute_on_form_submit: {
-    if (!isForm) {
-      break execute_on_form_submit;
-    }
-    // We will dispatch "action" when "submit" occurs (code called from.submit() to bypass validation)
-    const form = element;
-    if (!form.hasAttribute("data-action")) {
-      form.setAttribute("data-action", "toto");
-    }
-    form.setAttribute("novalidate", ""); // make sure browser don't prevent "submit" when invalid, nor display messages
-    const removeListener = addEventListener(form, "submit", (e) => {
-      e.preventDefault();
-      dispatchCustomEvent(form, "navi_action", {
-        action: null,
-        event: e,
-        method: "rerun",
-        requester: form,
-        meta: {
-          isSubmit: true,
-        },
-      });
-    });
-    addTeardown(() => {
-      removeListener();
-    });
-  }
-
   {
     const onkeydown = (e) => {
       if (e.key === "Escape") {
-        if (closeElementValidationMessage(e, "escape_key")) {
-          // closing the callout should prevent anything else from hapenning
-          e.stopPropagation();
-          e.preventDefault();
-        } else {
+        if (validationInterface.validationMessage) ; else {
           dispatchCancelCustomEvent({
+            event: e,
             reason: "escape_key",
           });
         }
@@ -19601,9 +21563,10 @@ const installCustomConstraintValidation = (
   }
 
   {
-    const onblur = () => {
+    const onblur = (e) => {
       if (element.value === "") {
         dispatchCancelCustomEvent({
+          event: e,
           reason: "blur_empty",
         });
         return;
@@ -19611,6 +21574,7 @@ const installCustomConstraintValidation = (
       // if we have failed constraint, we cancel too
       if (failedConstraintInfo) {
         dispatchCancelCustomEvent({
+          event: e,
           reason: "blur_invalid",
           failedConstraintInfo,
         });
@@ -19624,31 +21588,6 @@ const installCustomConstraintValidation = (
   }
 
   return validationInterface;
-};
-
-// When interacting with an element we want to find the closest element
-// eventually handling the action
-// 1. <button> itself has an action
-// 2. <button> is inside a <form> with an action
-// 3. <button> is inside a wrapper <div> with an action (data-action is not necessarly on the interactive element itself, it can be on a wrapper, we want to support that)
-// 4. <button> is inside a <fieldset> or any element that catches the action like a <form> would
-// In examples above <button> can also be <input> etc..
-const closestElementWithAction = (el) => {
-  if (el.hasAttribute("data-action")) {
-    return el;
-  }
-  const closestDataActionElement = el.closest("[data-action]");
-  if (!closestDataActionElement) {
-    return null;
-  }
-  const visualSelector = closestDataActionElement.getAttribute(
-    "data-visual-selector",
-  );
-  if (!visualSelector) {
-    return closestDataActionElement;
-  }
-  const visualElement = closestDataActionElement.querySelector(visualSelector);
-  return visualElement;
 };
 
 const pickConstraint = (a, b) => {
@@ -19669,22 +21608,6 @@ const getConstraintPriority = (constraint) => {
   return 1;
 };
 
-const getFirstButtonSubmittingForm = (form) => {
-  return form.querySelector(
-    `button[type="submit"], input[type="submit"], input[type="image"]`,
-  );
-};
-
-const dispatchRequestAction = (
-  elementWithAction,
-  { actionOrigin = "action_prop", event, requester },
-) => {
-  return dispatchCustomEvent(elementWithAction, "navi_request_action", {
-    actionOrigin,
-    event,
-    requester,
-  });
-};
 // https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Constraint_validation
 const requestSubmit = HTMLFormElement.prototype.requestSubmit;
 HTMLFormElement.prototype.requestSubmit = function (submitter) {
@@ -19728,199 +21651,17 @@ HTMLFormElement.prototype.requestSubmit = function (submitter) {
 //   return submit.apply(this, args);
 // };
 
-const addEventListener = (element, event, callback) => {
-  element.addEventListener(event, callback);
-  return () => {
-    element.removeEventListener(event, callback);
-  };
-};
-
-// When the requester is not a validated element itself (e.g. a <li> inside a
-// list container), look for a field element declared via data-field on the
-// closest [data-action] ancestor.
-const findFieldElement = (element) => {
-  const elementWithAction = element.closest("[data-action]");
-  if (!elementWithAction) {
-    return null;
-  }
-  const fieldSelector = elementWithAction.getAttribute("data-field");
-  if (!fieldSelector) {
-    return null;
-  }
-  return (
-    elementWithAction.querySelector(fieldSelector) ||
-    document.querySelector(fieldSelector)
-  );
-};
-
-const getFailedConstraintName = (validationInterface) => {
-  const state = validationInterface.getConstraintValidityState?.();
-  if (!state) {
-    return "unknown";
-  }
-  for (const key of Object.keys(state)) {
-    if (key !== "valid" && state[key]) {
-      return key;
-    }
-  }
-  return "unknown";
-};
-
-const useOnRequestAction = (actionOrigin = "action_prop") => {
-  const debugAction = useDebugAction();
-
-  return (action, e, options = {}) => {
-    if (e.detail.actionOrigin !== actionOrigin) {
-      return;
-    }
-    const context = {
-      debugAction,
-      actionOrigin,
-      ...options,
-    };
-    onRequestAction(action, e, context);
-  };
-};
-
-const useRequestedActionStatus = (elementRef, { actionOrigin } = {}) => {
-  const [actionRequester, setActionRequester] = useState(null);
-  const [actionPending, setActionPending] = useState(false);
-  const [actionAborted, setActionAborted] = useState(false);
-  const [actionError, setActionError] = useState(null);
-
-  useActionEvents(elementRef, {
-    actionOrigin,
-    onReady: (actionEvent) => {
-      setActionRequester(actionEvent.detail.requester);
-    },
-    onStart: () => {
-      setActionPending(true);
-      setActionAborted(false);
-      setActionError(null);
-    },
-    onAbort: () => {
-      setActionPending(false);
-      setActionAborted(true);
-    },
-    onError: (error) => {
-      setActionPending(false);
-      setActionError(error);
-    },
-    onEnd: () => {
-      setActionPending(false);
-    },
-  });
-
-  return {
-    actionRequester,
-    actionPending,
-    actionAborted,
-    actionError,
-  };
-};
-
-const useActionEvents = (
-  elementRef,
-  {
-    actionOrigin = "action_prop",
-    /**
-     * @param {Event} e - L'événement original
-     * @param {"form_reset" | "blur_invalid" | "escape_key"} reason - Raison du cancel
-     */
-    onCancel,
-    onRequested,
-    onPrevented,
-    onReady,
-    onStart,
-    onAbort,
-    onError,
-    onEnd,
-  },
-) => {
-  onCancel = useStableCallback(onCancel);
-  onRequested = useStableCallback(onRequested);
-  onPrevented = useStableCallback(onPrevented);
-  onReady = useStableCallback(onReady);
-  onStart = useStableCallback(onStart);
-  onAbort = useStableCallback(onAbort);
-  onError = useStableCallback(onError);
-  onEnd = useStableCallback(onEnd);
-
-  useLayoutEffect(() => {
-    const element = elementRef.current;
-    if (!element) {
-      return null;
-    }
-
-    return addManyEventListeners(element, {
-      navi_cancel: (e) => {
-        // cancel don't need to check for actionOrigin because
-        // it's actually unrelated to a specific actions
-        // in that sense it should likely be moved elsewhere as it's related to
-        // interaction and constraint validation, not to a specific action
-        onCancel?.(e, e.detail.reason);
-      },
-      navi_request_action: (e) => {
-        if (e.detail.actionOrigin !== actionOrigin) {
-          return;
-        }
-        onRequested?.(e);
-      },
-      navi_action_prevented: (e) => {
-        if (e.detail.actionOrigin !== actionOrigin) {
-          return;
-        }
-        onPrevented?.(e);
-      },
-      navi_action_ready: (e) => {
-        if (e.detail.actionOrigin !== actionOrigin) {
-          return;
-        }
-        onReady?.(e);
-      },
-      navi_action_start: (e) => {
-        if (e.detail.actionOrigin !== actionOrigin) {
-          return;
-        }
-        onStart?.(e);
-      },
-      navi_action_abort: (e) => {
-        if (e.detail.actionOrigin !== actionOrigin) {
-          return;
-        }
-        onAbort?.(e);
-      },
-      navi_action_error: (e) => {
-        if (e.detail.actionOrigin !== actionOrigin) {
-          return;
-        }
-        onError?.(e.detail.error, e);
-      },
-      navi_action_end: (e) => {
-        if (e.detail.actionOrigin !== actionOrigin) {
-          return;
-        }
-        onEnd?.(e);
-      },
-    });
-  }, [
-    actionOrigin,
-    onCancel,
-    onRequested,
-    onPrevented,
-    onReady,
-    onStart,
-    onAbort,
-    onError,
-    onEnd,
-  ]);
-};
-
 const useCustomValidationRef = (
   elementRef,
   { targetSelector, disabled },
 ) => {
   const customValidationRef = useRef();
+  // Capture the call-site stack at render time (outside the layout effect)
+  // so the warning points to the component that called this hook, not Preact internals.
+  const callSiteRef = useRef(null);
+  if (!callSiteRef.current) {
+    callSiteRef.current = new Error("useCustomValidationRef called here").stack;
+  }
 
   useLayoutEffect(() => {
     if (disabled) {
@@ -19929,7 +21670,8 @@ const useCustomValidationRef = (
     const element = elementRef.current;
     if (!element) {
       console.warn(
-        "useCustomValidationRef: elementRef.current is null, make sure to pass a ref to an element",
+        `useCustomValidationRef: elementRef.current is null, make sure to pass a ref to an element
+${callSiteRef.current}`,
       );
       /* can happen if the component does this for instance:
       const Component = () => {
@@ -19995,29 +21737,9 @@ const unsubscribe = (element) => {
 const NO_CONSTRAINTS = [];
 const useConstraints = (
   elementRef,
-  props,
+  constraints = NO_CONSTRAINTS,
   { targetSelector, disabled } = {},
 ) => {
-  const {
-    constraints = NO_CONSTRAINTS,
-    disabledMessage,
-    requiredMessage,
-    patternMessage,
-    minLengthMessage,
-    maxLengthMessage,
-    typeMessage,
-    minMessage,
-    maxMessage,
-    singleSpaceMessage,
-    sameAsMessage,
-    minDigitMessage,
-    minLowerLetterMessage,
-    minUpperLetterMessage,
-    minSpecialCharMessage,
-    availableMessage,
-    ...remainingProps
-  } = props;
-
   const customValidationRef = useCustomValidationRef(elementRef, {
     targetSelector,
     disabled,
@@ -20035,96 +21757,6 @@ const useConstraints = (
       }
     };
   }, constraints);
-
-  useLayoutEffect(() => {
-    const el = elementRef.current;
-    if (!el) {
-      return null;
-    }
-    const cleanupCallbackSet = new Set();
-    const setupCustomEvent = (el, constraintName, Component) => {
-      const attrName = `data-${constraintName}-message-event`;
-      const customEventName = `${constraintName}_message_jsx`;
-      el.setAttribute(attrName, customEventName);
-      const onCustomEvent = (e) => {
-        e.detail.render(Component);
-      };
-      el.addEventListener(customEventName, onCustomEvent);
-      cleanupCallbackSet.add(() => {
-        el.removeEventListener(customEventName, onCustomEvent);
-        el.removeAttribute(attrName);
-      });
-    };
-
-    if (disabledMessage) {
-      setupCustomEvent(el, "disabled", disabledMessage);
-    }
-    if (requiredMessage) {
-      setupCustomEvent(el, "required", requiredMessage);
-    }
-    if (patternMessage) {
-      setupCustomEvent(el, "pattern", patternMessage);
-    }
-    if (minLengthMessage) {
-      setupCustomEvent(el, "min-length", minLengthMessage);
-    }
-    if (maxLengthMessage) {
-      setupCustomEvent(el, "max-length", maxLengthMessage);
-    }
-    if (typeMessage) {
-      setupCustomEvent(el, "type", typeMessage);
-    }
-    if (minMessage) {
-      setupCustomEvent(el, "min", minMessage);
-    }
-    if (maxMessage) {
-      setupCustomEvent(el, "max", maxMessage);
-    }
-    if (singleSpaceMessage) {
-      setupCustomEvent(el, "single-space", singleSpaceMessage);
-    }
-    if (sameAsMessage) {
-      setupCustomEvent(el, "same-as", sameAsMessage);
-    }
-    if (minDigitMessage) {
-      setupCustomEvent(el, "min-digit", minDigitMessage);
-    }
-    if (minLowerLetterMessage) {
-      setupCustomEvent(el, "min-lower-letter", minLowerLetterMessage);
-    }
-    if (minUpperLetterMessage) {
-      setupCustomEvent(el, "min-upper-letter", minUpperLetterMessage);
-    }
-    if (minSpecialCharMessage) {
-      setupCustomEvent(el, "min-special-char", minSpecialCharMessage);
-    }
-    if (availableMessage) {
-      setupCustomEvent(el, "available", availableMessage);
-    }
-    return () => {
-      for (const cleanupCallback of cleanupCallbackSet) {
-        cleanupCallback();
-      }
-    };
-  }, [
-    disabledMessage,
-    requiredMessage,
-    patternMessage,
-    minLengthMessage,
-    maxLengthMessage,
-    typeMessage,
-    minMessage,
-    maxMessage,
-    singleSpaceMessage,
-    sameAsMessage,
-    minDigitMessage,
-    minLowerLetterMessage,
-    minUpperLetterMessage,
-    minSpecialCharMessage,
-    availableMessage,
-  ]);
-
-  return remainingProps;
 };
 
 const EmailSvg = () => {
@@ -20330,7 +21962,7 @@ const setupNetworkMonitoring = () => {
 };
 setupNetworkMonitoring();
 
-installImportMetaCssBuild(import.meta);const css$G = /* css */`
+installImportMetaCssBuild(import.meta);const css$N = /* css */`
   .navi_loading_indicator_fluid_container {
     position: relative;
     display: flex;
@@ -20339,8 +21971,7 @@ installImportMetaCssBuild(import.meta);const css$G = /* css */`
     border-radius: inherit;
     opacity: 1;
 
-    &[hidden] {
-      display: flex;
+    &[data-visually-hidden] {
       opacity: 0;
     }
   }
@@ -20358,9 +21989,10 @@ const LoadingIndicatorFluid = ({
   color = "currentColor",
   size = 2,
   radius,
+  visuallyHidden,
   ...rest
 }) => {
-  import.meta.css = [css$G, "@jsenv/navi/src/graphic/loading/loading_indicator_fluid.jsx"];
+  import.meta.css = [css$N, "@jsenv/navi/src/graphic/loading/loading_indicator_fluid.jsx"];
   const ref = useRef(null);
   // The container dimensions can be deduced from the ref itself as the indicator is absolute inset 0
   const [containerWidth, setContainerWidth] = useState(0);
@@ -20414,6 +22046,7 @@ const LoadingIndicatorFluid = ({
     ...rest,
     ref: ref,
     className: "navi_loading_indicator_fluid_container",
+    "data-visually-hidden": visuallyHidden ? "" : undefined,
     children: containerWidth > 0 && containerHeight > 0 && jsx(LoadingRectangleSvg, {
       color: color,
       radius: containerRadius,
@@ -20552,7 +22185,7 @@ const LoadingRectangleSvg = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$F = /* css */`
+installImportMetaCssBuild(import.meta);const css$M = /* css */`
   .navi_loading_outline_wrapper {
     position: absolute;
     top: var(--loading-rectangle-top, 0);
@@ -20570,7 +22203,7 @@ installImportMetaCssBuild(import.meta);const css$F = /* css */`
   }
 `;
 const LoadingOutline = props => {
-  import.meta.css = [css$F, "@jsenv/navi/src/graphic/loading/loading_outline.jsx"];
+  import.meta.css = [css$M, "@jsenv/navi/src/graphic/loading/loading_outline.jsx"];
   if (props.containerRef) {
     const container = props.containerRef.current;
     if (!container) {
@@ -20589,6 +22222,7 @@ const LoadingOutline = props => {
 const LoadingOutlineUI = props => {
   const {
     loading,
+    debounce = 300,
     targetSelector,
     color,
     borderWidth = 0,
@@ -20608,7 +22242,7 @@ const LoadingOutlineUI = props => {
     inset = 0,
     children
   } = props;
-  const shouldShowSpinner = useDebounceTrue(loading, 300);
+  const shouldShowSpinner = useDebounceTrue(loading, debounce);
   const rectangleRef = useRef(null);
   let insetTop = inset + spacingTop + marginTop;
   let insetRight = inset + spacingRight + marginRight;
@@ -20634,7 +22268,6 @@ const LoadingOutlineUI = props => {
     children: [jsx("span", {
       ref: rectangleRef,
       className: "navi_loading_outline_wrapper",
-      hidden: !shouldShowSpinner,
       style: {
         "--loading-rectangle-top": `${insetTop}px`,
         "--loading-rectangle-right": `${insetRight}px`,
@@ -20642,7 +22275,7 @@ const LoadingOutlineUI = props => {
         "--loading-rectangle-left": `${insetLeft}px`
       },
       children: loading && jsx(LoadingIndicatorFluid, {
-        hidden: !shouldShowSpinner,
+        visuallyHidden: !shouldShowSpinner,
         radius: radius,
         color: color,
         size: size
@@ -20710,25 +22343,6 @@ const useActionBoundToOneParam = (action, paramsSignal) => {
   }, []);
   return [boundAction, getValue(), setValue];
 };
-const useActionBoundToOneArrayParam = (action, paramsSignal) => {
-  const [boundAction, value, setValue] = useActionBoundToOneParam(
-    action,
-    paramsSignal,
-  );
-
-  const add = (valueToAdd, valueArray = value) => {
-    setValue(addIntoArray(valueArray, valueToAdd));
-  };
-
-  const remove = (valueToRemove, valueArray = value) => {
-    setValue(removeFromArray(valueArray, valueToRemove));
-  };
-
-  const result = [boundAction, value, setValue];
-  result.add = add;
-  result.remove = remove;
-  return result;
-};
 // used by <details> to just call their action
 const useAction = (action, paramsSignal) => {
   return useBoundAction(action, paramsSignal);
@@ -20786,13 +22400,6 @@ const isFunctionButNotAnActionFunction = (action) => {
   return typeof action === "function" && !action.isAction;
 };
 
-const ErrorBoundaryContext = createContext(null);
-
-const useResetErrorBoundary = () => {
-  const resetErrorBoundary = useContext(ErrorBoundaryContext);
-  return resetErrorBoundary;
-};
-
 const addCustomMessage = (element, key, message, options) => {
   const customConstraintValidation =
     element.__validationInterface__ ||
@@ -20808,6 +22415,13 @@ const removeCustomMessage = (element, key) => {
     return;
   }
   customConstraintValidation.removeCustomMessage(key);
+};
+
+const ErrorBoundaryContext = createContext(null);
+
+const useResetErrorBoundary = () => {
+  const resetErrorBoundary = useContext(ErrorBoundaryContext);
+  return resetErrorBoundary;
 };
 
 const useExecuteAction = (
@@ -20829,7 +22443,7 @@ const useExecuteAction = (
   }, [error]);
 
   const validationMessageTargetRef = useRef(null);
-  const addErrorMessage = (error) => {
+  const addErrorMessage = (error, { event } = {}) => {
     let calloutAnchor = validationMessageTargetRef.current;
     let message;
     if (errorMapping) {
@@ -20851,6 +22465,7 @@ const useExecuteAction = (
       message = error;
     }
     addCustomMessage(calloutAnchor, "action_error", message, {
+      event,
       status: "error",
       // This error should not prevent <form> submission
       // so whenever user tries to submit the form the error is cleared
@@ -20887,13 +22502,18 @@ const useExecuteAction = (
   // errorEffectRef.current = errorEffect;
   const executeAction = useCallback(
     (actionEvent) => {
-      const { action, actionOrigin, requester, event, method } =
-        actionEvent.detail;
+      const {
+        action,
+        actionOrigin,
+        requester,
+        event: firstEvent,
+        method,
+      } = actionEvent.detail;
       const sharedActionEventDetail = {
         action,
         actionOrigin,
         requester,
-        event,
+        event: actionEvent,
         method,
       };
 
@@ -20904,31 +22524,23 @@ const useExecuteAction = (
       setError(null);
 
       const element = elementRef.current;
+      if (!element) {
+        throw new Error(
+          "useExecuteAction: elementRef.current is null, make sure to pass a ref to an element",
+        );
+      }
       const validationMessageTarget = requester || element;
       validationMessageTargetRef.current = validationMessageTarget;
 
-      dispatchPublicCustomEvent(
+      dispatchInternalCustomEvent(
         element,
         "navi_action_start",
         sharedActionEventDetail,
       );
 
       return action[method]({
-        reason: `"${event.type}" event on ${(() => {
-          const target = event.target;
-          const tagName = target.tagName.toLowerCase();
-
-          if (target.id) {
-            return `${tagName}#${target.id}`;
-          }
-
-          const uiName = target.getAttribute("data-ui-name");
-          if (uiName) {
-            return `${tagName}[data-ui-name="${uiName}"]`;
-          }
-
-          return `<${tagName}>`;
-        })()}`,
+        event: actionEvent,
+        reason: `"${firstEvent.type}" event on ${getElementSignature(firstEvent.target)}`,
         onAbort: (reason) => {
           const element = elementRef.current;
           if (
@@ -20937,13 +22549,13 @@ const useExecuteAction = (
             // but other side effects might do this
             element
           ) {
-            dispatchPublicCustomEvent(element, "navi_action_abort", {
+            dispatchInternalCustomEvent(element, "navi_action_abort", {
               ...sharedActionEventDetail,
               reason,
             });
           }
         },
-        onError: (error) => {
+        onError: (error, { event }) => {
           const element = elementRef.current;
           if (
             // at this stage the action side effect might have removed the <element> from the DOM
@@ -20951,13 +22563,13 @@ const useExecuteAction = (
             // but other side effects might do this
             element
           ) {
-            dispatchPublicCustomEvent(element, "navi_action_error", {
+            dispatchInternalCustomEvent(element, "navi_action_error", {
               ...sharedActionEventDetail,
               error,
             });
           }
           if (errorEffect === "show_validation_message") {
-            addErrorMessage(error);
+            addErrorMessage(error, { event });
           } else if (errorEffect === "throw") {
             setError(error);
           }
@@ -20970,7 +22582,7 @@ const useExecuteAction = (
             // but other side effects might do this
             element
           ) {
-            dispatchPublicCustomEvent(element, "navi_action_end", {
+            dispatchInternalCustomEvent(element, "navi_action_end", {
               ...sharedActionEventDetail,
               data,
             });
@@ -20978,7 +22590,7 @@ const useExecuteAction = (
         },
       });
     },
-    [errorEffect],
+    [elementRef, errorEffect],
   );
 
   return executeAction;
@@ -21008,6 +22620,156 @@ const keyMapping = {
   ...(isMac
     ? { delete: { alias: ["backspace"] } }
     : { backspace: { alias: ["delete"] } }),
+};
+
+const addManyEventListeners = (element, events) => {
+  const cleanupCallbackSet = new Set();
+  for (const event of Object.keys(events)) {
+    const callback = events[event];
+    element.addEventListener(event, callback);
+    cleanupCallbackSet.add(() => {
+      element.removeEventListener(event, callback);
+    });
+  }
+  return () => {
+    for (const cleanupCallback of cleanupCallbackSet) {
+      cleanupCallback();
+    }
+  };
+};
+
+const useRequestedActionStatus = (elementRef, { actionOrigin } = {}) => {
+  const [actionRequester, setActionRequester] = useState(null);
+  const [actionPending, setActionPending] = useState(false);
+  const [actionAborted, setActionAborted] = useState(false);
+  const [actionError, setActionError] = useState(null);
+
+  useActionEvents(elementRef, {
+    actionOrigin,
+    onAllowed: (actionEvent) => {
+      setActionRequester(actionEvent.detail.requester);
+    },
+    onStart: () => {
+      setActionPending(true);
+      setActionAborted(false);
+      setActionError(null);
+    },
+    onAbort: () => {
+      setActionPending(false);
+      setActionAborted(true);
+    },
+    onError: (error) => {
+      setActionPending(false);
+      setActionError(error);
+    },
+    onEnd: () => {
+      setActionPending(false);
+    },
+  });
+
+  return {
+    actionRequester,
+    actionPending,
+    actionAborted,
+    actionError,
+  };
+};
+
+const useActionEvents = (
+  elementRef,
+  {
+    actionOrigin = "action_prop",
+    /**
+     * @param {Event} e - L'événement original
+     * @param {"form_reset" | "blur_invalid" | "escape_key"} reason - Raison du cancel
+     */
+    onCancel,
+    onRequested,
+    onPrevented,
+    onAllowed,
+    onStart,
+    onAbort,
+    onError,
+    onEnd,
+  },
+) => {
+  onCancel = useStableCallback(onCancel);
+  onRequested = useStableCallback(onRequested);
+  onPrevented = useStableCallback(onPrevented);
+  onAllowed = useStableCallback(onAllowed);
+  onStart = useStableCallback(onStart);
+  onAbort = useStableCallback(onAbort);
+  onError = useStableCallback(onError);
+  onEnd = useStableCallback(onEnd);
+
+  useLayoutEffect(() => {
+    const element = elementRef.current;
+    if (!element) {
+      return null;
+    }
+
+    return addManyEventListeners(element, {
+      navi_cancel: (e) => {
+        // cancel don't need to check for actionOrigin because
+        // it's actually unrelated to a specific actions
+        // in that sense it should likely be moved elsewhere as it's related to
+        // interaction and constraint validation, not to a specific action
+        onCancel?.(e, e.detail.reason);
+      },
+      navi_request_action: (e) => {
+        if (e.detail.actionOrigin !== actionOrigin) {
+          return;
+        }
+        onRequested?.(e);
+      },
+      navi_action_prevented: (e) => {
+        if (e.detail.actionOrigin !== actionOrigin) {
+          return;
+        }
+        onPrevented?.(e);
+      },
+      navi_action_allowed: (e) => {
+        if (e.detail.actionOrigin !== actionOrigin) {
+          return;
+        }
+        onAllowed?.(e);
+      },
+      navi_action_start: (e) => {
+        if (e.detail.actionOrigin !== actionOrigin) {
+          return;
+        }
+        onStart?.(e);
+      },
+      navi_action_abort: (e) => {
+        if (e.detail.actionOrigin !== actionOrigin) {
+          return;
+        }
+        onAbort?.(e);
+      },
+      navi_action_error: (e) => {
+        if (e.detail.actionOrigin !== actionOrigin) {
+          return;
+        }
+        onError?.(e.detail.error, e);
+      },
+      navi_action_end: (e) => {
+        if (e.detail.actionOrigin !== actionOrigin) {
+          return;
+        }
+        onEnd?.(e);
+      },
+    });
+  }, [
+    actionOrigin,
+    onCancel,
+    onRequested,
+    onPrevented,
+    onAllowed,
+    onStart,
+    onAbort,
+    onError,
+    onEnd,
+  ]);
 };
 
 const activeShortcutsSignal = signal([]);
@@ -21088,7 +22850,7 @@ const useKeyboardShortcuts = (
   useActionEvents(elementRef, {
     actionOrigin: "keyboard_shortcut",
     onPrevented: onActionPrevented,
-    onReady: (actionEvent) => {
+    onAllowed: (actionEvent) => {
       const { shortcut } = actionEvent.detail.meta || {};
       if (!shortcut) {
         // not a shortcut (an other interaction triggered the action, don't request it again)
@@ -21151,7 +22913,7 @@ const useKeyboardShortcuts = (
     );
     shortcut.action = useAction(shortcut.action);
   }
-  const onKeyDown = createOnKeyDownForShortcuts(
+  const onKeyDown = createOnKeyDownForShortcutArray(
     shortcuts,
     shortcutActionIsBusyRef,
   );
@@ -21172,7 +22934,7 @@ const useKeyboardShortcuts = (
   }, [shortcutDeps]);
 };
 
-const createOnKeyDownForShortcuts = (shortcuts, busyRef) => {
+const createOnKeyDownForShortcutArray = (shortcuts, busyRef) => {
   const shortcutsCopy = [];
   for (const shortcutCandidate of shortcuts) {
     shortcutsCopy.push({
@@ -21187,8 +22949,17 @@ const createOnKeyDownForShortcuts = (shortcuts, busyRef) => {
         const { action } = shortcutCandidate;
         const actionWithEvent = action.bindParams(keyboardEvent);
         const element = keyboardEvent.currentTarget;
-        return dispatchRequestAction(element, actionWithEvent, {
-          confirmMessage: shortcutCandidate.confirmMessage});
+        return dispatchRequestAction(element, {
+          event: keyboardEvent,
+          requester: document.activeElement,
+
+          action: actionWithEvent,
+          actionOrigin: "keyboard_shortcut",
+          confirmMessage: shortcutCandidate.confirmMessage,
+          meta: {
+            shortcut: shortcutCandidate,
+          },
+        });
       },
     });
   }
@@ -21197,7 +22968,7 @@ const createOnKeyDownForShortcuts = (shortcuts, busyRef) => {
     applyKeyboardShortcuts(shortcutsCopy, keyboardEvent);
   };
 };
-const shortcutsViaOnKeyDown = (shortcuts, onKeyDown) => {
+const createOnKeyDownForShortcuts = (shortcuts) => {
   const shortcutsArray = [];
   for (const key of Object.keys(shortcuts)) {
     const value = shortcuts[key];
@@ -21209,15 +22980,25 @@ const shortcutsViaOnKeyDown = (shortcuts, onKeyDown) => {
     }
     shortcutsArray.push(shortcut);
   }
-  const onKeyDownForShortcuts = createOnKeyDownForShortcuts(shortcutsArray);
-  return (e) => {
-    onKeyDownForShortcuts(e);
-    onKeyDown?.(e);
-  };
+  return createOnKeyDownForShortcutArray(shortcutsArray);
 };
 
 const applyKeyboardShortcuts = (shortcuts, keyboardEvent) => {
-  if (!canInterceptKeys(keyboardEvent)) {
+  const currentTarget = keyboardEvent.currentTarget;
+  const target = keyboardEvent.target;
+  let canIntercept;
+  if (target === currentTarget) {
+    // the event occurs on the element itself so we are sure we won't interfere with native behaviors of child elements
+    canIntercept = true;
+  } else {
+    // we need to check if the default action is something that we can allow to be intercepted
+    const defaultAction = getKeyboardEventDefaultAction(keyboardEvent);
+    canIntercept =
+      !defaultAction ||
+      defaultAction === "scroll" ||
+      defaultAction === "dismiss";
+  }
+  if (!canIntercept) {
     return null;
   }
   for (const shortcutCandidate of shortcuts) {
@@ -21496,7 +23277,7 @@ const selectByTextStrings = (element, range, startText, endText) => {
 };
 
 installImportMetaCssBuild(import.meta);// https://jsfiddle.net/v5xzJ/4/
-const css$E = /* css */`
+const css$L = /* css */`
   @layer navi {
     .navi_text {
       &[data-skeleton] {
@@ -21504,6 +23285,9 @@ const css$E = /* css */`
       }
       &[data-capitalize] {
         display: inline-block; /* We need inline-block to match the pseudo element */
+      }
+      &[data-shrinkwrap] {
+        display: inline-block;
       }
     }
   }
@@ -21805,7 +23589,7 @@ const shouldInjectSpacingBetween = (left, right) => {
   }
   return true;
 };
-const OverflowPinnedElementContext = createContext(null);
+const OverflowPinnedContext = createContext(null);
 /**
  * Text component for rendering inline or block text with layout-stable style changes.
  *
@@ -21875,6 +23659,11 @@ const TextDispatcher = props => {
       ...props
     });
   }
+  if (props.shrinkWrap) {
+    return jsx(TextShrinkWrap, {
+      ...props
+    });
+  }
   if (props.overflowEllipsis) {
     return jsx(TextOverflow, {
       ...props
@@ -21894,8 +23683,58 @@ const TextDispatcher = props => {
     ...props
   });
 };
+const TextShrinkWrap = props => {
+  const {
+    ref
+  } = props;
+  const applyWidth = () => {
+    const text = ref.current;
+    // Reset any previously forced width so we measure the natural size
+    text.style.width = "";
+    const optimalWidth = measureLongestVisualLineWidth(text);
+    if (optimalWidth === null) {
+      return;
+    }
+    text.style.width = `${Math.ceil(optimalWidth)}px`;
+  };
+  useLayoutEffect(() => {
+    const text = ref.current;
+    if (!text) {
+      return;
+    }
+    applyWidth();
+  });
+  useLayoutEffect(() => {
+    // Re-compute whenever the parent resizes (covers cases where the parent
+    // has an independent size constraint, e.g. max-width, flex layout).
+    // We also listen to window resize because when the parent's width is
+    // driven solely by the text itself (no external constraint), the parent
+    // won't change size when the viewport changes — so the ResizeObserver
+    // alone would never fire.
+    const text = ref.current;
+    if (!text) {
+      return undefined;
+    }
+    const parent = text.parentElement;
+    let observer;
+    if (parent) {
+      observer = new ResizeObserver(applyWidth);
+      observer.observe(parent);
+    }
+    window.addEventListener("resize", applyWidth);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener("resize", applyWidth);
+    };
+  }, []);
+  return jsx(TextDispatcher, {
+    ...props,
+    "data-shrinkwrap": "",
+    shrinkWrap: undefined
+  });
+};
 const TextUI = props => {
-  import.meta.css = [css$E, "@jsenv/navi/src/text/text.jsx"];
+  import.meta.css = [css$L, "@jsenv/navi/src/text/text.jsx"];
   let {
     ref,
     spacing,
@@ -21905,6 +23744,7 @@ const TextUI = props => {
     capitalize,
     children,
     childrenOutsideFlow,
+    shrinkWrap,
     ...rest
   } = props;
   const defaultSpace = preventSpaceUnderlines ? FAKE_SPACE : REGULAR_SPACE;
@@ -21912,6 +23752,7 @@ const TextUI = props => {
   const boxProps = {
     "as": "span",
     "data-capitalize": capitalize ? "" : undefined,
+    "data-shrinkwrap": shrinkWrap ? "" : undefined,
     ...rest,
     ref,
     "baseClassName": withPropsClassName("navi_text", rest.baseClassName)
@@ -22005,7 +23846,7 @@ const TextOverflow = ({
   children,
   ...rest
 }) => {
-  const [OverflowPinnedElement, setOverflowPinnedElement] = useState(null);
+  const [overflowPinned, setOverflowPinned] = useState(null);
   return jsx(TextDispatcher, {
     flex: true,
     block: true,
@@ -22022,35 +23863,39 @@ const TextOverflow = ({
     spacing: "pre",
     children: jsxs("span", {
       className: "navi_text_overflow_wrapper",
-      children: [jsx(OverflowPinnedElementContext.Provider, {
-        value: setOverflowPinnedElement,
+      children: [overflowPinned && overflowPinned.position === "start" ? overflowPinned.vnode : null, jsx(OverflowPinnedContext.Provider, {
+        value: setOverflowPinned,
         children: jsx(Text, {
           className: "navi_text_overflow_text",
           spacing: spacing,
           children: children
         })
-      }), OverflowPinnedElement]
+      }), overflowPinned && overflowPinned.position === "end" ? overflowPinned.vnode : null]
     })
   });
 };
-const TextOverflowPinned = ({
-  overflowPinned,
-  ...props
-}) => {
-  const setOverflowPinnedElement = useContext(OverflowPinnedElementContext);
+const TextOverflowPinned = props => {
+  const {
+    overflowPinned
+  } = props;
+  const setOverflowPinned = useContext(OverflowPinnedContext);
   const text = jsx(Text, {
     ...props,
-    "data-overflow-pinned": ""
+    "data-overflow-pinned": "",
+    overflowPinned: undefined
   });
-  if (!setOverflowPinnedElement) {
+  if (!setOverflowPinned) {
     console.warn("<Text overflowPinned> declared outside a <Text overflowEllipsis>");
     return text;
   }
   if (overflowPinned) {
-    setOverflowPinnedElement(text);
+    setOverflowPinned({
+      vnode: text,
+      position: overflowPinned === true ? "end" : overflowPinned
+    });
     return null;
   }
-  setOverflowPinnedElement(null);
+  setOverflowPinned(null);
   return text;
 };
 const TextWithSelectRange = ({
@@ -22066,7 +23911,7 @@ const TextWithSelectRange = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$D = /* css */`
+installImportMetaCssBuild(import.meta);const css$K = /* css */`
   .navi_text_anchor {
     vertical-align: baseline;
     user-select: none;
@@ -22101,7 +23946,7 @@ const TextAnchor = ({
   textSize,
   lineLayout
 }) => {
-  import.meta.css = [css$D, "@jsenv/navi/src/text/text_anchor.jsx"];
+  import.meta.css = [css$K, "@jsenv/navi/src/text/text_anchor.jsx"];
   const anchorRef = useRef();
   const setTopOffset = (childEl, topOffset) => {
     // position:relative + top shifts the element visually.
@@ -22203,7 +24048,7 @@ const computeTopOffset = ({
 };
 const charTopCanvas = document.createElement("canvas");
 
-installImportMetaCssBuild(import.meta);const css$C = /* css */`
+installImportMetaCssBuild(import.meta);const css$J = /* css */`
   @layer navi {
     /* Ensure data attributes from box.jsx can win to update display */
     .navi_icon {
@@ -22276,7 +24121,7 @@ const Icon = ({
   lineLayout,
   ...props
 }) => {
-  import.meta.css = [css$C, "@jsenv/navi/src/text/icon.jsx"];
+  import.meta.css = [css$J, "@jsenv/navi/src/text/icon.jsx"];
   const innerChildren = href ? jsx("svg", {
     width: "100%",
     height: "100%",
@@ -22357,6 +24202,167 @@ const Icon = ({
   });
 };
 
+const NextResolverContext = createContext(null);
+const useNextResolver = () => useContext(NextResolverContext);
+
+/**
+ * Creates a renderComponent function that passes props through a chain of resolvers.
+ * Each resolver is a Preact component rendered in sequence (hooks are allowed).
+ * To pass through to the next resolver, call useNextResolver() and render the
+ * returned Next component with the desired props.
+ * To terminate the chain early (e.g. render a specialized component), render
+ * directly without calling Next.
+ *
+ * Usage:
+ *   const renderButton = createComponentResolver([ResolverA, ResolverB]);
+ *   // Then inside a component render:
+ *   renderButton(ButtonTarget, props)
+ *
+ * NextResolverContext exposes a stable Next component so resolvers can continue
+ * the chain via useNextResolver().
+ * ResolverIndexContext tracks which resolver is next so that when a resolver
+ * re-renders and calls Next, the chain resumes from the correct position.
+ */
+const createComponentResolver = resolvers => {
+  const ResolverIndexContext = createContext(0);
+  const TargetComponentContext = createContext(null);
+  const ChainRunner = props => {
+    const index = useContext(ResolverIndexContext);
+    const TargetComponent = useContext(TargetComponentContext);
+    if (index >= resolvers.length) {
+      return jsx(NextResolverContext.Provider, {
+        value: null,
+        children: jsx(TargetComponent, {
+          ...props
+        })
+      });
+    }
+    const Resolver = resolvers[index];
+    return jsx(ResolverIndexContext.Provider, {
+      value: index + 1,
+      children: jsx(Resolver, {
+        ...props
+      })
+    });
+  };
+
+  // Stable component defined once per createComponentResolver call.
+  // Renders ChainRunner directly — no new providers — so ResolverIndexContext
+  // is inherited from the parent tree. When a resolver calls <Next>, the chain
+  // resumes from index+1 (already set by the Provider wrapping that resolver).
+  const NextComponent = props => jsx(ChainRunner, {
+    ...props
+  });
+  const renderComponent = (TargetComponent, props) => {
+    return jsx(NextResolverContext.Provider, {
+      value: NextComponent,
+      children: jsx(TargetComponentContext.Provider, {
+        value: TargetComponent,
+        children: jsx(ChainRunner, {
+          ...props
+        })
+      })
+    });
+  };
+  return renderComponent;
+};
+
+const LIGHT_ACCENT_ATTRIBUTE = "data-accent-light";
+const VERY_LIGHT_ACCENT_ATTRIBUTE = "data-accent-very-light";
+const DARK_CONTRAST_ATTRIBUTE = "data-accent-needs-dark-fg";
+const LIGHT_LUMINANCE_THRESHOLD = 0.5;
+const VERY_LIGHT_LUMINANCE_THRESHOLD = 0.92;
+const DARK_CONTRAST_LIGHTNESS_THRESHOLD = 0.65;
+
+/**
+ * Sets data attributes on an element based on the OKLCH lightness and contrast
+ * of a CSS color (typically an accent/brand color). All thresholds use OKLCH L
+ * (0–1, perceptually uniform scale).
+ *
+ * Three boolean attributes are managed independently:
+ *
+ * ## `data-accent-light` (set when OKLCH L > 0.5)
+ *   The accent color is perceptually light (orange, green, pink, yellow…).
+ *   Use to adjust color-mix direction so hover/active effects darken toward
+ *   black instead of lightening toward white.
+ *
+ * ## `data-accent-very-light` (set when OKLCH L > 0.92)
+ *   The accent color is near-white or white. Use to show a grey background on
+ *   unchecked state so the component boundary remains visible against white
+ *   page backgrounds.
+ *
+ * ## `data-accent-needs-dark-fg` (set when OKLCH L > 0.65)
+ *   The best contrasting foreground color against the accent is dark (black).
+ *   Use to render checkmarks, icons, or text in a dark color instead of white.
+ *
+ * @param {import("preact").RefObject} ref - Ref to the root element that receives the attributes.
+ * @param {string} accentColor - The accent color value. When it changes, attributes are recomputed.
+ * @param {object} [options]
+ * @param {string} [options.elementSelector] - CSS selector to find the element whose computed color is read.
+ *   Defaults to the root element itself. Useful when the color is applied to a probe/child element.
+ * @param {string} [options.colorProperty="backgroundColor"] - Computed style property to read (e.g. "color", "borderColor").
+ */
+const useAccentColorAttributes = (
+  ref,
+  accentColor,
+  { elementSelector, colorProperty = "backgroundColor" } = {},
+) => {
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) {
+      return undefined;
+    }
+    let elementToCheck = el;
+    elementSelector =
+      elementSelector || el.getAttribute("data-visual-selector");
+    if (elementSelector) {
+      elementToCheck = el.querySelector(elementSelector);
+      if (!elementToCheck) {
+        return undefined;
+      }
+    }
+    const updateAttributes = () => {
+      const computedStyle = getComputedStyle(elementToCheck);
+      const color = computedStyle[colorProperty];
+      if (!color) {
+        el.removeAttribute(LIGHT_ACCENT_ATTRIBUTE);
+        el.removeAttribute(VERY_LIGHT_ACCENT_ATTRIBUTE);
+        el.removeAttribute(DARK_CONTRAST_ATTRIBUTE);
+        return;
+      }
+      const luminance = resolveOklchLightness(color, el);
+      if (luminance !== null && luminance > LIGHT_LUMINANCE_THRESHOLD) {
+        el.setAttribute(LIGHT_ACCENT_ATTRIBUTE, "");
+      } else {
+        el.removeAttribute(LIGHT_ACCENT_ATTRIBUTE);
+      }
+      if (luminance !== null && luminance > VERY_LIGHT_LUMINANCE_THRESHOLD) {
+        el.setAttribute(VERY_LIGHT_ACCENT_ATTRIBUTE, "");
+      } else {
+        el.removeAttribute(VERY_LIGHT_ACCENT_ATTRIBUTE);
+      }
+      const bestContrast = contrastColor(
+        color,
+        el,
+        DARK_CONTRAST_LIGHTNESS_THRESHOLD,
+      );
+      if (bestContrast === "black") {
+        el.setAttribute(DARK_CONTRAST_ATTRIBUTE, "");
+      } else {
+        el.removeAttribute(DARK_CONTRAST_ATTRIBUTE);
+      }
+    };
+    updateAttributes();
+    el.addEventListener(NAVI_PSEUDO_STATE_CUSTOM_EVENT, updateAttributes);
+    return () => {
+      el.removeEventListener(NAVI_PSEUDO_STATE_CUSTOM_EVENT, updateAttributes);
+      el.removeAttribute(LIGHT_ACCENT_ATTRIBUTE);
+      el.removeAttribute(VERY_LIGHT_ACCENT_ATTRIBUTE);
+      el.removeAttribute(DARK_CONTRAST_ATTRIBUTE);
+    };
+  }, [ref, accentColor, elementSelector, colorProperty]);
+};
+
 /**
  * A variant of useLayoutEffect that accounts for ancestor <dialog>/<details>
  * or popover visibility.
@@ -22395,7 +24401,7 @@ const useDisplayedLayoutEffect = (ref, callback, deps) => {
     if (!el) {
       return;
     }
-    const ancestor = el.closest("dialog, details, [popover]");
+    const ancestor = el.closest("dialog, details, [popover], [aria-expanded]");
     if (!ancestor) {
       callbackRef.current(el, new CustomEvent("navi_displayed_on_document"));
       return;
@@ -22413,19 +24419,26 @@ const useDisplayedLayoutEffect = (ref, callback, deps) => {
     if (!el) {
       return undefined;
     }
-    const ancestor = el.closest("dialog, details, [popover]");
+    const ancestor = el.closest("dialog, details, [popover], [aria-expanded]");
     if (!ancestor) {
       return undefined;
     }
     const onToggle = (e) => {
       // <dialog> and [popover] fire toggle with newState; <details> uses the
       // older toggle event without newState — fall back to checking .open.
-      const isOpen =
-        e.newState !== undefined ? e.newState === "open" : e.target.open;
+      let isOpen;
+      if (typeof e.newState === "string") {
+        isOpen = e.newState === "open";
+      } else if (e.target.open) {
+        isOpen = true;
+      } else if (e.target.getAttribute("aria-expanded") === "true") {
+        isOpen = true;
+      }
       if (!isOpen) {
         return;
       }
-      callbackRef.current(el, e);
+      let lastEl = ref.current;
+      callbackRef.current(lastEl, e);
     };
     ancestor.addEventListener("toggle", onToggle);
     return () => {
@@ -22438,8 +24451,10 @@ const isAncestorOpen = (ancestor) => {
   if (ancestor.tagName === "DIALOG" || ancestor.hasAttribute("popover")) {
     return ancestor.matches(":popover-open, [open]");
   }
-  // details
-  return ancestor.open;
+  if (ancestor.tagName === "DETAILS") {
+    return ancestor.open;
+  }
+  return ancestor.getAttribute("aria-expanded") === "true";
 };
 
 // see also https://github.com/preactjs/preact/issues/1255
@@ -22450,42 +24465,40 @@ const isAncestorOpen = (ancestor) => {
  *
  * WHY NOT USE THE NATIVE `autofocus` ATTRIBUTE?
  *
- * The browser fires autofocus before JavaScript layout effects have run. This
- * means the element may not be correctly positioned yet — for example a popover
- * that is still being placed by our own positioning logic. When the browser then
- * calls scrollIntoView internally as part of focusing, it reads stale geometry
- * and may scroll the page even though the popover content is already fully on
- * screen (or will be once layout settles). There is no way to hook into the
- * browser's autofocus timing or suppress just its scroll side-effect while
- * keeping the focus itself.
- *
- * Also browser is just bad at scrolling into view something in a popover
+ * The browser's built-in `autofocus` triggers a `scrollIntoView` that reads
+ * element geometry before JavaScript layout effects have run. This can cause
+ * incorrect scrolling — for example, a popover that is still being positioned
+ * by our own layout logic will report stale geometry, and the browser may scroll
+ * the page unnecessarily. There is no way to suppress just the scroll side-effect
+ * while keeping the focus itself.
  *
  * For that reason, components that use `useAutoFocus` must NOT set the
- * `autofocus`|`autoFocus` attribute on the underlying DOM node. The hook
- * takes over the focus call entirely, fires it inside a `useDisplayedLayoutEffect`
- * (so Preact layout work is done and the element is correctly positioned), and
- * exposes `autoFocusPreventScroll` to let the caller decide whether any
- * scroll-into-view should happen at all.
+ * `autofocus`|`autoFocus` attribute on the underlying DOM node (use
+ * `navi-autofocus` instead, which has no browser behavior). The hook takes over
+ * the focus call entirely and fires it inside a `useDisplayedLayoutEffect`,
+ * which runs after Preact layout work is done and the element is correctly
+ * positioned.
+ *
+ * As a secondary benefit, firing focus after layout effects means any
+ * positioning-dependent setup (e.g. popover placement) is already complete,
+ * though in practice this ordering issue has not been observed — it is simply
+ * a safe default.
  *
  * @param {import("preact/hooks").Ref<HTMLElement>} focusableElementRef
  *   Ref to the element to focus.
  * @param {boolean} autoFocus
  *   When false the hook is a no-op.
  * @param {object} [options]
- * @param {boolean} [options.autoFocusPreventScroll]
- *   Passed as `preventScroll` to `element.focus()`. Set to true to suppress
+ * @param {boolean} [options.preventScroll]
+ *   Passed as `preventScroll` to `element.focus()`. Defaults to true to suppress
  *   the browser's built-in scroll-into-view that accompanies focus.
- * @param {boolean} [options.autoFocusVisible]
+ * @param {boolean} [options.focusVisible]
  *   Passed as `focusVisible` to `element.focus()`.
  * @param {boolean} [options.autoSelect]
  *   When true, also calls `element.select()` after focusing (useful for text inputs).
- * @param {boolean} [options.debugFocus]
- *   When true, logs focus decisions to the console.
  * @returns {Function} triggerAutofocus — can be called manually with a synthetic
  *   event to re-run the focus logic outside of the layout-effect lifecycle.
  */
-
 const useAutoFocus = (
   focusableElementRef,
   autoFocus,
@@ -22497,12 +24510,10 @@ const useAutoFocus = (
     if (!autoFocus) {
       return () => {};
     }
-
     const focusableElement = focusableElementRef.current;
     if (!focusableElement) {
       return () => {};
     }
-
     const activeElement = document.activeElement;
     const focusDebugCall = `${getElementSignature(focusableElement)}.focus({ preventScroll: ${preventScroll} })`;
     if (e.type === "navi_displayed_on_document") {
@@ -22606,653 +24617,1460 @@ document.body.addEventListener(
   { capture: true },
 );
 
-const LIGHT_ACCENT_ATTRIBUTE = "data-accent-light";
-const VERY_LIGHT_ACCENT_ATTRIBUTE = "data-accent-very-light";
-const DARK_CONTRAST_ATTRIBUTE = "data-accent-needs-dark-fg";
-const LIGHT_LUMINANCE_THRESHOLD = 0.5;
-const VERY_LIGHT_LUMINANCE_THRESHOLD = 0.92;
-const DARK_CONTRAST_LIGHTNESS_THRESHOLD = 0.65;
+// prop that we'll set on the control
+const CONTROL_ATTRIBUTE_SET = new Set([
+  ...CONSTRAINT_ATTRIBUTE_SET,
 
-/**
- * Sets data attributes on an element based on the OKLCH lightness and contrast
- * of a CSS color (typically an accent/brand color). All thresholds use OKLCH L
- * (0–1, perceptually uniform scale).
- *
- * Three boolean attributes are managed independently:
- *
- * ## `data-accent-light` (set when OKLCH L > 0.5)
- *   The accent color is perceptually light (orange, green, pink, yellow…).
- *   Use to adjust color-mix direction so hover/active effects darken toward
- *   black instead of lightening toward white.
- *
- * ## `data-accent-very-light` (set when OKLCH L > 0.92)
- *   The accent color is near-white or white. Use to show a grey background on
- *   unchecked state so the component boundary remains visible against white
- *   page backgrounds.
- *
- * ## `data-accent-needs-dark-fg` (set when OKLCH L > 0.65)
- *   The best contrasting foreground color against the accent is dark (black).
- *   Use to render checkmarks, icons, or text in a dark color instead of white.
- *
- * @param {import("preact").RefObject} ref - Ref to the root element that receives the attributes.
- * @param {string} accentColor - The accent color value. When it changes, attributes are recomputed.
- * @param {object} [options]
- * @param {string} [options.elementSelector] - CSS selector to find the element whose computed color is read.
- *   Defaults to the root element itself. Useful when the color is applied to a probe/child element.
- * @param {string} [options.colorProperty="backgroundColor"] - Computed style property to read (e.g. "color", "borderColor").
- */
-const useAccentColorAttributes = (
-  ref,
-  accentColor,
-  { elementSelector, colorProperty = "backgroundColor" } = {},
-) => {
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) {
-      return undefined;
-    }
-    let elementToCheck = el;
-    elementSelector =
-      elementSelector || el.getAttribute("data-visual-selector");
-    if (elementSelector) {
-      elementToCheck = el.querySelector(elementSelector);
-      if (!elementToCheck) {
-        return undefined;
-      }
-    }
-    const updateAttributes = () => {
-      const computedStyle = getComputedStyle(elementToCheck);
-      const color = computedStyle[colorProperty];
-      if (!color) {
-        el.removeAttribute(LIGHT_ACCENT_ATTRIBUTE);
-        el.removeAttribute(VERY_LIGHT_ACCENT_ATTRIBUTE);
-        el.removeAttribute(DARK_CONTRAST_ATTRIBUTE);
-        return;
-      }
-      const luminance = resolveOklchLightness(color, el);
-      if (luminance !== null && luminance > LIGHT_LUMINANCE_THRESHOLD) {
-        el.setAttribute(LIGHT_ACCENT_ATTRIBUTE, "");
-      } else {
-        el.removeAttribute(LIGHT_ACCENT_ATTRIBUTE);
-      }
-      if (luminance !== null && luminance > VERY_LIGHT_LUMINANCE_THRESHOLD) {
-        el.setAttribute(VERY_LIGHT_ACCENT_ATTRIBUTE, "");
-      } else {
-        el.removeAttribute(VERY_LIGHT_ACCENT_ATTRIBUTE);
-      }
-      const bestContrast = contrastColor(
-        color,
-        el,
-        DARK_CONTRAST_LIGHTNESS_THRESHOLD,
-      );
-      if (bestContrast === "black") {
-        el.setAttribute(DARK_CONTRAST_ATTRIBUTE, "");
-      } else {
-        el.removeAttribute(DARK_CONTRAST_ATTRIBUTE);
-      }
-    };
-    updateAttributes();
-    el.addEventListener(NAVI_PSEUDO_STATE_CUSTOM_EVENT, updateAttributes);
-    return () => {
-      el.removeEventListener(NAVI_PSEUDO_STATE_CUSTOM_EVENT, updateAttributes);
-      el.removeAttribute(LIGHT_ACCENT_ATTRIBUTE);
-      el.removeAttribute(VERY_LIGHT_ACCENT_ATTRIBUTE);
-      el.removeAttribute(DARK_CONTRAST_ATTRIBUTE);
-    };
-  }, [ref, accentColor, elementSelector, colorProperty]);
-};
+  "ref",
+  "children",
+  "id",
+  "name",
+  "type",
+  "value",
+  "checked",
 
-const useFormEvents = (
-  elementRef,
-  {
-    onFormReset,
-    onFormActionRequested,
-    onFormActionPrevented,
-    onFormActionStart,
-    onFormActionAbort,
-    onFormActionError,
-    onFormActionEnd,
-  },
-) => {
-  onFormReset = useStableCallback(onFormReset);
-  onFormActionRequested = useStableCallback(onFormActionRequested);
-  onFormActionPrevented = useStableCallback(onFormActionPrevented);
-  onFormActionStart = useStableCallback(onFormActionStart);
-  onFormActionAbort = useStableCallback(onFormActionAbort);
-  onFormActionError = useStableCallback(onFormActionError);
-  onFormActionEnd = useStableCallback(onFormActionEnd);
+  "navi-input-type",
+  "navi-control-proxy-for",
+  "aria-controls",
 
-  useLayoutEffect(() => {
-    const element = elementRef.current;
-    if (!element) {
-      return null;
-    }
+  "data-callout-arrow-x",
+  "data-callout-point-to-border-box",
+  "data-callout-point-to-content-box",
+  "data-callout-viewport-spacing",
+  "data-callout-position",
+  "data-callout-position-fixed",
 
-    let form = element.form;
-    if (!form) {
-      // some non input elements may want to listen form events (<RadioList> is a <div>)
-      form = element.closest("form");
-      if (!form) {
-        console.warn("No form found for element", element);
-        return null;
-      }
-    }
-    return addManyEventListeners(form, {
-      reset: onFormReset,
-      navi_request_action: onFormActionRequested,
-      navi_action_prevented: onFormActionPrevented,
-      navi_action_start: onFormActionStart,
-      navi_action_abort: onFormActionAbort,
-      navi_action_error: onFormActionError,
-      navi_action_end: onFormActionEnd,
-    });
-  }, [
-    onFormReset,
-    onFormActionRequested,
-    onFormActionPrevented,
-    onFormActionStart,
-    onFormActionAbort,
-    onFormActionError,
-    onFormActionEnd,
-  ]);
-};
+  "data-testid",
+]);
+// prop concerning control but that won't end up in the DOM if not inside CONTROL_ATTRIBUTE_SET
+const CONTROL_PROP_SET = new Set([
+  ...CONTROL_ATTRIBUTE_SET,
 
-const debugUIState = (...args) => {
-};
-const debugUIGroup = (...args) => {
-};
+  "action",
+  "actionInteraction",
+  "actionAfterChange",
+  "actionOnMouseDown",
+  "actionDebounce",
+  "defaultValue",
+  "defaultChecked",
 
-const UIStateControllerContext = createContext();
-const UIStateContext = createContext();
-const ParentUIStateControllerContext = createContext();
-const SelectTriggerContentRegistryContext = createContext(null);
+  "loading",
+  "basePseudoState",
+  "constraints",
 
-const FieldNameContext = createContext();
-const ReadOnlyContext = createContext();
+  "autoFocus",
+  "autoFocusVisible",
+  "autoSelect",
+
+  "onMouseDown",
+  "onClick",
+  "onKeyDown",
+  "onPaste",
+  "onInput",
+
+  "onCancel",
+  "cancelOnBlurInvalid",
+  "cancelOnEscape",
+  "onActionPrevented",
+  "onActionStart",
+  "onActionAborted",
+  "onActionError",
+  "actionErrorEffect",
+  "errorMapping",
+  "onActionEnd",
+
+  "resetOnCancel",
+  "resetOnAbort",
+  "resetOnError",
+]);
+
+const ControlToInterfaceContext = createContext(null);
+const MessagePropsRefContext = createContext();
+
+const ControlNameContext = createContext();
 const DisabledContext = createContext();
+const ReadOnlyContext = createContext();
 const RequiredContext = createContext();
 const LoadingContext = createContext();
-const LoadingElementContext = createContext();
+createContext();
+
+const ActionContext = createContext();
+const ActionRequesterContext = createContext();
 
 /**
- * UI State Controller Hook
+ * Converts a JS value into the form expected by the browser DOM property for a
+ * given control type/input type combination.
  *
- * Manages the relationship between external state (props) and UI state (what user sees).
- * Allows UI state to diverge temporarily for responsive interactions, with mechanisms
- * to sync back to external state when needed.
+ * For example:
+ * - `datetime-local` inputs expect a local datetime string without timezone
+ * - `number`/`range` inputs expect a numeric string or number
+ * - `color` inputs require a non-empty hex string (falls back to `#000000`)
+ * - All other inputs receive the value as-is (undefined → "")
  *
- * Key features:
- * - Immediate UI updates for responsive interactions
- * - State divergence with sync capabilities (resetUIState)
- * - Group integration for coordinated form inputs
- * - External control via custom events (onsetuistate/onresetuistate)
- * - Error recovery and form reset support
+ * Returns either the converted value directly, or a converter function when the
+ * conversion depends on the runtime value (e.g. plain inputs return `asInputValue`).
  *
- * See README.md for detailed usage examples and patterns.
+ * @param {any} value - The JS value to convert.
+ * @param {{ controlType: string, type: string }} options
+ * @returns {any} The DOM-compatible value or a converter function.
  */
-const useUIStateController = (
-  props,
-  componentType,
+const asControlHostValue = (jsValue, { controlType, type }) => {
   {
-    statePropName = "value",
-    defaultStatePropName = "defaultValue",
-    fallbackState = "",
-    getStateFromProp = (prop) => prop,
-    getPropFromState = (state) => state,
-    getStateFromParent,
-    persists,
-    allowNameless = false,
-  } = {},
-) => {
-  const debugAction = useDebugAction();
-  const debugActionVerbose = useDebugActionVerbose();
-  const parentUIStateController = useContext(ParentUIStateControllerContext);
-  const formContext = useContext(FormContext);
-  const { id, name, uiAction, action } = props;
-  if (persists === undefined && formContext) {
-    persists = true;
+    if (type === "datetime-local") {
+      return asDatetimeLocalString(jsValue);
+    }
+    if (type === "number" || type === "range") {
+      return asNumberString(jsValue);
+    }
+    if (type === "color") {
+      return asColorString(jsValue);
+    }
+    return asInputValue(jsValue);
   }
-  const [navState, setNavState] = useNavState(id);
-
-  const uiStateControllerRef = useRef();
-  const hasStateProp = Object.hasOwn(props, statePropName);
-  const state = props[statePropName];
-  const defaultState = props[defaultStatePropName];
-  const stateInitial = useInitialValue(() => {
-    if (hasStateProp) {
-      // controlled by state prop ("value" or "checked")
-      return getStateFromProp(state);
-    }
-    if (defaultState) {
-      // not controlled but want an initial state (a value or being checked)
-      return getStateFromProp(defaultState);
-    }
-    if (persists && navState) {
-      // not controlled but want to use value from nav state
-      // (I think this should likely move earlier to win over the hasUIStateProp when it's undefined)
-      return getStateFromProp(navState);
-    }
-    if (parentUIStateController && getStateFromParent) {
-      return getStateFromParent(parentUIStateController);
-    }
-    return getStateFromProp(fallbackState);
-  });
-
-  /**
-   * This check is needed only for basic field because
-   * When using action/form we consider the action/form code
-   * will have a side effect that will re-render the component with the up-to-date state
-   *
-   * In practice we set the checked from the backend state
-   * We use action to fetch the new state and update the local state
-   * The component re-renders so it's the action/form that is considered as responsible
-   * to update the state and as a result allowed to have "checked"/"value" prop without "onUIStateChange"
-   */
-  const uncontrolled =
-    !action && !uiAction && !formContext && !parentUIStateController;
-  const readOnly = uncontrolled && hasStateProp;
-
-  const [
-    notifyParentAboutChildMount,
-    notifyParentAboutChildUIStateChange,
-    notifyParentAboutChildUnmount,
-  ] = useParentControllerNotifiers(
-    parentUIStateController,
-    uiStateControllerRef);
-  useLayoutEffect(() => {
-    notifyParentAboutChildMount();
-    return notifyParentAboutChildUnmount;
-  }, []);
-
-  const existingUIStateController = uiStateControllerRef.current;
-  if (existingUIStateController) {
-    existingUIStateController._checkForUpdates({
-      readOnly,
-      name,
-      uiAction,
-      getPropFromState,
-      getStateFromProp,
-      hasStateProp,
-      stateInitial,
-      state,
-    });
-    return existingUIStateController;
+};
+// As explained in https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/datetime-local#setting_timezones
+// datetime-local does not support timezones
+const asDatetimeLocalString = (dateTimeString) => {
+  const date = new Date(dateTimeString);
+  if (isNaN(date.getTime())) {
+    return dateTimeString;
   }
-  debugUIState(
-    `Creating "${componentType}" ui state controller - initial state:`,
-    JSON.stringify(stateInitial),
-  );
-  const [publishUIState, subscribeUIState] = createPubSub();
-  const uiStateSignal = signal(stateInitial);
-  const uiStateController = {
-    _checkForUpdates: ({
-      readOnly,
-      name,
-      uiAction,
-      getPropFromState,
-      getStateFromProp,
-      hasStateProp,
-      stateInitial,
-      state,
-    }) => {
-      uiStateController.readOnly = readOnly;
-      uiStateController.name = name;
-      uiStateController.uiAction = uiAction;
-      uiStateController.getPropFromState = getPropFromState;
-      uiStateController.getStateFromProp = getStateFromProp;
-      uiStateController.stateInitial = stateInitial;
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const seconds = String(date.getSeconds()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+};
+const asNumberString = (jsValue) => {
+  if (jsValue === undefined) {
+    return "";
+  }
+  return jsValue;
+};
+// Browser requires a non-empty value for <input type="color">.
+// When our logical value is empty we give it #000000 so it doesn't choke.
+// The UI uses the original (possibly empty) value to show the checkerboard.
+const asColorString = (jsValue) => {
+  return jsValue || "#000000";
+};
+const asInputValue = (jsValue) => {
+  if (jsValue === undefined) {
+    return "";
+  }
+  return jsValue;
+};
 
-      if (hasStateProp) {
-        uiStateController.hasStateProp = true;
-        const currentState = uiStateController.state;
-        const stateFromProp = getStateFromProp(state);
-        if (stateFromProp !== currentState) {
-          uiStateController.state = stateFromProp;
-          uiStateController.setUIState(
-            uiStateController.getPropFromState(state),
-            new CustomEvent("state_prop"),
-          );
-        }
-      } else if (uiStateController.hasStateProp) {
-        uiStateController.hasStateProp = false;
-        uiStateController.state = uiStateController.stateInitial;
-      }
+/**
+ * Reads the current logical JS value from a control host DOM element.
+ *
+ * Handles all navi control host element types:
+ * - `<button>` — reads via `navi_get_value` custom event, falls back to `button.value`
+ * - `<input type="number|range">` — parses as a number, returns `undefined` when empty
+ * - `<input type="checkbox|radio">` — returns `undefined` when unchecked, otherwise reads
+ *   via `navi_get_value` custom event (to preserve the original JS type of the value prop)
+ * - `<input type="datetime-local">` — converts the local datetime string to an ISO 8601 string
+ * - `<input type="navi_picker">` — delegates to the controller via `navi_get_ui_state`
+ * - All other inputs — returns `input.value` as a string
+ *
+ * @param {HTMLElement} controlHost - The control host DOM element to read from.
+ * @returns {any} The current logical value of the control.
+ */
+const readControlValue = (controlHost) => {
+  if (
+    controlHost.tagName === "BUTTON" ||
+    controlHost.getAttribute("role") === "button"
+  ) {
+    return readValueFromButton(controlHost);
+  }
+  if (controlHost.tagName === "INPUT") {
+    // important: input.type = "navi_picker" followed by input.type returns "text"
+    // so use getAttribute
+    const type = controlHost.getAttribute("type");
+
+    if (type === "number" || type === "range") {
+      return readNumberFromInput(controlHost);
+    }
+    if (type === "color") {
+      return readValueFromControlHost(controlHost);
+    }
+    if (type === "checkbox" || type === "radio") {
+      return readValueFromCheckableInput(controlHost);
+    }
+    if (type === "datetime-local") {
+      return readDatetimeLocalFromInput(controlHost);
+    }
+    if (type === "navi_picker") {
+      return getUIStateFromElement(controlHost);
+    }
+    return readValueFromInput(controlHost);
+  }
+  if (controlHost.hasAttribute("navi-control-host")) {
+    // Non-button, non-input navi controls (e.g. Badge.Button rendered as span)
+    return readValueFromControlHost(controlHost);
+  }
+  return readValueFromElement(controlHost);
+};
+const readValueFromControlHost = (controlHost) => {
+  return readValueFromNaviCustomEvent(controlHost, controlHost.value);
+};
+const readValueFromButton = (button) => {
+  return readValueFromControlHost(button);
+};
+const readDatetimeLocalFromInput = (input) => {
+  const localDateTimeString = input.value;
+  if (localDateTimeString === "") {
+    return undefined;
+  }
+  const localDate = new Date(localDateTimeString);
+  if (isNaN(localDate.getTime())) {
+    return localDateTimeString;
+  }
+  return localDate.toISOString();
+};
+const readNumberFromInput = (input) => {
+  const numberString = input.value;
+  if (numberString === "") {
+    return undefined;
+  }
+  const asNumber = Number(numberString);
+  if (isNaN(asNumber)) {
+    return numberString;
+  }
+  return asNumber;
+};
+const readValueFromCheckableInput = (input) => {
+  const checked = input.checked;
+  if (!checked) {
+    return undefined;
+  }
+  return readValueFromControlHost(input);
+};
+const readValueFromInput = (input) => {
+  const value = input.value;
+  return value;
+};
+const readValueFromElement = (element) => {
+  const value = element.value;
+  return value;
+};
+const readValueFromNaviCustomEvent = (field, fallback) => {
+  // prefer the value given as prop (respect original type, browser would convert to string)
+  let responded;
+  let value;
+  dispatchCustomEvent(field, "navi_get_value", {
+    respondWith: (jsValue) => {
+      responded = true;
+      value = jsValue;
     },
+  });
+  if (responded) {
+    return value;
+  }
+  return fallback;
+};
 
-    componentType,
-    allowNameless,
-    readOnly,
-    name,
-    hasStateProp,
-    state: stateInitial,
-    uiState: stateInitial,
-    uiStateSignal,
-    uiAction,
-    getPropFromState,
-    getStateFromProp,
-    setUIState: (prop, e) => {
-      const newUIState = uiStateController.getStateFromProp(
-        isSignal(prop) ? prop.value : prop,
-      );
-      if (persists) {
-        setNavState(prop);
-      }
-      const currentUIState = uiStateController.uiState;
-      if (newUIState === currentUIState) {
-        return;
-      }
-      debugAction(
-        e,
-        `${getElementSignature(e.currentTarget)}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> updating to ${JSON.stringify(newUIState)}`,
-      );
-      uiStateController.uiState = newUIState;
-      uiStateSignal.value = newUIState;
-      debugActionVerbose(e, `uiStateSignal -> ${JSON.stringify(newUIState)}`);
-      publishUIState(newUIState);
-      debugActionVerbose(e, `publishUIState(${JSON.stringify(newUIState)})`);
-      if (uiStateController.uiAction) {
-        debugAction(
-          e,
-          `${getElementSignature(e.currentTarget)}.uiAction(${JSON.stringify(newUIState)})`,
+/**
+ * Creates a universal callback from an object declaring how it should behave
+ * depending on how it is called.
+ *
+ * The shape of the handlers object defines the **intended usage**.
+ * Navi warns at runtime when the callback is placed on the wrong prop.
+ *
+ * Supported call sites:
+ * - **DOM event props** (`onClick`, `onInput`, ...): called as `fn(event)`
+ * - **`uiAction` prop**: called as `fn(value, event)` — carries a value from the UI element
+ *
+ * ---
+ *
+ * **`{ event }`** — intended for DOM event props:
+ * ```js
+ * const cb = createUICallback({ event: (event) => { ... } });
+ * <Button onClick={cb} />   // ✓
+ * <Button onInput={cb} />   // ✓
+ * <Button uiAction={cb} />  // ⚠ warns, still calls event(event) — value ignored
+ * ```
+ *
+ * **`{ uiAction }`** — intended for the `uiAction` prop only:
+ * ```js
+ * const cb = createUICallback({ uiAction: (value, event) => { ... } });
+ * <Button uiAction={cb} />  // ✓
+ * <Button onClick={cb} />   // ✗ warns, no-op — no value available from DOM event
+ * ```
+ *
+ * **`{ event, uiAction }`** — works from both; each call site gets its own handler:
+ * ```js
+ * const cb = createUICallback({
+ *   event:    (event) => { ... },
+ *   uiAction: (value, event) => { ... },
+ * });
+ * <Button onClick={cb} />   // ✓ → event(event)
+ * <Button uiAction={cb} />  // ✓ → uiAction(value, event)
+ * ```
+ *
+ * @param {{ event?: function(event: Event): any, uiAction?: function(value: any, event: Event): any }} handlers
+ * @returns {function}
+ */
+const createUICallback = ({ name = "ui callback", event, action }) => {
+  if (event && action) {
+    return (...args) => {
+      return routeArgs(args, {
+        event: (e) => {
+          return event(e);
+        },
+        action: (value, actionSecondArg) => {
+          return action(value, actionSecondArg);
+        },
+        other: () => {
+          console.warn(
+            `${name} unsupported call attempt. It is designed to be called by action.`,
+          );
+          return false;
+        },
+      });
+    };
+  }
+  if (action) {
+    return (...args) => {
+      return routeArgs(args, {
+        event: () => {
+          console.warn(
+            `${name} unsupported call attempt (by DOM event). It is designed to be called by action.`,
+          );
+          return false;
+        },
+        action: (value, secondArg) => {
+          return action(value, secondArg);
+        },
+        other: () => {
+          console.warn(
+            `${name} unsupported call attempt. It is designed to be called by action.`,
+          );
+          return false;
+        },
+      });
+    };
+  }
+  // event only
+  return (...args) => {
+    return routeArgs(args, {
+      event: (e) => {
+        return event(e);
+      },
+      action: (_, { event: eventFromArg }) => {
+        console.info(
+          `${name} got called by action. It works but is designed to be called by DOM`,
         );
-        uiStateController.uiAction(newUIState, e);
-      }
-      if (!e.detail?.suppressParentNotification) {
-        notifyParentAboutChildUIStateChange(e);
-      }
-    },
-    resetUIState: (e) => {
-      const currentState = uiStateController.state;
-      uiStateController.setUIState(currentState, e);
-    },
-    actionEnd: () => {
-      if (persists) {
-        setNavState(undefined);
-      }
-    },
-    subscribe: subscribeUIState,
+        return event(eventFromArg);
+      },
+      other: () => {
+        console.warn(
+          `${name} unsupported call attempt. It is designed to be called by DOM.`,
+        );
+        return false;
+      },
+    });
   };
-  uiStateControllerRef.current = uiStateController;
-  return uiStateController;
-};
-
-const NO_PARENT = [() => {}, () => {}, () => {}];
-const useParentControllerNotifiers = (
-  parentUIStateController,
-  uiStateControllerRef,
-  componentType,
-) => {
-  return useMemo(() => {
-    if (!parentUIStateController) {
-      return NO_PARENT;
-    }
-
-    parentUIStateController.componentType;
-    const notifyParentAboutChildMount = () => {
-      const uiStateController = uiStateControllerRef.current;
-      parentUIStateController.registerChild(uiStateController);
-    };
-
-    const notifyParentAboutChildUIStateChange = (e) => {
-      const uiStateController = uiStateControllerRef.current;
-      parentUIStateController.onChildUIStateChange(uiStateController, e);
-    };
-
-    const notifyParentAboutChildUnmount = () => {
-      const uiStateController = uiStateControllerRef.current;
-      parentUIStateController.unregisterChild(uiStateController);
-    };
-
-    return [
-      notifyParentAboutChildMount,
-      notifyParentAboutChildUIStateChange,
-      notifyParentAboutChildUnmount,
-    ];
-  }, []);
 };
 
 /**
- * UI Group State Controller Hook
+ * Detects the shape of the arguments and dispatches to the matching handler.
+ * - DOM event prop (onClick, onInput, ...): fn(event)            → first arg has .currentTarget
+ * - uiAction prop:                          fn(value, event)     → second arg has .currentTarget
+ * - action prop:                            fn(value, { event }) → second arg is a plain object with .event
+ * - other:                                  unknown shape
  *
- * This hook manages a collection of child UI state controllers and aggregates their states
- * into a unified group state. It provides a way to coordinate multiple form inputs that
- * work together as a logical unit.
- *
- * What it provides:
- *
- * 1. **Child State Aggregation**:
- *    - Collects state from multiple child UI controllers
- *    - Combines them into a single meaningful group state
- *    - Updates group state automatically when any child changes
- *
- * 2. **Child Filtering**:
- *    - Can filter which child controllers to include based on component type
- *    - Useful for mixed content where only specific inputs matter
- *    - Enables type-safe aggregation patterns
- *
- * 3. **Group Operations**:
- *    - Provides `resetUIState()` that cascades to all children
- *    - Enables group-level operations like "clear all" or "reset form section"
- *    - Maintains consistency across related inputs
- *
- * 4. **External State Management**:
- *    - Notifies external code of group state changes via `onUIStateChange`
- *    - Allows external systems to react to group-level state changes
- *    - Supports complex form validation and submission logic
- *
- * Why use it:
- * - When you have multiple related inputs that should be treated as one logical unit
- * - For implementing checkbox lists, radio groups, or form sections
- * - When you need to perform operations on multiple inputs simultaneously
- * - To aggregate input states for validation or submission
- *
- * How it works:
- * - Child controllers automatically register themselves when mounted
- * - Group controller listens for child state changes and re-aggregates
- * - Custom aggregation function determines how child states combine
- * - Group state updates trigger notifications to external code
- *
- * @param {Object} props - Component props containing onUIStateChange callback
- * @param {string} componentType - Type identifier for this group controller
- * @param {Object} config - Configuration object
- * @param {string} [config.childComponentType] - Filter children by this type (e.g., "checkbox")
- * @param {Function} config.aggregateChildStates - Function to aggregate child states
- * @param {any} [config.emptyState] - State to use when no children have values
- * @returns {Object} UI group state controller
- *
- * Usage Examples:
- * - **Checkbox List**: Aggregates multiple checkboxes into array of checked values
- * - **Radio Group**: Manages radio buttons to ensure single selection
- * - **Form Section**: Groups related inputs for validation and reset operations
- * - **Dynamic Lists**: Handles variable number of repeated input groups
+ * @param {any[]} args
+ * @param {{ event: function, uiAction: function, action: function, other: function }} handlers
  */
-
-const useUIGroupStateController = (
-  props,
-  componentType,
-  { childComponentType, aggregateChildStates, emptyState = undefined },
-) => {
-  if (typeof aggregateChildStates !== "function") {
-    throw new TypeError("aggregateChildStates must be a function");
+const routeArgs = (args, { event, action, other }) => {
+  const [firstArg, secondArg] = args;
+  if (firstArg && firstArg.currentTarget) {
+    return event(...args);
   }
-  const parentUIStateController = useContext(ParentUIStateControllerContext);
-  const { uiAction, name, value } = props;
-  const childUIStateControllerArrayRef = useRef([]);
-  const childUIStateControllerArray = childUIStateControllerArrayRef.current;
-  const uiStateControllerRef = useRef();
+  if (secondArg && secondArg.event) {
+    return action(...args);
+  }
+  return other(...args);
+};
 
-  const groupIsRenderingRef = useRef(false);
-  const pendingChangeRef = useRef(false);
-  groupIsRenderingRef.current = true;
-  pendingChangeRef.current = false;
-
-  const [
-    notifyParentAboutChildMount,
-    notifyParentAboutChildUIStateChange,
-    notifyParentAboutChildUnmount,
-  ] = useParentControllerNotifiers(
-    parentUIStateController,
-    uiStateControllerRef);
-  useLayoutEffect(() => {
-    notifyParentAboutChildMount();
-    return notifyParentAboutChildUnmount;
-  }, []);
-
-  const debugAction = useDebugAction();
-  const onChange = (_, e, { notifyExternal = true } = {}) => {
-    if (groupIsRenderingRef.current) {
-      pendingChangeRef.current = true;
-      return;
+const resolveActionProp = (action) => {
+  if (typeof action === "string") {
+    const naviAction = STRING_ACTIONS[action];
+    if (!naviAction) {
+      throw new Error(`Unknown ui action "${action}"`);
     }
-    const newUIState = aggregateChildStates(
-      childUIStateControllerArray,
-      emptyState,
-    );
-    debugAction(
+    return naviAction;
+  }
+  return action;
+};
+
+const scroll = createUICallback({
+  name: "scroll",
+  event: (e) => {
+    return requestScroll(e, () => getActionParam(e));
+  },
+  action: (value, { event }) => {
+    return requestScroll(event, () => value);
+  },
+});
+const requestScroll = (e, getScrollParam) => {
+  const scrollTarget = getActionTarget(e, "scroll");
+  if (!scrollTarget) {
+    return false;
+  }
+  const param = getScrollParam();
+  if (!param) {
+    console.warn(
+      `scroll action triggered but no action-param specified or returned by getScrollParam callback`,
       e,
-      `${componentType}.aggregateChildStates -> ${JSON.stringify(newUIState)}`,
     );
-    const uiStateController = uiStateControllerRef.current;
-    uiStateController.setUIState(newUIState, e, { notifyExternal });
-  };
-
-  useLayoutEffect(() => {
-    groupIsRenderingRef.current = false;
-    if (pendingChangeRef.current) {
-      pendingChangeRef.current = false;
-      onChange(
-        null,
-        new CustomEvent(`${componentType}_batched_ui_state_update`),
-        { notifyExternal: false },
-      );
-    }
-  });
-
-  const existingUIStateController = uiStateControllerRef.current;
-  if (existingUIStateController) {
-    existingUIStateController.name = name;
-    existingUIStateController.uiAction = uiAction;
-    existingUIStateController.value = value;
-    return existingUIStateController;
+    return false;
   }
+  return dispatchCustomEvent(scrollTarget, "navi_request_scroll", {
+    event: e,
+    id: param,
+  });
+};
 
-  const [publishUIState, subscribeUIState] = createPubSub();
-  const uiStateSignal = signal(emptyState);
-  const isMonitoringChild = (childUIStateController) => {
-    if (childComponentType === "*") {
-      return true;
+const select = createUICallback({
+  name: "select",
+  event: (e) => {
+    return requestSelect(e, () => getActionParam(e));
+  },
+  action: (value, { event }) => {
+    return requestSelect(event, () => value);
+  },
+});
+const unselect = createUICallback({
+  name: "unselect",
+  event: (e) => {
+    return requestUnselect(e, () => getActionParam(e));
+  },
+  action: (value, { event }) => {
+    return requestUnselect(event, () => value);
+  },
+});
+const requestSelect = (e, getSelectParam) => {
+  const selectTarget = getActionTarget(e, "select");
+  if (!selectTarget) {
+    return false;
+  }
+  const param = getSelectParam();
+  if (!param) {
+    console.warn(
+      `select action triggered but no action-param specified or returned by getSelectParam callback`,
+      e,
+    );
+    return false;
+  }
+  return dispatchCustomEvent(selectTarget, "navi_request_select", {
+    event: e,
+    id: param,
+  });
+};
+const requestUnselect = (e, getUnselectParam) => {
+  const selectTarget = getActionTarget(e, "select");
+  if (!selectTarget) {
+    return false;
+  }
+  const param = getUnselectParam();
+  if (!param) {
+    console.warn(
+      `unselect action triggered but no action-param specified or returned by getSelectParam callback`,
+      e,
+    );
+    return false;
+  }
+  return dispatchCustomEvent(selectTarget, "navi_request_unselect", {
+    event: e,
+    id: param,
+  });
+};
+
+/**
+ * Updates the UI state of the closest ancestor field with the current value.
+ * Use inside a custom picker popup on an input so the parent picker reflects
+ * what is being typed/selected before the popup closes.
+ *
+ * @example
+ * <Input type="text" action="update" />
+ */
+const update = createUICallback({
+  name: "update",
+  action: (value, { event }) => {
+    return requestUpdate(event, value);
+  },
+});
+const requestUpdate = (event, value) => {
+  const actionTarget = getActionTarget(event);
+  if (!actionTarget) {
+    return false;
+  }
+  return dispatchRequestSetUIState(actionTarget, value, { event });
+};
+
+/**
+ * Submits the closest ancestor field's action.
+ * When triggered inside a popup (an element with `[aria-expanded]`), behaves
+ * like `send` instead: closes the popup and, if a value is available, updates
+ * the parent field with that value before closing.
+ *
+ * @example
+ * <Button action="send">Confirm</Button>
+ */
+const send = createUICallback({
+  name: "send",
+  event: (e) => {
+    const expandableEl = e.currentTarget.closest("[aria-expanded]");
+    if (expandableEl) {
+      return requestClose(e);
     }
-    return childUIStateController.componentType === childComponentType;
-  };
-  const uiStateController = {
-    componentType,
-    name,
-    value,
-    uiAction,
-    uiState: emptyState,
-    uiStateSignal,
-    setUIState: (newUIState, e, { notifyExternal = true } = {}) => {
-      if (isSignal(newUIState)) {
-        newUIState = newUIState.value;
+    return requestClosestAction(e);
+  },
+  action: (value, { event }) => {
+    const expandableEl = event.currentTarget.closest("[aria-expanded]");
+    if (expandableEl) {
+      if (value !== undefined) {
+        requestUpdate(event, value);
       }
-      const currentUIState = uiStateController.uiState;
-      if (newUIState === currentUIState) {
+      return requestClose(event);
+    }
+    return requestClosestAction(event);
+  },
+});
+const submitSelector = `button[type="submit"], input[type="submit"], input[type="image"], [data-action="submit"]`;
+const requestClosestAction = (event) => {
+  const currentTarget = event.currentTarget;
+  const target = event.target;
+  const controlWithAction = findClosestControlWithAction(currentTarget);
+  if (!controlWithAction) {
+    console.warn(
+      `submit event triggered but no control with [data-action] found in event path`,
+      event,
+    );
+    return false;
+  }
+  let requester = target;
+  if (currentTarget.matches(submitSelector)) {
+    requester = currentTarget;
+  } else {
+    // when present, we use first button submitting the form as the requester
+    // not the input, it aligns with browser behavior where
+    // hitting Enter in a text input triggers the first submit button of the form, not the input itself
+    const firstButtonSubmitting =
+      controlWithAction.querySelector(submitSelector);
+    if (firstButtonSubmitting) {
+      requester = firstButtonSubmitting;
+    }
+  }
+  const allowed = dispatchRequestAction(controlWithAction, {
+    event,
+    requester,
+  });
+  const initiator = event.detail ? event.detail.eventChain[0] : event;
+  const { form } = currentTarget;
+  if (form) {
+    // prevent form submission when cliking buttons or pressing enter on inputs
+    initiator.preventDefault();
+  } else if (initiator.type === "keydown" && initiator.key === "Enter") {
+    // prevent triggering click on such button, they are already performing submit
+    // (this ensure enter inside a picker won't trigger picker button click)
+    initiator.preventDefault();
+  }
+  return allowed;
+};
+
+/**
+ * Clears the value of the closest ancestor field then closes the popup.
+ * Combines `update('')` + `close` in one action.
+ *
+ * @example
+ * <Button action="clear">Clear</Button>
+ */
+const clear = createUICallback({
+  name: "clear",
+  event: (event) => {
+    update("", { event });
+    return requestClose(event);
+  },
+  action: (v, { event }) => {
+    update("", { event });
+    return requestClose(event);
+  },
+});
+/**
+ * Closes the nearest expandable ancestor (the element with `[aria-expanded]`).
+ * When used on a button inside a picker popup, closing also triggers the
+ * picker's action if the value changed since the popup was opened.
+ *
+ * @example
+ * <Button action="close">Close</Button>
+ */
+const close = createUICallback({
+  name: "close",
+  event: (event) => {
+    return requestClose(event);
+  },
+  action: (value, { event }) => {
+    return requestClose(event);
+  },
+});
+/**
+ * Cancels the current edit and closes the popup without triggering the
+ * picker's action. The picker restores the value it had when the popup opened.
+ *
+ * @example
+ * <Button action="cancel">Cancel</Button>
+ */
+const cancel = createUICallback({
+  name: "cancel",
+  event: (event) => {
+    return requestClose(event, { cancel: true });
+  },
+  action: (_, { event }) => {
+    return requestClose(event, { cancel: true });
+  },
+});
+const requestClose = (event, { cancel = false } = {}) => {
+  const currentTarget = event.currentTarget;
+  const expandableEl = currentTarget.closest("[aria-expanded]");
+  if (!expandableEl) {
+    console.warn(
+      "close action triggered but no element with [aria-expanded] found in event path",
+      event,
+    );
+    return false;
+  }
+  return dispatchCustomEvent(expandableEl, "navi_request_close", {
+    event,
+    cancel,
+  });
+};
+
+const getActionTarget = (e, actionName) => {
+  const currentTarget = e.currentTarget;
+  const actionTargetAttribute = currentTarget.getAttribute("action-target");
+  if (actionTargetAttribute) {
+    const actionTarget = document.getElementById(actionTargetAttribute);
+    if (!actionTarget) {
+      console.warn(
+        `action-target="${actionTargetAttribute}" specified but no element with that id found in the document`,
+        e,
+      );
+      return null;
+    }
+    return actionTarget;
+  }
+  const parentControl = getParentControl(currentTarget);
+  if (!parentControl) {
+    console.warn(
+      `${actionName} triggered but no element with [navi-control] found in event path`,
+      e,
+    );
+    return null;
+  }
+  return parentControl;
+};
+const getActionParam = (e) => {
+  const currentTarget = e.currentTarget;
+  const actionParamAttribute = currentTarget.getAttribute("action-param");
+  if (actionParamAttribute) {
+    return actionParamAttribute;
+  }
+  return null;
+};
+
+const STRING_ACTIONS = {
+  scroll,
+  select,
+  unselect,
+  update,
+
+  send,
+
+  close,
+  clear,
+  cancel,
+};
+
+/**
+ * Installs a navi_constraint_message event listener on the given element.
+ * Messages are resolved in the following priority order:
+ *   1. Own *Message props passed directly to the component
+ *   2. *Message props inherited from the nearest <Field> ancestor
+ *
+ * Returns the remaining props with all *Message props removed.
+ */
+const useConstraintMessages = (elementRef, props) => {
+  const messagePropsRefFromContext = useContext(MessagePropsRefContext);
+  const [messageProps, remainingProps] = extractMessageAndRemainingProps(props);
+  const messagePropsRef = useRef();
+  messagePropsRef.current = messageProps;
+
+  const onConstraintMessage = useCallback(
+    (e) => {
+      const propName = CONSTRAINT_NAME_TO_PROP[e.detail.constraintName];
+      const messageProp = messagePropsRef.current[propName];
+      if (messageProp) {
+        e.detail.respondMessage(messageProp);
         return;
       }
-      uiStateController.uiState = newUIState;
-      uiStateSignal.value = newUIState;
-      debugUIGroup(
-        `${componentType}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> updates from ${JSON.stringify(currentUIState)} to ${JSON.stringify(newUIState)}`,
-      );
-      publishUIState(newUIState);
-      if (notifyExternal) {
-        if (uiStateController.uiAction) {
-          debugAction(
-            e,
-            `${componentType}.uiAction(${JSON.stringify(newUIState)})`,
-          );
-          uiStateController.uiAction(newUIState, e);
+      const messagePropFromContext =
+        messagePropsRefFromContext?.current?.[propName];
+      if (messagePropFromContext) {
+        e.detail.respondMessage(messagePropFromContext);
+      }
+    },
+    [messagePropsRefFromContext],
+  );
+
+  useLayoutEffect(() => {
+    const el = elementRef.current;
+    if (!el) {
+      return null;
+    }
+    el.addEventListener("navi_constraint_message", onConstraintMessage);
+    return () => {
+      el.removeEventListener("navi_constraint_message", onConstraintMessage);
+    };
+  }, [onConstraintMessage]);
+
+  return remainingProps;
+};
+
+/**
+ * Core hooks for wiring navi field components to the action/validation system.
+ *
+ * Why this exists instead of using native events directly:
+ *
+ * 1. Preact maps `onChange` to the native `change` event, not `input`. For text inputs
+ *    this means the handler fires only on blur, not on every keystroke. All navi fields
+ *    use `onInput` internally and route through `dispatchRequestAction` so the behavior
+ *    is consistent regardless of input type.
+ *
+ * 2. Any field (text, checkbox, radio, picker…) can opt into debounce simply by passing
+ *    a debounced action. The request-action event chain handles the timing centrally
+ *    rather than each component having to manage its own debounce logic.
+ */
+const ControlChildrenWrapper = ({
+  children
+}) => jsx(ParentUIStateControllerContext.Provider, {
+  value: null,
+  children: jsx(MessagePropsRefContext.Provider, {
+    value: undefined,
+    children: jsx(ControlToInterfaceContext.Provider, {
+      value: undefined,
+      children: children
+    })
+  })
+});
+const ControlgroupChildrenWrapper = ({
+  children,
+  uiGroupStateController,
+  name,
+  required,
+  disabled,
+  readOnly,
+  loading,
+  boundAction,
+  actionRequester
+}) => jsx(MessagePropsRefContext.Provider, {
+  value: undefined,
+  children: jsx(ControlToInterfaceContext.Provider, {
+    value: undefined,
+    children: jsx(ParentUIStateControllerContext.Provider, {
+      value: uiGroupStateController,
+      children: jsx(ControlNameContext.Provider, {
+        value: name,
+        children: jsx(DisabledContext.Provider, {
+          value: disabled,
+          children: jsx(ReadOnlyContext.Provider, {
+            value: readOnly,
+            children: jsx(RequiredContext.Provider, {
+              value: required,
+              children: jsx(LoadingContext.Provider, {
+                value: loading,
+                children: jsx(ActionContext.Provider, {
+                  value: boundAction,
+                  children: jsx(ActionRequesterContext.Provider, {
+                    value: actionRequester,
+                    children: children
+                  })
+                })
+              })
+            })
+          })
+        })
+      })
+    })
+  })
+});
+
+/**
+ * Core hook for interactive field components (InputText, InputCheckbox, etc.).
+ *
+ * Sets up the full field lifecycle:
+ * - Creates a UI state controller that manages state divergence between props and user interactions
+ * - Binds the field's action to its current UI state via a signal
+ * - Wires up all DOM event handlers (navi_set_ui_state, navi_request_reset_ui_state,
+ *   navi_action_ready, navi_action_abort, navi_action_error, navi_cancel, etc.)
+ * - Resolves inherited context (disabled, readOnly, required, loading, fieldName)
+ * - Handles constraint validation and message props
+ *
+ * All state changes route through DOM events on the field element so that
+ * external subscribers (e.g. useUIState, Selectable) receive every update.
+ *
+ * @returns {Object} Props to spread onto the field's root/input element
+ */
+const useControlProps = (props, {
+  controlType,
+  statePropName,
+  defaultStatePropName,
+  fallbackState,
+  getStateFromProp,
+  getPropFromState,
+  getStateFromParent,
+  allowNameless,
+  persists,
+  uiActionInternal,
+  readOnlySupported,
+  picker
+}) => {
+  const debugInteraction = useDebugInteraction();
+  const controlName = useContext(ControlNameContext);
+  const state = props[statePropName];
+  if (isSignal(state)) {
+    props = {
+      ...props,
+      [statePropName]: state.value
+    };
+  }
+  if (!props.name && controlName) {
+    props.name = controlName;
+  }
+  const uiStateController = useUIStateController(props, controlType, {
+    statePropName,
+    defaultStatePropName,
+    fallbackState,
+    getStateFromProp,
+    getPropFromState,
+    getStateFromParent,
+    allowNameless,
+    persists,
+    debugInteraction,
+    uiActionInternal
+  });
+  const [boundAction] = useActionBoundToOneParam(resolveActionProp(props.action), uiStateController.uiStateSignal);
+  const [controlProps, remainingProps, ControlChildrenWrapper] = useInteractiveProps(props, {
+    uiStateController,
+    boundAction,
+    readOnlySupported
+  });
+  {
+    const {
+      ref,
+      actionInteraction,
+      actionOnMouseDown = actionInteraction === "mousedown",
+      actionAfterChange = actionInteraction === "change",
+      actionDebounce
+    } = props;
+    let isCheckable = false;
+    // Effect to run when the Enter key is pressed.
+    // For most inputs Enter submits the surrounding form; for checkables Enter
+    // synthesizes a click so the browser's native checkbox/radio activation runs
+    // (which then fires input -> goes through the action pipeline).
+    let enterEffect;
+    const updateUIState = e => {
+      const value = readControlValue(ref.current);
+      uiStateController.setUIState(value, e);
+    };
+    const transferFocusToTarget = pointerEvent => {
+      const naviProxyTarget = findFocusDelegateTarget(pointerEvent.currentTarget) || findControlProxyTarget(pointerEvent.currentTarget);
+      if (!naviProxyTarget) {
+        return false;
+      }
+      // We also transfer on click even if mousedown is there because:
+      // - it's possible to receive a click without a mousedown (<label>)
+      // - so it's possible to end up focused by the browser without having a chance to preventDefault on the mousedown
+      // -> We do it also on click
+      // No need to preventDefault here though
+      // -> This ensure browser don't complain we try to focus a aria-hidden element
+      // and ensure the focus ends up where it should
+      if (pointerEvent.type === "mousedown") {
+        pointerEvent.preventDefault();
+      }
+      naviProxyTarget.focus({
+        focusVisible: false
+      });
+      return true;
+    };
+    const asInteraction = (interaction, e) => {
+      const control = ref.current;
+      const allowed = dispatchRequestInteraction(control, e, interaction.name);
+      if (!allowed) {
+        debugInteraction(e, `${e.type}.preventDefault()`);
+        e.preventDefault();
+        return false;
+      }
+      interaction.effect?.(e);
+      return true;
+    };
+    const asBrowserAction = (interaction, e) => {
+      return asInteraction(interaction, e);
+    };
+    const lastEventRequestingActionRef = useRef();
+    const lastActionValueRef = useRef();
+    // Keep lastActionValueRef in sync with state changes that happen outside of asAction
+    // (e.g. radio_sibling_uncheck when another radio in the group becomes checked).
+    // Otherwise the dedup below would wrongly skip a real user click that re-checks a radio
+    // whose lastActionValueRef still matched a value from a previous interaction.
+    //
+    // We only sync for these external sources — NOT for every UI state change.
+    // Syncing on every change would also capture our own updateUIState calls fired
+    // from the input event, which would then make asAction (triggered later via
+    // navi_change / debounce) think the value is unchanged and skip the action.
+    controlProps.onnavi_ui_state_change = e => {
+      const originatingEvent = e.detail.event;
+      if (originatingEvent?.type === "radio_sibling_uncheck") {
+        lastActionValueRef.current = e.detail.value;
+      }
+    };
+    const asAction = (interaction, e, {
+      ifValueModified
+    }) => {
+      if (actionInteraction === "custom") {
+        return false;
+      }
+      const control = ref.current;
+      const currentValue = readControlValue(control);
+      if (ifValueModified) {
+        // Ignore input events that carry the same value as the last action we dispatched.
+        // This avoids showing a spurious "read-only" callout for redundant input events
+        // that browsers fire with no UI change — e.g. range inputs fire several input
+        // events around mouse release even though the value hasn't moved.
+        const lastActionValue = lastActionValueRef.current;
+        const valueSameAsLastAction = lastActionValue !== undefined && compareTwoJsValues(currentValue, lastActionValue);
+        if (valueSameAsLastAction) {
+          e.preventDefault();
+          return false;
         }
       }
-      notifyParentAboutChildUIStateChange(e);
-    },
-    registerChild: (childUIStateController) => {
-      if (!isMonitoringChild(childUIStateController)) {
+      lastEventRequestingActionRef.current = e;
+      lastActionValueRef.current = currentValue;
+      const allowed = dispatchRequestAction(control, {
+        event: e,
+        uiState: currentValue
+      });
+      if (!allowed) {
+        debugInteraction(e, `${e.type}.preventDefault()`);
+        e.preventDefault();
+        return false;
+      }
+      interaction.effect?.(e);
+      return true;
+    };
+    const applyInteraction = (interaction, e, {
+      ifValueModified
+    } = {}) => {
+      if (!interaction) {
+        return false;
+      }
+      return interaction.callback(interaction, e, {
+        ifValueModified
+      });
+    };
+    let mousedownInteraction;
+    let clickInteraction;
+    let inputInteraction;
+    let keydownInteraction = {
+      name: "keydown",
+      callback: asBrowserAction
+    };
+    // a custom concept being combination of "input", "change" and may other events
+    // this even if trigerred when value changes and can be controlled by actionDebounce and actionAfterChange
+    let naviChangeInteraction;
+    if (controlType === "button") {
+      mousedownInteraction = {
+        name: "mousedown",
+        callback: actionOnMouseDown ? asAction : asInteraction
+      };
+      clickInteraction = {
+        name: "click",
+        callback: actionOnMouseDown ? asInteraction : asAction
+      };
+    } else if (controlType === "input") {
+      isCheckable = props.type === "radio" || props.type === "checkbox";
+      // On input, gate the interaction (readonly check) and update UI state to reflect the new value.
+      inputInteraction = {
+        name: "input",
+        callback: asInteraction,
+        effect: updateUIState
+      };
+      naviChangeInteraction = {
+        name: "navi_change",
+        callback: asAction
+      };
+      enterEffect = e => resolveActionProp("send")(e);
+      if (picker) {
+        mousedownInteraction = {
+          name: "mousedown to open picker",
+          callback: asInteraction
+        };
+        clickInteraction = {
+          name: "click to open picker",
+          callback: asInteraction
+        };
+      }
+      if (isCheckable) {
+        // For checkables, click does NOT update state — it only gates the
+        // browser's native check/uncheck via interaction constraints (e.g.
+        // readOnly). State actually changes via the "input" event that the
+        // browser fires right after, which routes through asAction so the
+        // full action pipeline (constraints, navi_action_allowed, sibling
+        // uncheck for radios…) runs in one place.
+        clickInteraction = {
+          name: "click",
+          callback: asBrowserAction
+        };
+        inputInteraction = {
+          name: "input",
+          callback: asAction
+        };
+        naviChangeInteraction = undefined;
+        enterEffect = e => e.currentTarget.click();
+      } else if (props.type === "range") {
+        mousedownInteraction = {
+          name: "mousedown",
+          callback: asBrowserAction,
+          effect: updateUIState
+        };
+      } else if (props.type === "color") ;
+    }
+    const onMouseDown = e => {
+      props.onMouseDown?.(e);
+      applyInteraction(mousedownInteraction, e);
+      transferFocusToTarget(e);
+    };
+    const onClick = e => {
+      props.onClick?.(e);
+      applyInteraction(clickInteraction, e);
+      transferFocusToTarget(e);
+    };
+    const onKeyDown = e => {
+      props.onKeyDown?.(e);
+      if (e.key === "Enter" && enterEffect) {
+        enterEffect(e);
         return;
       }
-      const childComponentType = childUIStateController.componentType;
-      childUIStateControllerArray.push(childUIStateController);
-      debugUIGroup(
-        `${componentType}.registerChild("${childComponentType}") -> registered (total: ${childUIStateControllerArray.length})`,
-      );
-      onChange(
-        childUIStateController,
-        new CustomEvent(`${childComponentType}_mount`),
-        { notifyExternal: false },
-      );
-    },
-    onChildUIStateChange: (childUIStateController, e) => {
-      if (!isMonitoringChild(childUIStateController)) {
-        return;
+      applyInteraction(keydownInteraction, e);
+    };
+    const onInput = e => {
+      props.onInput?.(e);
+      applyInteraction(inputInteraction, e, {
+        ifValueModified: true
+      });
+    };
+    const hasNaviChangeInteraction = Boolean(naviChangeInteraction);
+    const refCallback = useCallback(field => {
+      if (!hasNaviChangeInteraction || actionInteraction === "custom") {
+        return undefined;
       }
-      debugUIGroup(
-        `${componentType}.onChildUIStateChange("${childComponentType}") to ${JSON.stringify(
-          childUIStateController.uiState,
-        )}`,
-      );
-      onChange(childUIStateController, e);
-    },
-    unregisterChild: (childUIStateController) => {
-      if (!isMonitoringChild(childUIStateController)) {
-        return;
+      return addInputEffect(field, e => {
+        applyInteraction(naviChangeInteraction, e, {
+          ifValueModified: true
+        });
+      }, {
+        waitForChange: actionAfterChange,
+        debounce: actionDebounce,
+        debugInteraction
+      });
+    }, [actionInteraction, actionAfterChange, actionDebounce, hasNaviChangeInteraction]);
+    const refComposed = useComposeElementRef(refCallback, ref);
+    const onPaste = e => {
+      props.onPaste?.(e);
+      const allowed = dispatchRequestInteraction(ref.current, e);
+      if (!allowed) {
+        e.preventDefault();
       }
-      const childComponentType = childUIStateController.componentType;
-      const index = childUIStateControllerArray.indexOf(childUIStateController);
-      if (index === -1) {
-        return;
-      }
-      childUIStateControllerArray.splice(index, 1);
-      debugUIGroup(
-        `${componentType}.unregisterChild("${childComponentType}") -> unregisteed (remaining: ${childUIStateControllerArray.length})`,
-      );
-      onChange(
-        childUIStateController,
-        new CustomEvent(`${childComponentType}_unmount`),
-        { notifyExternal: false },
-      );
-    },
-    resetUIState: (e) => {
-      // we should likely batch the changes that will be reported for performances
-      for (const childUIStateController of childUIStateControllerArray) {
-        childUIStateController.resetUIState(e);
-      }
-    },
-    actionEnd: (e) => {
-      for (const childUIStateController of childUIStateControllerArray) {
-        childUIStateController.actionEnd(e);
-      }
-    },
-    subscribe: subscribeUIState,
-  };
-  uiStateControllerRef.current = uiStateController;
-  return uiStateController;
+    };
+    Object.assign(controlProps, {
+      ref: refComposed,
+      onMouseDown,
+      onClick,
+      onKeyDown,
+      onPaste,
+      onInput
+    });
+  }
+  return [controlProps, remainingProps, ControlChildrenWrapper];
 };
 
 /**
- * Hook to track UI state from a UI state controller
+ * Core hook for field group components (SelectableList, CheckboxList, etc.).
+ * - Creates a UI group state controller that aggregates child states into one group state
+ * - Binds the group's action to the aggregated state signal
+ * - Provides context to children: ParentUIStateController, FieldName, Disabled, ReadOnly,
+ *   Required, Loading, Action, ActionRequester
+ * - Overrides `onnavi_request_reset_ui_state` to cascade resets to all monitored children
+ *   by dispatching `navi_request_reset_ui_state` DOM events on each child's DOM element
+ * - Overrides `onnavi_action_ready` to track the action requester
  *
- * This hook allows external code to react to UI state changes without
- * causing the controller itself to re-create. It returns the current UI state
- * and will cause re-renders when the UI state changes.
- *
- * @param {Object} uiStateController - The UI state controller to track
- * @returns {any} The current UI state
+ * @param {{ controlType: string, childControlType: string, aggregateChildStates: Function }} config
+ * @returns {Object} Props to spread onto the group's root element
  */
-const useUIState = (uiStateController) => {
-  return uiStateController.uiStateSignal.value;
+const useControlgroupProps = (props, {
+  stateType,
+  controlType,
+  childControlFilter,
+  aggregateChildStates
+}) => {
+  const {
+    action
+  } = props;
+  const debugAction = useDebugAction();
+  const uiGroupStateController = useUIGroupStateController(props, controlType, {
+    stateType,
+    childControlFilter,
+    aggregateChildStates,
+    debugAction
+  });
+  const [boundAction] = useActionBoundToOneParam(resolveActionProp(action), uiGroupStateController.uiStateSignal);
+  const [actionRequester, setActionRequester] = useState();
+  const [controlgroupProps, remainingProps] = useInteractiveProps(props, {
+    uiStateController: uiGroupStateController,
+    boundAction
+  });
+  const {
+    basePseudoState
+  } = controlgroupProps;
+  const disabled = basePseudoState[":disabled"];
+  const readOnly = basePseudoState[":read-only"];
+  const loading = basePseudoState[":-navi-loading"];
+  const childrenWrapperProps = useMemo(() => ({
+    uiGroupStateController,
+    name: controlgroupProps.name,
+    required: controlgroupProps.required,
+    disabled,
+    readOnly,
+    loading,
+    boundAction,
+    actionRequester
+  }), [uiGroupStateController, controlgroupProps.name, controlgroupProps.required, disabled, readOnly, loading, boundAction, actionRequester]);
+  return [{
+    ...controlgroupProps,
+    name: undefined,
+    // useful to children, not the the group itself
+    required: undefined,
+    // useful to children, not the the group itself
+    onnavi_action_allowed: e => {
+      setActionRequester(e.detail.requester);
+      controlgroupProps.onnavi_action_allowed(e);
+    }
+  }, remainingProps, childrenWrapperProps, uiGroupStateController];
+};
+const useInteractiveProps = (props, {
+  uiStateController,
+  boundAction,
+  readOnlySupported
+}) => {
+  const {
+    ref
+  } = props;
+  const controlProps = {
+    ref,
+    "navi-control-host": ""
+  };
+  let remainingProps = {
+    "navi-control": uiStateController.controlType
+  };
+  const propKeySet = new Set(Object.keys(props));
+  for (const key of propKeySet) {
+    if (CONTROL_PROP_SET.has(key)) {
+      if (CONTROL_ATTRIBUTE_SET.has(key)) {
+        controlProps[key] = props[key];
+      }
+    } else {
+      remainingProps[key] = props[key];
+    }
+  }
+  const actionStatus = useActionStatus(boundAction);
+  const controlToInterfaceContext = useContext(ControlToInterfaceContext);
+  const controlDisabled = useContext(DisabledContext);
+  const controlReadOnly = useContext(ReadOnlyContext);
+  const controlRequired = useContext(RequiredContext);
+  const controlLoading = useContext(LoadingContext);
+  const parentActionRequester = useContext(ActionRequesterContext);
+  const debugAction = useDebugAction();
+  const debugInteraction = useDebugInteraction();
+  const debugFocus = useDebugFocus();
+  {
+    const {
+      autoFocus,
+      autoFocusVisible,
+      autoSelect
+    } = props;
+    useAutoFocus(ref, autoFocus, {
+      focusVisible: autoFocusVisible,
+      autoSelect
+    });
+    Object.assign(controlProps, {
+      "navi-autofocus": autoFocus ? "" : undefined
+    });
+  }
+  {
+    const {
+      id,
+      "navi-control-proxy-for": naviProxyFor,
+      name,
+      type,
+      disabled,
+      required,
+      readOnly,
+      loading
+    } = props;
+    const idResolved = id || controlToInterfaceContext?.id;
+    const disabledResolved = disabled || controlDisabled;
+    const requiredResolved = required || controlRequired;
+    const loadingResolved = loading || actionStatus.loading || controlLoading && parentActionRequester === ref.current;
+    const readOnlyResolved = readOnly || controlReadOnly || loadingResolved || uiStateController.readOnly;
+    Object.assign(controlProps, {
+      "id": idResolved,
+      "navi-control-proxy-for": naviProxyFor,
+      name,
+      type,
+      "required": requiredResolved,
+      "disabled": disabledResolved,
+      "aria-busy": loadingResolved,
+      "basePseudoState": {
+        ":disabled": disabledResolved,
+        ":read-only": readOnlyResolved,
+        ":-navi-loading": loadingResolved,
+        ...props.basePseudoState
+      }
+    });
+    if (readOnlySupported) {
+      controlProps.readOnly = readOnlyResolved;
+    } else {
+      controlProps["aria-readonly"] = readOnlyResolved;
+    }
+    // infom any <Field> parent of our readOnly state + that we are interactive
+    useLayoutEffect(() => {
+      if (controlToInterfaceContext) {
+        controlToInterfaceContext.setInteractive(true);
+        controlToInterfaceContext.setDisabled(disabledResolved);
+        controlToInterfaceContext.setReadOnly(readOnlyResolved);
+      }
+    }, [controlToInterfaceContext, disabledResolved, readOnlyResolved]);
+    const {
+      constraints
+    } = controlProps;
+    useConstraints(ref, constraints);
+    remainingProps = useConstraintMessages(ref, remainingProps);
+  }
+  {
+    const uiState = uiStateController.uiStateSignal.value;
+    Object.assign(controlProps, {
+      // for some input navi-ui-state differs (like color where ui-state would be "" while value would be "#000000")
+      "navi-ui-state": uiState,
+      "onnavi_request_reset_ui_state": e => {
+        uiStateController.resetUIState(e);
+      },
+      "onnavi_get_ui_state": e => {
+        e.detail.respondWith(uiStateController.uiStateSignal.peek());
+      },
+      "onnavi_set_ui_state": e => {
+        uiStateController.setUIState(e.detail.value, e);
+      }
+    });
+    const {
+      statePropName
+    } = uiStateController;
+    if (statePropName) {
+      const statePropValueRaw = uiStateController.getPropFromState(uiState);
+      controlProps[statePropName] = statePropValueRaw;
+      if (statePropName === "checked") {
+        const {
+          value
+        } = props;
+        controlProps.value = value;
+      }
+    }
+  }
+  {
+    const {
+      children
+    } = props;
+    // Children are returned raw so callers decide how to wrap them.
+    // Use the returned ChildrenContextWrapper to reset field-specific contexts
+    // (MessagePropsRef, ControlToInterface) around the content you render.
+    Object.assign(controlProps, {
+      children
+    });
+  }
+  {
+    const {
+      action,
+      actionErrorEffect,
+      errorMapping
+    } = props;
+    const executeAction = useExecuteAction(ref, {
+      errorEffect: actionErrorEffect,
+      errorMapping
+    });
+    const dataAction = action === undefined ? undefined : typeof action === "string" ? action : boundAction.callSource;
+    Object.assign(controlProps, {
+      "data-action": dataAction
+    });
+    Object.assign(remainingProps, {
+      "data-action": dataAction
+    });
+    const {
+      onCancel,
+      cancelOnBlurInvalid,
+      cancelOnEscape,
+      onActionPrevented,
+      onActionStart,
+      onActionAborted,
+      onActionError,
+      onActionEnd,
+      resetOnCancel,
+      resetOnAbort,
+      resetOnError
+    } = props;
+    Object.assign(controlProps, {
+      onFocus: e => {
+        // Transfer programmatic focus to the delegate target (navi-focus-delegate or navi-control-proxy-for)
+        const focusProxyTarget = findFocusDelegateTarget(e.currentTarget) || findControlProxyTarget(e.currentTarget);
+        if (focusProxyTarget) {
+          const focusVisible = e.currentTarget.matches(":focus-visible");
+          debugFocus(e, `focus event: redirecting to ${getElementSignature(focusProxyTarget)}.focus({ focusVisible: ${focusVisible} })`);
+          focusProxyTarget.focus({
+            focusVisible
+          });
+        }
+      },
+      onnavi_request_interaction: e => {
+        onRequestInteraction(e, {
+          debugInteraction
+        });
+      },
+      onnavi_cancel: e => {
+        const {
+          reason
+        } = e.detail;
+        const isBlurInvalid = reason.startsWith("blur_invalid");
+        if (resetOnCancel) {
+          if (isBlurInvalid) {
+            return;
+          }
+          dispatchRequestResetUIState(e.currentTarget, e);
+          onCancel?.(e, reason);
+          return;
+        }
+        if (isBlurInvalid) {
+          if (!cancelOnBlurInvalid) {
+            return;
+          }
+          if (
+          // error prevent cancellation until the user closes it (or something closes it)
+          e.detail.failedConstraintInfo.level === "error" && e.detail.failedConstraintInfo.reportStatus !== "closed") {
+            return;
+          }
+        }
+        if (reason === "escape_key") {
+          if (!cancelOnEscape) {
+            return;
+          }
+        }
+        onCancel?.(e, reason);
+      },
+      onnavi_request_action: e => {
+        let uiState;
+        if (Object.hasOwn(e.detail, "uiState")) {
+          // uiState was forwarded by a proxy — use it directly to avoid
+          // re-computing from the element's own state (which may already reflect
+          // the optimistic update and return undefined for radio)
+          uiState = e.detail.uiState;
+        } else {
+          dispatchInternalCustomEvent(e.currentTarget, "navi_get_ui_state", {
+            respondWith: v => {
+              debugAction(e, `navi_get_ui_state.respondWith(${JSON.stringify(v)})`);
+              uiState = v;
+            }
+          });
+          e.detail.uiState = uiState;
+        }
+        const naviProxyTarget = findControlProxyTarget(e.currentTarget);
+        if (naviProxyTarget) {
+          // Apply the proxy's desired uiState optimistically before dispatching so
+          // the target's UI updates immediately, then forward the action.
+          // uiState is included explicitly so the target's onnavi_request_action
+          // can detect it via Object.hasOwn and skip re-computing from its own
+          // navi_request_ui_state (which would return undefined for an already-set radio).
+          debugAction(e, `${getElementSignature(naviProxyTarget)}.dispatchEvent("navi_set_ui_state", ${JSON.stringify(uiState)})`);
+          dispatchRequestSetUIState(naviProxyTarget, uiState, {
+            event: e
+          });
+          return;
+        }
+        if (e.detail.action) ; else {
+          e.detail.actionOrigin = "action_prop";
+          e.detail.action = boundAction;
+        }
+        onRequestAction(e, {
+          debugAction
+        });
+      },
+      onnavi_action_prevented: onActionPrevented,
+      onnavi_action_allowed: e => {
+        if (e.detail.action === "auto") {
+          // special case for the use case where form.submit is called
+          e.detail.action = boundAction;
+        }
+        const {
+          uiState
+        } = e.detail;
+        dispatchRequestSetUIState(e.currentTarget, uiState, {
+          event: e
+        });
+        debugAction(e, `executing action ${e.detail.action.callSource}`);
+        executeAction(e);
+      },
+      onnavi_action_start: e => {
+        onActionStart?.(e);
+      },
+      onnavi_action_abort: e => {
+        if (resetOnAbort) {
+          dispatchRequestResetUIState(e.currentTarget, e);
+        }
+        onActionAborted?.(e);
+      },
+      onnavi_action_error: e => {
+        const {
+          error
+        } = e.detail;
+        if (resetOnError) {
+          dispatchRequestResetUIState(e.currentTarget, e);
+        }
+        onActionError?.(error, e);
+      },
+      onnavi_action_end: e => {
+        const {
+          data
+        } = e.detail;
+        uiStateController.actionEnd(e);
+        debugAction(e, `action end with data: ${JSON.stringify(data)}`);
+        onActionEnd?.(data, e);
+        remainingProps.onnavi_action_end?.(e);
+      }
+    });
+  }
+  return [controlProps, remainingProps, ControlChildrenWrapper];
 };
 
-installImportMetaCssBuild(import.meta);const css$B = /* css */`
+installImportMetaCssBuild(import.meta);const css$I = /* css */`
   @layer navi {
     .navi_button {
       --button-border-radius: 2px;
@@ -23509,42 +26327,38 @@ installImportMetaCssBuild(import.meta);const css$B = /* css */`
 `;
 const Button = props => {
   const defaultRef = useRef(null);
-  const ref = props.ref || defaultRef;
-  return jsx(ButtonDispatcher, {
-    ...props,
-    ref: ref
-  });
+  props.ref = props.ref || defaultRef;
+  const button = renderButton(ButtonUI, props);
+  return button;
 };
-const ButtonDispatcher = props => {
-  const formContext = useContext(FormActionContext);
-  const hasAction = Boolean(props.action || props.shortcuts && props.shortcuts.length > 0);
-  if (hasAction) {
-    if (formContext && props.action) {
-      return jsx(ButtonWithActionInsideForm, {
-        ...props
-      });
-    }
-    return jsx(ButtonWithAction, {
-      ...props
-    });
-  }
+const ButtonRouteResolver = props => {
+  const Next = useNextResolver();
   if (props.route) {
     return jsx(ButtonWithRoute, {
       ...props
     });
   }
-  return jsx(ButtonUI, {
+  return jsx(Next, {
     ...props
   });
 };
+const ButtonInsideFormResolver = props => {
+  const Next = useNextResolver();
+  const formContext = useContext(FormContext);
+  if (formContext) {
+    return jsx(ButtonInsideForm, {
+      ...props
+    });
+  }
+  return jsx(Next, {
+    ...props
+  });
+};
+const renderButton = createComponentResolver([ButtonRouteResolver, ButtonInsideFormResolver]);
 const ButtonUI = props => {
-  import.meta.css = [css$B, "@jsenv/navi/src/field/button.jsx"];
+  import.meta.css = [css$I, "@jsenv/navi/src/control/button.jsx"];
   const {
     ref,
-    readOnly,
-    disabled,
-    loading,
-    autoFocus,
     // href/link
     href,
     target,
@@ -23553,19 +26367,18 @@ const ButtonUI = props => {
     icon,
     revealOnInteraction = icon,
     discrete = icon && !revealOnInteraction,
-    spacing,
-    children,
-    ...rest
+    spacing
   } = props;
-  const contextLoading = useContext(LoadingContext);
-  const contextLoadingElement = useContext(LoadingElementContext);
-  const contextReadOnly = useContext(ReadOnlyContext);
-  const contextDisabled = useContext(DisabledContext);
-  useAutoFocus(ref, autoFocus);
-  const remainingProps = useConstraints(ref, rest);
-  const innerLoading = loading || contextLoading && contextLoadingElement === ref.current;
-  const innerReadOnly = readOnly || contextReadOnly || innerLoading;
-  const innerDisabled = disabled || contextDisabled;
+  const [buttonProps, remainingProps, ControlChildrenWrapper] = useControlProps(props, {
+    controlType: "button",
+    statePropName: "value",
+    allowNameless: true
+  });
+  const {
+    basePseudoState,
+    children
+  } = buttonProps;
+  const loading = basePseudoState[":-navi-loading"];
   const isLink = href !== undefined;
   let as = "button";
   let innerTarget;
@@ -23582,27 +26395,20 @@ const ButtonUI = props => {
   useAccentColorAttributes(ref, null, {
     elementSelector: visualSelector
   });
-  const renderButtonContent = buttonProps => {
-    return jsxs(Text, {
-      ...buttonProps,
-      display: "inherit",
-      spacing: spacing,
-      className: "navi_button_content",
-      children: [children, jsx(ButtonShadow, {})]
-    });
-  };
-  const renderButtonContentMemoized = useCallback(renderButtonContent, [children, spacing]);
   return jsxs(Box, {
-    "data-readonly-silent": innerLoading ? "" : undefined,
+    ...buttonProps,
     ...remainingProps,
+    // eslint-disable-next-line react/no-children-prop
+    children: undefined,
+    spacing: undefined,
     ref: ref,
-    autFocus: undefined // See use_auto_focus.js
-    ,
-
     as: as,
     href: href,
     target: innerTarget,
     rel: innerRel,
+    onnavi_get_value: e => {
+      e.detail.respondWith(props.value);
+    },
     onContextMenu: e => {
       if (as === "a") {
         // For link we keep context menu to allow "open in new tab" and other browser features
@@ -23622,8 +26428,7 @@ const ButtonUI = props => {
     "data-icon": icon ? "" : undefined,
     "data-reveal-on-interaction": revealOnInteraction ? "" : undefined,
     "data-discrete": discrete ? "" : undefined,
-    "data-callout-arrow-x": "center",
-    "aria-busy": innerLoading
+    "data-callout-arrow-x": "center"
     // style management
     ,
 
@@ -23631,18 +26436,31 @@ const ButtonUI = props => {
     styleCSSVars: ButtonStyleCSSVars,
     pseudoClasses: ButtonPseudoClasses,
     pseudoElements: ButtonPseudoElements,
-    basePseudoState: {
-      ":read-only": innerReadOnly,
-      ":disabled": innerDisabled,
-      ":-navi-loading": innerLoading
-    },
     visualSelector: visualSelector,
-    hasChildFunction: true,
+    hasChildUsingForwardedProps: true,
     children: [jsx(LoadingOutline, {
-      loading: innerLoading,
+      loading: loading,
       inset: -1,
       color: "var(--button-loader-color)"
-    }), renderButtonContentMemoized]
+    }), jsx(ControlChildrenWrapper, {
+      children: jsx(ButtonContent, {
+        spacing: spacing,
+        children: children
+      })
+    })]
+  });
+};
+const ButtonContent = ({
+  spacing,
+  children
+}) => {
+  const boxForwardedProps = useContext(BoxForwardedPropsContext);
+  return jsxs(Text, {
+    ...boxForwardedProps,
+    display: "inherit",
+    spacing: spacing,
+    className: "navi_button_content",
+    children: [children, jsx(ButtonShadow, {})]
   });
 };
 const ButtonStyleCSSVars = {
@@ -23688,7 +26506,17 @@ const ButtonShadow = () => {
   });
 };
 markAsOutsideTextFlow(ButtonShadow);
+const ButtonInsideForm = props => {
+  const Next = useNextResolver();
+  return jsx(Next
+  // The default action for a button inside a form is to request form action
+  , {
+    action: "send",
+    ...props
+  });
+};
 const ButtonWithRoute = props => {
+  const Next = useNextResolver();
   const {
     route,
     routeParams,
@@ -23701,118 +26529,11 @@ const ButtonWithRoute = props => {
   } = useRouteStatus(route);
   const paramsAreMatching = route.matchesParams(routeParams);
   const linkMatching = matching && paramsAreMatching;
-  return jsx(ButtonDispatcher, {
+  return jsx(Next, {
     href: url,
     "data-href-current": linkMatching ? "" : undefined,
     ...rest,
-    route: undefined,
-    routeParams: undefined,
     children: children || route.buildRelativeUrl(routeParams)
-  });
-};
-const ButtonWithAction = props => {
-  const {
-    ref,
-    action,
-    loading,
-    actionErrorEffect,
-    onActionPrevented,
-    onActionAbort,
-    onActionError,
-    onActionEnd,
-    children,
-    ...rest
-  } = props;
-  const boundAction = useAction(action);
-  const {
-    loading: actionLoading
-  } = useActionStatus(boundAction);
-  const executeAction = useExecuteAction(ref, {
-    errorEffect: actionErrorEffect
-  });
-  const onRequestAction = useOnRequestAction();
-  const innerLoading = loading || actionLoading;
-  return jsx(ButtonDispatcher
-  // put data-action first to help find it in devtools
-  , {
-    "data-action": boundAction.name,
-    ...rest,
-    ref: ref,
-    action: undefined,
-    loading: innerLoading,
-    onnavi_request_action: e => {
-      onRequestAction(boundAction, e);
-    },
-    onnavi_action_prevented: onActionPrevented,
-    onnavi_action_ready: executeAction,
-    onnavi_action_abort: onActionAbort,
-    onnavi_action_error: onActionError,
-    onnavi_action_end: onActionEnd,
-    children: children
-  });
-};
-const ButtonWithActionInsideForm = props => {
-  const {
-    ref,
-    type,
-    action,
-    loading,
-    children,
-    onActionPrevented,
-    onActionStart,
-    onActionAbort,
-    onActionError,
-    onActionEnd,
-    ...rest
-  } = props;
-  const formAction = useContext(FormActionContext);
-  const formParamsSignal = formAction.paramsSignal;
-  const actionBoundToFormParams = useAction(action, formParamsSignal);
-  const {
-    loading: actionLoading
-  } = useActionStatus(actionBoundToFormParams);
-  const onRequestAction = useOnRequestAction();
-  const innerLoading = loading || actionLoading;
-  useFormEvents(ref, {
-    onFormActionPrevented: e => {
-      if (e.detail.action === actionBoundToFormParams) {
-        onActionPrevented?.(e);
-      }
-    },
-    onFormActionStart: e => {
-      if (e.detail.action === actionBoundToFormParams) {
-        onActionStart?.(e);
-      }
-    },
-    onFormActionAbort: e => {
-      if (e.detail.action === actionBoundToFormParams) {
-        onActionAbort?.(e);
-      }
-    },
-    onFormActionError: e => {
-      if (e.detail.action === actionBoundToFormParams) {
-        onActionError?.(e.detail.error);
-      }
-    },
-    onFormActionEnd: e => {
-      if (e.detail.action === actionBoundToFormParams) {
-        onActionEnd?.(e);
-      }
-    }
-  });
-  return jsx(ButtonDispatcher, {
-    "data-action": actionBoundToFormParams.name,
-    ...rest,
-    ref: ref,
-    action: undefined,
-    type: type,
-    loading: innerLoading,
-    onnavi_request_action: e => {
-      onRequestAction(actionBoundToFormParams, e, {
-        target: e.target.form
-      });
-    },
-    children: children
   });
 };
 
@@ -23867,7 +26588,7 @@ const WarningSvg = () => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$A = /* css */`
+installImportMetaCssBuild(import.meta);const css$H = /* css */`
   @layer navi {
     .navi_message_box {
       --background-color-info: var(--navi-info-color-light);
@@ -23920,7 +26641,7 @@ const MessageBox = ({
   onClose,
   ...rest
 }) => {
-  import.meta.css = [css$A, "@jsenv/navi/src/text/message_box.jsx"];
+  import.meta.css = [css$H, "@jsenv/navi/src/text/message_box.jsx"];
   const [hasTitleChild, setHasTitleChild] = useState(false);
   const innerLeftStripe = leftStripe === undefined ? hasTitleChild : leftStripe;
   if (icon === true) {
@@ -23936,7 +26657,7 @@ const MessageBox = ({
     inline: true,
     column: true,
     alignY: "start",
-    spacing: "sm",
+    spacing: "s",
     ...rest,
     className: withPropsClassName("navi_message_box", rest.className),
     padding: padding,
@@ -23979,7 +26700,7 @@ const MessageBoxPseudoClasses = [":-navi-status-info", ":-navi-status-success", 
 const MessageBoxStatusContext = createContext();
 const MessageBoxReportTitleChildContext = createContext();
 
-installImportMetaCssBuild(import.meta);const css$z = /* css */`
+installImportMetaCssBuild(import.meta);const css$G = /* css */`
   .navi_message_box {
     .navi_title {
       margin-top: 0;
@@ -23989,7 +26710,7 @@ installImportMetaCssBuild(import.meta);const css$z = /* css */`
   }
 `;
 const Title = props => {
-  import.meta.css = [css$z, "@jsenv/navi/src/text/title.jsx"];
+  import.meta.css = [css$G, "@jsenv/navi/src/text/title.jsx"];
   const messageBoxStatus = useContext(MessageBoxStatusContext);
   const innerAs = props.as || (messageBoxStatus ? "h4" : "h1");
   const titleLevel = parseInt(innerAs.slice(1));
@@ -24067,7 +26788,7 @@ const useDimColorWhen = (elementRef, shouldDim) => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$y = /* css */`
+installImportMetaCssBuild(import.meta);const css$F = /* css */`
   @layer navi {
     .navi_link {
       --link-border-radius: unset;
@@ -24296,6 +27017,8 @@ installImportMetaCssBuild(import.meta);const css$y = /* css */`
       display: inline-flex;
       width: 1em;
       height: 1em;
+      align-items: center;
+      justify-content: center;
       font-size: 1em;
       opacity: 0;
       /* The anchor link is displayed only on :hover */
@@ -24312,6 +27035,7 @@ installImportMetaCssBuild(import.meta);const css$y = /* css */`
       }
 
       .navi_icon {
+        font-size: 0.7em;
         vertical-align: top;
       }
     }
@@ -24419,7 +27143,7 @@ Object.assign(PSEUDO_CLASSES, {
   }
 });
 const Link = props => {
-  import.meta.css = [css$y, "@jsenv/navi/src/nav/link/link.jsx"];
+  import.meta.css = [css$F, "@jsenv/navi/src/nav/link/link.jsx"];
   return renderActionableComponent(props, {
     Basic: LinkBasic,
     WithAction: LinkWithAction
@@ -24487,7 +27211,8 @@ const LinkPlain = props => {
     hrefFallback = !anchor,
     overflowEllipsis,
     children,
-    ...rest
+    constraints,
+    ...remainingProps
   } = props;
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
@@ -24503,7 +27228,7 @@ const LinkPlain = props => {
     selectionController
   });
   useAutoFocus(ref, autoFocus);
-  const remainingProps = useConstraints(ref, rest);
+  useConstraints(ref, constraints);
   const shouldDimColor = readOnly || disabled;
   useDimColorWhen(ref, shouldDimColor);
   // subscribe to document url to re-render and re-compute getHrefTargetInfo
@@ -24557,6 +27282,7 @@ const LinkPlain = props => {
     autoFocus: undefined // See use_auto_focus.js
     ,
 
+    "navi-autofocus": autoFocus ? "" : undefined,
     ref: ref,
     href: href,
     rel: innerRel,
@@ -24685,7 +27411,7 @@ installImportMetaCssBuild(import.meta);/**
  * TabList component with support for horizontal and vertical layouts
  * https://dribbble.com/search/tabs
  */
-const css$x = /* css */`
+const css$E = /* css */`
   @layer navi {
     .navi_nav {
       --nav-border: none;
@@ -24821,7 +27547,7 @@ const Nav = ({
   panelBorderConnection,
   ...props
 }) => {
-  import.meta.css = [css$x, "@jsenv/navi/src/nav/link/nav.jsx"];
+  import.meta.css = [css$E, "@jsenv/navi/src/nav/link/nav.jsx"];
   children = toChildArray(children);
   return jsx(Box, {
     as: "nav",
@@ -24847,7 +27573,18 @@ const Nav = ({
 
 const useFocusGroup = (
   elementRef,
-  { enabled = true, direction, skipTab, loop, name } = {},
+  {
+    enabled = true,
+    skipTab,
+    name,
+    // Which axes are active: "x", "y", or "both" (default)
+    direction = "both",
+    // Which axes loop at boundaries: "x", "y", "both", or undefined (no looping)
+    wrap,
+    // CSS selector to restrict candidates on each axis
+    xSelector,
+    ySelector,
+  } = {},
 ) => {
   useLayoutEffect(() => {
     if (!enabled) {
@@ -24858,18 +27595,20 @@ const useFocusGroup = (
       return null;
     }
     const focusGroup = initFocusGroup(element, {
-      direction,
       skipTab,
-      loop,
       name,
+      direction,
+      wrap,
+      xSelector,
+      ySelector,
     });
     return focusGroup.cleanup;
-  }, [direction, skipTab, loop, name]);
+  }, [direction, wrap, skipTab, name, xSelector, ySelector]);
 };
 
 installImportMetaCssBuild(import.meta);const rightArrowPath = "M680-480L360-160l-80-80 240-240-240-240 80-80 320 320z";
 const downArrowPath = "M480-280L160-600l80-80 240 240 240-240 80 80-320 320z";
-const css$w = /* css */`
+const css$D = /* css */`
   .navi_summary_marker {
     width: 1em;
     height: 1em;
@@ -24954,7 +27693,7 @@ const SummaryMarker = ({
   open,
   loading
 }) => {
-  import.meta.css = [css$w, "@jsenv/navi/src/field/details/summary_marker.jsx"];
+  import.meta.css = [css$D, "@jsenv/navi/src/control/details/summary_marker.jsx"];
   const showLoading = useDebounceTrue(loading, 300);
   const mountedRef = useRef(false);
   const prevOpenRef = useRef(open);
@@ -25008,7 +27747,7 @@ const SummaryMarker = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$v = /* css */`
+installImportMetaCssBuild(import.meta);const css$C = /* css */`
   .navi_details {
     position: relative;
     z-index: 1;
@@ -25045,38 +27784,19 @@ installImportMetaCssBuild(import.meta);const css$v = /* css */`
   }
 `;
 const Details = props => {
-  import.meta.css = [css$v, "@jsenv/navi/src/field/details/details.jsx"];
-  const {
-    value = "on",
-    persists
-  } = props;
-  const uiStateController = useUIStateController(props, "details", {
-    statePropName: "open",
-    defaultStatePropName: "defaultOpen",
-    fallbackState: false,
-    getStateFromProp: open => open ? value : undefined,
-    getPropFromState: Boolean,
-    persists
+  const refDefault = useRef();
+  props.ref = props.ref || refDefault;
+  props.value = props.value === undefined ? "on" : props.value;
+  const details = jsx(DetailsField, {
+    ...props
   });
-  const uiState = useUIState(uiStateController);
-  const details = renderActionableComponent(props, {
-    Basic: DetailsBasic,
-    WithAction: DetailsWithAction,
-    WithConnectedAction: DetailsWithConnectedAction
-  });
-  return jsx(UIStateControllerContext.Provider, {
-    value: uiStateController,
-    children: jsx(UIStateContext.Provider, {
-      value: uiState,
-      children: details
-    })
-  });
+  return details;
 };
-const DetailsBasic = props => {
-  const uiStateController = useContext(UIStateControllerContext);
-  const uiState = useContext(UIStateContext);
+const DetailsField = props => {
+  import.meta.css = [css$C, "@jsenv/navi/src/control/details/details.jsx"];
   const {
-    id,
+    ref,
+    persists,
     label = "Summary",
     loading,
     focusGroup,
@@ -25084,15 +27804,29 @@ const DetailsBasic = props => {
     arrowKeyShortcuts = true,
     openKeyShortcut = "ArrowRight",
     closeKeyShortcut = "ArrowLeft",
-    onToggle,
-    onOpen,
-    onClose,
-    children,
-    ...rest
+    onToggle
   } = props;
-  const defaultRef = useRef();
-  const ref = rest.ref || defaultRef;
-  const open = Boolean(uiState);
+  const [detailsProps, remainingProps, ControlChildrenWrapper] = useControlProps({
+    resetOnCancel: true,
+    resetOnAbort: true,
+    resetOnError: true,
+    // errors are shown by ActionRenderer inside <details>, not as validation messages
+    actionErrorEffect: "none",
+    ...props
+  }, {
+    controlType: "details",
+    statePropName: "open",
+    defaultStatePropName: "defaultOpen",
+    fallbackState: false,
+    getStateFromProp: open => open ? props.value : undefined,
+    getPropFromState: Boolean,
+    persists
+  });
+  const {
+    value,
+    children
+  } = detailsProps;
+  const open = Boolean(value);
   useFocusGroup(ref, {
     enabled: focusGroup,
     name: typeof focusGroup === "string" ? focusGroup : undefined,
@@ -25164,22 +27898,18 @@ const DetailsBasic = props => {
   }, []);
   return jsxs(Box, {
     as: "details",
-    ...rest,
-    ref: ref,
-    id: id,
+    ...detailsProps,
+    ...remainingProps,
     baseClassName: "navi_details",
     onToggle: e => {
       onToggle?.(e);
-      const isOpen = e.newState === "open";
-      if (mountedRef.current) {
-        if (isOpen) {
-          uiStateController.setUIState(true, e);
-          onOpen?.(e);
-        } else {
-          uiStateController.setUIState(false, e);
-          onClose?.(e);
-        }
+      if (!mountedRef.current) {
+        return;
       }
+      const details = ref.current;
+      dispatchRequestAction(details, {
+        event: e
+      });
     },
     open: open,
     children: [jsx("summary", {
@@ -25194,103 +27924,38 @@ const DetailsBasic = props => {
           children: label
         })]
       })
-    }), children]
-  });
-};
-const DetailsWithAction = props => {
-  const uiStateController = useContext(UIStateControllerContext);
-  const {
-    action,
-    loading,
-    onOpen,
-    onClose,
-    onCancel,
-    onActionPrevented,
-    onActionAbort,
-    onActionError,
-    onActionEnd,
-    children,
-    ...rest
-  } = props;
-  const defaultRef = useRef();
-  const ref = rest.ref || defaultRef;
-  const effectiveAction = useAction(action);
-  const actionStatus = useActionStatus(effectiveAction);
-  const {
-    loading: actionLoading
-  } = actionStatus;
-  const executeAction = useExecuteAction(ref, {
-    // the error will be displayed by actionRenderer inside <details>
-    errorEffect: "none"
-  });
-  const onRequestAction = useOnRequestAction();
-  return jsx(DetailsBasic, {
-    ...rest,
-    ref: ref,
-    loading: loading || actionLoading,
-    onnavi_cancel: e => {
-      const {
-        reason
-      } = e.detail;
-      if (reason === "blur_invalid") {
-        return;
-      }
-      uiStateController.resetUIState(e);
-      onCancel?.(e, reason);
-    },
-    onnavi_request_action: e => {
-      onRequestAction(e, effectiveAction);
-    },
-    onnavi_action_prevented: onActionPrevented,
-    onnavi_action_ready: executeAction,
-    onnavi_action_abort: e => {
-      uiStateController.resetUIState(e);
-      onActionAbort?.(e);
-    },
-    onnavi_action_error: e => {
-      uiStateController.resetUIState(e);
-      onActionError?.(e);
-    },
-    onnavi_action_end: onActionEnd,
-    onOpen: e => {
-      dispatchRequestAction(e.target, {
-        event: e,
-        requester: e.target
-      });
-      onOpen?.(e);
-    },
-    onClose: e => {
-      effectiveAction.abort();
-      onClose?.(e);
-    },
-    children: jsx(ActionRenderer, {
-      action: effectiveAction,
-      children: children
-    })
-  });
-};
-const DetailsWithConnectedAction = props => {
-  const {
-    connectedAction,
-    children,
-    loading,
-    ...rest
-  } = props;
-  const actionStatus = useActionStatus(connectedAction);
-  const {
-    loading: actionLoading
-  } = actionStatus;
-  return jsx(DetailsBasic, {
-    ...rest,
-    loading: loading || actionLoading,
-    children: jsx(ActionRenderer, {
-      action: connectedAction,
-      children: children
-    })
+    }), jsx(DetailsFieldContent, {
+      children: jsx(ControlChildrenWrapper, {
+        children: children
+      })
+    })]
   });
 };
 
-CONSTRAINT_ATTRIBUTE_SET.add("data-available-message");
+// TODO: this is not really what we should be doing here:
+// the action should run on open and be aborted on close
+// instead we treat the details as a field
+// so it needs to be updated to work as designed (for later as we don't use details for now)
+//  onOpen={(e) => {
+//       dispatchRequestAction(e.target, {
+//         event: e,
+//         requester: e.target,
+//       });
+//       onOpen?.(e);
+//     }}
+//     onClose={(e) => {
+//       effectiveAction.abort();
+//       onClose?.(e);
+//     }}
+const DetailsFieldContent = ({
+  children
+}) => {
+  const action = useContext(ActionContext);
+  return jsx(ActionRenderer, {
+    action: action,
+    children: children
+  });
+};
 
 const createAvailableConstraint = (
   // the set might be incomplete (the front usually don't have the full copy of all the items from the backend)
@@ -25348,137 +28013,120 @@ const useConstraintValidityState = (ref) => {
   return constraintValidityState;
 };
 
-installImportMetaCssBuild(import.meta);const css$u = /* css */`
+installImportMetaCssBuild(import.meta);const css$B = /* css */`
   @layer navi {
-    .navi_field {
-      &[data-interactive] {
-        .navi_label {
-          cursor: pointer;
-          /* When label is interactive ability to select text oftens conflicts with other click interactions */
-          user-select: none;
-        }
-      }
+    .navi_checkbox {
+      --switch-margin: 2px; /* Useful to reserve space for outline */
+      --switch-width: 2em;
+      --switch-thumb-size: 1.2em;
+      /* Padding uses px and not em otherwise it can be resolved to a float which does not play well */
+      /* With the translation calc in some configurations. In the end 2px is nice in all sizes and can still be configured for exceptions */
+      --switch-padding: 2px;
+      --switch-border-radius: calc(
+        var(--switch-thumb-size) / 2 + calc(var(--switch-padding) * 2)
+      );
+      --switch-thumb-border-radius: 50%;
+      --switch-background-color: light-dark(#767676, #8e8e93);
+      --switch-background-color-checked: var(--accent-color);
+      --switch-background-color-hover: color-mix(
+        in srgb,
+        var(--switch-background-color) 60%,
+        white
+      );
+      --switch-background-color-readonly: color-mix(
+        in srgb,
+        var(--switch-background-color) 40%,
+        transparent
+      );
+      --switch-background-color-disabled: color-mix(
+        in srgb,
+        var(--switch-background-color) 15%,
+        #d3d3d3
+      );
+      --switch-background-color-hover-checked: color-mix(
+        in srgb,
+        var(--switch-background-color-checked) 90%,
+        black
+      );
+      --switch-background-color-readonly-checked: color-mix(
+        in srgb,
+        var(--switch-background-color-checked) 40%,
+        transparent
+      );
+      --switch-background-color-disabled-checked: color-mix(
+        in srgb,
+        var(--switch-background-color-checked) 15%,
+        #d3d3d3
+      );
+      --switch-thumb-color: white;
 
-      &[data-readonly],
-      &[data-disabled] {
-        .navi_label {
-          color: rgba(0, 0, 0, 0.5);
-          cursor: default;
-        }
+      &[data-accent-very-light] {
+        --switch-thumb-color: rgb(55, 55, 55);
+      }
+    }
+  }
+
+  .navi_checkbox {
+    .navi_switch {
+      width: var(--switch-thumb-size);
+      height: var(--switch-thumb-size);
+      border-radius: var(--switch-thumb-border-radius);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+      fill: var(--switch-thumb-color);
+      transform: translateX(0);
+      transition: transform 0.2s ease;
+      user-select: none;
+    }
+
+    &[data-checked] {
+      .navi_switch {
+        transform: translateX(
+          calc(
+            var(--switch-width) - var(--switch-thumb-size) +
+              var(--switch-padding)
+          )
+        );
       }
     }
   }
 `;
-const FieldContext = createContext(null);
-const useFieldId = () => {
-  const ctx = useContext(FieldContext);
-  return ctx ? ctx.fieldId : undefined;
-};
-const reportReadOnlyToField = value => {
-  const ctx = useContext(FieldContext);
-  ctx?.setReadOnly(value);
-};
-const reportDisabledToField = value => {
-  const ctx = useContext(FieldContext);
-  ctx?.setDisabled(value);
-};
-const reportInteractiveToField = value => {
-  const ctx = useContext(FieldContext);
-  ctx?.setInteractive(value);
-};
-
-/**
- * Field — a semantic wrapper that connects a label to a form control.
- *
- * It generates a stable `fieldId` (or accepts an explicit `id`) that is
- * automatically forwarded to the `Label` inside the field as `htmlFor` and to
- * any interactive control (Picker, Input, …) as its `id`, so clicking the
- * label focuses the control without requiring manual wiring.
- *
- * It also tracks the readOnly / disabled / interactive state reported by its
- * child control and reflects it on the `Label` (dimmed color, cursor change).
- *
- * Props:
- *   id        — optional explicit id used as the field id instead of the auto-generated one
- *   vertical  — shorthand for flex="y" + alignX="start"
- *   children  — any JSX; should contain a `Label` and a form control
- *   ...rest   — forwarded to the wrapping `<div>` (className, style, flex, spacing, …)
- *
- * @example
- * <Field vertical spacing="s">
- *   <Label>Date de début</Label>
- *   <Input name="start_date" required />
- * </Field>
- */
-const Field = props => {
-  import.meta.css = [css$u, "@jsenv/navi/src/field/field.jsx"];
-  const {
-    id,
-    vertical,
-    readOnly,
-    disabled,
-    children,
-    ...rest
-  } = props;
-  const idDefault = useId();
-  const fieldId = id || `field_${idDefault}`;
-  const [readOnlyFromChild, setReadOnlyFromChild] = useState(false);
-  const [disabledByChild, setDisabledByChild] = useState(false);
-  const [interactive, setInteractive] = useState(false);
-  const readOnlyEffective = readOnly || readOnlyFromChild;
-  const disabledEffective = disabled || disabledByChild;
-  const contextValue = useMemo(() => ({
-    fieldId,
-    interactive,
-    readOnly: readOnlyEffective,
-    disabled: disabledEffective,
-    setReadOnly: setReadOnlyFromChild,
-    setDisabled: setDisabledByChild,
-    setInteractive
-  }), [fieldId, interactive, readOnlyEffective, disabledEffective]);
+const SwitchUI = () => {
+  import.meta.css = [css$B, "@jsenv/navi/src/control/input/switch_ui.jsx"];
   return jsx(Box, {
-    flex: vertical ? "y" : undefined,
-    alignX: vertical ? "start" : undefined,
-    spacing: "s",
-    ...rest,
-    baseClassName: "navi_field",
-    pseudoClasses: FieldPseudoClasses,
-    basePseudoState: {
-      ":read-only": readOnlyEffective,
-      ":disabled": disabledEffective
-    },
-    children: jsx(FieldContext.Provider, {
-      value: contextValue,
-      children: children
+    className: "navi_switch",
+    as: "svg",
+    viewBox: "0 0 12 12",
+    "aria-hidden": "true",
+    children: jsx("circle", {
+      cx: "6",
+      cy: "6",
+      r: "5"
     })
   });
 };
-const FieldPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
-const Label = props => {
-  const {
-    children,
-    htmlFor,
-    ...rest
-  } = props;
-  const ctx = useContext(FieldContext);
-  const fieldId = ctx?.fieldId;
-  return jsx(Box, {
-    as: "label",
-    htmlFor: htmlFor || fieldId,
-    ...rest,
-    children: children
-  });
+const SwitchCSSVars = {
+  width: "--switch-width",
+  height: "--switch-height",
+  borderRadius: "--border-radius",
+  padding: "--switch-padding"
 };
 
-const fieldPropSet = new Set([
-  ...CONSTRAINT_ATTRIBUTE_SET,
-  "value",
-  "id",
-  "name",
-  "data-testid",
-]);
+const useCheckableProps = (props) => {
+  const result = useControlProps(props, {
+    controlType: "input",
+    statePropName: "checked",
+    defaultStatePropName: "defaultChecked",
+    fallbackState: false,
+    getStateFromProp: (checked) => (checked ? props.value : undefined),
+    getPropFromState: Boolean,
+  });
+  result[0].onnavi_get_value = (e) => {
+    e.detail.respondWith(props.value);
+  };
+  return result;
+};
 
-installImportMetaCssBuild(import.meta);const css$t = /* css */`
+installImportMetaCssBuild(import.meta);const css$A = /* css */`
   @layer navi {
     .navi_checkbox {
       --margin: 3px 3px 3px 4px;
@@ -25535,51 +28183,6 @@ installImportMetaCssBuild(import.meta);const css$t = /* css */`
       --border-color-disabled-checked: #d3d3d3;
       --background-color-disabled-checked: #d3d3d3;
 
-      /* Toggle specific */
-      --toggle-margin: 2px; /* Useful to reserve space for outline */
-      --toggle-width: 2em;
-      --toggle-thumb-size: 1.2em;
-      /* Padding uses px and not em otherwise it can be resolved to a float which does not play well */
-      /* With the translation calc in some configurations. In the end 2px is nice in all sizes and can still be configured for exceptions */
-      --toggle-padding: 2px;
-      --toggle-border-radius: calc(
-        var(--toggle-thumb-size) / 2 + calc(var(--toggle-padding) * 2)
-      );
-      --toggle-thumb-border-radius: 50%;
-      --toggle-background-color: light-dark(#767676, #8e8e93);
-      --toggle-background-color-checked: var(--accent-color);
-      --toggle-background-color-hover: color-mix(
-        in srgb,
-        var(--toggle-background-color) 60%,
-        white
-      );
-      --toggle-background-color-readonly: color-mix(
-        in srgb,
-        var(--toggle-background-color) 40%,
-        transparent
-      );
-      --toggle-background-color-disabled: color-mix(
-        in srgb,
-        var(--toggle-background-color) 15%,
-        #d3d3d3
-      );
-      --toggle-background-color-hover-checked: color-mix(
-        in srgb,
-        var(--toggle-background-color-checked) 90%,
-        black
-      );
-      --toggle-background-color-readonly-checked: color-mix(
-        in srgb,
-        var(--toggle-background-color-checked) 40%,
-        transparent
-      );
-      --toggle-background-color-disabled-checked: color-mix(
-        in srgb,
-        var(--toggle-background-color-checked) 15%,
-        #d3d3d3
-      );
-      --toggle-thumb-color: white;
-
       /* Button specific */
       --button-border-color: light-dark(#767676, #8e8e93);
       --button-background-color: light-dark(#f3f4f6, #2d3748);
@@ -25606,7 +28209,9 @@ installImportMetaCssBuild(import.meta);const css$t = /* css */`
     display: inline-flex;
     box-sizing: border-box;
     width: var(--width);
+    min-width: var(--width); /* Do not allow to shrink */
     height: var(--height);
+    min-height: var(--height); /* Do not allow to shrink */
     margin: var(--margin);
     background-color: var(--x-background-color);
     border-width: var(--border-width);
@@ -25618,7 +28223,7 @@ installImportMetaCssBuild(import.meta);const css$t = /* css */`
     outline-color: var(--outline-color);
     outline-offset: var(--outline-offset);
 
-    .navi_native_field {
+    .navi_control_input {
       position: absolute;
       inset: 0;
       margin: 0;
@@ -25720,63 +28325,37 @@ installImportMetaCssBuild(import.meta);const css$t = /* css */`
       }
     }
 
-    /* Toggle appearance */
-    &[data-appearance="toggle"] {
+    /* Switch appearance */
+    &[data-appearance="switch"] {
       /* We compute ourselves the width + padding otherwise during 
       translation subpixel rounding makes the thumb feels too much to the right by 1px */
       box-sizing: content-box;
-      --toggle-outer-width: calc(var(--toggle-width) + var(--toggle-padding));
+      --switch-outer-width: calc(var(--switch-width) + var(--switch-padding));
 
-      --margin: var(--toggle-margin);
-      --width: var(--toggle-outer-width);
+      --margin: var(--switch-margin);
+      --width: var(--switch-outer-width);
       --height: unset;
-      min-width: var(--toggle-outer-width);
-      --border-radius: var(--toggle-border-radius);
-      --background-color: var(--toggle-background-color);
-      --background-color-hover: var(--toggle-background-color-hover);
-      --background-color-readonly: var(--toggle-background-color-readonly);
-      --background-color-disabled: var(--toggle-background-color-disabled);
-      --background-color-checked: var(--toggle-background-color-checked);
+      min-width: var(--switch-outer-width);
+      --border-radius: var(--switch-border-radius);
+      --background-color: var(--switch-background-color);
+      --background-color-hover: var(--switch-background-color-hover);
+      --background-color-readonly: var(--switch-background-color-readonly);
+      --background-color-disabled: var(--switch-background-color-disabled);
+      --background-color-checked: var(--switch-background-color-checked);
       --background-color-hover-checked: var(
-        --toggle-background-color-hover-checked
+        --switch-background-color-hover-checked
       );
       --background-color-readonly-checked: var(
-        --toggle-background-color-readonly-checked
+        --switch-background-color-readonly-checked
       );
       --background-color-disabled-checked: var(
-        --toggle-background-color-disabled-checked
+        --switch-background-color-disabled-checked
       );
 
       position: relative;
-      padding: var(--toggle-padding);
+      padding: var(--switch-padding);
       background-color: var(--x-background-color);
       border-color: transparent;
-      user-select: none;
-
-      .navi_checkbox_toggle {
-        width: var(--toggle-thumb-size);
-        height: var(--toggle-thumb-size);
-        border-radius: var(--toggle-thumb-border-radius);
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-        fill: var(--toggle-thumb-color);
-        transform: translateX(0);
-        transition: transform 0.2s ease;
-      }
-
-      &[data-checked] {
-        .navi_checkbox_toggle {
-          transform: translateX(
-            calc(
-              var(--toggle-width) - var(--toggle-thumb-size) +
-                var(--toggle-padding)
-            )
-          );
-        }
-      }
-
-      &[data-accent-very-light] {
-        --toggle-thumb-color: rgb(55, 55, 55);
-      }
     }
 
     &[data-appearance="icon"] {
@@ -25836,149 +28415,61 @@ installImportMetaCssBuild(import.meta);const css$t = /* css */`
 `;
 const InputCheckbox = props => {
   const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
-  const fieldId = useFieldId();
-  const id = props.id || fieldId;
-  const {
-    value = "on"
-  } = props;
-  const uiStateController = useUIStateController(props, "checkbox", {
-    statePropName: "checked",
-    defaultStatePropName: "defaultChecked",
-    fallbackState: false,
-    getStateFromProp: checked => checked ? value : undefined,
-    getPropFromState: Boolean
-  });
-  const uiState = useUIState(uiStateController);
-  return jsx(UIStateControllerContext.Provider, {
-    value: uiStateController,
-    children: jsx(UIStateContext.Provider, {
-      value: uiState,
-      children: jsx(InputCheckboxDispatcher, {
-        ...props,
-        ref: ref,
-        id: id
-      })
-    })
-  });
-};
-const InputCheckboxDispatcher = props => {
-  if (props.action) {
-    return jsx(InputCheckboxWithAction, {
-      ...props
+  props.ref = props.ref || defaultRef;
+  props.value = props.value === undefined ? "on" : props.value;
+  if (props.headless) {
+    return jsx(InputCheckboxHeadless, {
+      ...props,
+      headless: undefined
     });
   }
-  return jsx(InputCheckboxUI, {
+  return jsx(InputCheckboxFieldInterface, {
     ...props
   });
 };
-const InputCheckboxUI = props => {
-  import.meta.css = [css$t, "@jsenv/navi/src/field/input/input_checkbox.jsx"];
+const InputCheckboxHeadless = props => {
+  const [checkboxProps, remainingProps] = useCheckableProps(props);
+  return jsx(RealInputCheckbox, {
+    pseudoClasses: CheckboxPseudoClasses,
+    ...checkboxProps,
+    ...remainingProps,
+    "navi-visually-hidden": ""
+  });
+};
+const InputCheckboxFieldInterface = props => {
+  import.meta.css = [css$A, "@jsenv/navi/src/control/input/input_checkbox.jsx"];
+  const [checkboxProps, remainingProps] = useCheckableProps(props);
   const {
-    ref,
-    /* eslint-disable no-unused-vars */
-    type,
-    defaultChecked,
-    /* eslint-enable no-unused-vars */
-
-    name,
-    readOnly,
-    disabled,
-    required,
-    loading,
-    autoFocus,
-    onClick,
-    onInput,
-    accentColor,
     icon,
-    appearance = icon ? "icon" : "checkbox",
-    // "checkbox", "toggle", "icon", "button"
-    ...rest
+    switch: switchProp,
+    appearance = icon ? "icon" : switchProp ? "switch" : "checkbox",
+    // "checkbox", "switch", "icon", "button"
+    accentColor
   } = props;
-  const contextFieldName = useContext(FieldNameContext);
-  const contextReadOnly = useContext(ReadOnlyContext);
-  const contextDisabled = useContext(DisabledContext);
-  const contextRequired = useContext(RequiredContext);
-  const contextLoading = useContext(LoadingContext);
-  const loadingElement = useContext(LoadingElementContext);
-  const uiStateController = useContext(UIStateControllerContext);
-  const uiState = useContext(UIStateContext);
-  const innerName = name || contextFieldName;
-  const innerDisabled = disabled || contextDisabled;
-  const innerRequired = required || contextRequired;
-  const innerLoading = loading || contextLoading && loadingElement === ref.current;
-  const innerReadOnly = readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
-  reportReadOnlyToField(innerReadOnly);
-  reportDisabledToField(innerDisabled);
-  reportInteractiveToField(true);
-  useAutoFocus(ref, autoFocus);
-  const remainingProps = useConstraints(ref, rest);
-  const checked = Boolean(uiState);
-  const innerOnClick = useStableCallback(e => {
-    if (innerReadOnly) {
-      e.preventDefault();
-    }
-    onClick?.(e);
-  });
-  const innerOnInput = useStableCallback(e => {
-    const checkbox = e.target;
-    const checkboxIsChecked = checkbox.checked;
-    uiStateController.setUIState(checkboxIsChecked, e);
-    onInput?.(e);
-  });
-  const renderCheckbox = checkboxProps => {
-    return jsx(Box, {
-      ...checkboxProps,
-      as: "input",
-      ref: ref,
-      type: "checkbox",
-      name: innerName,
-      checked: checked,
-      required: innerRequired,
-      baseClassName: "navi_native_field",
-      "data-callout-arrow-x": "center",
-      onClick: innerOnClick,
-      onInput: innerOnInput,
-      onresetuistate: e => {
-        uiStateController.resetUIState(e);
-      },
-      onsetuistate: e => {
-        uiStateController.setUIState(e.detail.value, e);
-      }
-    });
-  };
-  const renderCheckboxMemoized = useCallback(renderCheckbox, [innerName, checked, innerRequired]);
+  const {
+    basePseudoState,
+    checked
+  } = checkboxProps;
+  const loading = basePseudoState[":-navi-loading"];
   const boxRef = useRef();
   useAccentColorAttributes(boxRef, accentColor, {
     elementSelector: ".navi_checkbox_accent_probe"
   });
   let visualVnode;
-  if (icon) {
+  if (appearance === "icon" || icon) {
     visualVnode = jsx("div", {
       className: "navi_checkbox_icon",
       "aria-hidden": "true",
       children: Array.isArray(icon) ? icon[checked ? 1 : 0] : icon
     });
-  } else if (appearance === "toggle") {
-    visualVnode = jsx(Box, {
-      className: "navi_checkbox_toggle",
-      as: "svg",
-      viewBox: "0 0 12 12",
-      "aria-hidden": "true",
-      preventInitialTransition: true,
-      children: jsx("circle", {
-        cx: "6",
-        cy: "6",
-        r: "5"
-      })
-    });
+  } else if (appearance === "switch") {
+    visualVnode = jsx(SwitchUI, {});
   } else {
     visualVnode = jsx(Box, {
       className: "navi_checkbox_marker",
       as: "svg",
       viewBox: "0 0 12 12",
       "aria-hidden": "true",
-      preventInitialTransition: true,
       children: jsx("path", {
         d: "M10.5 2L4.5 9L1.5 5.5",
         fill: "none",
@@ -25994,33 +28485,38 @@ const InputCheckboxUI = props => {
 
     square: appearance === "button" ? true : undefined,
     ...remainingProps,
-    autoFocus: undefined // See use_auto_focus.js
-    ,
-
     ref: boxRef,
+    appearance: undefined,
+    switch: undefined,
+    icon: undefined,
+    accentColor: undefined,
     "data-appearance": appearance,
     baseClassName: "navi_checkbox",
-    pseudoStateSelector: ".navi_native_field",
-    styleCSSVars: appearance === "toggle" ? CheckboxToggleStyleCSSVars : appearance === "button" ? CheckboxButtonStyleCSSVars : CheckboxStyleCSSVars,
+    pseudoStateSelector: ".navi_control_input",
+    styleCSSVars: appearance === "switch" ? CheckboxSwitchStyleCSSVars : appearance === "button" ? CheckboxButtonStyleCSSVars : CheckboxStyleCSSVars,
+    basePseudoState: basePseudoState,
     pseudoClasses: CheckboxPseudoClasses,
     pseudoElements: CheckboxPseudoElements,
-    basePseudoState: {
-      ":read-only": innerReadOnly,
-      ":disabled": innerDisabled,
-      ":-navi-loading": innerLoading
-    },
-    accentColor: accentColor,
-    hasChildFunction: true,
-    baseChildPropSet: CheckboxChildPropSet,
-    preventInitialTransition: true,
     children: [jsx("span", {
       className: "navi_checkbox_accent_probe",
       "aria-hidden": "true"
     }), jsx(LoadingOutline, {
-      loading: innerLoading,
+      loading: loading,
       inset: -1,
       color: "var(--loader-color)"
-    }), visualVnode, renderCheckboxMemoized]
+    }), visualVnode, jsx(RealInputCheckbox, {
+      ...checkboxProps,
+      switch: switchProp
+    })]
+  });
+};
+const RealInputCheckbox = props => {
+  return jsx(Box, {
+    ...props,
+    as: "input",
+    type: "checkbox",
+    baseClassName: "navi_control_input",
+    "data-callout-arrow-x": "center"
   });
 };
 const CheckboxStyleCSSVars = {
@@ -26047,12 +28543,9 @@ const CheckboxStyleCSSVars = {
     borderColor: "--border-color-disabled"
   }
 };
-const CheckboxToggleStyleCSSVars = {
+const CheckboxSwitchStyleCSSVars = {
   ...CheckboxStyleCSSVars,
-  width: "--toggle-width",
-  height: "--toggle-height",
-  borderRadius: "--border-radius",
-  padding: "--toggle-padding"
+  ...SwitchCSSVars
 };
 const CheckboxButtonStyleCSSVars = {
   ...CheckboxStyleCSSVars,
@@ -26066,223 +28559,8 @@ const CheckboxButtonStyleCSSVars = {
 };
 const CheckboxPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":checked", ":-navi-loading"];
 const CheckboxPseudoElements = ["::-navi-loader", "::-navi-checkmark"];
-const CheckboxChildPropSet = new Set([...fieldPropSet]);
-const InputCheckboxWithAction = props => {
-  const {
-    ref,
-    action,
-    onCancel,
-    actionErrorEffect,
-    onActionPrevented,
-    onActionAbort,
-    onActionError,
-    onActionEnd,
-    loading,
-    ...rest
-  } = props;
-  const uiStateController = useContext(UIStateControllerContext);
-  const [actionBoundToUIState] = useActionBoundToOneParam(action, uiStateController.uiStateSignal);
-  const actionStatus = useActionStatus(actionBoundToUIState);
-  const {
-    loading: actionLoading
-  } = actionStatus;
-  const executeAction = useExecuteAction(ref, {
-    errorEffect: actionErrorEffect
-  });
-  const onRequestAction = useOnRequestAction();
-  return jsx(InputCheckboxDispatcher, {
-    "data-action": actionBoundToUIState.name,
-    ...rest,
-    ref: ref,
-    loading: loading || actionLoading
-    // In this situation updating the ui state === calling associated action
-    // so cance/abort/error have to revert the ui state to the one before user interaction
-    // to show back the real state of the checkbox (not the one user tried to set)
-    ,
 
-    onnavi_cancel: e => {
-      const {
-        reason
-      } = e.detail;
-      if (reason === "blur_invalid") {
-        return;
-      }
-      uiStateController.resetUIState(e);
-      onCancel?.(e, reason);
-    },
-    onnavi_request_action: e => {
-      onRequestAction(actionBoundToUIState, e);
-    },
-    onnavi_action_prevented: onActionPrevented,
-    onnavi_action_ready: executeAction,
-    onnavi_action_abort: e => {
-      uiStateController.resetUIState(e);
-      onActionAbort?.(e);
-    },
-    onnavi_action_error: e => {
-      uiStateController.resetUIState(e);
-      onActionError?.(e);
-    },
-    onnavi_action_end: onActionEnd
-  });
-};
-
-// TOFIX: select in data then reset, it reset to red/blue instead of red/blue/green
-
-const CheckboxList = props => {
-  const refDefault = useRef(null);
-  const ref = props.ref || refDefault;
-  const uiStateController = useUIGroupStateController(props, "checkbox_list", {
-    childComponentType: "checkbox",
-    aggregateChildStates: childUIStateControllers => {
-      const values = [];
-      for (const childUIStateController of childUIStateControllers) {
-        if (childUIStateController.uiState) {
-          values.push(childUIStateController.uiState);
-        }
-      }
-      return values.length === 0 ? undefined : values;
-    }
-  });
-  const uiState = useUIState(uiStateController);
-  return jsx(UIStateControllerContext.Provider, {
-    value: uiStateController,
-    children: jsx(UIStateContext.Provider, {
-      value: uiState,
-      children: jsx(CheckboxListDispatcher, {
-        ...props,
-        ref: ref
-      })
-    })
-  });
-};
-const Checkbox = InputCheckbox;
-const CheckboxListDispatcher = props => {
-  if (props.action) {
-    return jsx(CheckboxListWithAction, {
-      ...props
-    });
-  }
-  return jsx(CheckboxListUI, {
-    ...props
-  });
-};
-const CheckboxListUI = props => {
-  const {
-    name,
-    readOnly,
-    disabled,
-    required,
-    loading,
-    children,
-    ...rest
-  } = props;
-  const contextReadOnly = useContext(ReadOnlyContext);
-  const contextDisabled = useContext(DisabledContext);
-  const contextLoading = useContext(LoadingContext);
-  const uiStateController = useContext(UIStateControllerContext);
-  const innerLoading = loading || contextLoading;
-  const innerReadOnly = readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
-  const innerDisabled = disabled || contextDisabled;
-  return jsx(Box, {
-    flex: true,
-    ...rest,
-    baseClassName: "navi_checkbox_list",
-    "data-checkbox-list": "",
-    onresetuistate: e => {
-      uiStateController.resetUIState(e);
-    },
-    children: jsx(ParentUIStateControllerContext.Provider, {
-      value: uiStateController,
-      children: jsx(FieldNameContext.Provider, {
-        value: name,
-        children: jsx(ReadOnlyContext.Provider, {
-          value: innerReadOnly,
-          children: jsx(DisabledContext.Provider, {
-            value: innerDisabled,
-            children: jsx(RequiredContext.Provider, {
-              value: required,
-              children: jsx(LoadingContext.Provider, {
-                value: innerLoading,
-                children: children
-              })
-            })
-          })
-        })
-      })
-    })
-  });
-};
-const CheckboxListWithAction = props => {
-  const uiStateController = useContext(UIStateControllerContext);
-  const {
-    ref,
-    action,
-    actionErrorEffect,
-    onCancel,
-    onActionPrevented,
-    onActionAbort,
-    onActionError,
-    onActionEnd,
-    loading,
-    children,
-    ...rest
-  } = props;
-  const [boundAction] = useActionBoundToOneArrayParam(action, uiStateController.uiStateSignal);
-  const {
-    loading: actionLoading
-  } = useActionStatus(boundAction);
-  const executeAction = useExecuteAction(ref, {
-    errorEffect: actionErrorEffect
-  });
-  const onRequestAction = useOnRequestAction();
-  const [actionRequester, setActionRequester] = useState(null);
-  return jsx(CheckboxListUI, {
-    "data-action": boundAction,
-    ...rest,
-    ref: ref,
-    onChange: e => {
-      const checkbox = e.target;
-      const checkboxList = ref.current;
-      dispatchRequestAction(checkboxList, {
-        event: e,
-        requester: checkbox,
-        actionOrigin: "action_prop"
-      });
-    },
-    onnavi_cancel: e => {
-      const {
-        reason
-      } = e.detail;
-      uiStateController.resetUIState(e);
-      onCancel?.(e, reason);
-    },
-    onnavi_request_action: e => {
-      onRequestAction(boundAction, e);
-    },
-    onnavi_action_prevented: onActionPrevented,
-    onnavi_action_ready: e => {
-      setActionRequester(e.detail.requester);
-      executeAction(e);
-    },
-    onnavi_action_abort: e => {
-      uiStateController.resetUIState(e);
-      onActionAbort?.(e);
-    },
-    onnavi_action_error: e => {
-      uiStateController.resetUIState(e);
-      onActionError?.(e);
-    },
-    onnavi_action_end: onActionEnd,
-    loading: loading || actionLoading,
-    children: jsx(LoadingElementContext.Provider, {
-      value: actionRequester,
-      children: children
-    })
-  });
-};
-
-installImportMetaCssBuild(import.meta);const css$s = /* css */`
+installImportMetaCssBuild(import.meta);const css$z = /* css */`
   @layer navi {
     .navi_radio {
       --margin: 3px 3px 0 5px;
@@ -26299,6 +28577,7 @@ installImportMetaCssBuild(import.meta);const css$s = /* css */`
       --loader-color: var(--navi-loader-color);
       --border-color: light-dark(#767676, #8e8e93);
       --background-color: white;
+      --background-color-checked: var(--background-color);
       --accent-color: light-dark(#4476ff, #3b82f6);
       --radiomark-color: var(--accent-color);
       --border-color-checked: var(--accent-color);
@@ -26316,6 +28595,8 @@ installImportMetaCssBuild(import.meta);const css$s = /* css */`
         var(--radiomark-color) 80%,
         var(--color-mix)
       );
+      --background-color-hover: var(--background-color);
+      --background-color-hover-checked: var(--background-color);
       /* Readonly */
       --border-color-readonly: color-mix(
         in srgb,
@@ -26380,7 +28661,9 @@ installImportMetaCssBuild(import.meta);const css$s = /* css */`
     display: inline-flex;
     box-sizing: border-box;
     width: var(--x-width);
+    min-width: var(--x-width); /* Do not allow to shrink */
     height: var(--x-height);
+    min-height: var(--x-height); /* Do not allow to shrink */
     margin: var(--margin);
     outline-width: var(--x-outline-width);
     outline-style: none;
@@ -26396,7 +28679,7 @@ installImportMetaCssBuild(import.meta);const css$s = /* css */`
       pointer-events: none;
     }
 
-    .navi_native_field {
+    .navi_control_input {
       position: absolute;
       inset: 0;
       margin: 0;
@@ -26415,16 +28698,19 @@ installImportMetaCssBuild(import.meta);const css$s = /* css */`
     }
     /* Hover */
     &[data-hover] {
+      --x-background-color: var(--background-color-hover);
       --x-border-color: var(--border-color-hover);
       --x-radiomark-color: var(--radiomark-color-hover);
+
+      &[data-checked] {
+        --x-background-color: var(--background-color-hover-checked);
+        --x-border-color: var(--border-color-hover-checked);
+      }
     }
     /* Checked */
     &[data-checked] {
+      --x-background-color: var(--background-color-checked);
       --x-border-color: var(--border-color-checked);
-
-      &[data-hover] {
-        --x-border-color: var(--border-color-hover-checked);
-      }
     }
     /* Readonly */
     &[data-readonly] {
@@ -26450,6 +28736,7 @@ installImportMetaCssBuild(import.meta);const css$s = /* css */`
       --x-radiomark-color: var(--radiomark-color-disabled);
 
       &[data-checked] {
+        --x-background-color: var(--background-color-disabled-checked);
         --x-border-color: var(--border-color-disabled);
         --x-radiomark-color: var(--radiomark-color-disabled);
       }
@@ -26599,192 +28886,56 @@ installImportMetaCssBuild(import.meta);const css$s = /* css */`
 `;
 const InputRadio = props => {
   const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
-  const fieldId = useFieldId();
-  const id = props.id || fieldId;
-  const {
-    value = "on"
-  } = props;
-  const uiStateController = useUIStateController(props, "radio", {
-    statePropName: "checked",
-    fallbackState: false,
-    getStateFromProp: checked => checked ? value : undefined,
-    getPropFromState: Boolean,
-    getStateFromParent: parentUIStateController => {
-      if (parentUIStateController.componentType === "radio_list") {
-        return parentUIStateController.uiState === props.value;
-      }
-      return undefined;
-    }
-  });
-  const uiState = useUIState(uiStateController);
-  return jsx(UIStateControllerContext.Provider, {
-    value: uiStateController,
-    children: jsx(UIStateContext.Provider, {
-      value: uiState,
-      children: jsx(InputRadioDispatcher, {
-        ...props,
-        ref: ref,
-        id: id
-      })
-    })
-  });
-};
-const InputRadioDispatcher = props => {
-  if (props.action) {
-    return jsx(InputRadioWithAction, {});
+  props.ref = props.ref || defaultRef;
+  props.value = props.value === undefined ? "on" : props.value;
+  if (props.headless) {
+    return jsx(InputRadioHeadless, {
+      ...props,
+      headless: undefined
+    });
   }
-  return jsx(InputRadioUI, {
+  return jsx(InputRadioFieldInterface, {
     ...props
   });
 };
-const InputRadioUI = props => {
-  import.meta.css = [css$s, "@jsenv/navi/src/field/input/input_radio.jsx"];
-  const debugAction = useDebugAction();
+const InputRadioHeadless = props => {
+  const [radioProps, remainingProps] = useCheckableProps(props);
+  return jsx(RealInputRadio, {
+    pseudoClasses: RadioPseudoClasses,
+    ...remainingProps,
+    ...radioProps,
+    appearance: undefined,
+    "navi-visually-hidden": ""
+  });
+};
+const APPEARANCE_SET = new Set(["icon", "button", "radio"]);
+const InputRadioFieldInterface = props => {
+  import.meta.css = [css$z, "@jsenv/navi/src/control/input/input_radio.jsx"];
+  const [radioProps, remainingProps] = useCheckableProps(props);
   const {
-    ref,
-    /* eslint-disable no-unused-vars */
-    type,
-    /* eslint-enable no-unused-vars */
-
-    name,
-    readOnly,
-    disabled,
-    required,
-    loading,
-    autoFocus,
-    onClick,
-    onInput,
     icon,
-    appearance = icon ? "icon" : "radio",
-    color,
-    ...rest
+    appearance
   } = props;
-  const contextName = useContext(FieldNameContext);
-  const contextReadOnly = useContext(ReadOnlyContext);
-  const contextDisabled = useContext(DisabledContext);
-  const contextRequired = useContext(RequiredContext);
-  const contextLoading = useContext(LoadingContext);
-  const contextLoadingElement = useContext(LoadingElementContext);
-  const uiStateController = useContext(UIStateControllerContext);
-  const uiState = useContext(UIStateContext);
-  const innerName = name || contextName;
-  const innerDisabled = disabled || contextDisabled;
-  const innerRequired = required || contextRequired;
-  const innerLoading = loading || contextLoading && contextLoadingElement === ref.current;
-  const innerReadOnly = readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
-  reportReadOnlyToField(innerReadOnly);
-  reportDisabledToField(innerDisabled);
-  reportInteractiveToField(true);
-  useAutoFocus(ref, autoFocus);
-  const remainingProps = useConstraints(ref, rest);
-  const checked = Boolean(uiState);
-  // we must first dispatch an event to inform all other radios they where unchecked
-  // this way each other radio uiStateController knows thery are unchecked
-  // we do this on "input"
-  // but also when we are becoming checked from outside (hence the useLayoutEffect)
-  const updateOtherRadiosInGroup = e => {
-    const thisRadio = ref.current;
-    const radioList = thisRadio.closest("[data-radio-list]");
-    if (!radioList) {
-      return;
-    }
-    const radioInputs = radioList.querySelectorAll(`input[type="radio"][name="${thisRadio.name}"]`);
-    for (const radioInput of radioInputs) {
-      if (radioInput === thisRadio) {
-        continue;
-      }
-      // Dispatch "setuistate" with value: false to set the sibling radio's uiState to false (unchecked).
-      // Each radio's own uiState is a boolean (true = checked, false = unchecked).
-      // This is necessary because the group controller aggregates child states to determine
-      // the selected value — it needs all siblings to be unchecked before the newly checked
-      // radio propagates its state up, otherwise aggregation may find multiple "truthy" children.
-      // suppressParentNotification: true prevents the group from aggregating and calling uiAction during
-      // this intermediate state (all unchecked) — only the clicked radio's setUIState triggers aggregation.
-      dispatchCustomEvent(radioInput, "setuistate", {
-        event: e,
-        value: false,
-        suppressParentNotification: true
-      });
-    }
-  };
-  useLayoutEffect(() => {
-    if (checked) {
-      updateOtherRadiosInGroup();
-    }
-  }, [checked]);
-  const innerOnInput = useStableCallback(e => {
-    const radio = e.target;
-    const radioIsChecked = radio.checked;
-    debugAction(e, `radio input -> checked=${radioIsChecked}, value=${JSON.stringify(props.value || "on")}`);
-    if (radioIsChecked) {
-      updateOtherRadiosInGroup(e);
-    }
-    uiStateController.setUIState(radioIsChecked, e);
-    onInput?.(e);
-  });
-  const innerOnClick = useStableCallback(e => {
-    if (innerReadOnly) {
-      e.preventDefault();
-    }
-    onClick?.(e);
-  });
-  const renderRadio = radioProps => {
-    return jsx(Box, {
-      ...radioProps,
-      as: "input",
-      ref: ref,
-      type: "radio",
-      name: innerName,
-      checked: checked,
-      disabled: innerDisabled,
-      required: innerRequired,
-      baseClassName: "navi_native_field",
-      "data-callout-arrow-x": "center",
-      onClick: innerOnClick,
-      onInput: innerOnInput,
-      onresetuistate: e => {
-        uiStateController.resetUIState(e);
-      },
-      onsetuistate: e => {
-        uiStateController.setUIState(e.detail.value, e);
-      }
-    });
-  };
-  const renderRadioMemoized = useCallback(renderRadio, [innerName, checked, innerRequired]);
+  let appearanceResolved = appearance || (icon ? "icon" : "radio");
+  if (appearance && !APPEARANCE_SET.has(appearance)) {
+    console.warn(`InputRadio: unsupported appearance "${appearance}". Falling back to "radio".`);
+    appearanceResolved = "radio";
+  }
+  const {
+    basePseudoState,
+    checked
+  } = radioProps;
+  const loading = basePseudoState[":-navi-loading"];
   const boxRef = useRef();
-  useAccentColorAttributes(boxRef, remainingProps.accentColor, {
+  useAccentColorAttributes(boxRef, props.accentColor, {
     elementSelector: ".navi_radio_accent_probe"
   });
   let visualVNode;
-  if (appearance === "radio") {
-    visualVNode = jsxs("svg", {
-      viewBox: "0 0 12 12",
-      "aria-hidden": "true",
-      preserveAspectRatio: "xMidYMid meet",
-      children: [jsx("circle", {
-        className: "navi_radio_border",
-        cx: "6",
-        cy: "6",
-        r: "5.5",
-        strokeWidth: "1"
-      }), jsx("circle", {
-        className: "navi_radio_dashed_border",
-        cx: "6",
-        cy: "6",
-        r: "5.5",
-        strokeWidth: "1",
-        strokeDasharray: "2.16 2.16",
-        strokeDashoffset: "0"
-      }), jsx("circle", {
-        className: "navi_radio_marker",
-        cx: "6",
-        cy: "6",
-        r: "3.5"
-      })]
-    });
+  if (appearanceResolved === "icon" || icon) {
+    visualVNode = Array.isArray(icon) ? icon[checked ? 1 : 0] : icon;
   } else {
-    visualVNode = icon;
+    // appearanceResolved === "radio"
+    visualVNode = jsx(RadioSvg, {});
   }
   return jsxs(Box, {
     as: "span"
@@ -26792,34 +28943,63 @@ const InputRadioUI = props => {
     // (passsing any custom width/height would auto disable aspectRatio forced by the square prop)
     ,
 
-    square: appearance === "button" ? true : undefined,
+    square: appearanceResolved === "button" ? true : undefined,
     ...remainingProps,
-    autoFocus: undefined // See use_auto_focus.js
-    ,
-
     ref: boxRef,
-    "data-appearance": appearance,
+    icon: undefined,
+    appearance: undefined,
+    "data-appearance": appearanceResolved,
     baseClassName: "navi_radio",
-    pseudoStateSelector: ".navi_native_field",
-    styleCSSVars: appearance === "button" ? RadioButtonStyleCSSVars : RadioStyleCSSVars,
+    pseudoStateSelector: ".navi_control_input",
+    basePseudoState: basePseudoState,
+    styleCSSVars: appearanceResolved === "button" ? RadioButtonStyleCSSVars : RadioStyleCSSVars,
     pseudoClasses: RadioPseudoClasses,
     pseudoElements: RadioPseudoElements,
-    basePseudoState: {
-      ":read-only": innerReadOnly,
-      ":disabled": innerDisabled,
-      ":-navi-loading": innerLoading
-    },
-    color: color,
-    hasChildFunction: true,
-    baseChildPropSet: RadioChildPropSet,
     children: [jsx("span", {
       className: "navi_radio_accent_probe",
       "aria-hidden": "true"
     }), jsx(LoadingOutline, {
-      loading: innerLoading,
+      loading: loading,
       inset: -1,
       color: "var(--loader-color)"
-    }), visualVNode, renderRadioMemoized]
+    }), visualVNode, jsx(RealInputRadio, {
+      ...radioProps
+    })]
+  });
+};
+const RadioSvg = () => {
+  return jsxs("svg", {
+    viewBox: "0 0 12 12",
+    "aria-hidden": "true",
+    preserveAspectRatio: "xMidYMid meet",
+    children: [jsx("circle", {
+      className: "navi_radio_border",
+      cx: "6",
+      cy: "6",
+      r: "5.5",
+      strokeWidth: "1"
+    }), jsx("circle", {
+      className: "navi_radio_dashed_border",
+      cx: "6",
+      cy: "6",
+      r: "5.5",
+      strokeWidth: "1",
+      strokeDasharray: "2.16 2.16",
+      strokeDashoffset: "0"
+    }), jsx("circle", {
+      className: "navi_radio_marker",
+      cx: "6",
+      cy: "6",
+      r: "3.5"
+    })]
+  });
+};
+const RealInputRadio = props => {
+  return jsx(Box, {
+    ...props,
+    as: "input",
+    baseClassName: "navi_control_input",
+    "data-callout-arrow-x": "center"
   });
 };
 const RadioStyleCSSVars = {
@@ -26875,12 +29055,233 @@ const RadioButtonStyleCSSVars = {
 };
 const RadioPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":checked", ":-navi-loading"];
 const RadioPseudoElements = ["::-navi-loader", "::-navi-radiomark"];
-const RadioChildPropSet = new Set([...fieldPropSet]);
-const InputRadioWithAction = () => {
-  throw new Error(`<Input type="radio" /> with an action make no sense. Use <RadioList action={something} /> instead`);
+
+/**
+ * Parses a step value into seconds.
+ * Accepts:
+ *   - number: returned as-is (already in seconds)
+ *   - "HH:MM" string: converted to seconds (e.g. "00:30" → 1800, "01:00" → 3600)
+ *   - undefined/null: returned as-is
+ */
+const parseStepToSeconds = (step) => {
+  if (typeof step !== "string") {
+    return step;
+  }
+  const colonIndex = step.indexOf(":");
+  if (colonIndex === -1) {
+    return Number(step);
+  }
+  const hours = parseInt(step.slice(0, colonIndex), 10);
+  const minutes = parseInt(step.slice(colonIndex + 1), 10);
+  return (hours * 60 + minutes) * 60;
 };
 
-installImportMetaCssBuild(import.meta);const css$r = /* css */`
+const isToday = (value) => {
+  if (!value) {
+    return false;
+  }
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  if (typeof value === "string") {
+    return value === todayStr;
+  }
+  if (typeof value === "number") {
+    const d = new Date(value);
+    const s = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    return s === todayStr;
+  }
+  if (value instanceof Date) {
+    const s = `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
+    return s === todayStr;
+  }
+  return false;
+};
+
+/**
+ * Returns the current time as "HH:MM", with an optional minute offset.
+ *
+ * @param {number} [offsetMinutes=0] - Minutes to add (negative = subtract).
+ *   E.g. getNowHours(-5) returns "now minus 5 minutes".
+ *
+ * @example
+ * getNowHours()       // "14:30"
+ * getNowHours(-5)     // "14:25"
+ */
+const getNowHours = (offsetMinutes = 0) => {
+  const now = new Date();
+  const totalMinutes = now.getHours() * 60 + now.getMinutes() + offsetMinutes;
+  const clamped =
+    totalMinutes < 0
+      ? 0
+      : totalMinutes > 23 * 60 + 59
+        ? 23 * 60 + 59
+        : totalMinutes;
+  const h = Math.floor(clamped / 60);
+  const m = clamped % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+};
+
+/**
+ * Returns the current time rounded up to the nearest step boundary,
+ * with an optional minute offset applied first.
+ *
+ * This is useful to compute a step-aligned `min` for a time picker:
+ * passing it ensures the first available slot is always on a step boundary.
+ *
+ * @param {number} stepMinutes - Step size in minutes (e.g. 30).
+ * @param {number} [offsetMinutes=0] - Minutes to add before rounding (negative = subtract).
+ *
+ * @example
+ * // At 9:32, step 30, offset -5 → raw = 9:27 → ceil to 30 → "09:30"
+ * // At 9:38, step 30, offset -5 → raw = 9:33 → ceil to 30 → "10:00"
+ * getNowHoursRoundedToStep(30, -5)
+ */
+const getNowHoursRoundedToStep = (stepMinutes, offsetMinutes = 0) => {
+  const now = new Date();
+  const totalMinutes = now.getHours() * 60 + now.getMinutes() + offsetMinutes;
+  const aligned = Math.ceil(totalMinutes / stepMinutes) * stepMinutes;
+  const clamped =
+    aligned < 0 ? 0 : aligned > 23 * 60 + 59 ? 23 * 60 + 59 : aligned;
+  const h = Math.floor(clamped / 60);
+  const m = clamped % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+};
+
+/**
+ * resolveInputProps — normalizes input-related props that are shared across
+ * `<Picker>`, `<Input>` (textual) and `<Range>`. Mutates the props object in place.
+ *
+ * Currently it normalizes:
+ * - `min` / `max`: accepts a `Date` instance and converts it to the string
+ *   format the native input expects, based on `props.type`. Picker aliases
+ *   (`day`, `datetime`) are mapped to their native equivalent (`date`,
+ *   `datetime-local`).
+ * - `step`: for time-based types (`time`, `datetime-local`/`datetime`)
+ *   accepts an `"HH:MM"` string and converts it to seconds.
+ * - Navi conceptual number types (`navi_hours`, `navi_minutes`, `navi_seconds`,
+ *   `navi_percentage`): converted to `type="number"` with sensible min/max/step
+ *   defaults and a `data-navi-input-type` attribute for constraint messages.
+ */
+const resolveInputProps = (props) => {
+  const naviTypeDefaults = NAVI_NUMBER_TYPE_DEFAULTS[props.type];
+  if (naviTypeDefaults) {
+    props["navi-input-type"] = props.type;
+    props.type = naviTypeDefaults.type;
+    if (props.min === undefined) {
+      props.min = naviTypeDefaults.min;
+    }
+    if (props.max === undefined) {
+      props.max = naviTypeDefaults.max;
+    }
+    if (props.step === undefined) {
+      props.step = naviTypeDefaults.step;
+    }
+  }
+  const { type } = props;
+  const minMaxFormatter = MIN_MAX_FORMATTER_BY_TYPE[type];
+  const stepFormatter = STEP_FORMATTER_BY_TYPE[type];
+  if (minMaxFormatter) {
+    props.min = minMaxFormatter(props.min);
+    props.max = minMaxFormatter(props.max);
+  }
+  if (stepFormatter) {
+    props.step = stepFormatter(props.step);
+  }
+};
+
+// Conceptual number types: define defaults and map to native type="number".
+// The `data-navi-input-type` attribute is set so constraint messages can use
+// domain-specific wording instead of the generic "Ce nombre doit être...".
+const NAVI_NUMBER_TYPE_DEFAULTS = {
+  navi_hours: { type: "number", min: 0, max: 23, step: 1 },
+  navi_minutes: { type: "number", min: 0, max: 59, step: 1 },
+  navi_seconds: { type: "number", min: 0, max: 59, step: 1 },
+  navi_percentage: { type: "number", min: 0, max: 100, step: 1 },
+};
+
+const toInputDate = (value) => {
+  if (value === undefined || value === null) {
+    return value;
+  }
+  if (!(value instanceof Date)) {
+    return value;
+  }
+  const yyyy = value.getFullYear();
+  const mm = String(value.getMonth() + 1).padStart(2, "0");
+  const dd = String(value.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+};
+const toInputMonth = (value) => {
+  if (value === undefined || value === null) {
+    return value;
+  }
+  if (!(value instanceof Date)) {
+    return value;
+  }
+  const yyyy = value.getFullYear();
+  const mm = String(value.getMonth() + 1).padStart(2, "0");
+  return `${yyyy}-${mm}`;
+};
+const toInputWeek = (value) => {
+  if (value === undefined || value === null) {
+    return value;
+  }
+  if (!(value instanceof Date)) {
+    return value;
+  }
+  // ISO week number
+  const d = new Date(value);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
+  const yearStart = new Date(d.getFullYear(), 0, 4);
+  const week =
+    Math.round(
+      ((d - yearStart) / 86400000 - 3 + ((yearStart.getDay() + 6) % 7)) / 7,
+    ) + 1;
+  return `${d.getFullYear()}-W${String(week).padStart(2, "0")}`;
+};
+const toInputTime = (value) => {
+  if (value === undefined || value === null) {
+    return value;
+  }
+  if (!(value instanceof Date)) {
+    return value;
+  }
+  const hh = String(value.getHours()).padStart(2, "0");
+  const mm = String(value.getMinutes()).padStart(2, "0");
+  return `${hh}:${mm}`;
+};
+const toInputDatetime = (value) => {
+  if (value === undefined || value === null) {
+    return value;
+  }
+  if (!(value instanceof Date)) {
+    return value;
+  }
+  const yyyy = value.getFullYear();
+  const mm = String(value.getMonth() + 1).padStart(2, "0");
+  const dd = String(value.getDate()).padStart(2, "0");
+  const hh = String(value.getHours()).padStart(2, "0");
+  const min = String(value.getMinutes()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+};
+
+const MIN_MAX_FORMATTER_BY_TYPE = {
+  "date": toInputDate,
+  "month": toInputMonth,
+  "week": toInputWeek,
+  "time": toInputTime,
+  "datetime-local": toInputDatetime,
+  "datetime": toInputDatetime,
+};
+
+const STEP_FORMATTER_BY_TYPE = {
+  "time": parseStepToSeconds,
+  "datetime-local": parseStepToSeconds,
+  "datetime": parseStepToSeconds,
+};
+
+installImportMetaCssBuild(import.meta);const css$y = /* css */`
   @layer navi {
     .navi_input_range {
       --border-radius: 6px;
@@ -26990,7 +29391,7 @@ installImportMetaCssBuild(import.meta);const css$r = /* css */`
     outline-color: var(--outline-color);
     outline-offset: 2px;
 
-    .navi_native_input {
+    .navi_control_input {
       margin: 0;
       opacity: 0;
       --webkit-appearance: none;
@@ -27117,173 +29518,59 @@ installImportMetaCssBuild(import.meta);const css$r = /* css */`
 `;
 const InputRange = props => {
   const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
-  const fieldId = useFieldId();
-  const id = props.id || fieldId;
-  const uiStateController = useUIStateController(props, "input");
-  const uiState = useUIState(uiStateController);
-  return jsx(UIStateControllerContext.Provider, {
-    value: uiStateController,
-    children: jsx(UIStateContext.Provider, {
-      value: uiState,
-      children: jsx(InputRangeDispatcher, {
-        ...props,
-        ref: ref,
-        id: id
-      })
-    })
-  });
-};
-const InputRangeDispatcher = props => {
-  if (props.action) {
-    return jsx(InputRangeWithAction, {
-      ...props
-    });
-  }
-  return jsx(InputRangeUI, {
+  props.ref = props.ref || defaultRef;
+  return jsx(InputRangeFieldInterface, {
     ...props
   });
 };
-const InputRangeUI = props => {
-  import.meta.css = [css$r, "@jsenv/navi/src/field/input/input_range.jsx"];
+const InputRangeFieldInterface = props => {
+  import.meta.css = [css$y, "@jsenv/navi/src/control/input/input_range.jsx"];
   const {
-    ref,
-    onInput,
-    readOnly,
-    disabled,
-    loading,
-    autoFocus,
-    autoFocusVisible,
-    autoSelect,
-    ...rest
+    ref
   } = props;
-  const contextReadOnly = useContext(ReadOnlyContext);
-  const contextDisabled = useContext(DisabledContext);
-  const contextLoading = useContext(LoadingContext);
-  const contextLoadingElement = useContext(LoadingElementContext);
-  const uiStateController = useContext(UIStateControllerContext);
-  const uiState = useContext(UIStateContext);
-  const innerValue = uiState;
-  const innerLoading = loading || contextLoading && contextLoadingElement === ref.current;
-  const innerReadOnly = readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
-  const innerDisabled = disabled || contextDisabled;
-  // infom any <label> parent of our readOnly state
-  reportReadOnlyToField(innerReadOnly);
-  reportDisabledToField(innerDisabled);
-  reportInteractiveToField(true);
-  useAutoFocus(ref, autoFocus, {
-    focusVisible: autoFocusVisible,
-    autoSelect
+  const updateFillRatio = () => {
+    const input = ref.current;
+    if (!input) {
+      return;
+    }
+    const inputValue = input.value;
+    const ratio = (inputValue - input.min) / (input.max - input.min);
+    input.parentNode.style.setProperty("--x-fill-ratio", ratio);
+  };
+  resolveInputProps(props);
+  const [rangeProps, remainingProps] = useControlProps(props, {
+    controlType: "input",
+    statePropName: "value",
+    defaultStatePropName: "defaultValue",
+    readOnlySupported: true
   });
-  const remainingProps = useConstraints(ref, rest);
   const {
-    accentColor
-  } = remainingProps;
+    basePseudoState
+  } = rangeProps;
+  const loading = basePseudoState[":-navi-loading"];
   const boxRef = useRef();
-  useAccentColorAttributes(boxRef, accentColor, {
+  useAccentColorAttributes(boxRef, props.accentColor, {
     elementSelector: ".navi_input_range_accent_probe"
   });
-  const innerOnInput = useStableCallback(onInput);
-  const focusProxyId = `input_range_focus_proxy_${useId()}`;
-  const inertButFocusable = innerReadOnly && !innerDisabled;
-  const renderInput = inputProps => {
-    const updateFillRatio = () => {
-      const input = ref.current;
-      if (!input) {
-        return;
-      }
-      const inputValue = input.value;
-      const ratio = (inputValue - input.min) / (input.max - input.min);
-      input.parentNode.style.setProperty("--x-fill-ratio", ratio);
-    };
-    useLayoutEffect(() => {
-      updateFillRatio();
-    }, []);
-
-    // we must disable the input when readOnly to prevent drag and keyboard interactions effectively
-    // for some reason we have to do this here instead of just giving the disabled attribute
-    // via props, as for some reason preact won't set it correctly on the input element in that case
-    // this means however that the input is no longer focusable
-    // we have to put an other focusable element somewhere
-    useLayoutEffect(() => {
-      const input = ref.current;
-      if (!input) {
-        return;
-      }
-      const focusProxy = document.querySelector(`#${focusProxyId}`);
-      if (innerReadOnly) {
-        if (document.activeElement === input) {
-          focusProxy.focus({
-            preventScroll: true
-          });
-        }
-        input.setAttribute("focus-proxy", focusProxyId);
-        input.disabled = innerReadOnly;
-      } else {
-        if (document.activeElement === focusProxy) {
-          input.focus({
-            preventScroll: true
-          });
-        }
-        if (!innerDisabled) {
-          input.disabled = false;
-        }
-        input.removeAttribute("focus-proxy");
-      }
-    }, [innerReadOnly, innerDisabled]);
-    return jsx(Box, {
-      ...inputProps,
-      as: "input",
-      type: "range",
-      ref: ref,
-      "data-value": uiState,
-      value: innerValue,
-      onInput: e => {
-        const inputValue = e.target.valueAsNumber;
-        uiStateController.setUIState(inputValue, e);
-        innerOnInput?.(e);
-        updateFillRatio();
-      },
-      onresetuistate: e => {
-        uiStateController.resetUIState(e);
-      },
-      onsetuistate: e => {
-        uiStateController.setUIState(e.detail.value, e);
-        updateFillRatio();
-      }
-      // style management
-      ,
-
-      baseClassName: "navi_native_input"
-    });
-  };
-  const renderInputMemoized = useCallback(renderInput, [uiState, innerValue, innerOnInput, innerDisabled, innerReadOnly]);
   return jsxs(Box, {
     as: "span",
     flex: true,
     baseClassName: "navi_input_range",
     styleCSSVars: RangeStyleCSSVars,
-    pseudoStateSelector: ".navi_native_input",
-    visualSelector: ".navi_native_input",
-    basePseudoState: {
-      ":read-only": innerReadOnly,
-      ":disabled": innerDisabled,
-      ":-navi-loading": innerLoading
-    },
+    pseudoStateSelector: ".navi_control_input",
+    visualSelector: ".navi_control_input",
     pseudoClasses: RangePseudoClasses,
     pseudoElements: RangePseudoElements,
-    hasChildFunction: true,
-    baseChildPropSet: RangeChildPropSet,
+    "data-callout-anchor": ".navi_input_range_thumb",
+    hasChildUsingForwardedProps: true,
     ...remainingProps,
+    basePseudoState: basePseudoState,
     ref: boxRef,
-    autoFocus: undefined // See use_auto_focus.js
-    ,
-
     children: [jsx("span", {
       className: "navi_input_range_accent_probe",
       "aria-hidden": "true"
     }), jsx(LoadingOutline, {
-      loading: innerLoading,
+      loading: loading,
       color: "var(--loader-color)",
       inset: -1
     }), jsx("div", {
@@ -27293,12 +29580,32 @@ const InputRangeUI = props => {
     }), jsx("div", {
       className: "navi_input_range_track"
     }), jsx("div", {
-      className: "navi_input_range_thumb"
-    }), jsx("div", {
-      id: focusProxyId,
-      className: "navi_input_range_focus_proxy",
-      tabIndex: inertButFocusable ? "0" : "-1"
-    }), renderInputMemoized]
+      className: "navi_input_range_thumb",
+      "data-callout-arrow-x": "center"
+    }), jsx(RangeNativeInput, {
+      ...rangeProps,
+      updateFillRatio: updateFillRatio
+    })]
+  });
+};
+const RangeNativeInput = props => {
+  const {
+    updateFillRatio
+  } = props;
+  const rangeBoxProps = useContext(BoxForwardedPropsContext);
+  useLayoutEffect(() => {
+    updateFillRatio();
+  }, []);
+  return jsx(Box, {
+    ...props,
+    ...rangeBoxProps,
+    updateFillRatio: undefined,
+    onnavi_ui_state_change: () => {
+      updateFillRatio();
+    },
+    as: "input",
+    type: "range",
+    baseClassName: "navi_control_input"
   });
 };
 const RangeStyleCSSVars = {
@@ -27334,72 +29641,6 @@ const RangeStyleCSSVars = {
 };
 const RangePseudoClasses = [":hover", ":active", ":-navi-pressed", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
 const RangePseudoElements = ["::-navi-loader"];
-const RangeChildPropSet = new Set([...fieldPropSet]);
-const InputRangeWithAction = props => {
-  const {
-    ref,
-    action,
-    actionDebounce,
-    actionAfterChange,
-    loading,
-    onCancel,
-    onActionPrevented,
-    onActionAbort,
-    onActionError,
-    onActionEnd,
-    cancelOnBlurInvalid,
-    cancelOnEscape,
-    actionErrorEffect,
-    ...rest
-  } = props;
-  const uiStateController = useContext(UIStateControllerContext);
-  const [boundAction] = useActionBoundToOneParam(action, uiStateController.uiStateSignal);
-  const {
-    loading: actionLoading
-  } = useActionStatus(boundAction);
-  const executeAction = useExecuteAction(ref, {
-    errorEffect: actionErrorEffect
-  });
-  const onRequestAction = useOnRequestAction();
-  return jsx(InputRangeDispatcher, {
-    "data-action": boundAction.name,
-    "data-action-debounce": actionDebounce,
-    "data-action-after-change": actionAfterChange ? "" : undefined,
-    ...rest,
-    ref: ref,
-    action: undefined,
-    loading: loading || actionLoading,
-    onnavi_cancel: e => {
-      const {
-        reason
-      } = e.detail;
-      if (reason.startsWith("blur_invalid")) {
-        if (!cancelOnBlurInvalid) {
-          return;
-        }
-        if (
-        // error prevent cancellation until the user closes it (or something closes it)
-        e.detail.failedConstraintInfo.level === "error" && e.detail.failedConstraintInfo.reportStatus !== "closed") {
-          return;
-        }
-      }
-      if (reason === "escape_key") {
-        if (!cancelOnEscape) {
-          return;
-        }
-      }
-      onCancel?.(e, reason);
-    },
-    onnavi_request_action: e => {
-      onRequestAction(boundAction, e);
-    },
-    onnavi_action_prevented: onActionPrevented,
-    onnavi_action_ready: executeAction,
-    onnavi_action_abort: onActionAbort,
-    onnavi_action_error: onActionError,
-    onnavi_action_end: onActionEnd
-  });
-};
 
 const ChevronDownSvg = () => {
   return jsx("svg", {
@@ -27420,7 +29661,3186 @@ const SearchSvg = () => jsx("svg", {
   })
 });
 
+installImportMetaCssBuild(import.meta);const css$x = /* css */`
+  @layer navi {
+    [data-navi-field] {
+      .navi_checkbox {
+        --margin: 0;
+      }
+      .navi_radio {
+        --margin: 0;
+      }
+    }
+
+    label[data-navi-field] {
+      &[data-interactive] {
+        cursor: pointer;
+        user-select: none;
+      }
+      &[data-readonly],
+      &[data-disabled] {
+        color: rgba(0, 0, 0, 0.5);
+        cursor: default;
+      }
+    }
+
+    [data-navi-field-container] {
+      --field-spacing: var(--navi-xs);
+
+      > * + .navi_label {
+        padding-left: var(--field-spacing);
+      }
+      > .navi_label:first-child {
+        padding-right: var(--field-spacing);
+      }
+      &[data-vertical] > .navi_label:first-child {
+        padding-bottom: var(--field-spacing);
+      }
+
+      &[data-interactive] {
+        .navi_label {
+          cursor: pointer;
+          /* When label is interactive ability to select text oftens conflicts with other click interactions */
+          user-select: none;
+        }
+      }
+      &[data-readonly],
+      &[data-disabled] {
+        .navi_label {
+          color: rgba(0, 0, 0, 0.5);
+          cursor: default;
+        }
+      }
+    }
+  }
+`;
+
+/**
+ * Field — a semantic wrapper that connects a label to a form control.
+ *
+ * It generates a stable `fieldId` (or accepts an explicit `id`) that is
+ * automatically forwarded to the `Label` inside the field as `htmlFor` and to
+ * any interactive control (Picker, Input, …) as its `id`, so clicking the
+ * label focuses the control without requiring manual wiring.
+ *
+ * It also tracks the readOnly / disabled / interactive state reported by its
+ * child control and reflects it on the `Label` (dimmed color, cursor change).
+ *
+ * Props:
+ *   id        — optional explicit id used as the field id instead of the auto-generated one
+ *   vertical  — shorthand for flex="y" + alignX="start"
+ *   children  — any JSX; should contain a `Label` and a form control
+ *   ...rest   — forwarded to the wrapping `<div>` (className, style, flex, spacing, …)
+ *
+ * @example
+ * <Field flex spacing="s">
+ *   Date de début
+ *   <Input name="start_date" required />
+ * </Field>
+ */
+const Field = props => {
+  import.meta.css = [css$x, "@jsenv/navi/src/control/field.jsx"];
+  const refDefault = useRef();
+  props.ref = props.ref || refDefault;
+  const {
+    as,
+    vertical
+  } = props;
+  if (as === undefined && !vertical) {
+    props.as = "label";
+  }
+  if (props.as === "label") {
+    return jsx(FieldAsLabel, {
+      ...props
+    });
+  }
+  return jsx(FieldAsContainer, {
+    ...props
+  });
+};
+const FieldAsLabel = props => {
+  return jsx(FieldUI, {
+    ...props
+  });
+};
+const FieldAsContainer = props => {
+  const idDefault = useId();
+  const fieldId = `field_${idDefault}`;
+  props.fieldId = props.fieldId || props.id ? `${props.id}_field` : fieldId;
+  return jsx(FieldUI, {
+    ...props,
+    "data-navi-field-container": "",
+    styleCSSVars: FieldCSSVars
+  });
+};
+const FieldCSSVars = {
+  spacing: "--field-spacing"
+};
+const FieldUI = props => {
+  import.meta.css = [css$x, "@jsenv/navi/src/control/field.jsx"];
+  const {
+    vertical
+  } = props;
+  const {
+    fieldId,
+    name,
+    disabled,
+    readOnly,
+    required,
+    loading,
+    interactive,
+    ...rest
+  } = props;
+  const [messageProps, remainingProps] = extractMessageAndRemainingProps(rest);
+  const messagePropsRef = useRef();
+  messagePropsRef.current = messageProps;
+  const [disabledByChild, setDisabledByChild] = useState(false);
+  const [readOnlyFromChild, setReadOnlyFromChild] = useState(false);
+  const [interactiveFromChild, setInteractiveFromChild] = useState(false);
+  const parentControlName = useContext(ControlNameContext);
+  const parentControlDisabled = useContext(DisabledContext);
+  const parentControlReadOnly = useContext(ReadOnlyContext);
+  const parentControlRequired = useContext(RequiredContext);
+  const parentControlLoading = useContext(LoadingContext);
+  const nameResolved = name || parentControlName;
+  const disabledResolved = disabled || parentControlDisabled;
+  const readOnlyResolved = readOnly || parentControlReadOnly;
+  const requiredResolved = required || parentControlRequired;
+  const loadingResolved = loading || parentControlLoading;
+  const controlToInterfaceContextValue = useMemo(() => ({
+    id: fieldId,
+    setReadOnly: setReadOnlyFromChild,
+    setDisabled: setDisabledByChild,
+    setInteractive: setInteractiveFromChild
+  }), [fieldId]);
+  let childrenWithContext;
+  if (props.children === undefined) ; else {
+    childrenWithContext = jsx(MessagePropsRefContext.Provider, {
+      value: messagePropsRef,
+      children: jsx(ControlToInterfaceContext.Provider, {
+        value: controlToInterfaceContextValue,
+        children: jsx(ControlNameContext.Provider, {
+          value: nameResolved,
+          children: jsx(DisabledContext.Provider, {
+            value: disabledResolved,
+            children: jsx(ReadOnlyContext.Provider, {
+              value: readOnlyResolved,
+              children: jsx(RequiredContext.Provider, {
+                value: requiredResolved,
+                children: jsx(LoadingContext.Provider, {
+                  value: loadingResolved,
+                  children: props.children
+                })
+              })
+            })
+          })
+        })
+      })
+    });
+  }
+
+  // a field inteface can make the field component
+  // disabled/readonly when that field interface is disabled/readonly
+  // this is the only bottom up communication there is
+  // (apart from action requested by child which cause ancestor action to execute)
+  const disabledOrByChild = disabledResolved || disabledByChild;
+  const readOnlyOrByChild = readOnlyResolved || readOnlyFromChild;
+  const interactiveOrByChild = interactive || interactiveFromChild;
+  const fieldProps = {
+    "data-navi-field": "",
+    "data-interactive": interactiveOrByChild ? "" : undefined,
+    ...remainingProps,
+    "children": childrenWithContext,
+    "pseudoClasses": FieldPseudoClasses,
+    "basePseudoState": {
+      ":disabled": disabledOrByChild,
+      ":read-only": readOnlyOrByChild,
+      ...remainingProps.basePseudoState
+    }
+  };
+  return jsx(Box, {
+    flex: vertical ? "y" : undefined,
+    alignX: vertical ? "start" : undefined,
+    "data-vertical": vertical ? "" : undefined,
+    ...fieldProps
+  });
+};
+const FieldPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
+const Label = props => {
+  const {
+    children,
+    htmlFor,
+    ...rest
+  } = props;
+  const controlToInterface = useContext(ControlToInterfaceContext);
+  const fieldId = controlToInterface?.id;
+  return jsx(Box, {
+    as: "label",
+    htmlFor: htmlFor || fieldId,
+    baseClassName: "navi_label",
+    pseudoClasses: LabelPseudoClasses,
+    ...rest,
+    children: children
+  });
+};
+const LabelPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
+
+installImportMetaCssBuild(import.meta);/**
+ * Input component for all textual input types.
+ *
+ * Supports:
+ * - text (default)
+ * - password
+ * - hidden
+ * - email
+ * - url
+ * - search
+ * - tel
+ * - etc.
+ *
+ * For non-textual inputs, specialized components will be used:
+ * - <InputCheckbox /> for type="checkbox"
+ * - <InputRadio /> for type="radio"
+ */
+const css$w = /* css */`
+  @layer navi {
+    .navi_input {
+      --border-radius: 2px;
+      --border-width: 1px;
+      --outline-width: 1px;
+      --font-size: 14px;
+
+      /* Default */
+      --outline-color: var(--navi-focus-outline-color);
+      --loader-color: var(--navi-loader-color);
+      --border-color: light-dark(#767676, #8e8e93);
+      --background-color: white;
+      --color: currentColor;
+      --color-dimmed: color-mix(in srgb, currentColor 60%, transparent);
+      --placeholder-color: var(--color-dimmed);
+      /* Hover */
+      --border-color-hover: color-mix(in srgb, var(--border-color) 70%, black);
+      --background-color-hover: color-mix(
+        in srgb,
+        var(--background-color) 95%,
+        black
+      );
+      --color-hover: var(--color);
+      /* Active */
+      --border-color-active: color-mix(in srgb, var(--border-color) 90%, black);
+      /* Focus */
+      --border-color-focus: var(--border-color);
+      --background-color-focus: var(--background-color);
+      /* Readonly */
+      --border-color-readonly: color-mix(
+        in srgb,
+        var(--border-color) 45%,
+        transparent
+      );
+      --background-color-readonly: var(--background-color);
+      --color-readonly: color-mix(
+        in srgb,
+        var(--picker-border-color) 45%,
+        transparent
+      );
+      /* Disabled */
+      --border-color-disabled: var(--border-color-readonly);
+      --background-color-disabled: color-mix(
+        in srgb,
+        var(--background-color) 95%,
+        grey
+      );
+      --color-disabled: var(--color-dimmed);
+
+      --left-slot-size: 1.2em;
+      --right-slot-size: 1.2em;
+    }
+  }
+
+  .navi_input {
+    /* outline will draw the border when visible */
+    --x-outline-width: calc(var(--outline-width) + var(--border-width));
+    --x-outline-offset: calc(-1 * var(--border-width));
+    --x-left-slot-size: 0px;
+    --x-right-slot-size: 0xp;
+    --x-border-color: var(--border-color);
+    --x-background-color: var(--background-color);
+    --x-color: var(--color);
+    --x-placeholder-color: var(--placeholder-color);
+    --x-padding-top-base: var(
+      --padding-top,
+      var(--padding-y, var(--padding, 1px))
+    );
+    --x-padding-right-base: var(
+      --padding-right,
+      var(--padding-x, var(--padding, 2px))
+    );
+    --x-padding-bottom-base: var(
+      --padding-bottom,
+      var(--padding-y, var(--padding, 1px))
+    );
+    --x-padding-left-base: var(
+      --padding-left,
+      var(--padding-x, var(--padding, 2px))
+    );
+
+    position: relative;
+    box-sizing: border-box;
+    width: fit-content;
+    height: fit-content;
+    flex-direction: inherit;
+    border-radius: inherit;
+    cursor: inherit;
+
+    .navi_control_input {
+      box-sizing: border-box;
+      min-width: 50px;
+      padding-top: var(--x-padding-top-base);
+      padding-right: var(--x-padding-right-base);
+      padding-bottom: var(--x-padding-bottom-base);
+      padding-left: var(--x-padding-left-base);
+      color: var(--x-color);
+      font-size: var(--font-size);
+      background-color: var(--x-background-color);
+      border-width: var(--border-width);
+      border-style: solid;
+      border-color: var(--x-border-color);
+      border-radius: var(--border-radius);
+      outline-width: var(--x-outline-width);
+      outline-color: var(--outline-color);
+      outline-offset: var(--x-outline-offset);
+
+      &[type="search"] {
+        -webkit-appearance: textfield;
+
+        &::-webkit-search-cancel-button {
+          display: none;
+        }
+      }
+    }
+
+    &:has(.navi_input_slot[data-left]) {
+      --x-left-slot-size: calc(
+        var(--left-slot-size) + var(--x-padding-left-base) / 2
+      );
+
+      .navi_control_input {
+        padding-left: var(--x-left-slot-size);
+      }
+    }
+    &:has(.navi_input_slot[data-right]) {
+      --x-right-slot-size: calc(
+        var(--right-slot-size) + var(--x-padding-right-base) / 2
+      );
+
+      .navi_control_input {
+        padding-right: var(--x-right-slot-size);
+      }
+    }
+
+    .navi_input_slot {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      margin: 0;
+      padding: 0;
+      font-size: var(--font-size);
+      background: none;
+      border: none;
+
+      &[data-left] {
+        left: 0;
+        width: var(--x-left-slot-size);
+      }
+      &[data-right] {
+        right: 0;
+        width: var(--x-right-slot-size);
+      }
+      &[data-hide-while-empty] {
+        opacity: 0;
+        pointer-events: none;
+      }
+    }
+    &[data-has-value] {
+      .navi_input_slot[data-hide-while-empty] {
+        opacity: 1;
+        cursor: pointer;
+        pointer-events: auto;
+      }
+
+      &[data-readonly] {
+        .navi_input_slot[data-hide-while-empty] {
+          opacity: 0;
+          pointer-events: none;
+        }
+      }
+      &[data-disabled] {
+        .navi_input_slot[data-hide-while-empty] {
+          opacity: 0;
+          pointer-events: none;
+        }
+      }
+    }
+
+    /* Hover */
+    &[data-hover] {
+      --x-background-color: var(--background-color-hover);
+      --x-border-color: var(--border-color-hover);
+      --x-color: var(--color-hover);
+    }
+    /* Readonly */
+    &[data-readonly] {
+      --x-border-color: var(--border-color-readonly);
+      --x-background-color: var(--background-color-readonly);
+      --x-color: var(--color-readonly);
+    }
+    /* Focus */
+    &[data-focus-visible] {
+      --x-background-color: var(--background-color-focus);
+      --x-border-color: transparent;
+
+      .navi_control_input {
+        outline-style: solid;
+      }
+    }
+    /* Disabled */
+    &[data-disabled] {
+      --x-border-color: var(--border-color-disabled);
+      --x-background-color: var(--background-color-disabled);
+      --x-color: var(--color-disabled);
+    }
+    /* Callout (info, warning, error) */
+    &[data-callout] {
+      --x-border-color: var(--callout-color);
+      --x-outline-color: var(--callout-color);
+    }
+
+    &[data-discrete] {
+      --x-background-color: transparent;
+
+      &[data-hover] {
+        --x-background-color: white;
+      }
+      &[data-focus] {
+        --x-background-color: white;
+      }
+      &[data-readonly] {
+        --x-background-color: transparent;
+      }
+      &[data-disabled] {
+        --x-background-color: transparent;
+      }
+    }
+  }
+
+  .navi_input .navi_control_input::placeholder {
+    color: var(--x-placeholder-color);
+  }
+  .navi_input .navi_control_input:-internal-autofill-selected {
+    /* Webkit is putting some nasty styles after automplete that look as follow */
+    /* input:-internal-autofill-selected { color: FieldText !important; } */
+    /* Fortunately we can override it as follow */
+    -webkit-text-fill-color: var(--x-color) !important;
+  }
+`;
+const InputTextual = props => {
+  const defaultRef = useRef(null);
+  props.ref = props.ref || defaultRef;
+  const input = renderInput(InputTextualControlInterface, props);
+  return input;
+};
+const InputTextualWithListResolver = props => {
+  const Next = useNextResolver();
+  if (props.suggestions) {
+    return jsx(InputTextualWithSuggestions, {
+      ...props
+    });
+  }
+  return jsx(Next, {
+    ...props
+  });
+};
+const InputTypeResolver = props => {
+  const Next = useNextResolver();
+  if (props.type === "search") {
+    return jsx(InputSearch, {
+      ...props
+    });
+  }
+  if (props.type === "email") {
+    return jsx(InputEmail, {
+      ...props
+    });
+  }
+  if (props.type === "tel") {
+    return jsx(InputTel, {
+      ...props
+    });
+  }
+  if (props.type === "number") {
+    return jsx(InputNumber, {
+      ...props
+    });
+  }
+  if (props.type === "color") {
+    return jsx(InputColor, {
+      ...props
+    });
+  }
+  if (props.type === "datetime-local") {
+    return jsx(InputDatetimeLocal, {
+      ...props
+    });
+  }
+  return jsx(Next, {
+    ...props
+  });
+};
+const InputHeadlessResolver = props => {
+  const Next = useNextResolver();
+  if (props.headless) {
+    return jsx(InputTextualHeadless, {
+      ...props
+    });
+  }
+  return jsx(Next, {
+    ...props
+  });
+};
+const renderInput = createComponentResolver([InputTextualWithListResolver, InputTypeResolver, InputHeadlessResolver]);
+const InputTextualHeadless = props => {
+  const [inputProps, remainingProps] = useInputTextualProps(props);
+  return jsx(BoxForwardedPropsContext.Provider, {
+    value: undefined,
+    children: jsx(RealInput, {
+      ...inputProps,
+      ...remainingProps
+    })
+  });
+};
+const useInputTextualProps = props => {
+  resolveInputProps(props);
+  const [controlProps, remainingProps, ControlChildrenWrapper] = useControlProps(props, {
+    controlType: "input",
+    statePropName: "value",
+    defaultStatePropName: "defaultValue",
+    readOnlySupported: true
+  });
+  controlProps.value = asControlHostValue(controlProps.value, {
+    controlType: "input",
+    type: props.type
+  });
+  return [controlProps, remainingProps, ControlChildrenWrapper];
+};
+const InputNativeContext = createContext(null);
+const InputTextualControlInterface = props => {
+  import.meta.css = [css$w, "@jsenv/navi/src/control/input/input_textual.jsx"];
+  const {
+    ui,
+    discrete
+  } = props;
+  const [inputProps, remainingProps, ControlChildrenWrapper] = useInputTextualProps(props);
+  const idDefault = useId();
+  inputProps.id = inputProps.id || `input_${idDefault}`;
+  const {
+    id,
+    basePseudoState,
+    children
+  } = inputProps;
+  const disabled = basePseudoState[":disabled"];
+  const readOnly = basePseudoState[":read-only"];
+  const loading = basePseudoState[":-navi-loading"];
+  const childrenWithContext = jsx(ControlChildrenWrapper, {
+    children: jsx(InputNativeContext.Provider, {
+      value: {
+        id,
+        readOnly,
+        disabled
+      },
+      children: children || ui
+    })
+  });
+  return jsxs(Box, {
+    as: "span",
+    flex: true,
+    baseClassName: "navi_input",
+    ...remainingProps,
+    basePseudoState: basePseudoState,
+    ui: undefined,
+    "data-discrete": discrete ? "" : undefined,
+    discrete: undefined // handled via data attribute
+    ,
+
+    styleCSSVars: InputStyleCSSVars,
+    pseudoStateSelector: ".navi_control_input",
+    visualSelector: ".navi_control_input",
+    pseudoClasses: InputPseudoClasses,
+    pseudoElements: InputPseudoElements,
+    hasChildUsingForwardedProps: true,
+    children: [jsx(LoadingOutline, {
+      loading: loading,
+      color: "var(--loader-color)",
+      inset: -1
+    }), jsx(RealInput, {
+      ...inputProps
+    }), childrenWithContext]
+  });
+};
+const RealInput = props => {
+  const inputProps = useContext(BoxForwardedPropsContext);
+  return jsx(Box, {
+    ...inputProps,
+    ...props,
+    as: "input",
+    baseClassName: "navi_control_input"
+  });
+};
+const InputStyleCSSVars = {
+  "outlineWidth": "--outline-width",
+  "borderWidth": "--border-width",
+  "borderRadius": "--border-radius",
+  "padding": "--padding",
+  "paddingX": "--padding-x",
+  "paddingY": "--padding-y",
+  "paddingTop": "--padding-top",
+  "paddingRight": "--padding-right",
+  "paddingBottom": "--padding-bottom",
+  "paddingLeft": "--padding-left",
+  "background": "--background",
+  "backgroundColor": "--background-color",
+  "borderColor": "--border-color",
+  "color": "--color",
+  "fontSize": "--font-size",
+  ":hover": {
+    backgroundColor: "--background-color-hover",
+    borderColor: "--border-color-hover",
+    color: "--color-hover"
+  },
+  ":focus": {
+    backgroundColor: "--background-color-focus",
+    borderColor: "--border-color-focus"
+  },
+  ":active": {
+    backgroundColor: "--background-color-active",
+    borderColor: "--border-color-active"
+  },
+  ":read-only": {
+    backgroundColor: "--background-color-readonly",
+    borderColor: "--border-color-readonly",
+    color: "--color-readonly"
+  },
+  ":disabled": {
+    backgroundColor: "--background-color-disabled",
+    borderColor: "--border-color-disabled",
+    color: "--color-disabled"
+  }
+};
+const InputPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading", ":-navi-has-value", ":-navi-expanded"];
+const InputPseudoElements = ["::-navi-loader"];
+const InputSlot = ({
+  side,
+  onClick,
+  hideWhileEmpty,
+  ...props
+}) => {
+  const ctx = useContext(InputNativeContext);
+  const {
+    id,
+    readOnly,
+    disabled
+  } = ctx;
+  return jsx(Label, {
+    htmlFor: id,
+    className: "navi_input_slot",
+    disabled: disabled,
+    readOnly: readOnly,
+    "data-readonly": readOnly,
+    "data-disabled": disabled,
+    "data-left": side === "left" ? "" : undefined,
+    "data-right": side === "right" ? "" : undefined,
+    "data-hide-while-empty": hideWhileEmpty ? "" : undefined,
+    inline: true,
+    flex: true,
+    align: "center",
+    onMouseDown: e => {
+      // Only prevent focus from leaving when the input already has focus.
+      // If the input is not focused, let the mousedown proceed normally so
+      // the slot element (e.g. a clear button) can receive focus itself.
+      const inputEl = document.getElementById(id);
+      if (inputEl && inputEl === document.activeElement) {
+        e.preventDefault();
+      }
+    },
+    onClick: e => {
+      onClick?.(e);
+      const input = document.getElementById(id);
+      const allowed = dispatchRequestInteraction(input, e);
+      if (!allowed) {
+        e.preventDefault();
+      }
+    },
+    ...props
+  });
+};
+const InputLeftSlot = props => {
+  return jsx(InputSlot, {
+    ...props,
+    side: "left"
+  });
+};
+const InputRightSlot = props => {
+  return jsx(InputSlot, {
+    ...props,
+    side: "right"
+  });
+};
+const InputSearch = props => {
+  const Next = useNextResolver();
+  return jsx(Next, {
+    ui: jsx(InputSearchUI, {
+      icon: props.icon
+    }),
+    ...props
+  });
+};
+const InputSearchUI = ({
+  icon
+}) => {
+  return jsxs(Fragment$1, {
+    children: [icon === undefined && jsx(InputLeftSlot, {
+      children: jsx(Icon, {
+        color: "rgba(28, 43, 52, 0.5)",
+        children: jsx(SearchSvg, {})
+      })
+    }), jsx(InputRightSlot, {
+      hideWhileEmpty: true,
+      onClick: e => {
+        const input = e.currentTarget;
+        const allowed = dispatchRequestInteraction(input, e);
+        if (allowed) {
+          dispatchRequestSetUIState(input, "", {
+            event: e
+          });
+          dispatchCustomEvent(input, "navi_clear", {
+            event: e
+          });
+        }
+      },
+      children: jsx(Icon, {
+        color: "rgba(28, 43, 52, 0.5)",
+        children: jsx(CloseSvg, {})
+      })
+    })]
+  });
+};
+const InputEmail = props => {
+  const Next = useNextResolver();
+  return jsx(Next, {
+    ui: jsx(InputEmailUI, {}),
+    ...props
+  });
+};
+const InputEmailUI = ({
+  icon
+}) => {
+  if (icon !== undefined) {
+    return null;
+  }
+  return jsx(InputLeftSlot, {
+    children: jsx(Icon, {
+      color: "rgba(28, 43, 52, 0.5)",
+      children: jsx(EmailSvg, {})
+    })
+  });
+};
+const InputTel = props => {
+  const Next = useNextResolver();
+  return jsx(Next, {
+    ui: jsx(InputTelUI, {
+      icon: props.icon
+    }),
+    ...props
+  });
+};
+const InputTelUI = ({
+  icon
+}) => {
+  if (icon !== undefined) {
+    return null;
+  }
+  return jsx(InputLeftSlot, {
+    children: jsx(Icon, {
+      color: "rgba(28, 43, 52, 0.5)",
+      children: jsx(PhoneSvg, {})
+    })
+  });
+};
+const InputNumber = props => {
+  const Next = useNextResolver();
+  return jsx(Next, {
+    ...props
+  });
+};
+const InputColor = props => {
+  const Next = useNextResolver();
+  return jsx(Next, {
+    ...props
+  });
+};
+const InputDatetimeLocal = props => {
+  const Next = useNextResolver();
+  return jsx(Next, {
+    ...props
+  });
+};
+const InputTextualWithSuggestions = props => {
+  const Next = useNextResolver();
+  const {
+    ref,
+    suggestions,
+    onInput,
+    onFocus,
+    onBlur,
+    onKeyDown,
+    children,
+    ...rest
+  } = props;
+  const [expanded, setExpanded] = useState(false);
+  const expandedRef = useRef(expanded);
+  expandedRef.current = expanded;
+  const expand = () => {
+    expandedRef.current = true;
+    setExpanded(true);
+  };
+  const collapse = () => {
+    expandedRef.current = false;
+    setExpanded(false);
+  };
+  const getListEl = () => {
+    return document.getElementById(suggestions);
+  };
+  const showSuggestions = e => {
+    if (expandedRef.current) {
+      return;
+    }
+    const listEl = getListEl();
+    if (listEl) {
+      dispatchCustomEvent(listEl, "navi_request_open", {
+        event: e,
+        anchor: ref.current
+      });
+      expand();
+    }
+  };
+  const hideSuggestions = e => {
+    if (!expandedRef.current) {
+      return;
+    }
+    const listEl = getListEl();
+    if (listEl) {
+      dispatchCustomEvent(listEl, "navi_request_close", {
+        event: e
+      });
+      collapse();
+    }
+  };
+  useEffect(() => {
+    const inputEl = ref.current;
+    const listEl = getListEl();
+    if (!listEl) {
+      return undefined;
+    }
+    const onSelect = e => {
+      const {
+        item
+      } = e.detail;
+      const {
+        value
+      } = item;
+      inputEl.value = value;
+      inputEl.dispatchEvent(new Event("input", {
+        bubbles: true
+      }));
+      hideSuggestions(e);
+    };
+    listEl.addEventListener("navi_list_select", onSelect);
+    return () => {
+      listEl.removeEventListener("navi_list_select", onSelect);
+    };
+  }, [suggestions]);
+  const onKeyDownShortcuts = createOnKeyDownForShortcuts({
+    arrowdown: e => {
+      showSuggestions(e);
+    },
+    arrowup: e => {
+      showSuggestions(e);
+    },
+    escape: e => {
+      if (!expandedRef.current) {
+        return false;
+      }
+      hideSuggestions(e);
+      return true;
+    },
+    home: () => {},
+    end: () => {},
+    enter: () => {}
+  });
+  return jsx(Next, {
+    role: "combobox",
+    "aria-haspopup": "listbox",
+    "aria-expanded": expanded,
+    "aria-autocomplete": "list",
+    autoComplete: "off",
+    basePseudoState: {
+      ":-navi-expanded": expanded
+    },
+    onnavi_callout_open: e => {
+      hideSuggestions(e);
+    },
+    ...rest,
+    ref: ref,
+    onFocus: e => {
+      onFocus?.(e);
+      showSuggestions(e);
+    },
+    onBlur: e => {
+      onBlur?.(e);
+      hideSuggestions(e);
+    },
+    onInput: e => {
+      onInput?.(e);
+      showSuggestions(e);
+    },
+    onKeyDown: e => {
+      onKeyDown?.(e);
+      onKeyDownShortcuts(e);
+    }
+    //  arrowdown: (e) => {
+    //   const listEl = getListEl();
+    //   e.stopPropagation(); // when within a list, prevent list from handling it twice
+    //   return requestListNavFromCurrent(listEl, {
+    //     event: e,
+    //     goal: "down",
+    //   });
+    // },
+    // arrowup: (e) => {
+    //   const listEl = getListEl();
+    //   e.stopPropagation(); // when within a list, prevent list from handling it twice
+    //   return requestListNavFromCurrent(listEl, {
+    //     event: e,
+    //     goal: "up",
+    //   });
+    // },
+    // home: (e) => {
+    //   const listEl = getListEl();
+    //   e.stopPropagation(); // when within a list, prevent list from handling it twice
+    //   return requestListNavFromCurrent(listEl, {
+    //     event: e,
+    //     goal: "first",
+    //   });
+    // },
+    // end: (e) => {
+    //   const listEl = getListEl();
+    //   e.stopPropagation(); // when within a list, prevent list from handling it twice
+    //   return requestListNavFromCurrent(listEl, {
+    //     event: e,
+    //     goal: "last",
+    //   });
+    // },
+    // enter: (e) => {
+    //   const listEl = getListEl();
+    //   e.stopPropagation(); // when within a list, prevent list from handling it twice
+    //   return requestListSelectCurrent(listEl, { event: e });
+    // },
+    // escape: (e) => {
+    //   // prevent escape from reaching eventual <select> ancestor
+    //   // when the escape is meant to clear the search input (otherwise it would close the select too)
+    //   if (e.currentTarget.type === "search" && e.currentTarget.value !== "") {
+    //     e.stopPropagation();
+    //     return true;
+    //   }
+    //   const listEl = getListEl();
+    //   // here we allow propagation of escape up to the <select> to allow closing if within a select
+    //   // it also means list might catch escape and reset again but it's ok to reset twice here as it won't cause side effects
+    //   // (if we need the same pattern for other events where it could be problematic we would have to mark
+    //   // event as handled somehow to prevent list containing input to react to it)
+    //   return requestListInteractionStateReset(listEl, { event: e });
+    // },
+    ,
+
+    children: children || jsx(InputRightSlot, {
+      onClick: e => {
+        if (expanded) {
+          hideSuggestions(e);
+        } else {
+          showSuggestions(e);
+        }
+      },
+      children: jsx(Icon, {
+        color: "rgba(28, 43, 52, 0.5)",
+        children: jsx(ChevronDownSvg, {})
+      })
+    })
+  });
+};
+
+const Input = props => {
+  const {
+    type
+  } = props;
+  if (type === "radio") {
+    return jsx(InputRadio, {
+      ...props
+    });
+  }
+  if (type === "checkbox") {
+    return jsx(InputCheckbox, {
+      ...props
+    });
+  }
+  if (type === "range") {
+    return jsx(InputRange, {
+      ...props
+    });
+  }
+  return jsx(InputTextual, {
+    ...props
+  });
+};
+
+installImportMetaCssBuild(import.meta);/**
+ * - We must keep the edited element in the DOM so that
+ * the layout remains the same (especially important for table cells)
+ * And the editable part is in absolute so that it takes the original content dimensions
+ * AND for table cells it can actually take the table cell dimensions
+ *
+ * This means an editable thing MUST have a parent with position relative that wraps the content and the eventual editable input
+ *
+ */
+const css$v = /* css */`
+  .navi_editable_wrapper {
+    --inset-top: 0px;
+    --inset-right: 0px;
+    --inset-bottom: 0px;
+    --inset-left: 0px;
+
+    position: absolute;
+    top: var(--inset-top);
+    right: var(--inset-right);
+    bottom: var(--inset-bottom);
+    left: var(--inset-left);
+    opacity: 0;
+    pointer-events: none;
+
+    input {
+      font-weight: inherit;
+      text-align: inherit;
+    }
+
+    &[data-editing] {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  }
+`;
+const useEditionController = () => {
+  const [editing, editingSetter] = useState(null);
+  const startEditing = useCallback(event => {
+    editingSetter(current => {
+      return current || {
+        event
+      };
+    });
+  }, []);
+  const stopEditing = useCallback(() => {
+    editingSetter(null);
+  }, []);
+  const prevEditingRef = useRef(editing);
+  const editionJustEnded = prevEditingRef.current && !editing;
+  prevEditingRef.current = editing;
+  return {
+    editing,
+    startEditing,
+    stopEditing,
+    editionJustEnded
+  };
+};
+const Editable = props => {
+  import.meta.css = [css$v, "@jsenv/navi/src/control/edition/editable.jsx"];
+  let {
+    children,
+    action,
+    editing,
+    name,
+    value,
+    valueSignal,
+    onEditEnd,
+    constraints,
+    type,
+    required,
+    readOnly,
+    min,
+    max,
+    step,
+    minLength,
+    maxLength,
+    pattern,
+    wrapperProps,
+    autoSelect = true,
+    width,
+    height,
+    ...rest
+  } = props;
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
+  if (valueSignal) {
+    value = valueSignal.value;
+  }
+  const editingPreviousRef = useRef(editing);
+  const valueWhenEditStartRef = useRef(editing ? value : undefined);
+  if (editingPreviousRef.current !== editing) {
+    if (editing) {
+      valueWhenEditStartRef.current = value; // Always store the external value
+    }
+    editingPreviousRef.current = editing;
+  }
+
+  // Simulate typing the initial value when editing starts with a custom value
+  useLayoutEffect(() => {
+    if (!editing) {
+      return;
+    }
+    const editingEvent = editing.event;
+    if (editingEvent) {
+      const editingEventInitialValue = editingEvent.detail?.initialValue;
+      if (editingEventInitialValue !== undefined) {
+        const input = ref.current;
+        input.value = editingEventInitialValue;
+        input.dispatchEvent(new CustomEvent("input", {
+          bubbles: false
+        }));
+      }
+    }
+  }, [editing]);
+  const input = jsx(Input, {
+    ref: ref,
+    ...rest,
+    type: type,
+    name: name,
+    value: value,
+    valueSignal: valueSignal,
+    autoFocus: editing,
+    autoFocusVisible: true,
+    autoSelect: autoSelect,
+    cancelOnEscape: true,
+    cancelOnBlurInvalid: true,
+    constraints: constraints,
+    required: required,
+    readOnly: readOnly,
+    min: min,
+    max: max,
+    step: step,
+    minLength: minLength,
+    maxLength: maxLength,
+    pattern: pattern,
+    width: width,
+    height: height,
+    onCancel: e => {
+      if (valueSignal) {
+        valueSignal.value = valueWhenEditStartRef.current;
+      }
+      onEditEnd({
+        cancelled: true,
+        event: e
+      });
+    },
+    onBlur: e => {
+      let inputValue;
+      const valueWhenEditStart = valueWhenEditStartRef.current;
+      let inputValueWhenEditStart;
+      if (type === "number") {
+        inputValue = e.target.valueAsNumber;
+        inputValueWhenEditStart = valueWhenEditStart;
+      } else {
+        inputValue = e.target.value;
+        inputValueWhenEditStart = Number.isNaN(valueWhenEditStart) ? valueWhenEditStart : String(valueWhenEditStart);
+      }
+      if (inputValue === inputValueWhenEditStart) {
+        onEditEnd({
+          cancelled: true,
+          event: e
+        });
+        return;
+      }
+    },
+    action: action || (() => {}),
+    actionAfterChange: true,
+    onActionEnd: e => {
+      onEditEnd({
+        success: true,
+        event: e
+      });
+    }
+  });
+  const wrapperRef = useRef();
+  useLayoutEffect(() => {
+    const wrapper = wrapperRef.current;
+    if (!wrapper) {
+      return;
+    }
+    const parent = wrapper.parentElement;
+    const borderSizes = getBorderSizes(parent);
+    wrapper.style.setProperty("--inset-left", `-${borderSizes.left}px`);
+    wrapper.style.setProperty("--inset-top", `-${borderSizes.top}px`);
+    wrapper.style.setProperty("--inset-right", `-${borderSizes.right}px`);
+    wrapper.style.setProperty("--inset-bottom", `-${borderSizes.bottom}px`);
+  });
+  return jsxs(Fragment$1, {
+    children: [children || jsx("span", {
+      children: value
+    }), jsx(Box, {
+      className: "navi_editable_wrapper",
+      ref: wrapperRef,
+      ...wrapperProps,
+      // inert ensure input while not editing that:
+      // - input not focusable (via keyboard or anything)
+      // - cannot be interacted with pointer (click, hover, etc)
+      // - is ignored by screen readers
+      inert: editing ? undefined : "",
+      "data-editing": editing ? "" : undefined,
+      children: input
+    })]
+  });
+};
+
+/**
+ *
+ * Here we want the same behaviour as web standards:
+ *
+ * 1. When submitting the form URL does not change
+ * 2. When form submission id done user is redirected (by default the current one)
+ *    (we can configure this using target)
+ *    So for example user might be reidrect to a page with the resource he just created
+ *    I could create an example where we would put a link on the page to let user see what he created
+ *    but by default user stays on the form allowing to create multiple resources at once
+ *    And an other where he is redirected to the resource he created
+ * 3. If form submission fails ideally we should display this somewhere on the UI
+ *    right now it's just logged to the console I need to see how we can achieve this
+ */
+
+const Form = props => {
+  const defaultRef = useRef();
+  props.ref = props.ref || defaultRef;
+  const form = jsx(FormControl, {
+    ...props
+  });
+  return form;
+};
+const FormControl = props => {
+  const {
+    ref,
+    method = "GET"
+  } = props;
+  const [formProps, remainingProps, childrenWrapperProps] = useControlgroupProps(props, {
+    stateType: "object",
+    controlType: "form",
+    aggregateChildStates: childUIStateControllers => {
+      const formValues = {};
+      for (const childUIStateController of childUIStateControllers) {
+        const {
+          name,
+          uiState,
+          allowNameless
+        } = childUIStateController;
+        if (!name) {
+          if (!allowNameless) {
+            console.warn("A form child component is missing a name property, its state won't be included in the form state", childUIStateController);
+          }
+          continue;
+        }
+        formValues[name] = uiState;
+      }
+      return formValues;
+    }
+  });
+  const {
+    basePseudoState,
+    children
+  } = formProps;
+  // const disabled = basePseudoState[":disabled"];
+  // const readOnly = basePseudoState[":read-only"];
+  const loading = basePseudoState[":-navi-loading"];
+  const formContextValue = useMemo(() => {
+    return {
+      loading
+    };
+  }, [loading]);
+  return jsx(Box, {
+    ...formProps,
+    ...remainingProps,
+    as: "form",
+    "data-method": method,
+    novalidate: "" // make sure browser don't prevent "submit" when invalid, nor display messages
+    ,
+    pseudoClasses: FormPseudoClasses,
+    onSubmit: e => {
+      const form = e.currentTarget;
+      e.preventDefault();
+      dispatchInternalCustomEvent(form, "navi_action_allowed", {
+        event: e,
+        action: "auto",
+        method: "rerun",
+        requester: form,
+        meta: {
+          isSubmit: true
+        }
+      });
+    },
+    onnavi_get_managed_controls: e => {
+      e.detail.respondWith(getFormManagedControls(e.currentTarget));
+    },
+    onReset: e => {
+      const form = ref.current;
+      dispatchRequestResetUIState(form, e);
+      // browser would empty all fields to their default values (likely empty/unchecked)
+      // we want to reset to the last known external state instead
+      e.preventDefault();
+    },
+    children: jsx(FormContext.Provider, {
+      value: formContextValue,
+      children: jsx(ControlgroupChildrenWrapper, {
+        ...childrenWrapperProps,
+        children: children
+      })
+    })
+  });
+};
+const FormPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
+const getFormManagedControls = form => {
+  const managedControls = [];
+  for (const element of form.elements) {
+    // if (element.name) {
+    managedControls.push(element);
+    // }
+  }
+  return managedControls;
+};
+
+// const dispatchCustomEventOnFormAndFormElements = (type, options) => {
+//   const form = innerRef.current;
+//   const customEvent = new CustomEvent(type, options);
+//   // https://developer.mozilla.org/en-US/docs/Web/API/HTMLFormElement/elements
+//   for (const element of form.elements) {
+//     element.dispatchEvent(customEvent);
+//   }
+//   form.dispatchEvent(customEvent);
+// };
+
+installImportMetaCssBuild(import.meta);const css$u = /* css */`
+  .navi_group {
+    --border-width: 1px;
+
+    > *:hover,
+    > *[data-hover] {
+      position: relative;
+      z-index: 1;
+    }
+    > *:focus-visible,
+    > *[data-focus-visible] {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Horizontal (default): Cumulative margin for border overlap */
+    &:not([data-vertical]) {
+      > *:not(:first-child) {
+        margin-left: calc(var(--border-width) * -1);
+      }
+      > *:first-child:not(:only-child) {
+        border-top-right-radius: 0 !important;
+        border-bottom-right-radius: 0 !important;
+
+        .navi_button_content,
+        .navi_native_input {
+          border-top-right-radius: 0 !important;
+          border-bottom-right-radius: 0 !important;
+        }
+      }
+
+      > *:last-child:not(:only-child) {
+        border-top-left-radius: 0 !important;
+        border-bottom-left-radius: 0 !important;
+
+        .navi_button_content,
+        .navi_native_input {
+          border-top-left-radius: 0 !important;
+          border-bottom-left-radius: 0 !important;
+        }
+      }
+
+      > *:not(:first-child):not(:last-child) {
+        border-radius: 0 !important;
+
+        .navi_button_content,
+        .navi_native_input {
+          border-radius: 0 !important;
+        }
+      }
+    }
+
+    /* Vertical: Cumulative margin for border overlap */
+    &[data-vertical] {
+      > *:not(:first-child) {
+        margin-top: calc(var(--border-width) * -1);
+      }
+      > *:first-child:not(:only-child) {
+        border-bottom-right-radius: 0 !important;
+        border-bottom-left-radius: 0 !important;
+
+        .navi_button_content,
+        .navi_native_input {
+          border-bottom-right-radius: 0 !important;
+          border-bottom-left-radius: 0 !important;
+        }
+      }
+
+      > *:last-child:not(:only-child) {
+        border-top-left-radius: 0 !important;
+        border-top-right-radius: 0 !important;
+
+        .navi_button_content,
+        .navi_native_input {
+          border-top-left-radius: 0 !important;
+          border-top-right-radius: 0 !important;
+        }
+      }
+
+      > *:not(:first-child):not(:last-child) {
+        border-radius: 0 !important;
+
+        .navi_button_content,
+        .navi_native_input {
+          border-radius: 0 !important;
+        }
+      }
+    }
+  }
+`;
+const Group = ({
+  children,
+  borderWidth = 1,
+  row,
+  vertical = row,
+  ...props
+}) => {
+  import.meta.css = [css$u, "@jsenv/navi/src/control/group.jsx"];
+  if (typeof borderWidth === "string") {
+    borderWidth = parseFloat(borderWidth);
+  }
+  const borderWidthCssValue = typeof borderWidth === "number" ? `${borderWidth}px` : borderWidth;
+  return jsx(Box, {
+    baseClassName: "navi_group",
+    "data-vertical": vertical ? "" : undefined,
+    row: row,
+    ...props,
+    style: {
+      "--border-width": borderWidthCssValue,
+      ...props.style
+    },
+    children: children
+  });
+};
+
+installImportMetaCssBuild(import.meta);// TOFIX: select in data then reset, it reset to red/blue instead of red/blue/green
+const css$t = /* css */`
+  .navi_checkbox_group {
+    border-style: solid;
+
+    &[data-callout] {
+      border-color: var(--callout-color);
+    }
+  }
+`;
+const CheckboxGroup = props => {
+  const refDefault = useRef(null);
+  props.ref = props.ref || refDefault;
+  const defaultName = useId();
+  props.name = props.name || `checkbox_group_${defaultName}`;
+  const checkboxGroup = jsx(CheckboxGroupInterface, {
+    ...props
+  });
+  return checkboxGroup;
+};
+const CheckboxGroupInterface = props => {
+  import.meta.css = [css$t, "@jsenv/navi/src/control/input/checkbox_group.jsx"];
+  const {
+    ref,
+    name
+  } = props;
+  const [checkboxGroupProps, remainingProps, childrenWrapperProps] = useControlgroupProps({
+    resetOnCancel: true,
+    resetOnAbort: true,
+    resetOnError: true,
+    ...props
+  }, {
+    stateType: "array",
+    controlType: "checkbox_group",
+    childControlFilter: childUIStateController => {
+      return childUIStateController.controlType === "input" && childUIStateController.props.type === "checkbox";
+    },
+    aggregateChildStates: childUIStateControllers => {
+      const values = [];
+      for (const childUIStateController of childUIStateControllers) {
+        if (childUIStateController.uiState) {
+          values.push(childUIStateController.uiState);
+        }
+      }
+      return values.length === 0 ? undefined : values;
+    }
+  });
+  useFocusGroup(ref, {
+    wrap: "both"
+  });
+  return jsx(Box, {
+    as: "fieldset",
+    ...checkboxGroupProps,
+    ...remainingProps,
+    name: undefined,
+    baseClassName: "navi_checkbox_group",
+    "navi-checkbox-list": "",
+    "data-callout-point-to-border-box": "",
+    onChange: e => {
+      // we rely on change event bubbling but we want to catch only the relevant checkbox change events
+      const target = e.target;
+      if (target.tagName !== "INPUT" || target.type !== "checkbox") {
+        return;
+      }
+      if (target.name !== name) {
+        return;
+      }
+      const checkboxGroup = ref.current;
+      dispatchRequestAction(checkboxGroup, {
+        event: e,
+        requester: target
+      });
+    },
+    children: jsx(ControlgroupChildrenWrapper, {
+      ...childrenWrapperProps,
+      children: props.children
+    })
+  });
+};
+
+installImportMetaCssBuild(import.meta);const css$s = /* css */`
+  .navi_radio_group {
+    border-style: solid;
+
+    &[data-callout] {
+      border-color: var(--callout-color);
+    }
+  }
+`;
+const RadioGroup = props => {
+  const refDefault = useRef(null);
+  props.ref = props.ref || refDefault;
+  const defaultName = useId();
+  props.name = props.name || `radio_group_${defaultName}`;
+  const radioGroup = jsx(RadioGroupInterface, {
+    ...props
+  });
+  return radioGroup;
+};
+const RadioGroupInterface = props => {
+  import.meta.css = [css$s, "@jsenv/navi/src/control/input/radio_group.jsx"];
+  const {
+    ref,
+    name
+  } = props;
+  const [radioGroupProps, remainingProps, childrenWrapperProps] = useControlgroupProps({
+    resetOnCancel: true,
+    resetOnAbort: true,
+    resetOnError: true,
+    ...props
+  }, {
+    controlType: "radio_group",
+    childControlFilter: childUIStateController => {
+      return childUIStateController.controlType === "input" && childUIStateController.props.type === "radio";
+    },
+    aggregateChildStates: childUIStateControllers => {
+      let activeValue;
+      for (const childUIStateController of childUIStateControllers) {
+        if (childUIStateController.uiState) {
+          activeValue = childUIStateController.uiState;
+          break;
+        }
+      }
+      return activeValue;
+    }
+  });
+  useFocusGroup(ref, {
+    wrap: "both"
+  });
+  return jsx(Box, {
+    as: "fieldset",
+    ...radioGroupProps,
+    ...remainingProps,
+    name: undefined,
+    baseClassName: "navi_radio_group",
+    "data-callout-point-to-border-box": "",
+    onInput: e => {
+      // we rely on change event bubbling but we want to catch only the relevant radio change events
+      const target = e.target;
+      if (target.tagName !== "INPUT" || target.type !== "radio") {
+        return;
+      }
+      if (target.name !== name) {
+        return;
+      }
+      const radioGroup = ref.current;
+      dispatchRequestAction(radioGroup, {
+        event: e,
+        requester: target
+      });
+    },
+    children: jsx(ControlgroupChildrenWrapper, {
+      ...childrenWrapperProps,
+      children: props.children
+    })
+  });
+};
+
+const PickerPlaceholder = props => {
+  return jsx(Text, {
+    className: "navi_picker_placeholder",
+    ...props
+  });
+};
+const PickerValue = props => {
+  return jsx(Text, {
+    className: "navi_picker_value",
+    ...props
+  });
+};
+
+const PickerContext = createContext();
+
+const windowWidthSignal = signal(window.innerWidth);
+
+window.addEventListener("resize", () => {
+  windowWidthSignal.value = window.innerWidth;
+});
+
+/**
+ * Mirrors what browsers do when navigating to a page:
+ * 1. Focus the first element with [navi-autofocus] inside the container
+ * 2. Fall back to the first focusable element
+ * Does nothing if no candidate is found.
+ */
+const focusFirstAutofocusOrFocusable = (containerEl, debugFocus, e) => {
+  let target = containerEl.querySelector("[navi-autofocus]");
+  if (!target) {
+    target = findFocusable(containerEl);
+  }
+  if (!target) {
+    return;
+  }
+  debugFocus(
+    e,
+    `Moving focus to ${getElementSignature(target)}.focus({ preventScroll: true })`,
+  );
+  target.focus({ preventScroll: true });
+};
+
+const useCleanup = () => {
+  const cleanupMethodsRef = useRef(null);
+  let cleanupMethods = cleanupMethodsRef.current;
+  if (!cleanupMethods) {
+    const [publish, subscribe, clear] = createPubSub();
+    const cleanup = () => {
+      publish();
+      clear();
+    };
+    const registerCleanup = (cb) => {
+      subscribe(cb);
+    };
+    cleanupMethodsRef.current = cleanupMethods = [registerCleanup, cleanup];
+  }
+  useLayoutEffect(() => {
+    return () => {
+      const [, cleanup] = cleanupMethods;
+      cleanup();
+    };
+  }, []);
+  return cleanupMethods;
+};
+
+installImportMetaCssBuild(import.meta);const css$r = /* css */`
+  .navi_dialog {
+    &[open] {
+      display: flex;
+      flex-direction: column;
+    }
+
+    &::backdrop {
+      background: rgba(0, 0, 0, 0.4);
+    }
+  }
+`;
+const Dialog = props => {
+  import.meta.css = [css$r, "@jsenv/navi/src/popup/dialog.jsx"];
+  const {
+    children,
+    scrollTrap,
+    pointerTrap,
+    ...rest
+  } = props;
+  const defaultRef = useRef();
+  const ref = rest.ref || defaultRef;
+  const debugPopup = useDebugPopup();
+  const debugFocus = useDebugFocus();
+  const openedRef = useRef(false);
+  const [addCleanup, cleanup] = useCleanup();
+  const open = e => {
+    debugPopup(`"${e.type}" on ${getElementSignature(e.target)} -> openDialog`);
+    const dialogEl = ref.current;
+    dialogEl.showModal();
+    focusFirstAutofocusOrFocusable(dialogEl, debugFocus, e);
+    if (scrollTrap) {
+      addCleanup(trapScrollInside(dialogEl));
+    }
+    openedRef.current = true;
+    dispatchCustomEvent(dialogEl, "navi_open", {
+      event: e
+    });
+  };
+  const close = e => {
+    debugPopup(`"${e.type}" on ${getElementSignature(e.target)} -> closeDialog`);
+    const dialogEl = ref.current;
+    dialogEl.close();
+    cleanup();
+    openedRef.current = false;
+    dispatchCustomEvent(dialogEl, "navi_close", {
+      event: e
+    });
+  };
+  const onRequestOpen = e => {
+    const dialogEl = ref.current;
+    if (!dialogEl) {
+      return;
+    }
+    if (openedRef.current) {
+      return;
+    }
+    open(e);
+  };
+  const onRequestClose = e => {
+    const dialogEl = ref.current;
+    if (!dialogEl) {
+      return;
+    }
+    if (!openedRef.current) {
+      return;
+    }
+    close(e);
+  };
+  return jsx(Box, {
+    ...rest,
+    as: "dialog",
+    ref: ref,
+    baseClassName: "navi_dialog",
+    onMouseDown: e => {
+      rest.onMouseDown?.(e);
+      // The <dialog> element covers the full viewport; clicking the backdrop
+      // hits the dialog itself (not any child). Close when that happens.
+      if (!pointerTrap && e.button === 0 && e.target === ref.current) {
+        onRequestClose(e);
+      }
+    },
+    onCancel: e => {
+      // The browser fires "cancel" (then closes the dialog) when the user presses Escape.
+      // Prevent the native close so we control the close flow and dispatch navi_dialog_close.
+      e.preventDefault();
+      onRequestClose(e);
+    },
+    onnavi_request_open: e => {
+      onRequestOpen(e);
+    },
+    onnavi_request_close: e => {
+      onRequestClose(e);
+    },
+    children: children
+  });
+};
+
 installImportMetaCssBuild(import.meta);const css$q = /* css */`
+  .navi_popover_backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: transparent;
+  }
+
+  .navi_popover {
+    &[data-anchor-hidden] {
+      opacity: 0;
+      pointer-events: none;
+    }
+  }
+`;
+const Popover = props => {
+  import.meta.css = [css$q, "@jsenv/navi/src/popup/popover.jsx"];
+  const {
+    scrollTrap,
+    pointerTrap,
+    focusTrap,
+    children,
+    positionX,
+    positionY,
+    positionXFixed,
+    positionYFixed,
+    spacing = 0,
+    viewportSpacing = 0,
+    ...rest
+  } = props;
+  const defaultRef = useRef();
+  const ref = rest.ref || defaultRef;
+  const defaultId = useId();
+  const id = rest.id || defaultId;
+  const debugPopup = useDebugPopup();
+  const debugFocus = useDebugFocus();
+  const [opened, setOpened] = useState(false);
+  const openedRef = useRef(opened);
+  openedRef.current = opened;
+  const [addCleanup, cleanup] = useCleanup();
+  const open = (e, {
+    anchor
+  }) => {
+    debugPopup(e, `openPopover()`);
+    const popoverEl = ref.current;
+    popoverEl.showPopover();
+    focusFirstAutofocusOrFocusable(popoverEl, debugFocus, e);
+    const effectiveAnchor = anchor || document.documentElement;
+    const positionPopover = positionEvent => {
+      const {
+        width,
+        height
+      } = effectiveAnchor.getBoundingClientRect();
+      const {
+        left: borderLeft,
+        right: borderRight,
+        top: borderTop,
+        bottom: borderBottom
+      } = getBorderSizes(effectiveAnchor);
+      popoverEl.style.setProperty("--anchor-width", `${snapToPixel(width)}px`);
+      popoverEl.style.setProperty("--anchor-height", `${snapToPixel(height)}px`);
+      popoverEl.style.setProperty("--anchor-inner-width", `${snapToPixel(width - borderLeft - borderRight)}px`);
+      popoverEl.style.setProperty("--anchor-inner-height", `${snapToPixel(height - borderTop - borderBottom)}px`);
+      const minLeft = 1;
+      const effectivePositionX = anchor ? positionX : "center";
+      // Remove max-height constraint so pickPositionRelativeTo measures the natural
+      // (unconstrained) height of the popover. This ensures the 60% flip threshold
+      // compares against the real content height, not the already-truncated one.
+      popoverEl.style.removeProperty("--space-available");
+      const {
+        left,
+        top,
+        positionY: finalPositionY,
+        spaceAbove,
+        spaceBelow
+      } = pickPositionRelativeTo(popoverEl, effectiveAnchor, {
+        positionX: effectivePositionX,
+        positionY,
+        positionXFixed,
+        positionYFixed,
+        spacing: resolveSpacingSize(spacing),
+        viewportSpacing: resolveSpacingSize(viewportSpacing),
+        minLeft
+      });
+      const spaceAvailable = finalPositionY === "above" || finalPositionY === "above-overlap" ? spaceAbove : spaceBelow;
+      popoverEl.style.setProperty("--space-available", `${spaceAvailable}px`);
+      debugPopup(positionEvent, `positionPopover() -> left: ${left}, top: ${top}`);
+      popoverEl.style.top = `${top}px`;
+      popoverEl.style.left = `${Math.max(left, minLeft)}px`;
+    };
+    if (scrollTrap) {
+      addCleanup(trapScrollInside(popoverEl));
+    }
+    if (focusTrap) {
+      addCleanup(trapFocusInside(popoverEl, {
+        debug: debugFocus
+      }));
+    }
+    const rectEffect = visibleRectEffect(effectiveAnchor, ({
+      visibilityRatio
+    }, {
+      event
+    }) => {
+      if (visibilityRatio <= 0.2) {
+        popoverEl.setAttribute("data-anchor-hidden", "");
+        return;
+      }
+      popoverEl.removeAttribute("data-anchor-hidden");
+      positionPopover(event);
+    }, {
+      event: e
+    });
+    addCleanup(() => {
+      rectEffect.disconnect();
+    });
+    openedRef.current = true;
+    setOpened(true);
+    dispatchCustomEvent(popoverEl, "navi_open", {
+      event: e
+    });
+  };
+  const close = e => {
+    debugPopup(e, `closePopover()`);
+    const popoverEl = ref.current;
+    popoverEl.hidePopover();
+    cleanup();
+    openedRef.current = false;
+    setOpened(false);
+    dispatchCustomEvent(popoverEl, "navi_close", {
+      event: e
+    });
+  };
+  const onRequestOpen = (e, {
+    anchor
+  }) => {
+    const popoverEl = ref.current;
+    if (!popoverEl) {
+      return;
+    }
+    if (openedRef.current) {
+      return;
+    }
+    open(e, {
+      anchor
+    });
+  };
+  const onRequestClose = e => {
+    const popoverEl = ref.current;
+    if (!popoverEl) {
+      return;
+    }
+    if (!openedRef.current) {
+      return;
+    }
+    close(e);
+  };
+  return jsxs(Fragment$1, {
+    children: [opened && createPortal(jsx("div", {
+      className: "navi_popover_backdrop",
+      "aria-hidden": "true",
+      onMouseDown: e => {
+        if (e.button !== 0) {
+          return;
+        }
+        if (pointerTrap) {
+          e.preventDefault();
+          return;
+        }
+        onRequestClose(e);
+      }
+    }), document.body), jsx(Box, {
+      id: id,
+      popover: "manual",
+      ...rest,
+      ref: ref,
+      baseClassName: "navi_popover",
+      pseudoClasses: PopoverPseudoClasses,
+      onnavi_request_open: e => {
+        const {
+          anchor
+        } = e.detail;
+        onRequestOpen(e, {
+          anchor
+        });
+      },
+      onnavi_request_close: e => {
+        onRequestClose(e);
+      },
+      children: children
+    })]
+  });
+};
+const PopoverPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":focus-within", ":read-only", ":disabled"];
+
+installImportMetaCssBuild(import.meta);const css$p = /* css */`
+  .navi_picker {
+    /* popover */
+    &[aria-haspopup="listbox"] {
+      .navi_picker_popover {
+        position: absolute;
+        inset: unset;
+        min-width: var(--anchor-width, 0px);
+        max-width: 95vw;
+        /* max-height covers the placeholder + list; the list scrolls internally */
+        max-height: var(--space-available, 95dvh);
+        margin: 0;
+        padding: 0;
+        background: var(--picker-background-color);
+        border-width: var(--picker-border-width);
+        border-style: solid;
+        border-color: var(--x-picker-border-color);
+        border-radius: var(--picker-border-radius);
+        outline-width: var(--x-picker-outline-width);
+        outline-color: var(--picker-outline-color);
+        outline-offset: var(--x-picker-outline-offset);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+        cursor: default; /* Reset pointer cursor within the select */
+        overflow: hidden;
+        overscroll-behavior: none;
+
+        /* The anchor placeholder is a non-interactive visual clone of the
+           trigger. It makes the popover wrap both the trigger area and the list
+           under a single border/shadow. CSS order places it before the list
+           when the popover is below the trigger, and after when above. */
+        .navi_picker_anchor_clone {
+          display: flex;
+          /* To make clone same height as original we need to force it because context can impact height */
+          /* Like siblings with a bigger height in a flex container */
+          /* We subtract the border sizes as anchor-height includes borders in the dimensions */
+          min-height: var(--anchor-inner-height);
+          /* Mirror the trigger's padding so the clone looks identical */
+          padding-top: var(--x-picker-padding-top);
+          padding-right: var(--x-picker-padding-right);
+          padding-bottom: var(--x-picker-padding-bottom);
+          padding-left: var(--x-picker-padding-left);
+          flex-shrink: 0;
+          flex-direction: column;
+          justify-content: center;
+          gap: var(--navi-s);
+          order: -1; /* before the list — popover is below the trigger */
+          background: var(--x-picker-background-color);
+          border-bottom: var(--picker-border-width) solid
+            var(--x-picker-border-color);
+
+          &:hover {
+            --x-picker-background-color: var(--picker-background-color-hover);
+            --x-picker-border-color: var(--picker-border-color-hover);
+          }
+        }
+
+        &[data-position-y-current="above"],
+        &[data-position-y-current="above-overlap"] {
+          .navi_picker_anchor_clone {
+            order: 1; /* after the list — popover is above the trigger */
+            border-top: var(--picker-border-width) solid
+              var(--x-picker-border-color);
+            border-bottom: none;
+          }
+        }
+
+        /* The list scrolls inside the popover */
+        .navi_list_container {
+          width: 100%;
+          border-radius: inherit;
+          overflow: auto;
+          overscroll-behavior: none;
+        }
+      }
+
+      &[aria-expanded="true"] {
+        &[navi-popover-mode="overlay"],
+        &[navi-popover-mode="attached"] {
+          /* When sizes uses float AND the border uses border-radius it's possible it's possible to see some pixels
+          of the underlying select borders. We hide them to ensure this cannot happen.  */
+          border-color: transparent;
+        }
+
+        .navi_picker_popover {
+          display: flex;
+          flex-direction: column;
+        }
+      }
+
+      /* &:has([data-hover]) {
+        .navi_picker_popover {
+          --x-picker-border-color: var(--picker-border-color-hover);
+        }
+      } */
+
+      /* .navi_list_container {
+        width: 100%;
+        border: none;
+        border-radius: 0;
+        outline: none;
+
+        .navi_list {
+          width: 100%;
+        }
+      }
+      &:has([data-focus-visible]) {
+        .navi_picker_popover {
+          outline-style: solid;
+        }
+      } */
+    }
+
+    /* dialog */
+    &[aria-haspopup="dialog"] {
+      .navi_picker_dialog {
+        max-height: 95dvh;
+        padding: 0;
+        background: var(--picker-background-color);
+        border: var(--picker-border-width) solid var(--x-picker-border-color);
+        border-radius: var(--picker-border-radius);
+        outline-width: var(--x-picker-outline-width);
+        outline-color: var(--picker-outline-color);
+        outline-offset: var(--x-picker-outline-offset);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+        cursor: default; /* Reset pointer cursor within the select */
+        /* overscroll-behavior: contain; */
+
+        &[open] {
+          display: flex;
+          flex-direction: column;
+        }
+
+        &::backdrop {
+          background: rgba(0, 0, 0, 0.4);
+        }
+      }
+
+      .navi_list_container {
+        width: 100%;
+        border: none;
+        border-radius: 0;
+        outline: none;
+      }
+
+      /* .navi_list_container {
+        --list-max-height: none;
+        width: 100%;
+        border: none;
+        border-radius: 0;
+        outline: none;
+
+        .navi_list {
+          width: 100%;
+        }
+      }
+      &:has([data-focus-visible]) {
+        .navi_select_dialog {
+          outline-style: solid;
+        }
+      } */
+    }
+  }
+`;
+const PickerCustom = props => {
+  const {
+    ref,
+    mode: modeProp
+  } = props;
+  // Freeze the mode for the lifetime of an opening: compute it when closed,
+  // keep it stable while open so a screen resize mid-session doesn't switch
+  // between Popover and Dialog.
+  const defaultModeRef = useRef(null);
+  if (defaultModeRef.current === null) {
+    const isSmallScreen = windowWidthSignal.peek() <= 600;
+    defaultModeRef.current = modeProp ?? (isSmallScreen ? "dialog" : "popover");
+  }
+  const mode = defaultModeRef.current;
+  const pickerProps = {
+    ...props
+  };
+  const popupProps = {};
+  Object.assign(pickerProps, {
+    popupProps,
+    actionInteraction: "custom"
+  });
+  // ref
+  const popupRef = useRef(null);
+  popupProps.ref = popupRef;
+  // aria-controls + id
+  {
+    const popupId = useId();
+    Object.assign(pickerProps, {
+      "aria-controls": popupId
+    });
+    Object.assign(popupProps, {
+      id: popupId
+    });
+  }
+  // aria-expanded + open close + interactions to open close
+  {
+    const debugFocus = useDebugFocus();
+    const debugPopup = useDebugPopup();
+    const moveFocusToPicker = e => {
+      const pickerEl = ref.current;
+      const mousedownEvent = findEvent(e, "mousedown");
+      if (mousedownEvent) {
+        debugFocus(e, `move focus to picker (mousedown.preventDefault() + pickerEl.focus()`);
+        mousedownEvent.preventDefault();
+        pickerEl.focus({
+          preventScroll: true
+        });
+        return;
+      }
+      const focusoutEvent = findEvent(e, "focusout");
+      if (focusoutEvent) {
+        // If the popover closed because focus left the select (focusout),
+        // don't steal focus back — let focus go where the user intended.
+        debugFocus(e, `let focus go away`);
+        return;
+      }
+      debugFocus(e, `move focus to picker`);
+      pickerEl.focus({
+        preventScroll: true
+      });
+    };
+    const [expanded, setExpanded] = useState(false);
+    const expandedRef = useRef(expanded);
+    expandedRef.current = expanded;
+    const valueAtOpenRef = useRef(null);
+    const onOpen = () => {
+      expandedRef.current = true;
+      setExpanded(true);
+      valueAtOpenRef.current = getPickerInputUIState(ref.current);
+    };
+    const onClose = e => {
+      const cancelEvent = findEvent(e, eInChain => eInChain.type === "navi_request_close" && eInChain.detail.cancel);
+      const isCancel = Boolean(cancelEvent);
+      expandedRef.current = false;
+      setExpanded(false);
+      // Reset so the next opening re-evaluates screen size
+      defaultModeRef.current = null;
+      const pickerEl = ref.current;
+      const inputEl = getPickerInput$1(pickerEl);
+      if (!inputEl) {
+        moveFocusToPicker(e);
+        return;
+      }
+      const valueAtOpen = valueAtOpenRef.current;
+      if (isCancel) {
+        dispatchRequestSetUIState(inputEl, valueAtOpen, {
+          event: e
+        });
+        moveFocusToPicker(e);
+        return;
+      }
+      const valueAtClose = getPickerInputUIState(pickerEl);
+      if (compareTwoJsValues(valueAtClose, valueAtOpen)) {
+        debugPopup(e, `picker closed with same value as when it opened (${JSON.stringify(valueAtClose)}), no action dispatched`);
+      } else {
+        dispatchRequestAction(inputEl, {
+          event: e,
+          uiState: valueAtClose
+        });
+      }
+      moveFocusToPicker(e);
+    };
+    const disableClickFor = useIgnoreClickForMousedown();
+    const requestOpen = e => {
+      // scroll <button> of the picker into view when opening it
+      const pickerEl = ref.current;
+      pickerEl.scrollIntoView({
+        block: "nearest"
+      });
+      const popupEl = popupRef.current;
+      return dispatchCustomEvent(popupEl, "navi_request_open", {
+        event: e,
+        anchor: pickerEl
+      });
+    };
+    const requestClose = (e = new CustomEvent("programmatic"), {
+      cancel = false
+    } = {}) => {
+      const mousedownEvent = findEvent(e, "mousedown");
+      if (mousedownEvent) {
+        debugPopup(e, `disable click`);
+        disableClickFor();
+      }
+      const popupEl = popupRef.current;
+      return dispatchCustomEvent(popupEl, "navi_request_close", {
+        event: e,
+        cancel
+      });
+    };
+    const {
+      onActionStart,
+      children
+    } = props;
+    Object.assign(pickerProps, {
+      "aria-expanded": expanded,
+      "onActionStart": e => {
+        onActionStart?.(e);
+        requestClose(e);
+      },
+      "onnavi_request_close": e => {
+        if (dispatchRequestInteraction(ref.current, e)) {
+          requestClose(e);
+        }
+      },
+      children
+    });
+    Object.assign(popupProps, {
+      onnavi_open: e => {
+        onOpen();
+      },
+      onnavi_close: e => {
+        onClose(e);
+      }
+    });
+    {
+      const {
+        onMouseDown,
+        onClick,
+        onKeyDown
+      } = props;
+      const onKeyDownShortcuts = createOnKeyDownForShortcuts({
+        arrowdown: e => {
+          if (dispatchRequestInteraction(ref.current, e, "arrow_down_to_open")) {
+            e.preventDefault(); // prevent container scroll
+            requestOpen(e);
+          }
+        },
+        arrowup: e => {
+          if (dispatchRequestInteraction(ref.current, e, "arrow_up_to_open")) {
+            e.preventDefault(); // prevent container scroll
+            requestOpen(e);
+          }
+        },
+        space: e => {
+          if (dispatchRequestInteraction(ref.current, e, "space_to_open")) {
+            e.preventDefault(); // prevent scroll
+            requestOpen(e);
+          }
+        },
+        escape: e => {
+          if (!expandedRef.current) {
+            return;
+          }
+          if (dispatchRequestInteraction(ref.current, e, "escape_to_cancel")) {
+            e.preventDefault();
+            requestClose(e, {
+              cancel: true
+            });
+          }
+        }
+      });
+      Object.assign(pickerProps, {
+        onMouseDown: e => {
+          onMouseDown?.(e);
+          const pickerEl = ref.current;
+          if (dispatchRequestInteraction(pickerEl, e, "mousedown to open picker")) {
+            if (expandedRef.current) {
+              requestClose(e);
+            } else {
+              e.preventDefault(); // prevent browser trying to give focus to the select (popover will take focus)
+              debugFocus(e, `prevent browser giving focus to button (mousedown.preventDefault())`);
+              requestOpen(e);
+            }
+          }
+        },
+        onClick: e => {
+          // if (e.detail === 0) {
+          // disable enter to open that would happen because it's a <button>
+          // but we want to keep the input behavior here
+          // (space to open, enter to submit)
+          //  return;
+          // }
+          onClick?.(e);
+          if (dispatchRequestInteraction(ref.current, e, e.detail === 0 ? "keyboard click to open picker" : "click to open picker")) {
+            // When a label is clicked it transfers focus to the select
+            // in that case we want to open it (otherwise we have already opened on mousedown interaction)
+            e.preventDefault();
+            requestOpen(e);
+          }
+        },
+        onKeyDown: e => {
+          onKeyDown?.(e);
+          onKeyDownShortcuts(e);
+        }
+      });
+      Object.assign(popupProps, {
+        onMouseDown: e => {
+          if (e.button !== 0) {
+            return;
+          }
+          // mousedown inside popover should not bubble to the select (would re-open it if that mousedown closes it)
+          debugPopup(e, `popover mouseDown stopPropagation`);
+          e.stopPropagation();
+        },
+        onClick: e => {
+          if (e.button !== 0) {
+            return;
+          }
+          // click inside popover should not bubble to the select (would re-open it if that click closes it)
+          debugPopup(e, `popover click stopPropagation`);
+          e.stopPropagation();
+        },
+        onKeyDown: e => {
+          // some keys pressed inside popover should not reach the picker button
+          // (like enter that would try to request action of closest form otherwise for instance)
+          if (e.key === "Enter") {
+            e.stopPropagation();
+          }
+        }
+      });
+    }
+  }
+  if (mode === "popover") {
+    return jsx(PickerContentInsidePopover, {
+      ...pickerProps
+    });
+  }
+  if (mode === "dialog") {
+    return jsx(PickerContentInsideDialog, {
+      ...pickerProps
+    });
+  }
+  return null;
+};
+const getPickerInput$1 = pickerEl => {
+  return pickerEl.querySelector(".navi_picker_input");
+};
+const getPickerInputUIState = pickerEl => {
+  const pickerInput = getPickerInput$1(pickerEl);
+  return getUIStateFromElement(pickerInput);
+};
+const PickerContentInsidePopover = props => {
+  const Next = useNextResolver();
+  import.meta.css = [css$p, "@jsenv/navi/src/control/picker/picker_custom.jsx"];
+  const {
+    popupProps,
+    children,
+    pointerTrap,
+    scrollTrap = true,
+    focusTrap = true,
+    popoverMode = "nearby",
+    popoverSpacing = popoverMode === "nearby" ? 5 : 0,
+    viewportSpacing = 10,
+    ...rest
+  } = props;
+  return jsx(Next, {
+    "aria-haspopup": "listbox",
+    "navi-popover-mode": popoverMode,
+    ...rest,
+    onFocusOut: e => {
+      // Close when focus leaves the select entirely (not just moving between internal elements).
+      // relatedTarget is the element receiving focus; if it's inside the select or the popover, keep open.
+      const relatedTarget = e.relatedTarget;
+      const pickerEl = props.ref.current;
+      const popoverEl = popupProps.ref.current;
+      const focusStaysInside = pickerEl && pickerEl.contains(relatedTarget) || popoverEl && popoverEl.contains(relatedTarget);
+      if (!focusStaysInside && dispatchRequestInteraction(pickerEl, e)) {
+        dispatchCustomEvent(popoverEl, "navi_request_close", {
+          event: e
+        });
+      }
+    },
+    children: jsxs(Popover, {
+      ...popupProps,
+      className: "navi_picker_popover",
+      positionX: "left-aligned",
+      positionY: popoverMode === "nearby" ? "below" : "below-overlap",
+      spacing: popoverSpacing,
+      viewportSpacing: viewportSpacing,
+      scrollTrap: scrollTrap,
+      pointerTrap: pointerTrap,
+      focusTrap: focusTrap,
+      children: [popoverMode === "attached" ? jsx("div", {
+        className: "navi_picker_anchor_clone",
+        onMouseDown: e => {
+          if (e.button !== 0) {
+            return;
+          }
+          const popupEl = popupProps.ref.current;
+          dispatchCustomEvent(popupEl, "navi_request_close", {
+            event: e
+          });
+        },
+        children: props.trigger
+      }) : null, children]
+    })
+  });
+};
+const PickerContentInsideDialog = props => {
+  const Next = useNextResolver();
+  import.meta.css = [css$p, "@jsenv/navi/src/control/picker/picker_custom.jsx"];
+  const {
+    popupProps,
+    children,
+    scrollTrap = true,
+    pointerTrap,
+    ...rest
+  } = props;
+  return jsx(Next, {
+    "aria-haspopup": "dialog",
+    ...rest,
+    children: jsx(Dialog, {
+      ...popupProps,
+      className: "navi_picker_dialog",
+      scrollTrap: scrollTrap,
+      pointerTrap: pointerTrap,
+      children: children
+    })
+  });
+};
+
+/**
+ * Returns a `disableClickFor` function that suppresses the `click` event that
+ * the browser fires after a `mousedown` which already handled an open/close action.
+ *
+ * Problem: when the user clicks a dialog's backdrop to close it, the browser
+ * fires `mousedown` on the backdrop (which closes the dialog), then fires
+ * `click` on whatever element is underneath once the dialog is gone. If that
+ * element is the trigger button that originally opened the dialog, the `click`
+ * would immediately re-open it.
+ *
+ * Calling `stopPropagation()` or `preventDefault()` on the backdrop `mousedown`
+ * does not help: the browser dispatches the subsequent `click` regardless,
+ * targeting whichever element ends up under the pointer after the dialog closes.
+ *
+ * Solution: register a self-removing capture-phase `click` listener on `document`
+ * so the click is intercepted before it reaches any element handler.
+ */
+const useIgnoreClickForMousedown = () => {
+  const disableClickFor = () => {
+    const suppressClick = clickEvent => {
+      clickEvent.stopPropagation();
+      clickEvent.preventDefault();
+      document.removeEventListener("click", suppressClick, {
+        capture: true
+      });
+    };
+    document.addEventListener("click", suppressClick, {
+      capture: true
+    });
+  };
+  return disableClickFor;
+};
+
+const getPickerInputFromButtonEvent = e => {
+  const pickerButton = e.currentTarget;
+  const pickerInput = getPickerInput(pickerButton);
+  return pickerInput;
+};
+const getPickerInput = pickerButton => {
+  const pickerInput = pickerButton.querySelector(".navi_picker_input");
+  return pickerInput;
+};
+const PickerNative = props => {
+  const Next = useNextResolver();
+  const {
+    onClick
+  } = props;
+  return jsx(Next, {
+    ...props,
+    // Only wait for the native "change" event (dialog close) when the picker has its own
+    // action. Without an action, the change event would trigger a noop action cycle and
+    // cause spurious state updates (e.g. when closing the color dialog on form submit).
+    actionInteraction: props.action ? "change" : undefined,
+    onClick: e => {
+      onClick?.(e);
+      const pickerInput = getPickerInputFromButtonEvent(e);
+      const allowed = dispatchRequestInteraction(pickerInput, e, "click_to_show_picker");
+      if (allowed) {
+        try {
+          pickerInput.showPicker();
+        } catch {
+          pickerInput.click();
+        }
+      }
+    }
+  });
+};
+
+installImportMetaCssBuild(import.meta);const css$o = /* css */`
+  .navi_color {
+    display: block;
+    aspect-ratio: 1/1;
+    height: 1em;
+    height: 1lh;
+    background-color: currentColor;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    border-radius: 2px;
+
+    &[navi-color-empty] {
+      background-image:
+        linear-gradient(45deg, #ccc 25%, transparent 25%),
+        linear-gradient(-45deg, #ccc 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #ccc 75%),
+        linear-gradient(-45deg, transparent 75%, #ccc 75%);
+      background-position:
+        0 0,
+        0 3px,
+        3px -3px,
+        -3px 0;
+      background-size: 6px 6px;
+      /* Checkerboard pattern to convey "no color / transparent" */
+      background-color: white;
+    }
+  }
+`;
+const Color = ({
+  children,
+  ...rest
+}) => {
+  import.meta.css = [css$o, "@jsenv/navi/src/text/color.jsx"];
+  const color = children || undefined;
+  return jsx(Box, {
+    as: "span",
+    className: "navi_color",
+    "navi-color-empty": color ? undefined : ""
+    // propsCSSVars={COLOR_PROP_CSS_VAR}
+    ,
+
+    color: color,
+    title: color,
+    ...rest
+  });
+};
+// const COLOR_PROP_CSS_VAR = {
+//   color: "--color",
+// };
+
+const Time = props => {
+  const {
+    type
+  } = props;
+  if (type === "date") {
+    return jsx(TimeDate, {
+      ...props
+    });
+  }
+  if (type === "month") {
+    return jsx(TimeMonth, {
+      ...props
+    });
+  }
+  if (type === "week") {
+    return jsx(TimeWeek, {
+      ...props
+    });
+  }
+  if (type === "datetime") {
+    return jsx(TimeDatetime, {
+      ...props
+    });
+  }
+  if (type === "time") {
+    return jsx(TimeTime, {
+      ...props
+    });
+  }
+  return jsx(TimeRelative, {
+    ...props
+  });
+};
+const TimeDate = ({
+  children,
+  locale,
+  long,
+  dayLabel,
+  now,
+  ...props
+}) => {
+  const lang = locale || langSignal.value;
+  const date = toDate(children, value => {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      const d = new Date(`${value}T00:00:00`);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    return null;
+  });
+  let text;
+  let dateTime; // See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
+  if (date) {
+    const base = formatDay(date, lang, {
+      long
+    });
+    if (dayLabel) {
+      const offset = getRelativeDay(date, {
+        now
+      });
+      if (offset >= -1 && offset <= 1) {
+        text = `${base} (${formatDayRelative(offset, lang)})`;
+      } else {
+        text = base;
+      }
+    } else {
+      text = base;
+    }
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, "0");
+    const dd = String(date.getDate()).padStart(2, "0");
+    dateTime = `${yyyy}-${mm}-${dd}`;
+  } else if (children === undefined) {
+    text = formatDatePlaceholder(lang);
+  } else {
+    text = String(children);
+  }
+  return jsx(TimeText, {
+    dateTime: dateTime,
+    ...props,
+    children: text
+  });
+};
+const TimeMonth = ({
+  children,
+  locale,
+  ...props
+}) => {
+  const lang = locale || langSignal.value;
+  const date = toDate(children, value => {
+    if (/^\d{4}-\d{2}$/.test(value)) {
+      const d = new Date(`${value}-01T00:00:00`);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    return null;
+  });
+  let text;
+  let dateTime; // See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
+  if (date) {
+    text = formatMonth(date, lang);
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, "0");
+    dateTime = `${yyyy}-${mm}`;
+  } else if (children === undefined) {
+    text = formatMonthPlaceholder(lang);
+  } else {
+    text = String(children);
+  }
+  return jsx(TimeText, {
+    dateTime: dateTime,
+    ...props,
+    children: text
+  });
+};
+const TimeWeek = ({
+  children,
+  locale,
+  ...props
+}) => {
+  const lang = locale || langSignal.value;
+  let text;
+  let dateTime;
+  if (children !== undefined && children !== null) {
+    text = String(children);
+    dateTime = String(children);
+  } else {
+    text = formatWeekPlaceholder(lang);
+  }
+  return jsx(TimeText, {
+    dateTime: dateTime,
+    ...props,
+    children: text
+  });
+};
+const TimeDatetime = ({
+  children,
+  locale,
+  ...props
+}) => {
+  const lang = locale || langSignal.value;
+  const date = toDate(children);
+  let text;
+  let dateTime; // See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
+  if (date) {
+    text = formatDatetime(date, lang);
+    dateTime = date.toISOString();
+  } else if (children === undefined) {
+    text = formatDatetimePlaceholder(lang);
+  } else {
+    text = String(children);
+  }
+  return jsx(TimeText, {
+    dateTime: dateTime,
+    ...props,
+    children: text
+  });
+};
+const TimeTime = ({
+  children,
+  locale,
+  ...props
+}) => {
+  const lang = locale || langSignal.value;
+  const date = toDate(children, value => {
+    if (/^\d{2}:\d{2}(?::\d{2})?$/.test(value)) {
+      const d = new Date(`1970-01-01T${value}`);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    return null;
+  });
+  let text;
+  let dateTime; // See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
+  if (date) {
+    text = formatTime(date, lang);
+    const hh = String(date.getHours()).padStart(2, "0");
+    const mm = String(date.getMinutes()).padStart(2, "0");
+    dateTime = `${hh}:${mm}`;
+  } else if (children === undefined) {
+    text = "--:--";
+  } else {
+    text = children;
+  }
+  return jsx(TimeText, {
+    dateTime: dateTime,
+    ...props,
+    children: text
+  });
+};
+const TimeRelative = ({
+  children,
+  locale,
+  eventDuration = 0,
+  bare,
+  ...props
+}) => {
+  const lang = locale || langSignal.value;
+  const date = toDate(children);
+  let text;
+  let dateTime;
+  if (date) {
+    text = formatTimeRelative(date, eventDuration, lang, {
+      bare
+    });
+    dateTime = date.toISOString();
+  } else if (children === undefined) {
+    text = "–";
+  } else {
+    text = String(children);
+  }
+  return jsx(TimeText, {
+    dateTime: dateTime,
+    ...props,
+    children: text
+  });
+};
+const TimeText = props => {
+  return jsx(Text, {
+    as: "time",
+    ...props
+  });
+};
+const toDate = (value, parseString) => {
+  if (value instanceof Date) {
+    return value;
+  }
+  if (typeof value === "number") {
+    return new Date(value);
+  }
+  if (typeof value === "string") {
+    if (parseString) {
+      return parseString(value);
+    }
+    // "YYYY-MM-DD" — use local midnight to avoid UTC shift
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      const d = new Date(`${value}T00:00:00`);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    // ISO / other parseable strings
+    const d = new Date(value);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  return null;
+};
+
+const PickerText = props => {
+  const Next = useNextResolver();
+  return jsx(Next, {
+    icon: jsx(PencilSvg, {}),
+    ...props
+  });
+};
+const PickerArray = props => {
+  const Next = useNextResolver();
+  return jsx(Next, {
+    "data-multiline": "",
+    ui: jsx(PickerArrayUI, {}),
+    ...props,
+    type: "navi_picker"
+  });
+};
+const PickerArrayUI = () => {
+  const {
+    value,
+    placeholder
+  } = useContext(PickerContext);
+  if (!value || value.length === 0) {
+    if (!placeholder) {
+      return null;
+    }
+    return jsx(PickerPlaceholder, {
+      children: placeholder
+    });
+  }
+  return jsx(PickerValue, {
+    spacing: ", ",
+    shrinkWrap: true,
+    children: value.map(item => {
+      return jsx("span", {
+        children: item
+      }, item);
+    })
+  });
+};
+const PickerColor = props => {
+  const Next = useNextResolver();
+  return jsx(Next, {
+    ui: jsx(PickerColorUI, {}),
+    icon: jsx(ColorSvg, {}),
+    type: "color",
+    ...props
+  });
+};
+const PickerColorUI = () => {
+  const {
+    value,
+    placeholder
+  } = useContext(PickerContext);
+  if (!value) {
+    if (!placeholder) {
+      return jsx(Color, {});
+    }
+    return jsx(PickerPlaceholder, {
+      children: placeholder
+    });
+  }
+  return jsx(Color, {
+    children: value
+  });
+};
+const PickerDate = props => {
+  const Next = useNextResolver();
+  return jsx(Next, {
+    ui: jsx(PickerDateUI, {}),
+    icon: jsx(CalendarSvg, {}),
+    ...props,
+    type: "date"
+  });
+};
+const PickerDateUI = props => {
+  const {
+    value,
+    placeholder
+  } = useContext(PickerContext);
+  if (!value) {
+    if (!placeholder) {
+      return jsx(Time, {
+        type: "date",
+        color: "var(--picker-placeholder-color",
+        ...props
+      });
+    }
+    return jsx(PickerPlaceholder, {
+      children: placeholder
+    });
+  }
+  return jsx(Time, {
+    type: "date",
+    capitalize: true,
+    ...props,
+    children: value
+  });
+};
+const PickerMonth = props => {
+  const Next = useNextResolver();
+  return jsx(Next, {
+    ui: jsx(PickerMonthUI, {}),
+    icon: jsx(CalendarSvg, {}),
+    ...props,
+    type: "month"
+  });
+};
+const PickerMonthUI = () => {
+  const {
+    value,
+    placeholder
+  } = useContext(PickerContext);
+  if (!value) {
+    if (!placeholder) {
+      return jsx(Time, {
+        type: "month",
+        color: "var(--picker-placeholder-color"
+      });
+    }
+    return jsx(PickerPlaceholder, {
+      children: placeholder
+    });
+  }
+  return jsx(Time, {
+    type: "month",
+    capitalize: true,
+    children: value
+  });
+};
+const PickerWeek = props => {
+  const Next = useNextResolver();
+  return jsx(Next, {
+    ui: jsx(PickerWeekUI, {}),
+    icon: jsx(CalendarSvg, {}),
+    ...props,
+    type: "week"
+  });
+};
+const PickerWeekUI = () => {
+  const {
+    value,
+    placeholder
+  } = useContext(PickerContext);
+  if (!value) {
+    if (!placeholder) {
+      return jsx(Time, {
+        type: "week",
+        color: "var(--picker-placeholder-color"
+      });
+    }
+    return jsx(PickerPlaceholder, {
+      children: placeholder
+    });
+  }
+  return jsx(Time, {
+    type: "week",
+    capitalize: true,
+    children: value
+  });
+};
+const PickerTime = props => {
+  const Next = useNextResolver();
+  return jsx(Next, {
+    ui: jsx(PickerTimeUI, {}),
+    icon: jsx(ClockSvg, {}),
+    ...props,
+    type: "time"
+  });
+};
+const PickerTimeUI = () => {
+  const {
+    value,
+    placeholder
+  } = useContext(PickerContext);
+  if (!value) {
+    if (!placeholder) {
+      return jsx(Time, {
+        type: "time",
+        color: "var(--picker-placeholder-color"
+      });
+    }
+    return jsx(PickerPlaceholder, {
+      children: placeholder
+    });
+  }
+  return jsx(Time, {
+    type: "time",
+    children: value
+  });
+};
+const PickerDatetime = props => {
+  const Next = useNextResolver();
+  return jsx(Next, {
+    ui: jsx(PickerDatetimeUI, {}),
+    icon: jsx(CalendarSvg, {}),
+    ...props,
+    type: "datetime-local"
+  });
+};
+const PickerDatetimeUI = () => {
+  const {
+    value,
+    placeholder
+  } = useContext(PickerContext);
+  if (!value) {
+    if (!placeholder) {
+      return jsx(Time, {
+        type: "datetime",
+        color: "var(--picker-placeholder-color"
+      });
+    }
+    return jsx(PickerPlaceholder, {
+      children: placeholder
+    });
+  }
+  return jsx(Time, {
+    type: "datetime",
+    children: value
+  });
+};
+const PickerFile = props => {
+  const Next = useNextResolver();
+  return jsx(Next, {
+    ui: jsx(PickerFileUI, {}),
+    icon: jsx(FileSvg, {}),
+    type: "file",
+    ...props
+  });
+};
+const PickerFileUI = () => {
+  const {
+    value,
+    placeholder
+  } = useContext(PickerContext);
+  if (!value) {
+    if (!placeholder) {
+      return null;
+    }
+    return jsx(PickerPlaceholder, {
+      children: "placeholder"
+    });
+  }
+  // value is a FileList-like string from the input; display file names
+  return jsx(PickerValue, {
+    children: value
+  });
+};
+const PencilSvg = () => {
+  return jsx("svg", {
+    xmlns: "http://www.w3.org/2000/svg",
+    viewBox: "0 0 24 24",
+    fill: "currentColor",
+    children: jsx("path", {
+      d: "M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"
+    })
+  });
+};
+const CalendarSvg = () => {
+  return jsx("svg", {
+    xmlns: "http://www.w3.org/2000/svg",
+    viewBox: "0 0 24 24",
+    fill: "currentColor",
+    children: jsx("path", {
+      d: "M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"
+    })
+  });
+};
+const ClockSvg = () => {
+  return jsx("svg", {
+    xmlns: "http://www.w3.org/2000/svg",
+    viewBox: "0 0 24 24",
+    fill: "currentColor",
+    children: jsx("path", {
+      d: "M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"
+    })
+  });
+};
+const ColorSvg = () => {
+  return jsx("svg", {
+    xmlns: "http://www.w3.org/2000/svg",
+    viewBox: "0 0 24 24",
+    fill: "currentColor",
+    children: jsx("path", {
+      d: "M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"
+    })
+  });
+};
+const FileSvg = () => {
+  return jsx("svg", {
+    xmlns: "http://www.w3.org/2000/svg",
+    viewBox: "0 0 24 24",
+    fill: "currentColor",
+    children: jsx("path", {
+      d: "M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z"
+    })
+  });
+};
+
+installImportMetaCssBuild(import.meta);const css$n = /* css */`
   @layer navi {
     .navi_separator {
       --size: 1px;
@@ -27460,7 +32880,7 @@ const Separator = ({
   vertical,
   ...props
 }) => {
-  import.meta.css = [css$q, "@jsenv/navi/src/layout/separator.jsx"];
+  import.meta.css = [css$n, "@jsenv/navi/src/layout/separator.jsx"];
   return jsx(Box, {
     as: vertical ? "span" : "hr",
     ...props,
@@ -27958,17 +33378,6 @@ const applySearchHighlight = (el, highlight) => {
 installImportMetaCssBuild(import.meta);const ListItemTrackerContext = createContext(null);
 const GroupItemTrackerContext = createContext(null);
 const PendingScrollRefContext = createContext(null);
-const ListIdContext = createContext();
-const InsideRealListItemContext = createContext(false);
-
-// Provided by ListInteractive to give descendants (e.g. Suggestion) access
-// to hover/keyboard-pointed/selection state.
-// Values are item IDs (strings) or null — not indices — so they survive
-// index changes caused by search reordering.
-const ListMousePointedIdContext = createContext(null);
-const ListKeyboardPointedIdContext = createContext(null);
-// Non-null when inside a ListInteractive (used to render data-interactive).
-const ListInteractiveContext = createContext(false);
 
 // When total rendered items exceeds renderBudget, a render window [start, end)
 // is activated to cap the number of DOM nodes. Items outside the window return
@@ -27986,44 +33395,23 @@ const RenderWindowContext = createContext(null);
 // Carries the separator element/function down to each ListItem so separators
 // are only rendered between items that actually mount (post-filter, post-window).
 const SeparatorContext = createContext(null);
-const css$p = /* css */`
+const css$m = /* css */`
   @layer navi {
     .navi_list_container {
       --list-outline-width: 1px;
       --list-border-radius: 4px;
       --list-border-width: 1px;
-      --list-outline-color: var(--navi-focus-outline-color);
       --list-border-color: light-dark(#ccc, #555);
       --list-background-color: light-dark(#fff, #1e1e1e);
       --list-max-height: 220px;
     }
     .navi_list_item {
-      --list-item-padding: 8px 12px;
+      --list-item-padding-x: 0px;
+      --list-item-padding-y: 0px;
+      --list-item-padding: var(--list-item-padding-y) var(--list-item-padding-x);
       --list-item-color: inherit;
       --list-item-font-weight: inherit;
-
-      /* Hover (mouse) */
-      --list-item-color-hover: var(--list-item-color);
-      --list-item-background-color-hover: light-dark(#f5f5f5, #2a2a2a);
-
-      /* Pointed by mouse — subtle, just a shade above background */
-      --list-item-color-mouse-pointed: var(--list-item-color);
-      --list-item-background-color-mouse-pointed: light-dark(#ebebeb, #303030);
-
-      /* Pointed by keyboard — subtle light blue highlight */
-      --list-item-color-keyboard-pointed: var(--list-item-color);
-      --list-item-background-color-keyboard-pointed: light-dark(
-        #c2dcff,
-        #1c3a6e
-      );
-
-      /* Selected — vivid blue accent */
-      --list-item-color-selected: light-dark(#ffffff, #ffffff);
-      --list-item-background-color-selected: light-dark(#1a73e8, #2b5fcc);
-
-      /* Disabled */
-      --list-item-color-disabled: light-dark(#aaa, #555);
-      --list-item-background-color-disabled: var(--list-item-background-color);
+      --list-item-background-color: transparent;
 
       /* Highlight (CSS Highlight API match) */
       --list-item-color-highlight: inherit;
@@ -28044,10 +33432,6 @@ const css$p = /* css */`
   }
 
   .navi_list_container {
-    --x-list-outline-width: calc(
-      var(--list-outline-width) + var(--list-border-width)
-    );
-    --x-list-outline-offset: calc(-1 * var(--list-border-width));
     --x-list-border-radius: var(--list-border-radius);
     --x-list-border-width: var(--list-border-width);
     --x-list-border-color: var(--list-border-color);
@@ -28073,9 +33457,7 @@ const css$p = /* css */`
     background-color: var(--x-list-background-color);
     border: var(--x-list-border-width) solid var(--x-list-border-color);
     border-radius: var(--x-list-border-radius);
-    outline-width: var(--x-list-outline-width);
-    outline-color: var(--x-list-outline-color);
-    outline-offset: var(--x-list-outline-offset);
+
     transition: opacity 0.2s ease;
     /* overflow:hidden is required on the container (not the inner scroll element)
        so that border-radius clips the content correctly. Without it, items near
@@ -28115,18 +33497,6 @@ const css$p = /* css */`
         pointer-events: none;
       }
     }
-
-    &[data-focus] {
-      /* outline: var(--list-outline-width) solid var(--navi-focus-outline-color);
-      outline-offset: calc(-1 * var(--list-outline-width)); */
-    }
-    &[data-focus-visible] {
-      outline-style: solid;
-    }
-
-    &[data-callout] {
-      --x-list-border-color: var(--callout-color);
-    }
   }
 
   .navi_list {
@@ -28152,6 +33522,7 @@ const css$p = /* css */`
     --x-list-item-color: var(--list-item-color);
     --x-list-item-background-color: var(--list-item-background-color);
     --x-list-item-font-weight: var(--list-item-font-weight);
+
     box-sizing: border-box;
     min-width: 100%;
     padding: var(--list-item-padding);
@@ -28177,71 +33548,6 @@ const css$p = /* css */`
     /* When list has sticky header/footer, put a scroll padding */
     scroll-margin-top: var(--x-list-scroll-spacing-top);
     scroll-margin-bottom: var(--x-list-scroll-spacing-bottom);
-
-    &[data-interactive] {
-      cursor: pointer;
-      user-select: none;
-    }
-    &[data-pointed] {
-      --x-list-item-color: var(--list-item-color-mouse-pointed);
-      --x-list-item-background-color: var(
-        --list-item-background-color-mouse-pointed
-      );
-    }
-    &[data-selected] {
-      --x-list-item-color: var(--list-item-color-selected);
-      --x-list-item-background-color: var(
-        --list-item-background-color-selected
-      );
-      &[data-pointed] {
-        /* Here important should no beed need, but for some reason it is */
-        --x-list-item-background-color: var(
-          --list-item-background-color-selected,
-          var(--list-item-background-color-mouse-pointed)
-        ) !important;
-      }
-    }
-    &[data-disabled] {
-      --x-list-item-color: var(--list-item-color-disabled);
-      --x-list-item-background-color: var(
-        --list-item-background-color-disabled
-      );
-      cursor: default;
-      pointer-events: none;
-    }
-    &[data-readonly] {
-      --x-list-item-color: var(--list-item-color-disabled);
-      cursor: default;
-    }
-  }
-  .navi_list_container {
-    &[data-focus-within] {
-      .navi_list_item {
-        &[data-pointed-by-keyboard] {
-          --x-list-item-color: var(--list-item-color-keyboard-pointed);
-          --x-list-item-background-color: var(
-            --list-item-background-color-keyboard-pointed
-          );
-        }
-
-        /* Selected must win over pointed-by-keyboard */
-        &[data-selected] {
-          --x-list-item-color: var(--list-item-color-selected);
-          --x-list-item-background-color: var(
-            --list-item-background-color-selected
-          );
-          /* Selected + pointed by keyboard: use keyboard color as fallback
-           so that if --list-item-background-color-selected is reset the
-           keyboard-pointed highlight still shows. */
-          &[data-pointed-by-keyboard] {
-            --x-list-item-background-color: var(
-              --list-item-background-color-selected,
-              var(--list-item-background-color-keyboard-pointed)
-            );
-          }
-        }
-      }
-    }
   }
 
   /* Virtual scroll fillers — must remain invisible.
@@ -28346,13 +33652,6 @@ const css$p = /* css */`
       }
     }
   }
-
-  .navi_list_select_placeholder {
-    height: 0;
-    padding-block: 0;
-    line-height: 0;
-    overflow: hidden;
-  }
 `;
 
 /**
@@ -28387,40 +33686,19 @@ const css$p = /* css */`
  */
 const List = props => {
   const refDefault = useRef(null);
-  const ref = props.ref || refDefault;
-  return jsx(ListDispatcher, {
-    ...props,
-    ref: ref
-  });
-};
-const ListDispatcher = props => {
-  const alreadyInteractive = useContext(ListInteractiveContext);
-  const parentUIStateController = useContext(ParentUIStateControllerContext);
-  if (!alreadyInteractive && (props.action || props.uiAction || parentUIStateController)) {
-    return jsx(ListWithAction, {
-      ...props
-    });
-  }
-  if (props.popover === true) {
-    return jsx(ListWithPopover, {
-      ...props
-    });
-  }
-  if (props.keyboardInteractions) {
-    return jsx(ListWithKeyboardInteractions, {
-      ...props
-    });
-  }
-  return jsx(ListUI, {
+  props.ref = props.ref || refDefault;
+  const idDefault = useId();
+  props.id = props.id || idDefault;
+  const listVnode = jsx(ListUI, {
     ...props
   });
+  return listVnode;
 };
 const ListUI = props => {
-  import.meta.css = [css$p, "@jsenv/navi/src/field/list/list.jsx"];
+  import.meta.css = [css$m, "@jsenv/navi/src/control/list/list.jsx"];
   const {
     ref,
     renderBudget = RENDER_BUDGET_DEFAULT,
-    id,
     role,
     fallback,
     noMatchFallback,
@@ -28434,22 +33712,17 @@ const ListUI = props => {
     virtualItemHeight,
     lockSize,
     searchText,
-    name,
-    value,
-    required,
     ...rest
   } = props;
   if (renderBudget < 30) {
     console.warn(`List: renderBudget=${renderBudget} is too low. A renderBudget below 30 is not supported: on large screens or when the list grows, items outside the window would appear as blank space instead of rendered content. Use a value of at least 30, or omit the prop to use the default (${RENDER_BUDGET_DEFAULT}).`);
   }
-  const hiddenInputId = useId();
 
   // lockSize: capture the container's dimensions on first render so filtering
   // cannot collapse the layout. Measurement happens on the initial (unfiltered)
   // state because the parent controls hidden props before any search is applied.
-  const containerRef = useRef(null);
   const sizeLocked = useRef(false);
-  useDisplayedLayoutEffect(containerRef, listContainerEl => {
+  useDisplayedLayoutEffect(ref, listContainerEl => {
     if (!lockSize) {
       return undefined;
     }
@@ -28486,84 +33759,92 @@ const ListUI = props => {
     scrollToItem,
     pendingScrollRef
   } = useListScrollSync({
-    containerRef,
     ref,
     tracker,
     renderBudget,
     virtualItemHeight,
     searchText
   });
-  const idDefault = useId();
-  const innerId = id || idDefault;
-  const renderList = listProps => {
-    return jsx("div", {
-      className: "navi_list_scroll_container",
-      children: jsx(UnorderedList, {
-        ref: ref,
-        id: innerId,
-        role: role,
-        fallback: fallback,
-        noMatchFallback: noMatchFallback,
-        searchText: searchText,
-        separator: separator === true ? jsx(Separator, {
-          margin: "0"
-        }) : separator,
-        expandX: expandX || expand,
-        ...listProps,
-        tracker: tracker,
-        renderWindow: renderWindow,
-        virtualItemHeightSignal: virtualItemHeightSignal,
-        children: jsx(PendingScrollRefContext.Provider, {
-          value: pendingScrollRef,
-          children: jsx(ListIdContext.Provider, {
-            value: innerId,
-            children: children
-          })
-        })
-      })
-    });
+  const getItemById = itemId => {
+    return tracker.itemsSignal.peek().find(item => item.id === itemId);
   };
-  const renderListMemoized = useCallback(renderList, [innerId, role, fallback, noMatchFallback, searchText, separator, expandX, expand, renderWindow, children]);
-  const inputRef = useRef(null);
-  const remainingProps = useConstraints(inputRef, rest, {
-    disabled: !name
-  });
-  return jsxs(Box, {
-    ...remainingProps,
-    ref: containerRef,
+  return jsx(Box, {
+    ...rest,
+    ref: ref,
     baseClassName: "navi_list_container",
     popover: popover,
-    "data-field": name ? `#${CSS.escape(hiddenInputId)}` : undefined,
     "data-expand-x": expandX || expand ? "" : undefined,
     expandX: expandX,
     expand: expand,
     maxHeight: maxHeight,
     styleCSSVars: LIST_STYLE_CSS_VARS,
     pseudoClasses: LIST_PSEUDO_CLASSES,
-    pseudoStateSelector: ".navi_list",
-    hasChildFunction: true,
-    "data-navi-value": value || undefined,
-    onnavi_list_request_scroll: e => {
-      const {
-        item
-      } = e.detail;
-      if (!item) {
+    hasChildUsingForwardedProps: true,
+    onnavi_request_scroll: e => {
+      if (!Object.hasOwn(e.detail, "id")) {
+        console.warn(`navi_request_scroll event is missing the "id" property in its detail.`, e);
         return;
       }
+      const {
+        id
+      } = e.detail;
+      const item = getItemById(id);
       scrollToItem(item, {
         event: e,
         reason: "navi_request_scroll"
       });
     },
-    children: [name && jsx("input", {
-      ref: inputRef,
-      id: hiddenInputId,
-      type: "hidden",
-      name: name,
-      value: value,
-      required: required,
-      "data-rendered-by": ".navi_list_container"
-    }), renderListMemoized]
+    children: jsx(ListContent, {
+      role: role,
+      fallback: fallback,
+      noMatchFallback: noMatchFallback,
+      searchText: searchText,
+      separator: separator,
+      expandX: expandX,
+      expand: expand,
+      tracker: tracker,
+      renderWindow: renderWindow,
+      virtualItemHeightSignal: virtualItemHeightSignal,
+      pendingScrollRef: pendingScrollRef,
+      children: children
+    })
+  });
+};
+const ListContent = ({
+  role,
+  fallback,
+  noMatchFallback,
+  searchText,
+  separator,
+  expandX,
+  expand,
+  tracker,
+  renderWindow,
+  virtualItemHeightSignal,
+  pendingScrollRef,
+  children
+}) => {
+  const listProps = useContext(BoxForwardedPropsContext);
+  return jsx("div", {
+    className: "navi_list_scroll_container",
+    children: jsx(UnorderedList, {
+      role: role,
+      fallback: fallback,
+      noMatchFallback: noMatchFallback,
+      searchText: searchText,
+      separator: separator === true ? jsx(Separator, {
+        margin: "0"
+      }) : separator,
+      expandX: expandX || expand,
+      ...listProps,
+      tracker: tracker,
+      renderWindow: renderWindow,
+      virtualItemHeightSignal: virtualItemHeightSignal,
+      children: jsx(PendingScrollRefContext.Provider, {
+        value: pendingScrollRef,
+        children: children
+      })
+    })
   });
 };
 const LIST_STYLE_CSS_VARS = {
@@ -28572,9 +33853,8 @@ const LIST_STYLE_CSS_VARS = {
   borderRadius: "--list-border-radius",
   borderWidth: "--list-border-width"
 };
-const LIST_PSEUDO_CLASSES = [":hover", ":focus", ":focus-visible", ":focus-within", ":read-only", ":disabled", ":-navi-void", ":-navi-has-value", ":-navi-expanded"];
+const LIST_PSEUDO_CLASSES = [":hover", ":focus", ":focus-visible", ":focus-within", ":read-only", ":disabled", ":-navi-void", ":-navi-expanded"];
 const useListScrollSync = ({
-  containerRef,
   ref,
   tracker,
   renderBudget,
@@ -28629,24 +33909,18 @@ const useListScrollSync = ({
       const trigger = `"${event.type}" on ${getElementSignature(event.target)} (${reason})`;
       const block = event.type === "keydown" ? "nearest" : "center";
       const scrollToItemCall = `${getElementSignature(itemEl)}.scrollIntoView({ block: "${block}", container: "nearest" })`;
-      const listScrollContainerEl = containerRef.current.querySelector(`.navi_list_scroll_container`);
+      const listScrollContainerEl = ref.current.querySelector(`.navi_list_scroll_container`);
       debugScroll(`${trigger} -> ${scrollToItemCall}`);
       scrollIntoViewScoped(itemEl, {
         container: listScrollContainerEl,
         block
       });
-      dispatchPublicCustomEvent(listEl, "navi_list_scroll", {
+      const listEl = ref.current.querySelector(".navi_list");
+      dispatchPublicCustomEvent(listEl, "navi_scroll", {
         event,
         item
       });
     };
-
-    // Dispatch navi_list_nav immediately — do not wait for scroll to complete.
-    const listEl = ref.current;
-    dispatchPublicCustomEvent(listEl, "navi_list_nav", {
-      event,
-      item
-    });
     const {
       start,
       end
@@ -28675,8 +33949,7 @@ const useListScrollSync = ({
   };
   const currentScrollRef = useRef(null);
   const updateCurrentScroll = () => {
-    const listContainerEl = containerRef.current;
-    const listScrollContainerEl = listContainerEl.querySelector(`.navi_list_scroll_container`);
+    const listScrollContainerEl = ref.current.querySelector(`.navi_list_scroll_container`);
     const currentScrollLeft = listScrollContainerEl.scrollLeft;
     const currentScrollTop = listScrollContainerEl.scrollTop;
     const renderWindow = renderWindowRef.current;
@@ -28700,11 +33973,20 @@ const useListScrollSync = ({
       searchTextBecomesActive = true;
     }
   }
-  // Scroll to the selected item when the list is first presented on screen.
+  // Scroll to the selected item only the FIRST time the list is presented on screen,
+  // so the user can see what's selected on initial open. On subsequent re-displays
+  // (e.g. reopening a popover containing the list), we intentionally keep the previous
+  // scroll position — it's less disruptive UX to land where the user last was, even
+  // if that means the selected item isn't currently visible.
   // Skipped when inside a closed <dialog>/<details> (scrollIntoView is a no-op
   // on hidden elements); re-runs automatically every time the ancestor opens.
-  useDisplayedLayoutEffect(containerRef, (el, openEvent) => {
+  const hasBeenDisplayedRef = useRef(false);
+  useDisplayedLayoutEffect(ref, (el, openEvent) => {
     updateCurrentScroll();
+    if (hasBeenDisplayedRef.current) {
+      return;
+    }
+    hasBeenDisplayedRef.current = true;
     const items = tracker.itemsSignal.peek();
     const firstSelected = items.find(i => i.selected);
     if (firstSelected) {
@@ -28736,28 +34018,26 @@ const useListScrollSync = ({
   const savedScrollRef = useRef(null);
   const topMatchScoresKeyRef = useRef("");
   useLayoutEffect(() => {
-    const listContainerEl = containerRef.current;
-    const listScrollContainerEl = listContainerEl.querySelector(`.navi_list_scroll_container`);
+    const listScrollContainerEl = ref.current?.querySelector(`.navi_list_scroll_container`);
+    if (!listScrollContainerEl) {
+      return undefined;
+    }
     if (!searchText) {
       // no search -> try to restore scroll position
       topMatchScoresKeyRef.current = "";
       const savedScroll = savedScrollRef.current;
       if (!savedScroll) {
         // nothing to restore
-        return;
+        return undefined;
       }
       savedScrollRef.current = null;
       debugScroll("Restoring scroll to", savedScroll);
       updateRenderWindow(savedScroll.renderWindow.start, savedScroll.renderWindow.end, "restore scroll window");
-      requestAnimationFrame(() => {
+      const raf = requestAnimationFrame(() => {
         const left = savedScroll.left;
         const top = savedScroll.top;
         // use scrollTo to respect eventual css scroll-behavior: smooth;
         debugScroll(`restore scroll: ${getElementSignature(listScrollContainerEl)}.scrollTo({ left: ${left}, top: ${top} })`);
-        listScrollContainerEl.scrollTo({
-          left: savedScroll.left,
-          top: savedScroll.top
-        });
         // The reliable way to restore scroll is to use scrollTop because otherwise we will estimate the item to scroll
         // based on virtual item height which can wrongly restore the scroll.
         // However we have a contract with outside to inside which item is scrolled
@@ -28768,13 +34048,19 @@ const useListScrollSync = ({
         } = getScrollInfo({
           scrollTop: savedScroll.top
         }, listScrollContainerEl, tracker, virtualItemHeightSignal, renderWindowRef);
-        const listEl = ref.current;
-        dispatchPublicCustomEvent(listEl, "navi_list_nav", {
+        listScrollContainerEl.scrollTo({
+          left: savedScroll.left,
+          top: savedScroll.top
+        });
+        const listEl = ref.current.querySelector(".navi_list");
+        dispatchPublicCustomEvent(listEl, "navi_scroll", {
           item,
           event: new CustomEvent("navi_scroll_restore")
         });
       });
-      return;
+      return () => {
+        cancelAnimationFrame(raf);
+      };
     }
     const visibleItems = tracker.visibleItemsSignal.peek();
     const topItems = visibleItems.slice(0, renderBudget);
@@ -28782,7 +34068,7 @@ const useListScrollSync = ({
     const currentTopMatchScore = topMatchScoresKeyRef.current;
     if (topMatchScoresKey === currentTopMatchScore) {
       // no changes in top matches -> no need to scroll
-      return;
+      return undefined;
     }
     // n items are now more important to see, scrollTop to show them
     topMatchScoresKeyRef.current = topMatchScoresKey;
@@ -28796,12 +34082,12 @@ const useListScrollSync = ({
     scrollToItem(visibleItems[0], {
       event: new CustomEvent("navi_list_top_match_change")
     });
-    return;
+    return undefined;
   });
 
   // Scroll listener — slides the window as the user scrolls.
   useLayoutEffect(() => {
-    const listContainerEl = containerRef.current;
+    const listContainerEl = ref.current;
     if (!listContainerEl) {
       return undefined;
     }
@@ -28863,7 +34149,16 @@ const getScrollInfo = ({
   const containerRect = listScrollContainerEl.getBoundingClientRect();
   let hitEl = null;
   let hitFiller = null;
-  for (let y = containerRect.top + 1; y < containerRect.bottom; y += 4) {
+  // Start scanning from the vertical center of the viewport rather than the top.
+  // The render window places half its budget above and half below the hit index.
+  // Anchoring to the center maximises how many rendered items fall within the
+  // visible area: starting from the top would waste the "above" budget on items
+  // already scrolled past, leaving the bottom of the viewport uncovered.
+  // For large lists where renderBudget >> visible item count this never matters
+  // in practice (the window always covers the whole viewport), but it is
+  // strictly better and costs nothing.
+  const scanStartY = (containerRect.top + containerRect.bottom) / 2;
+  for (let y = scanStartY; y < containerRect.bottom; y += 4) {
     const el = document.elementFromPoint(containerRect.left + 1, y);
     if (!el || !listEl.contains(el)) {
       continue;
@@ -28925,7 +34220,7 @@ const useVirtualItemHeightSignal = (ref, virtualItemHeightProp = 0) => {
     if (virtualHeightSignal.peek() !== 0) {
       return;
     }
-    const listEl = ref.current;
+    const listEl = ref.current?.querySelector(".navi_list");
     if (!listEl) {
       return;
     }
@@ -29068,392 +34363,6 @@ const BottomFiller = ({
   });
 };
 
-// Popover variant: handles open/close/positioning events and forwards
-// navigate/confirm/clear to the underlying list.
-const ListWithPopover = props => {
-  const cleanupRef = useRef();
-  useLayoutEffect(() => {
-    return () => {
-      cleanupRef.current?.();
-    };
-  }, []);
-  return jsx(List, {
-    ...props,
-    popover: "manual",
-    onnavi_list_request_open: e => {
-      const listEl = e.currentTarget;
-      const listContainerEl = listEl.closest(".navi_list_container");
-      const anchor = e.detail?.anchor;
-      listContainerEl.showPopover();
-      const positionPopover = () => {
-        const anchorRect = anchor.getBoundingClientRect();
-        listContainerEl.style.setProperty("--list-anchor-width", `${anchorRect.width}px`);
-        const minLeft = 1;
-        const {
-          left,
-          top
-        } = pickPositionRelativeTo(listContainerEl, anchor, {
-          minLeft
-        });
-        listContainerEl.style.top = `${top}px`;
-        const popoverRect = listContainerEl.getBoundingClientRect();
-        const maxWidth = parseFloat(getComputedStyle(listContainerEl).maxWidth);
-        if (!isNaN(maxWidth) && popoverRect.width >= maxWidth - 1) {
-          const viewportWidth = document.documentElement.clientWidth;
-          const centeredLeft = (viewportWidth - popoverRect.width) / 2;
-          listContainerEl.style.left = `${Math.max(centeredLeft, minLeft)}px`;
-        } else {
-          listContainerEl.style.left = `${Math.max(left, minLeft)}px`;
-        }
-      };
-      const cleanup = visibleRectEffect(anchor, ({
-        visibilityRatio
-      }) => {
-        if (visibilityRatio <= 0.2) {
-          listContainerEl.setAttribute("data-anchor-hidden", "");
-          return;
-        }
-        listContainerEl.removeAttribute("data-anchor-hidden");
-        positionPopover();
-      });
-      cleanupRef.current = () => cleanup.disconnect();
-      dispatchPublicCustomEvent(listEl, "navi_list_open", {
-        event: e
-      });
-    },
-    onnavi_list_request_close: e => {
-      const listEl = e.currentTarget;
-      const listContainerEl = listEl.closest(".navi_list_container");
-      cleanupRef.current?.();
-      listContainerEl.removeAttribute("data-anchor-hidden");
-      listContainerEl.hidePopover();
-      dispatchPublicCustomEvent(listEl, "navi_list_close", {
-        event: e
-      });
-    }
-  });
-};
-
-// Interactive variant: manages hover/keyboard/selection state and handles the
-// navi event protocol. When an action is provided it binds the action to ui state
-// and fires it on select. When only uiAction is provided it calls it directly.
-const ListWithAction = props => {
-  const {
-    ref,
-    action,
-    loading,
-    actionErrorEffect,
-    onActionPrevented,
-    onActionAbort,
-    onActionError,
-    onActionEnd,
-    ...rest
-  } = props;
-  // Setup uiStateController and bind action to uiState
-  const uiStateController = useUIStateController(props, "list", {
-    allowNameless: true
-  });
-  const uiState = useUIState(uiStateController);
-  // Pass uiStateSignal directly so action params update synchronously (not one render behind)
-  const [boundAction] = useActionBoundToOneParam(action, uiStateController.uiStateSignal);
-  const {
-    loading: actionLoading
-  } = useActionStatus(boundAction);
-  const executeAction = useExecuteAction(ref, {
-    errorEffect: actionErrorEffect
-  });
-  const onRequestAction = useOnRequestAction();
-
-  // Mouse/keyboard pointed state
-  const [mousePointedId, setMousePointedId] = useState(null);
-  const [keyboardPointedId, setKeyboardPointedId] = useState(null);
-  const anchorIdRef = useRef(null);
-  const setAnchorId = id => {
-    anchorIdRef.current = id;
-  };
-  const visibleItemsRef = useRef([]);
-  const getAnchorIndex = () => {
-    const anchorId = anchorIdRef.current;
-    if (!anchorId) {
-      return -1;
-    }
-    return visibleItemsRef.current.findIndex(i => i.id === anchorId);
-  };
-  const getAnchorItem = () => {
-    const anchorId = anchorIdRef.current;
-    if (!anchorId) {
-      return null;
-    }
-    return visibleItemsRef.current.find(i => i.id === anchorId);
-  };
-  const listVnode = jsx(List, {
-    keyboardInteractions: true,
-    "data-action": boundAction.name,
-    ...rest,
-    ref: ref,
-    action: undefined,
-    uiAction: undefined,
-    loading: loading || actionLoading,
-    value: uiState,
-    onListVisibleItemsChange: visibleItems => {
-      props.onListVisibleItemsChange?.(visibleItems);
-      visibleItemsRef.current = visibleItems;
-    },
-    onnavi_request_action: e => onRequestAction(boundAction, e),
-    onnavi_action_prevented: onActionPrevented,
-    onnavi_action_ready: executeAction,
-    onnavi_action_abort: onActionAbort,
-    onnavi_action_error: onActionError,
-    onnavi_action_end: onActionEnd,
-    onnavi_list_nav: e => {
-      const {
-        item,
-        event
-      } = e.detail;
-      const id = item ? item.id : null;
-      const isNonUserNav = event.type === "navi_list_nav_top_on_displayed" || event.type === "navi_list_top_match_change";
-      if (isNonUserNav) {
-        setAnchorId(null);
-      } else {
-        setAnchorId(id);
-      }
-      if (event.type === "keydown") {
-        setKeyboardPointedId(id);
-      } else {
-        setKeyboardPointedId(null);
-      }
-      const isAutomaticNav = event.type === "navi_list_nav_top_on_displayed" || event.type === "navi_list_top_match_change" || event.type === "navi_scroll_restore";
-      if (item && !isAutomaticNav) {
-        uiStateController.setUIState(item.value, event);
-      }
-    }
-    // Dispatch action request on select
-    ,
-
-    onnavi_list_select: e => {
-      const listEl = e.currentTarget;
-      const item = e.detail?.item;
-      const requester = item ? listEl.querySelector(`#${CSS.escape(item.id)}`) : e.target;
-      const resolvedRequester = requester || e.target;
-      dispatchRequestAction(listEl, {
-        event: e,
-        requester: resolvedRequester
-      });
-    },
-    onnavi_list_request_nav: e => {
-      const {
-        item
-      } = e.detail;
-      if (!item) {
-        return;
-      }
-      if (item.id === anchorIdRef.current) {
-        return;
-      }
-      const isFailed = item.disabled || item.readOnly;
-      if (isFailed) {
-        return;
-      }
-      const listEl = e.currentTarget;
-      dispatchCustomEvent(listEl, "navi_list_request_scroll", {
-        event: e,
-        item
-      });
-    },
-    onnavi_list_request_select: e => {
-      const {
-        item
-      } = e.detail;
-      if (!item) {
-        return;
-      }
-      const listEl = e.currentTarget;
-      dispatchCustomEvent(listEl, "navi_list_request_nav", {
-        event: e,
-        item
-      });
-      dispatchPublicCustomEvent(listEl, "navi_list_select", {
-        item,
-        event: e
-      });
-    },
-    onnavi_list_request_hover: e => {
-      const {
-        item
-      } = e.detail;
-      setMousePointedId(item ? item.id : null);
-    },
-    onnavi_list_request_nav_from_current: e => {
-      const {
-        event = e,
-        goal
-      } = e.detail;
-      const visibleItems = visibleItemsRef.current;
-      const visibleItemCount = visibleItems.length;
-      if (visibleItemCount === 0) {
-        return;
-      }
-      const anchorIndex = getAnchorIndex();
-      const isSkippedIndex = i => Boolean(visibleItems[i]?.disabled || visibleItems[i]?.readOnly);
-      const resolveIndex = () => {
-        if (goal === "down") {
-          if (anchorIndex === -1) {
-            let i = 0;
-            while (i < visibleItemCount && isSkippedIndex(i)) {
-              i++;
-            }
-            return i < visibleItemCount ? i : anchorIndex;
-          }
-          let belowIndex = anchorIndex + 1;
-          while (belowIndex < visibleItemCount && isSkippedIndex(belowIndex)) {
-            belowIndex++;
-          }
-          return belowIndex < visibleItemCount ? belowIndex : anchorIndex;
-        }
-        if (goal === "up") {
-          if (anchorIndex === -1) {
-            let i = visibleItemCount - 1;
-            while (i >= 0 && isSkippedIndex(i)) {
-              i--;
-            }
-            return i >= 0 ? i : anchorIndex;
-          }
-          let aboveIndex = anchorIndex - 1;
-          while (aboveIndex >= 0 && isSkippedIndex(aboveIndex)) {
-            aboveIndex--;
-          }
-          return aboveIndex >= 0 ? aboveIndex : anchorIndex;
-        }
-        if (goal === "first") {
-          let i = 0;
-          while (i < visibleItemCount && isSkippedIndex(i)) {
-            i++;
-          }
-          return i < visibleItemCount ? i : anchorIndex;
-        }
-        if (goal === "last") {
-          let i = visibleItemCount - 1;
-          while (i >= 0 && isSkippedIndex(i)) {
-            i--;
-          }
-          return i >= 0 ? i : anchorIndex;
-        }
-        return anchorIndex;
-      };
-      const index = resolveIndex();
-      if (index === anchorIndex) {
-        if (event.type === "keydown") {
-          event.preventDefault();
-        }
-        return;
-      }
-      if (event.type === "keydown") {
-        event.preventDefault();
-      }
-      const item = visibleItems[index];
-      dispatchCustomEvent(e.currentTarget, "navi_list_request_nav", {
-        event: e,
-        item
-      });
-    },
-    onnavi_list_request_interaction_state_reset: () => {
-      setAnchorId(null);
-      setKeyboardPointedId(null);
-      setMousePointedId(null);
-    },
-    onnavi_list_request_select_current: e => {
-      const item = getAnchorItem();
-      dispatchCustomEvent(e.currentTarget, "navi_list_request_select", {
-        event: e,
-        item
-      });
-    }
-  });
-  return jsx(UIStateControllerContext.Provider, {
-    value: uiStateController,
-    children: jsx(UIStateContext.Provider, {
-      value: uiState,
-      children: jsx(ListInteractiveContext.Provider, {
-        value: true,
-        children: jsx(ListMousePointedIdContext.Provider, {
-          value: mousePointedId,
-          children: jsx(ListKeyboardPointedIdContext.Provider, {
-            value: keyboardPointedId,
-            children: listVnode
-          })
-        })
-      })
-    })
-  });
-};
-
-// Interactive variant: manages hover/keyboard/selection state and handles the
-// navi event protocol, then delegates rendering to ListUI.
-const ListWithKeyboardInteractions = props => {
-  const {
-    autoFocus,
-    autoFocusPreventScroll
-  } = props;
-  const defaultRef = useRef(null);
-  const ref = props.ref || defaultRef;
-  const onKeyDown = shortcutsViaOnKeyDown({
-    arrowdown: e => {
-      return requestListNavFromCurrent(e.currentTarget, {
-        event: e,
-        goal: "down"
-      });
-    },
-    arrowup: e => {
-      return requestListNavFromCurrent(e.currentTarget, {
-        event: e,
-        goal: "up"
-      });
-    },
-    home: e => {
-      return requestListNavFromCurrent(e.currentTarget, {
-        event: e,
-        goal: "first"
-      });
-    },
-    end: e => {
-      return requestListNavFromCurrent(e.currentTarget, {
-        event: e,
-        goal: "last"
-      });
-    },
-    enter: e => {
-      return requestListSelectCurrent(e.currentTarget, {
-        event: e
-      });
-    },
-    space: e => {
-      e.preventDefault(); // prevent page scroll
-      return requestListSelectCurrent(e.currentTarget, {
-        event: e
-      });
-    },
-    escape: e => {
-      return requestListInteractionStateReset(e.currentTarget, {
-        event: e
-      });
-    }
-  }, props.onKeyDown);
-  useAutoFocus(ref, autoFocus, {
-    preventScroll: autoFocusPreventScroll
-  });
-  return jsx(List, {
-    ...props,
-    ref: ref,
-    keyboardInteractions: undefined,
-    tabIndex: "0",
-    onKeyDown: onKeyDown,
-    autoFocus: undefined // See use_auto_focus.js
-    ,
-
-    autoFocusPreventScroll: undefined
-  });
-};
-
 /**
  * ListItem — a trackable item that participates in virtualization.
  *
@@ -29487,61 +34396,28 @@ const ListItemPresentation = props => {
   });
 };
 const ListItemRealOrVoid = props => {
-  let {
-    id,
-    value,
-    filtered,
-    hidden,
-    selected,
-    matchScore,
-    disabled,
-    readOnly,
-    index,
-    ...rest
-  } = props;
-  if (id === undefined) {
-    console.warn("ListItem is missing an explicit id prop. Provide a stable id so pointed/selected state survives search reordering.", {
-      value
-    });
+  if (props.id === undefined) {
+    console.warn("ListItem is missing an explicit id prop. Provide a stable id so pointed/selected state survives search reordering.");
   }
-  if (index === undefined) {
-    console.warn("ListItem is missing an explicit index prop. Provide an index so item ordering is stable regardless of render order.", {
-      value
-    });
+  if (props.index === undefined) {
+    console.warn("ListItem is missing an explicit index prop. Provide an index so item ordering is stable regardless of render order.");
   }
   const idDefault = useId();
-  id = id || idDefault;
+  props.id = props.id || idDefault;
   const renderWindow = useContext(RenderWindowContext);
   const tracker = useContext(ListItemTrackerContext);
-  const item = {
-    id,
-    index,
-    filtered,
-    hidden,
-    value,
-    selected,
-    matchScore,
-    disabled,
-    readOnly
-  };
+  const item = props;
   const visibleIndex = tracker.useTrackItem(item);
   const groupTracker = useContext(GroupItemTrackerContext);
   const groupVisibleIndex = groupTracker ? groupTracker.useTrackItem(item) : null;
   const separator = useContext(SeparatorContext);
-  if (filtered) {
+  if (props.filtered) {
     return null;
   }
   // html-hidden items: excluded from virtual scroll accounting but always in DOM
-  if (hidden) {
+  if (props.hidden) {
     return jsx(ListItemReal, {
-      id: id,
-      value: value,
-      item: item,
-      selected: selected,
-      disabled: disabled,
-      readOnly: readOnly,
-      hidden: hidden,
-      ...rest
+      ...props
     });
   }
   if (visibleIndex === -1) {
@@ -29551,13 +34427,7 @@ const ListItemRealOrVoid = props => {
     return jsx(ListItemVoid, {});
   }
   const listItemVnode = jsx(ListItemReal, {
-    id: id,
-    value: value,
-    item: item,
-    selected: selected,
-    disabled: disabled,
-    readOnly: readOnly,
-    ...rest
+    ...props
   });
   // Use group-scoped visible index for separator when inside a group,
   // so separators are only rendered between items within the same group.
@@ -29577,41 +34447,18 @@ const ListItemRealOrVoid = props => {
 const ListItemVoid = () => {
   return null;
 };
-const ListItemReal = ({
-  id,
-  hidden,
-  highlight,
-  selected,
-  disabled,
-  readOnly,
-  readOnlyMessage,
-  item,
-  pointed,
-  children,
-  ...rest
-}) => {
+const ListItemReal = props => {
   const defaultRef = useRef(null);
-  const ref = rest.ref || defaultRef;
-  const onNaviConstraintMessage = useOnNaviConstraintMessage({
-    readOnlyMessage
-  });
-  const isInteractive = useContext(ListInteractiveContext);
-  const mousePointedId = useContext(ListMousePointedIdContext);
-  const keyboardPointedId = useContext(ListKeyboardPointedIdContext);
+  props.ref = props.ref || defaultRef;
+  const {
+    ref,
+    id,
+    hidden,
+    highlight,
+    children,
+    ...rest
+  } = props;
   const pendingScrollRef = useContext(PendingScrollRefContext);
-  const registerTriggerContent = useContext(SelectTriggerContentRegistryContext);
-  useLayoutEffect(() => {
-    if (!registerTriggerContent) {
-      return;
-    }
-    if (selected) {
-      registerTriggerContent(children);
-    }
-  }, [selected, children, registerTriggerContent]);
-  const isPointedByMouse = id === mousePointedId;
-  const isPointedByKeyboard = id === keyboardPointedId;
-  const isPointedByProxy = Boolean(pointed);
-  const isPointed = isPointedByMouse || isPointedByKeyboard || isPointedByProxy;
   const pendingScroll = pendingScrollRef.current;
   const needScrollOnMount = pendingScroll && pendingScroll.id === id;
   useLayoutEffect(() => {
@@ -29633,96 +34480,24 @@ const ListItemReal = ({
     styleCSSVars: LIST_ITEM_STYLE_CSS_VARS,
     pseudoClasses: LIST_ITEM_PSEUDO_CLASSES,
     pseudoElements: LIST_ITEM_PSEUDO_ELEMENTS,
-    "aria-selected": selected,
-    "aria-disabled": disabled ? true : undefined,
     id: id,
     "navi-list-item-real": "",
-    "data-interactive": isInteractive ? "" : undefined,
-    "data-anchor": isPointedByKeyboard ? "" : undefined,
-    "data-required-message": naviI18n(`list_item.readonly`, {
-      item
-    }),
     ...rest,
     hidden: hidden,
     ref: ref,
-    onMouseEnter: e => {
-      if (disabled) {
-        return;
-      }
-      const listEl = e.currentTarget.closest(".navi_list");
-      dispatchCustomEvent(listEl, "navi_list_request_hover", {
-        item,
-        event: e
-      });
-      rest.onMouseEnter?.(e);
-    },
-    onMouseLeave: e => {
-      if (disabled) {
-        return;
-      }
-      const listEl = e.currentTarget.closest(".navi_list");
-      dispatchCustomEvent(listEl, "navi_list_request_hover", {
-        item: null,
-        event: e
-      });
-      rest.onMouseLeave?.(e);
-    },
-    onMouseDown: e => {
-      if (disabled) {
-        return;
-      }
-      if (readOnly) {
-        return;
-      }
-      if (e.button !== 0) {
-        return;
-      }
-      const listEl = e.currentTarget.closest(".navi_list");
-      dispatchCustomEvent(listEl, "navi_list_request_select", {
-        item,
-        event: e
-      });
-      rest.onMouseDown?.(e);
-    },
-    onnavi_list_item_request_select: e => {
-      if (readOnly) {
-        return;
-      }
-      const listEl = e.currentTarget.closest(".navi_list");
-      dispatchCustomEvent(listEl, "navi_list_request_select", {
-        item,
-        event: e.detail.event || e
-      });
-    },
-    onnavi_constraint_message: onNaviConstraintMessage,
-    basePseudoState: {
-      ":disabled": Boolean(disabled),
-      ":read-only": Boolean(readOnly),
-      ":-navi-pointed": isPointed,
-      ":-navi-pointed-by-mouse": isPointedByMouse,
-      ":-navi-pointed-by-keyboard": isPointedByKeyboard,
-      ":-navi-pointed-by-proxy": isPointedByProxy,
-      ":-navi-selected": selected,
-      ...rest.basePseudoState
-    },
-    children: jsx(InsideRealListItemContext.Provider, {
-      value: true,
-      children: children
-    })
+    children: children
   });
 };
 const LIST_ITEM_STYLE_CSS_VARS = {
+  "paddingX": "--list-item-padding-x",
+  "paddingY": "--list-item-padding-y",
   "padding": "--list-item-padding",
   "color": "--list-item-color",
   "backgroundColor": "--list-item-background-color",
   "fontWeight": "--list-item-font-weight",
-  ":-navi-pointed-by-keyboard": {
+  ":-navi-pointed": {
     color: "--list-item-color-keyboard-pointed",
     backgroundColor: "--list-item-background-color-keyboard-pointed"
-  },
-  ":-navi-pointed-by-mouse": {
-    color: "--list-item-color-mouse-pointed",
-    backgroundColor: "--list-item-background-color-mouse-pointed"
   },
   ":hover": {
     color: "--list-item-color-hover",
@@ -29741,7 +34516,7 @@ const LIST_ITEM_STYLE_CSS_VARS = {
     backgroundColor: "--suggestion-background-color-highlight"
   }
 };
-const LIST_ITEM_PSEUDO_CLASSES = [":-navi-pointed", ":-navi-pointed-by-mouse", ":-navi-pointed-by-keyboard", ":-navi-pointed-by-proxy", ":-navi-selected", ":disabled", ":read-only"];
+const LIST_ITEM_PSEUDO_CLASSES = [];
 const LIST_ITEM_PSEUDO_ELEMENTS = ["::highlight"];
 
 /**
@@ -29830,3294 +34605,419 @@ const ListItemFooter = props => {
     baseClassName: "navi_list_item_footer"
   });
 };
-const requestListNavFromCurrent = (listEl, {
-  event,
-  goal
-}) => {
-  return dispatchCustomEvent(listEl, "navi_list_request_nav_from_current", {
-    event,
-    goal
-  });
-};
-const requestListSelectCurrent = (listEl, {
-  event
-}) => {
-  return dispatchCustomEvent(listEl, "navi_list_request_select_current", {
-    event
-  });
-};
-const requestListInteractionStateReset = (listEl, {
-  event
-}) => {
-  return dispatchCustomEvent(listEl, "navi_list_request_interaction_state_reset", {
-    event
-  });
-};
-const requestListOpen = (listEl, {
-  event,
-  anchor
-}) => {
-  return dispatchCustomEvent(listEl, "navi_list_request_open", {
-    event,
-    anchor
-  });
-};
-const requestListClose = (listEl, {
-  event
-}) => {
-  return dispatchCustomEvent(listEl, "navi_list_request_close", {
-    event
-  });
-};
 
 installImportMetaCssBuild(import.meta);/**
- * Input component for all textual input types.
  *
- * Supports:
- * - text (default)
- * - password
- * - hidden
- * - email
- * - url
- * - search
- * - tel
- * - etc.
+ * Voila le délire:
  *
- * For non-textual inputs, specialized components will be used:
- * - <InputCheckbox /> for type="checkbox"
- * - <InputRadio /> for type="radio"
+ * En fait quoiqu'il on mettre un radio/checkbox MAIS
+ *
+ * il est aussi possible d'afficher une version décorative
+ * en instanciant un input dans le <Selectable>
+ * il faudra donc ptet un Selectable.Input par example
+ * qui se charge de render un input qui est décoratif, le vrai input est caché
+ * mais pilote cet input décoratif
  */
-const css$o = /* css */`
+const css$l = /* css */`
   @layer navi {
-    .navi_input {
-      --border-radius: 2px;
-      --border-width: 1px;
-      --outline-width: 1px;
-      --font-size: 14px;
-
-      /* Default */
-      --outline-color: var(--navi-focus-outline-color);
-      --loader-color: var(--navi-loader-color);
-      --border-color: light-dark(#767676, #8e8e93);
-      --background-color: white;
-      --color: currentColor;
-      --color-dimmed: color-mix(in srgb, currentColor 60%, transparent);
-      --placeholder-color: var(--color-dimmed);
-      /* Hover */
-      --border-color-hover: color-mix(in srgb, var(--border-color) 70%, black);
-      --background-color-hover: color-mix(
-        in srgb,
-        var(--background-color) 95%,
-        black
+    .navi_list_container {
+      --list-outline-color: var(--navi-focus-outline-color);
+      --list-item-outline-color: var(--navi-focus-outline-color);
+      --list-item-outline-width: 2px;
+      /* Hover (mouse) */
+      --list-item-color-hover: var(--list-item-color);
+      --list-item-background-color-hover: light-dark(#f5f5f5, #2a2a2a);
+      /* Pointed by mouse — subtle, just a shade above background */
+      --list-item-color-mouse-pointed: var(--list-item-color);
+      --list-item-background-color-mouse-pointed: light-dark(#ebebeb, #303030);
+      /* Pointed by keyboard — subtle light blue highlight */
+      --list-item-color-keyboard-pointed: var(--list-item-color);
+      --list-item-background-color-keyboard-pointed: light-dark(
+        #c2dcff,
+        #1c3a6e
       );
-      --color-hover: var(--color);
-      /* Active */
-      --border-color-active: color-mix(in srgb, var(--border-color) 90%, black);
-      /* Focus */
-      --border-color-focus: var(--border-color);
-      --background-color-focus: var(--background-color);
-      /* Readonly */
-      --border-color-readonly: color-mix(
-        in srgb,
-        var(--border-color) 45%,
-        transparent
-      );
-      --background-color-readonly: var(--background-color);
-      --color-readonly: var(--color-dimmed);
+      /* Pointed by proxy */
+      --list-item-color-pointed: var(--list-item-color);
+      --list-item-background-color-pointed: light-dark(#dbeafe, #1c3a6e);
+      /* Selected — vivid blue accent */
+      --list-item-color-selected: white;
+      --list-item-background-color-selected: rgb(3, 30, 60);
       /* Disabled */
-      --border-color-disabled: var(--border-color-readonly);
-      --background-color-disabled: color-mix(
-        in srgb,
-        var(--background-color) 95%,
-        grey
-      );
-      --color-disabled: color-mix(in srgb, var(--color) 95%, grey);
+      --list-item-color-disabled: light-dark(#aaa, #555);
+      --list-item-background-color-disabled: var(--list-item-background-color);
     }
   }
 
-  .navi_input {
-    /* outline will draw the border when visible */
-    --x-outline-width: calc(var(--outline-width) + var(--border-width));
-    --x-outline-offset: calc(-1 * var(--border-width));
-    --left-slot-size: 0px;
-    --right-slot-size: 0px;
-    --x-border-color: var(--border-color);
-    --x-background-color: var(--background-color);
-    --x-color: var(--color);
-    --x-placeholder-color: var(--placeholder-color);
-    --x-padding-top-base: var(
-      --padding-top,
-      var(--padding-y, var(--padding, 1px))
+  fieldset.navi_list_container {
+    margin: 0; /* Reset margin that might come from fieldset */
+    padding: 0; /* Reset padding that might come from fieldset */
+  }
+
+  .navi_list_container {
+    --x-list-outline-width: calc(
+      var(--list-outline-width) + var(--list-border-width)
     );
-    --x-padding-right-base: var(
-      --padding-right,
-      var(--padding-x, var(--padding, 2px))
-    );
-    --x-padding-bottom-base: var(
-      --padding-bottom,
-      var(--padding-y, var(--padding, 1px))
-    );
-    --x-padding-left-base: var(
-      --padding-left,
-      var(--padding-x, var(--padding, 2px))
-    );
+    --x-list-outline-offset: calc(-1 * var(--list-border-width));
 
-    position: relative;
-    box-sizing: border-box;
-    width: fit-content;
-    height: fit-content;
-    flex-direction: inherit;
-    border-radius: inherit;
-    cursor: inherit;
+    outline-width: var(--x-list-outline-width);
+    outline-color: var(--x-list-outline-color);
+    outline-offset: var(--x-list-outline-offset);
 
-    .navi_native_input {
-      box-sizing: border-box;
-      min-width: 50px;
-      padding-top: var(--x-padding-top-base);
-      padding-right: calc(var(--x-padding-right-base) + var(--right-slot-size));
-      padding-bottom: var(--x-padding-bottom-base);
-      padding-left: calc(var(--x-padding-left-base) + var(--left-slot-size));
-      color: var(--x-color);
-      font-size: var(--font-size);
-      background-color: var(--x-background-color);
-      border-width: var(--border-width);
-      border-style: solid;
-      border-color: var(--x-border-color);
-      border-radius: var(--border-radius);
-      outline-width: var(--x-outline-width);
-      outline-color: var(--outline-color);
-      outline-offset: var(--x-outline-offset);
-
-      &[type="search"] {
-        -webkit-appearance: textfield;
-
-        &::-webkit-search-cancel-button {
-          display: none;
-        }
-      }
+    &[data-focus] {
+      /* outline: var(--list-outline-width) solid var(--navi-focus-outline-color);
+      outline-offset: calc(-1 * var(--list-outline-width)); */
     }
-
-    .navi_input_slot {
-      position: absolute;
-      top: 0;
-      bottom: 0;
-      margin: 0;
-      padding: 0;
-      font-size: var(--font-size);
-      background: none;
-      border: none;
-
-      &[data-left] {
-        left: 0;
-        width: var(--left-slot-size);
-      }
-      &[data-right] {
-        right: 0;
-        width: var(--right-slot-size);
-      }
-      &[data-hide-while-empty] {
-        opacity: 0;
-        pointer-events: none;
-      }
-    }
-    &[data-has-value] {
-      .navi_input_slot[data-hide-while-empty] {
-        opacity: 1;
-        cursor: pointer;
-        pointer-events: auto;
-      }
-
-      &[data-readonly] {
-        .navi_input_slot[data-hide-while-empty] {
-          opacity: 0;
-          pointer-events: none;
-        }
-      }
-      &[data-disabled] {
-        .navi_input_slot[data-hide-while-empty] {
-          opacity: 0;
-          pointer-events: none;
-        }
-      }
-    }
-    &:has(.navi_input_slot[data-left]) {
-      --left-slot-size: 1.5em;
-    }
-    &:has(.navi_input_slot[data-right]) {
-      --right-slot-size: 1.5em;
-    }
-
-    /* Hover */
-    &[data-hover] {
-      --x-background-color: var(--background-color-hover);
-      --x-border-color: var(--border-color-hover);
-      --x-color: var(--color-hover);
-    }
-    /* Readonly */
-    &[data-readonly] {
-      --x-border-color: var(--border-color-readonly);
-      --x-background-color: var(--background-color-readonly);
-      --x-color: var(--color-readonly);
-    }
-    /* Focus */
-    &[data-focus],
     &[data-focus-visible] {
-      --x-background-color: var(--background-color-focus);
-      --x-border-color: transparent;
-
-      .navi_native_input {
-        outline-style: solid;
-      }
-    }
-    /* Disabled */
-    &[data-disabled] {
-      --x-border-color: var(--border-color-disabled);
-      --x-background-color: var(--background-color-disabled);
-      --x-color: var(--color-disabled);
-    }
-    /* Callout (info, warning, error) */
-    &[data-callout] {
-      --x-border-color: var(--callout-color);
-      --x-outline-color: var(--callout-color);
-    }
-  }
-
-  .navi_input .navi_native_input::placeholder {
-    color: var(--x-placeholder-color);
-  }
-  .navi_input .navi_native_input:-internal-autofill-selected {
-    /* Webkit is putting some nasty styles after automplete that look as follow */
-    /* input:-internal-autofill-selected { color: FieldText !important; } */
-    /* Fortunately we can override it as follow */
-    -webkit-text-fill-color: var(--x-color) !important;
-  }
-`;
-const InputTextual = props => {
-  const defaultRef = useRef(null);
-  const ref = props.ref || defaultRef;
-  const defaultId = useId(); // we need an id for the slots so we always generate one
-  const fieldId = useFieldId();
-  const id = props.id || fieldId || defaultId;
-  const uiStateController = useUIStateController(props, "input");
-  const uiState = useUIState(uiStateController);
-  return jsx(UIStateControllerContext.Provider, {
-    value: uiStateController,
-    children: jsx(UIStateContext.Provider, {
-      value: uiState,
-      children: jsx(InputTextualDispatcher, {
-        ...props,
-        ref: ref,
-        id: id
-      })
-    })
-  });
-};
-const InputTextualDispatcher = props => {
-  const listIdFromContext = useContext(ListIdContext);
-  const isInsideRealListItem = useContext(InsideRealListItemContext);
-  if (props.action) {
-    return jsx(InputTextualWithAction, {
-      ...props
-    });
-  }
-  if (listIdFromContext &&
-  // When inside a ListItem the input is not considered as controlling the list
-  // (A list item may contain an input)
-  // Note that you can still have an input controlling list in a ListItemHeader or Footer
-  !isInsideRealListItem) {
-    return jsx(InputControllingList, {
-      listId: listIdFromContext,
-      ...props
-    });
-  }
-  if (props.listId) {
-    return jsx(InputControllingList, {
-      ...props
-    });
-  }
-  if (props.suggestions) {
-    return jsx(InputTextualWithSuggestions, {
-      ...props
-    });
-  }
-  return jsx(InputTextualUI, {
-    ...props
-  });
-};
-const InputNativeContext = createContext(null);
-const InputTextualUI = props => {
-  import.meta.css = [css$o, "@jsenv/navi/src/field/input/input_textual.jsx"];
-  const {
-    ref,
-    type,
-    onInput,
-    onKeyDown,
-    readOnly,
-    disabled,
-    loading,
-    autoFocus,
-    autoFocusVisible,
-    autoSelect,
-    basePseudoState,
-    icon,
-    children,
-    ...rest
-  } = props;
-  const contextReadOnly = useContext(ReadOnlyContext);
-  const contextDisabled = useContext(DisabledContext);
-  const contextLoading = useContext(LoadingContext);
-  const contextLoadingElement = useContext(LoadingElementContext);
-  const uiStateController = useContext(UIStateControllerContext);
-  const uiState = useContext(UIStateContext);
-  const innerValue = type === "datetime-local" ? convertToLocalTimezone(uiState) : uiState;
-  const innerLoading = loading || contextLoading && contextLoadingElement === ref.current;
-  const innerReadOnly = readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
-  const innerDisabled = disabled || contextDisabled;
-  // infom any <label> parent of our readOnly state + that we are interactive
-  reportReadOnlyToField(innerReadOnly);
-  reportDisabledToField(innerDisabled);
-  reportInteractiveToField(true);
-  useAutoFocus(ref, autoFocus, {
-    focusVisible: autoFocusVisible,
-    autoSelect
-  });
-  const remainingProps = useConstraints(ref, rest);
-  const onInputStable = useStableCallback(onInput);
-  const onKeyDownStable = useStableCallback(onKeyDown);
-  const renderInput = inputProps => {
-    return jsx(Box, {
-      ...inputProps,
-      as: "input",
-      ref: ref,
-      type: type,
-      "data-value": uiState,
-      value: innerValue,
-      onInput: e => {
-        let inputValue;
-        if (type === "number") {
-          inputValue = e.target.valueAsNumber;
-          if (isNaN(inputValue)) {
-            inputValue = e.target.value;
-          }
-        } else if (type === "datetime-local") {
-          inputValue = convertToUTCTimezone(e.target.value);
-        } else {
-          inputValue = e.target.value;
-        }
-        uiStateController.setUIState(inputValue, e);
-        onInputStable?.(e);
-      },
-      onKeyDown: e => {
-        onKeyDownStable?.(e);
-      },
-      onresetuistate: e => {
-        uiStateController.resetUIState(e);
-      },
-      onsetuistate: e => {
-        uiStateController.setUIState(e.detail.value, e);
-      }
-      // style management
-      ,
-
-      baseClassName: "navi_native_input",
-      "data-rendered-by": ".navi_input"
-    });
-  };
-  const renderInputMemoized = useCallback(renderInput, [type, uiState, innerValue, autoFocus]);
-  let innerChildren;
-  if (children === undefined) {
-    if (type === "search") {
-      innerChildren = jsxs(Fragment$1, {
-        children: [icon === undefined && jsx(InputLeftSlot, {
-          children: jsx(Icon, {
-            color: "rgba(28, 43, 52, 0.5)",
-            children: jsx(SearchSvg, {})
-          })
-        }), jsx(InputRightSlot, {
-          hideWhileEmpty: true,
-          onClick: () => {
-            uiStateController.setUIState("", {
-              trigger: "cancel_button"
-            });
-            ref.current.value = "";
-            ref.current.dispatchEvent(new Event("navi_delete_content"));
-          },
-          children: jsx(Icon, {
-            color: "rgba(28, 43, 52, 0.5)",
-            children: jsx(CloseSvg, {})
-          })
-        })]
-      });
-    } else if (type === "email") {
-      innerChildren = icon === undefined && jsx(InputLeftSlot, {
-        children: jsx(Icon, {
-          color: "rgba(28, 43, 52, 0.5)",
-          children: jsx(EmailSvg, {})
-        })
-      });
-    } else if (type === "tel") {
-      innerChildren = icon === undefined && jsx(InputLeftSlot, {
-        children: jsx(Icon, {
-          color: "rgba(28, 43, 52, 0.5)",
-          children: jsx(PhoneSvg, {})
-        })
-      });
-    }
-  } else {
-    innerChildren = children;
-  }
-  return jsxs(Box, {
-    as: "span",
-    flex: true,
-    baseClassName: "navi_input",
-    styleCSSVars: InputStyleCSSVars,
-    pseudoStateSelector: ".navi_native_input",
-    visualSelector: ".navi_native_input",
-    basePseudoState: {
-      ...basePseudoState,
-      ":read-only": innerReadOnly,
-      ":disabled": innerDisabled,
-      ":-navi-loading": innerLoading
-    },
-    pseudoClasses: InputPseudoClasses,
-    pseudoElements: InputPseudoElements,
-    hasChildFunction: true,
-    baseChildPropSet: InputChildPropSet,
-    ...remainingProps,
-    ref: undefined,
-    autoFocus: undefined // See use_auto_focus.js
-    ,
-
-    children: [jsx(LoadingOutline, {
-      loading: innerLoading,
-      color: "var(--loader-color)",
-      inset: -1
-    }), renderInputMemoized, innerChildren ? jsx(InputNativeContext.Provider, {
-      value: {
-        id: props.id,
-        readOnly: innerReadOnly,
-        disabled: innerDisabled
-      },
-      children: innerChildren
-    }) : null]
-  });
-};
-const InputStyleCSSVars = {
-  "outlineWidth": "--outline-width",
-  "borderWidth": "--border-width",
-  "borderRadius": "--border-radius",
-  "padding": "--padding",
-  "paddingX": "--padding-x",
-  "paddingY": "--padding-y",
-  "paddingTop": "--padding-top",
-  "paddingRight": "--padding-right",
-  "paddingBottom": "--padding-bottom",
-  "paddingLeft": "--padding-left",
-  "background": "--background",
-  "backgroundColor": "--background-color",
-  "borderColor": "--border-color",
-  "color": "--color",
-  "fontSize": "--font-size",
-  ":hover": {
-    backgroundColor: "--background-color-hover",
-    borderColor: "--border-color-hover",
-    color: "--color-hover"
-  },
-  ":focus": {
-    backgroundColor: "--background-color-focus",
-    borderColor: "--border-color-focus"
-  },
-  ":active": {
-    backgroundColor: "--background-color-active",
-    borderColor: "--border-color-active"
-  },
-  ":read-only": {
-    backgroundColor: "--background-color-readonly",
-    borderColor: "--border-color-readonly",
-    color: "--color-readonly"
-  },
-  ":disabled": {
-    backgroundColor: "--background-color-disabled",
-    borderColor: "--border-color-disabled",
-    color: "--color-disabled"
-  }
-};
-const InputPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading", ":-navi-has-value", ":-navi-expanded"];
-const InputPseudoElements = ["::-navi-loader"];
-const InputChildPropSet = new Set([...fieldPropSet]);
-const InputSlot = ({
-  side,
-  onClick,
-  hideWhileEmpty,
-  ...props
-}) => {
-  const ctx = useContext(InputNativeContext);
-  const {
-    id,
-    readOnly,
-    disabled
-  } = ctx;
-  return jsx(Label, {
-    htmlFor: id,
-    className: "navi_input_slot",
-    disabled: disabled,
-    readOnly: readOnly,
-    "data-readonly": readOnly,
-    "data-disabled": disabled,
-    "data-left": side === "left" ? "" : undefined,
-    "data-right": side === "right" ? "" : undefined,
-    "data-hide-while-empty": hideWhileEmpty ? "" : undefined,
-    inline: true,
-    flex: true,
-    align: "center",
-    onMouseDown: e => {
-      // Only prevent focus from leaving when the input already has focus.
-      // If the input is not focused, let the mousedown proceed normally so
-      // the slot element (e.g. a clear button) can receive focus itself.
-      const inputEl = document.getElementById(id);
-      if (inputEl && inputEl === document.activeElement) {
-        e.preventDefault();
-      }
-    },
-    onClick: e => {
-      if (readOnly || disabled) {
-        return;
-      }
-      onClick?.(e);
-    },
-    ...props
-  });
-};
-const InputLeftSlot = props => {
-  return jsx(InputSlot, {
-    ...props,
-    side: "left"
-  });
-};
-const InputRightSlot = props => {
-  return jsx(InputSlot, {
-    ...props,
-    side: "right"
-  });
-};
-const InputControllingList = props => {
-  const {
-    ref,
-    listId,
-    onKeyDown,
-    ...rest
-  } = props;
-  const getListEl = () => {
-    return document.getElementById(listId);
-  };
-  const onKeyDownWithShortcuts = shortcutsViaOnKeyDown({
-    arrowdown: e => {
-      const listEl = getListEl();
-      e.stopPropagation(); // when within a list, prevent list from handling it twice
-      return requestListNavFromCurrent(listEl, {
-        event: e,
-        goal: "down"
-      });
-    },
-    arrowup: e => {
-      const listEl = getListEl();
-      e.stopPropagation(); // when within a list, prevent list from handling it twice
-      return requestListNavFromCurrent(listEl, {
-        event: e,
-        goal: "up"
-      });
-    },
-    home: e => {
-      const listEl = getListEl();
-      e.stopPropagation(); // when within a list, prevent list from handling it twice
-      return requestListNavFromCurrent(listEl, {
-        event: e,
-        goal: "first"
-      });
-    },
-    end: e => {
-      const listEl = getListEl();
-      e.stopPropagation(); // when within a list, prevent list from handling it twice
-      return requestListNavFromCurrent(listEl, {
-        event: e,
-        goal: "last"
-      });
-    },
-    enter: e => {
-      const listEl = getListEl();
-      e.stopPropagation(); // when within a list, prevent list from handling it twice
-      return requestListSelectCurrent(listEl, {
-        event: e
-      });
-    },
-    escape: e => {
-      // prevent escape from reaching eventual <select> ancestor
-      // when the escape is meant to clear the search input (otherwise it would close the select too)
-      if (e.currentTarget.type === "search" && e.currentTarget.value !== "") {
-        e.stopPropagation();
-        return true;
-      }
-      const listEl = getListEl();
-      // here we allow propagation of escape up to the <select> to allow closing if within a select
-      // it also means list might catch escape and reset again but it's ok to reset twice here as it won't cause side effects
-      // (if we need the same pattern for other events where it could be problematic we would have to mark
-      // event as handled somehow to prevent list containing input to react to it)
-      return requestListInteractionStateReset(listEl, {
-        event: e
-      });
-    }
-  }, onKeyDown);
-  return jsx(ListIdContext.Provider, {
-    value: null,
-    children: jsx(InputTextualDispatcher, {
-      "aria-controls": listId,
-      "aria-autocomplete": "list",
-      "aria-has-popup": "listbox",
-      type: "search",
-      autoComplete: "off",
-      ...rest,
-      ref: ref,
-      listId: undefined,
-      onKeyDown: onKeyDownWithShortcuts
-    })
-  });
-};
-const InputTextualWithSuggestions = props => {
-  const {
-    ref,
-    suggestions,
-    onInput,
-    onFocus,
-    onBlur,
-    onKeyDown,
-    children,
-    ...rest
-  } = props;
-  const [expanded, setExpanded] = useState(false);
-  const expandedRef = useRef(expanded);
-  expandedRef.current = expanded;
-  const expand = () => {
-    expandedRef.current = true;
-    setExpanded(true);
-  };
-  const collapse = () => {
-    expandedRef.current = false;
-    setExpanded(false);
-  };
-  const getListEl = () => {
-    return document.getElementById(suggestions);
-  };
-  const showSuggestions = e => {
-    if (expandedRef.current) {
-      return;
-    }
-    const listEl = getListEl();
-    if (listEl) {
-      requestListOpen(listEl, {
-        event: e,
-        anchor: ref.current
-      });
-      expand();
-    }
-  };
-  const hideSuggestions = e => {
-    if (!expandedRef.current) {
-      return;
-    }
-    const listEl = getListEl();
-    if (listEl) {
-      requestListClose(listEl, {
-        event: e
-      });
-      collapse();
-    }
-  };
-  useEffect(() => {
-    const inputEl = ref.current;
-    const listEl = getListEl();
-    if (!listEl) {
-      return undefined;
-    }
-    const onSelect = e => {
-      const {
-        item
-      } = e.detail;
-      const {
-        value
-      } = item;
-      inputEl.value = value;
-      inputEl.dispatchEvent(new Event("input", {
-        bubbles: true
-      }));
-      hideSuggestions(e);
-    };
-    listEl.addEventListener("navi_list_select", onSelect);
-    return () => {
-      listEl.removeEventListener("navi_list_select", onSelect);
-    };
-  }, [suggestions]);
-  return jsx(ListIdContext.Provider, {
-    value: suggestions,
-    children: jsx(InputTextualDispatcher, {
-      role: "combobox",
-      "aria-haspopup": "listbox",
-      "aria-expanded": expanded,
-      "aria-autocomplete": "list",
-      basePseudoState: {
-        ":-navi-expanded": expanded
-      },
-      onnavi_callout_open: e => {
-        hideSuggestions(e);
-      },
-      ...rest,
-      ref: ref,
-      suggestions: undefined,
-      onFocus: e => {
-        onFocus?.(e);
-        showSuggestions(e);
-      },
-      onBlur: e => {
-        onBlur?.(e);
-        hideSuggestions(e);
-      },
-      onInput: e => {
-        onInput?.(e);
-        showSuggestions(e);
-      },
-      onKeyDown: shortcutsViaOnKeyDown({
-        arrowdown: e => {
-          showSuggestions(e);
-        },
-        arrowup: e => {
-          showSuggestions(e);
-        },
-        escape: e => {
-          if (!expandedRef.current) {
-            return false;
-          }
-          hideSuggestions(e);
-          return true;
-        }
-      }, onKeyDown),
-      children: children || jsx(InputRightSlot, {
-        onClick: e => {
-          if (expanded) {
-            hideSuggestions(e);
-          } else {
-            showSuggestions(e);
-          }
-        },
-        children: jsx(Icon, {
-          color: "rgba(28, 43, 52, 0.5)",
-          children: jsx(ChevronDownSvg, {})
-        })
-      })
-    })
-  });
-};
-const InputTextualWithAction = props => {
-  const {
-    ref,
-    action,
-    actionDebounce,
-    actionAfterChange,
-    loading,
-    onCancel,
-    onActionPrevented,
-    onActionAborted,
-    onActionError,
-    onActionEnd,
-    cancelOnBlurInvalid,
-    cancelOnEscape,
-    actionErrorEffect,
-    ...rest
-  } = props;
-  const uiStateController = useContext(UIStateControllerContext);
-  const [boundAction] = useActionBoundToOneParam(action, uiStateController.uiStateSignal);
-  const {
-    loading: actionLoading
-  } = useActionStatus(boundAction);
-  const executeAction = useExecuteAction(ref, {
-    errorEffect: actionErrorEffect
-  });
-  const onRequestAction = useOnRequestAction();
-
-  // here updating the input won't call the associated action
-  // (user have to blur or press enter for this to happen)
-  // so we can keep the ui state on cancel/abort/error and let user decide
-  // to update ui state or retry via blur/enter as is
-
-  return jsx(InputTextualDispatcher, {
-    "data-action": boundAction.name || "anonymous",
-    "data-action-debounce": actionDebounce,
-    "data-action-after-change": actionAfterChange ? "" : undefined,
-    ...rest,
-    ref: ref,
-    action: undefined,
-    onnavi_cancel: e => {
-      const {
-        reason
-      } = e.detail;
-      if (reason.startsWith("blur_invalid")) {
-        if (!cancelOnBlurInvalid) {
-          return;
-        }
-        if (
-        // error prevent cancellation until the user closes it (or something closes it)
-        e.detail.failedConstraintInfo.level === "error" && e.detail.failedConstraintInfo.reportStatus !== "closed") {
-          return;
-        }
-      }
-      if (reason === "escape_key") {
-        if (!cancelOnEscape) {
-          return;
-        }
-      }
-      onCancel?.(e, reason);
-    },
-    onnavi_request_action: e => {
-      onRequestAction(boundAction, e);
-    },
-    onnavi_action_prevented: onActionPrevented,
-    onnavi_action_ready: executeAction,
-    onnavi_action_abort: onActionAborted,
-    onnavi_action_error: onActionError,
-    onnavi_action_end: onActionEnd,
-    loading: loading || actionLoading
-  });
-};
-
-// As explained in https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/datetime-local#setting_timezones
-// datetime-local does not support timezones
-const convertToLocalTimezone = dateTimeString => {
-  const date = new Date(dateTimeString);
-  // Check if the date is valid
-  if (isNaN(date.getTime())) {
-    return dateTimeString;
-  }
-
-  // Format to YYYY-MM-DDThh:mm:ss
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
-  const seconds = String(date.getSeconds()).padStart(2, "0");
-  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
-};
-/**
- * Converts a datetime string without timezone (local time) to UTC format with 'Z' notation
- *
- * @param {string} localDateTimeString - Local datetime string without timezone (e.g., "2023-07-15T14:30:00")
- * @returns {string} Datetime string in UTC with 'Z' notation (e.g., "2023-07-15T12:30:00Z")
- */
-const convertToUTCTimezone = localDateTimeString => {
-  if (!localDateTimeString) {
-    return localDateTimeString;
-  }
-  try {
-    // Create a Date object using the local time string
-    // The browser will interpret this as local timezone
-    const localDate = new Date(localDateTimeString);
-
-    // Check if the date is valid
-    if (isNaN(localDate.getTime())) {
-      return localDateTimeString;
-    }
-
-    // Convert to UTC ISO string
-    const utcString = localDate.toISOString();
-
-    // Return the UTC string (which includes the 'Z' notation)
-    return utcString;
-  } catch (error) {
-    console.error("Error converting local datetime to UTC:", error);
-    return localDateTimeString;
-  }
-};
-
-const Input = props => {
-  const {
-    type
-  } = props;
-  if (type === "radio") {
-    return jsx(InputRadio, {
-      ...props
-    });
-  }
-  if (type === "checkbox") {
-    return jsx(InputCheckbox, {
-      ...props
-    });
-  }
-  if (type === "range") {
-    return jsx(InputRange, {
-      ...props
-    });
-  }
-  return jsx(InputTextual, {
-    ...props
-  });
-};
-
-installImportMetaCssBuild(import.meta);/**
- * - We must keep the edited element in the DOM so that
- * the layout remains the same (especially important for table cells)
- * And the editable part is in absolute so that it takes the original content dimensions
- * AND for table cells it can actually take the table cell dimensions
- *
- * This means an editable thing MUST have a parent with position relative that wraps the content and the eventual editable input
- *
- */
-const css$n = /* css */`
-  .navi_editable_wrapper {
-    --inset-top: 0px;
-    --inset-right: 0px;
-    --inset-bottom: 0px;
-    --inset-left: 0px;
-
-    position: absolute;
-    top: var(--inset-top);
-    right: var(--inset-right);
-    bottom: var(--inset-bottom);
-    left: var(--inset-left);
-    opacity: 0;
-    pointer-events: none;
-
-    input {
-      font-weight: inherit;
-      text-align: inherit;
-    }
-
-    &[data-editing] {
-      opacity: 1;
-      pointer-events: auto;
-    }
-  }
-`;
-const useEditionController = () => {
-  const [editing, editingSetter] = useState(null);
-  const startEditing = useCallback(event => {
-    editingSetter(current => {
-      return current || {
-        event
-      };
-    });
-  }, []);
-  const stopEditing = useCallback(() => {
-    editingSetter(null);
-  }, []);
-  const prevEditingRef = useRef(editing);
-  const editionJustEnded = prevEditingRef.current && !editing;
-  prevEditingRef.current = editing;
-  return {
-    editing,
-    startEditing,
-    stopEditing,
-    editionJustEnded
-  };
-};
-const Editable = props => {
-  import.meta.css = [css$n, "@jsenv/navi/src/field/edition/editable.jsx"];
-  let {
-    children,
-    action,
-    editing,
-    name,
-    value,
-    valueSignal,
-    onEditEnd,
-    constraints,
-    type,
-    required,
-    readOnly,
-    min,
-    max,
-    step,
-    minLength,
-    maxLength,
-    pattern,
-    wrapperProps,
-    autoSelect = true,
-    width,
-    height,
-    ...rest
-  } = props;
-  const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
-  if (valueSignal) {
-    value = valueSignal.value;
-  }
-  const editingPreviousRef = useRef(editing);
-  const valueWhenEditStartRef = useRef(editing ? value : undefined);
-  if (editingPreviousRef.current !== editing) {
-    if (editing) {
-      valueWhenEditStartRef.current = value; // Always store the external value
-    }
-    editingPreviousRef.current = editing;
-  }
-
-  // Simulate typing the initial value when editing starts with a custom value
-  useLayoutEffect(() => {
-    if (!editing) {
-      return;
-    }
-    const editingEvent = editing.event;
-    if (editingEvent) {
-      const editingEventInitialValue = editingEvent.detail?.initialValue;
-      if (editingEventInitialValue !== undefined) {
-        const input = ref.current;
-        input.value = editingEventInitialValue;
-        input.dispatchEvent(new CustomEvent("input", {
-          bubbles: false
-        }));
-      }
-    }
-  }, [editing]);
-  const input = jsx(Input, {
-    ref: ref,
-    ...rest,
-    type: type,
-    name: name,
-    value: value,
-    valueSignal: valueSignal,
-    autoFocus: editing,
-    autoFocusVisible: true,
-    autoSelect: autoSelect,
-    cancelOnEscape: true,
-    cancelOnBlurInvalid: true,
-    constraints: constraints,
-    required: required,
-    readOnly: readOnly,
-    min: min,
-    max: max,
-    step: step,
-    minLength: minLength,
-    maxLength: maxLength,
-    pattern: pattern,
-    width: width,
-    height: height,
-    onCancel: e => {
-      if (valueSignal) {
-        valueSignal.value = valueWhenEditStartRef.current;
-      }
-      onEditEnd({
-        cancelled: true,
-        event: e
-      });
-    },
-    onBlur: e => {
-      let inputValue;
-      const valueWhenEditStart = valueWhenEditStartRef.current;
-      let inputValueWhenEditStart;
-      if (type === "number") {
-        inputValue = e.target.valueAsNumber;
-        inputValueWhenEditStart = valueWhenEditStart;
-      } else {
-        inputValue = e.target.value;
-        inputValueWhenEditStart = Number.isNaN(valueWhenEditStart) ? valueWhenEditStart : String(valueWhenEditStart);
-      }
-      if (inputValue === inputValueWhenEditStart) {
-        onEditEnd({
-          cancelled: true,
-          event: e
-        });
-        return;
-      }
-    },
-    action: action || (() => {}),
-    actionAfterChange: true,
-    onActionEnd: e => {
-      onEditEnd({
-        success: true,
-        event: e
-      });
-    }
-  });
-  const wrapperRef = useRef();
-  useLayoutEffect(() => {
-    const wrapper = wrapperRef.current;
-    if (!wrapper) {
-      return;
-    }
-    const parent = wrapper.parentElement;
-    const borderSizes = getBorderSizes(parent);
-    wrapper.style.setProperty("--inset-left", `-${borderSizes.left}px`);
-    wrapper.style.setProperty("--inset-top", `-${borderSizes.top}px`);
-    wrapper.style.setProperty("--inset-right", `-${borderSizes.right}px`);
-    wrapper.style.setProperty("--inset-bottom", `-${borderSizes.bottom}px`);
-  });
-  return jsxs(Fragment$1, {
-    children: [children || jsx("span", {
-      children: value
-    }), jsx(Box, {
-      className: "navi_editable_wrapper",
-      ref: wrapperRef,
-      ...wrapperProps,
-      // inert ensure input while not editing that:
-      // - input not focusable (via keyboard or anything)
-      // - cannot be interacted with pointer (click, hover, etc)
-      // - is ignored by screen readers
-      inert: editing ? undefined : "",
-      "data-editing": editing ? "" : undefined,
-      children: input
-    })]
-  });
-};
-
-const collectFormElementValues = (element) => {
-  let formElements;
-  if (element.tagName === "FORM") {
-    formElements = element.elements;
-  } else {
-    // fieldset or anything else
-    formElements = element.querySelectorAll(
-      "input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button[name]:not([disabled])",
-    );
-  }
-
-  const values = {};
-  const checkboxArrayNameSet = new Set();
-  for (const formElement of formElements) {
-    if (formElement.type === "checkbox" && formElement.name) {
-      const name = formElement.name;
-      const endsWithBrackets = name.endsWith("[]");
-      if (endsWithBrackets) {
-        checkboxArrayNameSet.add(name);
-        values[name] = [];
-        continue;
-      }
-      const closestDataCheckboxList = formElement.closest(
-        "[data-checkbox-list]",
-      );
-      if (closestDataCheckboxList) {
-        checkboxArrayNameSet.add(name);
-        values[name] = [];
-      }
-    }
-  }
-
-  for (const formElement of formElements) {
-    const name = formElement.name;
-    if (!name) {
-      continue;
-    }
-    const value = getFormElementValue(formElement);
-    if (value === undefined) {
-      continue; // Skip unchecked checkboxes/radios
-    }
-    if (formElement.type === "checkbox" && checkboxArrayNameSet.has(name)) {
-      values[name].push(value);
-    } else {
-      values[name] = value;
-    }
-  }
-  return values;
-};
-
-const getFormElementValue = (formElement) => {
-  const { type, tagName } = formElement;
-
-  if (tagName === "SELECT") {
-    if (formElement.multiple) {
-      return Array.from(formElement.selectedOptions, (option) =>
-        getValue(option),
-      );
-    }
-    return formElement.value;
-  }
-
-  if (type === "checkbox" || type === "radio") {
-    return formElement.checked ? getValue(formElement) : undefined;
-  }
-
-  if (type === "file") {
-    return formElement.files; // Return FileList for special handling
-  }
-
-  return getValue(formElement);
-};
-
-const getValue = (formElement) => {
-  const hasDataValueAttribute = formElement.hasAttribute("data-value");
-  if (hasDataValueAttribute) {
-    // happens for "datetime-local" inputs to keep the timezone
-    // consistent when sending to the server
-    return formElement.getAttribute("data-value");
-  }
-  return formElement.value;
-};
-
-/**
- *
- * Here we want the same behaviour as web standards:
- *
- * 1. When submitting the form URL does not change
- * 2. When form submission id done user is redirected (by default the current one)
- *    (we can configure this using target)
- *    So for example user might be reidrect to a page with the resource he just created
- *    I could create an example where we would put a link on the page to let user see what he created
- *    but by default user stays on the form allowing to create multiple resources at once
- *    And an other where he is redirected to the resource he created
- * 3. If form submission fails ideally we should display this somewhere on the UI
- *    right now it's just logged to the console I need to see how we can achieve this
- */
-
-const Form = props => {
-  const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
-  const uiStateController = useUIGroupStateController(props, "form", {
-    childComponentType: "*",
-    aggregateChildStates: childUIStateControllers => {
-      const formValues = {};
-      for (const childUIStateController of childUIStateControllers) {
-        const {
-          name,
-          uiState,
-          allowNameless
-        } = childUIStateController;
-        if (!name) {
-          if (!allowNameless) {
-            console.warn("A form child component is missing a name property, its state won't be included in the form state", childUIStateController);
-          }
-          continue;
-        }
-        formValues[name] = uiState;
-      }
-      return formValues;
-    }
-  });
-  const uiState = useUIState(uiStateController);
-  return jsx(UIStateControllerContext.Provider, {
-    value: uiStateController,
-    children: jsx(UIStateContext.Provider, {
-      value: uiState,
-      children: jsx(FormDispatcher, {
-        ...props,
-        ref: ref
-      })
-    })
-  });
-};
-const FormDispatcher = props => {
-  if (props.action) {
-    return jsx(FormWithAction, {
-      ...props
-    });
-  }
-  return jsx(FormUI, {
-    ...props
-  });
-};
-const FormUI = props => {
-  const {
-    ref,
-    readOnly,
-    loading,
-    children,
-    ...rest
-  } = props;
-  const debugAction = useDebugAction();
-  const uiStateController = useContext(UIStateControllerContext);
-
-  // instantiate validation via useConstraints hook:
-  // - receive "actionrequested" custom event ensure submit is prevented
-  // (and also execute action without validation if form.submit() is ever called)
-  const remainingProps = useConstraints(ref, rest);
-  const innerReadOnly = readOnly || loading;
-  const formContextValue = useMemo(() => {
-    return {
-      loading
-    };
-  }, [loading]);
-  return jsx(Box, {
-    ...remainingProps,
-    as: "form",
-    ref: ref,
-    onReset: e => {
-      // browser would empty all fields to their default values (likely empty/unchecked)
-      // we want to reset to the last known external state instead
-      e.preventDefault();
-      debugAction(e, `form reset -> resetUIState to ${JSON.stringify(uiStateController.state)}`);
-      uiStateController.resetUIState(e);
-    },
-    children: jsx(ParentUIStateControllerContext.Provider, {
-      value: uiStateController,
-      children: jsx(ReadOnlyContext.Provider, {
-        value: innerReadOnly,
-        children: jsx(LoadingContext.Provider, {
-          value: loading,
-          children: jsx(FormContext.Provider, {
-            value: formContextValue,
-            children: children
-          })
-        })
-      })
-    })
-  });
-};
-const FormWithAction = props => {
-  const {
-    ref,
-    action,
-    method,
-    actionErrorEffect = "show_validation_message",
-    // "show_validation_message" or "throw"
-    errorMapping,
-    onActionPrevented,
-    onActionAbort,
-    onActionError,
-    onActionEnd,
-    loading,
-    children,
-    ...rest
-  } = props;
-  const uiStateController = useContext(UIStateControllerContext);
-  const [actionBoundToUIState] = useActionBoundToOneParam(action, uiStateController.uiStateSignal);
-  const executeAction = useExecuteAction(ref, {
-    errorEffect: actionErrorEffect,
-    errorMapping
-  });
-  const onRequestAction = useOnRequestAction();
-  const {
-    actionPending,
-    actionRequester: formActionRequester
-  } = useRequestedActionStatus(ref);
-  const innerLoading = loading || actionPending;
-  return jsx(FormUI, {
-    "data-action": actionBoundToUIState.callSource,
-    "data-method": action.meta?.httpVerb || method || "GET",
-    ...rest,
-    ref: ref,
-    loading: innerLoading,
-    onnavi_request_action: e => {
-      onRequestAction(actionBoundToUIState, e);
-    },
-    onnavi_action_prevented: onActionPrevented,
-    onnavi_action_ready: e => {
-      const form = ref.current;
-      // this is not really mandatory, normally all navi fields already report
-      // it's only in case we have fields that are not managed by navi
-      const formElementValues = collectFormElementValues(form);
-      uiStateController.setUIState(formElementValues, e);
-      executeAction(e);
-    },
-    onnavi_action_abort: onActionAbort,
-    onnavi_action_error: onActionError,
-    onnavi_action_end: e => {
-      uiStateController.actionEnd(e);
-      onActionEnd?.(e);
-    },
-    children: jsx(FormActionContext.Provider, {
-      value: actionBoundToUIState,
-      children: jsx(LoadingElementContext.Provider, {
-        value: formActionRequester,
-        children: children
-      })
-    })
-  });
-};
-
-// const dispatchCustomEventOnFormAndFormElements = (type, options) => {
-//   const form = innerRef.current;
-//   const customEvent = new CustomEvent(type, options);
-//   // https://developer.mozilla.org/en-US/docs/Web/API/HTMLFormElement/elements
-//   for (const element of form.elements) {
-//     element.dispatchEvent(customEvent);
-//   }
-//   form.dispatchEvent(customEvent);
-// };
-
-installImportMetaCssBuild(import.meta);const css$m = /* css */`
-  .navi_group {
-    --border-width: 1px;
-
-    > *:hover,
-    > *[data-hover] {
-      position: relative;
-      z-index: 1;
-    }
-    > *:focus-visible,
-    > *[data-focus-visible] {
-      position: relative;
-      z-index: 1;
-    }
-
-    /* Horizontal (default): Cumulative margin for border overlap */
-    &:not([data-vertical]) {
-      > *:not(:first-child) {
-        margin-left: calc(var(--border-width) * -1);
-      }
-      > *:first-child:not(:only-child) {
-        border-top-right-radius: 0 !important;
-        border-bottom-right-radius: 0 !important;
-
-        .navi_button_content,
-        .navi_native_input {
-          border-top-right-radius: 0 !important;
-          border-bottom-right-radius: 0 !important;
-        }
-      }
-
-      > *:last-child:not(:only-child) {
-        border-top-left-radius: 0 !important;
-        border-bottom-left-radius: 0 !important;
-
-        .navi_button_content,
-        .navi_native_input {
-          border-top-left-radius: 0 !important;
-          border-bottom-left-radius: 0 !important;
-        }
-      }
-
-      > *:not(:first-child):not(:last-child) {
-        border-radius: 0 !important;
-
-        .navi_button_content,
-        .navi_native_input {
-          border-radius: 0 !important;
-        }
-      }
-    }
-
-    /* Vertical: Cumulative margin for border overlap */
-    &[data-vertical] {
-      > *:not(:first-child) {
-        margin-top: calc(var(--border-width) * -1);
-      }
-      > *:first-child:not(:only-child) {
-        border-bottom-right-radius: 0 !important;
-        border-bottom-left-radius: 0 !important;
-
-        .navi_button_content,
-        .navi_native_input {
-          border-bottom-right-radius: 0 !important;
-          border-bottom-left-radius: 0 !important;
-        }
-      }
-
-      > *:last-child:not(:only-child) {
-        border-top-left-radius: 0 !important;
-        border-top-right-radius: 0 !important;
-
-        .navi_button_content,
-        .navi_native_input {
-          border-top-left-radius: 0 !important;
-          border-top-right-radius: 0 !important;
-        }
-      }
-
-      > *:not(:first-child):not(:last-child) {
-        border-radius: 0 !important;
-
-        .navi_button_content,
-        .navi_native_input {
-          border-radius: 0 !important;
-        }
-      }
-    }
-  }
-`;
-const Group = ({
-  children,
-  borderWidth = 1,
-  row,
-  vertical = row,
-  ...props
-}) => {
-  import.meta.css = [css$m, "@jsenv/navi/src/field/group.jsx"];
-  if (typeof borderWidth === "string") {
-    borderWidth = parseFloat(borderWidth);
-  }
-  const borderWidthCssValue = typeof borderWidth === "number" ? `${borderWidth}px` : borderWidth;
-  return jsx(Box, {
-    baseClassName: "navi_group",
-    "data-vertical": vertical ? "" : undefined,
-    row: row,
-    ...props,
-    style: {
-      "--border-width": borderWidthCssValue,
-      ...props.style
-    },
-    children: children
-  });
-};
-
-/**
- * Pure vanilla JS time formatting utilities.
- * All functions accept an optional `{ now }` parameter for testability.
- */
-
-
-const DEFAULT_LANG = "en";
-
-/**
- * Formats a date as a human-readable day, appending "(aujourd'hui)" or
- * "(demain)" when the date matches today or tomorrow.
- *
- * @example
- * formatDay(new Date(), "fr") // "lundi 11 mai (aujourd'hui)"
- * formatDay(tomorrow, "fr")   // "mardi 12 mai (demain)"
- * formatDay(nextWeek, "fr")   // "lundi 18 mai"
- */
-const formatDay = (date, locale, { now = new Date() } = {}) => {
-  const base = new Intl.DateTimeFormat(locale, {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-  }).format(date);
-
-  const dateKey = toLocalDayKey(date);
-  const todayKey = toLocalDayKey(now);
-  const tomorrowDate = new Date(now);
-  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
-  const tomorrowKey = toLocalDayKey(tomorrowDate);
-
-  if (dateKey === todayKey) {
-    const label = new Intl.RelativeTimeFormat(locale, {
-      numeric: "auto",
-    }).format(0, "day");
-    return `${base} (${label})`;
-  }
-  if (dateKey === tomorrowKey) {
-    const label = new Intl.RelativeTimeFormat(locale, {
-      numeric: "auto",
-    }).format(1, "day");
-    return `${base} (${label})`;
-  }
-  return base;
-};
-
-/**
- * Formats a date as "mai 2026".
- */
-const formatMonth = (date, locale) => {
-  return new Intl.DateTimeFormat(locale, {
-    month: "long",
-    year: "numeric",
-  }).format(date);
-};
-
-/**
- * Formats a date as "lun. 11 mai, 14:30".
- */
-const formatDatetime = (date, locale) => {
-  return new Intl.DateTimeFormat(locale, {
-    weekday: "short",
-    day: "numeric",
-    month: "long",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
-};
-
-/**
- * Formats a date as "14:30".
- */
-const formatTime = (date, locale) => {
-  return new Intl.DateTimeFormat(locale, {
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
-};
-
-/**
- * Formats a date relative to now: "il y a 3 jours", "dans 2 heures", etc.
- */
-const formatTimeAgo = (
-  date,
-  locale,
-  { now = new Date(), prefix } = {},
-) => {
-  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
-  const nowMs = now instanceof Date ? now.getTime() : now;
-  const diff = date.getTime() - nowMs;
-  const absDiff = Math.abs(diff);
-
-  let value;
-  let unit;
-  if (absDiff < MINUTE) {
-    value = Math.round(diff / 1000);
-    unit = "second";
-  } else if (absDiff < HOUR) {
-    value = Math.round(diff / MINUTE);
-    unit = "minute";
-  } else if (absDiff < DAY) {
-    value = Math.round(diff / HOUR);
-    unit = "hour";
-  } else if (absDiff < 7 * DAY) {
-    value = Math.round(diff / DAY);
-    unit = "day";
-  } else if (absDiff < 30 * DAY) {
-    value = Math.round(diff / (7 * DAY));
-    unit = "week";
-  } else if (absDiff < YEAR) {
-    value = Math.round(diff / (30 * DAY));
-    unit = "month";
-  } else {
-    value = Math.round(diff / YEAR);
-    unit = "year";
-  }
-
-  if (prefix === undefined || prefix === null || value >= 0) {
-    return rtf.format(value, unit);
-  }
-  // Drop the leading past-tense literal ("il y a ", "ago ") and prepend the custom prefix.
-  // Slicing from the "integer" part keeps: integer + unit, drops the prefix.
-  const parts = rtf.formatToParts(value, unit);
-  const integerIndex = parts.findIndex((p) => p.type === "integer");
-  const withoutPrefix = parts
-    .slice(integerIndex)
-    .map((p) => p.value)
-    .join("")
-    .trim();
-  if (prefix === "") {
-    return withoutPrefix;
-  }
-  return `${prefix} ${withoutPrefix}`;
-};
-
-/**
- * Formats a timed event with an optional duration window.
- *
- * States:
- * - Future  (now < start)              → "dans 1 heure 30", "demain à 15h", …
- * - Ongoing (start ≤ now < start+dur)  → "En cours"
- * - Past    (now ≥ start+dur)          → relative ("il y a 2 heures", …)
- *
- * @param {Date|number} start      Start of the event (Date or ms timestamp)
- * @param {number}      durationMs Duration in milliseconds (0 = instant event)
- * @param {string}      locale     BCP 47 locale tag
- * @param {{ now?: Date|number }} options
- *
- * @example
- * // 90 min from now
- * formatDuration(Date.now() + 90 * 60_000, 0, "fr") // "dans 1 heure 30"
- * // currently happening (30 min window)
- * formatDuration(Date.now() - 5 * 60_000, 30 * 60_000, "fr") // "En cours"
- * // ended 2 hours ago
- * formatDuration(Date.now() - 3 * 3_600_000, 3_600_000, "fr") // "il y a 2 heures"
- */
-const formatTimeRelative = (
-  start,
-  durationMs = 0,
-  locale,
-  { now = new Date(), prefix } = {},
-) => {
-  const startMs = start instanceof Date ? start.getTime() : Number(start);
-  const endMs = startMs + durationMs;
-  const nowMs = now instanceof Date ? now.getTime() : Number(now);
-
-  if (nowMs >= startMs && nowMs < endMs) {
-    return getOngoingText(locale);
-  }
-  if (nowMs >= endMs) {
-    const refDate = endMs > startMs ? new Date(endMs) : new Date(startMs);
-    return formatTimeAgo(refDate, locale, { now, prefix });
-  }
-
-  const diff = startMs - nowMs;
-  return formatFuture(new Date(startMs), diff, locale, { now });
-};
-
-const formatFuture = (date, diff, locale, { now }) => {
-  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
-  const nowDate = now instanceof Date ? now : new Date(now);
-
-  // < 1 min
-  if (diff < MINUTE) {
-    return getLessThanMinuteText(locale);
-  }
-
-  // < 1 hour → "dans X minutes"
-  if (diff < HOUR) {
-    return rtf.format(Math.ceil(diff / MINUTE), "minute");
-  }
-
-  // 1h to 2h → "dans 1 heure 30"
-  if (diff < 2 * HOUR) {
-    const hours = Math.floor(diff / HOUR);
-    const minutes = Math.round((diff % HOUR) / MINUTE);
-    if (minutes === 0) {
-      return rtf.format(hours, "hour");
-    }
-    return formatHoursAndMinutes(hours, minutes, locale);
-  }
-
-  // < 6h → "dans X heures" (precise enough, skip tomorrow label)
-  if (diff < 6 * HOUR) {
-    return rtf.format(Math.round(diff / HOUR), "hour");
-  }
-
-  // Tomorrow (calendar day) and within ~30h → "demain à 15h"
-  const tomorrowDate = new Date(nowDate);
-  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
-  if (diff < 30 * HOUR && toLocalDayKey(date) === toLocalDayKey(tomorrowDate)) {
-    return formatTomorrowAt(date, locale);
-  }
-
-  // < 24h → "dans X heures"
-  if (diff < DAY) {
-    return rtf.format(Math.round(diff / HOUR), "hour");
-  }
-
-  // < 7 days → "dans X jours"
-  if (diff < 7 * DAY) {
-    return rtf.format(Math.round(diff / DAY), "day");
-  }
-
-  // < 30 days → "dans X semaines"
-  if (diff < 30 * DAY) {
-    return rtf.format(Math.round(diff / (7 * DAY)), "week");
-  }
-
-  // months (Intl handles "le mois prochain" when value = 1)
-  if (diff < YEAR) {
-    return rtf.format(Math.round(diff / (30 * DAY)), "month");
-  }
-
-  return rtf.format(Math.round(diff / YEAR), "year");
-};
-
-const formatTomorrowAt = (date, locale) => {
-  const dayLabel = new Intl.RelativeTimeFormat(locale, {
-    numeric: "auto",
-  }).format(1, "day");
-  const hasMinutes = date.getMinutes() !== 0;
-  const timeLabel = new Intl.DateTimeFormat(locale, {
-    hour: "numeric",
-    ...(hasMinutes ? { minute: "2-digit" } : {}),
-  }).format(date);
-  const atTemplate = naviI18n("time.tomorrow_at", undefined, {
-    lang: locale,
-  });
-  // atTemplate is e.g. "[day] à [time]" — replace placeholders
-  if (atTemplate !== "time.tomorrow_at") {
-    return atTemplate.replace("[day]", dayLabel).replace("[time]", timeLabel);
-  }
-  // fallback: concatenate with a space
-  return `${dayLabel} ${timeLabel}`;
-};
-
-// "dans 1 heure 30" — colloquial format, built per language.
-// The plural suffix is applied inline because it depends on the count;
-// a plain string template cannot express this, so we keep it in JS.
-const formatHoursAndMinutes = (hours, minutes, locale) => {
-  const lang = (locale || "").split("-")[0];
-  const templates = {
-    fr: (h, m) => `dans ${h} heure${h > 1 ? "s" : ""} ${m}`,
-    en: (h, m) => `in ${h} hour${h > 1 ? "s" : ""} ${m}`,
-    de: (h, m) => `in ${h} Stunde${h > 1 ? "n" : ""} ${m}`,
-    es: (h, m) => `en ${h} hora${h > 1 ? "s" : ""} ${m}`,
-    it: (h, m) => `tra ${h} ora${h > 1 ? "e" : ""} ${m}`,
-    pt: (h, m) => `em ${h} hora${h > 1 ? "s" : ""} ${m}`,
-    nl: (h, m) => `over ${h} uur ${m}`,
-  };
-  const template = templates[lang] || templates[DEFAULT_LANG];
-  return template(hours, minutes);
-};
-
-const getLessThanMinuteText = (locale) => {
-  return naviI18n("time.less_than_minute", undefined, { lang: locale });
-};
-
-const getOngoingText = (locale) => {
-  return naviI18n("time.ongoing", undefined, { lang: locale });
-};
-
-const MINUTE = 60_000;
-const HOUR = 60 * MINUTE;
-const DAY = 24 * HOUR;
-const YEAR = 365 * DAY;
-
-// Compares calendar days in local time (ignores the clock time)
-const toLocalDayKey = (date) => {
-  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
-};
-
-const Time = ({
-  children,
-  type = "day",
-  eventDuration = 0,
-  prefix,
-  locale,
-  ...props
-}) => {
-  const date = toDate(children, type);
-  const lang = locale || langSignal.value;
-  let text;
-  let dateTimeAttr;
-  if (type === "relative") {
-    text = date ? formatTimeRelative(date, eventDuration, lang, {
-      prefix
-    }) : children === undefined ? "–" : String(children);
-    dateTimeAttr = date ? date.toISOString() : undefined;
-  } else {
-    text = date ? formatDate(date, type, lang, {
-      prefix
-    }) : children === undefined ? "–" : String(children);
-    dateTimeAttr = date ? toDateTimeAttr(date, type) : undefined;
-  }
-  return jsx(Text, {
-    as: "time",
-    dateTime: dateTimeAttr,
-    ...props,
-    children: text
-  });
-};
-const toDate = (value, type) => {
-  if (value instanceof Date) {
-    return value;
-  }
-  if (typeof value === "number") {
-    return new Date(value);
-  }
-  if (typeof value === "string") {
-    // "HH:MM" or "HH:MM:SS" — only meaningful for type="time"
-    if (type === "time" && /^\d{2}:\d{2}(?::\d{2})?$/.test(value)) {
-      const d = new Date(`1970-01-01T${value}`);
-      return isNaN(d.getTime()) ? null : d;
-    }
-    // "YYYY-MM" — only meaningful for type="month", avoid UTC shift
-    if (type === "month" && /^\d{4}-\d{2}$/.test(value)) {
-      const d = new Date(`${value}-01T00:00:00`);
-      return isNaN(d.getTime()) ? null : d;
-    }
-    // "YYYY-MM-DD" — use local midnight to avoid UTC shift
-    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-      const d = new Date(`${value}T00:00:00`);
-      return isNaN(d.getTime()) ? null : d;
-    }
-    // ISO / other parseable strings
-    const d = new Date(value);
-    return isNaN(d.getTime()) ? null : d;
-  }
-  return null;
-};
-
-// Produces a machine-readable value for the HTML `datetime` attribute.
-// See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
-const toDateTimeAttr = (date, type) => {
-  if (type === "time") {
-    const hh = String(date.getHours()).padStart(2, "0");
-    const mm = String(date.getMinutes()).padStart(2, "0");
-    return `${hh}:${mm}`;
-  }
-  if (type === "month") {
-    const yyyy = date.getFullYear();
-    const mm = String(date.getMonth() + 1).padStart(2, "0");
-    return `${yyyy}-${mm}`;
-  }
-  if (type === "datetime" || type === "ago" || type === "relative") {
-    return date.toISOString();
-  }
-  // day
-  const yyyy = date.getFullYear();
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  const dd = String(date.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
-};
-const formatDate = (date, type, locale, {
-  prefix
-} = {}) => {
-  if (type === "day") {
-    return formatDay(date, locale);
-  }
-  if (type === "month") {
-    return formatMonth(date, locale);
-  }
-  if (type === "datetime") {
-    return formatDatetime(date, locale);
-  }
-  if (type === "time") {
-    return formatTime(date, locale);
-  }
-  if (type === "ago") {
-    return formatTimeAgo(date, locale, {
-      prefix
-    });
-  }
-  return String(date);
-};
-
-const windowWidthSignal = signal(window.innerWidth);
-
-window.addEventListener("resize", () => {
-  windowWidthSignal.value = window.innerWidth;
-});
-
-const useCleanup = () => {
-  const cleanupMethodsRef = useRef(null);
-  let cleanupMethods = cleanupMethodsRef.current;
-  if (!cleanupMethods) {
-    const [publish, subscribe, clear] = createPubSub();
-    const cleanup = () => {
-      publish();
-      clear();
-    };
-    const registerCleanup = (cb) => {
-      subscribe(cb);
-    };
-    cleanupMethodsRef.current = cleanupMethods = [registerCleanup, cleanup];
-  }
-  useLayoutEffect(() => {
-    return () => {
-      const [, cleanup] = cleanupMethods;
-      cleanup();
-    };
-  }, []);
-  return cleanupMethods;
-};
-
-installImportMetaCssBuild(import.meta);const css$l = /* css */`
-  .navi_dialog {
-    &[open] {
-      display: flex;
-      flex-direction: column;
-    }
-
-    &::backdrop {
-      background: rgba(0, 0, 0, 0.4);
-    }
-  }
-`;
-const Dialog = props => {
-  import.meta.css = [css$l, "@jsenv/navi/src/popup/dialog.jsx"];
-  const {
-    children,
-    scrollTrap,
-    pointerTrap,
-    ...rest
-  } = props;
-  const defaultRef = useRef();
-  const ref = rest.ref || defaultRef;
-  const debugPopup = useDebugPopup();
-  const debugFocus = useDebugFocus();
-  const openedRef = useRef(false);
-  const [addCleanup, cleanup] = useCleanup();
-  const open = e => {
-    debugPopup(`"${e.type}" on ${getElementSignature(e.target)} -> openDialog`);
-    const dialogEl = ref.current;
-    dialogEl.showModal();
-    const firstFocusable = findFocusable(dialogEl);
-    if (firstFocusable) {
-      debugFocus(e, `Moving focus to first focusable element in dialog: ${getElementSignature(firstFocusable)}.focus({ preventScroll: true })`);
-      firstFocusable.focus({
-        preventScroll: true
-      });
-    }
-    if (scrollTrap) {
-      addCleanup(trapScrollInside(dialogEl));
-    }
-    openedRef.current = true;
-    dispatchPublicCustomEvent(dialogEl, "navi_dialog_open", {
-      event: e
-    });
-  };
-  const close = e => {
-    debugPopup(`"${e.type}" on ${getElementSignature(e.target)} -> closeDialog`);
-    const dialogEl = ref.current;
-    dialogEl.close();
-    cleanup();
-    openedRef.current = false;
-    dispatchPublicCustomEvent(dialogEl, "navi_dialog_close", {
-      event: e
-    });
-  };
-  const onRequestOpen = e => {
-    const dialogEl = ref.current;
-    if (!dialogEl) {
-      return;
-    }
-    if (openedRef.current) {
-      return;
-    }
-    open(e);
-  };
-  const onRequestClose = e => {
-    const dialogEl = ref.current;
-    if (!dialogEl) {
-      return;
-    }
-    if (!openedRef.current) {
-      return;
-    }
-    close(e);
-  };
-  return jsx(Box, {
-    ...rest,
-    as: "dialog",
-    ref: ref,
-    baseClassName: "navi_dialog",
-    onMouseDown: e => {
-      rest.onMouseDown?.(e);
-      // The <dialog> element covers the full viewport; clicking the backdrop
-      // hits the dialog itself (not any child). Close when that happens.
-      if (!pointerTrap && e.button === 0 && e.target === ref.current) {
-        onRequestClose(e);
-      }
-    },
-    onCancel: e => {
-      // The browser fires "cancel" (then closes the dialog) when the user presses Escape.
-      // Prevent the native close so we control the close flow and dispatch navi_dialog_close.
-      e.preventDefault();
-      onRequestClose(e);
-    },
-    onnavi_dialog_request_open: e => {
-      const {
-        event = e
-      } = e.detail;
-      onRequestOpen(event);
-    },
-    onnavi_dialog_request_close: e => {
-      const {
-        event = e
-      } = e.detail;
-      onRequestClose(event);
-    },
-    children: children
-  });
-};
-const requestDialogOpen = (popoverElement, {
-  event
-}) => {
-  return dispatchCustomEvent(popoverElement, "navi_dialog_request_open", {
-    event
-  });
-};
-const requestDialogClose = (popoverElement, {
-  event
-} = {}) => {
-  return dispatchCustomEvent(popoverElement, "navi_dialog_request_close", {
-    event
-  });
-};
-
-installImportMetaCssBuild(import.meta);const css$k = /* css */`
-  .navi_popover_backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: 1000;
-    background: transparent;
-  }
-
-  .navi_popover {
-    &[data-anchor-hidden] {
-      opacity: 0;
-      pointer-events: none;
-    }
-  }
-`;
-const Popover = props => {
-  import.meta.css = [css$k, "@jsenv/navi/src/popup/popover.jsx"];
-  const {
-    scrollTrap,
-    pointerTrap,
-    focusTrap,
-    children,
-    positionX,
-    positionY,
-    positionXFixed,
-    positionYFixed,
-    spacing = 0,
-    viewportSpacing = 0,
-    ...rest
-  } = props;
-  const defaultRef = useRef();
-  const ref = rest.ref || defaultRef;
-  const defaultId = useId();
-  const id = rest.id || defaultId;
-  const debugPopup = useDebugPopup();
-  const debugFocus = useDebugFocus();
-  const [opened, setOpened] = useState(false);
-  const openedRef = useRef(opened);
-  openedRef.current = opened;
-  const [addCleanup, cleanup] = useCleanup();
-  const open = (e, {
-    anchor
-  }) => {
-    debugPopup(`openPopover("${e.type}")`);
-    const popoverEl = ref.current;
-    popoverEl.showPopover();
-    const firstFocusable = findFocusable(popoverEl);
-    if (firstFocusable) {
-      debugFocus(e, `Moving focus to first focusable element in popover: ${getElementSignature(firstFocusable)}.focus({ preventScroll: true })`);
-      firstFocusable.focus({
-        preventScroll: true
-      });
-    }
-    const effectiveAnchor = anchor || document.documentElement;
-    const positionPopover = positionEvent => {
-      const {
-        width,
-        height
-      } = effectiveAnchor.getBoundingClientRect();
-      const {
-        left: borderLeft,
-        right: borderRight,
-        top: borderTop,
-        bottom: borderBottom
-      } = getBorderSizes(effectiveAnchor);
-      popoverEl.style.setProperty("--anchor-width", `${snapToPixel(width)}px`);
-      popoverEl.style.setProperty("--anchor-height", `${snapToPixel(height)}px`);
-      popoverEl.style.setProperty("--anchor-inner-width", `${snapToPixel(width - borderLeft - borderRight)}px`);
-      popoverEl.style.setProperty("--anchor-inner-height", `${snapToPixel(height - borderTop - borderBottom)}px`);
-      const minLeft = 1;
-      const effectivePositionX = anchor ? positionX : "center";
-      // Remove max-height constraint so pickPositionRelativeTo measures the natural
-      // (unconstrained) height of the popover. This ensures the 60% flip threshold
-      // compares against the real content height, not the already-truncated one.
-      popoverEl.style.removeProperty("--space-available");
-      const {
-        left,
-        top,
-        positionY: finalPositionY,
-        spaceAbove,
-        spaceBelow
-      } = pickPositionRelativeTo(popoverEl, effectiveAnchor, {
-        positionX: effectivePositionX,
-        positionY,
-        positionXFixed,
-        positionYFixed,
-        spacing: resolveSpacingSize(spacing),
-        viewportSpacing: resolveSpacingSize(viewportSpacing),
-        minLeft
-      });
-      const spaceAvailable = finalPositionY === "above" || finalPositionY === "above-overlap" ? spaceAbove : spaceBelow;
-      popoverEl.style.setProperty("--space-available", `${spaceAvailable}px`);
-      debugPopup(`positionPopover("${positionEvent.type}") -> left: ${left}, top: ${top}`);
-      popoverEl.style.top = `${top}px`;
-      popoverEl.style.left = `${Math.max(left, minLeft)}px`;
-    };
-    if (scrollTrap) {
-      addCleanup(trapScrollInside(popoverEl));
-    }
-    if (focusTrap) {
-      addCleanup(trapFocusInside(popoverEl, {
-        debug: debugFocus
-      }));
-    }
-    const rectEffect = visibleRectEffect(effectiveAnchor, ({
-      visibilityRatio
-    }, {
-      event
-    }) => {
-      if (visibilityRatio <= 0.2) {
-        popoverEl.setAttribute("data-anchor-hidden", "");
-        return;
-      }
-      popoverEl.removeAttribute("data-anchor-hidden");
-      positionPopover(event);
-    });
-    addCleanup(() => {
-      rectEffect.disconnect();
-    });
-    openedRef.current = true;
-    setOpened(true);
-    dispatchPublicCustomEvent(popoverEl, "navi_popover_open", {
-      event: e
-    });
-  };
-  const close = e => {
-    debugPopup(`closePopover("${e.type}")`);
-    const popoverEl = ref.current;
-    popoverEl.hidePopover();
-    cleanup();
-    openedRef.current = false;
-    setOpened(false);
-    dispatchPublicCustomEvent(popoverEl, "navi_popover_close", {
-      event: e
-    });
-  };
-  const onRequestOpen = (e, {
-    anchor
-  }) => {
-    const popoverEl = ref.current;
-    if (!popoverEl) {
-      return;
-    }
-    if (openedRef.current) {
-      return;
-    }
-    open(e, {
-      anchor
-    });
-  };
-  const onRequestClose = e => {
-    const popoverEl = ref.current;
-    if (!popoverEl) {
-      return;
-    }
-    if (!openedRef.current) {
-      return;
-    }
-    close(e);
-  };
-  return jsxs(Fragment$1, {
-    children: [opened && createPortal(jsx("div", {
-      className: "navi_popover_backdrop",
-      "aria-hidden": "true",
-      onMouseDown: e => {
-        if (e.button !== 0) {
-          return;
-        }
-        if (pointerTrap) {
-          e.preventDefault();
-          return;
-        }
-        onRequestClose(e);
-      }
-    }), document.body), jsx(Box, {
-      id: id,
-      popover: "manual",
-      ...rest,
-      ref: ref,
-      baseClassName: "navi_popover",
-      pseudoClasses: PopoverPseudoClasses,
-      onnavi_popover_request_open: e => {
-        const {
-          event = e,
-          anchor
-        } = e.detail;
-        onRequestOpen(event, {
-          anchor
-        });
-      },
-      onnavi_popover_request_close: e => {
-        const {
-          event = e
-        } = e.detail;
-        onRequestClose(event);
-      },
-      children: children
-    })]
-  });
-};
-const PopoverPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":focus-within", ":read-only", ":disabled"];
-const requestPopoverOpen = (popoverElement, {
-  event,
-  anchor
-}) => {
-  return dispatchCustomEvent(popoverElement, "navi_popover_request_open", {
-    event,
-    anchor
-  });
-};
-const requestPopoverClose = (popoverElement, {
-  event
-} = {}) => {
-  return dispatchCustomEvent(popoverElement, "navi_popover_request_close", {
-    event
-  });
-};
-
-installImportMetaCssBuild(import.meta);const css$j = /* css */`
-  @layer navi {
-    .navi_select {
-      --select-border-radius: 2px;
-      --select-outline-width: 1px;
-      --select-border-width: 1px;
-      --select-font-size: 14px;
-      --select-padding-x-default: 8px;
-      --select-padding-y-default: 5px;
-      --select-outline-color: var(--navi-focus-outline-color);
-      --select-border-color: light-dark(#767676, #8e8e93);
-      --select-background-color: white;
-      --select-color: currentColor;
-      --select-placeholder-color: color-mix(
-        in srgb,
-        currentColor 60%,
-        transparent
-      );
-      --select-border-color-hover: color-mix(
-        in srgb,
-        var(--select-border-color) 70%,
-        black
-      );
-      --select-background-color-hover: color-mix(
-        in srgb,
-        var(--select-background-color) 95%,
-        black
-      );
-    }
-  }
-
-  .navi_select {
-    /* outline will draw the border when visible */
-    --x-select-outline-width: calc(
-      var(--select-outline-width) + var(--select-border-width)
-    );
-    --x-select-outline-offset: calc(-1 * var(--select-border-width));
-    --x-select-background-color: var(--select-background-color);
-    --x-select-border-color: var(--select-border-color);
-    --x-select-padding-top: var(
-      --select-padding-top,
-      var(--select-padding-y, var(--select-padding-y-default))
-    );
-    --x-select-padding-right: var(
-      --select-padding-right,
-      var(--select-padding-x, var(--select-padding-x-default))
-    );
-    --x-select-padding-left: var(
-      --select-padding-left,
-      var(--select-padding-x, var(--select-padding-x-default))
-    );
-    --x-select-padding-bottom: var(
-      --select-padding-bottom,
-      var(--select-padding-y, var(--select-padding-y-default))
-    );
-
-    position: relative;
-    box-sizing: border-box;
-    padding-top: var(--x-select-padding-top);
-    padding-right: var(--x-select-padding-right);
-    padding-bottom: var(--x-select-padding-bottom);
-    padding-left: var(--x-select-padding-left);
-    color: var(--select-color);
-    font-size: var(--select-font-size);
-    text-align: inherit; /* override browser defaults on button which is center */
-    white-space: nowrap; /* Prevent icon from going next line */
-    background-color: var(--x-select-background-color);
-    border-width: var(--select-border-width);
-    border-style: solid;
-    border-color: var(--x-select-border-color);
-    border-radius: var(--select-border-radius);
-    outline-width: var(--x-select-outline-width);
-    outline-color: var(--select-outline-color);
-    outline-offset: var(--x-select-outline-offset);
-    user-select: none;
-
-    &[data-hover] {
-      --x-select-background-color: var(--select-background-color-hover);
-      --x-select-border-color: var(--select-border-color-hover);
-    }
-
-    &[data-focus-visible] {
-      --x-select-border-color: transparent;
       outline-style: solid;
     }
+    &[data-callout] {
+      --x-list-border-color: var(--callout-color);
+    }
+  }
+
+  .navi_list_item {
+    --x-list-item-border-color: var(--x-list-item-background-color);
+
+    position: relative;
+    border-width: var(--list-item-outline-width);
+    border-style: solid;
+    border-color: var(--x-list-item-border-color);
+
+    &[data-interactive] {
+      cursor: pointer;
+      user-select: none;
+    }
+    &[data-hover] {
+      --x-list-item-color: var(--list-item-color-mouse-pointed);
+      --x-list-item-background-color: var(
+        --list-item-background-color-mouse-pointed
+      );
+    }
+    &[data-pointed] {
+      --x-list-item-color: var(--list-item-color-pointed);
+      --x-list-item-background-color: var(--list-item-background-color-pointed);
+    }
+    /* No input proxy: focused,selected */
+    &:not(:has(input[navi-control-proxy-for])) {
+      &:has([data-focus-visible]) {
+        --x-list-item-color: var(--list-item-color-keyboard-pointed);
+        --x-list-item-background-color: var(
+          --list-item-background-color-keyboard-pointed
+        );
+        --x-list-item-border-color: var(--list-item-outline-color);
+
+        /* Selected must win over keyboard-pointed */
+        &[data-selected] {
+          --x-list-item-background-color: var(
+            --list-item-background-color-selected,
+            var(--list-item-background-color-keyboard-pointed)
+          );
+        }
+      }
+
+      &[data-selected] {
+        --x-list-item-color: var(--list-item-color-selected);
+        --x-list-item-background-color: var(
+          --list-item-background-color-selected
+        );
+        &[data-hover] {
+          --x-list-item-background-color: var(
+            --list-item-background-color-selected,
+            var(--list-item-background-color-mouse-pointed)
+          ) !important;
+        }
+      }
+    }
 
     &[data-disabled] {
-      opacity: 0.5;
+      --x-list-item-color: var(--list-item-color-disabled);
+      --x-list-item-background-color: var(
+        --list-item-background-color-disabled
+      );
       cursor: default;
+      pointer-events: none;
     }
-    &[data-callout] {
-      --x-select-border-color: var(--callout-color);
-    }
-
-    .navi_select_trigger_text {
-      display: inline-flex;
-      min-width: 0;
-      flex: 1;
-      flex-direction: column;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      overflow: hidden;
-    }
-
-    .navi_select_trigger_placeholder,
-    .navi_select_trigger_value {
-    }
-    .navi_select_trigger_placeholder {
-      color: var(--select-placeholder-color);
-
-      &[hidden] {
-        /* We keep placeholder in the dom in case it dictates the select width, this way select wont shrink once a value is selected */
-        display: inline-block !important;
-        height: 0;
-        padding-block: 0;
-        visibility: hidden;
-      }
-    }
-    .navi_select_trigger_icon {
-      flex-shrink: 0;
-      opacity: 0.6;
-    }
-
-    /* popover */
-    &[aria-haspopup="listbox"] {
-      .navi_list_container {
-        width: 100%;
-        /* Handled by the popover */
-        border: none;
-        border-radius: 0;
-        outline: none;
-
-        .navi_list {
-          width: 100%;
-        }
-      }
-
-      .navi_select_popover {
-        position: absolute;
-        inset: unset;
-        min-width: var(--anchor-width, 0px);
-        max-width: 95vw;
-        /* max-height covers the placeholder + list; the list scrolls internally */
-        max-height: var(--space-available, 95dvh);
-        margin: 0;
-        padding: 0;
-        background: var(--select-background-color);
-        border-width: var(--select-border-width);
-        border-style: solid;
-        border-color: var(--x-select-border-color);
-        border-radius: var(--select-border-radius);
-        outline-width: var(--x-select-outline-width);
-        outline-color: var(--select-outline-color);
-        outline-offset: var(--x-select-outline-offset);
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
-        cursor: default; /* Reset pointer cursor within the select */
-        overflow: hidden;
-        overscroll-behavior: none;
-
-        /* The anchor placeholder is a non-interactive visual clone of the
-           trigger. It makes the popover wrap both the trigger area and the list
-           under a single border/shadow. CSS order places it before the list
-           when the popover is below the trigger, and after when above. */
-        .navi_select_anchor_clone {
-          display: flex;
-          /* To make clone same height as original we need to force it because context can impact height */
-          /* Like siblings with a bigger height in a flex container */
-          /* We subtract the border sizes as anchor-height includes borders in the dimensions */
-          min-height: var(--anchor-inner-height);
-          /* Mirror the trigger's padding so the clone looks identical */
-          padding-top: var(--x-select-padding-top);
-          padding-right: var(--x-select-padding-right);
-          padding-bottom: var(--x-select-padding-bottom);
-          padding-left: var(--x-select-padding-left);
-          flex-shrink: 0;
-          flex-direction: column;
-          justify-content: center;
-          gap: var(--navi-s);
-          order: -1; /* before the list — popover is below the trigger */
-          background: var(--x-select-background-color);
-          border-bottom: var(--select-border-width) solid
-            var(--x-select-border-color);
-
-          &:hover {
-            --x-select-background-color: var(--select-background-color-hover);
-            --x-select-border-color: var(--select-border-color-hover);
-          }
-        }
-
-        &[data-position-y-current="above"],
-        &[data-position-y-current="above-overlap"] {
-          .navi_select_anchor_clone {
-            order: 1; /* after the list — popover is above the trigger */
-            border-top: var(--select-border-width) solid
-              var(--x-select-border-color);
-            border-bottom: none;
-          }
-        }
-
-        /* The list scrolls inside the popover */
-        .navi_list_container {
-          overflow: auto;
-          overscroll-behavior: none;
-        }
-      }
-
-      &:has([data-hover]) {
-        .navi_select_popover {
-          --x-select-border-color: var(--select-border-color-hover);
-        }
-      }
-      &:has([data-focus-visible]) {
-        .navi_select_popover {
-          outline-style: solid;
-        }
-      }
-
-      &[aria-expanded="true"] {
-        &[navi-popover-mode="overlay"],
-        &[navi-popover-mode="attached"] {
-          /* When sizes uses float AND the border uses border-radius it's possible it's possible to see some pixels
-          of the underlying select borders. We hide them to ensure this cannot happen.  */
-          border-color: transparent;
-        }
-
-        .navi_select_popover {
-          display: flex;
-          flex-direction: column;
-        }
-      }
-    }
-
-    /* dialog */
-    &[aria-haspopup="dialog"] {
-      .navi_list_container {
-        width: 100%;
-        --list-max-height: none;
-        /* Handled by the dialog */
-        border: none;
-        border-radius: 0;
-        outline: none;
-
-        .navi_list {
-          width: 100%;
-        }
-      }
-
-      .navi_select_dialog {
-        max-height: 95dvh;
-        margin: auto;
-        padding: 0;
-        background: var(--select-background-color);
-        border: var(--select-border-width) solid var(--x-select-border-color);
-        border-radius: var(--select-border-radius);
-        outline-width: var(--x-select-outline-width);
-        outline-color: var(--select-outline-color);
-        outline-offset: var(--x-select-outline-offset);
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
-        cursor: default; /* Reset pointer cursor within the select */
-
-        &[open] {
-          display: flex;
-          flex-direction: column;
-        }
-
-        &::backdrop {
-          background: rgba(0, 0, 0, 0.4);
-        }
-      }
-
-      /* When the list inside the dialog has keyboard focus, show the focus ring
-       on the dialog instead */
-      &:has([data-focus-visible]) {
-        .navi_select_dialog {
-          outline-style: solid;
-        }
-      }
+    &[data-readonly] {
+      --x-list-item-color: var(--list-item-color-disabled);
+      cursor: default;
     }
   }
 `;
+const SelectableListMultipleContext = createContext(false);
 
-/**
- * Select — a trigger button that opens a popover or dialog containing children.
- *
- * Props:
- *   name        — form field name (hidden input for form submission)
- *   value       — currently selected value (displayed in the trigger)
- *   placeholder — text shown when value is null/undefined/"" and triggerContent is not set
- *   triggerContent — custom ReactNode for the trigger, bypasses value/placeholder display
- *   disabled    — disable the trigger
- *   uiAction    — called with the selected value when an item confirms a selection
- *   action      — server action (switches to WithAction variant)
- *   mode        — "popover" (default, anchored below trigger) | "dialog" (centered modal)
- *   children    — content rendered inside the popover/dialog (e.g. a <List>)
- *
- * Select exposes a ParentUIStateControllerContext so that a <List> placed inside
- * automatically reports its selected value to Select without explicit prop wiring.
- * Select in turn reports to a parent Form if one is present.
- *
- * Note: the trigger is type="button" — pressing Enter opens/closes the content
- * but does NOT submit a parent form. Use a separate submit button for that.
- */
-const Select = props => {
-  const defaultRef = useRef(null);
-  const ref = props.ref || defaultRef;
-  const uiStateController = useUIGroupStateController(props, "select", {
-    childComponentType: "list",
-    aggregateChildStates: childControllers => {
-      if (childControllers.length === 0) {
-        return undefined;
-      }
-      return childControllers[0].uiState;
-    },
-    emptyState: undefined
-  });
-  const uiState = useUIState(uiStateController);
-  const value = Object.hasOwn(props, "value") ? props.value : uiState;
-  return jsx(ParentUIStateControllerContext.Provider, {
-    value: uiStateController,
-    children: jsx(SelectDispatcher, {
-      trigger: jsx(SelectTrigger, {}),
-      ...props,
-      ref: ref,
-      value: value
-    })
-  });
-};
-const SelectDispatcher = props => {
-  const isSmallScreen = windowWidthSignal.value <= 600;
-  const defaultMode = isSmallScreen ? "dialog" : "popover";
-  const {
-    mode = defaultMode
-  } = props;
-  if (mode === "dialog") {
-    return jsx(SelectWithDialog, {
-      ...props
-    });
-  }
-  if (mode === "popover") {
-    return jsx(SelectWithPopover, {
-      ...props
-    });
-  }
-  return jsx(SelectUI, {
-    ...props
-  });
-};
-const SelectUI = props => {
-  import.meta.css = [css$j, "@jsenv/navi/src/field/select/select.jsx"];
-  const {
-    placeholder = "Select…",
-    trigger,
-    name,
-    value,
-    readOnly,
-    disabled,
-    loading,
-    children,
-    autoFocus,
-    autoFocusPreventScroll,
-    ...rest
-  } = props;
-  const contextReadOnly = useContext(ReadOnlyContext);
-  const contextDisabled = useContext(DisabledContext);
-  const contextLoading = useContext(LoadingContext);
-  const contextLoadingElement = useContext(LoadingElementContext);
+// Interactive variant: manages hover/keyboard/selection state and handles the
+// navi event protocol. When an action is provided it binds the action to ui state
+// and fires it on select. When only uiAction is provided it calls it directly.
+const SelectableList = props => {
+  import.meta.css = [css$l, "@jsenv/navi/src/control/list/selectable_list.jsx"];
   const defaultRef = useRef();
-  const ref = rest.ref || defaultRef;
-  const hiddenInputId = useId();
-  const hiddenInputRef = useRef(null);
-  const remainingProps = useConstraints(hiddenInputRef, rest);
-  const innerLoading = loading || contextLoading && contextLoadingElement === ref.current;
-  const innerReadOnly = readOnly || contextReadOnly || innerLoading;
-  const innerDisabled = disabled || contextDisabled;
-  reportReadOnlyToField(innerReadOnly);
-  reportDisabledToField(innerDisabled);
-  reportInteractiveToField(true);
-  useAutoFocus(ref, autoFocus, {
-    preventScroll: autoFocusPreventScroll
-  });
-  const [triggerContent, setTriggerContent] = useState(null);
-  return jsxs(Box, {
-    as: "button",
-    type: "button",
-    ...remainingProps,
-    baseClassName: "navi_select",
-    autoFocus: undefined // See use_auto_focus.js
-    ,
-
-    "data-navi-value": value || undefined,
-    styleCSSVars: SelectStyleCSSVars,
-    basePseudoState: {
-      ...remainingProps.basePseudoState,
-      ":read-only": innerReadOnly,
-      ":disabled": innerDisabled,
-      ":-navi-loading": innerLoading
-    },
-    pseudoClasses: SelectPseudoClasses,
-    pseudoElements: SelectPseudoElements,
-    children: [jsx(LoadingOutline, {
-      loading: innerLoading,
-      color: "var(--loader-color)",
-      inset: -1
-    }), jsx("input", {
-      ref: hiddenInputRef,
-      id: hiddenInputId,
-      type: "hidden",
-      name: name,
-      value: value,
-      required: rest.required,
-      "data-rendered-by": ".navi_select"
-    }), jsxs(SelectPlaceholderContext.Provider, {
-      value: placeholder,
-      children: [jsx(SelectValueContext.Provider, {
-        value: value,
-        children: jsx(SelectTriggerContentContext.Provider, {
-          value: triggerContent,
-          children: trigger
-        })
-      }), jsx(SelectTriggerContentRegistryContext.Provider, {
-        value: setTriggerContent,
-        children: children
-      })]
-    })]
-  });
-};
-const SelectPlaceholderContext = createContext();
-const SelectValueContext = createContext(null);
-const SelectTriggerContentContext = createContext(null);
-const SelectStyleCSSVars = {
-  "outlineWidth": "--select-outline-width",
-  "borderWidth": "--select-border-width",
-  "borderRadius": "--select-border-radius",
-  "paddingX": "--select-padding-x",
-  "paddingY": "--select-padding-y",
-  "paddingTop": "--select-padding-top",
-  "paddingRight": "--select-padding-right",
-  "paddingBottom": "--select-padding-bottom",
-  "paddingLeft": "--select-padding-left",
-  "background": "--select-background",
-  "backgroundColor": "--select-background-color",
-  "borderColor": "--select-border-color",
-  "color": "--select-color",
-  "fontSize": "--select-font-size",
-  ":hover": {
-    backgroundColor: "--select-background-color-hover",
-    borderColor: "--select-border-color-hover",
-    color: "--select-color-hover"
-  },
-  ":focus": {
-    backgroundColor: "--select-background-color-focus",
-    borderColor: "--select-border-color-focus"
-  },
-  ":active": {
-    backgroundColor: "--select-background-color-active",
-    borderColor: "--select-border-color-active"
-  },
-  ":read-only": {
-    backgroundColor: "--select-background-color-readonly",
-    borderColor: "--select-border-color-readonly",
-    color: "--select-color-readonly"
-  },
-  ":disabled": {
-    backgroundColor: "--select-background-color-disabled",
-    borderColor: "--select-border-color-disabled",
-    color: "--select-color-disabled"
-  }
-};
-const SelectPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":focus-within", ":read-only", ":disabled", ":-navi-loading", ":-navi-expanded"];
-const SelectPseudoElements = ["::-navi-loader"];
-const SelectTrigger = () => {
-  const placeholder = useContext(SelectPlaceholderContext);
-  const value = useContext(SelectValueContext);
-  const triggerContent = useContext(SelectTriggerContentContext);
-  const hasValue = value !== null && value !== undefined && value !== "";
-  const isPlaceholder = !hasValue;
-  const contentDisplayed = triggerContent || value;
-  return jsxs(Box, {
-    flex: true,
-    spacing: "s",
-    children: [jsxs("span", {
-      className: "navi_select_trigger_text",
-      children: [jsx("span", {
-        className: "navi_select_trigger_placeholder",
-        hidden: hasValue,
-        children: placeholder
-      }), jsx("span", {
-        className: "navi_select_trigger_value",
-        hidden: isPlaceholder,
-        children: contentDisplayed
-      })]
-    }), jsx(Icon, {
-      className: "navi_select_trigger_icon",
-      children: jsx(ChevronDownSvg, {})
-    })]
-  });
-};
-
-// SelectWithPopover — trigger + popover anchored relative to the trigger.
-const SelectWithPopover = props => {
+  props.ref = props.ref || defaultRef;
+  // we allow ourselves to auto-generate a name
+  const defaultName = useId();
+  props.name = props.name || `listbox_${defaultName}`;
   const {
     ref,
-    disabled,
-    onKeyDown,
-    children,
-    pointerTrap,
-    scrollTrap = true,
-    focusTrap = true,
-    popoverMode = "nearby",
-    popoverSpacing = popoverMode === "nearby" ? 5 : 0,
-    viewportSpacing = 10,
+    multiple,
+    selectedIndicator = "backgroundColor",
+    focusGroupDirection,
+    focusGroupWrap
+  } = props;
+  const [listControlProps, remainingProps, childrenWrapperProps, uiGroupStateController] = useControlgroupProps(props, {
+    stateType: multiple ? "array" : "",
+    controlType: multiple ? "checkbox_group" : "radio_group",
+    childControlFilter: multiple ? childUIStateController => {
+      return childUIStateController.controlType === "input" && childUIStateController.props.type === "checkbox";
+    } : childUIStateController => {
+      return childUIStateController.controlType === "input" && childUIStateController.props.type === "radio";
+    },
+    aggregateChildStates: multiple ? childUIStateControllers => {
+      const values = [];
+      for (const childUIStateController of childUIStateControllers) {
+        if (childUIStateController.uiState) {
+          values.push(childUIStateController.uiState);
+        }
+      }
+      return values.length === 0 ? undefined : values;
+    } : childUIStateControllers => {
+      let activeValue;
+      for (const childUIStateController of childUIStateControllers) {
+        if (childUIStateController.uiState) {
+          activeValue = childUIStateController.uiState;
+          break;
+        }
+      }
+      return activeValue;
+    }
+  });
+  useFocusGroup(ref, {
+    direction: focusGroupDirection,
+    wrap: focusGroupWrap,
+    // Up/Down navigate between list items only (the visually-hidden real inputs).
+    ySelector: "[navi-selectable-real-input]"
+  });
+  const listVnode = jsx(List, {
+    as: "fieldset",
+    "navi-has-selected-background": selectedIndicator === "backgroundColor" ? "" : undefined,
+    ...listControlProps,
+    ...remainingProps,
+    name: undefined,
+    selectedIndicator: undefined,
+    multiple: undefined,
+    onnavi_request_select: e => {
+      const {
+        id
+      } = e.detail;
+      if (id === undefined) {
+        return;
+      }
+      const inputId = `${id}_input`;
+      const childController = uiGroupStateController.findChildById(inputId);
+      if (!childController) {
+        return;
+      }
+      const list = ref.current;
+      const allowed = dispatchRequestInteraction(list, e, "select");
+      if (!allowed) {
+        e.preventDefault();
+        return;
+      }
+      if (childController.setUIState(true, e)) {
+        dispatchRequestAction(list, {
+          event: e
+        });
+      }
+    },
+    onnavi_request_unselect: e => {
+      const {
+        id
+      } = e.detail;
+      if (id === undefined) {
+        return;
+      }
+      const inputId = `${id}_input`;
+      const childController = uiGroupStateController.findChildById(inputId);
+      if (!childController) {
+        return;
+      }
+      const list = ref.current;
+      const allowed = dispatchRequestInteraction(list, e, "unselect");
+      if (!allowed) {
+        e.preventDefault();
+        return;
+      }
+      if (childController.setUIState(false, e)) {
+        dispatchRequestAction(list, {
+          event: e
+        });
+      }
+    },
+    children: jsx(ControlgroupChildrenWrapper, {
+      ...childrenWrapperProps,
+      children: props.children
+    })
+  });
+  return jsx(SelectableListMultipleContext.Provider, {
+    value: multiple,
+    children: listVnode
+  });
+};
+const SelectableRealInputContext = createContext(null);
+const Selectable = props => {
+  const {
+    index,
+    id,
+    highlight,
+    hidden,
+    filtered,
+    defaultSelected,
+    selected,
+    pointed,
+    selectableArea,
     ...rest
   } = props;
-  const debugFocus = useDebugFocus();
-  const debugPopup = useDebugPopup();
-  const popoverRef = useRef(null);
-  const popoverId = useId();
-  const [expanded, setExpanded] = useState(false);
-  const expandedRef = useRef(expanded);
-  expandedRef.current = expanded;
-  const onOpen = () => {
-    expandedRef.current = true;
-    setExpanded(true);
-  };
-  const onClose = () => {
-    expandedRef.current = false;
-    setExpanded(false);
-  };
-  const requestOpen = e => {
-    // scroll select into view when opening it
-    ref.current.scrollIntoView({
-      block: "nearest"
-    });
-    return requestPopoverOpen(popoverRef.current, {
-      event: e,
-      anchor: ref.current
-    });
-  };
-  const disableClickFor = useIgnoreClickForMousedown();
-  const requestClose = (e = new CustomEvent("programmatic")) => {
-    if (e.type === "mousedown") {
-      debugPopup(formatEventSideEffect(e, `disable click`));
-      disableClickFor();
-    }
-    return requestPopoverClose(popoverRef.current, {
-      event: e
-    });
-  };
-  const moveFocusToSelect = e => {
-    if (e.type === "mousedown") {
-      e.preventDefault();
-      debugFocus(e, `preventDefault and move focus to select`);
-    } else {
-      debugFocus(e, `move focus to select`);
-    }
-    const select = ref.current;
-    select.focus({
-      preventScroll: true
-    });
-  };
-  return jsx(SelectDispatcher, {
-    disabled: disabled,
-    "aria-haspopup": "listbox",
-    "aria-expanded": expanded,
-    "aria-controls": popoverId,
-    "navi-popover-mode": popoverMode,
-    onMouseDown: e => {
-      if (e.button !== 0) {
-        return;
-      }
-      if (disabled) {
-        return;
-      }
-      if (expandedRef.current) {
-        requestClose(e);
-      } else {
-        e.preventDefault(); // prevent browser trying to give focus to the select (popover will take focus)
-        debugFocus(e, `preventDefault()`);
-        requestOpen(e);
-      }
-    },
-    onClick: e => {
-      if (e.detail === 0) {
-        // click triggered by enter won't open the popover
-        return;
-      }
-      // When a label is clicked it transfers focus to the select
-      // in that case we want to open it (otherwise we have already opened on mousedown interaction)
-      requestOpen(e);
-    }
-    // When a list item is interacted via mousedown, return focus to the select.
-    ,
-
-    onnavi_list_select: e => {
-      const {
-        event
-      } = e.detail;
-      if (event.type === "mousedown") {
-        event.preventDefault(); // prevent browser trying to give focus to the list item
-        debugFocus(e, `preventDefault()`);
-      }
-      if (event.key === " ") {
-        // space can open the popover we don't want space to propagate to the select otherwise it would open it back immediatly
-        event.stopPropagation();
-      }
-      requestClose(event);
-      moveFocusToSelect(event);
-    },
-    onFocusOut: e => {
-      // Close when focus leaves the select entirely (not just moving between internal elements).
-      // relatedTarget is the element receiving focus; if it's inside the select or the popover, keep open.
-      const relatedTarget = e.relatedTarget;
-      const selectEl = ref.current;
-      const popoverEl = popoverRef.current;
-      const focusStaysInside = selectEl && selectEl.contains(relatedTarget) || popoverEl && popoverEl.contains(relatedTarget);
-      if (!focusStaysInside) {
-        requestClose(e);
-      }
-    },
+  const multiple = useContext(SelectableListMultipleContext);
+  const inputRef = useRef();
+  const inputType = multiple ? "checkbox" : "radio";
+  const inputId = `${id}_input`;
+  const [checkableProps, remainingProps, ChildrenContextWrapper] = useCheckableProps({
+    readOnlyMessage: naviI18n(`constraints.readonly.option`, props),
     ...rest,
-    onKeyDown: shortcutsViaOnKeyDown({
-      arrowdown: e => {
-        e.preventDefault(); // prevent container scroll
-        requestOpen(e);
-      },
-      arrowup: e => {
-        e.preventDefault(); // prevent container scroll
-        requestOpen(e);
-      },
-      space: e => {
-        e.preventDefault(); // prevent scroll
-        requestOpen(e);
-      },
-      escape: e => {
-        if (!expandedRef.current) {
-          return;
-        }
-        e.preventDefault();
-        requestClose(e);
-        moveFocusToSelect(e);
-      }
-    }, onKeyDown),
-    ref: ref,
-    mode: "ui",
-    children: jsxs(Popover, {
-      ref: popoverRef,
-      className: "navi_select_popover",
-      onMouseDown: e => {
-        if (e.button !== 0) {
-          return;
-        }
-        // mousedown inside popover should not bubble to the select (would re-open it if that mousedown closes it)
-        e.stopPropagation();
-        debugPopup(formatEventSideEffect(e, `popover mouseDown stopPropagation`));
-      },
-      onnavi_popover_open: e => {
-        onOpen();
-      },
-      onnavi_popover_close: e => {
-        onClose();
-        const {
-          event = e
-        } = e.detail;
-        if (event.type === "focusout") ; else {
-          moveFocusToSelect(event);
-        }
-      },
-      positionX: "left-aligned",
-      positionY: popoverMode === "nearby" ? "below" : "below-overlap",
-      spacing: popoverSpacing,
-      viewportSpacing: viewportSpacing,
-      scrollTrap: scrollTrap,
-      pointerTrap: pointerTrap,
-      focusTrap: focusTrap,
-      children: [popoverMode === "attached" ? jsx("div", {
-        className: "navi_select_anchor_clone",
-        onMouseDown: e => {
-          if (e.button !== 0) {
-            return;
-          }
-          requestClose(e);
-        },
-        children: props.trigger
-      }) : null, jsx(SelectRequestCloseContext.Provider, {
-        value: requestClose,
-        children: children
+    ref: inputRef,
+    id: inputId,
+    type: inputType,
+    defaultChecked: defaultSelected,
+    checked: selected,
+    action: (v, {
+      event
+    }) => {
+      const listContainerEl = event.currentTarget.closest(".navi_list_container");
+      dispatchRequestAction(listContainerEl, {
+        event
+      });
+    }
+  });
+  const {
+    checked,
+    value,
+    basePseudoState,
+    children
+  } = checkableProps;
+  const readOnly = basePseudoState[":read-only"];
+  const disabled = basePseudoState[":disabled"];
+  const loading = basePseudoState[":-navi-loading"];
+  const realInputContextValue = useMemo(() => {
+    return {
+      id: inputId,
+      type: inputType,
+      checked,
+      readOnly,
+      value
+    };
+  }, [inputId, inputType, checked, readOnly, value]);
+  return jsx(ListItem, {
+    id: id,
+    index: index,
+    highlight: highlight,
+    filtered: filtered,
+    hidden: hidden,
+    pseudoClasses: SELECTABLE_PSEUDO_CLASSES,
+    basePseudoState: {
+      ":-navi-selected": checked,
+      ":-navi-pointed": pointed,
+      ...basePseudoState
+    },
+    "aria-selected": checked,
+    selected: checked,
+    children: jsxs(Field, {
+      as: selectableArea === "manual" ? "div" : undefined,
+      padding: "m",
+      flex: true,
+      alignY: "center",
+      spacing: "s",
+      expandX: true,
+      ...remainingProps,
+      selectableArea: undefined,
+      basePseudoState: basePseudoState,
+      pseudoStateSelector: "[navi-selectable-real-input]",
+      disabled: disabled,
+      readOnly: readOnly,
+      loading: loading,
+      interactive: true,
+      children: [jsx(SelectableRealInput, {
+        ...checkableProps,
+        // eslint-disable-next-line react/no-children-prop
+        children: undefined
+      }), jsx(SelectableRealInputContext.Provider, {
+        value: realInputContextValue,
+        children: jsx(ChildrenContextWrapper, {
+          children: children
+        })
       })]
     })
   });
 };
-// SelectWithDialog — trigger + centered modal dialog.
-const SelectWithDialog = props => {
-  let {
-    ref,
-    disabled,
-    onKeyDown,
-    children,
-    scrollTrap,
-    pointerTrap,
-    ...rest
-  } = props;
-  const debugFocus = useDebugFocus();
-  const debugPopup = useDebugPopup();
-  const dialogRef = useRef(null);
-  const dialogId = useId();
-  const [expanded, setExpanded] = useState(false);
-  const expandedRef = useRef(expanded);
-  expandedRef.current = expanded;
-  const onOpen = () => {
-    expandedRef.current = true;
-    setExpanded(true);
-  };
-  const onClose = () => {
-    expandedRef.current = false;
-    setExpanded(false);
-  };
-  const requestOpen = e => {
-    return requestDialogOpen(dialogRef.current, {
-      event: e
-    });
-  };
-  const disableClickFor = useIgnoreClickForMousedown();
-  const requestClose = (e = new CustomEvent("programmatic")) => {
-    if (e.type === "mousedown") {
-      debugPopup(formatEventSideEffect(e, `disable click`));
-      disableClickFor();
-    }
-    return requestDialogClose(dialogRef.current, {
-      event: e
-    });
-  };
-  const moveFocusToSelect = e => {
-    if (e.type === "mousedown") {
-      e.preventDefault();
-      debugFocus(e, `preventDefault and move focus to select`);
-    } else {
-      debugFocus(e, `move focus to select`);
-    }
-    const select = ref.current;
-    select.focus({
-      preventScroll: true
-    });
-  };
-  return jsx(SelectDispatcher, {
-    disabled: disabled,
-    "aria-haspopup": "dialog",
-    "aria-expanded": expanded,
-    "aria-controls": dialogId,
-    onMouseDown: e => {
-      if (e.button !== 0) {
-        return;
-      }
-      if (disabled) {
-        return;
-      }
-      if (expandedRef.current) {
-        requestClose(e);
-      } else {
-        e.preventDefault(); // prevent browser trying to give focus to the select (dialog will take focus)
-        debugFocus(e, `preventDefault()`);
-        requestOpen(e);
-      }
-    },
-    onClick: e => {
-      if (e.detail === 0) {
-        // click triggered by enter won't open the dialog
-        return;
-      }
-      // When a label is clicked it transfers focus to the select, in that case we want to open it
-      requestOpen(e);
-    },
-    onnavi_list_select: e => {
-      const {
-        event
-      } = e.detail;
-      if (event.key === " ") {
-        // space can open the dialog, we don't want space to propagate to the select otherwise it would open it back immediately
-        event.stopPropagation();
-      }
-      requestClose(event);
-    },
-    ...rest,
-    onKeyDown: shortcutsViaOnKeyDown({
-      arrowdown: e => {
-        e.preventDefault();
-        requestOpen(e);
-      },
-      arrowup: e => {
-        e.preventDefault();
-        requestOpen(e);
-      },
-      space: e => {
-        e.preventDefault();
-        if (!expandedRef.current) {
-          requestOpen(e);
-        }
-      },
-      escape: () => {
-        if (!expandedRef.current) {
-          return;
-        }
-        // native <dialog> handles closing on Escape; we just need focus back
-        // (the onClose handler also calls moveFocusToSelect but escape fires before it)
-      }
-    }, onKeyDown),
-    ref: ref,
-    mode: "ui",
-    children: jsx(Dialog, {
-      ref: dialogRef,
-      className: "navi_select_dialog",
-      onnavi_dialog_open: e => {
-        onOpen();
-      },
-      onnavi_dialog_close: e => {
-        onClose();
-        moveFocusToSelect(e);
-      },
-      onMouseDown: e => {
-        if (e.button !== 0) {
-          return;
-        }
-        // mousedown inside dialog should not bubble to the select (would re-open it if that mousedown closes it)
-        e.stopPropagation();
-      },
-      scrollTrap: scrollTrap,
-      pointerTrap: pointerTrap,
-      children: jsx(SelectRequestCloseContext.Provider, {
-        value: requestClose,
-        children: children
-      })
+const SELECTABLE_PSEUDO_CLASSES = [...LIST_ITEM_PSEUDO_CLASSES, ":hover", ":disabled", ":read-only", ":focus-within", ":focus", ":focus-visible", ":-navi-loading", ":-navi-pointed", ":-navi-selected", ":disabled", ":read-only"];
+const SelectableRealInput = props => {
+  return jsx(Box, {
+    as: "input",
+    ...props,
+    "navi-selectable-real-input": "",
+    "navi-visually-hidden": "",
+    "data-callout-arrow-x": "center"
+    // navi-debug
+  });
+};
+const SelectableInputProxy = props => {
+  const selectableRealInputProps = useContext(SelectableRealInputContext);
+  if (!selectableRealInputProps) {
+    throw new Error("Selectable.Input must be used within a Selectable component");
+  }
+
+  // Reset FieldToInterfaceContext to ensure we don't read id or report our
+  // states (real input should take id and report)
+  return jsx(ControlToInterfaceContext.Provider, {
+    value: undefined,
+    children: jsx(Input, {
+      ...props,
+      ...selectableRealInputProps,
+      id: undefined,
+      "navi-control-proxy-for": selectableRealInputProps.id
+      // give it a specific name to avoid radio name (would unselect others)
+      // (making it unique to the list would be enough, but here it's even more unique)
+      ,
+
+      name: `${selectableRealInputProps.id}_proxy`,
+      "aria-hidden": "true",
+      tabIndex: -1
     })
   });
 };
-const SelectRequestCloseContext = createContext();
-const useSelectRequestClose = () => {
-  return useContext(SelectRequestCloseContext);
-};
+Selectable.Input = SelectableInputProxy;
 
-/**
- * Returns a `disableClickFor` function that suppresses the `click` event that
- * the browser fires after a `mousedown` which already handled an open/close action.
- *
- * Problem: when the user clicks a dialog's backdrop to close it, the browser
- * fires `mousedown` on the backdrop (which closes the dialog), then fires
- * `click` on whatever element is underneath once the dialog is gone. If that
- * element is the trigger button that originally opened the dialog, the `click`
- * would immediately re-open it.
- *
- * Calling `stopPropagation()` or `preventDefault()` on the backdrop `mousedown`
- * does not help: the browser dispatches the subsequent `click` regardless,
- * targeting whichever element ends up under the pointer after the dialog closes.
- *
- * Solution: register a self-removing capture-phase `click` listener on `document`
- * so the click is intercepted before it reaches any element handler.
- */
-const useIgnoreClickForMousedown = () => {
-  const disableClickFor = () => {
-    const suppressClick = clickEvent => {
-      clickEvent.stopPropagation();
-      clickEvent.preventDefault();
-      document.removeEventListener("click", suppressClick, {
-        capture: true
-      });
-    };
-    document.addEventListener("click", suppressClick, {
-      capture: true
-    });
-  };
-  return disableClickFor;
-};
-
-/**
- * Parses a step value into seconds.
- * Accepts:
- *   - number: returned as-is (already in seconds)
- *   - "HH:MM" string: converted to seconds (e.g. "00:30" → 1800, "01:00" → 3600)
- *   - undefined/null: returned as-is
- */
-const parseStepToSeconds = (step) => {
-  if (typeof step !== "string") {
-    return step;
-  }
-  const colonIndex = step.indexOf(":");
-  if (colonIndex === -1) {
-    return Number(step);
-  }
-  const hours = parseInt(step.slice(0, colonIndex), 10);
-  const minutes = parseInt(step.slice(colonIndex + 1), 10);
-  return (hours * 60 + minutes) * 60;
-};
-
-const isToday = (value) => {
-  if (!value) {
-    return false;
-  }
-  const now = new Date();
-  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-  if (typeof value === "string") {
-    return value === todayStr;
-  }
-  if (typeof value === "number") {
-    const d = new Date(value);
-    const s = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    return s === todayStr;
-  }
-  if (value instanceof Date) {
-    const s = `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
-    return s === todayStr;
-  }
-  return false;
-};
-
-/**
- * Returns the current time as "HH:MM", with an optional minute offset.
- *
- * @param {number} [offsetMinutes=0] - Minutes to add (negative = subtract).
- *   E.g. getNowHours(-5) returns "now minus 5 minutes".
- *
- * @example
- * getNowHours()       // "14:30"
- * getNowHours(-5)     // "14:25"
- */
-const getNowHours = (offsetMinutes = 0) => {
-  const now = new Date();
-  const totalMinutes = now.getHours() * 60 + now.getMinutes() + offsetMinutes;
-  const clamped =
-    totalMinutes < 0
-      ? 0
-      : totalMinutes > 23 * 60 + 59
-        ? 23 * 60 + 59
-        : totalMinutes;
-  const h = Math.floor(clamped / 60);
-  const m = clamped % 60;
-  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-};
-
-const HourPicker = ({
-  min = "00:00",
-  max = "23:30",
-  step: stepProp = 1800,
-  selectedDay,
-  minHidden,
-  minReadonly,
-  minReadonlyMessage,
-  noSlotsMessage,
-  value,
-  uiAction,
-  placeholder,
-  ...rest
-}) => {
-  const step = parseStepToSeconds(stepProp);
-  const slots = useMemo(() => {
-    const allSlots = generateTimeSlots(min, max, step);
-    if (!minHidden) {
-      return allSlots;
-    }
-    const [hh, mm] = minHidden.split(":").map(Number);
-    const minHiddenMinutes = hh * 60 + mm;
-    return allSlots.filter(slot => {
-      const [sh, sm] = slot.split(":").map(Number);
-      return sh * 60 + sm >= minHiddenMinutes;
-    });
-  }, [min, max, step, minHidden]);
-  const todayStr = toDateString(new Date());
-  const now = new Date();
-  const nowMinutes = selectedDay === todayStr ? now.getHours() * 60 + now.getMinutes() : -1;
-  const minReadonlyMinutes = useMemo(() => {
-    if (minReadonly) {
-      const [h, m] = minReadonly.split(":").map(Number);
-      return h * 60 + m;
-    }
-    return nowMinutes;
-  }, [minReadonly, nowMinutes]);
-  const isSlotReadonly = slot => {
-    if (minReadonlyMinutes === -1) {
-      return false;
-    }
-    const [h, m] = slot.split(":").map(Number);
-    return h * 60 + m <= minReadonlyMinutes;
-  };
-  const allDisabled = slots.length > 0 && slots.every(isSlotReadonly);
-  if (allDisabled) {
-    return jsx(Box, {
-      as: "span",
-      style: {
-        fontSize: "0.85em",
-        color: "color-mix(in srgb, currentColor 60%, transparent)",
-        fontStyle: "italic"
-      },
-      children: noSlotsMessage ?? naviI18n("picker.hour.no_slots")
-    });
-  }
-  return jsx(Select, {
-    value: value,
-    uiAction: uiAction,
-    placeholder: placeholder,
-    ...rest,
-    children: jsx(List, {
-      role: "listbox",
-      children: slots.map((slot, i) => jsx(ListItem, {
-        index: i,
+const PickerNaviTime = props => {
+  const Next = useNextResolver();
+  const {
+    min = "00:00",
+    max = "23:30",
+    step,
+    value
+  } = props;
+  const stepSeconds = parseStepToSeconds(step) ?? 1800;
+  const slots = useMemo(() => generateTimeSlots(min, max, stepSeconds), [min, max, stepSeconds]);
+  return jsx(Next, {
+    ...props,
+    type: "time",
+    children: jsx(SelectableList, {
+      action: "send",
+      children: slots.map((slot, i) => jsx(Selectable, {
         id: slot,
+        index: i,
         value: slot,
         selected: value === slot,
-        readOnly: isSlotReadonly(slot),
-        "data-readonly-message": minReadonlyMessage ?? naviI18n("picker.hour.readonly_slot"),
-        children: slot
+        children: jsx(Time, {
+          type: "time",
+          children: slot
+        })
       }, slot))
     })
   });
@@ -33137,14 +35037,82 @@ const generateTimeSlots = (min, max, stepSeconds) => {
   }
   return slots;
 };
-const toDateString = date => {
-  const yyyy = date.getFullYear();
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  const dd = String(date.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
-};
 
-installImportMetaCssBuild(import.meta);const css$i = /* css */`
+const PickerPresetResolver = props => {
+  const Next = useNextResolver();
+  if (props.type === "navi_time") {
+    return jsx(PickerNaviTime, {
+      ...props
+    });
+  }
+  return jsx(Next, {
+    ...props
+  });
+};
+const PickerCustomResolver = props => {
+  if (props.children === undefined) {
+    return jsx(PickerNative, {
+      ...props
+    });
+  }
+  return jsx(PickerCustom, {
+    ...props
+  });
+};
+const PickerTypeResolver = props => {
+  const Next = useNextResolver();
+  if (props.type === "color") {
+    return jsx(PickerColor, {
+      ...props
+    });
+  }
+  if (props.type === "date") {
+    return jsx(PickerDate, {
+      ...props
+    });
+  }
+  if (props.type === "month") {
+    return jsx(PickerMonth, {
+      ...props
+    });
+  }
+  if (props.type === "week") {
+    return jsx(PickerWeek, {
+      ...props
+    });
+  }
+  if (props.type === "time") {
+    return jsx(PickerTime, {
+      ...props
+    });
+  }
+  if (props.type === "datetime") {
+    return jsx(PickerDatetime, {
+      ...props
+    });
+  }
+  if (props.type === "file") {
+    return jsx(PickerFile, {
+      ...props
+    });
+  }
+  if (props.type === "text") {
+    return jsx(PickerText, {
+      ...props
+    });
+  }
+  if (props.type === "array") {
+    return jsx(PickerArray, {
+      ...props
+    });
+  }
+  return jsx(Next, {
+    ...props
+  });
+};
+const pickerResolvers = [PickerPresetResolver, PickerCustomResolver, PickerTypeResolver];
+
+installImportMetaCssBuild(import.meta);const css$k = /* css */`
   @layer navi {
     .navi_picker {
       --picker-border-radius: 2px;
@@ -33154,6 +35122,7 @@ installImportMetaCssBuild(import.meta);const css$i = /* css */`
       --picker-padding-x-default: 8px;
       --picker-padding-y-default: 5px;
       --picker-outline-color: var(--navi-focus-outline-color);
+      --picker-loader-color: var(--navi-loader-color);
       --picker-border-color: light-dark(#767676, #8e8e93);
       --picker-background-color: white;
       --picker-color: currentColor;
@@ -33162,6 +35131,9 @@ installImportMetaCssBuild(import.meta);const css$i = /* css */`
         currentColor 60%,
         transparent
       );
+      --picker-color-dimmed: color-mix(in srgb, currentColor 60%, transparent);
+      --picker-right-slot-size: 1.5em;
+      /* Hover */
       --picker-border-color-hover: color-mix(
         in srgb,
         var(--picker-border-color) 70%,
@@ -33172,7 +35144,30 @@ installImportMetaCssBuild(import.meta);const css$i = /* css */`
         var(--picker-background-color) 95%,
         black
       );
-      --picker-right-slot-size: 1.5em;
+      /* Readonly */
+      --picker-border-color-readonly: color-mix(
+        in srgb,
+        var(--picker-border-color) 45%,
+        transparent
+      );
+      --picker-background-color-readonly: var(--picker-background-color);
+      --picker-color-readonly: var(--picker-color-dimmed);
+      /* Disabled */
+      --picker-border-color-disabled: var(--picker-border-color-readonly);
+      --picker-background-color-disabled: color-mix(
+        in srgb,
+        var(--picker-background-color) 95%,
+        grey
+      );
+      --picker-color-disabled: var(--picker-color-dimmed);
+      /* Icon */
+      --picker-icon-color: #5e4e4e;
+      --picker-icon-color-readonly: color-mix(
+        in srgb,
+        var(--picker-icon-color) 45%,
+        transparent
+      );
+      --picker-icon-color-disabled: var(--picker-icon-color-readonly);
     }
   }
 
@@ -33192,7 +35187,7 @@ installImportMetaCssBuild(import.meta);const css$i = /* css */`
       var(--picker-padding-x, var(--picker-padding-x-default))
     );
     --x-picker-padding-right: calc(
-      var(--x-picker-padding-right-base) + var(--picker-right-slot-size)
+      var(--x-picker-padding-right-base) + var(--picker-right-slot-size) - 2px
     );
     --x-picker-padding-left: var(
       --picker-padding-left,
@@ -33202,18 +35197,21 @@ installImportMetaCssBuild(import.meta);const css$i = /* css */`
       --picker-padding-bottom,
       var(--picker-padding-y, var(--picker-padding-y-default))
     );
+    --x-picker-color: var(--picker-color);
 
     position: relative;
-    display: inline-flex;
+    display: inline-block;
     box-sizing: border-box;
-    min-height: 1em;
+    max-width: 100%;
+    min-height: calc(
+      1lh + var(--x-picker-padding-top) + var(--x-picker-padding-bottom)
+    );
     padding-top: var(--x-picker-padding-top);
     padding-right: var(--x-picker-padding-right);
     padding-bottom: var(--x-picker-padding-bottom);
     padding-left: var(--x-picker-padding-left);
-    flex-direction: column;
-    justify-content: center;
-    color: var(--picker-color);
+    flex-direction: row;
+    color: var(--x-picker-color);
     font-size: var(--picker-font-size);
     text-align: inherit;
     text-overflow: ellipsis;
@@ -33224,86 +35222,39 @@ installImportMetaCssBuild(import.meta);const css$i = /* css */`
     border-color: var(--x-picker-border-color);
     border-radius: var(--picker-border-radius);
     outline-width: var(--x-picker-outline-width);
+    outline-style: none;
     outline-color: var(--picker-outline-color);
     outline-offset: var(--x-picker-outline-offset);
-    cursor: pointer;
+    cursor: var(--x-picker-cursor, pointer);
     user-select: none;
     overflow: hidden;
 
-    &[data-hover] {
-      --x-picker-background-color: var(--picker-background-color-hover);
-      --x-picker-border-color: var(--picker-border-color-hover);
-    }
-    &[data-focus-visible] {
-      --x-picker-border-color: transparent;
-      outline-style: solid;
-    }
-    &[data-focus-within] {
-      --x-picker-border-color: transparent;
-      outline-style: solid;
-    }
-    &[data-expanded] {
-      --x-picker-border-color: transparent;
-      outline-style: solid;
-    }
-    &[data-disabled] {
-      opacity: 0.5;
-      cursor: default;
-    }
-    &[data-callout] {
-      --x-picker-border-color: var(--callout-color);
-    }
-
-    .navi_picker_placeholder {
-      color: var(--picker-placeholder-color);
-      &[hidden] {
-        display: inline-block !important;
-        height: 0;
-        padding-block: 0;
-        visibility: hidden;
-      }
-    }
-    &[navi-type="color"] {
-      .navi_picker_value {
-        /* In case there is no placeholder */
-        min-width: 1em;
-        min-height: 1em;
-      }
-
-      &[navi-has-placeholder] {
-        .navi_picker_value {
-          min-height: auto;
-        }
-
-        .navi_picker_placeholder {
-          &[hidden] {
-            /* Color display is absolute, keep placeholder in place */
-            height: auto;
-          }
-        }
-      }
-
-      .navi_picker_color_display {
-        position: absolute;
-        top: var(--x-picker-padding-top);
-        right: var(--x-picker-padding-right);
-        bottom: var(--x-picker-padding-bottom);
-        left: var(--x-picker-padding-left);
-        display: block;
-        background-color: var(--picker-color);
-        border: 1px solid rgba(0, 0, 0, 0.2);
-        border-radius: 2px;
-      }
-    }
-
     .navi_picker_value {
+      display: block;
+      min-width: 0;
+      max-width: 100%;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+    .navi_picker_placeholder {
+      display: block;
+      max-width: 100%;
+      color: var(--picker-placeholder-color);
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      overflow: hidden;
     }
     .navi_picker_right_slot {
       position: absolute;
+      top: 0;
       right: 0;
+      display: inline-flex;
       width: var(--picker-right-slot-size);
+      padding-top: var(--x-picker-padding-top);
       flex-shrink: 0;
-      opacity: 0.6;
+      justify-content: center;
+      color: var(--x-picker-icon-color, var(--picker-icon-color));
     }
     .navi_picker_input {
       position: absolute;
@@ -33316,467 +35267,265 @@ installImportMetaCssBuild(import.meta);const css$i = /* css */`
       background: none;
       border: none;
       opacity: 0;
-      cursor: pointer;
+      appearance: none;
+      pointer-events: none;
+    }
+
+    &[data-multiline] {
+      overflow-wrap: anywhere;
+
+      .navi_picker_placeholder {
+        white-space: normal;
+      }
+      .navi_picker_value {
+        white-space: normal;
+      }
+    }
+
+    /* Hover */
+    &[data-hover] {
+      --x-picker-background-color: var(--picker-background-color-hover);
+      --x-picker-border-color: var(--picker-border-color-hover);
+    }
+    /* Readonly */
+    &[data-readonly] {
+      --x-picker-border-color: var(--picker-border-color-readonly);
+      --x-picker-background-color: var(--picker-background-color-readonly);
+      --x-picker-color: var(--picker-color-readonly);
+      --x-picker-icon-color: var(--picker-icon-color-readonly);
+      --x-picker-cursor: default;
+    }
+    /* Focus */
+    &[data-focus-visible] {
+      --x-picker-border-color: transparent;
+      outline-style: solid;
+    }
+    /* Disabled */
+    &[data-disabled] {
+      --x-picker-border-color: var(--picker-border-color-disabled);
+      --x-picker-background-color: var(--picker-background-color-disabled);
+      --x-picker-color: var(--picker-color-disabled);
+      --x-picker-icon-color: var(--picker-icon-color-disabled);
+      --x-picker-cursor: default;
+    }
+    /* Callout (info, warning, error) */
+    &[data-callout] {
+      --x-picker-border-color: var(--callout-color);
     }
   }
 `;
 
 /**
- * Picker — a button-like trigger that opens the browser's native picker
- * (date, time, month, week, datetime-local, color) via showPicker().
+ * A button-like trigger that opens a picker when clicked.
+ *
+ * Use the `type` prop to choose what kind of picker to open:
+ *   "day"      — calendar day
+ *   "month"    — year + month
+ *   "week"     — ISO week
+ *   "time"     — hours + minutes
+ *   "datetime" — date + time
+ *   "color"    — color chooser
+ *   "hour"     — fixed time slots (derived from min/max/step)
+ *
+ * When `children` are provided, the picker opens a popover or dialog instead
+ * of the browser-native picker. On small screens a dialog is used automatically;
+ * on larger screens a popover is used. Pass `mode="dialog"` or `mode="popover"`
+ * to force one. The children are rendered inside the popup.
  *
  * Props:
- *   type        — picker type: "day" | "month" | "week" | "time" | "datetime" | "color"
- *                 Defaults to "day". Maps to the corresponding <input type=…>.
- *   value       — current value string (same format as the underlying input)
- *   uiAction    — called with the new value string when the user picks a value
- *   name        — form field name (on the underlying input for form submission)
- *   placeholder — shown when no value. If a string it is styled; otherwise rendered as-is.
+ *   type        — picker variant (see above)
+ *   value       — controlled value
+ *   uiAction    — called with the new value when the user picks one
+ *   name        — form field name
+ *   placeholder — shown when no value is selected
+ *   required    — marks the field as required
+ *   min         — minimum allowed value; accepts a Date or a raw string
+ *   max         — maximum allowed value; accepts a Date or a raw string
+ *   step        — step interval
  *   disabled    — disables the picker
- *   min         — min value forwarded to the underlying input
- *   max         — max value forwarded to the underlying input
- *   step        — step forwarded to the underlying input
- *   children    — custom value display. If omitted, the default display for the type is used.
- *   ...rest     — forwarded to the outer <button> element
+ *   children    — content to display inside the popup (enables popover/dialog mode)
+ *   mode        — "popover" or "dialog"; auto-detected from screen size when omitted
  */
 const Picker = props => {
   const defaultRef = useRef(null);
-  const ref = props.ref || defaultRef;
-  const fieldId = useFieldId();
-  const id = props.id || fieldId;
-  const uiStateController = useUIStateController(props, "picker");
-  const uiState = useUIState(uiStateController);
-  return jsx(UIStateControllerContext.Provider, {
-    value: uiStateController,
-    children: jsx(UIStateContext.Provider, {
-      value: uiState,
-      children: jsx(PickerDispatcher, {
-        ...props,
-        ref: ref,
-        id: id
-      })
-    })
-  });
+  props.ref = props.ref || defaultRef;
+  const picker = renderPicker(PickerButton, props);
+  return picker;
 };
-const PickerDispatcher = props => {
-  if (props.type === "hour") {
-    return jsx(HourPicker, {
-      ...props
-    });
-  }
-  return jsx(PickerUI, {
-    ...props
-  });
-};
-const PickerUI = props => {
-  import.meta.css = [css$i, "@jsenv/navi/src/field/picker/picker.jsx"];
+const renderPicker = createComponentResolver(pickerResolvers);
+const PickerButton = props => {
+  import.meta.css = [css$k, "@jsenv/navi/src/control/picker/picker.jsx"];
+  resolveInputProps(props);
   const {
     ref,
-    type = "day",
-    name,
+    icon,
     placeholder,
-    disabled,
-    readOnly,
-    loading,
-    autoFocus,
-    autoFocusPreventScroll,
-    min,
-    max,
-    step: stepProp,
-    children,
-    ...rest
+    singleLine,
+    ui,
+    dayLabel
   } = props;
-  const uiState = useContext(UIStateContext);
-  const uiStateController = useContext(UIStateControllerContext);
-  const contextReadOnly = useContext(ReadOnlyContext);
-  const contextDisabled = useContext(DisabledContext);
-  const contextLoading = useContext(LoadingContext);
-  const contextLoadingElement = useContext(LoadingElementContext);
-  const innerLoading = loading || contextLoading && contextLoadingElement === ref.current;
-  const innerReadOnly = readOnly || contextReadOnly || innerLoading;
-  const innerDisabled = disabled || contextDisabled;
-  reportReadOnlyToField(innerReadOnly);
-  reportDisabledToField(innerDisabled);
-  reportInteractiveToField(true);
-  useAutoFocus(ref, autoFocus, {
-    preventScroll: autoFocusPreventScroll
+  const inputRef = useRef(null);
+  const [inputProps, pickerRemainingProps, ControlChildrenWrapper] = useControlProps({
+    ...props,
+    ref: inputRef
+  }, {
+    controlType: "input",
+    statePropName: "value",
+    defaultStatePropName: "defaultValue",
+    readOnlySupported: true,
+    picker: true
   });
-  const step = type === "time" || type === "datetime" ? parseStepToSeconds(stepProp) : stepProp;
-  const pickerInputRef = useRef(null);
-  const remainingProps = useConstraints(pickerInputRef, rest);
   const {
-    "data-required-message": requiredMessageProp,
-    ...buttonProps
-  } = remainingProps;
-  const inputType = TYPE_TO_INPUT_TYPE[type] || "date";
-  const hasValue = uiState !== undefined && uiState !== "" && uiState !== null;
-  const [expanded, setExpanded] = useState(false);
-  const showColorSwatchAlways = type === "color" && !placeholder && !children;
+    id,
+    value,
+    basePseudoState,
+    disabled,
+    children
+  } = inputProps;
+  const loading = basePseudoState[":-navi-loading"];
   return jsxs(Box, {
     as: "button",
-    type: "button",
-    ...buttonProps,
     ref: ref,
+    type: "button",
     baseClassName: "navi_picker",
-    "navi-type": type,
     "navi-has-placeholder": placeholder ? "" : undefined,
-    autoFocus: undefined,
-    basePseudoState: {
-      ...buttonProps.basePseudoState,
-      ":read-only": innerReadOnly,
-      ":disabled": innerDisabled,
-      ":-navi-loading": innerLoading,
-      ":-navi-expanded": expanded
-    },
-    pseudoClasses: PICKER_PSEUDO_CLASSES,
+    pseudoClasses: PICKER_BUTTON_PSEUDO_CLASSES,
+    disabled: disabled,
+    "data-single-line": singleLine ? "" : undefined,
+    ...pickerRemainingProps,
+    basePseudoState: basePseudoState,
+    styleCSSVars: PickerStyleCSSVars
+    // we must put the id on the button and not the input
+    // so that a <label> tries to give focus to the button and not the input
+    ,
+
+    id: id,
+    icon: undefined,
+    ui: undefined,
+    singleLine: undefined,
+    dayLabel: undefined
+    // The button is handling the pointer interactions
+    ,
+
     onMouseDown: e => {
-      if (e.button !== 0) {
-        return;
-      }
-      if (innerDisabled || innerReadOnly) {
-        return;
-      }
-      e.preventDefault();
-      rest.onMouseDown?.(e);
+      inputProps.onMouseDown(e);
     },
     onClick: e => {
-      if (e.button !== 0) {
-        return;
-      }
-      if (innerDisabled || innerReadOnly) {
-        return;
-      }
-      const inputEl = ref.current?.querySelector(".navi_picker_input");
-      if (inputEl) {
-        try {
-          inputEl.showPicker();
-        } catch {
-          inputEl.click();
-        }
-      }
-      rest.onClick?.(e);
+      inputProps.onClick(e);
+    },
+    onKeyDown: e => {
+      // The button has the focus so he is the one handling keydown interactions
+      // it's also the one wrapping other elements so keydown bubbling will reach the button
+      // but neevr the input
+      inputProps.onKeyDown(e);
     },
     children: [jsx(LoadingOutline, {
-      loading: innerLoading,
-      color: "var(--loader-color)",
+      loading: loading,
+      color: "var(--picker-loader-color)",
       inset: -1
-    }), jsx("span", {
-      className: "navi_picker_placeholder",
-      hidden: hasValue,
-      children: placeholder
-    }), jsx("span", {
-      className: "navi_picker_value",
-      hidden: !hasValue && !showColorSwatchAlways,
-      children: children ? children : jsx(DefaultValueDisplay, {
-        type: type,
-        value: hasValue ? uiState : "#000000"
-      })
+    }), jsx(PickerInput, {
+      ...inputProps,
+      // eslint-disable-next-line react/no-children-prop
+      children: undefined // we will render children into the button
+      ,
+
+      id: undefined,
+      onMouseDown: undefined,
+      onClick: undefined,
+      onKeyDown: undefined
+    }), jsx(PickerContext.Provider, {
+      value: {
+        value,
+        placeholder,
+        dayLabel
+      },
+      children: ui === undefined ? jsx(PickerDefaultUI, {}) : ui
     }), jsx("span", {
       className: "navi_picker_right_slot",
       children: jsx(Icon, {
         size: "m",
-        children: ICON_FOR_TYPE[type] || jsx(CalendarSvg, {})
+        children: icon === undefined ? jsx(ChevronDownSvg, {}) : icon
       })
-    }), jsx("input", {
-      ref: pickerInputRef,
-      className: "navi_picker_input",
-      type: inputType,
-      name: name,
-      value: uiState,
-      min: formatInputMin(type, min),
-      max: formatInputMax(type, max),
-      step: step,
-      required: rest.required,
-      tabIndex: -1,
-      disabled: innerDisabled || innerReadOnly,
-      "data-rendered-by": ".navi_picker",
-      "data-required-message": requiredMessageProp ?? naviI18n(`picker.required.${type}`),
-      onChange: e => {
-        const newValue = e.currentTarget.value;
-        uiStateController.setUIState(newValue, e);
-        setExpanded(false);
-      },
-      onFocus: () => {
-        setExpanded(true);
-      },
-      onBlur: () => {
-        setExpanded(false);
-      }
+    }), jsx(ControlChildrenWrapper, {
+      children: children
     })]
   });
 };
-const PICKER_PSEUDO_CLASSES = [":hover", ":focus", ":focus-visible", ":focus-within", ":read-only", ":disabled", ":-navi-loading", ":-navi-expanded", ":-navi-has-value"];
-const TYPE_TO_INPUT_TYPE = {
-  day: "date",
-  month: "month",
-  week: "week",
-  time: "time",
-  datetime: "datetime-local",
-  color: "color"
-};
-const DefaultValueDisplay = ({
-  type,
-  value
-}) => {
-  if (type === "color") {
-    return jsx("span", {
-      className: "navi_picker_color_display",
-      style: {
-        "--picker-color": value
-      }
-    });
-  }
-  if (timeTypeSet.has(type)) {
-    return jsx(Time, {
-      type: type === "week" ? null : type,
-      capitalize: type === "day" || type === "month",
-      children: value
-    });
-  }
-  return value;
-};
-const timeTypeSet = new Set(["day", "month", "week", "time", "datetime"]);
-const formatInputMin = (type, min) => {
-  if (min === undefined || min === null) {
-    return undefined;
-  }
-  if (min instanceof Date) {
-    return toInputValue(type, min);
-  }
-  return min;
-};
-const formatInputMax = (type, max) => {
-  if (max === undefined || max === null) {
-    return undefined;
-  }
-  if (max instanceof Date) {
-    return toInputValue(type, max);
-  }
-  return max;
-};
-const toInputValue = (type, date) => {
-  const yyyy = date.getFullYear();
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  const dd = String(date.getDate()).padStart(2, "0");
-  const hh = String(date.getHours()).padStart(2, "0");
-  const min = String(date.getMinutes()).padStart(2, "0");
-  if (type === "day") {
-    return `${yyyy}-${mm}-${dd}`;
-  }
-  if (type === "month") {
-    return `${yyyy}-${mm}`;
-  }
-  if (type === "week") {
-    return toWeekString(date);
-  }
-  if (type === "time") {
-    return `${hh}:${min}`;
-  }
-  if (type === "datetime") {
-    return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
-  }
-  return String(date);
-};
-const toWeekString = date => {
-  // ISO week number
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7);
-  const yearStart = new Date(d.getFullYear(), 0, 4);
-  const week = Math.round(((d - yearStart) / 86400000 - 3 + (yearStart.getDay() + 6) % 7) / 7) + 1;
-  return `${d.getFullYear()}-W${String(week).padStart(2, "0")}`;
-};
-const ICON_FOR_TYPE = {
-  color: jsx(ColorSvg, {}),
-  time: jsx(ClockSvg, {}),
-  datetime: jsx(ClockSvg, {})
-};
-function CalendarSvg() {
-  return jsx("svg", {
-    xmlns: "http://www.w3.org/2000/svg",
-    viewBox: "0 0 24 24",
-    fill: "currentColor",
-    children: jsx("path", {
-      d: "M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"
-    })
-  });
-}
-function ClockSvg() {
-  return jsx("svg", {
-    xmlns: "http://www.w3.org/2000/svg",
-    viewBox: "0 0 24 24",
-    fill: "currentColor",
-    children: jsx("path", {
-      d: "M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"
-    })
-  });
-}
-function ColorSvg() {
-  return jsx("svg", {
-    xmlns: "http://www.w3.org/2000/svg",
-    viewBox: "0 0 24 24",
-    fill: "currentColor",
-    children: jsx("path", {
-      d: "M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"
-    })
-  });
-}
-
-const RadioList = props => {
-  const refDefault = useRef(null);
-  const ref = props.ref || refDefault;
-  const uiStateController = useUIGroupStateController(props, "radio_list", {
-    childComponentType: "radio",
-    aggregateChildStates: childUIStateControllers => {
-      let activeValue;
-      for (const childUIStateController of childUIStateControllers) {
-        if (childUIStateController.uiState) {
-          activeValue = childUIStateController.uiState;
-          break;
-        }
-      }
-      return activeValue;
-    }
-  });
-  const uiState = useUIState(uiStateController);
-  return jsx(UIStateControllerContext.Provider, {
-    value: uiStateController,
-    children: jsx(UIStateContext.Provider, {
-      value: uiState,
-      children: jsx(RadioListDispatcher, {
-        ...props,
-        ref: ref
-      })
-    })
-  });
-};
-const Radio = InputRadio;
-const RadioListDispatcher = props => {
-  if (props.action) {
-    return jsx(RadioListWithAction, {
-      ...props
-    });
-  }
-  return jsx(RadioListUI, {
-    ...props
-  });
-};
-const RadioListUI = props => {
-  const contextReadOnly = useContext(ReadOnlyContext);
-  const contextDisabled = useContext(DisabledContext);
-  const contextLoading = useContext(LoadingContext);
-  const uiStateController = useContext(UIStateControllerContext);
+const PickerInput = props => {
   const {
-    name,
-    loading,
-    disabled,
-    readOnly,
-    children,
-    required,
-    ...rest
+    type
   } = props;
-  const innerLoading = loading || contextLoading;
-  const innerReadOnly = readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
-  const innerDisabled = disabled || contextDisabled;
   return jsx(Box, {
-    flex: "y",
-    ...rest,
-    baseClassName: "navi_radio_list",
-    "data-radio-list": "",
-    onresetuistate: e => {
-      uiStateController.resetUIState(e);
-    },
-    children: jsx(ParentUIStateControllerContext.Provider, {
-      value: uiStateController,
-      children: jsx(FieldNameContext.Provider, {
-        value: name,
-        children: jsx(ReadOnlyContext.Provider, {
-          value: innerReadOnly,
-          children: jsx(DisabledContext.Provider, {
-            value: innerDisabled,
-            children: jsx(RequiredContext.Provider, {
-              value: required,
-              children: jsx(LoadingContext.Provider, {
-                value: innerLoading,
-                children: children
-              })
-            })
-          })
-        })
-      })
-    })
-  });
-};
-const RadioListWithAction = props => {
-  const uiStateController = useContext(UIStateControllerContext);
-  const {
-    ref,
-    action,
-    onCancel,
-    onActionPrevented,
-    onActionAbort,
-    onActionError,
-    onActionEnd,
-    actionErrorEffect,
-    loading,
-    children,
-    ...rest
-  } = props;
-  const [boundAction] = useActionBoundToOneParam(action, uiStateController.uiStateSignal);
-  const {
-    loading: actionLoading
-  } = useActionStatus(boundAction);
-  const executeAction = useExecuteAction(ref, {
-    errorEffect: actionErrorEffect
-  });
-  const [actionRequester, setActionRequester] = useState(null);
-  const onRequestAction = useOnRequestAction();
-  return jsx(RadioListUI, {
-    "data-action": boundAction,
-    ...rest,
-    ref: ref
-    // This is the onChange event that bubbled from radios
+    as: "input",
+    ...props,
+    value: asControlHostValue(props.value, {
+      controlType: "input",
+      type
+    }),
+    className: "navi_picker_input",
+    pseudoClasses: PickerInputPseudoClasses,
+    tabIndex: -1 // Make input non tabbable
     ,
-    onChange: e => {
-      const radio = e.target;
-      const radioListContainer = ref.current;
-      dispatchRequestAction(radioListContainer, {
-        event: e,
-        requester: radio,
-        actionOrigin: "action_prop"
-      });
-    },
-    onnavi_cancel: e => {
-      const {
-        reason
-      } = e.detail;
-      uiStateController.resetUIState(e);
-      onCancel?.(e, reason);
-    },
-    onnavi_request_action: e => {
-      onRequestAction(boundAction, e);
-    },
-    onnavi_action_prevented: onActionPrevented,
-    onnavi_action_ready: e => {
-      setActionRequester(e.detail.requester);
-      executeAction(e);
-    },
-    onnavi_action_abort: e => {
-      uiStateController.resetUIState(e);
-      onActionAbort?.(e);
-    },
-    onnavi_action_error: e => {
-      uiStateController.resetUIState(e);
-      onActionError?.(e);
-    },
-    onnavi_action_end: onActionEnd,
-    loading: loading || actionLoading,
-    children: jsx(LoadingElementContext.Provider, {
-      value: actionRequester,
-      children: children
-    })
+
+    "navi-focus-delegate": "" // Ensure callout focus the button and not the input
   });
 };
+const PICKER_BUTTON_PSEUDO_CLASSES = [":hover", ":focus", ":focus-visible", ":focus-within", ":read-only", ":disabled", ":-navi-loading", ":-navi-expanded", ":-navi-has-value"];
+const PickerInputPseudoClasses = [":read-only", ":disabled", ":-navi-loading", ":-navi-has-value", ":-navi-expanded"];
+const PickerStyleCSSVars = {
+  "outlineWidth": "--picker-outline-width",
+  "borderWidth": "--picker-border-width",
+  "borderRadius": "--picker-border-radius",
+  "padding": "--picker-padding",
+  "paddingX": "--picker-padding-x",
+  "paddingY": "--picker-padding-y",
+  "paddingTop": "--picker-padding-top",
+  "paddingRight": "--picker-padding-right",
+  "paddingBottom": "--picker-padding-bottom",
+  "paddingLeft": "--picker-padding-left",
+  "borderColor": "--picker-border-color",
+  "backgroundColor": "--picker-background-color",
+  "color": "--picker-color",
+  ":hover": {
+    backgroundColor: "--picker-background-color-hover",
+    borderColor: "--picker-border-color-hover"
+  },
+  ":read-only": {
+    backgroundColor: "--picker-background-color-readonly",
+    borderColor: "--picker-border-color-readonly",
+    color: "--picker-color-readonly"
+  },
+  ":disabled": {
+    backgroundColor: "--picker-background-color-disabled",
+    borderColor: "--picker-border-color-disabled",
+    color: "--picker-color-disabled"
+  }
+};
+const PickerDefaultUI = () => {
+  const {
+    value,
+    placeholder
+  } = useContext(PickerContext);
+  if (!value) {
+    if (!placeholder) {
+      return null;
+    }
+    return jsx(PickerPlaceholder, {
+      children: placeholder
+    });
+  }
+  return jsx(PickerValue, {
+    children: value
+  });
+};
+Picker.UI = PickerDefaultUI;
+Picker.UI.Date = PickerDateUI;
+Picker.UI.Time = PickerTimeUI;
+Picker.UI.Week = PickerWeekUI;
+Picker.UI.Datetime = PickerDatetimeUI;
+Picker.UI.File = PickerFileUI;
+Picker.UI.Color = PickerColorUI;
+Picker.UI.Multiple = PickerArrayUI;
 
 /**
  * applySearch — matches value against searchText.
@@ -34076,8 +35825,10 @@ const createSearch = (fields) => {
  * to each ListItem. The list's matchFallback will be shown when all items are hidden.
  */
 const useSearchText = (searchText, items, matchFn = applySearch) => {
-  if (typeof searchText !== "string") {
-    throw new TypeError("useSearchText: searchText must be a string");
+  if (typeof searchText !== "string" && searchText !== undefined) {
+    throw new TypeError(
+      "useSearchText: searchText must be a string or undefined",
+    );
   }
   if (items === undefined) {
     throw new TypeError("useSearch: items is undefined");
@@ -34428,7 +36179,7 @@ const Z_INDEX_DROP_PREVIEW = Z_INDEX_STICKY_CORNER + 1;
 
 const Z_INDEX_TABLE_UI = Z_INDEX_STICKY_CORNER + 1;
 
-installImportMetaCssBuild(import.meta);const css$h = /* css */`
+installImportMetaCssBuild(import.meta);const css$j = /* css */`
   .navi_table_drag_clone_container {
     position: absolute;
     top: var(--table-visual-top);
@@ -34583,7 +36334,7 @@ const useTableDragContextValue = ({
   }, [grabTarget, canChangeColumnOrder]);
 };
 const TableDragCloneContainer = forwardRef((props, ref) => {
-  import.meta.css = [css$h, "@jsenv/navi/src/field/table/drag/table_drag.jsx"];
+  import.meta.css = [css$j, "@jsenv/navi/src/control/table/drag/table_drag.jsx"];
   const {
     tableId
   } = props;
@@ -34881,7 +36632,7 @@ installImportMetaCssBuild(import.meta);const ROW_MIN_HEIGHT = 30;
 const ROW_MAX_HEIGHT = 100;
 const COLUMN_MIN_WIDTH = 50;
 const COLUMN_MAX_WIDTH = 500;
-const css$g = /* css */`
+const css$i = /* css */`
   @layer navi {
     .navi_table {
       --table-resizer-handle-color: #063b7c;
@@ -35041,7 +36792,7 @@ const css$g = /* css */`
 
 // Column resize components
 const TableColumnResizer = props => {
-  import.meta.css = [css$g, "@jsenv/navi/src/field/table/resize/table_resize.jsx"];
+  import.meta.css = [css$i, "@jsenv/navi/src/control/table/resize/table_resize.jsx"];
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
   return jsxs("div", {
@@ -35508,7 +37259,7 @@ const findPreviousTableRow = currentRow => {
   return currentIndex > 0 ? allRows[currentIndex - 1] : null;
 };
 
-installImportMetaCssBuild(import.meta);const css$f = /* css */`
+installImportMetaCssBuild(import.meta);const css$h = /* css */`
   @layer navi {
     .navi_table {
       --selection-border-color: var(--navi-selection-border-color, #0078d4);
@@ -35610,7 +37361,7 @@ const useTableSelectionController = ({
   onSelectionChange,
   selectionColor
 }) => {
-  import.meta.css = [css$f, "@jsenv/navi/src/field/table/selection/table_selection.jsx"];
+  import.meta.css = [css$h, "@jsenv/navi/src/control/table/selection/table_selection.jsx"];
   const selectionController = useSelectionController({
     elementRef: tableRef,
     layout: "grid",
@@ -36081,7 +37832,7 @@ const useTableStickyContextValue = ({
 };
 
 installImportMetaCssBuild(import.meta);// TODO: sticky left/top frontier should likely use "followPosition"
-const css$e = /* css */`
+const css$g = /* css */`
   @layer navi {
     .navi_table {
       --sticky-frontier-color: #c0c0c0;
@@ -36324,7 +38075,7 @@ const css$e = /* css */`
 const TableStickyFrontier = ({
   tableRef
 }) => {
-  import.meta.css = [css$e, "@jsenv/navi/src/field/table/sticky/table_sticky.jsx"];
+  import.meta.css = [css$g, "@jsenv/navi/src/control/table/sticky/table_sticky.jsx"];
   const stickyLeftFrontierGhostRef = useRef();
   const stickyLeftFrontierPreviewRef = useRef();
   const stickyTopFrontierGhostRef = useRef();
@@ -36553,7 +38304,7 @@ const initMoveStickyFrontierViaPointer = (pointerdownEvent, {
  *   inset 0 -1px 0 0 color;   // Bottom border
  */
 
-const css$d = /* css */ `
+const css$f = /* css */ `
   .navi_table_root {
     position: relative;
     max-width: var(--table-max-width, none);
@@ -36756,7 +38507,7 @@ const css$d = /* css */ `
   }
 `;
 
-installImportMetaCssBuild(import.meta);const css$c = /* css */`
+installImportMetaCssBuild(import.meta);const css$e = /* css */`
   .navi_table_ui {
     position: fixed;
     inset: 0;
@@ -36767,7 +38518,7 @@ installImportMetaCssBuild(import.meta);const css$c = /* css */`
   }
 `;
 const TableUI = forwardRef((props, ref) => {
-  import.meta.css = [css$c, "@jsenv/navi/src/field/table/table_ui.jsx"];
+  import.meta.css = [css$e, "@jsenv/navi/src/control/table/table_ui.jsx"];
   const {
     tableRef,
     tableId,
@@ -36873,7 +38624,7 @@ const RowIndexContext = createContext();
 const TableSectionContext = createContext();
 const useIsInTableHead = () => useContext(TableSectionContext) === "head";
 const Table = props => {
-  import.meta.css = [css$d, "@jsenv/navi/src/field/table/table.jsx"];
+  import.meta.css = [css$f, "@jsenv/navi/src/control/table/table.jsx"];
   const tableDefaultRef = useRef();
   const tableDefaultId = `table-${useId()}`;
   const {
@@ -37694,7 +39445,7 @@ const normalizeKey = (key) => {
   return key;
 };
 
-installImportMetaCssBuild(import.meta);const css$b = /* css */`
+installImportMetaCssBuild(import.meta);const css$d = /* css */`
   .navi_shortcut_container[data-visually-hidden] {
     /* Visually hidden container - doesn't affect layout */
     position: absolute;
@@ -37732,7 +39483,7 @@ installImportMetaCssBuild(import.meta);const css$b = /* css */`
 const ActiveKeyboardShortcuts = ({
   visible
 }) => {
-  import.meta.css = [css$b, "@jsenv/navi/src/keyboard/active_keyboard_shortcuts.jsx"];
+  import.meta.css = [css$d, "@jsenv/navi/src/keyboard/active_keyboard_shortcuts.jsx"];
   const activeShortcuts = activeShortcutsSignal.value;
   return jsx("div", {
     className: "navi_shortcut_container",
@@ -37771,7 +39522,7 @@ const KeyboardShortcutAriaElement = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$a = /* css */`
+installImportMetaCssBuild(import.meta);const css$c = /* css */`
   @layer navi {
     .navi_clipboard_container {
       --height: 1.5em;
@@ -37803,7 +39554,7 @@ const ButtonCopyToClipboard = ({
   children,
   ...props
 }) => {
-  import.meta.css = [css$a, "@jsenv/navi/src/field/button_copy_to_clipboard.jsx"];
+  import.meta.css = [css$c, "@jsenv/navi/src/control/button_copy_to_clipboard.jsx"];
   const [copied, setCopied] = useState(false);
   const renderedRef = useRef();
   useEffect(() => {
@@ -37884,23 +39635,29 @@ const Address = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$9 = /* css */`
+installImportMetaCssBuild(import.meta);const css$b = /* css */`
   @layer navi {
   }
   .navi_badge {
     --font-size: 0.7em;
-    --x-background: var(--background);
-    --x-background-color: var(--background-color, var(--x-background));
-    --x-color-contrasting: var(--navi-color-white);
-    --x-color: var(--color, var(--x-color-contrasting));
     --padding-x: 0.8em;
     --padding-y: 0.4em;
+
+    --x-background: var(--background, light-dark(#e0e0e0, #3a3a3a));
+    --x-background-color: var(--background-color, var(--x-background));
+    /* Default: white text — works on colored backgrounds.
+       Overridden to dark when the bg is light enough (data-accent-needs-dark-fg)
+       or when no background prop is passed (data-badge-default-bg). */
+    --x-color: var(--color, white);
+
     position: relative;
-    display: inline-block;
+    display: inline-flex;
+    max-width: 200px;
     padding-top: var(--padding-y);
     padding-right: var(--padding-x);
     padding-bottom: var(--padding-y);
     padding-left: var(--padding-x);
+    align-items: stretch;
     color: var(--x-color);
     font-size: var(--font-size);
     line-height: normal;
@@ -37908,8 +39665,41 @@ installImportMetaCssBuild(import.meta);const css$9 = /* css */`
     background-color: var(--x-background-color);
     border-radius: 1em;
 
+    /* Light colored background needs dark text */
     &[data-accent-needs-dark-fg] {
-      --x-color-contrasting: var(--navi-color-black);
+      --x-color: var(--color, #333);
+    }
+
+    &[data-text-overflow] .navi_text_overflow_wrapper {
+      /* Keep badge text and button together */
+      gap: 0;
+    }
+
+    [role="button"] {
+      display: inline-flex;
+      margin-top: calc(-1 * var(--padding-y));
+      margin-bottom: calc(-1 * var(--padding-y));
+      padding-right: calc(var(--padding-x) / 2);
+      padding-left: calc(var(--padding-x) / 2);
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+
+      &:first-child {
+        margin-left: calc(-1 * var(--padding-x));
+        border-top-left-radius: inherit;
+        border-bottom-left-radius: inherit;
+      }
+
+      &:last-child {
+        margin-right: calc(-1 * var(--padding-x));
+        border-top-right-radius: inherit;
+        border-bottom-right-radius: inherit;
+      }
+
+      &:hover {
+        background: rgba(0, 0, 0, 0.15);
+      }
     }
   }
 `;
@@ -37918,16 +39708,20 @@ const Badge = ({
   className,
   ...props
 }) => {
-  import.meta.css = [css$9, "@jsenv/navi/src/text/badge.jsx"];
+  import.meta.css = [css$b, "@jsenv/navi/src/text/badge.jsx"];
   const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
+  props.ref = props.ref || defaultRef;
+  const {
+    ref
+  } = props;
   useAccentColorAttributes(ref, null);
   return jsx(Text, {
-    ref: ref,
     className: withPropsClassName("navi_badge", className),
     bold: true,
+    overflowEllipsis: true,
     ...props,
     styleCSSVars: BadgeStyleCSSVars$1,
+    spacing: jsx("span", {}),
     children: children
   });
 };
@@ -37942,6 +39736,26 @@ const BadgeStyleCSSVars$1 = {
   color: "--color",
   fontSize: "--font-size"
 };
+const BadgeButton = props => {
+  const defaultRef = useRef();
+  props.ref = props.ref || defaultRef;
+  const [buttonProps, remainingProps] = useControlProps(props, {
+    controlType: "button",
+    statePropName: "value",
+    allowNameless: true
+  });
+  return jsx(Text, {
+    overflowPinned: true,
+    className: "navi_badge_button",
+    role: "button",
+    onnavi_get_value: e => {
+      e.detail.respondWith(props.value);
+    },
+    ...buttonProps,
+    ...remainingProps
+  });
+};
+Badge.Button = BadgeButton;
 
 const LoadingDotsSvg = () => {
   return jsxs("svg", {
@@ -38008,7 +39822,7 @@ const formatNumber = (value, { lang } = {}) => {
   return new Intl.NumberFormat(lang).format(value);
 };
 
-installImportMetaCssBuild(import.meta);const css$8 = /* css */`
+installImportMetaCssBuild(import.meta);const css$a = /* css */`
   @layer navi {
   }
   .navi_text.navi_badge_count {
@@ -38121,9 +39935,12 @@ const BadgeCount = ({
   lineLayout,
   ...props
 }) => {
-  import.meta.css = [css$8, "@jsenv/navi/src/text/badge_count.jsx"];
+  import.meta.css = [css$a, "@jsenv/navi/src/text/badge_count.jsx"];
   const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
+  props.ref = props.ref || defaultRef;
+  const {
+    ref
+  } = props;
   useAccentColorAttributes(ref, null);
   let valueRequested = (() => {
     if (typeof children !== "string") return children;
@@ -38151,7 +39968,6 @@ const BadgeCount = ({
       children: jsxs(BadgeCountCircle, {
         ...props,
         loading: loading,
-        ref: ref,
         hasOverflow: hasOverflow,
         charCount: charCount,
         children: [valueDisplayed, hasOverflow && maxElement]
@@ -38170,7 +39986,6 @@ const BadgeCount = ({
     children: jsxs(BadgeCountEllipse, {
       ...props,
       loading: loading,
-      ref: ref,
       hasOverflow: hasOverflow,
       charCount: charCount,
       children: [valueFormatted, hasOverflow && maxElement]
@@ -38205,7 +40020,6 @@ const applyMaxToValue = (max, value) => {
   return value;
 };
 const BadgeCountEllipse = ({
-  ref,
   loading,
   hasOverflow,
   charCount,
@@ -38214,7 +40028,6 @@ const BadgeCountEllipse = ({
   ...props
 }) => {
   return jsx(Text, {
-    ref: ref,
     className: withPropsClassName("navi_badge_count", className),
     bold: true,
     "data-ellipse": "",
@@ -38230,7 +40043,6 @@ const BadgeCountEllipse = ({
   });
 };
 const BadgeCountCircle = ({
-  ref,
   charCount,
   hasOverflow,
   loading,
@@ -38239,7 +40051,6 @@ const BadgeCountCircle = ({
   ...props
 }) => {
   return jsx(Text, {
-    ref: ref,
     className: withPropsClassName("navi_badge_count", className),
     "data-circle": "",
     bold: true,
@@ -38261,7 +40072,72 @@ const BadgeCountCircle = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$7 = /* css */`
+installImportMetaCssBuild(import.meta);const css$9 = /* css */`
+  @layer navi {
+  }
+  .navi_badge_list {
+    flex-wrap: wrap;
+  }
+`;
+const BadgeList = ({
+  fallback,
+  children,
+  className,
+  shrinkWrap = true,
+  ...props
+}) => {
+  import.meta.css = [css$9, "@jsenv/navi/src/text/badge_list.jsx"];
+  const defaultRef = useRef();
+  props.ref = props.ref || defaultRef;
+  const {
+    ref
+  } = props;
+  useLayoutEffect(() => {
+    if (!shrinkWrap) {
+      return undefined;
+    }
+    const el = ref.current;
+    if (!el) {
+      return undefined;
+    }
+    let observer;
+    let rafId;
+    const applyWidth = () => {
+      el.style.width = "";
+      const optimalWidth = measureWidestChildRow(el);
+      if (optimalWidth === null) {
+        return;
+      }
+      el.style.width = `${Math.ceil(optimalWidth)}px`;
+    };
+    applyWidth();
+    const parent = el.parentElement;
+    if (parent) {
+      observer = new ResizeObserver(() => {
+        cancelAnimationFrame(rafId);
+        rafId = requestAnimationFrame(applyWidth);
+      });
+      observer.observe(parent);
+    }
+    window.addEventListener("resize", applyWidth);
+    return () => {
+      cancelAnimationFrame(rafId);
+      observer?.disconnect();
+      window.removeEventListener("resize", applyWidth);
+    };
+  });
+  const childArray = toChildArray(children);
+  return jsx(Box, {
+    flex: "x",
+    alignY: "center",
+    spacing: "xs",
+    className: withPropsClassName("navi_badge_list", className),
+    ...props,
+    children: childArray.length ? children : fallback
+  });
+};
+
+installImportMetaCssBuild(import.meta);const css$8 = /* css */`
   @layer navi {
     .navi_caption {
       --color: #6b7280;
@@ -38282,7 +40158,7 @@ const Caption = ({
   className,
   ...rest
 }) => {
-  import.meta.css = [css$7, "@jsenv/navi/src/text/caption.jsx"];
+  import.meta.css = [css$8, "@jsenv/navi/src/text/caption.jsx"];
   return jsx(Text, {
     as: "small",
     size: "0.8em" // We use em to be relative to the parent (we want to be smaller than the surrounding text)
@@ -38639,7 +40515,7 @@ const Interpolate = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$6 = /* css */`
+installImportMetaCssBuild(import.meta);const css$7 = /* css */`
   @layer navi {
     .navi_quantity {
       --unit-color: color-mix(in srgb, currentColor 50%, white);
@@ -38710,7 +40586,7 @@ const Quantity = ({
   bold = true,
   ...props
 }) => {
-  import.meta.css = [css$6, "@jsenv/navi/src/text/quantity.jsx"];
+  import.meta.css = [css$7, "@jsenv/navi/src/text/quantity.jsx"];
   const value = parseQuantityValue(children);
   const valueRounded = integer && typeof value === "number" ? Math.round(value) : value;
   const valueFormatted = typeof valueRounded === "number" ? formatNumber(valueRounded, {
@@ -38796,7 +40672,7 @@ const parseQuantityValue = children => {
   return Number.isNaN(parsed) ? children : parsed;
 };
 
-installImportMetaCssBuild(import.meta);const css$5 = /* css */`
+installImportMetaCssBuild(import.meta);const css$6 = /* css */`
   @layer navi {
     .navi_meter {
       --loader-color: var(--navi-loader-color);
@@ -38934,7 +40810,7 @@ const Meter = ({
   style,
   ...rest
 }) => {
-  import.meta.css = [css$5, "@jsenv/navi/src/text/meter.jsx"];
+  import.meta.css = [css$6, "@jsenv/navi/src/text/meter.jsx"];
   const defaultRef = useRef();
   const ref = rest.ref || defaultRef;
   value = Number(value);
@@ -38957,8 +40833,6 @@ const Meter = ({
   }
   const level = getMeterLevel(clampedValue, min, max, low, high, optimum);
   const fillColorVar = level === "optimum" ? "var(--fill-color-optimum)" : level === "suboptimum" ? "var(--fill-color-suboptimum)" : "var(--fill-color-even-less-good)";
-  reportDisabledToField(disabled);
-  reportReadOnlyToField(readOnly);
 
   // When fill covers less than half the track, the text center sits on the
   // empty track — use the track color for contrast. Otherwise use fill color.
@@ -39059,6 +40933,94 @@ const Paragraph = props => {
     ...props,
     as: "p"
   });
+};
+
+installImportMetaCssBuild(import.meta);const css$5 = /* css */`
+  .navi_text_box {
+    min-width: 0;
+    align-items: flex-start;
+  }
+
+  .navi_text_box_content {
+    white-space: normal;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+
+  .navi_text_box[data-single-line] .navi_text_box_content {
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    word-break: normal;
+    overflow: hidden;
+    overflow-wrap: normal;
+  }
+`;
+
+/**
+ * A text container that:
+ * - Displays optional icon(s) before and/or after the text
+ * - Shrinks its width to fit the longest rendered text line (no trailing blank space)
+ * - Wraps long text by default (overflow-wrap: anywhere)
+ * - Shows ellipsis for a single overflowing unwrappable line
+ *
+ * Props:
+ *   iconBefore — element shown to the left of the text
+ *   iconAfter  — element shown to the right of the text (stays on the same line)
+ *   maxHeight  — CSS max-height string; when set, content that cannot wrap gets ellipsis
+ *   children   — the text content
+ */
+const TextBox = ({
+  iconBefore,
+  iconAfter,
+  maxHeight,
+  singleLine,
+  children,
+  ...rest
+}) => {
+  import.meta.css = [css$5, "@jsenv/navi/src/text/text_box.jsx"];
+  const boxRef = useRef(null);
+  const contentRef = useRef(null);
+  useLayoutEffect(() => {
+    const boxEl = boxRef.current;
+    const contentEl = contentRef.current;
+    if (!boxEl || !contentEl) {
+      return;
+    }
+    if (maxHeight) {
+      boxEl.style.maxHeight = maxHeight;
+      boxEl.style.overflow = "hidden";
+    } else {
+      boxEl.style.maxHeight = "";
+      boxEl.style.overflow = "";
+    }
+    if (!singleLine) {
+      adjustWidth(boxEl, contentEl);
+    }
+  });
+  return jsxs(Box, {
+    ref: boxRef,
+    flex: true,
+    inline: true,
+    ...rest,
+    baseClassName: "navi_text_box",
+    "data-single-line": singleLine ? "" : undefined,
+    children: [iconBefore, jsx("span", {
+      ref: contentRef,
+      className: "navi_text_box_content",
+      children: children
+    }), iconAfter]
+  });
+};
+const adjustWidth = (boxEl, contentEl) => {
+  // Reset any previously forced width so we measure the natural size
+  boxEl.style.width = "";
+  contentEl.style.width = "";
+  contentEl.removeAttribute("data-overflow-ellipsis");
+  const optimalWidth = measureLongestVisualLineWidth(contentEl);
+  if (optimalWidth === null) {
+    return;
+  }
+  contentEl.style.width = `${Math.ceil(optimalWidth)}px`;
 };
 
 installImportMetaCssBuild(import.meta);const css$4 = /* css */`
@@ -39749,5 +41711,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, Checkbox, CheckboxList, CloseSvg, Code, Col, Colgroup, ConstructionSvg, Details, Dialog, DialogLayout, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Field, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemFooter, ListItemGroup, ListItemHeader, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, MessageBox, Meter, Nav, NaviDebug, Paragraph, Picker, Popover, Quantity, Radio, RadioList, Route, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectionContext, Separator, SettingsSvg, SidePanel, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, Thead, Time, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, actionRunEffect, addCustomMessage, anyMatchingRouteSignal, applySearch, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, filterTableSelection, formatDatetime, formatDay, formatMonth, formatNumber, formatTime, formatTimeAgo, formatTimeRelative, getNowHours, installCustomConstraintValidation, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isToday, langSignal, localStorageSignal, moveArrayItemByIndex, navBack, navForward, navTo, naviI18n, openCallout, rawUrlPart, reload, removeCustomMessage, requestListClose, requestListOpen, rerunActions, resource, route, routeAction, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, useRouteStatus, useRunOnMount, useSearchText, useSelectRequestClose, useSelectableElement, useSelectionController, useSidePanelClose, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage, windowWidthSignal };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, Details, Dialog, DialogLayout, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Field, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemFooter, ListItemGroup, ListItemHeader, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, Paragraph, Picker, Popover, Quantity, RadioGroup, Route, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Selectable, SelectableList, SelectionContext, Separator, SettingsSvg, SidePanel, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Thead, Time, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, actionRunEffect, addCustomMessage, anyMatchingRouteSignal, applySearch, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, installCustomConstraintValidation, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isToday, langSignal, localStorageSignal, moveArrayItemByIndex, navBack, navForward, navTo, naviI18n, openCallout, rawUrlPart, reload, removeCustomMessage, rerunActions, resource, route, routeAction, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSidePanelClose, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi.js.map

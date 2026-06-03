@@ -6411,7 +6411,23 @@ const jsenvPluginDirectoryListing = ({
       const { request, requestedUrl, mainFilePath, rootDirectoryUrl } =
         reference.ownerUrlInfo.context;
       if (!fsStat) {
-        if (!request || request.headers["sec-fetch-dest"] !== "document") {
+        if (!request) {
+          // no request we should not serve directoy listing
+          return null;
+        }
+        const secFetchDest = request.headers["sec-fetch-dest"];
+        if (secFetchDest && secFetchDest !== "document") {
+          // we have sec fetch dest and it's not document so it's not a navigation request, we should not serve directory listing
+          return null;
+        }
+        // beware we might end up here when nav context is not trusted (http, ip url etc)
+        // in that case we fallback to detecting if the request accepts html
+        const acceptsHtml = pickContentType(request, ["text/html"]);
+        if (!acceptsHtml) {
+          return null;
+        }
+        // requestedUrl must be a proper file:// URL (no encoded slashes)
+        if (requestedUrl.includes("%2F") || requestedUrl.includes("%2f")) {
           return null;
         }
         if (url !== requestedUrl) {

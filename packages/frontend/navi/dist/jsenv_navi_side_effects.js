@@ -104,6 +104,29 @@ const css = /* css */`
       --navi-color-hint: color-mix(in srgb, currentColor 25%, transparent);
     }
   }
+
+  /* Hidden appearance */
+  input[navi-visually-hidden] {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    white-space: nowrap;
+    border: 0;
+    clip-path: inset(50%);
+    appearance: none;
+    overflow: hidden;
+
+    &[navi-debug] {
+      position: static;
+      width: auto;
+      height: auto;
+      margin: 0;
+      clip-path: none;
+      appearance: auto;
+    }
+  }
 `;
 import.meta.css = [css, "@jsenv/navi/src/navi_css_vars.js"];
 

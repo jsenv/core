@@ -128,17 +128,37 @@ const getElementSignature = (element) => {
       }
       return `input[type="${type}"]`;
     }
+    if (tagName === "form") {
+      const name = element.getAttribute("name");
+      if (name) {
+        return `form[name="${name}"]`;
+      }
+      return "form";
+    }
     if (element === document.body) {
-      return "<body>";
+      return "document.body";
     }
     if (element === document.documentElement) {
-      return "<html>";
+      return "document.html";
     }
     const elementId = element.id;
-    const className = element.className;
     if (elementId && !looksLikeGeneratedId(elementId)) {
       return `${tagName}#${elementId}`;
     }
+    if (tagName === "button") {
+      const text = element.textContent.trim();
+      if (text) {
+        const excerpt = text.length > 10 ? `${text.slice(0, 10)}…` : text;
+        return `button:text("${excerpt}")`;
+      }
+      const parentSignature = getElementSignature(element.parentElement);
+      return `${parentSignature} > button:empty`;
+    }
+    const role = element.getAttribute("role");
+    if (role) {
+      return `${tagName}[role="${role}"]`;
+    }
+    const className = element.className;
     if (className) {
       return `${tagName}.${className.split(" ").join(".")}`;
     }
@@ -188,7 +208,8 @@ const dispatchInternalCustomEvent = (
   customEventDetail,
 ) => {
   const customEvent = new CustomEvent(customEventName, {
-    detail: customEventDetail,
+    detail: resolveEventDetail(customEventDetail),
+    cancelable: true,
   });
   return el.dispatchEvent(customEvent);
 };
@@ -230,9 +251,13 @@ const resolveEventDetail = (customEventDetail) => {
   if (!isWrappedCustomEvent) {
     return { ...rest, event };
   }
+  // Keep `event` as the direct parent so callers see the immediate facade.
+  // Build eventChain as [root, ...grandparents] — oldest first, excluding `event`.
   const previousChain = event.detail.eventChain;
-  const eventChain = previousChain ? [...previousChain, event] : [event];
-  return { ...rest, event: event.detail.event, eventChain };
+  const eventChain = previousChain
+    ? [...previousChain, event.detail.event]
+    : [event.detail.event];
+  return { ...rest, event, eventChain };
 };
 
 /**
@@ -242,26 +267,43 @@ const resolveEventDetail = (customEventDetail) => {
  *   initiator (event.detail.event) → ...intermediates (event.detail.eventChain)... → event
  *
  * Examples:
- *   eventInvolves(e, (e) => e.type === "mousedown")
- *   eventInvolves(e, (e) => e.type === "navi_list_select")
+ *   findEvent(e, "mousedown")
+ *   findEvent(e, ["mousedown", "touchstart"])
+ *   findEvent(e, (e) => e.type === "mousedown")
+ *   findEvent(e, (e) => e.type === "navi_list_select")
  */
-const eventInvolves = (event, predicate) => {
-  if (predicate(event)) {
-    return true;
+const findEvent = (event, predicate) => {
+  if (!event) {
+    return undefined;
+  }
+  const match = resolveEventPredicate(predicate);
+  if (match(event)) {
+    return event;
   }
   if (event.detail?.eventChain) {
     for (const chainedEvent of event.detail.eventChain) {
-      if (predicate(chainedEvent)) {
-        return true;
+      if (match(chainedEvent)) {
+        return chainedEvent;
       }
     }
   }
-  if (event.detail?.event !== undefined) {
-    if (predicate(event.detail.event)) {
-      return true;
+  const initiator = event.detail?.event;
+  if (initiator) {
+    if (match(initiator)) {
+      return initiator;
     }
   }
-  return false;
+  return undefined;
+};
+
+const resolveEventPredicate = (predicate) => {
+  if (typeof predicate === "string") {
+    return (e) => e.type === predicate;
+  }
+  if (Array.isArray(predicate)) {
+    return (e) => predicate.includes(e.type);
+  }
+  return predicate;
 };
 
 /**
@@ -272,14 +314,16 @@ const eventInvolves = (event, predicate) => {
 const formatEventSideEffect = (e, sideEffect) => {
   const parts = [];
   if (e.detail?.event !== undefined) {
-    const initiator = e.detail.event;
+    const chain = e.detail.eventChain;
+    const initiator = chain ? chain[0] : e.detail.event;
     parts.push(
       `"${initiator.type}" on ${getElementSignature(initiator.target)}`,
     );
-    if (e.detail.eventChain) {
-      for (const chainedEvent of e.detail.eventChain) {
+    if (chain) {
+      for (const chainedEvent of chain.slice(1)) {
         parts.push(chainedEvent.type);
       }
+      parts.push(e.detail.event.type);
     }
     parts.push(e.type);
   } else {
@@ -319,7 +363,8 @@ const createEventGroupLogger = () => {
       return;
     }
     const e = eOrMessage;
-    const initiator = e.detail?.event ?? e;
+    const chain = e.detail?.eventChain;
+    const initiator = chain ? chain[0] : (e.detail?.event ?? e);
     if (initiator !== currentInitiator) {
       if (currentInitiator !== null) {
         clearTimeout(closeGroupTimeout);
@@ -340,9 +385,14 @@ const createEventGroupLogger = () => {
 
 const formatSideEffectLine = (e, sideEffect) => {
   const parts = [];
-  if (e.detail?.eventChain) {
-    for (const chainedEvent of e.detail.eventChain) {
+  const chain = e.detail?.eventChain;
+  if (chain) {
+    // chain[0] is the root event, already shown as the group label — skip it
+    for (const chainedEvent of chain.slice(1)) {
       parts.push(chainedEvent.type);
+    }
+    if (e.detail?.event) {
+      parts.push(e.detail.event.type);
     }
   }
   parts.push(sideEffect);
@@ -4086,10 +4136,20 @@ const addActiveElementEffect = (callback) => {
   return remove;
 };
 
-const elementIsVisibleForFocus = (node) => {
-  return getFocusVisibilityInfo(node).visible;
+/**
+ * Returns whether a node is visible from a focus/keyboard-navigation perspective.
+ * This intentionally ignores purely visual properties (opacity, clip, off-screen)
+ * and only checks structural visibility: hidden attribute, display:none, visibility:hidden,
+ * closed <details>/<dialog>/popover ancestors, and optionally aria-hidden ancestry.
+ *
+ * @param {Node} node
+ * @param {{ excludeAriaHidden?: boolean }} [options]
+ * @returns {boolean}
+ */
+const elementIsVisibleForFocus = (node, { excludeAriaHidden } = {}) => {
+  return getFocusVisibilityInfo(node, { excludeAriaHidden }).visible;
 };
-const getFocusVisibilityInfo = (node) => {
+const getFocusVisibilityInfo = (node, { excludeAriaHidden } = {}) => {
   if (isDocumentElement(node)) {
     return { visible: true, reason: "is document" };
   }
@@ -4106,6 +4166,12 @@ const getFocusVisibilityInfo = (node) => {
   while (nodeOrAncestor) {
     if (isDocumentElement(nodeOrAncestor)) {
       break;
+    }
+    if (
+      excludeAriaHidden &&
+      nodeOrAncestor.getAttribute("aria-hidden") === "true"
+    ) {
+      return { visible: false, reason: "inside aria-hidden element" };
     }
     if (getStyle(nodeOrAncestor, "display") === "none") {
       return { visible: false, reason: "ancestor uses display: none" };
@@ -4163,9 +4229,17 @@ const getVisuallyVisibleInfo = (
     return { visible: false, reason: "clipped with clip property" };
   }
 
+  if (node.hasAttribute("navi-visually-hidden")) {
+    return { visible: false, reason: "has navi-visually-hidden attribute" };
+  }
+
   const clipPathStyle = getStyle(node, "clip-path");
-  if (clipPathStyle && clipPathStyle.includes("inset(100%")) {
-    return { visible: false, reason: "clipped with clip-path" };
+  if (clipPathStyle) {
+    // inset(N%) where N >= 50 collapses the visible area to nothing
+    const insetMatch = clipPathStyle.match(/^inset\((\d+)%/);
+    if (insetMatch && Number(insetMatch[1]) >= 50) {
+      return { visible: false, reason: "clipped with clip-path" };
+    }
   }
 
   // Check if positioned off-screen (unless option says to count as visible)
@@ -4201,47 +4275,64 @@ const getFirstVisuallyVisibleAncestor = (node, options = {}) => {
   return null;
 };
 
-const elementIsFocusable = (node) => {
+/**
+ * Returns whether a node can receive focus, combining structural visibility
+ * (via {@link elementIsVisibleForFocus}) with interaction capability checks
+ * (disabled, inert) and element-type-specific focusability rules.
+ *
+ * @param {Node} node
+ * @param {{ excludeAriaHidden?: boolean }} [options]
+ *   - `excludeAriaHidden`: when true, elements inside an `aria-hidden="true"`
+ *     subtree are considered non-focusable (matching screen reader behaviour).
+ * @returns {boolean}
+ */
+const elementIsFocusable = (node, { excludeAriaHidden } = {}) => {
   // only element node can be focused, document, textNodes etc cannot
   if (node.nodeType !== 1) {
+    return false;
+  }
+  if (node.hasAttribute("navi-focus-delegate")) {
     return false;
   }
   if (!canInteract(node)) {
     return false;
   }
+  const canFocus = (node) =>
+    elementIsVisibleForFocus(node, { excludeAriaHidden });
+
   const nodeName = node.nodeName.toLowerCase();
   if (nodeName === "input") {
     if (node.type === "hidden") {
       return false;
     }
-    return elementIsVisibleForFocus(node);
+    return canFocus(node);
   }
   if (
     ["button", "select", "datalist", "iframe", "textarea"].indexOf(nodeName) >
     -1
   ) {
-    return elementIsVisibleForFocus(node);
+    return canFocus(node);
   }
   if (["a", "area"].indexOf(nodeName) > -1) {
     if (node.hasAttribute("href") === false) {
       return false;
     }
-    return elementIsVisibleForFocus(node);
+    return canFocus(node);
   }
   if (["audio", "video"].indexOf(nodeName) > -1) {
     if (node.hasAttribute("controls") === false) {
       return false;
     }
-    return elementIsVisibleForFocus(node);
+    return canFocus(node);
   }
   if (nodeName === "summary") {
-    return elementIsVisibleForFocus(node);
+    return canFocus(node);
   }
   if (node.hasAttribute("tabindex") || node.hasAttribute("tabIndex")) {
-    return elementIsVisibleForFocus(node);
+    return canFocus(node);
   }
   if (node.hasAttribute("draggable")) {
-    return elementIsVisibleForFocus(node);
+    return canFocus(node);
   }
   return false;
 };
@@ -4255,6 +4346,33 @@ const canInteract = (element) => {
     return false;
   }
   return true;
+};
+
+/**
+ * Given an element with the `navi-focus-delegate` attribute, returns the first
+ * focusable ancestor that should receive focus instead.
+ *
+ * Elements marked with `navi-focus-delegate` opt out of being focusable
+ * themselves (see {@link elementIsFocusable}) and redirect focus upward to
+ * their nearest focusable ancestor.
+ *
+ * Returns `null` when the attribute is absent or no focusable ancestor exists.
+ *
+ * @param {Element} el
+ * @returns {Element|null}
+ */
+const findFocusDelegateTarget = (el) => {
+  if (!el.hasAttribute("navi-focus-delegate")) {
+    return null;
+  }
+  let ancestor = el.parentElement;
+  while (ancestor) {
+    if (elementIsFocusable(ancestor)) {
+      return ancestor;
+    }
+    ancestor = ancestor.parentElement;
+  }
+  return null;
 };
 
 const findFocusable = (element) => {
@@ -4272,57 +4390,264 @@ const findFocusable = (element) => {
     return element;
   }
   const focusableDescendant = findDescendant(element, elementIsFocusable);
+  if (focusableDescendant) {
+    // If the first focusable is an unchecked radio/checkbox, prefer the checked
+    // sibling in the same group (mirrors native browser radio focus behavior
+    // and gives focus to the selected item in a selectable list).
+    const { tagName, type, name } = focusableDescendant;
+    if (
+      tagName === "INPUT" &&
+      (type === "radio" || type === "checkbox") &&
+      !focusableDescendant.checked &&
+      name
+    ) {
+      const groupContainer = focusableDescendant.form || document;
+      const checkedInput = groupContainer.querySelector(
+        `input[type="${type}"][name="${CSS.escape(name)}"]:checked`,
+      );
+      if (checkedInput) {
+        return checkedInput;
+      }
+    }
+  }
   return focusableDescendant;
 };
 
-// Input types where ArrowUp/Down natively change the value — don't intercept them
-const INPUT_TYPES_WITH_ARROW_MEANING = new Set([
-  "number",
-  "range",
-  "date",
-  "time",
-  "datetime-local",
-  "month",
-  "week",
-]);
-const INPUT_ALLOWED_KEYS = new Set(["Home", "End", "Escape", "Enter"]);
-const INPUT_ARROW_KEYS = new Set(["ArrowDown", "ArrowUp"]);
-const TEXTAREA_ALLOWED_KEYS = new Set(["Escape"]);
+/**
+ * Returns the browser's default action for a keyboard event on its target element.
+ *
+ * Possible return values:
+ * - `"activate"`     — Space/Enter triggers the element's primary action (button click, checkbox toggle, picker open…)
+ * - `"form_submit"`  — Enter submits the enclosing form (single-line inputs)
+ * - `"dismiss"`      — Escape closes a dialog, clears a search field, collapses a dropdown
+ * - `"focus_nav"`    — key moves focus (Tab, arrow keys in a radio/checkbox group)
+ * - `"value_change"` — key increments/decrements the field value (range, number, date…)
+ * - `"cursor_move"`  — key moves the text cursor within the field
+ * - `"type"`         — key produces or deletes text content
+ * - `"scroll"`       — key scrolls the page or a scrollable container
+ * - `""`             — no meaningful browser default; safe to intercept freely
+ */
+const normalizeKeyboardKey = (rawKey) => {
+  // The browser sends " " for the Space bar; map it to the friendly name "space"
+  if (rawKey === " ") {
+    return "space";
+  }
+  return rawKey.toLowerCase();
+};
 
-const canInterceptKeys = (event) => {
-  const target = event.target;
-  // Allow specific keys on input/textarea/contenteditable elements
-  if (target.tagName === "INPUT") {
-    if (INPUT_ALLOWED_KEYS.has(event.key)) {
-      return true;
-    }
-    if (INPUT_ARROW_KEYS.has(event.key)) {
-      return !INPUT_TYPES_WITH_ARROW_MEANING.has(target.type);
-    }
-    return false;
-  }
-  if (
-    target.tagName === "TEXTAREA" ||
-    target.contentEditable === "true" ||
-    target.isContentEditable
-  ) {
-    return TEXTAREA_ALLOWED_KEYS.has(event.key);
-  }
-  // Don't handle shortcuts when select dropdown is open
-  if (target.tagName === "SELECT") {
-    return false;
-  }
-  // Don't handle shortcuts when target or container is disabled
+const getKeyboardEventDefaultAction = (keyboardEvent) => {
+  const target = keyboardEvent.target;
+  const key = normalizeKeyboardKey(keyboardEvent.key);
+
+  // Nothing special occurs when the target or an ancestor is disabled/inert
   if (
     target.disabled ||
     target.closest("[disabled]") ||
     target.inert ||
     target.closest("[inert]")
   ) {
+    return "";
+  }
+  for (const { test, keys, fallback } of DEFAULT_BEHAVIORS) {
+    if (!test(target)) {
+      continue;
+    }
+    if (Object.hasOwn(keys, key)) {
+      const value = keys[key];
+      const defaultActionForKey =
+        typeof value === "function" ? value(keyboardEvent) : value;
+      if (defaultActionForKey !== undefined) {
+        return defaultActionForKey;
+      }
+    }
+    if (fallback === undefined) {
+      // This entry only handles specific keys — keep looking for other entries
+      continue;
+    }
+    const defaultAction =
+      typeof fallback === "function" ? fallback(keyboardEvent) : fallback;
+    if (defaultAction !== undefined) {
+      return defaultAction;
+    }
+  }
+  return "";
+};
+
+const isTypingIntent = (e) => {
+  // Modifier keys used for shortcuts: skip
+  if (e.metaKey || e.ctrlKey) {
     return false;
   }
-  return true;
+  const key = normalizeKeyboardKey(e.key);
+  // Single printable character — the user is typing
+  if (e.key.length === 1) {
+    return true;
+  }
+  // Editing keys that would modify the text
+  if (key === "backspace" || key === "delete") {
+    return true;
+  }
+  return false;
 };
+
+const DEFAULT_BEHAVIORS = [
+  {
+    test: () => true,
+    keys: {
+      // Tab moves focus on any element
+      tab: "focus_nav",
+      // Escape dismisses on any element (dialog, search clear, dropdown close, etc.)
+      escape: "dismiss",
+    },
+    // no fallback: only claims Tab/Escape, other keys continue to next entries
+  },
+  {
+    test: (el) => el.matches("input[type='radio'], input[type='checkbox']"),
+    keys: {
+      space: "activate",
+      enter: (e) => (e.target.form ? "form_submit" : ""),
+      arrowleft: "focus_nav",
+      arrowright: "focus_nav",
+      arrowup: "focus_nav",
+      arrowdown: "focus_nav",
+    },
+  },
+  {
+    test: (el) =>
+      el.matches(
+        "input:not([type]), input[type='text'], input[type='search'], input[type='url'], input[type='email'], input[type='password'], input[type='tel']",
+      ),
+    keys: {
+      enter: (e) => (e.target.form ? "form_submit" : ""),
+      arrowleft: "cursor_move",
+      arrowright: "cursor_move",
+      arrowup: "cursor_move",
+      arrowdown: "cursor_move",
+      home: "cursor_move",
+      end: "cursor_move",
+    },
+    fallback: (e) => (isTypingIntent(e) ? "type" : undefined),
+  },
+  {
+    test: (el) => el.matches("input[type='range']"),
+    keys: {
+      space: "scroll",
+      enter: (e) => (e.target.form ? "form_submit" : ""),
+      arrowleft: "value_change",
+      arrowright: "value_change",
+      arrowup: "value_change",
+      arrowdown: "value_change",
+      home: "value_change",
+      end: "value_change",
+      pageup: "value_change",
+      pagedown: "value_change",
+    },
+  },
+  {
+    test: (el) => el.matches("input[type='number']"),
+    keys: {
+      enter: (e) => (e.target.form ? "form_submit" : ""),
+      arrowleft: "cursor_move",
+      arrowright: "cursor_move",
+      arrowup: "value_change",
+      arrowdown: "value_change",
+      home: "cursor_move",
+      end: "cursor_move",
+    },
+    fallback: (e) => (isTypingIntent(e) ? "type" : undefined),
+  },
+  {
+    test: (el) =>
+      el.matches(
+        "input[type='date'], input[type='time'], input[type='datetime-local'], input[type='month'], input[type='week']",
+      ),
+    keys: {
+      space: "activate",
+      enter: (e) => (e.target.form ? "form_submit" : ""),
+      arrowleft: "value_change",
+      arrowright: "value_change",
+      arrowup: "value_change",
+      arrowdown: "value_change",
+    },
+  },
+  {
+    // Color input: Space opens the color picker, Enter submits the form
+    test: (el) => el.matches("input[type='color']"),
+    keys: {
+      space: "activate",
+      enter: (e) => (e.target.form ? "form_submit" : ""),
+    },
+  },
+  {
+    // File input: Space opens the picker, Enter submits the form
+    test: (el) => el.matches("input[type='file']"),
+    keys: {
+      space: "activate",
+      enter: (e) => (e.target.form ? "form_submit" : ""),
+    },
+  },
+  {
+    // Generic INPUT fallback for any remaining input types
+    test: (el) => el.tagName === "INPUT",
+    keys: {},
+    fallback: (e) => (isTypingIntent(e) ? "type" : undefined),
+  },
+  {
+    test: (el) =>
+      el.tagName === "TEXTAREA" ||
+      el.contentEditable === "true" ||
+      el.isContentEditable,
+    keys: {
+      enter: "type",
+      arrowleft: "cursor_move",
+      arrowright: "cursor_move",
+      arrowup: "cursor_move",
+      arrowdown: "cursor_move",
+      home: "cursor_move",
+      end: "cursor_move",
+    },
+    fallback: (e) => (isTypingIntent(e) ? "type" : undefined),
+  },
+  {
+    // Buttons and links: Space/Enter trigger the element's default action
+    test: (el) =>
+      el.tagName === "BUTTON" ||
+      el.tagName === "A" ||
+      el.getAttribute("role") === "button",
+    keys: {
+      space: "activate",
+      enter: "activate",
+    },
+  },
+  {
+    // details/summary: Space/Enter toggle the disclosure widget
+    test: (el) => el.tagName === "DETAILS" || el.tagName === "SUMMARY",
+    keys: {
+      space: "activate",
+      enter: "activate",
+    },
+  },
+  {
+    // SELECT: don't intercept anything while the dropdown may be open
+    test: (el) => el.tagName === "SELECT",
+    keys: {},
+  },
+  {
+    // Non-interactive elements: browser scrolls on Space and arrow keys
+    test: () => true,
+    keys: {
+      space: "scroll",
+      arrowup: "scroll",
+      arrowdown: "scroll",
+      arrowleft: "scroll",
+      arrowright: "scroll",
+      pageup: "scroll",
+      pagedown: "scroll",
+      home: "scroll",
+      end: "scroll",
+    },
+  },
+];
 
 // WeakMap to store focus group metadata
 const focusGroupRegistry = new WeakMap();
@@ -4365,12 +4690,50 @@ const markFocusNav = (event) => {
   focusNavEventMarker.mark(event);
 };
 
+/**
+ * Performs arrow-key navigation within a focus group element.
+ *
+ * Called on every keydown event inside the group. Decides whether the pressed
+ * key should move focus to another element, and if so, which one.
+ *
+ * @param {KeyboardEvent} event - The keydown event.
+ * @param {Element} element - The focus-group root element.
+ * @param {object} [options]
+ * @param {string} [options.name] - Optional group name used for ancestor delegation.
+ * @param {boolean} [options.excludeAriaHidden=true] - Skip elements hidden from the accessibility tree.
+ * @param {"x"|"y"|"both"} [options.direction="both"] - Which axes are active.
+ *   "x" = left/right only, "y" = up/down only, "both" = all four arrows.
+ * @param {"x"|"y"|"both"} [options.wrap] - Which axes loop at boundaries.
+ *   Omit or pass undefined for no looping on either axis.
+ * @param {string} [options.xSelector] - CSS selector that candidates must match
+ *   when navigating on the x axis. Omit to allow any focusable element.
+ * @param {string} [options.ySelector] - CSS selector that candidates must match
+ *   when navigating on the y axis. Omit to allow any focusable element.
+ * @returns {boolean} True if the event was handled (focus moved or default prevented).
+ */
 const performArrowNavigation = (
   event,
   element,
-  { direction = "both", loop, name } = {},
+  {
+    name,
+    excludeAriaHidden,
+    // Which axes are active: "x", "y", or "both" (default)
+    direction = "both",
+    // Which axes loop at boundaries: "x", "y", "both", or undefined (no looping)
+    wrap,
+    // CSS selector to restrict candidates on each axis
+    xSelector,
+    ySelector,
+  } = {},
 ) => {
-  if (!canInterceptKeys(event)) {
+  const defaultAction = getKeyboardEventDefaultAction(event);
+  // A focus group takes over arrow-key navigation entirely, including cases
+  // where the browser would otherwise scroll (e.g. arrow keys on a <button>).
+  const canIntercept =
+    defaultAction === "focus_nav" ||
+    defaultAction === "scroll" ||
+    !defaultAction;
+  if (!canIntercept) {
     return false;
   }
   const activeElement = document.activeElement;
@@ -4389,7 +4752,23 @@ const performArrowNavigation = (
   // Grid navigation: we support only TABLE element for now
   // A role="table" or an element with display: table could be used too but for now we need only TABLE support
   if (element.tagName === "TABLE") {
-    const targetInGrid = getTargetInTableFocusGroup(event, element, { loop });
+    const tablePredicate = (candidate) => {
+      if (!candidate.matches) {
+        return false;
+      }
+      if (candidate.getAttribute("navi-focusnav") === "ignore") {
+        return false;
+      }
+      if (!elementIsFocusable(candidate, { excludeAriaHidden })) {
+        return false;
+      }
+      return true;
+    };
+    const tableLoop = wrap === "both" || wrap === "x" || wrap === "y";
+    const targetInGrid = getTargetInTableFocusGroup(event, element, {
+      loop: tableLoop,
+      predicate: tablePredicate,
+    });
     if (!targetInGrid) {
       return false;
     }
@@ -4397,12 +4776,67 @@ const performArrowNavigation = (
     return true;
   }
 
+  // Linear navigation: detect which axis the pressed key belongs to.
+  const isVerticalKey = event.key === "ArrowUp" || event.key === "ArrowDown";
+  const isHorizontalKey =
+    event.key === "ArrowLeft" || event.key === "ArrowRight";
+  if (!isVerticalKey && !isHorizontalKey) {
+    return false;
+  }
+
+  // Check whether this axis is enabled and resolve its loop + cssSelector.
+  let axisDirection;
+  let axisLoop;
+  let axisCssSelector;
+  if (isVerticalKey) {
+    if (direction !== "both" && direction !== "y") {
+      return false;
+    }
+    axisDirection = "vertical";
+    axisLoop = wrap === "both" || wrap === "y";
+    axisCssSelector = ySelector;
+  } else {
+    if (direction !== "both" && direction !== "x") {
+      return false;
+    }
+    axisDirection = "horizontal";
+    axisLoop = wrap === "both" || wrap === "x";
+    axisCssSelector = xSelector;
+  }
+
+  const predicate = (candidate) => {
+    if (typeof candidate.matches !== "function") {
+      // Guard against nodes without matches() (e.g. text nodes).
+      return false;
+    }
+    if (candidate.getAttribute("navi-focusnav") === "ignore") {
+      return false;
+    }
+    // cssSelector check first: cheaper than elementIsFocusable.
+    if (axisCssSelector && !candidate.matches(axisCssSelector)) {
+      return false;
+    }
+    if (!elementIsFocusable(candidate, { excludeAriaHidden })) {
+      return false;
+    }
+    return true;
+  };
+
   const targetInLinearGroup = getTargetInLinearFocusGroup(event, element, {
-    direction,
-    loop,
+    direction: axisDirection,
+    loop: axisLoop,
     name,
+    predicate,
   });
   if (!targetInLinearGroup) {
+    // We decided not to loop, but the browser may loop anyway for certain element
+    // types (e.g. radio inputs cycle through their name group on arrow keys).
+    // Return true when the browser would do something we explicitly chose not to
+    // do, so the caller can preventDefault to enforce our decision.
+    if (!axisLoop && browserWouldLoopWithoutPreventDefault(activeElement)) {
+      event.preventDefault();
+      markFocusNav(event);
+    }
     return false;
   }
   onTargetToFocus(targetInLinearGroup);
@@ -4412,7 +4846,7 @@ const performArrowNavigation = (
 const getTargetInLinearFocusGroup = (
   event,
   element,
-  { direction, loop, name },
+  { direction, loop, name, predicate },
 ) => {
   const activeElement = document.activeElement;
 
@@ -4420,7 +4854,7 @@ const getTargetInLinearFocusGroup = (
   const isJumpToEnd = event.metaKey || event.ctrlKey;
 
   if (isJumpToEnd) {
-    return getJumpToEndTargetLinear(event, element, direction);
+    return getJumpToEndTargetLinear(event, element, direction, predicate);
   }
 
   const isForward = isForwardArrow(event, direction);
@@ -4430,7 +4864,7 @@ const getTargetInLinearFocusGroup = (
     if (!isBackwardArrow(event, direction)) {
       break backward;
     }
-    const previousElement = findBefore(activeElement, elementIsFocusable, {
+    const previousElement = findBefore(activeElement, predicate, {
       root: element,
     });
     if (previousElement) {
@@ -4438,15 +4872,13 @@ const getTargetInLinearFocusGroup = (
     }
     const ancestorTarget = delegateArrowNavigation(event, element, {
       name,
+      predicate,
     });
     if (ancestorTarget) {
       return ancestorTarget;
     }
     if (loop) {
-      const lastFocusableElement = findLastDescendant(
-        element,
-        elementIsFocusable,
-      );
+      const lastFocusableElement = findLastDescendant(element, predicate);
       if (lastFocusableElement) {
         return lastFocusableElement;
       }
@@ -4459,7 +4891,7 @@ const getTargetInLinearFocusGroup = (
     if (!isForward) {
       break forward;
     }
-    const nextElement = findAfter(activeElement, elementIsFocusable, {
+    const nextElement = findAfter(activeElement, predicate, {
       root: element,
     });
     if (nextElement) {
@@ -4467,13 +4899,14 @@ const getTargetInLinearFocusGroup = (
     }
     const ancestorTarget = delegateArrowNavigation(event, element, {
       name,
+      predicate,
     });
     if (ancestorTarget) {
       return ancestorTarget;
     }
     if (loop) {
       // No next element, wrap to first focusable in group
-      const firstFocusableElement = findDescendant(element, elementIsFocusable);
+      const firstFocusableElement = findDescendant(element, predicate);
       if (firstFocusableElement) {
         return firstFocusableElement;
       }
@@ -4484,7 +4917,11 @@ const getTargetInLinearFocusGroup = (
   return null;
 };
 // Find parent focus group with the same name and try delegation
-const delegateArrowNavigation = (event, currentElement, { name }) => {
+const delegateArrowNavigation = (
+  event,
+  currentElement,
+  { name, predicate },
+) => {
   let ancestorElement = currentElement.parentElement;
   while (ancestorElement) {
     const ancestorFocusGroup = getFocusGroup(ancestorElement);
@@ -4505,6 +4942,7 @@ const delegateArrowNavigation = (event, currentElement, { name }) => {
         direction: ancestorFocusGroup.direction,
         loop: ancestorFocusGroup.loop,
         name: ancestorFocusGroup.name,
+        predicate,
       });
     }
   }
@@ -4512,7 +4950,7 @@ const delegateArrowNavigation = (event, currentElement, { name }) => {
 };
 
 // Handle Cmd/Ctrl + arrow keys for linear focus groups to jump to start/end
-const getJumpToEndTargetLinear = (event, element, direction) => {
+const getJumpToEndTargetLinear = (event, element, direction, predicate) => {
   // Check if this arrow key is valid for the given direction
   if (!isForwardArrow(event, direction) && !isBackwardArrow(event, direction)) {
     return null;
@@ -4520,12 +4958,12 @@ const getJumpToEndTargetLinear = (event, element, direction) => {
 
   if (isBackwardArrow(event, direction)) {
     // Jump to first focusable element in the group
-    return findDescendant(element, elementIsFocusable);
+    return findDescendant(element, predicate);
   }
 
   if (isForwardArrow(event, direction)) {
     // Jump to last focusable element in the group
-    return findLastDescendant(element, elementIsFocusable);
+    return findLastDescendant(element, predicate);
   }
 
   return null;
@@ -4548,9 +4986,21 @@ const isForwardArrow = (event, direction = "both") => {
   return forwardKeys[direction]?.includes(event.key) ?? false;
 };
 
+// We decided not to loop, but the browser may loop anyway for certain element
+// types (e.g. radio inputs cycle through their name group on arrow keys).
+// Return true when the browser would do something we explicitly chose not to
+// do, so the caller can preventDefault to enforce our decision.
+const browserWouldLoopWithoutPreventDefault = (element) => {
+  if (element.tagName === "INPUT" && element.type === "radio") {
+    // Radio: browser cycles through same-name group on arrow keys
+    return true;
+  }
+  return false;
+};
+
 // Handle arrow navigation inside an HTMLTableElement as a grid.
 // Moves focus to adjacent cell in the direction of the arrow key.
-const getTargetInTableFocusGroup = (event, table, { loop }) => {
+const getTargetInTableFocusGroup = (event, table, { loop, predicate }) => {
   const arrowKey = event.key;
 
   // Only handle arrow keys
@@ -4568,7 +5018,7 @@ const getTargetInTableFocusGroup = (event, table, { loop }) => {
 
   // If we're not currently in a table cell, try to focus the first focusable element in the table
   if (!currentCell || !table.contains(currentCell)) {
-    return findDescendant(table, elementIsFocusable) || null;
+    return findDescendant(table, predicate) || null;
   }
 
   // Get the current position in the table grid
@@ -4588,6 +5038,7 @@ const getTargetInTableFocusGroup = (event, table, { loop }) => {
       allRows,
       currentRowIndex,
       currentColumnIndex,
+      predicate,
     );
   }
 
@@ -4602,7 +5053,7 @@ const getTargetInTableFocusGroup = (event, table, { loop }) => {
 
   // Find the first cell that is itself focusable
   for (const candidateCell of candidateCells) {
-    if (elementIsFocusable(candidateCell)) {
+    if (predicate(candidateCell)) {
       return candidateCell;
     }
   }
@@ -4616,6 +5067,7 @@ const getJumpToEndTarget = (
   allRows,
   currentRowIndex,
   currentColumnIndex,
+  predicate,
 ) => {
   if (arrowKey === "ArrowRight") {
     // Jump to last focusable cell in current row
@@ -4626,7 +5078,7 @@ const getJumpToEndTarget = (
     const cells = Array.from(currentRow.cells);
     for (let i = cells.length - 1; i >= 0; i--) {
       const cell = cells[i];
-      if (elementIsFocusable(cell)) {
+      if (predicate(cell)) {
         return cell;
       }
     }
@@ -4640,7 +5092,7 @@ const getJumpToEndTarget = (
 
     const cells = Array.from(currentRow.cells);
     for (const cell of cells) {
-      if (elementIsFocusable(cell)) {
+      if (predicate(cell)) {
         return cell;
       }
     }
@@ -4652,7 +5104,7 @@ const getJumpToEndTarget = (
     for (let rowIndex = allRows.length - 1; rowIndex >= 0; rowIndex--) {
       const row = allRows[rowIndex];
       const cell = row?.cells?.[currentColumnIndex];
-      if (cell && elementIsFocusable(cell)) {
+      if (cell && predicate(cell)) {
         return cell;
       }
     }
@@ -4664,7 +5116,7 @@ const getJumpToEndTarget = (
     for (let rowIndex = 0; rowIndex < allRows.length; rowIndex++) {
       const row = allRows[rowIndex];
       const cell = row?.cells?.[currentColumnIndex];
-      if (cell && elementIsFocusable(cell)) {
+      if (cell && predicate(cell)) {
         return cell;
       }
     }
@@ -4945,6 +5397,7 @@ const performTabNavigation = (
     rootElement = document.body,
     outsideOfElement = null,
     debug = () => {},
+    excludeAriaHidden,
   } = {},
 ) => {
   if (!isTabEvent$1(event)) {
@@ -4966,6 +5419,12 @@ const performTabNavigation = (
     event.preventDefault();
     markFocusNav(event);
     targetToFocus.focus();
+  };
+  const isFocusableByTab = (element) => {
+    if (hasNegativeTabIndex(element)) {
+      return false;
+    }
+    return elementIsFocusable(element, { excludeAriaHidden });
   };
 
   const predicate = (candidate) => {
@@ -5040,12 +5499,6 @@ const performTabNavigation = (
 
 const isTabEvent$1 = (event) => event.key === "Tab" || event.keyCode === 9;
 
-const isFocusableByTab = (element) => {
-  if (hasNegativeTabIndex(element)) {
-    return false;
-  }
-  return elementIsFocusable(element);
-};
 const hasNegativeTabIndex = (element) => {
   return (
     element.hasAttribute &&
@@ -5064,14 +5517,47 @@ const hasNegativeTabIndex = (element) => {
  */
 
 
+/**
+ * Initialises keyboard navigation for a focus group.
+ *
+ * Sets up two keyboard behaviours on the element:
+ * - **Tab**: exits the group, moving focus to the next/previous focusable
+ *   element outside the group (standard skip-group behaviour).
+ * - **Arrow keys**: moves focus between focusable descendants according to
+ *   the configured direction, wrapping and selector constraints.
+ *
+ * @param {Element} element - The focus-group root element.
+ * @param {object} [options]
+ * @param {boolean} [options.skipTab=true] - When true, Tab exits the group
+ *   instead of moving through its children one by one.
+ * @param {string} [options.name] - Optional name shared between related groups
+ *   to enable delegation (focus jumps from one named group to another).
+ * @param {boolean} [options.excludeAriaHidden=true] - Skip elements that are
+ *   hidden from the accessibility tree (aria-hidden).
+ * @param {"x"|"y"|"both"} [options.direction="both"] - Which axes are active.
+ *   "x" = left/right only, "y" = up/down only, "both" = all four arrows.
+ * @param {"x"|"y"|"both"} [options.wrap] - Which axes loop at boundaries.
+ *   Omit or pass undefined for no looping on either axis.
+ * @param {string} [options.xSelector] - CSS selector that candidates must match
+ *   when navigating on the x axis. Omit to allow any focusable element.
+ * @param {string} [options.ySelector] - CSS selector that candidates must match
+ *   when navigating on the y axis. Omit to allow any focusable element.
+ * @returns {{ cleanup: () => void }} Call cleanup() to remove all event listeners.
+ */
 const initFocusGroup = (
   element,
   {
-    direction = "both",
     // extend = true,
     skipTab = true,
-    loop = false,
     name, // Can be undefined for implicit ancestor-descendant grouping
+    excludeAriaHidden = true,
+    // Which axes are active: "x", "y", or "both" (default)
+    direction = "both",
+    // Which axes loop at boundaries: "x", "y", "both", or undefined (no looping)
+    wrap,
+    // CSS selector to restrict candidates on each axis
+    xSelector,
+    ySelector,
   } = {},
 ) => {
   const cleanupCallbackSet = new Set();
@@ -5085,7 +5571,6 @@ const initFocusGroup = (
   // Store focus group data in registry
   const removeFocusGroup = setFocusGroup(element, {
     direction,
-    loop,
     name, // Store undefined as-is for implicit grouping
   });
   cleanupCallbackSet.add(removeFocusGroup);
@@ -5099,7 +5584,10 @@ const initFocusGroup = (
         // Prevent double handling of the same event + allow preventing focus nav from outside
         return;
       }
-      performTabNavigation(event, { outsideOfElement: element });
+      performTabNavigation(event, {
+        outsideOfElement: element,
+        excludeAriaHidden,
+      });
     };
     // Handle Tab navigation (exit group)
     element.addEventListener("keydown", handleTabKeyDown, {
@@ -5123,7 +5611,14 @@ const initFocusGroup = (
         // Prevent double handling of the same event + allow preventing focus nav from outside
         return;
       }
-      performArrowNavigation(event, element, { direction, loop, name });
+      performArrowNavigation(event, element, {
+        name,
+        excludeAriaHidden,
+        direction,
+        wrap,
+        xSelector,
+        ySelector,
+      });
     };
     element.addEventListener("keydown", handleArrowKeyDown, {
       // we must use capture: false to let chance for other part of the code
@@ -5537,6 +6032,9 @@ const getScrollContainer = (arg, { includeHidden } = {}) => {
       return element;
     }
     return null;
+  }
+  if (element.hasAttribute("popover") && element.matches(":popover-open")) {
+    return getScrollingElement(element.ownerDocument);
   }
   const position = getStyle(element, "position");
   if (position === "fixed") {
@@ -6368,13 +6866,19 @@ const getPaddingSizes = (element) => {
 const trapScrollInside = (element) => {
   const cleanupCallbackSet = new Set();
   const lockScroll = (el) => {
+    const savedScrollTop = el.scrollTop;
+    const savedScrollLeft = el.scrollLeft;
     const scrollbarGutter = getStyle(el, "scrollbar-gutter");
     const hasScrollbarGutterStrategy =
       scrollbarGutter && scrollbarGutter !== "auto";
     if (hasScrollbarGutterStrategy) {
       // The element manages its own gutter — just hide overflow, no padding needed.
       const removeScrollLockStyles = setStyles(el, { overflow: "hidden" });
-      cleanupCallbackSet.add(removeScrollLockStyles);
+      cleanupCallbackSet.add(() => {
+        removeScrollLockStyles();
+        el.scrollTop = savedScrollTop;
+        el.scrollLeft = savedScrollLeft;
+      });
       return;
     }
     const [scrollbarWidth, scrollbarHeight] = measureScrollbar(el);
@@ -6384,7 +6888,11 @@ const trapScrollInside = (element) => {
       "padding-bottom": `${bottom + scrollbarHeight}px`,
       "overflow": "hidden",
     });
-    cleanupCallbackSet.add(removeScrollLockStyles);
+    cleanupCallbackSet.add(() => {
+      removeScrollLockStyles();
+      el.scrollTop = savedScrollTop;
+      el.scrollLeft = savedScrollLeft;
+    });
   };
   let previous = element.previousSibling;
   while (previous) {
@@ -10397,23 +10905,48 @@ const MIN_CONTENT_VISIBILITY_RATIO = 0.6;
 /**
  * Tracks how much of an element is visible within its scrollable parent and within the
  * document viewport. Calls update() on initialization and whenever visibility changes
- * (scroll, resize, intersection changes).
+ * (scroll, resize, intersection changes, ancestor open/close).
  *
- * The update callback receives a visibleRect object with:
- * - left, top, right, bottom, width, height: the visible portion of the element,
- *   clipped to its scroll container's bounds and expressed in overlay coordinates
- * - visibilityRatio: fraction of the element's area that is truly visible on screen (0–1).
- *   For document scroll containers this is the viewport-clipped fraction.
- *   For custom containers this is the fraction clipped by both the container AND the viewport
- *   (so an element scrolled out of its container correctly reports 0, not 1).
+ * @param {HTMLElement} element - The element to observe.
+ * @param {function(visibleRect: VisibleRect, info: VisibleRectInfo): void} update - Called on every visibility change.
+ *
+ * @typedef {Object} VisibleRect
+ * @property {number} left   - Left edge of the visible area, document-relative (px).
+ * @property {number} top    - Top edge of the visible area, document-relative (px).
+ * @property {number} right  - Right edge of the visible area, document-relative (px).
+ * @property {number} bottom - Bottom edge of the visible area, document-relative (px).
+ * @property {number} width  - Width of the visible area (px).
+ * @property {number} height - Height of the visible area (px).
+ * @property {number} visibilityRatio - Fraction of the element's area truly visible on screen (0–1).
+ *   For document scroll containers: viewport-clipped fraction.
+ *   For custom containers: fraction clipped by both the container and the viewport.
+ *   Is 0 when ancestorClosed is true.
+ *
+ * @typedef {Object} VisibleRectInfo
+ * @property {Event}   event          - The DOM event (or CustomEvent) that triggered the check.
+ * @property {number}  width          - Raw getBoundingClientRect() width of the element.
+ * @property {number}  height         - Raw getBoundingClientRect() height of the element.
+ * @property {boolean} ancestorClosed - True when a popover, dialog, or details ancestor is
+ *   currently closed so the element is not rendered. All visibleRect values are 0 in that case.
+ *   update() is called immediately on ancestor close and again (with false) on reopen.
+ *
+ * update() is called:
+ *   - Once synchronously on initialization (event.type = "initialization")
+ *   - On document/container scroll, window resize, element resize, intersection changes, touch move
+ *   - Immediately when an ancestor popover/dialog/details opens or closes
  *
  * A bit like https://tetherjs.dev/ but different
  */
-const visibleRectEffect = (element, update) => {
+const visibleRectEffect = (
+  element,
+  update,
+  { event: initialEvent = new CustomEvent("initialization") } = {},
+) => {
   const [teardown, addTeardown] = createPubSub();
   const scrollContainer = getScrollContainer(element);
   const scrollContainerIsDocument =
     scrollContainer === document.documentElement;
+  let ancestorClosedCount = 0;
   const check = (event) => {
 
     // 1. Calculate element position relative to scrollable parent
@@ -10550,10 +11083,11 @@ const visibleRectEffect = (element, update) => {
       event,
       width,
       height,
+      ancestorClosed: ancestorClosedCount > 0,
     });
   };
 
-  check(new CustomEvent("initialization"));
+  check(initialEvent);
 
   const [publishBeforeAutoCheck, onBeforeAutoCheck] = createPubSub();
   {
@@ -10683,6 +11217,59 @@ const visibleRectEffect = (element, update) => {
         });
       });
     }
+    {
+      let current = element.parentElement;
+      while (current) {
+        if (
+          current.hasAttribute("popover") ||
+          current.tagName === "DIALOG" ||
+          current.tagName === "DETAILS"
+        ) {
+          const ancestor = current;
+          const isInitiallyClosed =
+            ancestor.tagName === "DIALOG" || ancestor.tagName === "DETAILS"
+              ? !ancestor.open
+              : !ancestor.matches(":popover-open");
+          if (isInitiallyClosed) {
+            ancestorClosedCount++;
+          }
+          // eslint-disable-next-line no-loop-func
+          const onToggle = (e) => {
+            const isClosed =
+              ancestor.tagName === "DETAILS"
+                ? !ancestor.open
+                : e.newState === "closed";
+            if (isClosed) {
+              ancestorClosedCount++;
+              update(
+                {
+                  left: 0,
+                  top: 0,
+                  right: 0,
+                  bottom: 0,
+                  width: 0,
+                  height: 0,
+                  visibilityRatio: 0,
+                },
+                { event: e, width: 0, height: 0, ancestorClosed: true },
+              );
+            } else {
+              if (ancestorClosedCount > 0) {
+                ancestorClosedCount--;
+              }
+              if (ancestorClosedCount === 0) {
+                check(e);
+              }
+            }
+          };
+          ancestor.addEventListener("toggle", onToggle);
+          addTeardown(() => {
+            ancestor.removeEventListener("toggle", onToggle);
+          });
+        }
+        current = current.parentElement;
+      }
+    }
   }
 
   return {
@@ -10744,6 +11331,7 @@ const pickPositionRelativeTo = (
     alignToViewportEdgeWhenAnchorNearEdge = 0,
     minLeft = 0,
     spacing = 0,
+    alignToAnchorBox = "border-box",
     viewportSpacing = 0,
   } = {},
 ) => {
@@ -10768,10 +11356,30 @@ const pickPositionRelativeTo = (
   const anchorWidth = anchorRight - anchorLeft;
   const anchorHeight = anchorBottom - anchorTop;
 
-  const spaceAbove = anchorTop;
-  const spaceBelow = viewportHeight - anchorBottom;
-  const spaceLeft = anchorLeft;
-  const spaceRight = viewportWidth - anchorRight;
+  // alignToAnchorBox controls whether the element aligns to the anchor's border-box (outer edge)
+  // or content-box (inner content area, ignoring padding and border).
+  // content-box lets the arrow point into the content area instead of the outer edge.
+  // Insets are directional: top/bottom for Y-axis, left/right for X-axis.
+  // When positioning above, only the top inset applies (content-box top edge).
+  // When positioning below, only the bottom inset applies (content-box bottom edge).
+  let insetTop = 0;
+  let insetBottom = 0;
+  let insetLeft = 0;
+  let insetRight = 0;
+  if (alignToAnchorBox === "content-box") {
+    const anchorBorderSizes = getBorderSizes(anchor);
+    const anchorPaddingSizes = getPaddingSizes(anchor);
+    insetTop = anchorBorderSizes.top + anchorPaddingSizes.top;
+    insetBottom = anchorBorderSizes.bottom + anchorPaddingSizes.bottom;
+    insetLeft = anchorBorderSizes.left + anchorPaddingSizes.left;
+    insetRight = anchorBorderSizes.right + anchorPaddingSizes.right;
+  }
+  const spaceAbove = anchorTop + insetTop;
+  const spaceBelow = viewportHeight - anchorBottom + insetBottom;
+  const effectiveAnchorLeft = anchorLeft + insetLeft;
+  const effectiveAnchorRight = anchorRight - insetRight;
+  const spaceLeft = anchorLeft + insetLeft;
+  const spaceRight = viewportWidth - anchorRight + insetRight;
 
   // Resolve active X and Y, and whether each is fixed (no flip fallback)
   let activeX;
@@ -10845,7 +11453,11 @@ const pickPositionRelativeTo = (
       if (currentFitsEnough) {
         finalY = activeY;
       } else {
-        finalY = oppositeY[activeY];
+        // Only flip if the opposite side has more space — avoids oscillation
+        // when neither side has enough room (both fail the ratio).
+        const opposite = oppositeY[activeY];
+        const oppositeHasMoreSpace = spaceFor(opposite) > spaceFor(activeY);
+        finalY = oppositeHasMoreSpace ? opposite : activeY;
       }
     }
   }
@@ -10908,44 +11520,49 @@ const pickPositionRelativeTo = (
   let elementPositionLeft;
   {
     if (finalX === "to-the-left") {
-      elementPositionLeft = anchorLeft - elementWidth - spacing;
+      elementPositionLeft = effectiveAnchorLeft - elementWidth - spacing;
     } else if (finalX === "left-aligned") {
-      elementPositionLeft = anchorLeft;
+      elementPositionLeft = effectiveAnchorLeft;
     } else if (finalX === "center") {
       // Complex logic handles wide anchors and viewport-edge snapping
       const anchorIsWiderThanViewport = anchorWidth > viewportWidth;
       if (anchorIsWiderThanViewport) {
-        const anchorLeftIsVisible = anchorLeft >= 0;
-        const anchorRightIsVisible = anchorRight <= viewportWidth;
+        const anchorLeftIsVisible = effectiveAnchorLeft >= 0;
+        const anchorRightIsVisible = effectiveAnchorRight <= viewportWidth;
         if (!anchorLeftIsVisible && anchorRightIsVisible) {
           const viewportCenter = viewportWidth / 2;
-          const distanceFromRightEdge = viewportWidth - anchorRight;
+          const distanceFromRightEdge = viewportWidth - effectiveAnchorRight;
           elementPositionLeft =
             viewportCenter - distanceFromRightEdge / 2 - elementWidth / 2;
         } else if (anchorLeftIsVisible && !anchorRightIsVisible) {
           const viewportCenter = viewportWidth / 2;
-          const distanceFromLeftEdge = -anchorLeft;
+          const distanceFromLeftEdge = -effectiveAnchorLeft;
           elementPositionLeft =
             viewportCenter - distanceFromLeftEdge / 2 - elementWidth / 2;
         } else {
           elementPositionLeft = viewportWidth / 2 - elementWidth / 2;
         }
       } else {
-        elementPositionLeft = anchorLeft + anchorWidth / 2 - elementWidth / 2;
+        elementPositionLeft =
+          effectiveAnchorLeft +
+          (effectiveAnchorRight - effectiveAnchorLeft) / 2 -
+          elementWidth / 2;
         if (alignToViewportEdgeWhenAnchorNearEdge) {
-          const elementIsWiderThanAnchor = elementWidth > anchorWidth;
+          const effectiveAnchorWidth =
+            effectiveAnchorRight - effectiveAnchorLeft;
+          const elementIsWiderThanAnchor = elementWidth > effectiveAnchorWidth;
           const anchorIsNearLeftEdge =
-            anchorLeft < alignToViewportEdgeWhenAnchorNearEdge;
+            effectiveAnchorLeft < alignToViewportEdgeWhenAnchorNearEdge;
           if (elementIsWiderThanAnchor && anchorIsNearLeftEdge) {
             elementPositionLeft = minLeft;
           }
         }
       }
     } else if (finalX === "right-aligned") {
-      elementPositionLeft = anchorRight - elementWidth;
+      elementPositionLeft = effectiveAnchorRight - elementWidth;
     } else {
       // "to-the-right"
-      elementPositionLeft = anchorRight + spacing;
+      elementPositionLeft = effectiveAnchorRight + spacing;
     }
     // Constrain horizontal position to viewport boundaries (with viewportSpacing margin)
     if (elementPositionLeft < viewportSpacing) {
@@ -10962,8 +11579,8 @@ const pickPositionRelativeTo = (
   let elementPositionTop;
   {
     if (finalY === "above") {
-      // top is always anchorTop - elementHeight - spacing — max-height truncates if needed.
-      const idealTop = anchorTop - elementHeight - spacing;
+      // top is always anchorTop + insetTop - elementHeight - spacing — max-height truncates if needed.
+      const idealTop = anchorTop + insetTop - elementHeight - spacing;
       elementPositionTop =
         idealTop < viewportSpacing ? viewportSpacing : idealTop;
     } else if (finalY === "above-overlap") {
@@ -10978,9 +11595,9 @@ const pickPositionRelativeTo = (
         idealTop % 1 === 0 ? idealTop : Math.floor(idealTop) + 1;
     } else {
       // "below"
-      // top is always anchorBottom + spacing — max-height (via --space-available) truncates
+      // top is always anchorBottom - insetBottom + spacing — max-height (via --space-available) truncates
       // the element height so it doesn't overflow the viewport bottom.
-      const idealTop = anchorBottom + spacing;
+      const idealTop = anchorBottom - insetBottom + spacing;
       elementPositionTop =
         idealTop % 1 === 0 ? idealTop : Math.floor(idealTop) + 1;
     }
@@ -14031,6 +14648,144 @@ const getMaxWidth = (
   return maxWidth;
 };
 
+/**
+ * Measures the width of the longest rendered visual line inside an element.
+ *
+ * Useful for solving the CSS "shrinkwrap" problem: when multi-line text sits
+ * inside a `max-width` container, CSS expands the element to fill all
+ * available space, leaving trailing whitespace to the right of the text.
+ * Setting an explicit width equal to the longest line eliminates that gap.
+ * See shrinkwrap_demo.html for a visual explanation.
+ *
+ * Returns `null` when all content fits on a single visual line (nothing to
+ * optimize). Returns the pixel width of the widest line when text wraps to
+ * two or more lines.
+ *
+ * ## Implementation note — bounding extent, not sum of widths
+ *
+ * `range.getClientRects()` returns one rect per layout box intersecting the
+ * range. Nested elements (e.g. `<span><span>text</span></span>`) produce
+ * multiple overlapping rects for the exact same pixels on the same line.
+ * Summing their `width` values therefore over-counts the true line width.
+ *
+ * Instead we compute the bounding extent per line: track the minimum `left`
+ * and maximum `right` across all rects sharing the same rounded `top`, then
+ * use `right - left` as the line width. This is correct regardless of nesting
+ * depth and works well for regular inline text content.
+ *
+ * Limitation: rects are grouped by `Math.round(r.top)`, so elements on the
+ * same visual line but with slightly different baselines (e.g. an icon taller
+ * than surrounding text) could be counted as separate lines. This is unlikely
+ * to matter in practice for normal text rendering.
+ *
+ * Limitation: `range.getClientRects()` returns rects for text nodes and inline
+ * boxes as laid out in the flow, ignoring any `overflow: hidden` or `max-width`
+ * clipping applied to ancestor elements. If child elements clip their own
+ * content (e.g. badges with `overflow: hidden` and `max-width`), the rects
+ * will reflect the unclipped text size, producing a width larger than what is
+ * visually rendered. In that case prefer `measureWidestChildRow`, which uses
+ * each child's own `getBoundingClientRect()` and therefore respects clipping.
+ *
+ * @param {Element} el - The element whose text content should be measured.
+ * @returns {number|null} Width in pixels of the longest visual line,
+ *   or `null` if there is only one visual line.
+ */
+const measureLongestVisualLineWidth = (el) => {
+  const range = document.createRange();
+  range.selectNodeContents(el);
+
+  const lineBoundsByTop = new Map();
+  for (const r of range.getClientRects()) {
+    if (r.width === 0) {
+      continue;
+    }
+    const top = Math.round(r.top);
+    const existing = lineBoundsByTop.get(top);
+    if (existing === undefined) {
+      lineBoundsByTop.set(top, { left: r.left, right: r.right });
+    } else {
+      if (r.left < existing.left) {
+        existing.left = r.left;
+      }
+      if (r.right > existing.right) {
+        existing.right = r.right;
+      }
+    }
+  }
+
+  if (lineBoundsByTop.size <= 1) {
+    return null;
+  }
+
+  let longestLineWidth = 0;
+  for (const { left, right } of lineBoundsByTop.values()) {
+    const w = right - left;
+    if (w > longestLineWidth) {
+      longestLineWidth = w;
+    }
+  }
+  return longestLineWidth;
+};
+
+// Measures the width of the widest row of direct children.
+// Uses children's bounding rects (which respect overflow:hidden / max-width)
+// rather than Range.getClientRects() which sees through clipping boundaries.
+// Returns null when all children fit on a single row (nothing to optimize).
+const measureWidestChildRow = (el) => {
+  const children = Array.from(el.children);
+  if (children.length === 0) {
+    return null;
+  }
+
+  const containerStyle = getComputedStyle(el);
+  const paddingLeft = parseFloat(containerStyle.paddingLeft);
+  const paddingRight = parseFloat(containerStyle.paddingRight);
+  const borderLeft = parseFloat(containerStyle.borderLeftWidth);
+  const borderRight = parseFloat(containerStyle.borderRightWidth);
+
+  // Group children by row using their top position
+  const rowsByTop = new Map();
+  for (const child of children) {
+    const rect = child.getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) {
+      continue;
+    }
+    const top = Math.round(rect.top);
+    const existing = rowsByTop.get(top);
+    if (existing === undefined) {
+      rowsByTop.set(top, { left: rect.left, right: rect.right });
+    } else {
+      if (rect.left < existing.left) {
+        existing.left = rect.left;
+      }
+      if (rect.right > existing.right) {
+        existing.right = rect.right;
+      }
+    }
+  }
+
+  if (rowsByTop.size <= 1) {
+    return null;
+  }
+
+  let widestRowWidth = 0;
+  for (const { left, right } of rowsByTop.values()) {
+    const rowWidth = right - left;
+    if (rowWidth > widestRowWidth) {
+      widestRowWidth = rowWidth;
+    }
+  }
+
+  // Convert from absolute pixel width to the container's content-box width
+  // so that setting el.style.width = result + "px" works correctly.
+  if (containerStyle.boxSizing === "border-box") {
+    return (
+      widestRowWidth + paddingLeft + paddingRight + borderLeft + borderRight
+    );
+  }
+  return widestRowWidth;
+};
+
 const useAvailableHeight = (elementRef) => {
   const [availableHeight, availableHeightSetter] = useState(-1);
 
@@ -14147,4 +14902,4 @@ const useResizeStatus = (elementRef, { as = "number" } = {}) => {
   };
 };
 
-export { EASING, activeElementSignal, addActiveElementEffect, addAttributeEffect, allowWheelThrough, appendStyles, canInterceptKeys, captureScrollState, contrastColor, createBackgroundColorTransition, createBackgroundTransition, createBorderRadiusTransition, createBorderTransition, createDragGestureController, createDragToMoveGestureController, createEventGroupLogger, createGroupTransitionController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createValueEffect, createWidthTransition, cubicBezier, dispatchCustomEvent, dispatchInternalCustomEvent, dispatchPublicCustomEvent, dragAfterThreshold, elementIsFocusable, elementIsVisibleForFocus, elementIsVisuallyVisible, eventInvolves, findAfter, findAncestor, findBefore, findDescendant, findFocusable, formatEventSideEffect, getAvailableHeight, getAvailableWidth, getBackground, getBackgroundColor, getBorder, getBorderRadius, getBorderSizes, getContrastRatio, getDefaultStyles, getDragCoordinates, getDropTargetInfo, getElementSignature, getFirstVisuallyVisibleAncestor, getFocusVisibilityInfo, getHeight, getHeightWithoutTransition, getInnerHeight, getInnerWidth, getLuminance, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getOpacity, getOpacityWithoutTransition, getPaddingSizes, getPositionedParent, getPreferedColorScheme, getScrollBox, getScrollContainer, getScrollContainerSet, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getTranslateX, getTranslateXWithoutTransition, getTranslateY, getVisuallyVisibleInfo, getWidth, getWidthWithoutTransition, hasCSSSizeUnit, initFlexDetailsSet, initFocusGroup, initPositionSticky, isSameColor, isScrollable, measureScrollbar, mergeOneStyle, mergeTwoStyles, normalizeStyle, normalizeStyles, parseStyle, pickPositionRelativeTo, prefersDarkColors, prefersLightColors, preventFocusNav, preventFocusNavViaKeyboard, preventIntermediateScrollbar, resolveCSSColor, resolveCSSSize, resolveColorLuminance, resolveOklchLightness, scrollIntoViewScoped, scrollIntoViewWithStickyAwareness, setAttribute, setAttributes, setStyles, snapToPixel, startDragToReorder, startDragToResizeGesture, stickyAsRelativeCoords, stringifyStyle, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect };
+export { EASING, activeElementSignal, addActiveElementEffect, addAttributeEffect, allowWheelThrough, appendStyles, captureScrollState, contrastColor, createBackgroundColorTransition, createBackgroundTransition, createBorderRadiusTransition, createBorderTransition, createDragGestureController, createDragToMoveGestureController, createEventGroupLogger, createGroupTransitionController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createValueEffect, createWidthTransition, cubicBezier, dispatchCustomEvent, dispatchInternalCustomEvent, dispatchPublicCustomEvent, dragAfterThreshold, elementIsFocusable, elementIsVisibleForFocus, elementIsVisuallyVisible, findAfter, findAncestor, findBefore, findDescendant, findEvent, findFocusDelegateTarget, findFocusable, formatEventSideEffect, getAvailableHeight, getAvailableWidth, getBackground, getBackgroundColor, getBorder, getBorderRadius, getBorderSizes, getContrastRatio, getDefaultStyles, getDragCoordinates, getDropTargetInfo, getElementSignature, getFirstVisuallyVisibleAncestor, getFocusVisibilityInfo, getHeight, getHeightWithoutTransition, getInnerHeight, getInnerWidth, getKeyboardEventDefaultAction, getLuminance, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getOpacity, getOpacityWithoutTransition, getPaddingSizes, getPositionedParent, getPreferedColorScheme, getScrollBox, getScrollContainer, getScrollContainerSet, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getTranslateX, getTranslateXWithoutTransition, getTranslateY, getVisuallyVisibleInfo, getWidth, getWidthWithoutTransition, hasCSSSizeUnit, initFlexDetailsSet, initFocusGroup, initPositionSticky, isSameColor, isScrollable, measureLongestVisualLineWidth, measureScrollbar, measureWidestChildRow, mergeOneStyle, mergeTwoStyles, normalizeKeyboardKey, normalizeStyle, normalizeStyles, parseStyle, pickPositionRelativeTo, prefersDarkColors, prefersLightColors, preventFocusNav, preventFocusNavViaKeyboard, preventIntermediateScrollbar, resolveCSSColor, resolveCSSSize, resolveColorLuminance, resolveOklchLightness, scrollIntoViewScoped, scrollIntoViewWithStickyAwareness, setAttribute, setAttributes, setStyles, snapToPixel, startDragToReorder, startDragToResizeGesture, stickyAsRelativeCoords, stringifyStyle, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect };
