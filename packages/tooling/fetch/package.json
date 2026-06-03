@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/fetch",
-  "version": "1.3.27",
+  "version": "1.3.28",
   "type": "module",
   "description": "Unified url fetcher (http, http, file, data)",
   "repository": {
@@ -30,7 +30,7 @@
   ],
   "dependencies": {
     "@jsenv/server": "17.3.0",
-    "@jsenv/urls": "2.9.8",
+    "@jsenv/urls": "2.9.9",
     "node-fetch": "3.3.2"
   },
   "devDependencies": {

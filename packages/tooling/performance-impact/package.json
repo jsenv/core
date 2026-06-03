@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/performance-impact",
-  "version": "4.4.42",
+  "version": "4.4.43",
   "type": "module",
   "description": "Report pull request impacts on performance metrics",
   "repository": {
@@ -27,9 +27,9 @@
   },
   "dependencies": {
     "@jsenv/dynamic-import-worker": "1.2.1",
-    "@jsenv/filesystem": "4.15.15",
-    "@jsenv/github-pull-request-impact": "1.8.42",
-    "@jsenv/humanize": "1.7.6"
+    "@jsenv/filesystem": "4.15.16",
+    "@jsenv/github-pull-request-impact": "1.8.43",
+    "@jsenv/humanize": "1.7.7"
   },
   "devDependencies": {
     "@jsenv/assert": "../assert",

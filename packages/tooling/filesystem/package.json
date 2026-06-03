@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/filesystem",
-  "version": "4.15.15",
+  "version": "4.15.16",
   "type": "module",
   "repository": {
     "type": "git",
@@ -28,7 +28,7 @@
   "dependencies": {
     "@jsenv/abort": "4.3.1",
     "@jsenv/url-meta": "8.5.7",
-    "@jsenv/urls": "2.9.8",
+    "@jsenv/urls": "2.9.9",
     "@jsenv/utils": "2.3.1"
   },
   "devDependencies": {

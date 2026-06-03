@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/humanize",
-  "version": "1.7.6",
+  "version": "1.7.7",
   "type": "module",
   "description": "Generate messages meant to read by humans",
   "repository": {
