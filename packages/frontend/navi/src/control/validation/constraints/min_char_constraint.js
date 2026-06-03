@@ -1,6 +1,6 @@
+import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
-
-import { generateFieldInvalidMessage } from "./constraint_message_util.js";
+import { fieldTypeSuffix } from "./constraint_message_util.js";
 
 export const MIN_LOWER_LETTER_CONSTRAINT = {
   name: "min_lower_letter",
@@ -23,15 +23,16 @@ export const MIN_LOWER_LETTER_CONSTRAINT = {
     }
     if (numberOfLowercaseChars < min) {
       if (min === 1) {
-        return generateFieldInvalidMessage(
-          "constraint.min_lower_letter.singular",
-          { field },
+        return naviI18n(
+          `constraint.min_lower_letter.singular.${fieldTypeSuffix(field)}`,
         );
       }
-      return generateFieldInvalidMessage("constraint.min_lower_letter.plural", {
-        field,
-        min: String(min),
-      });
+      return naviI18n(
+        `constraint.min_lower_letter.plural.${fieldTypeSuffix(field)}`,
+        {
+          min: String(min),
+        },
+      );
     }
     return "";
   },
@@ -59,15 +60,16 @@ export const MIN_UPPER_LETTER_CONSTRAINT = {
     }
     if (numberOfUppercaseChars < min) {
       if (min === 1) {
-        return generateFieldInvalidMessage(
-          "constraint.min_upper_letter.singular",
-          { field },
+        return naviI18n(
+          `constraint.min_upper_letter.singular.${fieldTypeSuffix(field)}`,
         );
       }
-      return generateFieldInvalidMessage("constraint.min_upper_letter.plural", {
-        field,
-        min: String(min),
-      });
+      return naviI18n(
+        `constraint.min_upper_letter.plural.${fieldTypeSuffix(field)}`,
+        {
+          min: String(min),
+        },
+      );
     }
     return "";
   },
@@ -95,12 +97,11 @@ export const MIN_DIGIT_CONSTRAINT = {
     }
     if (numberOfDigitChars < min) {
       if (min === 1) {
-        return generateFieldInvalidMessage("constraint.min_digit.singular", {
-          field,
-        });
+        return naviI18n(
+          `constraint.min_digit.singular.${fieldTypeSuffix(field)}`,
+        );
       }
-      return generateFieldInvalidMessage("constraint.min_digit.plural", {
-        field,
+      return naviI18n(`constraint.min_digit.plural.${fieldTypeSuffix(field)}`, {
         min: String(min),
       });
     }
@@ -135,19 +136,15 @@ export const MIN_SPECIAL_CHAR_CONSTRAINT = {
     }
     if (numberOfSpecialChars < min) {
       if (min === 1) {
-        return generateFieldInvalidMessage(
-          "constraint.min_special_char.singular",
-          {
-            field,
-            charset: specialCharset,
-          },
+        return naviI18n(
+          `constraint.min_special_char.singular.${fieldTypeSuffix(field)}`,
+          { charset: specialCharset },
         );
       }
-      return generateFieldInvalidMessage("constraint.min_special_char.plural", {
-        field,
-        min: String(min),
-        charset: specialCharset,
-      });
+      return naviI18n(
+        `constraint.min_special_char.plural.${fieldTypeSuffix(field)}`,
+        { min: String(min), charset: specialCharset },
+      );
     }
     return "";
   },

@@ -1,24 +1,18 @@
-import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
-
-export const generateFieldInvalidMessage = (key, { field, ...vars } = {}) => {
-  return naviI18n(key, {
-    field: () => generateThisFieldText(field),
-    ...vars,
-  });
-};
-
-const generateThisFieldText = (field) => {
+export const fieldTypeSuffix = (field) => {
+  if (!field) {
+    return "default";
+  }
   if (field.type === "password") {
-    return naviI18n("constraint.field.password");
+    return "password";
   }
   if (field.type === "email") {
-    return naviI18n("constraint.field.email");
+    return "email";
   }
   if (field.type === "checkbox") {
-    return naviI18n("constraint.field.checkbox");
+    return "checkbox";
   }
   if (field.type === "radio") {
-    return naviI18n("constraint.field.radio");
+    return "radio";
   }
-  return naviI18n("constraint.field.default");
+  return "default";
 };

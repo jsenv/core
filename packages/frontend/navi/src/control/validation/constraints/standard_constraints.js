@@ -7,7 +7,7 @@ import { langSignal } from "@jsenv/navi/src/text/lang_signal.js";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { getUIStateFromElement } from "../../ui_state_controller.js";
 import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
-import { generateFieldInvalidMessage } from "./constraint_message_util.js";
+import { fieldTypeSuffix } from "./constraint_message_util.js";
 
 // this constraint is not really a native constraint and browser just not let this happen at all
 // in our case it's just here in case some code is wrongly calling "requestAction" or "checkValidity" on a disabled element
@@ -16,7 +16,7 @@ export const DISABLED_CONSTRAINT = {
   messageAttribute: "data-disabled-message",
   check: (field) => {
     if (field.disabled) {
-      return generateFieldInvalidMessage("constraint.disabled", { field });
+      return naviI18n(`constraint.disabled.${fieldTypeSuffix(field)}`);
     }
     return null;
   },
@@ -184,7 +184,7 @@ export const PATTERN_CONSTRAINT = {
     if (regex.test(value)) {
       return null;
     }
-    let message = generateFieldInvalidMessage("constraint.pattern", { field });
+    let message = naviI18n(`constraint.pattern.${fieldTypeSuffix(field)}`);
     const title = field.title;
     if (title) {
       message += `<br />${title}`;
@@ -242,13 +242,14 @@ export const MIN_LENGTH_CONSTRAINT = {
       return null;
     }
     if (valueLength === 1) {
-      return generateFieldInvalidMessage("constraint.min_length.singular", {
-        field,
-        min: String(minLength),
-      });
+      return naviI18n(
+        `constraint.min_length.singular.${fieldTypeSuffix(field)}`,
+        {
+          min: String(minLength),
+        },
+      );
     }
-    return generateFieldInvalidMessage("constraint.min_length.plural", {
-      field,
+    return naviI18n(`constraint.min_length.plural.${fieldTypeSuffix(field)}`, {
       min: String(minLength),
       count: String(valueLength),
     });
@@ -284,8 +285,7 @@ export const MAX_LENGTH_CONSTRAINT = {
     if (valueLength <= maxLength) {
       return null;
     }
-    return generateFieldInvalidMessage("constraint.max_length", {
-      field,
+    return naviI18n(`constraint.max_length.${fieldTypeSuffix(field)}`, {
       max: String(maxLength),
       count: String(valueLength),
     });
@@ -313,7 +313,7 @@ export const TYPE_NUMBER_CONSTRAINT = {
     const valueAsNumber = field.valueAsNumber;
     const valueAsNumberIsNaN = isNaN(valueAsNumber);
     if (valueAsNumberIsNaN) {
-      return generateFieldInvalidMessage("constraint.type.number", { field });
+      return naviI18n("constraint.type.number.default");
     }
     return null;
   },
@@ -350,8 +350,7 @@ export const MIN_CONSTRAINT = {
         return null;
       }
       if (valueAsNumber < minNumber) {
-        return generateFieldInvalidMessage("constraint.min.number", {
-          field,
+        return naviI18n("constraint.min.number.default", {
           min: minString,
         });
       }
@@ -365,8 +364,7 @@ export const MIN_CONSTRAINT = {
       const [minHours, minMinutes] = minString.split(":").map(Number);
       const [hours, minutes] = value.split(":").map(Number);
       if (hours < minHours || (hours === minHours && minutes < minMinutes)) {
-        return generateFieldInvalidMessage("constraint.min.time", {
-          field,
+        return naviI18n("constraint.min.time.default", {
           min: minString,
         });
       }
@@ -382,12 +380,9 @@ export const MIN_CONSTRAINT = {
       if (value < minString) {
         const todayIso = getTodayIso(field.type);
         if (minString === todayIso) {
-          return generateFieldInvalidMessage("constraint.min.date.today", {
-            field,
-          });
+          return naviI18n("constraint.min.date.today.default");
         }
-        return generateFieldInvalidMessage("constraint.min.date", {
-          field,
+        return naviI18n("constraint.min.date.default", {
           min: formatDateIso(minString, field.type),
         });
       }
@@ -419,8 +414,7 @@ export const MAX_CONSTRAINT = {
         return null;
       }
       if (valueAsNumber > maxNumber) {
-        return generateFieldInvalidMessage("constraint.max.number", {
-          field,
+        return naviI18n("constraint.max.number.default", {
           max: maxString,
         });
       }
@@ -434,8 +428,7 @@ export const MAX_CONSTRAINT = {
       const [maxHours, maxMinutes] = maxString.split(":").map(Number);
       const [hours, minutes] = value.split(":").map(Number);
       if (hours > maxHours || (hours === maxHours && minutes > maxMinutes)) {
-        return generateFieldInvalidMessage("constraint.max.time", {
-          field,
+        return naviI18n("constraint.max.time.default", {
           max: maxString,
         });
       }
@@ -449,12 +442,9 @@ export const MAX_CONSTRAINT = {
       if (value > maxString) {
         const todayIso = getTodayIso(field.type);
         if (maxString === todayIso) {
-          return generateFieldInvalidMessage("constraint.max.date.today", {
-            field,
-          });
+          return naviI18n("constraint.max.date.today.default");
         }
-        return generateFieldInvalidMessage("constraint.max.date", {
-          field,
+        return naviI18n("constraint.max.date.default", {
           max: formatDateIso(maxString, field.type),
         });
       }

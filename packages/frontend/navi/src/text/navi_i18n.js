@@ -65,30 +65,6 @@ naviI18n.addAll({
   },
 });
 
-// Field name substitutions used in constraint messages
-naviI18n.addAll({
-  "constraint.field.password": {
-    fr: "Ce mot de passe",
-    en: "This password",
-  },
-  "constraint.field.email": {
-    fr: "Cette adresse e-mail",
-    en: "This email address",
-  },
-  "constraint.field.checkbox": {
-    fr: "Cette case",
-    en: "This checkbox",
-  },
-  "constraint.field.radio": {
-    fr: "Cette option",
-    en: "This option",
-  },
-  "constraint.field.default": {
-    fr: "Ce champ",
-    en: "This field",
-  },
-});
-
 // Constraint validation messages — override any key to customize error messages
 naviI18n.addAll({
   "constraint.available": {
@@ -127,9 +103,25 @@ naviI18n.addAll({
     fr: "Veuillez sélectionner au moins un fichier.",
     en: "Please select at least one file.",
   },
-  "constraint.disabled": {
-    fr: "[field] est désactivé.",
-    en: "[field] is disabled.",
+  "constraint.disabled.password": {
+    fr: "Ce mot de passe est désactivé.",
+    en: "This password is disabled.",
+  },
+  "constraint.disabled.email": {
+    fr: "Cette adresse e-mail est désactivée.",
+    en: "This email address is disabled.",
+  },
+  "constraint.disabled.checkbox": {
+    fr: "Cette case est désactivée.",
+    en: "This checkbox is disabled.",
+  },
+  "constraint.disabled.radio": {
+    fr: "Cette option est désactivée.",
+    en: "This option is disabled.",
+  },
+  "constraint.disabled.default": {
+    fr: "Ce champ est désactivé.",
+    en: "This field is disabled.",
   },
   "constraint.readonly.busy": {
     fr: "Cet élément est occupé.",
@@ -207,9 +199,17 @@ naviI18n.addAll({
     fr: "Veuillez remplir ce champ.",
     en: "Please fill in this field.",
   },
-  "constraint.pattern": {
-    fr: "[field] ne correspond pas au format requis.",
-    en: "[field] does not match the required format.",
+  "constraint.pattern.password": {
+    fr: "Ce mot de passe ne correspond pas au format requis.",
+    en: "This password does not match the required format.",
+  },
+  "constraint.pattern.email": {
+    fr: "Cette adresse e-mail ne correspond pas au format requis.",
+    en: "This email address does not match the required format.",
+  },
+  "constraint.pattern.default": {
+    fr: "Ce champ ne correspond pas au format requis.",
+    en: "This field does not match the required format.",
   },
   "constraint.type.email.at": {
     fr: 'Veuillez inclure "@" dans l\'adresse e-mail. Il manque un symbole "@" dans [value].',
@@ -219,97 +219,153 @@ naviI18n.addAll({
     fr: "Veuillez saisir une adresse e-mail valide.",
     en: "Please enter a valid email address.",
   },
-  "constraint.min_length.singular": {
-    fr: "[field] doit contenir au moins [min] caractère (il contient actuellement un seul caractère).",
-    en: "[field] must contain at least [min] character (it currently contains only one character).",
+  "constraint.min_length.singular.password": {
+    fr: "Ce mot de passe doit contenir au moins [min] caractère (il contient actuellement un seul caractère).",
+    en: "This password must contain at least [min] character (it currently contains only one character).",
   },
-  "constraint.min_length.plural": {
-    fr: "[field] doit contenir au moins [min] caractères (il contient actuellement [count] caractères).",
-    en: "[field] must contain at least [min] characters (it currently contains [count] characters).",
+  "constraint.min_length.singular.email": {
+    fr: "Cette adresse e-mail doit contenir au moins [min] caractère (il contient actuellement un seul caractère).",
+    en: "This email address must contain at least [min] character (it currently contains only one character).",
   },
-  "constraint.max_length": {
-    fr: "[field] doit contenir au maximum [max] caractères (il contient actuellement [count] caractères).",
-    en: "[field] must contain at most [max] characters (it currently contains [count] characters).",
+  "constraint.min_length.singular.default": {
+    fr: "Ce champ doit contenir au moins [min] caractère (il contient actuellement un seul caractère).",
+    en: "This field must contain at least [min] character (it currently contains only one character).",
   },
-  "constraint.type.number": {
-    fr: "[field] doit être un nombre.",
-    en: "[field] must be a number.",
+  "constraint.min_length.plural.password": {
+    fr: "Ce mot de passe doit contenir au moins [min] caractères (il contient actuellement [count] caractères).",
+    en: "This password must contain at least [min] characters (it currently contains [count] characters).",
   },
-  "constraint.min.number": {
-    fr: "[field] doit être supérieur ou égal à <strong>[min]</strong>.",
-    en: "[field] must be greater than or equal to <strong>[min]</strong>.",
+  "constraint.min_length.plural.email": {
+    fr: "Cette adresse e-mail doit contenir au moins [min] caractères (il contient actuellement [count] caractères).",
+    en: "This email address must contain at least [min] characters (it currently contains [count] characters).",
   },
-  "constraint.min.time": {
-    fr: "[field] doit être <strong>[min]</strong> ou plus.",
-    en: "[field] must be <strong>[min]</strong> or later.",
+  "constraint.min_length.plural.default": {
+    fr: "Ce champ doit contenir au moins [min] caractères (il contient actuellement [count] caractères).",
+    en: "This field must contain at least [min] characters (it currently contains [count] characters).",
   },
-  "constraint.min.date.today": {
+  "constraint.max_length.password": {
+    fr: "Ce mot de passe doit contenir au maximum [max] caractères (il contient actuellement [count] caractères).",
+    en: "This password must contain at most [max] characters (it currently contains [count] characters).",
+  },
+  "constraint.max_length.email": {
+    fr: "Cette adresse e-mail doit contenir au maximum [max] caractères (il contient actuellement [count] caractères).",
+    en: "This email address must contain at most [max] characters (it currently contains [count] characters).",
+  },
+  "constraint.max_length.default": {
+    fr: "Ce champ doit contenir au maximum [max] caractères (il contient actuellement [count] caractères).",
+    en: "This field must contain at most [max] characters (it currently contains [count] characters).",
+  },
+  "constraint.type.number.default": {
+    fr: "Ce champ doit être un nombre.",
+    en: "This field must be a number.",
+  },
+  "constraint.min.number.default": {
+    fr: "Ce champ doit être supérieur ou égal à <strong>[min]</strong>.",
+    en: "This field must be greater than or equal to <strong>[min]</strong>.",
+  },
+  "constraint.min.time.default": {
+    fr: "Ce champ doit être <strong>[min]</strong> ou plus.",
+    en: "This field must be <strong>[min]</strong> or later.",
+  },
+  "constraint.min.date.today.default": {
     fr: "La date doit être aujourd'hui ou dans le futur.",
     en: "The date must be today or in the future.",
   },
-  "constraint.min.date": {
+  "constraint.min.date.default": {
     fr: "La date doit être à partir du <strong>[min]</strong>.",
     en: "The date must be on or after <strong>[min]</strong>.",
   },
-  "constraint.max.date.today": {
+  "constraint.max.date.today.default": {
     fr: "La date doit être aujourd'hui ou dans le passé.",
     en: "The date must be today or in the past.",
   },
-  "constraint.max.date": {
+  "constraint.max.date.default": {
     fr: "La date doit être au plus tard le <strong>[max]</strong>.",
     en: "The date must be on or before <strong>[max]</strong>.",
   },
-  "constraint.max.number": {
-    fr: "[field] doit être <strong>[max]</strong> ou moins.",
-    en: "[field] must be <strong>[max]</strong> or less.",
+  "constraint.max.number.default": {
+    fr: "Ce champ doit être <strong>[max]</strong> ou moins.",
+    en: "This field must be <strong>[max]</strong> or less.",
   },
-  "constraint.max.time": {
-    fr: "[field] doit être <strong>[max]</strong> ou moins.",
-    en: "[field] must be <strong>[max]</strong> or less.",
+  "constraint.max.time.default": {
+    fr: "Ce champ doit être <strong>[max]</strong> ou moins.",
+    en: "This field must be <strong>[max]</strong> or less.",
   },
-  "constraint.single_space.start": {
-    fr: "[field] ne doit pas commencer par un espace.",
-    en: "[field] must not start with a space.",
+  "constraint.single_space.start.default": {
+    fr: "Ce champ ne doit pas commencer par un espace.",
+    en: "This field must not start with a space.",
   },
-  "constraint.single_space.end": {
-    fr: "[field] ne doit pas finir par un espace.",
-    en: "[field] must not end with a space.",
+  "constraint.single_space.end.default": {
+    fr: "Ce champ ne doit pas finir par un espace.",
+    en: "This field must not end with a space.",
   },
-  "constraint.single_space.consecutive": {
-    fr: "[field] ne doit pas contenir plusieurs espaces consécutifs.",
-    en: "[field] must not contain consecutive spaces.",
+  "constraint.single_space.consecutive.default": {
+    fr: "Ce champ ne doit pas contenir plusieurs espaces consécutifs.",
+    en: "This field must not contain consecutive spaces.",
   },
-  "constraint.min_lower_letter.singular": {
-    fr: "[field] doit contenir au moins une lettre minuscule.",
-    en: "[field] must contain at least one lowercase letter.",
+  "constraint.min_lower_letter.singular.password": {
+    fr: "Ce mot de passe doit contenir au moins une lettre minuscule.",
+    en: "This password must contain at least one lowercase letter.",
   },
-  "constraint.min_lower_letter.plural": {
-    fr: "[field] contenir au moins [min] lettres minuscules.",
-    en: "[field] must contain at least [min] lowercase letters.",
+  "constraint.min_lower_letter.singular.default": {
+    fr: "Ce champ doit contenir au moins une lettre minuscule.",
+    en: "This field must contain at least one lowercase letter.",
   },
-  "constraint.min_upper_letter.singular": {
-    fr: "[field] doit contenir au moins une lettre majuscule.",
-    en: "[field] must contain at least one uppercase letter.",
+  "constraint.min_lower_letter.plural.password": {
+    fr: "Ce mot de passe doit contenir au moins [min] lettres minuscules.",
+    en: "This password must contain at least [min] lowercase letters.",
   },
-  "constraint.min_upper_letter.plural": {
-    fr: "[field] contenir au moins [min] lettres majuscules.",
-    en: "[field] must contain at least [min] uppercase letters.",
+  "constraint.min_lower_letter.plural.default": {
+    fr: "Ce champ doit contenir au moins [min] lettres minuscules.",
+    en: "This field must contain at least [min] lowercase letters.",
   },
-  "constraint.min_digit.singular": {
-    fr: "[field] doit contenir au moins un chiffre.",
-    en: "[field] must contain at least one digit.",
+  "constraint.min_upper_letter.singular.password": {
+    fr: "Ce mot de passe doit contenir au moins une lettre majuscule.",
+    en: "This password must contain at least one uppercase letter.",
   },
-  "constraint.min_digit.plural": {
-    fr: "[field] doit contenir au moins [min] chiffres.",
-    en: "[field] must contain at least [min] digits.",
+  "constraint.min_upper_letter.singular.default": {
+    fr: "Ce champ doit contenir au moins une lettre majuscule.",
+    en: "This field must contain at least one uppercase letter.",
   },
-  "constraint.min_special_char.singular": {
-    fr: "[field] doit contenir au moins un caractère spécial. ([charset])",
-    en: "[field] must contain at least one special character. ([charset])",
+  "constraint.min_upper_letter.plural.password": {
+    fr: "Ce mot de passe doit contenir au moins [min] lettres majuscules.",
+    en: "This password must contain at least [min] uppercase letters.",
   },
-  "constraint.min_special_char.plural": {
-    fr: "[field] doit contenir au moins [min] caractères spéciaux. ([charset])",
-    en: "[field] must contain at least [min] special characters. ([charset])",
+  "constraint.min_upper_letter.plural.default": {
+    fr: "Ce champ doit contenir au moins [min] lettres majuscules.",
+    en: "This field must contain at least [min] uppercase letters.",
+  },
+  "constraint.min_digit.singular.password": {
+    fr: "Ce mot de passe doit contenir au moins un chiffre.",
+    en: "This password must contain at least one digit.",
+  },
+  "constraint.min_digit.singular.default": {
+    fr: "Ce champ doit contenir au moins un chiffre.",
+    en: "This field must contain at least one digit.",
+  },
+  "constraint.min_digit.plural.password": {
+    fr: "Ce mot de passe doit contenir au moins [min] chiffres.",
+    en: "This password must contain at least [min] digits.",
+  },
+  "constraint.min_digit.plural.default": {
+    fr: "Ce champ doit contenir au moins [min] chiffres.",
+    en: "This field must contain at least [min] digits.",
+  },
+  "constraint.min_special_char.singular.password": {
+    fr: "Ce mot de passe doit contenir au moins un caractère spécial. ([charset])",
+    en: "This password must contain at least one special character. ([charset])",
+  },
+  "constraint.min_special_char.singular.default": {
+    fr: "Ce champ doit contenir au moins un caractère spécial. ([charset])",
+    en: "This field must contain at least one special character. ([charset])",
+  },
+  "constraint.min_special_char.plural.password": {
+    fr: "Ce mot de passe doit contenir au moins [min] caractères spéciaux. ([charset])",
+    en: "This password must contain at least [min] special characters. ([charset])",
+  },
+  "constraint.min_special_char.plural.default": {
+    fr: "Ce champ doit contenir au moins [min] caractères spéciaux. ([charset])",
+    en: "This field must contain at least [min] special characters. ([charset])",
   },
 });
 

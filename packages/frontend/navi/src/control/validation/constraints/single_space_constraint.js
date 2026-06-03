@@ -1,5 +1,5 @@
+import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
-import { generateFieldInvalidMessage } from "./constraint_message_util.js";
 
 export const SINGLE_SPACE_CONSTRAINT = {
   name: "single_space",
@@ -15,19 +15,12 @@ export const SINGLE_SPACE_CONSTRAINT = {
     const hasDoubleSpace = fieldValue.includes("  ");
     if (hasLeadingSpace || hasDoubleSpace || hasTrailingSpace) {
       if (hasLeadingSpace) {
-        return generateFieldInvalidMessage("constraint.single_space.start", {
-          field,
-        });
+        return naviI18n("constraint.single_space.start.default");
       }
       if (hasTrailingSpace) {
-        return generateFieldInvalidMessage("constraint.single_space.end", {
-          field,
-        });
+        return naviI18n("constraint.single_space.end.default");
       }
-      return generateFieldInvalidMessage(
-        "constraint.single_space.consecutive",
-        { field },
-      );
+      return naviI18n("constraint.single_space.consecutive.default");
     }
     return "";
   },
