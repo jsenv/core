@@ -84,7 +84,6 @@
           <StatesDemo />
           <WithActionDemo />
           <InFormDemo />
-          <ValidationDemo />
           <CustomizationDemo />
         </Box>
       );
@@ -103,12 +102,9 @@
                   <a href="#outside-form">Outside a form</a>
                 </li>
                 <li>
-                  <a href="#inside-form">Inside a form</a>
+                  <a href="#inside-form">Inside a form (+ required)</a>
                 </li>
               </ol>
-            </li>
-            <li>
-              <a href="#validation">Validation</a>
             </li>
             <li>
               <a href="#customization">Customization</a>
@@ -267,7 +263,7 @@
         );
       };
 
-      // ── 3. Interactivity — inside a form ─────────────────────────────────
+      // ── 4. Customization ──────────────────────────────────────────────────
 
       const InFormDemo = () => {
         const [entries, push, clear] = useCallLog();
@@ -276,8 +272,8 @@
           <div class="demo-section" id="inside-form">
             <h2>3. Interactivity — inside a form</h2>
             <p class="desc">
-              Le picker participe à la soumission du formulaire comme n'importe
-              quel champ.
+              Deux pickers obligatoires : l'un avec une valeur par défaut,
+              l'autre sans. La soumission échoue si un champ est vide.
             </p>
             <Form
               action={(values) => {
@@ -288,22 +284,25 @@
               alignX="start"
             >
               <Field vertical>
-                <Label>Couleur principale</Label>
+                <Label>Couleur (avec valeur par défaut, required)</Label>
                 <Picker
-                  name="primary_color"
+                  name="color_with_default"
                   type="color"
+                  defaultValue="#3b82f6"
+                  required
                   uiAction={(v) => {
-                    push("Picker uiAction (primary)", v);
+                    push("Picker uiAction (with default)", v);
                   }}
                 />
               </Field>
               <Field vertical>
-                <Label>Couleur secondaire</Label>
+                <Label>Couleur (sans valeur, required)</Label>
                 <Picker
-                  name="secondary_color"
+                  name="color_no_default"
                   type="color"
+                  required
                   uiAction={(v) => {
-                    push("Picker uiAction (secondary)", v);
+                    push("Picker uiAction (no default)", v);
                   }}
                 />
               </Field>
@@ -313,51 +312,6 @@
           </div>
         );
       };
-
-      // ── 4. Validation dans un form (required) ─────────────────────────────
-
-      const ValidationDemo = () => {
-        const submittedSignal = useSignal(null);
-        return (
-          <div class="demo-section" id="validation">
-            <h2>4. Validation dans un form (required)</h2>
-            <p class="desc">
-              Champ obligatoire — la soumission échoue si aucune couleur n'est
-              choisie.
-            </p>
-            <Form
-              action={(values) => {
-                submittedSignal.value = values;
-              }}
-              flex="y"
-              spacing="m"
-              alignX="start"
-            >
-              <Field vertical>
-                <Label>Couleur (obligatoire)</Label>
-                <Picker name="required_color" type="color" required />
-              </Field>
-              <Field vertical>
-                <Label>Couleur (message personnalisé)</Label>
-                <Picker
-                  name="required_color_custom"
-                  type="color"
-                  required
-                  requiredMessage="Merci de choisir une couleur."
-                />
-              </Field>
-              <Button type="submit">Soumettre</Button>
-              {submittedSignal.value && (
-                <pre style="margin:0;font-size:12px;background:#f0f0f0;padding:8px;border-radius:4px;width:100%;box-sizing:border-box;">
-                  {JSON.stringify(submittedSignal.value, null, 2)}
-                </pre>
-              )}
-            </Form>
-          </div>
-        );
-      };
-
-      // ── 5. Customization ──────────────────────────────────────────────────
 
       const SWATCHES = [
         { label: "Rouge", value: "#ef4444" },
@@ -373,7 +327,7 @@
         const colorSignal = useSignal("#3b82f6");
         return (
           <div class="demo-section" id="customization">
-            <h2>5. Customization</h2>
+            <h2>4. Customization</h2>
             <p class="desc">
               On passe des enfants au Picker pour afficher une palette de
               swatches construite avec <code>SelectableList</code> +{" "}

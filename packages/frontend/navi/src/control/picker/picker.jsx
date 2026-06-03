@@ -59,11 +59,7 @@ const css = /* css */ `
         var(--picker-background-color) 95%,
         grey
       );
-      --picker-color-disabled: color-mix(
-        in srgb,
-        var(--picker-color) 95%,
-        grey
-      );
+      --picker-color-disabled: var(--picker-color-dimmed);
       /* Icon */
       --picker-icon-color: #5e4e4e;
       --picker-icon-color-readonly: color-mix(

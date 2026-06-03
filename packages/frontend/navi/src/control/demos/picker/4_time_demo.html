@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Picker Time Demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 40px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      #container {
+        max-width: 900px;
+        margin: 0 auto;
+      }
+      h1 {
+        margin: 0 0 32px;
+        font-size: 1.4rem;
+      }
+      h2 {
+        margin: 0 0 4px;
+        font-size: 1.1rem;
+      }
+      .demo-section {
+        margin-bottom: 24px;
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      p.desc {
+        margin: 0 0 16px;
+        color: #555;
+        font-size: 13px;
+      }
+      .states-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        align-items: start;
+        gap: 16px;
+      }
+      .states-col-header {
+        margin-bottom: 12px;
+        color: #888;
+        font-weight: 600;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <h1>Time Picker Demo</h1>
+      <div id="app"></div>
+    </div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useSignal } from "@preact/signals";
+      import { CallLog, useCallLog } from "../utils/call_log.jsx";
+      import {
+        Box,
+        Field,
+        Label,
+        Picker,
+        Form,
+        Button,
+        NaviDebug,
+      } from "@jsenv/navi";
+
+      const App = () => (
+        <Box flex="y" spacing="l">
+          <TableOfContents />
+          <StatesDemo />
+          <WithActionDemo />
+          <InFormDemo />
+          <NaviTimeDemo />
+        </Box>
+      );
+
+      const TableOfContents = () => (
+        <div class="demo-section">
+          <h2>Table of contents</h2>
+          <ol style={{ margin: 0, paddingLeft: "20px", lineHeight: "2" }}>
+            <li>
+              <a href="#states">États</a>
+            </li>
+            <li>
+              Interactivity
+              <ol style={{ paddingLeft: "20px" }}>
+                <li>
+                  <a href="#outside-form">Outside a form</a>
+                </li>
+                <li>
+                  <a href="#inside-form">Inside a form (+ required)</a>
+                </li>
+              </ol>
+            </li>
+            <li>
+              <a href="#navi-time">navi_time (min / max / step)</a>
+            </li>
+          </ol>
+        </div>
+      );
+
+      // ── 1. États ──────────────────────────────────────────────────────────
+
+      const DEFAULT_TIME = "09:30";
+
+      const StatesDemo = () => (
+        <div class="demo-section" id="states">
+          <h2>1. États</h2>
+          <p class="desc">
+            États principaux du picker time jsenv. La colonne native est fournie
+            à titre de comparaison.
+          </p>
+          <div class="states-grid">
+            <div>
+              <div class="states-col-header">Navi Picker</div>
+              <Box flex="y" spacing="s">
+                <Field vertical>
+                  <Label>Vide</Label>
+                  <Picker name="time_empty" type="time" />
+                </Field>
+                <Field vertical>
+                  <Label>Avec valeur</Label>
+                  <Picker
+                    name="time_with_value"
+                    type="time"
+                    defaultValue={DEFAULT_TIME}
+                  />
+                </Field>
+                <Field vertical>
+                  <Label>Readonly</Label>
+                  <Picker
+                    name="time_readonly"
+                    type="time"
+                    defaultValue={DEFAULT_TIME}
+                    readOnly
+                  />
+                </Field>
+                <Field vertical>
+                  <Label>Disabled</Label>
+                  <Picker
+                    name="time_disabled"
+                    type="time"
+                    defaultValue={DEFAULT_TIME}
+                    disabled
+                  />
+                </Field>
+              </Box>
+            </div>
+            <div>
+              <div class="states-col-header">User agent</div>
+              <Box flex="y" spacing="s">
+                <Field vertical>
+                  <Label>Vide</Label>
+                  <input type="time" />
+                </Field>
+                <Field vertical>
+                  <Label>Avec valeur</Label>
+                  <input type="time" defaultValue={DEFAULT_TIME} />
+                </Field>
+                <Field vertical>
+                  <Label>Readonly</Label>
+                  <input type="time" defaultValue={DEFAULT_TIME} readOnly />
+                </Field>
+                <Field vertical>
+                  <Label>Disabled</Label>
+                  <input type="time" defaultValue={DEFAULT_TIME} disabled />
+                </Field>
+              </Box>
+            </div>
+          </div>
+        </div>
+      );
+
+      // ── 2. Interactivity — outside a form ─────────────────────────────────
+
+      const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+      const WithActionDemo = () => {
+        const [entries, push, clear] = useCallLog();
+        const timeSignal = useSignal(DEFAULT_TIME);
+
+        return (
+          <div class="demo-section" id="outside-form">
+            <h2>2. Interactivity — outside a form</h2>
+            <p class="desc">
+              L'action est asynchrone (simule un appel réseau de 800 ms). Le
+              picker passe en état loading pendant ce temps.
+            </p>
+            <Box flex="y" spacing="m">
+              <Field vertical>
+                <Label>No initial time</Label>
+                <Picker
+                  name="time_no_initial"
+                  type="time"
+                  uiAction={(v) => {
+                    push("Picker uiAction", v);
+                  }}
+                  action={async (v) => {
+                    push("Picker action", v);
+                    await sleep(800);
+                  }}
+                />
+              </Field>
+              <Field vertical>
+                <Label>With initial time</Label>
+                <Picker
+                  name="time_with_initial"
+                  type="time"
+                  value={timeSignal.value}
+                  uiAction={(v) => {
+                    push("Picker uiAction", v);
+                  }}
+                  action={async (v) => {
+                    push("Picker action", v);
+                    await sleep(800);
+                    timeSignal.value = v;
+                  }}
+                />
+              </Field>
+            </Box>
+            <CallLog entries={entries} onClear={clear} />
+          </div>
+        );
+      };
+
+      // ── 3. Interactivity — inside a form ─────────────────────────────────
+
+      const InFormDemo = () => {
+        const [entries, push, clear] = useCallLog();
+
+        return (
+          <div class="demo-section" id="inside-form">
+            <h2>3. Interactivity — inside a form</h2>
+            <p class="desc">
+              Deux pickers obligatoires : l'un avec une valeur par défaut,
+              l'autre sans. La soumission échoue si un champ est vide.
+            </p>
+            <Form
+              action={(values) => {
+                push("Form action", values);
+              }}
+              flex="y"
+              spacing="m"
+              alignX="start"
+            >
+              <Field vertical>
+                <Label>Heure (avec valeur par défaut, required)</Label>
+                <Picker
+                  name="time_with_default"
+                  type="time"
+                  defaultValue={DEFAULT_TIME}
+                  required
+                  uiAction={(v) => {
+                    push("Picker uiAction (with default)", v);
+                  }}
+                />
+              </Field>
+              <Field vertical>
+                <Label>Heure (sans valeur, required)</Label>
+                <Picker
+                  name="time_no_default"
+                  type="time"
+                  required
+                  uiAction={(v) => {
+                    push("Picker uiAction (no default)", v);
+                  }}
+                />
+              </Field>
+              <Button type="submit">Soumettre</Button>
+            </Form>
+            <CallLog entries={entries} onClear={clear} />
+          </div>
+        );
+      };
+
+      // ── 4. navi_time ──────────────────────────────────────────────────────
+
+      const NaviTimeDemo = () => {
+        const [entries, push, clear] = useCallLog();
+        const timeSignal = useSignal(null);
+
+        return (
+          <div class="demo-section" id="navi-time">
+            <h2>4. navi_time — créneaux min/max/step</h2>
+            <p class="desc">
+              Le type <code>navi_time</code> génère automatiquement une liste de
+              créneaux horaires à partir de <code>min</code>, <code>max</code>{" "}
+              et <code>step</code>. L'utilisateur ne peut choisir qu'un créneau
+              valide.
+            </p>
+            <Box flex="y" spacing="m">
+              <Field vertical>
+                <Label>08:00 – 18:00 tous les 30 min</Label>
+                <Picker
+                  name="navi_time_30"
+                  type="navi_time"
+                  min="08:00"
+                  max="18:00"
+                  step="00:30"
+                  value={timeSignal.value}
+                  action={(v) => {
+                    push("Picker action (30 min)", v);
+                    timeSignal.value = v;
+                  }}
+                />
+              </Field>
+              <Field vertical>
+                <Label>09:00 – 12:00 tous les 15 min</Label>
+                <Picker
+                  name="navi_time_15"
+                  type="navi_time"
+                  min="09:00"
+                  max="12:00"
+                  step="00:15"
+                  action={(v) => {
+                    push("Picker action (15 min)", v);
+                  }}
+                />
+              </Field>
+            </Box>
+            <CallLog entries={entries} onClear={clear} />
+          </div>
+        );
+      };
+
+      render(
+        <NaviDebug debugAction debugInteraction debugPopup>
+          <App />
+        </NaviDebug>,
+        document.getElementById("app"),
+      );
+    </script>
+  </body>
+</html>
