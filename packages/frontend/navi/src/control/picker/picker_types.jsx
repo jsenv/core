@@ -67,7 +67,7 @@ const PickerDateUI = () => {
   const { value, placeholder } = useContext(PickerContext);
   if (!value) {
     if (!placeholder) {
-      return <Time type="date" />;
+      return <Time type="date" color="var(--picker-placeholder-color" />;
     }
     return <PickerPlaceholder>{placeholder}</PickerPlaceholder>;
   }
@@ -92,7 +92,10 @@ export const PickerMonth = (props) => {
 const PickerMonthUI = () => {
   const { value, placeholder } = useContext(PickerContext);
   if (!value) {
-    return placeholder || null;
+    if (!placeholder) {
+      return <Time type="month" color="var(--picker-placeholder-color" />;
+    }
+    return <PickerPlaceholder>{placeholder}</PickerPlaceholder>;
   }
   return (
     <Time type="month" capitalize>
@@ -110,7 +113,10 @@ export const PickerWeek = (props) => {
 const PickerWeekUI = () => {
   const { value, placeholder } = useContext(PickerContext);
   if (!value) {
-    return placeholder || null;
+    if (!placeholder) {
+      return <Time type="week" color="var(--picker-placeholder-color" />;
+    }
+    return <PickerPlaceholder>{placeholder}</PickerPlaceholder>;
   }
   return (
     <Time type="week" capitalize>
@@ -129,7 +135,7 @@ const PickerTimeUI = () => {
   const { value, placeholder } = useContext(PickerContext);
   if (!value) {
     if (!placeholder) {
-      return <Time type="time" />;
+      return <Time type="time" color="var(--picker-placeholder-color" />;
     }
     return <PickerPlaceholder>{placeholder}</PickerPlaceholder>;
   }
@@ -150,24 +156,32 @@ export const PickerDatetime = (props) => {
 const PickerDatetimeUI = () => {
   const { value, placeholder } = useContext(PickerContext);
   if (!value) {
-    return placeholder || null;
+    if (!placeholder) {
+      return <Time type="datetime" color="var(--picker-placeholder-color" />;
+    }
+    return <PickerPlaceholder>{placeholder}</PickerPlaceholder>;
   }
   return <Time type="datetime">{value}</Time>;
 };
 
 export const PickerFile = (props) => {
   const Next = useNextResolver();
+
   return (
     <Next ui={<PickerFileUI />} icon={<FileSvg />} type="file" {...props} />
   );
 };
 const PickerFileUI = () => {
   const { value, placeholder } = useContext(PickerContext);
+
   if (!value) {
-    return placeholder || null;
+    if (!placeholder) {
+      return null;
+    }
+    return <PickerPlaceholder>placeholder</PickerPlaceholder>;
   }
   // value is a FileList-like string from the input; display file names
-  return <span>{value}</span>;
+  return <PickerValue>{value}</PickerValue>;
 };
 
 const PencilSvg = () => {

@@ -54,6 +54,9 @@ export const Time = (props) => {
   if (type === "month") {
     return <TimeMonth {...props} />;
   }
+  if (type === "week") {
+    return <TimeWeek {...props} />;
+  }
   if (type === "datetime") {
     return <TimeDatetime {...props} />;
   }
@@ -125,6 +128,22 @@ const TimeMonth = ({ children, locale, ...props }) => {
     text = String(children);
   }
 
+  return (
+    <TimeText dateTime={dateTime} {...props}>
+      {text}
+    </TimeText>
+  );
+};
+
+const TimeWeek = ({ children, ...props }) => {
+  let text;
+  let dateTime;
+  if (children !== undefined && children !== null) {
+    text = String(children);
+    dateTime = String(children);
+  } else {
+    text = "sem. xx / aaaa";
+  }
   return (
     <TimeText dateTime={dateTime} {...props}>
       {text}
