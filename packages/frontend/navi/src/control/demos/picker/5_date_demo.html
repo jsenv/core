@@ -281,51 +281,104 @@
 
       // ── 4. Customization ─────────────────────────────────────────────────
 
+      // Dates chosen to contrast short vs long day/month names:
+      // "2026-06-03" → mercredi 3 juin      (medium day, short month)
+      // "2026-09-11" → vendredi 11 septembre (long day, long month)
+      // "2026-01-20" → mardi 20 janvier      (short day, medium month)
+      const DEMO_DATES = ["2026-06-03", "2026-09-11", "2026-01-20"];
+
       const CustomizationDemo = () => (
         <div class="demo-section" id="customization">
           <h2>4. Customization — Picker.UI.Date</h2>
           <p class="desc">
-            Passez <code>ui={"<Picker.UI.Date />"}</code> pour personnaliser
-            l'affichage de la date. Les props <code>long</code> et{" "}
-            <code>dayLabel</code> sont transmises au composant
-            <code>&lt;Time type="date"&gt;</code> sous-jacent.
+            Passez <code>ui={"{<Picker.UI.Date />}"}</code> pour personnaliser
+            l'affichage de la date sélectionnée. Les props sont transmises au
+            composant <code>&lt;Time type="date"&gt;</code> sous-jacent.
           </p>
-          <Box flex="y" spacing="s">
-            <Field vertical>
-              <Label>Default (short, no relative label)</Label>
-              <Picker
-                name="date_default_ui"
-                type="date"
-                defaultValue={DEFAULT_DATE}
-              />
-            </Field>
-            <Field vertical>
-              <Label>long — format long ("mardi 3 juin 2026")</Label>
-              <Picker
-                name="date_long"
-                type="date"
-                defaultValue={DEFAULT_DATE}
-                ui={<Picker.UI.Date long />}
-              />
-            </Field>
-            <Field vertical>
-              <Label>dayLabel — ajoute "aujourd'hui" / "demain" / "hier"</Label>
-              <Picker
-                name="date_daylabel"
-                type="date"
-                defaultValue={DEFAULT_DATE}
-                ui={<Picker.UI.Date dayLabel />}
-              />
-            </Field>
-            <Field vertical>
-              <Label>long + dayLabel</Label>
-              <Picker
-                name="date_long_daylabel"
-                type="date"
-                defaultValue={DEFAULT_DATE}
-                ui={<Picker.UI.Date long dayLabel />}
-              />
-            </Field>
+
+          <div class="states-grid">
+            <div>
+              <div class="states-col-header">Default — format court</div>
+              <p class="desc">
+                Forme abrégée (ex&nbsp;: «&nbsp;Mer. 3 juin&nbsp;»). La largeur
+                varie légèrement selon le mois, mais reste compacte.
+              </p>
+              <Box flex="y" spacing="xs" alignX="start">
+                {DEMO_DATES.map((d, i) => (
+                  <Picker
+                    key={i}
+                    name={`date_default_${i}`}
+                    type="date"
+                    defaultValue={d}
+                  />
+                ))}
+              </Box>
+            </div>
+            <div>
+              <div class="states-col-header">long — format long</div>
+              <p class="desc">
+                Nom du jour et du mois en toutes lettres (ex&nbsp;:
+                «&nbsp;vendredi 11 septembre 2026&nbsp;»). La largeur varie
+                davantage selon la date.
+              </p>
+              <Box flex="y" spacing="xs" alignX="start">
+                {DEMO_DATES.map((d, i) => (
+                  <Picker
+                    key={i}
+                    name={`date_long_${i}`}
+                    type="date"
+                    defaultValue={d}
+                    ui={<Picker.UI.Date long />}
+                  />
+                ))}
+              </Box>
+            </div>
+          </div>
+
+          <p class="desc" style={{ marginTop: "20px" }}>
+            <strong>dayLabel — label relatif</strong>
+            <br />
+            Ajoute «&nbsp;aujourd'hui&nbsp;», «&nbsp;demain&nbsp;» ou
+            «&nbsp;hier&nbsp;» quand la date correspond. Compatible avec{" "}
+            <code>long</code>.
+          </p>
+          <Box flex="y" spacing="xs" alignX="start">
+            <Picker
+              name="date_daylabel_yesterday"
+              type="date"
+              defaultValue="2026-06-02"
+              ui={<Picker.UI.Date dayLabel />}
+            />
+            <Picker
+              name="date_daylabel_today"
+              type="date"
+              defaultValue="2026-06-03"
+              ui={<Picker.UI.Date dayLabel />}
+            />
+            <Picker
+              name="date_daylabel_tomorrow"
+              type="date"
+              defaultValue="2026-06-04"
+              ui={<Picker.UI.Date dayLabel />}
+            />
+            <Picker
+              name="date_long_daylabel_yesterday"
+              type="date"
+              defaultValue="2026-06-02"
+              ui={<Picker.UI.Date long dayLabel />}
+            />
+            <Picker
+              name="date_long_daylabel_today"
+              type="date"
+              defaultValue="2026-06-03"
+              ui={<Picker.UI.Date long dayLabel />}
+            />
+            <Picker
+              name="date_long_daylabel_tomorrow"
+              type="date"
+              defaultValue="2026-06-04"
+              ui={<Picker.UI.Date long dayLabel />}
+            />
           </Box>
         </div>
       );
