@@ -1,10 +1,14 @@
 import {
+  formatDatePlaceholder,
   formatDatetime,
+  formatDatetimePlaceholder,
   formatDay,
   formatDayRelative,
   formatMonth,
+  formatMonthPlaceholder,
   formatTime,
   formatTimeRelative,
+  formatWeekPlaceholder,
   getRelativeDay,
 } from "./format_time.js";
 import { langSignal } from "./lang_signal.js";
@@ -94,7 +98,7 @@ const TimeDate = ({ children, locale, long, dayLabel, now, ...props }) => {
     const dd = String(date.getDate()).padStart(2, "0");
     dateTime = `${yyyy}-${mm}-${dd}`;
   } else if (children === undefined) {
-    text = "jj / mm / aaaa";
+    text = formatDatePlaceholder(lang);
   } else {
     text = String(children);
   }
@@ -123,7 +127,7 @@ const TimeMonth = ({ children, locale, ...props }) => {
     const mm = String(date.getMonth() + 1).padStart(2, "0");
     dateTime = `${yyyy}-${mm}`;
   } else if (children === undefined) {
-    text = "mm / aaaa";
+    text = formatMonthPlaceholder(lang);
   } else {
     text = String(children);
   }
@@ -135,14 +139,15 @@ const TimeMonth = ({ children, locale, ...props }) => {
   );
 };
 
-const TimeWeek = ({ children, ...props }) => {
+const TimeWeek = ({ children, locale, ...props }) => {
+  const lang = locale || langSignal.value;
   let text;
   let dateTime;
   if (children !== undefined && children !== null) {
     text = String(children);
     dateTime = String(children);
   } else {
-    text = "sem. xx / aaaa";
+    text = formatWeekPlaceholder(lang);
   }
   return (
     <TimeText dateTime={dateTime} {...props}>
@@ -160,7 +165,7 @@ const TimeDatetime = ({ children, locale, ...props }) => {
     text = formatDatetime(date, lang);
     dateTime = date.toISOString();
   } else if (children === undefined) {
-    text = "jj / mm / aaaa, --:--";
+    text = formatDatetimePlaceholder(lang);
   } else {
     text = String(children);
   }

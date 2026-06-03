@@ -11,6 +11,14 @@ import { resolveInputProps } from "../input/resolve_input_props.js";
 import { PickerPlaceholder, PickerValue } from "./picker_components.jsx";
 import { PickerContext } from "./picker_context.jsx";
 import { pickerResolvers } from "./picker_resolvers.jsx";
+import {
+  PickerColorUI,
+  PickerDatetimeUI,
+  PickerDateUI,
+  PickerFileUI,
+  PickerTimeUI,
+  PickerWeekUI,
+} from "./picker_types.jsx";
 
 const css = /* css */ `
   @layer navi {
@@ -258,7 +266,7 @@ const renderPicker = createComponentResolver(pickerResolvers);
 const PickerButton = (props) => {
   import.meta.css = css;
   resolveInputProps(props);
-  const { ref, icon, placeholder, singleLine, ui } = props;
+  const { ref, icon, placeholder, singleLine, ui, dayLabel } = props;
   const inputRef = useRef(null);
   const [inputProps, pickerRemainingProps, ControlChildrenWrapper] =
     useControlProps(
@@ -296,6 +304,7 @@ const PickerButton = (props) => {
       icon={undefined}
       ui={undefined}
       singleLine={undefined}
+      dayLabel={undefined}
       // The button is handling the pointer interactions
       onMouseDown={(e) => {
         inputProps.onMouseDown(e);
@@ -324,7 +333,7 @@ const PickerButton = (props) => {
         onClick={undefined}
         onKeyDown={undefined}
       />
-      <PickerContext.Provider value={{ value, placeholder }}>
+      <PickerContext.Provider value={{ value, placeholder, dayLabel }}>
         {ui === undefined ? <PickerDefaultUI /> : ui}
       </PickerContext.Provider>
       <span className="navi_picker_right_slot">
@@ -408,3 +417,11 @@ const PickerDefaultUI = () => {
   }
   return <PickerValue>{value}</PickerValue>;
 };
+Picker.UI = PickerDefaultUI;
+
+Picker.UI.Date = PickerDateUI;
+Picker.UI.Time = PickerTimeUI;
+Picker.UI.Week = PickerWeekUI;
+Picker.UI.Datetime = PickerDatetimeUI;
+Picker.UI.File = PickerFileUI;
+Picker.UI.Color = PickerColorUI;

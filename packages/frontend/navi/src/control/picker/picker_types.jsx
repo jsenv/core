@@ -45,7 +45,7 @@ export const PickerColor = (props) => {
     <Next ui={<PickerColorUI />} icon={<ColorSvg />} type="color" {...props} />
   );
 };
-const PickerColorUI = () => {
+export const PickerColorUI = () => {
   const { value, placeholder } = useContext(PickerContext);
   if (!value) {
     if (!placeholder) {
@@ -63,20 +63,23 @@ export const PickerDate = (props) => {
     <Next ui={<PickerDateUI />} icon={<CalendarSvg />} {...props} type="date" />
   );
 };
-const PickerDateUI = () => {
+export const PickerDateUI = (props) => {
   const { value, placeholder } = useContext(PickerContext);
   if (!value) {
     if (!placeholder) {
-      return <Time type="date" color="var(--picker-placeholder-color" />;
+      return (
+        <Time type="date" color="var(--picker-placeholder-color" {...props} />
+      );
     }
     return <PickerPlaceholder>{placeholder}</PickerPlaceholder>;
   }
   return (
-    <Time type="date" capitalize>
+    <Time type="date" capitalize {...props}>
       {value}
     </Time>
   );
 };
+
 export const PickerMonth = (props) => {
   const Next = useNextResolver();
 
@@ -89,7 +92,7 @@ export const PickerMonth = (props) => {
     />
   );
 };
-const PickerMonthUI = () => {
+export const PickerMonthUI = () => {
   const { value, placeholder } = useContext(PickerContext);
   if (!value) {
     if (!placeholder) {
@@ -103,6 +106,7 @@ const PickerMonthUI = () => {
     </Time>
   );
 };
+
 export const PickerWeek = (props) => {
   const Next = useNextResolver();
 
@@ -110,7 +114,7 @@ export const PickerWeek = (props) => {
     <Next ui={<PickerWeekUI />} icon={<CalendarSvg />} {...props} type="week" />
   );
 };
-const PickerWeekUI = () => {
+export const PickerWeekUI = () => {
   const { value, placeholder } = useContext(PickerContext);
   if (!value) {
     if (!placeholder) {
@@ -124,6 +128,7 @@ const PickerWeekUI = () => {
     </Time>
   );
 };
+
 export const PickerTime = (props) => {
   const Next = useNextResolver();
 
@@ -131,7 +136,7 @@ export const PickerTime = (props) => {
     <Next ui={<PickerTimeUI />} icon={<ClockSvg />} {...props} type="time" />
   );
 };
-const PickerTimeUI = () => {
+export const PickerTimeUI = () => {
   const { value, placeholder } = useContext(PickerContext);
   if (!value) {
     if (!placeholder) {
@@ -141,6 +146,7 @@ const PickerTimeUI = () => {
   }
   return <Time type="time">{value}</Time>;
 };
+
 export const PickerDatetime = (props) => {
   const Next = useNextResolver();
 
@@ -153,7 +159,7 @@ export const PickerDatetime = (props) => {
     />
   );
 };
-const PickerDatetimeUI = () => {
+export const PickerDatetimeUI = () => {
   const { value, placeholder } = useContext(PickerContext);
   if (!value) {
     if (!placeholder) {
@@ -171,7 +177,7 @@ export const PickerFile = (props) => {
     <Next ui={<PickerFileUI />} icon={<FileSvg />} type="file" {...props} />
   );
 };
-const PickerFileUI = () => {
+export const PickerFileUI = () => {
   const { value, placeholder } = useContext(PickerContext);
 
   if (!value) {

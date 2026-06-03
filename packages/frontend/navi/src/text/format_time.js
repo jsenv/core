@@ -57,6 +57,68 @@ export const getRelativeDay = (date, { now = new Date() } = {}) => {
 /**
  * Formats a relative day offset (-1/0/1) as a locale-aware label: "hier", "aujourd'hui", "demain".
  */
+// ── Placeholder helpers ────────────────────────────────────────────────────
+// Derive locale-aware format placeholders from Intl.DateTimeFormat.formatToParts
+// using a sentinel date whose parts are unambiguous (day=28, month=11, year=9999).
+// Per-language token tables cover the most common locales; unknown langs fall
+// back to "dd/mm/yyyy".
+
+const SENTINEL_DATE = new Date(9999, 10, 28); // 28 Nov 9999 — day≠month, both 2-digit
+
+const getToken = (key, locale) =>
+  naviI18n(`time.placeholder.${key}`, undefined, { lang: locale });
+
+export const formatDatePlaceholder = (locale) => {
+  const parts = new Intl.DateTimeFormat(locale, {
+    day: "numeric",
+    month: "numeric",
+    year: "numeric",
+  }).formatToParts(SENTINEL_DATE);
+  return parts
+    .map((p) => {
+      if (p.type === "day") {
+        return getToken("day", locale);
+      }
+      if (p.type === "month") {
+        return getToken("month", locale);
+      }
+      if (p.type === "year") {
+        return getToken("year", locale);
+      }
+      return p.value;
+    })
+    .join("");
+};
+
+export const formatMonthPlaceholder = (locale) => {
+  const parts = new Intl.DateTimeFormat(locale, {
+    month: "numeric",
+    year: "numeric",
+  }).formatToParts(SENTINEL_DATE);
+  return parts
+    .map((p) => {
+      if (p.type === "month") {
+        return getToken("month", locale);
+      }
+      if (p.type === "year") {
+        return getToken("year", locale);
+      }
+      return p.value;
+    })
+    .join("");
+};
+
+export const formatWeekPlaceholder = (locale) => {
+  return `${getToken("week", locale)} xx / ${getToken("year", locale)}`;
+};
+
+export const formatDatetimePlaceholder = (locale) => {
+  const datePart = formatDatePlaceholder(locale);
+  return `${datePart}, ${getToken("hour", locale)}:${getToken("minute", locale)}`;
+};
+
+// ── End placeholder helpers ────────────────────────────────────────────────
+
 export const formatDayRelative = (offset, locale) => {
   const relativeDay = new Intl.RelativeTimeFormat(locale, {
     numeric: "auto",
