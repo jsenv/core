@@ -113,7 +113,11 @@ export { CheckboxGroup } from "./src/control/input/checkbox_group.jsx";
 export { Input } from "./src/control/input/input.jsx";
 export { RadioGroup } from "./src/control/input/radio_group.jsx";
 export { Picker } from "./src/control/picker/picker.jsx";
-export { getNowHours, isToday } from "./src/control/picker/time_helpers.js";
+export {
+  getNowHours,
+  getNowHoursRoundedToStep,
+  isToday,
+} from "./src/control/picker/time_helpers.js";
 // --- List start ---
 export { applySearch } from "./src/control/list/apply_search.js";
 export { createSearch } from "./src/control/list/create_search.js";

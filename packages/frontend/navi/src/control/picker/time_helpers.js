@@ -62,3 +62,29 @@ export const getNowHours = (offsetMinutes = 0) => {
   const m = clamped % 60;
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 };
+
+/**
+ * Returns the current time rounded up to the nearest step boundary,
+ * with an optional minute offset applied first.
+ *
+ * This is useful to compute a step-aligned `min` for a time picker:
+ * passing it ensures the first available slot is always on a step boundary.
+ *
+ * @param {number} stepMinutes - Step size in minutes (e.g. 30).
+ * @param {number} [offsetMinutes=0] - Minutes to add before rounding (negative = subtract).
+ *
+ * @example
+ * // At 9:32, step 30, offset -5 → raw = 9:27 → ceil to 30 → "09:30"
+ * // At 9:38, step 30, offset -5 → raw = 9:33 → ceil to 30 → "10:00"
+ * getNowHoursRoundedToStep(30, -5)
+ */
+export const getNowHoursRoundedToStep = (stepMinutes, offsetMinutes = 0) => {
+  const now = new Date();
+  const totalMinutes = now.getHours() * 60 + now.getMinutes() + offsetMinutes;
+  const aligned = Math.ceil(totalMinutes / stepMinutes) * stepMinutes;
+  const clamped =
+    aligned < 0 ? 0 : aligned > 23 * 60 + 59 ? 23 * 60 + 59 : aligned;
+  const h = Math.floor(clamped / 60);
+  const m = clamped % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+};

@@ -71,12 +71,19 @@ import { useConstraints } from "./validation/hooks/use_constraints.js";
 
 // Resets field-specific contexts so nested fields inside this component
 // don't inherit the current field's id, message props, or interface reporting.
+// Also cuts the parent state controller chain: children of a regular (leaf)
+// field are custom UI — they should never register as form participants.
+// A controlgroup is always enough: when a group (SelectableList, etc.) is
+// present, the form gets the group's aggregated value; individual controls
+// inside the group register to the group, not the form.
 const ControlChildrenWrapper = ({ children }) => (
-  <MessagePropsRefContext.Provider value={undefined}>
-    <ControlToInterfaceContext.Provider value={undefined}>
-      {children}
-    </ControlToInterfaceContext.Provider>
-  </MessagePropsRefContext.Provider>
+  <ParentUIStateControllerContext.Provider value={null}>
+    <MessagePropsRefContext.Provider value={undefined}>
+      <ControlToInterfaceContext.Provider value={undefined}>
+        {children}
+      </ControlToInterfaceContext.Provider>
+    </MessagePropsRefContext.Provider>
+  </ParentUIStateControllerContext.Provider>
 );
 
 export const ControlgroupChildrenWrapper = ({
@@ -435,8 +442,6 @@ export const useControlProps = (
 
 /**
  * Core hook for field group components (SelectableList, CheckboxList, etc.).
- *
- * Coordinates a collection of child fields:
  * - Creates a UI group state controller that aggregates child states into one group state
  * - Binds the group's action to the aggregated state signal
  * - Provides context to children: ParentUIStateController, FieldName, Disabled, ReadOnly,

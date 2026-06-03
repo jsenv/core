@@ -69,7 +69,7 @@
         Button,
         NaviDebug,
         isToday,
-        getNowHours,
+        getNowHoursRoundedToStep,
         stateSignal,
       } from "@jsenv/navi";
 
@@ -422,9 +422,17 @@
         autoFix: true,
       });
 
+      // Step-aligned min values for the fixed sub-examples.
+      // getNowHoursRoundedToStep(30, -5) computes: current time minus 5 min, rounded up to next 30-min boundary.
+      // At 9:32: 9:27 → ceil to 30 min → 9:30. At 9:38: 9:33 → ceil to 30 min → 10:00.
+      const MIN_MORNING = "09:30"; // simulates getNowHoursRoundedToStep(30, -5) at 9:32
+      const MIN_EVENING = "21:30"; // simulates getNowHoursRoundedToStep(30, -5) at 21:30 (past max → no slots)
+
       const DateTimeComboDemo = () => {
         const [entries, push, clear] = useCallLog();
         const hourSignal = useSignal("09:00");
+        const hourMorningSignal = useSignal("");
+        const hourEveningSignal = useSignal("");
 
         return (
           <div class="demo-section" id="date-time-combo">
@@ -432,12 +440,17 @@
             <p class="desc">
               Cas avancé combinant un picker de date et un picker d'heure. Le
               picker d'heure ne propose que les créneaux disponibles — si le
-              jour sélectionné est aujourd'hui, les heures déjà passées sont
-              masquées automatiquement.
+              jour sélectionné est aujourd'hui, <code>min</code> est calculé via{" "}
+              <code>getNowHoursRoundedToStep</code> pour ne montrer que les
+              créneaux futurs (arrondi au prochain pas supérieur).
+            </p>
+
+            <p class="desc">
+              <strong>Exemple dynamique</strong> — utilise l'heure courante.
             </p>
             <Form
               action={(values) => {
-                push("Form action", values);
+                push("Form action (dynamic)", values);
               }}
               flex="y"
               spacing="m"
@@ -462,7 +475,9 @@
                     type="navi_time"
                     required
                     min={
-                      isToday(dateSignalCombo.value) ? getNowHours(-5) : "7:00"
+                      isToday(dateSignalCombo.value)
+                        ? getNowHoursRoundedToStep(30, -5)
+                        : "07:00"
                     }
                     max="21:00"
                     step="00:30"
@@ -475,6 +490,83 @@
               </Field>
               <Button type="submit">Soumettre</Button>
             </Form>
+
+            <hr
+              style={{
+                margin: "20px 0",
+                border: "none",
+                borderTop: "1px solid #eee",
+              }}
+            />
+            <p class="desc">
+              <strong>Simulated 9h32</strong> — le premier créneau disponible
+              est 9h30 (getNowHoursRoundedToStep(30, -5) = 9h27 → arrondi au 30
+              min supérieur = 9h30).
+            </p>
+            <Form
+              action={(values) => {
+                push("Form action (9h32)", values);
+              }}
+              flex="y"
+              spacing="m"
+              alignX="start"
+            >
+              <Field vertical>
+                <Label>Heure</Label>
+                <Picker
+                  name="combo_time_morning"
+                  type="navi_time"
+                  required
+                  min={MIN_MORNING}
+                  max="21:00"
+                  step="00:30"
+                  value={hourMorningSignal.value}
+                  action={(v) => {
+                    hourMorningSignal.value = v;
+                  }}
+                />
+              </Field>
+              <Button type="submit">Soumettre</Button>
+            </Form>
+
+            <hr
+              style={{
+                margin: "20px 0",
+                border: "none",
+                borderTop: "1px solid #eee",
+              }}
+            />
+            <p class="desc">
+              <strong>Simulated 21h30</strong> — l'heure actuelle dépasse le max
+              (21h00). Aucun créneau n'est disponible. On peut tout de même
+              soumettre pour observer le comportement du formulaire.
+            </p>
+            <Form
+              action={(values) => {
+                push("Form action (21h30)", values);
+              }}
+              flex="y"
+              spacing="m"
+              alignX="start"
+            >
+              <Field vertical>
+                <Label>Heure</Label>
+                <Picker
+                  name="combo_time_evening"
+                  type="navi_time"
+                  required
+                  min={MIN_EVENING}
+                  max="21:00"
+                  step="00:30"
+                  value={hourEveningSignal.value}
+                  action={(v) => {
+                    hourEveningSignal.value = v;
+                  }}
+                />
+              </Field>
+              <Button type="submit">Soumettre</Button>
+            </Form>
+
             <CallLog entries={entries} onClear={clear} />
           </div>
         );
