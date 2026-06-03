@@ -5208,13 +5208,11 @@ const applyPackageResolve = (packageSpecifier, resolutionContext) => {
   if (packageSpecifier === "") {
     throw new Error("invalid module specifier");
   }
-  if (
-    conditions.includes("node") &&
-    isSpecifierForNodeBuiltin(packageSpecifier)
-  ) {
+  // "node:" prefixed specifiers always resolve to node builtins
+  if (packageSpecifier.startsWith("node:")) {
     return createResolutionResult({
       type: "node_builtin_specifier",
-      url: `node:${packageSpecifier}`,
+      url: packageSpecifier,
     });
   }
   let { packageName, packageSubpath } = parsePackageSpecifier(packageSpecifier);
@@ -5272,6 +5270,17 @@ const applyPackageResolve = (packageSpecifier, resolutionContext) => {
       ...resolutionContext,
       packageDirectoryUrl,
       packageJson,
+    });
+  }
+  // Bare builtin names (without "node:" prefix) are valid only if no local package found
+  // Local packages always take priority over builtins with the same name
+  if (
+    conditions.includes("node") &&
+    isSpecifierForNodeBuiltin(packageSpecifier)
+  ) {
+    return createResolutionResult({
+      type: "node_builtin_specifier",
+      url: `node:${packageSpecifier}`,
     });
   }
   throw createModuleNotFoundError(packageName, resolutionContext);
