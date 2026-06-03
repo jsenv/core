@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/node-esm-resolution",
-  "version": "1.3.0",
+  "version": "1.3.2",
   "type": "module",
   "repository": {
     "type": "git",
@@ -21,7 +21,7 @@
     "/src/"
   ],
   "dependencies": {
-    "@jsenv/filesystem": "4.15.15"
+    "@jsenv/filesystem": "4.15.16"
   },
   "devDependencies": {
     "@jsenv/assert": "../assert",
