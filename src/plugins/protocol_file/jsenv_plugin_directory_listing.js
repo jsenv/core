@@ -82,11 +82,14 @@ export const jsenvPluginDirectoryListing = ({
         }
         if (!secFetchDest) {
           // beware we might end up here when nav context is not trusted (http, ip url etc)
-          // in that case we fallback to detecting if the request explicitly accepts html
-          // (browsers navigating to a page send "text/html,..." explicitly; programmatic
-          // fetch clients like Node.js send "*/*" which should NOT trigger directory listing)
-          const acceptsHtml = pickContentType(request, ["text/html"]);
-          if (!acceptsHtml) {
+          // in that case we fallback to detecting if the request explicitly accepts html.
+          // browsers navigating to a page send "text/html,..." explicitly; programmatic
+          // fetch clients like Node.js send "*/*" which should NOT trigger directory listing.
+          // We must NOT use pickContentType here because it matches "text/html" via the
+          // "*/*" wildcard, causing programmatic fetches to receive the directory listing
+          // HTML page (status 200) instead of a 404.
+          const acceptHeader = request.headers.accept || "";
+          if (!acceptHeader.includes("text/html")) {
             return null;
           }
         }

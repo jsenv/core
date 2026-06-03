@@ -9,7 +9,7 @@ import { cpuUsage, memoryUsage } from "node:process";
 import { stripVTControlCharacters } from "node:util";
 import crypto from "node:crypto";
 import { dirname } from "node:path";
-import { createServer } from "node:net";
+import { createConnection, createServer } from "node:net";
 import { spawn, spawnSync, fork } from "node:child_process";
 import { availableParallelism, cpus, totalmem, release, freemem } from "node:os";
 import { SOURCEMAP, generateSourcemapDataUrl } from "@jsenv/sourcemap";
@@ -4184,13 +4184,11 @@ const applyPackageResolve = (packageSpecifier, resolutionContext) => {
   if (packageSpecifier === "") {
     throw new Error("invalid module specifier");
   }
-  if (
-    conditions.includes("node") &&
-    isSpecifierForNodeBuiltin(packageSpecifier)
-  ) {
+  // "node:" prefixed specifiers always resolve to node builtins
+  if (packageSpecifier.startsWith("node:")) {
     return createResolutionResult({
       type: "node_builtin_specifier",
-      url: `node:${packageSpecifier}`,
+      url: packageSpecifier,
     });
   }
   let { packageName, packageSubpath } = parsePackageSpecifier(packageSpecifier);
@@ -4248,6 +4246,17 @@ const applyPackageResolve = (packageSpecifier, resolutionContext) => {
       ...resolutionContext,
       packageDirectoryUrl,
       packageJson,
+    });
+  }
+  // Bare builtin names (without "node:" prefix) are valid only if no local package found
+  // Local packages always take priority over builtins with the same name
+  if (
+    conditions.includes("node") &&
+    isSpecifierForNodeBuiltin(packageSpecifier)
+  ) {
+    return createResolutionResult({
+      type: "node_builtin_specifier",
+      url: `node:${packageSpecifier}`,
     });
   }
   throw createModuleNotFoundError(packageName, resolutionContext);
@@ -7203,32 +7212,18 @@ const basicFetch = async (
 };
 
 const pingServer = async (url) => {
-  const server = createServer();
   const { hostname, port } = new URL(url);
 
-  try {
-    await new Promise((resolve, reject) => {
-      server.on("error", reject);
-      server.on("listening", () => {
-        resolve();
-      });
-      server.listen(port, hostname);
+  return new Promise((resolve) => {
+    const socket = createConnection({ hostname, port: Number(port) });
+    socket.on("connect", () => {
+      socket.destroy();
+      resolve(true);
     });
-  } catch (error) {
-    if (error && error.code === "EADDRINUSE") {
-      return true;
-    }
-    if (error && error.code === "EACCES") {
-      return true;
-    }
-    throw error;
-  }
-  await new Promise((resolve, reject) => {
-    server.on("error", reject);
-    server.on("close", resolve);
-    server.close();
+    socket.on("error", () => {
+      resolve(false);
+    });
   });
-  return false;
 };
 
 const startServerUsingCommand = async (
