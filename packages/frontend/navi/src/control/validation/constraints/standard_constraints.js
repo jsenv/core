@@ -23,7 +23,6 @@ export const DISABLED_CONSTRAINT = {
 };
 CONSTRAINT_ATTRIBUTE_SET.add("disabled");
 CONSTRAINT_ATTRIBUTE_SET.add("data-disabled");
-CONSTRAINT_ATTRIBUTE_SET.add("data-disabled-message");
 
 export const REQUIRED_CONSTRAINT = {
   name: "required",
@@ -168,8 +167,6 @@ export const REQUIRED_CONSTRAINT = {
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("required");
-CONSTRAINT_ATTRIBUTE_SET.add("data-required-message");
-CONSTRAINT_ATTRIBUTE_SET.add("data-color-empty");
 
 export const PATTERN_CONSTRAINT = {
   name: "pattern",
@@ -196,7 +193,6 @@ export const PATTERN_CONSTRAINT = {
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("pattern");
-CONSTRAINT_ATTRIBUTE_SET.add("data-pattern-message");
 
 // https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/email#validation
 const emailregex =
@@ -221,7 +217,6 @@ export const TYPE_EMAIL_CONSTRAINT = {
     return null;
   },
 };
-CONSTRAINT_ATTRIBUTE_SET.add("data-type-message");
 
 export const MIN_LENGTH_CONSTRAINT = {
   name: "min_length",
@@ -260,7 +255,6 @@ export const MIN_LENGTH_CONSTRAINT = {
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("minLength");
-CONSTRAINT_ATTRIBUTE_SET.add("data-min-length-message");
 const INPUT_TYPE_SUPPORTING_MIN_LENGTH_SET = new Set([
   "text",
   "search",
@@ -298,7 +292,6 @@ export const MAX_LENGTH_CONSTRAINT = {
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("maxLength");
-CONSTRAINT_ATTRIBUTE_SET.add("data-max-length-message");
 const INPUT_TYPE_SUPPORTING_MAX_LENGTH_SET = new Set(
   INPUT_TYPE_SUPPORTING_MIN_LENGTH_SET,
 );
@@ -325,7 +318,6 @@ export const TYPE_NUMBER_CONSTRAINT = {
     return null;
   },
 };
-CONSTRAINT_ATTRIBUTE_SET.add("data-type-message");
 
 // ISO date strings (YYYY-MM-DD, YYYY-MM, YYYY-Www, YYYY-MM-DDTHH:MM) are
 // zero-padded big-endian, so lexicographic comparison is equivalent to
@@ -405,7 +397,6 @@ export const MIN_CONSTRAINT = {
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("min");
-CONSTRAINT_ATTRIBUTE_SET.add("data-min-message");
 
 export const MAX_CONSTRAINT = {
   name: "max",
@@ -473,7 +464,6 @@ export const MAX_CONSTRAINT = {
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("max");
-CONSTRAINT_ATTRIBUTE_SET.add("data-max-message");
 
 const getTodayIso = (inputType) => {
   const now = new Date();

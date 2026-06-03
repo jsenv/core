@@ -1,7 +1,4 @@
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
-import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
-
-CONSTRAINT_ATTRIBUTE_SET.add("data-available-message");
 
 export const createAvailableConstraint = (
   // the set might be incomplete (the front usually don't have the full copy of all the items from the backend)

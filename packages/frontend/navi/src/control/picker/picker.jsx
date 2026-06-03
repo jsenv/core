@@ -347,6 +347,7 @@ const PickerButton = (props) => {
 
 const PickerInput = (props) => {
   const { type } = props;
+
   return (
     <Box
       as="input"

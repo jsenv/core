@@ -33,4 +33,3 @@ export const SINGLE_SPACE_CONSTRAINT = {
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("data-single-space");
-CONSTRAINT_ATTRIBUTE_SET.add("data-single-space-message");

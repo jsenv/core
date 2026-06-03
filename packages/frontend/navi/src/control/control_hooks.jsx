@@ -47,6 +47,8 @@ import { isSignal } from "@jsenv/navi/src/utils/is_signal.js";
 import {
   ActionContext,
   ActionRequesterContext,
+  CONTROL_ATTRIBUTE_SET,
+  CONTROL_PROP_SET,
   ControlNameContext,
   ControlToInterfaceContext,
   DisabledContext,
@@ -519,56 +521,6 @@ export const useControlgroupProps = (
   ];
 };
 
-const controlPropSet = new Set([
-  "ref",
-  "action",
-  "actionInteraction",
-  "actionAfterChange",
-  "actionOnMouseDown",
-  "actionDebounce",
-  "children",
-
-  "id",
-  "name",
-  "type",
-  "value",
-  "defaultValue",
-  "navi-control-proxy-for",
-  "checked",
-  "defaultChecked",
-
-  "disabled",
-  "readOnly",
-  "required",
-  "loading",
-  "basePseudoState",
-  "constraints",
-
-  "autoFocus",
-  "autoFocusVisible",
-  "autoSelect",
-
-  "onMouseDown",
-  "onClick",
-  "onKeyDown",
-  "onPaste",
-  "onInput",
-
-  "onCancel",
-  "cancelOnBlurInvalid",
-  "cancelOnEscape",
-  "onActionPrevented",
-  "onActionStart",
-  "onActionAborted",
-  "onActionError",
-  "actionErrorEffect",
-  "errorMapping",
-  "onActionEnd",
-
-  "resetOnCancel",
-  "resetOnAbort",
-  "resetOnError",
-]);
 const useInteractiveProps = (
   props,
   { uiStateController, boundAction, readOnlySupported },
@@ -583,7 +535,10 @@ const useInteractiveProps = (
   };
   const propKeySet = new Set(Object.keys(props));
   for (const key of propKeySet) {
-    if (controlPropSet.has(key)) {
+    if (CONTROL_PROP_SET.has(key)) {
+      if (CONTROL_ATTRIBUTE_SET.has(key)) {
+        controlProps[key] = props[key];
+      }
     } else {
       remainingProps[key] = props[key];
     }

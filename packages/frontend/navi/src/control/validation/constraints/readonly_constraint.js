@@ -44,5 +44,4 @@ export const READONLY_CONSTRAINT = {
 };
 CONSTRAINT_ATTRIBUTE_SET.add("readOnly");
 CONSTRAINT_ATTRIBUTE_SET.add("data-readonly");
-CONSTRAINT_ATTRIBUTE_SET.add("data-readonly-message");
 CONSTRAINT_ATTRIBUTE_SET.add("data-readonly-silent");

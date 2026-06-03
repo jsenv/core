@@ -40,8 +40,6 @@ export const ONE_OF_CONSTRAINT = {
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("data-one-of");
-CONSTRAINT_ATTRIBUTE_SET.add("data-one-of-message");
-CONSTRAINT_ATTRIBUTE_SET.add("data-one-of-no-match-message");
 
 const collectAllowedValues = (listEl) => {
   const values = new Set();

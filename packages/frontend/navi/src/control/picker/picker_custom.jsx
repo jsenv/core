@@ -390,12 +390,12 @@ export const PickerCustom = (props) => {
           }
         },
         onClick: (e) => {
-          if (e.detail === 0) {
-            // disable enter to open that would happen because it's a <button>
-            // but we want to keep the input behavior here
-            // (space to open, enter to submit)
-            return;
-          }
+          // if (e.detail === 0) {
+          // disable enter to open that would happen because it's a <button>
+          // but we want to keep the input behavior here
+          // (space to open, enter to submit)
+          //  return;
+          // }
           onClick?.(e);
           if (
             dispatchRequestInteraction(

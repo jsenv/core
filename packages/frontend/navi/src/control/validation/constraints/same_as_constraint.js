@@ -39,4 +39,3 @@ export const SAME_AS_CONSTRAINT = {
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("data-same-as");
-CONSTRAINT_ATTRIBUTE_SET.add("data-same-as-message");

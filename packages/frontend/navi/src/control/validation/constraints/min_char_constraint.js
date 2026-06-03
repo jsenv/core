@@ -37,7 +37,6 @@ export const MIN_LOWER_LETTER_CONSTRAINT = {
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("data-min-lower-letter");
-CONSTRAINT_ATTRIBUTE_SET.add("data-min-lower-letter-message");
 
 export const MIN_UPPER_LETTER_CONSTRAINT = {
   name: "min_upper_letter",
@@ -74,7 +73,6 @@ export const MIN_UPPER_LETTER_CONSTRAINT = {
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("data-min-upper-letter");
-CONSTRAINT_ATTRIBUTE_SET.add("data-min-upper-letter-message");
 
 export const MIN_DIGIT_CONSTRAINT = {
   name: "min_digit",
@@ -110,7 +108,6 @@ export const MIN_DIGIT_CONSTRAINT = {
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("data-min-digit");
-CONSTRAINT_ATTRIBUTE_SET.add("data-min-digit-message");
 
 export const MIN_SPECIAL_CHAR_CONSTRAINT = {
   name: "min_special_char",
@@ -157,4 +154,3 @@ export const MIN_SPECIAL_CHAR_CONSTRAINT = {
 };
 CONSTRAINT_ATTRIBUTE_SET.add("data-special-charset");
 CONSTRAINT_ATTRIBUTE_SET.add("data-min-special-char");
-CONSTRAINT_ATTRIBUTE_SET.add("data-min-special-char-message");

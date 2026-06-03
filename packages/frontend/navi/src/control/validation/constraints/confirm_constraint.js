@@ -1,7 +1,5 @@
 import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
 
-CONSTRAINT_ATTRIBUTE_SET.add("data-confirm");
-
 export const CONFIRM_CONSTRAINT = {
   name: "confirm",
   // messageAttribute: "data-confirm-message",
@@ -17,3 +15,4 @@ export const CONFIRM_CONSTRAINT = {
     return "";
   },
 };
+CONSTRAINT_ATTRIBUTE_SET.add("data-confirm");
