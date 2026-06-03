@@ -109,6 +109,8 @@
                 </li>
                 <li>
                   <a href="#validation-max">Max</a>
+                </li>
+                <li>
                   <a href="#validation-step">Step</a>
                 </li>
               </ol>
@@ -430,13 +432,12 @@
               3.4 Step
             </h3>
             <p class="desc">
-              Le picker est pré-rempli avec <code>09:07</code> alors que{" "}
-              <code>step="900"</code> (toutes les 15 minutes). Soumettre
-              déclenche le callout de validation.
+              3.4.1 — step en <strong>minutes</strong> : pré-rempli avec{" "}
+              <code>09:07</code> alors que <code>step="900"</code> (15 min).
             </p>
             <Form
               action={(values) => {
-                push("Form action (step)", values);
+                push("Form action (step minutes)", values);
               }}
               flex="y"
               spacing="m"
@@ -445,11 +446,44 @@
               <Field vertical>
                 <Label>Heure (step 15 min, required)</Label>
                 <Picker
-                  name="val_step"
+                  name="val_step_minutes"
                   type="time"
                   required
                   step="900"
                   defaultValue="09:07"
+                />
+              </Field>
+              <Button type="submit">Soumettre</Button>
+            </Form>
+
+            <hr
+              style={{
+                margin: "20px 0",
+                border: "none",
+                borderTop: "1px solid #eee",
+              }}
+            />
+
+            <p class="desc">
+              3.4.2 — step en <strong>heures</strong> : pré-rempli avec{" "}
+              <code>09:30</code> alors que <code>step="7200"</code> (2h).
+            </p>
+            <Form
+              action={(values) => {
+                push("Form action (step heures)", values);
+              }}
+              flex="y"
+              spacing="m"
+              alignX="start"
+            >
+              <Field vertical>
+                <Label>Heure (step 2h, required)</Label>
+                <Picker
+                  name="val_step_hours"
+                  type="time"
+                  required
+                  step="7200"
+                  defaultValue="09:30"
                 />
               </Field>
               <Button type="submit">Soumettre</Button>
