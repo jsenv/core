@@ -12,6 +12,7 @@ import { PickerPlaceholder, PickerValue } from "./picker_components.jsx";
 import { PickerContext } from "./picker_context.jsx";
 import { pickerResolvers } from "./picker_resolvers.jsx";
 import {
+  PickerArrayUI,
   PickerColorUI,
   PickerDatetimeUI,
   PickerDateUI,
@@ -425,3 +426,4 @@ Picker.UI.Week = PickerWeekUI;
 Picker.UI.Datetime = PickerDatetimeUI;
 Picker.UI.File = PickerFileUI;
 Picker.UI.Color = PickerColorUI;
+Picker.UI.Multiple = PickerArrayUI;

@@ -22,7 +22,7 @@ export const PickerArray = (props) => {
     />
   );
 };
-const PickerArrayUI = () => {
+export const PickerArrayUI = () => {
   const { value, placeholder } = useContext(PickerContext);
   if (!value || value.length === 0) {
     if (!placeholder) {

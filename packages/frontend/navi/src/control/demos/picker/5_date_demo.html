@@ -76,6 +76,7 @@
           <StatesDemo />
           <WithActionDemo />
           <InFormDemo />
+          <CustomizationDemo />
         </Box>
       );
 
@@ -96,6 +97,9 @@
                   <a href="#inside-form">Inside a form (+ required)</a>
                 </li>
               </ol>
+            </li>
+            <li>
+              <a href="#customization">Customization</a>
             </li>
           </ol>
         </div>
@@ -126,7 +130,6 @@
                     name="date_with_value"
                     type="date"
                     defaultValue={DEFAULT_DATE}
-                    ui={<Picker.UI.Date dayLabel />}
                   />
                 </Field>
                 <Field vertical>
@@ -275,6 +278,57 @@
           </div>
         );
       };
+
+      // ── 4. Customization ─────────────────────────────────────────────────
+
+      const CustomizationDemo = () => (
+        <div class="demo-section" id="customization">
+          <h2>4. Customization — Picker.UI.Date</h2>
+          <p class="desc">
+            Passez <code>ui={"<Picker.UI.Date />"}</code> pour personnaliser
+            l'affichage de la date. Les props <code>long</code> et{" "}
+            <code>dayLabel</code> sont transmises au composant
+            <code>&lt;Time type="date"&gt;</code> sous-jacent.
+          </p>
+          <Box flex="y" spacing="s">
+            <Field vertical>
+              <Label>Default (short, no relative label)</Label>
+              <Picker
+                name="date_default_ui"
+                type="date"
+                defaultValue={DEFAULT_DATE}
+              />
+            </Field>
+            <Field vertical>
+              <Label>long — format long ("mardi 3 juin 2026")</Label>
+              <Picker
+                name="date_long"
+                type="date"
+                defaultValue={DEFAULT_DATE}
+                ui={<Picker.UI.Date long />}
+              />
+            </Field>
+            <Field vertical>
+              <Label>dayLabel — ajoute "aujourd'hui" / "demain" / "hier"</Label>
+              <Picker
+                name="date_daylabel"
+                type="date"
+                defaultValue={DEFAULT_DATE}
+                ui={<Picker.UI.Date dayLabel />}
+              />
+            </Field>
+            <Field vertical>
+              <Label>long + dayLabel</Label>
+              <Picker
+                name="date_long_daylabel"
+                type="date"
+                defaultValue={DEFAULT_DATE}
+                ui={<Picker.UI.Date long dayLabel />}
+              />
+            </Field>
+          </Box>
+        </div>
+      );
 
       render(
         <NaviDebug debugAction debugInteraction debugPopup>
