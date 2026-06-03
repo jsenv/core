@@ -485,34 +485,102 @@ export const STEP_CONSTRAINT = {
       return null;
     }
     if (field.type === "number") {
+      const step = parseFloat(stepString);
+      const minString = field.min;
+      const base = minString !== "" ? parseFloat(minString) : 0;
+      const valueAsNumber = field.valueAsNumber;
+      const before = base + Math.floor((valueAsNumber - base) / step) * step;
+      const after = before + step;
+      const decimals = (stepString.split(".")[1] || "").length;
       return naviI18n("constraint.step.number.default", {
         step: stepString,
+        before: before.toFixed(decimals),
+        after: after.toFixed(decimals),
       });
     }
     if (field.type === "time") {
       const stepSeconds = parseFloat(stepString);
       if (!isNaN(stepSeconds)) {
+        const stepMs = stepSeconds * 1000;
+        const valueMs = field.valueAsNumber;
+        const minString = field.min;
+        const baseMs = minString !== "" ? timeStringToMs(minString) : 0;
+        const remainder = (((valueMs - baseMs) % stepMs) + stepMs) % stepMs;
+        const beforeMs = valueMs - remainder;
+        const afterMs = beforeMs + stepMs;
+        const showSeconds = stepSeconds % 60 !== 0;
+        const before = formatMsToTime(beforeMs, showSeconds);
+        const after = formatMsToTime(afterMs, showSeconds);
         if (stepSeconds % 3600 === 0) {
           return naviI18n("constraint.step.time.hours", {
             step: String(stepSeconds / 3600),
+            before,
+            after,
           });
         }
         if (stepSeconds % 60 === 0) {
           return naviI18n("constraint.step.time.minutes", {
             step: String(stepSeconds / 60),
+            before,
+            after,
           });
         }
+        return naviI18n("constraint.step.time.seconds", {
+          step: stepString,
+          before,
+          after,
+        });
       }
-      return naviI18n("constraint.step.time.seconds", {
+    }
+    {
+      const step = parseInt(stepString, 10);
+      const value = field.value;
+      const minString = field.min;
+      const baseDate = minString
+        ? new Date(`${minString}T00:00:00`)
+        : new Date(0);
+      const valueDate = new Date(`${value}T00:00:00`);
+      const diffDays = Math.round((valueDate - baseDate) / 86400000);
+      const beforeDays = Math.floor(diffDays / step) * step;
+      const afterDays = beforeDays + step;
+      const beforeDate = new Date(baseDate);
+      beforeDate.setDate(beforeDate.getDate() + beforeDays);
+      const afterDate = new Date(baseDate);
+      afterDate.setDate(afterDate.getDate() + afterDays);
+      return naviI18n("constraint.step.date.default", {
         step: stepString,
+        before: formatDateIso(
+          beforeDate.toISOString().slice(0, 10),
+          field.type,
+        ),
+        after: formatDateIso(afterDate.toISOString().slice(0, 10), field.type),
       });
     }
-    return naviI18n("constraint.step.date.default", {
-      step: stepString,
-    });
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("step");
+
+const timeStringToMs = (timeString) => {
+  const parts = timeString.split(":").map(Number);
+  const h = parts[0] || 0;
+  const m = parts[1] || 0;
+  const s = parts[2] || 0;
+  return (h * 3600 + m * 60 + s) * 1000;
+};
+
+const formatMsToTime = (ms, showSeconds) => {
+  const totalSec = Math.round(ms / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  const hh = String(h).padStart(2, "0");
+  const mm = String(m).padStart(2, "0");
+  if (!showSeconds) {
+    return `${hh}:${mm}`;
+  }
+  const ss = String(s).padStart(2, "0");
+  return `${hh}:${mm}:${ss}`;
+};
 
 const getTodayIso = (inputType) => {
   const now = new Date();

@@ -72,8 +72,8 @@ naviI18n.addAll({
     en: '"[value]" is already taken. Please enter a different value.',
   },
   "constraint.required.date": {
-    fr: "Veuillez sélectionner un jour.",
-    en: "Please select a day.",
+    fr: "Veuillez sélectionner une date.",
+    en: "Please select a date.",
   },
   "constraint.required.month": {
     fr: "Veuillez sélectionner un mois.",
@@ -292,24 +292,24 @@ naviI18n.addAll({
     en: "This number must be <strong>[max]</strong> or less.",
   },
   "constraint.step.number.default": {
-    fr: "Ce nombre doit être un multiple de <strong>[step]</strong>.",
-    en: "This number must be a multiple of <strong>[step]</strong>.",
+    fr: "Ce nombre doit être un multiple de <strong>[step]</strong> (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
+    en: "This number must be a multiple of <strong>[step]</strong> (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
   },
   "constraint.step.time.hours": {
-    fr: "Veuillez saisir une heure correspondant à un multiple de <strong>[step]</strong> heure(s).",
-    en: "Please enter a time that is a multiple of <strong>[step]</strong> hour(s).",
+    fr: "L'heure doit être dans un intervalle de <strong>[step]</strong> heure(s) (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
+    en: "The time must be within an interval of <strong>[step]</strong> hour(s) (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
   },
   "constraint.step.time.minutes": {
-    fr: "Veuillez saisir une heure correspondant à un multiple de <strong>[step]</strong> minute(s).",
-    en: "Please enter a time that is a multiple of <strong>[step]</strong> minute(s).",
+    fr: "L'heure doit être dans un intervalle de <strong>[step]</strong> minute(s) (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
+    en: "The time must be within an interval of <strong>[step]</strong> minute(s) (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
   },
   "constraint.step.time.seconds": {
-    fr: "Veuillez saisir une heure correspondant à un multiple de <strong>[step]</strong> seconde(s).",
-    en: "Please enter a time that is a multiple of <strong>[step]</strong> second(s).",
+    fr: "L'heure doit être dans un intervalle de <strong>[step]</strong> seconde(s) (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
+    en: "The time must be within an interval of <strong>[step]</strong> second(s) (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
   },
   "constraint.step.date.default": {
-    fr: "Cette date ne correspond pas au pas configuré.",
-    en: "This date does not match the configured step.",
+    fr: "La date doit correspondre à un intervalle de <strong>[step]</strong> jour(s) (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
+    en: "The date must correspond to an interval of <strong>[step]</strong> day(s) (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
   },
   "constraint.max.time.default": {
     fr: "L'heure doit être <strong>[max]</strong> ou moins.",

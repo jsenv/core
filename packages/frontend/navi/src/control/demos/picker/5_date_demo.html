@@ -79,6 +79,7 @@
           <StatesDemo />
           <WithActionDemo />
           <InFormDemo />
+          <ValidationDemo />
           <CustomizationDemo />
           <DateTimeComboDemo />
         </Box>
@@ -99,6 +100,23 @@
                 </li>
                 <li>
                   <a href="#inside-form">Inside a form (+ required)</a>
+                </li>
+              </ol>
+            </li>
+            <li>
+              Validation
+              <ol style={{ paddingLeft: "20px" }}>
+                <li>
+                  <a href="#validation-required">Required</a>
+                </li>
+                <li>
+                  <a href="#validation-min">Min</a>
+                </li>
+                <li>
+                  <a href="#validation-max">Max</a>
+                </li>
+                <li>
+                  <a href="#validation-step">Step</a>
                 </li>
               </ol>
             </li>
@@ -286,7 +304,167 @@
         );
       };
 
-      // ── 4. Customization ─────────────────────────────────────────────────
+      // ── 4. Validation ───────────────────────────────────────────────────
+
+      const ValidationDemo = () => {
+        const [entries, push, clear] = useCallLog();
+
+        return (
+          <div class="demo-section" id="validation">
+            <h2>4. Validation</h2>
+
+            <h3
+              id="validation-required"
+              style={{ margin: "0 0 8px", fontSize: "0.95rem" }}
+            >
+              4.1 Required
+            </h3>
+            <p class="desc">
+              Picker sans valeur, obligatoire. Soumettre déclenche le callout de
+              validation.
+            </p>
+            <Form
+              action={(values) => {
+                push("Form action (required)", values);
+              }}
+              flex="y"
+              spacing="m"
+              alignX="start"
+            >
+              <Field vertical>
+                <Label>Date (required)</Label>
+                <Picker name="val_required" type="date" required />
+              </Field>
+              <Button type="submit">Soumettre</Button>
+            </Form>
+
+            <hr
+              style={{
+                margin: "20px 0",
+                border: "none",
+                borderTop: "1px solid #eee",
+              }}
+            />
+
+            <h3
+              id="validation-min"
+              style={{ margin: "0 0 8px", fontSize: "0.95rem" }}
+            >
+              4.2 Min
+            </h3>
+            <p class="desc">
+              Pré-rempli avec <code>2026-05-01</code> alors que{" "}
+              <code>min="2026-06-01"</code>. Soumettre déclenche le callout de
+              validation.
+            </p>
+            <Form
+              action={(values) => {
+                push("Form action (min)", values);
+              }}
+              flex="y"
+              spacing="m"
+              alignX="start"
+            >
+              <Field vertical>
+                <Label>Date (min 2026-06-01, required)</Label>
+                <Picker
+                  name="val_min"
+                  type="date"
+                  required
+                  min="2026-06-01"
+                  defaultValue="2026-05-01"
+                />
+              </Field>
+              <Button type="submit">Soumettre</Button>
+            </Form>
+
+            <hr
+              style={{
+                margin: "20px 0",
+                border: "none",
+                borderTop: "1px solid #eee",
+              }}
+            />
+
+            <h3
+              id="validation-max"
+              style={{ margin: "0 0 8px", fontSize: "0.95rem" }}
+            >
+              4.3 Max
+            </h3>
+            <p class="desc">
+              Pré-rempli avec <code>2026-12-01</code> alors que{" "}
+              <code>max="2026-06-30"</code>. Soumettre déclenche le callout de
+              validation.
+            </p>
+            <Form
+              action={(values) => {
+                push("Form action (max)", values);
+              }}
+              flex="y"
+              spacing="m"
+              alignX="start"
+            >
+              <Field vertical>
+                <Label>Date (max 2026-06-30, required)</Label>
+                <Picker
+                  name="val_max"
+                  type="date"
+                  required
+                  max="2026-06-30"
+                  defaultValue="2026-12-01"
+                />
+              </Field>
+              <Button type="submit">Soumettre</Button>
+            </Form>
+
+            <hr
+              style={{
+                margin: "20px 0",
+                border: "none",
+                borderTop: "1px solid #eee",
+              }}
+            />
+
+            <h3
+              id="validation-step"
+              style={{ margin: "0 0 8px", fontSize: "0.95rem" }}
+            >
+              4.4 Step
+            </h3>
+            <p class="desc">
+              Pré-rempli avec <code>2026-06-03</code> (mercredi) alors que{" "}
+              <code>min="2026-06-01"</code> + <code>step="7"</code> (tous les 7
+              jours). Les dates valides sont 2026-06-01, 2026-06-08, etc.
+            </p>
+            <Form
+              action={(values) => {
+                push("Form action (step)", values);
+              }}
+              flex="y"
+              spacing="m"
+              alignX="start"
+            >
+              <Field vertical>
+                <Label>Date (step 7 jours, required)</Label>
+                <Picker
+                  name="val_step"
+                  type="date"
+                  required
+                  min="2026-06-01"
+                  step="7"
+                  defaultValue="2026-06-03"
+                />
+              </Field>
+              <Button type="submit">Soumettre</Button>
+            </Form>
+
+            <CallLog entries={entries} onClear={clear} />
+          </div>
+        );
+      };
+
+      // ── 5. Customization ─────────────────────────────────────────────────
 
       // Dates chosen to contrast short vs long day/month names:
       // "2026-06-03" → mercredi 3 juin      (medium day, short month)
@@ -296,7 +474,7 @@
 
       const CustomizationDemo = () => (
         <div class="demo-section" id="customization">
-          <h2>4. Customization — Picker.UI.Date</h2>
+          <h2>5. Customization — Picker.UI.Date</h2>
           <p class="desc">
             Passez <code>ui={"{<Picker.UI.Date />}"}</code> pour personnaliser
             l'affichage de la date sélectionnée. Les props sont transmises au
