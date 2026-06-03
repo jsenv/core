@@ -75,9 +75,8 @@
           <TableOfContents />
           <StatesDemo />
           <WithActionDemo />
-          <InFormDemo />
-          <NaviTimeDemo />
           <ValidationDemo />
+          <NaviTimeDemo />
         </Box>
       );
 
@@ -89,21 +88,21 @@
               <a href="#states">États</a>
             </li>
             <li>
-              Interactivity
+              <a href="#outside-form">Interactivity — outside a form</a>
+            </li>
+            <li>
+              Validation
               <ol style={{ paddingLeft: "20px" }}>
                 <li>
-                  <a href="#outside-form">Outside a form</a>
+                  <a href="#validation-required">Required</a>
                 </li>
                 <li>
-                  <a href="#inside-form">Inside a form (+ required)</a>
+                  <a href="#validation-min-max">Min / Max</a>
                 </li>
               </ol>
             </li>
             <li>
               <a href="#navi-time">navi_time (min / max / step)</a>
-            </li>
-            <li>
-              <a href="#validation">Validation &amp; min dynamique</a>
             </li>
           </ol>
         </div>
@@ -233,21 +232,28 @@
         );
       };
 
-      // ── 3. Interactivity — inside a form ─────────────────────────────────
+      // ── 3. Validation ─────────────────────────────────────────────────────
 
-      const InFormDemo = () => {
+      const ValidationDemo = () => {
         const [entries, push, clear] = useCallLog();
 
         return (
-          <div class="demo-section" id="inside-form">
-            <h2>3. Interactivity — inside a form</h2>
+          <div class="demo-section" id="validation">
+            <h2>3. Validation</h2>
+
+            <h3
+              id="validation-required"
+              style={{ margin: "0 0 8px", fontSize: "0.95rem" }}
+            >
+              3.1 Required
+            </h3>
             <p class="desc">
               Deux pickers obligatoires : l'un avec une valeur par défaut,
               l'autre sans. La soumission échoue si un champ est vide.
             </p>
             <Form
               action={(values) => {
-                push("Form action", values);
+                push("Form action (required)", values);
               }}
               flex="y"
               spacing="m"
@@ -278,6 +284,48 @@
               </Field>
               <Button type="submit">Soumettre</Button>
             </Form>
+
+            <hr
+              style={{
+                margin: "20px 0",
+                border: "none",
+                borderTop: "1px solid #eee",
+              }}
+            />
+
+            <h3
+              id="validation-min-max"
+              style={{ margin: "0 0 8px", fontSize: "0.95rem" }}
+            >
+              3.2 Min / Max
+            </h3>
+            <p class="desc">
+              Le picker est pré-rempli avec une valeur hors plage (
+              <code>08:00</code> alors que <code>min="10:00"</code>). Cliquer
+              sur Soumettre déclenche le callout de validation.
+            </p>
+            <Form
+              action={(values) => {
+                push("Form action (min/max)", values);
+              }}
+              flex="y"
+              spacing="m"
+              alignX="start"
+            >
+              <Field vertical>
+                <Label>Heure (min 10:00, max 18:00, required)</Label>
+                <Picker
+                  name="val_min_max"
+                  type="time"
+                  required
+                  min="10:00"
+                  max="18:00"
+                  defaultValue="08:00"
+                />
+              </Field>
+              <Button type="submit">Soumettre</Button>
+            </Form>
+
             <CallLog entries={entries} onClear={clear} />
           </div>
         );
@@ -327,153 +375,18 @@
                   }}
                 />
               </Field>
-            </Box>
-            <CallLog entries={entries} onClear={clear} />
-          </div>
-        );
-      };
-
-      // ── 5. Validation ─────────────────────────────────────────────────────
-
-      const ValidationDemo = () => {
-        const [entries, push, clear] = useCallLog();
-        const morningSignal = useSignal("");
-        const eveningSignal = useSignal("");
-
-        return (
-          <div class="demo-section" id="validation">
-            <h2>5. Validation &amp; min dynamique</h2>
-            <p class="desc">
-              Lorsque <code>min</code> est défini, le picker n'affiche que les
-              créneaux valides. Si l'utilisateur soumet sans sélectionner de
-              créneau, la validation native déclenche un callout d'erreur.
-            </p>
-
-            <p class="desc">
-              <strong>Cas de base</strong> — <code>min="10:00"</code>, champ
-              obligatoire vide. Cliquer sur Soumettre déclenche la validation.
-            </p>
-            <Form
-              action={(values) => {
-                push("Form action (base)", values);
-              }}
-              flex="y"
-              spacing="m"
-              alignX="start"
-            >
               <Field vertical>
-                <Label>Heure (min 10:00, required)</Label>
+                <Label>Aucun créneau (min 21:30 &gt; max 21:00)</Label>
                 <Picker
-                  name="val_base"
-                  type="time"
-                  required
-                  min="10:00"
-                  max="18:00"
-                  step="00:30"
-                />
-              </Field>
-              <Button type="submit">Soumettre</Button>
-            </Form>
-
-            <hr
-              style={{
-                margin: "20px 0",
-                border: "none",
-                borderTop: "1px solid #eee",
-              }}
-            />
-            <p class="desc">
-              <strong>Cas avancé — min calculé dynamiquement.</strong> La prop{" "}
-              <code>min</code> est fournie par{" "}
-              <code>getNowHoursRoundedToStep(stepMinutes, offsetMinutes)</code>{" "}
-              : elle soustrait <em>offsetMinutes</em> à l'heure courante puis
-              arrondit au créneau supérieur. Ainsi :
-            </p>
-            <ul
-              style={{
-                margin: "0 0 16px",
-                paddingLeft: "20px",
-                color: "#555",
-                fontSize: "13px",
-              }}
-            >
-              <li>
-                À 9h32 avec step 30 et offset -5 :{" "}
-                <code>9h27 → ceil → 9h30</code>
-              </li>
-              <li>
-                À 9h38 avec step 30 et offset -5 :{" "}
-                <code>9h33 → ceil → 10h00</code>
-              </li>
-            </ul>
-            <p class="desc">
-              <strong>Simulated 9h32</strong> — premier créneau disponible :
-              9h30.
-            </p>
-            <Form
-              action={(values) => {
-                push("Form action (9h32)", values);
-              }}
-              flex="y"
-              spacing="m"
-              alignX="start"
-            >
-              <Field vertical>
-                <Label>Heure (min dynamique simulé 9h32, required)</Label>
-                <Picker
-                  name="val_morning"
-                  type="navi_time"
-                  required
-                  min="09:30"
-                  max="21:00"
-                  step="00:30"
-                  value={morningSignal.value}
-                  action={(v) => {
-                    morningSignal.value = v;
-                  }}
-                />
-              </Field>
-              <Button type="submit">Soumettre</Button>
-            </Form>
-
-            <hr
-              style={{
-                margin: "20px 0",
-                border: "none",
-                borderTop: "1px solid #eee",
-              }}
-            />
-            <p class="desc">
-              <strong>Simulated 21h30</strong> — <code>min="21:30"</code>{" "}
-              dépasse <code>max="21:00"</code> : aucun créneau disponible. La
-              validation bloque la soumission.
-            </p>
-            <Form
-              action={(values) => {
-                push("Form action (21h30)", values);
-              }}
-              flex="y"
-              spacing="m"
-              alignX="start"
-            >
-              <Field vertical>
-                <Label>Heure (min dynamique simulé 21h30, required)</Label>
-                <Picker
-                  name="val_evening"
+                  name="navi_time_no_slots"
                   type="navi_time"
                   required
                   min="21:30"
                   max="21:00"
                   step="00:30"
-                  value={eveningSignal.value}
-                  action={(v) => {
-                    eveningSignal.value = v;
-                  }}
                 />
               </Field>
-              <Button type="submit">Soumettre</Button>
-            </Form>
-
+            </Box>
             <CallLog entries={entries} onClear={clear} />
           </div>
         );
