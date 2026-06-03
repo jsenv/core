@@ -87,6 +87,10 @@ naviI18n.addAll({
     fr: "Veuillez sélectionner une heure.",
     en: "Please select a time.",
   },
+  "constraint.required.number": {
+    fr: "Veuillez saisir un nombre.",
+    en: "Please enter a number.",
+  },
   "constraint.required.datetime": {
     fr: "Veuillez sélectionner une date et une heure.",
     en: "Please select a date and time.",

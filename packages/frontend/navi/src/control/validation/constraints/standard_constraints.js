@@ -152,6 +152,9 @@ export const REQUIRED_CONSTRAINT = {
     if (field.type === "time") {
       return naviI18n("constraint.required.time");
     }
+    if (field.type === "number") {
+      return naviI18n("constraint.required.number");
+    }
     if (field.type === "datetime-local") {
       return naviI18n("constraint.required.datetime");
     }
