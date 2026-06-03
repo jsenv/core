@@ -56,22 +56,23 @@ const PickerColorUI = () => {
   return <Color>{value}</Color>;
 };
 
-export const PickerDay = (props) => {
+export const PickerDate = (props) => {
   const Next = useNextResolver();
 
   return (
-    <Next ui={<PickerDayUI />} icon={<CalendarSvg />} {...props} type="date" />
+    <Next ui={<PickerDateUI />} icon={<CalendarSvg />} {...props} type="date" />
   );
 };
-const PickerDayUI = () => {
+const PickerDateUI = () => {
   const { value, placeholder } = useContext(PickerContext);
   if (!value) {
-    return placeholder ? (
-      <PickerPlaceholder>{placeholder}</PickerPlaceholder>
-    ) : null;
+    if (!placeholder) {
+      return <Time type="date" />;
+    }
+    return <PickerPlaceholder>{placeholder}</PickerPlaceholder>;
   }
   return (
-    <Time type="day" capitalize>
+    <Time type="date" capitalize>
       {value}
     </Time>
   );

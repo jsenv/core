@@ -4,8 +4,8 @@ import { PickerNative } from "./picker_native.jsx";
 import {
   PickerArray,
   PickerColor,
+  PickerDate,
   PickerDatetime,
-  PickerDay,
   PickerFile,
   PickerMonth,
   PickerText,
@@ -34,8 +34,8 @@ const PickerTypeResolver = (props) => {
   if (props.type === "color") {
     return <PickerColor {...props} />;
   }
-  if (props.type === "day") {
-    return <PickerDay {...props} />;
+  if (props.type === "date") {
+    return <PickerDate {...props} />;
   }
   if (props.type === "month") {
     return <PickerMonth {...props} />;

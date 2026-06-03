@@ -48,8 +48,8 @@ import { Text } from "./text.jsx";
  */
 export const Time = (props) => {
   const { type } = props;
-  if (type === "day") {
-    return <TimeDay {...props} />;
+  if (type === "date") {
+    return <TimeDate {...props} />;
   }
   if (type === "month") {
     return <TimeMonth {...props} />;
@@ -63,7 +63,7 @@ export const Time = (props) => {
   return <TimeRelative {...props} />;
 };
 
-const TimeDay = ({ children, locale, long, dayLabel, now, ...props }) => {
+const TimeDate = ({ children, locale, long, dayLabel, now, ...props }) => {
   const lang = locale || langSignal.value;
   const date = toDate(children, (value) => {
     if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
@@ -91,7 +91,7 @@ const TimeDay = ({ children, locale, long, dayLabel, now, ...props }) => {
     const dd = String(date.getDate()).padStart(2, "0");
     dateTime = `${yyyy}-${mm}-${dd}`;
   } else if (children === undefined) {
-    text = "–";
+    text = "jj / mm / aaaa";
   } else {
     text = String(children);
   }
@@ -120,7 +120,7 @@ const TimeMonth = ({ children, locale, ...props }) => {
     const mm = String(date.getMonth() + 1).padStart(2, "0");
     dateTime = `${yyyy}-${mm}`;
   } else if (children === undefined) {
-    text = "–";
+    text = "mm / aaaa";
   } else {
     text = String(children);
   }
@@ -141,7 +141,7 @@ const TimeDatetime = ({ children, locale, ...props }) => {
     text = formatDatetime(date, lang);
     dateTime = date.toISOString();
   } else if (children === undefined) {
-    text = "–";
+    text = "jj / mm / aaaa, --:--";
   } else {
     text = String(children);
   }
@@ -170,7 +170,7 @@ const TimeTime = ({ children, locale, ...props }) => {
     const mm = String(date.getMinutes()).padStart(2, "0");
     dateTime = `${hh}:${mm}`;
   } else if (children === undefined) {
-    text = "–- : --";
+    text = "--:--";
   } else {
     text = children;
   }

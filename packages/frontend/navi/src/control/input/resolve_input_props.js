@@ -25,7 +25,7 @@ export const resolveInputProps = (props) => {
   }
 };
 
-const toInputDay = (value) => {
+const toInputDate = (value) => {
   if (value === undefined || value === null) {
     return value;
   }
@@ -93,8 +93,7 @@ const toInputDatetime = (value) => {
 };
 
 const MIN_MAX_FORMATTER_BY_TYPE = {
-  "date": toInputDay,
-  "day": toInputDay,
+  "date": toInputDate,
   "month": toInputMonth,
   "week": toInputWeek,
   "time": toInputTime,
