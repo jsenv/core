@@ -103,7 +103,9 @@ const css = /* css */ `
     display: inline-block;
     box-sizing: border-box;
     max-width: 100%;
-    min-height: 1em;
+    min-height: calc(
+      1lh + var(--x-picker-padding-top) + var(--x-picker-padding-bottom)
+    );
     padding-top: var(--x-picker-padding-top);
     padding-right: var(--x-picker-padding-right);
     padding-bottom: var(--x-picker-padding-bottom);
@@ -145,10 +147,11 @@ const css = /* css */ `
     }
     .navi_picker_right_slot {
       position: absolute;
-      top: var(--x-picker-padding-top);
+      top: 0;
       right: 0;
       display: inline-flex;
       width: var(--picker-right-slot-size);
+      padding-top: var(--x-picker-padding-top);
       flex-shrink: 0;
       justify-content: center;
       color: var(--x-picker-icon-color, var(--picker-icon-color));

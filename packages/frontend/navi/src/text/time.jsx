@@ -170,7 +170,7 @@ const TimeTime = ({ children, locale, ...props }) => {
     const mm = String(date.getMinutes()).padStart(2, "0");
     dateTime = `${hh}:${mm}`;
   } else if (children === undefined) {
-    text = "–";
+    text = "–- : --";
   } else {
     text = children;
   }

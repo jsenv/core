@@ -127,7 +127,10 @@ export const PickerTime = (props) => {
 const PickerTimeUI = () => {
   const { value, placeholder } = useContext(PickerContext);
   if (!value) {
-    return placeholder || null;
+    if (!placeholder) {
+      return <Time type="time" />;
+    }
+    return <PickerPlaceholder>{placeholder}</PickerPlaceholder>;
   }
   return <Time type="time">{value}</Time>;
 };
