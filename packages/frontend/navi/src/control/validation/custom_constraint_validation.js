@@ -86,6 +86,7 @@ import {
   MIN_LENGTH_CONSTRAINT,
   PATTERN_CONSTRAINT,
   REQUIRED_CONSTRAINT,
+  STEP_CONSTRAINT,
   TYPE_EMAIL_CONSTRAINT,
   TYPE_NUMBER_CONSTRAINT,
 } from "./constraints/standard_constraints.js";
@@ -366,6 +367,7 @@ const STANDARD_CONSTRAINT_SET = new Set([
   MAX_LENGTH_CONSTRAINT,
   MIN_CONSTRAINT,
   MAX_CONSTRAINT,
+  STEP_CONSTRAINT,
 ]);
 const NAVI_CONSTRAINT_SET = new Set([
   // the order matters here, the last constraint is picked first when multiple constraints fail

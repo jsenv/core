@@ -264,8 +264,8 @@ naviI18n.addAll({
     en: "This field must be a number.",
   },
   "constraint.min.number.default": {
-    fr: "Ce champ doit être supérieur ou égal à <strong>[min]</strong>.",
-    en: "This field must be greater than or equal to <strong>[min]</strong>.",
+    fr: "Ce nombre doit être <strong>[min]</strong> ou plus.",
+    en: "This number must be <strong>[min]</strong> or greater.",
   },
   "constraint.min.time.default": {
     fr: "L'heure doit être <strong>[min]</strong> ou plus.",
@@ -288,8 +288,12 @@ naviI18n.addAll({
     en: "The date must be on or before <strong>[max]</strong>.",
   },
   "constraint.max.number.default": {
-    fr: "Ce champ doit être <strong>[max]</strong> ou moins.",
-    en: "This field must be <strong>[max]</strong> or less.",
+    fr: "Ce nombre doit être <strong>[max]</strong> ou moins.",
+    en: "This number must be <strong>[max]</strong> or less.",
+  },
+  "constraint.step.number.default": {
+    fr: "Ce nombre doit être un multiple de <strong>[step]</strong>.",
+    en: "This number must be a multiple of <strong>[step]</strong>.",
   },
   "constraint.max.time.default": {
     fr: "L'heure doit être <strong>[max]</strong> ou moins.",

@@ -458,6 +458,49 @@ export const MAX_CONSTRAINT = {
 };
 CONSTRAINT_ATTRIBUTE_SET.add("max");
 
+const STEP_SUPPORTED_TYPE_SET = new Set([
+  "number",
+  "time",
+  "date",
+  "month",
+  "week",
+  "datetime-local",
+]);
+
+export const STEP_CONSTRAINT = {
+  name: "step",
+  messageAttribute: "data-step-message",
+  check: (field) => {
+    if (field.tagName !== "INPUT") {
+      return null;
+    }
+    if (!STEP_SUPPORTED_TYPE_SET.has(field.type)) {
+      return null;
+    }
+    const stepString = field.step;
+    if (stepString === "" || stepString === "any") {
+      return null;
+    }
+    if (!field.validity.stepMismatch) {
+      return null;
+    }
+    if (field.type === "number") {
+      return naviI18n("constraint.step.number.default", {
+        step: stepString,
+      });
+    }
+    if (field.type === "time") {
+      return naviI18n("constraint.step.time.default", {
+        step: stepString,
+      });
+    }
+    return naviI18n("constraint.step.date.default", {
+      step: stepString,
+    });
+  },
+};
+CONSTRAINT_ATTRIBUTE_SET.add("step");
+
 const getTodayIso = (inputType) => {
   const now = new Date();
   const yyyy = now.getFullYear();
