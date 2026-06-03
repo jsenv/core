@@ -52,38 +52,45 @@ const NAVI_NUMBER_TYPE_DEFAULTS = {
   navi_percentage: { type: "number", min: 0, max: 100, step: 1 },
 };
 
-const toInputDate = (value) => {
+const normalizeToDate = (value) => {
   if (value === undefined || value === null) {
+    return null;
+  }
+  if (typeof value === "number") {
+    return new Date(value);
+  }
+  if (value instanceof Date) {
     return value;
   }
-  if (!(value instanceof Date)) {
+  return null;
+};
+
+const toInputDate = (value) => {
+  const date = normalizeToDate(value);
+  if (!date) {
     return value;
   }
-  const yyyy = value.getFullYear();
-  const mm = String(value.getMonth() + 1).padStart(2, "0");
-  const dd = String(value.getDate()).padStart(2, "0");
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
   return `${yyyy}-${mm}-${dd}`;
 };
 const toInputMonth = (value) => {
-  if (value === undefined || value === null) {
+  const date = normalizeToDate(value);
+  if (!date) {
     return value;
   }
-  if (!(value instanceof Date)) {
-    return value;
-  }
-  const yyyy = value.getFullYear();
-  const mm = String(value.getMonth() + 1).padStart(2, "0");
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
   return `${yyyy}-${mm}`;
 };
 const toInputWeek = (value) => {
-  if (value === undefined || value === null) {
-    return value;
-  }
-  if (!(value instanceof Date)) {
+  const date = normalizeToDate(value);
+  if (!date) {
     return value;
   }
   // ISO week number
-  const d = new Date(value);
+  const d = new Date(date);
   d.setHours(0, 0, 0, 0);
   d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
   const yearStart = new Date(d.getFullYear(), 0, 4);
@@ -94,28 +101,24 @@ const toInputWeek = (value) => {
   return `${d.getFullYear()}-W${String(week).padStart(2, "0")}`;
 };
 const toInputTime = (value) => {
-  if (value === undefined || value === null) {
+  const date = normalizeToDate(value);
+  if (!date) {
     return value;
   }
-  if (!(value instanceof Date)) {
-    return value;
-  }
-  const hh = String(value.getHours()).padStart(2, "0");
-  const mm = String(value.getMinutes()).padStart(2, "0");
+  const hh = String(date.getHours()).padStart(2, "0");
+  const mm = String(date.getMinutes()).padStart(2, "0");
   return `${hh}:${mm}`;
 };
 const toInputDatetime = (value) => {
-  if (value === undefined || value === null) {
+  const date = normalizeToDate(value);
+  if (!date) {
     return value;
   }
-  if (!(value instanceof Date)) {
-    return value;
-  }
-  const yyyy = value.getFullYear();
-  const mm = String(value.getMonth() + 1).padStart(2, "0");
-  const dd = String(value.getDate()).padStart(2, "0");
-  const hh = String(value.getHours()).padStart(2, "0");
-  const min = String(value.getMinutes()).padStart(2, "0");
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  const hh = String(date.getHours()).padStart(2, "0");
+  const min = String(date.getMinutes()).padStart(2, "0");
   return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
 };
 
