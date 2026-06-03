@@ -182,9 +182,16 @@ const css = /* css */ `
 `;
 
 export const PickerCustom = (props) => {
-  const isSmallScreen = windowWidthSignal.value <= 600;
-  const defaultMode = isSmallScreen ? "dialog" : "popover";
-  const { ref, mode = defaultMode } = props;
+  const { ref, mode: modeProp } = props;
+  // Freeze the mode for the lifetime of an opening: compute it when closed,
+  // keep it stable while open so a screen resize mid-session doesn't switch
+  // between Popover and Dialog.
+  const defaultModeRef = useRef(null);
+  if (defaultModeRef.current === null) {
+    const isSmallScreen = windowWidthSignal.peek() <= 600;
+    defaultModeRef.current = modeProp ?? (isSmallScreen ? "dialog" : "popover");
+  }
+  const mode = defaultModeRef.current;
 
   const pickerProps = {
     ...props,
@@ -252,6 +259,8 @@ export const PickerCustom = (props) => {
       const isCancel = Boolean(cancelEvent);
       expandedRef.current = false;
       setExpanded(false);
+      // Reset so the next opening re-evaluates screen size
+      defaultModeRef.current = null;
       const pickerEl = ref.current;
       const inputEl = getPickerInput(pickerEl);
       if (!inputEl) {
