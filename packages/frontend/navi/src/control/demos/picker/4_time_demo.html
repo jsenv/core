@@ -88,7 +88,15 @@
               <a href="#states">États</a>
             </li>
             <li>
-              <a href="#outside-form">Interactivity — outside a form</a>
+              Interactivity
+              <ol style={{ paddingLeft: "20px" }}>
+                <li>
+                  <a href="#outside-form">Outside a form</a>
+                </li>
+                <li>
+                  <a href="#inside-form">Inside a form</a>
+                </li>
+              </ol>
             </li>
             <li>
               Validation
@@ -97,7 +105,10 @@
                   <a href="#validation-required">Required</a>
                 </li>
                 <li>
-                  <a href="#validation-min-max">Min / Max</a>
+                  <a href="#validation-min">Min</a>
+                </li>
+                <li>
+                  <a href="#validation-max">Max</a>
                 </li>
               </ol>
             </li>
@@ -189,44 +200,82 @@
         const timeSignal = useSignal(DEFAULT_TIME);
 
         return (
-          <div class="demo-section" id="outside-form">
-            <h2>2. Interactivity — outside a form</h2>
+          <div class="demo-section">
+            <h2>2. Interactivity</h2>
+
+            <h3
+              id="outside-form"
+              style={{ margin: "0 0 8px", fontSize: "0.95rem" }}
+            >
+              2.1 Outside a form
+            </h3>
             <p class="desc">
-              L'action est asynchrone (simule un appel réseau de 800 ms). Le
-              picker passe en état loading pendant ce temps.
+              <code>uiAction</code> est appelé immédiatement à chaque sélection.{" "}
+              <code>action</code> est asynchrone (800 ms) : le picker passe en
+              état loading pendant ce temps.
             </p>
             <Box flex="y" spacing="m">
               <Field vertical>
-                <Label>No initial time</Label>
+                <Label>Heure</Label>
                 <Picker
-                  name="time_no_initial"
-                  type="time"
-                  uiAction={(v) => {
-                    push("Picker uiAction", v);
-                  }}
-                  action={async (v) => {
-                    push("Picker action", v);
-                    await sleep(800);
-                  }}
-                />
-              </Field>
-              <Field vertical>
-                <Label>With initial time</Label>
-                <Picker
-                  name="time_with_initial"
+                  name="time_outside_form"
                   type="time"
                   value={timeSignal.value}
                   uiAction={(v) => {
-                    push("Picker uiAction", v);
+                    push("uiAction", v);
                   }}
                   action={async (v) => {
-                    push("Picker action", v);
+                    push("action (start)", v);
                     await sleep(800);
                     timeSignal.value = v;
+                    push("action (done)", v);
                   }}
                 />
               </Field>
             </Box>
+
+            <hr
+              style={{
+                margin: "20px 0",
+                border: "none",
+                borderTop: "1px solid #eee",
+              }}
+            />
+
+            <h3
+              id="inside-form"
+              style={{ margin: "0 0 8px", fontSize: "0.95rem" }}
+            >
+              2.2 Inside a form
+            </h3>
+            <p class="desc">
+              <code>uiAction</code> est appelé à chaque sélection.{" "}
+              <code>action</code> n'est pas utilisée ici : c'est l'action du{" "}
+              <code>Form</code> qui se déclenche au submit.
+            </p>
+            <Form
+              action={async (values) => {
+                push("Form action", values);
+                await sleep(800);
+              }}
+              flex="y"
+              spacing="m"
+              alignX="start"
+            >
+              <Field vertical>
+                <Label>Heure</Label>
+                <Picker
+                  name="time_in_form"
+                  type="time"
+                  defaultValue={DEFAULT_TIME}
+                  uiAction={(v) => {
+                    push("uiAction", v);
+                  }}
+                />
+              </Field>
+              <Button type="submit">Soumettre</Button>
+            </Form>
+
             <CallLog entries={entries} onClear={clear} />
           </div>
         );
@@ -294,33 +343,72 @@
             />
 
             <h3
-              id="validation-min-max"
+              id="validation-min"
               style={{ margin: "0 0 8px", fontSize: "0.95rem" }}
             >
-              3.2 Min / Max
+              3.2 Min
             </h3>
             <p class="desc">
-              Le picker est pré-rempli avec une valeur hors plage (
-              <code>08:00</code> alors que <code>min="10:00"</code>). Cliquer
-              sur Soumettre déclenche le callout de validation.
+              Le picker est pré-rempli avec <code>08:00</code> alors que{" "}
+              <code>min="10:00"</code>. Soumettre déclenche le callout de
+              validation.
             </p>
             <Form
               action={(values) => {
-                push("Form action (min/max)", values);
+                push("Form action (min)", values);
               }}
               flex="y"
               spacing="m"
               alignX="start"
             >
               <Field vertical>
-                <Label>Heure (min 10:00, max 18:00, required)</Label>
+                <Label>Heure (min 10:00, required)</Label>
                 <Picker
-                  name="val_min_max"
+                  name="val_min"
                   type="time"
                   required
                   min="10:00"
-                  max="18:00"
                   defaultValue="08:00"
+                />
+              </Field>
+              <Button type="submit">Soumettre</Button>
+            </Form>
+
+            <hr
+              style={{
+                margin: "20px 0",
+                border: "none",
+                borderTop: "1px solid #eee",
+              }}
+            />
+
+            <h3
+              id="validation-max"
+              style={{ margin: "0 0 8px", fontSize: "0.95rem" }}
+            >
+              3.3 Max
+            </h3>
+            <p class="desc">
+              Le picker est pré-rempli avec <code>20:00</code> alors que{" "}
+              <code>max="18:00"</code>. Soumettre déclenche le callout de
+              validation.
+            </p>
+            <Form
+              action={(values) => {
+                push("Form action (max)", values);
+              }}
+              flex="y"
+              spacing="m"
+              alignX="start"
+            >
+              <Field vertical>
+                <Label>Heure (max 18:00, required)</Label>
+                <Picker
+                  name="val_max"
+                  type="time"
+                  required
+                  max="18:00"
+                  defaultValue="20:00"
                 />
               </Field>
               <Button type="submit">Soumettre</Button>
