@@ -254,7 +254,7 @@ export const PickerCustom = (props) => {
       const cancelEvent = findEvent(
         e,
         (eInChain) =>
-          eInChain.type === "navi_request_close" && eInChain.detail.cancel,
+          eInChain.type === "navi_request_close" && eInChain.detail.isCancel,
       );
       const isCancel = Boolean(cancelEvent);
       expandedRef.current = false;

@@ -1,4 +1,4 @@
-import { createPubSub } from "@jsenv/dom";
+import { createPubSub, findEvent } from "@jsenv/dom";
 
 export const addInputEffect = (
   input,
@@ -93,9 +93,12 @@ export const addInputEffect = (
   };
 
   // Standard user input (typing)
-  input.addEventListener("input", onEvent);
+  const onInput = (e) => {
+    onEvent(e);
+  };
+  input.addEventListener("input", onInput);
   addTeardown(() => {
-    input.removeEventListener("input", onEvent);
+    input.removeEventListener("input", onInput);
   });
 
   // Form reset - need to check the form
@@ -114,27 +117,28 @@ export const addInputEffect = (
     input.removeEventListener("paste", onEvent);
   });
 
-  if (input.type === "radio") {
+  input.addEventListener("navi_ui_state_change", (e) => {
     // radios are unchecked by an internal setUIState call when another radio is checked.
     // navi_ui_state_change is dispatched whenever setUIState changes state, so we
     // listen here to keep currentState in sync — otherwise input_effect thinks the
     // radio is still checked and ignores the next user click as "state unchanged".
-    input.addEventListener("navi_ui_state_change", () => {
-      currentState = getState();
-    });
-  }
-
-  const onNaviClear = (e) => {
-    // "navi_clear" behaves like an async event
-    // a bit like form reset because
-    // our action will be updated async after the component re-renders
-    // and we need to wait that to happen to properly call action with the right value
-    debugInteraction(e, `navi_clear received, scheduling callback`);
-    onAsyncEvent(e, { skipDebounce: true });
-  };
-  input.addEventListener("navi_clear", onNaviClear);
-  addTeardown(() => {
-    input.removeEventListener("navi_clear", onNaviClear);
+    if (input.type === "radio") {
+      currentState = e.detail.value;
+    }
+    const clearEvent = findEvent(
+      e,
+      (eInChain) =>
+        eInChain.type === "navi_set_ui_state" && eInChain.detail.isClear,
+    );
+    const isClear = Boolean(clearEvent);
+    if (isClear) {
+      // "navi_clear" behaves like an async event
+      // a bit like form reset because
+      // our action will be updated async after the component re-renders
+      // and we need to wait that to happen to properly call action with the right value
+      debugInteraction(e, `navi_clear received, scheduling callback`);
+      onAsyncEvent(e, { skipDebounce: true });
+    }
   });
 
   return teardown;

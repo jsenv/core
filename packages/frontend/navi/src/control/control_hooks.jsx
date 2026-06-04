@@ -60,7 +60,7 @@ import {
 import { findControlProxyTarget } from "./control_proxy.js";
 import { readControlValue } from "./control_value.js";
 import { addInputEffect } from "./input_effect.js";
-import { resolveActionProp } from "./string_actions.js";
+import { resolveActionProp, triggerStringAction } from "./string_actions.js";
 import {
   dispatchRequestResetUIState,
   dispatchRequestSetUIState,
@@ -334,7 +334,7 @@ export const useControlProps = (
         name: "navi_change",
         callback: asAction,
       };
-      enterEffect = (e) => resolveActionProp("send")(e);
+      enterEffect = (e) => triggerStringAction("send", e);
       if (picker) {
         mousedownInteraction = {
           name: "mousedown to open picker",

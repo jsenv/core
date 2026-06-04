@@ -93,15 +93,17 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import { Input, Box, Caption } from "@jsenv/navi";
+      import { Input, Box, Caption, NaviDebug } from "@jsenv/navi";
 
       const App = () => {
         return (
-          <div>
-            <BasicStatesDemo />
-            <InteractiveDemo />
-            <VariationsDemo />
-          </div>
+          <NaviDebug debugAction debugInteraction>
+            <div>
+              <BasicStatesDemo />
+              <InteractiveDemo />
+              <VariationsDemo />
+            </div>
+          </NaviDebug>
         );
       };
 

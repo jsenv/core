@@ -36,7 +36,7 @@ import {
 import { useControlProps } from "../control_hooks.jsx";
 import { asControlHostValue } from "../control_value.js";
 import { Label } from "../field.jsx";
-import { dispatchRequestSetUIState } from "../ui_state_controller.js";
+import { triggerStringAction } from "../string_actions.js";
 import { dispatchRequestInteraction } from "../validation/custom_constraint_validation.js";
 import { resolveInputProps } from "./resolve_input_props.js";
 
@@ -521,6 +521,9 @@ const InputSearch = (props) => {
   return <Next ui={<InputSearchUI icon={props.icon} />} {...props} />;
 };
 const InputSearchUI = ({ icon }) => {
+  const ctx = useContext(InputNativeContext);
+  const { id } = ctx;
+
   return (
     <>
       {icon === undefined && (
@@ -532,12 +535,12 @@ const InputSearchUI = ({ icon }) => {
       )}
       <InputRightSlot
         hideWhileEmpty
+        action-target={id}
         onClick={(e) => {
           const input = e.currentTarget;
           const allowed = dispatchRequestInteraction(input, e);
           if (allowed) {
-            dispatchRequestSetUIState(input, "", { event: e });
-            dispatchCustomEvent(input, "navi_clear", { event: e });
+            triggerStringAction("clear", e);
           }
         }}
       >

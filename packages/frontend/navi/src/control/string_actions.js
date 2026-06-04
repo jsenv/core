@@ -8,6 +8,9 @@ import { createUICallback } from "./ui_callback.js";
 import { dispatchRequestSetUIState } from "./ui_state_controller.js";
 import { dispatchRequestAction } from "./validation/custom_constraint_validation.js";
 
+export const triggerStringAction = (actionName, event) => {
+  return resolveActionProp(actionName)(event);
+};
 export const resolveActionProp = (action) => {
   if (typeof action === "string") {
     const naviAction = STRING_ACTIONS[action];
@@ -116,12 +119,12 @@ const update = createUICallback({
     return requestUpdate(event, value);
   },
 });
-const requestUpdate = (event, value) => {
+const requestUpdate = (event, value, { isClear } = {}) => {
   const actionTarget = getActionTarget(event);
   if (!actionTarget) {
     return false;
   }
-  return dispatchRequestSetUIState(actionTarget, value, { event });
+  return dispatchRequestSetUIState(actionTarget, value, { event, isClear });
 };
 
 /**
@@ -205,12 +208,20 @@ const requestClosestAction = (event) => {
 const clear = createUICallback({
   name: "clear",
   event: (event) => {
-    update("", { event });
-    return requestClose(event);
+    requestUpdate(event, "", { isClear: true });
+    const expandableEl = event.currentTarget.closest("[aria-expanded]");
+    if (expandableEl) {
+      return requestClose(event);
+    }
+    return true;
   },
   action: (v, { event }) => {
-    update("", { event });
-    return requestClose(event);
+    requestUpdate(event, "", { isClear: true });
+    const expandableEl = event.currentTarget.closest("[aria-expanded]");
+    if (expandableEl) {
+      return requestClose(event);
+    }
+    return true;
   },
 });
 /**
@@ -240,13 +251,13 @@ const close = createUICallback({
 const cancel = createUICallback({
   name: "cancel",
   event: (event) => {
-    return requestClose(event, { cancel: true });
+    return requestClose(event, { isCancel: true });
   },
   action: (_, { event }) => {
-    return requestClose(event, { cancel: true });
+    return requestClose(event, { isCancel: true });
   },
 });
-const requestClose = (event, { cancel = false } = {}) => {
+const requestClose = (event, { isCancel = false } = {}) => {
   const currentTarget = event.currentTarget;
   const expandableEl = currentTarget.closest("[aria-expanded]");
   if (!expandableEl) {
@@ -258,7 +269,7 @@ const requestClose = (event, { cancel = false } = {}) => {
   }
   return dispatchCustomEvent(expandableEl, "navi_request_close", {
     event,
-    cancel,
+    isCancel,
   });
 };
 
