@@ -1,6 +1,6 @@
 import { dispatchCustomEvent } from "@jsenv/dom";
 import { createOnKeyDownForShortcuts } from "@jsenv/navi/src/keyboard/keyboard_shortcuts.js";
-import { useLayoutEffect, useRef, useState } from "preact/hooks";
+import { useLayoutEffect, useState } from "preact/hooks";
 
 import { useNextResolver } from "../../resolver/resolver.jsx";
 
@@ -21,8 +21,7 @@ import { useNextResolver } from "../../resolver/resolver.jsx";
  */
 export const InputWithList = (props) => {
   const Next = useNextResolver();
-  const defaultRef = useRef(null);
-  const { ref = defaultRef, "navi-list": naviList, onKeyDown, ...rest } = props;
+  const { "navi-list": naviList, onKeyDown } = props;
 
   const getListEl = () => {
     return document.getElementById(naviList);
@@ -87,8 +86,7 @@ export const InputWithList = (props) => {
       aria-controls={currentId ? `${currentId}_input` : undefined}
       aria-activedescendant={currentId || undefined}
       autoComplete="off"
-      {...rest}
-      ref={ref}
+      {...props}
       onKeyDown={(e) => {
         onKeyDown?.(e);
         onKeyDownShortcuts(e);
