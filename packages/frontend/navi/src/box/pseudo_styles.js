@@ -277,18 +277,52 @@ focus_classes: {
     return false;
   };
 
+  // Shared setup for :focus and :focus-visible. Both need focusin/focusout
+  // listeners + a MutationObserver on aria-controls so that when the attribute
+  // changes while the element is focused, old and new controlled elements are
+  // notified to re-check their own focus state.
+  // extraSetup: optional (el, callback) => teardown for pseudo-class-specific
+  // listeners (e.g. keydown/keyup for :focus-visible).
+  const setupFocus = (el, callback) => {
+    const onFocusChange = (e) => {
+      callback();
+      notifyAriaControlled(el, e);
+    };
+    el.addEventListener("focusin", onFocusChange);
+    el.addEventListener("focusout", onFocusChange);
+    const observer = new MutationObserver((mutations) => {
+      if (!el.matches(":focus-within")) {
+        return;
+      }
+      for (const mutation of mutations) {
+        const oldIds = (mutation.oldValue || "").split(" ").filter(Boolean);
+        for (const id of oldIds) {
+          const controlled = document.getElementById(id);
+          if (controlled) {
+            requestPseudoStateCheck(controlled, {});
+          }
+        }
+      }
+      notifyAriaControlled(el, {});
+    });
+    observer.observe(el, {
+      attributes: true,
+      attributeFilter: ["aria-controls"],
+      attributeOldValue: true,
+    });
+    return () => {
+      el.removeEventListener("focusin", onFocusChange);
+      el.removeEventListener("focusout", onFocusChange);
+      observer.disconnect();
+    };
+  };
+
   definePseudoClass(":focus", {
     attribute: "data-focus",
-    setup: (el, callback) => {
-      const onFocusChange = (e) => {
-        callback();
-        notifyAriaControlled(el, e);
-      };
-      el.addEventListener("focusin", onFocusChange);
-      el.addEventListener("focusout", onFocusChange);
+    setup: (el) => {
+      const cleanup = setupFocus(el, callback);
       return () => {
-        el.removeEventListener("focusin", onFocusChange);
-        el.removeEventListener("focusout", onFocusChange);
+        cleanup();
       };
     },
     test: (el) => {
@@ -308,19 +342,13 @@ focus_classes: {
   definePseudoClass(":focus-visible", {
     attribute: "data-focus-visible",
     setup: (el, callback) => {
-      const onFocusChange = (e) => {
-        callback();
-        notifyAriaControlled(el, e);
-      };
+      const cleanup = setupFocus(el, callback);
       document.addEventListener("keydown", callback);
       document.addEventListener("keyup", callback);
-      el.addEventListener("focusin", onFocusChange);
-      el.addEventListener("focusout", onFocusChange);
       return () => {
+        cleanup();
         document.removeEventListener("keydown", callback);
         document.removeEventListener("keyup", callback);
-        el.removeEventListener("focusin", onFocusChange);
-        el.removeEventListener("focusout", onFocusChange);
       };
     },
     test: (el) => {
