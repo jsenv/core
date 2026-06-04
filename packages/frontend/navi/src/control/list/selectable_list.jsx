@@ -73,7 +73,7 @@ const css = /* css */ `
     --x-list-outline-offset: calc(-1 * var(--list-border-width));
 
     outline-width: var(--x-list-outline-width);
-    outline-color: var(--x-list-outline-color);
+    outline-color: var(--list-outline-color);
     outline-offset: var(--x-list-outline-offset);
 
     &[data-focus] {
