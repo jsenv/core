@@ -308,6 +308,7 @@ export const Box = (props) => {
       pseudoStateSelector,
 
       preventInitialTransition,
+      props["aria-controls"],
     ];
     let innerPseudoState;
     if (basePseudoState && pseudoState) {
