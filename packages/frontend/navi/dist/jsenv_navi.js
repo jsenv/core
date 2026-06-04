@@ -32096,6 +32096,9 @@ const PickerCustom = props => {
           // (like enter that would try to request action of closest form otherwise for instance)
           if (e.key === "Enter") {
             e.stopPropagation();
+            // preventDefault prevents the browser from synthesising a click on the
+            // picker button when focus moves to it synchronously during enterEffect
+            e.preventDefault();
           }
         }
       });
@@ -32132,6 +32135,7 @@ const PickerContentInsidePopover = props => {
     popoverMode = "nearby",
     popoverSpacing = popoverMode === "nearby" ? 5 : 0,
     viewportSpacing = 10,
+    closeOnFocusOut = false,
     ...rest
   } = props;
   return jsx(Next, {
@@ -32139,6 +32143,9 @@ const PickerContentInsidePopover = props => {
     "navi-popover-mode": popoverMode,
     ...rest,
     onFocusOut: e => {
+      if (!closeOnFocusOut) {
+        return;
+      }
       // Close when focus leaves the select entirely (not just moving between internal elements).
       // relatedTarget is the element receiving focus; if it's inside the select or the popover, keep open.
       const relatedTarget = e.relatedTarget;
@@ -34642,6 +34649,7 @@ const css$l = /* css */`
       --list-outline-color: var(--navi-focus-outline-color);
       --list-item-outline-color: var(--navi-focus-outline-color);
       --list-item-outline-width: 2px;
+      --list-item-outline-offset: calc(-1 * var(--list-item-outline-width));
       /* Hover (mouse) */
       --list-item-color-hover: var(--list-item-color);
       --list-item-background-color-hover: light-dark(#f5f5f5, #2a2a2a);
@@ -34694,12 +34702,10 @@ const css$l = /* css */`
   }
 
   .navi_list_item {
-    --x-list-item-border-color: var(--x-list-item-background-color);
-
     position: relative;
-    border-width: var(--list-item-outline-width);
-    border-style: solid;
-    border-color: var(--x-list-item-border-color);
+    outline-width: var(--list-item-outline-width);
+    outline-color: var(--list-item-outline-color);
+    outline-offset: var(--list-item-outline-offset);
 
     &[data-interactive] {
       cursor: pointer;
@@ -34722,7 +34728,7 @@ const css$l = /* css */`
         --x-list-item-background-color: var(
           --list-item-background-color-keyboard-pointed
         );
-        --x-list-item-border-color: var(--list-item-outline-color);
+        outline-style: solid;
 
         /* Selected must win over keyboard-pointed */
         &[data-selected] {
