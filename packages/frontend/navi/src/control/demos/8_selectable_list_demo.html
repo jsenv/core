@@ -212,10 +212,14 @@
               type="search"
               placeholder="Search fruits…"
               value={searchText}
-              onInput={(e) => {
-                searchFruitSignal.value = e.target.value;
+              action={(v) => {
+                searchFruitSignal.value = v;
               }}
-              style={{ marginBottom: "10px", width: "100%" }}
+              expandX
+              marginBottom="m"
+              borderRadius="xs"
+              paddingX="s"
+              paddingY="xs"
             />
             <SelectableList
               action={(v) => {
@@ -225,7 +229,7 @@
               expandX
             >
               {matchingFruits.map((fruit, i) => {
-                const { matchScore, highlight } = getMatchInfo(fruit);
+                const { score, ranges, match } = getMatchInfo(fruit);
                 return (
                   <Selectable
                     key={fruit}
@@ -233,8 +237,9 @@
                     id={`searchable_${fruit.toLowerCase()}`}
                     value={fruit}
                     selected={selected === fruit}
-                    matchScore={matchScore}
-                    highlight={highlight}
+                    highlight={ranges}
+                    matchScore={score}
+                    filtered={!match}
                     flex
                     spacing="s"
                   >
