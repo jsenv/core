@@ -8,8 +8,8 @@ import { createUICallback } from "./ui_callback.js";
 import { dispatchRequestSetUIState } from "./ui_state_controller.js";
 import { dispatchRequestAction } from "./validation/custom_constraint_validation.js";
 
-export const triggerStringAction = (actionName, event) => {
-  return resolveActionProp(actionName)(event);
+export const triggerStringAction = (actionName, event, options) => {
+  return resolveActionProp(actionName)(event, options);
 };
 export const resolveActionProp = (action) => {
   if (typeof action === "string") {
@@ -207,11 +207,13 @@ const requestClosestAction = (event) => {
  */
 const clear = createUICallback({
   name: "clear",
-  event: (event) => {
+  event: (event, { skipClose } = {}) => {
     requestUpdate(event, "", { isClear: true });
-    const expandableEl = event.currentTarget.closest("[aria-expanded]");
-    if (expandableEl) {
-      return requestClose(event);
+    if (!skipClose) {
+      const expandableEl = event.currentTarget.closest("[aria-expanded]");
+      if (expandableEl) {
+        return requestClose(event);
+      }
     }
     return true;
   },

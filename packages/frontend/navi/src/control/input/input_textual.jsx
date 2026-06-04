@@ -540,7 +540,7 @@ const InputSearchUI = ({ icon }) => {
           const input = e.currentTarget;
           const allowed = dispatchRequestInteraction(input, e);
           if (allowed) {
-            triggerStringAction("clear", e);
+            triggerStringAction("clear", e, { skipClose: true });
           }
         }}
       >

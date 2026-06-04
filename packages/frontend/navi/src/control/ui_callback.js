@@ -43,12 +43,8 @@ export const createUICallback = ({ name = "ui callback", event, action }) => {
   if (event && action) {
     return (...args) => {
       return routeArgs(args, {
-        event: (e) => {
-          return event(e);
-        },
-        action: (value, actionSecondArg) => {
-          return action(value, actionSecondArg);
-        },
+        event,
+        action,
         other: () => {
           console.warn(
             `${name} unsupported call attempt. It is designed to be called by action.`,
@@ -67,9 +63,7 @@ export const createUICallback = ({ name = "ui callback", event, action }) => {
           );
           return false;
         },
-        action: (value, secondArg) => {
-          return action(value, secondArg);
-        },
+        action,
         other: () => {
           console.warn(
             `${name} unsupported call attempt. It is designed to be called by action.`,
@@ -82,9 +76,7 @@ export const createUICallback = ({ name = "ui callback", event, action }) => {
   // event only
   return (...args) => {
     return routeArgs(args, {
-      event: (e) => {
-        return event(e);
-      },
+      event,
       action: (_, { event: eventFromArg }) => {
         console.info(
           `${name} got called by action. It works but is designed to be called by DOM`,
