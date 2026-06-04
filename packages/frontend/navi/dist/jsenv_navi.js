@@ -12823,6 +12823,17 @@ const requestPseudoStateCheck = (element, detail) => {
     "navi_pseudo_state_request_check",
     detail,
   );
+  // When a control has a visible proxy mirroring its state (e.g. selectable
+  // radio with `navi-control-proxy-for`), re-check the proxy too so it stays
+  // in sync with the real control.
+  const proxy = findControlProxy(element);
+  if (proxy) {
+    dispatchInternalCustomEvent(
+      proxy,
+      "navi_pseudo_state_request_check",
+      detail,
+    );
+  }
 };
 const NAVI_PSEUDO_STATE_CUSTOM_EVENT = "navi_pseudo_state";
 const dispatchPseudoStateCustomEvent = (element, value, oldValue) => {
@@ -13045,7 +13056,10 @@ definePseudoClass(":active", {
   // component.
   //
   // When a controller element (e.g. combobox input) gains or loses focus,
-  // notify the elements it controls via aria-controls so they re-check their focus state.
+  // notify the elements it controls via aria-controls so they re-check their
+  // focus state. `requestPseudoStateCheck` also re-checks the controlled
+  // element's proxy (if any), so the visible proxy mirrors the hidden real
+  // input's inherited focus.
   const notifyAriaControlled = (el, e) => {
     const controlledIds = el.getAttribute("aria-controls");
     if (!controlledIds) {
@@ -13058,53 +13072,104 @@ definePseudoClass(":active", {
       }
     }
   };
-  // Check if any element whose aria-controls includes el's id currently has focus.
-  const isControlledByFocusedElement = (
-    el,
-    { requireFocusVisible = false } = {},
-  ) => {
-    const id = el.id;
-    if (!id) {
-      return false;
-    }
-    const controllers = document.querySelectorAll(`[aria-controls~="${id}"]`);
-    for (const controller of controllers) {
-      // If the controller is inside the element it controls, the element already
-      // receives native :focus/:focus-within — no need to inherit focus from it.
-      if (el.contains(controller)) {
-        continue;
+  // Returns true when el holds focus indirectly — either because a controlling
+  // element (aria-controls) has focus, or because el is a proxy whose target
+  // is itself controlled by a focused element.
+  const hasIndirectFocus = (el, { requireFocusVisible = false } = {}) => {
+    const pseudoClass = requireFocusVisible ? ":focus-visible" : ":focus";
+    const isControlledBy = (target) => {
+      const id = target.id;
+      if (!id) {
+        return false;
       }
-      const pseudoClass = requireFocusVisible ? ":focus-visible" : ":focus";
-      if (controller.matches(pseudoClass)) {
+      const controllers = document.querySelectorAll(`[aria-controls~="${id}"]`);
+      for (const controller of controllers) {
+        // If the controller is inside the element it controls, focus is already
+        // native (:focus-within) — no need to inherit it.
+        if (target.contains(controller)) {
+          continue;
+        }
+        if (controller.matches(pseudoClass)) {
+          return true;
+        }
+      }
+      return false;
+    };
+    if (isControlledBy(el)) {
+      return true;
+    }
+    const proxyTarget = findControlProxyTarget(el);
+    if (proxyTarget) {
+      if (proxyTarget.matches(pseudoClass)) {
+        return true;
+      }
+      if (isControlledBy(proxyTarget)) {
         return true;
       }
     }
     return false;
   };
 
+  // Shared setup for :focus and :focus-visible. Both need focusin/focusout
+  // listeners + a MutationObserver on aria-controls so that when the attribute
+  // changes while the element is focused, old and new controlled elements are
+  // notified to re-check their own focus state.
+  // extraSetup: optional (el, callback) => teardown for pseudo-class-specific
+  // listeners (e.g. keydown/keyup for :focus-visible).
+  const setupFocus = (el, callback) => {
+    const onFocusChange = (e) => {
+      callback();
+      notifyAriaControlled(el, e);
+    };
+    el.addEventListener("focusin", onFocusChange);
+    el.addEventListener("focusout", onFocusChange);
+    // Only observe aria-controls mutations when the element already has the
+    // attribute at setup time. If aria-controls is guaranteed to be set before
+    // initPseudoStyles runs (e.g. passed as a prop in box.jsx), this covers all
+    // real cases without paying the MutationObserver cost for every element.
+    let observer;
+    // if (el.hasAttribute("aria-controls")) {
+    observer = new MutationObserver((mutations) => {
+      if (!el.matches(":focus-within")) {
+        return;
+      }
+      for (const mutation of mutations) {
+        const oldIds = (mutation.oldValue || "").split(" ").filter(Boolean);
+        for (const id of oldIds) {
+          const controlled = document.getElementById(id);
+          if (controlled) {
+            requestPseudoStateCheck(controlled, {});
+          }
+        }
+      }
+      notifyAriaControlled(el, {});
+    });
+    observer.observe(el, {
+      attributes: true,
+      attributeFilter: ["aria-controls"],
+      attributeOldValue: true,
+    });
+    // }
+    return () => {
+      el.removeEventListener("focusin", onFocusChange);
+      el.removeEventListener("focusout", onFocusChange);
+      observer?.disconnect();
+    };
+  };
+
   definePseudoClass(":focus", {
     attribute: "data-focus",
     setup: (el, callback) => {
-      const onFocusChange = (e) => {
-        callback();
-        notifyAriaControlled(el, e);
-      };
-      el.addEventListener("focusin", onFocusChange);
-      el.addEventListener("focusout", onFocusChange);
+      const cleanup = setupFocus(el, callback);
       return () => {
-        el.removeEventListener("focusin", onFocusChange);
-        el.removeEventListener("focusout", onFocusChange);
+        cleanup();
       };
     },
     test: (el) => {
       if (el.matches(":focus")) {
         return true;
       }
-      const proxyTarget = findControlProxyTarget(el);
-      if (proxyTarget && proxyTarget.matches(":focus")) {
-        return true;
-      }
-      if (isControlledByFocusedElement(el)) {
+      if (hasIndirectFocus(el)) {
         return true;
       }
       return false;
@@ -13113,30 +13178,20 @@ definePseudoClass(":active", {
   definePseudoClass(":focus-visible", {
     attribute: "data-focus-visible",
     setup: (el, callback) => {
-      const onFocusChange = (e) => {
-        callback();
-        notifyAriaControlled(el, e);
-      };
+      const cleanup = setupFocus(el, callback);
       document.addEventListener("keydown", callback);
       document.addEventListener("keyup", callback);
-      el.addEventListener("focusin", onFocusChange);
-      el.addEventListener("focusout", onFocusChange);
       return () => {
+        cleanup();
         document.removeEventListener("keydown", callback);
         document.removeEventListener("keyup", callback);
-        el.removeEventListener("focusin", onFocusChange);
-        el.removeEventListener("focusout", onFocusChange);
       };
     },
     test: (el) => {
       if (el.matches(":focus-visible")) {
         return true;
       }
-      const proxyTarget = findControlProxyTarget(el);
-      if (proxyTarget && proxyTarget.matches(":focus-visible")) {
-        return true;
-      }
-      if (isControlledByFocusedElement(el, { requireFocusVisible: true })) {
+      if (hasIndirectFocus(el, { requireFocusVisible: true })) {
         return true;
       }
       return false;
@@ -13160,7 +13215,7 @@ definePseudoClass(":active", {
       if (el.matches(":focus-within")) {
         return true;
       }
-      if (isControlledByFocusedElement(el)) {
+      if (hasIndirectFocus(el)) {
         return true;
       }
       if (el.contains(document.activeElement)) {
@@ -18945,6 +19000,22 @@ naviI18n.addAll({
   },
 });
 
+// List messages — override any key to customize list messages
+naviI18n.addAll({
+  "list.empty": {
+    en: "No items in this list.",
+    fr: "Aucun élément dans cette liste.",
+  },
+  "list.no_match": {
+    en: "No item matches this search.",
+    fr: "Aucun élément ne correspond à cette recherche.",
+  },
+  "list.no_match_rest_shown": {
+    en: "No item matches this search. The rest is shown below.",
+    fr: "Aucun élément ne correspond à cette recherche. Le reste est affiché ci-dessous.",
+  },
+});
+
 // Constraint validation messages — override any key to customize error messages
 naviI18n.addAll({
   "constraint.available": {
@@ -21673,11 +21744,12 @@ const useCustomValidationRef = (
     }
     const element = elementRef.current;
     if (!element) {
-      console.warn(
-        `useCustomValidationRef: elementRef.current is null, make sure to pass a ref to an element
+      if (!elementRef.nullExpected) {
+        console.warn(
+          `useCustomValidationRef: elementRef.current is null, make sure to pass a ref to an element
 ${callSiteRef.current}`,
-      );
-      /* can happen if the component does this for instance:
+        );
+        /* can happen if the component does this for instance:
       const Component = () => {
         const ref = useRef(null) 
         
@@ -21689,6 +21761,7 @@ ${callSiteRef.current}`,
 
       usually it's better to split the component in two but hey 
       */
+      }
       return undefined;
     }
     let target;
@@ -22997,10 +23070,7 @@ const applyKeyboardShortcuts = (shortcuts, keyboardEvent) => {
   } else {
     // we need to check if the default action is something that we can allow to be intercepted
     const defaultAction = getKeyboardEventDefaultAction(keyboardEvent);
-    canIntercept =
-      !defaultAction ||
-      defaultAction === "scroll" ||
-      defaultAction === "dismiss";
+    canIntercept = !defaultAction || defaultAction === "scroll";
   }
   if (!canIntercept) {
     return null;
@@ -24518,6 +24588,13 @@ const useAutoFocus = (
     if (!focusableElement) {
       return () => {};
     }
+    // Only autofocus when the element is mounted directly on the document.
+    // Any other event type means an expandable (popover, dialog, …) just opened
+    // and revealed this element — the expandable's opening logic already calls
+    // focusFirstAutofocusOrFocusable, so we must not steal focus here.
+    if (e.type !== "navi_displayed_on_document") {
+      return () => {};
+    }
     const activeElement = document.activeElement;
     const focusDebugCall = `${getElementSignature(focusableElement)}.focus({ preventScroll: ${preventScroll} })`;
     if (e.type === "navi_displayed_on_document") {
@@ -24920,12 +24997,8 @@ const createUICallback = ({ name = "ui callback", event, action }) => {
   if (event && action) {
     return (...args) => {
       return routeArgs(args, {
-        event: (e) => {
-          return event(e);
-        },
-        action: (value, actionSecondArg) => {
-          return action(value, actionSecondArg);
-        },
+        event,
+        action,
         other: () => {
           console.warn(
             `${name} unsupported call attempt. It is designed to be called by action.`,
@@ -24944,9 +25017,7 @@ const createUICallback = ({ name = "ui callback", event, action }) => {
           );
           return false;
         },
-        action: (value, secondArg) => {
-          return action(value, secondArg);
-        },
+        action,
         other: () => {
           console.warn(
             `${name} unsupported call attempt. It is designed to be called by action.`,
@@ -24959,9 +25030,7 @@ const createUICallback = ({ name = "ui callback", event, action }) => {
   // event only
   return (...args) => {
     return routeArgs(args, {
-      event: (e) => {
-        return event(e);
-      },
+      event,
       action: (_, { event: eventFromArg }) => {
         console.info(
           `${name} got called by action. It works but is designed to be called by DOM`,
@@ -24999,8 +25068,8 @@ const routeArgs = (args, { event, action, other }) => {
   return other(...args);
 };
 
-const triggerStringAction = (actionName, event) => {
-  return resolveActionProp(actionName)(event);
+const triggerStringAction = (actionName, event, options) => {
+  return resolveActionProp(actionName)(event, options);
 };
 const resolveActionProp = (action) => {
   if (typeof action === "string") {
@@ -25198,11 +25267,13 @@ const requestClosestAction = (event) => {
  */
 const clear = createUICallback({
   name: "clear",
-  event: (event) => {
+  event: (event, { skipClose } = {}) => {
     requestUpdate(event, "", { isClear: true });
-    const expandableEl = event.currentTarget.closest("[aria-expanded]");
-    if (expandableEl) {
-      return requestClose(event);
+    if (!skipClose) {
+      const expandableEl = event.currentTarget.closest("[aria-expanded]");
+      if (expandableEl) {
+        return requestClose(event);
+      }
     }
     return true;
   },
@@ -25831,7 +25902,8 @@ const useInteractiveProps = (props, {
       autoSelect
     });
     Object.assign(controlProps, {
-      "navi-autofocus": autoFocus ? "" : undefined
+      "navi-autofocus": autoFocus ? autoFocus === true ? "" : autoFocus : undefined,
+      "navi-autofocus-select": autoFocus && autoSelect ? "" : undefined
     });
   }
   {
@@ -29903,6 +29975,78 @@ const Label = props => {
 };
 const LabelPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
 
+const InputWithList = props => {
+  const Next = useNextResolver();
+  const {
+    "navi-list": naviList,
+    onKeyDown
+  } = props;
+  const getListEl = () => {
+    return document.getElementById(naviList);
+  };
+  const [currentId, setCurrentId] = useState(() => {
+    const listEl = getListEl();
+    return listEl ? listEl.getAttribute("navi-current-id") || null : null;
+  });
+  useLayoutEffect(() => {
+    const listEl = getListEl();
+    if (!listEl) {
+      return undefined;
+    }
+    // Sync in case list updated before our effect ran.
+    setCurrentId(listEl.getAttribute("navi-current-id") || null);
+    const onCurrentChange = e => {
+      setCurrentId(e.detail.id || null);
+    };
+    listEl.addEventListener("navi_current_change", onCurrentChange);
+    return () => {
+      listEl.removeEventListener("navi_current_change", onCurrentChange);
+    };
+  }, [naviList]);
+  const requestListNav = (e, goal) => {
+    const listEl = getListEl();
+    if (!listEl) {
+      return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+    dispatchCustomEvent(listEl, "navi_request_nav", {
+      event: e,
+      goal
+    });
+  };
+  const onKeyDownShortcuts = createOnKeyDownForShortcuts({
+    arrowdown: e => requestListNav(e, "down"),
+    arrowup: e => requestListNav(e, "up"),
+    home: e => requestListNav(e, "first"),
+    end: e => requestListNav(e, "last"),
+    enter: e => {
+      const listEl = getListEl();
+      if (!listEl) {
+        return;
+      }
+      e.preventDefault();
+      e.stopPropagation();
+      dispatchCustomEvent(listEl, "navi_request_activate", {
+        event: e
+      });
+    }
+  });
+  return jsx(Next, {
+    role: "combobox",
+    "aria-haspopup": "listbox",
+    "aria-autocomplete": "list",
+    "aria-controls": currentId ? `${currentId}_input` : undefined,
+    "aria-activedescendant": currentId || undefined,
+    autoComplete: "off",
+    ...props,
+    onKeyDown: e => {
+      onKeyDown?.(e);
+      onKeyDownShortcuts(e);
+    }
+  });
+};
+
 installImportMetaCssBuild(import.meta);/**
  * Input component for all textual input types.
  *
@@ -30169,6 +30313,11 @@ const InputTextual = props => {
 };
 const InputTextualWithListResolver = props => {
   const Next = useNextResolver();
+  if (props["navi-list"]) {
+    return jsx(InputWithList, {
+      ...props
+    });
+  }
   if (props.suggestions) {
     return jsx(InputTextualWithSuggestions, {
       ...props
@@ -30441,7 +30590,9 @@ const InputSearchUI = ({
         const input = e.currentTarget;
         const allowed = dispatchRequestInteraction(input, e);
         if (allowed) {
-          triggerStringAction("clear", e);
+          triggerStringAction("clear", e, {
+            skipClose: true
+          });
         }
       },
       children: jsx(Icon, {
@@ -31351,23 +31502,76 @@ window.addEventListener("resize", () => {
 
 /**
  * Mirrors what browsers do when navigating to a page:
- * 1. Focus the first element with [navi-autofocus] inside the container
+ * 1. Focus the first element with [navi-autofocus] (but not [navi-autofocus="fallback"]) inside the container
  * 2. Fall back to the first focusable element
+ * 3. Fall back to the first element with [navi-autofocus="fallback"]
  * Does nothing if no candidate is found.
  */
+const markAutofocusRestoreOnClose = (containerEl) => {
+  const focused = document.activeElement;
+  if (
+    focused &&
+    containerEl.contains(focused) &&
+    focused.getAttribute("navi-autofocus") === "fallback"
+  ) {
+    containerEl.setAttribute("navi-autofocus-restore", "");
+  } else {
+    containerEl.removeAttribute("navi-autofocus-restore");
+  }
+};
+
 const focusFirstAutofocusOrFocusable = (containerEl, debugFocus, e) => {
-  let target = containerEl.querySelector("[navi-autofocus]");
+  let target;
+  let reason;
+  if (containerEl.hasAttribute("navi-autofocus-restore")) {
+    containerEl.removeAttribute("navi-autofocus-restore");
+    const naviAutoFocusFallback = containerEl.querySelector(
+      "[navi-autofocus='fallback']",
+    );
+    if (naviAutoFocusFallback) {
+      reason = "navi-autofocus fallback (restore)";
+      target = naviAutoFocusFallback;
+    }
+  }
   if (!target) {
-    target = findFocusable(containerEl);
+    const naviAutoFocus = containerEl.querySelector(
+      "[navi-autofocus]:not([navi-autofocus='fallback'])",
+    );
+    if (naviAutoFocus) {
+      reason = "navi-autofocus";
+      target = naviAutoFocus;
+    }
+  }
+  if (!target) {
+    const focusable = findFocusable(containerEl, {
+      exclude: (el) => el.getAttribute("navi-autofocus") === "fallback",
+    });
+    if (focusable) {
+      reason = "first focusable element";
+      target = focusable;
+    }
+  }
+  if (!target) {
+    const naviAutoFocusFallback = containerEl.querySelector(
+      "[navi-autofocus='fallback']",
+    );
+    if (naviAutoFocusFallback) {
+      reason = "navi-autofocus fallback";
+      target = naviAutoFocusFallback;
+    }
   }
   if (!target) {
     return;
   }
   debugFocus(
     e,
-    `Moving focus to ${getElementSignature(target)}.focus({ preventScroll: true })`,
+    `Moving focus to ${getElementSignature(target)}.focus({ preventScroll: true }) (reason: ${reason})`,
   );
   target.focus({ preventScroll: true });
+  if (target.hasAttribute("navi-autofocus-select")) {
+    target.select();
+    target.scrollLeft = 0;
+  }
 };
 
 const useCleanup = () => {
@@ -31435,6 +31639,7 @@ const Dialog = props => {
   const close = e => {
     debugPopup(`"${e.type}" on ${getElementSignature(e.target)} -> closeDialog`);
     const dialogEl = ref.current;
+    markAutofocusRestoreOnClose(dialogEl);
     dialogEl.close();
     cleanup();
     openedRef.current = false;
@@ -31615,6 +31820,7 @@ const Popover = props => {
   const close = e => {
     debugPopup(e, `closePopover()`);
     const popoverEl = ref.current;
+    markAutofocusRestoreOnClose(popoverEl);
     popoverEl.hidePopover();
     cleanup();
     openedRef.current = false;
@@ -33724,6 +33930,7 @@ const ListUI = props => {
   const {
     ref,
     renderBudget = RENDER_BUDGET_DEFAULT,
+    renderBudgetSkipCheck,
     role,
     fallback,
     noMatchFallback,
@@ -33739,7 +33946,7 @@ const ListUI = props => {
     searchText,
     ...rest
   } = props;
-  if (renderBudget < 30) {
+  if (renderBudget < 30 && !renderBudgetSkipCheck) {
     console.warn(`List: renderBudget=${renderBudget} is too low. A renderBudget below 30 is not supported: on large screens or when the list grows, items outside the window would appear as blank space instead of rendered content. Use a value of at least 30, or omit the prop to use the default (${RENDER_BUDGET_DEFAULT}).`);
   }
 
@@ -34320,7 +34527,7 @@ const NoMatchFallback = ({
   const noneMatch = searchText && visibleItemCount > 0 && matchCount === 0;
   const showMatchFallback = allHidden || noneMatch;
   if (noMatchFallback === undefined) {
-    noMatchFallback = allHidden ? "Aucun élément ne correspond à cette recherche." : "Aucun élément ne correspond à cette recherche. Le reste est affiché ci-dessous";
+    noMatchFallback = allHidden ? naviI18n("list.no_match") : naviI18n("list.no_match_rest_shown");
   }
   return jsx(ListItem, {
     role: "presentation",
@@ -34337,7 +34544,7 @@ const Fallback = ({
   const itemCount = tracker.countSignal.value;
   const showFallback = itemCount === 0;
   if (fallback === undefined) {
-    fallback = "Aucun élément dans cette liste.";
+    fallback = naviI18n("list.empty");
   }
   return jsx(ListItem, {
     role: "presentation",
@@ -34508,6 +34715,7 @@ const ListItemReal = props => {
     id: id,
     "navi-list-item-real": "",
     ...rest,
+    index: undefined,
     hidden: hidden,
     ref: ref,
     children: children
@@ -34819,6 +35027,75 @@ const SelectableList = props => {
     // Up/Down navigate between list items only (the visually-hidden real inputs).
     ySelector: "[navi-selectable-real-input]"
   });
+
+  // "Current item" tracking — the item that an external controller (e.g. an
+  // <input navi-list>) navigates from. Defaults to the first selected item,
+  // else the first navigable item. Updated when:
+  //   - an item's real input gains focus (via Tab, click, etc.)
+  //   - the controller dispatches navi_request_list_nav
+  // The current id is announced via navi_list_current_change (bubbling) so a
+  // connected input can update its aria-controls / aria-activedescendant.
+  const currentIdRef = useRef(null);
+  const setCurrentId = (id, event) => {
+    const previousId = currentIdRef.current;
+    if (previousId === id) {
+      return;
+    }
+    currentIdRef.current = id;
+    const listEl = ref.current;
+    if (!listEl) {
+      return;
+    }
+    if (id) {
+      listEl.setAttribute("navi-current-id", id);
+    } else {
+      listEl.removeAttribute("navi-current-id");
+    }
+    dispatchPublicCustomEvent(listEl, "navi_current_change", {
+      event,
+      id,
+      realInputId: id ? `${id}_input` : null
+    });
+  };
+  const getNavigableElements = () => {
+    const listEl = ref.current;
+    if (!listEl) {
+      return [];
+    }
+    const itemEls = Array.from(listEl.querySelectorAll("[navi-list-item-real]"));
+    const navigableEls = [];
+    for (const itemEl of itemEls) {
+      if (itemEl.hidden) {
+        continue;
+      }
+      const realInput = itemEl.querySelector("[navi-selectable-real-input]");
+      if (!realInput || realInput.disabled) {
+        continue;
+      }
+      navigableEls.push(itemEl);
+    }
+    return navigableEls;
+  };
+  // On mount: set the initial current item to the first selected, else the first navigable.
+  // After that, focusin events on the list keep currentIdRef up to date.
+  useLayoutEffect(() => {
+    const navigableEls = getNavigableElements();
+    if (navigableEls.length === 0) {
+      return;
+    }
+    let initialEl;
+    for (const el of navigableEls) {
+      const realInput = el.querySelector("[navi-selectable-real-input]");
+      if (realInput && realInput.checked) {
+        initialEl = el;
+        break;
+      }
+    }
+    if (!initialEl) {
+      initialEl = navigableEls[0];
+    }
+    setCurrentId(initialEl.id);
+  }, []);
   const listVnode = jsx(List, {
     as: "fieldset",
     "navi-has-selected-background": selectedIndicator === "backgroundColor" ? "" : undefined,
@@ -34826,7 +35103,20 @@ const SelectableList = props => {
     ...remainingProps,
     name: undefined,
     selectedIndicator: undefined,
-    multiple: undefined,
+    multiple: undefined
+    // Track focus inside the list: whichever item gets focus becomes current.
+    ,
+
+    onFocusIn: e => {
+      const realInput = e.target.closest("[navi-selectable-real-input]");
+      if (!realInput) {
+        return;
+      }
+      const itemEl = realInput.closest("[navi-list-item-real]");
+      if (itemEl && itemEl.id) {
+        setCurrentId(itemEl.id, e);
+      }
+    },
     onnavi_request_select: e => {
       const {
         id
@@ -34875,6 +35165,70 @@ const SelectableList = props => {
         });
       }
     },
+    onnavi_request_nav: e => {
+      const {
+        goal
+      } = e.detail;
+      const navigableEls = getNavigableElements();
+      if (navigableEls.length === 0) {
+        return;
+      }
+      const currentId = currentIdRef.current;
+      let currentIndex = -1;
+      if (currentId) {
+        currentIndex = navigableEls.findIndex(el => el.id === currentId);
+      }
+      let targetEl;
+      if (goal === "first") {
+        targetEl = navigableEls[0];
+      } else if (goal === "last") {
+        targetEl = navigableEls[navigableEls.length - 1];
+      } else if (goal === "down") {
+        if (currentIndex === -1) {
+          targetEl = navigableEls[0];
+        } else if (currentIndex < navigableEls.length - 1) {
+          targetEl = navigableEls[currentIndex + 1];
+        } else {
+          targetEl = navigableEls[navigableEls.length - 1];
+        }
+      } else if (goal === "up") {
+        if (currentIndex === -1) {
+          targetEl = navigableEls[0];
+        } else if (currentIndex > 0) {
+          targetEl = navigableEls[currentIndex - 1];
+        } else {
+          targetEl = navigableEls[0];
+        }
+      }
+      if (!targetEl) {
+        return;
+      }
+      setCurrentId(targetEl.id, e);
+      dispatchCustomEvent(ref.current, "navi_request_scroll", {
+        event: e,
+        id: targetEl.id
+      });
+    },
+    onnavi_request_activate: e => {
+      const currentId = currentIdRef.current;
+      if (!currentId) {
+        return;
+      }
+      if (multiple) {
+        const inputId = `${currentId}_input`;
+        const childController = uiGroupStateController.findChildById(inputId);
+        const isSelected = childController && childController.uiState;
+        dispatchCustomEvent(ref.current, isSelected ? "navi_request_unselect" : "navi_request_select", {
+          event: e,
+          id: currentId
+        });
+        return;
+      }
+      dispatchCustomEvent(ref.current, "navi_request_select", {
+        event: e,
+        id: currentId
+      });
+    },
     children: jsx(ControlgroupChildrenWrapper, {
       ...childrenWrapperProps,
       children: props.children
@@ -34893,6 +35247,7 @@ const Selectable = props => {
     highlight,
     hidden,
     filtered,
+    matchScore,
     defaultSelected,
     selected,
     pointed,
@@ -34903,6 +35258,7 @@ const Selectable = props => {
   const inputRef = useRef();
   const inputType = multiple ? "checkbox" : "radio";
   const inputId = `${id}_input`;
+  inputRef.nullExpected = true; // virtualization
   const [checkableProps, remainingProps, ChildrenContextWrapper] = useCheckableProps({
     readOnlyMessage: naviI18n(`constraints.readonly.option`, props),
     ...rest,
@@ -34944,6 +35300,7 @@ const Selectable = props => {
     highlight: highlight,
     filtered: filtered,
     hidden: hidden,
+    matchScore: matchScore,
     pseudoClasses: SELECTABLE_PSEUDO_CLASSES,
     basePseudoState: {
       ":-navi-selected": checked,

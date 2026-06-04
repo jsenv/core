@@ -4375,21 +4375,30 @@ const findFocusDelegateTarget = (el) => {
   return null;
 };
 
-const findFocusable = (element) => {
+const findFocusable = (element, { exclude } = {}) => {
   const associatedElements = getAssociatedElements(element);
   if (associatedElements) {
     for (const associatedElement of associatedElements) {
-      const focusable = findFocusable(associatedElement);
+      const focusable = findFocusable(associatedElement, { exclude });
       if (focusable) {
         return focusable;
       }
     }
     return null;
   }
-  if (elementIsFocusable(element)) {
+  const isFocusable = (node) => {
+    if (!elementIsFocusable(node)) {
+      return false;
+    }
+    if (exclude && exclude(node)) {
+      return false;
+    }
+    return true;
+  };
+  if (isFocusable(element)) {
     return element;
   }
-  const focusableDescendant = findDescendant(element, elementIsFocusable);
+  const focusableDescendant = findDescendant(element, isFocusable);
   if (focusableDescendant) {
     // If the first focusable is an unchecked radio/checkbox, prefer the checked
     // sibling in the same group (mirrors native browser radio focus behavior
@@ -4496,10 +4505,15 @@ const DEFAULT_BEHAVIORS = [
     keys: {
       // Tab moves focus on any element
       tab: "focus_nav",
-      // Escape dismisses on any element (dialog, search clear, dropdown close, etc.)
+    },
+    // no fallback: only claims Tab, other keys continue to next entries
+  },
+  {
+    // Escape natively dismisses only <dialog> elements
+    test: (el) => el.tagName === "DIALOG" || Boolean(el.closest("dialog")),
+    keys: {
       escape: "dismiss",
     },
-    // no fallback: only claims Tab/Escape, other keys continue to next entries
   },
   {
     test: (el) => el.matches("input[type='radio'], input[type='checkbox']"),
@@ -4518,6 +4532,12 @@ const DEFAULT_BEHAVIORS = [
         "input:not([type]), input[type='text'], input[type='search'], input[type='url'], input[type='email'], input[type='password'], input[type='tel']",
       ),
     keys: {
+      escape: (e) => {
+        if (e.target.type === "search") {
+          return e.target.value ? "clear" : "";
+        }
+        return "";
+      },
       enter: (e) => (e.target.form ? "form_submit" : ""),
       arrowleft: "cursor_move",
       arrowright: "cursor_move",
