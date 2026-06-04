@@ -152,10 +152,6 @@
         id: "update_fruit",
         type: "string",
       });
-      const searchFruitSignal = stateSignal("", {
-        id: "search_fruit",
-        type: "string",
-      });
       const searchFruitSelectedSignal = stateSignal("", {
         id: "search_fruit_selected",
         type: "string",
@@ -165,7 +161,6 @@
         searchParams: {
           send_fruit: sendFruitSignal,
           update_fruit: updateFruitSignal,
-          search_fruit: searchFruitSignal,
           search_fruit_selected: searchFruitSelectedSignal,
         },
       });
@@ -419,6 +414,7 @@
 
       const SearchableSelectEmpty = () => {
         const selected = searchFruitSelectedSignal.value;
+        const searchText = useSignal("").value;
         const logSignal = useSignal([]);
         return (
           <div id="section-3" class="demo-section">
@@ -433,7 +429,7 @@
                   searchFruitSelectedSignal.value = v;
                 }}
                 items={[]}
-                searchText=""
+                searchText={searchText}
                 onSearch={() => {}}
                 logSignal={logSignal}
               />
@@ -445,7 +441,8 @@
 
       const SearchableSelectNormal = () => {
         const selected = searchFruitSelectedSignal.value;
-        const searchText = searchFruitSignal.value;
+        const searchTextSignal = useSignal("");
+        const searchText = searchTextSignal.value;
         const logSignal = useSignal([]);
         return (
           <div id="section-4" class="demo-section">
@@ -462,7 +459,7 @@
                 items={FRUIT_OPTIONS}
                 searchText={searchText}
                 onSearch={(v) => {
-                  searchFruitSignal.value = v;
+                  searchTextSignal.value = v;
                 }}
                 logSignal={logSignal}
               />
@@ -474,6 +471,8 @@
 
       const SearchableSelectFewResults = () => {
         const selected = searchFruitSelectedSignal.value;
+        const searchTextSignal = useSignal("rr");
+        const searchText = searchTextSignal.value;
         const logSignal = useSignal([]);
         return (
           <div id="section-5" class="demo-section">
@@ -491,8 +490,10 @@
                   searchFruitSelectedSignal.value = v;
                 }}
                 items={FRUIT_OPTIONS}
-                searchText="rr"
-                onSearch={() => {}}
+                searchText={searchText}
+                onSearch={(v) => {
+                  searchTextSignal.value = v;
+                }}
                 logSignal={logSignal}
               />
             </Field>
@@ -503,6 +504,8 @@
 
       const SearchableSelectNoResults = () => {
         const selected = searchFruitSelectedSignal.value;
+        const searchTextSignal = useSignal("zzz");
+        const searchText = searchTextSignal.value;
         const logSignal = useSignal([]);
         return (
           <div id="section-6" class="demo-section">
@@ -519,8 +522,10 @@
                   searchFruitSelectedSignal.value = v;
                 }}
                 items={FRUIT_OPTIONS}
-                searchText="zzz"
-                onSearch={() => {}}
+                searchText={searchText}
+                onSearch={(v) => {
+                  searchTextSignal.value = v;
+                }}
                 logSignal={logSignal}
               />
             </Field>
