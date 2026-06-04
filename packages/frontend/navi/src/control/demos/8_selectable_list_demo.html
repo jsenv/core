@@ -855,6 +855,7 @@
               name="fruit"
               required
               renderBudget={10}
+              renderBudgetSkipCheck
               style={{ maxHeight: 160, overflowY: "auto" }}
               action={(v) => {
                 setSelected(v ?? null);
@@ -900,6 +901,7 @@
             }}
           >
             <Input
+              name="search"
               type="search"
               aria-controls="filtered-required-list"
               placeholder="Filter fruits…"

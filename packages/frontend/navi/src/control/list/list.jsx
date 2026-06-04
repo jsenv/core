@@ -344,6 +344,7 @@ const ListUI = (props) => {
   const {
     ref,
     renderBudget = RENDER_BUDGET_DEFAULT,
+    renderBudgetSkipCheck,
     role,
     fallback,
     noMatchFallback,
@@ -359,7 +360,7 @@ const ListUI = (props) => {
     searchText,
     ...rest
   } = props;
-  if (renderBudget < 30) {
+  if (renderBudget < 30 && !renderBudgetSkipCheck) {
     console.warn(
       `List: renderBudget=${renderBudget} is too low. A renderBudget below 30 is not supported: on large screens or when the list grows, items outside the window would appear as blank space instead of rendered content. Use a value of at least 30, or omit the prop to use the default (${RENDER_BUDGET_DEFAULT}).`,
     );
