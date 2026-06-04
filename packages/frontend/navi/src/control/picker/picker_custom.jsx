@@ -439,6 +439,9 @@ export const PickerCustom = (props) => {
           // (like enter that would try to request action of closest form otherwise for instance)
           if (e.key === "Enter") {
             e.stopPropagation();
+            // preventDefault prevents the browser from synthesising a click on the
+            // picker button when focus moves to it synchronously during enterEffect
+            e.preventDefault();
           }
         },
       });
