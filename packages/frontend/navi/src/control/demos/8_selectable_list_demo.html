@@ -819,6 +819,7 @@
           >
             <Input
               type="search"
+              aria-controls="filtered-required-list"
               placeholder="Filter fruits…"
               value={searchText}
               action={(v) => {
@@ -831,12 +832,20 @@
               expandX
             />
             <SelectableList
+              id="filtered-required-list"
               name="fruit"
               required
               action={(v) => {
                 setSelected(v ?? null);
               }}
               expandX
+              noMatchFallback={
+                <div
+                  style={{ padding: 12, color: "#666", fontStyle: "italic" }}
+                >
+                  No fruits match your search.
+                </div>
+              }
             >
               {matchingFruits.map((fruit, i) => {
                 const { match, score, ranges } = getFruitMatchInfo(fruit);

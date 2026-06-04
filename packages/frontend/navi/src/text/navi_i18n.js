@@ -65,6 +65,22 @@ naviI18n.addAll({
   },
 });
 
+// List messages — override any key to customize list messages
+naviI18n.addAll({
+  "list.empty": {
+    en: "No items in this list.",
+    fr: "Aucun élément dans cette liste.",
+  },
+  "list.no_match": {
+    en: "No item matches this search.",
+    fr: "Aucun élément ne correspond à cette recherche.",
+  },
+  "list.no_match_rest_shown": {
+    en: "No item matches this search. The rest is shown below.",
+    fr: "Aucun élément ne correspond à cette recherche. Le reste est affiché ci-dessous.",
+  },
+});
+
 // Constraint validation messages — override any key to customize error messages
 naviI18n.addAll({
   "constraint.available": {

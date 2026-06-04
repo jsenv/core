@@ -16,6 +16,7 @@ import {
 import { Box, BoxForwardedPropsContext } from "../../box/box.jsx";
 import { Separator } from "../../layout/separator.jsx";
 import { useDebugScroll } from "../../navi_debug.jsx";
+import { naviI18n } from "../../text/navi_i18n.js";
 import { useItemTracker } from "../../utils/item_tracker/use_item_tracker.js";
 import { useDisplayedLayoutEffect } from "../../utils/use_displayed_layout_effect.js";
 import { useSearchHighlight } from "./search_highlight.js";
@@ -999,8 +1000,8 @@ const NoMatchFallback = ({ tracker, noMatchFallback, searchText }) => {
 
   if (noMatchFallback === undefined) {
     noMatchFallback = allHidden
-      ? "Aucun élément ne correspond à cette recherche."
-      : "Aucun élément ne correspond à cette recherche. Le reste est affiché ci-dessous";
+      ? naviI18n("list.no_match")
+      : naviI18n("list.no_match_rest_shown");
   }
 
   return (
@@ -1018,7 +1019,7 @@ const Fallback = ({ tracker, fallback }) => {
   const itemCount = tracker.countSignal.value;
   const showFallback = itemCount === 0;
   if (fallback === undefined) {
-    fallback = "Aucun élément dans cette liste.";
+    fallback = naviI18n("list.empty");
   }
 
   return (
