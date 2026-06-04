@@ -100,14 +100,27 @@
         BadgeCount,
         useSearchText,
         Input,
+        stateSignal,
+        route,
+        setupRoutes,
       } from "@jsenv/navi";
       import { CallLog, useCallLog } from "./utils/call_log.jsx";
+
+      const searchFruitSignal = stateSignal("", {
+        id: "search_fruit",
+        type: "string",
+      });
+      const DEMO_ROUTE = route("", {
+        searchParams: { search_fruit: searchFruitSignal },
+      });
+      setupRoutes([DEMO_ROUTE]);
 
       const App = () => {
         return (
           <NaviDebug debugAction debugInteraction>
             <div>
               <TableOfContents />
+              <SearchableDemo />
               <BasicDemo />
               <ReadOnlyDemo />
               <ExternalControlDemo />
@@ -133,6 +146,9 @@
           <div class="demo-section">
             <h2>Table of contents</h2>
             <ol style={{ margin: 0, paddingLeft: "20px", lineHeight: "2" }}>
+              <li>
+                <a href="#searchable">Searchable</a>
+              </li>
               <li>
                 <a href="#basic">Basic (with Selectable.Input)</a>
               </li>
@@ -174,6 +190,65 @@
       };
 
       const FRUITS = ["Apple", "Banana", "Cherry", "Date", "Elderberry"];
+
+      // ── Searchable ─────────────────────────────────────────────────────────────
+
+      const SearchableDemo = () => {
+        const searchText = searchFruitSignal.value;
+        const [matchingFruits, getMatchInfo] = useSearchText(
+          searchText,
+          FRUITS,
+        );
+        const [selected, setSelected] = useState("");
+        const [log, pushLog] = useCallLog();
+        return (
+          <div id="searchable" className="demo-section">
+            <h2>Searchable</h2>
+            <p>
+              A <code>stateSignal</code> persists the search text in the URL.
+              <code>useSearchText</code> filters and ranks items.
+            </p>
+            <Input
+              type="search"
+              placeholder="Search fruits…"
+              value={searchText}
+              onInput={(e) => {
+                searchFruitSignal.value = e.target.value;
+              }}
+              style={{ marginBottom: "10px", width: "100%" }}
+            />
+            <SelectableList
+              action={(v) => {
+                setSelected(v);
+                pushLog("action", v ?? "(none)");
+              }}
+              expandX
+            >
+              {matchingFruits.map((fruit, i) => {
+                const { matchScore, highlight } = getMatchInfo(fruit);
+                return (
+                  <Selectable
+                    key={fruit}
+                    index={i}
+                    id={`searchable_${fruit.toLowerCase()}`}
+                    value={fruit}
+                    selected={selected === fruit}
+                    matchScore={matchScore}
+                    highlight={highlight}
+                    flex
+                    spacing="s"
+                  >
+                    <Selectable.Input />
+                    {fruit}
+                  </Selectable>
+                );
+              })}
+            </SelectableList>
+            <div className="value-display">{selected}</div>
+            <CallLog entries={log} />
+          </div>
+        );
+      };
 
       // ── Basic (with Selectable.Input) ──────────────────────────────────────────
 
