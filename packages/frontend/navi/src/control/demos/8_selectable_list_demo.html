@@ -220,8 +220,10 @@
               borderRadius="xs"
               paddingX="s"
               paddingY="xs"
+              naviList="searchable-list"
             />
             <SelectableList
+              id="searchable-list"
               action={(v) => {
                 setSelected(v);
                 pushLog("action", v ?? "(none)");

@@ -38,6 +38,7 @@ import { asControlHostValue } from "../control_value.js";
 import { Label } from "../field.jsx";
 import { triggerStringAction } from "../string_actions.js";
 import { dispatchRequestInteraction } from "../validation/custom_constraint_validation.js";
+import { InputWithList } from "./input_with_list.jsx";
 import { resolveInputProps } from "./resolve_input_props.js";
 
 const css = /* css */ `
@@ -293,6 +294,9 @@ export const InputTextual = (props) => {
 const InputTextualWithListResolver = (props) => {
   const Next = useNextResolver();
 
+  if (props.naviList) {
+    return <InputWithList {...props} />;
+  }
   if (props.suggestions) {
     return <InputTextualWithSuggestions {...props} />;
   }
