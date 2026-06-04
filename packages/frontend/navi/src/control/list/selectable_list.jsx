@@ -406,9 +406,20 @@ export const SelectableList = (props) => {
           id: targetEl.id,
         });
       }}
-      onnavi_request_list_select_current={(e) => {
+      onnavi_request_activate={(e) => {
         const currentId = currentIdRef.current;
         if (!currentId) {
+          return;
+        }
+        if (multiple) {
+          const inputId = `${currentId}_input`;
+          const childController = uiGroupStateController.findChildById(inputId);
+          const isSelected = childController && childController.uiState;
+          dispatchCustomEvent(
+            ref.current,
+            isSelected ? "navi_request_unselect" : "navi_request_select",
+            { event: e, id: currentId },
+          );
           return;
         }
         dispatchCustomEvent(ref.current, "navi_request_select", {
