@@ -230,10 +230,7 @@ const applyKeyboardShortcuts = (shortcuts, keyboardEvent) => {
   } else {
     // we need to check if the default action is something that we can allow to be intercepted
     const defaultAction = getKeyboardEventDefaultAction(keyboardEvent);
-    canIntercept =
-      !defaultAction ||
-      defaultAction === "scroll" ||
-      defaultAction === "dismiss";
+    canIntercept = !defaultAction || defaultAction === "scroll";
   }
   if (!canIntercept) {
     return null;
