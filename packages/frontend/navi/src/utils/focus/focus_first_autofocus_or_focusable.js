@@ -18,7 +18,9 @@ export const focusFirstAutofocusOrFocusable = (containerEl, debugFocus, e) => {
     target = naviAutoFocus;
   }
   if (!target) {
-    const focusable = findFocusable(containerEl);
+    const focusable = findFocusable(containerEl, {
+      exclude: (el) => el.getAttribute("navi-autofocus") === "fallback",
+    });
     if (focusable) {
       reason = "first focusable element";
       target = focusable;
