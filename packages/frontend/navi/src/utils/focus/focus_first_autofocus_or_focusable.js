@@ -9,26 +9,36 @@ import { findFocusable, getElementSignature } from "@jsenv/dom";
  */
 export const focusFirstAutofocusOrFocusable = (containerEl, debugFocus, e) => {
   let target;
+  let reason;
   const naviAutoFocus = containerEl.querySelector(
     "[navi-autofocus]:not([navi-autofocus='fallback'])",
   );
-  target = naviAutoFocus;
+  if (naviAutoFocus) {
+    reason = "navi-autofocus";
+    target = naviAutoFocus;
+  }
   if (!target) {
     const focusable = findFocusable(containerEl);
-    target = focusable;
+    if (focusable) {
+      reason = "first focusable element";
+      target = focusable;
+    }
   }
   if (!target) {
     const naviAutoFocusFallback = containerEl.querySelector(
       "[navi-autofocus='fallback']",
     );
-    target = naviAutoFocusFallback;
+    if (naviAutoFocusFallback) {
+      reason = "navi-autofocus fallback";
+      target = naviAutoFocusFallback;
+    }
   }
   if (!target) {
     return;
   }
   debugFocus(
     e,
-    `Moving focus to ${getElementSignature(target)}.focus({ preventScroll: true })`,
+    `Moving focus to ${getElementSignature(target)}.focus({ preventScroll: true }) (reason: ${reason})`,
   );
   target.focus({ preventScroll: true });
 };
