@@ -3,7 +3,7 @@ import { useNextResolver } from "../../resolver/resolver.jsx";
 
 export const InputWithList = (props) => {
   const Next = useNextResolver();
-  const { ref, naviList, onKeyDown, ...rest } = props;
+  const { ref, "navi-list": naviList, onKeyDown, ...rest } = props;
 
   const getListEl = () => {
     return document.getElementById(naviList);
