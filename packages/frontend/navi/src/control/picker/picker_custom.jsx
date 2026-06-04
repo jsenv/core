@@ -474,6 +474,7 @@ const PickerContentInsidePopover = (props) => {
     popoverMode = "nearby",
     popoverSpacing = popoverMode === "nearby" ? 5 : 0,
     viewportSpacing = 10,
+    closeOnFocusOut = false,
     ...rest
   } = props;
 
@@ -483,8 +484,7 @@ const PickerContentInsidePopover = (props) => {
       navi-popover-mode={popoverMode}
       {...rest}
       onFocusOut={(e) => {
-        if (import.meta.dev) {
-          // during dev disable to allow inspecting the select (hot fix for now to ease life during dev)
+        if (!closeOnFocusOut) {
           return;
         }
         // Close when focus leaves the select entirely (not just moving between internal elements).
