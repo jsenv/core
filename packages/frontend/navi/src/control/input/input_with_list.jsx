@@ -1,81 +1,98 @@
+import { dispatchCustomEvent } from "@jsenv/dom";
 import { createOnKeyDownForShortcuts } from "@jsenv/navi/src/keyboard/keyboard_shortcuts.js";
+import { useLayoutEffect, useRef, useState } from "preact/hooks";
+
 import { useNextResolver } from "../../resolver/resolver.jsx";
 
+/**
+ * InputWithList — connects an input to a SelectableList via its id.
+ *
+ * Usage: <Input navi-list="my-list-id" /> next to <SelectableList id="my-list-id" />
+ *
+ * Behavior:
+ *   - ArrowDown / ArrowUp move the list's "current item" without moving focus
+ *   - Home / End jump to first/last navigable item
+ *   - Enter triggers selection of the current item (same as clicking it)
+ *   - aria-controls dynamically points at the current item's real input so the
+ *     pseudo-styles focus-inheritance kicks in (list item shows :focus /
+ *     :focus-visible while the input is focused).
+ *   - aria-activedescendant points at the current item's <li> id (standard
+ *     combobox/listbox ARIA pattern).
+ */
 export const InputWithList = (props) => {
   const Next = useNextResolver();
-  const { ref, "navi-list": naviList, onKeyDown, ...rest } = props;
+  const defaultRef = useRef(null);
+  const { ref = defaultRef, "navi-list": naviList, onKeyDown, ...rest } = props;
 
   const getListEl = () => {
     return document.getElementById(naviList);
   };
 
+  const [currentId, setCurrentId] = useState(() => {
+    const listEl = getListEl();
+    return listEl ? listEl.getAttribute("navi-current-id") || null : null;
+  });
+  useLayoutEffect(() => {
+    const listEl = getListEl();
+    if (!listEl) {
+      return undefined;
+    }
+    // Sync in case list updated before our effect ran.
+    setCurrentId(listEl.getAttribute("navi-current-id") || null);
+    const onCurrentChange = (e) => {
+      setCurrentId(e.detail.id || null);
+    };
+    listEl.addEventListener("navi_current_change", onCurrentChange);
+    return () => {
+      listEl.removeEventListener("navi_current_change", onCurrentChange);
+    };
+  }, [naviList]);
+
+  const requestListNav = (e, goal) => {
+    const listEl = getListEl();
+    if (!listEl) {
+      return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+    dispatchCustomEvent(listEl, "navi_request_nav", {
+      event: e,
+      goal,
+    });
+  };
+
   const onKeyDownShortcuts = createOnKeyDownForShortcuts({
-    arrowdown: (e) => {
-      const listEl = getListEl();
-      e.stopPropagation(); // when within a list, prevent list from handling it twice
-      return requestListNavFromCurrent(listEl, {
-        event: e,
-        goal: "down",
-      });
-    },
-    arrowup: (e) => {
-      const listEl = getListEl();
-      e.stopPropagation(); // when within a list, prevent list from handling it twice
-      return requestListNavFromCurrent(listEl, {
-        event: e,
-        goal: "up",
-      });
-    },
-    home: (e) => {
-      const listEl = getListEl();
-      e.stopPropagation(); // when within a list, prevent list from handling it twice
-      return requestListNavFromCurrent(listEl, {
-        event: e,
-        goal: "first",
-      });
-    },
-    end: (e) => {
-      const listEl = getListEl();
-      e.stopPropagation(); // when within a list, prevent list from handling it twice
-      return requestListNavFromCurrent(listEl, {
-        event: e,
-        goal: "last",
-      });
-    },
+    arrowdown: (e) => requestListNav(e, "down"),
+    arrowup: (e) => requestListNav(e, "up"),
+    home: (e) => requestListNav(e, "first"),
+    end: (e) => requestListNav(e, "last"),
     enter: (e) => {
       const listEl = getListEl();
-      e.stopPropagation(); // when within a list, prevent list from handling it twice
-      return requestListSelectCurrent(listEl, { event: e });
-    },
-    escape: (e) => {
-      // prevent escape from reaching eventual <select> ancestor
-      // when the escape is meant to clear the search input (otherwise it would close the select too)
-      if (e.currentTarget.type === "search" && e.currentTarget.value !== "") {
-        e.stopPropagation();
-        return true;
+      if (!listEl) {
+        return;
       }
-      const listEl = getListEl();
-      // here we allow propagation of escape up to the <select> to allow closing if within a select
-      // it also means list might catch escape and reset again but it's ok to reset twice here as it won't cause side effects
-      // (if we need the same pattern for other events where it could be problematic we would have to mark
-      // event as handled somehow to prevent list containing input to react to it)
-      return requestListInteractionStateReset(listEl, { event: e });
+      e.preventDefault();
+      e.stopPropagation();
+      dispatchCustomEvent(listEl, "navi_request_activate", {
+        event: e,
+      });
     },
-    // home: () => {},
-    // end: () => {},
-    // enter: () => {},
   });
 
-  <Next
-    role="combobox"
-    aria-haspopup="listbox"
-    aria-autocomplete="list"
-    autoComplete="off"
-    {...rest}
-    ref={ref}
-    onKeyDown={(e) => {
-      onKeyDown?.(e);
-      onKeyDownShortcuts(e);
-    }}
-  />;
+  return (
+    <Next
+      role="combobox"
+      aria-haspopup="listbox"
+      aria-autocomplete="list"
+      aria-controls={currentId ? `${currentId}_input` : undefined}
+      aria-activedescendant={currentId || undefined}
+      autoComplete="off"
+      {...rest}
+      ref={ref}
+      onKeyDown={(e) => {
+        onKeyDown?.(e);
+        onKeyDownShortcuts(e);
+      }}
+    />
+  );
 };

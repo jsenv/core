@@ -294,7 +294,7 @@ export const InputTextual = (props) => {
 const InputTextualWithListResolver = (props) => {
   const Next = useNextResolver();
 
-  if (props.naviList) {
+  if (props["navi-list"]) {
     return <InputWithList {...props} />;
   }
   if (props.suggestions) {

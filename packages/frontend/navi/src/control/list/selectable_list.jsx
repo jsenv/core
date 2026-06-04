@@ -11,8 +11,15 @@
  * mais pilote cet input décoratif
  */
 
+import { dispatchCustomEvent, dispatchPublicCustomEvent } from "@jsenv/dom";
 import { createContext } from "preact";
-import { useContext, useId, useMemo, useRef } from "preact/hooks";
+import {
+  useContext,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+} from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
@@ -224,6 +231,77 @@ export const SelectableList = (props) => {
     ySelector: "[navi-selectable-real-input]",
   });
 
+  // "Current item" tracking — the item that an external controller (e.g. an
+  // <input navi-list>) navigates from. Defaults to the first selected item,
+  // else the first navigable item. Updated when:
+  //   - an item's real input gains focus (via Tab, click, etc.)
+  //   - the controller dispatches navi_request_list_nav
+  // The current id is announced via navi_list_current_change (bubbling) so a
+  // connected input can update its aria-controls / aria-activedescendant.
+  const currentIdRef = useRef(null);
+  const setCurrentId = (id, event) => {
+    const previousId = currentIdRef.current;
+    if (previousId === id) {
+      return;
+    }
+    currentIdRef.current = id;
+    const listEl = ref.current;
+    if (!listEl) {
+      return;
+    }
+    if (id) {
+      listEl.setAttribute("navi-current-id", id);
+    } else {
+      listEl.removeAttribute("navi-current-id");
+    }
+    dispatchPublicCustomEvent(listEl, "navi_current_change", {
+      event,
+      id,
+      realInputId: id ? `${id}_input` : null,
+    });
+  };
+  const getNavigableElements = () => {
+    const listEl = ref.current;
+    if (!listEl) {
+      return [];
+    }
+    const itemEls = Array.from(
+      listEl.querySelectorAll("[navi-list-item-real]"),
+    );
+    const navigableEls = [];
+    for (const itemEl of itemEls) {
+      if (itemEl.hidden) {
+        continue;
+      }
+      const realInput = itemEl.querySelector("[navi-selectable-real-input]");
+      if (!realInput || realInput.disabled) {
+        continue;
+      }
+      navigableEls.push(itemEl);
+    }
+    return navigableEls;
+  };
+  // On mount: set the initial current item to the first selected, else the first navigable.
+  // After that, focusin events on the list keep currentIdRef up to date.
+  useLayoutEffect(() => {
+    const navigableEls = getNavigableElements();
+    if (navigableEls.length === 0) {
+      return;
+    }
+    let initialEl;
+    for (const el of navigableEls) {
+      const realInput = el.querySelector("[navi-selectable-real-input]");
+      if (realInput && realInput.checked) {
+        initialEl = el;
+        break;
+      }
+    }
+    if (!initialEl) {
+      initialEl = navigableEls[0];
+    }
+    setCurrentId(initialEl.id);
+  }, []);
+
   const listVnode = (
     <List
       as="fieldset"
@@ -235,6 +313,17 @@ export const SelectableList = (props) => {
       name={undefined}
       selectedIndicator={undefined}
       multiple={undefined}
+      // Track focus inside the list: whichever item gets focus becomes current.
+      onFocusIn={(e) => {
+        const realInput = e.target.closest("[navi-selectable-real-input]");
+        if (!realInput) {
+          return;
+        }
+        const itemEl = realInput.closest("[navi-list-item-real]");
+        if (itemEl && itemEl.id) {
+          setCurrentId(itemEl.id, e);
+        }
+      }}
       onnavi_request_select={(e) => {
         const { id } = e.detail;
         if (id === undefined) {
@@ -274,6 +363,58 @@ export const SelectableList = (props) => {
         if (childController.setUIState(false, e)) {
           dispatchRequestAction(list, { event: e });
         }
+      }}
+      onnavi_request_nav={(e) => {
+        const { goal } = e.detail;
+        const navigableEls = getNavigableElements();
+        if (navigableEls.length === 0) {
+          return;
+        }
+        const currentId = currentIdRef.current;
+        let currentIndex = -1;
+        if (currentId) {
+          currentIndex = navigableEls.findIndex((el) => el.id === currentId);
+        }
+        let targetEl;
+        if (goal === "first") {
+          targetEl = navigableEls[0];
+        } else if (goal === "last") {
+          targetEl = navigableEls[navigableEls.length - 1];
+        } else if (goal === "down") {
+          if (currentIndex === -1) {
+            targetEl = navigableEls[0];
+          } else if (currentIndex < navigableEls.length - 1) {
+            targetEl = navigableEls[currentIndex + 1];
+          } else {
+            targetEl = navigableEls[navigableEls.length - 1];
+          }
+        } else if (goal === "up") {
+          if (currentIndex === -1) {
+            targetEl = navigableEls[0];
+          } else if (currentIndex > 0) {
+            targetEl = navigableEls[currentIndex - 1];
+          } else {
+            targetEl = navigableEls[0];
+          }
+        }
+        if (!targetEl) {
+          return;
+        }
+        setCurrentId(targetEl.id, e);
+        dispatchCustomEvent(ref.current, "navi_request_scroll", {
+          event: e,
+          id: targetEl.id,
+        });
+      }}
+      onnavi_request_list_select_current={(e) => {
+        const currentId = currentIdRef.current;
+        if (!currentId) {
+          return;
+        }
+        dispatchCustomEvent(ref.current, "navi_request_select", {
+          event: e,
+          id: currentId,
+        });
       }}
     >
       <ControlgroupChildrenWrapper {...childrenWrapperProps}>
