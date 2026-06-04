@@ -85,6 +85,9 @@
         SelectableList,
         Selectable,
         NaviDebug,
+        route,
+        setupRoutes,
+        stateSignal,
       } from "@jsenv/navi";
 
       const FRUIT_OPTIONS = [
@@ -96,6 +99,32 @@
         "Fig",
         "Grape",
       ];
+
+      // ── State signals (persisted in URL search params) ────────────────────
+
+      const sendFruitSignal = stateSignal("Grape", {
+        id: "send_fruit",
+        type: "string",
+      });
+      const updateFruitSignal = stateSignal("Banana", {
+        id: "update_fruit",
+        type: "string",
+      });
+
+      const DEMO_ROUTE = route("", {
+        searchParams: {
+          send_fruit: sendFruitSignal,
+          update_fruit: updateFruitSignal,
+        },
+      });
+      setupRoutes([DEMO_ROUTE]);
+
+      const App = () => (
+        <Box flex="y" spacing="l">
+          <SelectWithSend />
+          <SelectWithUpdate />
+        </Box>
+      );
 
       const CallLog = ({ entries }) => {
         if (entries.length === 0) {
@@ -124,21 +153,13 @@
         );
       };
 
-      const App = () => (
-        <Box flex="y" spacing="l">
-          <SelectWithSend />
-          <SelectWithUpdate />
-        </Box>
-      );
-
       // ── 1. action="send" — closes on click ────────────────────────────────
       // Required for single-select: each click sends the value immediately and
       // closes the popover. Without it the picker stays open and the user must
       // close it manually, which makes no sense for a single-value selection.
 
       const SelectWithSend = () => {
-        const selectedSignal = useSignal("Grape");
-        const selected = selectedSignal.value;
+        const selected = sendFruitSignal.value;
         const logSignal = useSignal([]);
 
         const pushLog = (type, value) => {
@@ -166,7 +187,7 @@
                 }}
                 action={(v) => {
                   pushLog("action", v);
-                  selectedSignal.value = v;
+                  sendFruitSignal.value = v;
                 }}
                 minWidth="200"
               >
@@ -199,8 +220,7 @@
       // single-select, but shown here for comparison.
 
       const SelectWithUpdate = () => {
-        const selectedSignal = useSignal("Banana");
-        const selected = selectedSignal.value;
+        const selected = updateFruitSignal.value;
         const logSignal = useSignal([]);
 
         const pushLog = (type, value) => {
@@ -232,7 +252,7 @@
                 }}
                 action={(v) => {
                   pushLog("action", v);
-                  selectedSignal.value = v;
+                  updateFruitSignal.value = v;
                 }}
                 minWidth="200"
               >
