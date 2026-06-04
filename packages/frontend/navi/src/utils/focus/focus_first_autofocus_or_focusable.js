@@ -43,4 +43,8 @@ export const focusFirstAutofocusOrFocusable = (containerEl, debugFocus, e) => {
     `Moving focus to ${getElementSignature(target)}.focus({ preventScroll: true }) (reason: ${reason})`,
   );
   target.focus({ preventScroll: true });
+  if (target.hasAttribute("navi-autofocus-select")) {
+    target.select();
+    target.scrollLeft = 0;
+  }
 };

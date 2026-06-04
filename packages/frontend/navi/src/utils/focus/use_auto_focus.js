@@ -59,6 +59,13 @@ export const useAutoFocus = (
     if (!focusableElement) {
       return () => {};
     }
+    // Only autofocus when the element is mounted directly on the document.
+    // Any other event type means an expandable (popover, dialog, …) just opened
+    // and revealed this element — the expandable's opening logic already calls
+    // focusFirstAutofocusOrFocusable, so we must not steal focus here.
+    if (e.type !== "navi_displayed_on_document") {
+      return () => {};
+    }
     const activeElement = document.activeElement;
     const focusDebugCall = `${getElementSignature(focusableElement)}.focus({ preventScroll: ${preventScroll} })`;
     if (e.type === "navi_displayed_on_document") {

@@ -566,6 +566,7 @@ const useInteractiveProps = (
           ? ""
           : autoFocus
         : undefined,
+      "navi-autofocus-select": autoFocus && autoSelect ? "" : undefined,
     });
   }
   form_props: {
