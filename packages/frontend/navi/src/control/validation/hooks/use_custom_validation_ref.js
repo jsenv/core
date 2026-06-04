@@ -20,11 +20,12 @@ export const useCustomValidationRef = (
     }
     const element = elementRef.current;
     if (!element) {
-      console.warn(
-        `useCustomValidationRef: elementRef.current is null, make sure to pass a ref to an element
+      if (!elementRef.nullExpected) {
+        console.warn(
+          `useCustomValidationRef: elementRef.current is null, make sure to pass a ref to an element
 ${callSiteRef.current}`,
-      );
-      /* can happen if the component does this for instance:
+        );
+        /* can happen if the component does this for instance:
       const Component = () => {
         const ref = useRef(null) 
         
@@ -36,6 +37,7 @@ ${callSiteRef.current}`,
 
       usually it's better to split the component in two but hey 
       */
+      }
       return undefined;
     }
     let target;
