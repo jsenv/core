@@ -298,6 +298,7 @@ export const Selectable = (props) => {
     highlight,
     hidden,
     filtered,
+    matchScore,
     defaultSelected,
     selected,
     pointed,
@@ -345,6 +346,7 @@ export const Selectable = (props) => {
       highlight={highlight}
       filtered={filtered}
       hidden={hidden}
+      matchScore={matchScore}
       pseudoClasses={SELECTABLE_PSEUDO_CLASSES}
       basePseudoState={{
         ":-navi-selected": checked,

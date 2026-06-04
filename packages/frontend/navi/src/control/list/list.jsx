@@ -1190,6 +1190,7 @@ const ListItemReal = (props) => {
       id={id}
       navi-list-item-real=""
       {...rest}
+      index={undefined}
       hidden={hidden}
       ref={ref}
     >
