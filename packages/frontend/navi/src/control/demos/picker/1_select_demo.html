@@ -67,11 +67,51 @@
         color: #555;
         font-size: 13px;
       }
+      .toc {
+        margin-bottom: 24px;
+        padding: 16px 20px;
+        font-size: 13px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      .toc ol {
+        margin: 0;
+        padding-left: 20px;
+      }
+      .toc li {
+        line-height: 1.8;
+      }
+      .toc a {
+        color: #1a56cc;
+        text-decoration: none;
+      }
+      .toc a:hover {
+        text-decoration: underline;
+      }
     </style>
   </head>
   <body>
     <div id="container">
       <h1>Select Picker Demo</h1>
+      <nav class="toc">
+        <ol>
+          <li>
+            <a href="#section-1"
+              >1. <code>action="send"</code> — closes on click</a
+            >
+          </li>
+          <li>
+            <a href="#section-2"
+              >2. <code>action="update"</code> — stays open until closed</a
+            >
+          </li>
+          <li><a href="#section-3">3. Searchable select — empty list</a></li>
+          <li><a href="#section-4">4. Searchable select — full list</a></li>
+          <li><a href="#section-5">5. Searchable select — few results</a></li>
+          <li><a href="#section-6">6. Searchable select — no results</a></li>
+        </ol>
+      </nav>
       <div id="app"></div>
     </div>
     <script type="module" jsenv-type="module/jsx">
@@ -81,6 +121,7 @@
         Box,
         Field,
         Label,
+        Input,
         Picker,
         SelectableList,
         Selectable,
@@ -88,6 +129,7 @@
         route,
         setupRoutes,
         stateSignal,
+        useSearchText,
       } from "@jsenv/navi";
 
       const FRUIT_OPTIONS = [
@@ -110,11 +152,21 @@
         id: "update_fruit",
         type: "string",
       });
+      const searchFruitSignal = stateSignal("", {
+        id: "search_fruit",
+        type: "string",
+      });
+      const searchFruitSelectedSignal = stateSignal("", {
+        id: "search_fruit_selected",
+        type: "string",
+      });
 
       const DEMO_ROUTE = route("", {
         searchParams: {
           send_fruit: sendFruitSignal,
           update_fruit: updateFruitSignal,
+          search_fruit: searchFruitSignal,
+          search_fruit_selected: searchFruitSelectedSignal,
         },
       });
       setupRoutes([DEMO_ROUTE]);
@@ -123,6 +175,10 @@
         <Box flex="y" spacing="l">
           <SelectWithSend />
           <SelectWithUpdate />
+          <SearchableSelectEmpty />
+          <SearchableSelectNormal />
+          <SearchableSelectFewResults />
+          <SearchableSelectNoResults />
         </Box>
       );
 
@@ -167,7 +223,7 @@
         };
 
         return (
-          <div class="demo-section">
+          <div id="section-1" class="demo-section">
             <h2>
               1. <code>action="send"</code> — closes on click
             </h2>
@@ -228,7 +284,7 @@
         };
 
         return (
-          <div class="demo-section">
+          <div id="section-2" class="demo-section">
             <h2>
               2. <code>action="update"</code> — stays open until closed
             </h2>
@@ -272,6 +328,197 @@
                   ))}
                 </SelectableList>
               </Picker>
+            </Field>
+            <CallLog entries={logSignal.value} />
+          </div>
+        );
+      };
+
+      // ── 3–6. Searchable select ────────────────────────────────────────────
+
+      const SearchableSelectInner = ({
+        id,
+        selected,
+        onSelect,
+        items,
+        searchText,
+        onSearch,
+        logSignal,
+      }) => {
+        const [matchingItems, getMatchInfo] = useSearchText(searchText, items);
+        const pushLog = (type, value) => {
+          logSignal.value = [...logSignal.value, { type, value }];
+        };
+
+        return (
+          <Picker
+            name={id}
+            placeholder="Select a fruit…"
+            value={selected}
+            uiAction={(v) => {
+              pushLog("uiAction", v);
+            }}
+            action={(v) => {
+              pushLog("action", v);
+              onSelect(v);
+            }}
+            minWidth="240"
+          >
+            <Box flex="y" spacing="s" padding="s">
+              <Input
+                type="search"
+                placeholder="Search…"
+                value={searchText}
+                uiAction={(v) => {
+                  onSearch(v);
+                }}
+                autoComplete="off"
+                borderRadius="xs"
+                paddingX="s"
+                paddingY="xs"
+                expandX
+              />
+              <SelectableList
+                action="send"
+                maxHeight="200"
+                searchText={searchText}
+                noMatchFallback={
+                  <div style="padding: 8px 12px; color: #888; font-size: 13px;">
+                    No results match your search.
+                  </div>
+                }
+              >
+                {matchingItems.map((opt, i) => {
+                  const { match, score, ranges } = getMatchInfo(opt);
+                  return (
+                    <Selectable
+                      key={opt}
+                      id={`${id}_${opt}`}
+                      index={i}
+                      value={opt}
+                      selected={selected === opt}
+                      highlight={ranges}
+                      matchScore={score}
+                      filtered={!match}
+                      padding="s"
+                      spacing="s"
+                    >
+                      {opt}
+                    </Selectable>
+                  );
+                })}
+              </SelectableList>
+            </Box>
+          </Picker>
+        );
+      };
+
+      const SearchableSelectEmpty = () => {
+        const selected = searchFruitSelectedSignal.value;
+        const logSignal = useSignal([]);
+        return (
+          <div id="section-3" class="demo-section">
+            <h2>3. Searchable select — empty list</h2>
+            <p>The list has no items at all.</p>
+            <Field vertical>
+              <Label>Fruit</Label>
+              <SearchableSelectInner
+                id="search_empty"
+                selected={selected}
+                onSelect={(v) => {
+                  searchFruitSelectedSignal.value = v;
+                }}
+                items={[]}
+                searchText=""
+                onSearch={() => {}}
+                logSignal={logSignal}
+              />
+            </Field>
+            <CallLog entries={logSignal.value} />
+          </div>
+        );
+      };
+
+      const SearchableSelectNormal = () => {
+        const selected = searchFruitSelectedSignal.value;
+        const searchText = searchFruitSignal.value;
+        const logSignal = useSignal([]);
+        return (
+          <div id="section-4" class="demo-section">
+            <h2>4. Searchable select — full list</h2>
+            <p>All items shown, search is empty.</p>
+            <Field vertical>
+              <Label>Fruit</Label>
+              <SearchableSelectInner
+                id="search_normal"
+                selected={selected}
+                onSelect={(v) => {
+                  searchFruitSelectedSignal.value = v;
+                }}
+                items={FRUIT_OPTIONS}
+                searchText={searchText}
+                onSearch={(v) => {
+                  searchFruitSignal.value = v;
+                }}
+                logSignal={logSignal}
+              />
+            </Field>
+            <CallLog entries={logSignal.value} />
+          </div>
+        );
+      };
+
+      const SearchableSelectFewResults = () => {
+        const selected = searchFruitSelectedSignal.value;
+        const logSignal = useSignal([]);
+        return (
+          <div id="section-5" class="demo-section">
+            <h2>5. Searchable select — few results</h2>
+            <p>
+              Search pre-filled with <code>"rr"</code> — matches Cherry and
+              Elderberry.
+            </p>
+            <Field vertical>
+              <Label>Fruit</Label>
+              <SearchableSelectInner
+                id="search_few"
+                selected={selected}
+                onSelect={(v) => {
+                  searchFruitSelectedSignal.value = v;
+                }}
+                items={FRUIT_OPTIONS}
+                searchText="rr"
+                onSearch={() => {}}
+                logSignal={logSignal}
+              />
+            </Field>
+            <CallLog entries={logSignal.value} />
+          </div>
+        );
+      };
+
+      const SearchableSelectNoResults = () => {
+        const selected = searchFruitSelectedSignal.value;
+        const logSignal = useSignal([]);
+        return (
+          <div id="section-6" class="demo-section">
+            <h2>6. Searchable select — no results</h2>
+            <p>
+              Search pre-filled with <code>"zzz"</code> — matches nothing.
+            </p>
+            <Field vertical>
+              <Label>Fruit</Label>
+              <SearchableSelectInner
+                id="search_none"
+                selected={selected}
+                onSelect={(v) => {
+                  searchFruitSelectedSignal.value = v;
+                }}
+                items={FRUIT_OPTIONS}
+                searchText="zzz"
+                onSearch={() => {}}
+                logSignal={logSignal}
+              />
             </Field>
             <CallLog entries={logSignal.value} />
           </div>
