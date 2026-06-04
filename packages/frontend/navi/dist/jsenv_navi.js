@@ -35536,6 +35536,8 @@ const PickerDefaultUI = () => {
     children: value
   });
 };
+Picker.Placeholder = PickerPlaceholder;
+Picker.Value = PickerValue;
 Picker.UI = PickerDefaultUI;
 Picker.UI.Date = PickerDateUI;
 Picker.UI.Time = PickerTimeUI;

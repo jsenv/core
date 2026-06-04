@@ -419,6 +419,9 @@ const PickerDefaultUI = () => {
   }
   return <PickerValue>{value}</PickerValue>;
 };
+
+Picker.Placeholder = PickerPlaceholder;
+Picker.Value = PickerValue;
 Picker.UI = PickerDefaultUI;
 
 Picker.UI.Date = PickerDateUI;
