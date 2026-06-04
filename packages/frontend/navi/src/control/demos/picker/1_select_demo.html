@@ -366,6 +366,7 @@
           >
             <Box flex="y" spacing="s" padding="s">
               <Input
+                aria-controls={`${id}_list`}
                 type="search"
                 placeholder="Search…"
                 value={searchText}
@@ -381,6 +382,7 @@
                 discrete
               />
               <SelectableList
+                id={`${id}_list`}
                 action="send"
                 maxHeight="200"
                 searchText={searchText}
