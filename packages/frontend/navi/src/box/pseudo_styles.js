@@ -18,6 +18,17 @@ const requestPseudoStateCheck = (element, detail) => {
     "navi_pseudo_state_request_check",
     detail,
   );
+  // When a control has a visible proxy mirroring its state (e.g. selectable
+  // radio with `navi-control-proxy-for`), re-check the proxy too so it stays
+  // in sync with the real control.
+  const proxy = findControlProxy(element);
+  if (proxy) {
+    dispatchInternalCustomEvent(
+      proxy,
+      "navi_pseudo_state_request_check",
+      detail,
+    );
+  }
 };
 export const NAVI_PSEUDO_STATE_CUSTOM_EVENT = "navi_pseudo_state";
 const dispatchPseudoStateCustomEvent = (element, value, oldValue) => {
@@ -240,7 +251,10 @@ focus_classes: {
   // component.
   //
   // When a controller element (e.g. combobox input) gains or loses focus,
-  // notify the elements it controls via aria-controls so they re-check their focus state.
+  // notify the elements it controls via aria-controls so they re-check their
+  // focus state. `requestPseudoStateCheck` also re-checks the controlled
+  // element's proxy (if any), so the visible proxy mirrors the hidden real
+  // input's inherited focus.
   const notifyAriaControlled = (el, e) => {
     const controlledIds = el.getAttribute("aria-controls");
     if (!controlledIds) {
@@ -253,24 +267,38 @@ focus_classes: {
       }
     }
   };
-  // Check if any element whose aria-controls includes el's id currently has focus.
-  const isControlledByFocusedElement = (
-    el,
-    { requireFocusVisible = false } = {},
-  ) => {
-    const id = el.id;
-    if (!id) {
-      return false;
-    }
-    const controllers = document.querySelectorAll(`[aria-controls~="${id}"]`);
-    for (const controller of controllers) {
-      // If the controller is inside the element it controls, the element already
-      // receives native :focus/:focus-within — no need to inherit focus from it.
-      if (el.contains(controller)) {
-        continue;
+  // Returns true when el holds focus indirectly — either because a controlling
+  // element (aria-controls) has focus, or because el is a proxy whose target
+  // is itself controlled by a focused element.
+  const hasIndirectFocus = (el, { requireFocusVisible = false } = {}) => {
+    const pseudoClass = requireFocusVisible ? ":focus-visible" : ":focus";
+    const isControlledBy = (target) => {
+      const id = target.id;
+      if (!id) {
+        return false;
       }
-      const pseudoClass = requireFocusVisible ? ":focus-visible" : ":focus";
-      if (controller.matches(pseudoClass)) {
+      const controllers = document.querySelectorAll(`[aria-controls~="${id}"]`);
+      for (const controller of controllers) {
+        // If the controller is inside the element it controls, focus is already
+        // native (:focus-within) — no need to inherit it.
+        if (target.contains(controller)) {
+          continue;
+        }
+        if (controller.matches(pseudoClass)) {
+          return true;
+        }
+      }
+      return false;
+    };
+    if (isControlledBy(el)) {
+      return true;
+    }
+    const proxyTarget = findControlProxyTarget(el);
+    if (proxyTarget) {
+      if (proxyTarget.matches(pseudoClass)) {
+        return true;
+      }
+      if (isControlledBy(proxyTarget)) {
         return true;
       }
     }
@@ -336,11 +364,7 @@ focus_classes: {
       if (el.matches(":focus")) {
         return true;
       }
-      const proxyTarget = findControlProxyTarget(el);
-      if (proxyTarget && proxyTarget.matches(":focus")) {
-        return true;
-      }
-      if (isControlledByFocusedElement(el)) {
+      if (hasIndirectFocus(el)) {
         return true;
       }
       return false;
@@ -362,11 +386,7 @@ focus_classes: {
       if (el.matches(":focus-visible")) {
         return true;
       }
-      const proxyTarget = findControlProxyTarget(el);
-      if (proxyTarget && proxyTarget.matches(":focus-visible")) {
-        return true;
-      }
-      if (isControlledByFocusedElement(el, { requireFocusVisible: true })) {
+      if (hasIndirectFocus(el, { requireFocusVisible: true })) {
         return true;
       }
       return false;
@@ -390,7 +410,7 @@ focus_classes: {
       if (el.matches(":focus-within")) {
         return true;
       }
-      if (isControlledByFocusedElement(el)) {
+      if (hasIndirectFocus(el)) {
         return true;
       }
       if (el.contains(document.activeElement)) {
