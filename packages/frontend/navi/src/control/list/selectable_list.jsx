@@ -37,6 +37,7 @@ const css = /* css */ `
       --list-outline-color: var(--navi-focus-outline-color);
       --list-item-outline-color: var(--navi-focus-outline-color);
       --list-item-outline-width: 2px;
+      --list-item-outline-offset: calc(-1 * var(--list-item-outline-width));
       /* Hover (mouse) */
       --list-item-color-hover: var(--list-item-color);
       --list-item-background-color-hover: light-dark(#f5f5f5, #2a2a2a);
@@ -89,12 +90,10 @@ const css = /* css */ `
   }
 
   .navi_list_item {
-    --x-list-item-border-color: var(--x-list-item-background-color);
-
     position: relative;
-    border-width: var(--list-item-outline-width);
-    border-style: solid;
-    border-color: var(--x-list-item-border-color);
+    outline-width: var(--list-item-outline-width);
+    outline-color: var(--list-item-outline-color);
+    outline-offset: var(--list-item-outline-offset);
 
     &[data-interactive] {
       cursor: pointer;
@@ -117,7 +116,7 @@ const css = /* css */ `
         --x-list-item-background-color: var(
           --list-item-background-color-keyboard-pointed
         );
-        --x-list-item-border-color: var(--list-item-outline-color);
+        outline-style: solid;
 
         /* Selected must win over keyboard-pointed */
         &[data-selected] {
