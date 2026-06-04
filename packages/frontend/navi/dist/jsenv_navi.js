@@ -3,7 +3,7 @@ import { isValidElement, createContext, h, toChildArray, render, Fragment, clone
 import { useErrorBoundary, useLayoutEffect, useEffect, useContext, useMemo, useRef, useState, useCallback, useId } from "preact/hooks";
 import { jsxs, jsx, Fragment as Fragment$1 } from "preact/jsx-runtime";
 import { signal, effect, computed, batch, useSignal } from "@preact/signals";
-import { createIterableWeakSet, createEventGroupLogger, mergeOneStyle, normalizeStyle, createPubSub, dispatchInternalCustomEvent, getElementSignature, findEvent, mergeTwoStyles, normalizeStyles, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, findBefore, findAfter, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, createStyleController, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, measureLongestVisualLineWidth, findFocusDelegateTarget, getKeyboardEventDefaultAction, resolveCSSSize, activeElementSignal, hasCSSSizeUnit, resolveOklchLightness, contrastColor, dispatchCustomEvent, initFocusGroup, elementIsFocusable, findFocusable, trapScrollInside, trapFocusInside, snapToPixel, scrollIntoViewScoped, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement, measureWidestChildRow } from "@jsenv/dom";
+import { createIterableWeakSet, createEventGroupLogger, mergeOneStyle, normalizeStyle, createPubSub, findEvent, dispatchInternalCustomEvent, getElementSignature, mergeTwoStyles, normalizeStyles, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, findBefore, findAfter, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, createStyleController, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, measureLongestVisualLineWidth, findFocusDelegateTarget, getKeyboardEventDefaultAction, resolveCSSSize, activeElementSignal, hasCSSSizeUnit, resolveOklchLightness, contrastColor, dispatchCustomEvent, initFocusGroup, elementIsFocusable, findFocusable, trapScrollInside, trapFocusInside, snapToPixel, scrollIntoViewScoped, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement, measureWidestChildRow } from "@jsenv/dom";
 export { contrastColor, startDragToReorder } from "@jsenv/dom";
 import { prefixFirstAndIndentRemainingLines } from "@jsenv/humanize";
 import { createValidity } from "@jsenv/validity";
@@ -7403,9 +7403,12 @@ const addInputEffect = (
   };
 
   // Standard user input (typing)
-  input.addEventListener("input", onEvent);
+  const onInput = (e) => {
+    onEvent(e);
+  };
+  input.addEventListener("input", onInput);
   addTeardown(() => {
-    input.removeEventListener("input", onEvent);
+    input.removeEventListener("input", onInput);
   });
 
   // Form reset - need to check the form
@@ -7424,27 +7427,28 @@ const addInputEffect = (
     input.removeEventListener("paste", onEvent);
   });
 
-  if (input.type === "radio") {
+  input.addEventListener("navi_ui_state_change", (e) => {
     // radios are unchecked by an internal setUIState call when another radio is checked.
     // navi_ui_state_change is dispatched whenever setUIState changes state, so we
     // listen here to keep currentState in sync — otherwise input_effect thinks the
     // radio is still checked and ignores the next user click as "state unchanged".
-    input.addEventListener("navi_ui_state_change", () => {
-      currentState = getState();
-    });
-  }
-
-  const onNaviClear = (e) => {
-    // "navi_clear" behaves like an async event
-    // a bit like form reset because
-    // our action will be updated async after the component re-renders
-    // and we need to wait that to happen to properly call action with the right value
-    debugInteraction(e, `navi_clear received, scheduling callback`);
-    onAsyncEvent(e, { skipDebounce: true });
-  };
-  input.addEventListener("navi_clear", onNaviClear);
-  addTeardown(() => {
-    input.removeEventListener("navi_clear", onNaviClear);
+    if (input.type === "radio") {
+      currentState = e.detail.value;
+    }
+    const clearEvent = findEvent(
+      e,
+      (eInChain) =>
+        eInChain.type === "navi_set_ui_state" && eInChain.detail.isClear,
+    );
+    const isClear = Boolean(clearEvent);
+    if (isClear) {
+      // "navi_clear" behaves like an async event
+      // a bit like form reset because
+      // our action will be updated async after the component re-renders
+      // and we need to wait that to happen to properly call action with the right value
+      debugInteraction(e, `navi_clear received, scheduling callback`);
+      onAsyncEvent(e, { skipDebounce: true });
+    }
   });
 
   return teardown;
@@ -24995,6 +24999,9 @@ const routeArgs = (args, { event, action, other }) => {
   return other(...args);
 };
 
+const triggerStringAction = (actionName, event) => {
+  return resolveActionProp(actionName)(event);
+};
 const resolveActionProp = (action) => {
   if (typeof action === "string") {
     const naviAction = STRING_ACTIONS[action];
@@ -25103,12 +25110,12 @@ const update = createUICallback({
     return requestUpdate(event, value);
   },
 });
-const requestUpdate = (event, value) => {
+const requestUpdate = (event, value, { isClear } = {}) => {
   const actionTarget = getActionTarget(event);
   if (!actionTarget) {
     return false;
   }
-  return dispatchRequestSetUIState(actionTarget, value, { event });
+  return dispatchRequestSetUIState(actionTarget, value, { event, isClear });
 };
 
 /**
@@ -25192,12 +25199,20 @@ const requestClosestAction = (event) => {
 const clear = createUICallback({
   name: "clear",
   event: (event) => {
-    update("", { event });
-    return requestClose(event);
+    requestUpdate(event, "", { isClear: true });
+    const expandableEl = event.currentTarget.closest("[aria-expanded]");
+    if (expandableEl) {
+      return requestClose(event);
+    }
+    return true;
   },
   action: (v, { event }) => {
-    update("", { event });
-    return requestClose(event);
+    requestUpdate(event, "", { isClear: true });
+    const expandableEl = event.currentTarget.closest("[aria-expanded]");
+    if (expandableEl) {
+      return requestClose(event);
+    }
+    return true;
   },
 });
 /**
@@ -25227,13 +25242,13 @@ const close = createUICallback({
 const cancel = createUICallback({
   name: "cancel",
   event: (event) => {
-    return requestClose(event, { cancel: true });
+    return requestClose(event, { isCancel: true });
   },
   action: (_, { event }) => {
-    return requestClose(event, { cancel: true });
+    return requestClose(event, { isCancel: true });
   },
 });
-const requestClose = (event, { cancel = false } = {}) => {
+const requestClose = (event, { isCancel = false } = {}) => {
   const currentTarget = event.currentTarget;
   const expandableEl = currentTarget.closest("[aria-expanded]");
   if (!expandableEl) {
@@ -25245,7 +25260,7 @@ const requestClose = (event, { cancel = false } = {}) => {
   }
   return dispatchCustomEvent(expandableEl, "navi_request_close", {
     event,
-    cancel,
+    isCancel,
   });
 };
 
@@ -25612,7 +25627,7 @@ const useControlProps = (props, {
         name: "navi_change",
         callback: asAction
       };
-      enterEffect = e => resolveActionProp("send")(e);
+      enterEffect = e => triggerStringAction("send", e);
       if (picker) {
         mousedownInteraction = {
           name: "mousedown to open picker",
@@ -30409,6 +30424,10 @@ const InputSearch = props => {
 const InputSearchUI = ({
   icon
 }) => {
+  const ctx = useContext(InputNativeContext);
+  const {
+    id
+  } = ctx;
   return jsxs(Fragment$1, {
     children: [icon === undefined && jsx(InputLeftSlot, {
       children: jsx(Icon, {
@@ -30417,16 +30436,12 @@ const InputSearchUI = ({
       })
     }), jsx(InputRightSlot, {
       hideWhileEmpty: true,
+      "action-target": id,
       onClick: e => {
         const input = e.currentTarget;
         const allowed = dispatchRequestInteraction(input, e);
         if (allowed) {
-          dispatchRequestSetUIState(input, "", {
-            event: e
-          });
-          dispatchCustomEvent(input, "navi_clear", {
-            event: e
-          });
+          triggerStringAction("clear", e);
         }
       },
       children: jsx(Icon, {
@@ -31905,7 +31920,7 @@ const PickerCustom = props => {
       valueAtOpenRef.current = getPickerInputUIState(ref.current);
     };
     const onClose = e => {
-      const cancelEvent = findEvent(e, eInChain => eInChain.type === "navi_request_close" && eInChain.detail.cancel);
+      const cancelEvent = findEvent(e, eInChain => eInChain.type === "navi_request_close" && eInChain.detail.isCancel);
       const isCancel = Boolean(cancelEvent);
       expandedRef.current = false;
       setExpanded(false);
@@ -34663,7 +34678,7 @@ const css$l = /* css */`
     --x-list-outline-offset: calc(-1 * var(--list-border-width));
 
     outline-width: var(--x-list-outline-width);
-    outline-color: var(--x-list-outline-color);
+    outline-color: var(--list-outline-color);
     outline-offset: var(--x-list-outline-offset);
 
     &[data-focus] {
