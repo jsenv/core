@@ -290,7 +290,13 @@ focus_classes: {
     };
     el.addEventListener("focusin", onFocusChange);
     el.addEventListener("focusout", onFocusChange);
-    const observer = new MutationObserver((mutations) => {
+    // Only observe aria-controls mutations when the element already has the
+    // attribute at setup time. If aria-controls is guaranteed to be set before
+    // initPseudoStyles runs (e.g. passed as a prop in box.jsx), this covers all
+    // real cases without paying the MutationObserver cost for every element.
+    let observer;
+    // if (el.hasAttribute("aria-controls")) {
+    observer = new MutationObserver((mutations) => {
       if (!el.matches(":focus-within")) {
         return;
       }
@@ -310,16 +316,17 @@ focus_classes: {
       attributeFilter: ["aria-controls"],
       attributeOldValue: true,
     });
+    // }
     return () => {
       el.removeEventListener("focusin", onFocusChange);
       el.removeEventListener("focusout", onFocusChange);
-      observer.disconnect();
+      observer?.disconnect();
     };
   };
 
   definePseudoClass(":focus", {
     attribute: "data-focus",
-    setup: (el) => {
+    setup: (el, callback) => {
       const cleanup = setupFocus(el, callback);
       return () => {
         cleanup();
