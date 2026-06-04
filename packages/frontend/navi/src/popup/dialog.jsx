@@ -7,7 +7,10 @@ import { useRef } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
 import { useDebugFocus, useDebugPopup } from "../navi_debug.jsx";
-import { focusFirstAutofocusOrFocusable } from "../utils/focus/focus_first_autofocus_or_focusable.js";
+import {
+  focusFirstAutofocusOrFocusable,
+  markAutofocusRestoreOnClose,
+} from "../utils/focus/focus_first_autofocus_or_focusable.js";
 import { useCleanup } from "../utils/use_cleanup.js";
 
 const css = /* css */ `
@@ -50,6 +53,7 @@ export const Dialog = (props) => {
       `"${e.type}" on ${getElementSignature(e.target)} -> closeDialog`,
     );
     const dialogEl = ref.current;
+    markAutofocusRestoreOnClose(dialogEl);
     dialogEl.close();
     cleanup();
     openedRef.current = false;

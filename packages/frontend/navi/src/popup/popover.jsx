@@ -13,7 +13,10 @@ import { useId, useRef, useState } from "preact/hooks";
 import { Box } from "../box/box.jsx";
 import { resolveSpacingSize } from "../box/box_style_util.js";
 import { useDebugFocus, useDebugPopup } from "../navi_debug.jsx";
-import { focusFirstAutofocusOrFocusable } from "../utils/focus/focus_first_autofocus_or_focusable.js";
+import {
+  focusFirstAutofocusOrFocusable,
+  markAutofocusRestoreOnClose,
+} from "../utils/focus/focus_first_autofocus_or_focusable.js";
 import { useCleanup } from "../utils/use_cleanup.js";
 
 const css = /* css */ `
@@ -150,6 +153,7 @@ export const Popover = (props) => {
   const close = (e) => {
     debugPopup(e, `closePopover()`);
     const popoverEl = ref.current;
+    markAutofocusRestoreOnClose(popoverEl);
     popoverEl.hidePopover();
     cleanup();
     openedRef.current = false;

@@ -7,15 +7,40 @@ import { findFocusable, getElementSignature } from "@jsenv/dom";
  * 3. Fall back to the first element with [navi-autofocus="fallback"]
  * Does nothing if no candidate is found.
  */
+export const markAutofocusRestoreOnClose = (containerEl) => {
+  const focused = document.activeElement;
+  if (
+    focused &&
+    containerEl.contains(focused) &&
+    focused.getAttribute("navi-autofocus") === "fallback"
+  ) {
+    containerEl.setAttribute("navi-autofocus-restore", "");
+  } else {
+    containerEl.removeAttribute("navi-autofocus-restore");
+  }
+};
+
 export const focusFirstAutofocusOrFocusable = (containerEl, debugFocus, e) => {
   let target;
   let reason;
-  const naviAutoFocus = containerEl.querySelector(
-    "[navi-autofocus]:not([navi-autofocus='fallback'])",
-  );
-  if (naviAutoFocus) {
-    reason = "navi-autofocus";
-    target = naviAutoFocus;
+  if (containerEl.hasAttribute("navi-autofocus-restore")) {
+    containerEl.removeAttribute("navi-autofocus-restore");
+    const naviAutoFocusFallback = containerEl.querySelector(
+      "[navi-autofocus='fallback']",
+    );
+    if (naviAutoFocusFallback) {
+      reason = "navi-autofocus fallback (restore)";
+      target = naviAutoFocusFallback;
+    }
+  }
+  if (!target) {
+    const naviAutoFocus = containerEl.querySelector(
+      "[navi-autofocus]:not([navi-autofocus='fallback'])",
+    );
+    if (naviAutoFocus) {
+      reason = "navi-autofocus";
+      target = naviAutoFocus;
+    }
   }
   if (!target) {
     const focusable = findFocusable(containerEl, {
