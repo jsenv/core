@@ -409,13 +409,6 @@
                   borderColor="#007bff"
                 />
               </fieldset>
-
-              <fieldset>
-                <legend>Parent smaller font</legend>
-                <Box size="xxs">
-                  <Input type="search" placeholder="Placeholder" />
-                </Box>
-              </fieldset>
             </Box>
 
             <Box column>
@@ -436,7 +429,27 @@
               </fieldset>
 
               <fieldset>
-                <legend>Subtle Style</legend>
+                <legend>Parent smaller font</legend>
+                <Box size="xxs">
+                  <Input type="search" placeholder="Placeholder" />
+                </Box>
+              </fieldset>
+            </Box>
+
+            <Box column>
+              <fieldset style="background:grey">
+                <legend>Discrete</legend>
+                <Input
+                  type="search"
+                  placeholder="Discrete search..."
+                  borderRadius="6"
+                  discrete
+                  padding="14"
+                />
+              </fieldset>
+
+              <fieldset>
+                <legend>WTF</legend>
                 <Input
                   type="search"
                   value={searchValue4}
