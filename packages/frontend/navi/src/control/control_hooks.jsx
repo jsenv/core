@@ -561,7 +561,11 @@ const useInteractiveProps = (
       autoSelect,
     });
     Object.assign(controlProps, {
-      "navi-autofocus": autoFocus ? "" : undefined,
+      "navi-autofocus": autoFocus
+        ? autoFocus === true
+          ? ""
+          : autoFocus
+        : undefined,
     });
   }
   form_props: {

@@ -8,14 +8,20 @@ import { findFocusable, getElementSignature } from "@jsenv/dom";
  * Does nothing if no candidate is found.
  */
 export const focusFirstAutofocusOrFocusable = (containerEl, debugFocus, e) => {
-  let target = containerEl.querySelector(
+  let target;
+  const naviAutoFocus = containerEl.querySelector(
     "[navi-autofocus]:not([navi-autofocus='fallback'])",
   );
+  target = naviAutoFocus;
   if (!target) {
-    target = findFocusable(containerEl);
+    const focusable = findFocusable(containerEl);
+    target = focusable;
   }
   if (!target) {
-    target = containerEl.querySelector("[navi-autofocus='fallback']");
+    const naviAutoFocusFallback = containerEl.querySelector(
+      "[navi-autofocus='fallback']",
+    );
+    target = naviAutoFocusFallback;
   }
   if (!target) {
     return;
