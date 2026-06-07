@@ -1139,13 +1139,27 @@ const ListItemRealOrVoid = (props) => {
     return <ListItemVoid />;
   }
   const listItemVnode = <ListItemReal {...props} />;
-  // Use group-scoped visible index for separator when inside a group,
-  // so separators are only rendered between items within the same group.
-  const separatorIndex =
-    groupVisibleIndex !== null ? groupVisibleIndex : visibleIndex;
-  if (!separator || separatorIndex === 0) {
+  // For separator decision, we need to know "am I the first visible item?".
+  // We deliberately do NOT use tracker's visibleIndex here because, during a
+  // reorder render pass (e.g. items resorted by search score), other items
+  // still have stale keyToExplicitOrder values — the binary search reads
+  // those stale values and computes wrong indices. The result is that no
+  // item gets visibleIndex === 0 and a spurious <hr> appears at the top.
+  //
+  // Instead we use the parent-provided index, which is race-free:
+  //   - global list: props.index === 0 means "first by explicit order"
+  //     (parent passes sequential indices starting at 0; filtered items
+  //     are already pushed to the end by useSearchText)
+  //   - inside a group: each group has its own item tracker and group
+  //     items don't reorder, so groupVisibleIndex is reliable
+  const isFirstInList =
+    groupVisibleIndex === null ? props.index === 0 : groupVisibleIndex === 0;
+  if (!separator || isFirstInList) {
     return listItemVnode;
   }
+  // separatorIndex is only used as the function-form argument (gap index)
+  const separatorIndex =
+    groupVisibleIndex === null ? visibleIndex : groupVisibleIndex;
 
   const separatorVnode =
     typeof separator === "function" ? separator(separatorIndex - 1) : separator;
