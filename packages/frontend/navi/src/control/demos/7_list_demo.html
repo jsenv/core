@@ -225,11 +225,20 @@
       );
 
       const PlaceItem = ({ overflowEllipsis }) => (
-        <Box flex="y" expandX spacing="xs">
-          <Text bold overflowEllipsis={overflowEllipsis}>
+        <Box flex="y" expandX spacing="xs" minWidth="0">
+          <Text
+            bold
+            noWrap={overflowEllipsis}
+            overflowEllipsis={overflowEllipsis}
+          >
             Boulangerie Artisanale et Pâtisserie du Vieux Marché de Lyon
           </Text>
-          <Text size="xs" color="secondary" overflowEllipsis={overflowEllipsis}>
+          <Text
+            size="xs"
+            color="secondary"
+            noWrap={overflowEllipsis}
+            overflowEllipsis={overflowEllipsis}
+          >
             <Icon>
               <PinSvg />
             </Icon>

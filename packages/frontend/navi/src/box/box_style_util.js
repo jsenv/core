@@ -171,13 +171,13 @@ const DIMENSION_PROPS = {
     if (!value || value === "0") {
       return { flexShrink: 0 };
     }
-    return { flexShrink: 1 };
+    return { flexShrink: 1, minWidth: 0 };
   },
   shrinkY: (value) => {
     if (!value || value === "0") {
       return { flexShrink: 0 };
     }
-    return { flexShrink: 1 };
+    return { flexShrink: 1, minHeight: 0 };
   },
 
   scaleX: (value) => {
