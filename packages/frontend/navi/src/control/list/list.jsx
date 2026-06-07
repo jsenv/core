@@ -169,6 +169,7 @@ const css = /* css */ `
 
     box-sizing: border-box;
     min-width: 100%;
+    max-width: 100%;
     padding: var(--list-item-padding);
     color: var(--x-list-item-color);
     font-weight: var(--x-list-item-font-weight);
