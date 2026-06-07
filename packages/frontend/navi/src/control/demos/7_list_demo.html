@@ -117,6 +117,7 @@
             <TableOfContents />
             <DisplayOnlyDemo />
             <WidthDemo />
+            <WidthExpandXDemo />
             <SearchableExternalInputDemo />
             <SearchableDemo />
             <GroupedSearchDemo />
@@ -136,6 +137,9 @@
               </li>
               <li>
                 <a href="#width">Width behaviour</a>
+              </li>
+              <li>
+                <a href="#width-expand-x">Width behaviour — with expandX</a>
               </li>
               <li>
                 <a href="#search-external">
@@ -197,6 +201,7 @@
           </div>
         );
       };
+
       // ── 2. Width behaviour ─────────────────────────────────────────────────────
 
       const SHORT = "Short item";
@@ -214,28 +219,10 @@
           <div id="width" className="demo-section">
             <h2>Width behaviour</h2>
             <p>
-              Each list shows a short reference item paired with a longer one.
-              Compare how list width adapts across content types, and how{" "}
-              <code>expandX</code>, <code>overflowEllipsis</code>, and{" "}
-              <code>noWrap</code> change the result.
+              The list is fit-content wide but capped to its parent width. Each
+              case shows a short reference item paired with a longer one.
             </p>
-
-            {/* ── Without expandX ── */}
-            <strong
-              style={{
-                fontSize: "0.85rem",
-                color: "#555",
-                display: "block",
-                marginBottom: "8px",
-              }}
-            >
-              Without expandX
-            </strong>
-            <Box
-              flex="y"
-              spacing="l"
-              style={{ alignItems: "flex-start", marginBottom: "24px" }}
-            >
+            <Box flex="y" spacing="l" style={{ alignItems: "flex-start" }}>
               <Box flex="y" spacing="xs" style={{ alignItems: "flex-start" }}>
                 <strong style={{ fontSize: "0.8rem", color: "#888" }}>
                   Medium sentence
@@ -275,7 +262,7 @@
                   </ListItem>
                 </List>
               </Box>
-              <Box flex="y" spacing="xs" alignX="start">
+              <Box flex="y" spacing="xs" style={{ alignItems: "flex-start" }}>
                 <strong style={{ fontSize: "0.8rem", color: "#888" }}>
                   Long sentence + overflowEllipsis
                 </strong>
@@ -296,7 +283,7 @@
                   </ListItem>
                 </List>
               </Box>
-              <Box flex="y" spacing="xs" alignX="start">
+              <Box flex="y" spacing="xs" style={{ alignItems: "flex-start" }}>
                 <strong style={{ fontSize: "0.8rem", color: "#888" }}>
                   Long sentence + noWrap + overflowEllipsis
                 </strong>
@@ -325,7 +312,7 @@
                 style={{ alignItems: "flex-start", maxWidth: "300px" }}
               >
                 <strong style={{ fontSize: "0.8rem", color: "#888" }}>
-                  URL + overflowEllipsis
+                  URL + overflowEllipsis (constrained to 300px)
                 </strong>
                 <List expandX>
                   <ListItem
@@ -350,7 +337,7 @@
                 style={{ alignItems: "flex-start", maxWidth: "300px" }}
               >
                 <strong style={{ fontSize: "0.8rem", color: "#888" }}>
-                  URL + noWrap + overflowEllipsis
+                  URL + noWrap + overflowEllipsis (constrained to 300px)
                 </strong>
                 <List expandX>
                   <ListItem
@@ -372,18 +359,21 @@
                 </List>
               </Box>
             </Box>
+          </div>
+        );
+      };
 
-            {/* ── With expandX ── */}
-            <strong
-              style={{
-                fontSize: "0.85rem",
-                color: "#555",
-                display: "block",
-                marginBottom: "8px",
-              }}
-            >
-              With expandX
-            </strong>
+      // ── 2b. Width behaviour — with expandX ────────────────────────────────────
+
+      const WidthExpandXDemo = () => {
+        return (
+          <div id="width-expand-x" className="demo-section">
+            <h2>Width behaviour — with expandX</h2>
+            <p>
+              With <code>expandX</code> the list fills its parent. Overflow
+              cases use a constrained parent (300px) so ellipsis has something
+              to truncate against.
+            </p>
             <Box flex="y" spacing="l" style={{ alignItems: "flex-start" }}>
               <Box flex="y" spacing="xs" style={{ alignItems: "flex-start" }}>
                 <strong style={{ fontSize: "0.8rem", color: "#888" }}>
@@ -532,7 +522,8 @@
           </div>
         );
       };
-      // ── 3b. Searchable list — input outside list (listId) ──────────────────────
+
+      // ── 3. Searchable list — input outside list (listId) ──────────────────────
 
       const SearchableExternalInputDemo = () => {
         const [searchText, setSearchText] = useState("");
@@ -588,7 +579,7 @@
         );
       };
 
-      // ── 3. Searchable list — input inside list ─────────────────────────────────
+      // ── 4. Searchable list — input inside list ─────────────────────────────────
 
       const SearchableDemo = () => {
         const [searchText, setSearchText] = useState("");
@@ -600,7 +591,6 @@
               auto-connects it to the list via context. Keyboard events (arrows,
               enter, escape) forward from the input to the list automatically.
             </p>
-
             <Input
               placeholder="Search fruits…"
               paddingX="10"
@@ -610,7 +600,6 @@
                 setSearchText(value);
               }}
             />
-
             <List>
               {fruits.map((fruit, i) => {
                 const { match, ranges } = getItemMatchInfo(fruit);
@@ -632,7 +621,7 @@
         );
       };
 
-      // ── 4. Search — many items, grouped by letter ────────────────────────────
+      // ── 5. Search — many items, grouped by letter ────────────────────────────
 
       const GroupedSearchDemo = () => {
         const [filter, setFilter] = useState("");
@@ -715,7 +704,7 @@
         );
       };
 
-      // ── 5. Grouped suggestions with ListItemGroup ──────────────────────────────
+      // ── 6. Grouped suggestions with ListItemGroup ──────────────────────────────
 
       const GROUPED_ITEMS = [
         {
@@ -775,7 +764,7 @@
         );
       };
 
-      // ── 6. Split matches / non-matches ────────────────────────────────────────
+      // ── 7. Split matches / non-matches ────────────────────────────────────────
 
       const SplitMatchDemo = () => {
         const [filter, setFilter] = useState("");
