@@ -69,6 +69,10 @@ export const initFocusGroup = (
     name, // Store undefined as-is for implicit grouping
   });
   cleanupCallbackSet.add(removeFocusGroup);
+  element.setAttribute("navi-focus-group", "");
+  cleanupCallbackSet.add(() => {
+    element.removeAttribute("navi-focus-group");
+  });
 
   tab: {
     if (!skipTab) {
