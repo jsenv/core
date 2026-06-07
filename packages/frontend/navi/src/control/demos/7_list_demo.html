@@ -118,7 +118,7 @@
             <DisplayOnlyDemo />
             <SearchableExternalInputDemo />
             <SearchableDemo />
-            <LargeListDemo />
+            <GroupedSearchDemo />
             <ListItemGroupDemo />
             <SplitMatchDemo />
           </NaviDebug>
@@ -142,7 +142,7 @@
                 <a href="#search-inline">Search — input inside list</a>
               </li>
               <li>
-                <a href="#large-list">Large list with groups</a>
+                <a href="#large-list">Search — many items, grouped by letter</a>
               </li>
               <li>
                 <a href="#grouped">Grouped suggestions</a>
@@ -295,9 +295,9 @@
         );
       };
 
-      // ── 4. Large list with groups ──────────────────────────────────────────────
+      // ── 4. Search — many items, grouped by letter ────────────────────────────
 
-      const LargeListDemo = () => {
+      const GroupedSearchDemo = () => {
         const [filter, setFilter] = useState("");
         const [selected, setSelected] = useState(null);
         const [sorted, getItemMatchInfo] = useSearchText(filter, LARGE_LIST);
@@ -321,7 +321,7 @@
 
         return (
           <Box id="large-list" className="demo-section">
-            <h2>Large list (200 items) — sort by match, show all</h2>
+            <h2>Search — many items, grouped by letter</h2>
             <p>
               Matching items rise to the top, grouped by initial letter. All
               items remain visible.
