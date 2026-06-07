@@ -98,6 +98,7 @@ const css = /* css */ `
     );
 
     display: flex;
+    max-width: 100%;
     flex-direction: column;
     background-color: var(--x-list-background-color);
     border: var(--x-list-border-width) solid var(--x-list-border-color);
