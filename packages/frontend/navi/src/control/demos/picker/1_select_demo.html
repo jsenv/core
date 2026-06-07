@@ -137,9 +137,6 @@
         createSearch,
       } from "@jsenv/navi";
 
-      const formatAddress = (place) =>
-        `${place.street_number} ${place.street_type} ${place.street_name}, ${place.postal_code} ${place.city}`;
-
       const searchPlace = createSearch({
         label: {
           getter: (p) => p.label,
@@ -623,12 +620,14 @@
                 minWidth="280"
                 borderRadius="s"
                 padding="m"
+                ui={
+                  selectedPlace ? (
+                    <Picker.Value>{selectedPlace.label}</Picker.Value>
+                  ) : (
+                    <Picker.Placeholder>Choisir un lieu</Picker.Placeholder>
+                  )
+                }
               >
-                {selectedPlace ? (
-                  <Picker.Value>{selectedPlace.label}</Picker.Value>
-                ) : (
-                  <Picker.Placeholder>Choisir un lieu</Picker.Placeholder>
-                )}
                 <Box flex="y" spacing="s" padding="s">
                   <Input
                     navi-list="place_list"
@@ -687,7 +686,7 @@
                               color="secondary"
                               class="place-address"
                             >
-                              {formatAddress(place)}
+                              {place.address}
                             </Text>
                           </Box>
                         </Selectable>

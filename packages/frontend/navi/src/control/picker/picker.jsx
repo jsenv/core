@@ -89,22 +89,34 @@ const css = /* css */ `
     --x-picker-border-color: var(--picker-border-color);
     --x-picker-padding-top: var(
       --picker-padding-top,
-      var(--picker-padding-y, var(--picker-padding-y-default))
+      var(
+        --picker-padding-y,
+        var(--picker-padding, var(--picker-padding-y-default))
+      )
     );
     --x-picker-padding-right-base: var(
       --picker-padding-right,
-      var(--picker-padding-x, var(--picker-padding-x-default))
+      var(
+        --picker-padding-x,
+        var(--picker-padding, var(--picker-padding-x-default))
+      )
     );
     --x-picker-padding-right: calc(
       var(--x-picker-padding-right-base) + var(--picker-right-slot-size) - 2px
     );
     --x-picker-padding-left: var(
       --picker-padding-left,
-      var(--picker-padding-x, var(--picker-padding-x-default))
+      var(
+        --picker-padding-x,
+        var(--picker-padding, var(--picker-padding-x-default))
+      )
     );
     --x-picker-padding-bottom: var(
       --picker-padding-bottom,
-      var(--picker-padding-y, var(--picker-padding-y-default))
+      var(
+        --picker-padding-y,
+        var(--picker-padding, var(--picker-padding-y-default))
+      )
     );
     --x-picker-color: var(--picker-color);
 
