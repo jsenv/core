@@ -203,25 +203,30 @@
         {
           id: "short",
           label: "Short",
+          bg: "light-dark(#dbeafe, #1e3a5f)",
         },
         {
           id: "long",
           label:
             "This is a very long item label that will definitely overflow the list container if nothing is done about it",
+          bg: "light-dark(#dcfce7, #14532d)",
         },
         {
           id: "url",
           label:
             "https://example.com/some/very/deep/path/to/a/resource?with=query&params=here",
+          bg: "light-dark(#fef9c3, #422006)",
         },
         {
           id: "normal",
           label: "Normal length item",
+          bg: "light-dark(#fce7f3, #500724)",
         },
         {
           id: "word",
           label:
             "Averylongwordwithnospacesthatcouldcauseoverflowissuesifnothandledproperly",
+          bg: "light-dark(#ede9fe, #2e1065)",
         },
       ];
 
@@ -246,7 +251,7 @@
                       index={i}
                       id={item.id}
                       value={item.id}
-                      style={{ backgroundColor: SUGGESTION_BG }}
+                      style={{ backgroundColor: item.bg }}
                     >
                       {item.label}
                     </ListItem>
@@ -264,7 +269,7 @@
                       index={i}
                       id={item.id}
                       value={item.id}
-                      style={{ backgroundColor: SUGGESTION_BG }}
+                      style={{ backgroundColor: item.bg }}
                     >
                       {item.label}
                     </ListItem>
@@ -284,7 +289,7 @@
                       value={item.id}
                       noWrap
                       overflowEllipsis
-                      style={{ backgroundColor: SUGGESTION_BG }}
+                      style={{ backgroundColor: item.bg }}
                     >
                       {item.label}
                     </ListItem>
