@@ -41,7 +41,7 @@ const css = /* css */ `
         transparent
       );
       --picker-color-dimmed: color-mix(in srgb, currentColor 60%, transparent);
-      --picker-right-slot-size: 1.5em;
+      --picker-right-slot-size: 1em;
       /* Hover */
       --picker-border-color-hover: color-mix(
         in srgb,
@@ -169,13 +169,14 @@ const css = /* css */ `
     .navi_picker_right_slot {
       position: absolute;
       top: 0;
-      right: 0;
+      right: var(--x-picker-padding-right-base);
       display: inline-flex;
       width: var(--picker-right-slot-size);
       padding-top: var(--x-picker-padding-top);
       flex-shrink: 0;
       justify-content: center;
       color: var(--x-picker-icon-color, var(--picker-icon-color));
+      transform: translateX(25%);
     }
     .navi_picker_input {
       position: absolute;
