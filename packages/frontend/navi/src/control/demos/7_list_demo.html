@@ -224,6 +224,21 @@
         </svg>
       );
 
+      const PlaceItem = ({ overflowEllipsis }) => (
+        <Box flex="y" expandX spacing="xs">
+          <Text bold overflowEllipsis={overflowEllipsis}>
+            Boulangerie Artisanale et Pâtisserie du Vieux Marché de Lyon
+          </Text>
+          <Text size="xs" color="secondary" overflowEllipsis={overflowEllipsis}>
+            <Icon>
+              <PinSvg />
+            </Icon>
+            47 avenue du Général de Gaulle, Résidence Les Pins, Bâtiment C,
+            42000 Saint-Étienne
+          </Text>
+        </Box>
+      );
+
       const BG_SHORT = "light-dark(#dbeafe, #1e3a5f)";
       const BG_CONTENT = "light-dark(#dcfce7, #14532d)";
 
@@ -382,19 +397,7 @@
                       {SHORT}
                     </ListItem>
                     <ListItem index={1} style={{ backgroundColor: BG_CONTENT }}>
-                      <Box flex="y" expandX spacing="xs">
-                        <Text bold>
-                          Boulangerie Artisanale et Pâtisserie du Vieux Marché
-                          de Lyon
-                        </Text>
-                        <Text size="xs" color="secondary">
-                          <Icon>
-                            <PinSvg />
-                          </Icon>
-                          47 avenue du Général de Gaulle, Résidence Les Pins,
-                          Bâtiment C, 42000 Saint-Étienne
-                        </Text>
-                      </Box>
+                      <PlaceItem />
                     </ListItem>
                   </List>
                 </div>
@@ -414,24 +417,8 @@
                     <ListItem index={0} style={{ backgroundColor: BG_SHORT }}>
                       {SHORT}
                     </ListItem>
-                    <ListItem
-                      index={1}
-                      style={{ backgroundColor: BG_CONTENT }}
-                      overflowEllipsis
-                    >
-                      <Box flex="y" expandX spacing="xs">
-                        <Text bold>
-                          Boulangerie Artisanale et Pâtisserie du Vieux Marché
-                          de Lyon
-                        </Text>
-                        <Text size="xs" color="secondary">
-                          <Icon>
-                            <PinSvg />
-                          </Icon>
-                          47 avenue du Général de Gaulle, Résidence Les Pins,
-                          Bâtiment C, 42000 Saint-Étienne
-                        </Text>
-                      </Box>
+                    <ListItem index={1} style={{ backgroundColor: BG_CONTENT }}>
+                      <PlaceItem overflowEllipsis />
                     </ListItem>
                   </List>
                 </div>

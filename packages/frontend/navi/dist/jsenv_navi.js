@@ -23925,12 +23925,12 @@ const TextOverflow = ({
     flex: true,
     block: true,
     as: "div",
-    nowWrap: noWrap,
-    pre: !noWrap
+    pre: noWrap === undefined ? true : undefined
     // For paragraph we prefer to keep lines and only hide unbreakable long sections
     ,
 
-    preLine: rest.as === "p",
+    preLine: rest.as === "p" ? true : undefined,
+    noWrap: noWrap,
     ...rest,
     overflowEllipsis: undefined,
     "data-text-overflow": "",
@@ -33709,7 +33709,7 @@ const css$m = /* css */`
     );
 
     display: flex;
-    width: fit-content;
+    /* fit-content by default, but never wider than the parent */
     max-width: 100%;
     flex-direction: column;
     background-color: var(--x-list-background-color);
@@ -33760,8 +33760,6 @@ const css$m = /* css */`
   .navi_list {
     display: flex;
     box-sizing: border-box;
-    width: max-content;
-    min-width: 100%;
     margin: 0;
     padding: 0;
     flex-direction: column;
@@ -33783,6 +33781,7 @@ const css$m = /* css */`
 
     box-sizing: border-box;
     min-width: 100%;
+    max-width: 100%;
     padding: var(--list-item-padding);
     color: var(--x-list-item-color);
     font-weight: var(--x-list-item-font-weight);
@@ -33874,9 +33873,7 @@ const css$m = /* css */`
 
   /* Hide groups that have no rendered items. */
   .navi_list_item_group {
-    &[data-hidden-while-empty]:not(:has([navi-list-item-real])) {
-      display: none;
-    }
+    min-width: 100%;
 
     .navi_list_item_group_label {
       position: sticky;
@@ -33896,8 +33893,12 @@ const css$m = /* css */`
       }
     }
     .navi_list_item_group_list {
+      display: flex;
+      width: max-content;
+      min-width: 100%;
       margin: 0;
       padding: 0;
+      flex-direction: column;
       list-style: none;
 
       /* Items inside a group must account for the sticky group label height
@@ -33907,6 +33908,10 @@ const css$m = /* css */`
           var(--x-list-scroll-spacing-top) + var(--list-group-label-height, 0px)
         );
       }
+    }
+
+    &[data-hidden-while-empty]:not(:has([navi-list-item-real])) {
+      display: none;
     }
   }
 `;
@@ -34561,6 +34566,9 @@ const NoMatchFallback = ({
   if (noMatchFallback === undefined) {
     noMatchFallback = allHidden ? naviI18n("list.no_match") : naviI18n("list.no_match_rest_shown");
   }
+  if (!showMatchFallback) {
+    return null;
+  }
   return jsx(ListItem, {
     role: "presentation",
     className: "navi_list_item navi_list_no_match_fallback",
@@ -34578,6 +34586,9 @@ const Fallback = ({
   if (fallback === undefined) {
     fallback = naviI18n("list.empty");
   }
+  if (!showFallback) {
+    return null;
+  }
   return jsx(ListItem, {
     role: "presentation",
     className: "navi_list_item navi_list_fallback",
@@ -34593,6 +34604,9 @@ const TopFiller = ({
   const virtualItemHeight = virtualItemHeightSignal.value;
   const numberOfItemsAbove = renderWindowStart;
   const heightToFillAbove = numberOfItemsAbove * virtualItemHeight;
+  if (!heightToFillAbove) {
+    return null;
+  }
   return jsx("li", {
     className: "navi_list_virtual_filler"
     // eslint-disable-next-line react/no-unknown-property
@@ -34614,6 +34628,9 @@ const BottomFiller = ({
   const virtualItemHeight = virtualItemHeightSignal.value;
   const numberOfItemsBelow = Math.max(visibleItemCount - renderWindowEnd, 0);
   const heightToFillBelow = numberOfItemsBelow * virtualItemHeight;
+  if (!heightToFillBelow) {
+    return null;
+  }
   return jsx("li", {
     className: "navi_list_virtual_filler"
     // eslint-disable-next-line react/no-unknown-property
