@@ -209,28 +209,6 @@
       const BG_SHORT = "light-dark(#dbeafe, #1e3a5f)";
       const BG_CONTENT = "light-dark(#dcfce7, #14532d)";
 
-      const WidthCase = ({ label, content, listProps, itemProps }) => (
-        <Box flex="y" spacing="xs" style={{ alignItems: "flex-start" }}>
-          <strong style={{ fontSize: "0.8rem", color: "#888" }}>{label}</strong>
-          <List {...listProps}>
-            <ListItem
-              index={0}
-              style={{ backgroundColor: BG_SHORT }}
-              {...itemProps}
-            >
-              {SHORT}
-            </ListItem>
-            <ListItem
-              index={1}
-              style={{ backgroundColor: BG_CONTENT }}
-              {...itemProps}
-            >
-              {content}
-            </ListItem>
-          </List>
-        </Box>
-      );
-
       const WidthDemo = () => {
         return (
           <div id="width" className="demo-section">
@@ -258,29 +236,149 @@
               spacing="l"
               style={{ alignItems: "flex-start", marginBottom: "24px" }}
             >
-              <WidthCase label="Medium sentence" content={LONGER} />
-              <WidthCase label="Long sentence" content={LONG_SENTENCE} />
-              <WidthCase label="URL" content={URL} />
-              <WidthCase
-                label="Long sentence + overflowEllipsis"
-                content={LONG_SENTENCE}
-                itemProps={{ overflowEllipsis: true }}
-              />
-              <WidthCase
-                label="Long sentence + noWrap + overflowEllipsis"
-                content={LONG_SENTENCE}
-                itemProps={{ noWrap: true, overflowEllipsis: true }}
-              />
-              <WidthCase
-                label="URL + overflowEllipsis"
-                content={URL}
-                itemProps={{ overflowEllipsis: true }}
-              />
-              <WidthCase
-                label="URL + noWrap + overflowEllipsis"
-                content={URL}
-                itemProps={{ noWrap: true, overflowEllipsis: true }}
-              />
+              <Box flex="y" spacing="xs" style={{ alignItems: "flex-start" }}>
+                <strong style={{ fontSize: "0.8rem", color: "#888" }}>
+                  Medium sentence
+                </strong>
+                <List>
+                  <ListItem index={0} style={{ backgroundColor: BG_SHORT }}>
+                    {SHORT}
+                  </ListItem>
+                  <ListItem index={1} style={{ backgroundColor: BG_CONTENT }}>
+                    {LONGER}
+                  </ListItem>
+                </List>
+              </Box>
+              <Box flex="y" spacing="xs" style={{ alignItems: "flex-start" }}>
+                <strong style={{ fontSize: "0.8rem", color: "#888" }}>
+                  Long sentence
+                </strong>
+                <List>
+                  <ListItem index={0} style={{ backgroundColor: BG_SHORT }}>
+                    {SHORT}
+                  </ListItem>
+                  <ListItem index={1} style={{ backgroundColor: BG_CONTENT }}>
+                    {LONG_SENTENCE}
+                  </ListItem>
+                </List>
+              </Box>
+              <Box flex="y" spacing="xs" style={{ alignItems: "flex-start" }}>
+                <strong style={{ fontSize: "0.8rem", color: "#888" }}>
+                  URL
+                </strong>
+                <List>
+                  <ListItem index={0} style={{ backgroundColor: BG_SHORT }}>
+                    {SHORT}
+                  </ListItem>
+                  <ListItem index={1} style={{ backgroundColor: BG_CONTENT }}>
+                    {URL}
+                  </ListItem>
+                </List>
+              </Box>
+              <Box
+                flex="y"
+                spacing="xs"
+                style={{ alignItems: "flex-start", maxWidth: "300px" }}
+              >
+                <strong style={{ fontSize: "0.8rem", color: "#888" }}>
+                  Long sentence + overflowEllipsis
+                </strong>
+                <List expandX>
+                  <ListItem
+                    index={0}
+                    style={{ backgroundColor: BG_SHORT }}
+                    overflowEllipsis
+                  >
+                    {SHORT}
+                  </ListItem>
+                  <ListItem
+                    index={1}
+                    style={{ backgroundColor: BG_CONTENT }}
+                    overflowEllipsis
+                  >
+                    {LONG_SENTENCE}
+                  </ListItem>
+                </List>
+              </Box>
+              <Box
+                flex="y"
+                spacing="xs"
+                style={{ alignItems: "flex-start", maxWidth: "300px" }}
+              >
+                <strong style={{ fontSize: "0.8rem", color: "#888" }}>
+                  Long sentence + noWrap + overflowEllipsis
+                </strong>
+                <List expandX>
+                  <ListItem
+                    index={0}
+                    style={{ backgroundColor: BG_SHORT }}
+                    noWrap
+                    overflowEllipsis
+                  >
+                    {SHORT}
+                  </ListItem>
+                  <ListItem
+                    index={1}
+                    style={{ backgroundColor: BG_CONTENT }}
+                    noWrap
+                    overflowEllipsis
+                  >
+                    {LONG_SENTENCE}
+                  </ListItem>
+                </List>
+              </Box>
+              <Box
+                flex="y"
+                spacing="xs"
+                style={{ alignItems: "flex-start", maxWidth: "300px" }}
+              >
+                <strong style={{ fontSize: "0.8rem", color: "#888" }}>
+                  URL + overflowEllipsis
+                </strong>
+                <List expandX>
+                  <ListItem
+                    index={0}
+                    style={{ backgroundColor: BG_SHORT }}
+                    overflowEllipsis
+                  >
+                    {SHORT}
+                  </ListItem>
+                  <ListItem
+                    index={1}
+                    style={{ backgroundColor: BG_CONTENT }}
+                    overflowEllipsis
+                  >
+                    {URL}
+                  </ListItem>
+                </List>
+              </Box>
+              <Box
+                flex="y"
+                spacing="xs"
+                style={{ alignItems: "flex-start", maxWidth: "300px" }}
+              >
+                <strong style={{ fontSize: "0.8rem", color: "#888" }}>
+                  URL + noWrap + overflowEllipsis
+                </strong>
+                <List expandX>
+                  <ListItem
+                    index={0}
+                    style={{ backgroundColor: BG_SHORT }}
+                    noWrap
+                    overflowEllipsis
+                  >
+                    {SHORT}
+                  </ListItem>
+                  <ListItem
+                    index={1}
+                    style={{ backgroundColor: BG_CONTENT }}
+                    noWrap
+                    overflowEllipsis
+                  >
+                    {URL}
+                  </ListItem>
+                </List>
+              </Box>
             </Box>
 
             {/* ── With expandX ── */}
@@ -295,45 +393,149 @@
               With expandX
             </strong>
             <Box flex="y" spacing="l" style={{ alignItems: "flex-start" }}>
-              <WidthCase
-                label="Medium sentence"
-                content={LONGER}
-                listProps={{ expandX: true }}
-              />
-              <WidthCase
-                label="Long sentence"
-                content={LONG_SENTENCE}
-                listProps={{ expandX: true }}
-              />
-              <WidthCase
-                label="URL"
-                content={URL}
-                listProps={{ expandX: true }}
-              />
-              <WidthCase
-                label="Long sentence + overflowEllipsis"
-                content={LONG_SENTENCE}
-                listProps={{ expandX: true }}
-                itemProps={{ overflowEllipsis: true }}
-              />
-              <WidthCase
-                label="Long sentence + noWrap + overflowEllipsis"
-                content={LONG_SENTENCE}
-                listProps={{ expandX: true }}
-                itemProps={{ noWrap: true, overflowEllipsis: true }}
-              />
-              <WidthCase
-                label="URL + overflowEllipsis"
-                content={URL}
-                listProps={{ expandX: true }}
-                itemProps={{ overflowEllipsis: true }}
-              />
-              <WidthCase
-                label="URL + noWrap + overflowEllipsis"
-                content={URL}
-                listProps={{ expandX: true }}
-                itemProps={{ noWrap: true, overflowEllipsis: true }}
-              />
+              <Box flex="y" spacing="xs" style={{ alignItems: "flex-start" }}>
+                <strong style={{ fontSize: "0.8rem", color: "#888" }}>
+                  Medium sentence
+                </strong>
+                <List expandX>
+                  <ListItem index={0} style={{ backgroundColor: BG_SHORT }}>
+                    {SHORT}
+                  </ListItem>
+                  <ListItem index={1} style={{ backgroundColor: BG_CONTENT }}>
+                    {LONGER}
+                  </ListItem>
+                </List>
+              </Box>
+              <Box flex="y" spacing="xs" style={{ alignItems: "flex-start" }}>
+                <strong style={{ fontSize: "0.8rem", color: "#888" }}>
+                  Long sentence
+                </strong>
+                <List expandX>
+                  <ListItem index={0} style={{ backgroundColor: BG_SHORT }}>
+                    {SHORT}
+                  </ListItem>
+                  <ListItem index={1} style={{ backgroundColor: BG_CONTENT }}>
+                    {LONG_SENTENCE}
+                  </ListItem>
+                </List>
+              </Box>
+              <Box flex="y" spacing="xs" style={{ alignItems: "flex-start" }}>
+                <strong style={{ fontSize: "0.8rem", color: "#888" }}>
+                  URL
+                </strong>
+                <List expandX>
+                  <ListItem index={0} style={{ backgroundColor: BG_SHORT }}>
+                    {SHORT}
+                  </ListItem>
+                  <ListItem index={1} style={{ backgroundColor: BG_CONTENT }}>
+                    {URL}
+                  </ListItem>
+                </List>
+              </Box>
+              <Box
+                flex="y"
+                spacing="xs"
+                style={{ alignItems: "flex-start", maxWidth: "300px" }}
+              >
+                <strong style={{ fontSize: "0.8rem", color: "#888" }}>
+                  Long sentence + overflowEllipsis
+                </strong>
+                <List expandX>
+                  <ListItem
+                    index={0}
+                    style={{ backgroundColor: BG_SHORT }}
+                    overflowEllipsis
+                  >
+                    {SHORT}
+                  </ListItem>
+                  <ListItem
+                    index={1}
+                    style={{ backgroundColor: BG_CONTENT }}
+                    overflowEllipsis
+                  >
+                    {LONG_SENTENCE}
+                  </ListItem>
+                </List>
+              </Box>
+              <Box
+                flex="y"
+                spacing="xs"
+                style={{ alignItems: "flex-start", maxWidth: "300px" }}
+              >
+                <strong style={{ fontSize: "0.8rem", color: "#888" }}>
+                  Long sentence + noWrap + overflowEllipsis
+                </strong>
+                <List expandX>
+                  <ListItem
+                    index={0}
+                    style={{ backgroundColor: BG_SHORT }}
+                    noWrap
+                    overflowEllipsis
+                  >
+                    {SHORT}
+                  </ListItem>
+                  <ListItem
+                    index={1}
+                    style={{ backgroundColor: BG_CONTENT }}
+                    noWrap
+                    overflowEllipsis
+                  >
+                    {LONG_SENTENCE}
+                  </ListItem>
+                </List>
+              </Box>
+              <Box
+                flex="y"
+                spacing="xs"
+                style={{ alignItems: "flex-start", maxWidth: "300px" }}
+              >
+                <strong style={{ fontSize: "0.8rem", color: "#888" }}>
+                  URL + overflowEllipsis
+                </strong>
+                <List expandX>
+                  <ListItem
+                    index={0}
+                    style={{ backgroundColor: BG_SHORT }}
+                    overflowEllipsis
+                  >
+                    {SHORT}
+                  </ListItem>
+                  <ListItem
+                    index={1}
+                    style={{ backgroundColor: BG_CONTENT }}
+                    overflowEllipsis
+                  >
+                    {URL}
+                  </ListItem>
+                </List>
+              </Box>
+              <Box
+                flex="y"
+                spacing="xs"
+                style={{ alignItems: "flex-start", maxWidth: "300px" }}
+              >
+                <strong style={{ fontSize: "0.8rem", color: "#888" }}>
+                  URL + noWrap + overflowEllipsis
+                </strong>
+                <List expandX>
+                  <ListItem
+                    index={0}
+                    style={{ backgroundColor: BG_SHORT }}
+                    noWrap
+                    overflowEllipsis
+                  >
+                    {SHORT}
+                  </ListItem>
+                  <ListItem
+                    index={1}
+                    style={{ backgroundColor: BG_CONTENT }}
+                    noWrap
+                    overflowEllipsis
+                  >
+                    {URL}
+                  </ListItem>
+                </List>
+              </Box>
             </Box>
           </div>
         );
