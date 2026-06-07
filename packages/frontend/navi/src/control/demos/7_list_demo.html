@@ -423,6 +423,31 @@
                   </List>
                 </div>
               </Box>
+
+              <Box flex="y" spacing="xs" alignX="start">
+                <strong style={{ fontSize: "0.8rem", color: "#888" }}>
+                  Complex item 2 column + overflowEllipsis
+                </strong>
+                <div
+                  style={{
+                    border: "2px dotted #f59e0b",
+                    padding: "4px",
+                    maxWidth: "250px",
+                  }}
+                >
+                  <List expandX>
+                    <ListItem index={0} style={{ backgroundColor: BG_SHORT }}>
+                      {SHORT}
+                    </ListItem>
+                    <ListItem index={1} style={{ backgroundColor: BG_CONTENT }}>
+                      <Box flex spacing="xs">
+                        <Box shrink={false}>Coucou</Box>
+                        <PlaceItem overflowEllipsis />
+                      </Box>
+                    </ListItem>
+                  </List>
+                </div>
+              </Box>
             </Box>
           </div>
         );
