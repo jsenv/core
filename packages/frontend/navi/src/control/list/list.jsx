@@ -263,9 +263,7 @@ const css = /* css */ `
 
   /* Hide groups that have no rendered items. */
   .navi_list_item_group {
-    &[data-hidden-while-empty]:not(:has([navi-list-item-real])) {
-      display: none;
-    }
+    min-width: 100%;
 
     .navi_list_item_group_label {
       position: sticky;
@@ -285,8 +283,12 @@ const css = /* css */ `
       }
     }
     .navi_list_item_group_list {
+      display: flex;
+      width: max-content;
+      min-width: 100%;
       margin: 0;
       padding: 0;
+      flex-direction: column;
       list-style: none;
 
       /* Items inside a group must account for the sticky group label height
@@ -296,6 +298,10 @@ const css = /* css */ `
           var(--x-list-scroll-spacing-top) + var(--list-group-label-height, 0px)
         );
       }
+    }
+
+    &[data-hidden-while-empty]:not(:has([navi-list-item-real])) {
+      display: none;
     }
   }
 `;
