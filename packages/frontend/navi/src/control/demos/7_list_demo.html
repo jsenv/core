@@ -368,7 +368,7 @@
               </Box>
               <Box flex="y" spacing="xs" alignX="start">
                 <strong style={{ fontSize: "0.8rem", color: "#888" }}>
-                  Complex item — label overflows
+                  Complex item (label + address overflow)
                 </strong>
                 <div
                   style={{
@@ -391,16 +391,17 @@
                           <Icon>
                             <PinSvg />
                           </Icon>
-                          12 rue de la République, 69001 Lyon
+                          47 avenue du Général de Gaulle, Résidence Les Pins,
+                          Bâtiment C, 42000 Saint-Étienne
                         </Text>
                       </Box>
                     </ListItem>
                   </List>
                 </div>
               </Box>
-              <Box flex="y" spacing="xs" style={{ alignItems: "flex-start" }}>
+              <Box flex="y" spacing="xs" alignX="start">
                 <strong style={{ fontSize: "0.8rem", color: "#888" }}>
-                  Complex item — address overflows
+                  Complex item + overflowEllipsis
                 </strong>
                 <div
                   style={{
@@ -409,13 +410,20 @@
                     maxWidth: "250px",
                   }}
                 >
-                  <List>
+                  <List expandX>
                     <ListItem index={0} style={{ backgroundColor: BG_SHORT }}>
                       {SHORT}
                     </ListItem>
-                    <ListItem index={1} style={{ backgroundColor: BG_CONTENT }}>
+                    <ListItem
+                      index={1}
+                      style={{ backgroundColor: BG_CONTENT }}
+                      overflowEllipsis
+                    >
                       <Box flex="y" expandX spacing="xs">
-                        <Text bold>Boulangerie</Text>
+                        <Text bold>
+                          Boulangerie Artisanale et Pâtisserie du Vieux Marché
+                          de Lyon
+                        </Text>
                         <Text size="xs" color="secondary">
                           <Icon>
                             <PinSvg />
