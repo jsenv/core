@@ -1011,6 +1011,9 @@ const NoMatchFallback = ({ tracker, noMatchFallback, searchText }) => {
       : naviI18n("list.no_match_rest_shown");
   }
 
+  if (!showMatchFallback) {
+    return null;
+  }
   return (
     <ListItem
       role="presentation"
@@ -1029,6 +1032,9 @@ const Fallback = ({ tracker, fallback }) => {
     fallback = naviI18n("list.empty");
   }
 
+  if (!showFallback) {
+    return null;
+  }
   return (
     <ListItem
       role="presentation"
@@ -1045,6 +1051,9 @@ const TopFiller = ({ virtualItemHeightSignal, renderWindowStart }) => {
   const numberOfItemsAbove = renderWindowStart;
   const heightToFillAbove = numberOfItemsAbove * virtualItemHeight;
 
+  if (!heightToFillAbove) {
+    return null;
+  }
   return (
     <li
       className="navi_list_virtual_filler"
@@ -1067,6 +1076,9 @@ const BottomFiller = ({
   const numberOfItemsBelow = Math.max(visibleItemCount - renderWindowEnd, 0);
   const heightToFillBelow = numberOfItemsBelow * virtualItemHeight;
 
+  if (!heightToFillBelow) {
+    return null;
+  }
   return (
     <li
       className="navi_list_virtual_filler"
