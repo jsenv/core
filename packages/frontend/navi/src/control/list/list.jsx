@@ -98,6 +98,7 @@ const css = /* css */ `
     );
 
     display: flex;
+    min-width: 0;
     /* fit-content by default, but never wider than the parent */
     max-width: 100%;
     flex-direction: column;
