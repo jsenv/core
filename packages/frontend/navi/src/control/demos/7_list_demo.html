@@ -288,6 +288,27 @@
                   </ListItem>
                 </List>
               </Box>
+              <Box flex="y" spacing="xs" style={{ alignItems: "flex-start" }}>
+                <strong style={{ fontSize: "0.8rem", color: "#888" }}>
+                  overflowEllipsis (no noWrap)
+                </strong>
+                <List>
+                  <ListItem
+                    index={0}
+                    overflowEllipsis
+                    style={{ backgroundColor: "light-dark(#dcfce7, #14532d)" }}
+                  >
+                    {SENTENCE}
+                  </ListItem>
+                  <ListItem
+                    index={1}
+                    overflowEllipsis
+                    style={{ backgroundColor: "light-dark(#fef9c3, #422006)" }}
+                  >
+                    {URL}
+                  </ListItem>
+                </List>
+              </Box>
             </Box>
 
             {/* ── With expandX ── */}
@@ -356,6 +377,27 @@
                   <ListItem
                     index={1}
                     noWrap
+                    overflowEllipsis
+                    style={{ backgroundColor: "light-dark(#fef9c3, #422006)" }}
+                  >
+                    {URL}
+                  </ListItem>
+                </List>
+              </Box>
+              <Box flex="y" spacing="xs" expandX>
+                <strong style={{ fontSize: "0.8rem", color: "#888" }}>
+                  overflowEllipsis (no noWrap)
+                </strong>
+                <List expandX>
+                  <ListItem
+                    index={0}
+                    overflowEllipsis
+                    style={{ backgroundColor: "light-dark(#dcfce7, #14532d)" }}
+                  >
+                    {SENTENCE}
+                  </ListItem>
+                  <ListItem
+                    index={1}
                     overflowEllipsis
                     style={{ backgroundColor: "light-dark(#fef9c3, #422006)" }}
                   >
