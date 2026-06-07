@@ -244,7 +244,7 @@
                 <strong style={{ fontSize: "0.8rem", color: "#888" }}>
                   Default (no max-width)
                 </strong>
-                <List>
+                <List expandX>
                   {OVERFLOW_ITEMS.map((item, i) => (
                     <ListItem
                       key={item.id}
@@ -260,15 +260,16 @@
               </Box>
               <Box flex="y" spacing="xs" expandX>
                 <strong style={{ fontSize: "0.8rem", color: "#888" }}>
-                  Max-width: 200px — default wrap
+                  overflowEllipsis on list items
                 </strong>
-                <List style={{ maxWidth: "200px" }}>
+                <List expandX>
                   {OVERFLOW_ITEMS.map((item, i) => (
                     <ListItem
                       key={item.id}
                       index={i}
                       id={item.id}
                       value={item.id}
+                      overflowEllipsis
                       style={{ backgroundColor: item.bg }}
                     >
                       {item.label}
@@ -278,9 +279,9 @@
               </Box>
               <Box flex="y" spacing="xs" expandX>
                 <strong style={{ fontSize: "0.8rem", color: "#888" }}>
-                  Max-width: 200px — noWrap (ellipsis)
+                  noWrap + overflowEllipsis on list items
                 </strong>
-                <List style={{ maxWidth: "200px" }}>
+                <List expandX>
                   {OVERFLOW_ITEMS.map((item, i) => (
                     <ListItem
                       key={item.id}
