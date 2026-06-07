@@ -1,6 +1,7 @@
 import {
   dispatchCustomEvent,
   getElementSignature,
+  snapToPixel,
   trapScrollInside,
 } from "@jsenv/dom";
 import { useRef } from "preact/hooks";
@@ -35,9 +36,13 @@ export const Dialog = (props) => {
   const debugFocus = useDebugFocus();
   const openedRef = useRef(false);
   const [addCleanup, cleanup] = useCleanup();
-  const open = (e) => {
+  const open = (e, { anchor }) => {
+    const effectiveAnchor = anchor || document.documentElement;
     debugPopup(`"${e.type}" on ${getElementSignature(e.target)} -> openDialog`);
     const dialogEl = ref.current;
+    const { width, height } = effectiveAnchor.getBoundingClientRect();
+    dialogEl.style.setProperty("--anchor-width", `${snapToPixel(width)}px`);
+    dialogEl.style.setProperty("--anchor-height", `${snapToPixel(height)}px`);
     dialogEl.showModal();
     focusFirstAutofocusOrFocusable(dialogEl, debugFocus, e);
     if (scrollTrap) {
@@ -62,7 +67,7 @@ export const Dialog = (props) => {
     });
   };
 
-  const onRequestOpen = (e) => {
+  const onRequestOpen = (e, { anchor }) => {
     const dialogEl = ref.current;
     if (!dialogEl) {
       return;
@@ -70,7 +75,7 @@ export const Dialog = (props) => {
     if (openedRef.current) {
       return;
     }
-    open(e);
+    open(e, { anchor });
   };
   const onRequestClose = (e) => {
     const dialogEl = ref.current;
@@ -104,7 +109,8 @@ export const Dialog = (props) => {
         onRequestClose(e);
       }}
       onnavi_request_open={(e) => {
-        onRequestOpen(e);
+        const { anchor } = e.detail;
+        onRequestOpen(e, { anchor });
       }}
       onnavi_request_close={(e) => {
         onRequestClose(e);

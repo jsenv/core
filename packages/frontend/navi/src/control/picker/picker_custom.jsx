@@ -135,6 +135,7 @@ const css = /* css */ `
     /* dialog */
     &[aria-haspopup="dialog"] {
       .navi_picker_dialog {
+        min-width: var(--anchor-width, 0px);
         max-height: 95dvh;
         padding: 0;
         background: var(--picker-background-color);
