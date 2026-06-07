@@ -110,6 +110,9 @@
           <li><a href="#section-4">4. Searchable select — full list</a></li>
           <li><a href="#section-5">5. Searchable select — few results</a></li>
           <li><a href="#section-6">6. Searchable select — no results</a></li>
+          <li>
+            <a href="#section-7">7. Place picker — rich items with search</a>
+          </li>
         </ol>
       </nav>
       <div id="app"></div>
@@ -126,11 +129,36 @@
         SelectableList,
         Selectable,
         NaviDebug,
+        Text,
         route,
         setupRoutes,
         stateSignal,
         useSearchText,
       } from "@jsenv/navi";
+
+      const PLACES = [
+        {
+          id: "1ebff20a-e52b-4dc4-9ad4-7e250e039547",
+          slug: "mouratoglou_sophia",
+          label: "Mouratoglou Country Club",
+          city: "Biot",
+          address: "3550 road des Dolines, 06410 Biot",
+        },
+        {
+          id: "e3a31a8c-e53c-462b-a86e-4a527939626e",
+          slug: "tc_roquettan",
+          label: "TC Roquettan",
+          city: "La Roquette-sur-Siagne",
+          address: "1691 avenue de la République, 06550 La Roquette-sur-Siagne",
+        },
+        {
+          id: "d8adf2e6-f5d5-4821-b01d-7f195dd2768b",
+          slug: "tca",
+          label: "TCA",
+          city: "Antibes",
+          address: "330 avenue Jules Grec, 06600 Antibes",
+        },
+      ];
 
       const FRUIT_OPTIONS = [
         "Apple",
@@ -156,12 +184,17 @@
         id: "search_fruit_selected",
         type: "string",
       });
+      const placeSlugSignal = stateSignal("", {
+        id: "place_slug",
+        type: "string",
+      });
 
       const DEMO_ROUTE = route("", {
         searchParams: {
           send_fruit: sendFruitSignal,
           update_fruit: updateFruitSignal,
           search_fruit_selected: searchFruitSelectedSignal,
+          place_slug: placeSlugSignal,
         },
       });
       setupRoutes([DEMO_ROUTE]);
@@ -174,6 +207,7 @@
           <SearchableSelectNormal />
           <SearchableSelectFewResults />
           <SearchableSelectNoResults />
+          <PlacePickerDemo />
         </Box>
       );
 
@@ -527,6 +561,117 @@
                 }}
                 logSignal={logSignal}
               />
+            </Field>
+            <CallLog entries={logSignal.value} />
+          </div>
+        );
+      };
+
+      // ── 7. Place picker — rich items with search ──────────────────────────
+
+      const PlacePickerDemo = () => {
+        const placeSlug = placeSlugSignal.value;
+        const searchTextSignal = useSignal("");
+        const searchText = searchTextSignal.value;
+        const logSignal = useSignal([]);
+        const pushLog = (type, value) => {
+          logSignal.value = [...logSignal.value, { type, value }];
+        };
+
+        const selectedPlace = PLACES.find((p) => p.slug === placeSlug);
+        const [matchingPlaces, getPlaceMatchInfo] = useSearchText(
+          searchText,
+          PLACES,
+          (place) => `${place.label} ${place.city} ${place.address}`,
+        );
+
+        return (
+          <div id="section-7" class="demo-section">
+            <h2>7. Place picker — rich items with search</h2>
+            <p>
+              Each item shows a name and an address. The search filters across
+              all fields. The trigger displays the selected place label (or a
+              placeholder).
+            </p>
+            <Field vertical>
+              <Label>Lieu</Label>
+              <Picker
+                name="place_picker"
+                value={placeSlug}
+                uiAction={(v) => pushLog("uiAction", v)}
+                action={(v) => {
+                  pushLog("action", v);
+                  placeSlugSignal.value = v;
+                }}
+                minWidth="280"
+                borderRadius="s"
+              >
+                {selectedPlace ? (
+                  <Picker.Value>{selectedPlace.label}</Picker.Value>
+                ) : (
+                  <Picker.Placeholder>Choisir un lieu</Picker.Placeholder>
+                )}
+                <Box flex="y" spacing="s" padding="s">
+                  <Input
+                    navi-list="place_list"
+                    type="search"
+                    placeholder="Rechercher (nom, ville, adresse…)"
+                    value={searchText}
+                    uiAction={(v) => {
+                      searchTextSignal.value = v;
+                    }}
+                    autoComplete="off"
+                    autoFocus="fallback"
+                    borderRadius="xs"
+                    paddingX="s"
+                    paddingY="xs"
+                    expandX
+                    discrete
+                  />
+                  <SelectableList
+                    id="place_list"
+                    action="send"
+                    maxHeight="260"
+                    searchText={searchText}
+                    separator
+                    noMatchFallback={
+                      <Box padding="s">
+                        Aucun lieu ne correspond à votre recherche.
+                      </Box>
+                    }
+                  >
+                    {matchingPlaces.map((place, i) => {
+                      const { match, score, ranges } = getPlaceMatchInfo(place);
+                      return (
+                        <Selectable
+                          key={place.id}
+                          id={place.id}
+                          index={i}
+                          value={place.slug}
+                          highlight={ranges}
+                          matchScore={score}
+                          filtered={!match}
+                          selected={place.slug === placeSlug}
+                          flex
+                          alignY="center"
+                          border="none"
+                          spacing="m"
+                          paddingX="m"
+                          paddingY="s"
+                        >
+                          <Selectable.Input marginLeft="-xs" />
+                          <Box flex="y" expandX spacing="xs">
+                            <Text bold>{place.label}</Text>
+                            <Text size="xs" color="secondary">
+                              {place.address}
+                            </Text>
+                          </Box>
+                        </Selectable>
+                      );
+                    })}
+                  </SelectableList>
+                </Box>
+              </Picker>
             </Field>
             <CallLog entries={logSignal.value} />
           </div>
