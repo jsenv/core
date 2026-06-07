@@ -116,6 +116,7 @@
           <NaviDebug debugAction debugInteraction>
             <TableOfContents />
             <DisplayOnlyDemo />
+            <OverflowDemo />
             <SearchableExternalInputDemo />
             <SearchableDemo />
             <GroupedSearchDemo />
@@ -132,6 +133,9 @@
             <ol style={{ margin: 0, paddingLeft: "20px", lineHeight: "2" }}>
               <li>
                 <a href="#display-only">Display only</a>
+              </li>
+              <li>
+                <a href="#overflow">Text overflow</a>
               </li>
               <li>
                 <a href="#search-external">
@@ -193,7 +197,94 @@
           </div>
         );
       };
+      // ── 2. Text overflow ────────────────────────────────────────────────────────
 
+      const OVERFLOW_ITEMS = [
+        { id: "short", label: "Short" },
+        {
+          id: "long",
+          label:
+            "This is a very long item label that will definitely overflow the list container if nothing is done about it",
+        },
+        {
+          id: "url",
+          label:
+            "https://example.com/some/very/deep/path/to/a/resource?with=query&params=here",
+        },
+        { id: "normal", label: "Normal length item" },
+        {
+          id: "word",
+          label:
+            "Averylongwordwithnospacesthatcouldcauseoverflowissuesifnothandledproperly",
+        },
+      ];
+
+      const OverflowDemo = () => {
+        return (
+          <div id="overflow" className="demo-section">
+            <h2>Text overflow</h2>
+            <p>
+              Default behaviour: the list grows to fit its widest item (
+              <code>min-width: 100%</code>, no max-width). Constrain the list
+              width to observe truncation or wrapping.
+            </p>
+            <Box flex="y" spacing="m" alignX="start">
+              <Box flex="y" spacing="xs" expandX>
+                <strong style={{ fontSize: "0.8rem", color: "#888" }}>
+                  Unconstrained
+                </strong>
+                <List style={{ maxWidth: "none" }}>
+                  {OVERFLOW_ITEMS.map((item, i) => (
+                    <ListItem
+                      key={item.id}
+                      index={i}
+                      id={item.id}
+                      value={item.id}
+                    >
+                      {item.label}
+                    </ListItem>
+                  ))}
+                </List>
+              </Box>
+              <Box flex="y" spacing="xs" expandX>
+                <strong style={{ fontSize: "0.8rem", color: "#888" }}>
+                  Max-width: 200px — default wrap
+                </strong>
+                <List style={{ maxWidth: "200px" }}>
+                  {OVERFLOW_ITEMS.map((item, i) => (
+                    <ListItem
+                      key={item.id}
+                      index={i}
+                      id={item.id}
+                      value={item.id}
+                    >
+                      {item.label}
+                    </ListItem>
+                  ))}
+                </List>
+              </Box>
+              <Box flex="y" spacing="xs" expandX>
+                <strong style={{ fontSize: "0.8rem", color: "#888" }}>
+                  Max-width: 200px — noWrap (ellipsis)
+                </strong>
+                <List style={{ maxWidth: "200px" }}>
+                  {OVERFLOW_ITEMS.map((item, i) => (
+                    <ListItem
+                      key={item.id}
+                      index={i}
+                      id={item.id}
+                      value={item.id}
+                      noWrap
+                    >
+                      {item.label}
+                    </ListItem>
+                  ))}
+                </List>
+              </Box>
+            </Box>
+          </div>
+        );
+      };
       // ── 3b. Searchable list — input outside list (listId) ──────────────────────
 
       const SearchableExternalInputDemo = () => {
@@ -298,7 +389,6 @@
 
       const GroupedSearchDemo = () => {
         const [filter, setFilter] = useState("");
-        const [selected, setSelected] = useState(null);
         const [sorted, getItemMatchInfo] = useSearchText(filter, LARGE_LIST);
 
         const groupMap = new Map();
@@ -331,7 +421,6 @@
               value={filter}
               uiAction={(v) => {
                 setFilter(v);
-                setSelected(null);
               }}
               expandX
               border="1px solid #ccc"
@@ -353,10 +442,8 @@
               </div>
             )}
             <List
-              role="listbox"
               fallback="No results"
               style={{ maxHeight: "280px" }}
-              uiAction={setSelected}
             >
               {(() => {
                 let globalIndex = 0;
@@ -364,16 +451,12 @@
                   <ListItemGroup key={group.letter} label={group.letter}>
                     {group.items.map((item) => {
                       const i = globalIndex++;
-                      const { score, ranges } = getItemMatchInfo(item);
+                      const { ranges } = getItemMatchInfo(item);
                       return (
                         <ListItem
-                          role="option"
                           key={item}
                           index={i}
-                          value={item}
-                          selected={selected === item}
                           highlight={ranges}
-                          matchScore={score}
                           style={{ backgroundColor: SUGGESTION_BG }}
                         >
                           {item}
@@ -384,7 +467,6 @@
                 ));
               })()}
             </List>
-            <div className="value-display">{selected ?? ""}</div>
           </Box>
         );
       };
@@ -415,19 +497,16 @@
       ];
 
       const ListItemGroupDemo = () => {
-        const [selected, setSelected] = useState(null);
         return (
           <div id="grouped" className="demo-section">
             <h2>Grouped suggestions</h2>
             <p>Options organized into labeled groups using ListItemGroup.</p>
             <List
-              role="listbox"
               fallback="No results"
               style={{ maxHeight: "280px" }}
-              uiAction={setSelected}
               expandX
             >
-              <ListItem role="option" index={0}>
+              <ListItem index={0}>
                 A very large suggestion to test how it behaves when the text is
                 very large and exceeds the width of the list. It should be
                 visible
@@ -440,11 +519,8 @@
                       const i = globalIndex++;
                       return (
                         <ListItem
-                          role="option"
                           key={item}
                           index={i}
-                          value={item}
-                          selected={selected === item}
                           style={{ backgroundColor: SUGGESTION_BG }}
                         >
                           {item}
@@ -455,7 +531,6 @@
                 ));
               })()}
             </List>
-            <div className="value-display">{selected ?? ""}</div>
           </div>
         );
       };
@@ -464,7 +539,6 @@
 
       const SplitMatchDemo = () => {
         const [filter, setFilter] = useState("");
-        const [selected, setSelected] = useState(null);
         const [orderedItems, getItemMatchInfo] = useSearchText(
           filter,
           LARGE_LIST,
@@ -490,7 +564,6 @@
               value={filter}
               onInput={(e) => {
                 setFilter(e.target.value);
-                setSelected(null);
               }}
               style={{
                 display: "block",
@@ -504,10 +577,8 @@
               }}
             />
             <List
-              role="listbox"
               fallback="No results"
               style={{ maxHeight: "300px" }}
-              uiAction={setSelected}
             >
               <ListItemGroup
                 style={{ backgroundColor: "#f0faf3" }}
@@ -525,16 +596,12 @@
                 }
               >
                 {matches.map((item, i) => {
-                  const { score, ranges } = getItemMatchInfo(item);
+                  const { ranges } = getItemMatchInfo(item);
                   return (
                     <ListItem
-                      role="option"
                       key={item}
                       index={i}
-                      value={item}
-                      selected={selected === item}
                       highlight={ranges}
-                      matchScore={score}
                       style={{ backgroundColor: SUGGESTION_BG }}
                     >
                       {item}
@@ -560,11 +627,8 @@
                 >
                   {nonMatches.map((item, i) => (
                     <ListItem
-                      role="option"
                       key={item}
                       index={matches.length + i}
-                      value={item}
-                      selected={selected === item}
                       style={{ backgroundColor: SUGGESTION_BG }}
                     >
                       {item}
@@ -573,7 +637,6 @@
                 </ListItemGroup>
               )}
             </List>
-            <div className="value-display">{selected ?? ""}</div>
           </div>
         );
       };
