@@ -361,7 +361,7 @@
           >
             <Box flex="y" spacing="s" padding="s">
               <Input
-                aria-controls={`${id}_list`}
+                navi-list={`${id}_list`}
                 type="search"
                 placeholder="Search…"
                 value={searchText}
@@ -381,10 +381,9 @@
                 action="send"
                 maxHeight="200"
                 searchText={searchText}
+                separator
                 noMatchFallback={
-                  <div style="padding: 8px 12px; color: #888; font-size: 13px;">
-                    No results match your search.
-                  </div>
+                  <Box padding="s">No results match your search.</Box>
                 }
               >
                 {matchingItems.map((opt, i) => {
@@ -504,7 +503,7 @@
 
       const SearchableSelectNoResults = () => {
         const selected = searchFruitSelectedSignal.value;
-        const searchTextSignal = useSignal("zzz");
+        const searchTextSignal = useSignal("appp");
         const searchText = searchTextSignal.value;
         const logSignal = useSignal([]);
         return (

@@ -232,11 +232,10 @@ const css = /* css */ `
   .navi_list_fallback,
   .navi_list_no_match_fallback {
     order: -1;
+    color: light-dark(#888, #aaa);
     &[navi-default] {
       display: inline;
       padding: var(--list-item-padding);
-      color: light-dark(#888, #aaa);
-      font-size: 0.9em;
       text-align: center;
       user-select: none;
     }
