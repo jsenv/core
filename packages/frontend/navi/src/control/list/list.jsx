@@ -98,6 +98,7 @@ const css = /* css */ `
     );
 
     display: flex;
+    /* fit-content by default, but never wider than the parent */
     max-width: 100%;
     flex-direction: column;
     background-color: var(--x-list-background-color);

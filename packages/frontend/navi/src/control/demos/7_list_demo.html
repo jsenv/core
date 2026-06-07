@@ -219,8 +219,11 @@
           <div id="width" className="demo-section">
             <h2>Width behaviour</h2>
             <p>
-              The list is fit-content wide but capped to its parent width. Each
-              case shows a short reference item paired with a longer one.
+              By default the list is as wide as its widest item but will never
+              exceed its parent width (<code>max-width: 100%</code>). Each case
+              shows a short reference item paired with a longer one. The
+              overflow cases rely on the parent width being constrained by the
+              demo section.
             </p>
             <Box flex="y" spacing="l" style={{ alignItems: "flex-start" }}>
               <Box flex="y" spacing="xs" style={{ alignItems: "flex-start" }}>
@@ -362,9 +365,9 @@
           <div id="width-expand-x" className="demo-section">
             <h2>Width behaviour — with expandX</h2>
             <p>
-              With <code>expandX</code> the list fills its parent. Overflow
-              cases use a constrained parent (300px) so ellipsis has something
-              to truncate against.
+              With <code>expandX</code> the list fills its parent width. The
+              overflow cases rely on the same parent constraint — the list
+              expands to fill it, giving ellipsis something to truncate against.
             </p>
             <Box flex="y" spacing="l" alignX="start">
               <Box flex="y" spacing="xs" alignX="start" expandX>
