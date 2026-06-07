@@ -85,12 +85,12 @@ const css = /* css */ `
 
         /* The list scrolls inside the popover */
         .navi_list_container {
-          width: 100%;
+          /* width: 100%; */
           border-radius: max(
             0px,
             var(--picker-border-radius) - var(--picker-border-width)
           );
-          overflow: auto;
+          /* overflow: auto; */
           overscroll-behavior: none;
         }
       }

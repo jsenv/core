@@ -501,6 +501,8 @@ export const Selectable = (props) => {
       hidden={hidden}
       matchScore={matchScore}
       pseudoClasses={SELECTABLE_PSEUDO_CLASSES}
+      padding="m"
+      {...remainingProps}
       basePseudoState={{
         ":-navi-selected": checked,
         ":-navi-pointed": pointed,
@@ -509,31 +511,14 @@ export const Selectable = (props) => {
       aria-selected={checked}
       selected={checked}
     >
-      <Field
-        as={selectableArea === "manual" ? "div" : undefined}
-        padding="m"
-        flex
-        alignY="center"
-        spacing="s"
-        expandX
-        {...remainingProps}
-        selectableArea={undefined}
-        basePseudoState={basePseudoState}
-        pseudoStateSelector="[navi-selectable-real-input]"
-        disabled={disabled}
-        readOnly={readOnly}
-        loading={loading}
-        interactive
-      >
-        <SelectableRealInput
-          {...checkableProps}
-          // eslint-disable-next-line react/no-children-prop
-          children={undefined}
-        />
-        <SelectableRealInputContext.Provider value={realInputContextValue}>
-          <ChildrenContextWrapper>{children}</ChildrenContextWrapper>
-        </SelectableRealInputContext.Provider>
-      </Field>
+      <SelectableRealInput
+        {...checkableProps}
+        // eslint-disable-next-line react/no-children-prop
+        children={undefined}
+      />
+      <SelectableRealInputContext.Provider value={realInputContextValue}>
+        <ChildrenContextWrapper>{children}</ChildrenContextWrapper>
+      </SelectableRealInputContext.Provider>
     </ListItem>
   );
 };

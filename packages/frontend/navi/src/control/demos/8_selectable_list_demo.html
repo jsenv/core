@@ -1848,6 +1848,41 @@
                   </SelectableList>
                 </div>
               </Box>
+
+              <Box flex="y" spacing="xs" alignX="start">
+                <strong style={{ fontSize: "0.8rem", color: "#888" }}>
+                  Complex item inside absolute
+                </strong>
+                <Box relative width="350" height="250">
+                  <Box
+                    absolute
+                    inset={0}
+                    border="2px dotted #f59e0b"
+                    padding="4px"
+                    maxWidth="95vw"
+                    flex
+                    minWidth="500px"
+                    overflow="hidden"
+                    flex="y"
+                  >
+                    <SelectableList separator maxWidth="200">
+                      <Selectable
+                        index={0}
+                        style={{ backgroundColor: BG_SHORT }}
+                      >
+                        {SHORT}
+                      </Selectable>
+                      <Selectable
+                        index={1}
+                        style={{ backgroundColor: BG_CONTENT }}
+                      >
+                        <PlaceItem />
+                      </Selectable>
+                    </SelectableList>
+                  </Box>
+                </Box>
+              </Box>
+
               <Box flex="y" spacing="xs" alignX="start">
                 <strong style={{ fontSize: "0.8rem", color: "#888" }}>
                   Complex item + overflowEllipsis
