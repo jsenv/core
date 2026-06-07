@@ -29,7 +29,6 @@ import {
   ControlgroupChildrenWrapper,
   useControlgroupProps,
 } from "../control_hooks.jsx";
-import { Field } from "../field.jsx";
 import { Input } from "../input/input.jsx";
 import { useCheckableProps } from "../input/use_checkable_props.js";
 import {
@@ -480,8 +479,8 @@ export const Selectable = (props) => {
     });
   const { checked, value, basePseudoState, children } = checkableProps;
   const readOnly = basePseudoState[":read-only"];
-  const disabled = basePseudoState[":disabled"];
-  const loading = basePseudoState[":-navi-loading"];
+  // const disabled = basePseudoState[":disabled"];
+  // const loading = basePseudoState[":-navi-loading"];
   const realInputContextValue = useMemo(() => {
     return {
       id: inputId,
@@ -491,6 +490,23 @@ export const Selectable = (props) => {
       value,
     };
   }, [inputId, inputType, checked, readOnly, value]);
+
+  let childrenVnode = (
+    <>
+      <SelectableRealInput
+        {...checkableProps}
+        // eslint-disable-next-line react/no-children-prop
+        children={undefined}
+      />
+      <SelectableRealInputContext.Provider value={realInputContextValue}>
+        <ChildrenContextWrapper>{children}</ChildrenContextWrapper>
+      </SelectableRealInputContext.Provider>
+    </>
+  );
+
+  if (selectableArea !== "manual") {
+    childrenVnode = <label style="display: contents">{childrenVnode}</label>;
+  }
 
   return (
     <ListItem
@@ -511,14 +527,7 @@ export const Selectable = (props) => {
       aria-selected={checked}
       selected={checked}
     >
-      <SelectableRealInput
-        {...checkableProps}
-        // eslint-disable-next-line react/no-children-prop
-        children={undefined}
-      />
-      <SelectableRealInputContext.Provider value={realInputContextValue}>
-        <ChildrenContextWrapper>{children}</ChildrenContextWrapper>
-      </SelectableRealInputContext.Provider>
+      {childrenVnode}
     </ListItem>
   );
 };
