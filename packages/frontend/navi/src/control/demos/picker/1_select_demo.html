@@ -691,7 +691,11 @@
                         matchScore={score}
                         filtered={!match}
                         selected={place.slug === placeSlug}
+                        flex
+                        alignY="center"
+                        spacing="m"
                       >
+                        <Selectable.Input marginLeft="-xs" />
                         <PlaceItem overflowEllipsis={i === 0} />
                       </Selectable>
                     );
