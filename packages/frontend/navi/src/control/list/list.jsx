@@ -98,7 +98,7 @@ const css = /* css */ `
     );
 
     display: flex;
-    width: fit-content;
+    /* fit-content by default, but never wider than the parent */
     max-width: 100%;
     flex-direction: column;
     background-color: var(--x-list-background-color);
@@ -149,8 +149,6 @@ const css = /* css */ `
   .navi_list {
     display: flex;
     box-sizing: border-box;
-    width: max-content;
-    min-width: 100%;
     margin: 0;
     padding: 0;
     flex-direction: column;
@@ -172,6 +170,7 @@ const css = /* css */ `
 
     box-sizing: border-box;
     min-width: 100%;
+    max-width: 100%;
     padding: var(--list-item-padding);
     color: var(--x-list-item-color);
     font-weight: var(--x-list-item-font-weight);
@@ -1014,6 +1013,9 @@ const NoMatchFallback = ({ tracker, noMatchFallback, searchText }) => {
       : naviI18n("list.no_match_rest_shown");
   }
 
+  if (!showMatchFallback) {
+    return null;
+  }
   return (
     <ListItem
       role="presentation"
@@ -1032,6 +1034,9 @@ const Fallback = ({ tracker, fallback }) => {
     fallback = naviI18n("list.empty");
   }
 
+  if (!showFallback) {
+    return null;
+  }
   return (
     <ListItem
       role="presentation"
@@ -1048,6 +1053,9 @@ const TopFiller = ({ virtualItemHeightSignal, renderWindowStart }) => {
   const numberOfItemsAbove = renderWindowStart;
   const heightToFillAbove = numberOfItemsAbove * virtualItemHeight;
 
+  if (!heightToFillAbove) {
+    return null;
+  }
   return (
     <li
       className="navi_list_virtual_filler"
@@ -1070,6 +1078,9 @@ const BottomFiller = ({
   const numberOfItemsBelow = Math.max(visibleItemCount - renderWindowEnd, 0);
   const heightToFillBelow = numberOfItemsBelow * virtualItemHeight;
 
+  if (!heightToFillBelow) {
+    return null;
+  }
   return (
     <li
       className="navi_list_virtual_filler"

@@ -80,6 +80,7 @@
         useSearchText,
         Box,
         NaviDebug,
+        Icon,
       } from "@jsenv/navi";
 
       // 200 auto-generated items
@@ -116,6 +117,8 @@
           <NaviDebug debugAction debugInteraction>
             <TableOfContents />
             <DisplayOnlyDemo />
+            <WidthDemo />
+            <WidthExpandXDemo />
             <SearchableExternalInputDemo />
             <SearchableDemo />
             <GroupedSearchDemo />
@@ -132,6 +135,12 @@
             <ol style={{ margin: 0, paddingLeft: "20px", lineHeight: "2" }}>
               <li>
                 <a href="#display-only">Display only</a>
+              </li>
+              <li>
+                <a href="#width">Width behaviour</a>
+              </li>
+              <li>
+                <a href="#width-expand-x">Width behaviour — with expandX</a>
               </li>
               <li>
                 <a href="#search-external">
@@ -194,7 +203,376 @@
         );
       };
 
-      // ── 3b. Searchable list — input outside list (listId) ──────────────────────
+      // ── 2. Width behaviour ─────────────────────────────────────────────────────
+
+      const SHORT = "Short item";
+      const LONGER = "A longer item";
+      const LONG_SENTENCE =
+        "This is a much longer sentence that goes on and on well past where any reasonable line would end, forcing the list to become quite wide indeed.";
+      const URL =
+        "https://example.com/some/very/deep/nested/path/to/a/specific/resource?with=many&query=params&and=more&values=here&to=ensure&multiline=true";
+
+      const PinSvg = () => (
+        <svg
+          width="10"
+          height="13"
+          viewBox="0 0 10 13"
+          fill="currentColor"
+          style={{ flexShrink: 0, marginRight: "2px" }}
+        >
+          <path d="M5 0C2.24 0 0 2.24 0 5c0 3.75 5 8 5 8s5-4.25 5-8c0-2.76-2.24-5-5-5zm0 6.5C4.17 6.5 3.5 5.83 3.5 5S4.17 3.5 5 3.5 6.5 4.17 6.5 5 5.83 6.5 5 6.5z" />
+        </svg>
+      );
+
+      const PlaceItem = ({ overflowEllipsis }) => (
+        <Box flex="y" expandX spacing="xs">
+          <Text bold overflowEllipsis={overflowEllipsis}>
+            Boulangerie Artisanale et Pâtisserie du Vieux Marché de Lyon
+          </Text>
+          <Text size="xs" color="secondary" overflowEllipsis={overflowEllipsis}>
+            <Icon>
+              <PinSvg />
+            </Icon>
+            47 avenue du Général de Gaulle, Résidence Les Pins, Bâtiment C,
+            42000 Saint-Étienne
+          </Text>
+        </Box>
+      );
+
+      const BG_SHORT = "light-dark(#dbeafe, #1e3a5f)";
+      const BG_CONTENT = "light-dark(#dcfce7, #14532d)";
+
+      const WidthDemo = () => {
+        return (
+          <div id="width" className="demo-section">
+            <h2>Width behaviour</h2>
+            <p>
+              By default the list is as wide as its widest item but will never
+              exceed its parent width (<code>max-width: 100%</code>). Each case
+              shows a short reference item paired with a longer one. The
+              overflow cases rely on the parent width being constrained by the
+              demo section.
+            </p>
+            <Box flex="y" spacing="l" style={{ alignItems: "flex-start" }}>
+              <Box flex="y" spacing="xs" style={{ alignItems: "flex-start" }}>
+                <strong style={{ fontSize: "0.8rem", color: "#888" }}>
+                  Medium sentence
+                </strong>
+                <List>
+                  <ListItem index={0} style={{ backgroundColor: BG_SHORT }}>
+                    {SHORT}
+                  </ListItem>
+                  <ListItem index={1} style={{ backgroundColor: BG_CONTENT }}>
+                    {LONGER}
+                  </ListItem>
+                </List>
+              </Box>
+              <Box flex="y" spacing="xs" alignX="start">
+                <strong style={{ fontSize: "0.8rem", color: "#888" }}>
+                  Long sentence
+                </strong>
+                <List>
+                  <ListItem index={0} style={{ backgroundColor: BG_SHORT }}>
+                    {SHORT}
+                  </ListItem>
+                  <ListItem index={1} style={{ backgroundColor: BG_CONTENT }}>
+                    {LONG_SENTENCE}
+                  </ListItem>
+                </List>
+              </Box>
+              <Box flex="y" spacing="xs" alignX="start">
+                <strong style={{ fontSize: "0.8rem", color: "#888" }}>
+                  URL
+                </strong>
+                <List>
+                  <ListItem index={0} style={{ backgroundColor: BG_SHORT }}>
+                    {SHORT}
+                  </ListItem>
+                  <ListItem index={1} style={{ backgroundColor: BG_CONTENT }}>
+                    {URL}
+                  </ListItem>
+                </List>
+              </Box>
+              <Box flex="y" spacing="xs" alignX="start">
+                <strong style={{ fontSize: "0.8rem", color: "#888" }}>
+                  Long sentence + overflowEllipsis
+                </strong>
+                <List>
+                  <ListItem
+                    index={0}
+                    style={{ backgroundColor: BG_SHORT }}
+                    overflowEllipsis
+                  >
+                    {SHORT}
+                  </ListItem>
+                  <ListItem
+                    index={1}
+                    style={{ backgroundColor: BG_CONTENT }}
+                    overflowEllipsis
+                  >
+                    {LONG_SENTENCE}
+                  </ListItem>
+                </List>
+              </Box>
+              <Box flex="y" spacing="xs" alignX="start" maxWidth="100%">
+                <strong style={{ fontSize: "0.8rem", color: "#888" }}>
+                  Long sentence + noWrap + overflowEllipsis
+                </strong>
+                <List>
+                  <ListItem
+                    index={0}
+                    style={{ backgroundColor: BG_SHORT }}
+                    noWrap
+                    overflowEllipsis
+                  >
+                    {SHORT}
+                  </ListItem>
+                  <ListItem
+                    index={1}
+                    style={{ backgroundColor: BG_CONTENT }}
+                    noWrap
+                    overflowEllipsis
+                  >
+                    {LONG_SENTENCE}
+                  </ListItem>
+                </List>
+              </Box>
+              <Box flex="y" spacing="xs" alignX="start" maxWidth="100%">
+                <strong style={{ fontSize: "0.8rem", color: "#888" }}>
+                  URL + overflowEllipsis
+                </strong>
+                <List expandX>
+                  <ListItem
+                    index={0}
+                    style={{ backgroundColor: BG_SHORT }}
+                    overflowEllipsis
+                  >
+                    {SHORT}
+                  </ListItem>
+                  <ListItem
+                    index={1}
+                    style={{ backgroundColor: BG_CONTENT }}
+                    overflowEllipsis
+                  >
+                    {URL}
+                  </ListItem>
+                </List>
+              </Box>
+              <Box flex="y" spacing="xs" alignX="start" maxWidth="100%">
+                <strong style={{ fontSize: "0.8rem", color: "#888" }}>
+                  URL + noWrap + overflowEllipsis
+                </strong>
+                <List expandX>
+                  <ListItem
+                    index={0}
+                    style={{ backgroundColor: BG_SHORT }}
+                    noWrap
+                    overflowEllipsis
+                  >
+                    {SHORT}
+                  </ListItem>
+                  <ListItem
+                    index={1}
+                    style={{ backgroundColor: BG_CONTENT }}
+                    noWrap
+                    overflowEllipsis
+                  >
+                    {URL}
+                  </ListItem>
+                </List>
+              </Box>
+              <Box flex="y" spacing="xs" alignX="start">
+                <strong style={{ fontSize: "0.8rem", color: "#888" }}>
+                  Complex item (label + address overflow)
+                </strong>
+                <div
+                  style={{
+                    border: "2px dotted #f59e0b",
+                    padding: "4px",
+                    maxWidth: "250px",
+                  }}
+                >
+                  <List>
+                    <ListItem index={0} style={{ backgroundColor: BG_SHORT }}>
+                      {SHORT}
+                    </ListItem>
+                    <ListItem index={1} style={{ backgroundColor: BG_CONTENT }}>
+                      <PlaceItem />
+                    </ListItem>
+                  </List>
+                </div>
+              </Box>
+              <Box flex="y" spacing="xs" alignX="start">
+                <strong style={{ fontSize: "0.8rem", color: "#888" }}>
+                  Complex item + overflowEllipsis
+                </strong>
+                <div
+                  style={{
+                    border: "2px dotted #f59e0b",
+                    padding: "4px",
+                    maxWidth: "250px",
+                  }}
+                >
+                  <List expandX>
+                    <ListItem index={0} style={{ backgroundColor: BG_SHORT }}>
+                      {SHORT}
+                    </ListItem>
+                    <ListItem index={1} style={{ backgroundColor: BG_CONTENT }}>
+                      <PlaceItem overflowEllipsis />
+                    </ListItem>
+                  </List>
+                </div>
+              </Box>
+            </Box>
+          </div>
+        );
+      };
+
+      // ── 2b. Width behaviour — with expandX ────────────────────────────────────
+
+      const WidthExpandXDemo = () => {
+        return (
+          <div id="width-expand-x" className="demo-section">
+            <h2>Width behaviour — with expandX</h2>
+            <p>
+              With <code>expandX</code> the list fills its parent width. The
+              overflow cases rely on the same parent constraint — the list
+              expands to fill it, giving ellipsis something to truncate against.
+            </p>
+            <Box flex="y" spacing="l" alignX="start">
+              <Box flex="y" spacing="xs" alignX="start" expandX>
+                <strong style={{ fontSize: "0.8rem", color: "#888" }}>
+                  Medium sentence
+                </strong>
+                <List expandX>
+                  <ListItem index={0} style={{ backgroundColor: BG_SHORT }}>
+                    {SHORT}
+                  </ListItem>
+                  <ListItem index={1} style={{ backgroundColor: BG_CONTENT }}>
+                    {LONGER}
+                  </ListItem>
+                </List>
+              </Box>
+              <Box flex="y" spacing="xs" alignX="start">
+                <strong style={{ fontSize: "0.8rem", color: "#888" }}>
+                  Long sentence
+                </strong>
+                <List expandX>
+                  <ListItem index={0} style={{ backgroundColor: BG_SHORT }}>
+                    {SHORT}
+                  </ListItem>
+                  <ListItem index={1} style={{ backgroundColor: BG_CONTENT }}>
+                    {LONG_SENTENCE}
+                  </ListItem>
+                </List>
+              </Box>
+              <Box flex="y" spacing="xs" alignX="start">
+                <strong style={{ fontSize: "0.8rem", color: "#888" }}>
+                  URL
+                </strong>
+                <List expandX>
+                  <ListItem index={0} style={{ backgroundColor: BG_SHORT }}>
+                    {SHORT}
+                  </ListItem>
+                  <ListItem index={1} style={{ backgroundColor: BG_CONTENT }}>
+                    {URL}
+                  </ListItem>
+                </List>
+              </Box>
+              <Box flex="y" spacing="xs" alignX="start">
+                <strong style={{ fontSize: "0.8rem", color: "#888" }}>
+                  Long sentence + overflowEllipsis
+                </strong>
+                <List expandX>
+                  <ListItem
+                    index={0}
+                    style={{ backgroundColor: BG_SHORT }}
+                    overflowEllipsis
+                  >
+                    {SHORT}
+                  </ListItem>
+                  <ListItem
+                    index={1}
+                    style={{ backgroundColor: BG_CONTENT }}
+                    overflowEllipsis
+                  >
+                    {LONG_SENTENCE}
+                  </ListItem>
+                </List>
+              </Box>
+              <Box flex="y" spacing="xs" alignX="start" maxWidth="100%">
+                <strong style={{ fontSize: "0.8rem", color: "#888" }}>
+                  Long sentence + noWrap + overflowEllipsis
+                </strong>
+                <List expandX>
+                  <ListItem
+                    index={0}
+                    style={{ backgroundColor: BG_SHORT }}
+                    noWrap
+                    overflowEllipsis
+                  >
+                    {SHORT}
+                  </ListItem>
+                  <ListItem
+                    index={1}
+                    style={{ backgroundColor: BG_CONTENT }}
+                    noWrap
+                    overflowEllipsis
+                  >
+                    {LONG_SENTENCE}
+                  </ListItem>
+                </List>
+              </Box>
+              <Box flex="y" spacing="xs" alignX="start" maxWidth="100%">
+                <strong style={{ fontSize: "0.8rem", color: "#888" }}>
+                  URL + overflowEllipsis
+                </strong>
+                <List expandX>
+                  <ListItem
+                    index={0}
+                    style={{ backgroundColor: BG_SHORT }}
+                    overflowEllipsis
+                  >
+                    {SHORT}
+                  </ListItem>
+                  <ListItem
+                    index={1}
+                    style={{ backgroundColor: BG_CONTENT }}
+                    overflowEllipsis
+                  >
+                    {URL}
+                  </ListItem>
+                </List>
+              </Box>
+              <Box flex="y" spacing="xs" alignX="start" maxWidth="100%">
+                <strong style={{ fontSize: "0.8rem", color: "#888" }}>
+                  URL + noWrap + overflowEllipsis
+                </strong>
+                <List expandX>
+                  <ListItem
+                    index={0}
+                    style={{ backgroundColor: BG_SHORT }}
+                    noWrap
+                    overflowEllipsis
+                  >
+                    {SHORT}
+                  </ListItem>
+                  <ListItem
+                    index={1}
+                    style={{ backgroundColor: BG_CONTENT }}
+                    noWrap
+                    overflowEllipsis
+                  >
+                    {URL}
+                  </ListItem>
+                </List>
+              </Box>
+            </Box>
+          </div>
+        );
+      };
+
+      // ── 3. Searchable list — input outside list (listId) ──────────────────────
 
       const SearchableExternalInputDemo = () => {
         const [searchText, setSearchText] = useState("");
@@ -250,7 +628,7 @@
         );
       };
 
-      // ── 3. Searchable list — input inside list ─────────────────────────────────
+      // ── 4. Searchable list — input inside list ─────────────────────────────────
 
       const SearchableDemo = () => {
         const [searchText, setSearchText] = useState("");
@@ -262,7 +640,6 @@
               auto-connects it to the list via context. Keyboard events (arrows,
               enter, escape) forward from the input to the list automatically.
             </p>
-
             <Input
               placeholder="Search fruits…"
               paddingX="10"
@@ -272,7 +649,6 @@
                 setSearchText(value);
               }}
             />
-
             <List>
               {fruits.map((fruit, i) => {
                 const { match, ranges } = getItemMatchInfo(fruit);
@@ -294,11 +670,10 @@
         );
       };
 
-      // ── 4. Search — many items, grouped by letter ────────────────────────────
+      // ── 5. Search — many items, grouped by letter ────────────────────────────
 
       const GroupedSearchDemo = () => {
         const [filter, setFilter] = useState("");
-        const [selected, setSelected] = useState(null);
         const [sorted, getItemMatchInfo] = useSearchText(filter, LARGE_LIST);
 
         const groupMap = new Map();
@@ -331,7 +706,6 @@
               value={filter}
               uiAction={(v) => {
                 setFilter(v);
-                setSelected(null);
               }}
               expandX
               border="1px solid #ccc"
@@ -352,28 +726,19 @@
                 {LARGE_LIST.length}
               </div>
             )}
-            <List
-              role="listbox"
-              fallback="No results"
-              style={{ maxHeight: "280px" }}
-              uiAction={setSelected}
-            >
+            <List fallback="No results" style={{ maxHeight: "280px" }}>
               {(() => {
                 let globalIndex = 0;
                 return groups.map((group) => (
                   <ListItemGroup key={group.letter} label={group.letter}>
                     {group.items.map((item) => {
                       const i = globalIndex++;
-                      const { score, ranges } = getItemMatchInfo(item);
+                      const { ranges } = getItemMatchInfo(item);
                       return (
                         <ListItem
-                          role="option"
                           key={item}
                           index={i}
-                          value={item}
-                          selected={selected === item}
                           highlight={ranges}
-                          matchScore={score}
                           style={{ backgroundColor: SUGGESTION_BG }}
                         >
                           {item}
@@ -384,12 +749,11 @@
                 ));
               })()}
             </List>
-            <div className="value-display">{selected ?? ""}</div>
           </Box>
         );
       };
 
-      // ── 5. Grouped suggestions with ListItemGroup ──────────────────────────────
+      // ── 6. Grouped suggestions with ListItemGroup ──────────────────────────────
 
       const GROUPED_ITEMS = [
         {
@@ -415,19 +779,12 @@
       ];
 
       const ListItemGroupDemo = () => {
-        const [selected, setSelected] = useState(null);
         return (
           <div id="grouped" className="demo-section">
             <h2>Grouped suggestions</h2>
             <p>Options organized into labeled groups using ListItemGroup.</p>
-            <List
-              role="listbox"
-              fallback="No results"
-              style={{ maxHeight: "280px" }}
-              uiAction={setSelected}
-              expandX
-            >
-              <ListItem role="option" index={0}>
+            <List fallback="No results" style={{ maxHeight: "280px" }} expandX>
+              <ListItem index={0}>
                 A very large suggestion to test how it behaves when the text is
                 very large and exceeds the width of the list. It should be
                 visible
@@ -440,11 +797,8 @@
                       const i = globalIndex++;
                       return (
                         <ListItem
-                          role="option"
                           key={item}
                           index={i}
-                          value={item}
-                          selected={selected === item}
                           style={{ backgroundColor: SUGGESTION_BG }}
                         >
                           {item}
@@ -455,16 +809,14 @@
                 ));
               })()}
             </List>
-            <div className="value-display">{selected ?? ""}</div>
           </div>
         );
       };
 
-      // ── 6. Split matches / non-matches ────────────────────────────────────────
+      // ── 7. Split matches / non-matches ────────────────────────────────────────
 
       const SplitMatchDemo = () => {
         const [filter, setFilter] = useState("");
-        const [selected, setSelected] = useState(null);
         const [orderedItems, getItemMatchInfo] = useSearchText(
           filter,
           LARGE_LIST,
@@ -490,7 +842,6 @@
               value={filter}
               onInput={(e) => {
                 setFilter(e.target.value);
-                setSelected(null);
               }}
               style={{
                 display: "block",
@@ -503,12 +854,7 @@
                 fontSize: "1rem",
               }}
             />
-            <List
-              role="listbox"
-              fallback="No results"
-              style={{ maxHeight: "300px" }}
-              uiAction={setSelected}
-            >
+            <List fallback="No results" style={{ maxHeight: "300px" }}>
               <ListItemGroup
                 style={{ backgroundColor: "#f0faf3" }}
                 label={
@@ -525,16 +871,12 @@
                 }
               >
                 {matches.map((item, i) => {
-                  const { score, ranges } = getItemMatchInfo(item);
+                  const { ranges } = getItemMatchInfo(item);
                   return (
                     <ListItem
-                      role="option"
                       key={item}
                       index={i}
-                      value={item}
-                      selected={selected === item}
                       highlight={ranges}
-                      matchScore={score}
                       style={{ backgroundColor: SUGGESTION_BG }}
                     >
                       {item}
@@ -560,11 +902,8 @@
                 >
                   {nonMatches.map((item, i) => (
                     <ListItem
-                      role="option"
                       key={item}
                       index={matches.length + i}
-                      value={item}
-                      selected={selected === item}
                       style={{ backgroundColor: SUGGESTION_BG }}
                     >
                       {item}
@@ -573,7 +912,6 @@
                 </ListItemGroup>
               )}
             </List>
-            <div className="value-display">{selected ?? ""}</div>
           </div>
         );
       };
