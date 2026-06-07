@@ -199,19 +199,37 @@
       };
       // ── 2. Width behaviour ─────────────────────────────────────────────────────
 
+      const SENTENCE =
+        "This sentence is long enough to overflow and will wrap onto the next line.";
+      const URL =
+        "https://example.com/some/very/deep/path/to/a/resource?with=query&params=here";
+
       const WidthDemo = () => {
         return (
           <div id="width" className="demo-section">
             <h2>Width behaviour</h2>
             <p>
-              By default the list is as wide as its widest item. Place it inside
-              a constrained container and overflowing text wraps automatically.
+              The list is naturally as wide as its widest item. Use{" "}
+              <code>expandX</code> to make it fill its parent instead. Items
+              wrap long text by default; add <code>noWrap</code> +{" "}
+              <code>overflowEllipsis</code> to truncate to a single line.
             </p>
-            <Box flex="y" spacing="l" style={{ alignItems: "flex-start" }}>
-              {/* ── Natural width ── */}
+
+            {/* ── Without expandX ── */}
+            <strong
+              style={{
+                fontSize: "0.85rem",
+                color: "#555",
+                display: "block",
+                marginBottom: "8px",
+              }}
+            >
+              Without expandX
+            </strong>
+            <Box flex="y" spacing="l" alignX="start" marginBottom="24">
               <Box flex="y" spacing="xs" style={{ alignItems: "flex-start" }}>
                 <strong style={{ fontSize: "0.8rem", color: "#888" }}>
-                  Natural width — sized by widest item
+                  Natural width
                 </strong>
                 <List>
                   <ListItem
@@ -228,31 +246,28 @@
                   </ListItem>
                 </List>
               </Box>
-              {/* ── Overflow wraps ── */}
-              <Box flex="y" spacing="xs" expandX>
+              <Box flex="y" spacing="xs" style={{ alignItems: "flex-start" }}>
                 <strong style={{ fontSize: "0.8rem", color: "#888" }}>
-                  Constrained width — text wraps by default
+                  Wraps by default
                 </strong>
                 <List>
                   <ListItem
                     index={0}
                     style={{ backgroundColor: "light-dark(#dcfce7, #14532d)" }}
                   >
-                    This sentence is long enough to overflow a narrow container
-                    and will wrap onto the next line automatically.
+                    {SENTENCE}
                   </ListItem>
                   <ListItem
                     index={1}
                     style={{ backgroundColor: "light-dark(#fef9c3, #422006)" }}
                   >
-                    https://example.com/some/very/deep/path/to/a/resource?with=query&amp;params=here
+                    {URL}
                   </ListItem>
                 </List>
               </Box>
-              {/* ── noWrap + ellipsis ── */}
-              <Box flex="y" spacing="xs" expandX>
+              <Box flex="y" spacing="xs" style={{ alignItems: "flex-start" }}>
                 <strong style={{ fontSize: "0.8rem", color: "#888" }}>
-                  Constrained width — noWrap + overflowEllipsis
+                  noWrap + overflowEllipsis
                 </strong>
                 <List>
                   <ListItem
@@ -261,8 +276,7 @@
                     overflowEllipsis
                     style={{ backgroundColor: "light-dark(#dcfce7, #14532d)" }}
                   >
-                    This sentence is long enough to overflow a narrow container
-                    and will wrap onto the next line automatically.
+                    {SENTENCE}
                   </ListItem>
                   <ListItem
                     index={1}
@@ -270,7 +284,82 @@
                     overflowEllipsis
                     style={{ backgroundColor: "light-dark(#fef9c3, #422006)" }}
                   >
-                    https://example.com/some/very/deep/path/to/a/resource?with=query&amp;params=here
+                    {URL}
+                  </ListItem>
+                </List>
+              </Box>
+            </Box>
+
+            {/* ── With expandX ── */}
+            <strong
+              style={{
+                fontSize: "0.85rem",
+                color: "#555",
+                display: "block",
+                marginBottom: "8px",
+              }}
+            >
+              With expandX
+            </strong>
+            <Box flex="y" spacing="l" alignX="start">
+              <Box flex="y" spacing="xs" expandX>
+                <strong style={{ fontSize: "0.8rem", color: "#888" }}>
+                  Natural width
+                </strong>
+                <List expandX>
+                  <ListItem
+                    index={0}
+                    style={{ backgroundColor: "light-dark(#dbeafe, #1e3a5f)" }}
+                  >
+                    Short
+                  </ListItem>
+                  <ListItem
+                    index={1}
+                    style={{ backgroundColor: "light-dark(#dcfce7, #14532d)" }}
+                  >
+                    A somewhat longer item
+                  </ListItem>
+                </List>
+              </Box>
+              <Box flex="y" spacing="xs" expandX>
+                <strong style={{ fontSize: "0.8rem", color: "#888" }}>
+                  Wraps by default
+                </strong>
+                <List expandX>
+                  <ListItem
+                    index={0}
+                    style={{ backgroundColor: "light-dark(#dcfce7, #14532d)" }}
+                  >
+                    {SENTENCE}
+                  </ListItem>
+                  <ListItem
+                    index={1}
+                    style={{ backgroundColor: "light-dark(#fef9c3, #422006)" }}
+                  >
+                    {URL}
+                  </ListItem>
+                </List>
+              </Box>
+              <Box flex="y" spacing="xs" expandX>
+                <strong style={{ fontSize: "0.8rem", color: "#888" }}>
+                  noWrap + overflowEllipsis
+                </strong>
+                <List expandX>
+                  <ListItem
+                    index={0}
+                    noWrap
+                    overflowEllipsis
+                    style={{ backgroundColor: "light-dark(#dcfce7, #14532d)" }}
+                  >
+                    {SENTENCE}
+                  </ListItem>
+                  <ListItem
+                    index={1}
+                    noWrap
+                    overflowEllipsis
+                    style={{ backgroundColor: "light-dark(#fef9c3, #422006)" }}
+                  >
+                    {URL}
                   </ListItem>
                 </List>
               </Box>
