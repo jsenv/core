@@ -18,6 +18,7 @@ import { useNavState } from "../nav/browser_integration/browser_integration.js";
 import { useInitialValue } from "../state/use_initial_value.js";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import { findControlHost } from "./control_dom.js";
+import { findControlProxy } from "./control_proxy.js";
 import { FormContext } from "./form_context.js";
 
 // In-memory registry of all mounted ui state controllers keyed by their id.
@@ -367,6 +368,19 @@ export const useUIStateController = (
           event: e,
           value: newUIState,
         });
+      }
+      // When this controller is a real input that has a visible proxy
+      // (linked via `navi-control-proxy-for`), mirror the new state to the
+      // proxy DOM synchronously. Otherwise the proxy would only catch up
+      // later through a React re-render — visible as e.g. two radios
+      // appearing checked at once between the real input update and the
+      // next render (radio_sibling_uncheck case).
+      if (el && !controlProxyFor) {
+        const proxyEl = findControlProxy(el);
+        if (proxyEl) {
+          const propValue = uiStateController.getPropFromState(newUIState);
+          proxyEl[statePropName] = propValue;
+        }
       }
       const internalBehavior = e.detail?.internalBehavior;
       if (internalBehavior) {
