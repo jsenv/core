@@ -11,8 +11,9 @@ const css = /* css */ `
       --margin: 3px 3px 0 5px;
       --outline-offset: 1px;
       --outline-width: 2px;
-      --width: 0.815em;
-      --height: 0.815em;
+      /* Rounding ensures outline is visually a nice circle */
+      --width: round(0.815em, 1px);
+      --height: round(0.815em, 1px);
 
       --color-mix-light: black;
       --color-mix-dark: white;

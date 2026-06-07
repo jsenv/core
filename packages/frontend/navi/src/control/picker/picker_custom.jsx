@@ -160,9 +160,12 @@ const css = /* css */ `
 
       .navi_list_container {
         width: 100%;
-        border: none;
-        border-radius: 0;
-        outline: none;
+        border-radius: max(
+          0px,
+          var(--picker-border-radius) - var(--picker-border-width)
+        );
+        overflow: auto;
+        overscroll-behavior: none;
       }
 
       /* .navi_list_container {

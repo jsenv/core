@@ -3,7 +3,7 @@ import { isValidElement, createContext, h, toChildArray, render, Fragment, clone
 import { useErrorBoundary, useLayoutEffect, useEffect, useContext, useMemo, useRef, useState, useCallback, useId } from "preact/hooks";
 import { jsxs, jsx, Fragment as Fragment$1 } from "preact/jsx-runtime";
 import { signal, effect, computed, batch, useSignal } from "@preact/signals";
-import { createIterableWeakSet, createEventGroupLogger, mergeOneStyle, normalizeStyle, createPubSub, findEvent, dispatchInternalCustomEvent, getElementSignature, mergeTwoStyles, normalizeStyles, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, findBefore, findAfter, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, createStyleController, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, measureLongestVisualLineWidth, findFocusDelegateTarget, getKeyboardEventDefaultAction, resolveCSSSize, activeElementSignal, hasCSSSizeUnit, resolveOklchLightness, contrastColor, dispatchCustomEvent, initFocusGroup, elementIsFocusable, findFocusable, trapScrollInside, trapFocusInside, snapToPixel, scrollIntoViewScoped, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement, measureWidestChildRow } from "@jsenv/dom";
+import { createIterableWeakSet, createEventGroupLogger, mergeOneStyle, normalizeStyle, createPubSub, findEvent, dispatchInternalCustomEvent, getElementSignature, mergeTwoStyles, normalizeStyles, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, findBefore, findAfter, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, createStyleController, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, measureLongestVisualLineWidth, findFocusDelegateTarget, getKeyboardEventDefaultAction, resolveCSSSize, activeElementSignal, hasCSSSizeUnit, resolveOklchLightness, contrastColor, dispatchCustomEvent, initFocusGroup, elementIsFocusable, findFocusable, snapToPixel, trapScrollInside, trapFocusInside, scrollIntoViewScoped, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement, measureWidestChildRow } from "@jsenv/dom";
 export { contrastColor, startDragToReorder } from "@jsenv/dom";
 import { prefixFirstAndIndentRemainingLines } from "@jsenv/humanize";
 import { createValidity } from "@jsenv/validity";
@@ -24713,6 +24713,7 @@ const CONTROL_ATTRIBUTE_SET = new Set([
   "navi-input-type",
   "navi-control-proxy-for",
   "aria-controls",
+  "tabIndex",
 
   "data-callout-arrow-x",
   "data-callout-point-to-border-box",
@@ -28653,8 +28654,9 @@ installImportMetaCssBuild(import.meta);const css$z = /* css */`
       --margin: 3px 3px 0 5px;
       --outline-offset: 1px;
       --outline-width: 2px;
-      --width: 0.815em;
-      --height: 0.815em;
+      /* Rounding ensures outline is visually a nice circle */
+      --width: round(0.815em, 1px);
+      --height: round(0.815em, 1px);
 
       --color-mix-light: black;
       --color-mix-dark: white;
@@ -31623,9 +31625,18 @@ const Dialog = props => {
   const debugFocus = useDebugFocus();
   const openedRef = useRef(false);
   const [addCleanup, cleanup] = useCleanup();
-  const open = e => {
+  const open = (e, {
+    anchor
+  }) => {
+    const effectiveAnchor = anchor || document.documentElement;
     debugPopup(`"${e.type}" on ${getElementSignature(e.target)} -> openDialog`);
     const dialogEl = ref.current;
+    const {
+      width,
+      height
+    } = effectiveAnchor.getBoundingClientRect();
+    dialogEl.style.setProperty("--anchor-width", `${snapToPixel(width)}px`);
+    dialogEl.style.setProperty("--anchor-height", `${snapToPixel(height)}px`);
     dialogEl.showModal();
     focusFirstAutofocusOrFocusable(dialogEl, debugFocus, e);
     if (scrollTrap) {
@@ -31647,7 +31658,9 @@ const Dialog = props => {
       event: e
     });
   };
-  const onRequestOpen = e => {
+  const onRequestOpen = (e, {
+    anchor
+  }) => {
     const dialogEl = ref.current;
     if (!dialogEl) {
       return;
@@ -31655,7 +31668,9 @@ const Dialog = props => {
     if (openedRef.current) {
       return;
     }
-    open(e);
+    open(e, {
+      anchor
+    });
   };
   const onRequestClose = e => {
     const dialogEl = ref.current;
@@ -31687,7 +31702,12 @@ const Dialog = props => {
       onRequestClose(e);
     },
     onnavi_request_open: e => {
-      onRequestOpen(e);
+      const {
+        anchor
+      } = e.detail;
+      onRequestOpen(e, {
+        anchor
+      });
     },
     onnavi_request_close: e => {
       onRequestClose(e);
@@ -31960,7 +31980,10 @@ installImportMetaCssBuild(import.meta);const css$p = /* css */`
         /* The list scrolls inside the popover */
         .navi_list_container {
           width: 100%;
-          border-radius: inherit;
+          border-radius: max(
+            0px,
+            var(--picker-border-radius) - var(--picker-border-width)
+          );
           overflow: auto;
           overscroll-behavior: none;
         }
@@ -32006,6 +32029,7 @@ installImportMetaCssBuild(import.meta);const css$p = /* css */`
     /* dialog */
     &[aria-haspopup="dialog"] {
       .navi_picker_dialog {
+        min-width: var(--anchor-width, 0px);
         max-height: 95dvh;
         padding: 0;
         background: var(--picker-background-color);
@@ -32030,9 +32054,12 @@ installImportMetaCssBuild(import.meta);const css$p = /* css */`
 
       .navi_list_container {
         width: 100%;
-        border: none;
-        border-radius: 0;
-        outline: none;
+        border-radius: max(
+          0px,
+          var(--picker-border-radius) - var(--picker-border-width)
+        );
+        overflow: auto;
+        overscroll-behavior: none;
       }
 
       /* .navi_list_container {
@@ -33816,11 +33843,10 @@ const css$m = /* css */`
   .navi_list_fallback,
   .navi_list_no_match_fallback {
     order: -1;
+    color: light-dark(#888, #aaa);
     &[navi-default] {
       display: inline;
       padding: var(--list-item-padding);
-      color: light-dark(#888, #aaa);
-      font-size: 0.9em;
       text-align: center;
       user-select: none;
     }
@@ -34139,7 +34165,9 @@ const useListScrollSync = ({
     }
     const scrollItemIntoView = itemEl => {
       const trigger = `"${event.type}" on ${getElementSignature(event.target)} (${reason})`;
-      const block = event.type === "keydown" ? "nearest" : "center";
+      // When we display the list we prefer to have selected item at the center
+      // otherwise, usually when focused by arrow nav, we want to keep it into view close to the nearest edge
+      const block = event.type === "navi_displayed" ? "center" : "nearest";
       const scrollToItemCall = `${getElementSignature(itemEl)}.scrollIntoView({ block: "${block}", container: "nearest" })`;
       const listScrollContainerEl = ref.current.querySelector(`.navi_list_scroll_container`);
       debugScroll(`${trigger} -> ${scrollToItemCall}`);
@@ -34223,12 +34251,16 @@ const useListScrollSync = ({
     const firstSelected = items.find(i => i.selected);
     if (firstSelected) {
       scrollToItem(firstSelected, {
-        event: openEvent,
+        event: new CustomEvent("navi_displayed", {
+          detail: {
+            originalEvent: openEvent
+          }
+        }),
         reason: "scroll to selected"
       });
     } else {
       scrollToItem(items[0], {
-        event: new CustomEvent("navi_list_nav_top_on_displayed", {
+        event: new CustomEvent("navi_displayed", {
           detail: {
             originalEvent: openEvent
           }
@@ -34661,12 +34693,25 @@ const ListItemRealOrVoid = props => {
   const listItemVnode = jsx(ListItemReal, {
     ...props
   });
-  // Use group-scoped visible index for separator when inside a group,
-  // so separators are only rendered between items within the same group.
-  const separatorIndex = groupVisibleIndex !== null ? groupVisibleIndex : visibleIndex;
-  if (!separator || separatorIndex === 0) {
+  // For separator decision, we need to know "am I the first visible item?".
+  // We deliberately do NOT use tracker's visibleIndex here because, during a
+  // reorder render pass (e.g. items resorted by search score), other items
+  // still have stale keyToExplicitOrder values — the binary search reads
+  // those stale values and computes wrong indices. The result is that no
+  // item gets visibleIndex === 0 and a spurious <hr> appears at the top.
+  //
+  // Instead we use the parent-provided index, which is race-free:
+  //   - global list: props.index === 0 means "first by explicit order"
+  //     (parent passes sequential indices starting at 0; filtered items
+  //     are already pushed to the end by useSearchText)
+  //   - inside a group: each group has its own item tracker and group
+  //     items don't reorder, so groupVisibleIndex is reliable
+  const isFirstInList = groupVisibleIndex === null ? props.index === 0 : groupVisibleIndex === 0;
+  if (!separator || isFirstInList) {
     return listItemVnode;
   }
+  // separatorIndex is only used as the function-form argument (gap index)
+  const separatorIndex = groupVisibleIndex === null ? visibleIndex : groupVisibleIndex;
   const separatorVnode = typeof separator === "function" ? separator(separatorIndex - 1) : separator;
   return jsxs(Fragment$1, {
     children: [separatorVnode, listItemVnode]
@@ -34716,6 +34761,8 @@ const ListItemReal = props => {
     "navi-list-item-real": "",
     ...rest,
     index: undefined,
+    selected: undefined,
+    matchScore: undefined,
     hidden: hidden,
     ref: ref,
     children: children
@@ -35561,22 +35608,34 @@ installImportMetaCssBuild(import.meta);const css$k = /* css */`
     --x-picker-border-color: var(--picker-border-color);
     --x-picker-padding-top: var(
       --picker-padding-top,
-      var(--picker-padding-y, var(--picker-padding-y-default))
+      var(
+        --picker-padding-y,
+        var(--picker-padding, var(--picker-padding-y-default))
+      )
     );
     --x-picker-padding-right-base: var(
       --picker-padding-right,
-      var(--picker-padding-x, var(--picker-padding-x-default))
+      var(
+        --picker-padding-x,
+        var(--picker-padding, var(--picker-padding-x-default))
+      )
     );
     --x-picker-padding-right: calc(
       var(--x-picker-padding-right-base) + var(--picker-right-slot-size) - 2px
     );
     --x-picker-padding-left: var(
       --picker-padding-left,
-      var(--picker-padding-x, var(--picker-padding-x-default))
+      var(
+        --picker-padding-x,
+        var(--picker-padding, var(--picker-padding-x-default))
+      )
     );
     --x-picker-padding-bottom: var(
       --picker-padding-bottom,
-      var(--picker-padding-y, var(--picker-padding-y-default))
+      var(
+        --picker-padding-y,
+        var(--picker-padding, var(--picker-padding-y-default))
+      )
     );
     --x-picker-color: var(--picker-color);
 

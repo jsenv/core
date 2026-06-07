@@ -5447,10 +5447,36 @@ const performTabNavigation = (
     return elementIsFocusable(element, { excludeAriaHidden });
   };
 
-  const predicate = (candidate) => {
-    const canBeFocusedByTab = isFocusableByTab(candidate);
-    // debug(`Testing`, candidate, `${canBeFocusedByTab ? "✓" : "✗"}`);
-    return canBeFocusedByTab;
+  // A focus group "owns" the activeElement when activeElement is inside it.
+  // From the inside, Tab should exit the group (skip its remaining children).
+  // From the outside, Tab should enter the group normally (first focusable child).
+  const activeFocusGroup =
+    activeElement.closest?.("[navi-focus-group]") || null;
+  const isOwnedByActiveFocusGroup = (el) =>
+    activeFocusGroup && activeFocusGroup.contains(el);
+
+  const predicate = (candidate, skip) => {
+    if (!isFocusableByTab(candidate)) {
+      return false;
+    }
+    // Focus group roots are composite widgets.
+    if (candidate.hasAttribute("navi-focus-group")) {
+      if (isFocusableByTab(candidate)) {
+        // Root has tabindex="0": it is the single Tab stop for the group.
+        // Skip its children — arrow keys handle internal navigation.
+        skip?.();
+        return true;
+      }
+      // Root is not focusable by Tab: descend into children to allow Tab entry.
+      return false;
+    }
+    // If candidate is inside the focus group that currently owns focus, skip
+    // it — Tab should exit the group. (Going *into* a different focus group
+    // is allowed: only one focus group at a time has the activeElement.)
+    if (isOwnedByActiveFocusGroup(candidate)) {
+      return false;
+    }
+    return true;
   };
 
   const activeElementIsRoot = activeElement === rootElement;
@@ -5594,6 +5620,10 @@ const initFocusGroup = (
     name, // Store undefined as-is for implicit grouping
   });
   cleanupCallbackSet.add(removeFocusGroup);
+  element.setAttribute("navi-focus-group", "");
+  cleanupCallbackSet.add(() => {
+    element.removeAttribute("navi-focus-group");
+  });
 
   tab: {
     if (!skipTab) {
