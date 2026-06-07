@@ -670,7 +670,7 @@
                   id="place_list"
                   action="send"
                   maxHeight="260"
-                  maxWidth="400"
+                  maxWidth="250"
                   searchText={searchText}
                   separator
                   noMatchFallback={
@@ -692,7 +692,7 @@
                         filtered={!match}
                         selected={place.slug === placeSlug}
                       >
-                        <PlaceItem />
+                        <PlaceItem overflowEllipsis={i === 0} />
                       </Selectable>
                     );
                   })}
