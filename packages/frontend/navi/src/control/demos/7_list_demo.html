@@ -211,6 +211,27 @@
       const URL =
         "https://example.com/some/very/deep/nested/path/to/a/specific/resource?with=many&query=params&and=more&values=here&to=ensure&multiline=true";
 
+      const PLACE = {
+        label: "Boulangerie Artisanale du Vieux Marché",
+        address: "12 rue de la République",
+        city: "Lyon",
+        zip: "69001",
+      };
+      const formatAddress = (place) =>
+        `${place.address}, ${place.zip} ${place.city}`;
+
+      const PinSvg = () => (
+        <svg
+          width="10"
+          height="13"
+          viewBox="0 0 10 13"
+          fill="currentColor"
+          style={{ flexShrink: 0, marginRight: "2px" }}
+        >
+          <path d="M5 0C2.24 0 0 2.24 0 5c0 3.75 5 8 5 8s5-4.25 5-8c0-2.76-2.24-5-5-5zm0 6.5C4.17 6.5 3.5 5.83 3.5 5S4.17 3.5 5 3.5 6.5 4.17 6.5 5 5.83 6.5 5 6.5z" />
+        </svg>
+      );
+
       const BG_SHORT = "light-dark(#dbeafe, #1e3a5f)";
       const BG_CONTENT = "light-dark(#dcfce7, #14532d)";
 
@@ -350,6 +371,33 @@
                     overflowEllipsis
                   >
                     {URL}
+                  </ListItem>
+                </List>
+              </Box>
+              <Box flex="y" spacing="xs" style={{ alignItems: "flex-start" }}>
+                <strong style={{ fontSize: "0.8rem", color: "#888" }}>
+                  Complex item (label + address)
+                </strong>
+                <List>
+                  <ListItem index={0} style={{ backgroundColor: BG_SHORT }}>
+                    {SHORT}
+                  </ListItem>
+                  <ListItem index={1} style={{ backgroundColor: BG_CONTENT }}>
+                    <Box flex="y" expandX spacing="xs">
+                      <Text bold>{PLACE.label}</Text>
+                      <Text
+                        size="xs"
+                        color="secondary"
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "2px",
+                        }}
+                      >
+                        <PinSvg />
+                        {formatAddress(PLACE)}
+                      </Text>
+                    </Box>
                   </ListItem>
                 </List>
               </Box>
