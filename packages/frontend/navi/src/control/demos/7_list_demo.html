@@ -200,7 +200,10 @@
       // ── 2. Text overflow ────────────────────────────────────────────────────────
 
       const OVERFLOW_ITEMS = [
-        { id: "short", label: "Short" },
+        {
+          id: "short",
+          label: "Short",
+        },
         {
           id: "long",
           label:
@@ -211,7 +214,10 @@
           label:
             "https://example.com/some/very/deep/path/to/a/resource?with=query&params=here",
         },
-        { id: "normal", label: "Normal length item" },
+        {
+          id: "normal",
+          label: "Normal length item",
+        },
         {
           id: "word",
           label:
@@ -240,6 +246,7 @@
                       index={i}
                       id={item.id}
                       value={item.id}
+                      style={{ backgroundColor: SUGGESTION_BG }}
                     >
                       {item.label}
                     </ListItem>
@@ -257,6 +264,7 @@
                       index={i}
                       id={item.id}
                       value={item.id}
+                      style={{ backgroundColor: SUGGESTION_BG }}
                     >
                       {item.label}
                     </ListItem>
@@ -276,6 +284,7 @@
                       value={item.id}
                       noWrap
                       overflowEllipsis
+                      style={{ backgroundColor: SUGGESTION_BG }}
                     >
                       {item.label}
                     </ListItem>
