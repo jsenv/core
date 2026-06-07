@@ -231,9 +231,9 @@
             <Box flex="y" spacing="m" alignX="start">
               <Box flex="y" spacing="xs" expandX>
                 <strong style={{ fontSize: "0.8rem", color: "#888" }}>
-                  Unconstrained
+                  Default (no max-width)
                 </strong>
-                <List style={{ maxWidth: "none" }}>
+                <List>
                   {OVERFLOW_ITEMS.map((item, i) => (
                     <ListItem
                       key={item.id}
@@ -275,6 +275,7 @@
                       id={item.id}
                       value={item.id}
                       noWrap
+                      overflowEllipsis
                     >
                       {item.label}
                     </ListItem>
