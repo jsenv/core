@@ -211,15 +211,6 @@
       const URL =
         "https://example.com/some/very/deep/nested/path/to/a/specific/resource?with=many&query=params&and=more&values=here&to=ensure&multiline=true";
 
-      const PLACE = {
-        label: "Boulangerie Artisanale du Vieux Marché",
-        address: "12 rue de la République",
-        city: "Lyon",
-        zip: "69001",
-      };
-      const formatAddress = (place) =>
-        `${place.address}, ${place.zip} ${place.city}`;
-
       const PinSvg = () => (
         <svg
           width="10"
@@ -376,30 +367,65 @@
               </Box>
               <Box flex="y" spacing="xs" style={{ alignItems: "flex-start" }}>
                 <strong style={{ fontSize: "0.8rem", color: "#888" }}>
-                  Complex item (label + address)
+                  Complex item — label overflows
                 </strong>
-                <List>
-                  <ListItem index={0} style={{ backgroundColor: BG_SHORT }}>
-                    {SHORT}
-                  </ListItem>
-                  <ListItem index={1} style={{ backgroundColor: BG_CONTENT }}>
-                    <Box flex="y" expandX spacing="xs">
-                      <Text bold>{PLACE.label}</Text>
-                      <Text
-                        size="xs"
-                        color="secondary"
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "2px",
-                        }}
-                      >
-                        <PinSvg />
-                        {formatAddress(PLACE)}
-                      </Text>
-                    </Box>
-                  </ListItem>
-                </List>
+                <div style={{ border: "2px dotted #f59e0b", padding: "4px" }}>
+                  <List>
+                    <ListItem index={0} style={{ backgroundColor: BG_SHORT }}>
+                      {SHORT}
+                    </ListItem>
+                    <ListItem index={1} style={{ backgroundColor: BG_CONTENT }}>
+                      <Box flex="y" expandX spacing="xs">
+                        <Text bold>
+                          Boulangerie Artisanale et Pâtisserie du Vieux Marché
+                          de Lyon
+                        </Text>
+                        <Text
+                          size="xs"
+                          color="secondary"
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "2px",
+                          }}
+                        >
+                          <PinSvg />
+                          12 rue de la République, 69001 Lyon
+                        </Text>
+                      </Box>
+                    </ListItem>
+                  </List>
+                </div>
+              </Box>
+              <Box flex="y" spacing="xs" style={{ alignItems: "flex-start" }}>
+                <strong style={{ fontSize: "0.8rem", color: "#888" }}>
+                  Complex item — address overflows
+                </strong>
+                <div style={{ border: "2px dotted #f59e0b", padding: "4px" }}>
+                  <List>
+                    <ListItem index={0} style={{ backgroundColor: BG_SHORT }}>
+                      {SHORT}
+                    </ListItem>
+                    <ListItem index={1} style={{ backgroundColor: BG_CONTENT }}>
+                      <Box flex="y" expandX spacing="xs">
+                        <Text bold>Boulangerie</Text>
+                        <Text
+                          size="xs"
+                          color="secondary"
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "2px",
+                          }}
+                        >
+                          <PinSvg />
+                          47 avenue du Général de Gaulle, Résidence Les Pins,
+                          Bâtiment C, 42000 Saint-Étienne
+                        </Text>
+                      </Box>
+                    </ListItem>
+                  </List>
+                </div>
               </Box>
             </Box>
           </div>
