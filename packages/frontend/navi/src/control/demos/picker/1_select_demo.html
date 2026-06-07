@@ -134,7 +134,24 @@
         setupRoutes,
         stateSignal,
         useSearchText,
+        createSearch,
       } from "@jsenv/navi";
+
+      const formatAddress = (place) =>
+        `${place.street_number} ${place.street_type} ${place.street_name}, ${place.postal_code} ${place.city}`;
+
+      const searchPlace = createSearch({
+        label: {
+          getter: (p) => p.label,
+          domSelector: ".place-label",
+          priority: 2,
+        },
+        address: {
+          getter: (p) => p.address,
+          domSelector: ".place-address",
+          priority: 1,
+        },
+      });
 
       const PLACES = [
         {
@@ -582,7 +599,7 @@
         const [matchingPlaces, getPlaceMatchInfo] = useSearchText(
           searchText,
           PLACES,
-          (place) => `${place.label} ${place.city} ${place.address}`,
+          searchPlace,
         );
 
         return (
@@ -605,6 +622,7 @@
                 }}
                 minWidth="280"
                 borderRadius="s"
+                padding="m"
               >
                 {selectedPlace ? (
                   <Picker.Value>{selectedPlace.label}</Picker.Value>
@@ -635,7 +653,7 @@
                     searchText={searchText}
                     separator
                     noMatchFallback={
-                      <Box padding="s">
+                      <Box paddingX="m" paddingY="s">
                         Aucun lieu ne correspond à votre recherche.
                       </Box>
                     }
@@ -661,9 +679,15 @@
                         >
                           <Selectable.Input marginLeft="-xs" />
                           <Box flex="y" expandX spacing="xs">
-                            <Text bold>{place.label}</Text>
-                            <Text size="xs" color="secondary">
-                              {place.address}
+                            <Text bold class="place-label">
+                              {place.label}
+                            </Text>
+                            <Text
+                              size="xs"
+                              color="secondary"
+                              class="place-address"
+                            >
+                              {formatAddress(place)}
                             </Text>
                           </Box>
                         </Selectable>
