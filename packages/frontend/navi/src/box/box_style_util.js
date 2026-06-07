@@ -390,7 +390,10 @@ const VISUAL_PROPS = {
   overflow: PASS_THROUGH,
   overflowX: PASS_THROUGH,
   overflowY: PASS_THROUGH,
-  overflowEllipsis: () => {
+  overflowEllipsis: (value) => {
+    if (value === undefined || value === false) {
+      return null;
+    }
     return {
       overflow: "hidden",
       textOverflow: "ellipsis",
