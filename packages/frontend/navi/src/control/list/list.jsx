@@ -170,7 +170,7 @@ const css = /* css */ `
     --x-list-item-font-weight: var(--list-item-font-weight);
 
     box-sizing: border-box;
-    min-width: 100%;
+    min-width: 0;
     max-width: 100%;
     padding: var(--list-item-padding);
     color: var(--x-list-item-color);

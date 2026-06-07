@@ -171,13 +171,13 @@ const DIMENSION_PROPS = {
     if (!value || value === "0") {
       return { flexShrink: 0 };
     }
-    return { flexShrink: 1 };
+    return { flexShrink: 1, minWidth: 0 };
   },
   shrinkY: (value) => {
     if (!value || value === "0") {
       return { flexShrink: 0 };
     }
-    return { flexShrink: 1 };
+    return { flexShrink: 1, minHeight: 0 };
   },
 
   scaleX: (value) => {
@@ -390,7 +390,10 @@ const VISUAL_PROPS = {
   overflow: PASS_THROUGH,
   overflowX: PASS_THROUGH,
   overflowY: PASS_THROUGH,
-  overflowEllipsis: () => {
+  overflowEllipsis: (value) => {
+    if (value === undefined || value === false) {
+      return null;
+    }
     return {
       overflow: "hidden",
       textOverflow: "ellipsis",

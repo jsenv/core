@@ -225,11 +225,20 @@
       );
 
       const PlaceItem = ({ overflowEllipsis }) => (
-        <Box flex="y" expandX spacing="xs">
-          <Text bold overflowEllipsis={overflowEllipsis}>
+        <Box flex="y" expandX spacing="xs" minWidth="0">
+          <Text
+            bold
+            noWrap={overflowEllipsis}
+            overflowEllipsis={overflowEllipsis}
+          >
             Boulangerie Artisanale et Pâtisserie du Vieux Marché de Lyon
           </Text>
-          <Text size="xs" color="secondary" overflowEllipsis={overflowEllipsis}>
+          <Text
+            size="xs"
+            color="secondary"
+            noWrap={overflowEllipsis}
+            overflowEllipsis={overflowEllipsis}
+          >
             <Icon>
               <PinSvg />
             </Icon>
@@ -419,6 +428,112 @@
                     </ListItem>
                     <ListItem index={1} style={{ backgroundColor: BG_CONTENT }}>
                       <PlaceItem overflowEllipsis />
+                    </ListItem>
+                  </List>
+                </div>
+              </Box>
+
+              <Box flex="y" spacing="xs" alignX="start">
+                <strong style={{ fontSize: "0.8rem", color: "#888" }}>
+                  Complex item right column
+                </strong>
+                <div
+                  style={{
+                    border: "2px dotted #f59e0b",
+                    padding: "4px",
+                    maxWidth: "250px",
+                  }}
+                >
+                  <List expandX>
+                    <ListItem index={0} style={{ backgroundColor: BG_SHORT }}>
+                      {SHORT}
+                    </ListItem>
+                    <ListItem
+                      flex
+                      spacing="xs"
+                      index={1}
+                      style={{ backgroundColor: BG_CONTENT }}
+                    >
+                      <Box shrink={false}>Coucou</Box>
+                      <PlaceItem />
+                    </ListItem>
+                  </List>
+                </div>
+              </Box>
+
+              <Box flex="y" spacing="xs" alignX="start">
+                <strong style={{ fontSize: "0.8rem", color: "#888" }}>
+                  Complex item right column + overflowEllipsis
+                </strong>
+                <div
+                  style={{
+                    border: "2px dotted #f59e0b",
+                    padding: "4px",
+                    maxWidth: "250px",
+                  }}
+                >
+                  <List expandX>
+                    <ListItem index={0} style={{ backgroundColor: BG_SHORT }}>
+                      {SHORT}
+                    </ListItem>
+                    <ListItem
+                      flex
+                      spacing="xs"
+                      index={1}
+                      style={{ backgroundColor: BG_CONTENT }}
+                    >
+                      <Box shrink={false}>Coucou</Box>
+                      <PlaceItem overflowEllipsis />
+                    </ListItem>
+                  </List>
+                </div>
+              </Box>
+
+              <Box flex="y" spacing="xs" alignX="start">
+                <strong style={{ fontSize: "0.8rem", color: "#888" }}>
+                  Flex wrapper
+                </strong>
+                <div
+                  style={{
+                    border: "2px dotted #f59e0b",
+                    padding: "4px",
+                    maxWidth: "250px",
+                  }}
+                >
+                  <List expandX>
+                    <ListItem index={0} style={{ backgroundColor: BG_SHORT }}>
+                      {SHORT}
+                    </ListItem>
+                    <ListItem index={1} style={{ backgroundColor: BG_CONTENT }}>
+                      <Box flex spacing="xs">
+                        <Box shrink={false}>Coucou</Box>
+                        <PlaceItem />
+                      </Box>
+                    </ListItem>
+                  </List>
+                </div>
+              </Box>
+
+              <Box flex="y" spacing="xs" alignX="start">
+                <strong style={{ fontSize: "0.8rem", color: "#888" }}>
+                  Flex wrapper + overflowEllipsis
+                </strong>
+                <div
+                  style={{
+                    border: "2px dotted #f59e0b",
+                    padding: "4px",
+                    maxWidth: "250px",
+                  }}
+                >
+                  <List expandX>
+                    <ListItem index={0} style={{ backgroundColor: BG_SHORT }}>
+                      {SHORT}
+                    </ListItem>
+                    <ListItem index={1} style={{ backgroundColor: BG_CONTENT }}>
+                      <Box flex spacing="xs">
+                        <Box shrink={false}>Coucou</Box>
+                        <PlaceItem overflowEllipsis />
+                      </Box>
                     </ListItem>
                   </List>
                 </div>

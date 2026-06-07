@@ -136,7 +136,6 @@ const css = /* css */ `
     font-size: var(--picker-font-size);
     text-align: inherit;
     text-overflow: ellipsis;
-    white-space: nowrap;
     background-color: var(--x-picker-background-color);
     border-width: var(--picker-border-width);
     border-style: solid;
