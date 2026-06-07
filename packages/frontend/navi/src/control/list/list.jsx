@@ -98,8 +98,6 @@ const css = /* css */ `
     );
 
     display: flex;
-    width: fit-content;
-    max-width: 100%;
     flex-direction: column;
     background-color: var(--x-list-background-color);
     border: var(--x-list-border-width) solid var(--x-list-border-color);
@@ -149,8 +147,6 @@ const css = /* css */ `
   .navi_list {
     display: flex;
     box-sizing: border-box;
-    width: max-content;
-    min-width: 100%;
     margin: 0;
     padding: 0;
     flex-direction: column;
