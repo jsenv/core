@@ -1195,6 +1195,8 @@ const ListItemReal = (props) => {
       navi-list-item-real=""
       {...rest}
       index={undefined}
+      selected={undefined}
+      matchScore={undefined}
       hidden={hidden}
       ref={ref}
     >
