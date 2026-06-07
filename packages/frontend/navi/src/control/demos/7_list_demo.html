@@ -80,6 +80,7 @@
         useSearchText,
         Box,
         NaviDebug,
+        Icon,
       } from "@jsenv/navi";
 
       // 200 auto-generated items
@@ -365,11 +366,17 @@
                   </ListItem>
                 </List>
               </Box>
-              <Box flex="y" spacing="xs" style={{ alignItems: "flex-start" }}>
+              <Box flex="y" spacing="xs" alignX="start">
                 <strong style={{ fontSize: "0.8rem", color: "#888" }}>
                   Complex item — label overflows
                 </strong>
-                <div style={{ border: "2px dotted #f59e0b", padding: "4px" }}>
+                <div
+                  style={{
+                    border: "2px dotted #f59e0b",
+                    padding: "4px",
+                    maxWidth: "250px",
+                  }}
+                >
                   <List>
                     <ListItem index={0} style={{ backgroundColor: BG_SHORT }}>
                       {SHORT}
@@ -380,16 +387,10 @@
                           Boulangerie Artisanale et Pâtisserie du Vieux Marché
                           de Lyon
                         </Text>
-                        <Text
-                          size="xs"
-                          color="secondary"
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "2px",
-                          }}
-                        >
-                          <PinSvg />
+                        <Text size="xs" color="secondary">
+                          <Icon>
+                            <PinSvg />
+                          </Icon>
                           12 rue de la République, 69001 Lyon
                         </Text>
                       </Box>
@@ -401,7 +402,13 @@
                 <strong style={{ fontSize: "0.8rem", color: "#888" }}>
                   Complex item — address overflows
                 </strong>
-                <div style={{ border: "2px dotted #f59e0b", padding: "4px" }}>
+                <div
+                  style={{
+                    border: "2px dotted #f59e0b",
+                    padding: "4px",
+                    maxWidth: "250px",
+                  }}
+                >
                   <List>
                     <ListItem index={0} style={{ backgroundColor: BG_SHORT }}>
                       {SHORT}
@@ -409,16 +416,10 @@
                     <ListItem index={1} style={{ backgroundColor: BG_CONTENT }}>
                       <Box flex="y" expandX spacing="xs">
                         <Text bold>Boulangerie</Text>
-                        <Text
-                          size="xs"
-                          color="secondary"
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "2px",
-                          }}
-                        >
-                          <PinSvg />
+                        <Text size="xs" color="secondary">
+                          <Icon>
+                            <PinSvg />
+                          </Icon>
                           47 avenue du Général de Gaulle, Résidence Les Pins,
                           Bâtiment C, 42000 Saint-Étienne
                         </Text>
