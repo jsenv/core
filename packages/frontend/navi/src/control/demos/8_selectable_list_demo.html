@@ -903,8 +903,8 @@
             <Input
               name="search"
               type="search"
-              aria-controls="filtered-required-list"
               placeholder="Filter fruits…"
+              navi-list="filtered-required-list"
               value={searchText}
               action={(v) => {
                 setSearchText(v);
@@ -923,6 +923,7 @@
                 setSelected(v ?? null);
               }}
               expandX
+              separator
               noMatchFallback={
                 <div
                   style={{ padding: 12, color: "#666", fontStyle: "italic" }}
