@@ -69,15 +69,13 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useState, useRef } from "preact/hooks";
+      import { useState } from "preact/hooks";
       import {
         List,
         ListItem,
         ListItemHeader,
         Input,
         useSearchText,
-        requestListOpen,
-        requestListClose,
         Box,
         NaviDebug,
       } from "@jsenv/navi";
@@ -89,7 +87,6 @@
             <DisplayOnlyDemo />
             <SearchableExternalInputDemo />
             <SearchableDemo />
-            <PopoverDemo />
           </NaviDebug>
         );
       };
@@ -109,9 +106,6 @@
               </li>
               <li>
                 <a href="#search-inline">Search — input inside list</a>
-              </li>
-              <li>
-                <a href="#popover">Popover</a>
               </li>
             </ol>
           </div>
@@ -253,58 +247,6 @@
                   </ListItem>
                 );
               })}
-            </List>
-          </div>
-        );
-      };
-
-      // ── 4. Popover list ────────────────────────────────────────────────────────
-
-      const PopoverDemo = () => {
-        const [selected, setSelected] = useState(null);
-        const listRef = useRef(null);
-        const buttonRef = useRef(null);
-
-        const openList = () => {
-          requestListOpen(listRef.current, { anchor: buttonRef.current });
-        };
-        const closeList = () => {
-          requestListClose(listRef.current, {});
-        };
-
-        return (
-          <div id="popover" className="demo-section">
-            <p>
-              Pass <code>popover</code> to render the list as a managed popover.
-              Call <code>requestListOpen</code> with an anchor element to show
-              it; <code>requestListClose</code> to hide it. The list positions
-              itself below the anchor automatically.
-            </p>
-            <div style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
-              <button ref={buttonRef} onClick={openList}>
-                Open list
-              </button>
-              <button onClick={closeList}>Close list</button>
-            </div>
-            <List
-              ref={listRef}
-              popover
-              uiAction={(value) => {
-                setSelected(value);
-                requestListClose(listRef.current, {});
-              }}
-            >
-              {FRUITS.slice(0, 8).map((fruit, i) => (
-                <ListItem
-                  key={fruit}
-                  index={i}
-                  value={fruit}
-                  id={fruit}
-                  selected={selected === fruit}
-                >
-                  {fruit}
-                </ListItem>
-              ))}
             </List>
           </div>
         );
