@@ -1874,6 +1874,33 @@
               </Box>
               <Box flex="y" spacing="xs" alignX="start">
                 <strong style={{ fontSize: "0.8rem", color: "#888" }}>
+                  Complex item right column
+                </strong>
+                <div
+                  style={{
+                    border: "2px dotted #f59e0b",
+                    padding: "4px",
+                    maxWidth: "250px",
+                  }}
+                >
+                  <SelectableList separator>
+                    <Selectable index={0} style={{ backgroundColor: BG_SHORT }}>
+                      {SHORT}
+                    </Selectable>
+                    <Selectable
+                      flex
+                      spacing="xs"
+                      index={1}
+                      style={{ backgroundColor: BG_CONTENT }}
+                    >
+                      <Box>Coucou</Box>
+                      <PlaceItem />
+                    </Selectable>
+                  </SelectableList>
+                </div>
+              </Box>
+              <Box flex="y" spacing="xs" alignX="start">
+                <strong style={{ fontSize: "0.8rem", color: "#888" }}>
                   Complex item right column + overflowEllipsis
                 </strong>
                 <div
