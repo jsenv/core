@@ -579,7 +579,9 @@ const useListScrollSync = ({
 
     const scrollItemIntoView = (itemEl) => {
       const trigger = `"${event.type}" on ${getElementSignature(event.target)} (${reason})`;
-      const block = event.type === "keydown" ? "nearest" : "center";
+      // When we display the list we prefer to have selected item at the center
+      // otherwise, usually when focused by arrow nav, we want to keep it into view close to the nearest edge
+      const block = event.type === "navi_displayed" ? "center" : "nearest";
       const scrollToItemCall = `${getElementSignature(itemEl)}.scrollIntoView({ block: "${block}", container: "nearest" })`;
       const listScrollContainerEl = ref.current.querySelector(
         `.navi_list_scroll_container`,
@@ -673,12 +675,14 @@ const useListScrollSync = ({
       const firstSelected = items.find((i) => i.selected);
       if (firstSelected) {
         scrollToItem(firstSelected, {
-          event: openEvent,
+          event: new CustomEvent("navi_displayed", {
+            detail: { originalEvent: openEvent },
+          }),
           reason: "scroll to selected",
         });
       } else {
         scrollToItem(items[0], {
-          event: new CustomEvent("navi_list_nav_top_on_displayed", {
+          event: new CustomEvent("navi_displayed", {
             detail: { originalEvent: openEvent },
           }),
           reason: "scroll to top (no selected item)",
