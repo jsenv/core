@@ -102,6 +102,10 @@ const css = /* css */ `
     outline-color: var(--list-item-outline-color);
     outline-offset: var(--list-item-outline-offset);
 
+    &[navi-selectable] {
+      user-select: none;
+    }
+
     &[data-interactive] {
       cursor: pointer;
       user-select: none;
@@ -508,6 +512,7 @@ export const Selectable = (props) => {
       }}
       aria-selected={checked}
       selected={checked}
+      navi-selectable=""
     >
       <Field
         as={selectableArea === "manual" ? "div" : undefined}

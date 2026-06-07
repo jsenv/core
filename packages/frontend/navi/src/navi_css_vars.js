@@ -58,9 +58,13 @@ const css = /* css */ `
   /* Hidden appearance */
   input[navi-visually-hidden] {
     position: absolute;
-    width: 1px;
-    height: 1px;
-    margin: -1px;
+    top: 0;
+    left: 0;
+    z-index: -1;
+    /* Important to take full size so that scrollIntoView work as expected */
+    width: 100%;
+    height: 100%;
+    margin: 0;
     padding: 0;
     white-space: nowrap;
     border: 0;
