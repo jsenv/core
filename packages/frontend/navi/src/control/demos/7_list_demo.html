@@ -441,10 +441,7 @@
                 {LARGE_LIST.length}
               </div>
             )}
-            <List
-              fallback="No results"
-              style={{ maxHeight: "280px" }}
-            >
+            <List fallback="No results" style={{ maxHeight: "280px" }}>
               {(() => {
                 let globalIndex = 0;
                 return groups.map((group) => (
@@ -501,11 +498,7 @@
           <div id="grouped" className="demo-section">
             <h2>Grouped suggestions</h2>
             <p>Options organized into labeled groups using ListItemGroup.</p>
-            <List
-              fallback="No results"
-              style={{ maxHeight: "280px" }}
-              expandX
-            >
+            <List fallback="No results" style={{ maxHeight: "280px" }} expandX>
               <ListItem index={0}>
                 A very large suggestion to test how it behaves when the text is
                 very large and exceeds the width of the list. It should be
@@ -576,10 +569,7 @@
                 fontSize: "1rem",
               }}
             />
-            <List
-              fallback="No results"
-              style={{ maxHeight: "300px" }}
-            >
+            <List fallback="No results" style={{ maxHeight: "300px" }}>
               <ListItemGroup
                 style={{ backgroundColor: "#f0faf3" }}
                 label={
