@@ -199,20 +199,48 @@
       };
       // ── 2. Width behaviour ─────────────────────────────────────────────────────
 
-      const SENTENCE =
-        "This sentence is long enough to overflow and will wrap onto the next line.";
+      const SHORT = "Short item";
+      const MEDIUM_SENTENCE =
+        "A medium-length sentence that fits on a couple of lines.";
+      const LONG_SENTENCE =
+        "This is a significantly longer sentence that will definitely push the list width much further than any short item would.";
       const URL =
         "https://example.com/some/very/deep/path/to/a/resource?with=query&params=here";
+
+      const BG_SHORT = "light-dark(#dbeafe, #1e3a5f)";
+      const BG_CONTENT = "light-dark(#dcfce7, #14532d)";
+
+      const WidthCase = ({ label, content, listProps, itemProps }) => (
+        <Box flex="y" spacing="xs" style={{ alignItems: "flex-start" }}>
+          <strong style={{ fontSize: "0.8rem", color: "#888" }}>{label}</strong>
+          <List {...listProps}>
+            <ListItem
+              index={0}
+              style={{ backgroundColor: BG_SHORT }}
+              {...itemProps}
+            >
+              {SHORT}
+            </ListItem>
+            <ListItem
+              index={1}
+              style={{ backgroundColor: BG_CONTENT }}
+              {...itemProps}
+            >
+              {content}
+            </ListItem>
+          </List>
+        </Box>
+      );
 
       const WidthDemo = () => {
         return (
           <div id="width" className="demo-section">
             <h2>Width behaviour</h2>
             <p>
-              The list is naturally as wide as its widest item. Use{" "}
-              <code>expandX</code> to make it fill its parent instead. Items
-              wrap long text by default; add <code>noWrap</code> +{" "}
-              <code>overflowEllipsis</code> to truncate to a single line.
+              Each list shows a short reference item paired with a longer one.
+              Compare how list width adapts across content types, and how{" "}
+              <code>expandX</code>, <code>overflowEllipsis</code>, and{" "}
+              <code>noWrap</code> change the result.
             </p>
 
             {/* ── Without expandX ── */}
@@ -226,89 +254,24 @@
             >
               Without expandX
             </strong>
-            <Box flex="y" spacing="l" alignX="start" marginBottom="24">
-              <Box flex="y" spacing="xs" style={{ alignItems: "flex-start" }}>
-                <strong style={{ fontSize: "0.8rem", color: "#888" }}>
-                  Natural width
-                </strong>
-                <List>
-                  <ListItem
-                    index={0}
-                    style={{ backgroundColor: "light-dark(#dbeafe, #1e3a5f)" }}
-                  >
-                    Short
-                  </ListItem>
-                  <ListItem
-                    index={1}
-                    style={{ backgroundColor: "light-dark(#dcfce7, #14532d)" }}
-                  >
-                    A somewhat longer item
-                  </ListItem>
-                </List>
-              </Box>
-              <Box flex="y" spacing="xs" style={{ alignItems: "flex-start" }}>
-                <strong style={{ fontSize: "0.8rem", color: "#888" }}>
-                  Wraps by default
-                </strong>
-                <List>
-                  <ListItem
-                    index={0}
-                    style={{ backgroundColor: "light-dark(#dcfce7, #14532d)" }}
-                  >
-                    {SENTENCE}
-                  </ListItem>
-                  <ListItem
-                    index={1}
-                    style={{ backgroundColor: "light-dark(#fef9c3, #422006)" }}
-                  >
-                    {URL}
-                  </ListItem>
-                </List>
-              </Box>
-              <Box flex="y" spacing="xs" style={{ alignItems: "flex-start" }}>
-                <strong style={{ fontSize: "0.8rem", color: "#888" }}>
-                  overflowEllipsis
-                </strong>
-                <List>
-                  <ListItem
-                    index={0}
-                    overflowEllipsis
-                    style={{ backgroundColor: "light-dark(#dcfce7, #14532d)" }}
-                  >
-                    {SENTENCE}
-                  </ListItem>
-                  <ListItem
-                    index={1}
-                    overflowEllipsis
-                    style={{ backgroundColor: "light-dark(#fef9c3, #422006)" }}
-                  >
-                    {URL}
-                  </ListItem>
-                </List>
-              </Box>
-              <Box flex="y" spacing="xs" style={{ alignItems: "flex-start" }}>
-                <strong style={{ fontSize: "0.8rem", color: "#888" }}>
-                  overflowEllipsis + noWrap
-                </strong>
-                <List>
-                  <ListItem
-                    index={0}
-                    noWrap
-                    overflowEllipsis
-                    style={{ backgroundColor: "light-dark(#dcfce7, #14532d)" }}
-                  >
-                    {SENTENCE}
-                  </ListItem>
-                  <ListItem
-                    index={1}
-                    noWrap
-                    overflowEllipsis
-                    style={{ backgroundColor: "light-dark(#fef9c3, #422006)" }}
-                  >
-                    {URL}
-                  </ListItem>
-                </List>
-              </Box>
+            <Box
+              flex="y"
+              spacing="l"
+              style={{ alignItems: "flex-start", marginBottom: "24px" }}
+            >
+              <WidthCase label="Medium sentence" content={MEDIUM_SENTENCE} />
+              <WidthCase label="Long sentence" content={LONG_SENTENCE} />
+              <WidthCase label="URL" content={URL} />
+              <WidthCase
+                label="+ overflowEllipsis"
+                content={LONG_SENTENCE}
+                itemProps={{ overflowEllipsis: true }}
+              />
+              <WidthCase
+                label="+ noWrap + overflowEllipsis"
+                content={LONG_SENTENCE}
+                itemProps={{ noWrap: true, overflowEllipsis: true }}
+              />
             </Box>
 
             {/* ── With expandX ── */}
@@ -322,89 +285,34 @@
             >
               With expandX
             </strong>
-            <Box flex="y" spacing="l" alignX="start">
-              <Box flex="y" spacing="xs" expandX>
-                <strong style={{ fontSize: "0.8rem", color: "#888" }}>
-                  Natural width
-                </strong>
-                <List expandX>
-                  <ListItem
-                    index={0}
-                    style={{ backgroundColor: "light-dark(#dbeafe, #1e3a5f)" }}
-                  >
-                    Short
-                  </ListItem>
-                  <ListItem
-                    index={1}
-                    style={{ backgroundColor: "light-dark(#dcfce7, #14532d)" }}
-                  >
-                    A somewhat longer item
-                  </ListItem>
-                </List>
-              </Box>
-              <Box flex="y" spacing="xs" expandX>
-                <strong style={{ fontSize: "0.8rem", color: "#888" }}>
-                  Wraps by default
-                </strong>
-                <List expandX>
-                  <ListItem
-                    index={0}
-                    style={{ backgroundColor: "light-dark(#dcfce7, #14532d)" }}
-                  >
-                    {SENTENCE}
-                  </ListItem>
-                  <ListItem
-                    index={1}
-                    style={{ backgroundColor: "light-dark(#fef9c3, #422006)" }}
-                  >
-                    {URL}
-                  </ListItem>
-                </List>
-              </Box>
-              <Box flex="y" spacing="xs" expandX>
-                <strong style={{ fontSize: "0.8rem", color: "#888" }}>
-                  overflowEllipsis
-                </strong>
-                <List expandX>
-                  <ListItem
-                    index={0}
-                    overflowEllipsis
-                    style={{ backgroundColor: "light-dark(#dcfce7, #14532d)" }}
-                  >
-                    {SENTENCE}
-                  </ListItem>
-                  <ListItem
-                    index={1}
-                    overflowEllipsis
-                    style={{ backgroundColor: "light-dark(#fef9c3, #422006)" }}
-                  >
-                    {URL}
-                  </ListItem>
-                </List>
-              </Box>
-              <Box flex="y" spacing="xs" expandX>
-                <strong style={{ fontSize: "0.8rem", color: "#888" }}>
-                  overflowEllipsis + noWrap
-                </strong>
-                <List expandX>
-                  <ListItem
-                    index={0}
-                    noWrap
-                    overflowEllipsis
-                    style={{ backgroundColor: "light-dark(#dcfce7, #14532d)" }}
-                  >
-                    {SENTENCE}
-                  </ListItem>
-                  <ListItem
-                    index={1}
-                    noWrap
-                    overflowEllipsis
-                    style={{ backgroundColor: "light-dark(#fef9c3, #422006)" }}
-                  >
-                    {URL}
-                  </ListItem>
-                </List>
-              </Box>
+            <Box flex="y" spacing="l" style={{ alignItems: "flex-start" }}>
+              <WidthCase
+                label="Medium sentence"
+                content={MEDIUM_SENTENCE}
+                listProps={{ expandX: true }}
+              />
+              <WidthCase
+                label="Long sentence"
+                content={LONG_SENTENCE}
+                listProps={{ expandX: true }}
+              />
+              <WidthCase
+                label="URL"
+                content={URL}
+                listProps={{ expandX: true }}
+              />
+              <WidthCase
+                label="+ overflowEllipsis"
+                content={LONG_SENTENCE}
+                listProps={{ expandX: true }}
+                itemProps={{ overflowEllipsis: true }}
+              />
+              <WidthCase
+                label="+ noWrap + overflowEllipsis"
+                content={LONG_SENTENCE}
+                listProps={{ expandX: true }}
+                itemProps={{ noWrap: true, overflowEllipsis: true }}
+              />
             </Box>
           </div>
         );
