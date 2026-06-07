@@ -575,10 +575,10 @@ const TextOverflow = ({ noWrap, spacing, children, ...rest }) => {
       flex
       block
       as="div"
-      nowWrap={noWrap}
-      pre={!noWrap}
+      pre={noWrap === undefined ? true : undefined}
       // For paragraph we prefer to keep lines and only hide unbreakable long sections
-      preLine={rest.as === "p"}
+      preLine={rest.as === "p" ? true : undefined}
+      noWrap={noWrap}
       {...rest}
       overflowEllipsis={undefined}
       data-text-overflow=""
