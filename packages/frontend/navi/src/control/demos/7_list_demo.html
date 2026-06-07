@@ -200,12 +200,11 @@
       // ── 2. Width behaviour ─────────────────────────────────────────────────────
 
       const SHORT = "Short item";
-      const MEDIUM_SENTENCE =
-        "A medium-length sentence that fits on a couple of lines.";
+      const LONGER = "A longer item";
       const LONG_SENTENCE =
-        "This is a significantly longer sentence that will definitely push the list width much further than any short item would.";
+        "This is a much longer sentence that goes on and on well past where any reasonable line would end, forcing the list to become quite wide indeed.";
       const URL =
-        "https://example.com/some/very/deep/path/to/a/resource?with=query&params=here";
+        "https://example.com/some/very/deep/nested/path/to/a/specific/resource?with=many&query=params&and=more&values=here&to=ensure&multiline=true";
 
       const BG_SHORT = "light-dark(#dbeafe, #1e3a5f)";
       const BG_CONTENT = "light-dark(#dcfce7, #14532d)";
@@ -259,17 +258,27 @@
               spacing="l"
               style={{ alignItems: "flex-start", marginBottom: "24px" }}
             >
-              <WidthCase label="Medium sentence" content={MEDIUM_SENTENCE} />
+              <WidthCase label="Medium sentence" content={LONGER} />
               <WidthCase label="Long sentence" content={LONG_SENTENCE} />
               <WidthCase label="URL" content={URL} />
               <WidthCase
-                label="+ overflowEllipsis"
+                label="Long sentence + overflowEllipsis"
                 content={LONG_SENTENCE}
                 itemProps={{ overflowEllipsis: true }}
               />
               <WidthCase
-                label="+ noWrap + overflowEllipsis"
+                label="Long sentence + noWrap + overflowEllipsis"
                 content={LONG_SENTENCE}
+                itemProps={{ noWrap: true, overflowEllipsis: true }}
+              />
+              <WidthCase
+                label="URL + overflowEllipsis"
+                content={URL}
+                itemProps={{ overflowEllipsis: true }}
+              />
+              <WidthCase
+                label="URL + noWrap + overflowEllipsis"
+                content={URL}
                 itemProps={{ noWrap: true, overflowEllipsis: true }}
               />
             </Box>
@@ -288,7 +297,7 @@
             <Box flex="y" spacing="l" style={{ alignItems: "flex-start" }}>
               <WidthCase
                 label="Medium sentence"
-                content={MEDIUM_SENTENCE}
+                content={LONGER}
                 listProps={{ expandX: true }}
               />
               <WidthCase
@@ -302,14 +311,26 @@
                 listProps={{ expandX: true }}
               />
               <WidthCase
-                label="+ overflowEllipsis"
+                label="Long sentence + overflowEllipsis"
                 content={LONG_SENTENCE}
                 listProps={{ expandX: true }}
                 itemProps={{ overflowEllipsis: true }}
               />
               <WidthCase
-                label="+ noWrap + overflowEllipsis"
+                label="Long sentence + noWrap + overflowEllipsis"
                 content={LONG_SENTENCE}
+                listProps={{ expandX: true }}
+                itemProps={{ noWrap: true, overflowEllipsis: true }}
+              />
+              <WidthCase
+                label="URL + overflowEllipsis"
+                content={URL}
+                listProps={{ expandX: true }}
+                itemProps={{ overflowEllipsis: true }}
+              />
+              <WidthCase
+                label="URL + noWrap + overflowEllipsis"
+                content={URL}
                 listProps={{ expandX: true }}
                 itemProps={{ noWrap: true, overflowEllipsis: true }}
               />
