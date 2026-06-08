@@ -18759,15 +18759,15 @@ const resolveValue = (replacements, key, fallback) => {
   return fallback;
 };
 
-const DEFAULT_LANG$1 = "en";
+const DEFAULT_LANG = "en";
 
 const getBrowserLang = () => {
   if (typeof window === "undefined") {
-    return DEFAULT_LANG$1;
+    return DEFAULT_LANG;
   }
   const { navigator } = window;
   if (typeof navigator === "undefined") {
-    return DEFAULT_LANG$1;
+    return DEFAULT_LANG;
   }
   const { language } = navigator;
   if (typeof language === "string") {
@@ -18777,7 +18777,7 @@ const getBrowserLang = () => {
   if (Array.isArray(languages) && languages.length > 0) {
     return languages[0];
   }
-  return DEFAULT_LANG$1;
+  return DEFAULT_LANG;
 };
 
 const langSignal = signal(getBrowserLang());
@@ -19018,6 +19018,41 @@ naviI18n.addAll({
     it: "[day] alle [time]",
     pt: "[day] às [time]",
     nl: "[day] om [time]",
+  },
+  // [duration] is replaced at runtime with the formatted duration string (e.g. "1h30", "45 min")
+  "time.in_duration": {
+    en: "in [duration]",
+    fr: "dans [duration]",
+    de: "in [duration]",
+    es: "en [duration]",
+    it: "tra [duration]",
+    pt: "em [duration]",
+    nl: "over [duration]",
+  },
+  // Compact duration unit symbols used in "1h30", "45min", etc.
+  "time.duration.hour_symbol": {
+    en: "h",
+    fr: "h",
+    de: "h",
+    es: "h",
+    it: "h",
+    pt: "h",
+    nl: "u",
+    ja: "時間",
+    zh: "小时",
+    ko: "시간",
+  },
+  "time.duration.minute_symbol": {
+    en: "min",
+    fr: "min",
+    de: "min",
+    es: "min",
+    it: "min",
+    pt: "min",
+    nl: "min",
+    ja: "分",
+    zh: "分",
+    ko: "분",
   },
 });
 
@@ -19813,8 +19848,6 @@ CONSTRAINT_ATTRIBUTE_SET.add("data-single-space");
  */
 
 
-const DEFAULT_LANG = "en";
-
 /**
  * Formats a date as a human-readable day, appending "(aujourd'hui)" or
  * "(demain)" when the date matches today or tomorrow.
@@ -19965,6 +19998,70 @@ const formatTime = (date, locale) => {
 };
 
 /**
+ * Formats a duration expressed in minutes as a short human-readable string.
+ * Uses Intl.DurationFormat when available, falls back to a compact notation.
+ *
+ * @param {number} minutes
+ * @param {string} locale
+ * @param {{ long?: boolean }} [options]
+ *
+ * @example
+ * formatMinuteDuration(90, "fr")             // "1h30"        (compact, default)
+ * formatMinuteDuration(90, "fr", { long: true }) // "1 heure 30" or "1 h 30 min" via Intl
+ * formatMinuteDuration(45, "en")             // "45min"
+ * formatMinuteDuration(120, "fr")            // "2h"
+ */
+const formatMinuteDuration = (
+  minutes,
+  locale,
+  { long = false } = {},
+) => {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (long && typeof Intl.DurationFormat !== "undefined") {
+    const fmt = new Intl.DurationFormat(locale, { style: "long" });
+    if (h === 0) {
+      return fmt.format({ minutes: m });
+    }
+    if (m === 0) {
+      return fmt.format({ hours: h });
+    }
+    return fmt.format({ hours: h, minutes: m });
+  }
+  // Compact notation: "1h30", "45min", "2h"
+  const hSym = naviI18n("time.duration.hour_symbol", undefined, {
+    lang: locale,
+  });
+  const mSym = naviI18n("time.duration.minute_symbol", undefined, {
+    lang: locale,
+  });
+  if (h === 0) {
+    return `${m}${mSym}`;
+  }
+  if (m === 0) {
+    return `${h}${hSym}`;
+  }
+  return `${h}${hSym}${String(m).padStart(2, "0")}`;
+};
+
+/**
+ * Formats a duration expressed in hours (possibly fractional) as a short human-readable string.
+ *
+ * @param {number} hours
+ * @param {string} locale
+ * @param {{ long?: boolean }} [options]
+ *
+ * @example
+ * formatHourDuration(1.5, "fr")              // "1h30"
+ * formatHourDuration(1.5, "fr", { long: true }) // "1 heure 30" or "1 h 30 min" via Intl
+ * formatHourDuration(2, "en")               // "2h"
+ */
+const formatHourDuration = (hours, locale, { long = false } = {}) => {
+  const totalMinutes = Math.round(hours * 60);
+  return formatMinuteDuration(totalMinutes, locale, { long });
+};
+
+/**
  * Formats a date relative to now: "il y a 3 jours", "dans 2 heures", etc.
  */
 const formatTimeAgo = (date, locale, { now = new Date(), bare } = {}) => {
@@ -20075,7 +20172,14 @@ const formatFuture = (date, diff, locale, { now }) => {
     if (minutes === 0) {
       return rtf.format(hours, "hour");
     }
-    return formatHoursAndMinutes(hours, minutes, locale);
+    const duration = formatMinuteDuration(hours * 60 + minutes, locale, {
+      long: true,
+    });
+    const template = naviI18n("time.in_duration", undefined, { lang: locale });
+    if (template !== "time.in_duration") {
+      return template.replace("[duration]", duration);
+    }
+    return `in ${duration}`;
   }
 
   // < 6h → "dans X heures" (precise enough, skip tomorrow label)
@@ -20131,24 +20235,6 @@ const formatTomorrowAt = (date, locale) => {
   }
   // fallback: concatenate with a space
   return `${dayLabel} ${timeLabel}`;
-};
-
-// "dans 1 heure 30" — colloquial format, built per language.
-// The plural suffix is applied inline because it depends on the count;
-// a plain string template cannot express this, so we keep it in JS.
-const formatHoursAndMinutes = (hours, minutes, locale) => {
-  const lang = (locale || "").split("-")[0];
-  const templates = {
-    fr: (h, m) => `dans ${h} heure${h > 1 ? "s" : ""} ${m}`,
-    en: (h, m) => `in ${h} hour${h > 1 ? "s" : ""} ${m}`,
-    de: (h, m) => `in ${h} Stunde${h > 1 ? "n" : ""} ${m}`,
-    es: (h, m) => `en ${h} hora${h > 1 ? "s" : ""} ${m}`,
-    it: (h, m) => `tra ${h} ora${h > 1 ? "e" : ""} ${m}`,
-    pt: (h, m) => `em ${h} hora${h > 1 ? "s" : ""} ${m}`,
-    nl: (h, m) => `over ${h} uur ${m}`,
-  };
-  const template = templates[lang] || templates[DEFAULT_LANG];
-  return template(hours, minutes);
 };
 
 const getLessThanMinuteText = (locale) => {
@@ -32612,6 +32698,11 @@ const Time = props => {
       ...props
     });
   }
+  if (type === "hour") {
+    return jsx(TimeHour, {
+      ...props
+    });
+  }
   return jsx(TimeRelative, {
     ...props
   });
@@ -32754,6 +32845,7 @@ const TimeDatetime = ({
 const TimeTime = ({
   children,
   locale,
+  durationFormat,
   ...props
 }) => {
   const lang = locale || langSignal.value;
@@ -32776,10 +32868,21 @@ const TimeTime = ({
       children: children
     });
   }
-  const text = formatTime(date, lang);
   const hh = String(date.getHours()).padStart(2, "0");
   const mm = String(date.getMinutes()).padStart(2, "0");
   const dateTime = `${hh}:${mm}`; // See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
+  if (durationFormat) {
+    const totalMinutes = date.getHours() * 60 + date.getMinutes();
+    const text = formatMinuteDuration(totalMinutes, lang, {
+      long: durationFormat === "long"
+    });
+    return jsx(TimeText, {
+      dateTime: dateTime,
+      ...props,
+      children: text
+    });
+  }
+  const text = formatTime(date, lang);
   return jsx(TimeText, {
     dateTime: dateTime,
     ...props,
@@ -32789,13 +32892,15 @@ const TimeTime = ({
 const TimeMinute = ({
   children,
   locale,
+  long,
+  timeString,
   ...props
 }) => {
   const lang = locale || langSignal.value;
   if (children === undefined) {
     return jsx(TimeText, {
       ...props,
-      children: "--:--"
+      children: timeString ? "--:--" : "--"
     });
   }
   let minutes;
@@ -32811,13 +32916,56 @@ const TimeMinute = ({
     }
     minutes = childrenAsNumber;
   }
-  const date = new Date(1970, 0, 1, Math.floor(minutes / 60), minutes % 60, 0);
-  const hh = String(date.getHours()).padStart(2, "0");
-  const mm = String(date.getMinutes()).padStart(2, "0");
+  const totalHours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  const hh = String(totalHours).padStart(2, "0");
+  const mm = String(remainingMinutes).padStart(2, "0");
   const dateTime = `${hh}:${mm}`;
-  const text = formatTime(date, lang);
+  let text;
+  if (timeString) {
+    const date = new Date(1970, 0, 1, totalHours, remainingMinutes, 0);
+    text = formatTime(date, lang);
+  } else {
+    text = formatMinuteDuration(minutes, lang, {
+      long
+    });
+  }
   return jsx(TimeText, {
     dateTime: dateTime,
+    ...props,
+    children: text
+  });
+};
+const TimeHour = ({
+  children,
+  locale,
+  long,
+  ...props
+}) => {
+  const lang = locale || langSignal.value;
+  if (children === undefined) {
+    return jsx(TimeText, {
+      ...props,
+      children: "--"
+    });
+  }
+  let hours;
+  if (typeof children === "number") {
+    hours = children;
+  } else {
+    const childrenAsNumber = Number(children);
+    if (isNaN(childrenAsNumber)) {
+      return jsx(TimeText, {
+        ...props,
+        children: children
+      });
+    }
+    hours = childrenAsNumber;
+  }
+  const text = formatHourDuration(hours, lang, {
+    long
+  });
+  return jsx(TimeText, {
     ...props,
     children: text
   });
@@ -33051,7 +33199,7 @@ const PickerTime = props => {
     type: "time"
   });
 };
-const PickerTimeUI = () => {
+const PickerTimeUI = props => {
   const {
     value,
     placeholder
@@ -33060,7 +33208,8 @@ const PickerTimeUI = () => {
     if (!placeholder) {
       return jsx(Time, {
         type: "time",
-        color: "var(--picker-placeholder-color"
+        color: "var(--picker-placeholder-color",
+        ...props
       });
     }
     return jsx(PickerPlaceholder, {
@@ -33069,6 +33218,7 @@ const PickerTimeUI = () => {
   }
   return jsx(Time, {
     type: "time",
+    ...props,
     children: value
   });
 };
@@ -35726,7 +35876,8 @@ installImportMetaCssBuild(import.meta);const css$k = /* css */`
       )
     );
     --x-picker-padding-right: calc(
-      var(--x-picker-padding-right-base) + var(--picker-right-slot-size) - 2px
+      var(--x-picker-padding-right-base) + var(--picker-right-slot-size) +
+        var(--picker-right-slot-size) * 0.25
     );
     --x-picker-padding-left: var(
       --picker-padding-left,

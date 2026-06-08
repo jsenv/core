@@ -136,15 +136,21 @@ export const PickerTime = (props) => {
     <Next ui={<PickerTimeUI />} icon={<ClockSvg />} {...props} type="time" />
   );
 };
-export const PickerTimeUI = () => {
+export const PickerTimeUI = (props) => {
   const { value, placeholder } = useContext(PickerContext);
   if (!value) {
     if (!placeholder) {
-      return <Time type="time" color="var(--picker-placeholder-color" />;
+      return (
+        <Time type="time" color="var(--picker-placeholder-color" {...props} />
+      );
     }
     return <PickerPlaceholder>{placeholder}</PickerPlaceholder>;
   }
-  return <Time type="time">{value}</Time>;
+  return (
+    <Time type="time" {...props}>
+      {value}
+    </Time>
+  );
 };
 
 export const PickerDatetime = (props) => {

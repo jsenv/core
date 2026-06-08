@@ -77,6 +77,7 @@
           <WithActionDemo />
           <ValidationDemo />
           <NaviTimeDemo />
+          <CustomizationDemo />
         </Box>
       );
 
@@ -117,6 +118,9 @@
             </li>
             <li>
               <a href="#navi-time">navi_time (min / max / step)</a>
+            </li>
+            <li>
+              <a href="#customization">Customization</a>
             </li>
           </ol>
         </div>
@@ -554,6 +558,40 @@
           </div>
         );
       };
+
+      // ── 5. Customization ──────────────────────────────────────────────────
+
+      const CustomizationDemo = () => (
+        <div class="demo-section" id="customization">
+          <h2>5. Customization — Picker.UI.Time</h2>
+          <p class="desc">
+            Passez <code>ui={"{<Picker.UI.Time />}"}</code> pour personnaliser
+            l'affichage de la valeur sélectionnée. Ici avec{" "}
+            <code>durationFormat</code> pour afficher la durée au format{" "}
+            <code>1h30</code> au lieu de <code>09:30</code>.
+          </p>
+          <Box flex="y" spacing="s">
+            <Field vertical>
+              <Label>Format durée compact</Label>
+              <Picker
+                name="time_duration_compact"
+                type="time"
+                defaultValue="01:30"
+                ui={<Picker.UI.Time durationFormat />}
+              />
+            </Field>
+            <Field vertical>
+              <Label>Format durée long</Label>
+              <Picker
+                name="time_duration_long"
+                type="time"
+                defaultValue="01:30"
+                ui={<Picker.UI.Time durationFormat="long" />}
+              />
+            </Field>
+          </Box>
+        </div>
+      );
 
       render(
         <NaviDebug debugAction debugInteraction debugPopup>

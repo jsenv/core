@@ -184,7 +184,7 @@ const TimeDatetime = ({ children, locale, ...props }) => {
   );
 };
 
-const TimeTime = ({ children, locale, ...props }) => {
+const TimeTime = ({ children, locale, durationFormat, ...props }) => {
   const lang = locale || langSignal.value;
 
   if (children === undefined) {
@@ -202,10 +202,19 @@ const TimeTime = ({ children, locale, ...props }) => {
     return <TimeText {...props}>{children}</TimeText>;
   }
 
-  const text = formatTime(date, lang);
   const hh = String(date.getHours()).padStart(2, "0");
   const mm = String(date.getMinutes()).padStart(2, "0");
   const dateTime = `${hh}:${mm}`; // See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
+  if (durationFormat) {
+    const totalMinutes = date.getHours() * 60 + date.getMinutes();
+    const text = formatMinuteDuration(totalMinutes, lang, { long: durationFormat === "long" });
+    return (
+      <TimeText dateTime={dateTime} {...props}>
+        {text}
+      </TimeText>
+    );
+  }
+  const text = formatTime(date, lang);
   return (
     <TimeText dateTime={dateTime} {...props}>
       {text}
