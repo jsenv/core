@@ -150,6 +150,7 @@ const css = /* css */ `
     outline-color: var(--picker-outline-color);
     outline-offset: var(--x-picker-outline-offset);
     cursor: var(--x-picker-cursor, pointer);
+    pointer-events: auto;
     user-select: none;
     overflow: hidden;
 
