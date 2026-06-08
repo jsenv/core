@@ -235,7 +235,10 @@ const TYPE_DEFAULTS = {
   ratio: { min: 0, max: 1 },
   longitude: { min: -180, max: 180 },
   latitude: { min: -90, max: 90 },
-  day: {},
+  hour: { min: 0, step: 1 },
+  minute: { min: 0, step: 1 },
+  second: { min: 0, step: 1 },
+  date: {},
   month: {},
   datetime: {},
 };
@@ -383,6 +386,24 @@ const TYPE_VALIDATORS = {
     }
     return "";
   },
+  hour: (value) => {
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return "";
+    }
+    return `must be a number`;
+  },
+  minute: (value) => {
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return "";
+    }
+    return `must be a number`;
+  },
+  second: (value) => {
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return "";
+    }
+    return `must be a number`;
+  },
   month: (value) => {
     if (typeof value === "number" && Number.isFinite(value)) {
       return ""; // timestamp
@@ -520,6 +541,15 @@ const TYPE_CONVERTERS = {
     string: (value) => TYPE_CONVERTERS.number.string(value),
   },
   latitude: {
+    string: (value) => TYPE_CONVERTERS.number.string(value),
+  },
+  hour: {
+    string: (value) => TYPE_CONVERTERS.number.string(value),
+  },
+  minute: {
+    string: (value) => TYPE_CONVERTERS.number.string(value),
+  },
+  second: {
     string: (value) => TYPE_CONVERTERS.number.string(value),
   },
   percentage: {

@@ -35,6 +35,12 @@
 - [month type with min (timestamp)](31_month_type_with_min_(timestamp)/31_month_type_with_min_(timestamp).md)
 - [datetime type validation](32_datetime_type_validation/32_datetime_type_validation.md)
 - [datetime type with min and max (timestamps)](33_datetime_type_with_min_and_max_(timestamps)/33_datetime_type_with_min_and_max_(timestamps).md)
+- [hour type validation](34_hour_type_validation/34_hour_type_validation.md)
+- [hour type with max](35_hour_type_with_max/35_hour_type_with_max.md)
+- [minute type validation](36_minute_type_validation/36_minute_type_validation.md)
+- [minute type with max](37_minute_type_with_max/37_minute_type_with_max.md)
+- [second type validation](38_second_type_validation/38_second_type_validation.md)
+- [second type with max and decimal step](39_second_type_with_max_and_decimal_step/39_second_type_with_max_and_decimal_step.md)
 
 ---
 

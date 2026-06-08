@@ -18,18 +18,10 @@ return {
 
 # 1/2 logs
 
-![img](log_group.svg)
-
-<details>
-  <summary>see without style</summary>
-
 ```console
 [createValidity] Unknown ruleConfig properties: [ 'unknownRule' ]
 [createValidity] Unknown ruleConfig properties:
 ```
-
-</details>
-
 
 # 2/2 return
 
