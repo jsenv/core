@@ -12885,11 +12885,27 @@ const definePseudoClass = (pseudoClass, definition) => {
 definePseudoClass(":hover", {
   attribute: "data-hover",
   setup: (el, callback) => {
-    let onmouseenter = () => {
-      callback();
+    const recheckProxy = (e) => {
+      const proxy = findControlProxy(el);
+      if (proxy) {
+        requestPseudoStateCheck(proxy, { event: e });
+      }
     };
-    let onmouseleave = () => {
+    const recheckProxyTarget = (e) => {
+      const proxyTarget = findControlProxyTarget(el);
+      if (proxyTarget) {
+        requestPseudoStateCheck(proxyTarget, { event: e });
+      }
+    };
+    let onmouseenter = (e) => {
       callback();
+      recheckProxy(e);
+      recheckProxyTarget(e);
+    };
+    let onmouseleave = (e) => {
+      callback();
+      recheckProxy(e);
+      recheckProxyTarget(e);
     };
 
     if (el.tagName === "LABEL") {
@@ -12912,13 +12928,15 @@ definePseudoClass(":hover", {
         }
         requestPseudoStateCheck(input, { event: e });
       };
+      const _onmouseenter = onmouseenter;
       onmouseenter = (e) => {
-        callback();
         recheckInput(e);
+        _onmouseenter(e);
       };
+      const _onmouseleave = onmouseleave;
       onmouseleave = (e) => {
-        callback();
         recheckInput(e);
+        _onmouseleave(e);
       };
     }
 
@@ -12929,7 +12947,16 @@ definePseudoClass(":hover", {
       el.removeEventListener("mouseleave", onmouseleave);
     };
   },
-  test: (el) => el.matches(":hover"),
+  test: (el) => {
+    if (el.matches(":hover")) {
+      return true;
+    }
+    const proxy = findControlProxy(el);
+    if (proxy && proxy.matches(":hover")) {
+      return true;
+    }
+    return false;
+  },
 });
 definePseudoClass(":disabled", {
   attribute: "data-disabled",
@@ -17384,6 +17411,7 @@ const css$O = /* css */`
     opacity: 0;
     /* will be positioned with transform: translate */
     transition: opacity 0.2s ease-in-out;
+    pointer-events: auto; /* Must be interactive to be closabled (overrid list item pointer-events none for instance)  */
     overflow: visible;
 
     &[data-status="success"] {
@@ -21851,7 +21879,7 @@ const useCustomValidationRef = (
     }
     const element = elementRef.current;
     if (!element) {
-      if (!elementRef.nullExpected) {
+      if (!elementRef.nullCanHappen) {
         console.warn(
           `useCustomValidationRef: elementRef.current is null, make sure to pass a ref to an element
 ${callSiteRef.current}`,
@@ -24394,10 +24422,13 @@ const useNextResolver = () => useContext(NextResolverContext);
  * To terminate the chain early (e.g. render a specialized component), render
  * directly without calling Next.
  *
+ * The last entry in the array is the final/target component — it receives null
+ * from useNextResolver() indicating it is terminal.
+ *
  * Usage:
- *   const renderButton = createComponentResolver([ResolverA, ResolverB]);
+ *   const renderButton = createComponentResolver([ResolverA, ResolverB, ButtonTarget]);
  *   // Then inside a component render:
- *   renderButton(ButtonTarget, props)
+ *   renderButton(props)
  *
  * NextResolverContext exposes a stable Next component so resolvers can continue
  * the chain via useNextResolver().
@@ -24406,22 +24437,21 @@ const useNextResolver = () => useContext(NextResolverContext);
  */
 const createComponentResolver = resolvers => {
   const ResolverIndexContext = createContext(0);
-  const TargetComponentContext = createContext(null);
   const ChainRunner = props => {
     const index = useContext(ResolverIndexContext);
-    const TargetComponent = useContext(TargetComponentContext);
     if (index >= resolvers.length) {
-      return jsx(NextResolverContext.Provider, {
-        value: null,
-        children: jsx(TargetComponent, {
-          ...props
-        })
-      });
+      return null;
     }
     const Resolver = resolvers[index];
+    const isLast = index === resolvers.length - 1;
     return jsx(ResolverIndexContext.Provider, {
       value: index + 1,
-      children: jsx(Resolver, {
+      children: isLast ? jsx(NextResolverContext.Provider, {
+        value: null,
+        children: jsx(Resolver, {
+          ...props
+        })
+      }) : jsx(Resolver, {
         ...props
       })
     });
@@ -24434,11 +24464,11 @@ const createComponentResolver = resolvers => {
   const NextComponent = props => jsx(ChainRunner, {
     ...props
   });
-  const renderComponent = (TargetComponent, props) => {
+  const renderComponent = props => {
     return jsx(NextResolverContext.Provider, {
       value: NextComponent,
-      children: jsx(TargetComponentContext.Provider, {
-        value: TargetComponent,
+      children: jsx(ResolverIndexContext.Provider, {
+        value: 0,
         children: jsx(ChainRunner, {
           ...props
         })
@@ -24446,6 +24476,61 @@ const createComponentResolver = resolvers => {
     });
   };
   return renderComponent;
+};
+
+const ButtonInsideFormResolver = props => {
+  const Next = useNextResolver();
+  const formContext = useContext(FormContext);
+  if (formContext) {
+    return jsx(ButtonInsideForm, {
+      ...props
+    });
+  }
+  return jsx(Next, {
+    ...props
+  });
+};
+const ButtonInsideForm = props => {
+  const Next = useNextResolver();
+  return jsx(Next
+  // The default action for a button inside a form is to request form action
+  , {
+    action: "send",
+    ...props
+  });
+};
+
+const ButtonRouteResolver = props => {
+  const Next = useNextResolver();
+  if (props.route) {
+    return jsx(ButtonWithRoute, {
+      ...props
+    });
+  }
+  return jsx(Next, {
+    ...props
+  });
+};
+const ButtonWithRoute = props => {
+  const Next = useNextResolver();
+  const {
+    route,
+    routeParams,
+    children,
+    ...rest
+  } = props;
+  const url = route.buildUrl(routeParams);
+  const {
+    matching
+  } = useRouteStatus(route);
+  const paramsAreMatching = route.matchesParams(routeParams);
+  const linkMatching = matching && paramsAreMatching;
+  return jsx(Next, {
+    href: url,
+    "data-href-current": linkMatching ? "" : undefined,
+    ...rest,
+    children: children || route.buildRelativeUrl(routeParams)
+  });
 };
 
 const LIGHT_ACCENT_ATTRIBUTE = "data-accent-light";
@@ -26520,38 +26605,8 @@ installImportMetaCssBuild(import.meta);const css$I = /* css */`
     }
   }
 `;
-const Button = props => {
-  const defaultRef = useRef(null);
-  props.ref = props.ref || defaultRef;
-  const button = renderButton(ButtonUI, props);
-  return button;
-};
-const ButtonRouteResolver = props => {
-  const Next = useNextResolver();
-  if (props.route) {
-    return jsx(ButtonWithRoute, {
-      ...props
-    });
-  }
-  return jsx(Next, {
-    ...props
-  });
-};
-const ButtonInsideFormResolver = props => {
-  const Next = useNextResolver();
-  const formContext = useContext(FormContext);
-  if (formContext) {
-    return jsx(ButtonInsideForm, {
-      ...props
-    });
-  }
-  return jsx(Next, {
-    ...props
-  });
-};
-const renderButton = createComponentResolver([ButtonRouteResolver, ButtonInsideFormResolver]);
 const ButtonUI = props => {
-  import.meta.css = [css$I, "@jsenv/navi/src/control/button.jsx"];
+  import.meta.css = [css$I, "@jsenv/navi/src/control/input/button_ui.jsx"];
   const {
     ref,
     // href/link
@@ -26701,36 +26756,16 @@ const ButtonShadow = () => {
   });
 };
 markAsOutsideTextFlow(ButtonShadow);
-const ButtonInsideForm = props => {
+
+const ButtonFirstResolver = props => {
   const Next = useNextResolver();
-  return jsx(Next
-  // The default action for a button inside a form is to request form action
-  , {
-    action: "send",
+  const defaultRef = useRef(null);
+  props.ref = props.ref || defaultRef;
+  return jsx(Next, {
     ...props
   });
 };
-const ButtonWithRoute = props => {
-  const Next = useNextResolver();
-  const {
-    route,
-    routeParams,
-    children,
-    ...rest
-  } = props;
-  const url = route.buildUrl(routeParams);
-  const {
-    matching
-  } = useRouteStatus(route);
-  const paramsAreMatching = route.matchesParams(routeParams);
-  const linkMatching = matching && paramsAreMatching;
-  return jsx(Next, {
-    href: url,
-    "data-href-current": linkMatching ? "" : undefined,
-    ...rest,
-    children: children || route.buildRelativeUrl(routeParams)
-  });
-};
+const Button = createComponentResolver([ButtonFirstResolver, ButtonRouteResolver, ButtonInsideFormResolver, ButtonUI]);
 
 const CloseSvg = () => {
   return jsx("svg", {
@@ -29841,16 +29876,6 @@ const RangeStyleCSSVars = {
 const RangePseudoClasses = [":hover", ":active", ":-navi-pressed", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
 const RangePseudoElements = ["::-navi-loader"];
 
-const ChevronDownSvg = () => {
-  return jsx("svg", {
-    viewBox: "0 0 16 16",
-    fill: "currentColor",
-    children: jsx("path", {
-      d: "M4.427 7.427l3.396 3.396a.25.25 0 0 0 .354 0l3.396-3.396A.25.25 0 0 0 11.396 7H4.604a.25.25 0 0 0-.177.427z"
-    })
-  });
-};
-
 const SearchSvg = () => jsx("svg", {
   viewBox: "0 0 24 24",
   xmlns: "http://www.w3.org/2000/svg",
@@ -29859,6 +29884,8 @@ const SearchSvg = () => jsx("svg", {
     fill: "currentColor"
   })
 });
+
+const InputTextualContext = createContext(null);
 
 installImportMetaCssBuild(import.meta);const css$x = /* css */`
   @layer navi {
@@ -30084,6 +30111,91 @@ const Label = props => {
 };
 const LabelPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
 
+const InputSlot = ({
+  side,
+  onClick,
+  hideWhileEmpty,
+  ...props
+}) => {
+  const ctx = useContext(InputTextualContext);
+  const {
+    id,
+    readOnly,
+    disabled
+  } = ctx;
+  return jsx(Label, {
+    htmlFor: id,
+    className: "navi_input_slot",
+    disabled: disabled,
+    readOnly: readOnly,
+    "data-readonly": readOnly,
+    "data-disabled": disabled,
+    "data-left": side === "left" ? "" : undefined,
+    "data-right": side === "right" ? "" : undefined,
+    "data-hide-while-empty": hideWhileEmpty ? "" : undefined,
+    inline: true,
+    flex: true,
+    align: "center",
+    onMouseDown: e => {
+      // Only prevent focus from leaving when the input already has focus.
+      // If the input is not focused, let the mousedown proceed normally so
+      // the slot element (e.g. a clear button) can receive focus itself.
+      const inputEl = document.getElementById(id);
+      if (inputEl && inputEl === document.activeElement) {
+        e.preventDefault();
+      }
+    },
+    onClick: e => {
+      onClick?.(e);
+      const input = document.getElementById(id);
+      const allowed = dispatchRequestInteraction(input, e);
+      if (!allowed) {
+        e.preventDefault();
+      }
+    },
+    ...props
+  });
+};
+const InputLeftSlot = props => {
+  return jsx(InputSlot, {
+    ...props,
+    side: "left"
+  });
+};
+const InputRightSlot = props => {
+  return jsx(InputSlot, {
+    ...props,
+    side: "right"
+  });
+};
+
+const InputWithListResolver = props => {
+  const Next = useNextResolver();
+  if (props["navi-list"]) {
+    return jsx(InputWithList, {
+      ...props
+    });
+  }
+  return jsx(Next, {
+    ...props
+  });
+};
+
+/**
+ * InputWithList — connects an input to a SelectableList via its id.
+ *
+ * Usage: <Input navi-list="my-list-id" /> next to <SelectableList id="my-list-id" />
+ *
+ * Behavior:
+ *   - ArrowDown / ArrowUp move the list's "current item" without moving focus
+ *   - Home / End jump to first/last navigable item
+ *   - Enter triggers selection of the current item (same as clicking it)
+ *   - aria-controls dynamically points at the current item's real input so the
+ *     pseudo-styles focus-inheritance kicks in (list item shows :focus /
+ *     :focus-visible while the input is focused).
+ *   - aria-activedescendant points at the current item's <li> id (standard
+ *     combobox/listbox ARIA pattern).
+ */
 const InputWithList = props => {
   const Next = useNextResolver();
   const {
@@ -30153,6 +30265,218 @@ const InputWithList = props => {
       onKeyDown?.(e);
       onKeyDownShortcuts(e);
     }
+  });
+};
+
+const ChevronDownSvg = () => {
+  return jsx("svg", {
+    viewBox: "0 0 16 16",
+    fill: "currentColor",
+    children: jsx("path", {
+      d: "M4.427 7.427l3.396 3.396a.25.25 0 0 0 .354 0l3.396-3.396A.25.25 0 0 0 11.396 7H4.604a.25.25 0 0 0-.177.427z"
+    })
+  });
+};
+
+const InputWithSuggestionsResolver = props => {
+  const Next = useNextResolver();
+  if (props["navi-suggestions"]) {
+    return jsx(InputTextualWithSuggestions, {
+      ...props
+    });
+  }
+  return jsx(Next, {
+    ...props
+  });
+};
+const InputTextualWithSuggestions = props => {
+  const Next = useNextResolver();
+  const {
+    ref,
+    suggestions,
+    onInput,
+    onFocus,
+    onBlur,
+    onKeyDown,
+    children,
+    ...rest
+  } = props;
+  const [expanded, setExpanded] = useState(false);
+  const expandedRef = useRef(expanded);
+  expandedRef.current = expanded;
+  const expand = () => {
+    expandedRef.current = true;
+    setExpanded(true);
+  };
+  const collapse = () => {
+    expandedRef.current = false;
+    setExpanded(false);
+  };
+  const getListEl = () => {
+    return document.getElementById(suggestions);
+  };
+  const showSuggestions = e => {
+    if (expandedRef.current) {
+      return;
+    }
+    const listEl = getListEl();
+    if (listEl) {
+      dispatchCustomEvent(listEl, "navi_request_open", {
+        event: e,
+        anchor: ref.current
+      });
+      expand();
+    }
+  };
+  const hideSuggestions = e => {
+    if (!expandedRef.current) {
+      return;
+    }
+    const listEl = getListEl();
+    if (listEl) {
+      dispatchCustomEvent(listEl, "navi_request_close", {
+        event: e
+      });
+      collapse();
+    }
+  };
+  useEffect(() => {
+    const inputEl = ref.current;
+    const listEl = getListEl();
+    if (!listEl) {
+      return undefined;
+    }
+    const onSelect = e => {
+      const {
+        item
+      } = e.detail;
+      const {
+        value
+      } = item;
+      inputEl.value = value;
+      inputEl.dispatchEvent(new Event("input", {
+        bubbles: true
+      }));
+      hideSuggestions(e);
+    };
+    listEl.addEventListener("navi_list_select", onSelect);
+    return () => {
+      listEl.removeEventListener("navi_list_select", onSelect);
+    };
+  }, [suggestions]);
+  const onKeyDownShortcuts = createOnKeyDownForShortcuts({
+    arrowdown: e => {
+      showSuggestions(e);
+    },
+    arrowup: e => {
+      showSuggestions(e);
+    },
+    escape: e => {
+      if (!expandedRef.current) {
+        return false;
+      }
+      hideSuggestions(e);
+      return true;
+    },
+    home: () => {},
+    end: () => {},
+    enter: () => {}
+  });
+  return jsx(Next, {
+    role: "combobox",
+    "aria-haspopup": "listbox",
+    "aria-expanded": expanded,
+    "aria-autocomplete": "list",
+    autoComplete: "off",
+    basePseudoState: {
+      ":-navi-expanded": expanded
+    },
+    onnavi_callout_open: e => {
+      hideSuggestions(e);
+    },
+    ...rest,
+    ref: ref,
+    onFocus: e => {
+      onFocus?.(e);
+      showSuggestions(e);
+    },
+    onBlur: e => {
+      onBlur?.(e);
+      hideSuggestions(e);
+    },
+    onInput: e => {
+      onInput?.(e);
+      showSuggestions(e);
+    },
+    onKeyDown: e => {
+      onKeyDown?.(e);
+      onKeyDownShortcuts(e);
+    }
+    //  arrowdown: (e) => {
+    //   const listEl = getListEl();
+    //   e.stopPropagation(); // when within a list, prevent list from handling it twice
+    //   return requestListNavFromCurrent(listEl, {
+    //     event: e,
+    //     goal: "down",
+    //   });
+    // },
+    // arrowup: (e) => {
+    //   const listEl = getListEl();
+    //   e.stopPropagation(); // when within a list, prevent list from handling it twice
+    //   return requestListNavFromCurrent(listEl, {
+    //     event: e,
+    //     goal: "up",
+    //   });
+    // },
+    // home: (e) => {
+    //   const listEl = getListEl();
+    //   e.stopPropagation(); // when within a list, prevent list from handling it twice
+    //   return requestListNavFromCurrent(listEl, {
+    //     event: e,
+    //     goal: "first",
+    //   });
+    // },
+    // end: (e) => {
+    //   const listEl = getListEl();
+    //   e.stopPropagation(); // when within a list, prevent list from handling it twice
+    //   return requestListNavFromCurrent(listEl, {
+    //     event: e,
+    //     goal: "last",
+    //   });
+    // },
+    // enter: (e) => {
+    //   const listEl = getListEl();
+    //   e.stopPropagation(); // when within a list, prevent list from handling it twice
+    //   return requestListSelectCurrent(listEl, { event: e });
+    // },
+    // escape: (e) => {
+    //   // prevent escape from reaching eventual <select> ancestor
+    //   // when the escape is meant to clear the search input (otherwise it would close the select too)
+    //   if (e.currentTarget.type === "search" && e.currentTarget.value !== "") {
+    //     e.stopPropagation();
+    //     return true;
+    //   }
+    //   const listEl = getListEl();
+    //   // here we allow propagation of escape up to the <select> to allow closing if within a select
+    //   // it also means list might catch escape and reset again but it's ok to reset twice here as it won't cause side effects
+    //   // (if we need the same pattern for other events where it could be problematic we would have to mark
+    //   // event as handled somehow to prevent list containing input to react to it)
+    //   return requestListInteractionStateReset(listEl, { event: e });
+    // },
+    ,
+    children: children || jsx(InputRightSlot, {
+      onClick: e => {
+        if (expanded) {
+          hideSuggestions(e);
+        } else {
+          showSuggestions(e);
+        }
+      },
+      children: jsx(Icon, {
+        color: "rgba(28, 43, 52, 0.5)",
+        children: jsx(ChevronDownSvg, {})
+      })
+    })
   });
 };
 
@@ -30414,28 +30738,6 @@ const css$w = /* css */`
     -webkit-text-fill-color: var(--x-color) !important;
   }
 `;
-const InputTextual = props => {
-  const defaultRef = useRef(null);
-  props.ref = props.ref || defaultRef;
-  const input = renderInput(InputTextualControlInterface, props);
-  return input;
-};
-const InputTextualWithListResolver = props => {
-  const Next = useNextResolver();
-  if (props["navi-list"]) {
-    return jsx(InputWithList, {
-      ...props
-    });
-  }
-  if (props.suggestions) {
-    return jsx(InputTextualWithSuggestions, {
-      ...props
-    });
-  }
-  return jsx(Next, {
-    ...props
-  });
-};
 const InputTypeResolver = props => {
   const Next = useNextResolver();
   if (props.type === "search") {
@@ -30483,7 +30785,6 @@ const InputHeadlessResolver = props => {
     ...props
   });
 };
-const renderInput = createComponentResolver([InputTextualWithListResolver, InputTypeResolver, InputHeadlessResolver]);
 const InputTextualHeadless = props => {
   const [inputProps, remainingProps] = useInputTextualProps(props);
   return jsx(BoxForwardedPropsContext.Provider, {
@@ -30508,8 +30809,7 @@ const useInputTextualProps = props => {
   });
   return [controlProps, remainingProps, ControlChildrenWrapper];
 };
-const InputNativeContext = createContext(null);
-const InputTextualControlInterface = props => {
+const InputTextualUI = props => {
   import.meta.css = [css$w, "@jsenv/navi/src/control/input/input_textual.jsx"];
   const {
     ui,
@@ -30527,7 +30827,7 @@ const InputTextualControlInterface = props => {
   const readOnly = basePseudoState[":read-only"];
   const loading = basePseudoState[":-navi-loading"];
   const childrenWithContext = jsx(ControlChildrenWrapper, {
-    children: jsx(InputNativeContext.Provider, {
+    children: jsx(InputTextualContext.Provider, {
       value: {
         id,
         readOnly,
@@ -30562,6 +30862,15 @@ const InputTextualControlInterface = props => {
     }), childrenWithContext]
   });
 };
+const InputTextualFirstResolver = props => {
+  const Next = useNextResolver();
+  const defaultRef = useRef(null);
+  props.ref = props.ref || defaultRef;
+  return jsx(Next, {
+    ...props
+  });
+};
+const InputTextual = createComponentResolver([InputTextualFirstResolver, InputWithListResolver, InputWithSuggestionsResolver, InputTypeResolver, InputHeadlessResolver, InputTextualUI]);
 const RealInput = props => {
   const inputProps = useContext(BoxForwardedPropsContext);
   return jsx(Box, {
@@ -30613,63 +30922,6 @@ const InputStyleCSSVars = {
 };
 const InputPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading", ":-navi-has-value", ":-navi-expanded"];
 const InputPseudoElements = ["::-navi-loader"];
-const InputSlot = ({
-  side,
-  onClick,
-  hideWhileEmpty,
-  ...props
-}) => {
-  const ctx = useContext(InputNativeContext);
-  const {
-    id,
-    readOnly,
-    disabled
-  } = ctx;
-  return jsx(Label, {
-    htmlFor: id,
-    className: "navi_input_slot",
-    disabled: disabled,
-    readOnly: readOnly,
-    "data-readonly": readOnly,
-    "data-disabled": disabled,
-    "data-left": side === "left" ? "" : undefined,
-    "data-right": side === "right" ? "" : undefined,
-    "data-hide-while-empty": hideWhileEmpty ? "" : undefined,
-    inline: true,
-    flex: true,
-    align: "center",
-    onMouseDown: e => {
-      // Only prevent focus from leaving when the input already has focus.
-      // If the input is not focused, let the mousedown proceed normally so
-      // the slot element (e.g. a clear button) can receive focus itself.
-      const inputEl = document.getElementById(id);
-      if (inputEl && inputEl === document.activeElement) {
-        e.preventDefault();
-      }
-    },
-    onClick: e => {
-      onClick?.(e);
-      const input = document.getElementById(id);
-      const allowed = dispatchRequestInteraction(input, e);
-      if (!allowed) {
-        e.preventDefault();
-      }
-    },
-    ...props
-  });
-};
-const InputLeftSlot = props => {
-  return jsx(InputSlot, {
-    ...props,
-    side: "left"
-  });
-};
-const InputRightSlot = props => {
-  return jsx(InputSlot, {
-    ...props,
-    side: "right"
-  });
-};
 const InputSearch = props => {
   const Next = useNextResolver();
   return jsx(Next, {
@@ -30682,7 +30934,7 @@ const InputSearch = props => {
 const InputSearchUI = ({
   icon
 }) => {
-  const ctx = useContext(InputNativeContext);
+  const ctx = useContext(InputTextualContext);
   const {
     id
   } = ctx;
@@ -30771,197 +31023,6 @@ const InputDatetimeLocal = props => {
     ...props
   });
 };
-const InputTextualWithSuggestions = props => {
-  const Next = useNextResolver();
-  const {
-    ref,
-    suggestions,
-    onInput,
-    onFocus,
-    onBlur,
-    onKeyDown,
-    children,
-    ...rest
-  } = props;
-  const [expanded, setExpanded] = useState(false);
-  const expandedRef = useRef(expanded);
-  expandedRef.current = expanded;
-  const expand = () => {
-    expandedRef.current = true;
-    setExpanded(true);
-  };
-  const collapse = () => {
-    expandedRef.current = false;
-    setExpanded(false);
-  };
-  const getListEl = () => {
-    return document.getElementById(suggestions);
-  };
-  const showSuggestions = e => {
-    if (expandedRef.current) {
-      return;
-    }
-    const listEl = getListEl();
-    if (listEl) {
-      dispatchCustomEvent(listEl, "navi_request_open", {
-        event: e,
-        anchor: ref.current
-      });
-      expand();
-    }
-  };
-  const hideSuggestions = e => {
-    if (!expandedRef.current) {
-      return;
-    }
-    const listEl = getListEl();
-    if (listEl) {
-      dispatchCustomEvent(listEl, "navi_request_close", {
-        event: e
-      });
-      collapse();
-    }
-  };
-  useEffect(() => {
-    const inputEl = ref.current;
-    const listEl = getListEl();
-    if (!listEl) {
-      return undefined;
-    }
-    const onSelect = e => {
-      const {
-        item
-      } = e.detail;
-      const {
-        value
-      } = item;
-      inputEl.value = value;
-      inputEl.dispatchEvent(new Event("input", {
-        bubbles: true
-      }));
-      hideSuggestions(e);
-    };
-    listEl.addEventListener("navi_list_select", onSelect);
-    return () => {
-      listEl.removeEventListener("navi_list_select", onSelect);
-    };
-  }, [suggestions]);
-  const onKeyDownShortcuts = createOnKeyDownForShortcuts({
-    arrowdown: e => {
-      showSuggestions(e);
-    },
-    arrowup: e => {
-      showSuggestions(e);
-    },
-    escape: e => {
-      if (!expandedRef.current) {
-        return false;
-      }
-      hideSuggestions(e);
-      return true;
-    },
-    home: () => {},
-    end: () => {},
-    enter: () => {}
-  });
-  return jsx(Next, {
-    role: "combobox",
-    "aria-haspopup": "listbox",
-    "aria-expanded": expanded,
-    "aria-autocomplete": "list",
-    autoComplete: "off",
-    basePseudoState: {
-      ":-navi-expanded": expanded
-    },
-    onnavi_callout_open: e => {
-      hideSuggestions(e);
-    },
-    ...rest,
-    ref: ref,
-    onFocus: e => {
-      onFocus?.(e);
-      showSuggestions(e);
-    },
-    onBlur: e => {
-      onBlur?.(e);
-      hideSuggestions(e);
-    },
-    onInput: e => {
-      onInput?.(e);
-      showSuggestions(e);
-    },
-    onKeyDown: e => {
-      onKeyDown?.(e);
-      onKeyDownShortcuts(e);
-    }
-    //  arrowdown: (e) => {
-    //   const listEl = getListEl();
-    //   e.stopPropagation(); // when within a list, prevent list from handling it twice
-    //   return requestListNavFromCurrent(listEl, {
-    //     event: e,
-    //     goal: "down",
-    //   });
-    // },
-    // arrowup: (e) => {
-    //   const listEl = getListEl();
-    //   e.stopPropagation(); // when within a list, prevent list from handling it twice
-    //   return requestListNavFromCurrent(listEl, {
-    //     event: e,
-    //     goal: "up",
-    //   });
-    // },
-    // home: (e) => {
-    //   const listEl = getListEl();
-    //   e.stopPropagation(); // when within a list, prevent list from handling it twice
-    //   return requestListNavFromCurrent(listEl, {
-    //     event: e,
-    //     goal: "first",
-    //   });
-    // },
-    // end: (e) => {
-    //   const listEl = getListEl();
-    //   e.stopPropagation(); // when within a list, prevent list from handling it twice
-    //   return requestListNavFromCurrent(listEl, {
-    //     event: e,
-    //     goal: "last",
-    //   });
-    // },
-    // enter: (e) => {
-    //   const listEl = getListEl();
-    //   e.stopPropagation(); // when within a list, prevent list from handling it twice
-    //   return requestListSelectCurrent(listEl, { event: e });
-    // },
-    // escape: (e) => {
-    //   // prevent escape from reaching eventual <select> ancestor
-    //   // when the escape is meant to clear the search input (otherwise it would close the select too)
-    //   if (e.currentTarget.type === "search" && e.currentTarget.value !== "") {
-    //     e.stopPropagation();
-    //     return true;
-    //   }
-    //   const listEl = getListEl();
-    //   // here we allow propagation of escape up to the <select> to allow closing if within a select
-    //   // it also means list might catch escape and reset again but it's ok to reset twice here as it won't cause side effects
-    //   // (if we need the same pattern for other events where it could be problematic we would have to mark
-    //   // event as handled somehow to prevent list containing input to react to it)
-    //   return requestListInteractionStateReset(listEl, { event: e });
-    // },
-    ,
-
-    children: children || jsx(InputRightSlot, {
-      onClick: e => {
-        if (expanded) {
-          hideSuggestions(e);
-        } else {
-          showSuggestions(e);
-        }
-      },
-      children: jsx(Icon, {
-        color: "rgba(28, 43, 52, 0.5)",
-        children: jsx(ChevronDownSvg, {})
-      })
-    })
-  });
-};
 
 const Input = props => {
   const {
@@ -30985,6 +31046,10 @@ const Input = props => {
   return jsx(InputTextual, {
     ...props
   });
+};
+Input.UI = {
+  LeftSlot: InputLeftSlot,
+  RightSlot: InputRightSlot
 };
 
 installImportMetaCssBuild(import.meta);/**
@@ -33739,6 +33804,625 @@ const createItemTracker = (onChange) => {
   };
 };
 
+const ListItemHeaderOrFooterResolver = props => {
+  const Next = useNextResolver();
+  if (props.header) {
+    return jsx(ListItemHeader, {
+      ...props
+    });
+  }
+  if (props.footer) {
+    return jsx(ListItemFooter, {
+      ...props
+    });
+  }
+  return jsx(Next, {
+    ...props
+  });
+};
+const ListItemHeader = props => {
+  const Next = useNextResolver();
+  const {
+    ref
+  } = props;
+  useDisplayedLayoutEffect(ref, headerEl => {
+    const listContainerEl = headerEl.closest(".navi_list_container");
+    const rect = headerEl.getBoundingClientRect();
+    listContainerEl.style.setProperty("--list-header-height", `${rect.height}px`);
+    listContainerEl.style.setProperty("--list-header-width", `${rect.width}px`);
+  }, []);
+  return jsx(Next, {
+    ...props,
+    role: "presentation",
+    baseClassName: "navi_list_item_header"
+  });
+};
+const ListItemFooter = props => {
+  const Next = useNextResolver();
+  const {
+    ref
+  } = props;
+  useDisplayedLayoutEffect(ref, footerEl => {
+    const listContainerEl = footerEl.closest(".navi_list_container");
+    const rect = footerEl.getBoundingClientRect();
+    listContainerEl.style.setProperty("--list-footer-height", `${rect.height}px`);
+    listContainerEl.style.setProperty("--list-footer-width", `${rect.width}px`);
+  }, []);
+  return jsx(Next, {
+    ...props,
+    role: "presentation",
+    baseClassName: "navi_list_item_footer"
+  });
+};
+
+installImportMetaCssBuild(import.meta);const css$m = /* css */`
+  @layer navi {
+    .navi_list_container {
+      --list-outline-color: var(--navi-focus-outline-color);
+      --list-item-outline-color: var(--navi-focus-outline-color);
+      --list-item-outline-width: 2px;
+      --list-item-outline-offset: calc(-1 * var(--list-item-outline-width));
+      /* Hover (mouse) */
+      --list-item-color-hover: var(--list-item-color);
+      --list-item-background-color-hover: light-dark(#f5f5f5, #2a2a2a);
+      /* Pointed by mouse — subtle, just a shade above background */
+      --list-item-color-mouse-pointed: var(--list-item-color);
+      --list-item-background-color-mouse-pointed: light-dark(#ebebeb, #303030);
+      /* Pointed by keyboard — subtle light blue highlight */
+      --list-item-color-keyboard-pointed: var(--list-item-color);
+      --list-item-background-color-keyboard-pointed: light-dark(
+        #c2dcff,
+        #1c3a6e
+      );
+      /* Pointed by proxy */
+      --list-item-color-pointed: var(--list-item-color);
+      --list-item-background-color-pointed: light-dark(#dbeafe, #1c3a6e);
+      /* Selected — vivid blue accent */
+      --list-item-color-selected: white;
+      --list-item-background-color-selected: rgb(3, 30, 60);
+      --list-item-border-color-selected: var(
+        --list-item-background-color-selected
+      );
+      /* Disabled */
+      --list-item-color-disabled: light-dark(#aaa, #555);
+      --list-item-background-color-disabled: var(--list-item-background-color);
+    }
+  }
+
+  fieldset.navi_list_container {
+    margin: 0; /* Reset margin that might come from fieldset */
+    padding: 0; /* Reset padding that might come from fieldset */
+  }
+
+  .navi_list_container {
+    --x-list-outline-width: calc(
+      var(--list-outline-width) + var(--list-border-width)
+    );
+    --x-list-outline-offset: calc(-1 * var(--list-border-width));
+
+    outline-width: var(--x-list-outline-width);
+    outline-color: var(--list-outline-color);
+    outline-offset: var(--x-list-outline-offset);
+
+    &[data-focus] {
+      /* outline: var(--list-outline-width) solid var(--navi-focus-outline-color);
+      outline-offset: calc(-1 * var(--list-outline-width)); */
+    }
+    &[data-focus-visible] {
+      outline-style: solid;
+    }
+    &[data-callout] {
+      --x-list-border-color: var(--callout-color);
+    }
+  }
+
+  .navi_list_item {
+    --x-list-item-cursor: default;
+
+    position: relative;
+    outline-width: var(--list-item-outline-width);
+    outline-color: var(--list-item-outline-color);
+    outline-offset: var(--list-item-outline-offset);
+    cursor: var(--x-list-item-cursor);
+
+    &[navi-selectable] {
+      user-select: none;
+    }
+    &[navi-selectable-area-all] {
+      --x-list-item-cursor: pointer;
+      pointer-events: none;
+
+      [navi-selectable-real-input] {
+        z-index: 0;
+        outline: none;
+        opacity: 0;
+        clip-path: none;
+        cursor: var(--x-list-item-cursor);
+        pointer-events: auto;
+      }
+    }
+
+    &[data-interactive] {
+      cursor: pointer;
+      user-select: none;
+    }
+    &[data-hover] {
+      --x-list-item-color: var(--list-item-color-mouse-pointed);
+      --x-list-item-background-color: var(
+        --list-item-background-color-mouse-pointed
+      );
+    }
+    &[data-pointed] {
+      --x-list-item-color: var(--list-item-color-pointed);
+      --x-list-item-background-color: var(--list-item-background-color-pointed);
+    }
+    /* No input proxy: focused,selected */
+    &:not(:has(input[navi-control-proxy-for])) {
+      &:has([data-focus-visible]) {
+        --x-list-item-color: var(--list-item-color-keyboard-pointed);
+        --x-list-item-background-color: var(
+          --list-item-background-color-keyboard-pointed
+        );
+        outline-style: solid;
+
+        /* Selected must win over keyboard-pointed */
+        &[data-selected] {
+          --x-list-item-background-color: var(
+            --list-item-background-color-selected,
+            var(--list-item-background-color-keyboard-pointed)
+          );
+        }
+      }
+
+      &[data-selected] {
+        --x-list-item-border-color: var(--list-item-border-color-selected);
+        --x-list-item-background-color: var(
+          --list-item-background-color-selected
+        );
+        --x-list-item-color: var(--list-item-color-selected);
+
+        &[data-hover] {
+          --x-list-item-background-color: var(
+            --list-item-background-color-selected,
+            var(--list-item-background-color-mouse-pointed)
+          ) !important;
+        }
+      }
+    }
+
+    &[data-disabled] {
+      --x-list-item-color: var(--list-item-color-disabled);
+      --x-list-item-background-color: var(
+        --list-item-background-color-disabled
+      );
+      --x-list-item-cursor: default;
+      pointer-events: none;
+    }
+    &[data-readonly] {
+      --x-list-item-color: var(--list-item-color-disabled);
+      --x-list-item-cursor: default;
+    }
+  }
+`;
+const SelectableListMultipleContext = createContext(false);
+// Interactive variant: manages hover/keyboard/selection state and handles the
+// navi event protocol. When an action is provided it binds the action to ui state
+// and fires it on select. When only uiAction is provided it calls it directly.
+const ListSelectableResolver = props => {
+  const Next = useNextResolver();
+  if (props.selectable) {
+    return jsx(ListSelectable, {
+      ...props
+    });
+  }
+  return jsx(Next, {
+    ...props
+  });
+};
+const ListSelectable = props => {
+  const Next = useNextResolver();
+  import.meta.css = [css$m, "@jsenv/navi/src/control/list/list_selectable.jsx"];
+  // we allow ourselves to auto-generate a name
+  const defaultName = useId();
+  props.name = props.name || `listbox_${defaultName}`;
+  const {
+    ref,
+    multiple,
+    selectedIndicator = "backgroundColor",
+    focusGroupDirection,
+    focusGroupWrap
+  } = props;
+  const [listControlProps, remainingProps, childrenWrapperProps, uiGroupStateController] = useControlgroupProps(props, {
+    stateType: multiple ? "array" : "",
+    controlType: multiple ? "checkbox_group" : "radio_group",
+    childControlFilter: multiple ? childUIStateController => {
+      return childUIStateController.controlType === "input" && childUIStateController.props.type === "checkbox";
+    } : childUIStateController => {
+      return childUIStateController.controlType === "input" && childUIStateController.props.type === "radio";
+    },
+    aggregateChildStates: multiple ? childUIStateControllers => {
+      const values = [];
+      for (const childUIStateController of childUIStateControllers) {
+        if (childUIStateController.uiState) {
+          values.push(childUIStateController.uiState);
+        }
+      }
+      return values.length === 0 ? undefined : values;
+    } : childUIStateControllers => {
+      let activeValue;
+      for (const childUIStateController of childUIStateControllers) {
+        if (childUIStateController.uiState) {
+          activeValue = childUIStateController.uiState;
+          break;
+        }
+      }
+      return activeValue;
+    }
+  });
+  useFocusGroup(ref, {
+    direction: focusGroupDirection,
+    wrap: focusGroupWrap,
+    // Up/Down navigate between list items only (the visually-hidden real inputs).
+    ySelector: "[navi-selectable-real-input]"
+  });
+
+  // "Current item" tracking — the item that an external controller (e.g. an
+  // <input navi-list>) navigates from. Defaults to the first selected item,
+  // else the first navigable item. Updated when:
+  //   - an item's real input gains focus (via Tab, click, etc.)
+  //   - the controller dispatches navi_request_list_nav
+  // The current id is announced via navi_list_current_change (bubbling) so a
+  // connected input can update its aria-controls / aria-activedescendant.
+  const currentIdRef = useRef(null);
+  const setCurrentId = (id, event) => {
+    const previousId = currentIdRef.current;
+    if (previousId === id) {
+      return;
+    }
+    currentIdRef.current = id;
+    const listEl = ref.current;
+    if (!listEl) {
+      return;
+    }
+    if (id) {
+      listEl.setAttribute("navi-current-id", id);
+    } else {
+      listEl.removeAttribute("navi-current-id");
+    }
+    dispatchPublicCustomEvent(listEl, "navi_current_change", {
+      event,
+      id,
+      realInputId: id ? `${id}_input` : null
+    });
+  };
+  const getNavigableElements = () => {
+    const listEl = ref.current;
+    if (!listEl) {
+      return [];
+    }
+    const itemEls = Array.from(listEl.querySelectorAll("[navi-list-item-real]"));
+    const navigableEls = [];
+    for (const itemEl of itemEls) {
+      if (itemEl.hidden) {
+        continue;
+      }
+      const realInput = itemEl.querySelector("[navi-selectable-real-input]");
+      if (!realInput || realInput.disabled) {
+        continue;
+      }
+      navigableEls.push(itemEl);
+    }
+    return navigableEls;
+  };
+  // On mount: set the initial current item to the first selected, else the first navigable.
+  // After that, focusin events on the list keep currentIdRef up to date.
+  useLayoutEffect(() => {
+    const navigableEls = getNavigableElements();
+    if (navigableEls.length === 0) {
+      return;
+    }
+    let initialEl;
+    for (const el of navigableEls) {
+      const realInput = el.querySelector("[navi-selectable-real-input]");
+      if (realInput && realInput.checked) {
+        initialEl = el;
+        break;
+      }
+    }
+    if (!initialEl) {
+      initialEl = navigableEls[0];
+    }
+    setCurrentId(initialEl.id);
+  }, []);
+  const listVnode = jsx(Next, {
+    as: "fieldset",
+    "navi-has-selected-background": selectedIndicator === "backgroundColor" ? "" : undefined,
+    ...listControlProps,
+    ...remainingProps,
+    name: undefined,
+    selectedIndicator: undefined,
+    multiple: undefined
+    // Track focus inside the list: whichever item gets focus becomes current.
+    ,
+
+    onFocusIn: e => {
+      const realInput = e.target.closest("[navi-selectable-real-input]");
+      if (!realInput) {
+        return;
+      }
+      const itemEl = realInput.closest("[navi-list-item-real]");
+      if (itemEl && itemEl.id) {
+        setCurrentId(itemEl.id, e);
+      }
+    },
+    onnavi_request_select: e => {
+      const {
+        id
+      } = e.detail;
+      if (id === undefined) {
+        return;
+      }
+      const inputId = `${id}_input`;
+      const childController = uiGroupStateController.findChildById(inputId);
+      if (!childController) {
+        return;
+      }
+      const list = ref.current;
+      const allowed = dispatchRequestInteraction(list, e, "select");
+      if (!allowed) {
+        e.preventDefault();
+        return;
+      }
+      if (childController.setUIState(true, e)) {
+        dispatchRequestAction(list, {
+          event: e
+        });
+      }
+    },
+    onnavi_request_unselect: e => {
+      const {
+        id
+      } = e.detail;
+      if (id === undefined) {
+        return;
+      }
+      const inputId = `${id}_input`;
+      const childController = uiGroupStateController.findChildById(inputId);
+      if (!childController) {
+        return;
+      }
+      const list = ref.current;
+      const allowed = dispatchRequestInteraction(list, e, "unselect");
+      if (!allowed) {
+        e.preventDefault();
+        return;
+      }
+      if (childController.setUIState(false, e)) {
+        dispatchRequestAction(list, {
+          event: e
+        });
+      }
+    },
+    onnavi_request_nav: e => {
+      const {
+        goal
+      } = e.detail;
+      const navigableEls = getNavigableElements();
+      if (navigableEls.length === 0) {
+        return;
+      }
+      const currentId = currentIdRef.current;
+      let currentIndex = -1;
+      if (currentId) {
+        currentIndex = navigableEls.findIndex(el => el.id === currentId);
+      }
+      let targetEl;
+      if (goal === "first") {
+        targetEl = navigableEls[0];
+      } else if (goal === "last") {
+        targetEl = navigableEls[navigableEls.length - 1];
+      } else if (goal === "down") {
+        if (currentIndex === -1) {
+          targetEl = navigableEls[0];
+        } else if (currentIndex < navigableEls.length - 1) {
+          targetEl = navigableEls[currentIndex + 1];
+        } else {
+          targetEl = navigableEls[navigableEls.length - 1];
+        }
+      } else if (goal === "up") {
+        if (currentIndex === -1) {
+          targetEl = navigableEls[0];
+        } else if (currentIndex > 0) {
+          targetEl = navigableEls[currentIndex - 1];
+        } else {
+          targetEl = navigableEls[0];
+        }
+      }
+      if (!targetEl) {
+        return;
+      }
+      setCurrentId(targetEl.id, e);
+      dispatchCustomEvent(ref.current, "navi_request_scroll", {
+        event: e,
+        id: targetEl.id
+      });
+    },
+    onnavi_request_activate: e => {
+      const currentId = currentIdRef.current;
+      if (!currentId) {
+        return;
+      }
+      if (multiple) {
+        const inputId = `${currentId}_input`;
+        const childController = uiGroupStateController.findChildById(inputId);
+        const isSelected = childController && childController.uiState;
+        dispatchCustomEvent(ref.current, isSelected ? "navi_request_unselect" : "navi_request_select", {
+          event: e,
+          id: currentId
+        });
+        return;
+      }
+      dispatchCustomEvent(ref.current, "navi_request_select", {
+        event: e,
+        id: currentId
+      });
+    },
+    children: jsx(ControlgroupChildrenWrapper, {
+      ...childrenWrapperProps,
+      children: props.children
+    })
+  });
+  return jsx(SelectableListMultipleContext.Provider, {
+    value: multiple,
+    children: listVnode
+  });
+};
+const SelectableRealInputContext = createContext(null);
+const ListItemSelectableResolver = props => {
+  const Next = useNextResolver();
+  if (props.selectable) {
+    return jsx(ListItemSelectable, {
+      ...props
+    });
+  }
+  return jsx(Next, {
+    ...props
+  });
+};
+const ListItemSelectable = props => {
+  const Next = useNextResolver();
+  const {
+    index,
+    id,
+    highlight,
+    hidden,
+    filtered,
+    matchScore,
+    defaultSelected,
+    selected,
+    pointed,
+    selectableArea = "all",
+    ...rest
+  } = props;
+  const multiple = useContext(SelectableListMultipleContext);
+  const inputRef = useRef();
+  const inputType = multiple ? "checkbox" : "radio";
+  const inputId = `${id}_input`;
+  inputRef.nullCanHappen = true; // virtualization
+  const [checkableProps, remainingProps, ChildrenContextWrapper] = useCheckableProps({
+    readOnlyMessage: naviI18n(`constraint.readonly.option`, props),
+    ...rest,
+    ref: inputRef,
+    id: inputId,
+    type: inputType,
+    defaultChecked: defaultSelected,
+    checked: selected,
+    action: (v, {
+      event
+    }) => {
+      const listContainerEl = event.currentTarget.closest(".navi_list_container");
+      dispatchRequestAction(listContainerEl, {
+        event
+      });
+    }
+  });
+  const {
+    checked,
+    value,
+    basePseudoState,
+    children
+  } = checkableProps;
+  const readOnly = basePseudoState[":read-only"];
+  // const disabled = basePseudoState[":disabled"];
+  // const loading = basePseudoState[":-navi-loading"];
+  const realInputContextValue = useMemo(() => {
+    return {
+      id: inputId,
+      type: inputType,
+      checked,
+      readOnly,
+      value
+    };
+  }, [inputId, inputType, checked, readOnly, value]);
+  return jsxs(Next, {
+    id: id,
+    index: index,
+    highlight: highlight,
+    filtered: filtered,
+    hidden: hidden,
+    matchScore: matchScore,
+    "aria-selected": checked,
+    selected: checked,
+    "navi-selectable": "",
+    padding: "m",
+    spacing: "s",
+    flex: true,
+    alignY: "center",
+    ...remainingProps,
+    pseudoClasses: SELECTABLE_PSEUDO_CLASSES,
+    basePseudoState: {
+      ":-navi-selected": checked,
+      ":-navi-pointed": pointed,
+      ...basePseudoState
+    },
+    ref: props.ref,
+    selectable: undefined,
+    "navi-selectable-area-all": selectableArea === "all" ? "" : undefined,
+    children: [jsx(SelectableRealInput, {
+      ...checkableProps,
+      // eslint-disable-next-line react/no-children-prop
+      children: undefined
+    }), jsx(SelectableRealInputContext.Provider, {
+      value: realInputContextValue,
+      children: jsx(ChildrenContextWrapper, {
+        children: children
+      })
+    })]
+  });
+};
+const SELECTABLE_PSEUDO_CLASSES = [":hover", ":disabled", ":read-only", ":focus-within", ":focus", ":focus-visible", ":-navi-loading", ":-navi-pointed", ":-navi-selected", ":disabled", ":read-only"];
+const SelectableRealInput = props => {
+  // here for some reason we can't use <Input, so instead we use <Box
+  // ideally we could use <Input but it would interfere with the control props we already create
+  // in the ListItemSelectable
+  return jsx(Box, {
+    as: "input",
+    pseudoClasses: SELECTABLE_INPUT_PSEUDO_CLASSES,
+    ...props,
+    "navi-visually-hidden": "",
+    "navi-selectable-real-input": "",
+    "data-callout-arrow-x": "center"
+    // navi-debug
+  });
+};
+const SELECTABLE_INPUT_PSEUDO_CLASSES = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":checked"];
+const SelectableInputProxy = props => {
+  const selectableRealInputProps = useContext(SelectableRealInputContext);
+  if (!selectableRealInputProps) {
+    throw new Error("Selectable.Input must be used within a Selectable component");
+  }
+
+  // Reset FieldToInterfaceContext to ensure we don't read id or report our
+  // states (real input should take id and report)
+  return jsx(ControlToInterfaceContext.Provider, {
+    value: undefined,
+    children: jsx(Input, {
+      ...props,
+      ...selectableRealInputProps,
+      id: undefined,
+      "navi-control-proxy-for": selectableRealInputProps.id
+      // give it a specific name to avoid radio name (would unselect others)
+      // (making it unique to the list would be enough, but here it's even more unique)
+      ,
+
+      name: `${selectableRealInputProps.id}_proxy`,
+      "aria-hidden": "true",
+      tabIndex: -1
+    })
+  });
+};
+const SelectableInput = SelectableInputProxy;
+
 /**
  * CSS Highlight API integration for navi-search-match.
  *
@@ -33885,7 +34569,7 @@ const RenderWindowContext = createContext(null);
 // Carries the separator element/function down to each ListItem so separators
 // are only rendered between items that actually mount (post-filter, post-window).
 const SeparatorContext = createContext(null);
-const css$m = /* css */`
+const css$l = /* css */`
   @layer navi {
     .navi_list_container {
       --list-outline-width: 1px;
@@ -33939,6 +34623,12 @@ const css$m = /* css */`
     --x-list-scroll-spacing-bottom: calc(
       var(--list-footer-height, 0px) + var(--list-scroll-padding-bottom, 0px)
     );
+    --x-list-scroll-spacing-left: calc(
+      var(--list-header-width, 0px) + var(--list-scroll-padding-left, 0px)
+    );
+    --x-list-scroll-spacing-right: calc(
+      var(--list-footer-width, 0px) + var(--list-scroll-padding-right, 0px)
+    );
 
     display: flex;
     min-width: 0;
@@ -33991,26 +34681,19 @@ const css$m = /* css */`
   }
 
   .navi_list {
-    display: flex;
     box-sizing: border-box;
     margin: 0;
     padding: 0;
-    flex-direction: column;
     list-style: none;
     outline: none; /*  Focus is displayed on the container */
-
-    /* Would create scrollbars, for now just hide the loader here */
-    .navi_input {
-      .navi_loading_rectangle_wrapper {
-        display: none;
-      }
-    }
   }
 
   .navi_list_item {
     --x-list-item-color: var(--list-item-color);
     --x-list-item-background-color: var(--list-item-background-color);
     --x-list-item-font-weight: var(--list-item-font-weight);
+    --x-list-item-border-width: var(--list-item-border-width, 0px);
+    --x-list-item-border-color: var(--list-item-border-color, black);
 
     box-sizing: border-box;
     min-width: 0;
@@ -34019,6 +34702,8 @@ const css$m = /* css */`
     color: var(--x-list-item-color);
     font-weight: var(--x-list-item-font-weight);
     background-color: var(--x-list-item-background-color);
+    border: var(--x-list-item-border-width) solid
+      var(--x-list-item-border-color);
     /*
     CSS impossible d'obtenir un layout qui ferait en gros:
     width = max(min(max-content, 100%), unbreakable-content)
@@ -34037,7 +34722,9 @@ const css$m = /* css */`
     overflow-wrap: anywhere;
     /* When list has sticky header/footer, put a scroll padding */
     scroll-margin-top: var(--x-list-scroll-spacing-top);
+    scroll-margin-right: var(--x-list-scroll-spacing-right);
     scroll-margin-bottom: var(--x-list-scroll-spacing-bottom);
+    scroll-margin-left: var(--x-list-scroll-spacing-left);
   }
 
   /* Virtual scroll fillers — must remain invisible.
@@ -34045,9 +34732,15 @@ const css$m = /* css */`
      updates, so giving them a visible background would cause visual glitches. */
   .navi_list_virtual_filler {
     display: inline-block;
-    height: 0px;
+    height: var(--size-to-fill, 0px);
     list-style: none;
     /* background: pink; */
+  }
+  &[data-horizontal] {
+    .navi_list_virtual_filler {
+      width: var(--size-to-fill, 0px);
+      height: 100%;
+    }
   }
 
   /* Empty state — hidden by default, shown when no list items are rendered.
@@ -34069,6 +34762,7 @@ const css$m = /* css */`
   .navi_list_item_header {
     position: sticky;
     top: 0;
+    left: 0;
     z-index: 1;
     order: -2;
   }
@@ -34083,7 +34777,7 @@ const css$m = /* css */`
       user-select: none;
     }
   }
-  [navi-virtual-filler="bottom"] {
+  [navi-virtual-filler="after"] {
     /* for some reason preact ends up puttin this element before the list items in some scenarios
      I've noticed that removing the ItemIndexToScrollOnMountRefContext.Provider
      does fix this issue (I suppose it's because it cause on less render of the list which is the problematic one)
@@ -34094,6 +34788,7 @@ const css$m = /* css */`
   /* order: 2 pins the footer after fallbacks (order: 1) and all items. */
   .navi_list_item_footer {
     position: sticky;
+    right: 0;
     bottom: 0;
     z-index: 1;
     order: 2;
@@ -34140,6 +34835,9 @@ const css$m = /* css */`
         scroll-margin-top: calc(
           var(--x-list-scroll-spacing-top) + var(--list-group-label-height, 0px)
         );
+        scroll-margin-left: calc(
+          var(--x-list-scroll-spacing-left) + var(--list-group-label-width, 0px)
+        );
       }
     }
 
@@ -34167,7 +34865,7 @@ const css$m = /* css */`
  *   popover              — when true, renders as a managed popover positioned near
  *                          an anchor element via navi_list_open / navi_list_close events.
  *   renderBudget         — max items in DOM at once (default 100, virtual scroll when exceeded)
- *   virtualItemHeight    — fixed px height per item when all items have the same height.
+ *   virtualItemSize     — fixed px size per item (width if horizontal, height otherwise) when all items have the same size.
  *                          Enables precise virtual-scroll filler sizing without a DOM
  *                          measurement pass. Required when renderBudget is active and
  *                          item height is known up-front.
@@ -34179,18 +34877,8 @@ const css$m = /* css */`
  *                          min-height so filtering cannot collapse the layout.
  *   ...rest              — forwarded to the outer scroll container <Box>
  */
-const List = props => {
-  const refDefault = useRef(null);
-  props.ref = props.ref || refDefault;
-  const idDefault = useId();
-  props.id = props.id || idDefault;
-  const listVnode = jsx(ListUI, {
-    ...props
-  });
-  return listVnode;
-};
 const ListUI = props => {
-  import.meta.css = [css$m, "@jsenv/navi/src/control/list/list.jsx"];
+  import.meta.css = [css$l, "@jsenv/navi/src/control/list/list.jsx"];
   const {
     ref,
     renderBudget = RENDER_BUDGET_DEFAULT,
@@ -34205,9 +34893,11 @@ const ListUI = props => {
     expand,
     maxHeight,
     onListVisibleItemsChange,
-    virtualItemHeight,
+    virtualItemSize,
     lockSize,
     searchText,
+    horizontal,
+    spacing,
     ...rest
   } = props;
   if (renderBudget < 30 && !renderBudgetSkipCheck) {
@@ -34250,7 +34940,7 @@ const ListUI = props => {
     }
   });
   const {
-    virtualItemHeightSignal,
+    virtualItemSizeSignal,
     renderWindow,
     scrollToItem,
     pendingScrollRef
@@ -34258,8 +34948,9 @@ const ListUI = props => {
     ref,
     tracker,
     renderBudget,
-    virtualItemHeight,
-    searchText
+    virtualItemSize,
+    searchText,
+    horizontal
   });
   const getItemById = itemId => {
     return tracker.itemsSignal.peek().find(item => item.id === itemId);
@@ -34269,6 +34960,7 @@ const ListUI = props => {
     ref: ref,
     baseClassName: "navi_list_container",
     popover: popover,
+    "data-horizontal": horizontal ? "" : undefined,
     "data-expand-x": expandX || expand ? "" : undefined,
     expandX: expandX,
     expand: expand,
@@ -34298,14 +34990,27 @@ const ListUI = props => {
       separator: separator,
       expandX: expandX,
       expand: expand,
+      horizontal: horizontal,
+      spacing: spacing,
       tracker: tracker,
       renderWindow: renderWindow,
-      virtualItemHeightSignal: virtualItemHeightSignal,
+      virtualItemSizeSignal: virtualItemSizeSignal,
       pendingScrollRef: pendingScrollRef,
       children: children
     })
   });
 };
+const ListFirstResolver = props => {
+  const Next = useNextResolver();
+  const refDefault = useRef(null);
+  props.ref = props.ref || refDefault;
+  const idDefault = useId();
+  props.id = props.id || idDefault;
+  return jsx(Next, {
+    ...props
+  });
+};
+const List = createComponentResolver([ListFirstResolver, ListSelectableResolver, ListUI]);
 const ListContent = ({
   role,
   fallback,
@@ -34314,9 +35019,11 @@ const ListContent = ({
   separator,
   expandX,
   expand,
+  horizontal,
+  spacing,
   tracker,
   renderWindow,
-  virtualItemHeightSignal,
+  virtualItemSizeSignal,
   pendingScrollRef,
   children
 }) => {
@@ -34332,10 +35039,12 @@ const ListContent = ({
         margin: "0"
       }) : separator,
       expandX: expandX || expand,
+      horizontal: horizontal,
+      spacing: spacing,
       ...listProps,
       tracker: tracker,
       renderWindow: renderWindow,
-      virtualItemHeightSignal: virtualItemHeightSignal,
+      virtualItemSizeSignal: virtualItemSizeSignal,
       children: jsx(PendingScrollRefContext.Provider, {
         value: pendingScrollRef,
         children: children
@@ -34354,11 +35063,12 @@ const useListScrollSync = ({
   ref,
   tracker,
   renderBudget,
-  virtualItemHeight,
-  searchText
+  virtualItemSize,
+  searchText,
+  horizontal
 }) => {
   const debugScroll = useDebugScroll();
-  const virtualItemHeightSignal = useVirtualItemHeightSignal(ref, virtualItemHeight);
+  const virtualItemSizeSignal = useVirtualItemSizeSignal(ref, virtualItemSize, horizontal);
   const [renderWindow, setRenderWindow] = useState({
     start: 0,
     end: renderBudget
@@ -34547,9 +35257,7 @@ const useListScrollSync = ({
         // so we do our best to give that item back
         const {
           item
-        } = getScrollInfo({
-          scrollTop: savedScroll.top
-        }, listScrollContainerEl, tracker, virtualItemHeightSignal, renderWindowRef);
+        } = getScrollInfo(savedScroll, listScrollContainerEl, tracker, virtualItemSizeSignal, renderWindowRef, horizontal);
         listScrollContainerEl.scrollTo({
           left: savedScroll.left,
           top: savedScroll.top
@@ -34607,8 +35315,9 @@ const useListScrollSync = ({
       }
       let reason = "";
       const scrollInfo = getScrollInfo({
-        scrollTop: listScrollContainerEl.scrollTop
-      }, listScrollContainerEl, tracker, virtualItemHeightSignal, renderWindowRef);
+        left: listScrollContainerEl.scrollLeft,
+        top: listScrollContainerEl.scrollTop
+      }, listScrollContainerEl, tracker, virtualItemSizeSignal, renderWindowRef, horizontal);
       if (!scrollInfo) {
         return;
       }
@@ -34633,7 +35342,7 @@ const useListScrollSync = ({
     };
   }, [renderBudget]);
   return {
-    virtualItemHeightSignal,
+    virtualItemSizeSignal,
     renderWindow,
     pendingScrollRef,
     scrollToItem
@@ -34641,27 +35350,25 @@ const useListScrollSync = ({
 };
 // Returns the item located at the current scroll position of a list container.
 // Uses DOM hit-testing to find visible items/fillers; falls back to index
-// estimation via virtualItemHeight or renderWindow.start.
+// estimation via virtualItemSize or renderWindow.start.
 // Returns { index, item, reason } or null if nothing can be determined.
-const getScrollInfo = ({
-  scrollTop
-}, listScrollContainerEl, tracker, virtualItemHeightSignal, renderWindowRef) => {
+const getScrollInfo = (scrollValues, listScrollContainerEl, tracker, virtualItemSizeSignal, renderWindowRef, horizontal) => {
   const listEl = listScrollContainerEl.querySelector(".navi_list");
   const items = tracker.itemsSignal.peek();
   const containerRect = listScrollContainerEl.getBoundingClientRect();
   let hitEl = null;
   let hitFiller = null;
-  // Start scanning from the vertical center of the viewport rather than the top.
-  // The render window places half its budget above and half below the hit index.
+  const scrollPos = horizontal ? scrollValues.left : scrollValues.top;
+  // Start scanning from the center of the viewport along the main axis.
+  // The render window places half its budget before and half after the hit index.
   // Anchoring to the center maximises how many rendered items fall within the
-  // visible area: starting from the top would waste the "above" budget on items
-  // already scrolled past, leaving the bottom of the viewport uncovered.
-  // For large lists where renderBudget >> visible item count this never matters
-  // in practice (the window always covers the whole viewport), but it is
-  // strictly better and costs nothing.
-  const scanStartY = (containerRect.top + containerRect.bottom) / 2;
-  for (let y = scanStartY; y < containerRect.bottom; y += 4) {
-    const el = document.elementFromPoint(containerRect.left + 1, y);
+  // visible area.
+  const scanStart = horizontal ? (containerRect.left + containerRect.right) / 2 : (containerRect.top + containerRect.bottom) / 2;
+  const scanEnd = horizontal ? containerRect.right : containerRect.bottom;
+  for (let pos = scanStart; pos < scanEnd; pos += 4) {
+    const x = horizontal ? pos : containerRect.left + 1;
+    const y = horizontal ? containerRect.top + 1 : pos;
+    const el = document.elementFromPoint(x, y);
     if (!el || !listEl.contains(el)) {
       continue;
     }
@@ -34677,11 +35384,11 @@ const getScrollInfo = ({
     }
   }
   if (hitFiller) {
-    const virtualItemHeight = virtualItemHeightSignal.peek();
-    if (virtualItemHeight === 0) {
+    const virtualItemSize = virtualItemSizeSignal.peek();
+    if (virtualItemSize === 0) {
       return null;
     }
-    const estimatedIndex = Math.floor(scrollTop / virtualItemHeight);
+    const estimatedIndex = Math.floor(scrollPos / virtualItemSize);
     const index = Math.min(items.length - 1, estimatedIndex);
     return {
       item: items[index],
@@ -34708,18 +35415,18 @@ const getScrollInfo = ({
     reason: "no hit"
   };
 };
-const useVirtualItemHeightSignal = (ref, virtualItemHeightProp = 0) => {
-  const virtualHeightSignalRef = useRef(null);
-  if (!virtualHeightSignalRef.current) {
-    virtualHeightSignalRef.current = signal(virtualItemHeightProp);
+const useVirtualItemSizeSignal = (ref, virtualItemSizeProp = 0, horizontal) => {
+  const virtualSizeSignalRef = useRef(null);
+  if (!virtualSizeSignalRef.current) {
+    virtualSizeSignalRef.current = signal(virtualItemSizeProp);
   }
-  const virtualHeightSignal = virtualHeightSignalRef.current;
+  const virtualSizeSignal = virtualSizeSignalRef.current;
   // propagate prop changes to the signal
-  if (virtualItemHeightProp && virtualHeightSignal.peek() !== virtualItemHeightProp) {
-    virtualHeightSignal.value = virtualItemHeightProp;
+  if (virtualItemSizeProp && virtualSizeSignal.peek() !== virtualItemSizeProp) {
+    virtualSizeSignal.value = virtualItemSizeProp;
   }
   useLayoutEffect(() => {
-    if (virtualHeightSignal.peek() !== 0) {
+    if (virtualSizeSignal.peek() !== 0) {
       return;
     }
     const listEl = ref.current?.querySelector(".navi_list");
@@ -34730,35 +35437,40 @@ const useVirtualItemHeightSignal = (ref, virtualItemHeightProp = 0) => {
     if (!firstListItem) {
       return;
     }
-    const measuredHeight = firstListItem.getBoundingClientRect().height;
-    virtualHeightSignal.value = measuredHeight;
+    const rect = firstListItem.getBoundingClientRect();
+    const measuredSize = horizontal ? rect.width : rect.height;
+    virtualSizeSignal.value = measuredSize;
   });
-  return virtualHeightSignal;
+  return virtualSizeSignal;
 };
 
 // Inner <ul> — hosts the fillers + items.
-// Creates a virtualItemHeight signal so TopFiller and BottomFiller can
-// subscribe to it independently. When virtualItemHeight is passed as a prop it
+// Creates a virtualItemSize signal so BeforeFiller and AfterFiller can
+// subscribe to it independently. When virtualItemSize is passed as a prop it
 // initialises the signal directly; otherwise UnorderedList measures a rendered
 // item after each commit and writes to the signal, causing only the fillers to
 // re-render.
 const UnorderedList = ({
   tracker,
   renderWindow,
-  virtualItemHeightSignal,
+  virtualItemSizeSignal,
   fallback,
   noMatchFallback,
   searchText,
   separator,
+  horizontal,
+  spacing,
   children,
   ...rest
 }) => {
   return jsxs(Box, {
     as: "ul",
     ...rest,
+    flex: horizontal ? "x" : "y",
+    spacing: spacing,
     baseClassName: "navi_list",
-    children: [jsx(TopFiller, {
-      virtualItemHeightSignal: virtualItemHeightSignal,
+    children: [jsx(BeforeFiller, {
+      virtualItemSizeSignal: virtualItemSizeSignal,
       renderWindowStart: renderWindow.start
     }), jsx(NoMatchFallback, {
       noMatchFallback: noMatchFallback,
@@ -34776,8 +35488,8 @@ const UnorderedList = ({
           children: children
         })
       })
-    }), jsx(BottomFiller, {
-      virtualItemHeightSignal: virtualItemHeightSignal,
+    }), jsx(AfterFiller, {
+      virtualItemSizeSignal: virtualItemSizeSignal,
       renderWindowEnd: renderWindow.end,
       tracker: tracker
     })]
@@ -34830,14 +35542,14 @@ const Fallback = ({
     children: fallback
   });
 };
-const TopFiller = ({
-  virtualItemHeightSignal,
+const BeforeFiller = ({
+  virtualItemSizeSignal,
   renderWindowStart
 }) => {
-  const virtualItemHeight = virtualItemHeightSignal.value;
-  const numberOfItemsAbove = renderWindowStart;
-  const heightToFillAbove = numberOfItemsAbove * virtualItemHeight;
-  if (!heightToFillAbove) {
+  const virtualItemSize = virtualItemSizeSignal.value;
+  const numberOfItemsBefore = renderWindowStart;
+  const sizeToFillBefore = numberOfItemsBefore * virtualItemSize;
+  if (!sizeToFillBefore) {
     return null;
   }
   return jsx("li", {
@@ -34845,23 +35557,23 @@ const TopFiller = ({
     // eslint-disable-next-line react/no-unknown-property
     ,
 
-    "navi-virtual-filler": "top",
+    "navi-virtual-filler": "before",
     "aria-hidden": true,
     style: {
-      height: `${heightToFillAbove}px`
+      "--size-to-fill": `${sizeToFillBefore}px`
     }
   });
 };
-const BottomFiller = ({
-  virtualItemHeightSignal,
+const AfterFiller = ({
+  virtualItemSizeSignal,
   renderWindowEnd,
   tracker
 }) => {
   const visibleItemCount = tracker.visibleCountSignal.value;
-  const virtualItemHeight = virtualItemHeightSignal.value;
-  const numberOfItemsBelow = Math.max(visibleItemCount - renderWindowEnd, 0);
-  const heightToFillBelow = numberOfItemsBelow * virtualItemHeight;
-  if (!heightToFillBelow) {
+  const virtualItemSize = virtualItemSizeSignal.value;
+  const numberOfItemsAfter = Math.max(visibleItemCount - renderWindowEnd, 0);
+  const sizeToFillAfter = numberOfItemsAfter * virtualItemSize;
+  if (!sizeToFillAfter) {
     return null;
   }
   return jsx("li", {
@@ -34869,37 +35581,29 @@ const BottomFiller = ({
     // eslint-disable-next-line react/no-unknown-property
     ,
 
-    "navi-virtual-filler": "bottom",
+    "navi-virtual-filler": "after",
     "aria-hidden": true,
     style: {
-      height: `${heightToFillBelow}px`
+      "--size-to-fill": `${sizeToFillAfter}px`
     }
   });
 };
-
-/**
- * ListItem — a trackable item that participates in virtualization.
- *
- * Must be used inside <List>. Handles:
- * - Registration with item tracker (always runs, even when hidden)
- * - Early return when outside the render window
- * - Separator rendering between visible items
- *
- * Props:
- *   itemId    — stable string id for tracking (auto-generated if omitted)
- *   filtered  — when true, item is excluded from visible count and removed from DOM entirely
- *   hidden    — when true, item is excluded from visible count (no virtual scroll height)
- *               but stays in DOM with the native HTML hidden attribute
- *   highlight — array of [start, end] ranges to highlight via CSS Highlight API
- *   ...rest   — forwarded to the rendered <li> element
- */
-const ListItem = props => {
+const ListItemFirstResolver = props => {
+  const Next = useNextResolver();
+  const defaultRef = useRef(null);
+  props.ref = props.ref || defaultRef;
+  return jsx(Next, {
+    ...props
+  });
+};
+const ListItemPresentationResolver = props => {
+  const Next = useNextResolver();
   if (props.role === "presentation") {
     return jsx(ListItemPresentation, {
       ...props
     });
   }
-  return jsx(ListItemRealOrVoid, {
+  return jsx(Next, {
     ...props
   });
 };
@@ -34909,7 +35613,7 @@ const ListItemPresentation = props => {
     ...props
   });
 };
-const ListItemRealOrVoid = props => {
+const ListItemUI = props => {
   if (props.id === undefined) {
     console.warn("ListItem is missing an explicit id prop. Provide a stable id so pointed/selected state survives search reordering.");
   }
@@ -34975,8 +35679,6 @@ const ListItemVoid = () => {
   return null;
 };
 const ListItemReal = props => {
-  const defaultRef = useRef(null);
-  props.ref = props.ref || defaultRef;
   const {
     ref,
     id,
@@ -35025,6 +35727,8 @@ const LIST_ITEM_STYLE_CSS_VARS = {
   "color": "--list-item-color",
   "backgroundColor": "--list-item-background-color",
   "fontWeight": "--list-item-font-weight",
+  "borderWidth": "--list-item-border-width",
+  "borderColor": "--list-item-border-color",
   ":-navi-pointed": {
     color: "--list-item-color-keyboard-pointed",
     backgroundColor: "--list-item-background-color-keyboard-pointed"
@@ -35035,7 +35739,8 @@ const LIST_ITEM_STYLE_CSS_VARS = {
   },
   ":-navi-selected": {
     color: "--list-item-color-selected",
-    backgroundColor: "--list-item-background-color-selected"
+    backgroundColor: "--list-item-background-color-selected",
+    borderColor: "--list-item-border-color-selected"
   },
   ":disabled": {
     color: "--list-item-color-disabled",
@@ -35048,6 +35753,25 @@ const LIST_ITEM_STYLE_CSS_VARS = {
 };
 const LIST_ITEM_PSEUDO_CLASSES = [];
 const LIST_ITEM_PSEUDO_ELEMENTS = ["::highlight"];
+
+/**
+ * ListItem — a trackable item that participates in virtualization.
+ *
+ * Must be used inside <List>. Handles:
+ * - Registration with item tracker (always runs, even when hidden)
+ * - Early return when outside the render window
+ * - Separator rendering between visible items
+ *
+ * Props:
+ *   itemId    — stable string id for tracking (auto-generated if omitted)
+ *   filtered  — when true, item is excluded from visible count and removed from DOM entirely
+ *   hidden    — when true, item is excluded from visible count (no virtual scroll height)
+ *               but stays in DOM with the native HTML hidden attribute
+ *   highlight — array of [start, end] ranges to highlight via CSS Highlight API
+ *   ...rest   — forwarded to the rendered <li> element
+ */
+const ListItem = createComponentResolver([ListItemFirstResolver, ListItemSelectableResolver, ListItemHeaderOrFooterResolver, ListItemPresentationResolver, ListItemUI]);
+List.Item = ListItem;
 
 /**
  * ListGroup — a labeled group of list items.
@@ -35075,8 +35799,9 @@ const ListItemGroup = ({
     if (!groupEl) {
       return;
     }
-    const labelHeight = labelEl.getBoundingClientRect().height;
-    groupEl.style.setProperty("--list-group-label-height", `${labelHeight}px`);
+    const rect = labelEl.getBoundingClientRect();
+    groupEl.style.setProperty("--list-group-label-height", `${rect.height}px`);
+    groupEl.style.setProperty("--list-group-label-width", `${rect.width}px`);
   }, []);
   return jsxs(ListItem, {
     ...rest,
@@ -35105,577 +35830,6 @@ const ListItemGroup = ({
     })]
   });
 };
-const ListItemHeader = props => {
-  const defaultRef = useRef(null);
-  const ref = props.ref || defaultRef;
-  useDisplayedLayoutEffect(ref, headerEl => {
-    const listContainerEl = headerEl.closest(".navi_list_container");
-    const headerHeight = headerEl.getBoundingClientRect().height;
-    listContainerEl.style.setProperty("--list-header-height", `${headerHeight}px`);
-  }, []);
-  return jsx(ListItem, {
-    ...props,
-    ref: ref,
-    role: "presentation",
-    baseClassName: "navi_list_item_header"
-  });
-};
-const ListItemFooter = props => {
-  const defaultRef = useRef(null);
-  const ref = props.ref || defaultRef;
-  useDisplayedLayoutEffect(ref, headerEl => {
-    const listContainerEl = headerEl.closest(".navi_list_container");
-    const headerHeight = headerEl.getBoundingClientRect().height;
-    listContainerEl.style.setProperty("--list-footer-height", `${headerHeight}px`);
-  }, []);
-  return jsx(ListItem, {
-    ...props,
-    ref: ref,
-    role: "presentation",
-    baseClassName: "navi_list_item_footer"
-  });
-};
-
-installImportMetaCssBuild(import.meta);/**
- *
- * Voila le délire:
- *
- * En fait quoiqu'il on mettre un radio/checkbox MAIS
- *
- * il est aussi possible d'afficher une version décorative
- * en instanciant un input dans le <Selectable>
- * il faudra donc ptet un Selectable.Input par example
- * qui se charge de render un input qui est décoratif, le vrai input est caché
- * mais pilote cet input décoratif
- */
-const css$l = /* css */`
-  @layer navi {
-    .navi_list_container {
-      --list-outline-color: var(--navi-focus-outline-color);
-      --list-item-outline-color: var(--navi-focus-outline-color);
-      --list-item-outline-width: 2px;
-      --list-item-outline-offset: calc(-1 * var(--list-item-outline-width));
-      /* Hover (mouse) */
-      --list-item-color-hover: var(--list-item-color);
-      --list-item-background-color-hover: light-dark(#f5f5f5, #2a2a2a);
-      /* Pointed by mouse — subtle, just a shade above background */
-      --list-item-color-mouse-pointed: var(--list-item-color);
-      --list-item-background-color-mouse-pointed: light-dark(#ebebeb, #303030);
-      /* Pointed by keyboard — subtle light blue highlight */
-      --list-item-color-keyboard-pointed: var(--list-item-color);
-      --list-item-background-color-keyboard-pointed: light-dark(
-        #c2dcff,
-        #1c3a6e
-      );
-      /* Pointed by proxy */
-      --list-item-color-pointed: var(--list-item-color);
-      --list-item-background-color-pointed: light-dark(#dbeafe, #1c3a6e);
-      /* Selected — vivid blue accent */
-      --list-item-color-selected: white;
-      --list-item-background-color-selected: rgb(3, 30, 60);
-      /* Disabled */
-      --list-item-color-disabled: light-dark(#aaa, #555);
-      --list-item-background-color-disabled: var(--list-item-background-color);
-    }
-  }
-
-  fieldset.navi_list_container {
-    margin: 0; /* Reset margin that might come from fieldset */
-    padding: 0; /* Reset padding that might come from fieldset */
-  }
-
-  .navi_list_container {
-    --x-list-outline-width: calc(
-      var(--list-outline-width) + var(--list-border-width)
-    );
-    --x-list-outline-offset: calc(-1 * var(--list-border-width));
-
-    outline-width: var(--x-list-outline-width);
-    outline-color: var(--list-outline-color);
-    outline-offset: var(--x-list-outline-offset);
-
-    &[data-focus] {
-      /* outline: var(--list-outline-width) solid var(--navi-focus-outline-color);
-      outline-offset: calc(-1 * var(--list-outline-width)); */
-    }
-    &[data-focus-visible] {
-      outline-style: solid;
-    }
-    &[data-callout] {
-      --x-list-border-color: var(--callout-color);
-    }
-  }
-
-  .navi_list_item {
-    position: relative;
-    outline-width: var(--list-item-outline-width);
-    outline-color: var(--list-item-outline-color);
-    outline-offset: var(--list-item-outline-offset);
-
-    &[navi-selectable] {
-      user-select: none;
-    }
-
-    &[data-interactive] {
-      cursor: pointer;
-      user-select: none;
-    }
-    &[data-hover] {
-      --x-list-item-color: var(--list-item-color-mouse-pointed);
-      --x-list-item-background-color: var(
-        --list-item-background-color-mouse-pointed
-      );
-    }
-    &[data-pointed] {
-      --x-list-item-color: var(--list-item-color-pointed);
-      --x-list-item-background-color: var(--list-item-background-color-pointed);
-    }
-    /* No input proxy: focused,selected */
-    &:not(:has(input[navi-control-proxy-for])) {
-      &:has([data-focus-visible]) {
-        --x-list-item-color: var(--list-item-color-keyboard-pointed);
-        --x-list-item-background-color: var(
-          --list-item-background-color-keyboard-pointed
-        );
-        outline-style: solid;
-
-        /* Selected must win over keyboard-pointed */
-        &[data-selected] {
-          --x-list-item-background-color: var(
-            --list-item-background-color-selected,
-            var(--list-item-background-color-keyboard-pointed)
-          );
-        }
-      }
-
-      &[data-selected] {
-        --x-list-item-color: var(--list-item-color-selected);
-        --x-list-item-background-color: var(
-          --list-item-background-color-selected
-        );
-        &[data-hover] {
-          --x-list-item-background-color: var(
-            --list-item-background-color-selected,
-            var(--list-item-background-color-mouse-pointed)
-          ) !important;
-        }
-      }
-    }
-
-    &[data-disabled] {
-      --x-list-item-color: var(--list-item-color-disabled);
-      --x-list-item-background-color: var(
-        --list-item-background-color-disabled
-      );
-      cursor: default;
-      pointer-events: none;
-    }
-    &[data-readonly] {
-      --x-list-item-color: var(--list-item-color-disabled);
-      cursor: default;
-    }
-  }
-`;
-const SelectableListMultipleContext = createContext(false);
-
-// Interactive variant: manages hover/keyboard/selection state and handles the
-// navi event protocol. When an action is provided it binds the action to ui state
-// and fires it on select. When only uiAction is provided it calls it directly.
-const SelectableList = props => {
-  import.meta.css = [css$l, "@jsenv/navi/src/control/list/selectable_list.jsx"];
-  const defaultRef = useRef();
-  props.ref = props.ref || defaultRef;
-  // we allow ourselves to auto-generate a name
-  const defaultName = useId();
-  props.name = props.name || `listbox_${defaultName}`;
-  const {
-    ref,
-    multiple,
-    selectedIndicator = "backgroundColor",
-    focusGroupDirection,
-    focusGroupWrap
-  } = props;
-  const [listControlProps, remainingProps, childrenWrapperProps, uiGroupStateController] = useControlgroupProps(props, {
-    stateType: multiple ? "array" : "",
-    controlType: multiple ? "checkbox_group" : "radio_group",
-    childControlFilter: multiple ? childUIStateController => {
-      return childUIStateController.controlType === "input" && childUIStateController.props.type === "checkbox";
-    } : childUIStateController => {
-      return childUIStateController.controlType === "input" && childUIStateController.props.type === "radio";
-    },
-    aggregateChildStates: multiple ? childUIStateControllers => {
-      const values = [];
-      for (const childUIStateController of childUIStateControllers) {
-        if (childUIStateController.uiState) {
-          values.push(childUIStateController.uiState);
-        }
-      }
-      return values.length === 0 ? undefined : values;
-    } : childUIStateControllers => {
-      let activeValue;
-      for (const childUIStateController of childUIStateControllers) {
-        if (childUIStateController.uiState) {
-          activeValue = childUIStateController.uiState;
-          break;
-        }
-      }
-      return activeValue;
-    }
-  });
-  useFocusGroup(ref, {
-    direction: focusGroupDirection,
-    wrap: focusGroupWrap,
-    // Up/Down navigate between list items only (the visually-hidden real inputs).
-    ySelector: "[navi-selectable-real-input]"
-  });
-
-  // "Current item" tracking — the item that an external controller (e.g. an
-  // <input navi-list>) navigates from. Defaults to the first selected item,
-  // else the first navigable item. Updated when:
-  //   - an item's real input gains focus (via Tab, click, etc.)
-  //   - the controller dispatches navi_request_list_nav
-  // The current id is announced via navi_list_current_change (bubbling) so a
-  // connected input can update its aria-controls / aria-activedescendant.
-  const currentIdRef = useRef(null);
-  const setCurrentId = (id, event) => {
-    const previousId = currentIdRef.current;
-    if (previousId === id) {
-      return;
-    }
-    currentIdRef.current = id;
-    const listEl = ref.current;
-    if (!listEl) {
-      return;
-    }
-    if (id) {
-      listEl.setAttribute("navi-current-id", id);
-    } else {
-      listEl.removeAttribute("navi-current-id");
-    }
-    dispatchPublicCustomEvent(listEl, "navi_current_change", {
-      event,
-      id,
-      realInputId: id ? `${id}_input` : null
-    });
-  };
-  const getNavigableElements = () => {
-    const listEl = ref.current;
-    if (!listEl) {
-      return [];
-    }
-    const itemEls = Array.from(listEl.querySelectorAll("[navi-list-item-real]"));
-    const navigableEls = [];
-    for (const itemEl of itemEls) {
-      if (itemEl.hidden) {
-        continue;
-      }
-      const realInput = itemEl.querySelector("[navi-selectable-real-input]");
-      if (!realInput || realInput.disabled) {
-        continue;
-      }
-      navigableEls.push(itemEl);
-    }
-    return navigableEls;
-  };
-  // On mount: set the initial current item to the first selected, else the first navigable.
-  // After that, focusin events on the list keep currentIdRef up to date.
-  useLayoutEffect(() => {
-    const navigableEls = getNavigableElements();
-    if (navigableEls.length === 0) {
-      return;
-    }
-    let initialEl;
-    for (const el of navigableEls) {
-      const realInput = el.querySelector("[navi-selectable-real-input]");
-      if (realInput && realInput.checked) {
-        initialEl = el;
-        break;
-      }
-    }
-    if (!initialEl) {
-      initialEl = navigableEls[0];
-    }
-    setCurrentId(initialEl.id);
-  }, []);
-  const listVnode = jsx(List, {
-    as: "fieldset",
-    "navi-has-selected-background": selectedIndicator === "backgroundColor" ? "" : undefined,
-    ...listControlProps,
-    ...remainingProps,
-    name: undefined,
-    selectedIndicator: undefined,
-    multiple: undefined
-    // Track focus inside the list: whichever item gets focus becomes current.
-    ,
-
-    onFocusIn: e => {
-      const realInput = e.target.closest("[navi-selectable-real-input]");
-      if (!realInput) {
-        return;
-      }
-      const itemEl = realInput.closest("[navi-list-item-real]");
-      if (itemEl && itemEl.id) {
-        setCurrentId(itemEl.id, e);
-      }
-    },
-    onnavi_request_select: e => {
-      const {
-        id
-      } = e.detail;
-      if (id === undefined) {
-        return;
-      }
-      const inputId = `${id}_input`;
-      const childController = uiGroupStateController.findChildById(inputId);
-      if (!childController) {
-        return;
-      }
-      const list = ref.current;
-      const allowed = dispatchRequestInteraction(list, e, "select");
-      if (!allowed) {
-        e.preventDefault();
-        return;
-      }
-      if (childController.setUIState(true, e)) {
-        dispatchRequestAction(list, {
-          event: e
-        });
-      }
-    },
-    onnavi_request_unselect: e => {
-      const {
-        id
-      } = e.detail;
-      if (id === undefined) {
-        return;
-      }
-      const inputId = `${id}_input`;
-      const childController = uiGroupStateController.findChildById(inputId);
-      if (!childController) {
-        return;
-      }
-      const list = ref.current;
-      const allowed = dispatchRequestInteraction(list, e, "unselect");
-      if (!allowed) {
-        e.preventDefault();
-        return;
-      }
-      if (childController.setUIState(false, e)) {
-        dispatchRequestAction(list, {
-          event: e
-        });
-      }
-    },
-    onnavi_request_nav: e => {
-      const {
-        goal
-      } = e.detail;
-      const navigableEls = getNavigableElements();
-      if (navigableEls.length === 0) {
-        return;
-      }
-      const currentId = currentIdRef.current;
-      let currentIndex = -1;
-      if (currentId) {
-        currentIndex = navigableEls.findIndex(el => el.id === currentId);
-      }
-      let targetEl;
-      if (goal === "first") {
-        targetEl = navigableEls[0];
-      } else if (goal === "last") {
-        targetEl = navigableEls[navigableEls.length - 1];
-      } else if (goal === "down") {
-        if (currentIndex === -1) {
-          targetEl = navigableEls[0];
-        } else if (currentIndex < navigableEls.length - 1) {
-          targetEl = navigableEls[currentIndex + 1];
-        } else {
-          targetEl = navigableEls[navigableEls.length - 1];
-        }
-      } else if (goal === "up") {
-        if (currentIndex === -1) {
-          targetEl = navigableEls[0];
-        } else if (currentIndex > 0) {
-          targetEl = navigableEls[currentIndex - 1];
-        } else {
-          targetEl = navigableEls[0];
-        }
-      }
-      if (!targetEl) {
-        return;
-      }
-      setCurrentId(targetEl.id, e);
-      dispatchCustomEvent(ref.current, "navi_request_scroll", {
-        event: e,
-        id: targetEl.id
-      });
-    },
-    onnavi_request_activate: e => {
-      const currentId = currentIdRef.current;
-      if (!currentId) {
-        return;
-      }
-      if (multiple) {
-        const inputId = `${currentId}_input`;
-        const childController = uiGroupStateController.findChildById(inputId);
-        const isSelected = childController && childController.uiState;
-        dispatchCustomEvent(ref.current, isSelected ? "navi_request_unselect" : "navi_request_select", {
-          event: e,
-          id: currentId
-        });
-        return;
-      }
-      dispatchCustomEvent(ref.current, "navi_request_select", {
-        event: e,
-        id: currentId
-      });
-    },
-    children: jsx(ControlgroupChildrenWrapper, {
-      ...childrenWrapperProps,
-      children: props.children
-    })
-  });
-  return jsx(SelectableListMultipleContext.Provider, {
-    value: multiple,
-    children: listVnode
-  });
-};
-const SelectableRealInputContext = createContext(null);
-const Selectable = props => {
-  const {
-    index,
-    id,
-    highlight,
-    hidden,
-    filtered,
-    matchScore,
-    defaultSelected,
-    selected,
-    pointed,
-    selectableArea,
-    ...rest
-  } = props;
-  const multiple = useContext(SelectableListMultipleContext);
-  const inputRef = useRef();
-  const inputType = multiple ? "checkbox" : "radio";
-  const inputId = `${id}_input`;
-  inputRef.nullExpected = true; // virtualization
-  const [checkableProps, remainingProps, ChildrenContextWrapper] = useCheckableProps({
-    readOnlyMessage: naviI18n(`constraints.readonly.option`, props),
-    ...rest,
-    ref: inputRef,
-    id: inputId,
-    type: inputType,
-    defaultChecked: defaultSelected,
-    checked: selected,
-    action: (v, {
-      event
-    }) => {
-      const listContainerEl = event.currentTarget.closest(".navi_list_container");
-      dispatchRequestAction(listContainerEl, {
-        event
-      });
-    }
-  });
-  const {
-    checked,
-    value,
-    basePseudoState,
-    children
-  } = checkableProps;
-  const readOnly = basePseudoState[":read-only"];
-  const disabled = basePseudoState[":disabled"];
-  const loading = basePseudoState[":-navi-loading"];
-  const realInputContextValue = useMemo(() => {
-    return {
-      id: inputId,
-      type: inputType,
-      checked,
-      readOnly,
-      value
-    };
-  }, [inputId, inputType, checked, readOnly, value]);
-  return jsx(ListItem, {
-    id: id,
-    index: index,
-    highlight: highlight,
-    filtered: filtered,
-    hidden: hidden,
-    matchScore: matchScore,
-    pseudoClasses: SELECTABLE_PSEUDO_CLASSES,
-    basePseudoState: {
-      ":-navi-selected": checked,
-      ":-navi-pointed": pointed,
-      ...basePseudoState
-    },
-    "aria-selected": checked,
-    selected: checked,
-    "navi-selectable": "",
-    children: jsxs(Field, {
-      as: selectableArea === "manual" ? "div" : undefined,
-      padding: "m",
-      flex: true,
-      alignY: "center",
-      spacing: "s",
-      expandX: true,
-      ...remainingProps,
-      selectableArea: undefined,
-      basePseudoState: basePseudoState,
-      pseudoStateSelector: "[navi-selectable-real-input]",
-      disabled: disabled,
-      readOnly: readOnly,
-      loading: loading,
-      interactive: true,
-      children: [jsx(SelectableRealInput, {
-        ...checkableProps,
-        // eslint-disable-next-line react/no-children-prop
-        children: undefined
-      }), jsx(SelectableRealInputContext.Provider, {
-        value: realInputContextValue,
-        children: jsx(ChildrenContextWrapper, {
-          children: children
-        })
-      })]
-    })
-  });
-};
-const SELECTABLE_PSEUDO_CLASSES = [...LIST_ITEM_PSEUDO_CLASSES, ":hover", ":disabled", ":read-only", ":focus-within", ":focus", ":focus-visible", ":-navi-loading", ":-navi-pointed", ":-navi-selected", ":disabled", ":read-only"];
-const SelectableRealInput = props => {
-  return jsx(Box, {
-    as: "input",
-    ...props,
-    "navi-selectable-real-input": "",
-    "navi-visually-hidden": "",
-    "data-callout-arrow-x": "center"
-    // navi-debug
-  });
-};
-const SelectableInputProxy = props => {
-  const selectableRealInputProps = useContext(SelectableRealInputContext);
-  if (!selectableRealInputProps) {
-    throw new Error("Selectable.Input must be used within a Selectable component");
-  }
-
-  // Reset FieldToInterfaceContext to ensure we don't read id or report our
-  // states (real input should take id and report)
-  return jsx(ControlToInterfaceContext.Provider, {
-    value: undefined,
-    children: jsx(Input, {
-      ...props,
-      ...selectableRealInputProps,
-      id: undefined,
-      "navi-control-proxy-for": selectableRealInputProps.id
-      // give it a specific name to avoid radio name (would unselect others)
-      // (making it unique to the list would be enough, but here it's even more unique)
-      ,
-
-      name: `${selectableRealInputProps.id}_proxy`,
-      "aria-hidden": "true",
-      tabIndex: -1
-    })
-  });
-};
-Selectable.Input = SelectableInputProxy;
 
 const PickerNaviTime = props => {
   const Next = useNextResolver();
@@ -35690,9 +35844,11 @@ const PickerNaviTime = props => {
   return jsx(Next, {
     ...props,
     type: "time",
-    children: jsx(SelectableList, {
+    children: jsx(List, {
+      selectable: true,
       action: "send",
-      children: slots.map((slot, i) => jsx(Selectable, {
+      children: slots.map((slot, i) => jsx(List.Item, {
+        selectable: true,
         id: slot,
         index: i,
         value: slot,
@@ -36042,13 +36198,6 @@ installImportMetaCssBuild(import.meta);const css$k = /* css */`
  *   children    — content to display inside the popup (enables popover/dialog mode)
  *   mode        — "popover" or "dialog"; auto-detected from screen size when omitted
  */
-const Picker = props => {
-  const defaultRef = useRef(null);
-  props.ref = props.ref || defaultRef;
-  const picker = renderPicker(PickerButton, props);
-  return picker;
-};
-const renderPicker = createComponentResolver(pickerResolvers);
 const PickerButton = props => {
   import.meta.css = [css$k, "@jsenv/navi/src/control/picker/picker.jsx"];
   resolveInputProps(props);
@@ -36214,6 +36363,15 @@ const PickerDefaultUI = () => {
     children: value
   });
 };
+const PickerFirstResolver = props => {
+  const Next = useNextResolver();
+  const defaultRef = useRef(null);
+  props.ref = props.ref || defaultRef;
+  return jsx(Next, {
+    ...props
+  });
+};
+const Picker = createComponentResolver([PickerFirstResolver, ...pickerResolvers, PickerButton]);
 Picker.Placeholder = PickerPlaceholder;
 Picker.Value = PickerValue;
 Picker.UI = PickerDefaultUI;
@@ -40252,7 +40410,7 @@ const ButtonCopyToClipboard = ({
   children,
   ...props
 }) => {
-  import.meta.css = [css$c, "@jsenv/navi/src/control/button_copy_to_clipboard.jsx"];
+  import.meta.css = [css$c, "@jsenv/navi/src/control/input/button_copy_to_clipboard.jsx"];
   const [copied, setCopied] = useState(false);
   const renderedRef = useRef();
   useEffect(() => {
@@ -42409,5 +42567,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, Details, Dialog, DialogLayout, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Field, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemFooter, ListItemGroup, ListItemHeader, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, Paragraph, Picker, Popover, Quantity, RadioGroup, Route, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Selectable, SelectableList, SelectionContext, Separator, SettingsSvg, SidePanel, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Thead, Time, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, actionRunEffect, addCustomMessage, anyMatchingRouteSignal, applySearch, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, installCustomConstraintValidation, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isToday, langSignal, localStorageSignal, moveArrayItemByIndex, navBack, navForward, navTo, naviI18n, openCallout, rawUrlPart, reload, removeCustomMessage, rerunActions, resource, route, routeAction, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSidePanelClose, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage, windowWidthSignal };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, Details, Dialog, DialogLayout, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Field, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, Paragraph, Picker, Popover, Quantity, RadioGroup, Route, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Thead, Time, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, actionRunEffect, addCustomMessage, anyMatchingRouteSignal, applySearch, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, installCustomConstraintValidation, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isToday, langSignal, localStorageSignal, moveArrayItemByIndex, navBack, navForward, navTo, naviI18n, openCallout, rawUrlPart, reload, removeCustomMessage, rerunActions, resource, route, routeAction, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSidePanelClose, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi.js.map
