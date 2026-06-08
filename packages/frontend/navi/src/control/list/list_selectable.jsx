@@ -85,7 +85,7 @@ const css = /* css */ `
   }
 
   .navi_list_item {
-    --x-list-item-cursor: pointer;
+    --x-list-item-cursor: default;
 
     position: relative;
     outline-width: var(--list-item-outline-width);
@@ -97,6 +97,7 @@ const css = /* css */ `
       user-select: none;
     }
     &[navi-selectable-area-all] {
+      --x-list-item-cursor: pointer;
       pointer-events: none;
 
       [navi-selectable-real-input] {
@@ -485,7 +486,7 @@ const ListItemSelectable = (props) => {
   inputRef.nullCanHappen = true; // virtualization
   const [checkableProps, remainingProps, ChildrenContextWrapper] =
     useCheckableProps({
-      readOnlyMessage: naviI18n(`constraints.readonly.option`, props),
+      readOnlyMessage: naviI18n(`constraint.readonly.option`, props),
       ...rest,
       ref: inputRef,
       id: inputId,
