@@ -787,7 +787,6 @@ const STEP_RULE = {
         }
 
         const fixedValue = min + roundedRatio * step;
-        debugger;
         return Number(fixedValue.toFixed(maxAllowedDecimals));
       },
     };
