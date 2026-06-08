@@ -11,7 +11,149 @@
       import { useState } from "preact/hooks";
       import { BadgeCount, Box, Icon, Text } from "@jsenv/navi";
 
-      const IconTextDemo = () => {
+      const App = () => {
+        return (
+          <div
+            style={{
+              padding: "20px",
+              fontFamily: "system-ui, sans-serif",
+              maxWidth: "900px",
+              lineHeight: "1.5",
+            }}
+          >
+            <h1>Text Overflow Demo</h1>
+            <Toc />
+            <section>
+              <h2 id="s-two-col-flex">Two-column flex layout</h2>
+              <TwoColFlexSection />
+            </section>
+            <section>
+              <h2 id="s-icon-text">Icon + overflowing text in a flex row</h2>
+              <IconTextSection />
+            </section>
+            <section>
+              <h2 id="s-two-col-grid">Two-column grid layout</h2>
+              <TwoColGridSection />
+            </section>
+            <section>
+              <h2 id="s-basic">Basic</h2>
+              <BasicSection />
+            </section>
+            <section>
+              <h2 id="s-pinned">Pinned Content</h2>
+              <PinnedSection />
+            </section>
+            <section>
+              <h2 id="s-icons-styled">Icons &amp; Styled Text</h2>
+              <IconsStyledSection />
+            </section>
+            <section>
+              <h2 id="s-widths">Container Widths</h2>
+              <WidthsSection />
+            </section>
+            <section>
+              <h2 id="s-html">HTML Elements</h2>
+              <HtmlSection />
+            </section>
+            <section>
+              <h2 id="s-complex-pinned">Complex Pinned Content</h2>
+              <ComplexPinnedSection />
+            </section>
+            <section>
+              <h2 id="s-interactive">Interactive Width</h2>
+              <InteractiveWidthSection />
+            </section>
+            <section>
+              <h2 id="s-multiline">Multiline Behavior</h2>
+              <MultilineSection />
+            </section>
+            <section>
+              <h2 id="s-line-clamp">Line Clamp</h2>
+              <LineClampSection />
+            </section>
+          </div>
+        );
+      };
+
+      const Toc = () => {
+        return (
+          <nav
+            style={{
+              marginBottom: "40px",
+              padding: "20px",
+              background: "#f8f9fa",
+              borderRadius: "8px",
+              fontSize: "14px",
+            }}
+          >
+            <strong
+              style={{
+                display: "block",
+                marginBottom: "8px",
+                fontSize: "16px",
+              }}
+            >
+              Table des matières
+            </strong>
+            <ol style={{ margin: 0, paddingLeft: "20px", lineHeight: "2" }}>
+              <li>
+                <a href="#s-two-col-flex">Two-column flex layout</a>
+              </li>
+              <li>
+                <a href="#s-icon-text">
+                  Icon + overflowing text in a flex row
+                </a>
+              </li>
+              <li>
+                <a href="#s-two-col-grid">Two-column grid layout</a>
+              </li>
+              <li>
+                <a href="#s-basic">Basic</a>
+              </li>
+              <li>
+                <a href="#s-pinned">Pinned Content</a>
+              </li>
+              <li>
+                <a href="#s-icons-styled">Icons &amp; Styled Text</a>
+              </li>
+              <li>
+                <a href="#s-widths">Container Widths</a>
+              </li>
+              <li>
+                <a href="#s-html">HTML Elements</a>
+              </li>
+              <li>
+                <a href="#s-complex-pinned">Complex Pinned Content</a>
+              </li>
+              <li>
+                <a href="#s-interactive">Interactive Width</a>
+              </li>
+              <li>
+                <a href="#s-multiline">Multiline Behavior</a>
+              </li>
+              <li>
+                <a href="#s-line-clamp">Line Clamp</a>
+              </li>
+            </ol>
+          </nav>
+        );
+      };
+
+      const TwoColFlexSection = () => {
+        return (
+          <Box flex spacing="0" width="300">
+            <Text overflowEllipsis border="1px solid #ccc">
+              This is a long text in the first column that should be truncated
+              with an ellipsis when there is not enough space.
+            </Text>
+            <Box border="1px solid #4caf50" shrink={false}>
+              Second column
+            </Box>
+          </Box>
+        );
+      };
+
+      const IconTextSection = () => {
         const [width, setWidth] = useState(300);
         const [isLoading, setIsLoading] = useState(false);
         return (
@@ -114,623 +256,300 @@
         );
       };
 
-      const App = () => {
+      const TwoColGridSection = () => {
         return (
-          <div
-            style={{
-              padding: "20px",
-              fontFamily: "system-ui, sans-serif",
-              maxWidth: "900px",
-              lineHeight: "1.5",
-            }}
-          >
-            <h1>Text Overflow Demo</h1>
-
-            <nav
-              style={{
-                marginBottom: "40px",
-                padding: "20px",
-                background: "#f8f9fa",
-                borderRadius: "8px",
-                fontSize: "14px",
-              }}
-            >
-              <strong
-                style={{
-                  display: "block",
-                  marginBottom: "8px",
-                  fontSize: "16px",
-                }}
-              >
-                Table des matières
-              </strong>
-              <ol style={{ margin: 0, paddingLeft: "20px", lineHeight: "2" }}>
-                <li>
-                  <a href="#s-two-col-flex">Two-column flex layout</a>
-                </li>
-                <li>
-                  <a href="#s-icon-text">
-                    Icon + overflowing text in a flex row
-                  </a>
-                </li>
-                <li>
-                  <a href="#s-two-col-grid">Two-column grid layout</a>
-                </li>
-                <li>
-                  <a href="#s-basic">Basic</a>
-                </li>
-                <li>
-                  <a href="#s-pinned">Pinned Content</a>
-                </li>
-                <li>
-                  <a href="#s-icons-styled">Icons &amp; Styled Text</a>
-                </li>
-                <li>
-                  <a href="#s-widths">Container Widths</a>
-                </li>
-                <li>
-                  <a href="#s-html">HTML Elements</a>
-                </li>
-                <li>
-                  <a href="#s-complex-pinned">Complex Pinned Content</a>
-                </li>
-                <li>
-                  <a href="#s-interactive">Interactive Width</a>
-                </li>
-                <li>
-                  <a href="#s-multiline">Multiline Behavior</a>
-                </li>
-                <li>
-                  <a href="#s-line-clamp">Line Clamp</a>
-                </li>
-              </ol>
-            </nav>
-
-            <section>
-              <h2 id="s-two-col-flex">Two-column flex layout</h2>
-              <Box flex spacing="0" width="300">
-                <Text overflowEllipsis border="1px solid #ccc">
-                  This is a long text in the first column that should be
-                  truncated with an ellipsis when there is not enough space.
-                </Text>
-                <Box border="1px solid #4caf50" shrink={false}>
-                  Second column
-                </Box>
-              </Box>
-            </section>
-
-            <section>
-              <h2 id="s-icon-text">Icon + overflowing text in a flex row</h2>
-              <IconTextDemo />
-            </section>
-
-            <section>
-              <h2 id="s-two-col-grid">Two-column grid layout</h2>
-              {[
-                "fit-content(80px) 1fr",
-                "minmax(0, 1fr) 100px",
-                "auto 100px",
-              ].map((cols) => (
-                <div key={cols} style={{ marginBottom: "12px" }}>
-                  <div
-                    style={{
-                      fontSize: "12px",
-                      color: "#666",
-                      marginBottom: "4px",
-                    }}
-                  >
-                    grid-template-columns: <code>{cols}</code>
-                  </div>
-                  <Box
-                    grid
-                    style={{ gridTemplateColumns: cols }}
-                    spacing="12"
-                    width="300"
-                  >
-                    <Text overflowEllipsis border="1px solid #ccc">
-                      This is a long text in the first column that should be
-                      truncated with an ellipsis when there is not enough space.
-                    </Text>
-                    <Box border="1px solid #4caf50" shrink={false}>
-                      Second column
-                    </Box>
+          <>
+            {[
+              "fit-content(80px) 1fr",
+              "minmax(0, 1fr) 100px",
+              "auto 100px",
+            ].map((cols) => (
+              <div key={cols} style={{ marginBottom: "12px" }}>
+                <div
+                  style={{
+                    fontSize: "12px",
+                    color: "#666",
+                    marginBottom: "4px",
+                  }}
+                >
+                  grid-template-columns: <code>{cols}</code>
+                </div>
+                <Box
+                  grid
+                  style={{ gridTemplateColumns: cols }}
+                  spacing="12"
+                  width="300"
+                >
+                  <Text overflowEllipsis border="1px solid #ccc">
+                    This is a long text in the first column that should be
+                    truncated with an ellipsis when there is not enough space.
+                  </Text>
+                  <Box border="1px solid #4caf50" shrink={false}>
+                    Second column
                   </Box>
-                </div>
-              ))}
-            </section>
-
-            <section>
-              <h2 id="s-basic">Basic</h2>
-              <Box width="220" border="1px solid #ccc" padding="sm">
-                <Text overflowEllipsis>
-                  This is a very long text that should be truncated with
-                  ellipsis when it overflows this small container.
-                </Text>
-              </Box>
-            </section>
-
-            <section>
-              <h2 id="s-pinned">Pinned Content</h2>
-              <Box row spacing="16px">
-                <Box width="260" border="1px solid #ccc" padding="sm">
-                  <Text overflowEllipsis>
-                    This text has extra info that stays visible
-                    <Text overflowPinned color="#666">
-                      (modified)
-                    </Text>
-                  </Text>
                 </Box>
-                <Box width="260" border="1px solid #ccc" padding="sm">
-                  <Text overflowEllipsis>
-                    Text with a dynamic count that is long and will overflow
-                    <Text overflowPinned color="#4caf50">
-                      <BadgeCount background="violet" color="white">
-                        10
-                      </BadgeCount>
-                    </Text>
-                  </Text>
-                </Box>
-              </Box>
-            </section>
-
-            <section>
-              <h2 id="s-icons-styled">Icons &amp; Styled Text</h2>
-              <p style={{ color: "#555", fontSize: "14px" }}>
-                Inline icons and styled fragments inside an overflow ellipsis
-                will auto-space correctly while the pinned part stays visible.
-              </p>
-              <Box row spacing="16px">
-                <Box width="300" border="1px solid #ccc" padding="sm">
-                  <Text overflowEllipsis>
-                    <Icon color="orange">
-                      <StarSvg />
-                    </Icon>
-                    <Text textBold>Important</Text> notification about a process
-                    currently running with status
-                    <Icon>
-                      <StarSvg />
-                    </Icon>
-                    <Text textItalic>active</Text>
-                    <Text overflowPinned color="#666">
-                      (live)
-                    </Text>
-                  </Text>
-                </Box>
-                <Box width="300" border="1px solid #ccc" padding="sm">
-                  <Text overflowEllipsis spacing="l">
-                    <Icon color="orange">
-                      <StarSvg />
-                    </Icon>
-                    <Text textBold>Important</Text> notification about a process
-                    currently running with status
-                    <Icon>
-                      <StarSvg />
-                    </Icon>
-                    <Text textItalic>active</Text>
-                    <Text overflowPinned color="#666">
-                      (live)
-                    </Text>
-                  </Text>
-                </Box>
-                <Box width="180" border="1px solid #ccc" padding="sm">
-                  <Text overflowEllipsis>
-                    <Icon>
-                      <StarSvg />
-                    </Icon>
-                    <Text textUnderline>Truncated</Text> sequence showcasing
-                    icon spacing with styled parts
-                    <Text overflowPinned color="#666">
-                      (ok)
-                    </Text>
-                  </Text>
-                </Box>
-              </Box>
-            </section>
-
-            <section>
-              <h2 id="s-widths">Container Widths</h2>
-              <Box row spacing="12px">
-                {[150, 200, 300, 400].map((width) => (
-                  <div
-                    key={width}
-                    style={{
-                      width: `${width}px`,
-                      border: "1px solid #ccc",
-                      padding: "8px",
-                    }}
-                  >
-                    <div
-                      style={{
-                        fontSize: "12px",
-                        color: "#666",
-                        marginBottom: "4px",
-                      }}
-                    >
-                      Width: {width}px
-                    </div>
-                    <Text overflowEllipsis>
-                      Lorem ipsum dolor sit amet, consectetur adipiscing elit,
-                      sed do eiusmod tempor
-                    </Text>
-                  </div>
-                ))}
-              </Box>
-            </section>
-
-            <section>
-              <h2 id="s-html">HTML Elements</h2>
-              <Box row spacing="12px">
-                <div
-                  style={{
-                    width: "200px",
-                    border: "1px solid #ccc",
-                    padding: "8px",
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: "12px",
-                      color: "#666",
-                      marginBottom: "4px",
-                    }}
-                  >
-                    as=&quot;div&quot; (default)
-                  </div>
-                  <Text overflowEllipsis>
-                    This is rendered as a div element with overflow handling
-                  </Text>
-                </div>
-
-                <div
-                  style={{
-                    width: "200px",
-                    border: "1px solid #ccc",
-                    padding: "8px",
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: "12px",
-                      color: "#666",
-                      marginBottom: "4px",
-                    }}
-                  >
-                    as=&quot;p&quot;
-                  </div>
-                  <Text as="p" overflowEllipsis>
-                    This is rendered as a paragraph element with overflow
-                  </Text>
-                </div>
-
-                <div
-                  style={{
-                    width: "200px",
-                    border: "1px solid #ccc",
-                    padding: "8px",
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: "12px",
-                      color: "#666",
-                      marginBottom: "4px",
-                    }}
-                  >
-                    as=&quot;span&quot;
-                  </div>
-                  <Text as="span" overflowEllipsis>
-                    This is rendered as a span element with overflow
-                  </Text>
-                </div>
-              </Box>
-            </section>
-
-            <section>
-              <h2 id="s-complex-pinned">Complex Pinned Content</h2>
-              <Box row spacing="12px">
-                <div
-                  style={{
-                    width: "280px",
-                    border: "1px solid #ccc",
-                    padding: "8px",
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: "12px",
-                      color: "#666",
-                      marginBottom: "4px",
-                    }}
-                  >
-                    With icon after
-                  </div>
-                  <Text overflowEllipsis>
-                    Important message that might be too long to display fully
-                    <Text overflowPinned color="#f44336" size="sm">
-                      ⚠️
-                    </Text>
-                  </Text>
-                </div>
-
-                <div
-                  style={{
-                    width: "300px",
-                    border: "1px solid #ccc",
-                    padding: "8px",
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: "12px",
-                      color: "#666",
-                      marginBottom: "4px",
-                    }}
-                  >
-                    With multiple elements after
-                  </div>
-                  <Text overflowEllipsis>
-                    Document title with attachment count and icon that
-                    demonstrates overflow
-                    <Text overflowPinned>
-                      <div
-                        style={{
-                          display: "flex",
-                          gap: "4px",
-                          alignItems: "center",
-                        }}
-                      >
-                        <span style={{ fontSize: "12px", color: "#666" }}>
-                          (3)
-                        </span>
-                        <span style={{ fontSize: "14px" }}>📎</span>
-                      </div>
-                    </Text>
-                  </Text>
-                </div>
-              </Box>
-            </section>
-
-            <section>
-              <h2 id="s-interactive">Interactive Width</h2>
-              <InteractiveWidthDemo />
-            </section>
-
-            <section>
-              <h2 id="s-multiline">Multiline Behavior</h2>
-              <Box row spacing="16px">
-                <div
-                  style={{
-                    width: "200px",
-                    border: "1px solid #ccc",
-                    padding: "8px",
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: "12px",
-                      color: "#666",
-                      marginBottom: "4px",
-                    }}
-                  >
-                    Text with line breaks
-                  </div>
-                  <Text overflowEllipsis>
-                    First line of text{"\n"}
-                    Second line of text{"\n"}
-                    Third line that should overflow
-                  </Text>
-                </div>
-
-                <div
-                  style={{
-                    width: "200px",
-                    border: "1px solid #ccc",
-                    padding: "8px",
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: "12px",
-                      color: "#666",
-                      marginBottom: "4px",
-                    }}
-                  >
-                    Vertical alignment comparison
-                  </div>
-                  <Box layoutRow lineHeight="100px">
-                    <Text overflowEllipsis>
-                      Just a long line of text that would get overflowed.
-                    </Text>
-                    <Text overflowEllipsis>
-                      Just a long line of text that would get overflowed.
-                    </Text>
-                  </Box>
-                </div>
-              </Box>
-            </section>
-
-            <section>
-              <h2 id="s-line-clamp">Line Clamp</h2>
-              <p
-                style={{
-                  background: "#fff8e1",
-                  border: "1px solid #ffe082",
-                  borderRadius: "6px",
-                  padding: "10px 14px",
-                  fontSize: "14px",
-                  marginBottom: "16px",
-                }}
-              >
-                <strong>Which to use?</strong>
-                <br />→ Single-line truncation: use{" "}
-                <code>overflowEllipsis</code>. It collapses the text to one line
-                and appends <code>…</code>.
-                <br />→ Multi-line truncation: use{" "}
-                <code>-webkit-line-clamp</code>. It lets N lines show and
-                truncates the rest with <code>…</code>. The two don't compose —{" "}
-                <code>overflowEllipsis</code> forces{" "}
-                <code>white-space: nowrap</code> which makes line-clamp a no-op.
-              </p>
-              <p style={{ color: "#555", fontSize: "14px" }}>
-                <code>-webkit-line-clamp</code> truncates text after N lines and
-                adds an ellipsis. Unlike <code>overflowEllipsis</code> (which is
-                single-line), line clamping works on multi-line blocks.
-              </p>
-              <Box row spacing="16px" style={{ flexWrap: "wrap" }}>
-                <div
-                  style={{
-                    width: "260px",
-                    border: "1px solid #ccc",
-                    padding: "8px",
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: "12px",
-                      color: "#666",
-                      marginBottom: "4px",
-                    }}
-                  >
-                    No clamp (natural flow)
-                  </div>
-                  <div>
-                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed
-                    do eiusmod tempor incididunt ut labore et dolore magna
-                    aliqua. Ut enim ad minim veniam, quis nostrud exercitation
-                    ullamco.
-                  </div>
-                </div>
-
-                <div
-                  style={{
-                    width: "260px",
-                    border: "1px solid #ccc",
-                    padding: "8px",
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: "12px",
-                      color: "#666",
-                      marginBottom: "4px",
-                    }}
-                  >
-                    line-clamp: 2
-                  </div>
-                  <div
-                    style={{
-                      display: "-webkit-box",
-                      WebkitBoxOrient: "vertical",
-                      WebkitLineClamp: 2,
-                      overflow: "hidden",
-                    }}
-                  >
-                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed
-                    do eiusmod tempor incididunt ut labore et dolore magna
-                    aliqua. Ut enim ad minim veniam, quis nostrud exercitation
-                    ullamco.
-                  </div>
-                </div>
-
-                <div
-                  style={{
-                    width: "260px",
-                    border: "1px solid #ccc",
-                    padding: "8px",
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: "12px",
-                      color: "#666",
-                      marginBottom: "4px",
-                    }}
-                  >
-                    line-clamp: 3
-                  </div>
-                  <div
-                    style={{
-                      display: "-webkit-box",
-                      WebkitBoxOrient: "vertical",
-                      WebkitLineClamp: 3,
-                      overflow: "hidden",
-                    }}
-                  >
-                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed
-                    do eiusmod tempor incididunt ut labore et dolore magna
-                    aliqua. Ut enim ad minim veniam, quis nostrud exercitation
-                    ullamco.
-                  </div>
-                </div>
-              </Box>
-
-              <p
-                style={{
-                  color: "#555",
-                  fontSize: "14px",
-                  marginTop: "20px",
-                }}
-              >
-                Combined with <code>overflowEllipsis</code>: the two don't
-                compose naturally. <code>overflowEllipsis</code> forces{" "}
-                <code>white-space: nowrap</code>, which collapses everything to
-                one line — line-clamp then has no effect.
-              </p>
-              <Box flex="y" spacing="m" style={{ flexWrap: "wrap" }}>
-                <div
-                  style={{
-                    width: "260px",
-                    border: "1px solid #ccc",
-                    padding: "8px",
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: "12px",
-                      color: "#666",
-                      marginBottom: "4px",
-                    }}
-                  >
-                    overflowEllipsis + line-clamp: 2 → single-line wins
-                  </div>
-                  <Text overflowEllipsis lineClamp={2}>
-                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed
-                    do eiusmod tempor incididunt ut labore et dolore magna
-                    aliqua.
-                  </Text>
-                </div>
-
-                <div
-                  style={{
-                    width: "260px",
-                    border: "1px solid #ccc",
-                    padding: "8px",
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: "12px",
-                      color: "#666",
-                      marginBottom: "4px",
-                    }}
-                  >
-                    line-clamp only (no overflowEllipsis) → multiline truncation
-                  </div>
-                  <Box lineClamp={2}>
-                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed
-                    do eiusmod tempor incididunt ut labore et dolore magna
-                    aliqua.
-                  </Box>
-                </div>
-              </Box>
-            </section>
-          </div>
+              </div>
+            ))}
+          </>
         );
       };
 
-      const InteractiveWidthDemo = () => {
-        const [width, setWidth] = useState(200);
+      const BasicSection = () => {
+        return (
+          <Box width="220" border="1px solid #ccc" padding="sm">
+            <Text overflowEllipsis>
+              This is a very long text that should be truncated with ellipsis
+              when it overflows this small container.
+            </Text>
+          </Box>
+        );
+      };
 
+      const PinnedSection = () => {
+        return (
+          <Box row spacing="16px">
+            <Box width="260" border="1px solid #ccc" padding="sm">
+              <Text overflowEllipsis>
+                This text has extra info that stays visible
+                <Text overflowPinned color="#666">
+                  (modified)
+                </Text>
+              </Text>
+            </Box>
+            <Box width="260" border="1px solid #ccc" padding="sm">
+              <Text overflowEllipsis>
+                Text with a dynamic count that is long and will overflow
+                <Text overflowPinned color="#4caf50">
+                  <BadgeCount background="violet" color="white">
+                    10
+                  </BadgeCount>
+                </Text>
+              </Text>
+            </Box>
+          </Box>
+        );
+      };
+
+      const IconsStyledSection = () => {
+        return (
+          <>
+            <p style={{ color: "#555", fontSize: "14px" }}>
+              Inline icons and styled fragments inside an overflow ellipsis will
+              auto-space correctly while the pinned part stays visible.
+            </p>
+            <Box row spacing="16px">
+              <Box width="300" border="1px solid #ccc" padding="sm">
+                <Text overflowEllipsis>
+                  <Icon color="orange">
+                    <StarSvg />
+                  </Icon>
+                  <Text textBold>Important</Text> notification about a process
+                  currently running with status
+                  <Icon>
+                    <StarSvg />
+                  </Icon>
+                  <Text textItalic>active</Text>
+                  <Text overflowPinned color="#666">
+                    (live)
+                  </Text>
+                </Text>
+              </Box>
+              <Box width="300" border="1px solid #ccc" padding="sm">
+                <Text overflowEllipsis spacing="l">
+                  <Icon color="orange">
+                    <StarSvg />
+                  </Icon>
+                  <Text textBold>Important</Text> notification about a process
+                  currently running with status
+                  <Icon>
+                    <StarSvg />
+                  </Icon>
+                  <Text textItalic>active</Text>
+                  <Text overflowPinned color="#666">
+                    (live)
+                  </Text>
+                </Text>
+              </Box>
+              <Box width="180" border="1px solid #ccc" padding="sm">
+                <Text overflowEllipsis>
+                  <Icon>
+                    <StarSvg />
+                  </Icon>
+                  <Text textUnderline>Truncated</Text> sequence showcasing icon
+                  spacing with styled parts
+                  <Text overflowPinned color="#666">
+                    (ok)
+                  </Text>
+                </Text>
+              </Box>
+            </Box>
+          </>
+        );
+      };
+
+      const WidthsSection = () => {
+        return (
+          <Box row spacing="12px">
+            {[150, 200, 300, 400].map((width) => (
+              <div
+                key={width}
+                style={{
+                  width: `${width}px`,
+                  border: "1px solid #ccc",
+                  padding: "8px",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "12px",
+                    color: "#666",
+                    marginBottom: "4px",
+                  }}
+                >
+                  Width: {width}px
+                </div>
+                <Text overflowEllipsis>
+                  Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed
+                  do eiusmod tempor
+                </Text>
+              </div>
+            ))}
+          </Box>
+        );
+      };
+
+      const HtmlSection = () => {
+        return (
+          <Box row spacing="12px">
+            <div
+              style={{
+                width: "200px",
+                border: "1px solid #ccc",
+                padding: "8px",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "12px",
+                  color: "#666",
+                  marginBottom: "4px",
+                }}
+              >
+                as=&quot;div&quot; (default)
+              </div>
+              <Text overflowEllipsis>
+                This is rendered as a div element with overflow handling
+              </Text>
+            </div>
+            <div
+              style={{
+                width: "200px",
+                border: "1px solid #ccc",
+                padding: "8px",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "12px",
+                  color: "#666",
+                  marginBottom: "4px",
+                }}
+              >
+                as=&quot;p&quot;
+              </div>
+              <Text as="p" overflowEllipsis>
+                This is rendered as a paragraph element with overflow
+              </Text>
+            </div>
+            <div
+              style={{
+                width: "200px",
+                border: "1px solid #ccc",
+                padding: "8px",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "12px",
+                  color: "#666",
+                  marginBottom: "4px",
+                }}
+              >
+                as=&quot;span&quot;
+              </div>
+              <Text as="span" overflowEllipsis>
+                This is rendered as a span element with overflow
+              </Text>
+            </div>
+          </Box>
+        );
+      };
+
+      const ComplexPinnedSection = () => {
+        return (
+          <Box row spacing="12px">
+            <div
+              style={{
+                width: "280px",
+                border: "1px solid #ccc",
+                padding: "8px",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "12px",
+                  color: "#666",
+                  marginBottom: "4px",
+                }}
+              >
+                With icon after
+              </div>
+              <Text overflowEllipsis>
+                Important message that might be too long to display fully
+                <Text overflowPinned color="#f44336" size="sm">
+                  ⚠️
+                </Text>
+              </Text>
+            </div>
+            <div
+              style={{
+                width: "300px",
+                border: "1px solid #ccc",
+                padding: "8px",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "12px",
+                  color: "#666",
+                  marginBottom: "4px",
+                }}
+              >
+                With multiple elements after
+              </div>
+              <Text overflowEllipsis>
+                Document title with attachment count and icon that demonstrates
+                overflow
+                <Text overflowPinned>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "4px",
+                      alignItems: "center",
+                    }}
+                  >
+                    <span style={{ fontSize: "12px", color: "#666" }}>(3)</span>
+                    <span style={{ fontSize: "14px" }}>📎</span>
+                  </div>
+                </Text>
+              </Text>
+            </div>
+          </Box>
+        );
+      };
+
+      const InteractiveWidthSection = () => {
+        const [width, setWidth] = useState(200);
         return (
           <Box row spacing="12px">
             <Box column spacing="12px" alignY="center">
@@ -745,7 +564,6 @@
                 style={{ width: "200px" }}
               />
             </Box>
-
             <Box width={width} border="2px solid #2196f3" padding="s">
               <Text overflowEllipsis textBold>
                 Resize me to see how the text overflow behavior adapts to
@@ -756,6 +574,229 @@
               </Text>
             </Box>
           </Box>
+        );
+      };
+
+      const MultilineSection = () => {
+        return (
+          <Box row spacing="16px">
+            <div
+              style={{
+                width: "200px",
+                border: "1px solid #ccc",
+                padding: "8px",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "12px",
+                  color: "#666",
+                  marginBottom: "4px",
+                }}
+              >
+                Text with line breaks
+              </div>
+              <Text overflowEllipsis>
+                First line of text{"\n"}
+                Second line of text{"\n"}
+                Third line that should overflow
+              </Text>
+            </div>
+            <div
+              style={{
+                width: "200px",
+                border: "1px solid #ccc",
+                padding: "8px",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "12px",
+                  color: "#666",
+                  marginBottom: "4px",
+                }}
+              >
+                Vertical alignment comparison
+              </div>
+              <Box layoutRow lineHeight="100px">
+                <Text overflowEllipsis>
+                  Just a long line of text that would get overflowed.
+                </Text>
+                <Text overflowEllipsis>
+                  Just a long line of text that would get overflowed.
+                </Text>
+              </Box>
+            </div>
+          </Box>
+        );
+      };
+
+      const LineClampSection = () => {
+        return (
+          <>
+            <p
+              style={{
+                background: "#fff8e1",
+                border: "1px solid #ffe082",
+                borderRadius: "6px",
+                padding: "10px 14px",
+                fontSize: "14px",
+                marginBottom: "16px",
+              }}
+            >
+              <strong>Which to use?</strong>
+              <br />→ Single-line truncation: use <code>overflowEllipsis</code>.
+              It collapses the text to one line and appends <code>…</code>.
+              <br />→ Multi-line truncation: use{" "}
+              <code>-webkit-line-clamp</code>. It lets N lines show and truncates
+              the rest with <code>…</code>. The two don't compose —{" "}
+              <code>overflowEllipsis</code> forces{" "}
+              <code>white-space: nowrap</code> which makes line-clamp a no-op.
+            </p>
+            <p style={{ color: "#555", fontSize: "14px" }}>
+              <code>-webkit-line-clamp</code> truncates text after N lines and
+              adds an ellipsis. Unlike <code>overflowEllipsis</code> (which is
+              single-line), line clamping works on multi-line blocks.
+            </p>
+            <Box row spacing="16px" style={{ flexWrap: "wrap" }}>
+              <div
+                style={{
+                  width: "260px",
+                  border: "1px solid #ccc",
+                  padding: "8px",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "12px",
+                    color: "#666",
+                    marginBottom: "4px",
+                  }}
+                >
+                  No clamp (natural flow)
+                </div>
+                <div>
+                  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed
+                  do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+                  Ut enim ad minim veniam, quis nostrud exercitation ullamco.
+                </div>
+              </div>
+              <div
+                style={{
+                  width: "260px",
+                  border: "1px solid #ccc",
+                  padding: "8px",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "12px",
+                    color: "#666",
+                    marginBottom: "4px",
+                  }}
+                >
+                  line-clamp: 2
+                </div>
+                <div
+                  style={{
+                    display: "-webkit-box",
+                    WebkitBoxOrient: "vertical",
+                    WebkitLineClamp: 2,
+                    overflow: "hidden",
+                  }}
+                >
+                  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed
+                  do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+                  Ut enim ad minim veniam, quis nostrud exercitation ullamco.
+                </div>
+              </div>
+              <div
+                style={{
+                  width: "260px",
+                  border: "1px solid #ccc",
+                  padding: "8px",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "12px",
+                    color: "#666",
+                    marginBottom: "4px",
+                  }}
+                >
+                  line-clamp: 3
+                </div>
+                <div
+                  style={{
+                    display: "-webkit-box",
+                    WebkitBoxOrient: "vertical",
+                    WebkitLineClamp: 3,
+                    overflow: "hidden",
+                  }}
+                >
+                  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed
+                  do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+                  Ut enim ad minim veniam, quis nostrud exercitation ullamco.
+                </div>
+              </div>
+            </Box>
+            <p
+              style={{
+                color: "#555",
+                fontSize: "14px",
+                marginTop: "20px",
+              }}
+            >
+              Combined with <code>overflowEllipsis</code>: the two don't compose
+              naturally. <code>overflowEllipsis</code> forces{" "}
+              <code>white-space: nowrap</code>, which collapses everything to one
+              line — line-clamp then has no effect.
+            </p>
+            <Box flex="y" spacing="m" style={{ flexWrap: "wrap" }}>
+              <div
+                style={{
+                  width: "260px",
+                  border: "1px solid #ccc",
+                  padding: "8px",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "12px",
+                    color: "#666",
+                    marginBottom: "4px",
+                  }}
+                >
+                  overflowEllipsis + line-clamp: 2 → single-line wins
+                </div>
+                <Text overflowEllipsis lineClamp={2}>
+                  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed
+                  do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+                </Text>
+              </div>
+              <div
+                style={{
+                  width: "260px",
+                  border: "1px solid #ccc",
+                  padding: "8px",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "12px",
+                    color: "#666",
+                    marginBottom: "4px",
+                  }}
+                >
+                  line-clamp only (no overflowEllipsis) → multiline truncation
+                </div>
+                <Box lineClamp={2}>
+                  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed
+                  do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+                </Box>
+              </div>
+            </Box>
+          </>
         );
       };
 
