@@ -426,6 +426,19 @@
         Leaf,
       ]);
 
+      // ── Case 5: A nested inside itself via a custom wrapper ─────────────────
+      // CustomA renders an outer <A> and passes two inner <A> as children.
+      // This tests that renderComponent resets ResolverIndexContext to 0 so
+      // the inner <A> instances don't inherit the stale index from the outer chain.
+      const CustomA = () => {
+        return (
+          <A label="outer (CustomA wrapper)">
+            <A label="inner-child-1" icon="🌿" />
+            <A label="inner-child-2" badge="new" />
+          </A>
+        );
+      };
+
       const CaseSection = ({ title, code, children }) => (
         <div class="case-section">
           <div class="case-header">
@@ -504,6 +517,19 @@
                 innerBadge={showBadge ? "99" : undefined}
                 innerTooltip="from B"
               />
+            </CaseSection>
+
+            <CaseSection
+              title="Case 5 — A nested inside itself via a custom wrapper (ResolverIndexContext reset)"
+              code="<CustomA> must render inner <A> children correctly"
+            >
+              <p style="font-size:12px;color:#555;margin:0 0 8px">
+                CustomA renders an outer {"<A>"} and passes inner {"<A>"} as
+                children. Without the ResolverIndexContext reset in
+                renderComponent, the inner {"<A>"} would see a stale index and
+                render null.
+              </p>
+              <CustomA />
             </CaseSection>
           </div>
         );

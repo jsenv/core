@@ -58,7 +58,9 @@ export const createComponentResolver = (resolvers) => {
   const renderComponent = (props) => {
     return (
       <NextResolverContext.Provider value={NextComponent}>
-        <ChainRunner {...props} />
+        <ResolverIndexContext.Provider value={0}>
+          <ChainRunner {...props} />
+        </ResolverIndexContext.Provider>
       </NextResolverContext.Provider>
     );
   };
