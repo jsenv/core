@@ -1,7 +1,8 @@
 # [formatHourDuration](../../format_time.test.js)
 
 ```js
-const run = (hours, locale, opts) => formatHourDuration(hours, locale, opts);
+const run = (hours, locale, opts) =>
+  formatHourDuration(hours, locale, opts);
 return table(
   ["hours", "locale", "long", "result"],
   [
@@ -22,13 +23,13 @@ return table(
 ├───────┼────────┼──────┼────────────────────────┤
 │ 1     │ fr     │ 0    │ 1h                     │
 ├───────┼────────┼──────┼────────────────────────┤
-│ 1.5   │ fr     │ 0    │ 1h 30min               │
+│ 1.5   │ fr     │ 0    │ 1h30                   │
 ├───────┼────────┼──────┼────────────────────────┤
-│ 2.25  │ fr     │ 0    │ 2h 15min               │
+│ 2.25  │ fr     │ 0    │ 2h15                   │
 ├───────┼────────┼──────┼────────────────────────┤
 │ 1     │ en     │ 0    │ 1h                     │
 ├───────┼────────┼──────┼────────────────────────┤
-│ 1.5   │ en     │ 0    │ 1h 30m                 │
+│ 1.5   │ en     │ 0    │ 1h30                   │
 ├───────┼────────┼──────┼────────────────────────┤
 │ 1.5   │ fr     │ 1    │ 1 heure et 30 minutes  │
 ├───────┼────────┼──────┼────────────────────────┤

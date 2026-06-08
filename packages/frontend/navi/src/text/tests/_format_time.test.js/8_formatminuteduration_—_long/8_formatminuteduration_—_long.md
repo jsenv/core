@@ -1,7 +1,8 @@
 # [formatMinuteDuration — long](../../format_time.test.js)
 
 ```js
-const run = (minutes, locale) => formatMinuteDuration(minutes, locale, { long: true });
+const run = (minutes, locale) =>
+  formatMinuteDuration(minutes, locale, { long: true });
 return table(
   ["minutes", "locale", "result"],
   [

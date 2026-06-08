@@ -102,7 +102,8 @@ const css = /* css */ `
       )
     );
     --x-picker-padding-right: calc(
-      var(--x-picker-padding-right-base) + var(--picker-right-slot-size) - 2px
+      var(--x-picker-padding-right-base) + var(--picker-right-slot-size) +
+        var(--picker-right-slot-size) * 0.25
     );
     --x-picker-padding-left: var(
       --picker-padding-left,

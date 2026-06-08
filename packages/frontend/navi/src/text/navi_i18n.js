@@ -73,6 +73,31 @@ naviI18n.addAll({
     pt: "em [duration]",
     nl: "over [duration]",
   },
+  // Compact duration unit symbols used in "1h30", "45min", etc.
+  "time.duration.hour_symbol": {
+    en: "h",
+    fr: "h",
+    de: "h",
+    es: "h",
+    it: "h",
+    pt: "h",
+    nl: "u",
+    ja: "時間",
+    zh: "小时",
+    ko: "시간",
+  },
+  "time.duration.minute_symbol": {
+    en: "min",
+    fr: "min",
+    de: "min",
+    es: "min",
+    it: "min",
+    pt: "min",
+    nl: "min",
+    ja: "分",
+    zh: "分",
+    ko: "분",
+  },
 });
 
 // List messages — override any key to customize list messages

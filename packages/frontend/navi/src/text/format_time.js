@@ -5,8 +5,6 @@
 
 import { naviI18n } from "./navi_i18n.js";
 
-const DEFAULT_LANG = "en";
-
 /**
  * Formats a date as a human-readable day, appending "(aujourd'hui)" or
  * "(demain)" when the date matches today or tomorrow.
@@ -177,9 +175,8 @@ export const formatMinuteDuration = (
 ) => {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
-  if (typeof Intl.DurationFormat !== "undefined") {
-    const style = long ? "long" : "narrow";
-    const fmt = new Intl.DurationFormat(locale, { style });
+  if (long && typeof Intl.DurationFormat !== "undefined") {
+    const fmt = new Intl.DurationFormat(locale, { style: "long" });
     if (h === 0) {
       return fmt.format({ minutes: m });
     }
@@ -188,14 +185,20 @@ export const formatMinuteDuration = (
     }
     return fmt.format({ hours: h, minutes: m });
   }
-  // Fallback compact notation (no long variant without Intl.DurationFormat)
+  // Compact notation: "1h30", "45min", "2h"
+  const hSym = naviI18n("time.duration.hour_symbol", undefined, {
+    lang: locale,
+  });
+  const mSym = naviI18n("time.duration.minute_symbol", undefined, {
+    lang: locale,
+  });
   if (h === 0) {
-    return `${m}min`;
+    return `${m}${mSym}`;
   }
   if (m === 0) {
-    return `${h}h`;
+    return `${h}${hSym}`;
   }
-  return `${h}h${String(m).padStart(2, "0")}`;
+  return `${h}${hSym}${String(m).padStart(2, "0")}`;
 };
 
 /**
