@@ -4,6 +4,8 @@ import {
   formatDatetimePlaceholder,
   formatDay,
   formatDayRelative,
+  formatHourDuration,
+  formatMinuteDuration,
   formatMonth,
   formatMonthPlaceholder,
   formatTime,
@@ -69,6 +71,9 @@ export const Time = (props) => {
   }
   if (type === "minute") {
     return <TimeMinute {...props} />;
+  }
+  if (type === "hour") {
+    return <TimeHour {...props} />;
   }
   return <TimeRelative {...props} />;
 };
@@ -208,11 +213,11 @@ const TimeTime = ({ children, locale, ...props }) => {
   );
 };
 
-const TimeMinute = ({ children, locale, ...props }) => {
+const TimeMinute = ({ children, locale, colonFormat, ...props }) => {
   const lang = locale || langSignal.value;
 
   if (children === undefined) {
-    return <TimeText {...props}>--:--</TimeText>;
+    return <TimeText {...props}>{colonFormat ? "--:--" : "--"}</TimeText>;
   }
   let minutes;
   if (typeof children === "number") {
@@ -225,16 +230,44 @@ const TimeMinute = ({ children, locale, ...props }) => {
     minutes = childrenAsNumber;
   }
 
-  const date = new Date(1970, 0, 1, Math.floor(minutes / 60), minutes % 60, 0);
-  const hh = String(date.getHours()).padStart(2, "0");
-  const mm = String(date.getMinutes()).padStart(2, "0");
+  const totalHours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  const hh = String(totalHours).padStart(2, "0");
+  const mm = String(remainingMinutes).padStart(2, "0");
   const dateTime = `${hh}:${mm}`;
-  const text = formatTime(date, lang);
+  let text;
+  if (colonFormat) {
+    const date = new Date(1970, 0, 1, totalHours, remainingMinutes, 0);
+    text = formatTime(date, lang);
+  } else {
+    text = formatMinuteDuration(minutes, lang);
+  }
   return (
     <TimeText dateTime={dateTime} {...props}>
       {text}
     </TimeText>
   );
+};
+
+const TimeHour = ({ children, locale, ...props }) => {
+  const lang = locale || langSignal.value;
+
+  if (children === undefined) {
+    return <TimeText {...props}>--</TimeText>;
+  }
+  let hours;
+  if (typeof children === "number") {
+    hours = children;
+  } else {
+    const childrenAsNumber = Number(children);
+    if (isNaN(childrenAsNumber)) {
+      return <TimeText {...props}>{children}</TimeText>;
+    }
+    hours = childrenAsNumber;
+  }
+
+  const text = formatHourDuration(hours, lang);
+  return <TimeText {...props}>{text}</TimeText>;
 };
 
 const TimeRelative = ({

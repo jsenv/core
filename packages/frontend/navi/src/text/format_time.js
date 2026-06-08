@@ -157,6 +157,50 @@ export const formatTime = (date, locale) => {
 };
 
 /**
+ * Formats a duration expressed in minutes as a short human-readable string.
+ * Uses Intl.DurationFormat when available, falls back to a compact notation.
+ *
+ * @example
+ * formatMinuteDuration(90, "fr") // "1 h 30 min" or "1h30"
+ * formatMinuteDuration(45, "en") // "45 min"
+ * formatMinuteDuration(120, "fr") // "2 h"
+ */
+export const formatMinuteDuration = (minutes, locale) => {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (typeof Intl.DurationFormat !== "undefined") {
+    const fmt = new Intl.DurationFormat(locale, { style: "narrow" });
+    if (h === 0) {
+      return fmt.format({ minutes: m });
+    }
+    if (m === 0) {
+      return fmt.format({ hours: h });
+    }
+    return fmt.format({ hours: h, minutes: m });
+  }
+  // Fallback compact notation
+  if (h === 0) {
+    return `${m}min`;
+  }
+  if (m === 0) {
+    return `${h}h`;
+  }
+  return `${h}h${String(m).padStart(2, "0")}`;
+};
+
+/**
+ * Formats a duration expressed in hours (possibly fractional) as a short human-readable string.
+ *
+ * @example
+ * formatHourDuration(1.5, "fr") // "1 h 30 min" or "1h30"
+ * formatHourDuration(2, "en")   // "2 hr."
+ */
+export const formatHourDuration = (hours, locale) => {
+  const totalMinutes = Math.round(hours * 60);
+  return formatMinuteDuration(totalMinutes, locale);
+};
+
+/**
  * Formats a date relative to now: "il y a 3 jours", "dans 2 heures", etc.
  */
 const formatTimeAgo = (date, locale, { now = new Date(), bare } = {}) => {
