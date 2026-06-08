@@ -156,6 +156,10 @@ const css = /* css */ `
             var(--list-item-background-color-mouse-pointed)
           ) !important;
         }
+
+        input {
+          color: revert;
+        }
       }
     }
 
