@@ -63,6 +63,16 @@ naviI18n.addAll({
     pt: "[day] às [time]",
     nl: "[day] om [time]",
   },
+  // [duration] is replaced at runtime with the formatted duration string (e.g. "1h30", "45 min")
+  "time.in_duration": {
+    en: "in [duration]",
+    fr: "dans [duration]",
+    de: "in [duration]",
+    es: "en [duration]",
+    it: "tra [duration]",
+    pt: "em [duration]",
+    nl: "over [duration]",
+  },
 });
 
 // List messages — override any key to customize list messages

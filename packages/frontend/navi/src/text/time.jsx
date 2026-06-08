@@ -213,11 +213,11 @@ const TimeTime = ({ children, locale, ...props }) => {
   );
 };
 
-const TimeMinute = ({ children, locale, colonFormat, ...props }) => {
+const TimeMinute = ({ children, locale, long, timeString, ...props }) => {
   const lang = locale || langSignal.value;
 
   if (children === undefined) {
-    return <TimeText {...props}>{colonFormat ? "--:--" : "--"}</TimeText>;
+    return <TimeText {...props}>{timeString ? "--:--" : "--"}</TimeText>;
   }
   let minutes;
   if (typeof children === "number") {
@@ -236,11 +236,11 @@ const TimeMinute = ({ children, locale, colonFormat, ...props }) => {
   const mm = String(remainingMinutes).padStart(2, "0");
   const dateTime = `${hh}:${mm}`;
   let text;
-  if (colonFormat) {
+  if (timeString) {
     const date = new Date(1970, 0, 1, totalHours, remainingMinutes, 0);
     text = formatTime(date, lang);
   } else {
-    text = formatMinuteDuration(minutes, lang);
+    text = formatMinuteDuration(minutes, lang, { long });
   }
   return (
     <TimeText dateTime={dateTime} {...props}>
@@ -249,7 +249,7 @@ const TimeMinute = ({ children, locale, colonFormat, ...props }) => {
   );
 };
 
-const TimeHour = ({ children, locale, ...props }) => {
+const TimeHour = ({ children, locale, long, ...props }) => {
   const lang = locale || langSignal.value;
 
   if (children === undefined) {
@@ -266,7 +266,7 @@ const TimeHour = ({ children, locale, ...props }) => {
     hours = childrenAsNumber;
   }
 
-  const text = formatHourDuration(hours, lang);
+  const text = formatHourDuration(hours, lang, { long });
   return <TimeText {...props}>{text}</TimeText>;
 };
 

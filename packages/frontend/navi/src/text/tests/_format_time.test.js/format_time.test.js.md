@@ -8,6 +8,9 @@
 - [formatDuration — future](4_formatduration_%E2%80%94_future/4_formatduration_%E2%80%94_future.md)
 - [formatDuration — ongoing](5_formatduration_%E2%80%94_ongoing/5_formatduration_%E2%80%94_ongoing.md)
 - [formatDuration — past](6_formatduration_%E2%80%94_past/6_formatduration_%E2%80%94_past.md)
+- [formatMinuteDuration — compact (default)](7_formatminuteduration_%E2%80%94_compact_(default)/7_formatminuteduration_%E2%80%94_compact_(default).md)
+- [formatMinuteDuration — long](8_formatminuteduration_%E2%80%94_long/8_formatminuteduration_%E2%80%94_long.md)
+- [formatHourDuration](9_formathourduration/9_formathourduration.md)
 
 ---
 

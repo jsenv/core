@@ -3,6 +3,8 @@ import { COLORS, renderTable } from "@jsenv/terminal-table";
 
 import {
   formatDay,
+  formatHourDuration,
+  formatMinuteDuration,
   formatMonth,
   formatTime,
   formatTimeRelative,
@@ -220,6 +222,58 @@ await snapshotTests(import.meta.url, ({ test }) => {
           formatTimeRelative(ms(-3 * 3_600_000), 3_600_000, "fr", opts),
         ],
         ["-5min", 0, "fr", formatTimeRelative(ms(-5 * 60_000), 0, "fr", opts)],
+      ],
+    );
+  });
+
+  test("formatMinuteDuration — compact (default)", () => {
+    const run = (minutes, locale) => formatMinuteDuration(minutes, locale);
+    return table(
+      ["minutes", "locale", "result"],
+      [
+        [0, "fr", run(0, "fr")],
+        [1, "fr", run(1, "fr")],
+        [45, "fr", run(45, "fr")],
+        [60, "fr", run(60, "fr")],
+        [90, "fr", run(90, "fr")],
+        [120, "fr", run(120, "fr")],
+        [135, "fr", run(135, "fr")],
+        [45, "en", run(45, "en")],
+        [90, "en", run(90, "en")],
+      ],
+    );
+  });
+
+  test("formatMinuteDuration — long", () => {
+    const run = (minutes, locale) =>
+      formatMinuteDuration(minutes, locale, { long: true });
+    return table(
+      ["minutes", "locale", "result"],
+      [
+        [0, "fr", run(0, "fr")],
+        [45, "fr", run(45, "fr")],
+        [60, "fr", run(60, "fr")],
+        [90, "fr", run(90, "fr")],
+        [135, "fr", run(135, "fr")],
+        [45, "en", run(45, "en")],
+        [90, "en", run(90, "en")],
+      ],
+    );
+  });
+
+  test("formatHourDuration", () => {
+    const run = (hours, locale, opts) =>
+      formatHourDuration(hours, locale, opts);
+    return table(
+      ["hours", "locale", "long", "result"],
+      [
+        [1, "fr", false, run(1, "fr")],
+        [1.5, "fr", false, run(1.5, "fr")],
+        [2.25, "fr", false, run(2.25, "fr")],
+        [1, "en", false, run(1, "en")],
+        [1.5, "en", false, run(1.5, "en")],
+        [1.5, "fr", true, run(1.5, "fr", { long: true })],
+        [2.25, "fr", true, run(2.25, "fr", { long: true })],
       ],
     );
   });

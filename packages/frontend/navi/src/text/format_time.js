@@ -160,16 +160,26 @@ export const formatTime = (date, locale) => {
  * Formats a duration expressed in minutes as a short human-readable string.
  * Uses Intl.DurationFormat when available, falls back to a compact notation.
  *
+ * @param {number} minutes
+ * @param {string} locale
+ * @param {{ long?: boolean }} [options]
+ *
  * @example
- * formatMinuteDuration(90, "fr") // "1 h 30 min" or "1h30"
- * formatMinuteDuration(45, "en") // "45 min"
- * formatMinuteDuration(120, "fr") // "2 h"
+ * formatMinuteDuration(90, "fr")             // "1h30"        (compact, default)
+ * formatMinuteDuration(90, "fr", { long: true }) // "1 heure 30" or "1 h 30 min" via Intl
+ * formatMinuteDuration(45, "en")             // "45min"
+ * formatMinuteDuration(120, "fr")            // "2h"
  */
-export const formatMinuteDuration = (minutes, locale) => {
+export const formatMinuteDuration = (
+  minutes,
+  locale,
+  { long = false } = {},
+) => {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   if (typeof Intl.DurationFormat !== "undefined") {
-    const fmt = new Intl.DurationFormat(locale, { style: "narrow" });
+    const style = long ? "long" : "narrow";
+    const fmt = new Intl.DurationFormat(locale, { style });
     if (h === 0) {
       return fmt.format({ minutes: m });
     }
@@ -178,7 +188,7 @@ export const formatMinuteDuration = (minutes, locale) => {
     }
     return fmt.format({ hours: h, minutes: m });
   }
-  // Fallback compact notation
+  // Fallback compact notation (no long variant without Intl.DurationFormat)
   if (h === 0) {
     return `${m}min`;
   }
@@ -191,13 +201,18 @@ export const formatMinuteDuration = (minutes, locale) => {
 /**
  * Formats a duration expressed in hours (possibly fractional) as a short human-readable string.
  *
+ * @param {number} hours
+ * @param {string} locale
+ * @param {{ long?: boolean }} [options]
+ *
  * @example
- * formatHourDuration(1.5, "fr") // "1 h 30 min" or "1h30"
- * formatHourDuration(2, "en")   // "2 hr."
+ * formatHourDuration(1.5, "fr")              // "1h30"
+ * formatHourDuration(1.5, "fr", { long: true }) // "1 heure 30" or "1 h 30 min" via Intl
+ * formatHourDuration(2, "en")               // "2h"
  */
-export const formatHourDuration = (hours, locale) => {
+export const formatHourDuration = (hours, locale, { long = false } = {}) => {
   const totalMinutes = Math.round(hours * 60);
-  return formatMinuteDuration(totalMinutes, locale);
+  return formatMinuteDuration(totalMinutes, locale, { long });
 };
 
 /**
@@ -311,7 +326,14 @@ const formatFuture = (date, diff, locale, { now }) => {
     if (minutes === 0) {
       return rtf.format(hours, "hour");
     }
-    return formatHoursAndMinutes(hours, minutes, locale);
+    const duration = formatMinuteDuration(hours * 60 + minutes, locale, {
+      long: true,
+    });
+    const template = naviI18n("time.in_duration", undefined, { lang: locale });
+    if (template !== "time.in_duration") {
+      return template.replace("[duration]", duration);
+    }
+    return `in ${duration}`;
   }
 
   // < 6h → "dans X heures" (precise enough, skip tomorrow label)
@@ -367,24 +389,6 @@ const formatTomorrowAt = (date, locale) => {
   }
   // fallback: concatenate with a space
   return `${dayLabel} ${timeLabel}`;
-};
-
-// "dans 1 heure 30" — colloquial format, built per language.
-// The plural suffix is applied inline because it depends on the count;
-// a plain string template cannot express this, so we keep it in JS.
-const formatHoursAndMinutes = (hours, minutes, locale) => {
-  const lang = (locale || "").split("-")[0];
-  const templates = {
-    fr: (h, m) => `dans ${h} heure${h > 1 ? "s" : ""} ${m}`,
-    en: (h, m) => `in ${h} hour${h > 1 ? "s" : ""} ${m}`,
-    de: (h, m) => `in ${h} Stunde${h > 1 ? "n" : ""} ${m}`,
-    es: (h, m) => `en ${h} hora${h > 1 ? "s" : ""} ${m}`,
-    it: (h, m) => `tra ${h} ora${h > 1 ? "e" : ""} ${m}`,
-    pt: (h, m) => `em ${h} hora${h > 1 ? "s" : ""} ${m}`,
-    nl: (h, m) => `over ${h} uur ${m}`,
-  };
-  const template = templates[lang] || templates[DEFAULT_LANG];
-  return template(hours, minutes);
 };
 
 const getLessThanMinuteText = (locale) => {
