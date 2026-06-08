@@ -1,8 +1,17 @@
 import { dispatchCustomEvent } from "@jsenv/dom";
-import { createOnKeyDownForShortcuts } from "@jsenv/navi/src/keyboard/keyboard_shortcuts.js";
 import { useLayoutEffect, useState } from "preact/hooks";
 
+import { createOnKeyDownForShortcuts } from "@jsenv/navi/src/keyboard/keyboard_shortcuts.js";
 import { useNextResolver } from "../../resolver/resolver.jsx";
+
+export const InputWithListResolver = (props) => {
+  const Next = useNextResolver();
+
+  if (props["navi-list"]) {
+    return <InputWithList {...props} />;
+  }
+  return <Next {...props} />;
+};
 
 /**
  * InputWithList — connects an input to a SelectableList via its id.
@@ -19,7 +28,7 @@ import { useNextResolver } from "../../resolver/resolver.jsx";
  *   - aria-activedescendant points at the current item's <li> id (standard
  *     combobox/listbox ARIA pattern).
  */
-export const InputWithList = (props) => {
+const InputWithList = (props) => {
   const Next = useNextResolver();
   const { "navi-list": naviList, onKeyDown } = props;
 
