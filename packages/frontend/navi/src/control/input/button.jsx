@@ -1,17 +1,14 @@
 import { useContext, useRef } from "preact/hooks";
 
-import {
-  createComponentResolver,
-  useNextResolver,
-} from "@jsenv/navi/src/resolver/resolver.jsx";
-import { Box, BoxForwardedPropsContext } from "../box/box.jsx";
-import { LoadingOutline } from "../graphic/loading/loading_outline.jsx";
-import { getHrefTargetInfo } from "../nav/browser_integration/href_target_info.js";
-import { assertRoute, useRouteStatus } from "../nav/route.js";
-import { Text, markAsOutsideTextFlow } from "../text/text.jsx";
-import { useAccentColorAttributes } from "../utils/use_accent_color_attributes.js";
-import { useControlProps } from "./control_hooks.jsx";
-import { FormContext } from "./form_context.js";
+import { createComponentResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
+import { Box, BoxForwardedPropsContext } from "../../box/box.jsx";
+import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
+import { getHrefTargetInfo } from "../../nav/browser_integration/href_target_info.js";
+import { Text, markAsOutsideTextFlow } from "../../text/text.jsx";
+import { useAccentColorAttributes } from "../../utils/use_accent_color_attributes.js";
+import { useControlProps } from "../control_hooks.jsx";
+import { ButtonInsideFormResolver } from "./button_inside_form.jsx";
+import { ButtonRouteResolver } from "./button_route.jsx";
 
 /**
  * Notes on Button uiAction and action behavior regarding their context (form, radio list, picker):
@@ -293,31 +290,10 @@ const css = /* css */ `
 export const Button = (props) => {
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
-  const button = renderButton(ButtonUI, props);
+  const button = renderButton(props);
 
   return button;
 };
-
-const ButtonRouteResolver = (props) => {
-  const Next = useNextResolver();
-  if (props.route) {
-    return <ButtonWithRoute {...props} />;
-  }
-  return <Next {...props} />;
-};
-const ButtonInsideFormResolver = (props) => {
-  const Next = useNextResolver();
-  const formContext = useContext(FormContext);
-
-  if (formContext) {
-    return <ButtonInsideForm {...props} />;
-  }
-  return <Next {...props} />;
-};
-const renderButton = createComponentResolver([
-  ButtonRouteResolver,
-  ButtonInsideFormResolver,
-]);
 
 const ButtonUI = (props) => {
   import.meta.css = css;
@@ -487,35 +463,8 @@ const ButtonShadow = () => {
 };
 markAsOutsideTextFlow(ButtonShadow);
 
-const ButtonInsideForm = (props) => {
-  const Next = useNextResolver();
-
-  return (
-    <Next
-      // The default action for a button inside a form is to request form action
-      action="send"
-      {...props}
-    />
-  );
-};
-const ButtonWithRoute = (props) => {
-  const Next = useNextResolver();
-  const { route, routeParams, children, ...rest } = props;
-  if (import.meta.dev) {
-    assertRoute(route);
-  }
-  const url = route.buildUrl(routeParams);
-  const { matching } = useRouteStatus(route);
-  const paramsAreMatching = route.matchesParams(routeParams);
-  const linkMatching = matching && paramsAreMatching;
-
-  return (
-    <Next
-      href={url}
-      data-href-current={linkMatching ? "" : undefined}
-      {...rest}
-    >
-      {children || route.buildRelativeUrl(routeParams)}
-    </Next>
-  );
-};
+const renderButton = createComponentResolver([
+  ButtonRouteResolver,
+  ButtonInsideFormResolver,
+  ButtonUI,
+]);

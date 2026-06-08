@@ -363,11 +363,12 @@ export const List = (props) => {
   props.ref = props.ref || refDefault;
   const idDefault = useId();
   props.id = props.id || idDefault;
-  const listVnode = renderList(ListUI, props);
+  const listVnode = renderList(props);
 
   return listVnode;
 };
-const renderList = createComponentResolver([ListSelectableResolver]);
+// defined after ListUI (referenced in the array, must be declared first)
+let renderList;
 
 const ListUI = (props) => {
   import.meta.css = css;
@@ -513,6 +514,7 @@ const ListUI = (props) => {
     </Box>
   );
 };
+renderList = createComponentResolver([ListSelectableResolver, ListUI]);
 const ListContent = ({
   role,
   fallback,
@@ -1162,9 +1164,11 @@ export const ListItem = (props) => {
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
 
-  const listItemVnode = renderListItem(ListItemUI, props);
+  const listItemVnode = renderListItem(props);
   return listItemVnode;
 };
+// defined after ListItemUI (referenced in the array, must be declared first)
+let renderListItem;
 
 const ListItemPresentation = (props) => {
   return <Box as="li" {...props} />;
@@ -1243,12 +1247,6 @@ const ListItemPresentationResolver = (props) => {
   }
   return <Next {...props} />;
 };
-const renderListItem = createComponentResolver([
-  ListItemSelectableResolver,
-  ListItemHeaderOrFooterResolver,
-  ListItemPresentationResolver,
-]);
-
 const ListItemUI = (props) => {
   if (props.id === undefined) {
     console.warn(
@@ -1396,6 +1394,12 @@ const LIST_ITEM_STYLE_CSS_VARS = {
 };
 export const LIST_ITEM_PSEUDO_CLASSES = [];
 const LIST_ITEM_PSEUDO_ELEMENTS = ["::highlight"];
+renderListItem = createComponentResolver([
+  ListItemSelectableResolver,
+  ListItemHeaderOrFooterResolver,
+  ListItemPresentationResolver,
+  ListItemUI,
+]);
 
 /**
  * ListGroup — a labeled group of list items.

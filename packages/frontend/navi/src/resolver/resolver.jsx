@@ -13,10 +13,13 @@ export const useNextResolver = () => useContext(NextResolverContext);
  * To terminate the chain early (e.g. render a specialized component), render
  * directly without calling Next.
  *
+ * The last entry in the array is the final/target component — it receives null
+ * from useNextResolver() indicating it is terminal.
+ *
  * Usage:
- *   const renderButton = createComponentResolver([ResolverA, ResolverB]);
+ *   const renderButton = createComponentResolver([ResolverA, ResolverB, ButtonTarget]);
  *   // Then inside a component render:
- *   renderButton(ButtonTarget, props)
+ *   renderButton(props)
  *
  * NextResolverContext exposes a stable Next component so resolvers can continue
  * the chain via useNextResolver().
@@ -25,22 +28,23 @@ export const useNextResolver = () => useContext(NextResolverContext);
  */
 export const createComponentResolver = (resolvers) => {
   const ResolverIndexContext = createContext(0);
-  const TargetComponentContext = createContext(null);
 
   const ChainRunner = (props) => {
     const index = useContext(ResolverIndexContext);
-    const TargetComponent = useContext(TargetComponentContext);
     if (index >= resolvers.length) {
-      return (
-        <NextResolverContext.Provider value={null}>
-          <TargetComponent {...props} />
-        </NextResolverContext.Provider>
-      );
+      return null;
     }
     const Resolver = resolvers[index];
+    const isLast = index === resolvers.length - 1;
     return (
       <ResolverIndexContext.Provider value={index + 1}>
-        <Resolver {...props} />
+        {isLast ? (
+          <NextResolverContext.Provider value={null}>
+            <Resolver {...props} />
+          </NextResolverContext.Provider>
+        ) : (
+          <Resolver {...props} />
+        )}
       </ResolverIndexContext.Provider>
     );
   };
@@ -51,12 +55,10 @@ export const createComponentResolver = (resolvers) => {
   // resumes from index+1 (already set by the Provider wrapping that resolver).
   const NextComponent = (props) => <ChainRunner {...props} />;
 
-  const renderComponent = (TargetComponent, props) => {
+  const renderComponent = (props) => {
     return (
       <NextResolverContext.Provider value={NextComponent}>
-        <TargetComponentContext.Provider value={TargetComponent}>
-          <ChainRunner {...props} />
-        </TargetComponentContext.Provider>
+        <ChainRunner {...props} />
       </NextResolverContext.Provider>
     );
   };

@@ -101,7 +101,6 @@ export {
   useSelectionController,
 } from "./src/control/selection/selection.jsx";
 // Form/Components
-export { Button } from "./src/control/button.jsx";
 export {
   Editable,
   useEditionController,
@@ -109,6 +108,7 @@ export {
 export { Field, Label } from "./src/control/field.jsx";
 export { Form } from "./src/control/form.jsx";
 export { Group } from "./src/control/group.jsx";
+export { Button } from "./src/control/input/button.jsx";
 export { CheckboxGroup } from "./src/control/input/checkbox_group.jsx";
 export { Input } from "./src/control/input/input.jsx";
 export { RadioGroup } from "./src/control/input/radio_group.jsx";

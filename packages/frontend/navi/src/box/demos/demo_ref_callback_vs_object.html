@@ -74,7 +74,10 @@
         );
       };
 
-      const renderMockPicker = createComponentResolver([MockPickerCustom]);
+      const renderMockPicker = createComponentResolver([
+        MockPickerCustom,
+        "button",
+      ]);
 
       const App = () => {
         const selectedSignal = useSignal();
@@ -91,7 +94,7 @@
             >
               Simulate resize → dialog
             </button>
-            {renderMockPicker("button", {
+            {renderMockPicker({
               value: selectedSignal.value,
               action: () => {
                 selectedSignal.value = "x";

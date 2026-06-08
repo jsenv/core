@@ -271,12 +271,11 @@ const css = /* css */ `
 export const Picker = (props) => {
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
-  const picker = renderPicker(PickerButton, props);
+  const picker = renderPicker(props);
 
   return picker;
 };
 
-const renderPicker = createComponentResolver(pickerResolvers);
 const PickerButton = (props) => {
   import.meta.css = css;
   resolveInputProps(props);
@@ -432,6 +431,11 @@ const PickerDefaultUI = () => {
   }
   return <PickerValue>{value}</PickerValue>;
 };
+
+const renderPicker = createComponentResolver([
+  ...pickerResolvers,
+  PickerButton,
+]);
 
 Picker.Placeholder = PickerPlaceholder;
 Picker.Value = PickerValue;

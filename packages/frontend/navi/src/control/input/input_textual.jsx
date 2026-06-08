@@ -286,7 +286,7 @@ const css = /* css */ `
 export const InputTextual = (props) => {
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
-  const input = renderInput(InputTextualControlInterface, props);
+  const input = renderInput(props);
 
   return input;
 };
@@ -336,6 +336,7 @@ const renderInput = createComponentResolver([
   InputTextualWithListResolver,
   InputTypeResolver,
   InputHeadlessResolver,
+  InputTextualControlInterface,
 ]);
 
 const InputTextualHeadless = (props) => {

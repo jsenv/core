@@ -265,9 +265,44 @@
         );
       };
 
+      // ── Leaf component (target for both resolvers) ───────────────────────────
+      const Leaf = (props) => {
+        const next = useNextResolver();
+        const [count, setCount] = useState(0);
+        const renderCount = useRenderCount();
+        const flashRef = useRenderFlash();
+        return (
+          <div
+            class="cbox cbox-leaf"
+            ref={flashRef}
+            style="--flash-color:#34d399aa"
+          >
+            <div class="cbox-header">
+              Leaf {props.label ? `— ${props.label}` : ""}
+              <Counter
+                color="#065f46"
+                count={count}
+                onIncrement={() => setCount((n) => n + 1)}
+              />
+              <span class="render-count">render #{renderCount}</span>
+            </div>
+            <div class="cbox-body" style="font-size:12px;color:#555">
+              <div>
+                useNextResolver() ={" "}
+                <strong>{next === null ? "null ✓" : "NOT null ✗"}</strong>
+              </div>
+              {props["data-wrapped"] ? (
+                <div style="color:#6d28d9">data-wrapped prop received ✓</div>
+              ) : null}
+            </div>
+          </div>
+        );
+      };
+
       const renderA = createComponentResolver([
         WrapperResolverA,
         IconResolverA,
+        Leaf,
       ]);
 
       // ── Resolver B — augments with badge and tooltip ─────────────────────────
@@ -337,41 +372,8 @@
       const renderB = createComponentResolver([
         BadgeResolverB,
         TooltipResolverB,
+        Leaf,
       ]);
-
-      // ── Leaf component (target for both resolvers) ───────────────────────────
-      const Leaf = (props) => {
-        const next = useNextResolver();
-        const [count, setCount] = useState(0);
-        const renderCount = useRenderCount();
-        const flashRef = useRenderFlash();
-        return (
-          <div
-            class="cbox cbox-leaf"
-            ref={flashRef}
-            style="--flash-color:#34d399aa"
-          >
-            <div class="cbox-header">
-              Leaf {props.label ? `— ${props.label}` : ""}
-              <Counter
-                color="#065f46"
-                count={count}
-                onIncrement={() => setCount((n) => n + 1)}
-              />
-              <span class="render-count">render #{renderCount}</span>
-            </div>
-            <div class="cbox-body" style="font-size:12px;color:#555">
-              <div>
-                useNextResolver() ={" "}
-                <strong>{next === null ? "null ✓" : "NOT null ✗"}</strong>
-              </div>
-              {props["data-wrapped"] ? (
-                <div style="color:#6d28d9">data-wrapped prop received ✓</div>
-              ) : null}
-            </div>
-          </div>
-        );
-      };
 
       // ── A resolver that contains a B render ──────────────────────────────────
       // Tests that when A's resolver calls renderB inside its render,
@@ -408,7 +410,7 @@
               <div style="margin:8px 0 4px;font-size:11px;color:#6c7086">
                 inner B (independent):
               </div>
-              {renderB(Leaf, {
+              {renderB({
                 label: "inner-B target",
                 badge: innerBadge,
                 tooltip: innerTooltip,
@@ -421,6 +423,7 @@
       const renderAWithContainer = createComponentResolver([
         ContainerResolverA,
         IconResolverA,
+        Leaf,
       ]);
 
       const CaseSection = ({ title, code, children }) => (
@@ -449,16 +452,16 @@
 
             <CaseSection
               title="Case 1 — Resolver A only"
-              code="renderA(Leaf, { label: 'hello', icon: '🌟' })"
+              code="renderA({ label: 'hello', icon: '🌟' })"
             >
-              {renderA(Leaf, { label: "hello", icon: "🌟" })}
+              {renderA({ label: "hello", icon: "🌟" })}
             </CaseSection>
 
             <CaseSection
               title="Case 2 — Resolver B only"
-              code="renderB(Leaf, { label: 'world', badge: '3', tooltip: 'hi' })"
+              code="renderB({ label: 'world', badge: '3', tooltip: 'hi' })"
             >
-              {renderB(Leaf, { label: "world", badge: "3", tooltip: "hi" })}
+              {renderB({ label: "world", badge: "3", tooltip: "hi" })}
             </CaseSection>
 
             <CaseSection
@@ -476,11 +479,11 @@
                 </button>
               </div>
               {case3Mode === "nested"
-                ? renderA(Leaf, {
+                ? renderA({
                     label: "outer-A",
-                    children: renderB(Leaf, { label: "inner-B", badge: "!" }),
+                    children: renderB({ label: "inner-B", badge: "!" }),
                   })
-                : renderA(Leaf, { label: "icon mode", icon: "🔄" })}
+                : renderA({ label: "icon mode", icon: "🔄" })}
             </CaseSection>
 
             <CaseSection
@@ -494,7 +497,7 @@
                   Toggle inner B badge
                 </button>
               </div>
-              {renderAWithContainer(Leaf, {
+              {renderAWithContainer({
                 label: "outer-A",
                 icon: "🔥",
                 innerBadge: showBadge ? "99" : undefined,
