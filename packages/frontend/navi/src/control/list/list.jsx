@@ -96,6 +96,12 @@ const css = /* css */ `
     --x-list-scroll-spacing-bottom: calc(
       var(--list-footer-height, 0px) + var(--list-scroll-padding-bottom, 0px)
     );
+    --x-list-scroll-spacing-left: calc(
+      var(--list-header-width, 0px) + var(--list-scroll-padding-left, 0px)
+    );
+    --x-list-scroll-spacing-right: calc(
+      var(--list-footer-width, 0px) + var(--list-scroll-padding-right, 0px)
+    );
 
     display: flex;
     min-width: 0;
@@ -189,7 +195,9 @@ const css = /* css */ `
     overflow-wrap: anywhere;
     /* When list has sticky header/footer, put a scroll padding */
     scroll-margin-top: var(--x-list-scroll-spacing-top);
+    scroll-margin-right: var(--x-list-scroll-spacing-right);
     scroll-margin-bottom: var(--x-list-scroll-spacing-bottom);
+    scroll-margin-left: var(--x-list-scroll-spacing-left);
   }
 
   /* Virtual scroll fillers — must remain invisible.
@@ -227,6 +235,7 @@ const css = /* css */ `
   .navi_list_item_header {
     position: sticky;
     top: 0;
+    left: 0;
     z-index: 1;
     order: -2;
   }
@@ -252,6 +261,7 @@ const css = /* css */ `
   /* order: 2 pins the footer after fallbacks (order: 1) and all items. */
   .navi_list_item_footer {
     position: sticky;
+    right: 0;
     bottom: 0;
     z-index: 1;
     order: 2;
@@ -297,6 +307,9 @@ const css = /* css */ `
       .navi_list_item {
         scroll-margin-top: calc(
           var(--x-list-scroll-spacing-top) + var(--list-group-label-height, 0px)
+        );
+        scroll-margin-left: calc(
+          var(--x-list-scroll-spacing-left) + var(--list-group-label-width, 0px)
         );
       }
     }
@@ -1321,11 +1334,12 @@ export const ListItemGroup = ({
       if (!groupEl) {
         return;
       }
-      const labelHeight = labelEl.getBoundingClientRect().height;
+      const rect = labelEl.getBoundingClientRect();
       groupEl.style.setProperty(
         "--list-group-label-height",
-        `${labelHeight}px`,
+        `${rect.height}px`,
       );
+      groupEl.style.setProperty("--list-group-label-width", `${rect.width}px`);
     },
     [],
   );
@@ -1367,10 +1381,14 @@ export const ListItemHeader = (props) => {
     ref,
     (headerEl) => {
       const listContainerEl = headerEl.closest(".navi_list_container");
-      const headerHeight = headerEl.getBoundingClientRect().height;
+      const rect = headerEl.getBoundingClientRect();
       listContainerEl.style.setProperty(
         "--list-header-height",
-        `${headerHeight}px`,
+        `${rect.height}px`,
+      );
+      listContainerEl.style.setProperty(
+        "--list-header-width",
+        `${rect.width}px`,
       );
     },
     [],
@@ -1390,12 +1408,16 @@ export const ListItemFooter = (props) => {
   const ref = props.ref || defaultRef;
   useDisplayedLayoutEffect(
     ref,
-    (headerEl) => {
-      const listContainerEl = headerEl.closest(".navi_list_container");
-      const headerHeight = headerEl.getBoundingClientRect().height;
+    (footerEl) => {
+      const listContainerEl = footerEl.closest(".navi_list_container");
+      const rect = footerEl.getBoundingClientRect();
       listContainerEl.style.setProperty(
         "--list-footer-height",
-        `${headerHeight}px`,
+        `${rect.height}px`,
+      );
+      listContainerEl.style.setProperty(
+        "--list-footer-width",
+        `${rect.width}px`,
       );
     },
     [],
