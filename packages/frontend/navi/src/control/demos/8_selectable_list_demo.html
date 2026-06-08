@@ -102,6 +102,7 @@
         Input,
         stateSignal,
         route,
+        Box,
         setupRoutes,
       } from "@jsenv/navi";
       import { CallLog, useCallLog } from "./utils/call_log.jsx";
@@ -135,6 +136,7 @@
                 <BgColorDemo />
                 <ManualAreaDemo />
                 <LegendDemo />
+                <HorizontalDemo />
               </div>
             </div>
           </NaviDebug>
@@ -181,6 +183,9 @@
                   </li>
                   <li>
                     <a href="#legend">Legend</a>
+                  </li>
+                  <li>
+                    <a href="#horizontal">Horizontal</a>
                   </li>
                 </ol>
               </li>
@@ -1628,6 +1633,96 @@
               </SelectableList>
             </div>
             <div className="value-display">{selected ?? ""}</div>
+          </div>
+        );
+      };
+
+      const SIZES = ["XS", "S", "M", "L", "XL"];
+      const HorizontalDemo = () => {
+        const [selectedSingle, setSelectedSingle] = useState("M");
+        const [selectedMultiple, setSelectedMultiple] = useState(["S", "L"]);
+        return (
+          <div id="horizontal" className="demo-section">
+            <h2>Horizontal</h2>
+            <p>
+              La prop <code>horizontal</code> sur <code>SelectableList</code>{" "}
+              dispose les items en ligne. Ici sans <code>Selectable.Input</code>{" "}
+              visible : la sélection est indiquée uniquement par la couleur de
+              fond.
+            </p>
+            <Box flex="y" spacing="m" alignX="start">
+              <div>
+                <p
+                  style={{
+                    margin: "0 0 6px",
+                    fontSize: "0.85rem",
+                    color: "#555",
+                  }}
+                >
+                  Single
+                </p>
+                <SelectableList
+                  horizontal
+                  spacing="xs"
+                  borderWidth="0"
+                  selectedIndicator="backgroundColor"
+                  action={(v) => {
+                    setSelectedSingle(v ?? null);
+                  }}
+                >
+                  {SIZES.map((size, i) => (
+                    <Selectable
+                      key={size}
+                      index={i}
+                      id={`h_s_${size}`}
+                      value={size}
+                      selected={selectedSingle === size}
+                      paddingX="m"
+                      paddingY="s"
+                      style={{ borderRadius: "4px", fontWeight: 600 }}
+                    >
+                      {size}
+                    </Selectable>
+                  ))}
+                </SelectableList>
+              </div>
+              <div>
+                <p
+                  style={{
+                    margin: "0 0 6px",
+                    fontSize: "0.85rem",
+                    color: "#555",
+                  }}
+                >
+                  Multiple
+                </p>
+                <SelectableList
+                  horizontal
+                  multiple
+                  spacing="xs"
+                  borderWidth="0"
+                  selectedIndicator="backgroundColor"
+                  action={(v) => {
+                    setSelectedMultiple(v ?? []);
+                  }}
+                >
+                  {SIZES.map((size, i) => (
+                    <Selectable
+                      key={size}
+                      index={i}
+                      id={`h_m_${size}`}
+                      value={size}
+                      selected={selectedMultiple.includes(size)}
+                      paddingX="m"
+                      paddingY="s"
+                      style={{ borderRadius: "4px", fontWeight: 600 }}
+                    >
+                      {size}
+                    </Selectable>
+                  ))}
+                </SelectableList>
+              </div>
+            </Box>
           </div>
         );
       };
