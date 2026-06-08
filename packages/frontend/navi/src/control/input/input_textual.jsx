@@ -33,6 +33,7 @@ import { useControlProps } from "../control_hooks.jsx";
 import { asControlHostValue } from "../control_value.js";
 import { triggerStringAction } from "../string_actions.js";
 import { dispatchRequestInteraction } from "../validation/custom_constraint_validation.js";
+import { InputNaviHourResolver } from "./input_navi_hour.jsx";
 import { InputTextualContext } from "./input_textual_context.js";
 import { InputLeftSlot, InputRightSlot } from "./input_ui_components.jsx";
 import { InputWithListResolver } from "./input_with_list.jsx";
@@ -154,6 +155,22 @@ const css = /* css */ `
         &::-webkit-search-cancel-button {
           display: none;
         }
+      }
+
+      &[type="number"] {
+        min-width: 10px;
+      }
+    }
+
+    &[data-no-spin] {
+      .navi_control_input {
+        appearance: textfield;
+      }
+      .navi_control_input::-webkit-outer-spin-button,
+      .navi_control_input::-webkit-inner-spin-button {
+        margin: 0;
+
+        -webkit-appearance: none;
       }
     }
 
@@ -311,7 +328,6 @@ const InputHeadlessResolver = (props) => {
   }
   return <Next {...props} />;
 };
-
 const InputTextualHeadless = (props) => {
   const [inputProps, remainingProps] = useInputTextualProps(props);
   return (
@@ -320,9 +336,7 @@ const InputTextualHeadless = (props) => {
     </BoxForwardedPropsContext.Provider>
   );
 };
-
 const useInputTextualProps = (props) => {
-  resolveInputProps(props);
   const [controlProps, remainingProps, ControlChildrenWrapper] =
     useControlProps(props, {
       controlType: "input",
@@ -336,7 +350,6 @@ const useInputTextualProps = (props) => {
   });
   return [controlProps, remainingProps, ControlChildrenWrapper];
 };
-
 const InputTextualUI = (props) => {
   import.meta.css = css;
   const { ui, discrete } = props;
@@ -387,6 +400,7 @@ const InputTextualFirstResolver = (props) => {
   const Next = useNextResolver();
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
+  resolveInputProps(props);
 
   return <Next {...props} />;
 };
@@ -394,6 +408,7 @@ export const InputTextual = createComponentResolver([
   InputTextualFirstResolver,
   InputWithListResolver,
   InputWithSuggestionsResolver,
+  InputNaviHourResolver,
   InputTypeResolver,
   InputHeadlessResolver,
   InputTextualUI,

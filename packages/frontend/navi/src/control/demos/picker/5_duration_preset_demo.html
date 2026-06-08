@@ -219,7 +219,16 @@
             alignX="center"
           >
             Autre
-            <Picker
+            <Input
+              type="navi_hour"
+              data-no-spin
+              value={customDuration}
+              uiAction={(v) => {
+                customDurationSignal.value = v;
+              }}
+            />
+            h
+            <Input
               type="navi_minute"
               min={customDurationSignal.options.min}
               max={customDurationSignal.options.max}
