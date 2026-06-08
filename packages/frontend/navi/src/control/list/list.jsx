@@ -23,6 +23,7 @@ import { useDebugScroll } from "../../navi_debug.jsx";
 import { naviI18n } from "../../text/navi_i18n.js";
 import { useItemTracker } from "../../utils/item_tracker/use_item_tracker.js";
 import { useDisplayedLayoutEffect } from "../../utils/use_displayed_layout_effect.js";
+import { ListItemHeaderOrFooterResolver } from "./list_item_header_footer.jsx";
 import {
   ListItemSelectableResolver,
   ListSelectableResolver,
@@ -1145,90 +1146,11 @@ const AfterFiller = ({ virtualItemSizeSignal, renderWindowEnd, tracker }) => {
   );
 };
 
-/**
- * ListItem — a trackable item that participates in virtualization.
- *
- * Must be used inside <List>. Handles:
- * - Registration with item tracker (always runs, even when hidden)
- * - Early return when outside the render window
- * - Separator rendering between visible items
- *
- * Props:
- *   itemId    — stable string id for tracking (auto-generated if omitted)
- *   filtered  — when true, item is excluded from visible count and removed from DOM entirely
- *   hidden    — when true, item is excluded from visible count (no virtual scroll height)
- *               but stays in DOM with the native HTML hidden attribute
- *   highlight — array of [start, end] ranges to highlight via CSS Highlight API
- *   ...rest   — forwarded to the rendered <li> element
- */
-const ListItemPresentation = (props) => {
-  return <Box as="li" {...props} />;
-};
-const ListItemHeader = (props) => {
+const ListItemFirstResolver = (props) => {
   const Next = useNextResolver();
-  const { ref } = props;
-  useDisplayedLayoutEffect(
-    ref,
-    (headerEl) => {
-      const listContainerEl = headerEl.closest(".navi_list_container");
-      const rect = headerEl.getBoundingClientRect();
-      listContainerEl.style.setProperty(
-        "--list-header-height",
-        `${rect.height}px`,
-      );
-      listContainerEl.style.setProperty(
-        "--list-header-width",
-        `${rect.width}px`,
-      );
-    },
-    [],
-  );
+  const defaultRef = useRef(null);
+  props.ref = props.ref || defaultRef;
 
-  return (
-    <Next
-      {...props}
-      role="presentation"
-      baseClassName="navi_list_item_header"
-    />
-  );
-};
-const ListItemFooter = (props) => {
-  const Next = useNextResolver();
-  const { ref } = props;
-  useDisplayedLayoutEffect(
-    ref,
-    (footerEl) => {
-      const listContainerEl = footerEl.closest(".navi_list_container");
-      const rect = footerEl.getBoundingClientRect();
-      listContainerEl.style.setProperty(
-        "--list-footer-height",
-        `${rect.height}px`,
-      );
-      listContainerEl.style.setProperty(
-        "--list-footer-width",
-        `${rect.width}px`,
-      );
-    },
-    [],
-  );
-
-  return (
-    <Next
-      {...props}
-      role="presentation"
-      baseClassName="navi_list_item_footer"
-    />
-  );
-};
-
-const ListItemHeaderOrFooterResolver = (props) => {
-  const Next = useNextResolver();
-  if (props.header) {
-    return <ListItemHeader {...props} />;
-  }
-  if (props.footer) {
-    return <ListItemFooter {...props} />;
-  }
   return <Next {...props} />;
 };
 const ListItemPresentationResolver = (props) => {
@@ -1237,6 +1159,9 @@ const ListItemPresentationResolver = (props) => {
     return <ListItemPresentation {...props} />;
   }
   return <Next {...props} />;
+};
+const ListItemPresentation = (props) => {
+  return <Box as="li" {...props} />;
 };
 const ListItemUI = (props) => {
   if (props.id === undefined) {
@@ -1383,15 +1308,25 @@ const LIST_ITEM_STYLE_CSS_VARS = {
     backgroundColor: "--suggestion-background-color-highlight",
   },
 };
-export const LIST_ITEM_PSEUDO_CLASSES = [];
+const LIST_ITEM_PSEUDO_CLASSES = [];
 const LIST_ITEM_PSEUDO_ELEMENTS = ["::highlight"];
-const ListItemFirstResolver = (props) => {
-  const Next = useNextResolver();
-  const defaultRef = useRef(null);
-  props.ref = props.ref || defaultRef;
 
-  return <Next {...props} />;
-};
+/**
+ * ListItem — a trackable item that participates in virtualization.
+ *
+ * Must be used inside <List>. Handles:
+ * - Registration with item tracker (always runs, even when hidden)
+ * - Early return when outside the render window
+ * - Separator rendering between visible items
+ *
+ * Props:
+ *   itemId    — stable string id for tracking (auto-generated if omitted)
+ *   filtered  — when true, item is excluded from visible count and removed from DOM entirely
+ *   hidden    — when true, item is excluded from visible count (no virtual scroll height)
+ *               but stays in DOM with the native HTML hidden attribute
+ *   highlight — array of [start, end] ranges to highlight via CSS Highlight API
+ *   ...rest   — forwarded to the rendered <li> element
+ */
 export const ListItem = createComponentResolver([
   ListItemFirstResolver,
   ListItemSelectableResolver,
@@ -1399,6 +1334,7 @@ export const ListItem = createComponentResolver([
   ListItemPresentationResolver,
   ListItemUI,
 ]);
+List.Item = ListItem;
 
 /**
  * ListGroup — a labeled group of list items.
@@ -1437,6 +1373,7 @@ export const ListItemGroup = ({
     },
     [],
   );
+
   return (
     <ListItem
       {...rest}
@@ -1467,5 +1404,3 @@ export const ListItemGroup = ({
     </ListItem>
   );
 };
-
-List.Item = ListItem;
