@@ -522,12 +522,6 @@ const ListItemSelectable = (props) => {
       filtered={filtered}
       hidden={hidden}
       matchScore={matchScore}
-      pseudoClasses={SELECTABLE_PSEUDO_CLASSES}
-      basePseudoState={{
-        ":-navi-selected": checked,
-        ":-navi-pointed": pointed,
-        ...basePseudoState,
-      }}
       aria-selected={checked}
       selected={checked}
       navi-selectable=""
@@ -535,8 +529,13 @@ const ListItemSelectable = (props) => {
       spacing="s"
       flex
       alignY="center"
-      expandX
       {...remainingProps}
+      pseudoClasses={SELECTABLE_PSEUDO_CLASSES}
+      basePseudoState={{
+        ":-navi-selected": checked,
+        ":-navi-pointed": pointed,
+        ...basePseudoState,
+      }}
       ref={props.ref}
       selectable={undefined}
       navi-selectable-area-all={selectableArea === "all" ? "" : undefined}
