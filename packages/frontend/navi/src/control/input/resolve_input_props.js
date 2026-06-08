@@ -46,6 +46,7 @@ export const resolveInputProps = (props) => {
 // The `data-navi-input-type` attribute is set so constraint messages can use
 // domain-specific wording instead of the generic "Ce nombre doit être...".
 const NAVI_NUMBER_TYPE_DEFAULTS = {
+  navi_time: { type: "time", min: 0, max: 24 * 3600 - 1, step: 1 },
   navi_hours: { type: "number", min: 0, max: 23, step: 1 },
   navi_minutes: { type: "number", min: 0, max: 59, step: 1 },
   navi_seconds: { type: "number", min: 0, max: 59, step: 1 },

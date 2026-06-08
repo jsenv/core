@@ -273,7 +273,6 @@ const css = /* css */ `
  */
 const PickerButton = (props) => {
   import.meta.css = css;
-  resolveInputProps(props);
   const { ref, icon, placeholder, singleLine, ui, dayLabel } = props;
   const inputRef = useRef(null);
   const [inputProps, pickerRemainingProps, ControlChildrenWrapper] =
@@ -431,6 +430,7 @@ const PickerFirstResolver = (props) => {
   const Next = useNextResolver();
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
+  resolveInputProps(props);
 
   return <Next {...props} />;
 };
