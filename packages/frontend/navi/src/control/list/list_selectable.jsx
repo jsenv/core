@@ -1,16 +1,3 @@
-/**
- *
- * Voila le délire:
- *
- * En fait quoiqu'il on mettre un radio/checkbox MAIS
- *
- * il est aussi possible d'afficher une version décorative
- * en instanciant un input dans le <Selectable>
- * il faudra donc ptet un Selectable.Input par example
- * qui se charge de render un input qui est décoratif, le vrai input est caché
- * mais pilote cet input décoratif
- */
-
 import { dispatchCustomEvent, dispatchPublicCustomEvent } from "@jsenv/dom";
 import { createContext } from "preact";
 import {
@@ -30,7 +17,6 @@ import {
   ControlgroupChildrenWrapper,
   useControlgroupProps,
 } from "../control_hooks.jsx";
-import { Field } from "../field.jsx";
 import { Input } from "../input/input.jsx";
 import { useCheckableProps } from "../input/use_checkable_props.js";
 import {
@@ -107,6 +93,18 @@ const css = /* css */ `
 
     &[navi-selectable] {
       user-select: none;
+    }
+    &[navi-selectable-area-all] {
+      pointer-events: none;
+
+      [navi-selectable-real-input] {
+        z-index: 0;
+        outline: none;
+        opacity: 0;
+        clip-path: none;
+        cursor: pointer;
+        pointer-events: auto;
+      }
     }
 
     &[data-interactive] {
@@ -475,7 +473,7 @@ const ListItemSelectable = (props) => {
     defaultSelected,
     selected,
     pointed,
-    selectableArea,
+    selectableArea = "all",
     ...rest
   } = props;
   const multiple = useContext(SelectableListMultipleContext);
@@ -501,8 +499,8 @@ const ListItemSelectable = (props) => {
     });
   const { checked, value, basePseudoState, children } = checkableProps;
   const readOnly = basePseudoState[":read-only"];
-  const disabled = basePseudoState[":disabled"];
-  const loading = basePseudoState[":-navi-loading"];
+  // const disabled = basePseudoState[":disabled"];
+  // const loading = basePseudoState[":-navi-loading"];
   const realInputContextValue = useMemo(() => {
     return {
       id: inputId,
@@ -530,41 +528,28 @@ const ListItemSelectable = (props) => {
       aria-selected={checked}
       selected={checked}
       navi-selectable=""
-      borderWidth={props.borderWidth}
-      borderRadius={props.borderRadius}
-      borderColor={props.borderColor}
+      padding="m"
+      spacing="s"
+      flex
+      alignY="center"
+      expandX
+      {...remainingProps}
+      ref={props.ref}
+      selectable={undefined}
+      navi-selectable-area-all={selectableArea === "all" ? "" : undefined}
     >
-      <Field
-        as={selectableArea === "manual" ? "div" : undefined}
-        padding="m"
-        flex
-        alignY="center"
-        spacing="s"
-        expandX
-        {...remainingProps}
-        selectableArea={undefined}
-        borderWidth={undefined}
-        borderRadius={undefined}
-        borderColor={undefined}
-        basePseudoState={basePseudoState}
-        pseudoStateSelector="[navi-selectable-real-input]"
-        disabled={disabled}
-        readOnly={readOnly}
-        loading={loading}
-        interactive
-      >
-        <SelectableRealInput
-          {...checkableProps}
-          // eslint-disable-next-line react/no-children-prop
-          children={undefined}
-        />
-        <SelectableRealInputContext.Provider value={realInputContextValue}>
-          <ChildrenContextWrapper>{children}</ChildrenContextWrapper>
-        </SelectableRealInputContext.Provider>
-      </Field>
+      <SelectableRealInput
+        {...checkableProps}
+        // eslint-disable-next-line react/no-children-prop
+        children={undefined}
+      />
+      <SelectableRealInputContext.Provider value={realInputContextValue}>
+        <ChildrenContextWrapper>{children}</ChildrenContextWrapper>
+      </SelectableRealInputContext.Provider>
     </Next>
   );
 };
+
 const SELECTABLE_PSEUDO_CLASSES = [
   ":hover",
   ":disabled",
