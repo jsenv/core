@@ -256,18 +256,9 @@ export const useControlProps = (
     // Syncing on every change would also capture our own updateUIState calls fired
     // from the input event, which would then make asAction (triggered later via
     // navi_change / debounce) think the value is unchanged and skip the action.
-    //
-    // state_prop is also included to handle proxy radios:
-    // For proxy radios, radio_sibling_uncheck fires on the real input (not the proxy),
-    // so the proxy only hears about deselection via state_prop during re-render.
-    // Without this, lastActionValueRef stays stale (e.g. "Banana") after the proxy is
-    // deselected via state_prop, causing the dedup to wrongly block the next click.
     controlProps.onnavi_ui_state_change = (e) => {
       const originatingEvent = e.detail.event;
-      if (
-        originatingEvent?.type === "radio_sibling_uncheck" ||
-        originatingEvent?.type === "state_prop"
-      ) {
+      if (originatingEvent?.type === "radio_sibling_uncheck") {
         lastActionValueRef.current = e.detail.value;
       }
     };

@@ -6506,13 +6506,13 @@ const DIMENSION_PROPS = {
     if (!value || value === "0") {
       return { flexShrink: 0 };
     }
-    return { flexShrink: 1 };
+    return { flexShrink: 1, minWidth: 0 };
   },
   shrinkY: (value) => {
     if (!value || value === "0") {
       return { flexShrink: 0 };
     }
-    return { flexShrink: 1 };
+    return { flexShrink: 1, minHeight: 0 };
   },
 
   scaleX: (value) => {
@@ -6725,7 +6725,10 @@ const VISUAL_PROPS = {
   overflow: PASS_THROUGH,
   overflowX: PASS_THROUGH,
   overflowY: PASS_THROUGH,
-  overflowEllipsis: () => {
+  overflowEllipsis: (value) => {
+    if (value === undefined || value === false) {
+      return null;
+    }
     return {
       overflow: "hidden",
       textOverflow: "ellipsis",
@@ -12444,6 +12447,27 @@ const useUIStateController = (
           event: e,
           value: newUIState,
         });
+      }
+      // When this controller is a real input that has a visible proxy
+      // (linked via `navi-control-proxy-for`), mirror the new state to the
+      // proxy DOM synchronously. Otherwise the proxy would only catch up
+      // later through a React re-render — visible as e.g. two radios
+      // appearing checked at once between the real input update and the
+      // next render (radio_sibling_uncheck case).
+      if (el && !controlProxyFor) {
+        const proxyEl = findControlProxy(el);
+        if (proxyEl) {
+          const propValue = uiStateController.getPropFromState(newUIState);
+          proxyEl[statePropName] = propValue;
+          // Also notify the proxy's controller so it can stay in sync with
+          // state changes that originate from the real input (e.g. radio_sibling_uncheck).
+          // Without this the proxy only learns about deselection later via state_prop
+          // (Preact re-render), too late for lastActionValueRef to be updated.
+          dispatchInternalCustomEvent(proxyEl, "navi_ui_state_change", {
+            event: e,
+            value: newUIState,
+          });
+        }
       }
       const internalBehavior = e.detail?.internalBehavior;
       if (internalBehavior) {
@@ -33709,6 +33733,7 @@ const css$m = /* css */`
     );
 
     display: flex;
+    min-width: 0;
     /* fit-content by default, but never wider than the parent */
     max-width: 100%;
     flex-direction: column;
@@ -33780,7 +33805,7 @@ const css$m = /* css */`
     --x-list-item-font-weight: var(--list-item-font-weight);
 
     box-sizing: border-box;
-    min-width: 100%;
+    min-width: 0;
     max-width: 100%;
     padding: var(--list-item-padding);
     color: var(--x-list-item-color);
@@ -34979,6 +35004,10 @@ const css$l = /* css */`
     outline-color: var(--list-item-outline-color);
     outline-offset: var(--list-item-outline-offset);
 
+    &[navi-selectable] {
+      user-select: none;
+    }
+
     &[data-interactive] {
       cursor: pointer;
       user-select: none;
@@ -35373,6 +35402,7 @@ const Selectable = props => {
     },
     "aria-selected": checked,
     selected: checked,
+    "navi-selectable": "",
     children: jsxs(Field, {
       as: selectableArea === "manual" ? "div" : undefined,
       padding: "m",
@@ -35672,7 +35702,6 @@ installImportMetaCssBuild(import.meta);const css$k = /* css */`
     font-size: var(--picker-font-size);
     text-align: inherit;
     text-overflow: ellipsis;
-    white-space: nowrap;
     background-color: var(--x-picker-background-color);
     border-width: var(--picker-border-width);
     border-style: solid;

@@ -380,6 +380,14 @@ export const useUIStateController = (
         if (proxyEl) {
           const propValue = uiStateController.getPropFromState(newUIState);
           proxyEl[statePropName] = propValue;
+          // Also notify the proxy's controller so it can stay in sync with
+          // state changes that originate from the real input (e.g. radio_sibling_uncheck).
+          // Without this the proxy only learns about deselection later via state_prop
+          // (Preact re-render), too late for lastActionValueRef to be updated.
+          dispatchInternalCustomEvent(proxyEl, "navi_ui_state_change", {
+            event: e,
+            value: newUIState,
+          });
         }
       }
       const internalBehavior = e.detail?.internalBehavior;
