@@ -157,11 +157,11 @@ export const createValidity = (ruleConfig) => {
   }
 
   const applyOn = (value) => {
-    // if (value === undefined) {
-    //   validity.valid = true;
-    //   validity.validSuggestion = null;
-    //   return value;
-    // }
+    if (value === undefined) {
+      validity.valid = true;
+      validity.validSuggestion = null;
+      return value;
+    }
     let valid = true;
     let validSuggestion = null;
 
