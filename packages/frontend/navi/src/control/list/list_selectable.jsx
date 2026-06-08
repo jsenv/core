@@ -8,6 +8,7 @@ import {
   useRef,
 } from "preact/hooks";
 
+import { Box } from "@jsenv/navi/src/box/box.jsx";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { useFocusGroup } from "@jsenv/navi/src/utils/focus/use_focus_group.js";
@@ -566,16 +567,31 @@ const SELECTABLE_PSEUDO_CLASSES = [
   ":read-only",
 ];
 const SelectableRealInput = (props) => {
+  // here for some reason we can't use <Input, so instead we use <Box
+  // ideally we could use <Input but it would interfere with the control props we already create
+  // in the ListItemSelectable
   return (
-    <Input
+    <Box
+      as="input"
+      pseudoClasses={SELECTABLE_INPUT_PSEUDO_CLASSES}
       {...props}
-      headless
+      navi-visually-hidden=""
       navi-selectable-real-input=""
       data-callout-arrow-x="center"
       // navi-debug
     />
   );
 };
+const SELECTABLE_INPUT_PSEUDO_CLASSES = [
+  ":hover",
+  ":active",
+  ":focus",
+  ":focus-visible",
+  ":read-only",
+  ":disabled",
+  ":checked",
+];
+
 const SelectableInputProxy = (props) => {
   const selectableRealInputProps = useContext(SelectableRealInputContext);
   if (!selectableRealInputProps) {
