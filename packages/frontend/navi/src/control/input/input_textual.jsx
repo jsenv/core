@@ -128,6 +128,7 @@ const css = /* css */ `
     flex-direction: inherit;
     border-radius: inherit;
     cursor: inherit;
+    pointer-events: auto;
 
     .navi_control_input {
       box-sizing: border-box;

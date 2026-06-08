@@ -78,7 +78,7 @@
         step: "00:05",
         // persists: true,
       });
-      const customDurationSignal = stateSignal(undefined, {
+      const customDurationSignal = stateSignal("00:15", {
         id: "custom_duration",
         type: "minute",
         min: "00:15",
@@ -219,12 +219,11 @@
             alignX="center"
           >
             Autre
-            <Input
+            <Picker
               type="navi_minute"
               min={customDurationSignal.options.min}
               max={customDurationSignal.options.max}
               step={customDurationSignal.options.step}
-              placeholder="Durée en minutes"
               value={customDuration}
               uiAction={(v) => {
                 customDurationSignal.value = v;

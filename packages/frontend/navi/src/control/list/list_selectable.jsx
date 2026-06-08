@@ -157,7 +157,8 @@ const css = /* css */ `
           ) !important;
         }
 
-        input {
+        input,
+        .navi_picker {
           color: revert;
         }
       }
