@@ -93,8 +93,7 @@
       import { useLayoutEffect, useRef, useState } from "preact/hooks";
       import {
         NaviDebug,
-        SelectableList,
-        Selectable,
+        List,
         Form,
         Button,
         BadgeCount,
@@ -102,7 +101,9 @@
         Input,
         stateSignal,
         route,
+        Box,
         setupRoutes,
+        SelectableInput,
       } from "@jsenv/navi";
       import { CallLog, useCallLog } from "./utils/call_log.jsx";
 
@@ -182,6 +183,9 @@
                   <li>
                     <a href="#legend">Legend</a>
                   </li>
+                  <li>
+                    <a href="#horizontal">Horizontal</a>
+                  </li>
                 </ol>
               </li>
             </ol>
@@ -222,7 +226,8 @@
               paddingY="xs"
               navi-list="searchable-list"
             />
-            <SelectableList
+            <List
+              selectable
               id="searchable-list"
               action={(v) => {
                 setSelected(v);
@@ -233,7 +238,8 @@
               {matchingFruits.map((fruit, i) => {
                 const { score, ranges, match } = getMatchInfo(fruit);
                 return (
-                  <Selectable
+                  <List.Item
+                    selectable
                     key={fruit}
                     index={i}
                     id={`searchable_${fruit.toLowerCase()}`}
@@ -245,12 +251,12 @@
                     flex
                     spacing="s"
                   >
-                    <Selectable.Input />
+                    <SelectableInput />
                     {fruit}
-                  </Selectable>
+                  </List.Item>
                 );
               })}
-            </SelectableList>
+            </List>
             <div className="value-display">{selected}</div>
             <CallLog entries={log} />
           </div>
@@ -278,7 +284,8 @@
             <div className="two-col">
               <div>
                 <div className="col-label">Single</div>
-                <SelectableList
+                <List
+                  selectable
                   action={(v) => {
                     setSelectedSingle(v);
                     pushSingleLog("action", v ?? "(none)");
@@ -286,7 +293,8 @@
                   expandX
                 >
                   {FRUITS.map((fruit, i) => (
-                    <Selectable
+                    <List.Item
+                      selectable
                       key={fruit}
                       index={i}
                       id={`basic_s_${fruit.toLowerCase()}`}
@@ -295,16 +303,17 @@
                       flex
                       spacing="s"
                     >
-                      <Selectable.Input />
+                      <SelectableInput />
                       {fruit}
-                    </Selectable>
+                    </List.Item>
                   ))}
-                </SelectableList>
+                </List>
                 <CallLog entries={singleLog} />
               </div>
               <div>
                 <div className="col-label">Multiple</div>
-                <SelectableList
+                <List
+                  selectable
                   multiple
                   action={(v) => {
                     setSelectedMultiple(v);
@@ -316,7 +325,8 @@
                   expandX
                 >
                   {FRUITS.map((fruit, i) => (
-                    <Selectable
+                    <List.Item
+                      selectable
                       key={fruit}
                       index={i}
                       id={`basic_m_${fruit.toLowerCase()}`}
@@ -325,11 +335,11 @@
                       flex
                       spacing="s"
                     >
-                      <Selectable.Input />
+                      <SelectableInput />
                       {fruit}
-                    </Selectable>
+                    </List.Item>
                   ))}
-                </SelectableList>
+                </List>
                 <CallLog entries={multipleLog} />
               </div>
             </div>
@@ -346,14 +356,16 @@
           "Cherry",
         ]);
         const renderList = ({ multiple, selected, setSelected }) => (
-          <SelectableList
+          <List
+            selectable
             multiple={multiple}
             action={(v) => {
               setSelected(multiple ? (v ?? []) : (v ?? null));
             }}
             expandX
           >
-            <Selectable
+            <List.Item
+              selectable
               index={0}
               id={`ro_taken_${multiple ? "m" : "s"}`}
               value="taken"
@@ -366,10 +378,11 @@
                 </>
               }
             >
-              <Selectable.Input />
+              <SelectableInput />
               Taken
-            </Selectable>
-            <Selectable
+            </List.Item>
+            <List.Item
+              selectable
               index={1}
               id={`ro_unavailable_${multiple ? "m" : "s"}`}
               value="unavailable"
@@ -377,11 +390,12 @@
               spacing="s"
               readOnly
             >
-              <Selectable.Input />
+              <SelectableInput />
               Unavailable
-            </Selectable>
+            </List.Item>
             {FRUITS.slice(0, 3).map((fruit, i) => (
-              <Selectable
+              <List.Item
+                selectable
                 key={fruit}
                 index={i + 2}
                 id={`ro_${multiple ? "m" : "s"}_${fruit.toLowerCase()}`}
@@ -392,11 +406,11 @@
                 flex
                 spacing="s"
               >
-                <Selectable.Input />
+                <SelectableInput />
                 {fruit}
-              </Selectable>
+              </List.Item>
             ))}
-          </SelectableList>
+          </List>
         );
         return (
           <div id="readonly" className="demo-section">
@@ -500,7 +514,8 @@
                 <div className="col-label">
                   List (renderBudget=30, {EXTERNAL_CTRL_FRUITS.length} items)
                 </div>
-                <SelectableList
+                <List
+                  selectable
                   id="external-control-list"
                   ref={listRef}
                   renderBudget={30}
@@ -512,7 +527,8 @@
                   style={{ maxHeight: 200, overflowY: "auto" }}
                 >
                   {EXTERNAL_CTRL_FRUITS.map((fruit, i) => (
-                    <Selectable
+                    <List.Item
+                      selectable
                       key={fruit}
                       index={i}
                       id={`ext_s_${fruit.toLowerCase().replaceAll(" ", "_")}`}
@@ -521,11 +537,11 @@
                       flex
                       spacing="s"
                     >
-                      <Selectable.Input />
+                      <SelectableInput />
                       {fruit}
-                    </Selectable>
+                    </List.Item>
                   ))}
-                </SelectableList>
+                </List>
                 <div className="value-display">
                   Selected: {selected ?? "(none)"}
                 </div>
@@ -610,9 +626,10 @@
                     setSelectedSingle(fruit ?? null);
                   }}
                 >
-                  <SelectableList name="fruit">
+                  <List selectable name="fruit">
                     {FRUITS.map((fruit, i) => (
-                      <Selectable
+                      <List.Item
+                        selectable
                         key={fruit}
                         index={i}
                         id={`form_s_${fruit.toLowerCase()}`}
@@ -621,11 +638,11 @@
                         flex
                         spacing="s"
                       >
-                        <Selectable.Input />
+                        <SelectableInput />
                         {fruit}
-                      </Selectable>
+                      </List.Item>
                     ))}
-                  </SelectableList>
+                  </List>
                   <Button type="submit" style={{ marginTop: 12 }}>
                     Submit
                   </Button>
@@ -644,9 +661,10 @@
                     setSelectedMultiple(fruit);
                   }}
                 >
-                  <SelectableList multiple name="fruit">
+                  <List selectable multiple name="fruit">
                     {FRUITS.map((fruit, i) => (
-                      <Selectable
+                      <List.Item
+                        selectable
                         key={fruit}
                         index={i}
                         id={`form_m_${fruit.toLowerCase()}`}
@@ -655,11 +673,11 @@
                         flex
                         spacing="s"
                       >
-                        <Selectable.Input />
+                        <SelectableInput />
                         {fruit}
-                      </Selectable>
+                      </List.Item>
                     ))}
-                  </SelectableList>
+                  </List>
                   <Button type="submit" style={{ marginTop: 12 }}>
                     Submit
                   </Button>
@@ -699,9 +717,10 @@
                     setSelectedSingle(fruit);
                   }}
                 >
-                  <SelectableList name="fruit" required>
+                  <List selectable name="fruit" required>
                     {FRUITS.map((fruit, i) => (
-                      <Selectable
+                      <List.Item
+                        selectable
                         key={fruit}
                         index={i}
                         id={`val_s_${fruit.toLowerCase()}`}
@@ -710,11 +729,11 @@
                         flex
                         spacing="s"
                       >
-                        <Selectable.Input />
+                        <SelectableInput />
                         {fruit}
-                      </Selectable>
+                      </List.Item>
                     ))}
-                  </SelectableList>
+                  </List>
                   <Button type="submit" style={{ marginTop: 12 }}>
                     Submit
                   </Button>
@@ -733,9 +752,10 @@
                     setSelectedMultiple(fruit);
                   }}
                 >
-                  <SelectableList multiple name="fruit" required>
+                  <List selectable multiple name="fruit" required>
                     {FRUITS.map((fruit, i) => (
-                      <Selectable
+                      <List.Item
+                        selectable
                         key={fruit}
                         index={i}
                         id={`val_m_${fruit.toLowerCase()}`}
@@ -744,11 +764,11 @@
                         flex
                         spacing="s"
                       >
-                        <Selectable.Input />
+                        <SelectableInput />
                         {fruit}
-                      </Selectable>
+                      </List.Item>
                     ))}
-                  </SelectableList>
+                  </List>
                   <Button type="submit" style={{ marginTop: 12 }}>
                     Submit
                   </Button>
@@ -850,7 +870,8 @@
               setSelected(fruit);
             }}
           >
-            <SelectableList
+            <List
+              selectable
               ref={listRef}
               name="fruit"
               required
@@ -862,7 +883,8 @@
               }}
             >
               {LONG_FRUITS.map((fruit, i) => (
-                <Selectable
+                <List.Item
+                  selectable
                   key={fruit}
                   index={i}
                   id={`vreq_${fruit.toLowerCase()}`}
@@ -871,11 +893,11 @@
                   flex
                   spacing="s"
                 >
-                  <Selectable.Input />
+                  <SelectableInput />
                   {fruit}
-                </Selectable>
+                </List.Item>
               ))}
-            </SelectableList>
+            </List>
             <Button type="submit">Submit</Button>
             <div className="value-display">
               {submitted !== null ? `Submitted: ${submitted}` : ""}
@@ -915,7 +937,8 @@
               paddingY="xs"
               expandX
             />
-            <SelectableList
+            <List
+              selectable
               id="filtered-required-list"
               name="fruit"
               required
@@ -935,7 +958,8 @@
               {matchingFruits.map((fruit, i) => {
                 const { match, score, ranges } = getFruitMatchInfo(fruit);
                 return (
-                  <Selectable
+                  <List.Item
+                    selectable
                     key={fruit}
                     index={i}
                     id={`freqd_${fruit.toLowerCase()}`}
@@ -947,12 +971,12 @@
                     flex
                     spacing="s"
                   >
-                    <Selectable.Input />
+                    <SelectableInput />
                     {fruit}
-                  </Selectable>
+                  </List.Item>
                 );
               })}
-            </SelectableList>
+            </List>
             <div style={{ marginTop: 8, fontSize: "0.85rem", color: "#666" }}>
               Selected: <strong>{selected ?? "(none)"}</strong>
               {selected && !matchingFruits.includes(selected)
@@ -1005,14 +1029,16 @@
           "Cherry",
         ]);
         const renderList = ({ multiple, selected, setSelected }) => (
-          <SelectableList
+          <List
+            selectable
             multiple={multiple}
             action={(v) => {
               setSelected(multiple ? (v ?? []) : (v ?? null));
             }}
           >
             {FRUITS.map((fruit, i) => (
-              <Selectable
+              <List.Item
+                selectable
                 key={fruit}
                 index={i}
                 id={`icon_${multiple ? "m" : "s"}_${fruit.toLowerCase()}`}
@@ -1026,10 +1052,10 @@
                 alignY="center"
               >
                 <span style={{ flex: 1 }}>{fruit}</span>
-                <Selectable.Input icon={[<CircleIcon />, <CheckIcon />]} />
-              </Selectable>
+                <SelectableInput icon={[<CircleIcon />, <CheckIcon />]} />
+              </List.Item>
             ))}
-          </SelectableList>
+          </List>
         );
         return (
           <div id="icons" className="demo-section">
@@ -1090,13 +1116,15 @@
             <div className="two-col">
               <div>
                 <div className="col-label">Single — no switch</div>
-                <SelectableList
+                <List
+                  selectable
                   action={(v) => {
                     setSelectedSingle(v);
                   }}
                 >
                   {FRUITS.map((fruit, i) => (
-                    <Selectable
+                    <List.Item
+                      selectable
                       key={fruit}
                       index={i}
                       id={`switch_s_${fruit.toLowerCase()}`}
@@ -1108,24 +1136,26 @@
                       alignY="center"
                     >
                       <span style={{ flex: 1 }}>{fruit}</span>
-                      <Selectable.Input />
-                    </Selectable>
+                      <SelectableInput />
+                    </List.Item>
                   ))}
-                </SelectableList>
+                </List>
                 <div className="value-display">
                   {selectedSingle ? `Selected: ${selectedSingle}` : ""}
                 </div>
               </div>
               <div>
                 <div className="col-label">Multiple — with switch</div>
-                <SelectableList
+                <List
+                  selectable
                   multiple
                   action={(v) => {
                     setSelectedMultiple(v ?? []);
                   }}
                 >
                   {FRUITS.map((fruit, i) => (
-                    <Selectable
+                    <List.Item
+                      selectable
                       key={fruit}
                       index={i}
                       id={`switch_m_${fruit.toLowerCase()}`}
@@ -1137,10 +1167,10 @@
                       alignY="center"
                     >
                       <span style={{ flex: 1 }}>{fruit}</span>
-                      <Selectable.Input appearance="switch" />
-                    </Selectable>
+                      <SelectableInput appearance="switch" />
+                    </List.Item>
                   ))}
-                </SelectableList>
+                </List>
                 <div className="value-display">
                   {selectedMultiple.length
                     ? `Selected: ${selectedMultiple.join(", ")}`
@@ -1167,7 +1197,8 @@
           "--list-border-radius": `${borderRadius}px`,
         };
         const renderList = ({ multiple, selected, setSelected }) => (
-          <SelectableList
+          <List
+            selectable
             multiple={multiple}
             selectedIndicator="backgroundColor"
             style={customStyle}
@@ -1176,7 +1207,8 @@
             }}
           >
             {FRUITS.map((fruit, i) => (
-              <Selectable
+              <List.Item
+                selectable
                 key={fruit}
                 index={i}
                 id={`bg_${multiple ? "m" : "s"}_${fruit.toLowerCase()}`}
@@ -1188,9 +1220,9 @@
                 spacing="s"
               >
                 {fruit}
-              </Selectable>
+              </List.Item>
             ))}
-          </SelectableList>
+          </List>
         );
         return (
           <div id="bg-color" className="demo-section">
@@ -1316,7 +1348,8 @@
         const badge = FRUIT_BADGES[fruit];
         const id = `manual_${prefix}_${fruit.toLowerCase()}`;
         return (
-          <Selectable
+          <List.Item
+            selectable
             index={index}
             id={id}
             value={fruit}
@@ -1345,7 +1378,7 @@
                 margin: 4,
               }}
             >
-              <Selectable.Input />
+              <SelectableInput />
               <span>{fruit}</span>
               {badge > 0 && (
                 <BadgeCount background="#e53e3e" color="white" selfAlignX="end">
@@ -1411,7 +1444,7 @@
                 → {lastAction}
               </span>
             )}
-          </Selectable>
+          </List.Item>
         );
       };
 
@@ -1422,7 +1455,8 @@
           "Cherry",
         ]);
         const renderList = ({ multiple, selected, setSelected, prefix }) => (
-          <SelectableList
+          <List
+            selectable
             multiple={multiple}
             action={(v) => {
               setSelected(multiple ? (v ?? []) : (v ?? null));
@@ -1439,7 +1473,7 @@
                 prefix={prefix}
               />
             ))}
-          </SelectableList>
+          </List>
         );
         return (
           <div id="manual-area" className="demo-section">
@@ -1598,14 +1632,16 @@
                   );
                 })}
               </div>
-              <SelectableList
+              <List
+                selectable
                 selectedIndicator="backgroundColor"
                 action={(value) => {
                   setSelected(value);
                 }}
               >
                 {LEGEND_FRUITS.map((fruit, i) => (
-                  <Selectable
+                  <List.Item
+                    selectable
                     key={fruit}
                     index={i}
                     id={`legend_${fruit.toLowerCase()}`}
@@ -1623,11 +1659,107 @@
                     }}
                   >
                     {SUGAR_ICON[FRUIT_SUGAR[fruit]]} {fruit}
-                  </Selectable>
+                  </List.Item>
                 ))}
-              </SelectableList>
+              </List>
             </div>
             <div className="value-display">{selected ?? ""}</div>
+          </div>
+        );
+      };
+
+      const SIZES = ["XS", "S", "M", "L", "XL"];
+      const HorizontalDemo = () => {
+        const [selectedSingle, setSelectedSingle] = useState("M");
+        const [selectedMultiple, setSelectedMultiple] = useState(["S", "L"]);
+        return (
+          <div id="horizontal" className="demo-section">
+            <h2>Horizontal</h2>
+            <p>
+              La prop <code>horizontal</code> sur <code>SelectableList</code>{" "}
+              dispose les items en ligne. Ici sans <code>Selectable.Input</code>{" "}
+              visible : la sélection est indiquée uniquement par la couleur de
+              fond.
+            </p>
+            <Box flex="y" spacing="m" alignX="start">
+              <div>
+                <p
+                  style={{
+                    margin: "0 0 6px",
+                    fontSize: "0.85rem",
+                    color: "#555",
+                  }}
+                >
+                  Single
+                </p>
+                <List
+                  selectable
+                  horizontal
+                  spacing="xs"
+                  borderWidth="0"
+                  selectedIndicator="backgroundColor"
+                  action={(v) => {
+                    setSelectedSingle(v ?? null);
+                  }}
+                >
+                  {SIZES.map((size, i) => (
+                    <List.Item
+                      selectable
+                      key={size}
+                      index={i}
+                      id={`h_s_${size}`}
+                      value={size}
+                      selected={selectedSingle === size}
+                      paddingX="m"
+                      paddingY="s"
+                      borderRadius="s"
+                      borderWidth="1"
+                    >
+                      {size}
+                    </List.Item>
+                  ))}
+                </List>
+              </div>
+              <div>
+                <p
+                  style={{
+                    margin: "0 0 6px",
+                    fontSize: "0.85rem",
+                    color: "#555",
+                  }}
+                >
+                  Multiple
+                </p>
+                <List
+                  selectable
+                  horizontal
+                  multiple
+                  spacing="xs"
+                  borderWidth="0"
+                  selectedIndicator="backgroundColor"
+                  action={(v) => {
+                    setSelectedMultiple(v ?? []);
+                  }}
+                >
+                  {SIZES.map((size, i) => (
+                    <List.Item
+                      selectable
+                      key={size}
+                      index={i}
+                      id={`h_m_${size}`}
+                      value={size}
+                      selected={selectedMultiple.includes(size)}
+                      paddingX="m"
+                      paddingY="s"
+                      borderRadius="s"
+                      borderWidth="1"
+                    >
+                      {size}
+                    </List.Item>
+                  ))}
+                </List>
+              </div>
+            </Box>
           </div>
         );
       };

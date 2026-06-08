@@ -2,7 +2,7 @@ import { useMemo } from "preact/hooks";
 
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Time } from "@jsenv/navi/src/text/time.jsx";
-import { Selectable, SelectableList } from "../../list/selectable_list.jsx";
+import { List } from "../../list/list.jsx";
 import { parseStepToSeconds } from "../time_helpers.js";
 
 /**
@@ -27,9 +27,10 @@ export const PickerNaviTime = (props) => {
 
   return (
     <Next {...props} type="time">
-      <SelectableList action="send">
+      <List selectable action="send">
         {slots.map((slot, i) => (
-          <Selectable
+          <List.Item
+            selectable
             key={slot}
             id={slot}
             index={i}
@@ -37,9 +38,9 @@ export const PickerNaviTime = (props) => {
             selected={value === slot}
           >
             <Time type="time">{slot}</Time>
-          </Selectable>
+          </List.Item>
         ))}
-      </SelectableList>
+      </List>
     </Next>
   );
 };

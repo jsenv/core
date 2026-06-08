@@ -101,7 +101,6 @@ export {
   useSelectionController,
 } from "./src/control/selection/selection.jsx";
 // Form/Components
-export { Button } from "./src/control/button.jsx";
 export {
   Editable,
   useEditionController,
@@ -109,6 +108,7 @@ export {
 export { Field, Label } from "./src/control/field.jsx";
 export { Form } from "./src/control/form.jsx";
 export { Group } from "./src/control/group.jsx";
+export { Button } from "./src/control/input/button.jsx";
 export { CheckboxGroup } from "./src/control/input/checkbox_group.jsx";
 export { Input } from "./src/control/input/input.jsx";
 export { RadioGroup } from "./src/control/input/radio_group.jsx";
@@ -121,17 +121,8 @@ export {
 // --- List start ---
 export { applySearch } from "./src/control/list/apply_search.js";
 export { createSearch } from "./src/control/list/create_search.js";
-export {
-  List,
-  ListItem,
-  ListItemFooter,
-  ListItemGroup,
-  ListItemHeader,
-} from "./src/control/list/list.jsx";
-export {
-  Selectable,
-  SelectableList,
-} from "./src/control/list/selectable_list.jsx";
+export { List, ListItem, ListItemGroup } from "./src/control/list/list.jsx";
+export { SelectableInput } from "./src/control/list/list_selectable.jsx";
 export { useSearchText } from "./src/control/list/use_search_text.js";
 // --- List end ---
 // --- Table start---
@@ -163,7 +154,7 @@ export { ActiveKeyboardShortcuts } from "./src/keyboard/active_keyboard_shortcut
 
 // Text
 export { contrastColor } from "@jsenv/dom";
-export { ButtonCopyToClipboard } from "./src/control/button_copy_to_clipboard.jsx";
+export { ButtonCopyToClipboard } from "./src/control/input/button_copy_to_clipboard.jsx";
 export { Address } from "./src/text/address.jsx";
 export { Badge } from "./src/text/badge.jsx";
 export { BadgeCount } from "./src/text/badge_count.jsx";

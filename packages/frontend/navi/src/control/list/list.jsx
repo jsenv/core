@@ -13,12 +13,21 @@ import {
   useState,
 } from "preact/hooks";
 
+import {
+  createComponentResolver,
+  useNextResolver,
+} from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Box, BoxForwardedPropsContext } from "../../box/box.jsx";
 import { Separator } from "../../layout/separator.jsx";
 import { useDebugScroll } from "../../navi_debug.jsx";
 import { naviI18n } from "../../text/navi_i18n.js";
 import { useItemTracker } from "../../utils/item_tracker/use_item_tracker.js";
 import { useDisplayedLayoutEffect } from "../../utils/use_displayed_layout_effect.js";
+import { ListItemHeaderOrFooterResolver } from "./list_item_header_footer.jsx";
+import {
+  ListItemSelectableResolver,
+  ListSelectableResolver,
+} from "./list_selectable.jsx";
 import { useSearchHighlight } from "./search_highlight.js";
 
 const ListItemTrackerContext = createContext(null);
@@ -96,6 +105,12 @@ const css = /* css */ `
     --x-list-scroll-spacing-bottom: calc(
       var(--list-footer-height, 0px) + var(--list-scroll-padding-bottom, 0px)
     );
+    --x-list-scroll-spacing-left: calc(
+      var(--list-header-width, 0px) + var(--list-scroll-padding-left, 0px)
+    );
+    --x-list-scroll-spacing-right: calc(
+      var(--list-footer-width, 0px) + var(--list-scroll-padding-right, 0px)
+    );
 
     display: flex;
     min-width: 0;
@@ -148,26 +163,19 @@ const css = /* css */ `
   }
 
   .navi_list {
-    display: flex;
     box-sizing: border-box;
     margin: 0;
     padding: 0;
-    flex-direction: column;
     list-style: none;
     outline: none; /*  Focus is displayed on the container */
-
-    /* Would create scrollbars, for now just hide the loader here */
-    .navi_input {
-      .navi_loading_rectangle_wrapper {
-        display: none;
-      }
-    }
   }
 
   .navi_list_item {
     --x-list-item-color: var(--list-item-color);
     --x-list-item-background-color: var(--list-item-background-color);
     --x-list-item-font-weight: var(--list-item-font-weight);
+    --x-list-item-border-width: var(--list-item-border-width, 0px);
+    --x-list-item-border-color: var(--list-item-border-color, black);
 
     box-sizing: border-box;
     min-width: 0;
@@ -176,6 +184,8 @@ const css = /* css */ `
     color: var(--x-list-item-color);
     font-weight: var(--x-list-item-font-weight);
     background-color: var(--x-list-item-background-color);
+    border: var(--x-list-item-border-width) solid
+      var(--x-list-item-border-color);
     /*
     CSS impossible d'obtenir un layout qui ferait en gros:
     width = max(min(max-content, 100%), unbreakable-content)
@@ -194,7 +204,9 @@ const css = /* css */ `
     overflow-wrap: anywhere;
     /* When list has sticky header/footer, put a scroll padding */
     scroll-margin-top: var(--x-list-scroll-spacing-top);
+    scroll-margin-right: var(--x-list-scroll-spacing-right);
     scroll-margin-bottom: var(--x-list-scroll-spacing-bottom);
+    scroll-margin-left: var(--x-list-scroll-spacing-left);
   }
 
   /* Virtual scroll fillers — must remain invisible.
@@ -202,9 +214,15 @@ const css = /* css */ `
      updates, so giving them a visible background would cause visual glitches. */
   .navi_list_virtual_filler {
     display: inline-block;
-    height: 0px;
+    height: var(--size-to-fill, 0px);
     list-style: none;
     /* background: pink; */
+  }
+  &[data-horizontal] {
+    .navi_list_virtual_filler {
+      width: var(--size-to-fill, 0px);
+      height: 100%;
+    }
   }
 
   /* Empty state — hidden by default, shown when no list items are rendered.
@@ -226,6 +244,7 @@ const css = /* css */ `
   .navi_list_item_header {
     position: sticky;
     top: 0;
+    left: 0;
     z-index: 1;
     order: -2;
   }
@@ -240,7 +259,7 @@ const css = /* css */ `
       user-select: none;
     }
   }
-  [navi-virtual-filler="bottom"] {
+  [navi-virtual-filler="after"] {
     /* for some reason preact ends up puttin this element before the list items in some scenarios
      I've noticed that removing the ItemIndexToScrollOnMountRefContext.Provider
      does fix this issue (I suppose it's because it cause on less render of the list which is the problematic one)
@@ -251,6 +270,7 @@ const css = /* css */ `
   /* order: 2 pins the footer after fallbacks (order: 1) and all items. */
   .navi_list_item_footer {
     position: sticky;
+    right: 0;
     bottom: 0;
     z-index: 1;
     order: 2;
@@ -297,6 +317,9 @@ const css = /* css */ `
         scroll-margin-top: calc(
           var(--x-list-scroll-spacing-top) + var(--list-group-label-height, 0px)
         );
+        scroll-margin-left: calc(
+          var(--x-list-scroll-spacing-left) + var(--list-group-label-width, 0px)
+        );
       }
     }
 
@@ -324,7 +347,7 @@ const css = /* css */ `
  *   popover              — when true, renders as a managed popover positioned near
  *                          an anchor element via navi_list_open / navi_list_close events.
  *   renderBudget         — max items in DOM at once (default 100, virtual scroll when exceeded)
- *   virtualItemHeight    — fixed px height per item when all items have the same height.
+ *   virtualItemSize     — fixed px size per item (width if horizontal, height otherwise) when all items have the same size.
  *                          Enables precise virtual-scroll filler sizing without a DOM
  *                          measurement pass. Required when renderBudget is active and
  *                          item height is known up-front.
@@ -336,14 +359,6 @@ const css = /* css */ `
  *                          min-height so filtering cannot collapse the layout.
  *   ...rest              — forwarded to the outer scroll container <Box>
  */
-export const List = (props) => {
-  const refDefault = useRef(null);
-  props.ref = props.ref || refDefault;
-  const idDefault = useId();
-  props.id = props.id || idDefault;
-  const listVnode = <ListUI {...props} />;
-  return listVnode;
-};
 const ListUI = (props) => {
   import.meta.css = css;
   const {
@@ -360,9 +375,11 @@ const ListUI = (props) => {
     expand,
     maxHeight,
     onListVisibleItemsChange,
-    virtualItemHeight,
+    virtualItemSize,
     lockSize,
     searchText,
+    horizontal,
+    spacing,
     ...rest
   } = props;
   if (renderBudget < 30 && !renderBudgetSkipCheck) {
@@ -419,7 +436,7 @@ const ListUI = (props) => {
   });
 
   const {
-    virtualItemHeightSignal,
+    virtualItemSizeSignal,
     renderWindow,
     scrollToItem,
     pendingScrollRef,
@@ -427,8 +444,9 @@ const ListUI = (props) => {
     ref,
     tracker,
     renderBudget,
-    virtualItemHeight,
+    virtualItemSize,
     searchText,
+    horizontal,
   });
 
   const getItemById = (itemId) => {
@@ -441,6 +459,7 @@ const ListUI = (props) => {
       ref={ref}
       baseClassName="navi_list_container"
       popover={popover}
+      data-horizontal={horizontal ? "" : undefined}
       data-expand-x={expandX || expand ? "" : undefined}
       expandX={expandX}
       expand={expand}
@@ -472,9 +491,11 @@ const ListUI = (props) => {
         separator={separator}
         expandX={expandX}
         expand={expand}
+        horizontal={horizontal}
+        spacing={spacing}
         tracker={tracker}
         renderWindow={renderWindow}
-        virtualItemHeightSignal={virtualItemHeightSignal}
+        virtualItemSizeSignal={virtualItemSizeSignal}
         pendingScrollRef={pendingScrollRef}
       >
         {children}
@@ -482,6 +503,20 @@ const ListUI = (props) => {
     </Box>
   );
 };
+const ListFirstResolver = (props) => {
+  const Next = useNextResolver();
+  const refDefault = useRef(null);
+  props.ref = props.ref || refDefault;
+  const idDefault = useId();
+  props.id = props.id || idDefault;
+
+  return <Next {...props} />;
+};
+export const List = createComponentResolver([
+  ListFirstResolver,
+  ListSelectableResolver,
+  ListUI,
+]);
 const ListContent = ({
   role,
   fallback,
@@ -490,9 +525,11 @@ const ListContent = ({
   separator,
   expandX,
   expand,
+  horizontal,
+  spacing,
   tracker,
   renderWindow,
-  virtualItemHeightSignal,
+  virtualItemSizeSignal,
   pendingScrollRef,
   children,
 }) => {
@@ -506,10 +543,12 @@ const ListContent = ({
         searchText={searchText}
         separator={separator === true ? <Separator margin="0" /> : separator}
         expandX={expandX || expand}
+        horizontal={horizontal}
+        spacing={spacing}
         {...listProps}
         tracker={tracker}
         renderWindow={renderWindow}
-        virtualItemHeightSignal={virtualItemHeightSignal}
+        virtualItemSizeSignal={virtualItemSizeSignal}
       >
         <PendingScrollRefContext.Provider value={pendingScrollRef}>
           {children}
@@ -538,13 +577,15 @@ const useListScrollSync = ({
   ref,
   tracker,
   renderBudget,
-  virtualItemHeight,
+  virtualItemSize,
   searchText,
+  horizontal,
 }) => {
   const debugScroll = useDebugScroll();
-  const virtualItemHeightSignal = useVirtualItemHeightSignal(
+  const virtualItemSizeSignal = useVirtualItemSizeSignal(
     ref,
-    virtualItemHeight,
+    virtualItemSize,
+    horizontal,
   );
 
   const [renderWindow, setRenderWindow] = useState({
@@ -743,11 +784,12 @@ const useListScrollSync = ({
         // (used by keyboard nav to enable anchoring the item for list item nav with arrow keys)
         // so we do our best to give that item back
         const { item } = getScrollInfo(
-          { scrollTop: savedScroll.top },
+          savedScroll,
           listScrollContainerEl,
           tracker,
-          virtualItemHeightSignal,
+          virtualItemSizeSignal,
           renderWindowRef,
+          horizontal,
         );
         listScrollContainerEl.scrollTo({
           left: savedScroll.left,
@@ -814,11 +856,15 @@ const useListScrollSync = ({
       }
       let reason = "";
       const scrollInfo = getScrollInfo(
-        { scrollTop: listScrollContainerEl.scrollTop },
+        {
+          left: listScrollContainerEl.scrollLeft,
+          top: listScrollContainerEl.scrollTop,
+        },
         listScrollContainerEl,
         tracker,
-        virtualItemHeightSignal,
+        virtualItemSizeSignal,
         renderWindowRef,
+        horizontal,
       );
       if (!scrollInfo) {
         return;
@@ -842,7 +888,7 @@ const useListScrollSync = ({
   }, [renderBudget]);
 
   return {
-    virtualItemHeightSignal,
+    virtualItemSizeSignal,
     renderWindow,
     pendingScrollRef,
     scrollToItem,
@@ -850,31 +896,34 @@ const useListScrollSync = ({
 };
 // Returns the item located at the current scroll position of a list container.
 // Uses DOM hit-testing to find visible items/fillers; falls back to index
-// estimation via virtualItemHeight or renderWindow.start.
+// estimation via virtualItemSize or renderWindow.start.
 // Returns { index, item, reason } or null if nothing can be determined.
 const getScrollInfo = (
-  { scrollTop },
+  scrollValues,
   listScrollContainerEl,
   tracker,
-  virtualItemHeightSignal,
+  virtualItemSizeSignal,
   renderWindowRef,
+  horizontal,
 ) => {
   const listEl = listScrollContainerEl.querySelector(".navi_list");
   const items = tracker.itemsSignal.peek();
   const containerRect = listScrollContainerEl.getBoundingClientRect();
   let hitEl = null;
   let hitFiller = null;
-  // Start scanning from the vertical center of the viewport rather than the top.
-  // The render window places half its budget above and half below the hit index.
+  const scrollPos = horizontal ? scrollValues.left : scrollValues.top;
+  // Start scanning from the center of the viewport along the main axis.
+  // The render window places half its budget before and half after the hit index.
   // Anchoring to the center maximises how many rendered items fall within the
-  // visible area: starting from the top would waste the "above" budget on items
-  // already scrolled past, leaving the bottom of the viewport uncovered.
-  // For large lists where renderBudget >> visible item count this never matters
-  // in practice (the window always covers the whole viewport), but it is
-  // strictly better and costs nothing.
-  const scanStartY = (containerRect.top + containerRect.bottom) / 2;
-  for (let y = scanStartY; y < containerRect.bottom; y += 4) {
-    const el = document.elementFromPoint(containerRect.left + 1, y);
+  // visible area.
+  const scanStart = horizontal
+    ? (containerRect.left + containerRect.right) / 2
+    : (containerRect.top + containerRect.bottom) / 2;
+  const scanEnd = horizontal ? containerRect.right : containerRect.bottom;
+  for (let pos = scanStart; pos < scanEnd; pos += 4) {
+    const x = horizontal ? pos : containerRect.left + 1;
+    const y = horizontal ? containerRect.top + 1 : pos;
+    const el = document.elementFromPoint(x, y);
     if (!el || !listEl.contains(el)) {
       continue;
     }
@@ -890,11 +939,11 @@ const getScrollInfo = (
     }
   }
   if (hitFiller) {
-    const virtualItemHeight = virtualItemHeightSignal.peek();
-    if (virtualItemHeight === 0) {
+    const virtualItemSize = virtualItemSizeSignal.peek();
+    if (virtualItemSize === 0) {
       return null;
     }
-    const estimatedIndex = Math.floor(scrollTop / virtualItemHeight);
+    const estimatedIndex = Math.floor(scrollPos / virtualItemSize);
     const index = Math.min(items.length - 1, estimatedIndex);
     return {
       item: items[index],
@@ -922,21 +971,18 @@ const getScrollInfo = (
   };
 };
 
-const useVirtualItemHeightSignal = (ref, virtualItemHeightProp = 0) => {
-  const virtualHeightSignalRef = useRef(null);
-  if (!virtualHeightSignalRef.current) {
-    virtualHeightSignalRef.current = signal(virtualItemHeightProp);
+const useVirtualItemSizeSignal = (ref, virtualItemSizeProp = 0, horizontal) => {
+  const virtualSizeSignalRef = useRef(null);
+  if (!virtualSizeSignalRef.current) {
+    virtualSizeSignalRef.current = signal(virtualItemSizeProp);
   }
-  const virtualHeightSignal = virtualHeightSignalRef.current;
+  const virtualSizeSignal = virtualSizeSignalRef.current;
   // propagate prop changes to the signal
-  if (
-    virtualItemHeightProp &&
-    virtualHeightSignal.peek() !== virtualItemHeightProp
-  ) {
-    virtualHeightSignal.value = virtualItemHeightProp;
+  if (virtualItemSizeProp && virtualSizeSignal.peek() !== virtualItemSizeProp) {
+    virtualSizeSignal.value = virtualItemSizeProp;
   }
   useLayoutEffect(() => {
-    if (virtualHeightSignal.peek() !== 0) {
+    if (virtualSizeSignal.peek() !== 0) {
       return;
     }
     const listEl = ref.current?.querySelector(".navi_list");
@@ -947,33 +993,42 @@ const useVirtualItemHeightSignal = (ref, virtualItemHeightProp = 0) => {
     if (!firstListItem) {
       return;
     }
-    const measuredHeight = firstListItem.getBoundingClientRect().height;
-    virtualHeightSignal.value = measuredHeight;
+    const rect = firstListItem.getBoundingClientRect();
+    const measuredSize = horizontal ? rect.width : rect.height;
+    virtualSizeSignal.value = measuredSize;
   });
-  return virtualHeightSignal;
+  return virtualSizeSignal;
 };
 
 // Inner <ul> — hosts the fillers + items.
-// Creates a virtualItemHeight signal so TopFiller and BottomFiller can
-// subscribe to it independently. When virtualItemHeight is passed as a prop it
+// Creates a virtualItemSize signal so BeforeFiller and AfterFiller can
+// subscribe to it independently. When virtualItemSize is passed as a prop it
 // initialises the signal directly; otherwise UnorderedList measures a rendered
 // item after each commit and writes to the signal, causing only the fillers to
 // re-render.
 const UnorderedList = ({
   tracker,
   renderWindow,
-  virtualItemHeightSignal,
+  virtualItemSizeSignal,
   fallback,
   noMatchFallback,
   searchText,
   separator,
+  horizontal,
+  spacing,
   children,
   ...rest
 }) => {
   return (
-    <Box as="ul" {...rest} baseClassName="navi_list">
-      <TopFiller
-        virtualItemHeightSignal={virtualItemHeightSignal}
+    <Box
+      as="ul"
+      {...rest}
+      flex={horizontal ? "x" : "y"}
+      spacing={spacing}
+      baseClassName="navi_list"
+    >
+      <BeforeFiller
+        virtualItemSizeSignal={virtualItemSizeSignal}
         renderWindowStart={renderWindow.start}
       />
       <NoMatchFallback
@@ -989,8 +1044,8 @@ const UnorderedList = ({
           </ListItemTrackerContext.Provider>
         </SeparatorContext.Provider>
       </RenderWindowContext.Provider>
-      <BottomFiller
-        virtualItemHeightSignal={virtualItemHeightSignal}
+      <AfterFiller
+        virtualItemSizeSignal={virtualItemSizeSignal}
         renderWindowEnd={renderWindow.end}
         tracker={tracker}
       />
@@ -1049,78 +1104,67 @@ const Fallback = ({ tracker, fallback }) => {
     </ListItem>
   );
 };
-const TopFiller = ({ virtualItemHeightSignal, renderWindowStart }) => {
-  const virtualItemHeight = virtualItemHeightSignal.value;
-  const numberOfItemsAbove = renderWindowStart;
-  const heightToFillAbove = numberOfItemsAbove * virtualItemHeight;
+const BeforeFiller = ({ virtualItemSizeSignal, renderWindowStart }) => {
+  const virtualItemSize = virtualItemSizeSignal.value;
+  const numberOfItemsBefore = renderWindowStart;
+  const sizeToFillBefore = numberOfItemsBefore * virtualItemSize;
 
-  if (!heightToFillAbove) {
+  if (!sizeToFillBefore) {
     return null;
   }
   return (
     <li
       className="navi_list_virtual_filler"
       // eslint-disable-next-line react/no-unknown-property
-      navi-virtual-filler="top"
+      navi-virtual-filler="before"
       aria-hidden
       style={{
-        height: `${heightToFillAbove}px`,
+        "--size-to-fill": `${sizeToFillBefore}px`,
       }}
     />
   );
 };
-const BottomFiller = ({
-  virtualItemHeightSignal,
-  renderWindowEnd,
-  tracker,
-}) => {
+const AfterFiller = ({ virtualItemSizeSignal, renderWindowEnd, tracker }) => {
   const visibleItemCount = tracker.visibleCountSignal.value;
-  const virtualItemHeight = virtualItemHeightSignal.value;
-  const numberOfItemsBelow = Math.max(visibleItemCount - renderWindowEnd, 0);
-  const heightToFillBelow = numberOfItemsBelow * virtualItemHeight;
+  const virtualItemSize = virtualItemSizeSignal.value;
+  const numberOfItemsAfter = Math.max(visibleItemCount - renderWindowEnd, 0);
+  const sizeToFillAfter = numberOfItemsAfter * virtualItemSize;
 
-  if (!heightToFillBelow) {
+  if (!sizeToFillAfter) {
     return null;
   }
   return (
     <li
       className="navi_list_virtual_filler"
       // eslint-disable-next-line react/no-unknown-property
-      navi-virtual-filler="bottom"
+      navi-virtual-filler="after"
       aria-hidden
       style={{
-        height: `${heightToFillBelow}px`,
+        "--size-to-fill": `${sizeToFillAfter}px`,
       }}
     />
   );
 };
 
-/**
- * ListItem — a trackable item that participates in virtualization.
- *
- * Must be used inside <List>. Handles:
- * - Registration with item tracker (always runs, even when hidden)
- * - Early return when outside the render window
- * - Separator rendering between visible items
- *
- * Props:
- *   itemId    — stable string id for tracking (auto-generated if omitted)
- *   filtered  — when true, item is excluded from visible count and removed from DOM entirely
- *   hidden    — when true, item is excluded from visible count (no virtual scroll height)
- *               but stays in DOM with the native HTML hidden attribute
- *   highlight — array of [start, end] ranges to highlight via CSS Highlight API
- *   ...rest   — forwarded to the rendered <li> element
- */
-export const ListItem = (props) => {
+const ListItemFirstResolver = (props) => {
+  const Next = useNextResolver();
+  const defaultRef = useRef(null);
+  props.ref = props.ref || defaultRef;
+
+  return <Next {...props} />;
+};
+const ListItemPresentationResolver = (props) => {
+  const Next = useNextResolver();
+
   if (props.role === "presentation") {
     return <ListItemPresentation {...props} />;
   }
-  return <ListItemRealOrVoid {...props} />;
+  return <Next {...props} />;
 };
 const ListItemPresentation = (props) => {
   return <Box as="li" {...props} />;
 };
-const ListItemRealOrVoid = (props) => {
+const ListItemUI = (props) => {
   if (props.id === undefined) {
     console.warn(
       "ListItem is missing an explicit id prop. Provide a stable id so pointed/selected state survives search reordering.",
@@ -1196,8 +1240,6 @@ const ListItemVoid = () => {
   return null;
 };
 const ListItemReal = (props) => {
-  const defaultRef = useRef(null);
-  props.ref = props.ref || defaultRef;
   const { ref, id, hidden, highlight, children, ...rest } = props;
   const pendingScrollRef = useContext(PendingScrollRefContext);
   const pendingScroll = pendingScrollRef.current;
@@ -1243,6 +1285,8 @@ const LIST_ITEM_STYLE_CSS_VARS = {
   "color": "--list-item-color",
   "backgroundColor": "--list-item-background-color",
   "fontWeight": "--list-item-font-weight",
+  "borderWidth": "--list-item-border-width",
+  "borderColor": "--list-item-border-color",
   ":-navi-pointed": {
     color: "--list-item-color-keyboard-pointed",
     backgroundColor: "--list-item-background-color-keyboard-pointed",
@@ -1254,6 +1298,7 @@ const LIST_ITEM_STYLE_CSS_VARS = {
   ":-navi-selected": {
     color: "--list-item-color-selected",
     backgroundColor: "--list-item-background-color-selected",
+    borderColor: "--list-item-border-color-selected",
   },
   ":disabled": {
     color: "--list-item-color-disabled",
@@ -1264,8 +1309,33 @@ const LIST_ITEM_STYLE_CSS_VARS = {
     backgroundColor: "--suggestion-background-color-highlight",
   },
 };
-export const LIST_ITEM_PSEUDO_CLASSES = [];
+const LIST_ITEM_PSEUDO_CLASSES = [];
 const LIST_ITEM_PSEUDO_ELEMENTS = ["::highlight"];
+
+/**
+ * ListItem — a trackable item that participates in virtualization.
+ *
+ * Must be used inside <List>. Handles:
+ * - Registration with item tracker (always runs, even when hidden)
+ * - Early return when outside the render window
+ * - Separator rendering between visible items
+ *
+ * Props:
+ *   itemId    — stable string id for tracking (auto-generated if omitted)
+ *   filtered  — when true, item is excluded from visible count and removed from DOM entirely
+ *   hidden    — when true, item is excluded from visible count (no virtual scroll height)
+ *               but stays in DOM with the native HTML hidden attribute
+ *   highlight — array of [start, end] ranges to highlight via CSS Highlight API
+ *   ...rest   — forwarded to the rendered <li> element
+ */
+export const ListItem = createComponentResolver([
+  ListItemFirstResolver,
+  ListItemSelectableResolver,
+  ListItemHeaderOrFooterResolver,
+  ListItemPresentationResolver,
+  ListItemUI,
+]);
+List.Item = ListItem;
 
 /**
  * ListGroup — a labeled group of list items.
@@ -1295,14 +1365,16 @@ export const ListItemGroup = ({
       if (!groupEl) {
         return;
       }
-      const labelHeight = labelEl.getBoundingClientRect().height;
+      const rect = labelEl.getBoundingClientRect();
       groupEl.style.setProperty(
         "--list-group-label-height",
-        `${labelHeight}px`,
+        `${rect.height}px`,
       );
+      groupEl.style.setProperty("--list-group-label-width", `${rect.width}px`);
     },
     [],
   );
+
   return (
     <ListItem
       {...rest}
@@ -1331,57 +1403,5 @@ export const ListItemGroup = ({
         </GroupItemTrackerContext.Provider>
       </ul>
     </ListItem>
-  );
-};
-
-export const ListItemHeader = (props) => {
-  const defaultRef = useRef(null);
-  const ref = props.ref || defaultRef;
-  useDisplayedLayoutEffect(
-    ref,
-    (headerEl) => {
-      const listContainerEl = headerEl.closest(".navi_list_container");
-      const headerHeight = headerEl.getBoundingClientRect().height;
-      listContainerEl.style.setProperty(
-        "--list-header-height",
-        `${headerHeight}px`,
-      );
-    },
-    [],
-  );
-
-  return (
-    <ListItem
-      {...props}
-      ref={ref}
-      role="presentation"
-      baseClassName="navi_list_item_header"
-    />
-  );
-};
-
-export const ListItemFooter = (props) => {
-  const defaultRef = useRef(null);
-  const ref = props.ref || defaultRef;
-  useDisplayedLayoutEffect(
-    ref,
-    (headerEl) => {
-      const listContainerEl = headerEl.closest(".navi_list_container");
-      const headerHeight = headerEl.getBoundingClientRect().height;
-      listContainerEl.style.setProperty(
-        "--list-footer-height",
-        `${headerHeight}px`,
-      );
-    },
-    [],
-  );
-
-  return (
-    <ListItem
-      {...props}
-      ref={ref}
-      role="presentation"
-      baseClassName="navi_list_item_footer"
-    />
   );
 };

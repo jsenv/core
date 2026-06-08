@@ -16,18 +16,14 @@
  * - <InputRadio /> for type="radio"
  */
 
-import { dispatchCustomEvent } from "@jsenv/dom";
-import { createContext } from "preact";
-import { useContext, useEffect, useId, useRef, useState } from "preact/hooks";
+import { useContext, useId, useRef } from "preact/hooks";
 
 import { Box, BoxForwardedPropsContext } from "@jsenv/navi/src/box/box.jsx";
-import { ChevronDownSvg } from "@jsenv/navi/src/graphic/icons/chevron_updown_svg.jsx";
 import { CloseSvg } from "@jsenv/navi/src/graphic/icons/close_svg.jsx";
 import { EmailSvg } from "@jsenv/navi/src/graphic/icons/email_svg.jsx";
 import { PhoneSvg } from "@jsenv/navi/src/graphic/icons/phone_svg.jsx";
 import { SearchSvg } from "@jsenv/navi/src/graphic/icons/search_svg.jsx";
 import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.jsx";
-import { createOnKeyDownForShortcuts } from "@jsenv/navi/src/keyboard/keyboard_shortcuts.js";
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
 import {
   createComponentResolver,
@@ -35,10 +31,12 @@ import {
 } from "../../resolver/resolver.jsx";
 import { useControlProps } from "../control_hooks.jsx";
 import { asControlHostValue } from "../control_value.js";
-import { Label } from "../field.jsx";
 import { triggerStringAction } from "../string_actions.js";
 import { dispatchRequestInteraction } from "../validation/custom_constraint_validation.js";
-import { InputWithList } from "./input_with_list.jsx";
+import { InputTextualContext } from "./input_textual_context.js";
+import { InputLeftSlot, InputRightSlot } from "./input_ui_components.jsx";
+import { InputWithListResolver } from "./input_with_list.jsx";
+import { InputWithSuggestionsResolver } from "./input_with_suggestions.jsx";
 import { resolveInputProps } from "./resolve_input_props.js";
 
 const css = /* css */ `
@@ -283,25 +281,6 @@ const css = /* css */ `
   }
 `;
 
-export const InputTextual = (props) => {
-  const defaultRef = useRef(null);
-  props.ref = props.ref || defaultRef;
-  const input = renderInput(InputTextualControlInterface, props);
-
-  return input;
-};
-
-const InputTextualWithListResolver = (props) => {
-  const Next = useNextResolver();
-
-  if (props["navi-list"]) {
-    return <InputWithList {...props} />;
-  }
-  if (props.suggestions) {
-    return <InputTextualWithSuggestions {...props} />;
-  }
-  return <Next {...props} />;
-};
 const InputTypeResolver = (props) => {
   const Next = useNextResolver();
   if (props.type === "search") {
@@ -332,12 +311,6 @@ const InputHeadlessResolver = (props) => {
   return <Next {...props} />;
 };
 
-const renderInput = createComponentResolver([
-  InputTextualWithListResolver,
-  InputTypeResolver,
-  InputHeadlessResolver,
-]);
-
 const InputTextualHeadless = (props) => {
   const [inputProps, remainingProps] = useInputTextualProps(props);
   return (
@@ -363,8 +336,7 @@ const useInputTextualProps = (props) => {
   return [controlProps, remainingProps, ControlChildrenWrapper];
 };
 
-const InputNativeContext = createContext(null);
-const InputTextualControlInterface = (props) => {
+const InputTextualUI = (props) => {
   import.meta.css = css;
   const { ui, discrete } = props;
   const [inputProps, remainingProps, ControlChildrenWrapper] =
@@ -377,9 +349,9 @@ const InputTextualControlInterface = (props) => {
   const loading = basePseudoState[":-navi-loading"];
   const childrenWithContext = (
     <ControlChildrenWrapper>
-      <InputNativeContext.Provider value={{ id, readOnly, disabled }}>
+      <InputTextualContext.Provider value={{ id, readOnly, disabled }}>
         {children || ui}
-      </InputNativeContext.Provider>
+      </InputTextualContext.Provider>
     </ControlChildrenWrapper>
   );
 
@@ -410,6 +382,22 @@ const InputTextualControlInterface = (props) => {
     </Box>
   );
 };
+const InputTextualFirstResolver = (props) => {
+  const Next = useNextResolver();
+  const defaultRef = useRef(null);
+  props.ref = props.ref || defaultRef;
+
+  return <Next {...props} />;
+};
+export const InputTextual = createComponentResolver([
+  InputTextualFirstResolver,
+  InputWithListResolver,
+  InputWithSuggestionsResolver,
+  InputTypeResolver,
+  InputHeadlessResolver,
+  InputTextualUI,
+]);
+
 const RealInput = (props) => {
   const inputProps = useContext(BoxForwardedPropsContext);
   return (
@@ -474,58 +462,14 @@ const InputPseudoClasses = [
   ":-navi-expanded",
 ];
 const InputPseudoElements = ["::-navi-loader"];
-const InputSlot = ({ side, onClick, hideWhileEmpty, ...props }) => {
-  const ctx = useContext(InputNativeContext);
-  const { id, readOnly, disabled } = ctx;
-
-  return (
-    <Label
-      htmlFor={id}
-      className="navi_input_slot"
-      disabled={disabled}
-      readOnly={readOnly}
-      data-readonly={readOnly}
-      data-disabled={disabled}
-      data-left={side === "left" ? "" : undefined}
-      data-right={side === "right" ? "" : undefined}
-      data-hide-while-empty={hideWhileEmpty ? "" : undefined}
-      inline
-      flex
-      align="center"
-      onMouseDown={(e) => {
-        // Only prevent focus from leaving when the input already has focus.
-        // If the input is not focused, let the mousedown proceed normally so
-        // the slot element (e.g. a clear button) can receive focus itself.
-        const inputEl = document.getElementById(id);
-        if (inputEl && inputEl === document.activeElement) {
-          e.preventDefault();
-        }
-      }}
-      onClick={(e) => {
-        onClick?.(e);
-        const input = document.getElementById(id);
-        const allowed = dispatchRequestInteraction(input, e);
-        if (!allowed) {
-          e.preventDefault();
-        }
-      }}
-      {...props}
-    />
-  );
-};
-export const InputLeftSlot = (props) => {
-  return <InputSlot {...props} side="left" />;
-};
-export const InputRightSlot = (props) => {
-  return <InputSlot {...props} side="right" />;
-};
 
 const InputSearch = (props) => {
   const Next = useNextResolver();
+
   return <Next ui={<InputSearchUI icon={props.icon} />} {...props} />;
 };
 const InputSearchUI = ({ icon }) => {
-  const ctx = useContext(InputNativeContext);
+  const ctx = useContext(InputTextualContext);
   const { id } = ctx;
 
   return (
@@ -557,6 +501,7 @@ const InputSearchUI = ({ icon }) => {
 };
 const InputEmail = (props) => {
   const Next = useNextResolver();
+
   return <Next ui={<InputEmailUI />} {...props} />;
 };
 const InputEmailUI = ({ icon }) => {
@@ -589,203 +534,16 @@ const InputTelUI = ({ icon }) => {
 };
 const InputNumber = (props) => {
   const Next = useNextResolver();
+
   return <Next {...props} />;
 };
 const InputColor = (props) => {
   const Next = useNextResolver();
+
   return <Next {...props} />;
 };
 const InputDatetimeLocal = (props) => {
   const Next = useNextResolver();
+
   return <Next {...props} />;
-};
-
-const InputTextualWithSuggestions = (props) => {
-  const Next = useNextResolver();
-  const {
-    ref,
-    suggestions,
-    onInput,
-    onFocus,
-    onBlur,
-    onKeyDown,
-    children,
-    ...rest
-  } = props;
-  const [expanded, setExpanded] = useState(false);
-  const expandedRef = useRef(expanded);
-  expandedRef.current = expanded;
-  const expand = () => {
-    expandedRef.current = true;
-    setExpanded(true);
-  };
-  const collapse = () => {
-    expandedRef.current = false;
-    setExpanded(false);
-  };
-  const getListEl = () => {
-    return document.getElementById(suggestions);
-  };
-  const showSuggestions = (e) => {
-    if (expandedRef.current) {
-      return;
-    }
-    const listEl = getListEl();
-    if (listEl) {
-      dispatchCustomEvent(listEl, "navi_request_open", {
-        event: e,
-        anchor: ref.current,
-      });
-      expand();
-    }
-  };
-  const hideSuggestions = (e) => {
-    if (!expandedRef.current) {
-      return;
-    }
-    const listEl = getListEl();
-    if (listEl) {
-      dispatchCustomEvent(listEl, "navi_request_close", { event: e });
-      collapse();
-    }
-  };
-
-  useEffect(() => {
-    const inputEl = ref.current;
-    const listEl = getListEl();
-    if (!listEl) {
-      return undefined;
-    }
-    const onSelect = (e) => {
-      const { item } = e.detail;
-      const { value } = item;
-      inputEl.value = value;
-      inputEl.dispatchEvent(new Event("input", { bubbles: true }));
-      hideSuggestions(e);
-    };
-    listEl.addEventListener("navi_list_select", onSelect);
-    return () => {
-      listEl.removeEventListener("navi_list_select", onSelect);
-    };
-  }, [suggestions]);
-
-  const onKeyDownShortcuts = createOnKeyDownForShortcuts({
-    arrowdown: (e) => {
-      showSuggestions(e);
-    },
-    arrowup: (e) => {
-      showSuggestions(e);
-    },
-    escape: (e) => {
-      if (!expandedRef.current) {
-        return false;
-      }
-      hideSuggestions(e);
-      return true;
-    },
-    home: () => {},
-    end: () => {},
-    enter: () => {},
-  });
-
-  return (
-    <Next
-      role="combobox"
-      aria-haspopup="listbox"
-      aria-expanded={expanded}
-      aria-autocomplete="list"
-      autoComplete="off"
-      basePseudoState={{
-        ":-navi-expanded": expanded,
-      }}
-      onnavi_callout_open={(e) => {
-        hideSuggestions(e);
-      }}
-      {...rest}
-      ref={ref}
-      onFocus={(e) => {
-        onFocus?.(e);
-        showSuggestions(e);
-      }}
-      onBlur={(e) => {
-        onBlur?.(e);
-        hideSuggestions(e);
-      }}
-      onInput={(e) => {
-        onInput?.(e);
-        showSuggestions(e);
-      }}
-      onKeyDown={(e) => {
-        onKeyDown?.(e);
-        onKeyDownShortcuts(e);
-      }}
-      //  arrowdown: (e) => {
-      //   const listEl = getListEl();
-      //   e.stopPropagation(); // when within a list, prevent list from handling it twice
-      //   return requestListNavFromCurrent(listEl, {
-      //     event: e,
-      //     goal: "down",
-      //   });
-      // },
-      // arrowup: (e) => {
-      //   const listEl = getListEl();
-      //   e.stopPropagation(); // when within a list, prevent list from handling it twice
-      //   return requestListNavFromCurrent(listEl, {
-      //     event: e,
-      //     goal: "up",
-      //   });
-      // },
-      // home: (e) => {
-      //   const listEl = getListEl();
-      //   e.stopPropagation(); // when within a list, prevent list from handling it twice
-      //   return requestListNavFromCurrent(listEl, {
-      //     event: e,
-      //     goal: "first",
-      //   });
-      // },
-      // end: (e) => {
-      //   const listEl = getListEl();
-      //   e.stopPropagation(); // when within a list, prevent list from handling it twice
-      //   return requestListNavFromCurrent(listEl, {
-      //     event: e,
-      //     goal: "last",
-      //   });
-      // },
-      // enter: (e) => {
-      //   const listEl = getListEl();
-      //   e.stopPropagation(); // when within a list, prevent list from handling it twice
-      //   return requestListSelectCurrent(listEl, { event: e });
-      // },
-      // escape: (e) => {
-      //   // prevent escape from reaching eventual <select> ancestor
-      //   // when the escape is meant to clear the search input (otherwise it would close the select too)
-      //   if (e.currentTarget.type === "search" && e.currentTarget.value !== "") {
-      //     e.stopPropagation();
-      //     return true;
-      //   }
-      //   const listEl = getListEl();
-      //   // here we allow propagation of escape up to the <select> to allow closing if within a select
-      //   // it also means list might catch escape and reset again but it's ok to reset twice here as it won't cause side effects
-      //   // (if we need the same pattern for other events where it could be problematic we would have to mark
-      //   // event as handled somehow to prevent list containing input to react to it)
-      //   return requestListInteractionStateReset(listEl, { event: e });
-      // },
-    >
-      {children || (
-        <InputRightSlot
-          onClick={(e) => {
-            if (expanded) {
-              hideSuggestions(e);
-            } else {
-              showSuggestions(e);
-            }
-          }}
-        >
-          <Icon color="rgba(28, 43, 52, 0.5)">
-            <ChevronDownSvg />
-          </Icon>
-        </InputRightSlot>
-      )}
-    </Next>
-  );
 };

@@ -73,8 +73,7 @@
         Color,
         Form,
         Button,
-        SelectableList,
-        Selectable,
+        List,
         NaviDebug,
       } from "@jsenv/navi";
 
@@ -330,9 +329,9 @@
             <h2>4. Customization</h2>
             <p class="desc">
               On passe des enfants au Picker pour afficher une palette de
-              swatches construite avec <code>SelectableList</code> +{" "}
-              <code>Selectable</code>. La couleur sélectionnée est mise en
-              évidence et le popover se ferme automatiquement.
+              swatches construite avec <code>List selectable</code> +{" "}
+              <code>List.Item selectable</code>. La couleur sélectionnée est
+              mise en évidence et le popover se ferme automatiquement.
             </p>
             <Box flex="y" spacing="m">
               <Field vertical>
@@ -385,9 +384,10 @@
           readOnly={readOnly}
           loading={loading}
         >
-          <SelectableList action="send">
+          <List selectable action="send">
             {SWATCHES.map(({ label, value: swatchValue }, i) => (
-              <Selectable
+              <List.Item
+                selectable
                 key={swatchValue}
                 id={swatchValue}
                 index={i}
@@ -402,9 +402,9 @@
                   {swatchValue}
                 </Color>
                 {label}
-              </Selectable>
+              </List.Item>
             ))}
-          </SelectableList>
+          </List>
         </Picker>
       );
 

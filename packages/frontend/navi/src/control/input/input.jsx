@@ -2,6 +2,7 @@ import { InputCheckbox } from "./input_checkbox.jsx";
 import { InputRadio } from "./input_radio.jsx";
 import { InputRange } from "./input_range.jsx";
 import { InputTextual } from "./input_textual.jsx";
+import { InputLeftSlot, InputRightSlot } from "./input_ui_components.jsx";
 
 export const Input = (props) => {
   const { type } = props;
@@ -15,4 +16,9 @@ export const Input = (props) => {
     return <InputRange {...props} />;
   }
   return <InputTextual {...props} />;
+};
+
+Input.UI = {
+  LeftSlot: InputLeftSlot,
+  RightSlot: InputRightSlot,
 };

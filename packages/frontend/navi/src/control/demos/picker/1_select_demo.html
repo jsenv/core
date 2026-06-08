@@ -127,8 +127,8 @@
         Input,
         Picker,
         Icon,
-        SelectableList,
-        Selectable,
+        List,
+        SelectableInput,
         NaviDebug,
         Text,
         route,
@@ -292,9 +292,10 @@
                 }}
                 minWidth="200"
               >
-                <SelectableList action="send">
+                <List selectable action="send">
                   {FRUIT_OPTIONS.map((opt, i) => (
-                    <Selectable
+                    <List.Item
+                      selectable
                       key={opt}
                       id={`send_${opt}`}
                       index={i}
@@ -304,9 +305,9 @@
                       spacing="s"
                     >
                       {opt}
-                    </Selectable>
+                    </List.Item>
                   ))}
-                </SelectableList>
+                </List>
               </Picker>
             </Field>
             <CallLog entries={logSignal.value} />
@@ -357,9 +358,10 @@
                 }}
                 minWidth="200"
               >
-                <SelectableList action="update">
+                <List selectable action="update">
                   {FRUIT_OPTIONS.map((opt, i) => (
-                    <Selectable
+                    <List.Item
+                      selectable
                       key={opt}
                       id={`update_${opt}`}
                       index={i}
@@ -369,9 +371,9 @@
                       spacing="s"
                     >
                       {opt}
-                    </Selectable>
+                    </List.Item>
                   ))}
-                </SelectableList>
+                </List>
               </Picker>
             </Field>
             <CallLog entries={logSignal.value} />
@@ -426,7 +428,8 @@
                 expandX
                 discrete
               />
-              <SelectableList
+              <List
+                selectable
                 id={`${id}_list`}
                 action="send"
                 maxHeight="200"
@@ -439,7 +442,8 @@
                 {matchingItems.map((opt, i) => {
                   const { match, score, ranges } = getMatchInfo(opt);
                   return (
-                    <Selectable
+                    <List.Item
+                      selectable
                       key={opt}
                       id={`${id}_${opt}`}
                       index={i}
@@ -452,10 +456,10 @@
                       spacing="s"
                     >
                       {opt}
-                    </Selectable>
+                    </List.Item>
                   );
                 })}
-              </SelectableList>
+              </List>
             </Box>
           </Picker>
         );
@@ -666,7 +670,8 @@
                 }
                 expandX
               >
-                <SelectableList
+                <List
+                  selectable
                   id="place_list"
                   action="send"
                   maxHeight="260"
@@ -682,7 +687,8 @@
                   {matchingPlaces.map((place, i) => {
                     const { match, score, ranges } = getPlaceMatchInfo(place);
                     return (
-                      <Selectable
+                      <List.Item
+                        selectable
                         key={place.id}
                         id={place.id}
                         index={i}
@@ -695,12 +701,12 @@
                         alignY="center"
                         spacing="m"
                       >
-                        <Selectable.Input marginLeft="-xs" />
+                        <SelectableInput marginLeft="-xs" />
                         <PlaceItem overflowEllipsis={i === 0} />
-                      </Selectable>
+                      </List.Item>
                     );
                   })}
-                </SelectableList>
+                </List>
               </Picker>
             </Field>
             <CallLog entries={logSignal.value} />
