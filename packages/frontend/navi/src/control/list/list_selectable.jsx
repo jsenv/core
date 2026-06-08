@@ -22,6 +22,7 @@ import {
 } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
+import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { useFocusGroup } from "@jsenv/navi/src/utils/focus/use_focus_group.js";
 import { ControlToInterfaceContext } from "../control_context.js";
@@ -36,7 +37,6 @@ import {
   dispatchRequestAction,
   dispatchRequestInteraction,
 } from "../validation/custom_constraint_validation.js";
-import { List, LIST_ITEM_PSEUDO_CLASSES, ListItem } from "./list.jsx";
 
 const css = /* css */ `
   @layer navi {
@@ -173,14 +173,19 @@ const css = /* css */ `
 `;
 
 const SelectableListMultipleContext = createContext(false);
-
 // Interactive variant: manages hover/keyboard/selection state and handles the
 // navi event protocol. When an action is provided it binds the action to ui state
 // and fires it on select. When only uiAction is provided it calls it directly.
-export const SelectableList = (props) => {
+export const ListSelectableResolver = (props) => {
+  const Next = useNextResolver();
+  if (props.selectable) {
+    return <ListSelectable {...props} />;
+  }
+  return <Next {...props} />;
+};
+const ListSelectable = (props) => {
+  const Next = useNextResolver();
   import.meta.css = css;
-  const defaultRef = useRef();
-  props.ref = props.ref || defaultRef;
   // we allow ourselves to auto-generate a name
   const defaultName = useId();
   props.name = props.name || `listbox_${defaultName}`;
@@ -312,7 +317,7 @@ export const SelectableList = (props) => {
   }, []);
 
   const listVnode = (
-    <List
+    <Next
       as="fieldset"
       navi-has-selected-background={
         selectedIndicator === "backgroundColor" ? "" : undefined
@@ -440,9 +445,8 @@ export const SelectableList = (props) => {
       <ControlgroupChildrenWrapper {...childrenWrapperProps}>
         {props.children}
       </ControlgroupChildrenWrapper>
-    </List>
+    </Next>
   );
-
   return (
     <SelectableListMultipleContext.Provider value={multiple}>
       {listVnode}
@@ -452,7 +456,15 @@ export const SelectableList = (props) => {
 
 const SelectableRealInputContext = createContext(null);
 
-export const Selectable = (props) => {
+export const ListItemSelectableResolver = (props) => {
+  const Next = useNextResolver();
+  if (props.selectable) {
+    return <ListItemSelectable {...props} />;
+  }
+  return <Next {...props} />;
+};
+const ListItemSelectable = (props) => {
+  const Next = useNextResolver();
   const {
     index,
     id,
@@ -502,7 +514,7 @@ export const Selectable = (props) => {
   }, [inputId, inputType, checked, readOnly, value]);
 
   return (
-    <ListItem
+    <Next
       id={id}
       index={index}
       highlight={highlight}
@@ -550,11 +562,10 @@ export const Selectable = (props) => {
           <ChildrenContextWrapper>{children}</ChildrenContextWrapper>
         </SelectableRealInputContext.Provider>
       </Field>
-    </ListItem>
+    </Next>
   );
 };
 const SELECTABLE_PSEUDO_CLASSES = [
-  ...LIST_ITEM_PSEUDO_CLASSES,
   ":hover",
   ":disabled",
   ":read-only",
@@ -605,4 +616,4 @@ const SelectableInputProxy = (props) => {
     </ControlToInterfaceContext.Provider>
   );
 };
-Selectable.Input = SelectableInputProxy;
+export const SelectableInput = SelectableInputProxy;

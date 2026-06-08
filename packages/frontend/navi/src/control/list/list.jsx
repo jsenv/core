@@ -13,12 +13,20 @@ import {
   useState,
 } from "preact/hooks";
 
+import {
+  createComponentResolver,
+  useNextResolver,
+} from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Box, BoxForwardedPropsContext } from "../../box/box.jsx";
 import { Separator } from "../../layout/separator.jsx";
 import { useDebugScroll } from "../../navi_debug.jsx";
 import { naviI18n } from "../../text/navi_i18n.js";
 import { useItemTracker } from "../../utils/item_tracker/use_item_tracker.js";
 import { useDisplayedLayoutEffect } from "../../utils/use_displayed_layout_effect.js";
+import {
+  ListItemSelectableResolver,
+  ListSelectableResolver,
+} from "./list_selectable.jsx";
 import { useSearchHighlight } from "./search_highlight.js";
 
 const ListItemTrackerContext = createContext(null);
@@ -355,9 +363,12 @@ export const List = (props) => {
   props.ref = props.ref || refDefault;
   const idDefault = useId();
   props.id = props.id || idDefault;
-  const listVnode = <ListUI {...props} />;
+  const listVnode = renderList(ListUI, props);
+
   return listVnode;
 };
+const renderList = createComponentResolver([ListSelectableResolver]);
+
 const ListUI = (props) => {
   import.meta.css = css;
   const {
@@ -1148,15 +1159,97 @@ const AfterFiller = ({ virtualItemSizeSignal, renderWindowEnd, tracker }) => {
  *   ...rest   — forwarded to the rendered <li> element
  */
 export const ListItem = (props) => {
-  if (props.role === "presentation") {
-    return <ListItemPresentation {...props} />;
-  }
-  return <ListItemRealOrVoid {...props} />;
+  const defaultRef = useRef(null);
+  props.ref = props.ref || defaultRef;
+
+  const listItemVnode = renderListItem(ListItemUI, props);
+  return listItemVnode;
 };
+
 const ListItemPresentation = (props) => {
   return <Box as="li" {...props} />;
 };
-const ListItemRealOrVoid = (props) => {
+const ListItemHeader = (props) => {
+  const Next = useNextResolver();
+  const { ref } = props;
+  useDisplayedLayoutEffect(
+    ref,
+    (headerEl) => {
+      const listContainerEl = headerEl.closest(".navi_list_container");
+      const rect = headerEl.getBoundingClientRect();
+      listContainerEl.style.setProperty(
+        "--list-header-height",
+        `${rect.height}px`,
+      );
+      listContainerEl.style.setProperty(
+        "--list-header-width",
+        `${rect.width}px`,
+      );
+    },
+    [],
+  );
+
+  return (
+    <Next
+      {...props}
+      role="presentation"
+      baseClassName="navi_list_item_header"
+    />
+  );
+};
+const ListItemFooter = (props) => {
+  const Next = useNextResolver();
+  const { ref } = props;
+  useDisplayedLayoutEffect(
+    ref,
+    (footerEl) => {
+      const listContainerEl = footerEl.closest(".navi_list_container");
+      const rect = footerEl.getBoundingClientRect();
+      listContainerEl.style.setProperty(
+        "--list-footer-height",
+        `${rect.height}px`,
+      );
+      listContainerEl.style.setProperty(
+        "--list-footer-width",
+        `${rect.width}px`,
+      );
+    },
+    [],
+  );
+
+  return (
+    <Next
+      {...props}
+      role="presentation"
+      baseClassName="navi_list_item_footer"
+    />
+  );
+};
+
+const ListItemHeaderOrFooterResolver = (props) => {
+  const Next = useNextResolver();
+  if (props.header) {
+    return <ListItemHeader {...props} />;
+  }
+  if (props.footer) {
+    return <ListItemFooter {...props} />;
+  }
+  return <Next {...props} />;
+};
+const ListItemPresentationResolver = (props) => {
+  const Next = useNextResolver();
+  if (props.role === "presentation") {
+    return <ListItemPresentation {...props} />;
+  }
+  return <Next {...props} />;
+};
+const renderListItem = createComponentResolver([
+  ListItemSelectableResolver,
+  ListItemHeaderOrFooterResolver,
+  ListItemPresentationResolver,
+]);
+
+const ListItemUI = (props) => {
   if (props.id === undefined) {
     console.warn(
       "ListItem is missing an explicit id prop. Provide a stable id so pointed/selected state survives search reordering.",
@@ -1232,8 +1325,6 @@ const ListItemVoid = () => {
   return null;
 };
 const ListItemReal = (props) => {
-  const defaultRef = useRef(null);
-  props.ref = props.ref || defaultRef;
   const { ref, id, hidden, highlight, children, ...rest } = props;
   const pendingScrollRef = useContext(PendingScrollRefContext);
   const pendingScroll = pendingScrollRef.current;
@@ -1371,65 +1462,6 @@ export const ListItemGroup = ({
         </GroupItemTrackerContext.Provider>
       </ul>
     </ListItem>
-  );
-};
-
-export const ListItemHeader = (props) => {
-  const defaultRef = useRef(null);
-  const ref = props.ref || defaultRef;
-  useDisplayedLayoutEffect(
-    ref,
-    (headerEl) => {
-      const listContainerEl = headerEl.closest(".navi_list_container");
-      const rect = headerEl.getBoundingClientRect();
-      listContainerEl.style.setProperty(
-        "--list-header-height",
-        `${rect.height}px`,
-      );
-      listContainerEl.style.setProperty(
-        "--list-header-width",
-        `${rect.width}px`,
-      );
-    },
-    [],
-  );
-
-  return (
-    <ListItem
-      {...props}
-      ref={ref}
-      role="presentation"
-      baseClassName="navi_list_item_header"
-    />
-  );
-};
-export const ListItemFooter = (props) => {
-  const defaultRef = useRef(null);
-  const ref = props.ref || defaultRef;
-  useDisplayedLayoutEffect(
-    ref,
-    (footerEl) => {
-      const listContainerEl = footerEl.closest(".navi_list_container");
-      const rect = footerEl.getBoundingClientRect();
-      listContainerEl.style.setProperty(
-        "--list-footer-height",
-        `${rect.height}px`,
-      );
-      listContainerEl.style.setProperty(
-        "--list-footer-width",
-        `${rect.width}px`,
-      );
-    },
-    [],
-  );
-
-  return (
-    <ListItem
-      {...props}
-      ref={ref}
-      role="presentation"
-      baseClassName="navi_list_item_footer"
-    />
   );
 };
 
