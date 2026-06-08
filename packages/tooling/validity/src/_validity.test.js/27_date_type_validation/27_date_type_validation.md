@@ -1,7 +1,7 @@
-# [day type validation](../../validity.test.js)
+# [date type validation](../../validity.test.js)
 
 ```js
-const [validity, applyOn] = createValidity({ type: "day" });
+const [validity, applyOn] = createValidity({ type: "date" });
 const run = (value) => {
   applyOn(value);
   return structuredClone(validity);

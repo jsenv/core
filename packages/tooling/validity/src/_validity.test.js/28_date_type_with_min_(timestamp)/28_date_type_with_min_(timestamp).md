@@ -1,9 +1,9 @@
-# [day type with min (timestamp)](../../validity.test.js)
+# [date type with min (timestamp)](../../validity.test.js)
 
 ```js
 const today = new Date(2024, 5, 15); // 2024-06-15 local
 const [validity, applyOn] = createValidity({
-  type: "day",
+  type: "date",
   min: today.getTime(),
 });
 const run = (value) => {

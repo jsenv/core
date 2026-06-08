@@ -345,8 +345,11 @@ const TYPE_VALIDATORS = {
     }
   },
   date: (value) => {
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return ""; // timestamp
+    }
     if (typeof value !== "string") {
-      return `must be a string`;
+      return `must be a string in YYYY-MM-DD format or a timestamp`;
     }
     const dateRegex = /^(\d{4})-(\d{2})-(\d{2})$/;
     const match = dateRegex.exec(value);
@@ -377,34 +380,6 @@ const TYPE_VALIDATORS = {
     const timeRegex = /^(?:[01]?[0-9]|2[0-3]):[0-5][0-9](?::[0-5][0-9])?$/;
     if (!timeRegex.test(value)) {
       return `must be in HH:MM or HH:MM:SS format`;
-    }
-    return "";
-  },
-  day: (value) => {
-    if (typeof value === "number" && Number.isFinite(value)) {
-      return ""; // timestamp
-    }
-    if (value instanceof Date) {
-      return isNaN(value.getTime()) ? `must be a valid date` : "";
-    }
-    if (typeof value !== "string") {
-      return `must be a string in YYYY-MM-DD format or a timestamp`;
-    }
-    const dateRegex = /^(\d{4})-(\d{2})-(\d{2})$/;
-    const match = dateRegex.exec(value);
-    if (!match) {
-      return `must be in YYYY-MM-DD format`;
-    }
-    const year = parseInt(match[1], 10);
-    const month = parseInt(match[2], 10);
-    const day = parseInt(match[3], 10);
-    const date = new Date(year, month - 1, day);
-    if (
-      date.getFullYear() !== year ||
-      date.getMonth() !== month - 1 ||
-      date.getDate() !== day
-    ) {
-      return `must be a valid date`;
     }
     return "";
   },
@@ -604,7 +579,7 @@ const MIN_RULE = {
       return null;
     }
     const type = ruleConfig.type;
-    if (type === "day" || type === "month" || type === "datetime") {
+    if (type === "date" || type === "month" || type === "datetime") {
       const valueMs = toMs(value, type);
       const minMs = toMs(min, type);
       if (valueMs === null || minMs === null) {
@@ -638,7 +613,7 @@ const MAX_RULE = {
       return null;
     }
     const type = ruleConfig.type;
-    if (type === "day" || type === "month" || type === "datetime") {
+    if (type === "date" || type === "month" || type === "datetime") {
       const valueMs = toMs(value, type);
       const maxMs = toMs(max, type);
       if (valueMs === null || maxMs === null) {
@@ -739,7 +714,7 @@ const STEP_RULE = {
 // Converts a temporal value (string YYYY-MM-DD, YYYY-MM, timestamp, or Date) to ms
 const toMs = (value, type) => {
   if (typeof value === "number" && Number.isFinite(value)) {
-    if (type === "day") {
+    if (type === "date") {
       // Normalize to start of local day
       const d = new Date(value);
       return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
@@ -754,7 +729,7 @@ const toMs = (value, type) => {
     return isNaN(value.getTime()) ? null : value.getTime();
   }
   if (typeof value === "string") {
-    if (type === "day" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    if (type === "date" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
       const d = new Date(`${value}T00:00:00`);
       return isNaN(d.getTime()) ? null : d.getTime();
     }
@@ -780,7 +755,7 @@ const fromMs = (ms, originalValue, type) => {
     return d;
   }
   // string
-  if (type === "day") {
+  if (type === "date") {
     const yyyy = d.getFullYear();
     const mm = String(d.getMonth() + 1).padStart(2, "0");
     const dd = String(d.getDate()).padStart(2, "0");
@@ -797,7 +772,7 @@ const fromMs = (ms, originalValue, type) => {
 const formatTemporalBound = (value, type) => {
   if (typeof value === "number") {
     const d = new Date(value);
-    if (type === "day") {
+    if (type === "date") {
       return d.toLocaleDateString();
     }
     if (type === "month") {

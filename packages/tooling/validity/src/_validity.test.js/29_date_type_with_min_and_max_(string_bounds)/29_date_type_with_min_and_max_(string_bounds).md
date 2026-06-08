@@ -1,8 +1,8 @@
-# [day type with min and max (string bounds)](../../validity.test.js)
+# [date type with min and max (string bounds)](../../validity.test.js)
 
 ```js
 const [validity, applyOn] = createValidity({
-  type: "day",
+  type: "date",
   min: "2024-01-01",
   max: "2024-12-31",
 });

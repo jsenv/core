@@ -502,8 +502,8 @@ await snapshotTests(import.meta.url, ({ test }) => {
     };
   });
 
-  test("day type validation", () => {
-    const [validity, applyOn] = createValidity({ type: "day" });
+  test("date type validation", () => {
+    const [validity, applyOn] = createValidity({ type: "date" });
     const run = (value) => {
       applyOn(value);
       return structuredClone(validity);
@@ -518,10 +518,10 @@ await snapshotTests(import.meta.url, ({ test }) => {
     };
   });
 
-  test("day type with min (timestamp)", () => {
+  test("date type with min (timestamp)", () => {
     const today = new Date(2024, 5, 15); // 2024-06-15 local
     const [validity, applyOn] = createValidity({
-      type: "day",
+      type: "date",
       min: today.getTime(),
     });
     const run = (value) => {
@@ -535,9 +535,9 @@ await snapshotTests(import.meta.url, ({ test }) => {
     };
   });
 
-  test("day type with min and max (string bounds)", () => {
+  test("date type with min and max (string bounds)", () => {
     const [validity, applyOn] = createValidity({
-      type: "day",
+      type: "date",
       min: "2024-01-01",
       max: "2024-12-31",
     });
