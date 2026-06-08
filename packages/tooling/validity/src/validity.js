@@ -70,13 +70,27 @@ export const createValidity = (ruleConfig) => {
   const validity = {};
 
   const ruleSet = new Set();
+  let effectiveRuleConfig;
   setup: {
     const { type, ...rest } = ruleConfig;
     const typeDefaults = type ? TYPE_DEFAULTS[type] || {} : {};
-    const effectiveRuleConfig = {
+    effectiveRuleConfig = {
       ...typeDefaults,
       ...rest,
     };
+    if (DURATION_TYPES.has(type)) {
+      for (const key of ["min", "max", "step"]) {
+        if (typeof effectiveRuleConfig[key] === "string") {
+          const parsed = parseTimeStringForDurationType(
+            effectiveRuleConfig[key],
+            type,
+          );
+          if (parsed !== null) {
+            effectiveRuleConfig[key] = parsed;
+          }
+        }
+      }
+    }
     const { min, max, step, oneOf, ...unknown } = effectiveRuleConfig;
     if (Object.keys(unknown).length > 0) {
       console.warn(
@@ -152,7 +166,7 @@ export const createValidity = (ruleConfig) => {
     let validSuggestion = null;
 
     for (const { key, rule, ruleValue } of ruleSet) {
-      const result = rule.applyOn(ruleValue, value, ruleConfig);
+      const result = rule.applyOn(ruleValue, value, effectiveRuleConfig);
       if (!result) {
         // valid
         validity[key] = undefined;
@@ -177,7 +191,11 @@ export const createValidity = (ruleConfig) => {
       let valueCandidate = autoFixResult;
       let candidateIsValid = true;
       for (const { rule, ruleValue } of ruleSet) {
-        const result = rule.applyOn(ruleValue, valueCandidate, ruleConfig);
+        const result = rule.applyOn(
+          ruleValue,
+          valueCandidate,
+          effectiveRuleConfig,
+        );
         if (!result) {
           // This rule passes, keep trying all rules
           continue;
@@ -208,7 +226,11 @@ export const createValidity = (ruleConfig) => {
       // (in case nested autofix is actually incompatible with all rules)
       let suggestionIsValid = true;
       for (const { rule, ruleValue } of ruleSet) {
-        const result = rule.applyOn(ruleValue, valueCandidate, ruleConfig);
+        const result = rule.applyOn(
+          ruleValue,
+          valueCandidate,
+          effectiveRuleConfig,
+        );
         if (result) {
           suggestionIsValid = false;
           break;
@@ -241,6 +263,35 @@ const TYPE_DEFAULTS = {
   date: {},
   month: {},
   datetime: {},
+};
+
+const DURATION_TYPES = new Set(["hour", "minute", "second"]);
+
+// Parses a time string "HH:MM" or "H:MM" into a numeric duration for the given type:
+//   minute → total minutes (e.g. "01:30" → 90)
+//   hour   → total hours   (e.g. "01:30" → 1.5)
+//   second → total seconds (e.g. "01:30" → 90)
+// Returns null if the string is not a valid time string.
+const parseTimeStringForDurationType = (str, type) => {
+  if (typeof str !== "string") {
+    return null;
+  }
+  const match = /^(\d+):(\d{2})$/.exec(str);
+  if (!match) {
+    return null;
+  }
+  const left = parseInt(match[1], 10);
+  const right = parseInt(match[2], 10);
+  if (type === "minute") {
+    return left * 60 + right;
+  }
+  if (type === "hour") {
+    return left + right / 60;
+  }
+  if (type === "second") {
+    return left * 60 + right;
+  }
+  return null;
 };
 
 const TYPE_RULE = {
@@ -736,6 +787,7 @@ const STEP_RULE = {
         }
 
         const fixedValue = min + roundedRatio * step;
+        debugger;
         return Number(fixedValue.toFixed(maxAllowedDecimals));
       },
     };

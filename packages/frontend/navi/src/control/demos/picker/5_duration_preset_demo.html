@@ -56,6 +56,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useSignal } from "@preact/signals";
+      import { stateSignal, route, setupRoutes } from "@jsenv/navi";
       import {
         Box,
         Field,
@@ -67,6 +68,20 @@
         Time,
         NaviDebug,
       } from "@jsenv/navi";
+
+      const durationSignal = stateSignal(90, {
+        id: "duration",
+        type: "minute",
+        min: "00:15",
+        max: "05:00",
+        step: "00:05",
+        persists: true,
+      });
+
+      const DEMO_ROUTE = route("", {
+        searchParams: { duration: durationSignal },
+      });
+      setupRoutes([DEMO_ROUTE]);
 
       const PRESET_DURATIONS = [60, 90, 120];
 
@@ -116,9 +131,9 @@
           >
             <Picker
               type="number"
-              min={15}
-              max={240}
-              step={15}
+              min={durationSignal.options.min}
+              min={durationSignal.options.max}
+              step={durationSignal.options.step}
               placeholder="Autre"
               value={isCustom ? value : undefined}
               uiAction={(v) => {
@@ -132,7 +147,6 @@
       // ── DurationField ─────────────────────────────────────────────────────
 
       const DurationField = () => {
-        const durationSignal = useSignal(90);
         const value = durationSignal.value;
 
         return (
@@ -149,7 +163,6 @@
               uiAction={(v) => {
                 durationSignal.value = Number(v);
               }}
-              border="none"
             >
               {PRESET_DURATIONS.map((minutes, i) => (
                 <MinuteOption

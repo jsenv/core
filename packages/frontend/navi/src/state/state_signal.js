@@ -450,24 +450,26 @@ export const stateSignal = (defaultValue, options = {}) => {
   };
 
   // Store signal with its options (used by route_pattern.js)
+  const effectiveOptions = {
+    staticDefaultValue,
+    getDefaultValue,
+    dynamicDefaultSignal,
+    isCustomValue,
+    isDefaultValue,
+    type,
+    step,
+    min,
+    max,
+    persists,
+    localStorageKey,
+    debug,
+    ...options,
+  };
   globalSignalRegistry.set(signalIdString, {
     signal: facadeSignal,
-    options: {
-      staticDefaultValue,
-      getDefaultValue,
-      dynamicDefaultSignal,
-      isCustomValue,
-      isDefaultValue,
-      type,
-      step,
-      min,
-      max,
-      persists,
-      localStorageKey,
-      debug,
-      ...options,
-    },
+    options: effectiveOptions,
   });
+  facadeSignal.options = effectiveOptions;
   if (debug) {
     console.debug(
       `[stateSignal:${signalIdString}] created with initial value=${facadeSignal.value}`,
