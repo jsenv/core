@@ -83,6 +83,88 @@
       });
       setupRoutes([DEMO_ROUTE]);
 
+      const App = () => {
+        const formResultSignal = useSignal(null);
+
+        return (
+          <Box flex="y" spacing="l">
+            <div class="demo-section">
+              <h2>Duration selector — presets + custom</h2>
+              <p class="desc">
+                3 preset options (60, 90, 120 min) and a "custom" option with a
+                time Picker. The custom item is selected when the current value
+                is not one of the presets. The Picker opens to let the user
+                enter any duration. Everything is wired in a Form.
+              </p>
+              <Form
+                action={(values) => {
+                  formResultSignal.value = values;
+                }}
+                flex="y"
+                spacing="m"
+                alignX="start"
+              >
+                <DurationField />
+                <Button type="submit">Submit</Button>
+              </Form>
+              {formResultSignal.value !== null ? (
+                <div class="form-result">
+                  Form submitted:{" "}
+                  {JSON.stringify(formResultSignal.value, null, 2)}
+                </div>
+              ) : (
+                <div class="form-result" style="color:#aaa">
+                  Submit the form to see values…
+                </div>
+              )}
+            </div>
+          </Box>
+        );
+      };
+
+      // ── DurationField ─────────────────────────────────────────────────────
+
+      const DurationField = () => {
+        const value = durationSignal.value;
+
+        return (
+          <Field vertical>
+            <Label>Durée</Label>
+            <List
+              selectable
+              horizontal
+              spacing="s"
+              id="duration"
+              name="duration"
+              border="none"
+              required
+              value={value}
+              uiAction={(v) => {
+                durationSignal.value = Number(v);
+              }}
+            >
+              {PRESET_DURATIONS.map((minutes, i) => (
+                <MinuteOption
+                  key={minutes}
+                  index={i}
+                  id={minutes}
+                  value={minutes}
+                >
+                  {minutes}
+                </MinuteOption>
+              ))}
+              <CustomDurationOption
+                index={PRESET_DURATIONS.length}
+                value={value}
+                onSelect={(v) => {
+                  durationSignal.value = v;
+                }}
+              />
+            </List>
+          </Field>
+        );
+      };
+
       const PRESET_DURATIONS = [60, 90, 120];
 
       const isCustomDuration = (value) => {
@@ -144,88 +226,7 @@
         );
       };
 
-      // ── DurationField ─────────────────────────────────────────────────────
-
-      const DurationField = () => {
-        const value = durationSignal.value;
-
-        return (
-          <Field vertical>
-            <Label>Durée</Label>
-            <List
-              selectable
-              horizontal
-              spacing="s"
-              id="duration"
-              name="duration"
-              required
-              value={value}
-              uiAction={(v) => {
-                durationSignal.value = Number(v);
-              }}
-            >
-              {PRESET_DURATIONS.map((minutes, i) => (
-                <MinuteOption
-                  key={minutes}
-                  index={i}
-                  id={minutes}
-                  value={minutes}
-                >
-                  {minutes}
-                </MinuteOption>
-              ))}
-              <CustomDurationOption
-                index={PRESET_DURATIONS.length}
-                value={value}
-                onSelect={(v) => {
-                  durationSignal.value = v;
-                }}
-              />
-            </List>
-          </Field>
-        );
-      };
-
       // ── App ───────────────────────────────────────────────────────────────
-
-      const App = () => {
-        const formResultSignal = useSignal(null);
-
-        return (
-          <Box flex="y" spacing="l">
-            <div class="demo-section">
-              <h2>Duration selector — presets + custom</h2>
-              <p class="desc">
-                3 preset options (60, 90, 120 min) and a "custom" option with a
-                time Picker. The custom item is selected when the current value
-                is not one of the presets. The Picker opens to let the user
-                enter any duration. Everything is wired in a Form.
-              </p>
-              <Form
-                action={(values) => {
-                  formResultSignal.value = values;
-                }}
-                flex="y"
-                spacing="m"
-                alignX="start"
-              >
-                <DurationField />
-                <Button type="submit">Submit</Button>
-              </Form>
-              {formResultSignal.value !== null ? (
-                <div class="form-result">
-                  Form submitted:{" "}
-                  {JSON.stringify(formResultSignal.value, null, 2)}
-                </div>
-              ) : (
-                <div class="form-result" style="color:#aaa">
-                  Submit the form to see values…
-                </div>
-              )}
-            </div>
-          </Box>
-        );
-      };
 
       render(
         <NaviDebug debugAction debugInteraction>
