@@ -62,6 +62,7 @@
         Field,
         Label,
         List,
+        Input,
         Picker,
         Form,
         Button,
@@ -71,6 +72,14 @@
 
       const durationSignal = stateSignal(90, {
         id: "duration",
+        type: "minute",
+        min: "00:15",
+        max: "05:00",
+        step: "00:05",
+        persists: true,
+      });
+      const customDurationSignal = stateSignal(undefined, {
+        id: "customDuration",
         type: "minute",
         min: "00:15",
         max: "05:00",
@@ -126,6 +135,7 @@
 
       const DurationField = () => {
         const value = durationSignal.value;
+        const isCustom = isCustomDuration(value);
 
         return (
           <Field vertical>
@@ -140,7 +150,7 @@
               required
               value={value}
               uiAction={(v) => {
-                durationSignal.value = Number(v);
+                durationSignal.value = v;
               }}
             >
               {PRESET_DURATIONS.map((minutes, i) => (
@@ -155,10 +165,7 @@
               ))}
               <CustomDurationOption
                 index={PRESET_DURATIONS.length}
-                value={value}
-                onSelect={(v) => {
-                  durationSignal.value = v;
-                }}
+                selected={isCustom}
               />
             </List>
           </Field>
@@ -194,32 +201,34 @@
       // A List.Item that is "selected" when the current value is not a preset.
       // It embeds a Picker so the user can type any minute value.
 
-      const CustomDurationOption = ({ value, onSelect, index }) => {
-        const isCustom = isCustomDuration(value);
-        const customValue = isCustom ? value : undefined;
+      const CustomDurationOption = ({ selected, index }) => {
+        const customDuration = customDurationSignal.value;
 
         return (
           <List.Item
+            selectable
+            selectableArea="manual"
             index={index}
             id="custom"
-            value={customValue}
-            selected={isCustom}
+            value={customDuration}
+            selected={selected}
             borderRadius="s"
             borderWidth="1"
             minWidth="64"
-            paddingX="xs"
-            paddingY="xs"
+            paddingX="m"
+            paddingY="s"
             alignX="center"
           >
-            <Picker
-              type="navi_minute"
+            Autre
+            <Input
+              type="number"
               min={durationSignal.options.min}
-              min={durationSignal.options.max}
+              max={durationSignal.options.max}
               step={durationSignal.options.step}
-              placeholder="Autre"
-              value={isCustom ? value : undefined}
+              placeholder="Durée en minutes"
+              value={customDuration}
               uiAction={(v) => {
-                onSelect(Number(v));
+                customDurationSignal.value = v;
               }}
             />
           </List.Item>
