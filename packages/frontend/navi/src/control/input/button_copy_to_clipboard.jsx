@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 
-import { Box } from "../box/box.jsx";
-import { Icon } from "../text/icon.jsx";
+import { Box } from "../../box/box.jsx";
+import { Icon } from "../../text/icon.jsx";
 import { Button } from "./button.jsx";
 
 const css = /* css */ `
