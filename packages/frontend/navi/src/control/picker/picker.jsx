@@ -3,7 +3,10 @@ import { useContext, useRef } from "preact/hooks";
 import { Box } from "@jsenv/navi/src/box/box.jsx";
 import { ChevronDownSvg } from "@jsenv/navi/src/graphic/icons/chevron_updown_svg.jsx";
 import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.jsx";
-import { createComponentResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
+import {
+  createComponentResolver,
+  useNextResolver,
+} from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
 import { useControlProps } from "../control_hooks.jsx";
 import { asControlHostValue } from "../control_value.js";
@@ -268,14 +271,6 @@ const css = /* css */ `
  *   children    — content to display inside the popup (enables popover/dialog mode)
  *   mode        — "popover" or "dialog"; auto-detected from screen size when omitted
  */
-export const Picker = (props) => {
-  const defaultRef = useRef(null);
-  props.ref = props.ref || defaultRef;
-  const picker = renderPicker(props);
-
-  return picker;
-};
-
 const PickerButton = (props) => {
   import.meta.css = css;
   resolveInputProps(props);
@@ -432,7 +427,15 @@ const PickerDefaultUI = () => {
   return <PickerValue>{value}</PickerValue>;
 };
 
-const renderPicker = createComponentResolver([
+const PickerFirstResolver = (props) => {
+  const Next = useNextResolver();
+  const defaultRef = useRef(null);
+  props.ref = props.ref || defaultRef;
+
+  return <Next {...props} />;
+};
+export const Picker = createComponentResolver([
+  PickerFirstResolver,
   ...pickerResolvers,
   PickerButton,
 ]);

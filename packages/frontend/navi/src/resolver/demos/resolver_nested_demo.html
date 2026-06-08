@@ -299,7 +299,7 @@
         );
       };
 
-      const renderA = createComponentResolver([
+      const A = createComponentResolver([
         WrapperResolverA,
         IconResolverA,
         Leaf,
@@ -369,14 +369,14 @@
         );
       };
 
-      const renderB = createComponentResolver([
+      const B = createComponentResolver([
         BadgeResolverB,
         TooltipResolverB,
         Leaf,
       ]);
 
       // ── A resolver that contains a B render ──────────────────────────────────
-      // Tests that when A's resolver calls renderB inside its render,
+      // Tests that when A's resolver renders <B> inside its render,
       // B's resolvers get B's Next (not A's) — no cross-contamination.
       const ContainerResolverA = (props) => {
         const Next = useNextResolver();
@@ -410,17 +410,17 @@
               <div style="margin:8px 0 4px;font-size:11px;color:#6c7086">
                 inner B (independent):
               </div>
-              {renderB({
-                label: "inner-B target",
-                badge: innerBadge,
-                tooltip: innerTooltip,
-              })}
+              <B
+                label="inner-B target"
+                badge={innerBadge}
+                tooltip={innerTooltip}
+              />
             </div>
           </div>
         );
       };
 
-      const renderAWithContainer = createComponentResolver([
+      const AWithContainer = createComponentResolver([
         ContainerResolverA,
         IconResolverA,
         Leaf,
@@ -452,16 +452,16 @@
 
             <CaseSection
               title="Case 1 — Resolver A only"
-              code="renderA({ label: 'hello', icon: '🌟' })"
+              code="<A label='hello' icon='🌟' />"
             >
-              {renderA({ label: "hello", icon: "🌟" })}
+              <A label="hello" icon="🌟" />
             </CaseSection>
 
             <CaseSection
               title="Case 2 — Resolver B only"
-              code="renderB({ label: 'world', badge: '3', tooltip: 'hi' })"
+              code="<B label='world' badge='3' tooltip='hi' />"
             >
-              {renderB({ label: "world", badge: "3", tooltip: "hi" })}
+              <B label="world" badge="3" tooltip="hi" />
             </CaseSection>
 
             <CaseSection
@@ -478,12 +478,13 @@
                   {case3Mode === "nested" ? "A icon branch" : "A wrapping B"}
                 </button>
               </div>
-              {case3Mode === "nested"
-                ? renderA({
-                    label: "outer-A",
-                    children: renderB({ label: "inner-B", badge: "!" }),
-                  })
-                : renderA({ label: "icon mode", icon: "🔄" })}
+              {case3Mode === "nested" ? (
+                <A label="outer-A">
+                  <B label="inner-B" badge="!" />
+                </A>
+              ) : (
+                <A label="icon mode" icon="🔄" />
+              )}
             </CaseSection>
 
             <CaseSection
@@ -497,12 +498,12 @@
                   Toggle inner B badge
                 </button>
               </div>
-              {renderAWithContainer({
-                label: "outer-A",
-                icon: "🔥",
-                innerBadge: showBadge ? "99" : undefined,
-                innerTooltip: "from B",
-              })}
+              <AWithContainer
+                label="outer-A"
+                icon="🔥"
+                innerBadge={showBadge ? "99" : undefined}
+                innerTooltip="from B"
+              />
             </CaseSection>
           </div>
         );

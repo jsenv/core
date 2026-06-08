@@ -258,7 +258,7 @@
         );
       };
 
-      const renderButton = createComponentResolver([
+      const ResolvedButton = createComponentResolver([
         WrapperResolver,
         IconResolver,
         Button,
@@ -293,11 +293,11 @@
             </p>
 
             <CaseSection title="Case 1 — no resolver matches → plain Button">
-              {renderButton({ label: "Hello" })}
+              <ResolvedButton label="Hello" />
             </CaseSection>
 
             <CaseSection title="Case 2 — IconResolver matches">
-              {renderButton({ label: "Save", icon: "💾" })}
+              <ResolvedButton label="Save" icon="💾" />
             </CaseSection>
 
             <CaseSection
@@ -320,15 +320,15 @@
                   component renders
                 </span>
               </div>
-              {case3Mode === "wrapper"
-                ? renderButton({
-                    children: (
-                      <span style="color:#4338ca;font-weight:bold">
-                        inner content
-                      </span>
-                    ),
-                  })
-                : renderButton({ label: "Switched!", icon: "🔀" })}
+              {case3Mode === "wrapper" ? (
+                <ResolvedButton>
+                  <span style="color:#4338ca;font-weight:bold">
+                    inner content
+                  </span>
+                </ResolvedButton>
+              ) : (
+                <ResolvedButton label="Switched!" icon="🔀" />
+              )}
             </CaseSection>
 
             <CaseSection
@@ -346,10 +346,9 @@
                   prop → Button changes
                 </span>
               </div>
-              {renderButton({
-                children: "wrapper content",
-                highlight: boostActive,
-              })}
+              <ResolvedButton highlight={boostActive}>
+                wrapper content
+              </ResolvedButton>
             </CaseSection>
           </div>
         );

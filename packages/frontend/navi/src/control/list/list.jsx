@@ -358,18 +358,6 @@ const css = /* css */ `
  *                          min-height so filtering cannot collapse the layout.
  *   ...rest              — forwarded to the outer scroll container <Box>
  */
-export const List = (props) => {
-  const refDefault = useRef(null);
-  props.ref = props.ref || refDefault;
-  const idDefault = useId();
-  props.id = props.id || idDefault;
-  const listVnode = renderList(props);
-
-  return listVnode;
-};
-// defined after ListUI (referenced in the array, must be declared first)
-let renderList;
-
 const ListUI = (props) => {
   import.meta.css = css;
   const {
@@ -514,7 +502,20 @@ const ListUI = (props) => {
     </Box>
   );
 };
-renderList = createComponentResolver([ListSelectableResolver, ListUI]);
+const ListFirstResolver = (props) => {
+  const Next = useNextResolver();
+  const refDefault = useRef(null);
+  props.ref = props.ref || refDefault;
+  const idDefault = useId();
+  props.id = props.id || idDefault;
+
+  return <Next {...props} />;
+};
+export const List = createComponentResolver([
+  ListFirstResolver,
+  ListSelectableResolver,
+  ListUI,
+]);
 const ListContent = ({
   role,
   fallback,
@@ -1160,16 +1161,6 @@ const AfterFiller = ({ virtualItemSizeSignal, renderWindowEnd, tracker }) => {
  *   highlight — array of [start, end] ranges to highlight via CSS Highlight API
  *   ...rest   — forwarded to the rendered <li> element
  */
-export const ListItem = (props) => {
-  const defaultRef = useRef(null);
-  props.ref = props.ref || defaultRef;
-
-  const listItemVnode = renderListItem(props);
-  return listItemVnode;
-};
-// defined after ListItemUI (referenced in the array, must be declared first)
-let renderListItem;
-
 const ListItemPresentation = (props) => {
   return <Box as="li" {...props} />;
 };
@@ -1394,7 +1385,15 @@ const LIST_ITEM_STYLE_CSS_VARS = {
 };
 export const LIST_ITEM_PSEUDO_CLASSES = [];
 const LIST_ITEM_PSEUDO_ELEMENTS = ["::highlight"];
-renderListItem = createComponentResolver([
+const ListItemFirstResolver = (props) => {
+  const Next = useNextResolver();
+  const defaultRef = useRef(null);
+  props.ref = props.ref || defaultRef;
+
+  return <Next {...props} />;
+};
+export const ListItem = createComponentResolver([
+  ListItemFirstResolver,
   ListItemSelectableResolver,
   ListItemHeaderOrFooterResolver,
   ListItemPresentationResolver,

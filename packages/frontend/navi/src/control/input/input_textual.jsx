@@ -283,14 +283,6 @@ const css = /* css */ `
   }
 `;
 
-export const InputTextual = (props) => {
-  const defaultRef = useRef(null);
-  props.ref = props.ref || defaultRef;
-  const input = renderInput(props);
-
-  return input;
-};
-
 const InputTextualWithListResolver = (props) => {
   const Next = useNextResolver();
 
@@ -331,13 +323,6 @@ const InputHeadlessResolver = (props) => {
   }
   return <Next {...props} />;
 };
-
-const renderInput = createComponentResolver([
-  InputTextualWithListResolver,
-  InputTypeResolver,
-  InputHeadlessResolver,
-  InputTextualControlInterface,
-]);
 
 const InputTextualHeadless = (props) => {
   const [inputProps, remainingProps] = useInputTextualProps(props);
@@ -411,6 +396,19 @@ const InputTextualControlInterface = (props) => {
     </Box>
   );
 };
+const InputTextualFacade = (props) => {
+  const Next = useNextResolver();
+  const defaultRef = useRef(null);
+  props.ref = props.ref || defaultRef;
+  return <Next {...props} />;
+};
+export const InputTextual = createComponentResolver([
+  InputTextualFacade,
+  InputTextualWithListResolver,
+  InputTypeResolver,
+  InputHeadlessResolver,
+  InputTextualControlInterface,
+]);
 const RealInput = (props) => {
   const inputProps = useContext(BoxForwardedPropsContext);
   return (
