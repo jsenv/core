@@ -3,7 +3,9 @@ import { useEffect, useRef, useState } from "preact/hooks";
 
 import { ChevronDownSvg } from "@jsenv/navi/src/graphic/icons/chevron_updown_svg.jsx";
 import { createOnKeyDownForShortcuts } from "@jsenv/navi/src/keyboard/keyboard_shortcuts.js";
+import { Icon } from "@jsenv/navi/src/text/icon.jsx";
 import { useNextResolver } from "../../resolver/resolver.jsx";
+import { InputRightSlot } from "./input_ui_components.jsx";
 
 export const InputWithSuggestionsResolver = (props) => {
   const Next = useNextResolver();

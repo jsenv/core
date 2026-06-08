@@ -16,7 +16,6 @@
  * - <InputRadio /> for type="radio"
  */
 
-import { createContext } from "preact";
 import { useContext, useId, useRef } from "preact/hooks";
 
 import { Box, BoxForwardedPropsContext } from "@jsenv/navi/src/box/box.jsx";
@@ -32,9 +31,10 @@ import {
 } from "../../resolver/resolver.jsx";
 import { useControlProps } from "../control_hooks.jsx";
 import { asControlHostValue } from "../control_value.js";
-import { Label } from "../field.jsx";
 import { triggerStringAction } from "../string_actions.js";
 import { dispatchRequestInteraction } from "../validation/custom_constraint_validation.js";
+import { InputTextualContext } from "./input_textual_context.js";
+import { InputLeftSlot, InputRightSlot } from "./input_ui_components.jsx";
 import { InputWithListResolver } from "./input_with_list.jsx";
 import { InputWithSuggestionsResolver } from "./input_with_suggestions.jsx";
 import { resolveInputProps } from "./resolve_input_props.js";
@@ -336,8 +336,7 @@ const useInputTextualProps = (props) => {
   return [controlProps, remainingProps, ControlChildrenWrapper];
 };
 
-const InputNativeContext = createContext(null);
-const InputTextualControlInterface = (props) => {
+const InputTextualUI = (props) => {
   import.meta.css = css;
   const { ui, discrete } = props;
   const [inputProps, remainingProps, ControlChildrenWrapper] =
@@ -350,9 +349,9 @@ const InputTextualControlInterface = (props) => {
   const loading = basePseudoState[":-navi-loading"];
   const childrenWithContext = (
     <ControlChildrenWrapper>
-      <InputNativeContext.Provider value={{ id, readOnly, disabled }}>
+      <InputTextualContext.Provider value={{ id, readOnly, disabled }}>
         {children || ui}
-      </InputNativeContext.Provider>
+      </InputTextualContext.Provider>
     </ControlChildrenWrapper>
   );
 
@@ -396,7 +395,7 @@ export const InputTextual = createComponentResolver([
   InputWithSuggestionsResolver,
   InputTypeResolver,
   InputHeadlessResolver,
-  InputTextualControlInterface,
+  InputTextualUI,
 ]);
 
 const RealInput = (props) => {
@@ -463,58 +462,14 @@ const InputPseudoClasses = [
   ":-navi-expanded",
 ];
 const InputPseudoElements = ["::-navi-loader"];
-const InputSlot = ({ side, onClick, hideWhileEmpty, ...props }) => {
-  const ctx = useContext(InputNativeContext);
-  const { id, readOnly, disabled } = ctx;
-
-  return (
-    <Label
-      htmlFor={id}
-      className="navi_input_slot"
-      disabled={disabled}
-      readOnly={readOnly}
-      data-readonly={readOnly}
-      data-disabled={disabled}
-      data-left={side === "left" ? "" : undefined}
-      data-right={side === "right" ? "" : undefined}
-      data-hide-while-empty={hideWhileEmpty ? "" : undefined}
-      inline
-      flex
-      align="center"
-      onMouseDown={(e) => {
-        // Only prevent focus from leaving when the input already has focus.
-        // If the input is not focused, let the mousedown proceed normally so
-        // the slot element (e.g. a clear button) can receive focus itself.
-        const inputEl = document.getElementById(id);
-        if (inputEl && inputEl === document.activeElement) {
-          e.preventDefault();
-        }
-      }}
-      onClick={(e) => {
-        onClick?.(e);
-        const input = document.getElementById(id);
-        const allowed = dispatchRequestInteraction(input, e);
-        if (!allowed) {
-          e.preventDefault();
-        }
-      }}
-      {...props}
-    />
-  );
-};
-export const InputLeftSlot = (props) => {
-  return <InputSlot {...props} side="left" />;
-};
-export const InputRightSlot = (props) => {
-  return <InputSlot {...props} side="right" />;
-};
 
 const InputSearch = (props) => {
   const Next = useNextResolver();
+
   return <Next ui={<InputSearchUI icon={props.icon} />} {...props} />;
 };
 const InputSearchUI = ({ icon }) => {
-  const ctx = useContext(InputNativeContext);
+  const ctx = useContext(InputTextualContext);
   const { id } = ctx;
 
   return (
@@ -546,6 +501,7 @@ const InputSearchUI = ({ icon }) => {
 };
 const InputEmail = (props) => {
   const Next = useNextResolver();
+
   return <Next ui={<InputEmailUI />} {...props} />;
 };
 const InputEmailUI = ({ icon }) => {
@@ -578,13 +534,16 @@ const InputTelUI = ({ icon }) => {
 };
 const InputNumber = (props) => {
   const Next = useNextResolver();
+
   return <Next {...props} />;
 };
 const InputColor = (props) => {
   const Next = useNextResolver();
+
   return <Next {...props} />;
 };
 const InputDatetimeLocal = (props) => {
   const Next = useNextResolver();
+
   return <Next {...props} />;
 };
