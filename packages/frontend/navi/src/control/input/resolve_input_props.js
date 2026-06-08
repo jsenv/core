@@ -47,9 +47,9 @@ export const resolveInputProps = (props) => {
 // domain-specific wording instead of the generic "Ce nombre doit être...".
 const NAVI_NUMBER_TYPE_DEFAULTS = {
   navi_time: { type: "time", min: 0, max: 24 * 3600 - 1, step: 1 },
-  navi_hours: { type: "number", min: 0, max: 23, step: 1 },
-  navi_minutes: { type: "number", min: 0, max: 59, step: 1 },
-  navi_seconds: { type: "number", min: 0, max: 59, step: 1 },
+  navi_hour: { type: "number", min: 0, max: 23, step: 1 },
+  navi_minute: { type: "number", min: 0, max: 59, step: 1 },
+  navi_second: { type: "number", min: 0, max: 59, step: 1 },
   navi_percentage: { type: "number", min: 0, max: 100, step: 1 },
 };
 

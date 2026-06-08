@@ -221,10 +221,10 @@
           >
             Autre
             <Input
-              type="number"
-              min={durationSignal.options.min}
-              max={durationSignal.options.max}
-              step={durationSignal.options.step}
+              type="navi_minute"
+              min={customDurationSignal.options.min}
+              max={customDurationSignal.options.max}
+              step={customDurationSignal.options.step}
               placeholder="Durée en minutes"
               value={customDuration}
               uiAction={(v) => {
