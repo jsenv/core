@@ -19,6 +19,16 @@ export const resolveInputProps = (props) => {
   const naviTypeDefaults = NAVI_NUMBER_TYPE_DEFAULTS[props.type];
   if (naviTypeDefaults) {
     props["navi-input-type"] = props.type;
+    // Apply formatters for the original navi type before remapping
+    const origMinMaxFormatter = MIN_MAX_FORMATTER_BY_TYPE[props.type];
+    const origStepFormatter = STEP_FORMATTER_BY_TYPE[props.type];
+    if (origMinMaxFormatter) {
+      props.min = origMinMaxFormatter(props.min);
+      props.max = origMinMaxFormatter(props.max);
+    }
+    if (origStepFormatter) {
+      props.step = origStepFormatter(props.step);
+    }
     props.type = naviTypeDefaults.type;
     if (props.min === undefined) {
       props.min = naviTypeDefaults.min;
@@ -51,6 +61,39 @@ const NAVI_NUMBER_TYPE_DEFAULTS = {
   navi_minute: { type: "number", min: 0, max: 59, step: 1 },
   navi_second: { type: "number", min: 0, max: 59, step: 1 },
   navi_percentage: { type: "number", min: 0, max: 100, step: 1 },
+};
+
+// HH:MM → number converters for duration navi types.
+// Used in MIN_MAX_FORMATTER_BY_TYPE and STEP_FORMATTER_BY_TYPE before type remapping.
+const timeStringToMinutes = (value) => {
+  if (typeof value !== "string") {
+    return value;
+  }
+  const m = /^(\d+):(\d{2})$/.exec(value);
+  if (!m) {
+    return value;
+  }
+  return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+};
+const timeStringToHours = (value) => {
+  if (typeof value !== "string") {
+    return value;
+  }
+  const m = /^(\d+):(\d{2})$/.exec(value);
+  if (!m) {
+    return value;
+  }
+  return parseInt(m[1], 10) + parseInt(m[2], 10) / 60;
+};
+const timeStringToSeconds = (value) => {
+  if (typeof value !== "string") {
+    return value;
+  }
+  const m = /^(\d+):(\d{2})$/.exec(value);
+  if (!m) {
+    return value;
+  }
+  return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
 };
 
 const normalizeToDate = (value) => {
@@ -124,6 +167,9 @@ const toInputDatetime = (value) => {
 };
 
 const MIN_MAX_FORMATTER_BY_TYPE = {
+  "navi_minute": timeStringToMinutes,
+  "navi_hour": timeStringToHours,
+  "navi_second": timeStringToSeconds,
   "date": toInputDate,
   "month": toInputMonth,
   "week": toInputWeek,
@@ -133,6 +179,9 @@ const MIN_MAX_FORMATTER_BY_TYPE = {
 };
 
 const STEP_FORMATTER_BY_TYPE = {
+  "navi_minute": timeStringToMinutes,
+  "navi_hour": timeStringToHours,
+  "navi_second": timeStringToSeconds,
   "time": parseStepToSeconds,
   "datetime-local": parseStepToSeconds,
   "datetime": parseStepToSeconds,
