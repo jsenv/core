@@ -67,6 +67,9 @@ export const Time = (props) => {
   if (type === "time") {
     return <TimeTime {...props} />;
   }
+  if (type === "minute") {
+    return <TimeMinute {...props} />;
+  }
   return <TimeRelative {...props} />;
 };
 
@@ -199,6 +202,35 @@ const TimeTime = ({ children, locale, ...props }) => {
     text = children;
   }
 
+  return (
+    <TimeText dateTime={dateTime} {...props}>
+      {text}
+    </TimeText>
+  );
+};
+
+const TimeMinute = ({ children, locale, ...props }) => {
+  const lang = locale || langSignal.value;
+
+  if (children === undefined) {
+    return <TimeText {...props}>--</TimeText>;
+  }
+  let minutes;
+  if (typeof children === "number") {
+    minutes = children;
+  } else {
+    const childrenAsNumber = Number(children);
+    if (isNaN(childrenAsNumber)) {
+      return <TimeText {...props}>{children}</TimeText>;
+    }
+    minutes = childrenAsNumber;
+  }
+
+  const date = new Date(1970, 0, 1, Math.floor(minutes / 60), minutes % 60, 0);
+  const hh = String(date.getHours()).padStart(2, "0");
+  const mm = String(date.getMinutes()).padStart(2, "0");
+  const dateTime = `${hh}:${mm}`;
+  const text = formatTime(date, lang);
   return (
     <TimeText dateTime={dateTime} {...props}>
       {text}
