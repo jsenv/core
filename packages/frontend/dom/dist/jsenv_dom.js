@@ -2240,6 +2240,7 @@ const cssSizeUnitSet = new Set([
   "in",
   "pt",
   "pc",
+  "cap",
 ]);
 const cssUnitSet = new Set([
   ...cssSizeUnitSet,
