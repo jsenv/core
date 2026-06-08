@@ -367,6 +367,17 @@ const TYPO_PROPS = {
       overflowWrap: "normal",
     };
   },
+  lineClamp: (value) => {
+    if (!value) {
+      return null;
+    }
+    return {
+      "overflow": "hidden",
+      "display": "-webkit-box",
+      "-webkit-box-orient": "vertical",
+      "-webkit-line-clamp": value,
+    };
+  },
 };
 const VISUAL_PROPS = {
   outline: PASS_THROUGH,

@@ -6387,7 +6387,7 @@ const applyOnTwoProps = (propA, propB) => {
   };
 };
 
-const FLOW_PROPS = {
+const LAYOUT_PROPS = {
   // all are handled by navi-attributes
   inline: () => {},
   block: () => {},
@@ -6398,12 +6398,8 @@ const FLOW_PROPS = {
   display: PASS_THROUGH, // in case people write "display: none" (even if hidden prop is recommended)
   row: () => {},
   column: () => {},
-
-  // not really related to flow but should be on the container element if any
-  pointerEvents: PASS_THROUGH,
-  viewTransitionName: PASS_THROUGH,
 };
-const OUTER_SPACING_PROPS = {
+const OUTER_PROPS = {
   margin: PASS_THROUGH,
   marginLeft: PASS_THROUGH,
   marginRight: PASS_THROUGH,
@@ -6411,8 +6407,12 @@ const OUTER_SPACING_PROPS = {
   marginBottom: PASS_THROUGH,
   marginX: applyOnTwoCSSProps("marginLeft", "marginRight"),
   marginY: applyOnTwoCSSProps("marginTop", "marginBottom"),
+
+  // not really related to flow but should be on the container element if any
+  pointerEvents: PASS_THROUGH,
+  viewTransitionName: PASS_THROUGH,
 };
-const INNER_SPACING_PROPS = {
+const INNER_PROPS = {
   padding: PASS_THROUGH,
   paddingLeft: PASS_THROUGH,
   paddingRight: PASS_THROUGH,
@@ -6692,6 +6692,27 @@ const TYPO_PROPS = {
   uppercase: applyToCssPropWhenTruthy("textTransform", "uppercase", "none"),
   lowercase: applyToCssPropWhenTruthy("textTransform", "lowercase", "none"),
   letterSpacing: PASS_THROUGH,
+  overflowEllipsis: (value) => {
+    if (!value) {
+      return null;
+    }
+    return {
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      overflowWrap: "normal",
+    };
+  },
+  lineClamp: (value) => {
+    if (!value) {
+      return null;
+    }
+    return {
+      "overflow": "hidden",
+      "display": "-webkit-box",
+      "-webkit-box-orient": "vertical",
+      "-webkit-line-clamp": value,
+    };
+  },
 };
 const VISUAL_PROPS = {
   outline: PASS_THROUGH,
@@ -6725,16 +6746,6 @@ const VISUAL_PROPS = {
   overflow: PASS_THROUGH,
   overflowX: PASS_THROUGH,
   overflowY: PASS_THROUGH,
-  overflowEllipsis: (value) => {
-    if (value === undefined || value === false) {
-      return null;
-    }
-    return {
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      overflowWrap: "normal",
-    };
-  },
   objectFit: PASS_THROUGH,
   accentColor: PASS_THROUGH,
 };
@@ -6778,7 +6789,7 @@ const CONTENT_PROPS = {
     };
   },
   spacing: (value, { boxFlow }) => {
-    if (isSpacingHandledByFlow(boxFlow)) {
+    if (isSpacingHandledByLayout(boxFlow)) {
       return {
         gap: stringifySpacingStyle(value, "gap"),
       };
@@ -6812,7 +6823,7 @@ const CONTENT_PROPS = {
     return undefined;
   },
 };
-const flowSpacingHandlerSet = new Set([
+const LAYOUT_HANDLING_SPACING_SET = new Set([
   "flex-x",
   "flex-y",
   "inline-flex-x",
@@ -6820,36 +6831,58 @@ const flowSpacingHandlerSet = new Set([
   "grid",
   "inline-grid",
 ]);
-const isSpacingHandledByFlow = (boxFlow) => {
-  return flowSpacingHandlerSet.has(boxFlow);
+const isSpacingHandledByLayout = (boxFlow) => {
+  return LAYOUT_HANDLING_SPACING_SET.has(boxFlow);
 };
 
 const All_PROPS = {
-  ...FLOW_PROPS,
-  ...OUTER_SPACING_PROPS,
-  ...INNER_SPACING_PROPS,
+  ...LAYOUT_PROPS,
+  ...OUTER_PROPS,
+  ...INNER_PROPS,
   ...DIMENSION_PROPS,
   ...POSITION_PROPS,
   ...TYPO_PROPS,
   ...VISUAL_PROPS,
   ...CONTENT_PROPS,
 };
-const FLOW_PROP_NAME_SET = new Set(Object.keys(FLOW_PROPS));
-const OUTER_SPACING_PROP_NAME_SET = new Set(Object.keys(OUTER_SPACING_PROPS));
-const INNER_SPACING_PROP_NAME_SET = new Set(Object.keys(INNER_SPACING_PROPS));
-const DIMENSION_PROP_NAME_SET = new Set(Object.keys(DIMENSION_PROPS));
-const POSITION_PROP_NAME_SET = new Set(Object.keys(POSITION_PROPS));
+const LAYOUT_PROP_NAME_SET = new Set(Object.keys(LAYOUT_PROPS));
+// const OUTER_PROP_NAME_SET = new Set(Object.keys(OUTER_PROPS));
+const INNER_PROP_NAME_SET = new Set(Object.keys(INNER_PROPS));
+// const DIMENSION_PROP_NAME_SET = new Set(Object.keys(DIMENSION_PROPS));
+// const POSITION_PROP_NAME_SET = new Set(Object.keys(POSITION_PROPS));
 const TYPO_PROP_NAME_SET = new Set(Object.keys(TYPO_PROPS));
 const VISUAL_PROP_NAME_SET = new Set(Object.keys(VISUAL_PROPS));
 const CONTENT_PROP_NAME_SET = new Set(Object.keys(CONTENT_PROPS));
 const STYLE_PROP_NAME_SET = new Set(Object.keys(All_PROPS));
+const SPACING_PROP_SET = new Set([
+  "borderRadius",
+  "spacing",
+  "spacingX",
+  "spacingY",
+  "margin",
+  "marginLeft",
+  "marginRight",
+  "marginTop",
+  "marginBottom",
+  "marginX",
+  "marginY",
+  "padding",
+  "paddingLeft",
+  "paddingRight",
+  "paddingTop",
+  "paddingBottom",
+  "paddingX",
+  "paddingY",
+]);
 
 const COPIED_ON_VISUAL_CHILD_PROP_SET = new Set([
-  ...FLOW_PROP_NAME_SET,
+  ...LAYOUT_PROP_NAME_SET,
   "expand",
   "expandX",
   "expandY",
   "shrink",
+  "shrinkX",
+  "shrinkY",
   "align",
   "alignX",
   "alignY",
@@ -6857,7 +6890,7 @@ const COPIED_ON_VISUAL_CHILD_PROP_SET = new Set([
   "minHeight",
 ]);
 const HANDLED_BY_VISUAL_CHILD_PROP_SET = new Set([
-  ...INNER_SPACING_PROP_NAME_SET,
+  ...INNER_PROP_NAME_SET,
   ...VISUAL_PROP_NAME_SET,
   ...CONTENT_PROP_NAME_SET,
 ]);
@@ -6873,47 +6906,11 @@ const getVisualChildStylePropStrategy = (name) => {
 
 const isStyleProp = (name) => STYLE_PROP_NAME_SET.has(name);
 
-const getStylePropGroup = (name) => {
-  if (FLOW_PROP_NAME_SET.has(name)) {
-    return "flow";
-  }
-  if (OUTER_SPACING_PROP_NAME_SET.has(name)) {
-    return "margin";
-  }
-  if (INNER_SPACING_PROP_NAME_SET.has(name)) {
-    return "padding";
-  }
-  if (DIMENSION_PROP_NAME_SET.has(name)) {
-    return "dimension";
-  }
-  if (POSITION_PROP_NAME_SET.has(name)) {
-    return "position";
-  }
-  if (TYPO_PROP_NAME_SET.has(name)) {
-    return "typo";
-  }
-  if (VISUAL_PROP_NAME_SET.has(name)) {
-    return "visual";
-  }
-  if (CONTENT_PROP_NAME_SET.has(name)) {
-    return "content";
-  }
-  return null;
-};
 const getStringifier = (key) => {
-  if (
-    key === "borderRadius" ||
-    key === "spacing" ||
-    key === "spacingX" ||
-    key === "spacingY"
-  ) {
+  if (SPACING_PROP_SET.has(key)) {
     return stringifySpacingStyle;
   }
-  const group = getStylePropGroup(key);
-  if (group === "margin" || group === "padding") {
-    return stringifySpacingStyle;
-  }
-  if (group === "typo") {
+  if (TYPO_PROP_NAME_SET.has(key)) {
     return stringifyTypoStyle;
   }
   return stringifyStyle;
