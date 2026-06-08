@@ -182,6 +182,11 @@ const TimeDatetime = ({ children, locale, ...props }) => {
 
 const TimeTime = ({ children, locale, ...props }) => {
   const lang = locale || langSignal.value;
+
+  if (children === undefined) {
+    return <TimeText {...props}>--:--</TimeText>;
+  }
+
   const date = toDate(children, (value) => {
     if (/^\d{2}:\d{2}(?::\d{2})?$/.test(value)) {
       const d = new Date(`1970-01-01T${value}`);
@@ -189,19 +194,14 @@ const TimeTime = ({ children, locale, ...props }) => {
     }
     return null;
   });
-  let text;
-  let dateTime; // See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
-  if (date) {
-    text = formatTime(date, lang);
-    const hh = String(date.getHours()).padStart(2, "0");
-    const mm = String(date.getMinutes()).padStart(2, "0");
-    dateTime = `${hh}:${mm}`;
-  } else if (children === undefined) {
-    text = "--:--";
-  } else {
-    text = children;
+  if (!date) {
+    return <TimeText {...props}>{children}</TimeText>;
   }
 
+  const text = formatTime(date, lang);
+  const hh = String(date.getHours()).padStart(2, "0");
+  const mm = String(date.getMinutes()).padStart(2, "0");
+  const dateTime = `${hh}:${mm}`; // See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
   return (
     <TimeText dateTime={dateTime} {...props}>
       {text}
@@ -213,7 +213,7 @@ const TimeMinute = ({ children, locale, ...props }) => {
   const lang = locale || langSignal.value;
 
   if (children === undefined) {
-    return <TimeText {...props}>--</TimeText>;
+    return <TimeText {...props}>--:--</TimeText>;
   }
   let minutes;
   if (typeof children === "number") {
