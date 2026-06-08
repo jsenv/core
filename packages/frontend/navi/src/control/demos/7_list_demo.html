@@ -117,6 +117,7 @@
           <NaviDebug debugAction debugInteraction>
             <TableOfContents />
             <DisplayOnlyDemo />
+            <HorizontalDemo />
             <WidthDemo />
             <WidthExpandXDemo />
             <SearchableExternalInputDemo />
@@ -135,6 +136,9 @@
             <ol style={{ margin: 0, paddingLeft: "20px", lineHeight: "2" }}>
               <li>
                 <a href="#display-only">Display only</a>
+              </li>
+              <li>
+                <a href="#horizontal">Horizontal</a>
               </li>
               <li>
                 <a href="#width">Width behaviour</a>
@@ -202,6 +206,77 @@
           </div>
         );
       };
+
+      // ── 1b. Horizontal list ───────────────────────────────────────────────────
+
+      const SIZES = ["XS", "S", "M", "L", "XL"];
+
+      const HorizontalDemo = () => (
+        <div id="horizontal" className="demo-section">
+          <h2>Horizontal</h2>
+          <p>
+            Avec <code>horizontal</code> les items s'affichent en ligne.{" "}
+            <code>spacing</code> s'applique entre eux. Les items supportent{" "}
+            <code>borderWidth</code> et <code>borderColor</code>.
+          </p>
+          <Box flex="y" spacing="m" alignX="start">
+            <div>
+              <p
+                style={{
+                  margin: "0 0 8px",
+                  fontWeight: 600,
+                  fontSize: "0.85rem",
+                }}
+              >
+                Simple — avec spacing
+              </p>
+              <List horizontal spacing="s">
+                {FRUITS.slice(0, 5).map((fruit, i) => (
+                  <ListItem
+                    key={fruit}
+                    index={i}
+                    id={fruit}
+                    value={fruit}
+                    paddingX="m"
+                    paddingY="s"
+                    backgroundColor="light-dark(#e8f4ff, #1a2840)"
+                  >
+                    {fruit}
+                  </ListItem>
+                ))}
+              </List>
+            </div>
+            <div>
+              <p
+                style={{
+                  margin: "0 0 8px",
+                  fontWeight: 600,
+                  fontSize: "0.85rem",
+                }}
+              >
+                Tailles avec border
+              </p>
+              <List horizontal spacing="xs" borderWidth="0">
+                {SIZES.map((size, i) => (
+                  <ListItem
+                    key={size}
+                    index={i}
+                    id={size}
+                    value={size}
+                    paddingX="m"
+                    paddingY="s"
+                    borderWidth="2"
+                    borderColor="light-dark(#6366f1, #818cf8)"
+                    backgroundColor="transparent"
+                  >
+                    {size}
+                  </ListItem>
+                ))}
+              </List>
+            </div>
+          </Box>
+        </div>
+      );
 
       // ── 2. Width behaviour ─────────────────────────────────────────────────────
 

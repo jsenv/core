@@ -63,6 +63,9 @@ const css = /* css */ `
       /* Selected — vivid blue accent */
       --list-item-color-selected: white;
       --list-item-background-color-selected: rgb(3, 30, 60);
+      --list-item-border-color-selected: var(
+        --list-item-background-color-selected
+      );
       /* Disabled */
       --list-item-color-disabled: light-dark(#aaa, #555);
       --list-item-background-color-disabled: var(--list-item-background-color);
@@ -139,10 +142,12 @@ const css = /* css */ `
       }
 
       &[data-selected] {
-        --x-list-item-color: var(--list-item-color-selected);
+        --x-list-item-border-color: var(--list-item-border-color-selected);
         --x-list-item-background-color: var(
           --list-item-background-color-selected
         );
+        --x-list-item-color: var(--list-item-color-selected);
+
         &[data-hover] {
           --x-list-item-background-color: var(
             --list-item-background-color-selected,
