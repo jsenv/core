@@ -488,6 +488,9 @@ const NO_LOCAL_STORAGE = [() => undefined, () => {}, () => {}];
 const localStorageTypeMap = {
   float: "number",
   integer: "number",
+  minute: "number",
+  hour: "number",
+  second: "number",
   ratio: "number",
   longitude: "number",
   latitude: "number",
