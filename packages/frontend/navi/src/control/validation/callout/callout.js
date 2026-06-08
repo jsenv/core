@@ -67,6 +67,7 @@ const css = /* css */ `
     opacity: 0;
     /* will be positioned with transform: translate */
     transition: opacity 0.2s ease-in-out;
+    pointer-events: auto; /* Must be interactive to be closabled (overrid list item pointer-events none for instance)  */
     overflow: visible;
 
     &[data-status="success"] {

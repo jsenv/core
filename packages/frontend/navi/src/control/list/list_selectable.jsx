@@ -8,7 +8,6 @@ import {
   useRef,
 } from "preact/hooks";
 
-import { Box } from "@jsenv/navi/src/box/box.jsx";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { useFocusGroup } from "@jsenv/navi/src/utils/focus/use_focus_group.js";
@@ -86,10 +85,13 @@ const css = /* css */ `
   }
 
   .navi_list_item {
+    --x-list-item-cursor: pointer;
+
     position: relative;
     outline-width: var(--list-item-outline-width);
     outline-color: var(--list-item-outline-color);
     outline-offset: var(--list-item-outline-offset);
+    cursor: var(--x-list-item-cursor);
 
     &[navi-selectable] {
       user-select: none;
@@ -102,7 +104,7 @@ const css = /* css */ `
         outline: none;
         opacity: 0;
         clip-path: none;
-        cursor: pointer;
+        cursor: var(--x-list-item-cursor);
         pointer-events: auto;
       }
     }
@@ -160,12 +162,12 @@ const css = /* css */ `
       --x-list-item-background-color: var(
         --list-item-background-color-disabled
       );
-      cursor: default;
+      --x-list-item-cursor: default;
       pointer-events: none;
     }
     &[data-readonly] {
       --x-list-item-color: var(--list-item-color-disabled);
-      cursor: default;
+      --x-list-item-cursor: default;
     }
   }
 `;
