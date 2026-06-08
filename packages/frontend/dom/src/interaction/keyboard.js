@@ -22,6 +22,10 @@ export const normalizeKeyboardKey = (rawKey) => {
 
 export const getKeyboardEventDefaultAction = (keyboardEvent) => {
   const target = keyboardEvent.target;
+  if (keyboardEvent.key === undefined) {
+    // Happens for enter after autocomplete
+    return "activate";
+  }
   const key = normalizeKeyboardKey(keyboardEvent.key);
 
   // Nothing special occurs when the target or an ancestor is disabled/inert
@@ -61,6 +65,10 @@ export const getKeyboardEventDefaultAction = (keyboardEvent) => {
 const isTypingIntent = (e) => {
   // Modifier keys used for shortcuts: skip
   if (e.metaKey || e.ctrlKey) {
+    return false;
+  }
+  if (!e.key) {
+    // can happen when pressing enter for autocomplete for instance
     return false;
   }
   const key = normalizeKeyboardKey(e.key);
