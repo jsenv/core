@@ -32607,6 +32607,11 @@ const Time = props => {
       ...props
     });
   }
+  if (type === "minute") {
+    return jsx(TimeMinute, {
+      ...props
+    });
+  }
   return jsx(TimeRelative, {
     ...props
   });
@@ -32620,6 +32625,12 @@ const TimeDate = ({
   ...props
 }) => {
   const lang = locale || langSignal.value;
+  if (children === undefined) {
+    return jsx(TimeText, {
+      ...props,
+      children: formatDatePlaceholder(lang)
+    });
+  }
   const date = toDate(children, value => {
     if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
       const d = new Date(`${value}T00:00:00`);
@@ -32627,33 +32638,32 @@ const TimeDate = ({
     }
     return null;
   });
-  let text;
-  let dateTime; // See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
-  if (date) {
-    const base = formatDay(date, lang, {
-      long
+  if (!date) {
+    return jsx(TimeText, {
+      ...props,
+      children: String(children)
     });
-    if (dayLabel) {
-      const offset = getRelativeDay(date, {
-        now
-      });
-      if (offset >= -1 && offset <= 1) {
-        text = `${base} (${formatDayRelative(offset, lang)})`;
-      } else {
-        text = base;
-      }
+  }
+  const base = formatDay(date, lang, {
+    long
+  });
+  let text;
+  if (dayLabel) {
+    const offset = getRelativeDay(date, {
+      now
+    });
+    if (offset >= -1 && offset <= 1) {
+      text = `${base} (${formatDayRelative(offset, lang)})`;
     } else {
       text = base;
     }
-    const yyyy = date.getFullYear();
-    const mm = String(date.getMonth() + 1).padStart(2, "0");
-    const dd = String(date.getDate()).padStart(2, "0");
-    dateTime = `${yyyy}-${mm}-${dd}`;
-  } else if (children === undefined) {
-    text = formatDatePlaceholder(lang);
   } else {
-    text = String(children);
+    text = base;
   }
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  const dateTime = `${yyyy}-${mm}-${dd}`; // See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
   return jsx(TimeText, {
     dateTime: dateTime,
     ...props,
@@ -32666,6 +32676,12 @@ const TimeMonth = ({
   ...props
 }) => {
   const lang = locale || langSignal.value;
+  if (children === undefined) {
+    return jsx(TimeText, {
+      ...props,
+      children: formatMonthPlaceholder(lang)
+    });
+  }
   const date = toDate(children, value => {
     if (/^\d{4}-\d{2}$/.test(value)) {
       const d = new Date(`${value}-01T00:00:00`);
@@ -32673,18 +32689,16 @@ const TimeMonth = ({
     }
     return null;
   });
-  let text;
-  let dateTime; // See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
-  if (date) {
-    text = formatMonth(date, lang);
-    const yyyy = date.getFullYear();
-    const mm = String(date.getMonth() + 1).padStart(2, "0");
-    dateTime = `${yyyy}-${mm}`;
-  } else if (children === undefined) {
-    text = formatMonthPlaceholder(lang);
-  } else {
-    text = String(children);
+  if (!date) {
+    return jsx(TimeText, {
+      ...props,
+      children: String(children)
+    });
   }
+  const text = formatMonth(date, lang);
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dateTime = `${yyyy}-${mm}`; // See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
   return jsx(TimeText, {
     dateTime: dateTime,
     ...props,
@@ -32697,18 +32711,17 @@ const TimeWeek = ({
   ...props
 }) => {
   const lang = locale || langSignal.value;
-  let text;
-  let dateTime;
-  if (children !== undefined && children !== null) {
-    text = String(children);
-    dateTime = String(children);
-  } else {
-    text = formatWeekPlaceholder(lang);
+  if (children === undefined || children === null) {
+    return jsx(TimeText, {
+      ...props,
+      children: formatWeekPlaceholder(lang)
+    });
   }
+  const dateTime = String(children);
   return jsx(TimeText, {
     dateTime: dateTime,
     ...props,
-    children: text
+    children: dateTime
   });
 };
 const TimeDatetime = ({
@@ -32717,17 +32730,21 @@ const TimeDatetime = ({
   ...props
 }) => {
   const lang = locale || langSignal.value;
-  const date = toDate(children);
-  let text;
-  let dateTime; // See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
-  if (date) {
-    text = formatDatetime(date, lang);
-    dateTime = date.toISOString();
-  } else if (children === undefined) {
-    text = formatDatetimePlaceholder(lang);
-  } else {
-    text = String(children);
+  if (children === undefined) {
+    return jsx(TimeText, {
+      ...props,
+      children: formatDatetimePlaceholder(lang)
+    });
   }
+  const date = toDate(children);
+  if (!date) {
+    return jsx(TimeText, {
+      ...props,
+      children: String(children)
+    });
+  }
+  const text = formatDatetime(date, lang);
+  const dateTime = date.toISOString(); // See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
   return jsx(TimeText, {
     dateTime: dateTime,
     ...props,
@@ -32740,6 +32757,12 @@ const TimeTime = ({
   ...props
 }) => {
   const lang = locale || langSignal.value;
+  if (children === undefined) {
+    return jsx(TimeText, {
+      ...props,
+      children: "--:--"
+    });
+  }
   const date = toDate(children, value => {
     if (/^\d{2}:\d{2}(?::\d{2})?$/.test(value)) {
       const d = new Date(`1970-01-01T${value}`);
@@ -32747,18 +32770,52 @@ const TimeTime = ({
     }
     return null;
   });
-  let text;
-  let dateTime; // See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
-  if (date) {
-    text = formatTime(date, lang);
-    const hh = String(date.getHours()).padStart(2, "0");
-    const mm = String(date.getMinutes()).padStart(2, "0");
-    dateTime = `${hh}:${mm}`;
-  } else if (children === undefined) {
-    text = "--:--";
-  } else {
-    text = children;
+  if (!date) {
+    return jsx(TimeText, {
+      ...props,
+      children: children
+    });
   }
+  const text = formatTime(date, lang);
+  const hh = String(date.getHours()).padStart(2, "0");
+  const mm = String(date.getMinutes()).padStart(2, "0");
+  const dateTime = `${hh}:${mm}`; // See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
+  return jsx(TimeText, {
+    dateTime: dateTime,
+    ...props,
+    children: text
+  });
+};
+const TimeMinute = ({
+  children,
+  locale,
+  ...props
+}) => {
+  const lang = locale || langSignal.value;
+  if (children === undefined) {
+    return jsx(TimeText, {
+      ...props,
+      children: "--:--"
+    });
+  }
+  let minutes;
+  if (typeof children === "number") {
+    minutes = children;
+  } else {
+    const childrenAsNumber = Number(children);
+    if (isNaN(childrenAsNumber)) {
+      return jsx(TimeText, {
+        ...props,
+        children: children
+      });
+    }
+    minutes = childrenAsNumber;
+  }
+  const date = new Date(1970, 0, 1, Math.floor(minutes / 60), minutes % 60, 0);
+  const hh = String(date.getHours()).padStart(2, "0");
+  const mm = String(date.getMinutes()).padStart(2, "0");
+  const dateTime = `${hh}:${mm}`;
+  const text = formatTime(date, lang);
   return jsx(TimeText, {
     dateTime: dateTime,
     ...props,
@@ -32773,19 +32830,23 @@ const TimeRelative = ({
   ...props
 }) => {
   const lang = locale || langSignal.value;
-  const date = toDate(children);
-  let text;
-  let dateTime;
-  if (date) {
-    text = formatTimeRelative(date, eventDuration, lang, {
-      bare
+  if (children === undefined) {
+    return jsx(TimeText, {
+      ...props,
+      children: "\u2013"
     });
-    dateTime = date.toISOString();
-  } else if (children === undefined) {
-    text = "–";
-  } else {
-    text = String(children);
   }
+  const date = toDate(children);
+  if (!date) {
+    return jsx(TimeText, {
+      ...props,
+      children: String(children)
+    });
+  }
+  const text = formatTimeRelative(date, eventDuration, lang, {
+    bare
+  });
+  const dateTime = date.toISOString();
   return jsx(TimeText, {
     dateTime: dateTime,
     ...props,

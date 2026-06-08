@@ -75,6 +75,11 @@ export const Time = (props) => {
 
 const TimeDate = ({ children, locale, long, dayLabel, now, ...props }) => {
   const lang = locale || langSignal.value;
+
+  if (children === undefined) {
+    return <TimeText {...props}>{formatDatePlaceholder(lang)}</TimeText>;
+  }
+
   const date = toDate(children, (value) => {
     if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
       const d = new Date(`${value}T00:00:00`);
@@ -82,30 +87,26 @@ const TimeDate = ({ children, locale, long, dayLabel, now, ...props }) => {
     }
     return null;
   });
+  if (!date) {
+    return <TimeText {...props}>{String(children)}</TimeText>;
+  }
+
+  const base = formatDay(date, lang, { long });
   let text;
-  let dateTime; // See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
-  if (date) {
-    const base = formatDay(date, lang, { long });
-    if (dayLabel) {
-      const offset = getRelativeDay(date, { now });
-      if (offset >= -1 && offset <= 1) {
-        text = `${base} (${formatDayRelative(offset, lang)})`;
-      } else {
-        text = base;
-      }
+  if (dayLabel) {
+    const offset = getRelativeDay(date, { now });
+    if (offset >= -1 && offset <= 1) {
+      text = `${base} (${formatDayRelative(offset, lang)})`;
     } else {
       text = base;
     }
-    const yyyy = date.getFullYear();
-    const mm = String(date.getMonth() + 1).padStart(2, "0");
-    const dd = String(date.getDate()).padStart(2, "0");
-    dateTime = `${yyyy}-${mm}-${dd}`;
-  } else if (children === undefined) {
-    text = formatDatePlaceholder(lang);
   } else {
-    text = String(children);
+    text = base;
   }
-
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  const dateTime = `${yyyy}-${mm}-${dd}`; // See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
   return (
     <TimeText dateTime={dateTime} {...props}>
       {text}
@@ -115,6 +116,11 @@ const TimeDate = ({ children, locale, long, dayLabel, now, ...props }) => {
 
 const TimeMonth = ({ children, locale, ...props }) => {
   const lang = locale || langSignal.value;
+
+  if (children === undefined) {
+    return <TimeText {...props}>{formatMonthPlaceholder(lang)}</TimeText>;
+  }
+
   const date = toDate(children, (value) => {
     if (/^\d{4}-\d{2}$/.test(value)) {
       const d = new Date(`${value}-01T00:00:00`);
@@ -122,19 +128,14 @@ const TimeMonth = ({ children, locale, ...props }) => {
     }
     return null;
   });
-  let text;
-  let dateTime; // See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
-  if (date) {
-    text = formatMonth(date, lang);
-    const yyyy = date.getFullYear();
-    const mm = String(date.getMonth() + 1).padStart(2, "0");
-    dateTime = `${yyyy}-${mm}`;
-  } else if (children === undefined) {
-    text = formatMonthPlaceholder(lang);
-  } else {
-    text = String(children);
+  if (!date) {
+    return <TimeText {...props}>{String(children)}</TimeText>;
   }
 
+  const text = formatMonth(date, lang);
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dateTime = `${yyyy}-${mm}`; // See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
   return (
     <TimeText dateTime={dateTime} {...props}>
       {text}
@@ -144,35 +145,33 @@ const TimeMonth = ({ children, locale, ...props }) => {
 
 const TimeWeek = ({ children, locale, ...props }) => {
   const lang = locale || langSignal.value;
-  let text;
-  let dateTime;
-  if (children !== undefined && children !== null) {
-    text = String(children);
-    dateTime = String(children);
-  } else {
-    text = formatWeekPlaceholder(lang);
+
+  if (children === undefined || children === null) {
+    return <TimeText {...props}>{formatWeekPlaceholder(lang)}</TimeText>;
   }
+
+  const dateTime = String(children);
   return (
     <TimeText dateTime={dateTime} {...props}>
-      {text}
+      {dateTime}
     </TimeText>
   );
 };
 
 const TimeDatetime = ({ children, locale, ...props }) => {
   const lang = locale || langSignal.value;
-  const date = toDate(children);
-  let text;
-  let dateTime; // See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
-  if (date) {
-    text = formatDatetime(date, lang);
-    dateTime = date.toISOString();
-  } else if (children === undefined) {
-    text = formatDatetimePlaceholder(lang);
-  } else {
-    text = String(children);
+
+  if (children === undefined) {
+    return <TimeText {...props}>{formatDatetimePlaceholder(lang)}</TimeText>;
   }
 
+  const date = toDate(children);
+  if (!date) {
+    return <TimeText {...props}>{String(children)}</TimeText>;
+  }
+
+  const text = formatDatetime(date, lang);
+  const dateTime = date.toISOString(); // See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
   return (
     <TimeText dateTime={dateTime} {...props}>
       {text}
@@ -246,18 +245,18 @@ const TimeRelative = ({
   ...props
 }) => {
   const lang = locale || langSignal.value;
-  const date = toDate(children);
-  let text;
-  let dateTime;
-  if (date) {
-    text = formatTimeRelative(date, eventDuration, lang, { bare });
-    dateTime = date.toISOString();
-  } else if (children === undefined) {
-    text = "–";
-  } else {
-    text = String(children);
+
+  if (children === undefined) {
+    return <TimeText {...props}>–</TimeText>;
   }
 
+  const date = toDate(children);
+  if (!date) {
+    return <TimeText {...props}>{String(children)}</TimeText>;
+  }
+
+  const text = formatTimeRelative(date, eventDuration, lang, { bare });
+  const dateTime = date.toISOString();
   return (
     <TimeText dateTime={dateTime} {...props}>
       {text}
