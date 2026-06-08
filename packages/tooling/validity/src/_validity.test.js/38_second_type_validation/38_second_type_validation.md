@@ -21,6 +21,7 @@ return {
   0: {
     "type": undefined,
     "min": undefined,
+    "max": undefined,
     "step": undefined,
     "valid": true,
     "validSuggestion": null
@@ -28,6 +29,7 @@ return {
   30: {
     "type": undefined,
     "min": undefined,
+    "max": undefined,
     "step": undefined,
     "valid": true,
     "validSuggestion": null
@@ -35,6 +37,7 @@ return {
   "-1 (below min)": {
     "type": undefined,
     "min": "must be positive",
+    "max": undefined,
     "step": undefined,
     "valid": false,
     "validSuggestion": {
@@ -44,6 +47,7 @@ return {
   "1.5 (not integer)": {
     "type": undefined,
     "min": undefined,
+    "max": undefined,
     "step": "must have at most 0 decimal places",
     "valid": false,
     "validSuggestion": {
@@ -53,6 +57,7 @@ return {
   '"10" (string number)': {
     "type": "must be a number",
     "min": undefined,
+    "max": undefined,
     "step": undefined,
     "valid": false,
     "validSuggestion": {
@@ -62,6 +67,7 @@ return {
   "true (invalid type)": {
     "type": "must be a number",
     "min": undefined,
+    "max": undefined,
     "step": undefined,
     "valid": false,
     "validSuggestion": null

@@ -70,28 +70,23 @@ export const createValidity = (ruleConfig) => {
   const validity = {};
 
   const ruleSet = new Set();
-  let effectiveRuleConfig;
+  let effectiveRuleConfig = {};
   setup: {
-    const { type, ...rest } = ruleConfig;
-    const typeDefaults = type ? TYPE_DEFAULTS[type] || {} : {};
-    effectiveRuleConfig = {
-      ...typeDefaults,
-      ...rest,
-    };
-    if (DURATION_TYPES.has(type)) {
-      for (const key of ["min", "max", "step"]) {
-        if (typeof effectiveRuleConfig[key] === "string") {
-          const parsed = parseTimeStringForDurationType(
-            effectiveRuleConfig[key],
-            type,
-          );
-          if (parsed !== null) {
-            effectiveRuleConfig[key] = parsed;
-          }
-        }
+    const theType = ruleConfig.type;
+    if (theType) {
+      const typeDefaults = TYPE_DEFAULTS[theType];
+      if (typeDefaults) {
+        Object.assign(effectiveRuleConfig, typeDefaults);
       }
     }
-    const { min, max, step, oneOf, ...unknown } = effectiveRuleConfig;
+    Object.assign(effectiveRuleConfig, ruleConfig);
+
+    let { type, min, max, step, oneOf, ...unknown } = effectiveRuleConfig;
+    if (DURATION_TYPES.has(type)) {
+      min = resolveTimeString(min, type);
+      max = resolveTimeString(max, type);
+      step = resolveTimeString(step, type);
+    }
     if (Object.keys(unknown).length > 0) {
       console.warn(
         "[createValidity] Unknown ruleConfig properties:",
@@ -162,6 +157,11 @@ export const createValidity = (ruleConfig) => {
   }
 
   const applyOn = (value) => {
+    // if (value === undefined) {
+    //   validity.valid = true;
+    //   validity.validSuggestion = null;
+    //   return value;
+    // }
     let valid = true;
     let validSuggestion = null;
 
@@ -267,6 +267,16 @@ const TYPE_DEFAULTS = {
 
 const DURATION_TYPES = new Set(["hour", "minute", "second"]);
 
+const resolveTimeString = (value, type) => {
+  if (typeof value !== "string") {
+    return value;
+  }
+  const parsed = parseTimeStringForDurationType(value, type);
+  if (parsed === null) {
+    return value;
+  }
+  return parsed;
+};
 // Parses a time string "HH:MM" or "H:MM" into a numeric duration for the given type:
 //   minute → total minutes (e.g. "01:30" → 90)
 //   hour   → total hours   (e.g. "01:30" → 1.5)
