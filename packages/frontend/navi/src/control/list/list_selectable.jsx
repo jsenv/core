@@ -58,12 +58,12 @@ const css = /* css */ `
     }
   }
 
-  fieldset.navi_list_container {
+  fieldset.navi_list_container[navi-selectable] {
     margin: 0; /* Reset margin that might come from fieldset */
     padding: 0; /* Reset padding that might come from fieldset */
   }
 
-  .navi_list_container {
+  .navi_list_container[navi-selectable] {
     --x-list-outline-width: calc(
       var(--list-outline-width) + var(--list-border-width)
     );
@@ -85,7 +85,7 @@ const css = /* css */ `
     }
   }
 
-  .navi_list_item {
+  .navi_list_item[navi-selectable] {
     --x-list-item-cursor: default;
 
     position: relative;
@@ -321,6 +321,7 @@ const ListSelectable = (props) => {
   const listVnode = (
     <Next
       as="fieldset"
+      navi-selectable=""
       navi-has-selected-background={
         selectedIndicator === "backgroundColor" ? "" : undefined
       }
@@ -328,6 +329,7 @@ const ListSelectable = (props) => {
       {...remainingProps}
       name={undefined}
       selectedIndicator={undefined}
+      selectable={undefined}
       multiple={undefined}
       // Track focus inside the list: whichever item gets focus becomes current.
       onFocusIn={(e) => {
