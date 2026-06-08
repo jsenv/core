@@ -96,8 +96,7 @@
         Label,
         Picker,
         Button,
-        SelectableList,
-        Selectable,
+        List,
         NaviDebug,
         Badge,
         BadgeList,
@@ -155,7 +154,7 @@
           <div class="demo-section">
             <h2>1. Text display — comma-separated</h2>
             <p>
-              <code>SelectableList multiple action="update"</code> updates the
+              <code>List selectable multiple action="update"</code> updates the
               picker's pending state on each click. Confirming commits the array
               to the action callback, which updates the displayed value.
             </p>
@@ -173,9 +172,10 @@
                   selectedSignal.value = v;
                 }}
               >
-                <SelectableList multiple action="update">
+                <List selectable multiple action="update">
                   {FRUIT_OPTIONS.map((opt, i) => (
-                    <Selectable
+                    <List.Item
+                      selectable
                       key={opt}
                       id={`${opt}_chip`}
                       index={i}
@@ -185,9 +185,9 @@
                       spacing="s"
                     >
                       {opt}
-                    </Selectable>
+                    </List.Item>
                   ))}
-                </SelectableList>
+                </List>
               </Picker>
             </Field>
           </div>
@@ -241,14 +241,16 @@
                   selectedSignal.value = v;
                 }}
               >
-                <SelectableList
+                <List
+                  selectable
                   multiple
                   id="skills_list_simple"
                   action="update"
                   style="min-width: 180px"
                 >
                   {SKILL_OPTIONS.map((opt, i) => (
-                    <Selectable
+                    <List.Item
+                      selectable
                       key={opt}
                       id={`simple_${opt}`}
                       index={i}
@@ -258,9 +260,9 @@
                       spacing="s"
                     >
                       {opt}
-                    </Selectable>
+                    </List.Item>
                   ))}
-                </SelectableList>
+                </List>
               </Picker>
             </Field>
           </div>
@@ -337,7 +339,8 @@
                   selectedSignal.value = v;
                 }}
               >
-                <SelectableList
+                <List
+                  selectable
                   ref={listRef}
                   multiple
                   id="skills_list_delete"
@@ -345,7 +348,8 @@
                   style="min-width: 180px"
                 >
                   {SKILL_OPTIONS.map((opt, i) => (
-                    <Selectable
+                    <List.Item
+                      selectable
                       key={opt}
                       id={opt}
                       index={i}
@@ -355,9 +359,9 @@
                       spacing="s"
                     >
                       {opt}
-                    </Selectable>
+                    </List.Item>
                   ))}
-                </SelectableList>
+                </List>
               </Picker>
             </Field>
           </div>
