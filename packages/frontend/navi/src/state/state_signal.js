@@ -106,7 +106,7 @@ if (import.meta.hot) {
 const stringUndefinedAliasSet = new Set([""]);
 const stringTypeSet = new Set([
   "string",
-  "day",
+  "date",
   "month",
   "week",
   "time",

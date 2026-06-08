@@ -5347,7 +5347,7 @@ const generateSignalId = () => {
 const stringUndefinedAliasSet = new Set([""]);
 const stringTypeSet = new Set([
   "string",
-  "day",
+  "date",
   "month",
   "week",
   "time",
@@ -35803,7 +35803,7 @@ installImportMetaCssBuild(import.meta);const css$k = /* css */`
  * A button-like trigger that opens a picker when clicked.
  *
  * Use the `type` prop to choose what kind of picker to open:
- *   "day"      — calendar day
+ *   "date"      — calendar day
  *   "month"    — year + month
  *   "week"     — ISO week
  *   "time"     — hours + minutes

@@ -27,7 +27,7 @@ import { Text } from "./text.jsx";
  *
  * @param {"day"|"month"|"datetime"|"time"|"relative"} [type="relative"]
  *   Controls the display format:
- *   - `"day"`       → "Lun. 11 mai"  — short by default; use `long` for full "lundi 11 mai (aujourd'hui)"
+ *   - `"date"`       → "Lun. 11 mai"  — short by default; use `long` for full "lundi 11 mai (aujourd'hui)"
  *   - `"month"`     → "mai 2026"
  *   - `"datetime"`  → "lun. 11 mai, 14:30"
  *   - `"time"`      → "14:30"
@@ -42,9 +42,9 @@ import { Text } from "./text.jsx";
  *   When true, strips the past-tense literal ("il y a", "ago") and returns only integer + unit.
  *   Only applies to the past state of `type="relative"`.
  * @param {boolean} [long]
- *   When true and `type="day"`, uses the long weekday/month format.
+ *   When true and `type="date"`, uses the long weekday/month format.
  * @param {boolean} [dayLabel]
- *   When true and `type="day"`, appends the locale-aware relative label
+ *   When true and `type="date"`, appends the locale-aware relative label
  *   ("hier", "aujourd'hui", "demain") when the date is yesterday, today, or tomorrow.
  * @param {string} [locale]
  *   BCP 47 locale tag (e.g. `"fr"`, `"en-US"`).
