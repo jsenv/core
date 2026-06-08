@@ -20,7 +20,7 @@ export const useCustomValidationRef = (
     }
     const element = elementRef.current;
     if (!element) {
-      if (!elementRef.nullExpected) {
+      if (!elementRef.nullCanHappen) {
         console.warn(
           `useCustomValidationRef: elementRef.current is null, make sure to pass a ref to an element
 ${callSiteRef.current}`,

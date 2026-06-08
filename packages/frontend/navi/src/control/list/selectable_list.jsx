@@ -470,7 +470,7 @@ export const Selectable = (props) => {
   const inputRef = useRef();
   const inputType = multiple ? "checkbox" : "radio";
   const inputId = `${id}_input`;
-  inputRef.nullExpected = true; // virtualization
+  inputRef.nullCanHappen = true; // virtualization
   const [checkableProps, remainingProps, ChildrenContextWrapper] =
     useCheckableProps({
       readOnlyMessage: naviI18n(`constraints.readonly.option`, props),
