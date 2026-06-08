@@ -180,6 +180,9 @@
                 <li>
                   <a href="#s-multiline">Multiline Behavior</a>
                 </li>
+                <li>
+                  <a href="#s-line-clamp">Line Clamp</a>
+                </li>
               </ol>
             </nav>
 
@@ -542,6 +545,176 @@
                       Just a long line of text that would get overflowed.
                     </Text>
                   </Box>
+                </div>
+              </Box>
+            </section>
+
+            <section>
+              <h2 id="s-line-clamp">Line Clamp</h2>
+              <p style={{ color: "#555", fontSize: "14px" }}>
+                <code>-webkit-line-clamp</code> truncates text after N lines and
+                adds an ellipsis. Unlike <code>overflowEllipsis</code> (which is
+                single-line), line clamping works on multi-line blocks.
+              </p>
+              <Box row spacing="16px" style={{ flexWrap: "wrap" }}>
+                <div
+                  style={{
+                    width: "260px",
+                    border: "1px solid #ccc",
+                    padding: "8px",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: "12px",
+                      color: "#666",
+                      marginBottom: "4px",
+                    }}
+                  >
+                    No clamp (natural flow)
+                  </div>
+                  <div>
+                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed
+                    do eiusmod tempor incididunt ut labore et dolore magna
+                    aliqua. Ut enim ad minim veniam, quis nostrud exercitation
+                    ullamco.
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    width: "260px",
+                    border: "1px solid #ccc",
+                    padding: "8px",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: "12px",
+                      color: "#666",
+                      marginBottom: "4px",
+                    }}
+                  >
+                    line-clamp: 2
+                  </div>
+                  <div
+                    style={{
+                      display: "-webkit-box",
+                      WebkitBoxOrient: "vertical",
+                      WebkitLineClamp: 2,
+                      overflow: "hidden",
+                    }}
+                  >
+                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed
+                    do eiusmod tempor incididunt ut labore et dolore magna
+                    aliqua. Ut enim ad minim veniam, quis nostrud exercitation
+                    ullamco.
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    width: "260px",
+                    border: "1px solid #ccc",
+                    padding: "8px",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: "12px",
+                      color: "#666",
+                      marginBottom: "4px",
+                    }}
+                  >
+                    line-clamp: 3
+                  </div>
+                  <div
+                    style={{
+                      display: "-webkit-box",
+                      WebkitBoxOrient: "vertical",
+                      WebkitLineClamp: 3,
+                      overflow: "hidden",
+                    }}
+                  >
+                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed
+                    do eiusmod tempor incididunt ut labore et dolore magna
+                    aliqua. Ut enim ad minim veniam, quis nostrud exercitation
+                    ullamco.
+                  </div>
+                </div>
+              </Box>
+
+              <p
+                style={{
+                  color: "#555",
+                  fontSize: "14px",
+                  marginTop: "20px",
+                }}
+              >
+                Combined with <code>overflowEllipsis</code>: the two don't
+                compose naturally. <code>overflowEllipsis</code> forces{" "}
+                <code>white-space: nowrap</code>, which collapses everything to
+                one line — line-clamp then has no effect.
+              </p>
+              <Box row spacing="16px" style={{ flexWrap: "wrap" }}>
+                <div
+                  style={{
+                    width: "260px",
+                    border: "1px solid #ccc",
+                    padding: "8px",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: "12px",
+                      color: "#666",
+                      marginBottom: "4px",
+                    }}
+                  >
+                    overflowEllipsis + line-clamp: 2 → single-line wins
+                  </div>
+                  <Text
+                    overflowEllipsis
+                    style={{
+                      display: "-webkit-box",
+                      WebkitBoxOrient: "vertical",
+                      WebkitLineClamp: 2,
+                    }}
+                  >
+                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed
+                    do eiusmod tempor incididunt ut labore et dolore magna
+                    aliqua.
+                  </Text>
+                </div>
+
+                <div
+                  style={{
+                    width: "260px",
+                    border: "1px solid #ccc",
+                    padding: "8px",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: "12px",
+                      color: "#666",
+                      marginBottom: "4px",
+                    }}
+                  >
+                    line-clamp only (no overflowEllipsis) → multiline truncation
+                  </div>
+                  <div
+                    style={{
+                      display: "-webkit-box",
+                      WebkitBoxOrient: "vertical",
+                      WebkitLineClamp: 2,
+                      overflow: "hidden",
+                    }}
+                  >
+                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed
+                    do eiusmod tempor incididunt ut labore et dolore magna
+                    aliqua.
+                  </div>
                 </div>
               </Box>
             </section>
