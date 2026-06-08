@@ -565,11 +565,10 @@ const SELECTABLE_PSEUDO_CLASSES = [
 ];
 const SelectableRealInput = (props) => {
   return (
-    <Box
-      as="input"
+    <Input
       {...props}
+      headless
       navi-selectable-real-input=""
-      navi-visually-hidden=""
       data-callout-arrow-x="center"
       // navi-debug
     />

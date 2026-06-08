@@ -59,11 +59,27 @@ const definePseudoClass = (pseudoClass, definition) => {
 definePseudoClass(":hover", {
   attribute: "data-hover",
   setup: (el, callback) => {
-    let onmouseenter = () => {
-      callback();
+    const recheckProxy = (e) => {
+      const proxy = findControlProxy(el);
+      if (proxy) {
+        requestPseudoStateCheck(proxy, { event: e });
+      }
     };
-    let onmouseleave = () => {
+    const recheckProxyTarget = (e) => {
+      const proxyTarget = findControlProxyTarget(el);
+      if (proxyTarget) {
+        requestPseudoStateCheck(proxyTarget, { event: e });
+      }
+    };
+    let onmouseenter = (e) => {
       callback();
+      recheckProxy(e);
+      recheckProxyTarget(e);
+    };
+    let onmouseleave = (e) => {
+      callback();
+      recheckProxy(e);
+      recheckProxyTarget(e);
     };
 
     if (el.tagName === "LABEL") {
@@ -86,13 +102,15 @@ definePseudoClass(":hover", {
         }
         requestPseudoStateCheck(input, { event: e });
       };
+      const _onmouseenter = onmouseenter;
       onmouseenter = (e) => {
-        callback();
         recheckInput(e);
+        _onmouseenter(e);
       };
+      const _onmouseleave = onmouseleave;
       onmouseleave = (e) => {
-        callback();
         recheckInput(e);
+        _onmouseleave(e);
       };
     }
 
@@ -103,7 +121,16 @@ definePseudoClass(":hover", {
       el.removeEventListener("mouseleave", onmouseleave);
     };
   },
-  test: (el) => el.matches(":hover"),
+  test: (el) => {
+    if (el.matches(":hover")) {
+      return true;
+    }
+    const proxy = findControlProxy(el);
+    if (proxy && proxy.matches(":hover")) {
+      return true;
+    }
+    return false;
+  },
 });
 definePseudoClass(":disabled", {
   attribute: "data-disabled",

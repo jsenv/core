@@ -119,7 +119,25 @@
       const App = () => {
         return (
           <NaviDebug debugAction debugInteraction>
-            <BasicDemo />
+            <div>
+              <TableOfContents />
+              <SearchableDemo />
+              <BasicDemo />
+              <ReadOnlyDemo />
+              <ExternalControlDemo />
+              <FormDemo />
+              <ValidationDemo />
+              <div id="customization">
+                <div class="demo-section">
+                  <h2>Customization</h2>
+                </div>
+                <IconInputDemo />
+                <SwitchDemo />
+                <BgColorDemo />
+                <ManualAreaDemo />
+                <LegendDemo />
+              </div>
+            </div>
           </NaviDebug>
         );
       };
