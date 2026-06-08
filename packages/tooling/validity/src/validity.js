@@ -80,13 +80,21 @@ export const createValidity = (ruleConfig) => {
       }
     }
     Object.assign(effectiveRuleConfig, ruleConfig);
-
-    let { type, min, max, step, oneOf, ...unknown } = effectiveRuleConfig;
-    if (DURATION_TYPES.has(type)) {
-      min = resolveTimeString(min, type);
-      max = resolveTimeString(max, type);
-      step = resolveTimeString(step, type);
+    if (DURATION_TYPES.has(theType)) {
+      effectiveRuleConfig.min = resolveTimeString(
+        effectiveRuleConfig.min,
+        theType,
+      );
+      effectiveRuleConfig.max = resolveTimeString(
+        effectiveRuleConfig.max,
+        theType,
+      );
+      effectiveRuleConfig.step = resolveTimeString(
+        effectiveRuleConfig.step,
+        theType,
+      );
     }
+    const { type, min, max, step, oneOf, ...unknown } = effectiveRuleConfig;
     if (Object.keys(unknown).length > 0) {
       console.warn(
         "[createValidity] Unknown ruleConfig properties:",
@@ -267,28 +275,18 @@ const TYPE_DEFAULTS = {
 
 const DURATION_TYPES = new Set(["hour", "minute", "second"]);
 
-const resolveTimeString = (value, type) => {
-  if (typeof value !== "string") {
-    return value;
-  }
-  const parsed = parseTimeStringForDurationType(value, type);
-  if (parsed === null) {
-    return value;
-  }
-  return parsed;
-};
 // Parses a time string "HH:MM" or "H:MM" into a numeric duration for the given type:
 //   minute → total minutes (e.g. "01:30" → 90)
 //   hour   → total hours   (e.g. "01:30" → 1.5)
 //   second → total seconds (e.g. "01:30" → 90)
 // Returns null if the string is not a valid time string.
-const parseTimeStringForDurationType = (str, type) => {
-  if (typeof str !== "string") {
-    return null;
+const resolveTimeString = (value, type) => {
+  if (typeof value !== "string") {
+    return value;
   }
-  const match = /^(\d+):(\d{2})$/.exec(str);
+  const match = /^(\d+):(\d{2})$/.exec(value);
   if (!match) {
-    return null;
+    return value;
   }
   const left = parseInt(match[1], 10);
   const right = parseInt(match[2], 10);
@@ -301,7 +299,7 @@ const parseTimeStringForDurationType = (str, type) => {
   if (type === "second") {
     return left * 60 + right;
   }
-  return null;
+  return value;
 };
 
 const TYPE_RULE = {
