@@ -518,6 +518,9 @@ export const Selectable = (props) => {
       aria-selected={checked}
       selected={checked}
       navi-selectable=""
+      borderWidth={props.borderWidth}
+      borderRadius={props.borderRadius}
+      borderColor={props.borderColor}
     >
       <Field
         as={selectableArea === "manual" ? "div" : undefined}
@@ -528,6 +531,9 @@ export const Selectable = (props) => {
         expandX
         {...remainingProps}
         selectableArea={undefined}
+        borderWidth={undefined}
+        borderRadius={undefined}
+        borderColor={undefined}
         basePseudoState={basePseudoState}
         pseudoStateSelector="[navi-selectable-real-input]"
         disabled={disabled}

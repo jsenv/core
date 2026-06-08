@@ -1385,7 +1385,6 @@ export const ListItemHeader = (props) => {
     />
   );
 };
-
 export const ListItemFooter = (props) => {
   const defaultRef = useRef(null);
   const ref = props.ref || defaultRef;
@@ -1411,3 +1410,5 @@ export const ListItemFooter = (props) => {
     />
   );
 };
+
+List.Item = ListItem;
