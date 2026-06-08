@@ -551,6 +551,26 @@
 
             <section>
               <h2 id="s-line-clamp">Line Clamp</h2>
+              <p
+                style={{
+                  background: "#fff8e1",
+                  border: "1px solid #ffe082",
+                  borderRadius: "6px",
+                  padding: "10px 14px",
+                  fontSize: "14px",
+                  marginBottom: "16px",
+                }}
+              >
+                <strong>Which to use?</strong>
+                <br />→ Single-line truncation: use{" "}
+                <code>overflowEllipsis</code>. It collapses the text to one line
+                and appends <code>…</code>.
+                <br />→ Multi-line truncation: use{" "}
+                <code>-webkit-line-clamp</code>. It lets N lines show and
+                truncates the rest with <code>…</code>. The two don't compose —{" "}
+                <code>overflowEllipsis</code> forces{" "}
+                <code>white-space: nowrap</code> which makes line-clamp a no-op.
+              </p>
               <p style={{ color: "#555", fontSize: "14px" }}>
                 <code>-webkit-line-clamp</code> truncates text after N lines and
                 adds an ellipsis. Unlike <code>overflowEllipsis</code> (which is
