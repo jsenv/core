@@ -175,6 +175,8 @@ const css = /* css */ `
     }
 
     .navi_input_slot {
+      color: #5e4e4e;
+
       &[data-left] {
         order: -1;
       }

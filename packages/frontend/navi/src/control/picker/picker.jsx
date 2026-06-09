@@ -123,6 +123,7 @@ const css = /* css */ `
       )
     );
     --x-picker-color: var(--picker-color);
+    --x-picker-icon-color: var(--picker-icon-color);
 
     position: relative;
     display: inline-block;
@@ -179,7 +180,7 @@ const css = /* css */ `
       padding-top: var(--x-picker-padding-top);
       flex-shrink: 0;
       justify-content: center;
-      color: var(--x-picker-icon-color, var(--picker-icon-color));
+      color: var(--x-picker-icon-color);
       transform: translateX(25%);
     }
     .navi_picker_input {
