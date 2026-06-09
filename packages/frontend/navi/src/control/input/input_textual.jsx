@@ -121,25 +121,45 @@ const css = /* css */ `
       --padding-left,
       var(--padding-x, var(--padding, 2px))
     );
+    --x-padding-top: var(--x-padding-top-base);
+    --x-padding-right: var(--x-padding-right-base);
+    --x-padding-bottom: var(--x-padding-bottom-base);
+    --x-padding-left: var(--x-padding-left-base);
 
     position: relative;
-    box-sizing: border-box;
+    display: inline-block;
+    box-sizing: content-box;
     width: fit-content;
+    min-width: 50px;
     height: fit-content;
+    padding-top: var(--x-padding-top);
+    padding-right: var(--x-padding-right);
+    padding-bottom: var(--x-padding-bottom);
+    padding-left: var(--x-padding-left);
     flex-direction: inherit;
+    color: var(--x-color);
+    font-size: var(--font-size);
     border-radius: inherit;
     cursor: inherit;
     pointer-events: auto;
 
+    &[navi-input-type="number"] {
+      min-width: 1ch;
+    }
+
     .navi_control_input {
-      box-sizing: border-box;
-      min-width: 50px;
-      padding-top: var(--x-padding-top-base);
-      padding-right: var(--x-padding-right-base);
-      padding-bottom: var(--x-padding-bottom-base);
-      padding-left: var(--x-padding-left-base);
-      color: var(--x-color);
-      font-size: var(--font-size);
+      box-sizing: content-box;
+      width: inherit;
+      margin-top: calc(-1 * var(--x-padding-top));
+      margin-right: calc(-1 * var(--x-padding-right));
+      margin-bottom: calc(-1 * var(--x-padding-bottom));
+      margin-left: calc(-1 * var(--x-padding-left));
+      padding-top: var(--x-padding-top);
+      padding-right: var(--x-padding-right);
+      padding-bottom: var(--x-padding-bottom);
+      padding-left: var(--x-padding-left);
+      color: inherit;
+      font-size: inherit;
       background-color: var(--x-background-color);
       border-width: var(--border-width);
       border-style: solid;
@@ -155,10 +175,6 @@ const css = /* css */ `
         &::-webkit-search-cancel-button {
           display: none;
         }
-      }
-
-      &[type="number"] {
-        min-width: 10px;
       }
     }
 
@@ -178,19 +194,13 @@ const css = /* css */ `
       --x-left-slot-size: calc(
         var(--left-slot-size) + var(--x-padding-left-base) / 2
       );
-
-      .navi_control_input {
-        padding-left: var(--x-left-slot-size);
-      }
+      --x-padding-left: var(--x-left-slot-size);
     }
     &:has(.navi_input_slot[data-right]) {
       --x-right-slot-size: calc(
         var(--right-slot-size) + var(--x-padding-right-base) / 2
       );
-
-      .navi_control_input {
-        padding-right: var(--x-right-slot-size);
-      }
+      --x-padding-right: var(--x-right-slot-size);
     }
 
     .navi_input_slot {
@@ -199,6 +209,7 @@ const css = /* css */ `
       bottom: 0;
       margin: 0;
       padding: 0;
+      padding-top: var(--x-padding-top);
       font-size: var(--font-size);
       background: none;
       border: none;
@@ -378,6 +389,7 @@ const InputTextualUI = (props) => {
       basePseudoState={basePseudoState}
       ui={undefined}
       data-discrete={discrete ? "" : undefined}
+      navi-input-type={inputProps.type}
       discrete={undefined} // handled via data attribute
       styleCSSVars={InputStyleCSSVars}
       pseudoStateSelector=".navi_control_input"
