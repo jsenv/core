@@ -69,6 +69,9 @@
               <a href="#default">Default behavior</a>
             </li>
             <li>
+              <a href="#invalid">Invalid (non-numeric) value</a>
+            </li>
+            <li>
               <a href="#min">min</a>
               <ol style="padding-left:16px;line-height:2">
                 <li>
@@ -209,74 +212,82 @@
               initialValue={8}
             />
 
-            {/* ── 2. Min ── */}
+            {/* ── 2. Invalid value ── */}
+            <DemoForm
+              id="invalid"
+              title='2. Invalid value — initialValue="aa"'
+              desc='The initial value "aa" cannot be converted to a number. The type constraint fires and shows a validation message on submit.'
+              initialValue="aa"
+            />
+
+            {/* ── 3. Min ── */}
             <h2 id="min" style="margin:0">
-              2. min
+              3. min
             </h2>
 
             <DemoForm
               id="min-basic"
-              title="2a. Basic min — min=2, max=23"
-              desc="Values below 2 are invalid. Try submitting with value 1 to see the validation message."
-              initialValue={5}
+              title="3a. Basic min — min=2, max=23"
+              desc="Values below 2 are invalid. Initial value is 1 (below min) — submit to see the validation message."
+              initialValue={1}
               inputProps={{ min: 2, max: 23 }}
             />
 
             <DemoForm
               id="min-negative"
-              title="2b. Negative min — min=-10, max=10"
-              desc="min is negative so the input can contain a '-' sign. maxLength accounts for the sign character. Try submitting -15 (below min) or 15 (above max)."
-              initialValue={-3}
+              title="3b. Negative min — min=-10, max=10"
+              desc="min is negative so the input can contain a '-' sign. Initial value is -15 (below min) — submit to see the validation message."
+              initialValue={-15}
               inputProps={{ min: -10, max: 10 }}
             />
 
-            {/* ── 3. Max ── */}
+            {/* ── 4. Max ── */}
             <h2 id="max" style="margin:0">
-              3. max
+              4. max
             </h2>
 
             <DemoForm
               id="max-basic"
-              title="3a. Basic max — max=9"
-              desc="Single-digit max → 1ch width. Values above 9 are invalid. Try submitting 10."
-              initialValue={5}
+              title="4a. Basic max — max=9"
+              desc="Single-digit max → 1ch width. Initial value is 10 (above max) — submit to see the validation message."
+              initialValue={10}
               inputProps={{ max: 9 }}
             />
 
             <DemoForm
               id="max-large"
-              title="3b. Large max — max=999"
-              desc="3-digit max → 3ch width. Try submitting 1000."
-              initialValue={120}
+              title="4b. Large max — max=999"
+              desc="3-digit max → 3ch width. Initial value is 1000 (above max) — submit to see the validation message."
+              initialValue={1000}
               inputProps={{ min: 0, max: 999 }}
             />
 
-            {/* ── 4. Step ── */}
+            {/* ── 5. Step ── */}
             <h2 id="step" style="margin:0">
-              4. step
+              5. step
             </h2>
 
             <DemoForm
               id="step-basic"
-              title="4a. Integer step — step=5, min=0, max=60"
-              desc="Only multiples of 5 are valid (0, 5, 10, …). Try submitting 7."
-              initialValue={15}
+              title="5a. Integer step — step=5, min=0, max=60"
+              desc="Only multiples of 5 are valid. Initial value is 7 (not a multiple of 5) — submit to see the validation message."
+              initialValue={7}
               inputProps={{ min: 0, max: 60, step: 5 }}
             />
 
             <DemoForm
               id="step-float"
-              title="4b. Float step — step=0.5, min=0, max=9.5"
-              desc="Step is 0.5 so values like 1.5 or 3.5 are valid. maxLength accounts for the decimal separator. Try submitting 1.3 (invalid step)."
-              initialValue={2.5}
+              title="5b. Float step — step=0.5, min=0, max=9.5"
+              desc="Step is 0.5 so values like 1.5 or 3.5 are valid. Initial value is 1.3 (invalid step) — submit to see the validation message."
+              initialValue={1.3}
               inputProps={{ min: 0, max: 9.5, step: 0.5 }}
             />
 
             <DemoForm
               id="step-negative"
-              title="4c. Float step + negative min — step=0.5, min=-5, max=5"
-              desc="Combines negative min and float step. Width = sign + 1 integer digit + 1 separator + 1 decimal = 4ch. Try -3.5 (valid) or -3.3 (invalid step)."
-              initialValue={-1.5}
+              title="5c. Float step + negative min — step=0.5, min=-5, max=5"
+              desc="Combines negative min and float step. Initial value is -3.3 (invalid step) — submit to see the validation message."
+              initialValue={-3.3}
               inputProps={{ min: -5, max: 5, step: 0.5 }}
             />
           </Box>
