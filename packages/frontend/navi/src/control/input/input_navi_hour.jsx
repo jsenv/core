@@ -13,7 +13,8 @@ import { InputRightSlot } from "./input_ui_components.jsx";
  */
 export const InputNaviHourResolver = (props) => {
   const Next = useNextResolver();
-  if (props["navi-input-type"] === "navi_hour") {
+
+  if (props["navi-input-type"] === "hour") {
     return <InputNaviHour {...props} />;
   }
   return <Next {...props} />;
