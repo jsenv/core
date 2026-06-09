@@ -16,9 +16,9 @@
  * - <InputRadio /> for type="radio"
  */
 
-import { useContext, useId, useRef } from "preact/hooks";
+import { useId, useRef } from "preact/hooks";
 
-import { Box, BoxForwardedPropsContext } from "@jsenv/navi/src/box/box.jsx";
+import { Box } from "@jsenv/navi/src/box/box.jsx";
 import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.jsx";
 import {
   createComponentResolver,
@@ -269,11 +269,7 @@ const InputHeadlessResolver = (props) => {
 };
 const InputTextualHeadless = (props) => {
   const [inputProps, remainingProps] = useInputTextualProps(props);
-  return (
-    <BoxForwardedPropsContext.Provider value={undefined}>
-      <RealInput {...inputProps} {...remainingProps} />
-    </BoxForwardedPropsContext.Provider>
-  );
+  return <RealInput {...inputProps} {...remainingProps} />;
 };
 const useInputTextualProps = (props) => {
   const [controlProps, remainingProps, ControlChildrenWrapper] =
@@ -309,6 +305,11 @@ const InputTextualUI = (props) => {
     </ControlChildrenWrapper>
   );
 
+  if (Object.hasOwn(remainingProps, "width")) {
+    inputProps.width = remainingProps.width;
+  }
+  const { maxLength } = inputProps;
+
   return (
     <Box
       as="span"
@@ -317,7 +318,7 @@ const InputTextualUI = (props) => {
       {...remainingProps}
       basePseudoState={basePseudoState}
       ui={undefined}
-      width={undefined} // width is meant to end up on the input element
+      width={undefined} // width is put on the input element
       data-discrete={discrete ? "" : undefined}
       discrete={undefined} // handled via data attribute
       styleCSSVars={InputStyleCSSVars}
@@ -331,7 +332,10 @@ const InputTextualUI = (props) => {
         color="var(--loader-color)"
         inset={-1}
       />
-      <RealInput {...inputProps} width={remainingProps.width} />
+      <RealInput
+        width={maxLength === undefined ? undefined : `${maxLength}ch`}
+        {...inputProps}
+      />
       {childrenWithContext}
     </Box>
   );
@@ -356,18 +360,7 @@ export const InputTextual = createComponentResolver([
 ]);
 
 const RealInput = (props) => {
-  const inputProps = useContext(BoxForwardedPropsContext);
-  const { maxLength } = props;
-
-  return (
-    <Box
-      width={maxLength === undefined ? undefined : `${maxLength}ch`}
-      {...inputProps}
-      {...props}
-      as="input"
-      baseClassName="navi_control_input"
-    />
-  );
+  return <Box {...props} as="input" baseClassName="navi_control_input" />;
 };
 
 const InputStyleCSSVars = {
