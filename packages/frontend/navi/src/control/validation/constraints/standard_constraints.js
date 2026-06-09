@@ -319,10 +319,11 @@ export const TYPE_NUMBER_CONSTRAINT = {
     const numericValue =
       field.type === "number" ? field.valueAsNumber : Number(field.value);
     const valueAsNumberIsNaN = isNaN(numericValue);
-    if (valueAsNumberIsNaN) {
-      return naviI18n("constraint.type.number.default");
+    if (!valueAsNumberIsNaN) {
+      return null;
     }
-    return null;
+    const naviInputType = field.getAttribute("navi-input-type");
+    return naviI18n(`constraint.type.${naviInputType || "number"}.default`);
   },
 };
 

@@ -40,12 +40,11 @@ const NAVI_TYPE_DEFAULTS = {
     "step": 1,
   },
   navi_number: {
-    "type": "text",
-    "navi-input-type": "navi_number",
-    "inputMode": "numeric",
-    "autocorrect": "off",
-    "spellcheck": "false",
-    "autoComplete": "off",
+    type: "text",
+    inputMode: "numeric",
+    autoCorrect: "off",
+    spellcheck: "false",
+    autoComplete: "off",
   },
 };
 
