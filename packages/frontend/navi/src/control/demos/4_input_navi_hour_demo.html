@@ -50,7 +50,15 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useSignal } from "@preact/signals";
-      import { Box, Field, Label, Input, NaviDebug } from "@jsenv/navi";
+      import {
+        Box,
+        Button,
+        Field,
+        Form,
+        Label,
+        Input,
+        NaviDebug,
+      } from "@jsenv/navi";
 
       const App = () => (
         <Box flex="y" spacing="l">
@@ -65,6 +73,7 @@
 
       const DefaultDemo = () => {
         const valueSignal = useSignal(8);
+        const submitSignal = useSignal(null);
         return (
           <div class="demo-section">
             <h2>1. Default — 0 to 23h</h2>
@@ -72,18 +81,35 @@
               Max is 23 → 2 digits → input width is 2ch. No spin buttons. "h"
               suffix. Text centered.
             </p>
-            <Field>
-              Heure
-              <Input
-                type="navi_hour"
-                value={valueSignal.value}
-                action={(v) => {
-                  valueSignal.value = v;
-                }}
-              />
-            </Field>
+            <Form
+              action={({ hour }) => {
+                submitSignal.value = hour;
+              }}
+              flex="y"
+              alignX="start"
+              spacing="s"
+            >
+              <Field>
+                Heure
+                <Input
+                  name="hour"
+                  type="navi_hour"
+                  value={valueSignal.value}
+                  action={(v) => {
+                    valueSignal.value = v;
+                  }}
+                />
+              </Field>
+              <Button type="submit">Submit</Button>
+            </Form>
             <p class="value-display">
               Value: <strong>{valueSignal.value}</strong>
+              {submitSignal.value !== null && (
+                <>
+                  {" "}
+                  — Last submitted: <strong>{submitSignal.value}</strong>
+                </>
+              )}
             </p>
           </div>
         );
@@ -93,23 +119,41 @@
 
       const SingleDigitDemo = () => {
         const valueSignal = useSignal(3);
+        const submitSignal = useSignal(null);
         return (
           <div class="demo-section">
             <h2>2. Single digit max — 0 to 9h</h2>
             <p class="desc">Max is 9 → 1 digit → input width is 1ch.</p>
-            <Field>
-              <Label>Heure</Label>
-              <Input
-                type="navi_hour"
-                max={9}
-                value={valueSignal.value}
-                action={(v) => {
-                  valueSignal.value = Number(v);
-                }}
-              />
-            </Field>
+            <Form
+              action={({ hour }) => {
+                submitSignal.value = hour;
+              }}
+              flex="y"
+              alignX="start"
+              spacing="s"
+            >
+              <Field>
+                <Label>Heure</Label>
+                <Input
+                  name="hour"
+                  type="navi_hour"
+                  max={9}
+                  value={valueSignal.value}
+                  action={(v) => {
+                    valueSignal.value = Number(v);
+                  }}
+                />
+              </Field>
+              <Button type="submit">Submit</Button>
+            </Form>
             <p class="value-display">
               Value: <strong>{valueSignal.value}</strong>
+              {submitSignal.value !== null && (
+                <>
+                  {" "}
+                  — Last submitted: <strong>{submitSignal.value}</strong>
+                </>
+              )}
             </p>
           </div>
         );
@@ -119,25 +163,43 @@
 
       const LargeMaxDemo = () => {
         const valueSignal = useSignal(120);
+        const submitSignal = useSignal(null);
         return (
           <div class="demo-section">
             <h2>3. Large max — 0 to 999h</h2>
             <p class="desc">Max is 999 → 3 digits → input width is 3ch.</p>
-            <Field>
-              <Label>Heures totales</Label>
-              <Input
-                type="navi_hour"
-                min={0}
-                max={999}
-                step={1}
-                value={valueSignal.value}
-                action={(v) => {
-                  valueSignal.value = Number(v);
-                }}
-              />
-            </Field>
+            <Form
+              action={({ hour }) => {
+                submitSignal.value = hour;
+              }}
+              flex="y"
+              alignX="start"
+              spacing="s"
+            >
+              <Field>
+                <Label>Heures totales</Label>
+                <Input
+                  name="hour"
+                  type="navi_hour"
+                  min={0}
+                  max={999}
+                  step={1}
+                  value={valueSignal.value}
+                  action={(v) => {
+                    valueSignal.value = Number(v);
+                  }}
+                />
+              </Field>
+              <Button type="submit">Submit</Button>
+            </Form>
             <p class="value-display">
               Value: <strong>{valueSignal.value}</strong>
+              {submitSignal.value !== null && (
+                <>
+                  {" "}
+                  — Last submitted: <strong>{submitSignal.value}</strong>
+                </>
+              )}
             </p>
           </div>
         );
@@ -147,27 +209,45 @@
 
       const TimeStringDemo = () => {
         const valueSignal = useSignal(2);
+        const submitSignal = useSignal(null);
         return (
           <div class="demo-section">
             <h2>4. Time string min/max — "00:30" to "12:00"</h2>
             <p class="desc">
               min="00:30" → 0.5h, max="12:00" → 12h. 2-digit width.
             </p>
-            <Field>
-              <Label>Heure</Label>
-              <Input
-                type="navi_hour"
-                min="00:30"
-                max="12:00"
-                step="00:30"
-                value={valueSignal.value}
-                action={(v) => {
-                  valueSignal.value = Number(v);
-                }}
-              />
-            </Field>
+            <Form
+              action={({ hour }) => {
+                submitSignal.value = hour;
+              }}
+              flex="y"
+              alignX="start"
+              spacing="s"
+            >
+              <Field>
+                <Label>Heure</Label>
+                <Input
+                  name="hour"
+                  type="navi_hour"
+                  min="00:30"
+                  max="12:00"
+                  step="00:30"
+                  value={valueSignal.value}
+                  action={(v) => {
+                    valueSignal.value = Number(v);
+                  }}
+                />
+              </Field>
+              <Button type="submit">Submit</Button>
+            </Form>
             <p class="value-display">
               Value: <strong>{valueSignal.value}</strong>
+              {submitSignal.value !== null && (
+                <>
+                  {" "}
+                  — Last submitted: <strong>{submitSignal.value}</strong>
+                </>
+              )}
             </p>
           </div>
         );

@@ -12,12 +12,43 @@ export const InputModeResolver = (props) => {
 const InputModeNumeric = (props) => {
   const Next = useNextResolver();
 
-  const { max } = props;
+  const { min, max, step = 1, action } = props;
   let maxLength;
   if (max !== undefined) {
     const digitCount = String(Math.floor(max)).length;
     maxLength = digitCount;
   }
 
-  return <Next maxLength={maxLength} {...props} />;
+  return (
+    <Next
+      maxLength={maxLength}
+      {...props}
+      onKeyDown={(e) => {
+        props.onKeyDown?.(e);
+        if (e.defaultPrevented) {
+          return;
+        }
+        if (e.key !== "ArrowUp" && e.key !== "ArrowDown") {
+          return;
+        }
+        e.preventDefault();
+        if (!action) {
+          return;
+        }
+        const currentValue = Number(e.currentTarget.value);
+        if (Number.isNaN(currentValue)) {
+          return;
+        }
+        const delta = e.key === "ArrowUp" ? step : -step;
+        let nextValue = currentValue + delta;
+        if (min !== undefined && nextValue < min) {
+          nextValue = min;
+        }
+        if (max !== undefined && nextValue > max) {
+          nextValue = max;
+        }
+        action(nextValue);
+      }}
+    />
+  );
 };
