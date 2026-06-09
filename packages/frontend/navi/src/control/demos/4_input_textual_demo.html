@@ -1160,47 +1160,41 @@
 
       // ── maxLength → automatic width ────────────────────────────────────────
       // When maxLength is set, InputTextual automatically sizes itself.
-      // For numeric inputs (type="number" or inputMode="numeric"): `maxLength * 1ch`
-      //   — digits are monospace-like, ch is accurate.
-      // For text inputs: `maxLength * 1.2ch`
-      //   — 1.2x factor accounts for variable-width characters (M, W, etc.).
+      // For inputMode="numeric": `maxLength * 1ch` — digits are uniform-width.
+      // Otherwise: `maxLength * 1.5ch` — 1.5x factor accounts for wide chars
+      //   like "M" or "W" (1.2ch was not enough in practice).
+      // Note: type="number" does not support maxLength, so only inputMode="numeric"
+      //   gets the 1ch treatment.
 
       const MaxLengthWidthDemo = () => (
         <div class="demo-section" id="max-length">
           <h2>maxLength → automatic width</h2>
           <p class="desc">
             When <code>maxLength</code> is provided, the input wrapper is
-            automatically sized. For numeric inputs (<code>type="number"</code>{" "}
-            or <code>inputMode="numeric"</code>) the width is{" "}
-            <code>maxLength × 1ch</code> — digits are uniform-width so ch is
-            accurate. For text inputs the width is{" "}
-            <code>maxLength × 1.2ch</code> to account for wide characters like
+            automatically sized. For <code>inputMode="numeric"</code> the width
+            is <code>maxLength × 1ch</code> — digits are uniform-width so ch is
+            accurate. For all other inputs the width is{" "}
+            <code>maxLength × 1.5ch</code> to account for wide characters like
             "M" or "W". A <code>width</code> prop always wins.
           </p>
           <Box flex="y" spacing="m" wrap alignY="start">
             <Box flex="y" spacing="xs">
               <span style="font-size:12px;color:#888">
-                text maxLength=2 (×1.2ch)
+                text maxLength=2 (×1.5ch)
               </span>
-              <Input type="text" maxLength={2} defaultValue="AB" />
+              <Input type="text" maxLength={2} defaultValue="MM" />
             </Box>
             <Box flex="y" spacing="xs">
               <span style="font-size:12px;color:#888">
-                text maxLength=5 (×1.2ch)
+                text maxLength=5 (×1.5ch)
               </span>
-              <Input type="text" maxLength={5} defaultValue="ABCDE" />
+              <Input type="text" maxLength={5} defaultValue="MMMMM" />
             </Box>
             <Box flex="y" spacing="xs">
               <span style="font-size:12px;color:#888">
-                text maxLength=10 (×1.2ch)
+                text maxLength=10 (×1.5ch)
               </span>
-              <Input type="text" maxLength={10} defaultValue="0123456789" />
-            </Box>
-            <Box flex="y" spacing="xs">
-              <span style="font-size:12px;color:#888">
-                number maxLength=3 (×1ch)
-              </span>
-              <Input type="number" maxLength={3} defaultValue="123" />
+              <Input type="text" maxLength={10} defaultValue="MMMMMMMMMM" />
             </Box>
             <Box flex="y" spacing="xs">
               <span style="font-size:12px;color:#888">
@@ -1225,7 +1219,7 @@
                 type="text"
                 maxLength={4}
                 padding="l"
-                defaultValue="ABCD"
+                defaultValue="MMWW"
               />
             </Box>
           </Box>
