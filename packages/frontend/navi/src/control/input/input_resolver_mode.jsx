@@ -16,8 +16,16 @@ const InputModeNumeric = (props) => {
   const { min, max, step = 1 } = props;
   let maxLength;
   if (max !== undefined) {
-    const digitCount = String(Math.floor(max)).length;
-    maxLength = digitCount;
+    const integerDigits = String(Math.floor(max)).length;
+    // If step has decimal places, the value can contain a separator + those digits
+    const stepStr = String(step);
+    const dotIndex = stepStr.indexOf(".");
+    const decimalDigits = dotIndex === -1 ? 0 : stepStr.length - dotIndex - 1;
+    // If min is negative (or unknown and max itself is negative), a "-" sign can appear
+    const canBeNegative = min !== undefined ? min < 0 : max < 0;
+    const signChar = canBeNegative ? 1 : 0;
+    maxLength =
+      signChar + integerDigits + (decimalDigits > 0 ? 1 + decimalDigits : 0);
   }
 
   return (

@@ -60,17 +60,57 @@
         NaviDebug,
       } from "@jsenv/navi";
 
-      const App = () => (
-        <NaviDebug debugInteraction debugAction>
-          <Box flex="y" spacing="l">
-            <DefaultDemo />
-            <SingleDigitDemo />
-            <LargeMaxDemo />
-            <TimeStringDemo />
-          </Box>
-        </NaviDebug>
+      // ── TOC ───────────────────────────────────────────────────────────────
+      const TOC = () => (
+        <nav style="margin-bottom:32px">
+          <strong>Contents</strong>
+          <ol style="margin:8px 0 0;padding-left:20px;line-height:2">
+            <li>
+              <a href="#default">Default behavior</a>
+            </li>
+            <li>
+              <a href="#min">min</a>
+              <ol style="padding-left:16px;line-height:2">
+                <li>
+                  <a href="#min-basic">Basic min</a>
+                </li>
+                <li>
+                  <a href="#min-negative">
+                    Negative min (allows negative values)
+                  </a>
+                </li>
+              </ol>
+            </li>
+            <li>
+              <a href="#max">max</a>
+              <ol style="padding-left:16px;line-height:2">
+                <li>
+                  <a href="#max-basic">Basic max</a>
+                </li>
+                <li>
+                  <a href="#max-large">Large max (3 digits)</a>
+                </li>
+              </ol>
+            </li>
+            <li>
+              <a href="#step">step</a>
+              <ol style="padding-left:16px;line-height:2">
+                <li>
+                  <a href="#step-basic">Integer step</a>
+                </li>
+                <li>
+                  <a href="#step-float">Float step (decimal values)</a>
+                </li>
+                <li>
+                  <a href="#step-negative">Float step with negative min</a>
+                </li>
+              </ol>
+            </li>
+          </ol>
+        </nav>
       );
 
+      // ── Shared helpers ────────────────────────────────────────────────────
       const CallLog = ({ entries }) => {
         if (entries.length === 0) {
           return null;
@@ -100,48 +140,54 @@
         return [logSignal, log];
       };
 
-      // ── 1. Default (0–23h, step 1) ────────────────────────────────────────
-
-      const DefaultDemo = () => {
-        const valueSignal = useSignal(8);
+      const DemoForm = ({
+        id,
+        title,
+        desc,
+        children,
+        inputProps,
+        initialValue,
+        name = "hour",
+      }) => {
+        const valueSignal = useSignal(initialValue);
         const submitSignal = useSignal(null);
         const [logSignal, log] = useCallLog();
         return (
-          <div class="demo-section">
-            <h2>1. Default — 0 to 23h</h2>
-            <p class="desc">
-              Max is 23 → 2 digits → input width is 2ch. No spin buttons. "h"
-              suffix. Text centered.
-            </p>
+          <div class="demo-section" id={id}>
+            <h2>{title}</h2>
+            {desc && <p class="desc">{desc}</p>}
             <Form
-              action={({ hour }) => {
-                log("form action", { hour });
-                submitSignal.value = hour;
+              action={(fields) => {
+                log("form action", fields);
+                submitSignal.value = fields[name];
               }}
               flex="y"
               alignX="start"
               spacing="s"
             >
               <Field>
-                Heure
+                <Label>Heures</Label>
                 <Input
-                  name="hour"
+                  name={name}
                   type="navi_hour"
                   value={valueSignal.value}
                   action={(v) => {
                     log("action", v);
                     valueSignal.value = v;
                   }}
+                  {...inputProps}
                 />
               </Field>
+              {children}
               <Button type="submit">Submit</Button>
             </Form>
             <p class="value-display">
-              Value: <strong>{valueSignal.value}</strong>
+              Value: <strong>{String(valueSignal.value)}</strong>
               {submitSignal.value !== null && (
                 <>
                   {" "}
-                  — Last submitted: <strong>{submitSignal.value}</strong>
+                  — Last submitted:{" "}
+                  <strong>{String(submitSignal.value)}</strong>
                 </>
               )}
             </p>
@@ -150,155 +196,92 @@
         );
       };
 
-      // ── 2. Single digit max (0–9h) ────────────────────────────────────────
+      // ── App ───────────────────────────────────────────────────────────────
+      const App = () => (
+        <NaviDebug>
+          <TOC />
+          <Box flex="y" spacing="l">
+            {/* ── 1. Default ── */}
+            <DemoForm
+              id="default"
+              title="1. Default — 0 to 23h, step 1"
+              desc="No explicit min/max/step. Defaults: min=0, max=23, step=1. Width is 2ch (2 digits). No spin buttons. 'h' suffix. Centered text."
+              initialValue={8}
+            />
 
-      const SingleDigitDemo = () => {
-        const valueSignal = useSignal(3);
-        const submitSignal = useSignal(null);
-        const [logSignal, log] = useCallLog();
-        return (
-          <div class="demo-section">
-            <h2>2. Single digit max — 0 to 9h</h2>
-            <p class="desc">Max is 9 → 1 digit → input width is 1ch.</p>
-            <Form
-              action={({ hour }) => {
-                log("form action", { hour });
-                submitSignal.value = hour;
-              }}
-              flex="y"
-              alignX="start"
-              spacing="s"
-            >
-              <Field>
-                <Label>Heure</Label>
-                <Input
-                  name="hour"
-                  type="navi_hour"
-                  max={9}
-                  value={valueSignal.value}
-                  action={(v) => {
-                    log("action", v);
-                    valueSignal.value = Number(v);
-                  }}
-                />
-              </Field>
-              <Button type="submit">Submit</Button>
-            </Form>
-            <p class="value-display">
-              Value: <strong>{valueSignal.value}</strong>
-              {submitSignal.value !== null && (
-                <>
-                  {" "}
-                  — Last submitted: <strong>{submitSignal.value}</strong>
-                </>
-              )}
-            </p>
-            <CallLog entries={logSignal.value} />
-          </div>
-        );
-      };
+            {/* ── 2. Min ── */}
+            <h2 id="min" style="margin:0">
+              2. min
+            </h2>
 
-      // ── 3. Large max (0–999h) ─────────────────────────────────────────────
+            <DemoForm
+              id="min-basic"
+              title="2a. Basic min — min=2, max=23"
+              desc="Values below 2 are invalid. Try submitting with value 1 to see the validation message."
+              initialValue={5}
+              inputProps={{ min: 2, max: 23 }}
+            />
 
-      const LargeMaxDemo = () => {
-        const valueSignal = useSignal(120);
-        const submitSignal = useSignal(null);
-        const [logSignal, log] = useCallLog();
-        return (
-          <div class="demo-section">
-            <h2>3. Large max — 0 to 999h</h2>
-            <p class="desc">Max is 999 → 3 digits → input width is 3ch.</p>
-            <Form
-              action={({ hour }) => {
-                log("form action", { hour });
-                submitSignal.value = hour;
-              }}
-              flex="y"
-              alignX="start"
-              spacing="s"
-            >
-              <Field>
-                <Label>Heures totales</Label>
-                <Input
-                  name="hour"
-                  type="navi_hour"
-                  min={0}
-                  max={999}
-                  step={1}
-                  value={valueSignal.value}
-                  action={(v) => {
-                    log("action", v);
-                    valueSignal.value = Number(v);
-                  }}
-                />
-              </Field>
-              <Button type="submit">Submit</Button>
-            </Form>
-            <p class="value-display">
-              Value: <strong>{valueSignal.value}</strong>
-              {submitSignal.value !== null && (
-                <>
-                  {" "}
-                  — Last submitted: <strong>{submitSignal.value}</strong>
-                </>
-              )}
-            </p>
-            <CallLog entries={logSignal.value} />
-          </div>
-        );
-      };
+            <DemoForm
+              id="min-negative"
+              title="2b. Negative min — min=-10, max=10"
+              desc="min is negative so the input can contain a '-' sign. maxLength accounts for the sign character. Try submitting -15 (below min) or 15 (above max)."
+              initialValue={-3}
+              inputProps={{ min: -10, max: 10 }}
+            />
 
-      // ── 4. With time string min/max ───────────────────────────────────────
+            {/* ── 3. Max ── */}
+            <h2 id="max" style="margin:0">
+              3. max
+            </h2>
 
-      const TimeStringDemo = () => {
-        const valueSignal = useSignal(2);
-        const submitSignal = useSignal(null);
-        const [logSignal, log] = useCallLog();
-        return (
-          <div class="demo-section">
-            <h2>4. Time string min/max — "00:30" to "12:00"</h2>
-            <p class="desc">
-              min="00:30" → 0.5h, max="12:00" → 12h. 2-digit width.
-            </p>
-            <Form
-              action={({ hour }) => {
-                log("form action", { hour });
-                submitSignal.value = hour;
-              }}
-              flex="y"
-              alignX="start"
-              spacing="s"
-            >
-              <Field>
-                <Label>Heure</Label>
-                <Input
-                  name="hour"
-                  type="navi_hour"
-                  min="00:30"
-                  max="12:00"
-                  step="00:30"
-                  value={valueSignal.value}
-                  action={(v) => {
-                    log("action", v);
-                    valueSignal.value = Number(v);
-                  }}
-                />
-              </Field>
-              <Button type="submit">Submit</Button>
-            </Form>
-            <p class="value-display">
-              Value: <strong>{valueSignal.value}</strong>
-              {submitSignal.value !== null && (
-                <>
-                  {" "}
-                  — Last submitted: <strong>{submitSignal.value}</strong>
-                </>
-              )}
-            </p>
-            <CallLog entries={logSignal.value} />
-          </div>
-        );
-      };
+            <DemoForm
+              id="max-basic"
+              title="3a. Basic max — max=9"
+              desc="Single-digit max → 1ch width. Values above 9 are invalid. Try submitting 10."
+              initialValue={5}
+              inputProps={{ max: 9 }}
+            />
+
+            <DemoForm
+              id="max-large"
+              title="3b. Large max — max=999"
+              desc="3-digit max → 3ch width. Try submitting 1000."
+              initialValue={120}
+              inputProps={{ min: 0, max: 999 }}
+            />
+
+            {/* ── 4. Step ── */}
+            <h2 id="step" style="margin:0">
+              4. step
+            </h2>
+
+            <DemoForm
+              id="step-basic"
+              title="4a. Integer step — step=5, min=0, max=60"
+              desc="Only multiples of 5 are valid (0, 5, 10, …). Try submitting 7."
+              initialValue={15}
+              inputProps={{ min: 0, max: 60, step: 5 }}
+            />
+
+            <DemoForm
+              id="step-float"
+              title="4b. Float step — step=0.5, min=0, max=9.5"
+              desc="Step is 0.5 so values like 1.5 or 3.5 are valid. maxLength accounts for the decimal separator. Try submitting 1.3 (invalid step)."
+              initialValue={2.5}
+              inputProps={{ min: 0, max: 9.5, step: 0.5 }}
+            />
+
+            <DemoForm
+              id="step-negative"
+              title="4c. Float step + negative min — step=0.5, min=-5, max=5"
+              desc="Combines negative min and float step. Width = sign + 1 integer digit + 1 separator + 1 decimal = 4ch. Try -3.5 (valid) or -3.3 (invalid step)."
+              initialValue={-1.5}
+              inputProps={{ min: -5, max: 5, step: 0.5 }}
+            />
+          </Box>
+        </NaviDebug>
+      );
 
       render(<App />, document.getElementById("app"));
     </script>

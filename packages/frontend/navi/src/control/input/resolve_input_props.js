@@ -107,37 +107,97 @@ export const resolveInputProps = (props) => {
   resolveInputProps(props);
 };
 
-// HH:MM → number converters for duration navi types.
-// Used in MIN_MAX_FORMATTER_BY_TYPE and STEP_FORMATTER_BY_TYPE before type remapping.
+// Parses a duration string into a total number of seconds.
+// Supported notations:
+//   single unit   "5s" / "5second", "10min" / "10minute"
+//                 "2h" / "2hour", "3d" / "3day"
+//                 "2w" / "2week", "1month", "1year"
+//   compound      "1h20min" → 1h + 20min, "1h20min30s" → 1h + 20min + 30s
+// Returns null when the value cannot be parsed.
+const parseDurationToSeconds = (value) => {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const str = value.trim();
+
+  // Compound: 1h20min, 1h20min30s, 2h30min, 20min30s, etc.
+  // Requires explicit unit on each part
+  const compoundMatch =
+    /^(?:(\d+(?:\.\d+)?)h)?(?:(\d+(?:\.\d+)?)min)?(?:(\d+(?:\.\d+)?)s)?$/.exec(
+      str,
+    );
+  if (
+    compoundMatch &&
+    (compoundMatch[1] || compoundMatch[2] || compoundMatch[3]) &&
+    str !== ""
+  ) {
+    const h = compoundMatch[1] ? parseFloat(compoundMatch[1]) : 0;
+    const min = compoundMatch[2] ? parseFloat(compoundMatch[2]) : 0;
+    const sec = compoundMatch[3] ? parseFloat(compoundMatch[3]) : 0;
+    return h * 3600 + min * 60 + sec;
+  }
+
+  // Single value with long-form unit
+  const singleMatch =
+    /^(\d+(?:\.\d+)?)(second|minute|hour|day|week|month|year)$/.exec(str);
+  if (singleMatch) {
+    const n = parseFloat(singleMatch[1]);
+    const unit = singleMatch[2];
+    if (unit === "second") {
+      return n;
+    }
+    if (unit === "minute") {
+      return n * 60;
+    }
+    if (unit === "hour") {
+      return n * 3600;
+    }
+    if (unit === "day") {
+      return n * 86400;
+    }
+    if (unit === "week") {
+      return n * 604800;
+    }
+    if (unit === "month") {
+      return n * 2592000;
+    }
+    if (unit === "year") {
+      return n * 31536000;
+    }
+  }
+
+  return null;
+};
+
 const timeStringToMinutes = (value) => {
   if (typeof value !== "string") {
     return value;
   }
-  const m = /^(\d+):(\d{2})$/.exec(value);
-  if (!m) {
-    return value;
+  const seconds = parseDurationToSeconds(value);
+  if (seconds !== null) {
+    return seconds / 60;
   }
-  return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+  return value;
 };
 const timeStringToHours = (value) => {
   if (typeof value !== "string") {
     return value;
   }
-  const m = /^(\d+):(\d{2})$/.exec(value);
-  if (!m) {
-    return value;
+  const seconds = parseDurationToSeconds(value);
+  if (seconds !== null) {
+    return seconds / 3600;
   }
-  return parseInt(m[1], 10) + parseInt(m[2], 10) / 60;
+  return value;
 };
 const timeStringToSeconds = (value) => {
   if (typeof value !== "string") {
     return value;
   }
-  const m = /^(\d+):(\d{2})$/.exec(value);
-  if (!m) {
-    return value;
+  const seconds = parseDurationToSeconds(value);
+  if (seconds !== null) {
+    return seconds;
   }
-  return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+  return value;
 };
 
 const normalizeToDate = (value) => {
