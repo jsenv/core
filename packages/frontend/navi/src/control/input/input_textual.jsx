@@ -1,6 +1,9 @@
 /**
  * Input component for all textual input types.
  *
+ * Note pour plus tard: un jour on voudra un cas field-sizing: content;
+ *
+ *
  * Supports:
  * - text (default)
  * - password
