@@ -18,6 +18,11 @@ const css = /* css */ `
   .navi_dialog {
     &[open] {
       display: flex;
+      /* When centerInVisualViewport is enabled, --dialog-top-inset is set
+         dynamically to keep the dialog centered in the visual viewport
+         (accounts for the virtual keyboard on mobile). */
+      margin-top: var(--dialog-top-inset, auto);
+      margin-bottom: auto;
       flex-direction: column;
     }
 
@@ -29,7 +34,13 @@ const css = /* css */ `
 
 export const Dialog = (props) => {
   import.meta.css = css;
-  const { children, scrollTrap, pointerTrap, ...rest } = props;
+  const {
+    children,
+    scrollTrap,
+    pointerTrap,
+    centerInVisualViewport: centerInVisualViewportProp,
+    ...rest
+  } = props;
   const defaultRef = useRef();
   const ref = rest.ref || defaultRef;
   const debugPopup = useDebugPopup();
@@ -47,6 +58,36 @@ export const Dialog = (props) => {
     focusFirstAutofocusOrFocusable(dialogEl, debugFocus, e);
     if (scrollTrap) {
       addCleanup(trapScrollInside(dialogEl));
+    }
+    if (centerInVisualViewportProp && window.visualViewport) {
+      const centerInVisualViewport = () => {
+        const vv = window.visualViewport;
+        const dialogHeight = dialogEl.offsetHeight;
+        const availableHeight = vv.height;
+        const topOffset = vv.offsetTop;
+        const marginTop =
+          availableHeight > dialogHeight
+            ? topOffset + (availableHeight - dialogHeight) / 2
+            : topOffset;
+        dialogEl.style.setProperty(
+          "--dialog-top-inset",
+          `${snapToPixel(marginTop)}px`,
+        );
+      };
+      centerInVisualViewport();
+      window.visualViewport.addEventListener("resize", centerInVisualViewport);
+      window.visualViewport.addEventListener("scroll", centerInVisualViewport);
+      addCleanup(() => {
+        window.visualViewport.removeEventListener(
+          "resize",
+          centerInVisualViewport,
+        );
+        window.visualViewport.removeEventListener(
+          "scroll",
+          centerInVisualViewport,
+        );
+        dialogEl.style.removeProperty("--dialog-top-inset");
+      });
     }
     openedRef.current = true;
     dispatchCustomEvent(dialogEl, "navi_open", {

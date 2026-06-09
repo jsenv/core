@@ -523,6 +523,7 @@ const PickerContentInsideDialog = (props) => {
         className="navi_picker_dialog"
         scrollTrap={scrollTrap}
         pointerTrap={pointerTrap}
+        centerInVisualViewport
       >
         {children}
       </Dialog>
