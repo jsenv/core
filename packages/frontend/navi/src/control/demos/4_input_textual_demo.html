@@ -199,6 +199,7 @@
             <TypeVariationsDemo />
             <DatetimeDemo />
             <SizeVariationsDemo />
+            <MaxLengthWidthDemo />
             <InteractiveDemo />
           </div>
         );
@@ -247,6 +248,9 @@
               </li>
               <li>
                 <a href="#sizes">Size Variations</a>
+              </li>
+              <li>
+                <a href="#max-length">maxLength → automatic width</a>
               </li>
               <li>
                 <a href="#interactive-controls">Interactive Controls</a>
@@ -1153,6 +1157,44 @@
           </div>
         );
       };
+
+      // ── maxLength → automatic width ────────────────────────────────────────
+      // When maxLength is set, InputTextual automatically sizes itself to
+      // `maxLength + "ch"` so the input is never wider than needed.
+
+      const MaxLengthWidthDemo = () => (
+        <div class="demo-section" id="max-length">
+          <h2>maxLength → automatic width</h2>
+          <p class="desc">
+            When <code>maxLength</code> is provided, the input wrapper is
+            automatically sized to <code>maxLength + "ch"</code>. No need to set{" "}
+            <code>width</code> manually.
+          </p>
+          <Box flex="y" spacing="m" wrap alignY="center">
+            <Box flex="y" spacing="xs">
+              <span style="font-size:12px;color:#888">maxLength=2</span>
+              <Input type="text" maxLength={2} placeholder="AB" />
+            </Box>
+            <Box flex="y" spacing="xs">
+              <span style="font-size:12px;color:#888">maxLength=5</span>
+              <Input type="text" maxLength={5} placeholder="Hello" />
+            </Box>
+            <Box flex="y" spacing="xs">
+              <span style="font-size:12px;color:#888">maxLength=10</span>
+              <Input type="text" maxLength={10} placeholder="0123456789" />
+            </Box>
+            <Box flex="y" spacing="xs">
+              <span style="font-size:12px;color:#888">width override wins</span>
+              <Input
+                type="text"
+                maxLength={3}
+                width="200px"
+                placeholder="abc"
+              />
+            </Box>
+          </Box>
+        </div>
+      );
 
       render(
         <NaviDebug debugAction debugInteraction>

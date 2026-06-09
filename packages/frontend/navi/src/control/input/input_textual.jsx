@@ -317,6 +317,7 @@ const InputTextualUI = (props) => {
       {...remainingProps}
       basePseudoState={basePseudoState}
       ui={undefined}
+      width={undefined} // width is meant to end up on the input element
       data-discrete={discrete ? "" : undefined}
       discrete={undefined} // handled via data attribute
       styleCSSVars={InputStyleCSSVars}
@@ -330,7 +331,7 @@ const InputTextualUI = (props) => {
         color="var(--loader-color)"
         inset={-1}
       />
-      <RealInput {...inputProps} />
+      <RealInput {...inputProps} width={remainingProps.width} />
       {childrenWithContext}
     </Box>
   );
@@ -356,8 +357,11 @@ export const InputTextual = createComponentResolver([
 
 const RealInput = (props) => {
   const inputProps = useContext(BoxForwardedPropsContext);
+  const { maxLength } = props;
+
   return (
     <Box
+      width={maxLength === undefined ? undefined : `${maxLength}ch`}
       {...inputProps}
       {...props}
       as="input"
