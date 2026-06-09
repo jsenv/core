@@ -310,16 +310,19 @@ const InputTextualUI = (props) => {
     </ControlChildrenWrapper>
   );
 
-  if (Object.hasOwn(remainingProps, "width")) {
-    inputProps.width = remainingProps.width;
-  }
-  const { maxLength } = inputProps;
-  let maxLengthWidth;
-  if (maxLength !== undefined) {
-    const isNumeric = props.inputMode === "numeric";
-    maxLengthWidth = isNumeric
-      ? `${maxLength}ch`
-      : `calc(${maxLength} * 1.5ch)`;
+  const { width = "maxLength" } = props;
+  if (width === "maxLength") {
+    const { maxLength } = inputProps;
+    if (maxLength !== undefined) {
+      const isNumeric = props.inputMode === "numeric";
+      inputProps.width = isNumeric
+        ? `${maxLength}ch`
+        : `calc(${maxLength} * 1.5ch)`;
+    }
+  } else if (width === "content") {
+    inputProps.fieldSizing = "content";
+  } else {
+    inputProps.width = width;
   }
 
   return (
@@ -344,7 +347,7 @@ const InputTextualUI = (props) => {
         color="var(--loader-color)"
         inset={-1}
       />
-      <RealInput width={maxLengthWidth} {...inputProps} />
+      <RealInput {...inputProps} />
       {childrenWithContext}
     </Box>
   );

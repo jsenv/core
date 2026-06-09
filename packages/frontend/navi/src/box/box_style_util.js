@@ -100,6 +100,7 @@ const DIMENSION_PROPS = {
   height: PASS_THROUGH,
   minHeight: PASS_THROUGH,
   maxHeight: PASS_THROUGH,
+  fieldSizing: PASS_THROUGH,
   square: (v, context) => {
     if (!v) {
       return null;
