@@ -47,7 +47,12 @@ const InputSearchUI = ({ icon }) => {
       <InputRightSlot
         hideWhileEmpty
         onClick={(e) => {
-          const input = e.currentTarget;
+          if (e.button !== 0) {
+            return;
+          }
+          const slot = e.currentTarget;
+          const label = slot.closest("label");
+          const input = document.getElementById(label.getAttribute("for"));
           const allowed = dispatchRequestInteraction(input, e);
           if (allowed) {
             triggerStringAction("clear", e, {
