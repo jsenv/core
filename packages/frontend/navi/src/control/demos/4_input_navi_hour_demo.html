@@ -61,12 +61,14 @@
       } from "@jsenv/navi";
 
       const App = () => (
-        <Box flex="y" spacing="l">
-          <DefaultDemo />
-          <SingleDigitDemo />
-          <LargeMaxDemo />
-          <TimeStringDemo />
-        </Box>
+        <NaviDebug debugInteraction debugAction>
+          <Box flex="y" spacing="l">
+            <DefaultDemo />
+            <SingleDigitDemo />
+            <LargeMaxDemo />
+            <TimeStringDemo />
+          </Box>
+        </NaviDebug>
       );
 
       const CallLog = ({ entries }) => {
@@ -298,12 +300,7 @@
         );
       };
 
-      render(
-        <NaviDebug>
-          <App />
-        </NaviDebug>,
-        document.getElementById("app"),
-      );
+      render(<App />, document.getElementById("app"));
     </script>
   </body>
 </html>

@@ -8,8 +8,8 @@ import { createUICallback } from "./ui_callback.js";
 import { dispatchRequestSetUIState } from "./ui_state_controller.js";
 import { dispatchRequestAction } from "./validation/custom_constraint_validation.js";
 
-export const triggerStringAction = (actionName, event, options) => {
-  return resolveActionProp(actionName)(event, options);
+export const triggerStringAction = (actionName, ...args) => {
+  return resolveActionProp(actionName)(...args);
 };
 export const resolveActionProp = (action) => {
   if (typeof action === "string") {

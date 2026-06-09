@@ -1,4 +1,4 @@
-import { resolveActionProp } from "@jsenv/navi/src/control/string_actions.js";
+import { triggerStringAction } from "@jsenv/navi/src/control/string_actions.js";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 
 export const InputModeResolver = (props) => {
@@ -45,7 +45,7 @@ const InputModeNumeric = (props) => {
         if (max !== undefined && nextValue > max) {
           nextValue = max;
         }
-        resolveActionProp("update")(nextValue, { event: e });
+        triggerStringAction("update", nextValue, { event: e });
       }}
     />
   );
