@@ -127,7 +127,7 @@ const css = /* css */ `
     --x-padding-left: var(--x-padding-left-base);
 
     position: relative;
-    display: inline-block;
+    display: inline-flex;
     box-sizing: content-box;
     width: fit-content;
     min-width: 50px;
@@ -136,10 +136,17 @@ const css = /* css */ `
     padding-right: var(--x-padding-right);
     padding-bottom: var(--x-padding-bottom);
     padding-left: var(--x-padding-left);
-    flex-direction: inherit;
+    flex-direction: row;
     color: var(--x-color);
     font-size: var(--font-size);
-    border-radius: inherit;
+    background-color: var(--x-background-color);
+    border-width: var(--border-width);
+    border-style: solid;
+    border-color: var(--x-border-color);
+    border-radius: var(--border-radius);
+    outline-width: var(--x-outline-width);
+    outline-color: var(--outline-color);
+    outline-offset: var(--x-outline-offset);
     cursor: inherit;
     pointer-events: auto;
 
@@ -149,7 +156,7 @@ const css = /* css */ `
 
     .navi_control_input {
       box-sizing: content-box;
-      width: inherit;
+      min-width: 1ch;
       margin-top: calc(-1 * var(--x-padding-top));
       margin-right: calc(-1 * var(--x-padding-right));
       margin-bottom: calc(-1 * var(--x-padding-bottom));
@@ -158,16 +165,13 @@ const css = /* css */ `
       padding-right: var(--x-padding-right);
       padding-bottom: var(--x-padding-bottom);
       padding-left: var(--x-padding-left);
+      flex-grow: 1;
       color: inherit;
       font-size: inherit;
-      background-color: var(--x-background-color);
-      border-width: var(--border-width);
-      border-style: solid;
-      border-color: var(--x-border-color);
-      border-radius: var(--border-radius);
-      outline-width: var(--x-outline-width);
-      outline-color: var(--outline-color);
-      outline-offset: var(--x-outline-offset);
+      background: none;
+      border: none;
+      border-radius: inherit;
+      outline: none;
 
       &[type="search"] {
         -webkit-appearance: textfield;
@@ -178,50 +182,11 @@ const css = /* css */ `
       }
     }
 
-    &[data-no-spin] {
-      .navi_control_input {
-        appearance: textfield;
-      }
-      .navi_control_input::-webkit-outer-spin-button,
-      .navi_control_input::-webkit-inner-spin-button {
-        margin: 0;
-
-        -webkit-appearance: none;
-      }
-    }
-
-    &:has(.navi_input_slot[data-left]) {
-      --x-left-slot-size: calc(
-        var(--left-slot-size) + var(--x-padding-left-base) / 2
-      );
-      --x-padding-left: var(--x-left-slot-size);
-    }
-    &:has(.navi_input_slot[data-right]) {
-      --x-right-slot-size: calc(
-        var(--right-slot-size) + var(--x-padding-right-base) / 2
-      );
-      --x-padding-right: var(--x-right-slot-size);
-    }
-
     .navi_input_slot {
-      position: absolute;
-      top: 0;
-      bottom: 0;
-      margin: 0;
-      padding: 0;
-      padding-top: var(--x-padding-top);
-      font-size: var(--font-size);
-      background: none;
-      border: none;
-
       &[data-left] {
-        left: 0;
-        width: var(--x-left-slot-size);
+        order: -1;
       }
-      &[data-right] {
-        right: 0;
-        width: var(--x-right-slot-size);
-      }
+
       &[data-hide-while-empty] {
         opacity: 0;
         pointer-events: none;
@@ -233,7 +198,6 @@ const css = /* css */ `
         cursor: pointer;
         pointer-events: auto;
       }
-
       &[data-readonly] {
         .navi_input_slot[data-hide-while-empty] {
           opacity: 0;
@@ -264,10 +228,7 @@ const css = /* css */ `
     &[data-focus-visible] {
       --x-background-color: var(--background-color-focus);
       --x-border-color: transparent;
-
-      .navi_control_input {
-        outline-style: solid;
-      }
+      outline-style: solid;
     }
     /* Disabled */
     &[data-disabled] {
@@ -393,7 +354,6 @@ const InputTextualUI = (props) => {
       discrete={undefined} // handled via data attribute
       styleCSSVars={InputStyleCSSVars}
       pseudoStateSelector=".navi_control_input"
-      visualSelector=".navi_control_input"
       pseudoClasses={InputPseudoClasses}
       pseudoElements={InputPseudoElements}
       hasChildUsingForwardedProps

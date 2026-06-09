@@ -13,6 +13,7 @@ export const CONTROL_ATTRIBUTE_SET = new Set([
   "type",
   "value",
   "checked",
+  "placeholder",
 
   "navi-input-type",
   "navi-control-proxy-for",

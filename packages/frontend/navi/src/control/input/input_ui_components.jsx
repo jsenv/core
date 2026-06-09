@@ -21,7 +21,7 @@ const InputSlot = ({ side, onClick, hideWhileEmpty, ...props }) => {
       data-hide-while-empty={hideWhileEmpty ? "" : undefined}
       inline
       flex
-      alignX="center"
+      align="center"
       onMouseDown={(e) => {
         // Only prevent focus from leaving when the input already has focus.
         // If the input is not focused, let the mousedown proceed normally so
