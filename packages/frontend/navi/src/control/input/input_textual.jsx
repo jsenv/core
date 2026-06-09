@@ -309,6 +309,13 @@ const InputTextualUI = (props) => {
     inputProps.width = remainingProps.width;
   }
   const { maxLength } = inputProps;
+  let maxLengthWidth;
+  if (maxLength !== undefined) {
+    const isNumeric = props.inputMode === "numeric";
+    maxLengthWidth = isNumeric
+      ? `${maxLength}ch`
+      : `calc(${maxLength} * 1.5ch)`;
+  }
 
   return (
     <Box
@@ -332,10 +339,7 @@ const InputTextualUI = (props) => {
         color="var(--loader-color)"
         inset={-1}
       />
-      <RealInput
-        width={maxLength === undefined ? undefined : `${maxLength}ch`}
-        {...inputProps}
-      />
+      <RealInput width={maxLengthWidth} {...inputProps} />
       {childrenWithContext}
     </Box>
   );
