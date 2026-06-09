@@ -315,20 +315,20 @@ naviI18n.addAll({
     en: "This field must be a number.",
   },
   "constraint.type.navi_hour.default": {
-    fr: "Ce champ doit être un nombre d'heures valide.",
-    en: "This field must be a valid number of hours.",
+    fr: "Ce champ doit contenir un nombre d'heure.",
+    en: "This field must contain a number of hours.",
   },
   "constraint.type.navi_minute.default": {
-    fr: "Ce champ doit être un nombre de minutes valide.",
-    en: "This field must be a valid number of minutes.",
+    fr: "Ce champ doit contenir un nombre de minutes.",
+    en: "This field must contain a number of minutes.",
   },
   "constraint.type.navi_second.default": {
-    fr: "Ce champ doit être un nombre de secondes valide.",
-    en: "This field must be a valid number of seconds.",
+    fr: "Ce champ doit contenir un nombre de secondes.",
+    en: "This field must contain a number of seconds.",
   },
   "constraint.type.navi_percentage.default": {
-    fr: "Ce champ doit être un pourcentage valide.",
-    en: "This field must be a valid percentage.",
+    fr: "Ce champ doit contenir un pourcentage.",
+    en: "This field must contain a percentage.",
   },
   "constraint.min.number.default": {
     fr: "Ce nombre doit être <strong>[min]</strong> ou plus.",
