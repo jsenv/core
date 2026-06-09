@@ -1,5 +1,3 @@
-import { useContext } from "preact/hooks";
-
 import { CloseSvg } from "@jsenv/navi/src/graphic/icons/close_svg.jsx";
 import { EmailSvg } from "@jsenv/navi/src/graphic/icons/email_svg.jsx";
 import { PhoneSvg } from "@jsenv/navi/src/graphic/icons/phone_svg.jsx";
@@ -8,7 +6,6 @@ import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
 import { triggerStringAction } from "../string_actions.js";
 import { dispatchRequestInteraction } from "../validation/custom_constraint_validation.js";
-import { InputTextualContext } from "./input_textual_context.js";
 import { InputIconSlot, InputRightSlot } from "./input_ui_components.jsx";
 
 export const InputTypeResolver = (props) => {
@@ -40,9 +37,6 @@ const InputSearch = (props) => {
   return <Next ui={<InputSearchUI icon={props.icon} />} {...props} />;
 };
 const InputSearchUI = ({ icon }) => {
-  const ctx = useContext(InputTextualContext);
-  const { id } = ctx;
-
   return (
     <>
       {icon === undefined && (
