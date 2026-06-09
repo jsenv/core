@@ -259,14 +259,44 @@ export const visibleRectEffect = (
         });
       }
     }
-    on_window_resize: {
-      const onWindowResize = (e) => {
+    on_visual_viewport_resize: {
+      // visualViewport resize is a superset of window resize:
+      // it also fires when the virtual keyboard opens/closes on mobile.
+      // Fall back to window resize when visualViewport is unavailable.
+      const onResize = (e) => {
         autoCheck(e);
       };
-      window.addEventListener("resize", onWindowResize);
-      addTeardown(() => {
-        window.removeEventListener("resize", onWindowResize);
-      });
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener("resize", onResize);
+        addTeardown(() => {
+          window.visualViewport.removeEventListener("resize", onResize);
+        });
+      } else {
+        window.addEventListener("resize", onResize);
+        addTeardown(() => {
+          window.removeEventListener("resize", onResize);
+        });
+      }
+    }
+    on_visual_viewport_scroll: {
+      // visualViewport scroll fires when the visual viewport pans independently
+      // of the layout viewport (e.g. during pinch-zoom). This is distinct from
+      // document scroll and must be observed separately.
+      if (window.visualViewport) {
+        const onVisualViewportScroll = (e) => {
+          autoCheck(e);
+        };
+        window.visualViewport.addEventListener(
+          "scroll",
+          onVisualViewportScroll,
+        );
+        addTeardown(() => {
+          window.visualViewport.removeEventListener(
+            "scroll",
+            onVisualViewportScroll,
+          );
+        });
+      }
     }
     on_element_resize: {
       let handlingResize = true;
