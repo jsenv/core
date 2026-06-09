@@ -314,19 +314,19 @@ naviI18n.addAll({
     fr: "Ce champ doit être un nombre.",
     en: "This field must be a number.",
   },
-  "constraint.type.navi_hour.default": {
+  "constraint.type.hour.default": {
     fr: "Ce champ doit contenir un nombre d'heure.",
     en: "This field must contain a number of hours.",
   },
-  "constraint.type.navi_minute.default": {
+  "constraint.type.minute.default": {
     fr: "Ce champ doit contenir un nombre de minutes.",
     en: "This field must contain a number of minutes.",
   },
-  "constraint.type.navi_second.default": {
+  "constraint.type.second.default": {
     fr: "Ce champ doit contenir un nombre de secondes.",
     en: "This field must contain a number of seconds.",
   },
-  "constraint.type.navi_percentage.default": {
+  "constraint.type.percentage.default": {
     fr: "Ce champ doit contenir un pourcentage.",
     en: "This field must contain a percentage.",
   },
