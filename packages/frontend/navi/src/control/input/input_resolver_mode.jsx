@@ -1,3 +1,4 @@
+import { resolveActionProp } from "@jsenv/navi/src/control/string_actions.js";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 
 export const InputModeResolver = (props) => {
@@ -12,7 +13,7 @@ export const InputModeResolver = (props) => {
 const InputModeNumeric = (props) => {
   const Next = useNextResolver();
 
-  const { min, max, step = 1, action } = props;
+  const { min, max, step = 1 } = props;
   let maxLength;
   if (max !== undefined) {
     const digitCount = String(Math.floor(max)).length;
@@ -32,9 +33,6 @@ const InputModeNumeric = (props) => {
           return;
         }
         e.preventDefault();
-        if (!action) {
-          return;
-        }
         const currentValue = Number(e.currentTarget.value);
         if (Number.isNaN(currentValue)) {
           return;
@@ -47,7 +45,7 @@ const InputModeNumeric = (props) => {
         if (max !== undefined && nextValue > max) {
           nextValue = max;
         }
-        action(nextValue);
+        resolveActionProp("update")(nextValue, { event: e });
       }}
     />
   );

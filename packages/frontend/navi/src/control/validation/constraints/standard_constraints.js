@@ -306,15 +306,19 @@ export const TYPE_NUMBER_CONSTRAINT = {
     if (field.tagName !== "INPUT") {
       return null;
     }
-    if (field.type !== "number") {
+    const isNumber = field.type === "number" || field.inputMode === "numeric";
+    if (!isNumber) {
       return null;
     }
     if (field.validity.valueMissing) {
       // let required handle that
       return null;
     }
-    const valueAsNumber = field.valueAsNumber;
-    const valueAsNumberIsNaN = isNaN(valueAsNumber);
+    // valueAsNumber only works for type="number"; for inputMode="numeric"
+    // (which is type="text" under the hood) we must parse field.value manually.
+    const numericValue =
+      field.type === "number" ? field.valueAsNumber : Number(field.value);
+    const valueAsNumberIsNaN = isNaN(numericValue);
     if (valueAsNumberIsNaN) {
       return naviI18n("constraint.type.number.default");
     }
@@ -349,7 +353,8 @@ export const MIN_CONSTRAINT = {
       if (isNaN(minNumber)) {
         return null;
       }
-      const valueAsNumber = field.valueAsNumber;
+      const valueAsNumber =
+        field.type === "number" ? field.valueAsNumber : Number(field.value);
       if (isNaN(valueAsNumber)) {
         return null;
       }
@@ -415,7 +420,8 @@ export const MAX_CONSTRAINT = {
       if (isNaN(maxNumber)) {
         return null;
       }
-      const valueAsNumber = field.valueAsNumber;
+      const valueAsNumber =
+        field.type === "number" ? field.valueAsNumber : Number(field.value);
       if (isNaN(valueAsNumber)) {
         return null;
       }
@@ -493,7 +499,8 @@ export const STEP_CONSTRAINT = {
       const step = parseFloat(stepString);
       const minString = field.min;
       const base = minString !== "" ? parseFloat(minString) : 0;
-      const valueAsNumber = field.valueAsNumber;
+      const valueAsNumber =
+        field.type === "number" ? field.valueAsNumber : Number(field.value);
       const before = base + Math.floor((valueAsNumber - base) / step) * step;
       const after = before + step;
       const decimals = (stepString.split(".")[1] || "").length;

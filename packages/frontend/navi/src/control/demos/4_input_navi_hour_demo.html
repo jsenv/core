@@ -69,11 +69,41 @@
         </Box>
       );
 
+      const CallLog = ({ entries }) => {
+        if (entries.length === 0) {
+          return null;
+        }
+        return (
+          <div style="margin-top:12px;font-size:12px;color:#555;border-top:1px solid #eee;padding-top:8px">
+            <strong>Call log</strong>
+            <ol style="margin:4px 0 0;padding-left:20px">
+              {entries.map((entry, i) => (
+                <li key={i} style="font-family:monospace">
+                  {entry}
+                </li>
+              ))}
+            </ol>
+          </div>
+        );
+      };
+
+      const useCallLog = () => {
+        const logSignal = useSignal([]);
+        const log = (label, value) => {
+          logSignal.value = [
+            ...logSignal.value,
+            `${label}(${JSON.stringify(value)})`,
+          ];
+        };
+        return [logSignal, log];
+      };
+
       // ── 1. Default (0–23h, step 1) ────────────────────────────────────────
 
       const DefaultDemo = () => {
         const valueSignal = useSignal(8);
         const submitSignal = useSignal(null);
+        const [logSignal, log] = useCallLog();
         return (
           <div class="demo-section">
             <h2>1. Default — 0 to 23h</h2>
@@ -83,6 +113,7 @@
             </p>
             <Form
               action={({ hour }) => {
+                log("form action", { hour });
                 submitSignal.value = hour;
               }}
               flex="y"
@@ -96,6 +127,7 @@
                   type="navi_hour"
                   value={valueSignal.value}
                   action={(v) => {
+                    log("action", v);
                     valueSignal.value = v;
                   }}
                 />
@@ -111,6 +143,7 @@
                 </>
               )}
             </p>
+            <CallLog entries={logSignal.value} />
           </div>
         );
       };
@@ -120,12 +153,14 @@
       const SingleDigitDemo = () => {
         const valueSignal = useSignal(3);
         const submitSignal = useSignal(null);
+        const [logSignal, log] = useCallLog();
         return (
           <div class="demo-section">
             <h2>2. Single digit max — 0 to 9h</h2>
             <p class="desc">Max is 9 → 1 digit → input width is 1ch.</p>
             <Form
               action={({ hour }) => {
+                log("form action", { hour });
                 submitSignal.value = hour;
               }}
               flex="y"
@@ -140,6 +175,7 @@
                   max={9}
                   value={valueSignal.value}
                   action={(v) => {
+                    log("action", v);
                     valueSignal.value = Number(v);
                   }}
                 />
@@ -155,6 +191,7 @@
                 </>
               )}
             </p>
+            <CallLog entries={logSignal.value} />
           </div>
         );
       };
@@ -164,12 +201,14 @@
       const LargeMaxDemo = () => {
         const valueSignal = useSignal(120);
         const submitSignal = useSignal(null);
+        const [logSignal, log] = useCallLog();
         return (
           <div class="demo-section">
             <h2>3. Large max — 0 to 999h</h2>
             <p class="desc">Max is 999 → 3 digits → input width is 3ch.</p>
             <Form
               action={({ hour }) => {
+                log("form action", { hour });
                 submitSignal.value = hour;
               }}
               flex="y"
@@ -186,6 +225,7 @@
                   step={1}
                   value={valueSignal.value}
                   action={(v) => {
+                    log("action", v);
                     valueSignal.value = Number(v);
                   }}
                 />
@@ -201,6 +241,7 @@
                 </>
               )}
             </p>
+            <CallLog entries={logSignal.value} />
           </div>
         );
       };
@@ -210,6 +251,7 @@
       const TimeStringDemo = () => {
         const valueSignal = useSignal(2);
         const submitSignal = useSignal(null);
+        const [logSignal, log] = useCallLog();
         return (
           <div class="demo-section">
             <h2>4. Time string min/max — "00:30" to "12:00"</h2>
@@ -218,6 +260,7 @@
             </p>
             <Form
               action={({ hour }) => {
+                log("form action", { hour });
                 submitSignal.value = hour;
               }}
               flex="y"
@@ -234,6 +277,7 @@
                   step="00:30"
                   value={valueSignal.value}
                   action={(v) => {
+                    log("action", v);
                     valueSignal.value = Number(v);
                   }}
                 />
@@ -249,6 +293,7 @@
                 </>
               )}
             </p>
+            <CallLog entries={logSignal.value} />
           </div>
         );
       };
