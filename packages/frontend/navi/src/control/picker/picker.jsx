@@ -359,7 +359,11 @@ const PickerInput = (props) => {
     <Box
       as="input"
       {...props}
-      value={asControlHostValue(props.value, { controlType: "input", type })}
+      value={asControlHostValue(props.value, {
+        controlType: "input",
+        type,
+        inputMode: props.inputMode,
+      })}
       className="navi_picker_input"
       pseudoClasses={PickerInputPseudoClasses}
       tabIndex={-1} // Make input non tabbable

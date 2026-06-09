@@ -5,41 +5,47 @@ import { parseStepToSeconds } from "../picker/time_helpers.js";
 // domain-specific wording instead of the generic "Ce nombre doit être...".
 const NAVI_TYPE_DEFAULTS = {
   navi_time: {
-    type: "time",
-    min: 0,
-    max: 24 * 3600 - 1,
-    step: 1,
+    "type": "time",
+    "navi-input-type": "time",
+    "min": 0,
+    "max": 24 * 3600 - 1,
+    "step": 1,
   },
   navi_hour: {
-    type: "navi_number",
-    min: 0,
-    max: 23,
-    step: 1,
+    "type": "navi_number",
+    "navi-input-type": "hour",
+    "min": 0,
+    "max": 23,
+    "step": 1,
   },
   navi_minute: {
-    type: "navi_number",
-    min: 0,
-    max: 59,
-    step: 1,
+    "type": "navi_number",
+    "navi-input-type": "minute",
+    "min": 0,
+    "max": 59,
+    "step": 1,
   },
   navi_second: {
-    type: "navi_number",
-    min: 0,
-    max: 59,
-    step: 1,
+    "type": "navi_number",
+    "navi-input-type": "second",
+    "min": 0,
+    "max": 59,
+    "step": 1,
   },
   navi_percentage: {
-    type: "navi_number",
-    min: 0,
-    max: 100,
-    step: 1,
+    "type": "navi_number",
+    "navi-input-type": "percentage",
+    "min": 0,
+    "max": 100,
+    "step": 1,
   },
   navi_number: {
-    type: "text",
-    inputMode: "numeric",
-    autocorrect: "off",
-    spellcheck: "false",
-    autoComplete: "off",
+    "type": "text",
+    "navi-input-type": "navi_number",
+    "inputMode": "numeric",
+    "autocorrect": "off",
+    "spellcheck": "false",
+    "autoComplete": "off",
   },
 };
 
@@ -81,9 +87,6 @@ export const resolveInputProps = (props) => {
   const currentTypeDefaults = NAVI_TYPE_DEFAULTS[currentType];
   if (!currentTypeDefaults) {
     return;
-  }
-  if (!props["navi-input-type"]) {
-    props["navi-input-type"] = currentType;
   }
   for (const key of Object.keys(currentTypeDefaults)) {
     if (props[key] === undefined) {

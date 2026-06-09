@@ -22,26 +22,18 @@ export const InputNaviHourResolver = (props) => {
 const InputNaviHour = (props) => {
   const Next = useNextResolver();
   const { unit = true } = props;
-  let widthDefault;
-  if (props.children === undefined) {
-    let charCount = 0;
-    if (props.max !== undefined) {
-      const digitCount = String(Math.floor(props.max)).length;
-      charCount += digitCount;
-    }
-    if (unit) {
-      const unitText = naviI18n("time.duration.hour_symbol");
-      charCount += unitText.length;
-      props.ui = <InputNaviHourUI unitText={unitText} />;
-    }
-    widthDefault = charCount > 0 ? `${charCount}ch` : undefined;
-  }
 
   return (
-    <Next data-no-spin="" alignX="center" width={widthDefault} {...props} />
+    <Next
+      alignX="center"
+      ui={unit ? <InputNaviHourUI /> : undefined}
+      {...props}
+    />
   );
 };
 
-const InputNaviHourUI = ({ unitText }) => {
+const InputNaviHourUI = () => {
+  const unitText = naviI18n("time.duration.hour_symbol");
+
   return <InputRightSlot>{unitText}</InputRightSlot>;
 };

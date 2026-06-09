@@ -318,15 +318,15 @@ naviI18n.addAll({
     fr: "Ce nombre doit être <strong>[min]</strong> ou plus.",
     en: "This number must be <strong>[min]</strong> or greater.",
   },
-  "constraint.min.navi_hours.default": {
+  "constraint.min.navi_hour.default": {
     fr: "Les heures doivent être <strong>[min]</strong> ou plus.",
     en: "The hours must be <strong>[min]</strong> or greater.",
   },
-  "constraint.min.navi_minutes.default": {
+  "constraint.min.navi_minute.default": {
     fr: "Les minutes doivent être <strong>[min]</strong> ou plus.",
     en: "The minutes must be <strong>[min]</strong> or greater.",
   },
-  "constraint.min.navi_seconds.default": {
+  "constraint.min.navi_second.default": {
     fr: "Les secondes doivent être <strong>[min]</strong> ou plus.",
     en: "The seconds must be <strong>[min]</strong> or greater.",
   },
@@ -362,11 +362,11 @@ naviI18n.addAll({
     fr: "Les heures doivent être <strong>[max]</strong> ou moins.",
     en: "The hours must be <strong>[max]</strong> or less.",
   },
-  "constraint.max.navi_minutes.default": {
+  "constraint.max.navi_minute.default": {
     fr: "Les minutes doivent être <strong>[max]</strong> ou moins.",
     en: "The minutes must be <strong>[max]</strong> or less.",
   },
-  "constraint.max.navi_seconds.default": {
+  "constraint.max.navi_second.default": {
     fr: "Les secondes doivent être <strong>[max]</strong> ou moins.",
     en: "The seconds must be <strong>[max]</strong> or less.",
   },
@@ -378,15 +378,15 @@ naviI18n.addAll({
     fr: "Ce nombre doit être un multiple de <strong>[step]</strong> (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
     en: "This number must be a multiple of <strong>[step]</strong> (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
   },
-  "constraint.step.navi_hours.default": {
+  "constraint.step.navi_hour.default": {
     fr: "Les heures doivent être un multiple de <strong>[step]</strong> (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
     en: "The hours must be a multiple of <strong>[step]</strong> (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
   },
-  "constraint.step.navi_minutes.default": {
+  "constraint.step.navi_minute.default": {
     fr: "Les minutes doivent être un multiple de <strong>[step]</strong> (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
     en: "The minutes must be a multiple of <strong>[step]</strong> (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
   },
-  "constraint.step.navi_seconds.default": {
+  "constraint.step.navi_second.default": {
     fr: "Les secondes doivent être un multiple de <strong>[step]</strong> (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
     en: "The seconds must be a multiple of <strong>[step]</strong> (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
   },
@@ -394,15 +394,15 @@ naviI18n.addAll({
     fr: "Le pourcentage doit être un multiple de <strong>[step]</strong> (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
     en: "The percentage must be a multiple of <strong>[step]</strong> (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
   },
-  "constraint.step.time.hours": {
+  "constraint.step.time.hour": {
     fr: "L'heure doit être dans un intervalle de <strong>[step]</strong> heure(s) (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
     en: "The time must be within an interval of <strong>[step]</strong> hour(s) (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
   },
-  "constraint.step.time.minutes": {
+  "constraint.step.time.minute": {
     fr: "L'heure doit être dans un intervalle de <strong>[step]</strong> minute(s) (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
     en: "The time must be within an interval of <strong>[step]</strong> minute(s) (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
   },
-  "constraint.step.time.seconds": {
+  "constraint.step.time.second": {
     fr: "L'heure doit être dans un intervalle de <strong>[step]</strong> seconde(s) (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
     en: "The time must be within an interval of <strong>[step]</strong> second(s) (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
   },

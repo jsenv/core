@@ -152,7 +152,7 @@ export const REQUIRED_CONSTRAINT = {
     if (field.type === "time") {
       return naviI18n("constraint.required.time");
     }
-    if (field.type === "number") {
+    if (field.type === "number" || field.inputMode === "numeric") {
       return naviI18n("constraint.required.number");
     }
     if (field.type === "datetime-local") {
@@ -343,7 +343,8 @@ export const MIN_CONSTRAINT = {
     if (minString === "") {
       return null;
     }
-    if (field.type === "number") {
+    const isNumber = field.type === "number" || field.inputMode === "numeric";
+    if (isNumber) {
       const minNumber = parseFloat(minString);
       if (isNaN(minNumber)) {
         return null;
@@ -353,7 +354,7 @@ export const MIN_CONSTRAINT = {
         return null;
       }
       if (valueAsNumber < minNumber) {
-        const naviInputType = field.getAttribute("data-navi-input-type");
+        const naviInputType = field.getAttribute("navi-input-type");
         return naviI18n(`constraint.min.${naviInputType || "number"}.default`, {
           min: minString,
         });
@@ -408,7 +409,8 @@ export const MAX_CONSTRAINT = {
     if (maxString === "") {
       return null;
     }
-    if (field.type === "number") {
+    const isNumber = field.type === "number" || field.inputMode === "numeric";
+    if (isNumber) {
       const maxNumber = parseFloat(maxString);
       if (isNaN(maxNumber)) {
         return null;
@@ -418,7 +420,7 @@ export const MAX_CONSTRAINT = {
         return null;
       }
       if (valueAsNumber > maxNumber) {
-        const naviInputType = field.getAttribute("data-navi-input-type");
+        const naviInputType = field.getAttribute("navi-input-type");
         return naviI18n(`constraint.max.${naviInputType || "number"}.default`, {
           max: maxString,
         });
@@ -486,7 +488,8 @@ export const STEP_CONSTRAINT = {
     if (!field.validity.stepMismatch) {
       return null;
     }
-    if (field.type === "number") {
+    const isNumber = field.type === "number" || field.inputMode === "numeric";
+    if (isNumber) {
       const step = parseFloat(stepString);
       const minString = field.min;
       const base = minString !== "" ? parseFloat(minString) : 0;

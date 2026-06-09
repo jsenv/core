@@ -130,7 +130,6 @@ const css = /* css */ `
     display: inline-flex;
     box-sizing: content-box;
     width: fit-content;
-    min-width: 50px;
     height: fit-content;
     padding-top: var(--x-padding-top);
     padding-right: var(--x-padding-right);
@@ -149,10 +148,6 @@ const css = /* css */ `
     outline-offset: var(--x-outline-offset);
     cursor: inherit;
     pointer-events: auto;
-
-    &[navi-input-type="number"] {
-      min-width: 1ch;
-    }
 
     .navi_control_input {
       box-sizing: content-box;
@@ -319,6 +314,7 @@ const useInputTextualProps = (props) => {
   controlProps.value = asControlHostValue(controlProps.value, {
     controlType: "input",
     type: props.type,
+    inputMode: props.inputMode,
   });
   return [controlProps, remainingProps, ControlChildrenWrapper];
 };
@@ -350,7 +346,6 @@ const InputTextualUI = (props) => {
       basePseudoState={basePseudoState}
       ui={undefined}
       data-discrete={discrete ? "" : undefined}
-      navi-input-type={inputProps.type}
       discrete={undefined} // handled via data attribute
       styleCSSVars={InputStyleCSSVars}
       pseudoStateSelector=".navi_control_input"

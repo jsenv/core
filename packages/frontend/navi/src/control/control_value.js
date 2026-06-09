@@ -19,12 +19,15 @@ import { getUIStateFromElement } from "./ui_state_controller.js";
  * @param {{ controlType: string, type: string }} options
  * @returns {any} The DOM-compatible value or a converter function.
  */
-export const asControlHostValue = (jsValue, { controlType, type }) => {
+export const asControlHostValue = (
+  jsValue,
+  { controlType, type, inputMode },
+) => {
   if (controlType === "input") {
     if (type === "datetime-local") {
       return asDatetimeLocalString(jsValue);
     }
-    if (type === "number" || type === "range") {
+    if (type === "number" || type === "range" || inputMode === "numeric") {
       return asNumberString(jsValue);
     }
     if (type === "color") {
@@ -95,7 +98,11 @@ export const readControlValue = (controlHost) => {
     // so use getAttribute
     const type = controlHost.getAttribute("type");
 
-    if (type === "number" || type === "range") {
+    if (
+      type === "number" ||
+      type === "range" ||
+      controlHost.inputMode === "numeric"
+    ) {
       return readNumberFromInput(controlHost);
     }
     if (type === "color") {
