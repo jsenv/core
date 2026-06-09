@@ -52,12 +52,14 @@ const InputSearchUI = ({ icon }) => {
       )}
       <InputRightSlot
         hideWhileEmpty
-        action-target={id}
         onClick={(e) => {
           const input = e.currentTarget;
           const allowed = dispatchRequestInteraction(input, e);
           if (allowed) {
-            triggerStringAction("clear", e, { skipClose: true });
+            triggerStringAction("clear", e, {
+              actionTarget: input,
+              skipClose: true,
+            });
           }
         }}
       >
