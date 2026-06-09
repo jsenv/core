@@ -485,23 +485,32 @@ export const STEP_CONSTRAINT = {
     if (field.tagName !== "INPUT") {
       return null;
     }
-    if (!STEP_SUPPORTED_TYPE_SET.has(field.type)) {
+    const isNumericText =
+      field.type === "text" && field.inputMode === "numeric";
+    if (!isNumericText && !STEP_SUPPORTED_TYPE_SET.has(field.type)) {
       return null;
     }
     const stepString = field.step;
     if (stepString === "" || stepString === "any") {
       return null;
     }
-    if (!field.validity.stepMismatch) {
-      return null;
-    }
-    const isNumber = field.type === "number" || field.inputMode === "numeric";
+    const isNumber = field.type === "number" || isNumericText;
     if (isNumber) {
       const step = parseFloat(stepString);
       const minString = field.min;
       const base = minString !== "" ? parseFloat(minString) : 0;
       const valueAsNumber =
         field.type === "number" ? field.valueAsNumber : Number(field.value);
+      if (isNaN(valueAsNumber)) {
+        return null;
+      }
+      const remainder = (((valueAsNumber - base) % step) + step) % step;
+      // Use a small epsilon to handle floating-point imprecision
+      const epsilon = step * 1e-9;
+      const hasMismatch = remainder > epsilon && remainder < step - epsilon;
+      if (!hasMismatch) {
+        return null;
+      }
       const before = base + Math.floor((valueAsNumber - base) / step) * step;
       const after = before + step;
       const decimals = (stepString.split(".")[1] || "").length;
@@ -520,6 +529,9 @@ export const STEP_CONSTRAINT = {
         const minString = field.min;
         const baseMs = minString !== "" ? timeStringToMs(minString) : 0;
         const remainder = (((valueMs - baseMs) % stepMs) + stepMs) % stepMs;
+        if (remainder === 0) {
+          return null;
+        }
         const beforeMs = valueMs - remainder;
         const afterMs = beforeMs + stepMs;
         const showSeconds = stepSeconds % 60 !== 0;
@@ -555,6 +567,9 @@ export const STEP_CONSTRAINT = {
         : new Date(0);
       const valueDate = new Date(`${value}T00:00:00`);
       const diffDays = Math.round((valueDate - baseDate) / 86400000);
+      if (diffDays % step === 0) {
+        return null;
+      }
       const beforeDays = Math.floor(diffDays / step) * step;
       const afterDays = beforeDays + step;
       const beforeDate = new Date(baseDate);
