@@ -115,12 +115,14 @@ const requestUnselect = (e, getUnselectParam) => {
  */
 const update = createUICallback({
   name: "update",
-  action: (value, { event }) => {
-    return requestUpdate(event, value);
+  action: (value, { event, actionTarget }) => {
+    return requestUpdate(event, value, { actionTarget });
   },
 });
-const requestUpdate = (event, value, { isClear } = {}) => {
-  const actionTarget = getActionTarget(event);
+const requestUpdate = (event, value, { actionTarget, isClear } = {}) => {
+  if (!actionTarget) {
+    actionTarget = getActionTarget(event);
+  }
   if (!actionTarget) {
     return false;
   }

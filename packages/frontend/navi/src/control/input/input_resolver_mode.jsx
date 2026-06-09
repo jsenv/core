@@ -45,7 +45,10 @@ const InputModeNumeric = (props) => {
         if (max !== undefined && nextValue > max) {
           nextValue = max;
         }
-        triggerStringAction("update", nextValue, { event: e });
+        triggerStringAction("update", nextValue, {
+          event: e,
+          actionTarget: e.currentTarget,
+        });
       }}
     />
   );
