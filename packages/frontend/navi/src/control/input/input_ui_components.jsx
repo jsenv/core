@@ -1,8 +1,30 @@
 import { useContext } from "preact/hooks";
 
+import { Icon } from "@jsenv/navi/src/text/icon.jsx";
 import { Label } from "../field.jsx";
 import { dispatchRequestInteraction } from "../validation/custom_constraint_validation.js";
 import { InputTextualContext } from "./input_textual_context.js";
+
+export const InputLeftSlot = (props) => {
+  return <InputSlot {...props} side="left" />;
+};
+export const InputRightSlot = (props) => {
+  return <InputSlot {...props} side="right" />;
+};
+export const InputIconSlot = ({ children, ...props }) => {
+  return (
+    <InputLeftSlot side="right">
+      <Icon {...props}>{children}</Icon>
+    </InputLeftSlot>
+  );
+};
+export const InputUnitSlot = ({ children, ...props }) => {
+  return (
+    <InputRightSlot marginLeft="xxs" {...props}>
+      {children}
+    </InputRightSlot>
+  );
+};
 
 const InputSlot = ({ side, onClick, hideWhileEmpty, ...props }) => {
   const ctx = useContext(InputTextualContext);
@@ -42,10 +64,4 @@ const InputSlot = ({ side, onClick, hideWhileEmpty, ...props }) => {
       {...props}
     />
   );
-};
-export const InputLeftSlot = (props) => {
-  return <InputSlot {...props} side="left" />;
-};
-export const InputRightSlot = (props) => {
-  return <InputSlot {...props} side="right" />;
 };

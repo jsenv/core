@@ -9,7 +9,7 @@ import { Icon } from "@jsenv/navi/src/text/icon.jsx";
 import { triggerStringAction } from "../string_actions.js";
 import { dispatchRequestInteraction } from "../validation/custom_constraint_validation.js";
 import { InputTextualContext } from "./input_textual_context.js";
-import { InputLeftSlot, InputRightSlot } from "./input_ui_components.jsx";
+import { InputIconSlot, InputRightSlot } from "./input_ui_components.jsx";
 
 export const InputTypeResolver = (props) => {
   const Next = useNextResolver();
@@ -46,11 +46,9 @@ const InputSearchUI = ({ icon }) => {
   return (
     <>
       {icon === undefined && (
-        <InputLeftSlot>
-          <Icon color="rgba(28, 43, 52, 0.5)">
-            <SearchSvg />
-          </Icon>
-        </InputLeftSlot>
+        <InputIconSlot>
+          <SearchSvg />
+        </InputIconSlot>
       )}
       <InputRightSlot
         hideWhileEmpty
@@ -63,7 +61,7 @@ const InputSearchUI = ({ icon }) => {
           }
         }}
       >
-        <Icon color="rgba(28, 43, 52, 0.5)">
+        <Icon>
           <CloseSvg />
         </Icon>
       </InputRightSlot>
@@ -80,11 +78,9 @@ const InputEmailUI = ({ icon }) => {
     return null;
   }
   return (
-    <InputLeftSlot>
-      <Icon color="rgba(28, 43, 52, 0.5)">
-        <EmailSvg />
-      </Icon>
-    </InputLeftSlot>
+    <InputIconSlot>
+      <EmailSvg />
+    </InputIconSlot>
   );
 };
 const InputTel = (props) => {
@@ -96,11 +92,9 @@ const InputTelUI = ({ icon }) => {
     return null;
   }
   return (
-    <InputLeftSlot>
-      <Icon color="rgba(28, 43, 52, 0.5)">
-        <PhoneSvg />
-      </Icon>
-    </InputLeftSlot>
+    <InputIconSlot>
+      <PhoneSvg />
+    </InputIconSlot>
   );
 };
 const InputNumber = (props) => {

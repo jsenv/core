@@ -1,6 +1,6 @@
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { useNextResolver } from "../../resolver/resolver.jsx";
-import { InputRightSlot } from "./input_ui_components.jsx";
+import { InputUnitSlot } from "./input_ui_components.jsx";
 
 export const InputNaviHourResolver = (props) => {
   const Next = useNextResolver();
@@ -27,5 +27,5 @@ const InputNaviHour = (props) => {
 const InputNaviHourUI = () => {
   const unitText = naviI18n("time.duration.hour_symbol");
 
-  return <InputRightSlot>{unitText}</InputRightSlot>;
+  return <InputUnitSlot>{unitText}</InputUnitSlot>;
 };
