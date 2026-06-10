@@ -12,6 +12,7 @@ const ButtonFirstResolver = (props) => {
   const Next = useNextResolver();
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
+
   return <Next {...props} />;
 };
 
