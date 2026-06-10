@@ -22,7 +22,7 @@ import {
   useControlgroupProps,
 } from "./control_hooks.jsx";
 import { FormContext } from "./form_context.js";
-import { dispatchRequestResetUIState } from "./ui_state_controller.js";
+import { dispatchRequestResetUIState } from "./ui_state_dom.js";
 
 export const Form = (props) => {
   const defaultRef = useRef();

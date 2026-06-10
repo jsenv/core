@@ -5,7 +5,7 @@ import {
   getParentControl,
 } from "./control_dom.js";
 import { createUICallback } from "./ui_callback.js";
-import { dispatchRequestSetUIState } from "./ui_state_controller.js";
+import { dispatchRequestSetUIState } from "./ui_state_dom.js";
 import { dispatchRequestAction } from "./validation/custom_constraint_validation.js";
 
 export const triggerStringAction = (actionName, ...args) => {
