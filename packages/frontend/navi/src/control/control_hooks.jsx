@@ -378,13 +378,13 @@ export const useControlProps = (
       transferFocusToTarget(e);
     };
     const onClick = (e) => {
+      props.onClick?.(e);
+      applyInteraction(clickInteraction, e);
+      transferFocusToTarget(e);
       if (controlType === "button" && e.currentTarget.form) {
         // prevent form submission
         e.preventDefault();
       }
-      props.onClick?.(e);
-      applyInteraction(clickInteraction, e);
-      transferFocusToTarget(e);
     };
     const onKeyDown = (e) => {
       props.onKeyDown?.(e);
