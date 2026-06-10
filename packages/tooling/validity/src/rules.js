@@ -14,7 +14,7 @@ export const TYPE_RULE = {
     if (!message) {
       return null;
     }
-    const convertValue = typeDef?.representations?.[actualType]?.deserialize;
+    const convertValue = typeDef?.representations?.[actualType]?.parse;
     return {
       message,
       autoFix: convertValue ? () => convertValue(value) : null,

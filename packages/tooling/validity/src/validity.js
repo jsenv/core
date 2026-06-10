@@ -81,18 +81,18 @@ export const createValidity = (ruleConfig) => {
   const { representation, ...ruleConfigWithoutRepresentation } = ruleConfig;
   ruleConfig = ruleConfigWithoutRepresentation;
 
-  // Resolve the serialize/deserialize pair for the chosen representation.
-  // - deserialize: converts from the chosen representation to the canonical value before validation
-  // - serialize: converts from the canonical value back to the chosen representation (e.g. for validSuggestion)
-  let deserialize = null;
-  let serialize = null;
+  // Resolve the format/parse pair for the chosen representation.
+  // - parse: converts from the chosen representation to the canonical value before validation
+  // - format: converts from the canonical value back to the chosen representation (e.g. for validSuggestion)
+  let parse = null;
+  let format = null;
   if (representation) {
     const theType = ruleConfig.type;
     const typeDef = theType ? TYPES[theType] : null;
     const repr = typeDef?.representations?.[representation];
     if (repr) {
-      deserialize = repr.deserialize;
-      serialize = repr.serialize;
+      parse = repr.parse;
+      format = repr.format;
     } else {
       console.warn(
         `[createValidity] Unknown representation "${representation}" for type "${theType}"`,
@@ -201,11 +201,11 @@ export const createValidity = (ruleConfig) => {
   }
 
   const applyOn = (value) => {
-    // Deserialize from chosen representation to canonical before validating
-    if (deserialize && value !== undefined) {
-      const deserialized = deserialize(value);
-      if (deserialized !== CANNOT_CONVERT) {
-        value = deserialized;
+    // Parse from chosen representation to canonical before validating
+    if (parse && value !== undefined) {
+      const parsed = parse(value);
+      if (parsed !== CANNOT_CONVERT) {
+        value = parsed;
       }
     }
     if (value === undefined) {
@@ -295,9 +295,9 @@ export const createValidity = (ruleConfig) => {
     }
 
     validity.valid = valid;
-    // Serialize validSuggestion back to the chosen representation
-    if (validSuggestion && serialize) {
-      validSuggestion = { value: serialize(validSuggestion.value) };
+    // Format validSuggestion back to the chosen representation
+    if (validSuggestion && format) {
+      validSuggestion = { value: format(validSuggestion.value) };
     }
     validity.validSuggestion = validSuggestion;
     return value;

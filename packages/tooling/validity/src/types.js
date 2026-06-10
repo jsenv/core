@@ -104,7 +104,7 @@ export const TYPES = {
     storage: "boolean",
     representations: {
       string: {
-        deserialize: (value) => {
+        parse: (value) => {
           if (value === "true") return true;
           if (value === "false") return false;
           if (value === "on") return true;
@@ -115,7 +115,7 @@ export const TYPES = {
         },
       },
       number: {
-        deserialize: (value) => {
+        parse: (value) => {
           if (value === 0) return false;
           if (value === 1) return true;
           return CANNOT_CONVERT;
@@ -127,14 +127,14 @@ export const TYPES = {
     storage: "number",
     validate: validateNumber,
     representations: {
-      string: { deserialize: convertStringToNumber },
+      string: { parse: convertStringToNumber },
     },
   },
   "string": {
     storage: "string",
     representations: {
-      number: { deserialize: String },
-      boolean: { deserialize: String },
+      number: { parse: String },
+      boolean: { parse: String },
     },
   },
   "array": {
@@ -147,12 +147,9 @@ export const TYPES = {
     },
     representations: {
       string: {
-        deserialize: (value) => {
+        parse: (value) => {
           try {
             const parsed = JSON.parse(value);
-            if (!Array.isArray(parsed)) {
-              return CANNOT_CONVERT;
-            }
             return parsed;
           } catch {
             return CANNOT_CONVERT;
@@ -174,16 +171,9 @@ export const TYPES = {
     },
     representations: {
       string: {
-        deserialize: (value) => {
+        parse: (value) => {
           try {
             const parsed = JSON.parse(value);
-            if (
-              Array.isArray(parsed) ||
-              typeof parsed !== "object" ||
-              parsed === null
-            ) {
-              return CANNOT_CONVERT;
-            }
             return parsed;
           } catch {
             return CANNOT_CONVERT;
@@ -198,21 +188,21 @@ export const TYPES = {
     representations: {
       // "YYYY-MM-DD" string — also used for auto-converting string inputs
       string: {
-        serialize: (d) => {
+        format: (d) => {
           const yyyy = d.getFullYear();
           const mm = String(d.getMonth() + 1).padStart(2, "0");
           const dd = String(d.getDate()).padStart(2, "0");
           return `${yyyy}-${mm}-${dd}`;
         },
-        deserialize: (s) => {
+        parse: (s) => {
           const d = new Date(`${s}T00:00:00`);
           return isNaN(d.getTime()) ? CANNOT_CONVERT : d;
         },
       },
       // Unix timestamp — also used for auto-converting number inputs
       number: {
-        serialize: (d) => d.getTime(),
-        deserialize: (n) => {
+        format: (d) => d.getTime(),
+        parse: (n) => {
           const d = new Date(n);
           return isNaN(d.getTime()) ? CANNOT_CONVERT : d;
         },
@@ -286,7 +276,7 @@ export const TYPES = {
     },
     representations: {
       object: {
-        deserialize: (value) => {
+        parse: (value) => {
           if (!(value instanceof Date) || isNaN(value.getTime())) {
             return CANNOT_CONVERT;
           }
@@ -299,7 +289,7 @@ export const TYPES = {
         },
       },
       number: {
-        deserialize: (value) => {
+        parse: (value) => {
           const d = new Date(value);
           if (isNaN(d.getTime())) {
             return CANNOT_CONVERT;
@@ -319,7 +309,7 @@ export const TYPES = {
     storage: "number",
     validate: validateNumber,
     representations: {
-      string: { deserialize: convertStringToNumber },
+      string: { parse: convertStringToNumber },
     },
   },
   "integer": {
@@ -336,7 +326,7 @@ export const TYPES = {
     },
     representations: {
       string: {
-        deserialize: (value) => {
+        parse: (value) => {
           const result = convertStringToNumber(value);
           if (result === CANNOT_CONVERT) {
             return CANNOT_CONVERT;
@@ -344,7 +334,7 @@ export const TYPES = {
           return Math.round(result);
         },
       },
-      number: { deserialize: (value) => Math.round(value) },
+      number: { parse: (value) => Math.round(value) },
     },
   },
   "ratio": {
@@ -355,7 +345,7 @@ export const TYPES = {
     },
     validate: validateNumber,
     representations: {
-      string: { deserialize: convertStringToNumber },
+      string: { parse: convertStringToNumber },
     },
   },
   "longitude": {
@@ -366,7 +356,7 @@ export const TYPES = {
     },
     validate: validateNumber,
     representations: {
-      string: { deserialize: convertStringToNumber },
+      string: { parse: convertStringToNumber },
     },
   },
   "latitude": {
@@ -377,7 +367,7 @@ export const TYPES = {
     },
     validate: validateNumber,
     representations: {
-      string: { deserialize: convertStringToNumber },
+      string: { parse: convertStringToNumber },
     },
   },
   "second": {
@@ -389,8 +379,8 @@ export const TYPES = {
     },
     // canonical: number of seconds (e.g. 90)
     representations: {
-      duration: {
-        serialize: (s) => {
+      string: {
+        format: (s) => {
           const totalSec = Math.round(s);
           const hours = Math.floor(totalSec / 3600);
           const mins = Math.floor((totalSec % 3600) / 60);
@@ -407,9 +397,14 @@ export const TYPES = {
           }
           return result;
         },
-        deserialize: resolveToSeconds,
+        parse: (value) => {
+          const fromDuration = resolveToSeconds(value);
+          if (typeof fromDuration === "number") {
+            return fromDuration;
+          }
+          return convertStringToNumber(value);
+        },
       },
-      string: { deserialize: convertStringToNumber },
     },
     validate: (value) => {
       if (typeof value === "number" && Number.isFinite(value)) {
@@ -427,9 +422,8 @@ export const TYPES = {
     },
     // canonical: number of minutes (e.g. 90)
     representations: {
-      // "1h30min" duration string representation
-      duration: {
-        serialize: (m) => {
+      string: {
+        format: (m) => {
           const totalMin = Math.round(m);
           const hours = Math.floor(totalMin / 60);
           const mins = totalMin % 60;
@@ -441,9 +435,14 @@ export const TYPES = {
           }
           return `${hours}h${mins}min`;
         },
-        deserialize: resolveToMinutes,
+        parse: (value) => {
+          const fromDuration = resolveToMinutes(value);
+          if (typeof fromDuration === "number") {
+            return fromDuration;
+          }
+          return convertStringToNumber(value);
+        },
       },
-      string: { deserialize: convertStringToNumber },
     },
     validate: (value) => {
       if (typeof value === "number" && Number.isFinite(value)) {
@@ -461,9 +460,8 @@ export const TYPES = {
     },
     // canonical: number of hours (e.g. 1.5)
     representations: {
-      // "1h30min" duration string representation
-      duration: {
-        serialize: (h) => {
+      string: {
+        format: (h) => {
           const totalMin = Math.round(h * 60);
           const hours = Math.floor(totalMin / 60);
           const mins = totalMin % 60;
@@ -475,9 +473,14 @@ export const TYPES = {
           }
           return `${hours}h${mins}min`;
         },
-        deserialize: resolveToHours,
+        parse: (value) => {
+          const fromDuration = resolveToHours(value);
+          if (typeof fromDuration === "number") {
+            return fromDuration;
+          }
+          return convertStringToNumber(value);
+        },
       },
-      string: { deserialize: convertStringToNumber },
     },
     validate: (value) => {
       if (typeof value === "number" && Number.isFinite(value)) {
@@ -535,7 +538,7 @@ export const TYPES = {
     },
     representations: {
       string: {
-        deserialize: (value) => {
+        parse: (value) => {
           const parsed = parseInt(value, 10);
           if (!isNaN(parsed) && String(parsed) === value.trim()) {
             return parsed;
@@ -554,8 +557,8 @@ export const TYPES = {
     representations: {
       // "50%" string — also used for auto-converting string inputs
       string: {
-        serialize: (n) => `${n}%`,
-        deserialize: (s) => {
+        format: (n) => `${n}%`,
+        parse: (s) => {
           const trimmed =
             typeof s === "string" && s.endsWith("%") ? s.slice(0, -1) : s;
           const parsed = parseFloat(trimmed);
