@@ -55,7 +55,6 @@
     </div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { computed } from "@preact/signals";
       import { useSignal } from "@preact/signals";
       import { stateSignal, route, setupRoutes } from "@jsenv/navi";
       import {
@@ -71,16 +70,17 @@
         NaviDebug,
       } from "@jsenv/navi";
 
-      // "1h30"
+      const PRESET_DURATIONS = [60, 90, 120];
+
+      // Value is one of the preset numbers (60, 90, 120) or the string "custom".
+      // When "custom", the actual duration is derived from customDurationHourSignal
+      // and customDurationMinuteSignal.
       const durationSignal = stateSignal(90, {
         id: "duration",
-        type: "minute",
-        min: 15,
-        max: "5h",
-        step: 5,
+        oneOf: [...PRESET_DURATIONS, "custom"],
         // persists: true,
       });
-      const customDurationHourSignal = stateSignal(0, {
+      const customDurationHourSignal = stateSignal(2, {
         id: "custom_hour",
         type: "hour",
         min: 0,
@@ -92,11 +92,6 @@
         min: 0,
         max: 59,
       });
-      const customDurationSignal = computed(
-        () =>
-          customDurationHourSignal.value * 60 +
-          customDurationMinuteSignal.value,
-      );
 
       const DEMO_ROUTE = route("", {
         searchParams: {
@@ -121,8 +116,13 @@
                 enter any duration. Everything is wired in a Form.
               </p>
               <Form
-                action={(values) => {
-                  formResultSignal.value = values;
+                action={({ duration }) => {
+                  if (duration === "custom") {
+                    const hours = customDurationHourSignal.value || 0;
+                    const minutes = customDurationMinuteSignal.value || 0;
+                    duration = hours * 60 + minutes;
+                  }
+                  formResultSignal.value = { duration };
                 }}
                 flex="y"
                 spacing="m"
@@ -172,21 +172,19 @@
                   index={i}
                   id={minutes}
                   value={minutes}
-                  selected={minutes === value}
+                  selected={value === minutes}
                 >
                   {minutes}
                 </MinuteOption>
               ))}
               <CustomDurationOption
                 index={PRESET_DURATIONS.length}
-                selected={customDurationSignal.value === value}
+                selected={value === "custom"}
               />
             </List>
           </Field>
         );
       };
-
-      const PRESET_DURATIONS = [60, 90, 120];
 
       // ── MinuteOption ─────────────────────────────────────────────────────
 
@@ -212,7 +210,6 @@
       // It embeds a Picker so the user can type any minute value.
 
       const CustomDurationOption = ({ selected, index }) => {
-        const totalMinutes = customDurationSignal.value;
         const hours = customDurationHourSignal.value;
         const minutes = customDurationMinuteSignal.value;
 
@@ -221,7 +218,7 @@
             selectable
             index={index}
             id="custom"
-            value={totalMinutes}
+            value="custom"
             selected={selected}
             borderRadius="s"
             borderWidth="1"
@@ -235,17 +232,15 @@
               <Input
                 type="navi_hour"
                 value={hours}
-                uiAction={(v) => {
+                action={(v) => {
                   customDurationHourSignal.value = v;
-                  durationSignal.value = customDurationSignal.value;
                 }}
               />
               <Input
                 type="navi_minute"
                 value={minutes}
-                uiAction={(v) => {
+                action={(v) => {
                   customDurationMinuteSignal.value = v;
-                  durationSignal.value = customDurationSignal.value;
                 }}
               />
             </Box>
