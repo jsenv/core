@@ -167,6 +167,7 @@ export const stateSignal = (defaultValue, options = {}) => {
     oneOf,
     localStorageRepresentation,
     urlRepresentation,
+    autoFix: true,
   });
   const readFromLocalStorage = persists
     ? () => {
@@ -276,49 +277,20 @@ export const stateSignal = (defaultValue, options = {}) => {
     if (undefinedAliasSet && undefinedAliasSet.has(value)) {
       return undefined;
     }
-    const wasValid = validity.valid;
     updateValidity(value);
-    if (validity.valid) {
-      if (!wasValid) {
-        if (debug) {
-          console.debug(
-            `[stateSignal:${signalIdString}] validation now passes`,
-            { value },
-          );
-        }
-      }
-      return value;
-    }
-
-    const hasAutoFix = Boolean(validity.representations.valid);
-    if (hasAutoFix) {
-      if (debug) {
-        console.debug(`[stateSignal:${signalIdString}] validation failed: `, {
-          value,
-          validValue: validity.representations.valid.value,
-          validity,
-        });
-      }
-    } else {
+    if (!validity.valid) {
       console.warn(
         `[stateSignal:${signalIdString}] validation failed with no valid suggestion: `,
         { value, validity },
       );
+      return value;
     }
-    if (hasAutoFix) {
-      const validValue = validity.representations.valid.value;
-      if (debug) {
-        console.debug(
-          `[stateSignal:${signalIdString}] autoFix applied: ${value} → ${validValue}`,
-          {
-            value,
-            validValue,
-          },
-        );
-      }
-      return validValue;
+    if (validity.autoFixed && debug) {
+      console.debug(
+        `[stateSignal:${signalIdString}] autoFix applied: ${value} → ${validity.value}`,
+      );
     }
-    return value;
+    return validity.value;
   };
   const preactSignal = signal(processValue(getFallbackValue()));
 
