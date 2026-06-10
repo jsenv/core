@@ -5,48 +5,38 @@ const [validity, applyOn] = createValidity({
   type: "boolean",
 });
 
+const rows = [];
 const run = (value) => {
   applyOn(value);
-  return structuredClone(validity);
+  const message = validity.valid ? "-" : validity.type;
+  const suggestion = validity.validSuggestion
+    ? humanize(validity.validSuggestion.value)
+    : "-";
+  rows.push({ value: humanize(value), message, suggestion });
 };
 
-return {
-  "true": run(true),
-  '"true"': run("true"),
-  '"false"': run("false"),
-  "1": run(1),
-};
+run(true);
+run("true");
+run("false");
+run(1);
+
+return renderTable(tableFromObjects(rows, {
+  head: [
+    { value: "value" },
+    { value: "invalid message" },
+    { value: "valid suggestion" },
+  ],
+}));
 ```
 
 ```js
-{
-  1: {
-    "type": "must be a boolean, got number",
-    "valid": false,
-    "validSuggestion": {
-      "value": true
-    }
-  },
-  "true": {
-    "type": undefined,
-    "valid": true,
-    "validSuggestion": null
-  },
-  '"true"': {
-    "type": "must be a boolean, got string",
-    "valid": false,
-    "validSuggestion": {
-      "value": true
-    }
-  },
-  '"false"': {
-    "type": "must be a boolean, got string",
-    "valid": false,
-    "validSuggestion": {
-      "value": false
-    }
-  }
-}
+ value   ││ invalid message               ││ valid suggestion 
+─────────┤├───────────────────────────────┤├──────────────────
+ true    ││ -                             ││ -                
+ "true"  ││ must be a boolean, got string ││ true             
+ "false" ││ must be a boolean, got string ││ false            
+ 1       ││ must be a boolean, got number ││ true             
+─────────┘└───────────────────────────────┘└──────────────────
 ```
 
 ---
