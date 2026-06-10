@@ -51,32 +51,6 @@ const convertStringToNumber = (value) => {
   return CANNOT_AUTOFIX;
 };
 
-const wellKnownColorSet = new Set([
-  "black",
-  "white",
-  "red",
-  "green",
-  "blue",
-  "yellow",
-  "cyan",
-  "magenta",
-  "silver",
-  "gray",
-  "maroon",
-  "olive",
-  "lime",
-  "aqua",
-  "teal",
-  "navy",
-  "fuchsia",
-  "purple",
-  "orange",
-  "pink",
-  "brown",
-  "gold",
-  "violet",
-]);
-
 export const TYPES = {
   number: {
     validate: validateNumber,
@@ -433,3 +407,29 @@ export const TYPES = {
     },
   },
 };
+
+const wellKnownColorSet = new Set([
+  "black",
+  "white",
+  "red",
+  "green",
+  "blue",
+  "yellow",
+  "cyan",
+  "magenta",
+  "silver",
+  "gray",
+  "maroon",
+  "olive",
+  "lime",
+  "aqua",
+  "teal",
+  "navy",
+  "fuchsia",
+  "purple",
+  "orange",
+  "pink",
+  "brown",
+  "gold",
+  "violet",
+]);
