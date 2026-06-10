@@ -1,3 +1,5 @@
+import { TYPES } from "./types.js";
+
 export const MIN_RULE = {
   id: "min",
   applyOn: (min, value, ruleConfig) => {
@@ -222,4 +224,26 @@ const formatTemporalBound = (value, type) => {
     return d.toLocaleString();
   }
   return String(value);
+};
+
+export const TYPE_RULE = {
+  id: "type",
+  applyOn: (type, value) => {
+    const actualType = typeof value;
+    let message;
+    const typeDef = TYPES[type];
+    if (typeDef?.validate) {
+      message = typeDef.validate(value);
+    } else if (actualType !== type) {
+      message = `must be a ${type}, got ${actualType}`;
+    }
+    if (!message) {
+      return null;
+    }
+    const convertValue = typeDef?.convert?.[actualType];
+    return {
+      message,
+      autoFix: convertValue ? () => convertValue(value) : null,
+    };
+  },
 };
