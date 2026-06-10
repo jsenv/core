@@ -55,6 +55,7 @@
     </div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
+      import { signal, computed } from "@preact/signals";
       import { useSignal } from "@preact/signals";
       import { stateSignal, route, setupRoutes } from "@jsenv/navi";
       import {
@@ -79,14 +80,13 @@
         step: 5,
         // persists: true,
       });
-      const customDurationSignal = stateSignal(15, {
-        id: "custom_duration",
-        type: "minute",
-        min: 15,
-        max: "5h",
-        step: 5,
-        // persists: true,
-      });
+      const customDurationHourSignal = signal(0);
+      const customDurationMinuteSignal = signal(15);
+      const customDurationSignal = computed(
+        () =>
+          customDurationHourSignal.value * 60 +
+          customDurationMinuteSignal.value,
+      );
 
       const DEMO_ROUTE = route("", {
         searchParams: { duration: durationSignal },
@@ -202,9 +202,9 @@
       // It embeds a Picker so the user can type any minute value.
 
       const CustomDurationOption = ({ selected, index }) => {
-        const totalMinutes = customDurationSignal.value ?? 0;
-        const hours = Math.floor(totalMinutes / 60);
-        const minutes = totalMinutes % 60;
+        const totalMinutes = customDurationSignal.value;
+        const hours = customDurationHourSignal.value;
+        const minutes = customDurationMinuteSignal.value;
 
         return (
           <List.Item
@@ -219,6 +219,9 @@
             paddingX="m"
             paddingY="s"
             alignX="center"
+            uiAction={(v) => {
+              durationSignal.value = v;
+            }}
           >
             Autre
             <Box flex spacing="xxs">
@@ -226,16 +229,14 @@
                 type="navi_hour"
                 value={hours}
                 uiAction={(v) => {
-                  const h = typeof v === "number" ? v : 0;
-                  customDurationSignal.value = h * 60 + minutes;
+                  customDurationHourSignal.value = v;
                 }}
               />
               <Input
                 type="navi_minute"
                 value={minutes}
                 uiAction={(v) => {
-                  const m = typeof v === "number" ? v : 0;
-                  customDurationSignal.value = hours * 60 + m;
+                  customDurationMinuteSignal.value = v;
                 }}
               />
             </Box>
