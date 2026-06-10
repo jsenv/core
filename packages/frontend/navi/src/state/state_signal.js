@@ -1,4 +1,4 @@
-import { createValidity } from "@jsenv/validity";
+import { createValidity, TYPES } from "@jsenv/validity";
 import { effect, signal } from "@preact/signals";
 
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
@@ -487,19 +487,9 @@ export const stateSignal = (defaultValue, options = {}) => {
 };
 
 const NO_LOCAL_STORAGE = [() => undefined, () => {}, () => {}];
-const localStorageTypeMap = {
-  float: "number",
-  integer: "number",
-  minute: "number",
-  hour: "number",
-  second: "number",
-  ratio: "number",
-  longitude: "number",
-  latitude: "number",
-  percentage: "string",
-  url: "string",
-  date: "string",
-  time: "string",
-  email: "string",
-  array: "object",
-};
+const localStorageTypeMap = {};
+for (const [typeName, typeDef] of Object.entries(TYPES)) {
+  if (typeDef.storage) {
+    localStorageTypeMap[typeName] = typeDef.storage;
+  }
+}

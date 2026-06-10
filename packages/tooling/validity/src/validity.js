@@ -78,6 +78,28 @@ import { CANNOT_AUTOFIX, TYPES } from "./types.js";
 export const createValidity = (ruleConfig) => {
   const validity = {};
 
+  const { representation, ...ruleConfigWithoutRepresentation } = ruleConfig;
+  ruleConfig = ruleConfigWithoutRepresentation;
+
+  // Resolve the serialize/deserialize pair for the chosen representation.
+  // - deserialize: converts from the chosen representation to the canonical value before validation
+  // - serialize: converts from the canonical value back to the chosen representation (e.g. for validSuggestion)
+  let deserialize = null;
+  let serialize = null;
+  if (representation) {
+    const theType = ruleConfig.type;
+    const typeDef = theType ? TYPES[theType] : null;
+    const repr = typeDef?.representations?.[representation];
+    if (repr) {
+      deserialize = repr.deserialize;
+      serialize = repr.serialize;
+    } else {
+      console.warn(
+        `[createValidity] Unknown representation "${representation}" for type "${theType}"`,
+      );
+    }
+  }
+
   const ruleSet = new Set();
   let effectiveRuleConfig = {};
   setup: {
@@ -179,6 +201,13 @@ export const createValidity = (ruleConfig) => {
   }
 
   const applyOn = (value) => {
+    // Deserialize from chosen representation to canonical before validating
+    if (deserialize && value !== undefined) {
+      const deserialized = deserialize(value);
+      if (deserialized !== CANNOT_AUTOFIX) {
+        value = deserialized;
+      }
+    }
     if (value === undefined) {
       validity.valid = true;
       validity.validSuggestion = null;
@@ -266,6 +295,10 @@ export const createValidity = (ruleConfig) => {
     }
 
     validity.valid = valid;
+    // Serialize validSuggestion back to the chosen representation
+    if (validSuggestion && serialize) {
+      validSuggestion = { value: serialize(validSuggestion.value) };
+    }
     validity.validSuggestion = validSuggestion;
     return value;
   };
