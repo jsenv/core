@@ -348,6 +348,8 @@ export const route = (pattern, { searchParams } = {}) => {
       // eslint-disable-next-line no-loop-func
       const cleanupSignalUrlEffect = effect(() => {
         const value = paramSignal.value;
+        const urlValue =
+          paramSignal.validity?.representations.url.value ?? value;
         const rawParams = route.rawParamsSignal.value;
         const urlParamValue = rawParams[paramName];
         const matching = route.matchingSignal.value;
@@ -370,11 +372,11 @@ export const route = (pattern, { searchParams } = {}) => {
           }
           if (debug) {
             console.debug(
-              `[route] Signal->URL: ${paramName} adding custom value ${value} to URL (default: ${connection.getDefaultValue()})`,
+              `[route] Signal->URL: ${paramName} adding custom value ${urlValue} to URL (default: ${connection.getDefaultValue()})`,
             );
           }
           route.replaceParams(
-            { [paramName]: value },
+            { [paramName]: urlValue },
             {
               callReason: `${paramName} signal change on ${route}`,
               isSignalChange: true,
@@ -400,17 +402,17 @@ export const route = (pattern, { searchParams } = {}) => {
           return;
         }
 
-        if (value === urlParamValue) {
+        if (urlValue === urlParamValue) {
           // Values already match, no sync needed
           return;
         }
         if (debug) {
           console.debug(
-            `[route] Signal->URL: ${paramName} updating URL ${urlParamValue} -> ${value}`,
+            `[route] Signal->URL: ${paramName} updating URL ${urlParamValue} -> ${urlValue}`,
           );
         }
         route.replaceParams(
-          { [paramName]: value },
+          { [paramName]: urlValue },
           {
             callReason: `${paramName} signal change on ${route}`,
             isSignalChange: true,

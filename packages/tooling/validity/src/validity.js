@@ -87,6 +87,11 @@ export const createValidity = (ruleConfig) => {
   } = ruleConfig;
   ruleConfig = ruleConfigWithoutRepresentation;
   const theType = ruleConfig.type;
+  if (theType && !TYPES[theType]) {
+    throw new Error(
+      `[createValidity] Unknown type "${theType}". Known types: ${Object.keys(TYPES).join(", ")}`,
+    );
+  }
   const typeDef = theType ? TYPES[theType] : null;
 
   // Determine which named storage targets to track in validity.representations.

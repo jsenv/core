@@ -49,7 +49,6 @@
     </div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useSignal } from "@preact/signals";
       import {
         Box,
         Button,
@@ -58,7 +57,59 @@
         Label,
         Input,
         NaviDebug,
+        route,
+        setupRoutes,
+        stateSignal,
       } from "@jsenv/navi";
+
+      // ── State signals (persisted in URL search params) ────────────────────
+
+      const defaultSignal = stateSignal(8, {
+        id: "default",
+        type: "hour",
+      });
+      const invalidSignal = stateSignal("aa", {
+        id: "invalid",
+        type: "hour",
+      });
+      const minBasicSignal = stateSignal(1, {
+        id: "min_basic",
+        type: "hour",
+      });
+      const minNegativeSignal = stateSignal(-15, {
+        id: "min_neg",
+        type: "hour",
+      });
+      const maxBasicSignal = stateSignal(10, {
+        id: "max_basic",
+        type: "hour",
+      });
+      const maxLargeSignal = stateSignal(1000, {
+        id: "max_large",
+        type: "hour",
+      });
+      const stepBasicSignal = stateSignal(7, {
+        id: "step_int",
+        type: "hour",
+      });
+      const stepFloatSignal = stateSignal(1.3, {
+        id: "step_float",
+        type: "hour",
+      });
+
+      const DEMO_ROUTE = route("", {
+        searchParams: {
+          default: defaultSignal,
+          invalid: invalidSignal,
+          min_basic: minBasicSignal,
+          min_neg: minNegativeSignal,
+          max_basic: maxBasicSignal,
+          max_large: maxLargeSignal,
+          step_int: stepBasicSignal,
+          step_float: stepFloatSignal,
+        },
+      });
+      setupRoutes([DEMO_ROUTE]);
 
       // ── TOC ───────────────────────────────────────────────────────────────
       const TOC = () => (
@@ -111,55 +162,22 @@
       );
 
       // ── Shared helpers ────────────────────────────────────────────────────
-      const CallLog = ({ entries }) => {
-        if (entries.length === 0) {
-          return null;
-        }
-        return (
-          <div style="margin-top:12px;font-size:12px;color:#555;border-top:1px solid #eee;padding-top:8px">
-            <strong>Call log</strong>
-            <ol style="margin:4px 0 0;padding-left:20px">
-              {entries.map((entry, i) => (
-                <li key={i} style="font-family:monospace">
-                  {entry}
-                </li>
-              ))}
-            </ol>
-          </div>
-        );
-      };
-
-      const useCallLog = () => {
-        const logSignal = useSignal([]);
-        const log = (label, value) => {
-          logSignal.value = [
-            ...logSignal.value,
-            `${label}(${JSON.stringify(value)})`,
-          ];
-        };
-        return [logSignal, log];
-      };
-
       const DemoForm = ({
         id,
         title,
         desc,
         children,
         inputProps,
-        initialValue,
+        valueSignal,
         name = "hour",
       }) => {
-        const valueSignal = useSignal(initialValue);
-        const submitSignal = useSignal(null);
-        const [logSignal, log] = useCallLog();
         return (
           <div class="demo-section" id={id}>
             <h2>{title}</h2>
             {desc && <p class="desc">{desc}</p>}
             <Form
               action={(fields) => {
-                log("form action", fields);
-                submitSignal.value = fields[name];
+                valueSignal.value = fields[name];
               }}
               flex="y"
               alignX="start"
@@ -172,7 +190,6 @@
                   type="navi_hour"
                   value={valueSignal.value}
                   action={(v) => {
-                    log("action", v);
                     valueSignal.value = v;
                   }}
                   {...inputProps}
@@ -183,15 +200,7 @@
             </Form>
             <p class="value-display">
               Value: <strong>{String(valueSignal.value)}</strong>
-              {submitSignal.value !== null && (
-                <>
-                  {" "}
-                  — Last submitted:{" "}
-                  <strong>{String(submitSignal.value)}</strong>
-                </>
-              )}
             </p>
-            <CallLog entries={logSignal.value} />
           </div>
         );
       };
@@ -206,7 +215,7 @@
               id="default"
               title="1. Default — 0 to 23h, step 1"
               desc="No explicit min/max/step. Defaults: min=0, max=23, step=1. Width is 2ch (2 digits). No spin buttons. 'h' suffix. Centered text."
-              initialValue={8}
+              valueSignal={defaultSignal}
             />
 
             {/* ── 2. Invalid value ── */}
@@ -214,7 +223,7 @@
               id="invalid"
               title='2. Invalid value — initialValue="aa"'
               desc='The initial value "aa" cannot be converted to a number. The type constraint fires and shows a validation message on submit.'
-              initialValue="aa"
+              valueSignal={invalidSignal}
             />
 
             {/* ── 3. Min ── */}
@@ -226,7 +235,7 @@
               id="min-basic"
               title="3a. Basic min — min=2, max=23"
               desc="Values below 2 are invalid. Initial value is 1 (below min) — submit to see the validation message."
-              initialValue={1}
+              valueSignal={minBasicSignal}
               inputProps={{ min: 2, max: 23 }}
             />
 
@@ -234,7 +243,7 @@
               id="min-negative"
               title="3b. Negative min — min=-10, max=10"
               desc="min is negative so the input can contain a '-' sign. Initial value is -15 (below min) — submit to see the validation message."
-              initialValue={-15}
+              valueSignal={minNegativeSignal}
               inputProps={{ min: -10, max: 10 }}
             />
 
@@ -247,7 +256,7 @@
               id="max-basic"
               title="4a. Basic max — max=9"
               desc="Single-digit max → 1ch width. Initial value is 10 (above max) — submit to see the validation message."
-              initialValue={10}
+              valueSignal={maxBasicSignal}
               inputProps={{ max: 9, width: "10ch" }}
             />
 
@@ -255,7 +264,7 @@
               id="max-large"
               title="4b. Large max — max=999"
               desc="3-digit max → 3ch width. Initial value is 1000 (above max) — submit to see the validation message."
-              initialValue={1000}
+              valueSignal={maxLargeSignal}
               inputProps={{ min: 0, max: 999, width: "10ch" }}
             />
 
@@ -268,7 +277,7 @@
               id="step-basic"
               title="5a. Integer step — step=5, min=0, max=60"
               desc="Only multiples of 5 are valid. Initial value is 7 (not a multiple of 5) — submit to see the validation message."
-              initialValue={7}
+              valueSignal={stepBasicSignal}
               inputProps={{ min: 0, max: 60, step: 5 }}
             />
 
@@ -276,7 +285,7 @@
               id="step-float"
               title="5b. Float step — step=0.5, min=0, max=9.5"
               desc="Step is 0.5 so values like 1.5 or 3.5 are valid. Initial value is 1.3 (invalid step) — submit to see the validation message."
-              initialValue={1.3}
+              valueSignal={stepFloatSignal}
               inputProps={{ min: 0, max: 9.5, step: 0.5 }}
             />
           </Box>
