@@ -100,7 +100,7 @@ const convertStringToNumber = (value) => {
 };
 
 export const TYPES = {
-  boolean: {
+  "boolean": {
     convert: {
       string: (value) => {
         if (value === "true") return true;
@@ -118,19 +118,19 @@ export const TYPES = {
       },
     },
   },
-  number: {
+  "number": {
     validate: validateNumber,
     convert: {
       string: convertStringToNumber,
     },
   },
-  string: {
+  "string": {
     convert: {
       number: String,
       boolean: String,
     },
   },
-  array: {
+  "array": {
     validate: (value) => {
       if (!Array.isArray(value)) {
         return `must be an array, got ${typeof value}`;
@@ -151,7 +151,7 @@ export const TYPES = {
       },
     },
   },
-  object: {
+  "object": {
     validate: (value) => {
       if (Array.isArray(value)) {
         return `must be an object, got array`;
@@ -179,13 +179,16 @@ export const TYPES = {
       },
     },
   },
-  date: {
+  "date": {
     validate: (value) => {
+      if (value instanceof Date) {
+        return isNaN(value.getTime()) ? `must be a valid date` : "";
+      }
       if (typeof value === "number" && Number.isFinite(value)) {
         return ""; // timestamp
       }
       if (typeof value !== "string") {
-        return `must be a string in YYYY-MM-DD format or a timestamp`;
+        return `must be a string in YYYY-MM-DD format, a timestamp, or a Date object`;
       }
       const dateRegex = /^(\d{4})-(\d{2})-(\d{2})$/;
       const match = dateRegex.exec(value);
@@ -206,8 +209,24 @@ export const TYPES = {
       }
       return "";
     },
+    convert: {
+      string: (value) => {
+        const d = new Date(`${value}T00:00:00`);
+        if (isNaN(d.getTime())) {
+          return CANNOT_AUTOFIX;
+        }
+        return d;
+      },
+      number: (value) => {
+        const d = new Date(value);
+        if (isNaN(d.getTime())) {
+          return CANNOT_AUTOFIX;
+        }
+        return d;
+      },
+    },
   },
-  datetime: {
+  "datetime": {
     validate: (value) => {
       if (typeof value === "number" && Number.isFinite(value)) {
         return ""; // timestamp
@@ -225,14 +244,56 @@ export const TYPES = {
       return "";
     },
   },
+  // "datetime-local" matches the value format of <input type="datetime-local">: "YYYY-MM-DDTHH:MM"
+  "datetime-local": {
+    validate: (value) => {
+      if (typeof value !== "string") {
+        return `must be a string in YYYY-MM-DDTHH:MM format`;
+      }
+      const regex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?$/;
+      if (!regex.test(value)) {
+        return `must be in YYYY-MM-DDTHH:MM format`;
+      }
+      const d = new Date(value);
+      if (isNaN(d.getTime())) {
+        return `must be a valid datetime`;
+      }
+      return "";
+    },
+    convert: {
+      object: (value) => {
+        if (!(value instanceof Date) || isNaN(value.getTime())) {
+          return CANNOT_AUTOFIX;
+        }
+        const yyyy = value.getFullYear();
+        const mm = String(value.getMonth() + 1).padStart(2, "0");
+        const dd = String(value.getDate()).padStart(2, "0");
+        const hh = String(value.getHours()).padStart(2, "0");
+        const min = String(value.getMinutes()).padStart(2, "0");
+        return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+      },
+      number: (value) => {
+        const d = new Date(value);
+        if (isNaN(d.getTime())) {
+          return CANNOT_AUTOFIX;
+        }
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, "0");
+        const dd = String(d.getDate()).padStart(2, "0");
+        const hh = String(d.getHours()).padStart(2, "0");
+        const min = String(d.getMinutes()).padStart(2, "0");
+        return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+      },
+    },
+  },
   // number/derived
-  float: {
+  "float": {
     validate: validateNumber,
     convert: {
       string: convertStringToNumber,
     },
   },
-  integer: {
+  "integer": {
     validate: (value) => {
       const numberError = validateNumber(value);
       if (numberError) {
@@ -254,7 +315,7 @@ export const TYPES = {
       number: (value) => Math.round(value),
     },
   },
-  ratio: {
+  "ratio": {
     props: {
       min: { default: 0 },
       max: { default: 1 },
@@ -264,7 +325,7 @@ export const TYPES = {
       string: convertStringToNumber,
     },
   },
-  longitude: {
+  "longitude": {
     props: {
       min: { default: -180 },
       max: { default: 180 },
@@ -274,7 +335,7 @@ export const TYPES = {
       string: convertStringToNumber,
     },
   },
-  latitude: {
+  "latitude": {
     props: {
       min: { default: -90 },
       max: { default: 90 },
@@ -284,7 +345,7 @@ export const TYPES = {
       string: convertStringToNumber,
     },
   },
-  second: {
+  "second": {
     props: {
       min: { default: 0, resolver: resolveToSeconds },
       max: { default: 60, resolver: resolveToSeconds },
@@ -300,7 +361,7 @@ export const TYPES = {
       string: convertStringToNumber,
     },
   },
-  minute: {
+  "minute": {
     props: {
       min: { default: 0, resolver: resolveToMinutes },
       max: { default: 60, resolver: resolveToMinutes },
@@ -316,7 +377,7 @@ export const TYPES = {
       string: convertStringToNumber,
     },
   },
-  hour: {
+  "hour": {
     props: {
       min: { default: 0, resolver: resolveToHours },
       max: { default: 24, resolver: resolveToHours },
@@ -332,7 +393,7 @@ export const TYPES = {
       string: convertStringToNumber,
     },
   },
-  month: {
+  "month": {
     validate: (value) => {
       if (typeof value === "number" && Number.isFinite(value)) {
         return ""; // timestamp
@@ -355,49 +416,72 @@ export const TYPES = {
       return "";
     },
   },
-  percentage: {
+  // "week" matches the value format of <input type="week">: "YYYY-Www" (e.g. "2024-W03")
+  "week": {
+    validate: (value) => {
+      if (typeof value !== "string") {
+        return `must be a string in YYYY-Www format`;
+      }
+      const weekRegex = /^\d{4}-W(?:0[1-9]|[1-4][0-9]|5[0-3])$/;
+      if (!weekRegex.test(value)) {
+        return `must be in YYYY-Www format (e.g. "2024-W03")`;
+      }
+      return "";
+    },
+  },
+  // "year" is a plain number (e.g. 2024)
+  "year": {
+    validate: (value) => {
+      if (typeof value !== "number" || !Number.isInteger(value)) {
+        return `must be an integer year`;
+      }
+      return "";
+    },
+    convert: {
+      string: (value) => {
+        const parsed = parseInt(value, 10);
+        if (!isNaN(parsed) && String(parsed) === value.trim()) {
+          return parsed;
+        }
+        return CANNOT_AUTOFIX;
+      },
+    },
+  },
+  "percentage": {
     props: {
       min: { default: 0 },
       max: { default: 100 },
     },
     validate: (value) => {
-      if (typeof value !== "string") {
-        return `must be a percentage`;
+      if (typeof value !== "number") {
+        return `must be a number between 0 and 100`;
       }
-      if (!value.endsWith("%")) {
-        return `must end with %`;
+      if (!Number.isFinite(value)) {
+        return `must be finite`;
       }
-      const percentageString = value.slice(0, -1);
-      const percentageFloat = parseFloat(percentageString);
-      if (typeof percentageFloat !== "number") {
-        return `must be a percentage`;
-      }
-      if (percentageFloat < 0 || percentageFloat > 100) {
+      if (value < 0 || value > 100) {
         return `must be between 0 and 100`;
       }
       return "";
     },
     convert: {
-      number: (value) => {
-        if (value >= 0 && value <= 100) {
-          return `${value}%`;
-        }
-        return CANNOT_AUTOFIX;
-      },
       string: (value) => {
-        if (value.endsWith("%")) {
-          return value;
-        }
-        const parsed = parseFloat(value);
-        if (!isNaN(parsed) && parsed >= 0 && parsed <= 100) {
-          return `${parsed}%`;
+        const trimmed = value.endsWith("%") ? value.slice(0, -1) : value;
+        const parsed = parseFloat(trimmed);
+        if (
+          !isNaN(parsed) &&
+          isFinite(parsed) &&
+          parsed >= 0 &&
+          parsed <= 100
+        ) {
+          return parsed;
         }
         return CANNOT_AUTOFIX;
       },
     },
   },
   // string/advanced
-  time: {
+  "time": {
     validate: (value) => {
       if (typeof value !== "string") {
         return `must be a string`;
@@ -409,7 +493,7 @@ export const TYPES = {
       return "";
     },
   },
-  email: {
+  "email": {
     validate: (value) => {
       if (typeof value !== "string") {
         return `must be a string`;
@@ -425,7 +509,7 @@ export const TYPES = {
       return "";
     },
   },
-  url: {
+  "url": {
     validate: (value) => {
       if (typeof value !== "string") {
         return `must be a string`;
@@ -439,7 +523,7 @@ export const TYPES = {
       }
     },
   },
-  color: {
+  "color": {
     validate: (value) => {
       if (typeof value !== "string") {
         return `must be a string`;
