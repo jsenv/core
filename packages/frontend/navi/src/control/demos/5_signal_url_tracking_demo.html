@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Signal / URL / localStorage Tracking Demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 40px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      #container {
+        max-width: 720px;
+        margin: 0 auto;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 1.4rem;
+      }
+      h2 {
+        margin: 0 0 8px;
+        font-size: 1.1rem;
+      }
+      p.lead {
+        margin: 0 0 32px;
+        color: #555;
+        font-size: 13px;
+      }
+      .demo-section {
+        margin-bottom: 24px;
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      p.desc {
+        margin: 0 0 16px;
+        color: #555;
+        font-size: 13px;
+      }
+      .tracker {
+        margin-top: 16px;
+        font-size: 13px;
+        border: 1px solid #e0e0e0;
+        border-radius: 6px;
+        overflow: hidden;
+      }
+      .tracker-row {
+        display: grid;
+        grid-template-columns: 140px 1fr;
+        border-bottom: 1px solid #e0e0e0;
+      }
+      .tracker-row:last-child {
+        border-bottom: none;
+      }
+      .tracker-label {
+        padding: 8px 12px;
+        color: #666;
+        font-weight: 500;
+        background: #f8f8f8;
+        border-right: 1px solid #e0e0e0;
+      }
+      .tracker-value {
+        padding: 8px 12px;
+        font-family: monospace;
+        white-space: pre-wrap;
+        word-break: break-all;
+      }
+      .tracker-value[data-valid="false"] {
+        color: #c0392b;
+      }
+      .tracker-value[data-empty] {
+        color: #aaa;
+        font-style: italic;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <h1>Signal / URL / localStorage Tracking</h1>
+      <p class="lead">
+        Shows live JS value, URL representation, localStorage value and validity
+        state as you type. Uses a <code>type="hour"</code> signal so
+        type-casting (string → number) is visible.
+      </p>
+      <div id="app"></div>
+    </div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useComputed } from "@preact/signals";
+      import {
+        Box,
+        Button,
+        Field,
+        Form,
+        Input,
+        Label,
+        NaviDebug,
+        route,
+        setupRoutes,
+        stateSignal,
+      } from "@jsenv/navi";
+
+      // ── Signals ───────────────────────────────────────────────────────────
+
+      // 1. No default — signal starts undefined
+      const noDefaultSignal = stateSignal(undefined, {
+        id: "no_default",
+        type: "hour",
+      });
+
+      // 2. With default value
+      const withDefaultSignal = stateSignal(8, {
+        id: "with_default",
+        type: "hour",
+      });
+
+      // 3. With default + min/max/step constraints
+      const constrainedSignal = stateSignal(8, {
+        id: "constrained",
+        type: "hour",
+        min: 0,
+        max: 23,
+        step: 0.5,
+      });
+
+      // 4. Persisted in localStorage
+      const persistedSignal = stateSignal(8, {
+        id: "persisted",
+        type: "hour",
+        persists: true,
+      });
+
+      const DEMO_ROUTE = route("", {
+        searchParams: {
+          no_default: noDefaultSignal,
+          with_default: withDefaultSignal,
+          constrained: constrainedSignal,
+          persisted: persistedSignal,
+        },
+      });
+      setupRoutes([DEMO_ROUTE]);
+
+      // ── Tracker component ─────────────────────────────────────────────────
+
+      const Val = ({ value }) => {
+        if (value === undefined) {
+          return (
+            <span class="tracker-value" data-empty="">
+              undefined
+            </span>
+          );
+        }
+        return (
+          <span class="tracker-value">
+            {JSON.stringify(value)}{" "}
+            <em style="color:#aaa;font-size:11px">({typeof value})</em>
+          </span>
+        );
+      };
+
+      const Tracker = ({ sig }) => {
+        const validity = useComputed(() => {
+          // eslint-disable-next-line no-unused-expressions
+          sig.value; // read signal to subscribe
+          return sig.validity;
+        });
+        const jsVal = sig.value;
+        const v = validity.value;
+        const urlVal = v?.representations?.url?.value;
+        const lsVal = v?.representations?.localStorage?.value;
+        const validVal = v?.representations?.valid?.value;
+
+        return (
+          <div class="tracker">
+            <div class="tracker-row">
+              <span class="tracker-label">signal.value (JS)</span>
+              <Val value={jsVal} />
+            </div>
+            <div class="tracker-row">
+              <span class="tracker-label">validity.valid</span>
+              <span class="tracker-value" data-valid={String(v?.valid)}>
+                {String(v?.valid)}
+                {v && !v.valid && (
+                  <em style="color:#c0392b;margin-left:8px;font-size:11px">
+                    {[v.type, v.min, v.max, v.step, v.oneOf]
+                      .filter(Boolean)
+                      .join(", ")}
+                  </em>
+                )}
+              </span>
+            </div>
+            <div class="tracker-row">
+              <span class="tracker-label">validity.value</span>
+              <Val value={v?.value} />
+            </div>
+            <div class="tracker-row">
+              <span class="tracker-label">representations.valid</span>
+              <Val value={validVal} />
+            </div>
+            <div class="tracker-row">
+              <span class="tracker-label">representations.url</span>
+              <Val value={urlVal} />
+            </div>
+            <div class="tracker-row">
+              <span class="tracker-label">representations.localStorage</span>
+              <Val value={lsVal} />
+            </div>
+          </div>
+        );
+      };
+
+      // ── Sections ──────────────────────────────────────────────────────────
+
+      const Section = ({ id, title, desc, sig, inputProps }) => (
+        <div class="demo-section" id={id}>
+          <h2>{title}</h2>
+          {desc && <p class="desc">{desc}</p>}
+          <Box flex="y" spacing="s" alignX="start">
+            <Field>
+              <Label>Heures</Label>
+              <Input
+                value={sig}
+                action={(v) => {
+                  sig.value = v;
+                }}
+                {...inputProps}
+              />
+            </Field>
+            <Button
+              onClick={() => {
+                sig.value = undefined;
+              }}
+            >
+              Reset to undefined
+            </Button>
+          </Box>
+          <Tracker sig={sig} />
+        </div>
+      );
+
+      // ── App ───────────────────────────────────────────────────────────────
+
+      const App = () => (
+        <NaviDebug>
+          <Box flex="y" spacing="l">
+            <Section
+              id="no-default"
+              title="1. No default (starts undefined)"
+              desc="Signal has no default value. Type a number to see it appear in JS and URL. Clear the field to see what happens."
+              sig={noDefaultSignal}
+            />
+
+            <Section
+              id="with-default"
+              title="2. With default (starts at 8)"
+              desc="Signal has default=8. The default value is NOT reflected in the URL (URL stays clean). Changing the value writes to URL."
+              sig={withDefaultSignal}
+            />
+
+            <Section
+              id="constrained"
+              title="3. Constrained (min=0 max=23 step=0.5)"
+              desc="Signal has validity constraints. Invalid values (e.g. 8.3) appear in the URL but validity.valid=false and representations.valid is the suggested fix."
+              sig={constrainedSignal}
+            />
+
+            <Section
+              id="persisted"
+              title="4. Persisted in localStorage"
+              desc='Signal is persisted. Reload the page to see the value restored from localStorage. The "representations.localStorage" row shows what is written.'
+              sig={persistedSignal}
+            />
+          </Box>
+        </NaviDebug>
+      );
+
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>
