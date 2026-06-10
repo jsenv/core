@@ -11,8 +11,8 @@ const rows = cases.map((value) => {
   applyOn(value);
   return [
     cell(humanize(value)),
-    cell(validity.valid ? "✓" : "✗"),
-    cell(validity.representations.valid?.value ?? "-"),
+    cell(humanize(validity.valid)),
+    cell(humanize(validity.representations.valid?.value)),
     cell(validity.step ?? "-"),
   ];
 });
@@ -20,10 +20,10 @@ const rows = cases.map((value) => {
 return renderTable(
   [
     [
-      cell("value"),
-      cell("valid"),
-      cell("valid suggestion"),
-      cell("step error"),
+      cell("input"),
+      cell(".valid"),
+      cell(".representations.valid.value"),
+      cell(".step"),
     ],
     ...rows,
   ],
@@ -32,19 +32,19 @@ return renderTable(
 ```
 
 ```js
-┌──────────┬───────┬──────────────────┬────────────────────────────────────┐
-│ value    │ valid │ valid suggestion │ step error                         │
-├──────────┼───────┼──────────────────┼────────────────────────────────────┤
-│ 1.2      │ ✓     │ -                │ -                                  │
-├──────────┼───────┼──────────────────┼────────────────────────────────────┤
-│ 1.23     │ ✗     │ 1.2              │ must have at most 1 decimal places │
-├──────────┼───────┼──────────────────┼────────────────────────────────────┤
-│ 3.000001 │ ✗     │ 3                │ must have at most 1 decimal places │
-├──────────┼───────┼──────────────────┼────────────────────────────────────┤
-│ 3.05     │ ✗     │ 3                │ must have at most 1 decimal places │
-├──────────┼───────┼──────────────────┼────────────────────────────────────┤
-│ 2.67     │ ✗     │ 2.7              │ must have at most 1 decimal places │
-└──────────┴───────┴──────────────────┴────────────────────────────────────┘
+┌──────────┬────────┬──────────────────────────────┬────────────────────────────────────┐
+│ input    │ .valid │ .representations.valid.value │ .step                              │
+├──────────┼────────┼──────────────────────────────┼────────────────────────────────────┤
+│ 1.2      │ true   │ undefined                    │ -                                  │
+├──────────┼────────┼──────────────────────────────┼────────────────────────────────────┤
+│ 1.23     │ false  │ 1.2                          │ must have at most 1 decimal places │
+├──────────┼────────┼──────────────────────────────┼────────────────────────────────────┤
+│ 3.000001 │ false  │ 3                            │ must have at most 1 decimal places │
+├──────────┼────────┼──────────────────────────────┼────────────────────────────────────┤
+│ 3.05     │ false  │ 3                            │ must have at most 1 decimal places │
+├──────────┼────────┼──────────────────────────────┼────────────────────────────────────┤
+│ 2.67     │ false  │ 2.7                          │ must have at most 1 decimal places │
+└──────────┴────────┴──────────────────────────────┴────────────────────────────────────┘
 ```
 
 ---

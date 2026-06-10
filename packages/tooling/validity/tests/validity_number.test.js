@@ -32,18 +32,18 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
     const grid = [
       [
-        cell("value"),
-        cell("representation: string"),
-        cell("valid"),
-        cell("invalid message"),
+        cell("input"),
+        cell(".representations.custom.value (string)"),
+        cell(".valid"),
+        cell(".type"),
       ],
       ...cases.map((value) => {
         applyOnString(value);
         return [
           cell(humanize(value)),
           reprCell(validityString.representations.custom),
-          cell(validityString.valid ? "✓" : "✗"),
-          cell(validityString.type ?? "-"),
+          cell(humanize(validityString.valid)),
+          cell(humanize(validityString.type)),
         ];
       }),
     ];
@@ -59,23 +59,23 @@ await snapshotTests(import.meta.url, ({ test }) => {
       return [
         cell(humanize(value)),
         cell(humanize(validity.value)),
-        cell(validity.valid ? "✓" : "✗"),
-        cell(validity.representations.valid?.value ?? "-"),
+        cell(humanize(validity.valid)),
+        cell(humanize(validity.representations.valid?.value)),
         cell(
           validity.representations.custom
             ? humanize(validity.representations.custom.value)
             : "-",
         ),
-        cell(validity.min ?? "-"),
+        cell(humanize(validity.min)),
       ];
     };
     const headers = [
-      cell("value"),
-      cell("validity.value"),
-      cell("valid"),
-      cell("valid suggestion"),
-      cell("customRepresentation: string"),
-      cell("min error"),
+      cell("input"),
+      cell(".value"),
+      cell(".valid"),
+      cell(".representations.valid.value"),
+      cell(".representations.custom.value (string)"),
+      cell(".min"),
     ];
 
     const [validity, applyOn] = createValidity({
@@ -122,8 +122,8 @@ ${table2}`;
       applyOn(value);
       return [
         cell(humanize(value)),
-        cell(validity.valid ? "✓" : "✗"),
-        cell(validity.representations.valid?.value ?? "-"),
+        cell(humanize(validity.valid)),
+        cell(humanize(validity.representations.valid?.value)),
         cell(validity.max ?? "-"),
       ];
     });
@@ -131,10 +131,10 @@ ${table2}`;
     return renderTable(
       [
         [
-          cell("value"),
-          cell("valid"),
-          cell("valid suggestion"),
-          cell("max error"),
+          cell("input"),
+          cell(".valid"),
+          cell(".representations.valid.value"),
+          cell(".max"),
         ],
         ...rows,
       ],
@@ -153,8 +153,8 @@ ${table2}`;
       applyOn(value);
       return [
         cell(humanize(value)),
-        cell(validity.valid ? "✓" : "✗"),
-        cell(validity.representations.valid?.value ?? "-"),
+        cell(humanize(validity.valid)),
+        cell(humanize(validity.representations.valid?.value)),
         cell(validity.step ?? "-"),
       ];
     });
@@ -162,10 +162,10 @@ ${table2}`;
     return renderTable(
       [
         [
-          cell("value"),
-          cell("valid"),
-          cell("valid suggestion"),
-          cell("step error"),
+          cell("input"),
+          cell(".valid"),
+          cell(".representations.valid.value"),
+          cell(".step"),
         ],
         ...rows,
       ],
@@ -184,8 +184,8 @@ ${table2}`;
       applyOn(value);
       return [
         cell(humanize(value)),
-        cell(validity.valid ? "✓" : "✗"),
-        cell(validity.representations.valid?.value ?? "-"),
+        cell(humanize(validity.valid)),
+        cell(humanize(validity.representations.valid?.value)),
         cell(validity.step ?? "-"),
       ];
     });
@@ -193,10 +193,10 @@ ${table2}`;
     return renderTable(
       [
         [
-          cell("value"),
-          cell("valid"),
-          cell("valid suggestion"),
-          cell("step error"),
+          cell("input"),
+          cell(".valid"),
+          cell(".representations.valid.value"),
+          cell(".step"),
         ],
         ...rows,
       ],
@@ -217,8 +217,8 @@ ${table2}`;
       applyOn(value);
       return [
         cell(humanize(value)),
-        cell(validity.valid ? "✓" : "✗"),
-        cell(validity.representations.valid?.value ?? "-"),
+        cell(humanize(validity.valid)),
+        cell(humanize(validity.representations.valid?.value)),
         cell(
           [validity.type, validity.min, validity.max, validity.step]
             .filter(Boolean)
@@ -230,9 +230,9 @@ ${table2}`;
     return renderTable(
       [
         [
-          cell("value"),
-          cell("valid"),
-          cell("valid suggestion"),
+          cell("input"),
+          cell(".valid"),
+          cell(".representations.valid.value"),
           cell("errors"),
         ],
         ...rows,
@@ -255,8 +255,8 @@ ${table2}`;
       applyOn(value);
       return [
         cell(humanize(value)),
-        cell(validity.valid ? "✓" : "✗"),
-        cell(validity.representations.valid?.value ?? "-"),
+        cell(humanize(validity.valid)),
+        cell(humanize(validity.representations.valid?.value)),
         cell(
           [validity.type, validity.min, validity.max, validity.step]
             .filter(Boolean)
@@ -268,9 +268,9 @@ ${table2}`;
     return renderTable(
       [
         [
-          cell("value"),
-          cell("valid"),
-          cell("valid suggestion"),
+          cell("input"),
+          cell(".valid"),
+          cell(".representations.valid.value"),
           cell("errors"),
         ],
         ...rows,
@@ -292,8 +292,8 @@ ${table2}`;
       applyOn(value);
       return [
         cell(humanize(value)),
-        cell(validity.valid ? "✓" : "✗"),
-        cell(validity.representations.valid?.value ?? "-"),
+        cell(humanize(validity.valid)),
+        cell(humanize(validity.representations.valid?.value)),
         cell(
           [
             validity.type,
@@ -311,9 +311,9 @@ ${table2}`;
     return renderTable(
       [
         [
-          cell("value"),
-          cell("valid"),
-          cell("valid suggestion"),
+          cell("input"),
+          cell(".valid"),
+          cell(".representations.valid.value"),
           cell("errors"),
         ],
         ...rows,

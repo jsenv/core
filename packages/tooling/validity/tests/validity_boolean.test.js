@@ -38,9 +38,9 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
     const grid = [
       [
-        cell("value"),
-        cell("customRepresentation: string"),
-        cell("customRepresentation: number"),
+        cell("input"),
+        cell(".representations.custom.value (string)"),
+        cell(".representations.custom.value (number)"),
       ],
       ...cases.map((value) => {
         applyOnString(value);
@@ -75,22 +75,18 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
     const grid = [
       [
-        cell("value"),
-        cell("valid"),
-        cell("valid suggestion"),
-        cell("invalid message"),
+        cell("input"),
+        cell(".valid"),
+        cell(".representations.valid.value"),
+        cell(".type"),
       ],
       ...cases.map((value) => {
         applyOn(value);
         return [
           cell(humanize(value)),
-          cell(validity.valid ? "✓" : "✗"),
-          cell(
-            validity.representations.valid
-              ? humanize(validity.representations.valid.value)
-              : "-",
-          ),
-          cell(validity.type ?? "-"),
+          cell(humanize(validity.valid)),
+          cell(humanize(validity.representations.valid?.value)),
+          cell(humanize(validity.type)),
         ];
       }),
     ];

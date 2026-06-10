@@ -14,8 +14,8 @@ const rows = cases.map((value) => {
   applyOn(value);
   return [
     cell(humanize(value)),
-    cell(validity.valid ? "✓" : "✗"),
-    cell(validity.representations.valid?.value ?? "-"),
+    cell(humanize(validity.valid)),
+    cell(humanize(validity.representations.valid?.value)),
     cell(
       [validity.type, validity.min, validity.max, validity.step]
         .filter(Boolean)
@@ -27,9 +27,9 @@ const rows = cases.map((value) => {
 return renderTable(
   [
     [
-      cell("value"),
-      cell("valid"),
-      cell("valid suggestion"),
+      cell("input"),
+      cell(".valid"),
+      cell(".representations.valid.value"),
       cell("errors"),
     ],
     ...rows,
@@ -39,17 +39,17 @@ return renderTable(
 ```
 
 ```js
-┌───────┬───────┬──────────────────┬────────────────────────────────────┐
-│ value │ valid │ valid suggestion │ errors                             │
-├───────┼───────┼──────────────────┼────────────────────────────────────┤
-│ 150   │ ✗     │ 100              │ must be <= 100                     │
-├───────┼───────┼──────────────────┼────────────────────────────────────┤
-│   5.5 │ ✗     │   6              │ must have at most 0 decimal places │
-├───────┼───────┼──────────────────┼────────────────────────────────────┤
-│  10   │ ✗     │   0              │ must be positive                   │
-├───────┼───────┼──────────────────┼────────────────────────────────────┤
-│  50   │ ✓     │ -                │ -                                  │
-└───────┴───────┴──────────────────┴────────────────────────────────────┘
+┌───────┬────────┬──────────────────────────────┬────────────────────────────────────┐
+│ input │ .valid │ .representations.valid.value │ errors                             │
+├───────┼────────┼──────────────────────────────┼────────────────────────────────────┤
+│ 150   │ false  │ 100                          │ must be <= 100                     │
+├───────┼────────┼──────────────────────────────┼────────────────────────────────────┤
+│   5.5 │ false  │   6                          │ must have at most 0 decimal places │
+├───────┼────────┼──────────────────────────────┼────────────────────────────────────┤
+│  10   │ false  │   0                          │ must be positive                   │
+├───────┼────────┼──────────────────────────────┼────────────────────────────────────┤
+│  50   │ true   │ undefined                    │ -                                  │
+└───────┴────────┴──────────────────────────────┴────────────────────────────────────┘
 ```
 
 ---

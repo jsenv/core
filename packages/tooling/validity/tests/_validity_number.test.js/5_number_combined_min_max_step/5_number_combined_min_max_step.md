@@ -13,8 +13,8 @@ const rows = cases.map((value) => {
   applyOn(value);
   return [
     cell(humanize(value)),
-    cell(validity.valid ? "✓" : "✗"),
-    cell(validity.representations.valid?.value ?? "-"),
+    cell(humanize(validity.valid)),
+    cell(humanize(validity.representations.valid?.value)),
     cell(
       [validity.type, validity.min, validity.max, validity.step]
         .filter(Boolean)
@@ -26,9 +26,9 @@ const rows = cases.map((value) => {
 return renderTable(
   [
     [
-      cell("value"),
-      cell("valid"),
-      cell("valid suggestion"),
+      cell("input"),
+      cell(".valid"),
+      cell(".representations.valid.value"),
       cell("errors"),
     ],
     ...rows,
@@ -38,13 +38,13 @@ return renderTable(
 ```
 
 ```js
-┌───────┬───────┬──────────────────┬─────────────────────────────────────────────┐
-│ value │ valid │ valid suggestion │ errors                                      │
-├───────┼───────┼──────────────────┼─────────────────────────────────────────────┤
-│ 5.5   │ ✓     │ -                │ -                                           │
-├───────┼───────┼──────────────────┼─────────────────────────────────────────────┤
-│ 2.3   │ ✗     │ 0                │ must be positive, must be a multiple of 0.5 │
-└───────┴───────┴──────────────────┴─────────────────────────────────────────────┘
+┌───────┬────────┬──────────────────────────────┬─────────────────────────────────────────────┐
+│ input │ .valid │ .representations.valid.value │ errors                                      │
+├───────┼────────┼──────────────────────────────┼─────────────────────────────────────────────┤
+│ 5.5   │ true   │ undefined                    │ -                                           │
+├───────┼────────┼──────────────────────────────┼─────────────────────────────────────────────┤
+│ 2.3   │ false  │ 0                            │ must be positive, must be a multiple of 0.5 │
+└───────┴────────┴──────────────────────────────┴─────────────────────────────────────────────┘
 ```
 
 ---

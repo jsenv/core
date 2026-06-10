@@ -13,8 +13,8 @@ const rows = cases.map((value) => {
   applyOn(value);
   return [
     cell(humanize(value)),
-    cell(validity.valid ? "✓" : "✗"),
-    cell(validity.representations.valid?.value ?? "-"),
+    cell(humanize(validity.valid)),
+    cell(humanize(validity.representations.valid?.value)),
     cell(
       [
         validity.type,
@@ -32,9 +32,9 @@ const rows = cases.map((value) => {
 return renderTable(
   [
     [
-      cell("value"),
-      cell("valid"),
-      cell("valid suggestion"),
+      cell("input"),
+      cell(".valid"),
+      cell(".representations.valid.value"),
       cell("errors"),
     ],
     ...rows,
@@ -44,11 +44,11 @@ return renderTable(
 ```
 
 ```js
-┌───────┬───────┬──────────────────┬───────────────────────────────────────────┐
-│ value │ valid │ valid suggestion │ errors                                    │
-├───────┼───────┼──────────────────┼───────────────────────────────────────────┤
-│ 15    │ ✗     │ -                │ must be >= 50, must be one of: 10, 20, 30 │
-└───────┴───────┴──────────────────┴───────────────────────────────────────────┘
+┌───────┬────────┬──────────────────────────────┬───────────────────────────────────────────┐
+│ input │ .valid │ .representations.valid.value │ errors                                    │
+├───────┼────────┼──────────────────────────────┼───────────────────────────────────────────┤
+│ 15    │ false  │ undefined                    │ must be >= 50, must be one of: 10, 20, 30 │
+└───────┴────────┴──────────────────────────────┴───────────────────────────────────────────┘
 ```
 
 ---

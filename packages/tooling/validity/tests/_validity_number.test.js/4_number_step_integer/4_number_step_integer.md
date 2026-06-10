@@ -11,8 +11,8 @@ const rows = cases.map((value) => {
   applyOn(value);
   return [
     cell(humanize(value)),
-    cell(validity.valid ? "✓" : "✗"),
-    cell(validity.representations.valid?.value ?? "-"),
+    cell(humanize(validity.valid)),
+    cell(humanize(validity.representations.valid?.value)),
     cell(validity.step ?? "-"),
   ];
 });
@@ -20,10 +20,10 @@ const rows = cases.map((value) => {
 return renderTable(
   [
     [
-      cell("value"),
-      cell("valid"),
-      cell("valid suggestion"),
-      cell("step error"),
+      cell("input"),
+      cell(".valid"),
+      cell(".representations.valid.value"),
+      cell(".step"),
     ],
     ...rows,
   ],
@@ -32,13 +32,13 @@ return renderTable(
 ```
 
 ```js
-┌───────┬───────┬──────────────────┬────────────────────────────────────┐
-│ value │ valid │ valid suggestion │ step error                         │
-├───────┼───────┼──────────────────┼────────────────────────────────────┤
-│ 5     │ ✓     │ -                │ -                                  │
-├───────┼───────┼──────────────────┼────────────────────────────────────┤
-│ 5.5   │ ✗     │ 6                │ must have at most 0 decimal places │
-└───────┴───────┴──────────────────┴────────────────────────────────────┘
+┌───────┬────────┬──────────────────────────────┬────────────────────────────────────┐
+│ input │ .valid │ .representations.valid.value │ .step                              │
+├───────┼────────┼──────────────────────────────┼────────────────────────────────────┤
+│ 5     │ true   │ undefined                    │ -                                  │
+├───────┼────────┼──────────────────────────────┼────────────────────────────────────┤
+│ 5.5   │ false  │ 6                            │ must have at most 0 decimal places │
+└───────┴────────┴──────────────────────────────┴────────────────────────────────────┘
 ```
 
 ---
