@@ -350,9 +350,12 @@ export const route = (pattern, { searchParams } = {}) => {
         const value = paramSignal.value;
         const urlValue =
           paramSignal.validity?.representations.url.value ?? value;
-        const rawParams = route.rawParamsSignal.value;
+        // Use peek() to avoid subscribing to URL-derived signals.
+        // This effect should only re-run when the param signal changes,
+        // not when the URL changes (which would create a cycle: signal→URL→signal).
+        const rawParams = route.rawParamsSignal.peek();
         const urlParamValue = rawParams[paramName];
-        const matching = route.matchingSignal.value;
+        const matching = route.matchingSignal.peek();
 
         // Signal returned to default - clean up URL by removing the parameter
         // Skip cleanup during URL-to-signal synchronization to prevent recursion
