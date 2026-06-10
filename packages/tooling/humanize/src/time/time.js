@@ -99,9 +99,15 @@ export const humanizeDuration = (
   }
   const { primary, remaining } = parseMs(ms);
   if (!remaining) {
+    const primaryUnitIndex = UNIT_KEYS.indexOf(primary.name);
+    const nextUnitName = UNIT_KEYS[primaryUnitIndex - 1];
+    const maxCount = nextUnitName
+      ? UNIT_MS[nextUnitName] / UNIT_MS[primary.name]
+      : null;
     return humanizeDurationUnit(primary, {
       decimals:
         decimals === undefined ? (primary.name === "second" ? 1 : 0) : decimals,
+      maxCount,
       short,
       rounded,
       timeDictionnary,
@@ -126,11 +132,16 @@ export const humanizeDuration = (
 };
 const humanizeDurationUnit = (
   unit,
-  { decimals, short, rounded, timeDictionnary },
+  { decimals, maxCount, short, rounded, timeDictionnary },
 ) => {
-  const count = rounded
+  let count = rounded
     ? setRoundedPrecision(unit.count, { decimals })
     : setPrecision(unit.count, { decimals });
+  if (maxCount !== null && maxCount !== undefined && count >= maxCount) {
+    // Prevent rounding up to the next unit boundary (e.g. 59.999s → 60s → cap to 59.9s)
+    const factor = Math.pow(10, decimals ?? 0);
+    count = Math.floor(unit.count * factor) / factor;
+  }
   const name = unit.name;
   if (short) {
     const unitText = timeDictionnary[name].short;
