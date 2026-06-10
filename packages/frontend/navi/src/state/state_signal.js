@@ -102,20 +102,6 @@ if (import.meta.hot) {
  * const childTab = stateSignal(parentTab);
  * // childTab follows parentTab changes unless explicitly set
  */
-const stringUndefinedAliasSet = new Set([""]);
-const stringTypeSet = new Set([
-  "string",
-  "date",
-  "month",
-  "week",
-  "time",
-  "datetime",
-  "date",
-  "url",
-  "email",
-  "percentage",
-  "color",
-]);
 export const stateSignal = (defaultValue, options = {}) => {
   const {
     id,
@@ -133,11 +119,7 @@ export const stateSignal = (defaultValue, options = {}) => {
     undefinedAlias,
   } = options;
   const undefinedAliasSet =
-    undefinedAlias === undefined
-      ? stringTypeSet.has(type)
-        ? stringUndefinedAliasSet
-        : undefined
-      : new Set(undefinedAlias);
+    undefinedAlias === undefined ? undefined : new Set(undefinedAlias);
 
   // Check if defaultValue is a signal (dynamic default) or static value
   const isDynamicDefault =
