@@ -221,23 +221,24 @@
             alignX="center"
           >
             Autre
-            <Input
-              type="navi_hour"
-              value={hours}
-              uiAction={(v) => {
-                const h = typeof v === "number" ? v : 0;
-                customDurationSignal.value = h * 60 + minutes;
-              }}
-            />
-            h
-            <Input
-              type="navi_minute"
-              value={minutes}
-              uiAction={(v) => {
-                const m = typeof v === "number" ? v : 0;
-                customDurationSignal.value = hours * 60 + m;
-              }}
-            />
+            <Box flex spacing="xxs">
+              <Input
+                type="navi_hour"
+                value={hours}
+                uiAction={(v) => {
+                  const h = typeof v === "number" ? v : 0;
+                  customDurationSignal.value = h * 60 + minutes;
+                }}
+              />
+              <Input
+                type="navi_minute"
+                value={minutes}
+                uiAction={(v) => {
+                  const m = typeof v === "number" ? v : 0;
+                  customDurationSignal.value = hours * 60 + m;
+                }}
+              />
+            </Box>
           </List.Item>
         );
       };
