@@ -1,7 +1,8 @@
 # [validity_boolean.test.js](../validity_boolean.test.js)
 
 
-- [boolean type conversion](0_boolean_type_conversion/0_boolean_type_conversion.md)
+- [boolean representations](0_boolean_representations/0_boolean_representations.md)
+- [boolean type conversion](1_boolean_type_conversion/1_boolean_type_conversion.md)
 
 ---
 
