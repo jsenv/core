@@ -5,7 +5,7 @@ import {
   STEP_RULE,
   TYPE_RULE,
 } from "./rules.js";
-import { CANNOT_AUTOFIX, TYPES } from "./types.js";
+import { CANNOT_CONVERT, TYPES } from "./types.js";
 
 /**
  * Creates a validation system with configurable rules for data validation and auto-fixing.
@@ -204,7 +204,7 @@ export const createValidity = (ruleConfig) => {
     // Deserialize from chosen representation to canonical before validating
     if (deserialize && value !== undefined) {
       const deserialized = deserialize(value);
-      if (deserialized !== CANNOT_AUTOFIX) {
+      if (deserialized !== CANNOT_CONVERT) {
         value = deserialized;
       }
     }
@@ -234,7 +234,7 @@ export const createValidity = (ruleConfig) => {
         continue;
       }
       const autoFixResult = autoFix();
-      if (autoFixResult === CANNOT_AUTOFIX) {
+      if (autoFixResult === CANNOT_CONVERT) {
         // invalid and cannot autofix
         continue;
       }
@@ -258,7 +258,7 @@ export const createValidity = (ruleConfig) => {
           break;
         }
         const nestedFix = result.autoFix();
-        if (nestedFix === CANNOT_AUTOFIX) {
+        if (nestedFix === CANNOT_CONVERT) {
           candidateIsValid = false;
           break;
         }

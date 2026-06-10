@@ -1,4 +1,4 @@
-export const CANNOT_AUTOFIX = {};
+export const CANNOT_CONVERT = {};
 
 // Parses a duration string into a total number of seconds.
 // Supported notations:
@@ -96,41 +96,45 @@ const convertStringToNumber = (value) => {
   if (!isNaN(parsed) && isFinite(parsed)) {
     return parsed;
   }
-  return CANNOT_AUTOFIX;
+  return CANNOT_CONVERT;
 };
 
 export const TYPES = {
   "boolean": {
     storage: "boolean",
-    convert: {
-      string: (value) => {
-        if (value === "true") return true;
-        if (value === "false") return false;
-        if (value === "on") return true;
-        if (value === "off") return false;
-        if (value === "1") return true;
-        if (value === "0") return false;
-        return CANNOT_AUTOFIX;
+    representations: {
+      string: {
+        deserialize: (value) => {
+          if (value === "true") return true;
+          if (value === "false") return false;
+          if (value === "on") return true;
+          if (value === "off") return false;
+          if (value === "1") return true;
+          if (value === "0") return false;
+          return CANNOT_CONVERT;
+        },
       },
-      number: (value) => {
-        if (value === 0) return false;
-        if (value === 1) return true;
-        return CANNOT_AUTOFIX;
+      number: {
+        deserialize: (value) => {
+          if (value === 0) return false;
+          if (value === 1) return true;
+          return CANNOT_CONVERT;
+        },
       },
     },
   },
   "number": {
     storage: "number",
     validate: validateNumber,
-    convert: {
-      string: convertStringToNumber,
+    representations: {
+      string: { deserialize: convertStringToNumber },
     },
   },
   "string": {
     storage: "string",
-    convert: {
-      number: String,
-      boolean: String,
+    representations: {
+      number: { deserialize: String },
+      boolean: { deserialize: String },
     },
   },
   "array": {
@@ -141,17 +145,19 @@ export const TYPES = {
       }
       return "";
     },
-    convert: {
-      string: (value) => {
-        try {
-          const parsed = JSON.parse(value);
-          if (!Array.isArray(parsed)) {
-            return CANNOT_AUTOFIX;
+    representations: {
+      string: {
+        deserialize: (value) => {
+          try {
+            const parsed = JSON.parse(value);
+            if (!Array.isArray(parsed)) {
+              return CANNOT_CONVERT;
+            }
+            return parsed;
+          } catch {
+            return CANNOT_CONVERT;
           }
-          return parsed;
-        } catch {
-          return CANNOT_AUTOFIX;
-        }
+        },
       },
     },
   },
@@ -166,21 +172,23 @@ export const TYPES = {
       }
       return "";
     },
-    convert: {
-      string: (value) => {
-        try {
-          const parsed = JSON.parse(value);
-          if (
-            Array.isArray(parsed) ||
-            typeof parsed !== "object" ||
-            parsed === null
-          ) {
-            return CANNOT_AUTOFIX;
+    representations: {
+      string: {
+        deserialize: (value) => {
+          try {
+            const parsed = JSON.parse(value);
+            if (
+              Array.isArray(parsed) ||
+              typeof parsed !== "object" ||
+              parsed === null
+            ) {
+              return CANNOT_CONVERT;
+            }
+            return parsed;
+          } catch {
+            return CANNOT_CONVERT;
           }
-          return parsed;
-        } catch {
-          return CANNOT_AUTOFIX;
-        }
+        },
       },
     },
   },
@@ -188,7 +196,7 @@ export const TYPES = {
     storage: "string",
     // canonical: Date object
     representations: {
-      // "YYYY-MM-DD" string representation
+      // "YYYY-MM-DD" string — also used for auto-converting string inputs
       string: {
         serialize: (d) => {
           const yyyy = d.getFullYear();
@@ -198,15 +206,15 @@ export const TYPES = {
         },
         deserialize: (s) => {
           const d = new Date(`${s}T00:00:00`);
-          return isNaN(d.getTime()) ? CANNOT_AUTOFIX : d;
+          return isNaN(d.getTime()) ? CANNOT_CONVERT : d;
         },
       },
-      // Unix timestamp (number) representation
-      timestamp: {
+      // Unix timestamp — also used for auto-converting number inputs
+      number: {
         serialize: (d) => d.getTime(),
         deserialize: (n) => {
           const d = new Date(n);
-          return isNaN(d.getTime()) ? CANNOT_AUTOFIX : d;
+          return isNaN(d.getTime()) ? CANNOT_CONVERT : d;
         },
       },
     },
@@ -238,22 +246,6 @@ export const TYPES = {
         return `must be a valid date`;
       }
       return "";
-    },
-    convert: {
-      string: (value) => {
-        const d = new Date(`${value}T00:00:00`);
-        if (isNaN(d.getTime())) {
-          return CANNOT_AUTOFIX;
-        }
-        return d;
-      },
-      number: (value) => {
-        const d = new Date(value);
-        if (isNaN(d.getTime())) {
-          return CANNOT_AUTOFIX;
-        }
-        return d;
-      },
     },
   },
   "datetime": {
@@ -292,29 +284,33 @@ export const TYPES = {
       }
       return "";
     },
-    convert: {
-      object: (value) => {
-        if (!(value instanceof Date) || isNaN(value.getTime())) {
-          return CANNOT_AUTOFIX;
-        }
-        const yyyy = value.getFullYear();
-        const mm = String(value.getMonth() + 1).padStart(2, "0");
-        const dd = String(value.getDate()).padStart(2, "0");
-        const hh = String(value.getHours()).padStart(2, "0");
-        const min = String(value.getMinutes()).padStart(2, "0");
-        return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+    representations: {
+      object: {
+        deserialize: (value) => {
+          if (!(value instanceof Date) || isNaN(value.getTime())) {
+            return CANNOT_CONVERT;
+          }
+          const yyyy = value.getFullYear();
+          const mm = String(value.getMonth() + 1).padStart(2, "0");
+          const dd = String(value.getDate()).padStart(2, "0");
+          const hh = String(value.getHours()).padStart(2, "0");
+          const min = String(value.getMinutes()).padStart(2, "0");
+          return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+        },
       },
-      number: (value) => {
-        const d = new Date(value);
-        if (isNaN(d.getTime())) {
-          return CANNOT_AUTOFIX;
-        }
-        const yyyy = d.getFullYear();
-        const mm = String(d.getMonth() + 1).padStart(2, "0");
-        const dd = String(d.getDate()).padStart(2, "0");
-        const hh = String(d.getHours()).padStart(2, "0");
-        const min = String(d.getMinutes()).padStart(2, "0");
-        return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+      number: {
+        deserialize: (value) => {
+          const d = new Date(value);
+          if (isNaN(d.getTime())) {
+            return CANNOT_CONVERT;
+          }
+          const yyyy = d.getFullYear();
+          const mm = String(d.getMonth() + 1).padStart(2, "0");
+          const dd = String(d.getDate()).padStart(2, "0");
+          const hh = String(d.getHours()).padStart(2, "0");
+          const min = String(d.getMinutes()).padStart(2, "0");
+          return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+        },
       },
     },
   },
@@ -322,8 +318,8 @@ export const TYPES = {
   "float": {
     storage: "number",
     validate: validateNumber,
-    convert: {
-      string: convertStringToNumber,
+    representations: {
+      string: { deserialize: convertStringToNumber },
     },
   },
   "integer": {
@@ -338,15 +334,17 @@ export const TYPES = {
       }
       return "";
     },
-    convert: {
-      string: (value) => {
-        const result = convertStringToNumber(value);
-        if (result === CANNOT_AUTOFIX) {
-          return CANNOT_AUTOFIX;
-        }
-        return Math.round(result);
+    representations: {
+      string: {
+        deserialize: (value) => {
+          const result = convertStringToNumber(value);
+          if (result === CANNOT_CONVERT) {
+            return CANNOT_CONVERT;
+          }
+          return Math.round(result);
+        },
       },
-      number: (value) => Math.round(value),
+      number: { deserialize: (value) => Math.round(value) },
     },
   },
   "ratio": {
@@ -356,8 +354,8 @@ export const TYPES = {
       max: { default: 1 },
     },
     validate: validateNumber,
-    convert: {
-      string: convertStringToNumber,
+    representations: {
+      string: { deserialize: convertStringToNumber },
     },
   },
   "longitude": {
@@ -367,8 +365,8 @@ export const TYPES = {
       max: { default: 180 },
     },
     validate: validateNumber,
-    convert: {
-      string: convertStringToNumber,
+    representations: {
+      string: { deserialize: convertStringToNumber },
     },
   },
   "latitude": {
@@ -378,8 +376,8 @@ export const TYPES = {
       max: { default: 90 },
     },
     validate: validateNumber,
-    convert: {
-      string: convertStringToNumber,
+    representations: {
+      string: { deserialize: convertStringToNumber },
     },
   },
   "second": {
@@ -391,7 +389,6 @@ export const TYPES = {
     },
     // canonical: number of seconds (e.g. 90)
     representations: {
-      // "1h30min30s" duration string representation
       duration: {
         serialize: (s) => {
           const totalSec = Math.round(s);
@@ -412,15 +409,13 @@ export const TYPES = {
         },
         deserialize: resolveToSeconds,
       },
+      string: { deserialize: convertStringToNumber },
     },
     validate: (value) => {
       if (typeof value === "number" && Number.isFinite(value)) {
         return "";
       }
       return `must be a number`;
-    },
-    convert: {
-      string: convertStringToNumber,
     },
   },
   "minute": {
@@ -448,15 +443,13 @@ export const TYPES = {
         },
         deserialize: resolveToMinutes,
       },
+      string: { deserialize: convertStringToNumber },
     },
     validate: (value) => {
       if (typeof value === "number" && Number.isFinite(value)) {
         return "";
       }
       return `must be a number`;
-    },
-    convert: {
-      string: convertStringToNumber,
     },
   },
   "hour": {
@@ -484,15 +477,13 @@ export const TYPES = {
         },
         deserialize: resolveToHours,
       },
+      string: { deserialize: convertStringToNumber },
     },
     validate: (value) => {
       if (typeof value === "number" && Number.isFinite(value)) {
         return "";
       }
       return `must be a number`;
-    },
-    convert: {
-      string: convertStringToNumber,
     },
   },
   "month": {
@@ -542,13 +533,15 @@ export const TYPES = {
       }
       return "";
     },
-    convert: {
-      string: (value) => {
-        const parsed = parseInt(value, 10);
-        if (!isNaN(parsed) && String(parsed) === value.trim()) {
-          return parsed;
-        }
-        return CANNOT_AUTOFIX;
+    representations: {
+      string: {
+        deserialize: (value) => {
+          const parsed = parseInt(value, 10);
+          if (!isNaN(parsed) && String(parsed) === value.trim()) {
+            return parsed;
+          }
+          return CANNOT_CONVERT;
+        },
       },
     },
   },
@@ -559,14 +552,14 @@ export const TYPES = {
       max: { default: 100 },
     }, // canonical: number (e.g. 50)
     representations: {
-      // "50%" string representation
+      // "50%" string — also used for auto-converting string inputs
       string: {
         serialize: (n) => `${n}%`,
         deserialize: (s) => {
           const trimmed =
             typeof s === "string" && s.endsWith("%") ? s.slice(0, -1) : s;
           const parsed = parseFloat(trimmed);
-          return !isNaN(parsed) && isFinite(parsed) ? parsed : CANNOT_AUTOFIX;
+          return !isNaN(parsed) && isFinite(parsed) ? parsed : CANNOT_CONVERT;
         },
       },
     },
@@ -581,21 +574,6 @@ export const TYPES = {
         return `must be between 0 and 100`;
       }
       return "";
-    },
-    convert: {
-      string: (value) => {
-        const trimmed = value.endsWith("%") ? value.slice(0, -1) : value;
-        const parsed = parseFloat(trimmed);
-        if (
-          !isNaN(parsed) &&
-          isFinite(parsed) &&
-          parsed >= 0 &&
-          parsed <= 100
-        ) {
-          return parsed;
-        }
-        return CANNOT_AUTOFIX;
-      },
     },
   },
   // string/advanced

@@ -21,30 +21,36 @@ return {
 ```js
 {
   75: {
-    "type": "must be a percentage",
-    "valid": false,
-    "validSuggestion": {
-      "value": "75%"
-    }
-  },
-  '"50%"': {
     "type": undefined,
+    "min": undefined,
+    "max": undefined,
     "valid": true,
     "validSuggestion": null
   },
-  '"50"': {
-    "type": "must end with %",
+  '"50%"': {
+    "type": "must be a number between 0 and 100",
+    "min": undefined,
+    "max": undefined,
     "valid": false,
     "validSuggestion": {
-      "value": "50%"
+      "value": 50
+    }
+  },
+  '"50"': {
+    "type": "must be a number between 0 and 100",
+    "min": undefined,
+    "max": undefined,
+    "valid": false,
+    "validSuggestion": {
+      "value": 50
     }
   },
   '"150%"': {
-    "type": "must be between 0 and 100",
+    "type": "must be a number between 0 and 100",
+    "min": undefined,
+    "max": undefined,
     "valid": false,
-    "validSuggestion": {
-      "value": "150%"
-    }
+    "validSuggestion": null
   }
 }
 ```
