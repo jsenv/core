@@ -1,37 +1,85 @@
 export const CANNOT_AUTOFIX = {};
 
-// Parses a time string "HH:MM" or "H:MM" into { left, right }.
-// Returns null if the string is not a time string.
-const parseTimeString = (value) => {
+// Parses a duration string into a total number of seconds.
+// Supported notations:
+//   single unit   "5s" / "5second", "10min" / "10minute"
+//                 "2h" / "2hour", "3d" / "3day"
+//                 "2w" / "2week", "1month", "1year"
+//   compound      "1h20min" → 1h + 20min, "1h20min30s" → 1h + 20min + 30s
+// Returns null when the value cannot be parsed.
+const parseDurationToSeconds = (value) => {
   if (typeof value !== "string") {
     return null;
   }
-  const match = /^(\d+):(\d{2})$/.exec(value);
-  if (!match) {
-    return null;
+  const str = value.trim();
+
+  // Compound: 1h20min, 1h20min30s, 2h30min, 20min30s, etc.
+  const compoundMatch =
+    /^(?:(\d+(?:\.\d+)?)h)?(?:(\d+(?:\.\d+)?)min)?(?:(\d+(?:\.\d+)?)s)?$/.exec(
+      str,
+    );
+  if (
+    compoundMatch &&
+    (compoundMatch[1] || compoundMatch[2] || compoundMatch[3]) &&
+    str !== ""
+  ) {
+    const h = compoundMatch[1] ? parseFloat(compoundMatch[1]) : 0;
+    const min = compoundMatch[2] ? parseFloat(compoundMatch[2]) : 0;
+    const sec = compoundMatch[3] ? parseFloat(compoundMatch[3]) : 0;
+    return h * 3600 + min * 60 + sec;
   }
-  return { left: parseInt(match[1], 10), right: parseInt(match[2], 10) };
+
+  // Single value with long-form unit
+  const singleMatch =
+    /^(\d+(?:\.\d+)?)(second|minute|hour|day|week|month|year)s?$/.exec(str);
+  if (singleMatch) {
+    const n = parseFloat(singleMatch[1]);
+    const unit = singleMatch[2];
+    if (unit === "second") {
+      return n;
+    }
+    if (unit === "minute") {
+      return n * 60;
+    }
+    if (unit === "hour") {
+      return n * 3600;
+    }
+    if (unit === "day") {
+      return n * 86400;
+    }
+    if (unit === "week") {
+      return n * 604800;
+    }
+    if (unit === "month") {
+      return n * 2592000;
+    }
+    if (unit === "year") {
+      return n * 31536000;
+    }
+  }
+
+  return null;
 };
-const resolveTimeStringAsMinutes = (value) => {
-  const parsed = parseTimeString(value);
-  if (!parsed) {
+const resolveToHours = (value) => {
+  const seconds = parseDurationToSeconds(value);
+  if (seconds === null) {
     return value;
   }
-  return parsed.left * 60 + parsed.right;
+  return seconds / 3600;
 };
-const resolveTimeStringAsHours = (value) => {
-  const parsed = parseTimeString(value);
-  if (!parsed) {
+const resolveToMinutes = (value) => {
+  const seconds = parseDurationToSeconds(value);
+  if (seconds === null) {
     return value;
   }
-  return parsed.left + parsed.right / 60;
+  return seconds / 60;
 };
-const resolveTimeStringAsSeconds = (value) => {
-  const parsed = parseTimeString(value);
-  if (!parsed) {
+const resolveToSeconds = (value) => {
+  const seconds = parseDurationToSeconds(value);
+  if (seconds === null) {
     return value;
   }
-  return parsed.left * 60 + parsed.right;
+  return seconds;
 };
 
 const validateNumber = (value) => {
@@ -52,40 +100,6 @@ const convertStringToNumber = (value) => {
 };
 
 export const TYPES = {
-  number: {
-    validate: validateNumber,
-    convert: {
-      string: convertStringToNumber,
-    },
-  },
-  float: {
-    validate: validateNumber,
-    convert: {
-      string: convertStringToNumber,
-    },
-  },
-  integer: {
-    validate: (value) => {
-      const numberError = validateNumber(value);
-      if (numberError) {
-        return numberError;
-      }
-      if (!Number.isInteger(value)) {
-        return `must be an integer`;
-      }
-      return "";
-    },
-    convert: {
-      string: (value) => {
-        const result = convertStringToNumber(value);
-        if (result === CANNOT_AUTOFIX) {
-          return CANNOT_AUTOFIX;
-        }
-        return Math.round(result);
-      },
-      number: (value) => Math.round(value),
-    },
-  },
   boolean: {
     convert: {
       string: (value) => {
@@ -104,176 +118,16 @@ export const TYPES = {
       },
     },
   },
+  number: {
+    validate: validateNumber,
+    convert: {
+      string: convertStringToNumber,
+    },
+  },
   string: {
     convert: {
       number: String,
       boolean: String,
-    },
-  },
-  ratio: {
-    props: {
-      min: { default: 0 },
-      max: { default: 1 },
-    },
-    validate: validateNumber,
-    convert: {
-      string: convertStringToNumber,
-    },
-  },
-  longitude: {
-    props: {
-      min: { default: -180 },
-      max: { default: 180 },
-    },
-    validate: validateNumber,
-    convert: {
-      string: convertStringToNumber,
-    },
-  },
-  latitude: {
-    props: {
-      min: { default: -90 },
-      max: { default: 90 },
-    },
-    validate: validateNumber,
-    convert: {
-      string: convertStringToNumber,
-    },
-  },
-  hour: {
-    props: {
-      min: { default: 0, resolver: resolveTimeStringAsHours },
-      max: { default: 24, resolver: resolveTimeStringAsHours },
-      step: { default: 1, resolver: resolveTimeStringAsHours },
-    },
-    validate: (value) => {
-      if (typeof value === "number" && Number.isFinite(value)) {
-        return "";
-      }
-      return `must be a number`;
-    },
-    convert: {
-      string: convertStringToNumber,
-    },
-  },
-  minute: {
-    props: {
-      min: { default: 0, resolver: resolveTimeStringAsMinutes },
-      max: { default: 60, resolver: resolveTimeStringAsMinutes },
-      step: { default: 1, resolver: resolveTimeStringAsMinutes },
-    },
-    validate: (value) => {
-      if (typeof value === "number" && Number.isFinite(value)) {
-        return "";
-      }
-      return `must be a number`;
-    },
-    convert: {
-      string: convertStringToNumber,
-    },
-  },
-  second: {
-    props: {
-      min: { default: 0, resolver: resolveTimeStringAsSeconds },
-      max: { default: 60, resolver: resolveTimeStringAsSeconds },
-      step: { default: 1, resolver: resolveTimeStringAsSeconds },
-    },
-    validate: (value) => {
-      if (typeof value === "number" && Number.isFinite(value)) {
-        return "";
-      }
-      return `must be a number`;
-    },
-    convert: {
-      string: convertStringToNumber,
-    },
-  },
-  percentage: {
-    validate: (value) => {
-      if (typeof value !== "string") {
-        return `must be a percentage`;
-      }
-      if (!value.endsWith("%")) {
-        return `must end with %`;
-      }
-      const percentageString = value.slice(0, -1);
-      const percentageFloat = parseFloat(percentageString);
-      if (typeof percentageFloat !== "number") {
-        return `must be a percentage`;
-      }
-      if (percentageFloat < 0 || percentageFloat > 100) {
-        return `must be between 0 and 100`;
-      }
-      return "";
-    },
-    convert: {
-      number: (value) => {
-        if (value >= 0 && value <= 100) {
-          return `${value}%`;
-        }
-        return CANNOT_AUTOFIX;
-      },
-      string: (value) => {
-        if (value.endsWith("%")) {
-          return value;
-        }
-        const parsed = parseFloat(value);
-        if (!isNaN(parsed) && parsed >= 0 && parsed <= 100) {
-          return `${parsed}%`;
-        }
-        return CANNOT_AUTOFIX;
-      },
-    },
-  },
-  email: {
-    validate: (value) => {
-      if (typeof value !== "string") {
-        return `must be a string`;
-      }
-      const emailregex =
-        /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
-      if (!value.includes("@")) {
-        return `must be a valid email address`;
-      }
-      if (!emailregex.test(value)) {
-        return `must be a valid email address`;
-      }
-      return "";
-    },
-  },
-  url: {
-    validate: (value) => {
-      if (typeof value !== "string") {
-        return `must be a string`;
-      }
-      try {
-        // eslint-disable-next-line no-new
-        new URL(value);
-        return "";
-      } catch {
-        return `must be a valid URL`;
-      }
-    },
-  },
-  color: {
-    validate: (value) => {
-      if (typeof value !== "string") {
-        return `must be a string`;
-      }
-      const hexRegex = /^#(?:[0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/;
-      const rgbRegex =
-        /^rgb\(\s*(?:[01]?[0-9]{1,2}|2[0-4][0-9]|25[0-5])\s*,\s*(?:[01]?[0-9]{1,2}|2[0-4][0-9]|25[0-5])\s*,\s*(?:[01]?[0-9]{1,2}|2[0-4][0-9]|25[0-5])\s*\)$/;
-      const rgbaRegex =
-        /^rgba\(\s*(?:[01]?[0-9]{1,2}|2[0-4][0-9]|25[0-5])\s*,\s*(?:[01]?[0-9]{1,2}|2[0-4][0-9]|25[0-5])\s*,\s*(?:[01]?[0-9]{1,2}|2[0-4][0-9]|25[0-5])\s*,\s*(?:[01]|0?\.[0-9]+)\s*\)$/;
-      if (
-        hexRegex.test(value) ||
-        rgbRegex.test(value) ||
-        rgbaRegex.test(value) ||
-        wellKnownColorSet.has(value.toLowerCase())
-      ) {
-        return "";
-      }
-      return `must be a valid color (hex, rgb, rgba, or named color)`;
     },
   },
   array: {
@@ -353,16 +207,129 @@ export const TYPES = {
       return "";
     },
   },
-  time: {
+  datetime: {
     validate: (value) => {
-      if (typeof value !== "string") {
-        return `must be a string`;
+      if (typeof value === "number" && Number.isFinite(value)) {
+        return ""; // timestamp
       }
-      const timeRegex = /^(?:[01]?[0-9]|2[0-3]):[0-5][0-9](?::[0-5][0-9])?$/;
-      if (!timeRegex.test(value)) {
-        return `must be in HH:MM or HH:MM:SS format`;
+      if (value instanceof Date) {
+        return isNaN(value.getTime()) ? `must be a valid datetime` : "";
+      }
+      if (typeof value !== "string") {
+        return `must be a string or a timestamp`;
+      }
+      const d = new Date(value);
+      if (isNaN(d.getTime())) {
+        return `must be a valid datetime`;
       }
       return "";
+    },
+  },
+  // number/derived
+  float: {
+    validate: validateNumber,
+    convert: {
+      string: convertStringToNumber,
+    },
+  },
+  integer: {
+    validate: (value) => {
+      const numberError = validateNumber(value);
+      if (numberError) {
+        return numberError;
+      }
+      if (!Number.isInteger(value)) {
+        return `must be an integer`;
+      }
+      return "";
+    },
+    convert: {
+      string: (value) => {
+        const result = convertStringToNumber(value);
+        if (result === CANNOT_AUTOFIX) {
+          return CANNOT_AUTOFIX;
+        }
+        return Math.round(result);
+      },
+      number: (value) => Math.round(value),
+    },
+  },
+  ratio: {
+    props: {
+      min: { default: 0 },
+      max: { default: 1 },
+    },
+    validate: validateNumber,
+    convert: {
+      string: convertStringToNumber,
+    },
+  },
+  longitude: {
+    props: {
+      min: { default: -180 },
+      max: { default: 180 },
+    },
+    validate: validateNumber,
+    convert: {
+      string: convertStringToNumber,
+    },
+  },
+  latitude: {
+    props: {
+      min: { default: -90 },
+      max: { default: 90 },
+    },
+    validate: validateNumber,
+    convert: {
+      string: convertStringToNumber,
+    },
+  },
+  second: {
+    props: {
+      min: { default: 0, resolver: resolveToSeconds },
+      max: { default: 60, resolver: resolveToSeconds },
+      step: { default: 1, resolver: resolveToSeconds },
+    },
+    validate: (value) => {
+      if (typeof value === "number" && Number.isFinite(value)) {
+        return "";
+      }
+      return `must be a number`;
+    },
+    convert: {
+      string: convertStringToNumber,
+    },
+  },
+  minute: {
+    props: {
+      min: { default: 0, resolver: resolveToMinutes },
+      max: { default: 60, resolver: resolveToMinutes },
+      step: { default: 1, resolver: resolveToMinutes },
+    },
+    validate: (value) => {
+      if (typeof value === "number" && Number.isFinite(value)) {
+        return "";
+      }
+      return `must be a number`;
+    },
+    convert: {
+      string: convertStringToNumber,
+    },
+  },
+  hour: {
+    props: {
+      min: { default: 0, resolver: resolveToHours },
+      max: { default: 24, resolver: resolveToHours },
+      step: { default: 1, resolver: resolveToHours },
+    },
+    validate: (value) => {
+      if (typeof value === "number" && Number.isFinite(value)) {
+        return "";
+      }
+      return `must be a number`;
+    },
+    convert: {
+      string: convertStringToNumber,
     },
   },
   month: {
@@ -388,22 +355,109 @@ export const TYPES = {
       return "";
     },
   },
-  datetime: {
+  percentage: {
+    props: {
+      min: { default: 0 },
+      max: { default: 100 },
+    },
     validate: (value) => {
-      if (typeof value === "number" && Number.isFinite(value)) {
-        return ""; // timestamp
-      }
-      if (value instanceof Date) {
-        return isNaN(value.getTime()) ? `must be a valid datetime` : "";
-      }
       if (typeof value !== "string") {
-        return `must be a string or a timestamp`;
+        return `must be a percentage`;
       }
-      const d = new Date(value);
-      if (isNaN(d.getTime())) {
-        return `must be a valid datetime`;
+      if (!value.endsWith("%")) {
+        return `must end with %`;
+      }
+      const percentageString = value.slice(0, -1);
+      const percentageFloat = parseFloat(percentageString);
+      if (typeof percentageFloat !== "number") {
+        return `must be a percentage`;
+      }
+      if (percentageFloat < 0 || percentageFloat > 100) {
+        return `must be between 0 and 100`;
       }
       return "";
+    },
+    convert: {
+      number: (value) => {
+        if (value >= 0 && value <= 100) {
+          return `${value}%`;
+        }
+        return CANNOT_AUTOFIX;
+      },
+      string: (value) => {
+        if (value.endsWith("%")) {
+          return value;
+        }
+        const parsed = parseFloat(value);
+        if (!isNaN(parsed) && parsed >= 0 && parsed <= 100) {
+          return `${parsed}%`;
+        }
+        return CANNOT_AUTOFIX;
+      },
+    },
+  },
+  // string/advanced
+  time: {
+    validate: (value) => {
+      if (typeof value !== "string") {
+        return `must be a string`;
+      }
+      const timeRegex = /^(?:[01]?[0-9]|2[0-3]):[0-5][0-9](?::[0-5][0-9])?$/;
+      if (!timeRegex.test(value)) {
+        return `must be in HH:MM or HH:MM:SS format`;
+      }
+      return "";
+    },
+  },
+  email: {
+    validate: (value) => {
+      if (typeof value !== "string") {
+        return `must be a string`;
+      }
+      const emailregex =
+        /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+      if (!value.includes("@")) {
+        return `must be a valid email address`;
+      }
+      if (!emailregex.test(value)) {
+        return `must be a valid email address`;
+      }
+      return "";
+    },
+  },
+  url: {
+    validate: (value) => {
+      if (typeof value !== "string") {
+        return `must be a string`;
+      }
+      try {
+        // eslint-disable-next-line no-new
+        new URL(value);
+        return "";
+      } catch {
+        return `must be a valid URL`;
+      }
+    },
+  },
+  color: {
+    validate: (value) => {
+      if (typeof value !== "string") {
+        return `must be a string`;
+      }
+      const hexRegex = /^#(?:[0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/;
+      const rgbRegex =
+        /^rgb\(\s*(?:[01]?[0-9]{1,2}|2[0-4][0-9]|25[0-5])\s*,\s*(?:[01]?[0-9]{1,2}|2[0-4][0-9]|25[0-5])\s*,\s*(?:[01]?[0-9]{1,2}|2[0-4][0-9]|25[0-5])\s*\)$/;
+      const rgbaRegex =
+        /^rgba\(\s*(?:[01]?[0-9]{1,2}|2[0-4][0-9]|25[0-5])\s*,\s*(?:[01]?[0-9]{1,2}|2[0-4][0-9]|25[0-5])\s*,\s*(?:[01]?[0-9]{1,2}|2[0-4][0-9]|25[0-5])\s*,\s*(?:[01]|0?\.[0-9]+)\s*\)$/;
+      if (
+        hexRegex.test(value) ||
+        rgbRegex.test(value) ||
+        rgbaRegex.test(value) ||
+        wellKnownColorSet.has(value.toLowerCase())
+      ) {
+        return "";
+      }
+      return `must be a valid color (hex, rgb, rgba, or named color)`;
     },
   },
 };
