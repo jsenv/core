@@ -178,6 +178,7 @@ const css = /* css */ `
       color: #5e4e4e;
 
       &[data-left] {
+        margin-right: var(--x-padding-left);
         order: -1;
       }
 
@@ -267,6 +268,7 @@ const css = /* css */ `
 
 const InputHeadlessResolver = (props) => {
   const Next = useNextResolver();
+
   if (props.headless) {
     return <InputTextualHeadless {...props} />;
   }
@@ -274,6 +276,7 @@ const InputHeadlessResolver = (props) => {
 };
 const InputTextualHeadless = (props) => {
   const [inputProps, remainingProps] = useInputTextualProps(props);
+
   return <RealInput {...inputProps} {...remainingProps} />;
 };
 const useInputTextualProps = (props) => {
@@ -302,7 +305,7 @@ const InputTextualUI = (props) => {
     </ControlChildrenWrapper>
   );
 
-  const { width = "maxLength" } = props;
+  const { width = "maxLength" } = remainingProps;
   if (width === "maxLength") {
     const { maxLength } = inputProps;
     if (maxLength !== undefined) {
@@ -417,6 +420,5 @@ const InputPseudoClasses = [
   ":disabled",
   ":-navi-loading",
   ":-navi-has-value",
-  ":-navi-expanded",
 ];
 const InputPseudoElements = ["::-navi-loader"];
