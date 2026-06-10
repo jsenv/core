@@ -107,7 +107,8 @@ const convertStringToNumber = (value) => {
 
 export const TYPES = {
   "boolean": {
-    storage: "boolean",
+    localStorageRepresentation: "string",
+    urlRepresentation: "string",
     representations: {
       string: {
         parse: (value) => {
@@ -132,7 +133,8 @@ export const TYPES = {
     },
   },
   "number": {
-    storage: "number",
+    localStorageRepresentation: "string",
+    urlRepresentation: "string",
     validate: validateNumber,
     representations: {
       string: {
@@ -142,7 +144,8 @@ export const TYPES = {
     },
   },
   "string": {
-    storage: "string",
+    localStorageRepresentation: "string",
+    urlRepresentation: "string",
     representations: {
       number: {
         parse: String,
@@ -159,7 +162,8 @@ export const TYPES = {
     },
   },
   "array": {
-    storage: "array",
+    localStorageRepresentation: "string",
+    urlRepresentation: "string",
     validate: (value) => {
       if (!Array.isArray(value)) {
         return `must be an array, got ${typeof value}`;
@@ -181,7 +185,8 @@ export const TYPES = {
     },
   },
   "object": {
-    storage: "object",
+    localStorageRepresentation: "string",
+    urlRepresentation: "string",
     validate: (value) => {
       if (Array.isArray(value)) {
         return `must be an object, got array`;
@@ -206,7 +211,8 @@ export const TYPES = {
     },
   },
   "date": {
-    storage: "string",
+    localStorageRepresentation: "string",
+    urlRepresentation: "string",
     // canonical: Date object
     representations: {
       // "YYYY-MM-DD" string — also used for auto-converting string inputs
@@ -262,7 +268,8 @@ export const TYPES = {
     },
   },
   "datetime": {
-    storage: "string",
+    localStorageRepresentation: "string",
+    urlRepresentation: "string",
     validate: (value) => {
       if (typeof value === "number" && Number.isFinite(value)) {
         return ""; // timestamp
@@ -282,7 +289,8 @@ export const TYPES = {
   },
   // "datetime-local" matches the value format of <input type="datetime-local">: "YYYY-MM-DDTHH:MM"
   "datetime-local": {
-    storage: "string",
+    localStorageRepresentation: "string",
+    urlRepresentation: "string",
     validate: (value) => {
       if (typeof value !== "string") {
         return `must be a string in YYYY-MM-DDTHH:MM format`;
@@ -331,7 +339,8 @@ export const TYPES = {
   },
   // number/derived
   "float": {
-    storage: "number",
+    localStorageRepresentation: "string",
+    urlRepresentation: "string",
     validate: validateNumber,
     representations: {
       string: {
@@ -341,7 +350,8 @@ export const TYPES = {
     },
   },
   "integer": {
-    storage: "number",
+    localStorageRepresentation: "string",
+    urlRepresentation: "string",
     validate: (value) => {
       const numberError = validateNumber(value);
       if (numberError) {
@@ -370,7 +380,8 @@ export const TYPES = {
     },
   },
   "ratio": {
-    storage: "number",
+    localStorageRepresentation: "string",
+    urlRepresentation: "string",
     props: {
       min: { default: 0 },
       max: { default: 1 },
@@ -384,7 +395,8 @@ export const TYPES = {
     },
   },
   "longitude": {
-    storage: "number",
+    localStorageRepresentation: "string",
+    urlRepresentation: "string",
     props: {
       min: { default: -180 },
       max: { default: 180 },
@@ -398,7 +410,8 @@ export const TYPES = {
     },
   },
   "latitude": {
-    storage: "number",
+    localStorageRepresentation: "string",
+    urlRepresentation: "string",
     props: {
       min: { default: -90 },
       max: { default: 90 },
@@ -412,7 +425,8 @@ export const TYPES = {
     },
   },
   "second": {
-    storage: "number",
+    localStorageRepresentation: "string",
+    urlRepresentation: "string",
     props: {
       min: { default: 0, resolver: resolveToSeconds },
       max: { default: 60, resolver: resolveToSeconds },
@@ -439,7 +453,8 @@ export const TYPES = {
     },
   },
   "minute": {
-    storage: "number",
+    localStorageRepresentation: "string",
+    urlRepresentation: "string",
     props: {
       min: { default: 0, resolver: resolveToMinutes },
       max: { default: 60, resolver: resolveToMinutes },
@@ -466,7 +481,8 @@ export const TYPES = {
     },
   },
   "hour": {
-    storage: "number",
+    localStorageRepresentation: "string",
+    urlRepresentation: "string",
     props: {
       min: { default: 0, resolver: resolveToHours },
       max: { default: 24, resolver: resolveToHours },
@@ -494,7 +510,8 @@ export const TYPES = {
   },
   // "week" matches the value format of <input type="week">: "YYYY-Www" (e.g. "2024-W03")
   "week": {
-    storage: "string",
+    localStorageRepresentation: "string",
+    urlRepresentation: "string",
     validate: (value) => {
       if (typeof value !== "string") {
         return `must be a string in YYYY-Www format`;
@@ -507,7 +524,8 @@ export const TYPES = {
     },
   },
   "month": {
-    storage: "string",
+    localStorageRepresentation: "string",
+    urlRepresentation: "string",
     validate: (value) => {
       if (typeof value === "number" && Number.isFinite(value)) {
         return ""; // timestamp
@@ -532,7 +550,8 @@ export const TYPES = {
   },
   // "year" is a plain number (e.g. 2024)
   "year": {
-    storage: "number",
+    localStorageRepresentation: "string",
+    urlRepresentation: "string",
     validate: (value) => {
       if (typeof value !== "number" || !Number.isInteger(value)) {
         return `must be an integer year`;
@@ -553,7 +572,8 @@ export const TYPES = {
     },
   },
   "percentage": {
-    storage: "number",
+    localStorageRepresentation: "string",
+    urlRepresentation: "string",
     props: {
       min: { default: 0 },
       max: { default: 100 },
@@ -585,7 +605,8 @@ export const TYPES = {
   },
   // string/advanced
   "time": {
-    storage: "string",
+    localStorageRepresentation: "string",
+    urlRepresentation: "string",
     validate: (value) => {
       if (typeof value !== "string") {
         return `must be a string`;
@@ -598,7 +619,8 @@ export const TYPES = {
     },
   },
   "email": {
-    storage: "string",
+    localStorageRepresentation: "string",
+    urlRepresentation: "string",
     validate: (value) => {
       if (typeof value !== "string") {
         return `must be a string`;
@@ -615,7 +637,8 @@ export const TYPES = {
     },
   },
   "url": {
-    storage: "string",
+    localStorageRepresentation: "string",
+    urlRepresentation: "string",
     validate: (value) => {
       if (typeof value !== "string") {
         return `must be a string`;
@@ -630,7 +653,8 @@ export const TYPES = {
     },
   },
   "color": {
-    storage: "string",
+    localStorageRepresentation: "string",
+    urlRepresentation: "string",
     validate: (value) => {
       if (typeof value !== "string") {
         return `must be a string`;
@@ -678,7 +702,3 @@ const wellKnownColorSet = new Set([
   "gold",
   "violet",
 ]);
-
-export const getLocalStorageType = (type) => {
-  return TYPES[type]?.storage;
-};
