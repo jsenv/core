@@ -1,6 +1,6 @@
 import { humanize } from "@jsenv/humanize";
 import { snapshotTests } from "@jsenv/snapshot";
-import { renderTable, tableFromObjects } from "@jsenv/terminal-table";
+import { renderTable } from "@jsenv/terminal-table";
 
 import { createValidity } from "../src/validity.js";
 
@@ -10,29 +10,46 @@ await snapshotTests(import.meta.url, ({ test }) => {
       type: "boolean",
     });
 
-    const rows = [];
+    const cell = (value, { color } = {}) => {
+      return color ? { value, color } : { value };
+    };
+
+    const headerRow = [
+      cell("value"),
+      cell("invalid message"),
+      cell("valid suggestion"),
+    ];
+
+    const rows = [headerRow];
     const run = (value) => {
       applyOn(value);
-      const message = validity.valid ? "-" : validity.type;
-      const suggestion = validity.validSuggestion
-        ? humanize(validity.validSuggestion.value)
-        : "-";
-      rows.push({ value: humanize(value), message, suggestion });
+      const messageCell = validity.valid
+        ? cell("-")
+        : cell(validity.type, { color: "red" });
+      let suggestionCell;
+      if (validity.valid) {
+        suggestionCell = cell("-");
+      } else if (validity.validSuggestion) {
+        suggestionCell = cell(humanize(validity.validSuggestion.value), {
+          color: "green",
+        });
+      } else {
+        suggestionCell = cell("cannot convert", { color: "red" });
+      }
+      rows.push([cell(humanize(value)), messageCell, suggestionCell]);
     };
 
     run(true);
+    run(false);
     run("true");
     run("false");
+    run("on");
+    run("1");
     run(1);
+    run(0);
+    run("toto");
+    run(undefined);
 
-    return renderTable(
-      tableFromObjects(rows, {
-        head: [
-          { value: "value" },
-          { value: "invalid message" },
-          { value: "valid suggestion" },
-        ],
-      }),
-    );
+    return renderTable(rows);
   });
 });
