@@ -144,7 +144,11 @@ export const TYPES = {
       },
       boolean: {
         parse: String,
-        format: Boolean,
+        format: (value) => {
+          if (value === "true") return true;
+          if (value === "false") return false;
+          return CANNOT_CONVERT;
+        },
       },
     },
   },
@@ -355,6 +359,7 @@ export const TYPES = {
       },
       number: {
         parse: (value) => Math.round(value),
+        format: (value) => value,
       },
     },
   },

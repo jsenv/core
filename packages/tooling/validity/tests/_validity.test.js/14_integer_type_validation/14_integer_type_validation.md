@@ -18,11 +18,35 @@ return {
 };
 ```
 
-```console
-ReferenceError: result is not defined
-  at run (base/validity.test.js:263:7)
-  at base/validity.test.js:270:16
-  at async base/validity.test.js:5:1
+```js
+{
+  42: {
+    "type": undefined,
+    "valid": true,
+    "validSuggestion": null
+  },
+  "3.14": {
+    "type": "must be an integer",
+    "valid": false,
+    "validSuggestion": {
+      "value": 3
+    }
+  },
+  '"123"': {
+    "type": "must be a number",
+    "valid": false,
+    "validSuggestion": {
+      "value": 123
+    }
+  },
+  '"3.7"': {
+    "type": "must be a number",
+    "valid": false,
+    "validSuggestion": {
+      "value": 4
+    }
+  }
+}
 ```
 
 ---
