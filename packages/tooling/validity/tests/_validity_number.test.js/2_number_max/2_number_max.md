@@ -12,17 +12,9 @@ const rows = cases.map((value) => {
   applyOn(value);
   return [
     cell(humanize(value)),
-    cell(
-      validity.representations?.custom !== undefined
-        ? humanize(validity.representations.custom)
-        : "-",
-    ),
+    cell(validity.representations.custom ? humanize(validity.representations.custom.value) : "-"),
     cell(validity.valid ? "✓" : "✗"),
-    cell(
-      validity.validSuggestion
-        ? humanize(validity.validSuggestion.value)
-        : "-",
-    ),
+    cell(validity.representations.valid?.value ?? "-"),
     cell(validity.max ?? "-"),
   ];
 });
@@ -31,7 +23,7 @@ return renderTable(
   [
     [
       cell("value"),
-      cell("converted"),
+      cell("customRepresentation: string"),
       cell("valid"),
       cell("valid suggestion"),
       cell("max error"),
@@ -43,24 +35,15 @@ return renderTable(
 ```
 
 ```js
-┌───────┬─────────────────────┬───────┬──────────────────┬────────────────┐
-│ value │ converted           │ valid │ valid suggestion │ max error      │
-├───────┼─────────────────────┼───────┼──────────────────┼────────────────┤
-│ "50"  │ {                   │ ✓     │ -                │ -              │
-│       │   "type": "string", │       │                  │                │
-│       │   "value": "50"     │       │                  │                │
-│       │ }                   │       │                  │                │
-├───────┼─────────────────────┼───────┼──────────────────┼────────────────┤
-│ "100" │ {                   │ ✓     │ -                │ -              │
-│       │   "type": "string", │       │                  │                │
-│       │   "value": "100"    │       │                  │                │
-│       │ }                   │       │                  │                │
-├───────┼─────────────────────┼───────┼──────────────────┼────────────────┤
-│ "150" │ {                   │ ✗     │ -                │ must be <= 100 │
-│       │   "type": "string", │       │                  │                │
-│       │   "value": "100"    │       │                  │                │
-│       │ }                   │       │                  │                │
-└───────┴─────────────────────┴───────┴──────────────────┴────────────────┘
+┌───────┬──────────────────────────────┬───────┬──────────────────┬────────────────┐
+│ value │ customRepresentation: string │ valid │ valid suggestion │ max error      │
+├───────┼──────────────────────────────┼───────┼──────────────────┼────────────────┤
+│ "50"  │ "50"                         │ ✓     │ -                │ -              │
+├───────┼──────────────────────────────┼───────┼──────────────────┼────────────────┤
+│ "100" │ "100"                        │ ✓     │ -                │ -              │
+├───────┼──────────────────────────────┼───────┼──────────────────┼────────────────┤
+│ "150" │ "100"                        │ ✗     │ 100              │ must be <= 100 │
+└───────┴──────────────────────────────┴───────┴──────────────────┴────────────────┘
 ```
 
 ---

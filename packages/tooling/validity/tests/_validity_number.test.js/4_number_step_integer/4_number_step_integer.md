@@ -12,17 +12,9 @@ const rows = cases.map((value) => {
   applyOn(value);
   return [
     cell(humanize(value)),
-    cell(
-      validity.representations?.custom !== undefined
-        ? humanize(validity.representations.custom)
-        : "-",
-    ),
+    cell(validity.representations.custom ? humanize(validity.representations.custom.value) : "-"),
     cell(validity.valid ? "✓" : "✗"),
-    cell(
-      validity.validSuggestion
-        ? humanize(validity.validSuggestion.value)
-        : "-",
-    ),
+    cell(validity.representations.valid?.value ?? "-"),
     cell(validity.step ?? "-"),
   ];
 });
@@ -31,7 +23,7 @@ return renderTable(
   [
     [
       cell("value"),
-      cell("converted"),
+      cell("customRepresentation: string"),
       cell("valid"),
       cell("valid suggestion"),
       cell("step error"),
@@ -43,19 +35,13 @@ return renderTable(
 ```
 
 ```js
-┌───────┬─────────────────────┬───────┬──────────────────┬────────────────────────────────────┐
-│ value │ converted           │ valid │ valid suggestion │ step error                         │
-├───────┼─────────────────────┼───────┼──────────────────┼────────────────────────────────────┤
-│ "5"   │ {                   │ ✓     │ -                │ -                                  │
-│       │   "type": "string", │       │                  │                                    │
-│       │   "value": "5"      │       │                  │                                    │
-│       │ }                   │       │                  │                                    │
-├───────┼─────────────────────┼───────┼──────────────────┼────────────────────────────────────┤
-│ "5.5" │ {                   │ ✗     │ -                │ must have at most 0 decimal places │
-│       │   "type": "string", │       │                  │                                    │
-│       │   "value": "6"      │       │                  │                                    │
-│       │ }                   │       │                  │                                    │
-└───────┴─────────────────────┴───────┴──────────────────┴────────────────────────────────────┘
+┌───────┬──────────────────────────────┬───────┬──────────────────┬────────────────────────────────────┐
+│ value │ customRepresentation: string │ valid │ valid suggestion │ step error                         │
+├───────┼──────────────────────────────┼───────┼──────────────────┼────────────────────────────────────┤
+│ "5"   │ "5"                          │ ✓     │ -                │ -                                  │
+├───────┼──────────────────────────────┼───────┼──────────────────┼────────────────────────────────────┤
+│ "5.5" │ "6"                          │ ✗     │ 6                │ must have at most 0 decimal places │
+└───────┴──────────────────────────────┴───────┴──────────────────┴────────────────────────────────────┘
 ```
 
 ---

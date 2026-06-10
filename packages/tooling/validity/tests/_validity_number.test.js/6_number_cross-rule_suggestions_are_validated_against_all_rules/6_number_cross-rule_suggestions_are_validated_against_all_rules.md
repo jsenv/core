@@ -15,17 +15,9 @@ const rows = cases.map((value) => {
   applyOn(value);
   return [
     cell(humanize(value)),
-    cell(
-      validity.representations?.custom !== undefined
-        ? humanize(validity.representations.custom)
-        : "-",
-    ),
+    cell(validity.representations.custom ? humanize(validity.representations.custom.value) : "-"),
     cell(validity.valid ? "✓" : "✗"),
-    cell(
-      validity.validSuggestion
-        ? humanize(validity.validSuggestion.value)
-        : "-",
-    ),
+    cell(validity.representations.valid?.value ?? "-"),
     cell(
       [validity.type, validity.min, validity.max, validity.step]
         .filter(Boolean)
@@ -38,7 +30,7 @@ return renderTable(
   [
     [
       cell("value"),
-      cell("converted"),
+      cell("customRepresentation: string"),
       cell("valid"),
       cell("valid suggestion"),
       cell("errors"),
@@ -50,29 +42,17 @@ return renderTable(
 ```
 
 ```js
-┌───────┬─────────────────────┬───────┬──────────────────┬────────────────────────────────────┐
-│ value │ converted           │ valid │ valid suggestion │ errors                             │
-├───────┼─────────────────────┼───────┼──────────────────┼────────────────────────────────────┤
-│ "150" │ {                   │ ✗     │ -                │ must be <= 100                     │
-│       │   "type": "string", │       │                  │                                    │
-│       │   "value": "100"    │       │                  │                                    │
-│       │ }                   │       │                  │                                    │
-├───────┼─────────────────────┼───────┼──────────────────┼────────────────────────────────────┤
-│ "5.5" │ {                   │ ✗     │ -                │ must have at most 0 decimal places │
-│       │   "type": "string", │       │                  │                                    │
-│       │   "value": "6"      │       │                  │                                    │
-│       │ }                   │       │                  │                                    │
-├───────┼─────────────────────┼───────┼──────────────────┼────────────────────────────────────┤
-│ "-10" │ {                   │ ✗     │ -                │ must be positive                   │
-│       │   "type": "string", │       │                  │                                    │
-│       │   "value": "0"      │       │                  │                                    │
-│       │ }                   │       │                  │                                    │
-├───────┼─────────────────────┼───────┼──────────────────┼────────────────────────────────────┤
-│ "50"  │ {                   │ ✓     │ -                │ -                                  │
-│       │   "type": "string", │       │                  │                                    │
-│       │   "value": "50"     │       │                  │                                    │
-│       │ }                   │       │                  │                                    │
-└───────┴─────────────────────┴───────┴──────────────────┴────────────────────────────────────┘
+┌───────┬──────────────────────────────┬───────┬──────────────────┬────────────────────────────────────┐
+│ value │ customRepresentation: string │ valid │ valid suggestion │ errors                             │
+├───────┼──────────────────────────────┼───────┼──────────────────┼────────────────────────────────────┤
+│ "150" │ "100"                        │ ✗     │ 100              │ must be <= 100                     │
+├───────┼──────────────────────────────┼───────┼──────────────────┼────────────────────────────────────┤
+│ "5.5" │ "6"                          │ ✗     │   6              │ must have at most 0 decimal places │
+├───────┼──────────────────────────────┼───────┼──────────────────┼────────────────────────────────────┤
+│ "-10" │ "0"                          │ ✗     │   0              │ must be positive                   │
+├───────┼──────────────────────────────┼───────┼──────────────────┼────────────────────────────────────┤
+│ "50"  │ "50"                         │ ✓     │ -                │ -                                  │
+└───────┴──────────────────────────────┴───────┴──────────────────┴────────────────────────────────────┘
 ```
 
 ---

@@ -14,17 +14,9 @@ const rows = cases.map((value) => {
   applyOn(value);
   return [
     cell(humanize(value)),
-    cell(
-      validity.representations?.custom !== undefined
-        ? humanize(validity.representations.custom)
-        : "-",
-    ),
+    cell(validity.representations.custom ? humanize(validity.representations.custom.value) : "-"),
     cell(validity.valid ? "✓" : "✗"),
-    cell(
-      validity.validSuggestion
-        ? humanize(validity.validSuggestion.value)
-        : "-",
-    ),
+    cell(validity.representations.valid?.value ?? "-"),
     cell(
       [validity.type, validity.min, validity.max, validity.step]
         .filter(Boolean)
@@ -37,7 +29,7 @@ return renderTable(
   [
     [
       cell("value"),
-      cell("converted"),
+      cell("customRepresentation: string"),
       cell("valid"),
       cell("valid suggestion"),
       cell("errors"),
@@ -49,19 +41,13 @@ return renderTable(
 ```
 
 ```js
-┌────────┬─────────────────────┬───────┬──────────────────┬─────────────────────────────────────────────┐
-│ value  │ converted           │ valid │ valid suggestion │ errors                                      │
-├────────┼─────────────────────┼───────┼──────────────────┼─────────────────────────────────────────────┤
-│ "5.5"  │ {                   │ ✓     │ -                │ -                                           │
-│        │   "type": "string", │       │                  │                                             │
-│        │   "value": "5.5"    │       │                  │                                             │
-│        │ }                   │       │                  │                                             │
-├────────┼─────────────────────┼───────┼──────────────────┼─────────────────────────────────────────────┤
-│ "-2.3" │ {                   │ ✗     │ -                │ must be positive, must be a multiple of 0.5 │
-│        │   "type": "string", │       │                  │                                             │
-│        │   "value": "0"      │       │                  │                                             │
-│        │ }                   │       │                  │                                             │
-└────────┴─────────────────────┴───────┴──────────────────┴─────────────────────────────────────────────┘
+┌────────┬──────────────────────────────┬───────┬──────────────────┬─────────────────────────────────────────────┐
+│ value  │ customRepresentation: string │ valid │ valid suggestion │ errors                                      │
+├────────┼──────────────────────────────┼───────┼──────────────────┼─────────────────────────────────────────────┤
+│ "5.5"  │ "5.5"                        │ ✓     │ -                │ -                                           │
+├────────┼──────────────────────────────┼───────┼──────────────────┼─────────────────────────────────────────────┤
+│ "-2.3" │ "0"                          │ ✗     │ 0                │ must be positive, must be a multiple of 0.5 │
+└────────┴──────────────────────────────┴───────┴──────────────────┴─────────────────────────────────────────────┘
 ```
 
 ---

@@ -12,17 +12,9 @@ const rows = cases.map((value) => {
   applyOn(value);
   return [
     cell(humanize(value)),
-    cell(
-      validity.representations?.custom !== undefined
-        ? humanize(validity.representations.custom)
-        : "-",
-    ),
+    cell(validity.representations.custom ? humanize(validity.representations.custom.value) : "-"),
     cell(validity.valid ? "✓" : "✗"),
-    cell(
-      validity.validSuggestion
-        ? humanize(validity.validSuggestion.value)
-        : "-",
-    ),
+    cell(validity.representations.valid?.value ?? "-"),
     cell(validity.min ?? "-"),
   ];
 });
@@ -31,7 +23,7 @@ return renderTable(
   [
     [
       cell("value"),
-      cell("converted"),
+      cell("customRepresentation: string"),
       cell("valid"),
       cell("valid suggestion"),
       cell("min error"),
@@ -43,24 +35,15 @@ return renderTable(
 ```
 
 ```js
-┌───────┬─────────────────────┬───────┬──────────────────┬──────────────────┐
-│ value │ converted           │ valid │ valid suggestion │ min error        │
-├───────┼─────────────────────┼───────┼──────────────────┼──────────────────┤
-│ "-10" │ {                   │ ✗     │ -                │ must be positive │
-│       │   "type": "string", │       │                  │                  │
-│       │   "value": "0"      │       │                  │                  │
-│       │ }                   │       │                  │                  │
-├───────┼─────────────────────┼───────┼──────────────────┼──────────────────┤
-│ "0"   │ {                   │ ✓     │ -                │ -                │
-│       │   "type": "string", │       │                  │                  │
-│       │   "value": "0"      │       │                  │                  │
-│       │ }                   │       │                  │                  │
-├───────┼─────────────────────┼───────┼──────────────────┼──────────────────┤
-│ "50"  │ {                   │ ✓     │ -                │ -                │
-│       │   "type": "string", │       │                  │                  │
-│       │   "value": "50"     │       │                  │                  │
-│       │ }                   │       │                  │                  │
-└───────┴─────────────────────┴───────┴──────────────────┴──────────────────┘
+┌───────┬──────────────────────────────┬───────┬──────────────────┬──────────────────┐
+│ value │ customRepresentation: string │ valid │ valid suggestion │ min error        │
+├───────┼──────────────────────────────┼───────┼──────────────────┼──────────────────┤
+│ "-10" │ "0"                          │ ✗     │ 0                │ must be positive │
+├───────┼──────────────────────────────┼───────┼──────────────────┼──────────────────┤
+│ "0"   │ "0"                          │ ✓     │ -                │ -                │
+├───────┼──────────────────────────────┼───────┼──────────────────┼──────────────────┤
+│ "50"  │ "50"                         │ ✓     │ -                │ -                │
+└───────┴──────────────────────────────┴───────┴──────────────────┴──────────────────┘
 ```
 
 ---

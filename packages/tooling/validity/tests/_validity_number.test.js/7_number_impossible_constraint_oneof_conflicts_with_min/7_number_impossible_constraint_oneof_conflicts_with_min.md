@@ -14,11 +14,7 @@ const rows = cases.map((value) => {
   return [
     cell(humanize(value)),
     cell(validity.valid ? "✓" : "✗"),
-    cell(
-      validity.validSuggestion
-        ? humanize(validity.validSuggestion.value)
-        : "-",
-    ),
+    cell(validity.representations.valid?.value ?? "-"),
     cell(
       [
         validity.type,
