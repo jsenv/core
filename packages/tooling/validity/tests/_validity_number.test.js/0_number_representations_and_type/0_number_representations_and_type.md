@@ -6,7 +6,15 @@ const [validityString, applyOnString] = createValidity({
   representation: "string",
 });
 
-const cases = [42, 3.14, "123", "3.14", "not a number", Infinity, undefined];
+const cases = [
+  42,
+  3.14,
+  "123",
+  "3.14",
+  "not a number",
+  Infinity,
+  undefined,
+];
 
 const reprCell = (v) => {
   return cell(

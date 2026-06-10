@@ -14,14 +14,24 @@ const rows = cases.map((value) => {
     cell(humanize(value)),
     cell(validity.value !== undefined ? humanize(validity.value) : "-"),
     cell(validity.valid ? "✓" : "✗"),
-    cell(validity.validSuggestion ? humanize(validity.validSuggestion.value) : "-"),
+    cell(
+      validity.validSuggestion
+        ? humanize(validity.validSuggestion.value)
+        : "-",
+    ),
     cell(validity.step ?? "-"),
   ];
 });
 
 return renderTable(
   [
-    [cell("value"), cell("converted"), cell("valid"), cell("valid suggestion"), cell("step error")],
+    [
+      cell("value"),
+      cell("converted"),
+      cell("valid"),
+      cell("valid suggestion"),
+      cell("step error"),
+    ],
     ...rows,
   ],
   { borderCollapse: true },

@@ -5,6 +5,10 @@
 - [number min](1_number_min/1_number_min.md)
 - [number max](2_number_max/2_number_max.md)
 - [number step](3_number_step/3_number_step.md)
+- [number step integer](4_number_step_integer/4_number_step_integer.md)
+- [number combined min max step](5_number_combined_min_max_step/5_number_combined_min_max_step.md)
+- [number cross-rule suggestions are validated against all rules](6_number_cross-rule_suggestions_are_validated_against_all_rules/6_number_cross-rule_suggestions_are_validated_against_all_rules.md)
+- [number impossible constraint oneOf conflicts with min](7_number_impossible_constraint_oneof_conflicts_with_min/7_number_impossible_constraint_oneof_conflicts_with_min.md)
 
 ---
 
