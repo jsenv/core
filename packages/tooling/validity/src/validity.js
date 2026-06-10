@@ -328,10 +328,16 @@ export const createValidity = (ruleConfig) => {
       validity.valid = true;
     }
     validity.value = value;
-    validity.representations.valid =
-      validCanonicalValue === undefined
-        ? null
-        : { type: theType, value: validCanonicalValue };
+    if (valid) {
+      validity.representations.valid = { type: theType, value };
+    } else if (validCanonicalValue !== undefined) {
+      validity.representations.valid = {
+        type: theType,
+        value: validCanonicalValue,
+      };
+    } else {
+      validity.representations.valid = null;
+    }
     for (const [key, { type, format }] of storageTargets) {
       if (key === "custom") {
         // custom always shows the coerced (and possibly autoFixed) input value
