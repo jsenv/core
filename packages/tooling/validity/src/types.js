@@ -107,7 +107,7 @@ const convertStringToNumber = (value) => {
 
 export const TYPES = {
   "boolean": {
-    jsRepresentation: "boolean",
+    jsType: "boolean",
     localStorageRepresentation: "string",
     urlRepresentation: "string",
     representations: {
@@ -134,7 +134,7 @@ export const TYPES = {
     },
   },
   "number": {
-    jsRepresentation: "number",
+    jsType: "number",
     localStorageRepresentation: "string",
     urlRepresentation: "string",
     validate: validateNumber,
@@ -146,7 +146,7 @@ export const TYPES = {
     },
   },
   "string": {
-    jsRepresentation: "string",
+    jsType: "string",
     localStorageRepresentation: "string",
     urlRepresentation: "string",
     representations: {
@@ -165,7 +165,7 @@ export const TYPES = {
     },
   },
   "array": {
-    jsRepresentation: "array",
+    jsType: "array",
     localStorageRepresentation: "string",
     urlRepresentation: "string",
     validate: (value) => {
@@ -189,7 +189,7 @@ export const TYPES = {
     },
   },
   "object": {
-    jsRepresentation: "object",
+    jsType: "object",
     localStorageRepresentation: "string",
     urlRepresentation: "string",
     validate: (value) => {
@@ -216,7 +216,7 @@ export const TYPES = {
     },
   },
   "date": {
-    jsRepresentation: "Date",
+    jsType: "Date",
     localStorageRepresentation: "string",
     urlRepresentation: "string",
     // canonical: Date object
@@ -274,29 +274,36 @@ export const TYPES = {
     },
   },
   "datetime": {
-    jsRepresentation: "Date",
+    jsType: "Date",
     localStorageRepresentation: "string",
     urlRepresentation: "string",
+    // canonical: Date object (same as "date" but with time component)
+    representations: {
+      string: {
+        parse: (s) => {
+          const d = new Date(s);
+          return isNaN(d.getTime()) ? CANNOT_CONVERT : d;
+        },
+        format: (d) => d.toISOString(),
+      },
+      number: {
+        parse: (n) => {
+          const d = new Date(n);
+          return isNaN(d.getTime()) ? CANNOT_CONVERT : d;
+        },
+        format: (d) => d.getTime(),
+      },
+    },
     validate: (value) => {
-      if (typeof value === "number" && Number.isFinite(value)) {
-        return ""; // timestamp
+      if (!(value instanceof Date)) {
+        return `must be a Date`;
       }
-      if (value instanceof Date) {
-        return isNaN(value.getTime()) ? `must be a valid datetime` : "";
-      }
-      if (typeof value !== "string") {
-        return `must be a string or a timestamp`;
-      }
-      const d = new Date(value);
-      if (isNaN(d.getTime())) {
-        return `must be a valid datetime`;
-      }
-      return "";
+      return isNaN(value.getTime()) ? `must be a valid datetime` : "";
     },
   },
   // "datetime-local" matches the value format of <input type="datetime-local">: "YYYY-MM-DDTHH:MM"
   "datetime-local": {
-    jsRepresentation: "string",
+    jsType: "string",
     localStorageRepresentation: "string",
     urlRepresentation: "string",
     validate: (value) => {
@@ -347,7 +354,7 @@ export const TYPES = {
   },
   // number/derived
   "float": {
-    jsRepresentation: "number",
+    jsType: "number",
     localStorageRepresentation: "string",
     urlRepresentation: "string",
     validate: validateNumber,
@@ -359,7 +366,7 @@ export const TYPES = {
     },
   },
   "integer": {
-    jsRepresentation: "number",
+    jsType: "number",
     localStorageRepresentation: "string",
     urlRepresentation: "string",
     validate: (value) => {
@@ -390,7 +397,7 @@ export const TYPES = {
     },
   },
   "ratio": {
-    jsRepresentation: "number",
+    jsType: "number",
     localStorageRepresentation: "string",
     urlRepresentation: "string",
     props: {
@@ -406,7 +413,7 @@ export const TYPES = {
     },
   },
   "longitude": {
-    jsRepresentation: "number",
+    jsType: "number",
     localStorageRepresentation: "string",
     urlRepresentation: "string",
     props: {
@@ -422,7 +429,7 @@ export const TYPES = {
     },
   },
   "latitude": {
-    jsRepresentation: "number",
+    jsType: "number",
     localStorageRepresentation: "string",
     urlRepresentation: "string",
     props: {
@@ -438,7 +445,7 @@ export const TYPES = {
     },
   },
   "second": {
-    jsRepresentation: "number",
+    jsType: "number",
     localStorageRepresentation: "string",
     urlRepresentation: "string",
     props: {
@@ -467,7 +474,7 @@ export const TYPES = {
     },
   },
   "minute": {
-    jsRepresentation: "number",
+    jsType: "number",
     localStorageRepresentation: "string",
     urlRepresentation: "string",
     props: {
@@ -496,7 +503,7 @@ export const TYPES = {
     },
   },
   "hour": {
-    jsRepresentation: "number",
+    jsType: "number",
     localStorageRepresentation: "string",
     urlRepresentation: "string",
     props: {
@@ -526,7 +533,7 @@ export const TYPES = {
   },
   // "week" matches the value format of <input type="week">: "YYYY-Www" (e.g. "2024-W03")
   "week": {
-    jsRepresentation: "string",
+    jsType: "string",
     localStorageRepresentation: "string",
     urlRepresentation: "string",
     validate: (value) => {
@@ -541,7 +548,7 @@ export const TYPES = {
     },
   },
   "month": {
-    jsRepresentation: "string",
+    jsType: "string",
     localStorageRepresentation: "string",
     urlRepresentation: "string",
     validate: (value) => {
@@ -568,7 +575,7 @@ export const TYPES = {
   },
   // "year" is a plain number (e.g. 2024)
   "year": {
-    jsRepresentation: "number",
+    jsType: "number",
     localStorageRepresentation: "string",
     urlRepresentation: "string",
     validate: (value) => {
@@ -591,7 +598,7 @@ export const TYPES = {
     },
   },
   "percentage": {
-    jsRepresentation: "number",
+    jsType: "number",
     localStorageRepresentation: "string",
     urlRepresentation: "string",
     props: {
@@ -625,7 +632,7 @@ export const TYPES = {
   },
   // string/advanced
   "time": {
-    jsRepresentation: "string",
+    jsType: "string",
     localStorageRepresentation: "string",
     urlRepresentation: "string",
     validate: (value) => {
@@ -640,7 +647,7 @@ export const TYPES = {
     },
   },
   "email": {
-    jsRepresentation: "string",
+    jsType: "string",
     localStorageRepresentation: "string",
     urlRepresentation: "string",
     validate: (value) => {
@@ -659,7 +666,7 @@ export const TYPES = {
     },
   },
   "url": {
-    jsRepresentation: "string",
+    jsType: "string",
     localStorageRepresentation: "string",
     urlRepresentation: "string",
     validate: (value) => {
@@ -676,7 +683,7 @@ export const TYPES = {
     },
   },
   "color": {
-    jsRepresentation: "string",
+    jsType: "string",
     localStorageRepresentation: "string",
     urlRepresentation: "string",
     validate: (value) => {
