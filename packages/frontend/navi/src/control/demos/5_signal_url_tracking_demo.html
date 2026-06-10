@@ -176,9 +176,11 @@
                 {String(v?.valid)}
                 {v && !v.valid && (
                   <em style="color:#c0392b;margin-left:8px;font-size:11px">
+                    (
                     {[v.type, v.min, v.max, v.step, v.oneOf]
                       .filter(Boolean)
                       .join(", ")}
+                    )
                   </em>
                 )}
               </span>
@@ -222,7 +224,7 @@
                   <Input
                     name="heures"
                     value={sig}
-                    action={(v) => {
+                    uiAction={(v) => {
                       sig.value = v;
                     }}
                     {...inputProps}
@@ -248,7 +250,7 @@
       // ── App ───────────────────────────────────────────────────────────────
 
       const App = () => (
-        <NaviDebug>
+        <NaviDebug debugInteraction debugAction>
           <Box flex="y" spacing="l">
             <Section
               id="no-default"
