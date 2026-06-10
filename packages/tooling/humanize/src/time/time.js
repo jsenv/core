@@ -119,6 +119,9 @@ export const humanizeDuration = (
     rounded,
     timeDictionnary,
   });
+  if (short) {
+    return `${primaryText}${remainingText}`;
+  }
   return timeDictionnary.joinDuration(primaryText, remainingText);
 };
 const humanizeDurationUnit = (
