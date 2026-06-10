@@ -113,6 +113,7 @@ export const TYPES = {
           if (value === "0") return false;
           return CANNOT_CONVERT;
         },
+        format: String,
       },
       number: {
         parse: (value) => {
@@ -120,6 +121,7 @@ export const TYPES = {
           if (value === 1) return true;
           return CANNOT_CONVERT;
         },
+        format: (value) => (value ? 1 : 0),
       },
     },
   },
@@ -127,14 +129,23 @@ export const TYPES = {
     storage: "number",
     validate: validateNumber,
     representations: {
-      string: { parse: convertStringToNumber },
+      string: {
+        parse: convertStringToNumber,
+        format: String,
+      },
     },
   },
   "string": {
     storage: "string",
     representations: {
-      number: { parse: String },
-      boolean: { parse: String },
+      number: {
+        parse: String,
+        format: Number,
+      },
+      boolean: {
+        parse: String,
+        format: Boolean,
+      },
     },
   },
   "array": {
@@ -155,6 +166,7 @@ export const TYPES = {
             return CANNOT_CONVERT;
           }
         },
+        format: JSON.stringify,
       },
     },
   },
@@ -179,6 +191,7 @@ export const TYPES = {
             return CANNOT_CONVERT;
           }
         },
+        format: JSON.stringify,
       },
     },
   },
@@ -188,24 +201,24 @@ export const TYPES = {
     representations: {
       // "YYYY-MM-DD" string — also used for auto-converting string inputs
       string: {
+        parse: (s) => {
+          const d = new Date(`${s}T00:00:00`);
+          return isNaN(d.getTime()) ? CANNOT_CONVERT : d;
+        },
         format: (d) => {
           const yyyy = d.getFullYear();
           const mm = String(d.getMonth() + 1).padStart(2, "0");
           const dd = String(d.getDate()).padStart(2, "0");
           return `${yyyy}-${mm}-${dd}`;
         },
-        parse: (s) => {
-          const d = new Date(`${s}T00:00:00`);
-          return isNaN(d.getTime()) ? CANNOT_CONVERT : d;
-        },
       },
       // Unix timestamp — also used for auto-converting number inputs
       number: {
-        format: (d) => d.getTime(),
         parse: (n) => {
           const d = new Date(n);
           return isNaN(d.getTime()) ? CANNOT_CONVERT : d;
         },
+        format: (d) => d.getTime(),
       },
     },
     validate: (value) => {
@@ -287,6 +300,7 @@ export const TYPES = {
           const min = String(value.getMinutes()).padStart(2, "0");
           return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
         },
+        format: (value) => new Date(value),
       },
       number: {
         parse: (value) => {
@@ -301,6 +315,7 @@ export const TYPES = {
           const min = String(d.getMinutes()).padStart(2, "0");
           return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
         },
+        format: (value) => new Date(value).getTime(),
       },
     },
   },
@@ -309,7 +324,10 @@ export const TYPES = {
     storage: "number",
     validate: validateNumber,
     representations: {
-      string: { parse: convertStringToNumber },
+      string: {
+        parse: convertStringToNumber,
+        format: String,
+      },
     },
   },
   "integer": {
@@ -333,8 +351,11 @@ export const TYPES = {
           }
           return Math.round(result);
         },
+        format: String,
       },
-      number: { parse: (value) => Math.round(value) },
+      number: {
+        parse: (value) => Math.round(value),
+      },
     },
   },
   "ratio": {
@@ -345,7 +366,10 @@ export const TYPES = {
     },
     validate: validateNumber,
     representations: {
-      string: { parse: convertStringToNumber },
+      string: {
+        parse: convertStringToNumber,
+        format: String,
+      },
     },
   },
   "longitude": {
@@ -356,7 +380,10 @@ export const TYPES = {
     },
     validate: validateNumber,
     representations: {
-      string: { parse: convertStringToNumber },
+      string: {
+        parse: convertStringToNumber,
+        format: String,
+      },
     },
   },
   "latitude": {
@@ -367,7 +394,10 @@ export const TYPES = {
     },
     validate: validateNumber,
     representations: {
-      string: { parse: convertStringToNumber },
+      string: {
+        parse: convertStringToNumber,
+        format: String,
+      },
     },
   },
   "second": {
@@ -380,6 +410,13 @@ export const TYPES = {
     // canonical: number of seconds (e.g. 90)
     representations: {
       string: {
+        parse: (value) => {
+          const fromDuration = resolveToSeconds(value);
+          if (typeof fromDuration === "number") {
+            return fromDuration;
+          }
+          return convertStringToNumber(value);
+        },
         format: (s) => {
           const totalSec = Math.round(s);
           const hours = Math.floor(totalSec / 3600);
@@ -396,13 +433,6 @@ export const TYPES = {
             result += `${secs}s`;
           }
           return result;
-        },
-        parse: (value) => {
-          const fromDuration = resolveToSeconds(value);
-          if (typeof fromDuration === "number") {
-            return fromDuration;
-          }
-          return convertStringToNumber(value);
         },
       },
     },
@@ -423,6 +453,13 @@ export const TYPES = {
     // canonical: number of minutes (e.g. 90)
     representations: {
       string: {
+        parse: (value) => {
+          const fromDuration = resolveToMinutes(value);
+          if (typeof fromDuration === "number") {
+            return fromDuration;
+          }
+          return convertStringToNumber(value);
+        },
         format: (m) => {
           const totalMin = Math.round(m);
           const hours = Math.floor(totalMin / 60);
@@ -434,13 +471,6 @@ export const TYPES = {
             return `${hours}h`;
           }
           return `${hours}h${mins}min`;
-        },
-        parse: (value) => {
-          const fromDuration = resolveToMinutes(value);
-          if (typeof fromDuration === "number") {
-            return fromDuration;
-          }
-          return convertStringToNumber(value);
         },
       },
     },
@@ -461,6 +491,13 @@ export const TYPES = {
     // canonical: number of hours (e.g. 1.5)
     representations: {
       string: {
+        parse: (value) => {
+          const fromDuration = resolveToHours(value);
+          if (typeof fromDuration === "number") {
+            return fromDuration;
+          }
+          return convertStringToNumber(value);
+        },
         format: (h) => {
           const totalMin = Math.round(h * 60);
           const hours = Math.floor(totalMin / 60);
@@ -472,13 +509,6 @@ export const TYPES = {
             return `${hours}h`;
           }
           return `${hours}h${mins}min`;
-        },
-        parse: (value) => {
-          const fromDuration = resolveToHours(value);
-          if (typeof fromDuration === "number") {
-            return fromDuration;
-          }
-          return convertStringToNumber(value);
         },
       },
     },
@@ -545,6 +575,7 @@ export const TYPES = {
           }
           return CANNOT_CONVERT;
         },
+        format: String,
       },
     },
   },
@@ -557,13 +588,13 @@ export const TYPES = {
     representations: {
       // "50%" string — also used for auto-converting string inputs
       string: {
-        format: (n) => `${n}%`,
         parse: (s) => {
           const trimmed =
             typeof s === "string" && s.endsWith("%") ? s.slice(0, -1) : s;
           const parsed = parseFloat(trimmed);
           return !isNaN(parsed) && isFinite(parsed) ? parsed : CANNOT_CONVERT;
         },
+        format: (n) => `${n}%`,
       },
     },
     validate: (value) => {
