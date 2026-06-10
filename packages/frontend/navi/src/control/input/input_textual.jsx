@@ -29,6 +29,7 @@ import {
 } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { ControlChildrenWrapper, useControlProps } from "../control_hooks.jsx";
 import { InputNaviHourResolver } from "./input_navi_hour.jsx";
+import { InputNaviMinuteResolver } from "./input_navi_minute.jsx";
 import { InputModeResolver } from "./input_resolver_mode.jsx";
 import { InputTypeResolver } from "./input_resolver_type.jsx";
 import { InputTextualContext } from "./input_textual_context.js";
@@ -356,6 +357,7 @@ export const InputTextual = createComponentResolver([
   InputWithListResolver,
   InputWithSuggestionsResolver,
   InputNaviHourResolver,
+  InputNaviMinuteResolver,
   InputTypeResolver,
   InputModeResolver,
   InputHeadlessResolver,
