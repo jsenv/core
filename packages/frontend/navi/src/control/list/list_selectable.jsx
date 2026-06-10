@@ -14,6 +14,7 @@ import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { useFocusGroup } from "@jsenv/navi/src/utils/focus/use_focus_group.js";
 import { ControlToInterfaceContext } from "../control_context.js";
 import {
+  ControlChildrenWrapper,
   ControlgroupChildrenWrapper,
   useControlgroupProps,
 } from "../control_hooks.jsx";
@@ -186,6 +187,7 @@ const SelectableListMultipleContext = createContext(false);
 // and fires it on select. When only uiAction is provided it calls it directly.
 export const ListSelectableResolver = (props) => {
   const Next = useNextResolver();
+
   if (props.selectable) {
     return <ListSelectable {...props} />;
   }
@@ -490,22 +492,21 @@ const ListItemSelectable = (props) => {
   const inputType = multiple ? "checkbox" : "radio";
   const inputId = `${id}_input`;
   inputRef.nullCanHappen = true; // virtualization
-  const [checkableProps, remainingProps, ChildrenContextWrapper] =
-    useCheckableProps({
-      readOnlyMessage: naviI18n(`constraint.readonly.option`, props),
-      ...rest,
-      ref: inputRef,
-      id: inputId,
-      type: inputType,
-      defaultChecked: defaultSelected,
-      checked: selected,
-      action: (v, { event }) => {
-        const listContainerEl = event.currentTarget.closest(
-          ".navi_list_container",
-        );
-        dispatchRequestAction(listContainerEl, { event });
-      },
-    });
+  const [checkableProps, remainingProps] = useCheckableProps({
+    readOnlyMessage: naviI18n(`constraint.readonly.option`, props),
+    ...rest,
+    ref: inputRef,
+    id: inputId,
+    type: inputType,
+    defaultChecked: defaultSelected,
+    checked: selected,
+    action: (v, { event }) => {
+      const listContainerEl = event.currentTarget.closest(
+        ".navi_list_container",
+      );
+      dispatchRequestAction(listContainerEl, { event });
+    },
+  });
   const { checked, value, basePseudoState, children } = checkableProps;
   const readOnly = basePseudoState[":read-only"];
   // const disabled = basePseudoState[":disabled"];
@@ -552,7 +553,7 @@ const ListItemSelectable = (props) => {
         children={undefined}
       />
       <SelectableRealInputContext.Provider value={realInputContextValue}>
-        <ChildrenContextWrapper>{children}</ChildrenContextWrapper>
+        <ControlChildrenWrapper>{children}</ControlChildrenWrapper>
       </SelectableRealInputContext.Provider>
     </Next>
   );
