@@ -104,10 +104,20 @@ export const createValidity = (ruleConfig) => {
       return;
     }
     const repr = typeDef?.representations?.[type];
-    if (!repr?.format) {
+    if (repr?.format) {
+      storageTargets.set(key, { type, format: repr.format });
       return;
     }
-    storageTargets.set(key, { type, format: repr.format });
+    // No explicit format defined. If the representation type matches the
+    // canonical JS type of the value (e.g. url repr "string" for a type
+    // whose jsType is "string"), no conversion is needed — use identity.
+    if (typeDef?.jsType === type) {
+      storageTargets.set(key, { type, format: (value) => value });
+      return;
+    }
+    throw new Error(
+      `[createValidity] Type "${theType}" declares ${key}Representation "${type}" but has no format function for it`,
+    );
   };
   const effectiveLocalStorageRepr =
     localStorageRepresentationOverride ?? typeDef?.localStorageRepresentation;
