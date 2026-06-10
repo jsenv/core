@@ -13,7 +13,7 @@ export const CANNOT_CONVERT = {};
 //                 "2w" / "2week", "1month", "1year"
 //   compound      "1h20min" → 1h + 20min, "1h20min30s" → 1h + 20min + 30s
 // Returns null when the value cannot be parsed.
-const parseDurationToSeconds = (value) => {
+export const parseDurationToSeconds = (value) => {
   if (typeof value !== "string") {
     return null;
   }

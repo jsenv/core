@@ -1,3 +1,5 @@
+import { parseDurationToSeconds } from "@jsenv/validity";
+
 import { parseStepToSeconds } from "../picker/time_helpers.js";
 
 // Conceptual number types: define defaults and map to native type="number".
@@ -105,68 +107,6 @@ export const resolveInputProps = (props) => {
   const targetType = currentTypeDefaults.type;
   props.type = targetType;
   resolveInputProps(props);
-};
-
-// Parses a duration string into a total number of seconds.
-// Supported notations:
-//   single unit   "5s" / "5second", "10min" / "10minute"
-//                 "2h" / "2hour", "3d" / "3day"
-//                 "2w" / "2week", "1month", "1year"
-//   compound      "1h20min" → 1h + 20min, "1h20min30s" → 1h + 20min + 30s
-// Returns null when the value cannot be parsed.
-const parseDurationToSeconds = (value) => {
-  if (typeof value !== "string") {
-    return null;
-  }
-  const str = value.trim();
-
-  // Compound: 1h20min, 1h20min30s, 2h30min, 20min30s, etc.
-  // Requires explicit unit on each part
-  const compoundMatch =
-    /^(?:(\d+(?:\.\d+)?)h)?(?:(\d+(?:\.\d+)?)min)?(?:(\d+(?:\.\d+)?)s)?$/.exec(
-      str,
-    );
-  if (
-    compoundMatch &&
-    (compoundMatch[1] || compoundMatch[2] || compoundMatch[3]) &&
-    str !== ""
-  ) {
-    const h = compoundMatch[1] ? parseFloat(compoundMatch[1]) : 0;
-    const min = compoundMatch[2] ? parseFloat(compoundMatch[2]) : 0;
-    const sec = compoundMatch[3] ? parseFloat(compoundMatch[3]) : 0;
-    return h * 3600 + min * 60 + sec;
-  }
-
-  // Single value with long-form unit
-  const singleMatch =
-    /^(\d+(?:\.\d+)?)(second|minute|hour|day|week|month|year)$/.exec(str);
-  if (singleMatch) {
-    const n = parseFloat(singleMatch[1]);
-    const unit = singleMatch[2];
-    if (unit === "second") {
-      return n;
-    }
-    if (unit === "minute") {
-      return n * 60;
-    }
-    if (unit === "hour") {
-      return n * 3600;
-    }
-    if (unit === "day") {
-      return n * 86400;
-    }
-    if (unit === "week") {
-      return n * 604800;
-    }
-    if (unit === "month") {
-      return n * 2592000;
-    }
-    if (unit === "year") {
-      return n * 31536000;
-    }
-  }
-
-  return null;
 };
 
 const timeStringToMinutes = (value) => {
