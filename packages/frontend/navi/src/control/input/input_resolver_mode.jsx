@@ -46,7 +46,12 @@ const InputModeNumeric = (props) => {
           return;
         }
         const delta = e.key === "ArrowUp" ? step : -step;
-        let nextValue = currentValue + delta;
+        // Snap to step grid relative to step base (min ?? 0), then move
+        const stepBase = min !== undefined ? min : 0;
+        const offset = currentValue - stepBase;
+        const currentStepIndex = Math.round(offset / step);
+        const snapped = stepBase + currentStepIndex * step;
+        let nextValue = snapped + delta;
         if (min !== undefined && nextValue < min) {
           nextValue = min;
         }
