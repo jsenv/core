@@ -81,6 +81,7 @@ export const createValidity = (ruleConfig) => {
     localStorageRepresentation: localStorageRepresentationOverride,
     urlRepresentation: urlRepresentationOverride,
     customRepresentation,
+    typeCoercion = true,
     ...ruleConfigWithoutRepresentation
   } = ruleConfig;
   ruleConfig = ruleConfigWithoutRepresentation;
@@ -230,6 +231,20 @@ export const createValidity = (ruleConfig) => {
   }
 
   const applyOn = (value) => {
+    // Type coercion: silently convert value to canonical form before validation.
+    // Disabled when strict: true.
+    if (typeCoercion && typeDef?.representations && value !== undefined) {
+      for (const repr of Object.values(typeDef.representations)) {
+        if (!repr.parse) {
+          continue;
+        }
+        const parsed = repr.parse(value);
+        if (parsed !== CANNOT_CONVERT) {
+          value = parsed;
+          break;
+        }
+      }
+    }
     let valid = true;
     let validSuggestion = null;
 
@@ -315,10 +330,16 @@ export const createValidity = (ruleConfig) => {
     validity.validSuggestion = validSuggestion;
     // Update validity.representations for each storage target
     if (storageTargets.size > 0) {
+      const canonicalValue = valid
+        ? value
+        : validSuggestion
+          ? validSuggestion.value
+          : undefined;
       for (const [key, { type, format }] of storageTargets) {
         validity.representations[key] = {
           type,
-          value: valid ? format(value) : undefined,
+          value:
+            canonicalValue !== undefined ? format(canonicalValue) : undefined,
         };
       }
     }
