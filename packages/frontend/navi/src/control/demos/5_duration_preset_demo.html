@@ -55,7 +55,7 @@
     </div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { signal, computed } from "@preact/signals";
+      import { computed } from "@preact/signals";
       import { useSignal } from "@preact/signals";
       import { stateSignal, route, setupRoutes } from "@jsenv/navi";
       import {
@@ -80,8 +80,18 @@
         step: 5,
         // persists: true,
       });
-      const customDurationHourSignal = signal(0);
-      const customDurationMinuteSignal = signal(15);
+      const customDurationHourSignal = stateSignal(0, {
+        id: "custom_hour",
+        type: "hour",
+        min: 0,
+        max: 5,
+      });
+      const customDurationMinuteSignal = stateSignal(15, {
+        id: "custom_minute",
+        type: "minute",
+        min: 0,
+        max: 59,
+      });
       const customDurationSignal = computed(
         () =>
           customDurationHourSignal.value * 60 +
@@ -227,16 +237,16 @@
                 value={hours}
                 uiAction={(v) => {
                   customDurationHourSignal.value = v;
+                  durationSignal.value = customDurationSignal.value;
                 }}
-                action="update"
               />
               <Input
                 type="navi_minute"
                 value={minutes}
                 uiAction={(v) => {
                   customDurationMinuteSignal.value = v;
+                  durationSignal.value = customDurationSignal.value;
                 }}
-                action="update"
               />
             </Box>
           </List.Item>
