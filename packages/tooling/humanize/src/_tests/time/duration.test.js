@@ -1,20 +1,20 @@
-import { assert } from "@jsenv/assert";
-
 import { humanizeDuration } from "@jsenv/humanize";
+import { snapshotTests } from "@jsenv/snapshot";
+import { COLORS, renderTable } from "@jsenv/terminal-table";
 
-const test = (durationInMs, expect) => {
-  const actual = humanizeDuration(durationInMs);
-  assert({ actual, expect });
-};
+const BORDER = { color: COLORS.GREY };
+const cell = (value) => ({ value, border: BORDER });
 
-test(0.1, "0 second");
-test(1.02, "0.001 second");
-test(1.52, "0.002 second");
-test(52, "0.05 second");
-test(55, "0.06 second");
-test(99, "0.1 second");
-test(999, "1 second");
-test(1_421, "1.4 seconds");
-test(61_421, "1 minute and 1 second");
-test(3_601_200, "1 hour");
-test(7_651_200, "2 hours and 8 minutes");
+snapshotTests.prefConfigure({ preserveDurations: true });
+await snapshotTests(import.meta.url, ({ test }) => {
+  test("humanizeDuration", () => {
+    const cases = [
+      0.1, 1.02, 1.52, 52, 55, 99, 999, 1_421, 61_421, 3_601_200, 7_651_200,
+    ];
+    const grid = [
+      [cell("input (ms)"), cell("output")],
+      ...cases.map((ms) => [cell(String(ms)), cell(humanizeDuration(ms))]),
+    ];
+    return renderTable(grid, { borderCollapse: true });
+  });
+});
