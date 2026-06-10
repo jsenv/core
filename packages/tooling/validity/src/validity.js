@@ -218,6 +218,7 @@ export const createValidity = (ruleConfig) => {
       });
     }
     validity.valid = true;
+    validity.autoFixed = false;
     validity.value = undefined;
     validity.representations = { valid: null };
     for (const [key, { type }] of storageTargets) {
@@ -317,15 +318,14 @@ export const createValidity = (ruleConfig) => {
     }
 
     validity.valid = valid;
+    validity.autoFixed = false;
     // If autoFix is enabled and a suggestion exists, apply it silently
     if (autoFixOption && !valid && validCanonicalValue !== undefined) {
       value = validCanonicalValue;
       valid = true;
       validCanonicalValue = undefined;
-      for (const { key } of ruleSet) {
-        validity[key] = undefined;
-      }
       validity.valid = true;
+      validity.autoFixed = true;
     }
     validity.value = value;
     if (valid) {

@@ -60,6 +60,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
         cell(humanize(value)),
         cell(humanize(validity.value)),
         cell(humanize(validity.valid)),
+        cell(humanize(validity.autoFixed)),
         cell(humanize(validity.representations.valid?.value)),
         cell(
           validity.representations.string
@@ -73,6 +74,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
       cell("input"),
       cell(".value"),
       cell(".valid"),
+      cell(".autoFixed"),
       cell(".representations.valid.value"),
       cell(".representations.string.value"),
       cell(".min"),
