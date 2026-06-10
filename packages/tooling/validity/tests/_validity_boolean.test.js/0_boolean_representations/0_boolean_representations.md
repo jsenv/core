@@ -23,14 +23,12 @@ const cases = [
   undefined,
 ];
 
-const outcomeCell = (validity) => {
-  if (validity.valid) {
-    return cell("✓ valid");
-  }
-  if (validity.validSuggestion) {
-    return cell(`→ ${humanize(validity.validSuggestion.value)}`);
-  }
-  return cell("✗ cannot convert");
+const reprCell = (validity) => {
+  return cell(
+    validity.value !== undefined
+      ? humanize(validity.value)
+      : "[[CANNOT_CONVERT]]",
+  );
 };
 
 const grid = [
@@ -44,8 +42,8 @@ const grid = [
     applyOnNumber(value);
     return [
       cell(humanize(value)),
-      outcomeCell(validityString),
-      outcomeCell(validityNumber),
+      reprCell(validityString),
+      reprCell(validityNumber),
     ];
   }),
 ];
@@ -57,25 +55,25 @@ return renderTable(grid, { borderCollapse: true });
 ┌───────────┬────────────────────────┬────────────────────────┐
 │ value     │ representation: string │ representation: number │
 ├───────────┼────────────────────────┼────────────────────────┤
-│ true      │ ✓ valid                │ ✓ valid                │
+│ true      │ "true"                 │ 1                      │
 ├───────────┼────────────────────────┼────────────────────────┤
-│ false     │ ✓ valid                │ ✓ valid                │
+│ false     │ "false"                │ 0                      │
 ├───────────┼────────────────────────┼────────────────────────┤
-│ "true"    │ ✓ valid                │ → 1                    │
+│ "true"    │ "true"                 │ 1                      │
 ├───────────┼────────────────────────┼────────────────────────┤
-│ "false"   │ ✓ valid                │ → 0                    │
+│ "false"   │ "false"                │ 0                      │
 ├───────────┼────────────────────────┼────────────────────────┤
-│ "on"      │ ✓ valid                │ → 1                    │
+│ "on"      │ "true"                 │ 1                      │
 ├───────────┼────────────────────────┼────────────────────────┤
-│ "1"       │ ✓ valid                │ → 1                    │
+│ "1"       │ "true"                 │ 1                      │
 ├───────────┼────────────────────────┼────────────────────────┤
-│ 1         │ → "true"               │ ✓ valid                │
+│ 1         │ "true"                 │ 1                      │
 ├───────────┼────────────────────────┼────────────────────────┤
-│ 0         │ → "false"              │ ✓ valid                │
+│ 0         │ "false"                │ 0                      │
 ├───────────┼────────────────────────┼────────────────────────┤
-│ "toto"    │ ✗ cannot convert       │ ✗ cannot convert       │
+│ "toto"    │ [[CANNOT_CONVERT]]     │ [[CANNOT_CONVERT]]     │
 ├───────────┼────────────────────────┼────────────────────────┤
-│ undefined │ ✗ cannot convert       │ ✗ cannot convert       │
+│ undefined │ [[CANNOT_CONVERT]]     │ [[CANNOT_CONVERT]]     │
 └───────────┴────────────────────────┴────────────────────────┘
 ```
 

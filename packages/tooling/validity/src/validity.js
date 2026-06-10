@@ -82,22 +82,47 @@ export const createValidity = (ruleConfig) => {
   ruleConfig = ruleConfigWithoutRepresentation;
 
   // Resolve the format/parse pair for the chosen representation.
-  // - parse: converts from the chosen representation to the canonical value before validation
-  // - format: converts from the canonical value back to the chosen representation (e.g. for validSuggestion)
+  // - parse: converts any value to the canonical form before validation
+  //          (tries all representations until one succeeds; skips if already canonical)
+  // - format: converts from the canonical value back to the chosen representation
   let parse = null;
   let format = null;
   if (representation) {
     const theType = ruleConfig.type;
     const typeDef = theType ? TYPES[theType] : null;
     const repr = typeDef?.representations?.[representation];
-    if (repr) {
-      parse = repr.parse;
-      format = repr.format;
-    } else {
-      console.warn(
+    if (!repr) {
+      throw new Error(
         `[createValidity] Unknown representation "${representation}" for type "${theType}"`,
       );
     }
+    if (!repr.format) {
+      throw new Error(
+        `[createValidity] Representation "${representation}" for type "${theType}" has no format function`,
+      );
+    }
+    format = repr.format;
+    const allRepresentations = typeDef.representations
+      ? Object.values(typeDef.representations)
+      : [];
+    const storageType = typeDef?.storage;
+    parse = (value) => {
+      // Already canonical — no conversion needed
+      if (storageType && typeof value === storageType) {
+        return value;
+      }
+      // Try each representation's parse until one succeeds
+      for (const r of allRepresentations) {
+        if (!r.parse) {
+          continue;
+        }
+        const result = r.parse(value);
+        if (result !== CANNOT_CONVERT) {
+          return result;
+        }
+      }
+      return CANNOT_CONVERT;
+    };
   }
 
   const ruleSet = new Set();
@@ -198,6 +223,9 @@ export const createValidity = (ruleConfig) => {
     }
     validity.valid = true;
     validity.validSuggestion = null;
+    if (format) {
+      validity.value = undefined;
+    }
   }
 
   const applyOn = (value) => {
@@ -295,6 +323,10 @@ export const createValidity = (ruleConfig) => {
       validSuggestion = { value: format(validSuggestion.value) };
     }
     validity.validSuggestion = validSuggestion;
+    // Expose the formatted value when valid
+    if (format) {
+      validity.value = valid ? format(value) : undefined;
+    }
     return value;
   };
 
