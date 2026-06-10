@@ -11,8 +11,8 @@ const makeRow = (validity, applyOn, value) => {
     cell(humanize(validity.valid)),
     cell(humanize(validity.representations.valid?.value)),
     cell(
-      validity.representations.custom
-        ? humanize(validity.representations.custom.value)
+      validity.representations.string
+        ? humanize(validity.representations.string.value)
         : "-",
     ),
     cell(humanize(validity.min)),
@@ -23,13 +23,13 @@ const headers = [
   cell(".value"),
   cell(".valid"),
   cell(".representations.valid.value"),
-  cell(".representations.custom.value (string)"),
+  cell(".representations.string.value"),
   cell(".min"),
 ];
 
 const [validity, applyOn] = createValidity({
   type: "number",
-  customRepresentation: "string",
+  representation: { string: "string" },
   min: 0,
 });
 const table1 = renderTable(
@@ -39,7 +39,7 @@ const table1 = renderTable(
 
 const [validityAutoFix, applyOnAutoFix] = createValidity({
   type: "number",
-  customRepresentation: "string",
+  representation: { string: "string" },
   min: 0,
   autoFix: true,
 });
@@ -62,26 +62,26 @@ ${table2}`;
 
 ```js
 without autoFix:
-┌───────┬────────┬────────┬──────────────────────────────┬────────────────────────────────────────┬────────────────────┐
-│ input │ .value │ .valid │ .representations.valid.value │ .representations.custom.value (string) │ .min               │
-├───────┼────────┼────────┼──────────────────────────────┼────────────────────────────────────────┼────────────────────┤
-│ "-10" │ 10     │ false  │ 0                            │ "-10"                                  │ "must be positive" │
-├───────┼────────┼────────┼──────────────────────────────┼────────────────────────────────────────┼────────────────────┤
-│ "0"   │  0     │ true   │ undefined                    │ "0"                                    │ undefined          │
-├───────┼────────┼────────┼──────────────────────────────┼────────────────────────────────────────┼────────────────────┤
-│ "50"  │ 50     │ true   │ undefined                    │ "50"                                   │ undefined          │
-└───────┴────────┴────────┴──────────────────────────────┴────────────────────────────────────────┴────────────────────┘
+┌───────┬────────┬────────┬──────────────────────────────┬───────────────────────────────┬────────────────────┐
+│ input │ .value │ .valid │ .representations.valid.value │ .representations.string.value │ .min               │
+├───────┼────────┼────────┼──────────────────────────────┼───────────────────────────────┼────────────────────┤
+│ "-10" │ 10     │ false  │ 0                            │ undefined                     │ "must be positive" │
+├───────┼────────┼────────┼──────────────────────────────┼───────────────────────────────┼────────────────────┤
+│ "0"   │  0     │ true   │ undefined                    │ "0"                           │ undefined          │
+├───────┼────────┼────────┼──────────────────────────────┼───────────────────────────────┼────────────────────┤
+│ "50"  │ 50     │ true   │ undefined                    │ "50"                          │ undefined          │
+└───────┴────────┴────────┴──────────────────────────────┴───────────────────────────────┴────────────────────┘
 
 with autoFix: true:
-┌───────┬────────┬────────┬──────────────────────────────┬────────────────────────────────────────┬───────────┐
-│ input │ .value │ .valid │ .representations.valid.value │ .representations.custom.value (string) │ .min      │
-├───────┼────────┼────────┼──────────────────────────────┼────────────────────────────────────────┼───────────┤
-│ "-10" │  0     │ true   │ undefined                    │ "0"                                    │ undefined │
-├───────┼────────┼────────┼──────────────────────────────┼────────────────────────────────────────┼───────────┤
-│ "0"   │  0     │ true   │ undefined                    │ "0"                                    │ undefined │
-├───────┼────────┼────────┼──────────────────────────────┼────────────────────────────────────────┼───────────┤
-│ "50"  │ 50     │ true   │ undefined                    │ "50"                                   │ undefined │
-└───────┴────────┴────────┴──────────────────────────────┴────────────────────────────────────────┴───────────┘
+┌───────┬────────┬────────┬──────────────────────────────┬───────────────────────────────┬───────────┐
+│ input │ .value │ .valid │ .representations.valid.value │ .representations.string.value │ .min      │
+├───────┼────────┼────────┼──────────────────────────────┼───────────────────────────────┼───────────┤
+│ "-10" │  0     │ true   │ undefined                    │ "0"                           │ undefined │
+├───────┼────────┼────────┼──────────────────────────────┼───────────────────────────────┼───────────┤
+│ "0"   │  0     │ true   │ undefined                    │ "0"                           │ undefined │
+├───────┼────────┼────────┼──────────────────────────────┼───────────────────────────────┼───────────┤
+│ "50"  │ 50     │ true   │ undefined                    │ "50"                          │ undefined │
+└───────┴────────┴────────┴──────────────────────────────┴───────────────────────────────┴───────────┘
 ```
 
 ---

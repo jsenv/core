@@ -11,11 +11,11 @@ await snapshotTests(import.meta.url, ({ test }) => {
   test("boolean representations", () => {
     const [validityString, applyOnString] = createValidity({
       type: "boolean",
-      customRepresentation: "string",
+      representation: { string: "string" },
     });
     const [validityNumber, applyOnNumber] = createValidity({
       type: "boolean",
-      customRepresentation: "number",
+      representation: { number: "number" },
     });
 
     const cases = [
@@ -31,24 +31,24 @@ await snapshotTests(import.meta.url, ({ test }) => {
       undefined,
     ];
 
-    const customCell = (validity) => {
-      const v = validity.representations?.custom?.value;
+    const customCell = (validity, key) => {
+      const v = validity.representations?.[key]?.value;
       return cell(v !== undefined ? humanize(v) : "[[CANNOT_CONVERT]]");
     };
 
     const grid = [
       [
         cell("input"),
-        cell(".representations.custom.value (string)"),
-        cell(".representations.custom.value (number)"),
+        cell(".representations.string.value"),
+        cell(".representations.number.value"),
       ],
       ...cases.map((value) => {
         applyOnString(value);
         applyOnNumber(value);
         return [
           cell(humanize(value)),
-          customCell(validityString),
-          customCell(validityNumber),
+          customCell(validityString, "string"),
+          customCell(validityNumber, "number"),
         ];
       }),
     ];

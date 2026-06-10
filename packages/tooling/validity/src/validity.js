@@ -80,7 +80,7 @@ export const createValidity = (ruleConfig) => {
   const {
     localStorageRepresentation: localStorageRepresentationOverride,
     urlRepresentation: urlRepresentationOverride,
-    customRepresentation,
+    representation,
     typeCoercion = true,
     autoFix: autoFixOption = false,
     ...ruleConfigWithoutRepresentation
@@ -89,11 +89,13 @@ export const createValidity = (ruleConfig) => {
   const theType = ruleConfig.type;
   const typeDef = theType ? TYPES[theType] : null;
 
-  if (customRepresentation) {
-    if (!typeDef?.representations?.[customRepresentation]) {
-      throw new Error(
-        `[createValidity] Unknown representation "${customRepresentation}" for type "${theType}"`,
-      );
+  if (representation) {
+    for (const [key, reprName] of Object.entries(representation)) {
+      if (!typeDef?.representations?.[reprName]) {
+        throw new Error(
+          `[createValidity] Unknown representation "${reprName}" for type "${theType}"`,
+        );
+      }
     }
   }
 
@@ -118,8 +120,10 @@ export const createValidity = (ruleConfig) => {
     urlRepresentationOverride ?? typeDef?.urlRepresentation;
   addStorageTarget("localStorage", effectiveLocalStorageRepr);
   addStorageTarget("url", effectiveUrlRepr);
-  if (customRepresentation) {
-    addStorageTarget("custom", customRepresentation);
+  if (representation) {
+    for (const [key, reprName] of Object.entries(representation)) {
+      addStorageTarget(key, reprName);
+    }
   }
 
   const ruleSet = new Set();

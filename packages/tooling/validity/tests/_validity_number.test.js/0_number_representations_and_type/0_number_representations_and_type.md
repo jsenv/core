@@ -3,7 +3,7 @@
 ```js
 const [validityString, applyOnString] = createValidity({
   type: "number",
-  customRepresentation: "string",
+  representation: { string: "string" },
 });
 
 const cases = [
@@ -25,7 +25,7 @@ const reprCell = (v) => {
 const grid = [
   [
     cell("input"),
-    cell(".representations.custom.value (string)"),
+    cell(".representations.string.value"),
     cell(".valid"),
     cell(".type"),
   ],
@@ -33,7 +33,7 @@ const grid = [
     applyOnString(value);
     return [
       cell(humanize(value)),
-      reprCell(validityString.representations.custom),
+      reprCell(validityString.representations.string),
       cell(humanize(validityString.valid)),
       cell(humanize(validityString.type)),
     ];
@@ -44,23 +44,23 @@ return renderTable(grid, { borderCollapse: true });
 ```
 
 ```js
-┌────────────────┬────────────────────────────────────────┬────────┬────────────────────┐
-│ input          │ .representations.custom.value (string) │ .valid │ .type              │
-├────────────────┼────────────────────────────────────────┼────────┼────────────────────┤
-│ 42             │ "42"                                   │ true   │ undefined          │
-├────────────────┼────────────────────────────────────────┼────────┼────────────────────┤
-│  3.14          │ "3.14"                                 │ true   │ undefined          │
-├────────────────┼────────────────────────────────────────┼────────┼────────────────────┤
-│ "123"          │ "123"                                  │ true   │ undefined          │
-├────────────────┼────────────────────────────────────────┼────────┼────────────────────┤
-│ "3.14"         │ "3.14"                                 │ true   │ undefined          │
-├────────────────┼────────────────────────────────────────┼────────┼────────────────────┤
-│ "not a number" │ "not a number"                         │ false  │ "must be a number" │
-├────────────────┼────────────────────────────────────────┼────────┼────────────────────┤
-│ Infinity       │ "Infinity"                             │ false  │ "must be finite"   │
-├────────────────┼────────────────────────────────────────┼────────┼────────────────────┤
-│ undefined      │ [[CANNOT_CONVERT]]                     │ false  │ "must be a number" │
-└────────────────┴────────────────────────────────────────┴────────┴────────────────────┘
+┌────────────────┬───────────────────────────────┬────────┬────────────────────┐
+│ input          │ .representations.string.value │ .valid │ .type              │
+├────────────────┼───────────────────────────────┼────────┼────────────────────┤
+│ 42             │ "42"                          │ true   │ undefined          │
+├────────────────┼───────────────────────────────┼────────┼────────────────────┤
+│  3.14          │ "3.14"                        │ true   │ undefined          │
+├────────────────┼───────────────────────────────┼────────┼────────────────────┤
+│ "123"          │ "123"                         │ true   │ undefined          │
+├────────────────┼───────────────────────────────┼────────┼────────────────────┤
+│ "3.14"         │ "3.14"                        │ true   │ undefined          │
+├────────────────┼───────────────────────────────┼────────┼────────────────────┤
+│ "not a number" │ [[CANNOT_CONVERT]]            │ false  │ "must be a number" │
+├────────────────┼───────────────────────────────┼────────┼────────────────────┤
+│ Infinity       │ [[CANNOT_CONVERT]]            │ false  │ "must be finite"   │
+├────────────────┼───────────────────────────────┼────────┼────────────────────┤
+│ undefined      │ [[CANNOT_CONVERT]]            │ false  │ "must be a number" │
+└────────────────┴───────────────────────────────┴────────┴────────────────────┘
 ```
 
 ---

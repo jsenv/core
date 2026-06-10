@@ -3,11 +3,11 @@
 ```js
 const [validityString, applyOnString] = createValidity({
   type: "boolean",
-  customRepresentation: "string",
+  representation: { string: "string" },
 });
 const [validityNumber, applyOnNumber] = createValidity({
   type: "boolean",
-  customRepresentation: "number",
+  representation: { number: "number" },
 });
 
 const cases = [
@@ -23,24 +23,24 @@ const cases = [
   undefined,
 ];
 
-const customCell = (validity) => {
-  const v = validity.representations?.custom?.value;
+const customCell = (validity, key) => {
+  const v = validity.representations?.[key]?.value;
   return cell(v !== undefined ? humanize(v) : "[[CANNOT_CONVERT]]");
 };
 
 const grid = [
   [
     cell("input"),
-    cell(".representations.custom.value (string)"),
-    cell(".representations.custom.value (number)"),
+    cell(".representations.string.value"),
+    cell(".representations.number.value"),
   ],
   ...cases.map((value) => {
     applyOnString(value);
     applyOnNumber(value);
     return [
       cell(humanize(value)),
-      customCell(validityString),
-      customCell(validityNumber),
+      customCell(validityString, "string"),
+      customCell(validityNumber, "number"),
     ];
   }),
 ];
@@ -49,29 +49,29 @@ return renderTable(grid, { borderCollapse: true });
 ```
 
 ```js
-┌───────────┬────────────────────────────────────────┬────────────────────────────────────────┐
-│ input     │ .representations.custom.value (string) │ .representations.custom.value (number) │
-├───────────┼────────────────────────────────────────┼────────────────────────────────────────┤
-│ true      │ "true"                                 │ 1                                      │
-├───────────┼────────────────────────────────────────┼────────────────────────────────────────┤
-│ false     │ "false"                                │ 0                                      │
-├───────────┼────────────────────────────────────────┼────────────────────────────────────────┤
-│ "true"    │ "true"                                 │ 1                                      │
-├───────────┼────────────────────────────────────────┼────────────────────────────────────────┤
-│ "false"   │ "false"                                │ 0                                      │
-├───────────┼────────────────────────────────────────┼────────────────────────────────────────┤
-│ "on"      │ "true"                                 │ 1                                      │
-├───────────┼────────────────────────────────────────┼────────────────────────────────────────┤
-│ "1"       │ "true"                                 │ 1                                      │
-├───────────┼────────────────────────────────────────┼────────────────────────────────────────┤
-│ 1         │ "true"                                 │ 1                                      │
-├───────────┼────────────────────────────────────────┼────────────────────────────────────────┤
-│ 0         │ "false"                                │ 0                                      │
-├───────────┼────────────────────────────────────────┼────────────────────────────────────────┤
-│ "toto"    │ "toto"                                 │ 1                                      │
-├───────────┼────────────────────────────────────────┼────────────────────────────────────────┤
-│ undefined │ [[CANNOT_CONVERT]]                     │ [[CANNOT_CONVERT]]                     │
-└───────────┴────────────────────────────────────────┴────────────────────────────────────────┘
+┌───────────┬───────────────────────────────┬───────────────────────────────┐
+│ input     │ .representations.string.value │ .representations.number.value │
+├───────────┼───────────────────────────────┼───────────────────────────────┤
+│ true      │ "true"                        │ 1                             │
+├───────────┼───────────────────────────────┼───────────────────────────────┤
+│ false     │ "false"                       │ 0                             │
+├───────────┼───────────────────────────────┼───────────────────────────────┤
+│ "true"    │ "true"                        │ 1                             │
+├───────────┼───────────────────────────────┼───────────────────────────────┤
+│ "false"   │ "false"                       │ 0                             │
+├───────────┼───────────────────────────────┼───────────────────────────────┤
+│ "on"      │ "true"                        │ 1                             │
+├───────────┼───────────────────────────────┼───────────────────────────────┤
+│ "1"       │ "true"                        │ 1                             │
+├───────────┼───────────────────────────────┼───────────────────────────────┤
+│ 1         │ "true"                        │ 1                             │
+├───────────┼───────────────────────────────┼───────────────────────────────┤
+│ 0         │ "false"                       │ 0                             │
+├───────────┼───────────────────────────────┼───────────────────────────────┤
+│ "toto"    │ [[CANNOT_CONVERT]]            │ [[CANNOT_CONVERT]]            │
+├───────────┼───────────────────────────────┼───────────────────────────────┤
+│ undefined │ [[CANNOT_CONVERT]]            │ [[CANNOT_CONVERT]]            │
+└───────────┴───────────────────────────────┴───────────────────────────────┘
 ```
 
 ---

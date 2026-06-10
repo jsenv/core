@@ -11,7 +11,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
   test("number representations and type", () => {
     const [validityString, applyOnString] = createValidity({
       type: "number",
-      customRepresentation: "string",
+      representation: { string: "string" },
     });
 
     const cases = [
@@ -33,7 +33,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     const grid = [
       [
         cell("input"),
-        cell(".representations.custom.value (string)"),
+        cell(".representations.string.value"),
         cell(".valid"),
         cell(".type"),
       ],
@@ -41,7 +41,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
         applyOnString(value);
         return [
           cell(humanize(value)),
-          reprCell(validityString.representations.custom),
+          reprCell(validityString.representations.string),
           cell(humanize(validityString.valid)),
           cell(humanize(validityString.type)),
         ];
@@ -62,8 +62,8 @@ await snapshotTests(import.meta.url, ({ test }) => {
         cell(humanize(validity.valid)),
         cell(humanize(validity.representations.valid?.value)),
         cell(
-          validity.representations.custom
-            ? humanize(validity.representations.custom.value)
+          validity.representations.string
+            ? humanize(validity.representations.string.value)
             : "-",
         ),
         cell(humanize(validity.min)),
@@ -74,13 +74,13 @@ await snapshotTests(import.meta.url, ({ test }) => {
       cell(".value"),
       cell(".valid"),
       cell(".representations.valid.value"),
-      cell(".representations.custom.value (string)"),
+      cell(".representations.string.value"),
       cell(".min"),
     ];
 
     const [validity, applyOn] = createValidity({
       type: "number",
-      customRepresentation: "string",
+      representation: { string: "string" },
       min: 0,
     });
     const table1 = renderTable(
@@ -90,7 +90,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
     const [validityAutoFix, applyOnAutoFix] = createValidity({
       type: "number",
-      customRepresentation: "string",
+      representation: { string: "string" },
       min: 0,
       autoFix: true,
     });
