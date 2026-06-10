@@ -21,24 +21,10 @@ const TIME_DICTIONARY_EN = {
   second: { long: "second", plural: "seconds", short: "s" },
   joinDuration: (primary, remaining) => `${primary} and ${remaining}`,
 };
-const TIME_DICTIONARY_FR = {
-  year: { long: "an", plural: "ans", short: "a" },
-  month: { long: "mois", plural: "mois", short: "m" },
-  week: { long: "semaine", plural: "semaines", short: "s" },
-  day: { long: "jour", plural: "jours", short: "j" },
-  hour: { long: "heure", plural: "heures", short: "h" },
-  minute: { long: "minute", plural: "minutes", short: "m" },
-  second: { long: "seconde", plural: "secondes", short: "s" },
-  joinDuration: (primary, remaining) => `${primary} et ${remaining}`,
-};
 
 export const humanizeEllapsedTime = (
   ms,
-  {
-    short,
-    lang = "en",
-    timeDictionnary = lang === "fr" ? TIME_DICTIONARY_FR : TIME_DICTIONARY_EN,
-  } = {},
+  { short, timeDictionnary = TIME_DICTIONARY_EN } = {},
 ) => {
   if (ms < 1000) {
     return short
@@ -75,23 +61,35 @@ const inspectEllapsedUnit = (unit, { short, timeDictionnary }) => {
   return `${count} ${unitText}`;
 };
 
+/**
+ * Converts a duration in milliseconds into a human-readable string intended for display in
+ * CLI output — where readability matters more than precision.
+ *
+ * - Values below 1ms are displayed as "0 second". Sub-millisecond durations are not
+ *   meaningful at human scale, and showing "0.0001 second" (or switching to a "millisecond"
+ *   unit) would hurt readability. The chosen trade-off is to always use "second" as the
+ *   smallest unit and accept the loss of precision for very small values.
+ * - Values below 1s are displayed in fractional seconds (e.g. "0.05 second").
+ * - Values are expressed using the two most significant units (e.g. "1 hour and 23 minutes").
+ * - Rounding never causes a value to display as the next unit boundary
+ *   (e.g. 59_999ms → "59.9 seconds", never "60 seconds").
+ *
+ * @param {number} ms - Duration in milliseconds.
+ * @param {object} [options]
+ * @param {boolean} [options.short=false] - Use compact unit symbols (e.g. "1h and 23m").
+ * @param {boolean} [options.rounded=true] - Round the last displayed digit. When false, truncates instead.
+ * @param {number} [options.decimals] - Override the number of decimal places shown.
+ * @returns {string}
+ */
 export const humanizeDuration = (
   ms,
   {
     short,
     rounded = true,
     decimals,
-    lang = "en",
-    timeDictionnary = lang === "fr" ? TIME_DICTIONARY_FR : TIME_DICTIONARY_EN,
+    timeDictionnary = TIME_DICTIONARY_EN,
   } = {},
 ) => {
-  // ignore ms below meaningfulMs so that:
-  // humanizeDuration(0.5) -> "0 second"
-  // humanizeDuration(1.1) -> "0.001 second" (and not "0.0011 second")
-  // This tool is meant to be read by humans and it would be barely readable to see
-  // "0.0001 second" (stands for 0.1 millisecond)
-  // yes we could return "0.1 millisecond" but we choosed consistency over precision
-  // so that the prefered unit is "second" (and does not become millisecond when ms is super small)
   if (ms < 1) {
     return short
       ? `0${timeDictionnary.second.short}`
