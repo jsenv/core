@@ -124,6 +124,8 @@ export const stateSignal = (defaultValue, options = {}) => {
     max,
     step,
     oneOf,
+    localStorageRepresentation,
+    urlRepresentation,
     persists = false,
     debug,
     default: staticFallback,
@@ -163,6 +165,8 @@ export const stateSignal = (defaultValue, options = {}) => {
     max,
     step,
     oneOf,
+    localStorageRepresentation,
+    urlRepresentation,
   });
   const readFromLocalStorage = persists
     ? () => {
