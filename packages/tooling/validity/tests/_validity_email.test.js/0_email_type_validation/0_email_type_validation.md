@@ -2,77 +2,52 @@
 
 ```js
 const [validity, applyOn] = createValidity({
-  type: "email",
+"type": "email"
 });
 
-const run = (value) => {
+const cases = ["user@example.com","test@domain.org","invalid-email","@domain.com","user@",undefined];
+const rows = cases.map((value) => {
   applyOn(value);
-  return structuredClone(validity);
-};
+  return [
+    cell(humanize(value)),
+    cell(humanize(validity.value)),
+    cell(humanize(validity.valid)),
+    cell(humanize(validity.representations.valid?.value)),
+    cell(humanize(validity.type)),
+  ];
+});
 
-return {
-  '"user@example.com"': run("user@example.com"),
-  '"test@domain.org"': run("test@domain.org"),
-  '"invalid-email"': run("invalid-email"),
-  '"@domain.com"': run("@domain.com"),
-  '"user@"': run("user@"),
-};
+return renderTable(
+  [
+    [
+      cell("input"),
+      cell(".value"),
+      cell(".valid"),
+      cell(".representations.valid.value"),
+      cell(".type"),
+    ],
+    ...rows,
+  ],
+  { borderCollapse: true },
+);
 ```
 
 ```js
-{
-  '"user@example.com"': {
-    "type": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": "user@example.com",
-    "representations": {
-      "valid": {
-        "type": "email",
-        "value": "user@example.com"
-      }
-    }
-  },
-  '"test@domain.org"': {
-    "type": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": "test@domain.org",
-    "representations": {
-      "valid": {
-        "type": "email",
-        "value": "test@domain.org"
-      }
-    }
-  },
-  '"invalid-email"': {
-    "type": "must be a valid email address",
-    "valid": false,
-    "autoFixed": false,
-    "value": "invalid-email",
-    "representations": {
-      "valid": null
-    }
-  },
-  '"@domain.com"': {
-    "type": "must be a valid email address",
-    "valid": false,
-    "autoFixed": false,
-    "value": "@domain.com",
-    "representations": {
-      "valid": null
-    }
-  },
-  '"user@"': {
-    "type": "must be a valid email address",
-    "valid": false,
-    "autoFixed": false,
-    "value": "user@",
-    "representations": {
-      "valid": null
-    }
-  }
-}
+┌────────────────────┬────────────────────┬────────┬──────────────────────────────┬─────────────────────────────────┐
+│ input              │ .value             │ .valid │ .representations.valid.value │ .type                           │
+├────────────────────┼────────────────────┼────────┼──────────────────────────────┼─────────────────────────────────┤
+│ "user@example.com" │ "user@example.com" │ true   │ "user@example.com"           │ undefined                       │
+├────────────────────┼────────────────────┼────────┼──────────────────────────────┼─────────────────────────────────┤
+│ "test@domain.org"  │ "test@domain.org"  │ true   │ "test@domain.org"            │ undefined                       │
+├────────────────────┼────────────────────┼────────┼──────────────────────────────┼─────────────────────────────────┤
+│ "invalid-email"    │ "invalid-email"    │ false  │ undefined                    │ "must be a valid email address" │
+├────────────────────┼────────────────────┼────────┼──────────────────────────────┼─────────────────────────────────┤
+│ "@domain.com"      │ "@domain.com"      │ false  │ undefined                    │ "must be a valid email address" │
+├────────────────────┼────────────────────┼────────┼──────────────────────────────┼─────────────────────────────────┤
+│ "user@"            │ "user@"            │ false  │ undefined                    │ "must be a valid email address" │
+├────────────────────┼────────────────────┼────────┼──────────────────────────────┼─────────────────────────────────┤
+│ undefined          │ undefined          │ false  │ undefined                    │ "must be a string"              │
+└────────────────────┴────────────────────┴────────┴──────────────────────────────┴─────────────────────────────────┘
 ```
 
 ---

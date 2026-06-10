@@ -5,44 +5,43 @@ const [validity, applyOn] = createValidity({
   oneOf: ["red", "green", "blue"],
 });
 
-const run = (value) => {
+const cases = ["red", "yellow", undefined];
+const rows = cases.map((value) => {
   applyOn(value);
-  return structuredClone(validity);
-};
+  return [
+    cell(humanize(value)),
+    cell(humanize(validity.value)),
+    cell(humanize(validity.valid)),
+    cell(humanize(validity.representations.valid?.value)),
+    cell(humanize(validity.oneOf)),
+  ];
+});
 
-return {
-  '"red"': run("red"),
-  '"yellow"': run("yellow"),
-};
+return renderTable(
+  [
+    [
+      cell("input"),
+      cell(".value"),
+      cell(".valid"),
+      cell(".representations.valid.value"),
+      cell(".oneOf"),
+    ],
+    ...rows,
+  ],
+  { borderCollapse: true },
+);
 ```
 
 ```js
-{
-  '"red"': {
-    "oneOf": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": "red",
-    "representations": {
-      "valid": {
-        "type": undefined,
-        "value": "red"
-      }
-    }
-  },
-  '"yellow"': {
-    "oneOf": 'must be one of: "red", "green", "blue"',
-    "valid": false,
-    "autoFixed": false,
-    "value": "yellow",
-    "representations": {
-      "valid": {
-        "type": undefined,
-        "value": "red"
-      }
-    }
-  }
-}
+┌───────────┬───────────┬────────┬──────────────────────────────┬──────────────────────────────────────────┐
+│ input     │ .value    │ .valid │ .representations.valid.value │ .oneOf                                   │
+├───────────┼───────────┼────────┼──────────────────────────────┼──────────────────────────────────────────┤
+│ "red"     │ "red"     │ true   │ "red"                        │ undefined                                │
+├───────────┼───────────┼────────┼──────────────────────────────┼──────────────────────────────────────────┤
+│ "yellow"  │ "yellow"  │ false  │ "red"                        │ 'must be one of: "red", "green", "blue"' │
+├───────────┼───────────┼────────┼──────────────────────────────┼──────────────────────────────────────────┤
+│ undefined │ undefined │ false  │ "red"                        │ 'must be one of: "red", "green", "blue"' │
+└───────────┴───────────┴────────┴──────────────────────────────┴──────────────────────────────────────────┘
 ```
 
 ---

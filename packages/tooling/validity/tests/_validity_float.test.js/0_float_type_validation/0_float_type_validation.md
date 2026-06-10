@@ -2,81 +2,48 @@
 
 ```js
 const [validity, applyOn] = createValidity({
-  type: "float",
+"type": "float"
 });
 
-const run = (value) => {
+const cases = [3.14,"2.5","invalid",undefined];
+const rows = cases.map((value) => {
   applyOn(value);
-  return structuredClone(validity);
-};
+  return [
+    cell(humanize(value)),
+    cell(humanize(validity.value)),
+    cell(humanize(validity.valid)),
+    cell(humanize(validity.representations.valid?.value)),
+    cell(humanize(validity.type)),
+  ];
+});
 
-return {
-  "3.14": run(3.14),
-  '"2.5"': run("2.5"),
-  '"invalid"': run("invalid"),
-};
+return renderTable(
+  [
+    [
+      cell("input"),
+      cell(".value"),
+      cell(".valid"),
+      cell(".representations.valid.value"),
+      cell(".type"),
+    ],
+    ...rows,
+  ],
+  { borderCollapse: true },
+);
 ```
 
 ```js
-{
-  "3.14": {
-    "type": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": 3.14,
-    "representations": {
-      "valid": {
-        "type": "float",
-        "value": 3.14
-      },
-      "localStorage": {
-        "type": "string",
-        "value": "3.14"
-      },
-      "url": {
-        "type": "string",
-        "value": "3.14"
-      }
-    }
-  },
-  '"2.5"': {
-    "type": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": 2.5,
-    "representations": {
-      "valid": {
-        "type": "float",
-        "value": 2.5
-      },
-      "localStorage": {
-        "type": "string",
-        "value": "2.5"
-      },
-      "url": {
-        "type": "string",
-        "value": "2.5"
-      }
-    }
-  },
-  '"invalid"': {
-    "type": "must be a number",
-    "valid": false,
-    "autoFixed": false,
-    "value": "invalid",
-    "representations": {
-      "valid": null,
-      "localStorage": {
-        "type": "string",
-        "value": undefined
-      },
-      "url": {
-        "type": "string",
-        "value": undefined
-      }
-    }
-  }
-}
+┌───────────┬───────────┬────────┬──────────────────────────────┬────────────────────┐
+│ input     │ .value    │ .valid │ .representations.valid.value │ .type              │
+├───────────┼───────────┼────────┼──────────────────────────────┼────────────────────┤
+│ 3.14      │ 3.14      │ true   │ 3.14                         │ undefined          │
+├───────────┼───────────┼────────┼──────────────────────────────┼────────────────────┤
+│ "2.5"     │ 2.5       │ true   │ 2.5                          │ undefined          │
+├───────────┼───────────┼────────┼──────────────────────────────┼────────────────────┤
+│ "invalid" │ "invalid" │ false  │ undefined                    │ "must be a number" │
+├───────────┼───────────┼────────┼──────────────────────────────┼────────────────────┤
+│ undefined │ undefined │ false  │ undefined                    │ "must be a number" │
+└───────────┴───────────┴────────┴──────────────────────────────┴────────────────────┘
 ```
 
 ---

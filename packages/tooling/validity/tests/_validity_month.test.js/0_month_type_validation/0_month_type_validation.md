@@ -2,73 +2,32 @@
 
 ```js
 const [validity, applyOn] = createValidity({ type: "month" });
-const run = (value) => {
-  applyOn(value);
-  return structuredClone(validity);
-};
-return {
-  '"2024-06"': run("2024-06"),
-  '"2024-13"': run("2024-13"),
-  '"2024-00"': run("2024-00"),
-  '"not-a-month"': run("not-a-month"),
-  "timestamp (number)": run(Date.UTC(2024, 5, 1)),
-};
+return makeTable(validity, applyOn, [
+  ['"2024-06"', "2024-06"],
+  ['"2024-13" (invalid month)', "2024-13"],
+  ['"2024-00" (invalid month)', "2024-00"],
+  ['"not-a-month"', "not-a-month"],
+  ["timestamp (number)", Date.UTC(2024, 5, 1)],
+  ["undefined", undefined],
+], ["type"]);
 ```
 
 ```js
-{
-  '"2024-06"': {
-    "type": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": "2024-06",
-    "representations": {
-      "valid": {
-        "type": "month",
-        "value": "2024-06"
-      }
-    }
-  },
-  '"2024-13"': {
-    "type": "must be a valid month (01–12)",
-    "valid": false,
-    "autoFixed": false,
-    "value": "2024-13",
-    "representations": {
-      "valid": null
-    }
-  },
-  '"2024-00"': {
-    "type": "must be a valid month (01–12)",
-    "valid": false,
-    "autoFixed": false,
-    "value": "2024-00",
-    "representations": {
-      "valid": null
-    }
-  },
-  '"not-a-month"': {
-    "type": "must be in YYYY-MM format",
-    "valid": false,
-    "autoFixed": false,
-    "value": "not-a-month",
-    "representations": {
-      "valid": null
-    }
-  },
-  "timestamp (number)": {
-    "type": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": 1_717_200_000_000,
-    "representations": {
-      "valid": {
-        "type": "month",
-        "value": 1_717_200_000_000
-      }
-    }
-  }
-}
+┌───────────────────────────┬───────────────────┬────────┬──────────────────────────────┬────────────────────────────────────────────────────┐
+│ input                     │ .value            │ .valid │ .representations.valid.value │ .type                                              │
+├───────────────────────────┼───────────────────┼────────┼──────────────────────────────┼────────────────────────────────────────────────────┤
+│ "2024-06"                 │ "2024-06"         │ true   │ "2024-06"                    │ undefined                                          │
+├───────────────────────────┼───────────────────┼────────┼──────────────────────────────┼────────────────────────────────────────────────────┤
+│ "2024-13" (invalid month) │ "2024-13"         │ false  │ undefined                    │ "must be a valid month (01–12)"                    │
+├───────────────────────────┼───────────────────┼────────┼──────────────────────────────┼────────────────────────────────────────────────────┤
+│ "2024-00" (invalid month) │ "2024-00"         │ false  │ undefined                    │ "must be a valid month (01–12)"                    │
+├───────────────────────────┼───────────────────┼────────┼──────────────────────────────┼────────────────────────────────────────────────────┤
+│ "not-a-month"             │ "not-a-month"     │ false  │ undefined                    │ "must be in YYYY-MM format"                        │
+├───────────────────────────┼───────────────────┼────────┼──────────────────────────────┼────────────────────────────────────────────────────┤
+│ timestamp (number)        │ 1_717_200_000_000 │ true   │ 1_717_200_000_000            │ undefined                                          │
+├───────────────────────────┼───────────────────┼────────┼──────────────────────────────┼────────────────────────────────────────────────────┤
+│ undefined                 │ undefined         │ false  │ undefined                    │ "must be a string in YYYY-MM format or a timestam… │
+└───────────────────────────┴───────────────────┴────────┴──────────────────────────────┴────────────────────────────────────────────────────┘
 ```
 
 ---

@@ -2,182 +2,29 @@
 
 ```js
 const [validity, applyOn] = createValidity({ type: "minute" });
-const run = (value) => {
-  applyOn(value);
-  return structuredClone(validity);
-};
-return {
-  "0": run(0),
-  "30": run(30),
-  "90": run(90),
-  "-5 (below min)": run(-5),
-  "1.5 (not integer)": run(1.5),
-  '"45" (string number)': run("45"),
-  "true (invalid type)": run(true),
-};
+return makeTable(validity, applyOn, [0, 30, 90, -5, 1.5, "45", true, undefined], ["type", "min", "step"]);
 ```
 
 ```js
-{
-  0: {
-    "type": undefined,
-    "min": undefined,
-    "max": undefined,
-    "step": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": 0,
-    "representations": {
-      "valid": {
-        "type": "minute",
-        "value": 0
-      },
-      "localStorage": {
-        "type": "string",
-        "value": "<X>s"
-      },
-      "url": {
-        "type": "string",
-        "value": "<X>s"
-      }
-    }
-  },
-  30: {
-    "type": undefined,
-    "min": undefined,
-    "max": undefined,
-    "step": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": 30,
-    "representations": {
-      "valid": {
-        "type": "minute",
-        "value": 30
-      },
-      "localStorage": {
-        "type": "string",
-        "value": "30m"
-      },
-      "url": {
-        "type": "string",
-        "value": "30m"
-      }
-    }
-  },
-  90: {
-    "type": undefined,
-    "min": undefined,
-    "max": "must be <= 60",
-    "step": undefined,
-    "valid": false,
-    "autoFixed": false,
-    "value": 90,
-    "representations": {
-      "valid": {
-        "type": "minute",
-        "value": 60
-      },
-      "localStorage": {
-        "type": "string",
-        "value": undefined
-      },
-      "url": {
-        "type": "string",
-        "value": undefined
-      }
-    }
-  },
-  "-5 (below min)": {
-    "type": undefined,
-    "min": "must be positive",
-    "max": undefined,
-    "step": undefined,
-    "valid": false,
-    "autoFixed": false,
-    "value": -5,
-    "representations": {
-      "valid": {
-        "type": "minute",
-        "value": 0
-      },
-      "localStorage": {
-        "type": "string",
-        "value": undefined
-      },
-      "url": {
-        "type": "string",
-        "value": undefined
-      }
-    }
-  },
-  "1.5 (not integer)": {
-    "type": undefined,
-    "min": undefined,
-    "max": undefined,
-    "step": "must have at most 0 decimal places",
-    "valid": false,
-    "autoFixed": false,
-    "value": 1.5,
-    "representations": {
-      "valid": {
-        "type": "minute",
-        "value": 2
-      },
-      "localStorage": {
-        "type": "string",
-        "value": undefined
-      },
-      "url": {
-        "type": "string",
-        "value": undefined
-      }
-    }
-  },
-  '"45" (string number)': {
-    "type": undefined,
-    "min": undefined,
-    "max": undefined,
-    "step": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": 45,
-    "representations": {
-      "valid": {
-        "type": "minute",
-        "value": 45
-      },
-      "localStorage": {
-        "type": "string",
-        "value": "45m"
-      },
-      "url": {
-        "type": "string",
-        "value": "45m"
-      }
-    }
-  },
-  "true (invalid type)": {
-    "type": "must be a number",
-    "min": undefined,
-    "max": undefined,
-    "step": undefined,
-    "valid": false,
-    "autoFixed": false,
-    "value": true,
-    "representations": {
-      "valid": null,
-      "localStorage": {
-        "type": "string",
-        "value": undefined
-      },
-      "url": {
-        "type": "string",
-        "value": undefined
-      }
-    }
-  }
-}
+┌───────────┬───────────┬────────┬──────────────────────────────┬────────────────────┬────────────────────┬──────────────────────────────────────┐
+│ input     │ .value    │ .valid │ .representations.valid.value │ .type              │ .min               │ .step                                │
+├───────────┼───────────┼────────┼──────────────────────────────┼────────────────────┼────────────────────┼──────────────────────────────────────┤
+│  0        │  0        │ true   │  0                           │ undefined          │ undefined          │ undefined                            │
+├───────────┼───────────┼────────┼──────────────────────────────┼────────────────────┼────────────────────┼──────────────────────────────────────┤
+│ 30        │ 30        │ true   │ 30                           │ undefined          │ undefined          │ undefined                            │
+├───────────┼───────────┼────────┼──────────────────────────────┼────────────────────┼────────────────────┼──────────────────────────────────────┤
+│ 90        │ 90        │ false  │ 60                           │ undefined          │ undefined          │ undefined                            │
+├───────────┼───────────┼────────┼──────────────────────────────┼────────────────────┼────────────────────┼──────────────────────────────────────┤
+│  5        │  5        │ false  │  0                           │ undefined          │ "must be positive" │ undefined                            │
+├───────────┼───────────┼────────┼──────────────────────────────┼────────────────────┼────────────────────┼──────────────────────────────────────┤
+│  1.5      │  1.5      │ false  │  2                           │ undefined          │ undefined          │ "must have at most 0 decimal places" │
+├───────────┼───────────┼────────┼──────────────────────────────┼────────────────────┼────────────────────┼──────────────────────────────────────┤
+│ "45"      │ 45        │ true   │ 45                           │ undefined          │ undefined          │ undefined                            │
+├───────────┼───────────┼────────┼──────────────────────────────┼────────────────────┼────────────────────┼──────────────────────────────────────┤
+│ true      │ true      │ false  │ undefined                    │ "must be a number" │ undefined          │ undefined                            │
+├───────────┼───────────┼────────┼──────────────────────────────┼────────────────────┼────────────────────┼──────────────────────────────────────┤
+│ undefined │ undefined │ false  │ undefined                    │ "must be a number" │ undefined          │ undefined                            │
+└───────────┴───────────┴────────┴──────────────────────────────┴────────────────────┴────────────────────┴──────────────────────────────────────┘
 ```
 
 ---

@@ -2,87 +2,24 @@
 
 ```js
 const today = new Date(2024, 5, 15);
-const [validity, applyOn] = createValidity({
-  type: "date",
-  min: today.getTime(),
-});
-const run = (value) => {
-  applyOn(value);
-  return structuredClone(validity);
-};
-return {
-  '"2024-06-15" (today)': run("2024-06-15"),
-  '"2024-06-14" (yesterday)': run("2024-06-14"),
-  '"2024-06-16" (tomorrow)': run("2024-06-16"),
-};
+const [validity, applyOn] = createValidity({ type: "date", min: today.getTime() });
+return makeTable(validity, applyOn, [
+  ['"2024-06-15" (today)', "2024-06-15"],
+  ['"2024-06-14" (yesterday)', "2024-06-14"],
+  ['"2024-06-16" (tomorrow)', "2024-06-16"],
+], ["min"]);
 ```
 
 ```js
-{
-  '"2024-06-15" (today)': {
-    "type": undefined,
-    "min": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": {},
-    "representations": {
-      "valid": {
-        "type": "date",
-        "value": {}
-      },
-      "localStorage": {
-        "type": "string",
-        "value": "2024-06-15"
-      },
-      "url": {
-        "type": "string",
-        "value": "2024-06-15"
-      }
-    }
-  },
-  '"2024-06-14" (yesterday)': {
-    "type": undefined,
-    "min": "must be on or after 6/15/2024",
-    "valid": false,
-    "autoFixed": false,
-    "value": {},
-    "representations": {
-      "valid": {
-        "type": "date",
-        "value": {}
-      },
-      "localStorage": {
-        "type": "string",
-        "value": undefined
-      },
-      "url": {
-        "type": "string",
-        "value": undefined
-      }
-    }
-  },
-  '"2024-06-16" (tomorrow)': {
-    "type": undefined,
-    "min": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": {},
-    "representations": {
-      "valid": {
-        "type": "date",
-        "value": {}
-      },
-      "localStorage": {
-        "type": "string",
-        "value": "2024-06-16"
-      },
-      "url": {
-        "type": "string",
-        "value": "2024-06-16"
-      }
-    }
-  }
-}
+┌──────────────────────────┬─────────────────────┬────────┬──────────────────────────────┬─────────────────────────────────┐
+│ input                    │ .value              │ .valid │ .representations.valid.value │ .min                            │
+├──────────────────────────┼─────────────────────┼────────┼──────────────────────────────┼─────────────────────────────────┤
+│ "2024-06-15" (today)     │ Date(1718402400000) │ true   │ Date(1718402400000)          │ undefined                       │
+├──────────────────────────┼─────────────────────┼────────┼──────────────────────────────┼─────────────────────────────────┤
+│ "2024-06-14" (yesterday) │ Date(1718316000000) │ false  │ Date(1718402400000)          │ "must be on or after 6/15/2024" │
+├──────────────────────────┼─────────────────────┼────────┼──────────────────────────────┼─────────────────────────────────┤
+│ "2024-06-16" (tomorrow)  │ Date(1718488800000) │ true   │ Date(1718488800000)          │ undefined                       │
+└──────────────────────────┴─────────────────────┴────────┴──────────────────────────────┴─────────────────────────────────┘
 ```
 
 ---

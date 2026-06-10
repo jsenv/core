@@ -2,79 +2,32 @@
 
 ```js
 const [validity, applyOn] = createValidity({ type: "datetime" });
-const run = (value) => {
-  applyOn(value);
-  return structuredClone(validity);
-};
-return {
-  '"2024-06-15T14:30:00Z"': run("2024-06-15T14:30:00Z"),
-  '"2024-06-15"': run("2024-06-15"),
-  '"not a datetime"': run("not a datetime"),
-  "timestamp (number)": run(Date.UTC(2024, 5, 15, 14, 30)),
-  "Date instance": run(new Date(2024, 5, 15, 14, 30)),
-};
+return makeTable(validity, applyOn, [
+  ['"2024-06-15T14:30:00Z"', "2024-06-15T14:30:00Z"],
+  ['"2024-06-15"', "2024-06-15"],
+  ['"not a datetime"', "not a datetime"],
+  ["timestamp (number)", Date.UTC(2024, 5, 15, 14, 30)],
+  ["Date instance", new Date(2024, 5, 15, 14, 30)],
+  ["undefined", undefined],
+], ["type"]);
 ```
 
 ```js
-{
-  '"2024-06-15T14:30:00Z"': {
-    "type": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": "2024-06-15T14:30:00Z",
-    "representations": {
-      "valid": {
-        "type": "datetime",
-        "value": "2024-06-15T14:30:00Z"
-      }
-    }
-  },
-  '"2024-06-15"': {
-    "type": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": "2024-06-15",
-    "representations": {
-      "valid": {
-        "type": "datetime",
-        "value": "2024-06-15"
-      }
-    }
-  },
-  '"not a datetime"': {
-    "type": "must be a valid datetime",
-    "valid": false,
-    "autoFixed": false,
-    "value": "not a datetime",
-    "representations": {
-      "valid": null
-    }
-  },
-  "timestamp (number)": {
-    "type": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": 1_718_461_800_000,
-    "representations": {
-      "valid": {
-        "type": "datetime",
-        "value": 1_718_461_800_000
-      }
-    }
-  },
-  "Date instance": {
-    "type": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": {},
-    "representations": {
-      "valid": {
-        "type": "datetime",
-        "value": {}
-      }
-    }
-  }
-}
+┌────────────────────────┬────────────────────────┬────────┬──────────────────────────────┬───────────────────────────────────┐
+│ input                  │ .value                 │ .valid │ .representations.valid.value │ .type                             │
+├────────────────────────┼────────────────────────┼────────┼──────────────────────────────┼───────────────────────────────────┤
+│ "2024-06-15T14:30:00Z" │ "2024-06-15T14:30:00Z" │ true   │ "2024-06-15T14:30:00Z"       │ undefined                         │
+├────────────────────────┼────────────────────────┼────────┼──────────────────────────────┼───────────────────────────────────┤
+│ "2024-06-15"           │ "2024-06-15"           │ true   │ "2024-06-15"                 │ undefined                         │
+├────────────────────────┼────────────────────────┼────────┼──────────────────────────────┼───────────────────────────────────┤
+│ "not a datetime"       │ "not a datetime"       │ false  │ undefined                    │ "must be a valid datetime"        │
+├────────────────────────┼────────────────────────┼────────┼──────────────────────────────┼───────────────────────────────────┤
+│ timestamp (number)     │ 1_718_461_800_000      │ true   │ 1_718_461_800_000            │ undefined                         │
+├────────────────────────┼────────────────────────┼────────┼──────────────────────────────┼───────────────────────────────────┤
+│ Date instance          │ Date(1718454600000)    │ true   │ Date(1718454600000)          │ undefined                         │
+├────────────────────────┼────────────────────────┼────────┼──────────────────────────────┼───────────────────────────────────┤
+│ undefined              │ undefined              │ false  │ undefined                    │ "must be a string or a timestamp" │
+└────────────────────────┴────────────────────────┴────────┴──────────────────────────────┴───────────────────────────────────┘
 ```
 
 ---

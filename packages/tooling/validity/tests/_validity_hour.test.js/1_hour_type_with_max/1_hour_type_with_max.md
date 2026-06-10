@@ -2,89 +2,19 @@
 
 ```js
 const [validity, applyOn] = createValidity({ type: "hour", max: 23 });
-const run = (value) => {
-  applyOn(value);
-  return structuredClone(validity);
-};
-return {
-  "0": run(0),
-  "23": run(23),
-  "24 (above max)": run(24),
-};
+return makeTable(validity, applyOn, [0, 23, 24], ["max"]);
 ```
 
 ```js
-{
-  0: {
-    "type": undefined,
-    "min": undefined,
-    "max": undefined,
-    "step": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": 0,
-    "representations": {
-      "valid": {
-        "type": "hour",
-        "value": 0
-      },
-      "localStorage": {
-        "type": "string",
-        "value": "<X>s"
-      },
-      "url": {
-        "type": "string",
-        "value": "<X>s"
-      }
-    }
-  },
-  23: {
-    "type": undefined,
-    "min": undefined,
-    "max": undefined,
-    "step": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": 23,
-    "representations": {
-      "valid": {
-        "type": "hour",
-        "value": 23
-      },
-      "localStorage": {
-        "type": "string",
-        "value": "23h"
-      },
-      "url": {
-        "type": "string",
-        "value": "23h"
-      }
-    }
-  },
-  "24 (above max)": {
-    "type": undefined,
-    "min": undefined,
-    "max": "must be <= 23",
-    "step": undefined,
-    "valid": false,
-    "autoFixed": false,
-    "value": 24,
-    "representations": {
-      "valid": {
-        "type": "hour",
-        "value": 23
-      },
-      "localStorage": {
-        "type": "string",
-        "value": undefined
-      },
-      "url": {
-        "type": "string",
-        "value": undefined
-      }
-    }
-  }
-}
+┌───────┬────────┬────────┬──────────────────────────────┬─────────────────┐
+│ input │ .value │ .valid │ .representations.valid.value │ .max            │
+├───────┼────────┼────────┼──────────────────────────────┼─────────────────┤
+│  0    │  0     │ true   │  0                           │ undefined       │
+├───────┼────────┼────────┼──────────────────────────────┼─────────────────┤
+│ 23    │ 23     │ true   │ 23                           │ undefined       │
+├───────┼────────┼────────┼──────────────────────────────┼─────────────────┤
+│ 24    │ 24     │ false  │ 23                           │ "must be <= 23" │
+└───────┴────────┴────────┴──────────────────────────────┴─────────────────┘
 ```
 
 ---

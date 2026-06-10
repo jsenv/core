@@ -3,67 +3,24 @@
 ```js
 const minTs = new Date(2024, 5, 15, 9, 0).getTime();
 const maxTs = new Date(2024, 5, 15, 18, 0).getTime();
-const [validity, applyOn] = createValidity({
-  type: "datetime",
-  min: minTs,
-  max: maxTs,
-});
-const run = (value) => {
-  applyOn(value);
-  return structuredClone(validity);
-};
-return {
-  "within range": run(new Date(2024, 5, 15, 12, 0).getTime()),
-  "before min": run(new Date(2024, 5, 15, 8, 0).getTime()),
-  "after max": run(new Date(2024, 5, 15, 19, 0).getTime()),
-};
+const [validity, applyOn] = createValidity({ type: "datetime", min: minTs, max: maxTs });
+return makeTable(validity, applyOn, [
+  ["within range", new Date(2024, 5, 15, 12, 0).getTime()],
+  ["before min", new Date(2024, 5, 15, 8, 0).getTime()],
+  ["after max", new Date(2024, 5, 15, 19, 0).getTime()],
+], ["min", "max"]);
 ```
 
 ```js
-{
-  "within range": {
-    "type": undefined,
-    "min": undefined,
-    "max": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": 1_718_445_600_000,
-    "representations": {
-      "valid": {
-        "type": "datetime",
-        "value": 1_718_445_600_000
-      }
-    }
-  },
-  "before min": {
-    "type": undefined,
-    "min": "must be on or after 6/15/2024, 9:00:00 AM",
-    "max": undefined,
-    "valid": false,
-    "autoFixed": false,
-    "value": 1_718_431_200_000,
-    "representations": {
-      "valid": {
-        "type": "datetime",
-        "value": 1_718_434_800_000
-      }
-    }
-  },
-  "after max": {
-    "type": undefined,
-    "min": undefined,
-    "max": "must be on or before 6/15/2024, 6:00:00 PM",
-    "valid": false,
-    "autoFixed": false,
-    "value": 1_718_470_800_000,
-    "representations": {
-      "valid": {
-        "type": "datetime",
-        "value": 1_718_467_200_000
-      }
-    }
-  }
-}
+┌──────────────┬───────────────────┬────────┬──────────────────────────────┬─────────────────────────────────────────────┬──────────────────────────────────────────────┐
+│ input        │ .value            │ .valid │ .representations.valid.value │ .min                                        │ .max                                         │
+├──────────────┼───────────────────┼────────┼──────────────────────────────┼─────────────────────────────────────────────┼──────────────────────────────────────────────┤
+│ within range │ 1_718_445_600_000 │ true   │ 1_718_445_600_000            │ undefined                                   │ undefined                                    │
+├──────────────┼───────────────────┼────────┼──────────────────────────────┼─────────────────────────────────────────────┼──────────────────────────────────────────────┤
+│ before min   │ 1_718_431_200_000 │ false  │ 1_718_434_800_000            │ "must be on or after 6/15/2024, 9:00:00 AM" │ undefined                                    │
+├──────────────┼───────────────────┼────────┼──────────────────────────────┼─────────────────────────────────────────────┼──────────────────────────────────────────────┤
+│ after max    │ 1_718_470_800_000 │ false  │ 1_718_467_200_000            │ undefined                                   │ "must be on or before 6/15/2024, 6:00:00 PM" │
+└──────────────┴───────────────────┴────────┴──────────────────────────────┴─────────────────────────────────────────────┴──────────────────────────────────────────────┘
 ```
 
 ---

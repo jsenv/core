@@ -1,34 +1,46 @@
+import { humanize } from "@jsenv/humanize";
 import { snapshotTests } from "@jsenv/snapshot";
+import { COLORS, renderTable } from "@jsenv/terminal-table";
 
 import { createValidity } from "../src/validity.js";
+
+const BORDER = { color: COLORS.GREY };
+const cell = (value) => ({ value, border: BORDER });
+
+const makeTable = (validity, applyOn, cases, cols) => {
+  const rows = cases.map((value) => {
+    applyOn(value);
+    return [
+      cell(humanize(value)),
+      cell(humanize(validity.value)),
+      cell(humanize(validity.valid)),
+      cell(humanize(validity.representations.valid?.value)),
+      ...cols.map((col) => cell(humanize(validity[col]))),
+    ];
+  });
+  return renderTable(
+    [
+      [
+        cell("input"),
+        cell(".value"),
+        cell(".valid"),
+        cell(".representations.valid.value"),
+        ...cols.map((col) => cell(`.${col}`)),
+      ],
+      ...rows,
+    ],
+    { borderCollapse: true },
+  );
+};
 
 await snapshotTests(import.meta.url, ({ test }) => {
   test("hour type validation", () => {
     const [validity, applyOn] = createValidity({ type: "hour" });
-    const run = (value) => {
-      applyOn(value);
-      return structuredClone(validity);
-    };
-    return {
-      "0": run(0),
-      "12": run(12),
-      "-1 (below min)": run(-1),
-      "1.5 (not integer)": run(1.5),
-      '"3" (string number)': run("3"),
-      "true (invalid type)": run(true),
-    };
+    return makeTable(validity, applyOn, [0, 12, -1, 1.5, "3", true, undefined], ["type", "min", "step"]);
   });
 
   test("hour type with max", () => {
     const [validity, applyOn] = createValidity({ type: "hour", max: 23 });
-    const run = (value) => {
-      applyOn(value);
-      return structuredClone(validity);
-    };
-    return {
-      "0": run(0),
-      "23": run(23),
-      "24 (above max)": run(24),
-    };
+    return makeTable(validity, applyOn, [0, 23, 24], ["max"]);
   });
 });

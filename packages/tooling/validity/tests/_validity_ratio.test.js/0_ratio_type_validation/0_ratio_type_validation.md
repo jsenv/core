@@ -2,159 +2,54 @@
 
 ```js
 const [validity, applyOn] = createValidity({
-  type: "ratio",
+"type": "ratio"
 });
 
-const run = (value) => {
+const cases = [0.5,0,1,1.5,-0.5,"0.75",undefined];
+const rows = cases.map((value) => {
   applyOn(value);
-  return structuredClone(validity);
-};
+  return [
+    cell(humanize(value)),
+    cell(humanize(validity.value)),
+    cell(humanize(validity.valid)),
+    cell(humanize(validity.representations.valid?.value)),
+    cell(humanize(validity.type)),
+  ];
+});
 
-return {
-  "0.5": run(0.5),
-  "0": run(0),
-  "1": run(1),
-  "1.5": run(1.5),
-  "-0.5": run(-0.5),
-  '"0.75"': run("0.75"),
-};
+return renderTable(
+  [
+    [
+      cell("input"),
+      cell(".value"),
+      cell(".valid"),
+      cell(".representations.valid.value"),
+      cell(".type"),
+    ],
+    ...rows,
+  ],
+  { borderCollapse: true },
+);
 ```
 
 ```js
-{
-  0: {
-    "type": undefined,
-    "min": undefined,
-    "max": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": 0,
-    "representations": {
-      "valid": {
-        "type": "ratio",
-        "value": 0
-      },
-      "localStorage": {
-        "type": "string",
-        "value": "0"
-      },
-      "url": {
-        "type": "string",
-        "value": "0"
-      }
-    }
-  },
-  1: {
-    "type": undefined,
-    "min": undefined,
-    "max": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": 1,
-    "representations": {
-      "valid": {
-        "type": "ratio",
-        "value": 1
-      },
-      "localStorage": {
-        "type": "string",
-        "value": "1"
-      },
-      "url": {
-        "type": "string",
-        "value": "1"
-      }
-    }
-  },
-  "0.5": {
-    "type": undefined,
-    "min": undefined,
-    "max": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": 0.5,
-    "representations": {
-      "valid": {
-        "type": "ratio",
-        "value": 0.5
-      },
-      "localStorage": {
-        "type": "string",
-        "value": "0.5"
-      },
-      "url": {
-        "type": "string",
-        "value": "0.5"
-      }
-    }
-  },
-  "1.5": {
-    "type": undefined,
-    "min": undefined,
-    "max": "must be <= 1",
-    "valid": false,
-    "autoFixed": false,
-    "value": 1.5,
-    "representations": {
-      "valid": {
-        "type": "ratio",
-        "value": 1
-      },
-      "localStorage": {
-        "type": "string",
-        "value": undefined
-      },
-      "url": {
-        "type": "string",
-        "value": undefined
-      }
-    }
-  },
-  "-0.5": {
-    "type": undefined,
-    "min": "must be positive",
-    "max": undefined,
-    "valid": false,
-    "autoFixed": false,
-    "value": -0.5,
-    "representations": {
-      "valid": {
-        "type": "ratio",
-        "value": 0
-      },
-      "localStorage": {
-        "type": "string",
-        "value": undefined
-      },
-      "url": {
-        "type": "string",
-        "value": undefined
-      }
-    }
-  },
-  '"0.75"': {
-    "type": undefined,
-    "min": undefined,
-    "max": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": 0.75,
-    "representations": {
-      "valid": {
-        "type": "ratio",
-        "value": 0.75
-      },
-      "localStorage": {
-        "type": "string",
-        "value": "0.75"
-      },
-      "url": {
-        "type": "string",
-        "value": "0.75"
-      }
-    }
-  }
-}
+┌───────────┬───────────┬────────┬──────────────────────────────┬────────────────────┐
+│ input     │ .value    │ .valid │ .representations.valid.value │ .type              │
+├───────────┼───────────┼────────┼──────────────────────────────┼────────────────────┤
+│ 0.5       │ 0.5       │ true   │ 0.5                          │ undefined          │
+├───────────┼───────────┼────────┼──────────────────────────────┼────────────────────┤
+│ 0         │ 0         │ true   │ 0                            │ undefined          │
+├───────────┼───────────┼────────┼──────────────────────────────┼────────────────────┤
+│ 1         │ 1         │ true   │ 1                            │ undefined          │
+├───────────┼───────────┼────────┼──────────────────────────────┼────────────────────┤
+│ 1.5       │ 1.5       │ false  │ 1                            │ undefined          │
+├───────────┼───────────┼────────┼──────────────────────────────┼────────────────────┤
+│ 0.5       │ 0.5       │ false  │ 0                            │ undefined          │
+├───────────┼───────────┼────────┼──────────────────────────────┼────────────────────┤
+│ "0.75"    │ 0.75      │ true   │ 0.75                         │ undefined          │
+├───────────┼───────────┼────────┼──────────────────────────────┼────────────────────┤
+│ undefined │ undefined │ false  │ undefined                    │ "must be a number" │
+└───────────┴───────────┴────────┴──────────────────────────────┴────────────────────┘
 ```
 
 ---

@@ -2,89 +2,52 @@
 
 ```js
 const [validity, applyOn] = createValidity({
-  type: "object",
+"type": "object"
 });
 
-const run = (value) => {
+const cases = [{"key":"value"},"{\"key\": \"value\"}","{invalid json}",undefined];
+const rows = cases.map((value) => {
   applyOn(value);
-  return structuredClone(validity);
-};
+  return [
+    cell(humanize(value)),
+    cell(humanize(validity.value)),
+    cell(humanize(validity.valid)),
+    cell(humanize(validity.representations.valid?.value)),
+    cell(humanize(validity.type)),
+  ];
+});
 
-return {
-  '{ key: "value" }': run({ key: "value" }),
-  '"{\"key\": \"value\"}"': run('{"key": "value"}'),
-  '"{invalid json}"': run("{invalid json}"),
-};
+return renderTable(
+  [
+    [
+      cell("input"),
+      cell(".value"),
+      cell(".valid"),
+      cell(".representations.valid.value"),
+      cell(".type"),
+    ],
+    ...rows,
+  ],
+  { borderCollapse: true },
+);
 ```
 
 ```js
-{
-  '{ key: "value" }': {
-    "type": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": {
-      "key": "value"
-    },
-    "representations": {
-      "valid": {
-        "type": "object",
-        "value": {
-          "key": "value"
-        }
-      },
-      "localStorage": {
-        "type": "string",
-        "value": '{"key":"value"}'
-      },
-      "url": {
-        "type": "string",
-        "value": '{"key":"value"}'
-      }
-    }
-  },
-  '"{"key": "value"}"': {
-    "type": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": {
-      "key": "value"
-    },
-    "representations": {
-      "valid": {
-        "type": "object",
-        "value": {
-          "key": "value"
-        }
-      },
-      "localStorage": {
-        "type": "string",
-        "value": '{"key":"value"}'
-      },
-      "url": {
-        "type": "string",
-        "value": '{"key":"value"}'
-      }
-    }
-  },
-  '"{invalid json}"': {
-    "type": "must be an object, got string",
-    "valid": false,
-    "autoFixed": false,
-    "value": "{invalid json}",
-    "representations": {
-      "valid": null,
-      "localStorage": {
-        "type": "string",
-        "value": undefined
-      },
-      "url": {
-        "type": "string",
-        "value": undefined
-      }
-    }
-  }
-}
+┌────────────────────┬──────────────────┬────────┬──────────────────────────────┬────────────────────────────────────┐
+│ input              │ .value           │ .valid │ .representations.valid.value │ .type                              │
+├────────────────────┼──────────────────┼────────┼──────────────────────────────┼────────────────────────────────────┤
+│ {                  │ {                │ true   │ {                            │ undefined                          │
+│   "key": "value"   │   "key": "value" │        │   "key": "value"             │                                    │
+│ }                  │ }                │        │ }                            │                                    │
+├────────────────────┼──────────────────┼────────┼──────────────────────────────┼────────────────────────────────────┤
+│ '{"key": "value"}' │ {                │ true   │ {                            │ undefined                          │
+│                    │   "key": "value" │        │   "key": "value"             │                                    │
+│                    │ }                │        │ }                            │                                    │
+├────────────────────┼──────────────────┼────────┼──────────────────────────────┼────────────────────────────────────┤
+│ "{invalid json}"   │ "{invalid json}" │ false  │ undefined                    │ "must be an object, got string"    │
+├────────────────────┼──────────────────┼────────┼──────────────────────────────┼────────────────────────────────────┤
+│ undefined          │ undefined        │ false  │ undefined                    │ "must be an object, got undefined" │
+└────────────────────┴──────────────────┴────────┴──────────────────────────────┴────────────────────────────────────┘
 ```
 
 ---

@@ -1,22 +1,42 @@
+import { humanize } from "@jsenv/humanize";
 import { snapshotTests } from "@jsenv/snapshot";
+import { COLORS, renderTable } from "@jsenv/terminal-table";
 
 import { createValidity } from "../src/validity.js";
+
+const BORDER = { color: COLORS.GREY };
+const cell = (value) => ({ value, border: BORDER });
 
 await snapshotTests(import.meta.url, ({ test }) => {
   test("object type with JSON conversion", () => {
     const [validity, applyOn] = createValidity({
-      type: "object",
+  "type": "object"
+});
+
+    const cases = [{"key":"value"},"{\"key\": \"value\"}","{invalid json}",undefined];
+    const rows = cases.map((value) => {
+      applyOn(value);
+      return [
+        cell(humanize(value)),
+        cell(humanize(validity.value)),
+        cell(humanize(validity.valid)),
+        cell(humanize(validity.representations.valid?.value)),
+        cell(humanize(validity.type)),
+      ];
     });
 
-    const run = (value) => {
-      applyOn(value);
-      return structuredClone(validity);
-    };
-
-    return {
-      '{ key: "value" }': run({ key: "value" }),
-      '"{\"key\": \"value\"}"': run('{"key": "value"}'),
-      '"{invalid json}"': run("{invalid json}"),
-    };
+    return renderTable(
+      [
+        [
+          cell("input"),
+          cell(".value"),
+          cell(".valid"),
+          cell(".representations.valid.value"),
+          cell(".type"),
+        ],
+        ...rows,
+      ],
+      { borderCollapse: true },
+    );
   });
 });

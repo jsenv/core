@@ -2,159 +2,54 @@
 
 ```js
 const [validity, applyOn] = createValidity({
-  type: "latitude",
+"type": "latitude"
 });
 
-const run = (value) => {
+const cases = [45.5,0,-89.9,100,-100,"45.5",undefined];
+const rows = cases.map((value) => {
   applyOn(value);
-  return structuredClone(validity);
-};
+  return [
+    cell(humanize(value)),
+    cell(humanize(validity.value)),
+    cell(humanize(validity.valid)),
+    cell(humanize(validity.representations.valid?.value)),
+    cell(humanize(validity.type)),
+  ];
+});
 
-return {
-  "45.5": run(45.5),
-  "0": run(0),
-  "-89.9": run(-89.9),
-  "100": run(100),
-  "-100": run(-100),
-  '"45.5"': run("45.5"),
-};
+return renderTable(
+  [
+    [
+      cell("input"),
+      cell(".value"),
+      cell(".valid"),
+      cell(".representations.valid.value"),
+      cell(".type"),
+    ],
+    ...rows,
+  ],
+  { borderCollapse: true },
+);
 ```
 
 ```js
-{
-  0: {
-    "type": undefined,
-    "min": undefined,
-    "max": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": 0,
-    "representations": {
-      "valid": {
-        "type": "latitude",
-        "value": 0
-      },
-      "localStorage": {
-        "type": "string",
-        "value": "0"
-      },
-      "url": {
-        "type": "string",
-        "value": "0"
-      }
-    }
-  },
-  100: {
-    "type": undefined,
-    "min": undefined,
-    "max": "must be <= 90",
-    "valid": false,
-    "autoFixed": false,
-    "value": 100,
-    "representations": {
-      "valid": {
-        "type": "latitude",
-        "value": 90
-      },
-      "localStorage": {
-        "type": "string",
-        "value": undefined
-      },
-      "url": {
-        "type": "string",
-        "value": undefined
-      }
-    }
-  },
-  "45.5": {
-    "type": undefined,
-    "min": undefined,
-    "max": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": 45.5,
-    "representations": {
-      "valid": {
-        "type": "latitude",
-        "value": 45.5
-      },
-      "localStorage": {
-        "type": "string",
-        "value": "45.5"
-      },
-      "url": {
-        "type": "string",
-        "value": "45.5"
-      }
-    }
-  },
-  "-89.9": {
-    "type": undefined,
-    "min": undefined,
-    "max": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": -89.9,
-    "representations": {
-      "valid": {
-        "type": "latitude",
-        "value": -89.9
-      },
-      "localStorage": {
-        "type": "string",
-        "value": "-89.9"
-      },
-      "url": {
-        "type": "string",
-        "value": "-89.9"
-      }
-    }
-  },
-  -100: {
-    "type": undefined,
-    "min": "must be >= -90",
-    "max": undefined,
-    "valid": false,
-    "autoFixed": false,
-    "value": -100,
-    "representations": {
-      "valid": {
-        "type": "latitude",
-        "value": -90
-      },
-      "localStorage": {
-        "type": "string",
-        "value": undefined
-      },
-      "url": {
-        "type": "string",
-        "value": undefined
-      }
-    }
-  },
-  '"45.5"': {
-    "type": undefined,
-    "min": undefined,
-    "max": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": 45.5,
-    "representations": {
-      "valid": {
-        "type": "latitude",
-        "value": 45.5
-      },
-      "localStorage": {
-        "type": "string",
-        "value": "45.5"
-      },
-      "url": {
-        "type": "string",
-        "value": "45.5"
-      }
-    }
-  }
-}
+┌───────────┬───────────┬────────┬──────────────────────────────┬────────────────────┐
+│ input     │ .value    │ .valid │ .representations.valid.value │ .type              │
+├───────────┼───────────┼────────┼──────────────────────────────┼────────────────────┤
+│  45.5     │  45.5     │ true   │ 45.5                         │ undefined          │
+├───────────┼───────────┼────────┼──────────────────────────────┼────────────────────┤
+│   0       │   0       │ true   │  0                           │ undefined          │
+├───────────┼───────────┼────────┼──────────────────────────────┼────────────────────┤
+│  89.9     │  89.9     │ true   │ 89.9                         │ undefined          │
+├───────────┼───────────┼────────┼──────────────────────────────┼────────────────────┤
+│ 100       │ 100       │ false  │ 90                           │ undefined          │
+├───────────┼───────────┼────────┼──────────────────────────────┼────────────────────┤
+│ 100       │ 100       │ false  │ 90                           │ undefined          │
+├───────────┼───────────┼────────┼──────────────────────────────┼────────────────────┤
+│ "45.5"    │  45.5     │ true   │ 45.5                         │ undefined          │
+├───────────┼───────────┼────────┼──────────────────────────────┼────────────────────┤
+│ undefined │ undefined │ false  │ undefined                    │ "must be a number" │
+└───────────┴───────────┴────────┴──────────────────────────────┴────────────────────┘
 ```
 
 ---

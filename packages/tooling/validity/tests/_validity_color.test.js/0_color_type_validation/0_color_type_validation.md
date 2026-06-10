@@ -2,119 +2,52 @@
 
 ```js
 const [validity, applyOn] = createValidity({
-  type: "color",
+"type": "color"
 });
 
-const run = (value) => {
+const cases = ["#FF0000","#f0a","rgb(255, 128, 0)","red","#GGGGGG",undefined];
+const rows = cases.map((value) => {
   applyOn(value);
-  return structuredClone(validity);
-};
+  return [
+    cell(humanize(value)),
+    cell(humanize(validity.value)),
+    cell(humanize(validity.valid)),
+    cell(humanize(validity.representations.valid?.value)),
+    cell(humanize(validity.type)),
+  ];
+});
 
-return {
-  '"#FF0000"': run("#FF0000"),
-  '"#f0a"': run("#f0a"),
-  '"rgb(255, 128, 0)"': run("rgb(255, 128, 0)"),
-  '"rgba(255, 128, 0, 0.5)"': run("rgba(255, 128, 0, 0.5)"),
-  '"red"': run("red"),
-  '"Blue"': run("Blue"),
-  '"#GGGGGG"': run("#GGGGGG"),
-  '"rgb(300, 128, 0)"': run("rgb(300, 128, 0)"),
-};
+return renderTable(
+  [
+    [
+      cell("input"),
+      cell(".value"),
+      cell(".valid"),
+      cell(".representations.valid.value"),
+      cell(".type"),
+    ],
+    ...rows,
+  ],
+  { borderCollapse: true },
+);
 ```
 
 ```js
-{
-  '"#FF0000"': {
-    "type": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": "#FF0000",
-    "representations": {
-      "valid": {
-        "type": "color",
-        "value": "#FF0000"
-      }
-    }
-  },
-  '"#f0a"': {
-    "type": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": "#f0a",
-    "representations": {
-      "valid": {
-        "type": "color",
-        "value": "#f0a"
-      }
-    }
-  },
-  '"rgb(255, 128, 0)"': {
-    "type": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": "rgb(255, 128, 0)",
-    "representations": {
-      "valid": {
-        "type": "color",
-        "value": "rgb(255, 128, 0)"
-      }
-    }
-  },
-  '"rgba(255, 128, 0, 0.5)"': {
-    "type": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": "rgba(255, 128, 0, 0.5)",
-    "representations": {
-      "valid": {
-        "type": "color",
-        "value": "rgba(255, 128, 0, 0.5)"
-      }
-    }
-  },
-  '"red"': {
-    "type": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": "red",
-    "representations": {
-      "valid": {
-        "type": "color",
-        "value": "red"
-      }
-    }
-  },
-  '"Blue"': {
-    "type": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": "Blue",
-    "representations": {
-      "valid": {
-        "type": "color",
-        "value": "Blue"
-      }
-    }
-  },
-  '"#GGGGGG"': {
-    "type": "must be a valid color (hex, rgb, rgba, or named color)",
-    "valid": false,
-    "autoFixed": false,
-    "value": "#GGGGGG",
-    "representations": {
-      "valid": null
-    }
-  },
-  '"rgb(300, 128, 0)"': {
-    "type": "must be a valid color (hex, rgb, rgba, or named color)",
-    "valid": false,
-    "autoFixed": false,
-    "value": "rgb(300, 128, 0)",
-    "representations": {
-      "valid": null
-    }
-  }
-}
+┌────────────────────┬────────────────────┬────────┬──────────────────────────────┬────────────────────────────────────────────────────┐
+│ input              │ .value             │ .valid │ .representations.valid.value │ .type                                              │
+├────────────────────┼────────────────────┼────────┼──────────────────────────────┼────────────────────────────────────────────────────┤
+│ "#FF0000"          │ "#FF0000"          │ true   │ "#FF0000"                    │ undefined                                          │
+├────────────────────┼────────────────────┼────────┼──────────────────────────────┼────────────────────────────────────────────────────┤
+│ "#f0a"             │ "#f0a"             │ true   │ "#f0a"                       │ undefined                                          │
+├────────────────────┼────────────────────┼────────┼──────────────────────────────┼────────────────────────────────────────────────────┤
+│ "rgb(255, 128, 0)" │ "rgb(255, 128, 0)" │ true   │ "rgb(255, 128, 0)"           │ undefined                                          │
+├────────────────────┼────────────────────┼────────┼──────────────────────────────┼────────────────────────────────────────────────────┤
+│ "red"              │ "red"              │ true   │ "red"                        │ undefined                                          │
+├────────────────────┼────────────────────┼────────┼──────────────────────────────┼────────────────────────────────────────────────────┤
+│ "#GGGGGG"          │ "#GGGGGG"          │ false  │ undefined                    │ "must be a valid color (hex, rgb, rgba, or named … │
+├────────────────────┼────────────────────┼────────┼──────────────────────────────┼────────────────────────────────────────────────────┤
+│ undefined          │ undefined          │ false  │ undefined                    │ "must be a string"                                 │
+└────────────────────┴────────────────────┴────────┴──────────────────────────────┴────────────────────────────────────────────────────┘
 ```
 
 ---

@@ -2,63 +2,24 @@
 
 ```js
 const thisMonth = new Date(2024, 5, 1);
-const [validity, applyOn] = createValidity({
-  type: "month",
-  min: thisMonth.getTime(),
-});
-const run = (value) => {
-  applyOn(value);
-  return structuredClone(validity);
-};
-return {
-  '"2024-06" (this month)': run("2024-06"),
-  '"2024-05" (last month)': run("2024-05"),
-  '"2024-07" (next month)': run("2024-07"),
-};
+const [validity, applyOn] = createValidity({ type: "month", min: thisMonth.getTime() });
+return makeTable(validity, applyOn, [
+  ['"2024-06" (this month)', "2024-06"],
+  ['"2024-05" (last month)', "2024-05"],
+  ['"2024-07" (next month)', "2024-07"],
+], ["min"]);
 ```
 
 ```js
-{
-  '"2024-06" (this month)': {
-    "type": undefined,
-    "min": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": "2024-06",
-    "representations": {
-      "valid": {
-        "type": "month",
-        "value": "2024-06"
-      }
-    }
-  },
-  '"2024-05" (last month)': {
-    "type": undefined,
-    "min": "must be on or after 2024-06",
-    "valid": false,
-    "autoFixed": false,
-    "value": "2024-05",
-    "representations": {
-      "valid": {
-        "type": "month",
-        "value": "2024-06"
-      }
-    }
-  },
-  '"2024-07" (next month)': {
-    "type": undefined,
-    "min": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": "2024-07",
-    "representations": {
-      "valid": {
-        "type": "month",
-        "value": "2024-07"
-      }
-    }
-  }
-}
+┌────────────────────────┬───────────┬────────┬──────────────────────────────┬───────────────────────────────┐
+│ input                  │ .value    │ .valid │ .representations.valid.value │ .min                          │
+├────────────────────────┼───────────┼────────┼──────────────────────────────┼───────────────────────────────┤
+│ "2024-06" (this month) │ "2024-06" │ true   │ "2024-06"                    │ undefined                     │
+├────────────────────────┼───────────┼────────┼──────────────────────────────┼───────────────────────────────┤
+│ "2024-05" (last month) │ "2024-05" │ false  │ "2024-06"                    │ "must be on or after 2024-06" │
+├────────────────────────┼───────────┼────────┼──────────────────────────────┼───────────────────────────────┤
+│ "2024-07" (next month) │ "2024-07" │ true   │ "2024-07"                    │ undefined                     │
+└────────────────────────┴───────────┴────────┴──────────────────────────────┴───────────────────────────────┘
 ```
 
 ---

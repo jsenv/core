@@ -2,138 +2,60 @@
 
 ```js
 const [validity, applyOn] = createValidity({
-  type: "array",
+"type": "array"
 });
 
-const run = (value) => {
+const cases = [[1,2,3],[],"{key:\"value\"}","[1,2,3]","not an array",undefined];
+const rows = cases.map((value) => {
   applyOn(value);
-  return structuredClone(validity);
-};
+  return [
+    cell(humanize(value)),
+    cell(humanize(validity.value)),
+    cell(humanize(validity.valid)),
+    cell(humanize(validity.representations.valid?.value)),
+    cell(humanize(validity.type)),
+  ];
+});
 
-return {
-  "[1, 2, 3]": run([1, 2, 3]),
-  "[]": run([]),
-  '{ key: "value" }': run({ key: "value" }),
-  '"[1,2,3]"': run("[1,2,3]"),
-  '"not an array"': run("not an array"),
-};
+return renderTable(
+  [
+    [
+      cell("input"),
+      cell(".value"),
+      cell(".valid"),
+      cell(".representations.valid.value"),
+      cell(".type"),
+    ],
+    ...rows,
+  ],
+  { borderCollapse: true },
+);
 ```
 
 ```js
-{
-  "[1, 2, 3]": {
-    "type": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": [
-      1,
-      2,
-      3
-    ],
-    "representations": {
-      "valid": {
-        "type": "array",
-        "value": [
-          1,
-          2,
-          3
-        ]
-      },
-      "localStorage": {
-        "type": "string",
-        "value": "[1,2,3]"
-      },
-      "url": {
-        "type": "string",
-        "value": "[1,2,3]"
-      }
-    }
-  },
-  "[]": {
-    "type": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": [],
-    "representations": {
-      "valid": {
-        "type": "array",
-        "value": []
-      },
-      "localStorage": {
-        "type": "string",
-        "value": "[]"
-      },
-      "url": {
-        "type": "string",
-        "value": "[]"
-      }
-    }
-  },
-  '{ key: "value" }': {
-    "type": "must be an array, got object",
-    "valid": false,
-    "autoFixed": false,
-    "value": {
-      "key": "value"
-    },
-    "representations": {
-      "valid": null,
-      "localStorage": {
-        "type": "string",
-        "value": undefined
-      },
-      "url": {
-        "type": "string",
-        "value": undefined
-      }
-    }
-  },
-  '"[1,2,3]"': {
-    "type": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": [
-      1,
-      2,
-      3
-    ],
-    "representations": {
-      "valid": {
-        "type": "array",
-        "value": [
-          1,
-          2,
-          3
-        ]
-      },
-      "localStorage": {
-        "type": "string",
-        "value": "[1,2,3]"
-      },
-      "url": {
-        "type": "string",
-        "value": "[1,2,3]"
-      }
-    }
-  },
-  '"not an array"': {
-    "type": "must be an array, got string",
-    "valid": false,
-    "autoFixed": false,
-    "value": "not an array",
-    "representations": {
-      "valid": null,
-      "localStorage": {
-        "type": "string",
-        "value": undefined
-      },
-      "url": {
-        "type": "string",
-        "value": undefined
-      }
-    }
-  }
-}
+┌─────────────────┬─────────────────┬────────┬──────────────────────────────┬───────────────────────────────────┐
+│ input           │ .value          │ .valid │ .representations.valid.value │ .type                             │
+├─────────────────┼─────────────────┼────────┼──────────────────────────────┼───────────────────────────────────┤
+│ [               │ [               │ true   │ [                            │ undefined                         │
+│   1,            │   1,            │        │   1,                         │                                   │
+│   2,            │   2,            │        │   2,                         │                                   │
+│   3             │   3             │        │   3                          │                                   │
+│ ]               │ ]               │        │ ]                            │                                   │
+├─────────────────┼─────────────────┼────────┼──────────────────────────────┼───────────────────────────────────┤
+│ []              │ []              │ true   │ []                           │ undefined                         │
+├─────────────────┼─────────────────┼────────┼──────────────────────────────┼───────────────────────────────────┤
+│ '{key:"value"}' │ '{key:"value"}' │ false  │ undefined                    │ "must be an array, got string"    │
+├─────────────────┼─────────────────┼────────┼──────────────────────────────┼───────────────────────────────────┤
+│ "[1,2,3]"       │ [               │ true   │ [                            │ undefined                         │
+│                 │   1,            │        │   1,                         │                                   │
+│                 │   2,            │        │   2,                         │                                   │
+│                 │   3             │        │   3                          │                                   │
+│                 │ ]               │        │ ]                            │                                   │
+├─────────────────┼─────────────────┼────────┼──────────────────────────────┼───────────────────────────────────┤
+│ "not an array"  │ "not an array"  │ false  │ undefined                    │ "must be an array, got string"    │
+├─────────────────┼─────────────────┼────────┼──────────────────────────────┼───────────────────────────────────┤
+│ undefined       │ undefined       │ false  │ undefined                    │ "must be an array, got undefined" │
+└─────────────────┴─────────────────┴────────┴──────────────────────────────┴───────────────────────────────────┘
 ```
 
 ---

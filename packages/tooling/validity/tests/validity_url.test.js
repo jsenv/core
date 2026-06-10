@@ -1,24 +1,42 @@
+import { humanize } from "@jsenv/humanize";
 import { snapshotTests } from "@jsenv/snapshot";
+import { COLORS, renderTable } from "@jsenv/terminal-table";
 
 import { createValidity } from "../src/validity.js";
+
+const BORDER = { color: COLORS.GREY };
+const cell = (value) => ({ value, border: BORDER });
 
 await snapshotTests(import.meta.url, ({ test }) => {
   test("url type validation", () => {
     const [validity, applyOn] = createValidity({
-      type: "url",
+  "type": "url"
+});
+
+    const cases = ["https://example.com","http://domain.org/path","not-a-url","://missing-protocol.com",undefined];
+    const rows = cases.map((value) => {
+      applyOn(value);
+      return [
+        cell(humanize(value)),
+        cell(humanize(validity.value)),
+        cell(humanize(validity.valid)),
+        cell(humanize(validity.representations.valid?.value)),
+        cell(humanize(validity.type)),
+      ];
     });
 
-    const run = (value) => {
-      applyOn(value);
-      return structuredClone(validity);
-    };
-
-    return {
-      '"https://example.com"': run("https://example.com"),
-      '"http://domain.org/path"': run("http://domain.org/path"),
-      '"ftp://files.example.com"': run("ftp://files.example.com"),
-      '"not-a-url"': run("not-a-url"),
-      '"://missing-protocol.com"': run("://missing-protocol.com"),
-    };
+    return renderTable(
+      [
+        [
+          cell("input"),
+          cell(".value"),
+          cell(".valid"),
+          cell(".representations.valid.value"),
+          cell(".type"),
+        ],
+        ...rows,
+      ],
+      { borderCollapse: true },
+    );
   });
 });

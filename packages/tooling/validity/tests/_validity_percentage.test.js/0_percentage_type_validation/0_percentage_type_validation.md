@@ -1,114 +1,49 @@
 # [percentage type validation](../../validity_percentage.test.js)
 
 ```js
-const [validity, applyOn] = createValidity({
-  type: "percentage",
+const [validity, applyOn] = createValidity({ type: "percentage" });
+
+const cases = ["50%", "50", "150%", 75, undefined];
+const rows = cases.map((value) => {
+  applyOn(value);
+  return [
+    cell(humanize(value)),
+    cell(humanize(validity.value)),
+    cell(humanize(validity.valid)),
+    cell(humanize(validity.representations.valid?.value)),
+    cell(humanize(validity.type)),
+  ];
 });
 
-const run = (value) => {
-  applyOn(value);
-  return structuredClone(validity);
-};
-
-return {
-  '"50%"': run("50%"),
-  '"50"': run("50"),
-  '"150%"': run("150%"),
-  "75": run(75),
-};
+return renderTable(
+  [
+    [
+      cell("input"),
+      cell(".value"),
+      cell(".valid"),
+      cell(".representations.valid.value"),
+      cell(".type"),
+    ],
+    ...rows,
+  ],
+  { borderCollapse: true },
+);
 ```
 
 ```js
-{
-  75: {
-    "type": undefined,
-    "min": undefined,
-    "max": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": 75,
-    "representations": {
-      "valid": {
-        "type": "percentage",
-        "value": 75
-      },
-      "localStorage": {
-        "type": "string",
-        "value": "75%"
-      },
-      "url": {
-        "type": "string",
-        "value": "75%"
-      }
-    }
-  },
-  '"50%"': {
-    "type": undefined,
-    "min": undefined,
-    "max": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": 50,
-    "representations": {
-      "valid": {
-        "type": "percentage",
-        "value": 50
-      },
-      "localStorage": {
-        "type": "string",
-        "value": "50%"
-      },
-      "url": {
-        "type": "string",
-        "value": "50%"
-      }
-    }
-  },
-  '"50"': {
-    "type": undefined,
-    "min": undefined,
-    "max": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": 50,
-    "representations": {
-      "valid": {
-        "type": "percentage",
-        "value": 50
-      },
-      "localStorage": {
-        "type": "string",
-        "value": "50%"
-      },
-      "url": {
-        "type": "string",
-        "value": "50%"
-      }
-    }
-  },
-  '"150%"': {
-    "type": "must be between 0 and 100",
-    "min": undefined,
-    "max": "must be <= 100",
-    "valid": false,
-    "autoFixed": false,
-    "value": 150,
-    "representations": {
-      "valid": {
-        "type": "percentage",
-        "value": 100
-      },
-      "localStorage": {
-        "type": "string",
-        "value": undefined
-      },
-      "url": {
-        "type": "string",
-        "value": undefined
-      }
-    }
-  }
-}
+┌───────────┬───────────┬────────┬──────────────────────────────┬──────────────────────────────────────┐
+│ input     │ .value    │ .valid │ .representations.valid.value │ .type                                │
+├───────────┼───────────┼────────┼──────────────────────────────┼──────────────────────────────────────┤
+│ "50%"     │  50       │ true   │  50                          │ undefined                            │
+├───────────┼───────────┼────────┼──────────────────────────────┼──────────────────────────────────────┤
+│ "50"      │  50       │ true   │  50                          │ undefined                            │
+├───────────┼───────────┼────────┼──────────────────────────────┼──────────────────────────────────────┤
+│ "150%"    │ 150       │ false  │ 100                          │ "must be between 0 and 100"          │
+├───────────┼───────────┼────────┼──────────────────────────────┼──────────────────────────────────────┤
+│ 75        │  75       │ true   │  75                          │ undefined                            │
+├───────────┼───────────┼────────┼──────────────────────────────┼──────────────────────────────────────┤
+│ undefined │ undefined │ false  │ undefined                    │ "must be a number between 0 and 100" │
+└───────────┴───────────┴────────┴──────────────────────────────┴──────────────────────────────────────┘
 ```
 
 ---

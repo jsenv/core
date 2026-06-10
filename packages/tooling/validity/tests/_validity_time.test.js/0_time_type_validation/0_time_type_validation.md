@@ -2,90 +2,52 @@
 
 ```js
 const [validity, applyOn] = createValidity({
-  type: "time",
+"type": "time"
 });
 
-const run = (value) => {
+const cases = ["14:30","09:15:30","23:59:59","24:00","14:60",undefined];
+const rows = cases.map((value) => {
   applyOn(value);
-  return structuredClone(validity);
-};
+  return [
+    cell(humanize(value)),
+    cell(humanize(validity.value)),
+    cell(humanize(validity.valid)),
+    cell(humanize(validity.representations.valid?.value)),
+    cell(humanize(validity.type)),
+  ];
+});
 
-return {
-  '"14:30"': run("14:30"),
-  '"09:15:30"': run("09:15:30"),
-  '"23:59:59"': run("23:59:59"),
-  '"24:00"': run("24:00"),
-  '"14:60"': run("14:60"),
-  '"2:30 PM"': run("2:30 PM"),
-};
+return renderTable(
+  [
+    [
+      cell("input"),
+      cell(".value"),
+      cell(".valid"),
+      cell(".representations.valid.value"),
+      cell(".type"),
+    ],
+    ...rows,
+  ],
+  { borderCollapse: true },
+);
 ```
 
 ```js
-{
-  '"14:30"': {
-    "type": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": "14:30",
-    "representations": {
-      "valid": {
-        "type": "time",
-        "value": "14:30"
-      }
-    }
-  },
-  '"09:15:30"': {
-    "type": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": "09:15:30",
-    "representations": {
-      "valid": {
-        "type": "time",
-        "value": "09:15:30"
-      }
-    }
-  },
-  '"23:59:59"': {
-    "type": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": "23:59:59",
-    "representations": {
-      "valid": {
-        "type": "time",
-        "value": "23:59:59"
-      }
-    }
-  },
-  '"24:00"': {
-    "type": "must be in HH:MM or HH:MM:SS format",
-    "valid": false,
-    "autoFixed": false,
-    "value": "24:00",
-    "representations": {
-      "valid": null
-    }
-  },
-  '"14:60"': {
-    "type": "must be in HH:MM or HH:MM:SS format",
-    "valid": false,
-    "autoFixed": false,
-    "value": "14:60",
-    "representations": {
-      "valid": null
-    }
-  },
-  '"2:30 PM"': {
-    "type": "must be in HH:MM or HH:MM:SS format",
-    "valid": false,
-    "autoFixed": false,
-    "value": "2:30 PM",
-    "representations": {
-      "valid": null
-    }
-  }
-}
+┌────────────┬────────────┬────────┬──────────────────────────────┬───────────────────────────────────────┐
+│ input      │ .value     │ .valid │ .representations.valid.value │ .type                                 │
+├────────────┼────────────┼────────┼──────────────────────────────┼───────────────────────────────────────┤
+│ "14:30"    │ "14:30"    │ true   │ "14:30"                      │ undefined                             │
+├────────────┼────────────┼────────┼──────────────────────────────┼───────────────────────────────────────┤
+│ "09:15:30" │ "09:15:30" │ true   │ "09:15:30"                   │ undefined                             │
+├────────────┼────────────┼────────┼──────────────────────────────┼───────────────────────────────────────┤
+│ "23:59:59" │ "23:59:59" │ true   │ "23:59:59"                   │ undefined                             │
+├────────────┼────────────┼────────┼──────────────────────────────┼───────────────────────────────────────┤
+│ "24:00"    │ "24:00"    │ false  │ undefined                    │ "must be in HH:MM or HH:MM:SS format" │
+├────────────┼────────────┼────────┼──────────────────────────────┼───────────────────────────────────────┤
+│ "14:60"    │ "14:60"    │ false  │ undefined                    │ "must be in HH:MM or HH:MM:SS format" │
+├────────────┼────────────┼────────┼──────────────────────────────┼───────────────────────────────────────┤
+│ undefined  │ undefined  │ false  │ undefined                    │ "must be a string"                    │
+└────────────┴────────────┴────────┴──────────────────────────────┴───────────────────────────────────────┘
 ```
 
 ---

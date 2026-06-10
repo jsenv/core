@@ -2,8 +2,8 @@
 
 
 - [longitude type validation](0_longitude_type_validation/0_longitude_type_validation.md)
-- [step validation with string inputs (longitude type)](1_step_validation_with_string_inputs_(longitude_type)/1_step_validation_with_string_inputs_(longitude_type).md)
-- [an other step validation](2_an_other_step_validation/2_an_other_step_validation.md)
+- [longitude with step 0.1](1_longitude_with_step_0_1/1_longitude_with_step_0_1.md)
+- [longitude with step 0.000001](2_longitude_with_step_0_000001/2_longitude_with_step_0_000001.md)
 
 ---
 

@@ -2,105 +2,50 @@
 
 ```js
 const [validity, applyOn] = createValidity({
-  type: "integer",
+"type": "integer"
 });
 
-const run = (value) => {
+const cases = [42,3.14,"123","3.7",undefined];
+const rows = cases.map((value) => {
   applyOn(value);
-  return structuredClone(validity);
-};
+  return [
+    cell(humanize(value)),
+    cell(humanize(validity.value)),
+    cell(humanize(validity.valid)),
+    cell(humanize(validity.representations.valid?.value)),
+    cell(humanize(validity.type)),
+  ];
+});
 
-return {
-  "42": run(42),
-  "3.14": run(3.14),
-  '"123"': run("123"),
-  '"3.7"': run("3.7"),
-};
+return renderTable(
+  [
+    [
+      cell("input"),
+      cell(".value"),
+      cell(".valid"),
+      cell(".representations.valid.value"),
+      cell(".type"),
+    ],
+    ...rows,
+  ],
+  { borderCollapse: true },
+);
 ```
 
 ```js
-{
-  42: {
-    "type": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": 42,
-    "representations": {
-      "valid": {
-        "type": "integer",
-        "value": 42
-      },
-      "localStorage": {
-        "type": "string",
-        "value": "42"
-      },
-      "url": {
-        "type": "string",
-        "value": "42"
-      }
-    }
-  },
-  "3.14": {
-    "type": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": 3,
-    "representations": {
-      "valid": {
-        "type": "integer",
-        "value": 3
-      },
-      "localStorage": {
-        "type": "string",
-        "value": "3"
-      },
-      "url": {
-        "type": "string",
-        "value": "3"
-      }
-    }
-  },
-  '"123"': {
-    "type": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": 123,
-    "representations": {
-      "valid": {
-        "type": "integer",
-        "value": 123
-      },
-      "localStorage": {
-        "type": "string",
-        "value": "123"
-      },
-      "url": {
-        "type": "string",
-        "value": "123"
-      }
-    }
-  },
-  '"3.7"': {
-    "type": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": 4,
-    "representations": {
-      "valid": {
-        "type": "integer",
-        "value": 4
-      },
-      "localStorage": {
-        "type": "string",
-        "value": "4"
-      },
-      "url": {
-        "type": "string",
-        "value": "4"
-      }
-    }
-  }
-}
+┌───────────┬───────────┬────────┬──────────────────────────────┬────────────────────┐
+│ input     │ .value    │ .valid │ .representations.valid.value │ .type              │
+├───────────┼───────────┼────────┼──────────────────────────────┼────────────────────┤
+│ 42        │  42       │ true   │  42                          │ undefined          │
+├───────────┼───────────┼────────┼──────────────────────────────┼────────────────────┤
+│  3.14     │   3       │ true   │   3                          │ undefined          │
+├───────────┼───────────┼────────┼──────────────────────────────┼────────────────────┤
+│ "123"     │ 123       │ true   │ 123                          │ undefined          │
+├───────────┼───────────┼────────┼──────────────────────────────┼────────────────────┤
+│ "3.7"     │   4       │ true   │   4                          │ undefined          │
+├───────────┼───────────┼────────┼──────────────────────────────┼────────────────────┤
+│ undefined │ undefined │ false  │ undefined                    │ "must be a number" │
+└───────────┴───────────┴────────┴──────────────────────────────┴────────────────────┘
 ```
 
 ---

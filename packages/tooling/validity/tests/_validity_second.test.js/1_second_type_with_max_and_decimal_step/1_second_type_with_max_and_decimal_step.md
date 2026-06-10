@@ -1,118 +1,22 @@
 # [second type with max and decimal step](../../validity_second.test.js)
 
 ```js
-const [validity, applyOn] = createValidity({
-  type: "second",
-  max: 59,
-  step: 0.5,
-});
-const run = (value) => {
-  applyOn(value);
-  return structuredClone(validity);
-};
-return {
-  "0": run(0),
-  "30.5": run(30.5),
-  "30.3 (invalid step)": run(30.3),
-  "60 (above max)": run(60),
-};
+const [validity, applyOn] = createValidity({ type: "second", max: 59, step: 0.5 });
+return makeTable(validity, applyOn, [0, 30.5, 30.3, 60], ["max", "step"]);
 ```
 
 ```js
-{
-  0: {
-    "type": undefined,
-    "min": undefined,
-    "max": undefined,
-    "step": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": 0,
-    "representations": {
-      "valid": {
-        "type": "second",
-        "value": 0
-      },
-      "localStorage": {
-        "type": "string",
-        "value": "<X>s"
-      },
-      "url": {
-        "type": "string",
-        "value": "<X>s"
-      }
-    }
-  },
-  "30.5": {
-    "type": undefined,
-    "min": undefined,
-    "max": undefined,
-    "step": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": 30.5,
-    "representations": {
-      "valid": {
-        "type": "second",
-        "value": 30.5
-      },
-      "localStorage": {
-        "type": "string",
-        "value": "<X>s"
-      },
-      "url": {
-        "type": "string",
-        "value": "<X>s"
-      }
-    }
-  },
-  "30.3 (invalid step)": {
-    "type": undefined,
-    "min": undefined,
-    "max": undefined,
-    "step": "must be a multiple of 0.5",
-    "valid": false,
-    "autoFixed": false,
-    "value": 30.3,
-    "representations": {
-      "valid": {
-        "type": "second",
-        "value": 30.5
-      },
-      "localStorage": {
-        "type": "string",
-        "value": undefined
-      },
-      "url": {
-        "type": "string",
-        "value": undefined
-      }
-    }
-  },
-  "60 (above max)": {
-    "type": undefined,
-    "min": undefined,
-    "max": "must be <= 59",
-    "step": undefined,
-    "valid": false,
-    "autoFixed": false,
-    "value": 60,
-    "representations": {
-      "valid": {
-        "type": "second",
-        "value": 59
-      },
-      "localStorage": {
-        "type": "string",
-        "value": undefined
-      },
-      "url": {
-        "type": "string",
-        "value": undefined
-      }
-    }
-  }
-}
+┌───────┬────────┬────────┬──────────────────────────────┬─────────────────┬─────────────────────────────┐
+│ input │ .value │ .valid │ .representations.valid.value │ .max            │ .step                       │
+├───────┼────────┼────────┼──────────────────────────────┼─────────────────┼─────────────────────────────┤
+│  0    │  0     │ true   │  0                           │ undefined       │ undefined                   │
+├───────┼────────┼────────┼──────────────────────────────┼─────────────────┼─────────────────────────────┤
+│ 30.5  │ 30.5   │ true   │ 30.5                         │ undefined       │ undefined                   │
+├───────┼────────┼────────┼──────────────────────────────┼─────────────────┼─────────────────────────────┤
+│ 30.3  │ 30.3   │ false  │ 30.5                         │ undefined       │ "must be a multiple of 0.5" │
+├───────┼────────┼────────┼──────────────────────────────┼─────────────────┼─────────────────────────────┤
+│ 60    │ 60     │ false  │ 59                           │ "must be <= 59" │ undefined                   │
+└───────┴────────┴────────┴──────────────────────────────┴─────────────────┴─────────────────────────────┘
 ```
 
 ---

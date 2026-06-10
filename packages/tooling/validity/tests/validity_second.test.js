@@ -1,39 +1,46 @@
+import { humanize } from "@jsenv/humanize";
 import { snapshotTests } from "@jsenv/snapshot";
+import { COLORS, renderTable } from "@jsenv/terminal-table";
 
 import { createValidity } from "../src/validity.js";
+
+const BORDER = { color: COLORS.GREY };
+const cell = (value) => ({ value, border: BORDER });
+
+const makeTable = (validity, applyOn, cases, cols) => {
+  const rows = cases.map((value) => {
+    applyOn(value);
+    return [
+      cell(humanize(value)),
+      cell(humanize(validity.value)),
+      cell(humanize(validity.valid)),
+      cell(humanize(validity.representations.valid?.value)),
+      ...cols.map((col) => cell(humanize(validity[col]))),
+    ];
+  });
+  return renderTable(
+    [
+      [
+        cell("input"),
+        cell(".value"),
+        cell(".valid"),
+        cell(".representations.valid.value"),
+        ...cols.map((col) => cell(`.${col}`)),
+      ],
+      ...rows,
+    ],
+    { borderCollapse: true },
+  );
+};
 
 await snapshotTests(import.meta.url, ({ test }) => {
   test("second type validation", () => {
     const [validity, applyOn] = createValidity({ type: "second" });
-    const run = (value) => {
-      applyOn(value);
-      return structuredClone(validity);
-    };
-    return {
-      "0": run(0),
-      "30": run(30),
-      "-1 (below min)": run(-1),
-      "1.5 (not integer)": run(1.5),
-      '"10" (string number)': run("10"),
-      "true (invalid type)": run(true),
-    };
+    return makeTable(validity, applyOn, [0, 30, -1, 1.5, "10", true, undefined], ["type", "min", "step"]);
   });
 
   test("second type with max and decimal step", () => {
-    const [validity, applyOn] = createValidity({
-      type: "second",
-      max: 59,
-      step: 0.5,
-    });
-    const run = (value) => {
-      applyOn(value);
-      return structuredClone(validity);
-    };
-    return {
-      "0": run(0),
-      "30.5": run(30.5),
-      "30.3 (invalid step)": run(30.3),
-      "60 (above max)": run(60),
-    };
+    const [validity, applyOn] = createValidity({ type: "second", max: 59, step: 0.5 });
+    return makeTable(validity, applyOn, [0, 30.5, 30.3, 60], ["max", "step"]);
   });
 });

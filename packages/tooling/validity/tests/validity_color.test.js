@@ -1,27 +1,42 @@
+import { humanize } from "@jsenv/humanize";
 import { snapshotTests } from "@jsenv/snapshot";
+import { COLORS, renderTable } from "@jsenv/terminal-table";
 
 import { createValidity } from "../src/validity.js";
+
+const BORDER = { color: COLORS.GREY };
+const cell = (value) => ({ value, border: BORDER });
 
 await snapshotTests(import.meta.url, ({ test }) => {
   test("color type validation", () => {
     const [validity, applyOn] = createValidity({
-      type: "color",
+  "type": "color"
+});
+
+    const cases = ["#FF0000","#f0a","rgb(255, 128, 0)","red","#GGGGGG",undefined];
+    const rows = cases.map((value) => {
+      applyOn(value);
+      return [
+        cell(humanize(value)),
+        cell(humanize(validity.value)),
+        cell(humanize(validity.valid)),
+        cell(humanize(validity.representations.valid?.value)),
+        cell(humanize(validity.type)),
+      ];
     });
 
-    const run = (value) => {
-      applyOn(value);
-      return structuredClone(validity);
-    };
-
-    return {
-      '"#FF0000"': run("#FF0000"),
-      '"#f0a"': run("#f0a"),
-      '"rgb(255, 128, 0)"': run("rgb(255, 128, 0)"),
-      '"rgba(255, 128, 0, 0.5)"': run("rgba(255, 128, 0, 0.5)"),
-      '"red"': run("red"),
-      '"Blue"': run("Blue"),
-      '"#GGGGGG"': run("#GGGGGG"),
-      '"rgb(300, 128, 0)"': run("rgb(300, 128, 0)"),
-    };
+    return renderTable(
+      [
+        [
+          cell("input"),
+          cell(".value"),
+          cell(".valid"),
+          cell(".representations.valid.value"),
+          cell(".type"),
+        ],
+        ...rows,
+      ],
+      { borderCollapse: true },
+    );
   });
 });

@@ -2,80 +2,50 @@
 
 ```js
 const [validity, applyOn] = createValidity({
-  type: "url",
+"type": "url"
 });
 
-const run = (value) => {
+const cases = ["https://example.com","http://domain.org/path","not-a-url","://missing-protocol.com",undefined];
+const rows = cases.map((value) => {
   applyOn(value);
-  return structuredClone(validity);
-};
+  return [
+    cell(humanize(value)),
+    cell(humanize(validity.value)),
+    cell(humanize(validity.valid)),
+    cell(humanize(validity.representations.valid?.value)),
+    cell(humanize(validity.type)),
+  ];
+});
 
-return {
-  '"https://example.com"': run("https://example.com"),
-  '"http://domain.org/path"': run("http://domain.org/path"),
-  '"ftp://files.example.com"': run("ftp://files.example.com"),
-  '"not-a-url"': run("not-a-url"),
-  '"://missing-protocol.com"': run("://missing-protocol.com"),
-};
+return renderTable(
+  [
+    [
+      cell("input"),
+      cell(".value"),
+      cell(".valid"),
+      cell(".representations.valid.value"),
+      cell(".type"),
+    ],
+    ...rows,
+  ],
+  { borderCollapse: true },
+);
 ```
 
 ```js
-{
-  '"https://example.com"': {
-    "type": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": "https://example.com",
-    "representations": {
-      "valid": {
-        "type": "url",
-        "value": "https://example.com"
-      }
-    }
-  },
-  '"http://domain.org/path"': {
-    "type": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": "http://domain.org/path",
-    "representations": {
-      "valid": {
-        "type": "url",
-        "value": "http://domain.org/path"
-      }
-    }
-  },
-  '"ftp://files.example.com"': {
-    "type": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": "ftp://files.example.com",
-    "representations": {
-      "valid": {
-        "type": "url",
-        "value": "ftp://files.example.com"
-      }
-    }
-  },
-  '"not-a-url"': {
-    "type": "must be a valid URL",
-    "valid": false,
-    "autoFixed": false,
-    "value": "not-a-url",
-    "representations": {
-      "valid": null
-    }
-  },
-  '"://missing-protocol.com"': {
-    "type": "must be a valid URL",
-    "valid": false,
-    "autoFixed": false,
-    "value": "://missing-protocol.com",
-    "representations": {
-      "valid": null
-    }
-  }
-}
+┌───────────────────────────┬───────────────────────────┬────────┬──────────────────────────────┬───────────────────────┐
+│ input                     │ .value                    │ .valid │ .representations.valid.value │ .type                 │
+├───────────────────────────┼───────────────────────────┼────────┼──────────────────────────────┼───────────────────────┤
+│ "https://example.com"     │ "https://example.com"     │ true   │ "https://example.com"        │ undefined             │
+├───────────────────────────┼───────────────────────────┼────────┼──────────────────────────────┼───────────────────────┤
+│ "http://domain.org/path"  │ "http://domain.org/path"  │ true   │ "http://domain.org/path"     │ undefined             │
+├───────────────────────────┼───────────────────────────┼────────┼──────────────────────────────┼───────────────────────┤
+│ "not-a-url"               │ "not-a-url"               │ false  │ undefined                    │ "must be a valid URL" │
+├───────────────────────────┼───────────────────────────┼────────┼──────────────────────────────┼───────────────────────┤
+│ "://missing-protocol.com" │ "://missing-protocol.com" │ false  │ undefined                    │ "must be a valid URL" │
+├───────────────────────────┼───────────────────────────┼────────┼──────────────────────────────┼───────────────────────┤
+│ undefined                 │ undefined                 │ false  │ undefined                    │ "must be a string"    │
+└───────────────────────────┴───────────────────────────┴────────┴──────────────────────────────┴───────────────────────┘
 ```
 
 ---

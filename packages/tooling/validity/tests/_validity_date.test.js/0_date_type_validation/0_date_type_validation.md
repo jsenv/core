@@ -2,140 +2,35 @@
 
 ```js
 const [validity, applyOn] = createValidity({ type: "date" });
-const run = (value) => {
-  applyOn(value);
-  return structuredClone(validity);
-};
-return {
-  '"2024-06-15"': run("2024-06-15"),
-  '"2024-02-29"': run("2024-02-29"),
-  '"2023-02-29"': run("2023-02-29"),
-  '"not-a-date"': run("not-a-date"),
-  "timestamp (number)": run(Date.UTC(2024, 5, 15)),
-  "invalid type (boolean)": run(true),
-};
+return makeTable(validity, applyOn, [
+  ['"2024-06-15"', "2024-06-15"],
+  ['"2024-02-29" (leap)', "2024-02-29"],
+  ['"2023-02-29" (invalid leap)', "2023-02-29"],
+  ['"not-a-date"', "not-a-date"],
+  ["timestamp (number)", Date.UTC(2024, 5, 15)],
+  ["boolean (invalid type)", true],
+  ["undefined", undefined],
+], ["type"]);
 ```
 
 ```js
-{
-  '"2024-06-15"': {
-    "type": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": {},
-    "representations": {
-      "valid": {
-        "type": "date",
-        "value": {}
-      },
-      "localStorage": {
-        "type": "string",
-        "value": "2024-06-15"
-      },
-      "url": {
-        "type": "string",
-        "value": "2024-06-15"
-      }
-    }
-  },
-  '"2024-02-29"': {
-    "type": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": {},
-    "representations": {
-      "valid": {
-        "type": "date",
-        "value": {}
-      },
-      "localStorage": {
-        "type": "string",
-        "value": "2024-02-29"
-      },
-      "url": {
-        "type": "string",
-        "value": "2024-02-29"
-      }
-    }
-  },
-  '"2023-02-29"': {
-    "type": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": {},
-    "representations": {
-      "valid": {
-        "type": "date",
-        "value": {}
-      },
-      "localStorage": {
-        "type": "string",
-        "value": "2023-03-01"
-      },
-      "url": {
-        "type": "string",
-        "value": "2023-03-01"
-      }
-    }
-  },
-  '"not-a-date"': {
-    "type": "must be in YYYY-MM-DD format",
-    "valid": false,
-    "autoFixed": false,
-    "value": "not-a-date",
-    "representations": {
-      "valid": null,
-      "localStorage": {
-        "type": "string",
-        "value": undefined
-      },
-      "url": {
-        "type": "string",
-        "value": undefined
-      }
-    }
-  },
-  "timestamp (number)": {
-    "type": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": {},
-    "representations": {
-      "valid": {
-        "type": "date",
-        "value": {}
-      },
-      "localStorage": {
-        "type": "string",
-        "value": "2024-06-15"
-      },
-      "url": {
-        "type": "string",
-        "value": "2024-06-15"
-      }
-    }
-  },
-  "invalid type (boolean)": {
-    "type": undefined,
-    "valid": true,
-    "autoFixed": false,
-    "value": {},
-    "representations": {
-      "valid": {
-        "type": "date",
-        "value": {}
-      },
-      "localStorage": {
-        "type": "string",
-        "value": "1970-01-01"
-      },
-      "url": {
-        "type": "string",
-        "value": "1970-01-01"
-      }
-    }
-  }
-}
+┌─────────────────────────────┬─────────────────────┬────────┬──────────────────────────────┬────────────────────────────────────────────────────┐
+│ input                       │ .value              │ .valid │ .representations.valid.value │ .type                                              │
+├─────────────────────────────┼─────────────────────┼────────┼──────────────────────────────┼────────────────────────────────────────────────────┤
+│ "2024-06-15"                │ Date(1718402400000) │ true   │ Date(1718402400000)          │ undefined                                          │
+├─────────────────────────────┼─────────────────────┼────────┼──────────────────────────────┼────────────────────────────────────────────────────┤
+│ "2024-02-29" (leap)         │ Date(1709161200000) │ true   │ Date(1709161200000)          │ undefined                                          │
+├─────────────────────────────┼─────────────────────┼────────┼──────────────────────────────┼────────────────────────────────────────────────────┤
+│ "2023-02-29" (invalid leap) │ Date(1677625200000) │ true   │ Date(1677625200000)          │ undefined                                          │
+├─────────────────────────────┼─────────────────────┼────────┼──────────────────────────────┼────────────────────────────────────────────────────┤
+│ "not-a-date"                │ "not-a-date"        │ false  │ undefined                    │ "must be in YYYY-MM-DD format"                     │
+├─────────────────────────────┼─────────────────────┼────────┼──────────────────────────────┼────────────────────────────────────────────────────┤
+│ timestamp (number)          │ Date(1718409600000) │ true   │ Date(1718409600000)          │ undefined                                          │
+├─────────────────────────────┼─────────────────────┼────────┼──────────────────────────────┼────────────────────────────────────────────────────┤
+│ boolean (invalid type)      │ Date(1)             │ true   │ Date(1)                      │ undefined                                          │
+├─────────────────────────────┼─────────────────────┼────────┼──────────────────────────────┼────────────────────────────────────────────────────┤
+│ undefined                   │ undefined           │ false  │ undefined                    │ "must be a string in YYYY-MM-DD format, a timesta… │
+└─────────────────────────────┴─────────────────────┴────────┴──────────────────────────────┴────────────────────────────────────────────────────┘
 ```
 
 ---
