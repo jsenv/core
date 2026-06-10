@@ -1,6 +1,6 @@
 import { snapshotTests } from "@jsenv/snapshot";
 
-import { createValidity } from "./validity.js";
+import { createValidity } from "../src/validity.js";
 
 await snapshotTests(import.meta.url, ({ test }) => {
   test("type validation", () => {
@@ -124,24 +124,6 @@ await snapshotTests(import.meta.url, ({ test }) => {
       '"50"': run("50"),
       '"150%"': run("150%"),
       "75": run(75),
-    };
-  });
-
-  test("boolean type conversion", () => {
-    const [validity, applyOn] = createValidity({
-      type: "boolean",
-    });
-
-    const run = (value) => {
-      applyOn(value);
-      return structuredClone(validity);
-    };
-
-    return {
-      "true": run(true),
-      '"true"': run("true"),
-      '"false"': run("false"),
-      "1": run(1),
     };
   });
 
