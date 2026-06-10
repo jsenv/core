@@ -148,7 +148,7 @@ const css = /* css */ `
     pointer-events: auto;
 
     .navi_control_input {
-      box-sizing: border-box;
+      box-sizing: content-box;
       min-width: 1ch;
       margin-top: calc(-1 * var(--x-padding-top));
       margin-right: calc(-1 * var(--x-padding-right));
