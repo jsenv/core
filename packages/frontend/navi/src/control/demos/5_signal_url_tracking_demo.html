@@ -49,7 +49,7 @@
       }
       .tracker-row {
         display: grid;
-        grid-template-columns: 140px 1fr;
+        grid-template-columns: 180px 1fr;
         border-bottom: 1px solid #e0e0e0;
       }
       .tracker-row:last-child {
@@ -79,11 +79,11 @@
   </head>
   <body>
     <div id="container">
-      <h1>Signal / URL / localStorage Tracking</h1>
+      <h1>Signal / URL Tracking</h1>
       <p class="lead">
-        Shows live JS value, URL representation, localStorage value and validity
-        state as you type. Uses a <code>type="hour"</code> signal so
-        type-casting (string → number) is visible.
+        Shows live JS value, URL representation and validity state as you type.
+        Uses a <code>type="hour"</code> signal so type-casting (string → number)
+        is visible.
       </p>
       <div id="app"></div>
     </div>
@@ -126,19 +126,11 @@
         step: 0.5,
       });
 
-      // 4. Persisted in localStorage
-      const persistedSignal = stateSignal(8, {
-        id: "persisted",
-        type: "hour",
-        persists: true,
-      });
-
       const DEMO_ROUTE = route("", {
         searchParams: {
           no_default: noDefaultSignal,
           with_default: withDefaultSignal,
           constrained: constrainedSignal,
-          persisted: persistedSignal,
         },
       });
       setupRoutes([DEMO_ROUTE]);
@@ -170,7 +162,6 @@
         const jsVal = sig.value;
         const v = validity.value;
         const urlVal = v?.representations?.url?.value;
-        const lsVal = v?.representations?.localStorage?.value;
         const validVal = v?.representations?.valid?.value;
 
         return (
@@ -203,10 +194,6 @@
             <div class="tracker-row">
               <span class="tracker-label">representations.url</span>
               <Val value={urlVal} />
-            </div>
-            <div class="tracker-row">
-              <span class="tracker-label">representations.localStorage</span>
-              <Val value={lsVal} />
             </div>
           </div>
         );
@@ -265,13 +252,6 @@
               title="3. Constrained (min=0 max=23 step=0.5)"
               desc="Signal has validity constraints. Invalid values (e.g. 8.3) appear in the URL but validity.valid=false and representations.valid is the suggested fix."
               sig={constrainedSignal}
-            />
-
-            <Section
-              id="persisted"
-              title="4. Persisted in localStorage"
-              desc='Signal is persisted. Reload the page to see the value restored from localStorage. The "representations.localStorage" row shows what is written.'
-              sig={persistedSignal}
             />
           </Box>
         </NaviDebug>
