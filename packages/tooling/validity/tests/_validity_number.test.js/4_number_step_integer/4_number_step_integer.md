@@ -12,7 +12,11 @@ const rows = cases.map((value) => {
   applyOn(value);
   return [
     cell(humanize(value)),
-    cell(validity.representations?.custom !== undefined ? humanize(validity.representations.custom) : "-"),
+    cell(
+      validity.representations?.custom !== undefined
+        ? humanize(validity.representations.custom)
+        : "-",
+    ),
     cell(validity.valid ? "✓" : "✗"),
     cell(
       validity.validSuggestion

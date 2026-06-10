@@ -33,7 +33,7 @@ const grid = [
     applyOnString(value);
     return [
       cell(humanize(value)),
-      reprCell(validityString),
+      reprCell(validityString.representations.custom),
       cell(validityString.valid ? "✓" : "✗"),
       cell(validityString.type ?? "-"),
     ];
@@ -47,13 +47,13 @@ return renderTable(grid, { borderCollapse: true });
 ┌────────────────┬────────────────────────┬───────┬──────────────────┐
 │ value          │ representation: string │ valid │ invalid message  │
 ├────────────────┼────────────────────────┼───────┼──────────────────┤
-│ 42             │ [[CANNOT_CONVERT]]     │ ✓     │ -                │
+│ 42             │ "42"                   │ ✓     │ -                │
 ├────────────────┼────────────────────────┼───────┼──────────────────┤
-│  3.14          │ [[CANNOT_CONVERT]]     │ ✓     │ -                │
+│  3.14          │ "3.14"                 │ ✓     │ -                │
 ├────────────────┼────────────────────────┼───────┼──────────────────┤
-│ "123"          │ [[CANNOT_CONVERT]]     │ ✓     │ -                │
+│ "123"          │ "123"                  │ ✓     │ -                │
 ├────────────────┼────────────────────────┼───────┼──────────────────┤
-│ "3.14"         │ [[CANNOT_CONVERT]]     │ ✓     │ -                │
+│ "3.14"         │ "3.14"                 │ ✓     │ -                │
 ├────────────────┼────────────────────────┼───────┼──────────────────┤
 │ "not a number" │ [[CANNOT_CONVERT]]     │ ✗     │ must be a number │
 ├────────────────┼────────────────────────┼───────┼──────────────────┤
