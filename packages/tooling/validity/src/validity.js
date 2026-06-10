@@ -77,24 +77,24 @@ export const createValidity = (ruleConfig) => {
     const theType = ruleConfig.type;
     if (theType) {
       const typeDef = TYPES[theType];
-      if (typeDef?.defaults) {
-        Object.assign(effectiveRuleConfig, typeDef.defaults);
+      if (typeDef?.props) {
+        for (const [propName, propDef] of Object.entries(typeDef.props)) {
+          if (propDef.default !== undefined && ruleConfig[propName] === undefined) {
+            effectiveRuleConfig[propName] = propDef.default;
+          }
+        }
       }
     }
     Object.assign(effectiveRuleConfig, ruleConfig);
-    if (TYPES[theType]?.isDuration) {
-      effectiveRuleConfig.min = resolveTimeString(
-        effectiveRuleConfig.min,
-        theType,
-      );
-      effectiveRuleConfig.max = resolveTimeString(
-        effectiveRuleConfig.max,
-        theType,
-      );
-      effectiveRuleConfig.step = resolveTimeString(
-        effectiveRuleConfig.step,
-        theType,
-      );
+    if (theType) {
+      const typeDef = TYPES[theType];
+      if (typeDef?.props) {
+        for (const [propName, propDef] of Object.entries(typeDef.props)) {
+          if (propDef.resolver && effectiveRuleConfig[propName] !== undefined) {
+            effectiveRuleConfig[propName] = propDef.resolver(effectiveRuleConfig[propName]);
+          }
+        }
+      }
     }
     const { type, min, max, step, oneOf, ...unknown } = effectiveRuleConfig;
     if (Object.keys(unknown).length > 0) {
@@ -263,31 +263,38 @@ export const createValidity = (ruleConfig) => {
 
 const CANNOT_AUTOFIX = {};
 
-// Parses a time string "HH:MM" or "H:MM" into a numeric duration for the given type:
-//   minute → total minutes (e.g. "01:30" → 90)
-//   hour   → total hours   (e.g. "01:30" → 1.5)
-//   second → total seconds (e.g. "01:30" → 90)
+// Parses a time string "HH:MM" or "H:MM" into a numeric duration.
 // Returns the value as-is if it is not a time string.
-const resolveTimeString = (value, type) => {
+const parseTimeString = (value) => {
   if (typeof value !== "string") {
-    return value;
+    return null;
   }
   const match = /^(\d+):(\d{2})$/.exec(value);
   if (!match) {
+    return null;
+  }
+  return { left: parseInt(match[1], 10), right: parseInt(match[2], 10) };
+};
+const resolveTimeStringAsMinutes = (value) => {
+  const parsed = parseTimeString(value);
+  if (!parsed) {
     return value;
   }
-  const left = parseInt(match[1], 10);
-  const right = parseInt(match[2], 10);
-  if (type === "minute") {
-    return left * 60 + right;
+  return parsed.left * 60 + parsed.right;
+};
+const resolveTimeStringAsHours = (value) => {
+  const parsed = parseTimeString(value);
+  if (!parsed) {
+    return value;
   }
-  if (type === "hour") {
-    return left + right / 60;
+  return parsed.left + parsed.right / 60;
+};
+const resolveTimeStringAsSeconds = (value) => {
+  const parsed = parseTimeString(value);
+  if (!parsed) {
+    return value;
   }
-  if (type === "second") {
-    return left * 60 + right;
-  }
-  return value;
+  return parsed.left * 60 + parsed.right;
 };
 
 const validateNumber = (value) => {
@@ -393,29 +400,41 @@ const TYPES = {
     },
   },
   ratio: {
-    defaults: { min: 0, max: 1 },
+    props: {
+      min: { default: 0 },
+      max: { default: 1 },
+    },
     validate: validateNumber,
     convert: {
       string: convertStringToNumber,
     },
   },
   longitude: {
-    defaults: { min: -180, max: 180 },
+    props: {
+      min: { default: -180 },
+      max: { default: 180 },
+    },
     validate: validateNumber,
     convert: {
       string: convertStringToNumber,
     },
   },
   latitude: {
-    defaults: { min: -90, max: 90 },
+    props: {
+      min: { default: -90 },
+      max: { default: 90 },
+    },
     validate: validateNumber,
     convert: {
       string: convertStringToNumber,
     },
   },
   hour: {
-    defaults: { min: 0, max: 24, step: 1 },
-    isDuration: true,
+    props: {
+      min: { default: 0, resolver: resolveTimeStringAsHours },
+      max: { default: 24, resolver: resolveTimeStringAsHours },
+      step: { default: 1, resolver: resolveTimeStringAsHours },
+    },
     validate: (value) => {
       if (typeof value === "number" && Number.isFinite(value)) {
         return "";
@@ -427,8 +446,11 @@ const TYPES = {
     },
   },
   minute: {
-    defaults: { min: 0, max: 60, step: 1 },
-    isDuration: true,
+    props: {
+      min: { default: 0, resolver: resolveTimeStringAsMinutes },
+      max: { default: 60, resolver: resolveTimeStringAsMinutes },
+      step: { default: 1, resolver: resolveTimeStringAsMinutes },
+    },
     validate: (value) => {
       if (typeof value === "number" && Number.isFinite(value)) {
         return "";
@@ -440,8 +462,11 @@ const TYPES = {
     },
   },
   second: {
-    defaults: { min: 0, max: 60, step: 1 },
-    isDuration: true,
+    props: {
+      min: { default: 0, resolver: resolveTimeStringAsSeconds },
+      max: { default: 60, resolver: resolveTimeStringAsSeconds },
+      step: { default: 1, resolver: resolveTimeStringAsSeconds },
+    },
     validate: (value) => {
       if (typeof value === "number" && Number.isFinite(value)) {
         return "";
@@ -590,7 +615,6 @@ const TYPES = {
     },
   },
   date: {
-    defaults: {},
     validate: (value) => {
       if (typeof value === "number" && Number.isFinite(value)) {
         return ""; // timestamp
@@ -631,7 +655,6 @@ const TYPES = {
     },
   },
   month: {
-    defaults: {},
     validate: (value) => {
       if (typeof value === "number" && Number.isFinite(value)) {
         return ""; // timestamp
@@ -655,7 +678,6 @@ const TYPES = {
     },
   },
   datetime: {
-    defaults: {},
     validate: (value) => {
       if (typeof value === "number" && Number.isFinite(value)) {
         return ""; // timestamp
