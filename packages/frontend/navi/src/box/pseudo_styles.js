@@ -10,7 +10,7 @@ import {
   findControlProxyTarget,
 } from "../control/control_proxy.js";
 import { addInputEffect } from "../control/input_effect.js";
-import { getUIStateFromElement } from "../control/ui_state_controller.js";
+import { getUIStateFromElement } from "../control/ui_state_dom.js";
 
 const requestPseudoStateCheck = (element, detail) => {
   dispatchInternalCustomEvent(

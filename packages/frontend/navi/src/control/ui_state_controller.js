@@ -17,9 +17,13 @@ import {
 import { useNavState } from "../nav/browser_integration/browser_integration.js";
 import { useInitialValue } from "../state/use_initial_value.js";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
-import { findControlHost } from "./control_dom.js";
 import { findControlProxy } from "./control_proxy.js";
+import { asControlHostValue } from "./control_value.js";
 import { FormContext } from "./form_context.js";
+import {
+  dispatchRequestResetUIState,
+  dispatchRequestSetUIState,
+} from "./ui_state_dom.js";
 
 // In-memory registry of all mounted ui state controllers keyed by their id.
 // Allows direct controller access without dispatching DOM events — used by external
@@ -325,7 +329,11 @@ export const useUIStateController = (
           e,
           `[${statePropName}] = ${JSON.stringify(propValue)};`,
         );
-        el[statePropName] = propValue;
+        el[statePropName] = asControlHostValue(propValue, {
+          controlType,
+          type: props.type,
+          inputMode: props.inputMode,
+        });
       }
       uiStateController.uiState = newUIState;
       ownUIStateSignal.value = newUIState;
@@ -755,28 +763,6 @@ export const useUIGroupStateController = (
 // array (never undefined) and callers don't get a new reference each render.
 const EMPTY_ARRAY = [];
 const EMPTY_OBJECT = {};
-
-export const dispatchRequestSetUIState = (element, value, detail) => {
-  const controlHost = findControlHost(element) || element;
-  return dispatchInternalCustomEvent(controlHost, "navi_set_ui_state", {
-    ...detail,
-    value,
-  });
-};
-export const dispatchRequestResetUIState = (element, e) => {
-  return dispatchInternalCustomEvent(element, "navi_request_reset_ui_state", {
-    event: e,
-  });
-};
-export const getUIStateFromElement = (el) => {
-  let uiState;
-  dispatchInternalCustomEvent(el, "navi_get_ui_state", {
-    respondWith: (v) => {
-      uiState = v;
-    },
-  });
-  return uiState;
-};
 
 /**
  * Hook to subscribe to the UI state of a field from its DOM element ref.

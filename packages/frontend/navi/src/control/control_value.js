@@ -1,6 +1,6 @@
 import { dispatchCustomEvent } from "@jsenv/dom";
 
-import { getUIStateFromElement } from "./ui_state_controller.js";
+import { getUIStateFromElement } from "./ui_state_dom.js";
 
 /**
  * Converts a JS value into the form expected by the browser DOM property for a

@@ -5,7 +5,7 @@
 import { formatDay, formatMonth } from "@jsenv/navi/src/text/format_time.js";
 import { langSignal } from "@jsenv/navi/src/text/lang_signal.js";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
-import { getUIStateFromElement } from "../../ui_state_controller.js";
+import { getUIStateFromElement } from "../../ui_state_dom.js";
 import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
 import { fieldTypeSuffix } from "./constraint_message_util.js";
 

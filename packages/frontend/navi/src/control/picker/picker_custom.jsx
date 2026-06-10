@@ -11,7 +11,7 @@ import { compareTwoJsValues } from "@jsenv/navi/src/utils/compare_two_js_values.
 import {
   dispatchRequestSetUIState,
   getUIStateFromElement,
-} from "../ui_state_controller.js";
+} from "../ui_state_dom.js";
 import {
   dispatchRequestAction,
   dispatchRequestInteraction,

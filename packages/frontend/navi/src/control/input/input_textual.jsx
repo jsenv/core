@@ -28,7 +28,6 @@ import {
   useNextResolver,
 } from "../../resolver/resolver.jsx";
 import { useControlProps } from "../control_hooks.jsx";
-import { asControlHostValue } from "../control_value.js";
 import { InputNaviHourResolver } from "./input_navi_hour.jsx";
 import { InputModeResolver } from "./input_resolver_mode.jsx";
 import { InputTypeResolver } from "./input_resolver_type.jsx";
@@ -277,24 +276,21 @@ const InputTextualHeadless = (props) => {
   return <RealInput {...inputProps} {...remainingProps} />;
 };
 const useInputTextualProps = (props) => {
-  const [controlProps, remainingProps, ControlChildrenWrapper] =
-    useControlProps(props, {
+  const [controlProps, remainingProps, uiStateController] = useControlProps(
+    props,
+    {
       controlType: "input",
       statePropName: "value",
       defaultStatePropName: "defaultValue",
       readOnlySupported: true,
-    });
-  controlProps.value = asControlHostValue(controlProps.value, {
-    controlType: "input",
-    type: props.type,
-    inputMode: props.inputMode,
-  });
-  return [controlProps, remainingProps, ControlChildrenWrapper];
+    },
+  );
+  return [controlProps, remainingProps, uiStateController];
 };
 const InputTextualUI = (props) => {
   import.meta.css = css;
   const { ui, discrete } = props;
-  const [inputProps, remainingProps, ControlChildrenWrapper] =
+  const [inputProps, remainingProps, { ControlChildrenWrapper }] =
     useInputTextualProps(props);
   const idDefault = useId();
   inputProps.id = inputProps.id || `input_${idDefault}`;
