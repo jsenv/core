@@ -27,8 +27,8 @@ await snapshotTests(import.meta.url, ({ test }) => {
   test("unit transition progression (seconds→minutes)", () => {
     // Simulate time ticking up as we approach and cross the 1-minute boundary
     const cases = [
-      55_000, 57_000, 58_000, 59_000, 59_500, 59_900, 59_999, 60_000, 60_500,
-      61_000, 62_000,
+      55_000, 59_400, 59_449, 59_450, 59_499, 59_500, 59_501, 59_900, 59_999,
+      60_000, 60_001,
     ];
     const grid = [
       [cell("input (ms)"), cell("output"), cell("output (short)")],
