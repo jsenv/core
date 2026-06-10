@@ -208,11 +208,6 @@ export const createValidity = (ruleConfig) => {
         value = parsed;
       }
     }
-    if (value === undefined) {
-      validity.valid = true;
-      validity.validSuggestion = null;
-      return value;
-    }
     let valid = true;
     let validSuggestion = null;
 

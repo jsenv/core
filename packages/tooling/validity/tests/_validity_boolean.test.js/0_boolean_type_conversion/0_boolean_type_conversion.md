@@ -5,16 +5,36 @@ const [validity, applyOn] = createValidity({
   type: "boolean",
 });
 
-const cases = [true, false, "true", "false", "on", "1", 1, 0, "toto", undefined];
+const cases = [
+  true,
+  false,
+  "true",
+  "false",
+  "on",
+  "1",
+  1,
+  0,
+  "toto",
+  undefined,
+];
 
 const grid = [
-  [cell("value"), cell("valid"), cell("valid suggestion"), cell("invalid message")],
+  [
+    cell("value"),
+    cell("valid"),
+    cell("valid suggestion"),
+    cell("invalid message"),
+  ],
   ...cases.map((value) => {
     applyOn(value);
     return [
       cell(humanize(value)),
       cell(validity.valid ? "✓" : "✗"),
-      cell(validity.validSuggestion ? humanize(validity.validSuggestion.value) : "-"),
+      cell(
+        validity.validSuggestion
+          ? humanize(validity.validSuggestion.value)
+          : "-",
+      ),
       cell(validity.type ?? "-"),
     ];
   }),
@@ -24,29 +44,29 @@ return renderTable(grid, { borderCollapse: true });
 ```
 
 ```js
-┌───────────┬───────┬──────────────────┬───────────────────────────────┐
-│ value     │ valid │ valid suggestion │ invalid message               │
-├───────────┼───────┼──────────────────┼───────────────────────────────┤
-│ true      │ ✓     │ -                │ -                             │
-├───────────┼───────┼──────────────────┼───────────────────────────────┤
-│ false     │ ✓     │ -                │ -                             │
-├───────────┼───────┼──────────────────┼───────────────────────────────┤
-│ "true"    │ ✗     │ true             │ must be a boolean, got string │
-├───────────┼───────┼──────────────────┼───────────────────────────────┤
-│ "false"   │ ✗     │ false            │ must be a boolean, got string │
-├───────────┼───────┼──────────────────┼───────────────────────────────┤
-│ "on"      │ ✗     │ true             │ must be a boolean, got string │
-├───────────┼───────┼──────────────────┼───────────────────────────────┤
-│ "1"       │ ✗     │ true             │ must be a boolean, got string │
-├───────────┼───────┼──────────────────┼───────────────────────────────┤
-│ 1         │ ✗     │ true             │ must be a boolean, got number │
-├───────────┼───────┼──────────────────┼───────────────────────────────┤
-│ 0         │ ✗     │ false            │ must be a boolean, got number │
-├───────────┼───────┼──────────────────┼───────────────────────────────┤
-│ "toto"    │ ✗     │ -                │ must be a boolean, got string │
-├───────────┼───────┼──────────────────┼───────────────────────────────┤
-│ undefined │ ✓     │ -                │ must be a boolean, got string │
-└───────────┴───────┴──────────────────┴───────────────────────────────┘
+┌───────────┬───────┬──────────────────┬──────────────────────────────────┐
+│ value     │ valid │ valid suggestion │ invalid message                  │
+├───────────┼───────┼──────────────────┼──────────────────────────────────┤
+│ true      │ ✓     │ -                │ -                                │
+├───────────┼───────┼──────────────────┼──────────────────────────────────┤
+│ false     │ ✓     │ -                │ -                                │
+├───────────┼───────┼──────────────────┼──────────────────────────────────┤
+│ "true"    │ ✗     │ true             │ must be a boolean, got string    │
+├───────────┼───────┼──────────────────┼──────────────────────────────────┤
+│ "false"   │ ✗     │ false            │ must be a boolean, got string    │
+├───────────┼───────┼──────────────────┼──────────────────────────────────┤
+│ "on"      │ ✗     │ true             │ must be a boolean, got string    │
+├───────────┼───────┼──────────────────┼──────────────────────────────────┤
+│ "1"       │ ✗     │ true             │ must be a boolean, got string    │
+├───────────┼───────┼──────────────────┼──────────────────────────────────┤
+│ 1         │ ✗     │ true             │ must be a boolean, got number    │
+├───────────┼───────┼──────────────────┼──────────────────────────────────┤
+│ 0         │ ✗     │ false            │ must be a boolean, got number    │
+├───────────┼───────┼──────────────────┼──────────────────────────────────┤
+│ "toto"    │ ✗     │ -                │ must be a boolean, got string    │
+├───────────┼───────┼──────────────────┼──────────────────────────────────┤
+│ undefined │ ✗     │ -                │ must be a boolean, got undefined │
+└───────────┴───────┴──────────────────┴──────────────────────────────────┘
 ```
 
 ---
