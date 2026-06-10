@@ -89,7 +89,7 @@
     </div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useComputed } from "@preact/signals";
+      import { useComputed, useSignal } from "@preact/signals";
       import {
         Box,
         Button,
@@ -153,7 +153,7 @@
         );
       };
 
-      const Tracker = ({ sig }) => {
+      const Tracker = ({ sig, formValue }) => {
         const validity = useComputed(() => {
           // eslint-disable-next-line no-unused-expressions
           sig.value; // read signal to subscribe
@@ -195,38 +195,55 @@
               <span class="tracker-label">representations.url</span>
               <Val value={urlVal} />
             </div>
+            <div class="tracker-row">
+              <span class="tracker-label">form submitted value</span>
+              <Val value={formValue.value} />
+            </div>
           </div>
         );
       };
 
       // ── Sections ──────────────────────────────────────────────────────────
 
-      const Section = ({ id, title, desc, sig, inputProps }) => (
-        <div class="demo-section" id={id}>
-          <h2>{title}</h2>
-          {desc && <p class="desc">{desc}</p>}
-          <Box flex="y" spacing="s" alignX="start">
-            <Field>
-              <Label>Heures</Label>
-              <Input
-                value={sig}
-                action={(v) => {
-                  sig.value = v;
-                }}
-                {...inputProps}
-              />
-            </Field>
-            <Button
-              onClick={() => {
-                sig.value = undefined;
+      const Section = ({ id, title, desc, sig, inputProps }) => {
+        const formValue = useSignal(undefined);
+        return (
+          <div class="demo-section" id={id}>
+            <h2>{title}</h2>
+            {desc && <p class="desc">{desc}</p>}
+            <Form
+              action={(params) => {
+                formValue.value = params.heures;
               }}
             >
-              Reset to undefined
-            </Button>
-          </Box>
-          <Tracker sig={sig} />
-        </div>
-      );
+              <Box flex="y" spacing="s" alignX="start">
+                <Field>
+                  <Label>Heures</Label>
+                  <Input
+                    name="heures"
+                    value={sig}
+                    action={(v) => {
+                      sig.value = v;
+                    }}
+                    {...inputProps}
+                  />
+                </Field>
+                <Box flex="x" spacing="s">
+                  <Button type="submit">Submit</Button>
+                  <Button
+                    onClick={() => {
+                      sig.value = undefined;
+                    }}
+                  >
+                    Reset to undefined
+                  </Button>
+                </Box>
+              </Box>
+            </Form>
+            <Tracker sig={sig} formValue={formValue} />
+          </div>
+        );
+      };
 
       // ── App ───────────────────────────────────────────────────────────────
 
