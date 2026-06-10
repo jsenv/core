@@ -108,10 +108,15 @@ export const createValidity = (ruleConfig) => {
       storageTargets.set(key, { type, format: repr.format });
       return;
     }
-    // No explicit format defined. If the representation type matches the
-    // canonical JS type of the value (e.g. url repr "string" for a type
-    // whose jsType is "string"), no conversion is needed — use identity.
-    if (typeDef?.jsType === type) {
+    // No explicit format defined.
+    // - If there is no typeDef (untyped signal): use String() as safe serializer.
+    // - If the representation type matches the canonical JS type (e.g. "string" repr
+    //   for a type whose jsType is "string"): identity, no conversion needed.
+    if (!typeDef) {
+      storageTargets.set(key, { type, format: String });
+      return;
+    }
+    if (typeDef.jsType === type) {
       storageTargets.set(key, { type, format: (value) => value });
       return;
     }
@@ -120,9 +125,11 @@ export const createValidity = (ruleConfig) => {
     );
   };
   const effectiveLocalStorageRepr =
-    localStorageRepresentationOverride ?? typeDef?.localStorageRepresentation;
+    localStorageRepresentationOverride ??
+    typeDef?.localStorageRepresentation ??
+    "string";
   const effectiveUrlRepr =
-    urlRepresentationOverride ?? typeDef?.urlRepresentation;
+    urlRepresentationOverride ?? typeDef?.urlRepresentation ?? "string";
   addStorageTarget("localStorage", effectiveLocalStorageRepr);
   addStorageTarget("url", effectiveUrlRepr);
   if (representation) {
