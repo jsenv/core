@@ -468,6 +468,11 @@ export const useUIStateController = (
     subscribe: subscribeUIState,
   };
   uiStateControllerRef.current = uiStateController;
+  // Register synchronously during render so getUIStateControllerById works
+  // immediately in the same render cycle (e.g. InputTextualUI reading uiState).
+  if (id) {
+    controllersById.set(id, uiStateController);
+  }
   return uiStateController;
 };
 
