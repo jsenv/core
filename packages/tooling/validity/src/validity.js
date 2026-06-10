@@ -346,9 +346,20 @@ export const createValidity = (ruleConfig) => {
     for (const [key, { type, format }] of storageTargets) {
       // Always write the representation regardless of validity,
       // so callers (URL, localStorage) can reflect the current value even when invalid.
+      // When the value is not in the canonical JS type (e.g. "a" typed in a number field),
+      // the format function would produce garbage (NaN etc.). Fall back to String(value).
+      let representedValue;
+      if (value !== undefined) {
+        const jsType = typeDef?.jsType;
+        if (jsType && typeof value !== jsType) {
+          representedValue = String(value);
+        } else {
+          representedValue = format(value);
+        }
+      }
       validity.representations[key] = {
         type,
-        value: value !== undefined ? format(value) : undefined,
+        value: representedValue,
       };
     }
     return value;
