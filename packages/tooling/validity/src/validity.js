@@ -78,18 +78,24 @@ import { CANNOT_CONVERT, TYPES } from "./types.js";
 export const createValidity = (ruleConfig) => {
   const validity = {};
 
-  const { representation, ...ruleConfigWithoutRepresentation } = ruleConfig;
+  const {
+    representation,
+    localStorageRepresentation: localStorageRepresentationOverride,
+    urlRepresentation: urlRepresentationOverride,
+    ...ruleConfigWithoutRepresentation
+  } = ruleConfig;
   ruleConfig = ruleConfigWithoutRepresentation;
 
-  // Resolve the format/parse pair for the chosen representation.
-  // - parse: converts any value to the canonical form before validation
-  //          (tries all representations until one succeeds; skips if already canonical)
-  // - format: converts from the canonical value back to the chosen representation
+  const theType = ruleConfig.type;
+  const typeDef = theType ? TYPES[theType] : null;
+
+  // parse: when a representation option is passed, converts any input value to
+  // canonical form before validation by trying all known representations.
   let parse = null;
-  let format = null;
+  // representationFormat: format fn for the explicit representation option,
+  // used to format validSuggestion back to the caller's expected format.
+  let representationFormat = null;
   if (representation) {
-    const theType = ruleConfig.type;
-    const typeDef = theType ? TYPES[theType] : null;
     const repr = typeDef?.representations?.[representation];
     if (!repr) {
       throw new Error(
@@ -101,16 +107,11 @@ export const createValidity = (ruleConfig) => {
         `[createValidity] Representation "${representation}" for type "${theType}" has no format function`,
       );
     }
-    format = repr.format;
+    representationFormat = repr.format;
     const allRepresentations = typeDef.representations
       ? Object.values(typeDef.representations)
       : [];
-    const storageType = typeDef?.storage;
     parse = (value) => {
-      // Already canonical — no conversion needed
-      if (storageType && typeof value === storageType) {
-        return value;
-      }
       // Try each representation's parse until one succeeds
       for (const r of allRepresentations) {
         if (!r.parse) {
@@ -123,6 +124,37 @@ export const createValidity = (ruleConfig) => {
       }
       return CANNOT_CONVERT;
     };
+  }
+
+  // Determine which named storage targets to track in validity.representations.
+  // Each target: { reprName, formatFn } — used to populate { type, value } entries.
+  // "url" and "localStorage" come from the type def (overridable via ruleConfig options).
+  // An explicit "representation" option adds its own named entry.
+  const storageTargets = []; // [{ key, reprName, formatFn }]
+  const addStorageTarget = (key, reprName) => {
+    if (!reprName) {
+      return;
+    }
+    const repr = typeDef?.representations?.[reprName];
+    if (!repr?.format) {
+      return;
+    }
+    storageTargets.push({ key, reprName, formatFn: repr.format });
+  };
+  const effectiveLocalStorageRepr =
+    localStorageRepresentationOverride ?? typeDef?.localStorageRepresentation;
+  const effectiveUrlRepr =
+    urlRepresentationOverride ?? typeDef?.urlRepresentation;
+  addStorageTarget("localStorage", effectiveLocalStorageRepr);
+  addStorageTarget("url", effectiveUrlRepr);
+  if (representation) {
+    // Only add if not already covered by the storage targets above
+    const alreadyTracked = storageTargets.some(
+      (t) => t.reprName === representation,
+    );
+    if (!alreadyTracked) {
+      addStorageTarget(representation, representation);
+    }
   }
 
   const ruleSet = new Set();
@@ -223,8 +255,11 @@ export const createValidity = (ruleConfig) => {
     }
     validity.valid = true;
     validity.validSuggestion = null;
-    if (format) {
-      validity.value = undefined;
+    if (storageTargets.length > 0) {
+      validity.representations = {};
+      for (const { key, reprName } of storageTargets) {
+        validity.representations[key] = { type: reprName, value: undefined };
+      }
     }
   }
 
@@ -318,14 +353,19 @@ export const createValidity = (ruleConfig) => {
     }
 
     validity.valid = valid;
-    // Format validSuggestion back to the chosen representation
-    if (validSuggestion && format) {
-      validSuggestion = { value: format(validSuggestion.value) };
+    // Format validSuggestion back to the explicit representation option
+    if (validSuggestion && representationFormat) {
+      validSuggestion = { value: representationFormat(validSuggestion.value) };
     }
     validity.validSuggestion = validSuggestion;
-    // Expose the formatted value when valid
-    if (format) {
-      validity.value = valid ? format(value) : undefined;
+    // Update validity.representations for each storage target
+    if (storageTargets.length > 0) {
+      for (const { key, reprName, formatFn } of storageTargets) {
+        validity.representations[key] = {
+          type: reprName,
+          value: valid ? formatFn(value) : undefined,
+        };
+      }
     }
     return value;
   };

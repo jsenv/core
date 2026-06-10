@@ -1,8 +1,7 @@
-import { createValidity, getLocalStorageType } from "@jsenv/validity";
+import { createValidity } from "@jsenv/validity";
 import { effect, signal } from "@preact/signals";
 
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
-import { valueInLocalStorage } from "./value_in_local_storage.js";
 
 // Global signal registry for route template detection
 export const globalSignalRegistry = new Map();
@@ -158,12 +157,37 @@ export const stateSignal = (defaultValue, options = {}) => {
 
   // Determine localStorage key: use id if persists=true, or legacy localStorage option
   const localStorageKey = signalIdString;
-  const [readFromLocalStorage, writeIntoLocalStorage, removeFromLocalStorage] =
-    persists
-      ? valueInLocalStorage(localStorageKey, {
-          type: getLocalStorageType(type) || type,
-        })
-      : NO_LOCAL_STORAGE;
+  const [validity, updateValidity] = createValidity({
+    type,
+    min,
+    max,
+    step,
+    oneOf,
+  });
+  const readFromLocalStorage = persists
+    ? () => {
+        const raw = window.localStorage.getItem(localStorageKey);
+        if (raw === null) {
+          return undefined;
+        }
+        return raw;
+      }
+    : () => undefined;
+  const updateLocalStorage = persists
+    ? () => {
+        const localStorageValue = validity.representations.localStorage.value;
+        if (localStorageValue === undefined) {
+          window.localStorage.removeItem(localStorageKey);
+        } else {
+          window.localStorage.setItem(localStorageKey, localStorageValue);
+        }
+      }
+    : () => {};
+  const removeFromLocalStorage = persists
+    ? () => {
+        window.localStorage.removeItem(localStorageKey);
+      }
+    : () => {};
 
   /**
    * Returns the current default value from code logic only (static or dynamic).
@@ -241,13 +265,6 @@ export const stateSignal = (defaultValue, options = {}) => {
   };
 
   // Create signal with initial value: use stored value, or undefined to indicate no explicit value
-  const [validity, updateValidity] = createValidity({
-    type,
-    min,
-    max,
-    step,
-    oneOf,
-  });
   const processValue = (value) => {
     if (value === undefined) {
       return undefined;
@@ -413,7 +430,7 @@ export const stateSignal = (defaultValue, options = {}) => {
               `[stateSignal:${signalIdString}] dynamic default: writing to localStorage "${localStorageKey}"=${value}`,
             );
           }
-          writeIntoLocalStorage(value);
+          updateLocalStorage();
         }
         return;
       }
@@ -424,7 +441,7 @@ export const stateSignal = (defaultValue, options = {}) => {
             `[stateSignal:${signalIdString}] writing into localStorage "${localStorageKey}"=${value}`,
           );
         }
-        writeIntoLocalStorage(value);
+        updateLocalStorage();
       } else {
         if (debug) {
           console.debug(
@@ -485,5 +502,3 @@ export const stateSignal = (defaultValue, options = {}) => {
 
   return facadeSignal;
 };
-
-const NO_LOCAL_STORAGE = [() => undefined, () => {}, () => {}];

@@ -31,12 +31,9 @@ await snapshotTests(import.meta.url, ({ test }) => {
       undefined,
     ];
 
-    const reprCell = (validity) => {
-      return cell(
-        validity.value !== undefined
-          ? humanize(validity.value)
-          : "[[CANNOT_CONVERT]]",
-      );
+    const reprCell = (validity, reprName) => {
+      const v = validity.representations?.[reprName];
+      return cell(v !== undefined ? humanize(v) : "[[CANNOT_CONVERT]]");
     };
 
     const grid = [
@@ -50,8 +47,8 @@ await snapshotTests(import.meta.url, ({ test }) => {
         applyOnNumber(value);
         return [
           cell(humanize(value)),
-          reprCell(validityString),
-          reprCell(validityNumber),
+          reprCell(validityString, "string"),
+          reprCell(validityNumber, "number"),
         ];
       }),
     ];

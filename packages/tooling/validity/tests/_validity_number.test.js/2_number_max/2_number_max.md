@@ -12,7 +12,7 @@ const rows = cases.map((value) => {
   applyOn(value);
   return [
     cell(humanize(value)),
-    cell(validity.value !== undefined ? humanize(validity.value) : "-"),
+    cell(validity.representations?.string !== undefined ? humanize(validity.representations.string) : "-"),
     cell(validity.valid ? "✓" : "✗"),
     cell(
       validity.validSuggestion
@@ -42,9 +42,9 @@ return renderTable(
 ┌───────┬───────────┬───────┬──────────────────┬────────────────┐
 │ value │ converted │ valid │ valid suggestion │ max error      │
 ├───────┼───────────┼───────┼──────────────────┼────────────────┤
-│ "50"  │ "50"      │ ✓     │ -                │ -              │
+│ "50"  │ -         │ ✓     │ -                │ -              │
 ├───────┼───────────┼───────┼──────────────────┼────────────────┤
-│ "100" │ "100"     │ ✓     │ -                │ -              │
+│ "100" │ -         │ ✓     │ -                │ -              │
 ├───────┼───────────┼───────┼──────────────────┼────────────────┤
 │ "150" │ -         │ ✗     │ "100"            │ must be <= 100 │
 └───────┴───────────┴───────┴──────────────────┴────────────────┘

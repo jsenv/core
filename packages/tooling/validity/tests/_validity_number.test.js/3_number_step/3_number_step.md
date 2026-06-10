@@ -12,7 +12,7 @@ const rows = cases.map((value) => {
   applyOn(value);
   return [
     cell(humanize(value)),
-    cell(validity.value !== undefined ? humanize(validity.value) : "-"),
+    cell(validity.representations?.string !== undefined ? humanize(validity.representations.string) : "-"),
     cell(validity.valid ? "✓" : "✗"),
     cell(
       validity.validSuggestion
@@ -42,7 +42,7 @@ return renderTable(
 ┌────────────┬───────────┬───────┬──────────────────┬────────────────────────────────────┐
 │ value      │ converted │ valid │ valid suggestion │ step error                         │
 ├────────────┼───────────┼───────┼──────────────────┼────────────────────────────────────┤
-│ "1.2"      │ "1.2"     │ ✓     │ -                │ -                                  │
+│ "1.2"      │ -         │ ✓     │ -                │ -                                  │
 ├────────────┼───────────┼───────┼──────────────────┼────────────────────────────────────┤
 │ "1.23"     │ -         │ ✗     │ "1.2"            │ must have at most 1 decimal places │
 ├────────────┼───────────┼───────┼──────────────────┼────────────────────────────────────┤

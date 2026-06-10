@@ -20,7 +20,13 @@ const rows = cases.map((value) => {
         : "-",
     ),
     cell(
-      [validity.type, validity.min, validity.max, validity.step, validity.oneOf]
+      [
+        validity.type,
+        validity.min,
+        validity.max,
+        validity.step,
+        validity.oneOf,
+      ]
         .filter(Boolean)
         .join(", ") || "-",
     ),

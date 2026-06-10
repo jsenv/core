@@ -7,34 +7,6 @@ import { createValidity } from "../src/validity.js";
 const BORDER = { color: COLORS.GREY };
 const cell = (value) => ({ value, border: BORDER });
 
-const validityTable = (validity, cases) => {
-  const grid = [
-    [
-      cell("value"),
-      cell("valid"),
-      cell("valid suggestion"),
-      cell("invalid message"),
-    ],
-    ...cases.map((value) => {
-      return [
-        cell(humanize(value)),
-        cell(validity.valid ? "✓" : "✗"),
-        cell(
-          validity.validSuggestion
-            ? humanize(validity.validSuggestion.value)
-            : "-",
-        ),
-        cell(
-          [validity.type, validity.min, validity.max, validity.step]
-            .filter(Boolean)
-            .join(", ") || "-",
-        ),
-      ];
-    }),
-  ];
-  return renderTable(grid, { borderCollapse: true });
-};
-
 await snapshotTests(import.meta.url, ({ test }) => {
   test("number representations and type", () => {
     const [validityString, applyOnString] = createValidity({
@@ -91,7 +63,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
       applyOn(value);
       return [
         cell(humanize(value)),
-        cell(validity.value !== undefined ? humanize(validity.value) : "-"),
+        cell(validity.representations?.string !== undefined ? humanize(validity.representations.string) : "-"),
         cell(validity.valid ? "✓" : "✗"),
         cell(
           validity.validSuggestion
@@ -129,7 +101,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
       applyOn(value);
       return [
         cell(humanize(value)),
-        cell(validity.value !== undefined ? humanize(validity.value) : "-"),
+        cell(validity.representations?.string !== undefined ? humanize(validity.representations.string) : "-"),
         cell(validity.valid ? "✓" : "✗"),
         cell(
           validity.validSuggestion
@@ -167,7 +139,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
       applyOn(value);
       return [
         cell(humanize(value)),
-        cell(validity.value !== undefined ? humanize(validity.value) : "-"),
+        cell(validity.representations?.string !== undefined ? humanize(validity.representations.string) : "-"),
         cell(validity.valid ? "✓" : "✗"),
         cell(
           validity.validSuggestion
@@ -205,7 +177,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
       applyOn(value);
       return [
         cell(humanize(value)),
-        cell(validity.value !== undefined ? humanize(validity.value) : "-"),
+        cell(validity.representations?.string !== undefined ? humanize(validity.representations.string) : "-"),
         cell(validity.valid ? "✓" : "✗"),
         cell(
           validity.validSuggestion
@@ -245,7 +217,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
       applyOn(value);
       return [
         cell(humanize(value)),
-        cell(validity.value !== undefined ? humanize(validity.value) : "-"),
+        cell(validity.representations?.string !== undefined ? humanize(validity.representations.string) : "-"),
         cell(validity.valid ? "✓" : "✗"),
         cell(
           validity.validSuggestion
@@ -290,7 +262,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
       applyOn(value);
       return [
         cell(humanize(value)),
-        cell(validity.value !== undefined ? humanize(validity.value) : "-"),
+        cell(validity.representations?.string !== undefined ? humanize(validity.representations.string) : "-"),
         cell(validity.valid ? "✓" : "✗"),
         cell(
           validity.validSuggestion
