@@ -1,6 +1,15 @@
 import { parseDurationToSeconds } from "@jsenv/validity";
 
+import { isSignal } from "../../utils/is_signal.js";
 import { parseStepToSeconds } from "../picker/time_helpers.js";
+
+// Maps validity type names → navi input type names
+const VALIDITY_TYPE_TO_INPUT_TYPE = {
+  hour: "navi_hour",
+  minute: "navi_minute",
+  second: "navi_second",
+  percentage: "navi_percentage",
+};
 
 // Conceptual number types: define defaults and map to native type="number".
 // The `data-navi-input-type` attribute is set so constraint messages can use
@@ -84,6 +93,22 @@ const NAVI_TYPE_DEFAULTS = {
  *   step accepts `"HH:MM"` and is converted to seconds.
  */
 export const resolveInputProps = (props) => {
+  // If value is a stateSignal, pull type/min/max/step defaults from the signal's options.
+  // Explicit props take precedence over signal options.
+  const valueSignal = props.value;
+  if (isSignal(valueSignal) && valueSignal.options) {
+    const signalOptions = valueSignal.options;
+    for (const key of ["min", "max", "step"]) {
+      if (props[key] === undefined && signalOptions[key] !== undefined) {
+        props[key] = signalOptions[key];
+      }
+    }
+    if (props.type === undefined && signalOptions.type !== undefined) {
+      props.type =
+        VALIDITY_TYPE_TO_INPUT_TYPE[signalOptions.type] ?? signalOptions.type;
+    }
+  }
+
   const currentType = props.type;
   const currentTypeDefaults = NAVI_TYPE_DEFAULTS[currentType];
   if (!currentTypeDefaults) {

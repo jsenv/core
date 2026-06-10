@@ -55,9 +55,9 @@ return renderTable(grid, { borderCollapse: true });
 ├────────────────┼───────────────────────────────┼────────┼────────────────────┤
 │ "3.14"         │ "3.14"                        │ true   │ undefined          │
 ├────────────────┼───────────────────────────────┼────────┼────────────────────┤
-│ "not a number" │ [[CANNOT_CONVERT]]            │ false  │ "must be a number" │
+│ "not a number" │ "not a number"                │ false  │ "must be a number" │
 ├────────────────┼───────────────────────────────┼────────┼────────────────────┤
-│ Infinity       │ [[CANNOT_CONVERT]]            │ false  │ "must be finite"   │
+│ Infinity       │ "Infinity"                    │ false  │ "must be finite"   │
 ├────────────────┼───────────────────────────────┼────────┼────────────────────┤
 │ undefined      │ [[CANNOT_CONVERT]]            │ false  │ "must be a number" │
 └────────────────┴───────────────────────────────┴────────┴────────────────────┘

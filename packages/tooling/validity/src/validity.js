@@ -344,19 +344,12 @@ export const createValidity = (ruleConfig) => {
       validity.representations.valid = null;
     }
     for (const [key, { type, format }] of storageTargets) {
-      if (key === "custom") {
-        // custom always shows the coerced (and possibly autoFixed) input value
-        validity.representations[key] = {
-          type,
-          value: value !== undefined ? format(value) : undefined,
-        };
-      } else {
-        // localStorage/url only written when value is valid
-        validity.representations[key] = {
-          type,
-          value: valid && value !== undefined ? format(value) : undefined,
-        };
-      }
+      // Always write the representation regardless of validity,
+      // so callers (URL, localStorage) can reflect the current value even when invalid.
+      validity.representations[key] = {
+        type,
+        value: value !== undefined ? format(value) : undefined,
+      };
     }
     return value;
   };

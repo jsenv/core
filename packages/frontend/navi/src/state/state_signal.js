@@ -167,7 +167,6 @@ export const stateSignal = (defaultValue, options = {}) => {
     oneOf,
     localStorageRepresentation,
     urlRepresentation,
-    autoFix: true,
   });
   const readFromLocalStorage = persists
     ? () => {
@@ -278,18 +277,9 @@ export const stateSignal = (defaultValue, options = {}) => {
       return undefined;
     }
     updateValidity(value);
-    if (!validity.valid) {
-      console.warn(
-        `[stateSignal:${signalIdString}] validation failed with no valid suggestion: `,
-        { value, validity },
-      );
-      return value;
-    }
-    if (validity.autoFixed && debug) {
-      console.debug(
-        `[stateSignal:${signalIdString}] autoFix applied: ${value} → ${validity.value}`,
-      );
-    }
+    // Always return the coerced value (type coercion applies), even if invalid.
+    // Invalid values are preserved as-is so the UI can display them and the URL
+    // can reflect the current input state without silently correcting it.
     return validity.value;
   };
   const preactSignal = signal(processValue(getFallbackValue()));
