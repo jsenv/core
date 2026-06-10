@@ -116,10 +116,7 @@ export const stateSignal = (defaultValue, options = {}) => {
     debug,
     default: staticFallback,
     ignoreArrayOrder,
-    undefinedAlias,
   } = options;
-  const undefinedAliasSet =
-    undefinedAlias === undefined ? undefined : new Set(undefinedAlias);
 
   // Check if defaultValue is a signal (dynamic default) or static value
   const isDynamicDefault =
@@ -253,9 +250,6 @@ export const stateSignal = (defaultValue, options = {}) => {
   // Create signal with initial value: use stored value, or undefined to indicate no explicit value
   const processValue = (value) => {
     if (value === undefined) {
-      return undefined;
-    }
-    if (undefinedAliasSet && undefinedAliasSet.has(value)) {
       return undefined;
     }
     updateValidity(value);
