@@ -3,11 +3,11 @@
 ```js
 const [validityString, applyOnString] = createValidity({
   type: "boolean",
-  representation: "string",
+  customRepresentation: "string",
 });
 const [validityNumber, applyOnNumber] = createValidity({
   type: "boolean",
-  representation: "number",
+  customRepresentation: "number",
 });
 
 const cases = [
@@ -52,55 +52,25 @@ return renderTable(grid, { borderCollapse: true });
 ┌───────────┬────────────────────────┬────────────────────────┐
 │ value     │ representation: string │ representation: number │
 ├───────────┼────────────────────────┼────────────────────────┤
-│ true      │ [[CANNOT_CONVERT]]     │ {                      │
-│           │                        │   "type": "number",    │
-│           │                        │   "value": 1           │
-│           │                        │ }                      │
+│ true      │ [[CANNOT_CONVERT]]     │ [[CANNOT_CONVERT]]     │
 ├───────────┼────────────────────────┼────────────────────────┤
-│ false     │ [[CANNOT_CONVERT]]     │ {                      │
-│           │                        │   "type": "number",    │
-│           │                        │   "value": 0           │
-│           │                        │ }                      │
+│ false     │ [[CANNOT_CONVERT]]     │ [[CANNOT_CONVERT]]     │
 ├───────────┼────────────────────────┼────────────────────────┤
-│ "true"    │ [[CANNOT_CONVERT]]     │ {                      │
-│           │                        │   "type": "number",    │
-│           │                        │   "value": 1           │
-│           │                        │ }                      │
+│ "true"    │ [[CANNOT_CONVERT]]     │ [[CANNOT_CONVERT]]     │
 ├───────────┼────────────────────────┼────────────────────────┤
-│ "false"   │ [[CANNOT_CONVERT]]     │ {                      │
-│           │                        │   "type": "number",    │
-│           │                        │   "value": 0           │
-│           │                        │ }                      │
+│ "false"   │ [[CANNOT_CONVERT]]     │ [[CANNOT_CONVERT]]     │
 ├───────────┼────────────────────────┼────────────────────────┤
-│ "on"      │ [[CANNOT_CONVERT]]     │ {                      │
-│           │                        │   "type": "number",    │
-│           │                        │   "value": 1           │
-│           │                        │ }                      │
+│ "on"      │ [[CANNOT_CONVERT]]     │ [[CANNOT_CONVERT]]     │
 ├───────────┼────────────────────────┼────────────────────────┤
-│ "1"       │ [[CANNOT_CONVERT]]     │ {                      │
-│           │                        │   "type": "number",    │
-│           │                        │   "value": 1           │
-│           │                        │ }                      │
+│ "1"       │ [[CANNOT_CONVERT]]     │ [[CANNOT_CONVERT]]     │
 ├───────────┼────────────────────────┼────────────────────────┤
-│ 1         │ [[CANNOT_CONVERT]]     │ {                      │
-│           │                        │   "type": "number",    │
-│           │                        │   "value": 1           │
-│           │                        │ }                      │
+│ 1         │ [[CANNOT_CONVERT]]     │ [[CANNOT_CONVERT]]     │
 ├───────────┼────────────────────────┼────────────────────────┤
-│ 0         │ [[CANNOT_CONVERT]]     │ {                      │
-│           │                        │   "type": "number",    │
-│           │                        │   "value": 0           │
-│           │                        │ }                      │
+│ 0         │ [[CANNOT_CONVERT]]     │ [[CANNOT_CONVERT]]     │
 ├───────────┼────────────────────────┼────────────────────────┤
-│ "toto"    │ [[CANNOT_CONVERT]]     │ {                      │
-│           │                        │   "type": "number",    │
-│           │                        │   "value": undefined   │
-│           │                        │ }                      │
+│ "toto"    │ [[CANNOT_CONVERT]]     │ [[CANNOT_CONVERT]]     │
 ├───────────┼────────────────────────┼────────────────────────┤
-│ undefined │ [[CANNOT_CONVERT]]     │ {                      │
-│           │                        │   "type": "number",    │
-│           │                        │   "value": undefined   │
-│           │                        │ }                      │
+│ undefined │ [[CANNOT_CONVERT]]     │ [[CANNOT_CONVERT]]     │
 └───────────┴────────────────────────┴────────────────────────┘
 ```
 

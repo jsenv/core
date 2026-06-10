@@ -11,7 +11,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
   test("number representations and type", () => {
     const [validityString, applyOnString] = createValidity({
       type: "number",
-      representation: "string",
+      customRepresentation: "string",
     });
 
     const cases = [
@@ -54,7 +54,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
   test("number min", () => {
     const [validity, applyOn] = createValidity({
       type: "number",
-      representation: "string",
+      customRepresentation: "string",
       min: 0,
     });
 
@@ -63,7 +63,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
       applyOn(value);
       return [
         cell(humanize(value)),
-        cell(validity.representations?.string !== undefined ? humanize(validity.representations.string) : "-"),
+        cell(validity.representations?.custom !== undefined ? humanize(validity.representations.custom) : "-"),
         cell(validity.valid ? "✓" : "✗"),
         cell(
           validity.validSuggestion
@@ -92,7 +92,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
   test("number max", () => {
     const [validity, applyOn] = createValidity({
       type: "number",
-      representation: "string",
+      customRepresentation: "string",
       max: 100,
     });
 
@@ -101,7 +101,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
       applyOn(value);
       return [
         cell(humanize(value)),
-        cell(validity.representations?.string !== undefined ? humanize(validity.representations.string) : "-"),
+        cell(validity.representations?.custom !== undefined ? humanize(validity.representations.custom) : "-"),
         cell(validity.valid ? "✓" : "✗"),
         cell(
           validity.validSuggestion
@@ -130,7 +130,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
   test("number step", () => {
     const [validity, applyOn] = createValidity({
       type: "number",
-      representation: "string",
+      customRepresentation: "string",
       step: 0.1,
     });
 
@@ -139,7 +139,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
       applyOn(value);
       return [
         cell(humanize(value)),
-        cell(validity.representations?.string !== undefined ? humanize(validity.representations.string) : "-"),
+        cell(validity.representations?.custom !== undefined ? humanize(validity.representations.custom) : "-"),
         cell(validity.valid ? "✓" : "✗"),
         cell(
           validity.validSuggestion
@@ -168,7 +168,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
   test("number step integer", () => {
     const [validity, applyOn] = createValidity({
       type: "number",
-      representation: "string",
+      customRepresentation: "string",
       step: 1,
     });
 
@@ -177,7 +177,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
       applyOn(value);
       return [
         cell(humanize(value)),
-        cell(validity.representations?.string !== undefined ? humanize(validity.representations.string) : "-"),
+        cell(validity.representations?.custom !== undefined ? humanize(validity.representations.custom) : "-"),
         cell(validity.valid ? "✓" : "✗"),
         cell(
           validity.validSuggestion
@@ -206,7 +206,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
   test("number combined min max step", () => {
     const [validity, applyOn] = createValidity({
       type: "number",
-      representation: "string",
+      customRepresentation: "string",
       min: 0,
       max: 10,
       step: 0.5,
@@ -217,7 +217,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
       applyOn(value);
       return [
         cell(humanize(value)),
-        cell(validity.representations?.string !== undefined ? humanize(validity.representations.string) : "-"),
+        cell(validity.representations?.custom !== undefined ? humanize(validity.representations.custom) : "-"),
         cell(validity.valid ? "✓" : "✗"),
         cell(
           validity.validSuggestion
@@ -251,7 +251,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     // String inputs get converted, then suggestions from one rule are validated against all others
     const [validity, applyOn] = createValidity({
       type: "number",
-      representation: "string",
+      customRepresentation: "string",
       min: 0,
       max: 100,
       step: 1,
@@ -262,7 +262,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
       applyOn(value);
       return [
         cell(humanize(value)),
-        cell(validity.representations?.string !== undefined ? humanize(validity.representations.string) : "-"),
+        cell(validity.representations?.custom !== undefined ? humanize(validity.representations.custom) : "-"),
         cell(validity.valid ? "✓" : "✗"),
         cell(
           validity.validSuggestion

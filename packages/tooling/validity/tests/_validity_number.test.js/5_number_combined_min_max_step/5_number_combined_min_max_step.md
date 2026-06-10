@@ -3,7 +3,7 @@
 ```js
 const [validity, applyOn] = createValidity({
   type: "number",
-  representation: "string",
+  customRepresentation: "string",
   min: 0,
   max: 10,
   step: 0.5,
@@ -14,7 +14,7 @@ const rows = cases.map((value) => {
   applyOn(value);
   return [
     cell(humanize(value)),
-    cell(validity.representations?.string !== undefined ? humanize(validity.representations.string) : "-"),
+    cell(validity.representations?.custom !== undefined ? humanize(validity.representations.custom) : "-"),
     cell(validity.valid ? "✓" : "✗"),
     cell(
       validity.validSuggestion
@@ -45,13 +45,19 @@ return renderTable(
 ```
 
 ```js
-┌────────┬───────────┬───────┬──────────────────┬─────────────────────────────────────────────┐
-│ value  │ converted │ valid │ valid suggestion │ errors                                      │
-├────────┼───────────┼───────┼──────────────────┼─────────────────────────────────────────────┤
-│ "5.5"  │ -         │ ✓     │ -                │ -                                           │
-├────────┼───────────┼───────┼──────────────────┼─────────────────────────────────────────────┤
-│ "-2.3" │ -         │ ✗     │ "0"              │ must be positive, must be a multiple of 0.5 │
-└────────┴───────────┴───────┴──────────────────┴─────────────────────────────────────────────┘
+┌────────┬──────────────────────┬───────┬──────────────────┬─────────────────────────────────────────────┐
+│ value  │ converted            │ valid │ valid suggestion │ errors                                      │
+├────────┼──────────────────────┼───────┼──────────────────┼─────────────────────────────────────────────┤
+│ "5.5"  │ {                    │ ✓     │ -                │ -                                           │
+│        │   "type": "string",  │       │                  │                                             │
+│        │   "value": "5.5"     │       │                  │                                             │
+│        │ }                    │       │                  │                                             │
+├────────┼──────────────────────┼───────┼──────────────────┼─────────────────────────────────────────────┤
+│ "-2.3" │ {                    │ ✗     │ "0"              │ must be positive, must be a multiple of 0.5 │
+│        │   "type": "string",  │       │                  │                                             │
+│        │   "value": undefined │       │                  │                                             │
+│        │ }                    │       │                  │                                             │
+└────────┴──────────────────────┴───────┴──────────────────┴─────────────────────────────────────────────┘
 ```
 
 ---

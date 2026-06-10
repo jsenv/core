@@ -3,7 +3,7 @@
 ```js
 const [validity, applyOn] = createValidity({
   type: "number",
-  representation: "string",
+  customRepresentation: "string",
   max: 100,
 });
 
@@ -12,7 +12,7 @@ const rows = cases.map((value) => {
   applyOn(value);
   return [
     cell(humanize(value)),
-    cell(validity.representations?.string !== undefined ? humanize(validity.representations.string) : "-"),
+    cell(validity.representations?.custom !== undefined ? humanize(validity.representations.custom) : "-"),
     cell(validity.valid ? "✓" : "✗"),
     cell(
       validity.validSuggestion
@@ -39,15 +39,24 @@ return renderTable(
 ```
 
 ```js
-┌───────┬───────────┬───────┬──────────────────┬────────────────┐
-│ value │ converted │ valid │ valid suggestion │ max error      │
-├───────┼───────────┼───────┼──────────────────┼────────────────┤
-│ "50"  │ -         │ ✓     │ -                │ -              │
-├───────┼───────────┼───────┼──────────────────┼────────────────┤
-│ "100" │ -         │ ✓     │ -                │ -              │
-├───────┼───────────┼───────┼──────────────────┼────────────────┤
-│ "150" │ -         │ ✗     │ "100"            │ must be <= 100 │
-└───────┴───────────┴───────┴──────────────────┴────────────────┘
+┌───────┬──────────────────────┬───────┬──────────────────┬────────────────┐
+│ value │ converted            │ valid │ valid suggestion │ max error      │
+├───────┼──────────────────────┼───────┼──────────────────┼────────────────┤
+│ "50"  │ {                    │ ✓     │ -                │ -              │
+│       │   "type": "string",  │       │                  │                │
+│       │   "value": "50"      │       │                  │                │
+│       │ }                    │       │                  │                │
+├───────┼──────────────────────┼───────┼──────────────────┼────────────────┤
+│ "100" │ {                    │ ✓     │ -                │ -              │
+│       │   "type": "string",  │       │                  │                │
+│       │   "value": "100"     │       │                  │                │
+│       │ }                    │       │                  │                │
+├───────┼──────────────────────┼───────┼──────────────────┼────────────────┤
+│ "150" │ {                    │ ✗     │ "100"            │ must be <= 100 │
+│       │   "type": "string",  │       │                  │                │
+│       │   "value": undefined │       │                  │                │
+│       │ }                    │       │                  │                │
+└───────┴──────────────────────┴───────┴──────────────────┴────────────────┘
 ```
 
 ---

@@ -79,7 +79,7 @@ export const createValidity = (ruleConfig) => {
   const validity = {};
 
   const {
-    representation,
+    customRepresentation,
     localStorageRepresentation: localStorageRepresentationOverride,
     urlRepresentation: urlRepresentationOverride,
     ...ruleConfigWithoutRepresentation
@@ -92,19 +92,19 @@ export const createValidity = (ruleConfig) => {
   // parse: when a representation option is passed, converts any input value to
   // canonical form before validation by trying all known representations.
   let parse = null;
-  // representationFormat: format fn for the explicit representation option,
+  // representationFormat: format fn for the custom representation option,
   // used to format validSuggestion back to the caller's expected format.
   let representationFormat = null;
-  if (representation) {
-    const repr = typeDef?.representations?.[representation];
+  if (customRepresentation) {
+    const repr = typeDef?.representations?.[customRepresentation];
     if (!repr) {
       throw new Error(
-        `[createValidity] Unknown representation "${representation}" for type "${theType}"`,
+        `[createValidity] Unknown representation "${customRepresentation}" for type "${theType}"`,
       );
     }
     if (!repr.format) {
       throw new Error(
-        `[createValidity] Representation "${representation}" for type "${theType}" has no format function`,
+        `[createValidity] Representation "${customRepresentation}" for type "${theType}" has no format function`,
       );
     }
     representationFormat = repr.format;
@@ -130,7 +130,7 @@ export const createValidity = (ruleConfig) => {
   // Each target: { reprName, formatFn } — used to populate { type, value } entries.
   // "url" and "localStorage" come from the type def (overridable via ruleConfig options).
   // An explicit "representation" option adds its own named entry.
-  const storageTargets = []; // [{ key, reprName, formatFn }]
+  const storageTargets = new Map(); // key → { type, formatFn }
   const addStorageTarget = (key, reprName) => {
     if (!reprName) {
       return;
@@ -139,7 +139,7 @@ export const createValidity = (ruleConfig) => {
     if (!repr?.format) {
       return;
     }
-    storageTargets.push({ key, reprName, formatFn: repr.format });
+    storageTargets.set(key, { type: reprName, formatFn: repr.format });
   };
   const effectiveLocalStorageRepr =
     localStorageRepresentationOverride ?? typeDef?.localStorageRepresentation;
@@ -147,14 +147,8 @@ export const createValidity = (ruleConfig) => {
     urlRepresentationOverride ?? typeDef?.urlRepresentation;
   addStorageTarget("localStorage", effectiveLocalStorageRepr);
   addStorageTarget("url", effectiveUrlRepr);
-  if (representation) {
-    // Only add if not already covered by the storage targets above
-    const alreadyTracked = storageTargets.some(
-      (t) => t.reprName === representation,
-    );
-    if (!alreadyTracked) {
-      addStorageTarget(representation, representation);
-    }
+  if (customRepresentation) {
+    addStorageTarget("custom", customRepresentation);
   }
 
   const ruleSet = new Set();
@@ -255,9 +249,9 @@ export const createValidity = (ruleConfig) => {
     }
     validity.valid = true;
     validity.validSuggestion = null;
-    if (storageTargets.length > 0) {
+    if (storageTargets.size > 0) {
       validity.representations = {};
-      for (const { key, reprName } of storageTargets) {
+      for (const [key, { type: reprName }] of storageTargets) {
         validity.representations[key] = { type: reprName, value: undefined };
       }
     }
@@ -359,8 +353,8 @@ export const createValidity = (ruleConfig) => {
     }
     validity.validSuggestion = validSuggestion;
     // Update validity.representations for each storage target
-    if (storageTargets.length > 0) {
-      for (const { key, reprName, formatFn } of storageTargets) {
+    if (storageTargets.size > 0) {
+      for (const [key, { type: reprName, formatFn }] of storageTargets) {
         validity.representations[key] = {
           type: reprName,
           value: valid ? formatFn(value) : undefined,

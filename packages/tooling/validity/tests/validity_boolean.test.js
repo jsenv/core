@@ -11,11 +11,11 @@ await snapshotTests(import.meta.url, ({ test }) => {
   test("boolean representations", () => {
     const [validityString, applyOnString] = createValidity({
       type: "boolean",
-      representation: "string",
+      customRepresentation: "string",
     });
     const [validityNumber, applyOnNumber] = createValidity({
       type: "boolean",
-      representation: "number",
+      customRepresentation: "number",
     });
 
     const cases = [

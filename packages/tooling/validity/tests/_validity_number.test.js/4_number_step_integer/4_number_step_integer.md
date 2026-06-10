@@ -3,7 +3,7 @@
 ```js
 const [validity, applyOn] = createValidity({
   type: "number",
-  representation: "string",
+  customRepresentation: "string",
   step: 1,
 });
 
@@ -12,7 +12,7 @@ const rows = cases.map((value) => {
   applyOn(value);
   return [
     cell(humanize(value)),
-    cell(validity.representations?.string !== undefined ? humanize(validity.representations.string) : "-"),
+    cell(validity.representations?.custom !== undefined ? humanize(validity.representations.custom) : "-"),
     cell(validity.valid ? "✓" : "✗"),
     cell(
       validity.validSuggestion
@@ -39,13 +39,19 @@ return renderTable(
 ```
 
 ```js
-┌───────┬───────────┬───────┬──────────────────┬────────────────────────────────────┐
-│ value │ converted │ valid │ valid suggestion │ step error                         │
-├───────┼───────────┼───────┼──────────────────┼────────────────────────────────────┤
-│ "5"   │ -         │ ✓     │ -                │ -                                  │
-├───────┼───────────┼───────┼──────────────────┼────────────────────────────────────┤
-│ "5.5" │ -         │ ✗     │ "6"              │ must have at most 0 decimal places │
-└───────┴───────────┴───────┴──────────────────┴────────────────────────────────────┘
+┌───────┬──────────────────────┬───────┬──────────────────┬────────────────────────────────────┐
+│ value │ converted            │ valid │ valid suggestion │ step error                         │
+├───────┼──────────────────────┼───────┼──────────────────┼────────────────────────────────────┤
+│ "5"   │ {                    │ ✓     │ -                │ -                                  │
+│       │   "type": "string",  │       │                  │                                    │
+│       │   "value": "5"       │       │                  │                                    │
+│       │ }                    │       │                  │                                    │
+├───────┼──────────────────────┼───────┼──────────────────┼────────────────────────────────────┤
+│ "5.5" │ {                    │ ✗     │ "6"              │ must have at most 0 decimal places │
+│       │   "type": "string",  │       │                  │                                    │
+│       │   "value": undefined │       │                  │                                    │
+│       │ }                    │       │                  │                                    │
+└───────┴──────────────────────┴───────┴──────────────────┴────────────────────────────────────┘
 ```
 
 ---

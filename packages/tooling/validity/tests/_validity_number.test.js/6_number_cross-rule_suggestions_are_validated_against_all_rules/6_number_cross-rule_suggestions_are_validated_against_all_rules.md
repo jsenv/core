@@ -4,7 +4,7 @@
 // String inputs get converted, then suggestions from one rule are validated against all others
 const [validity, applyOn] = createValidity({
   type: "number",
-  representation: "string",
+  customRepresentation: "string",
   min: 0,
   max: 100,
   step: 1,
@@ -15,7 +15,7 @@ const rows = cases.map((value) => {
   applyOn(value);
   return [
     cell(humanize(value)),
-    cell(validity.representations?.string !== undefined ? humanize(validity.representations.string) : "-"),
+    cell(validity.representations?.custom !== undefined ? humanize(validity.representations.custom) : "-"),
     cell(validity.valid ? "✓" : "✗"),
     cell(
       validity.validSuggestion
@@ -46,17 +46,29 @@ return renderTable(
 ```
 
 ```js
-┌───────┬───────────┬───────┬──────────────────┬────────────────────────────────────┐
-│ value │ converted │ valid │ valid suggestion │ errors                             │
-├───────┼───────────┼───────┼──────────────────┼────────────────────────────────────┤
-│ "150" │ -         │ ✗     │ "100"            │ must be <= 100                     │
-├───────┼───────────┼───────┼──────────────────┼────────────────────────────────────┤
-│ "5.5" │ -         │ ✗     │ "6"              │ must have at most 0 decimal places │
-├───────┼───────────┼───────┼──────────────────┼────────────────────────────────────┤
-│ "-10" │ -         │ ✗     │ "0"              │ must be positive                   │
-├───────┼───────────┼───────┼──────────────────┼────────────────────────────────────┤
-│ "50"  │ -         │ ✓     │ -                │ -                                  │
-└───────┴───────────┴───────┴──────────────────┴────────────────────────────────────┘
+┌───────┬──────────────────────┬───────┬──────────────────┬────────────────────────────────────┐
+│ value │ converted            │ valid │ valid suggestion │ errors                             │
+├───────┼──────────────────────┼───────┼──────────────────┼────────────────────────────────────┤
+│ "150" │ {                    │ ✗     │ "100"            │ must be <= 100                     │
+│       │   "type": "string",  │       │                  │                                    │
+│       │   "value": undefined │       │                  │                                    │
+│       │ }                    │       │                  │                                    │
+├───────┼──────────────────────┼───────┼──────────────────┼────────────────────────────────────┤
+│ "5.5" │ {                    │ ✗     │ "6"              │ must have at most 0 decimal places │
+│       │   "type": "string",  │       │                  │                                    │
+│       │   "value": undefined │       │                  │                                    │
+│       │ }                    │       │                  │                                    │
+├───────┼──────────────────────┼───────┼──────────────────┼────────────────────────────────────┤
+│ "-10" │ {                    │ ✗     │ "0"              │ must be positive                   │
+│       │   "type": "string",  │       │                  │                                    │
+│       │   "value": undefined │       │                  │                                    │
+│       │ }                    │       │                  │                                    │
+├───────┼──────────────────────┼───────┼──────────────────┼────────────────────────────────────┤
+│ "50"  │ {                    │ ✓     │ -                │ -                                  │
+│       │   "type": "string",  │       │                  │                                    │
+│       │   "value": "50"      │       │                  │                                    │
+│       │ }                    │       │                  │                                    │
+└───────┴──────────────────────┴───────┴──────────────────┴────────────────────────────────────┘
 ```
 
 ---

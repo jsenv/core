@@ -3,7 +3,7 @@
 ```js
 const [validityString, applyOnString] = createValidity({
   type: "number",
-  representation: "string",
+  customRepresentation: "string",
 });
 
 const cases = [
