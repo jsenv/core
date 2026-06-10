@@ -89,7 +89,11 @@
       );
 
       const DEMO_ROUTE = route("", {
-        searchParams: { duration: durationSignal },
+        searchParams: {
+          duration: durationSignal,
+          custom_hour: customDurationHourSignal,
+          custom_minute: customDurationMinuteSignal,
+        },
       });
       setupRoutes([DEMO_ROUTE]);
 
@@ -224,6 +228,7 @@
                 uiAction={(v) => {
                   customDurationHourSignal.value = v;
                 }}
+                action="update"
               />
               <Input
                 type="navi_minute"
@@ -231,6 +236,7 @@
                 uiAction={(v) => {
                   customDurationMinuteSignal.value = v;
                 }}
+                action="update"
               />
             </Box>
           </List.Item>
