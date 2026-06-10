@@ -107,6 +107,7 @@ const convertStringToNumber = (value) => {
 
 export const TYPES = {
   "boolean": {
+    jsRepresentation: "boolean",
     localStorageRepresentation: "string",
     urlRepresentation: "string",
     representations: {
@@ -133,6 +134,7 @@ export const TYPES = {
     },
   },
   "number": {
+    jsRepresentation: "number",
     localStorageRepresentation: "string",
     urlRepresentation: "string",
     validate: validateNumber,
@@ -144,6 +146,7 @@ export const TYPES = {
     },
   },
   "string": {
+    jsRepresentation: "string",
     localStorageRepresentation: "string",
     urlRepresentation: "string",
     representations: {
@@ -162,6 +165,7 @@ export const TYPES = {
     },
   },
   "array": {
+    jsRepresentation: "array",
     localStorageRepresentation: "string",
     urlRepresentation: "string",
     validate: (value) => {
@@ -185,6 +189,7 @@ export const TYPES = {
     },
   },
   "object": {
+    jsRepresentation: "object",
     localStorageRepresentation: "string",
     urlRepresentation: "string",
     validate: (value) => {
@@ -211,6 +216,7 @@ export const TYPES = {
     },
   },
   "date": {
+    jsRepresentation: "Date",
     localStorageRepresentation: "string",
     urlRepresentation: "string",
     // canonical: Date object
@@ -268,6 +274,7 @@ export const TYPES = {
     },
   },
   "datetime": {
+    jsRepresentation: "Date",
     localStorageRepresentation: "string",
     urlRepresentation: "string",
     validate: (value) => {
@@ -289,6 +296,7 @@ export const TYPES = {
   },
   // "datetime-local" matches the value format of <input type="datetime-local">: "YYYY-MM-DDTHH:MM"
   "datetime-local": {
+    jsRepresentation: "string",
     localStorageRepresentation: "string",
     urlRepresentation: "string",
     validate: (value) => {
@@ -339,6 +347,7 @@ export const TYPES = {
   },
   // number/derived
   "float": {
+    jsRepresentation: "number",
     localStorageRepresentation: "string",
     urlRepresentation: "string",
     validate: validateNumber,
@@ -350,6 +359,7 @@ export const TYPES = {
     },
   },
   "integer": {
+    jsRepresentation: "number",
     localStorageRepresentation: "string",
     urlRepresentation: "string",
     validate: (value) => {
@@ -380,6 +390,7 @@ export const TYPES = {
     },
   },
   "ratio": {
+    jsRepresentation: "number",
     localStorageRepresentation: "string",
     urlRepresentation: "string",
     props: {
@@ -395,6 +406,7 @@ export const TYPES = {
     },
   },
   "longitude": {
+    jsRepresentation: "number",
     localStorageRepresentation: "string",
     urlRepresentation: "string",
     props: {
@@ -410,6 +422,7 @@ export const TYPES = {
     },
   },
   "latitude": {
+    jsRepresentation: "number",
     localStorageRepresentation: "string",
     urlRepresentation: "string",
     props: {
@@ -425,6 +438,7 @@ export const TYPES = {
     },
   },
   "second": {
+    jsRepresentation: "number",
     localStorageRepresentation: "string",
     urlRepresentation: "string",
     props: {
@@ -453,6 +467,7 @@ export const TYPES = {
     },
   },
   "minute": {
+    jsRepresentation: "number",
     localStorageRepresentation: "string",
     urlRepresentation: "string",
     props: {
@@ -481,6 +496,7 @@ export const TYPES = {
     },
   },
   "hour": {
+    jsRepresentation: "number",
     localStorageRepresentation: "string",
     urlRepresentation: "string",
     props: {
@@ -510,6 +526,7 @@ export const TYPES = {
   },
   // "week" matches the value format of <input type="week">: "YYYY-Www" (e.g. "2024-W03")
   "week": {
+    jsRepresentation: "string",
     localStorageRepresentation: "string",
     urlRepresentation: "string",
     validate: (value) => {
@@ -524,6 +541,7 @@ export const TYPES = {
     },
   },
   "month": {
+    jsRepresentation: "string",
     localStorageRepresentation: "string",
     urlRepresentation: "string",
     validate: (value) => {
@@ -550,6 +568,7 @@ export const TYPES = {
   },
   // "year" is a plain number (e.g. 2024)
   "year": {
+    jsRepresentation: "number",
     localStorageRepresentation: "string",
     urlRepresentation: "string",
     validate: (value) => {
@@ -572,6 +591,7 @@ export const TYPES = {
     },
   },
   "percentage": {
+    jsRepresentation: "number",
     localStorageRepresentation: "string",
     urlRepresentation: "string",
     props: {
@@ -605,6 +625,7 @@ export const TYPES = {
   },
   // string/advanced
   "time": {
+    jsRepresentation: "string",
     localStorageRepresentation: "string",
     urlRepresentation: "string",
     validate: (value) => {
@@ -619,6 +640,7 @@ export const TYPES = {
     },
   },
   "email": {
+    jsRepresentation: "string",
     localStorageRepresentation: "string",
     urlRepresentation: "string",
     validate: (value) => {
@@ -637,6 +659,7 @@ export const TYPES = {
     },
   },
   "url": {
+    jsRepresentation: "string",
     localStorageRepresentation: "string",
     urlRepresentation: "string",
     validate: (value) => {
@@ -653,6 +676,7 @@ export const TYPES = {
     },
   },
   "color": {
+    jsRepresentation: "string",
     localStorageRepresentation: "string",
     urlRepresentation: "string",
     validate: (value) => {
