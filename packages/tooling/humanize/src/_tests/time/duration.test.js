@@ -9,15 +9,21 @@ snapshotTests.prefConfigure({ preserveDurations: true });
 await snapshotTests(import.meta.url, ({ test }) => {
   test("humanizeDuration", () => {
     const cases = [
-      0.1, 1.02, 1.52, 52, 55, 99, 999, 1_421, 59_999, 60_000, 61_421,
+      0, 0.1, 1.02, 1.52, 52, 55, 99, 999, 1_421, 59_999, 60_000, 61_421,
       3_599_999, 3_600_000, 3_601_200, 7_200_000, 7_651_200, 86_400_000,
       90_000_000,
     ];
     const grid = [
-      [cell("input (ms)"), cell("output"), cell("output (short)")],
+      [
+        cell("input (ms)"),
+        cell("output"),
+        cell("output (rounded: false)"),
+        cell("output (short)"),
+      ],
       ...cases.map((ms) => [
         cell(String(ms)),
         cell(humanizeDuration(ms)),
+        cell(humanizeDuration(ms, { rounded: false })),
         cell(humanizeDuration(ms, { short: true })),
       ]),
     ];
@@ -31,10 +37,16 @@ await snapshotTests(import.meta.url, ({ test }) => {
       60_000, 60_001,
     ];
     const grid = [
-      [cell("input (ms)"), cell("output"), cell("output (short)")],
+      [
+        cell("input (ms)"),
+        cell("output"),
+        cell("output (rounded: false)"),
+        cell("output (short)"),
+      ],
       ...cases.map((ms) => [
         cell(String(ms)),
         cell(humanizeDuration(ms)),
+        cell(humanizeDuration(ms, { rounded: false })),
         cell(humanizeDuration(ms, { short: true })),
       ]),
     ];
@@ -49,10 +61,45 @@ await snapshotTests(import.meta.url, ({ test }) => {
       3_602_000,
     ];
     const grid = [
-      [cell("input (ms)"), cell("output"), cell("output (short)")],
+      [
+        cell("input (ms)"),
+        cell("output"),
+        cell("output (rounded: false)"),
+        cell("output (short)"),
+      ],
       ...cases.map((ms) => [
         cell(String(ms)),
         cell(humanizeDuration(ms)),
+        cell(humanizeDuration(ms, { rounded: false })),
+        cell(humanizeDuration(ms, { short: true })),
+      ]),
+    ];
+    return renderTable(grid, { borderCollapse: true });
+  });
+
+  test("unit transition progression (hours→days)", () => {
+    const DAY_MS = 86_400_000;
+    const cases = [
+      DAY_MS - 3_600_000,
+      DAY_MS - 1_800_000,
+      DAY_MS - 600_000,
+      DAY_MS - 1_000,
+      DAY_MS - 500,
+      DAY_MS - 1,
+      DAY_MS,
+      DAY_MS + 1_000,
+    ];
+    const grid = [
+      [
+        cell("input (ms)"),
+        cell("output"),
+        cell("output (rounded: false)"),
+        cell("output (short)"),
+      ],
+      ...cases.map((ms) => [
+        cell(String(ms)),
+        cell(humanizeDuration(ms)),
+        cell(humanizeDuration(ms, { rounded: false })),
         cell(humanizeDuration(ms, { short: true })),
       ]),
     ];
