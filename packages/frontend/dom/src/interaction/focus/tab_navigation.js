@@ -47,10 +47,40 @@ export const performTabNavigation = (
   // A focus group "owns" the activeElement when activeElement is inside it.
   // From the inside, Tab should exit the group (skip its remaining children).
   // From the outside, Tab should enter the group normally (first focusable child).
+  //
+  // Smart mode (navi-focus-group="[role=radio]"):
+  //   - activeElement directly matches the selector (IS a radio):
+  //     Tab skips ALL elements in the group → exits to next focusable outside.
+  //   - activeElement is inside a managed element but doesn't match (e.g. an
+  //     input inside a custom radio widget): Tab navigates freely within the
+  //     group, only skipping elements that directly match the managed selector.
+  //
+  // Strict mode (navi-focus-group with no value, or navi-focus-group-strict):
+  //   Tab always exits the group regardless of where focus is inside it.
   const activeFocusGroup =
     activeElement.closest?.("[navi-focus-group]") || null;
-  const isOwnedByActiveFocusGroup = (el) =>
-    activeFocusGroup && activeFocusGroup.contains(el);
+  const activeFocusGroupManages = activeFocusGroup
+    ? activeFocusGroup.getAttribute("navi-focus-group") || null
+    : null;
+  const activeFocusGroupIsStrict = activeFocusGroup
+    ? !activeFocusGroupManages ||
+      activeFocusGroup.hasAttribute("navi-focus-group-strict")
+    : false;
+  const activeElementIsManaged =
+    activeFocusGroup && activeFocusGroupManages
+      ? activeElement.matches(activeFocusGroupManages)
+      : false;
+  const isOwnedByActiveFocusGroup = (el) => {
+    if (!activeFocusGroup || !activeFocusGroup.contains(el)) {
+      return false;
+    }
+    if (activeFocusGroupIsStrict || activeElementIsManaged) {
+      // Strict: skip everything inside the group so Tab exits.
+      return true;
+    }
+    // Smart: only skip elements that are themselves managed items.
+    return el.matches(activeFocusGroupManages);
+  };
 
   const predicate = (candidate, skip) => {
     if (!isFocusableByTab(candidate)) {
