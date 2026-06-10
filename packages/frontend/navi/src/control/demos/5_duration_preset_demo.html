@@ -149,7 +149,7 @@
               border="none"
               required
               value={value}
-              uiAction={(v) => {
+              action={(v) => {
                 durationSignal.value = v;
               }}
             >
@@ -159,6 +159,7 @@
                   index={i}
                   id={minutes}
                   value={minutes}
+                  selected={minutes === value}
                 >
                   {minutes}
                 </MinuteOption>
@@ -219,9 +220,6 @@
             paddingX="m"
             paddingY="s"
             alignX="center"
-            uiAction={(v) => {
-              durationSignal.value = v;
-            }}
           >
             Autre
             <Box flex spacing="xxs">
