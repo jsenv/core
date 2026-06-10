@@ -10,10 +10,17 @@ const cell = (value) => ({ value, border: BORDER });
 await snapshotTests(import.meta.url, ({ test }) => {
   test("time type validation", () => {
     const [validity, applyOn] = createValidity({
-  "type": "time"
-});
+      type: "time",
+    });
 
-    const cases = ["14:30","09:15:30","23:59:59","24:00","14:60",undefined];
+    const cases = [
+      "14:30",
+      "09:15:30",
+      "23:59:59",
+      "24:00",
+      "14:60",
+      undefined,
+    ];
     const rows = cases.map((value) => {
       applyOn(value);
       return [
