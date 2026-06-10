@@ -2,7 +2,7 @@
 
 
 - [date type validation](0_date_type_validation/0_date_type_validation.md)
-- [date type with min (timestamp)](1_date_type_with_min_(timestamp)/1_date_type_with_min_(timestamp).md)
+- [date min as timestamp (e.g. Date.now())](1_date_min_as_timestamp_(e_g__date_now())/1_date_min_as_timestamp_(e_g__date_now()).md)
 - [date type with min and max (string bounds)](2_date_type_with_min_and_max_(string_bounds)/2_date_type_with_min_and_max_(string_bounds).md)
 
 ---

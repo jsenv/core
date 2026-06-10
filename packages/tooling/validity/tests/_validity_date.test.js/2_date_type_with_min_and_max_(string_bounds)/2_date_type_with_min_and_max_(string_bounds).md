@@ -1,12 +1,21 @@
 # [date type with min and max (string bounds)](../../validity_date.test.js)
 
 ```js
-const [validity, applyOn] = createValidity({ type: "date", min: "2024-01-01", max: "2024-12-31" });
-return makeTable(validity, applyOn, [
-  ['"2024-06-15"', "2024-06-15"],
-  ['"2023-12-31" (before min)', "2023-12-31"],
-  ['"2025-01-01" (after max)', "2025-01-01"],
-], ["min", "max"]);
+const [validity, applyOn] = createValidity({
+  type: "date",
+  min: "2024-01-01",
+  max: "2024-12-31",
+});
+return makeTable(
+  validity,
+  applyOn,
+  [
+    ['"2024-06-15"', "2024-06-15"],
+    ['"2023-12-31" (before min)', "2023-12-31"],
+    ['"2025-01-01" (after max)', "2025-01-01"],
+  ],
+  ["min", "max"],
+);
 ```
 
 ```js

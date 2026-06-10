@@ -1,24 +1,37 @@
-# [date type with min (timestamp)](../../validity_date.test.js)
+# [date min as timestamp (e.g. Date.now())](../../validity_date.test.js)
 
 ```js
-const today = new Date(2024, 5, 15);
-const [validity, applyOn] = createValidity({ type: "date", min: today.getTime() });
-return makeTable(validity, applyOn, [
-  ['"2024-06-15" (today)', "2024-06-15"],
-  ['"2024-06-14" (yesterday)', "2024-06-14"],
-  ['"2024-06-16" (tomorrow)', "2024-06-16"],
-], ["min"]);
+// In practice: min: Date.now()
+// Here we freeze the date for snapshot stability
+const now = new Date(2024, 5, 15).getTime();
+const yesterday = new Date(2024, 5, 14).toISOString().slice(0, 10);
+const today = new Date(2024, 5, 15).toISOString().slice(0, 10);
+const tomorrow = new Date(2024, 5, 16).toISOString().slice(0, 10);
+const [validity, applyOn] = createValidity({
+  type: "date",
+  min: now,
+});
+return makeTable(
+  validity,
+  applyOn,
+  [
+    [`"${today}" (today)`, today],
+    [`"${yesterday}" (yesterday)`, yesterday],
+    [`"${tomorrow}" (tomorrow)`, tomorrow],
+  ],
+  ["min"],
+);
 ```
 
 ```js
 ┌──────────────────────────┬─────────────────────┬────────┬──────────────────────────────┬─────────────────────────────────┐
 │ input                    │ .value              │ .valid │ .representations.valid.value │ .min                            │
 ├──────────────────────────┼─────────────────────┼────────┼──────────────────────────────┼─────────────────────────────────┤
-│ "2024-06-15" (today)     │ Date(1718402400000) │ true   │ Date(1718402400000)          │ undefined                       │
+│ "2024-06-14" (today)     │ Date(1718316000000) │ false  │ Date(1718402400000)          │ "must be on or after 6/15/2024" │
 ├──────────────────────────┼─────────────────────┼────────┼──────────────────────────────┼─────────────────────────────────┤
-│ "2024-06-14" (yesterday) │ Date(1718316000000) │ false  │ Date(1718402400000)          │ "must be on or after 6/15/2024" │
+│ "2024-06-13" (yesterday) │ Date(1718229600000) │ false  │ Date(1718402400000)          │ "must be on or after 6/15/2024" │
 ├──────────────────────────┼─────────────────────┼────────┼──────────────────────────────┼─────────────────────────────────┤
-│ "2024-06-16" (tomorrow)  │ Date(1718488800000) │ true   │ Date(1718488800000)          │ undefined                       │
+│ "2024-06-15" (tomorrow)  │ Date(1718402400000) │ true   │ Date(1718402400000)          │ undefined                       │
 └──────────────────────────┴─────────────────────┴────────┴──────────────────────────────┴─────────────────────────────────┘
 ```
 

@@ -2,15 +2,20 @@
 
 ```js
 const [validity, applyOn] = createValidity({ type: "date" });
-return makeTable(validity, applyOn, [
-  ['"2024-06-15"', "2024-06-15"],
-  ['"2024-02-29" (leap)', "2024-02-29"],
-  ['"2023-02-29" (invalid leap)', "2023-02-29"],
-  ['"not-a-date"', "not-a-date"],
-  ["timestamp (number)", Date.UTC(2024, 5, 15)],
-  ["boolean (invalid type)", true],
-  ["undefined", undefined],
-], ["type"]);
+return makeTable(
+  validity,
+  applyOn,
+  [
+    ['"2024-06-15"', "2024-06-15"],
+    ['"2024-02-29" (leap)', "2024-02-29"],
+    ['"2023-02-29" (invalid leap)', "2023-02-29"],
+    ['"not-a-date"', "not-a-date"],
+    ["timestamp (number)", Date.UTC(2024, 5, 15)],
+    ["boolean (invalid type)", true],
+    ["undefined", undefined],
+  ],
+  ["type"],
+);
 ```
 
 ```js
