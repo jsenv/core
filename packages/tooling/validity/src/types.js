@@ -1,3 +1,9 @@
+import {
+  formatHours,
+  formatMinutes,
+  formatSeconds,
+} from "./format_duration.js";
+
 export const CANNOT_CONVERT = {};
 
 // Parses a duration string into a total number of seconds.
@@ -422,23 +428,7 @@ export const TYPES = {
           }
           return convertStringToNumber(value);
         },
-        format: (s) => {
-          const totalSec = Math.round(s);
-          const hours = Math.floor(totalSec / 3600);
-          const mins = Math.floor((totalSec % 3600) / 60);
-          const secs = totalSec % 60;
-          let result = "";
-          if (hours > 0) {
-            result += `${hours}h`;
-          }
-          if (mins > 0) {
-            result += `${mins}min`;
-          }
-          if (secs > 0 || result === "") {
-            result += `${secs}s`;
-          }
-          return result;
-        },
+        format: formatSeconds,
       },
     },
     validate: (value) => {
@@ -465,18 +455,7 @@ export const TYPES = {
           }
           return convertStringToNumber(value);
         },
-        format: (m) => {
-          const totalMin = Math.round(m);
-          const hours = Math.floor(totalMin / 60);
-          const mins = totalMin % 60;
-          if (hours === 0) {
-            return `${mins}min`;
-          }
-          if (mins === 0) {
-            return `${hours}h`;
-          }
-          return `${hours}h${mins}min`;
-        },
+        format: formatMinutes,
       },
     },
     validate: (value) => {
@@ -503,18 +482,7 @@ export const TYPES = {
           }
           return convertStringToNumber(value);
         },
-        format: (h) => {
-          const totalMin = Math.round(h * 60);
-          const hours = Math.floor(totalMin / 60);
-          const mins = totalMin % 60;
-          if (hours === 0) {
-            return `${mins}min`;
-          }
-          if (mins === 0) {
-            return `${hours}h`;
-          }
-          return `${hours}h${mins}min`;
-        },
+        format: formatHours,
       },
     },
     validate: (value) => {
