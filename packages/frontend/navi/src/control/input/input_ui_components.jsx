@@ -11,18 +11,18 @@ export const InputLeftSlot = (props) => {
 export const InputRightSlot = (props) => {
   return <InputSlot {...props} side="right" />;
 };
-export const InputIconSlot = ({ children, ...props }) => {
+export const InputIconSlot = ({ children, side = "right", ...props }) => {
   return (
-    <InputLeftSlot side="right">
+    <InputSlot side={side}>
       <Icon {...props}>{children}</Icon>
-    </InputLeftSlot>
+    </InputSlot>
   );
 };
-export const InputUnitSlot = ({ children, ...props }) => {
+export const InputUnitSlot = ({ children, side = "right", ...props }) => {
   return (
-    <InputRightSlot marginLeft="xxs" {...props}>
+    <InputSlot side={side} marginLeft="xxs" {...props}>
       {children}
-    </InputRightSlot>
+    </InputSlot>
   );
 };
 

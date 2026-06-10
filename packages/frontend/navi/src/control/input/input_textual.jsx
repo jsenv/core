@@ -28,6 +28,7 @@ import {
   useNextResolver,
 } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { ControlChildrenWrapper, useControlProps } from "../control_hooks.jsx";
+import { getUIStateControllerById } from "../ui_state_controller.js";
 import { InputNaviHourResolver } from "./input_navi_hour.jsx";
 import { InputNaviMinuteResolver } from "./input_navi_minute.jsx";
 import { InputModeResolver } from "./input_resolver_mode.jsx";
@@ -291,15 +292,15 @@ const InputTextualUI = (props) => {
   import.meta.css = css;
   const { ui, discrete } = props;
   const [inputProps, remainingProps] = useInputTextualProps(props);
-  const idDefault = useId();
-  inputProps.id = inputProps.id || `input_${idDefault}`;
   const { id, basePseudoState, children } = inputProps;
+  const uiStateController = getUIStateControllerById(id);
+  const value = uiStateController.uiState;
   const disabled = basePseudoState[":disabled"];
   const readOnly = basePseudoState[":read-only"];
   const loading = basePseudoState[":-navi-loading"];
   const childrenWithContext = (
     <ControlChildrenWrapper>
-      <InputTextualContext.Provider value={{ id, readOnly, disabled }}>
+      <InputTextualContext.Provider value={{ id, readOnly, disabled, value }}>
         {children || ui}
       </InputTextualContext.Provider>
     </ControlChildrenWrapper>
@@ -335,7 +336,6 @@ const InputTextualUI = (props) => {
       pseudoStateSelector=".navi_control_input"
       pseudoClasses={InputPseudoClasses}
       pseudoElements={InputPseudoElements}
-      hasChildUsingForwardedProps
     >
       <LoadingOutline
         loading={loading}
@@ -351,6 +351,8 @@ const InputTextualFirstResolver = (props) => {
   const Next = useNextResolver();
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
+  const idDefault = useId(); // needed by ui state controller and slot labels
+  props.id = props.id || idDefault;
   resolveInputProps(props);
 
   return <Next {...props} />;

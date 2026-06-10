@@ -1,3 +1,5 @@
+import { useContext } from "preact/hooks";
+
 import { CloseSvg } from "@jsenv/navi/src/graphic/icons/close_svg.jsx";
 import { EmailSvg } from "@jsenv/navi/src/graphic/icons/email_svg.jsx";
 import { PhoneSvg } from "@jsenv/navi/src/graphic/icons/phone_svg.jsx";
@@ -6,6 +8,7 @@ import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
 import { triggerStringAction } from "../string_actions.js";
 import { dispatchRequestInteraction } from "../validation/custom_constraint_validation.js";
+import { InputTextualContext } from "./input_textual_context.js";
 import { InputIconSlot, InputRightSlot } from "./input_ui_components.jsx";
 
 export const InputTypeResolver = (props) => {
@@ -37,36 +40,39 @@ const InputSearch = (props) => {
   return <Next ui={<InputSearchUI icon={props.icon} />} {...props} />;
 };
 const InputSearchUI = ({ icon }) => {
+  const { value } = useContext(InputTextualContext);
+  const searchIcon = icon === undefined ? <SearchSvg /> : icon;
+  const hasValue = Boolean(value);
+
+  if (!hasValue) {
+    if (!searchIcon) {
+      return null;
+    }
+    return <InputIconSlot>{searchIcon}</InputIconSlot>;
+  }
+
   return (
-    <>
-      {icon === undefined && (
-        <InputIconSlot>
-          <SearchSvg />
-        </InputIconSlot>
-      )}
-      <InputRightSlot
-        hideWhileEmpty
-        onClick={(e) => {
-          if (e.button !== 0) {
-            return;
-          }
-          const slot = e.currentTarget;
-          const label = slot.closest("label");
-          const input = document.getElementById(label.getAttribute("for"));
-          const allowed = dispatchRequestInteraction(input, e);
-          if (allowed) {
-            triggerStringAction("clear", e, {
-              actionTarget: input,
-              skipClose: true,
-            });
-          }
-        }}
-      >
-        <Icon>
-          <CloseSvg />
-        </Icon>
-      </InputRightSlot>
-    </>
+    <InputRightSlot
+      onClick={(e) => {
+        if (e.button !== 0) {
+          return;
+        }
+        const slot = e.currentTarget;
+        const label = slot.closest("label");
+        const input = document.getElementById(label.getAttribute("for"));
+        const allowed = dispatchRequestInteraction(input, e);
+        if (allowed) {
+          triggerStringAction("clear", e, {
+            actionTarget: input,
+            skipClose: true,
+          });
+        }
+      }}
+    >
+      <Icon>
+        <CloseSvg />
+      </Icon>
+    </InputRightSlot>
   );
 };
 const InputEmail = (props) => {
