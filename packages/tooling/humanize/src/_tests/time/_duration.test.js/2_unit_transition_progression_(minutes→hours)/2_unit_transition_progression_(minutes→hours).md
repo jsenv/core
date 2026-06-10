@@ -30,23 +30,23 @@ return renderTable(grid, { borderCollapse: true });
 ├────────────┼───────────────────────────┼───────────────────────────┼────────────────┤
 │ 3_540_000  │ 59 minutes                │ 59 minutes                │ 59m            │
 ├────────────┼───────────────────────────┼───────────────────────────┼────────────────┤
-│ 3_560_000  │ 59 minutes and 20 seconds │ 59 minutes and 20 seconds │ 59m and 20s    │
+│ 3_560_000  │ 59 minutes and 20 seconds │ 59 minutes and 20 seconds │ 59m20s         │
 ├────────────┼───────────────────────────┼───────────────────────────┼────────────────┤
-│ 3_570_000  │ 59 minutes and 30 seconds │ 59 minutes and 30 seconds │ 59m and 30s    │
+│ 3_570_000  │ 59 minutes and 30 seconds │ 59 minutes and 30 seconds │ 59m30s         │
 ├────────────┼───────────────────────────┼───────────────────────────┼────────────────┤
-│ 3_580_000  │ 59 minutes and 40 seconds │ 59 minutes and 40 seconds │ 59m and 40s    │
+│ 3_580_000  │ 59 minutes and 40 seconds │ 59 minutes and 40 seconds │ 59m40s         │
 ├────────────┼───────────────────────────┼───────────────────────────┼────────────────┤
-│ 3_590_000  │ 59 minutes and 50 seconds │ 59 minutes and 50 seconds │ 59m and 50s    │
+│ 3_590_000  │ 59 minutes and 50 seconds │ 59 minutes and 50 seconds │ 59m50s         │
 ├────────────┼───────────────────────────┼───────────────────────────┼────────────────┤
-│ 3_595_000  │ 59 minutes and 55 seconds │ 59 minutes and 55 seconds │ 59m and 55s    │
+│ 3_595_000  │ 59 minutes and 55 seconds │ 59 minutes and 55 seconds │ 59m55s         │
 ├────────────┼───────────────────────────┼───────────────────────────┼────────────────┤
-│ 3_599_000  │ 59 minutes and 59 seconds │ 59 minutes and 59 seconds │ 59m and 59s    │
+│ 3_599_000  │ 59 minutes and 59 seconds │ 59 minutes and 59 seconds │ 59m59s         │
 ├────────────┼───────────────────────────┼───────────────────────────┼────────────────┤
-│ 3_599_500  │ 59 minutes and 60 seconds │ 59 minutes and 59 seconds │ 59m and 60s    │
+│ 3_599_500  │ 59 minutes and 59 seconds │ 59 minutes and 59 seconds │ 59m59s         │
 ├────────────┼───────────────────────────┼───────────────────────────┼────────────────┤
-│ 3_599_900  │ 59 minutes and 60 seconds │ 59 minutes and 59 seconds │ 59m and 60s    │
+│ 3_599_900  │ 59 minutes and 59 seconds │ 59 minutes and 59 seconds │ 59m59s         │
 ├────────────┼───────────────────────────┼───────────────────────────┼────────────────┤
-│ 3_599_999  │ 59 minutes and 60 seconds │ 59 minutes and 59 seconds │ 59m and 60s    │
+│ 3_599_999  │ 59 minutes and 59 seconds │ 59 minutes and 59 seconds │ 59m59s         │
 ├────────────┼───────────────────────────┼───────────────────────────┼────────────────┤
 │ 3_600_000  │ 1 hour                    │ 1 hour                    │ 1h             │
 ├────────────┼───────────────────────────┼───────────────────────────┼────────────────┤
