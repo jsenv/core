@@ -126,7 +126,7 @@ const css = /* css */ `
 
     position: relative;
     display: inline-flex;
-    box-sizing: content-box;
+    box-sizing: border-box;
     width: fit-content;
     height: fit-content;
     padding-top: var(--x-padding-top);
@@ -148,7 +148,7 @@ const css = /* css */ `
     pointer-events: auto;
 
     .navi_control_input {
-      box-sizing: content-box;
+      box-sizing: border-box;
       min-width: 1ch;
       margin-top: calc(-1 * var(--x-padding-top));
       margin-right: calc(-1 * var(--x-padding-right));
@@ -290,7 +290,7 @@ const useInputTextualProps = (props) => {
 };
 const InputTextualUI = (props) => {
   import.meta.css = css;
-  const { ui, discrete } = props;
+  const { ui, discrete, width = "maxLength" } = props;
   const [inputProps, remainingProps] = useInputTextualProps(props);
   const { id, basePseudoState, children } = inputProps;
   const uiStateController = getUIStateControllerById(id);
@@ -306,7 +306,10 @@ const InputTextualUI = (props) => {
     </ControlChildrenWrapper>
   );
 
-  const { width = "maxLength" } = remainingProps;
+  // meant to end on input
+  // we have to use delete otherwise it could override width: undefined
+  // when remainingProps contains expandX which would try to set width to 100%
+  delete remainingProps.width;
   if (width === "maxLength") {
     const { maxLength } = inputProps;
     if (maxLength !== undefined) {
@@ -329,7 +332,6 @@ const InputTextualUI = (props) => {
       {...remainingProps}
       basePseudoState={basePseudoState}
       ui={undefined}
-      width={undefined} // width is put on the input element
       data-discrete={discrete ? "" : undefined}
       discrete={undefined} // handled via data attribute
       styleCSSVars={InputStyleCSSVars}
