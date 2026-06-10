@@ -198,15 +198,13 @@ const parseMs = (ms) => {
   // drop the remaining to avoid displaying "59 minutes and 60 seconds".
   const remainingUnitMs = UNIT_MS[remainingUnitName];
   const nextUnitMs = UNIT_MS[firstUnitName];
-  const roundedRemainingMs = Math.round(remainingUnitCount) * remainingUnitMs;
-  if (roundedRemainingMs >= nextUnitMs) {
-    return {
-      primary: {
-        name: firstUnitName,
-        count: firstUnitCount,
-      },
-    };
-  }
+  const maxRemainingCount = nextUnitMs / remainingUnitMs; // e.g. 60 for seconds-in-a-minute
+  // Cap remaining so it never rounds up to the next unit boundary
+  // (e.g. 59.5s stays as 59s instead of rounding to 60s = 1min)
+  const cappedRemainingCount =
+    remainingUnitCount >= maxRemainingCount - 1
+      ? maxRemainingCount - 1
+      : remainingUnitCount;
   // - 1 year and 1 month is great
   return {
     primary: {
@@ -215,7 +213,7 @@ const parseMs = (ms) => {
     },
     remaining: {
       name: remainingUnitName,
-      count: remainingUnitCount,
+      count: cappedRemainingCount,
     },
   };
 };
