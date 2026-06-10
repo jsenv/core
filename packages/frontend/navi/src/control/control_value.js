@@ -134,7 +134,7 @@ const readValueFromButton = (button) => {
 const readDatetimeLocalFromInput = (input) => {
   const localDateTimeString = input.value;
   if (localDateTimeString === "") {
-    return undefined;
+    return "";
   }
   const localDate = new Date(localDateTimeString);
   if (isNaN(localDate.getTime())) {
@@ -145,7 +145,7 @@ const readDatetimeLocalFromInput = (input) => {
 const readNumberFromInput = (input) => {
   const numberString = input.value;
   if (numberString === "") {
-    return undefined;
+    return "";
   }
   const asNumber = Number(numberString);
   if (isNaN(asNumber)) {

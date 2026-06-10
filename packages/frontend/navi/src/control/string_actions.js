@@ -210,7 +210,7 @@ const requestClosestAction = (event) => {
 const clear = createUICallback({
   name: "clear",
   event: (event, { actionTarget, skipClose } = {}) => {
-    requestUpdate(event, undefined, { actionTarget, isClear: true });
+    requestUpdate(event, "", { actionTarget, isClear: true });
     if (!skipClose) {
       const expandableEl = event.currentTarget.closest("[aria-expanded]");
       if (expandableEl) {
@@ -220,7 +220,7 @@ const clear = createUICallback({
     return true;
   },
   action: (v, { event, actionTarget }) => {
-    requestUpdate(event, undefined, { actionTarget, isClear: true });
+    requestUpdate(event, "", { actionTarget, isClear: true });
     const expandableEl = event.currentTarget.closest("[aria-expanded]");
     if (expandableEl) {
       return requestClose(event);
