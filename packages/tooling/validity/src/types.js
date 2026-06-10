@@ -693,3 +693,7 @@ const wellKnownColorSet = new Set([
   "gold",
   "violet",
 ]);
+
+export const getLocalStorageType = (type) => {
+  return TYPES[type]?.storage;
+};

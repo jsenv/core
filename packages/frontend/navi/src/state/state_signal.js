@@ -1,4 +1,4 @@
-import { createValidity, TYPES } from "@jsenv/validity";
+import { createValidity, getLocalStorageType } from "@jsenv/validity";
 import { effect, signal } from "@preact/signals";
 
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
@@ -161,7 +161,7 @@ export const stateSignal = (defaultValue, options = {}) => {
   const [readFromLocalStorage, writeIntoLocalStorage, removeFromLocalStorage] =
     persists
       ? valueInLocalStorage(localStorageKey, {
-          type: localStorageTypeMap[type] || type,
+          type: getLocalStorageType(type) || type,
         })
       : NO_LOCAL_STORAGE;
 
@@ -487,9 +487,3 @@ export const stateSignal = (defaultValue, options = {}) => {
 };
 
 const NO_LOCAL_STORAGE = [() => undefined, () => {}, () => {}];
-const localStorageTypeMap = {};
-for (const [typeName, typeDef] of Object.entries(TYPES)) {
-  if (typeDef.storage) {
-    localStorageTypeMap[typeName] = typeDef.storage;
-  }
-}
