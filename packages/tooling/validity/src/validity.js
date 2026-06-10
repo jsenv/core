@@ -100,15 +100,15 @@ export const createValidity = (ruleConfig) => {
   // "url" and "localStorage" come from the type def (overridable via ruleConfig options).
   // An explicit "representation" option adds its own named entry.
   const storageTargets = new Map(); // key → { type, formatFn }
-  const addStorageTarget = (key, reprName) => {
-    if (!reprName) {
+  const addStorageTarget = (key, type) => {
+    if (!type) {
       return;
     }
-    const repr = typeDef?.representations?.[reprName];
+    const repr = typeDef?.representations?.[type];
     if (!repr?.format) {
       return;
     }
-    storageTargets.set(key, { type: reprName, formatFn: repr.format });
+    storageTargets.set(key, { type, format: repr.format });
   };
   const effectiveLocalStorageRepr =
     localStorageRepresentationOverride ?? typeDef?.localStorageRepresentation;
@@ -220,8 +220,11 @@ export const createValidity = (ruleConfig) => {
     validity.validSuggestion = null;
     if (storageTargets.size > 0) {
       validity.representations = {};
-      for (const [key, { type: reprName }] of storageTargets) {
-        validity.representations[key] = { type: reprName, value: undefined };
+      for (const [key, { type }] of storageTargets) {
+        validity.representations[key] = {
+          type,
+          value: undefined,
+        };
       }
     }
   }
@@ -312,10 +315,10 @@ export const createValidity = (ruleConfig) => {
     validity.validSuggestion = validSuggestion;
     // Update validity.representations for each storage target
     if (storageTargets.size > 0) {
-      for (const [key, { type: reprName, formatFn }] of storageTargets) {
+      for (const [key, { type, format }] of storageTargets) {
         validity.representations[key] = {
-          type: reprName,
-          value: valid ? formatFn(value) : undefined,
+          type,
+          value: valid ? format(value) : undefined,
         };
       }
     }
