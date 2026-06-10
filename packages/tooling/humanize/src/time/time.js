@@ -27,9 +27,10 @@ export const humanizeEllapsedTime = (
   { short, timeDictionnary = TIME_DICTIONARY_EN } = {},
 ) => {
   if (ms < 1000) {
-    return short
-      ? `0${timeDictionnary.second.short}`
-      : `0 ${timeDictionnary.second.long}`;
+    if (short) {
+      return `0${timeDictionnary.second.short}`;
+    }
+    return `0 ${timeDictionnary.second.long}`;
   }
   const { primary, remaining } = parseMs(ms);
   if (!remaining) {
@@ -91,9 +92,10 @@ export const humanizeDuration = (
   } = {},
 ) => {
   if (ms < 1) {
-    return short
-      ? `0${timeDictionnary.second.short}`
-      : `0 ${timeDictionnary.second.long}`;
+    if (short) {
+      return `0${timeDictionnary.second.short}`;
+    }
+    return `0 ${timeDictionnary.second.long}`;
   }
   const { primary, remaining } = parseMs(ms);
   if (!remaining) {
