@@ -290,12 +290,12 @@ export const stateSignal = (defaultValue, options = {}) => {
       return value;
     }
 
-    const hasAutoFix = Boolean(validity.validSuggestion);
+    const hasAutoFix = Boolean(validity.representations.valid);
     if (hasAutoFix) {
       if (debug) {
         console.debug(`[stateSignal:${signalIdString}] validation failed: `, {
           value,
-          validValue: validity.validSuggestion.value,
+          validValue: validity.representations.valid.value,
           validity,
         });
       }
@@ -305,8 +305,8 @@ export const stateSignal = (defaultValue, options = {}) => {
         { value, validity },
       );
     }
-    if (validity.validSuggestion) {
-      const validValue = validity.validSuggestion.value;
+    if (hasAutoFix) {
+      const validValue = validity.representations.valid.value;
       if (debug) {
         console.debug(
           `[stateSignal:${signalIdString}] autoFix applied: ${value} → ${validValue}`,
