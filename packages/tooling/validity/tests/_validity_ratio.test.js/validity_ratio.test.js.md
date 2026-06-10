@@ -1,7 +1,7 @@
-# [validity.test.js](../validity.test.js)
+# [validity_ratio.test.js](../validity_ratio.test.js)
 
 
-No test
+- [ratio type validation](0_ratio_type_validation/0_ratio_type_validation.md)
 
 ---
 

@@ -1,7 +1,7 @@
-# [validity.test.js](../validity.test.js)
+# [validity_color.test.js](../validity_color.test.js)
 
 
-No test
+- [color type validation](0_color_type_validation/0_color_type_validation.md)
 
 ---
 

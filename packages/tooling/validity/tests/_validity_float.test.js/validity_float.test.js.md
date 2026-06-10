@@ -1,7 +1,7 @@
-# [validity.test.js](../validity.test.js)
+# [validity_float.test.js](../validity_float.test.js)
 
 
-No test
+- [float type validation](0_float_type_validation/0_float_type_validation.md)
 
 ---
 

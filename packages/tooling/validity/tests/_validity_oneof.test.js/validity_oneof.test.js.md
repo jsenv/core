@@ -1,7 +1,7 @@
-# [validity.test.js](../validity.test.js)
+# [validity_oneof.test.js](../validity_oneof.test.js)
 
 
-No test
+- [oneOf validation](0_oneof_validation/0_oneof_validation.md)
 
 ---
 

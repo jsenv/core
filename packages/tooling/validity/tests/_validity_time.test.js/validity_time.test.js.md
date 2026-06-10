@@ -1,7 +1,7 @@
-# [validity.test.js](../validity.test.js)
+# [validity_time.test.js](../validity_time.test.js)
 
 
-No test
+- [time type validation](0_time_type_validation/0_time_type_validation.md)
 
 ---
 

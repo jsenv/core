@@ -1,7 +1,7 @@
-# [validity.test.js](../validity.test.js)
+# [validity_email.test.js](../validity_email.test.js)
 
 
-No test
+- [email type validation](0_email_type_validation/0_email_type_validation.md)
 
 ---
 

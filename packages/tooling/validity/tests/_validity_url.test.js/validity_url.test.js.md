@@ -1,7 +1,7 @@
-# [validity.test.js](../validity.test.js)
+# [validity_url.test.js](../validity_url.test.js)
 
 
-No test
+- [url type validation](0_url_type_validation/0_url_type_validation.md)
 
 ---
 

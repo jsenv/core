@@ -1,7 +1,7 @@
-# [validity.test.js](../validity.test.js)
+# [validity_array.test.js](../validity_array.test.js)
 
 
-No test
+- [array type validation](0_array_type_validation/0_array_type_validation.md)
 
 ---
 
