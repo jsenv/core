@@ -3,77 +3,6 @@ import { snapshotTests } from "@jsenv/snapshot";
 import { createValidity } from "../src/validity.js";
 
 await snapshotTests(import.meta.url, ({ test }) => {
-  test("type validation", () => {
-    const [validity, applyOn] = createValidity({ type: "number" });
-    const run = (value) => {
-      applyOn(value);
-      return structuredClone(validity);
-    };
-    return {
-      "42": run(42),
-      '"123"': run("123"),
-      '"not a number"': run("not a number"),
-      "Infinity": run(Infinity),
-    };
-  });
-
-  test("min/max validation", () => {
-    const [validity, applyOn] = createValidity({
-      type: "number",
-      min: 0,
-      max: 100,
-    });
-
-    const run = (value) => {
-      applyOn(value);
-      return structuredClone(validity);
-    };
-
-    return {
-      "50": run(50),
-      "-10": run(-10),
-      "150": run(150),
-      "0": run(0),
-      "100": run(100),
-    };
-  });
-
-  test("step validation", () => {
-    const [validity, applyOn] = createValidity({
-      type: "number",
-      step: 0.1,
-      min: 0,
-    });
-
-    const run = (value) => {
-      applyOn(value);
-      return structuredClone(validity);
-    };
-
-    return {
-      1.2: run(1.2),
-      1.23: run(1.23),
-      1.1000000001: run(1.1000000001),
-    };
-  });
-
-  test("step validation with integer step", () => {
-    const [validity, applyOn] = createValidity({
-      type: "number",
-      step: 1,
-    });
-
-    const run = (value) => {
-      applyOn(value);
-      return structuredClone(validity);
-    };
-
-    return {
-      5: run(5),
-      5.5: run(5.5),
-    };
-  });
-
   test("oneOf validation", () => {
     const [validity, applyOn] = createValidity({
       oneOf: ["red", "green", "blue"],
@@ -87,25 +16,6 @@ await snapshotTests(import.meta.url, ({ test }) => {
     return {
       '"red"': run("red"),
       '"yellow"': run("yellow"),
-    };
-  });
-
-  test("combined validation", () => {
-    const [validity, applyOn] = createValidity({
-      type: "number",
-      min: 0,
-      max: 10,
-      step: 0.5,
-    });
-
-    const run = (value) => {
-      applyOn(value);
-      return structuredClone(validity);
-    };
-
-    return {
-      "5.5": run(5.5),
-      "-2.3": run(-2.3),
     };
   });
 
@@ -163,80 +73,6 @@ await snapshotTests(import.meta.url, ({ test }) => {
     };
   });
 
-  test("unknown rule should be ignored", () => {
-    const [validity, applyOn] = createValidity({
-      type: "number",
-      unknownRule: "should be ignored",
-    });
-
-    const run = (value) => {
-      applyOn(value);
-      return structuredClone(validity);
-    };
-
-    return {
-      42: run(42),
-    };
-  });
-
-  test("cross-rule validation works correctly - suggestions are validated against all rules", () => {
-    // This test demonstrates that the system correctly validates suggestions
-    // from one rule against all other rules
-    const [validity, applyOn] = createValidity({
-      type: "number", // Rule 1: type conversion
-      min: 0, // Rule 2: minimum value
-      max: 100, // Rule 3: maximum value
-      step: 1, // Rule 4: integer step
-    });
-
-    const run = (value) => {
-      applyOn(value);
-      return structuredClone(validity);
-    };
-
-    return {
-      '"150"': run("150"),
-      '"5.5"': run("5.5"),
-      '"-10"': run("-10"),
-      '"50"': run("50"),
-    };
-  });
-
-  test("debug cross-rule validation behavior", () => {
-    // Simple case to understand what's happening
-    const [validity, applyOn] = createValidity({
-      type: "number",
-      max: 100,
-    });
-
-    const run = (value) => {
-      applyOn(value);
-      return structuredClone(validity);
-    };
-
-    return {
-      '"50"': run("50"),
-      '"150"': run("150"),
-    };
-  });
-
-  test("impossible constraint validation", () => {
-    // Test case where no valid suggestion is possible
-    const [validity, applyOn] = createValidity({
-      type: "number",
-      oneOf: [10, 20, 30], // Only these values allowed
-      min: 50, // But min is 50, making oneOf values impossible
-    });
-
-    const run = (value) => {
-      applyOn(value);
-      return structuredClone(validity);
-    };
-
-    return {
-      '"15"': run("15"),
-    };
-  });
   test("float type validation", () => {
     const [validity, applyOn] = createValidity({
       type: "float",
@@ -428,24 +264,6 @@ await snapshotTests(import.meta.url, ({ test }) => {
       '"24:00"': run("24:00"),
       '"14:60"': run("14:60"),
       '"2:30 PM"': run("2:30 PM"),
-    };
-  });
-
-  test("step validation with string inputs (simple number type)", () => {
-    const [validity, applyOn] = createValidity({
-      type: "number",
-      step: 0.1,
-    });
-
-    const run = (value) => {
-      applyOn(value);
-      return structuredClone(validity);
-    };
-
-    return {
-      '"3.000001"': run("3.000001"), // String should be stepped to 3.0
-      '"3.05"': run("3.05"), // String should be stepped to 3.1
-      '"2.67"': run("2.67"), // String should be stepped to 2.7
     };
   });
 

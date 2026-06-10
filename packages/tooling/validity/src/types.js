@@ -492,6 +492,20 @@ export const TYPES = {
       return `must be a number`;
     },
   },
+  // "week" matches the value format of <input type="week">: "YYYY-Www" (e.g. "2024-W03")
+  "week": {
+    storage: "string",
+    validate: (value) => {
+      if (typeof value !== "string") {
+        return `must be a string in YYYY-Www format`;
+      }
+      const weekRegex = /^\d{4}-W(?:0[1-9]|[1-4][0-9]|5[0-3])$/;
+      if (!weekRegex.test(value)) {
+        return `must be in YYYY-Www format (e.g. "2024-W03")`;
+      }
+      return "";
+    },
+  },
   "month": {
     storage: "string",
     validate: (value) => {
@@ -512,20 +526,6 @@ export const TYPES = {
       const month = parseInt(match[0].slice(5), 10);
       if (month < 1 || month > 12) {
         return `must be a valid month (01–12)`;
-      }
-      return "";
-    },
-  },
-  // "week" matches the value format of <input type="week">: "YYYY-Www" (e.g. "2024-W03")
-  "week": {
-    storage: "string",
-    validate: (value) => {
-      if (typeof value !== "string") {
-        return `must be a string in YYYY-Www format`;
-      }
-      const weekRegex = /^\d{4}-W(?:0[1-9]|[1-4][0-9]|5[0-3])$/;
-      if (!weekRegex.test(value)) {
-        return `must be in YYYY-Www format (e.g. "2024-W03")`;
       }
       return "";
     },
