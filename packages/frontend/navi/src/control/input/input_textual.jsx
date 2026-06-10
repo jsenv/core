@@ -26,8 +26,8 @@ import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.
 import {
   createComponentResolver,
   useNextResolver,
-} from "../../resolver/resolver.jsx";
-import { useControlProps } from "../control_hooks.jsx";
+} from "@jsenv/navi/src/resolver/resolver.jsx";
+import { ControlChildrenWrapper, useControlProps } from "../control_hooks.jsx";
 import { InputNaviHourResolver } from "./input_navi_hour.jsx";
 import { InputModeResolver } from "./input_resolver_mode.jsx";
 import { InputTypeResolver } from "./input_resolver_type.jsx";
@@ -276,22 +276,17 @@ const InputTextualHeadless = (props) => {
   return <RealInput {...inputProps} {...remainingProps} />;
 };
 const useInputTextualProps = (props) => {
-  const [controlProps, remainingProps, uiStateController] = useControlProps(
-    props,
-    {
-      controlType: "input",
-      statePropName: "value",
-      defaultStatePropName: "defaultValue",
-      readOnlySupported: true,
-    },
-  );
-  return [controlProps, remainingProps, uiStateController];
+  return useControlProps(props, {
+    controlType: "input",
+    statePropName: "value",
+    defaultStatePropName: "defaultValue",
+    readOnlySupported: true,
+  });
 };
 const InputTextualUI = (props) => {
   import.meta.css = css;
   const { ui, discrete } = props;
-  const [inputProps, remainingProps, { ControlChildrenWrapper }] =
-    useInputTextualProps(props);
+  const [inputProps, remainingProps] = useInputTextualProps(props);
   const idDefault = useId();
   inputProps.id = inputProps.id || `input_${idDefault}`;
   const { id, basePseudoState, children } = inputProps;

@@ -1,4 +1,4 @@
-import { useContext, useRef } from "preact/hooks";
+import { useContext, useId, useRef } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
 import { ChevronDownSvg } from "@jsenv/navi/src/graphic/icons/chevron_updown_svg.jsx";
@@ -8,9 +8,9 @@ import {
   useNextResolver,
 } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
-import { useControlProps } from "../control_hooks.jsx";
-import { asControlHostValue } from "../control_value.js";
+import { ControlChildrenWrapper, useControlProps } from "../control_hooks.jsx";
 import { resolveInputProps } from "../input/resolve_input_props.js";
+import { getUIStateControllerById } from "../ui_state_controller.js";
 import { PickerPlaceholder, PickerValue } from "./picker_components.jsx";
 import { PickerContext } from "./picker_context.jsx";
 import { pickerResolvers } from "./picker_resolvers.jsx";
@@ -275,23 +275,24 @@ const css = /* css */ `
  */
 const PickerButton = (props) => {
   import.meta.css = css;
-  const { ref, icon, placeholder, singleLine, ui, dayLabel } = props;
+  const { ref, icon, placeholder, singleLine, ui } = props;
   const inputRef = useRef(null);
-  const [inputProps, pickerRemainingProps, ControlChildrenWrapper] =
-    useControlProps(
-      {
-        ...props,
-        ref: inputRef,
-      },
-      {
-        controlType: "input",
-        statePropName: "value",
-        defaultStatePropName: "defaultValue",
-        readOnlySupported: true,
-        picker: true,
-      },
-    );
-  const { id, value, basePseudoState, disabled, children } = inputProps;
+  const [inputProps, pickerRemainingProps] = useControlProps(
+    {
+      ...props,
+      ref: inputRef,
+    },
+    {
+      controlType: "input",
+      statePropName: "value",
+      defaultStatePropName: "defaultValue",
+      readOnlySupported: true,
+      picker: true,
+    },
+  );
+  const uiStateController = getUIStateControllerById(inputProps.id);
+  const value = uiStateController.uiState;
+  const { id, basePseudoState, disabled, children } = inputProps;
   const loading = basePseudoState[":-navi-loading"];
 
   return (
@@ -342,7 +343,7 @@ const PickerButton = (props) => {
         onClick={undefined}
         onKeyDown={undefined}
       />
-      <PickerContext.Provider value={{ value, placeholder, dayLabel }}>
+      <PickerContext.Provider value={{ value, placeholder }}>
         {ui === undefined ? <PickerDefaultUI /> : ui}
       </PickerContext.Provider>
       <span className="navi_picker_right_slot">
@@ -354,17 +355,10 @@ const PickerButton = (props) => {
 };
 
 const PickerInput = (props) => {
-  const { type } = props;
-
   return (
     <Box
       as="input"
       {...props}
-      value={asControlHostValue(props.value, {
-        controlType: "input",
-        type,
-        inputMode: props.inputMode,
-      })}
       className="navi_picker_input"
       pseudoClasses={PickerInputPseudoClasses}
       tabIndex={-1} // Make input non tabbable
@@ -436,6 +430,9 @@ const PickerFirstResolver = (props) => {
   const Next = useNextResolver();
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
+  const idDefault = useId(); // needed by ui state controller
+  props.id = props.id || idDefault;
+
   resolveInputProps(props);
 
   return <Next {...props} />;

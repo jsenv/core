@@ -29,7 +29,7 @@ import {
 // Allows direct controller access without dispatching DOM events — used by external
 // callers (e.g. selectable_list) to call setUIState by id instead of via the DOM.
 const controllersById = new Map();
-const getUIStateControllerById = (id) => controllersById.get(id);
+export const getUIStateControllerById = (id) => controllersById.get(id);
 
 // In-memory registry for radio controllers, keyed by input name.
 // Allows radio sibling unchecking without querying the DOM — necessary when
@@ -291,6 +291,13 @@ export const useUIStateController = (
     elementRef: ref,
     getPropFromState,
     getStateFromProp,
+    toControlHostValue: (jsValue) => {
+      return asControlHostValue(jsValue, {
+        controlType,
+        type: uiStateController.props.type,
+        inputMode: uiStateController.props.inputMode,
+      });
+    },
     setUIState: (prop, e) => {
       const newUIState = uiStateController.getStateFromProp(prop);
       const controllerSig = getElementSignature(e.currentTarget || ref.current);
@@ -329,11 +336,7 @@ export const useUIStateController = (
           e,
           `[${statePropName}] = ${JSON.stringify(propValue)};`,
         );
-        el[statePropName] = asControlHostValue(propValue, {
-          controlType,
-          type: props.type,
-          inputMode: props.inputMode,
-        });
+        el[statePropName] = uiStateController.toControlHostValue(propValue);
       }
       uiStateController.uiState = newUIState;
       ownUIStateSignal.value = newUIState;
