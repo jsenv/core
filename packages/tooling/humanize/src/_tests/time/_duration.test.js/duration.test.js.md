@@ -2,6 +2,8 @@
 
 
 - [humanizeDuration](0_humanizeduration/0_humanizeduration.md)
+- [unit transition progression (seconds→minutes)](1_unit_transition_progression_(seconds%E2%86%92minutes)/1_unit_transition_progression_(seconds%E2%86%92minutes).md)
+- [unit transition progression (minutes→hours)](2_unit_transition_progression_(minutes%E2%86%92hours)/2_unit_transition_progression_(minutes%E2%86%92hours).md)
 
 ---
 

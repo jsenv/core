@@ -183,6 +183,19 @@ const parseMs = (ms) => {
       },
     };
   }
+  // When remaining rounds up to a full next-unit (e.g. 59.999s rounds to 60s = 1min),
+  // drop the remaining to avoid displaying "59 minutes and 60 seconds".
+  const remainingUnitMs = UNIT_MS[remainingUnitName];
+  const nextUnitMs = UNIT_MS[firstUnitName];
+  const roundedRemainingMs = Math.round(remainingUnitCount) * remainingUnitMs;
+  if (roundedRemainingMs >= nextUnitMs) {
+    return {
+      primary: {
+        name: firstUnitName,
+        count: firstUnitCount,
+      },
+    };
+  }
   // - 1 year and 1 month is great
   return {
     primary: {
