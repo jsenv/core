@@ -58,6 +58,9 @@ const trimDecimal = (n) => {
   return s.replace(/\.?0+$/, "");
 };
 
-export const formatSeconds = (s) => formatDurationMs(s * 1_000);
-export const formatMinutes = (m) => formatDurationMs(m * 60_000);
-export const formatHours = (h) => formatDurationMs(h * 3_600_000);
+export const formatSeconds = (s) =>
+  s === 0 ? "0s" : formatDurationMs(s * 1_000);
+export const formatMinutes = (m) =>
+  m === 0 ? "0m" : formatDurationMs(m * 60_000);
+export const formatHours = (h) =>
+  h === 0 ? "0h" : formatDurationMs(h * 3_600_000);
