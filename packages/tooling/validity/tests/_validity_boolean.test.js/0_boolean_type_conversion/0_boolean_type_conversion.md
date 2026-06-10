@@ -5,61 +5,48 @@ const [validity, applyOn] = createValidity({
   type: "boolean",
 });
 
-const cell = (value, { color } = {}) => {
-  return color ? { value, color } : { value };
-};
+const cases = [true, false, "true", "false", "on", "1", 1, 0, "toto", undefined];
 
-const headerRow = [
-  cell("value"),
-  cell("invalid message"),
-  cell("valid suggestion"),
+const grid = [
+  [cell("value"), cell("valid"), cell("valid suggestion"), cell("invalid message")],
+  ...cases.map((value) => {
+    applyOn(value);
+    return [
+      cell(humanize(value)),
+      cell(validity.valid ? "✓" : "✗"),
+      cell(validity.validSuggestion ? humanize(validity.validSuggestion.value) : "-"),
+      cell(validity.type ?? "-"),
+    ];
+  }),
 ];
 
-const rows = [headerRow];
-const run = (value) => {
-  applyOn(value);
-  const messageCell = validity.valid
-    ? cell("-")
-    : cell(validity.type, { color: "red" });
-  let suggestionCell;
-  if (validity.valid) {
-    suggestionCell = cell("-");
-  } else if (validity.validSuggestion) {
-    suggestionCell = cell(humanize(validity.validSuggestion.value), {
-      color: "green",
-    });
-  } else {
-    suggestionCell = cell("cannot convert", { color: "red" });
-  }
-  rows.push([cell(humanize(value)), messageCell, suggestionCell]);
-};
-
-run(true);
-run(false);
-run("true");
-run("false");
-run("on");
-run("1");
-run(1);
-run(0);
-run("toto");
-run(undefined);
-
-return renderTable(rows);
+return renderTable(grid, { borderCollapse: true });
 ```
 
 ```js
- value      invalid message                valid suggestion 
- true       -                              -                
- false      -                              -                
- "true"     must be a boolean, got string  true             
- "false"    must be a boolean, got string  false            
- "on"       must be a boolean, got string  true             
- "1"        must be a boolean, got string  true             
- 1          must be a boolean, got number  true             
- 0          must be a boolean, got number  false            
- "toto"     must be a boolean, got string  cannot convert   
- undefined  -                              -                
+┌───────────┬───────┬──────────────────┬───────────────────────────────┐
+│ value     │ valid │ valid suggestion │ invalid message               │
+├───────────┼───────┼──────────────────┼───────────────────────────────┤
+│ true      │ ✓     │ -                │ -                             │
+├───────────┼───────┼──────────────────┼───────────────────────────────┤
+│ false     │ ✓     │ -                │ -                             │
+├───────────┼───────┼──────────────────┼───────────────────────────────┤
+│ "true"    │ ✗     │ true             │ must be a boolean, got string │
+├───────────┼───────┼──────────────────┼───────────────────────────────┤
+│ "false"   │ ✗     │ false            │ must be a boolean, got string │
+├───────────┼───────┼──────────────────┼───────────────────────────────┤
+│ "on"      │ ✗     │ true             │ must be a boolean, got string │
+├───────────┼───────┼──────────────────┼───────────────────────────────┤
+│ "1"       │ ✗     │ true             │ must be a boolean, got string │
+├───────────┼───────┼──────────────────┼───────────────────────────────┤
+│ 1         │ ✗     │ true             │ must be a boolean, got number │
+├───────────┼───────┼──────────────────┼───────────────────────────────┤
+│ 0         │ ✗     │ false            │ must be a boolean, got number │
+├───────────┼───────┼──────────────────┼───────────────────────────────┤
+│ "toto"    │ ✗     │ -                │ must be a boolean, got string │
+├───────────┼───────┼──────────────────┼───────────────────────────────┤
+│ undefined │ ✓     │ -                │ must be a boolean, got string │
+└───────────┴───────┴──────────────────┴───────────────────────────────┘
 ```
 
 ---

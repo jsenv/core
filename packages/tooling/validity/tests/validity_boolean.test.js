@@ -1,8 +1,11 @@
 import { humanize } from "@jsenv/humanize";
 import { snapshotTests } from "@jsenv/snapshot";
-import { renderTable } from "@jsenv/terminal-table";
+import { COLORS, renderTable } from "@jsenv/terminal-table";
 
 import { createValidity } from "../src/validity.js";
+
+const BORDER = { color: COLORS.GREY };
+const cell = (value) => ({ value, border: BORDER });
 
 await snapshotTests(import.meta.url, ({ test }) => {
   test("boolean type conversion", () => {
@@ -10,46 +13,41 @@ await snapshotTests(import.meta.url, ({ test }) => {
       type: "boolean",
     });
 
-    const cell = (value, { color } = {}) => {
-      return color ? { value, color } : { value };
-    };
-
-    const headerRow = [
-      cell("value"),
-      cell("invalid message"),
-      cell("valid suggestion"),
+    const cases = [
+      true,
+      false,
+      "true",
+      "false",
+      "on",
+      "1",
+      1,
+      0,
+      "toto",
+      undefined,
     ];
 
-    const rows = [headerRow];
-    const run = (value) => {
-      applyOn(value);
-      const messageCell = validity.valid
-        ? cell("-")
-        : cell(validity.type, { color: "red" });
-      let suggestionCell;
-      if (validity.valid) {
-        suggestionCell = cell("-");
-      } else if (validity.validSuggestion) {
-        suggestionCell = cell(humanize(validity.validSuggestion.value), {
-          color: "green",
-        });
-      } else {
-        suggestionCell = cell("cannot convert", { color: "red" });
-      }
-      rows.push([cell(humanize(value)), messageCell, suggestionCell]);
-    };
+    const grid = [
+      [
+        cell("value"),
+        cell("valid"),
+        cell("valid suggestion"),
+        cell("invalid message"),
+      ],
+      ...cases.map((value) => {
+        applyOn(value);
+        return [
+          cell(humanize(value)),
+          cell(validity.valid ? "✓" : "✗"),
+          cell(
+            validity.validSuggestion
+              ? humanize(validity.validSuggestion.value)
+              : "-",
+          ),
+          cell(validity.type ?? "-"),
+        ];
+      }),
+    ];
 
-    run(true);
-    run(false);
-    run("true");
-    run("false");
-    run("on");
-    run("1");
-    run(1);
-    run(0);
-    run("toto");
-    run(undefined);
-
-    return renderTable(rows);
+    return renderTable(grid, { borderCollapse: true });
   });
 });
