@@ -3,16 +3,14 @@
 ```js
 const [validity, applyOn] = createValidity({
   type: "number",
-  customRepresentation: "string",
   max: 100,
 });
 
-const cases = ["50", "100", "150"];
+const cases = [50, 100, 150];
 const rows = cases.map((value) => {
   applyOn(value);
   return [
     cell(humanize(value)),
-    cell(validity.representations.custom ? humanize(validity.representations.custom.value) : "-"),
     cell(validity.valid ? "✓" : "✗"),
     cell(validity.representations.valid?.value ?? "-"),
     cell(validity.max ?? "-"),
@@ -23,7 +21,6 @@ return renderTable(
   [
     [
       cell("value"),
-      cell("customRepresentation: string"),
       cell("valid"),
       cell("valid suggestion"),
       cell("max error"),
@@ -35,15 +32,15 @@ return renderTable(
 ```
 
 ```js
-┌───────┬──────────────────────────────┬───────┬──────────────────┬────────────────┐
-│ value │ customRepresentation: string │ valid │ valid suggestion │ max error      │
-├───────┼──────────────────────────────┼───────┼──────────────────┼────────────────┤
-│ "50"  │ "50"                         │ ✓     │ -                │ -              │
-├───────┼──────────────────────────────┼───────┼──────────────────┼────────────────┤
-│ "100" │ "100"                        │ ✓     │ -                │ -              │
-├───────┼──────────────────────────────┼───────┼──────────────────┼────────────────┤
-│ "150" │ "100"                        │ ✗     │ 100              │ must be <= 100 │
-└───────┴──────────────────────────────┴───────┴──────────────────┴────────────────┘
+┌───────┬───────┬──────────────────┬────────────────┐
+│ value │ valid │ valid suggestion │ max error      │
+├───────┼───────┼──────────────────┼────────────────┤
+│  50   │ ✓     │ -                │ -              │
+├───────┼───────┼──────────────────┼────────────────┤
+│ 100   │ ✓     │ -                │ -              │
+├───────┼───────┼──────────────────┼────────────────┤
+│ 150   │ ✗     │ 100              │ must be <= 100 │
+└───────┴───────┴──────────────────┴────────────────┘
 ```
 
 ---

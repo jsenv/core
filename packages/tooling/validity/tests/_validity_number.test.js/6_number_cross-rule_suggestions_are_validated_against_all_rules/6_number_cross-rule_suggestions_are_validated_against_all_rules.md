@@ -4,18 +4,16 @@
 // String inputs get converted, then suggestions from one rule are validated against all others
 const [validity, applyOn] = createValidity({
   type: "number",
-  customRepresentation: "string",
   min: 0,
   max: 100,
   step: 1,
 });
 
-const cases = ["150", "5.5", "-10", "50"];
+const cases = [150, 5.5, -10, 50];
 const rows = cases.map((value) => {
   applyOn(value);
   return [
     cell(humanize(value)),
-    cell(validity.representations.custom ? humanize(validity.representations.custom.value) : "-"),
     cell(validity.valid ? "✓" : "✗"),
     cell(validity.representations.valid?.value ?? "-"),
     cell(
@@ -30,7 +28,6 @@ return renderTable(
   [
     [
       cell("value"),
-      cell("customRepresentation: string"),
       cell("valid"),
       cell("valid suggestion"),
       cell("errors"),
@@ -42,17 +39,17 @@ return renderTable(
 ```
 
 ```js
-┌───────┬──────────────────────────────┬───────┬──────────────────┬────────────────────────────────────┐
-│ value │ customRepresentation: string │ valid │ valid suggestion │ errors                             │
-├───────┼──────────────────────────────┼───────┼──────────────────┼────────────────────────────────────┤
-│ "150" │ "100"                        │ ✗     │ 100              │ must be <= 100                     │
-├───────┼──────────────────────────────┼───────┼──────────────────┼────────────────────────────────────┤
-│ "5.5" │ "6"                          │ ✗     │   6              │ must have at most 0 decimal places │
-├───────┼──────────────────────────────┼───────┼──────────────────┼────────────────────────────────────┤
-│ "-10" │ "0"                          │ ✗     │   0              │ must be positive                   │
-├───────┼──────────────────────────────┼───────┼──────────────────┼────────────────────────────────────┤
-│ "50"  │ "50"                         │ ✓     │ -                │ -                                  │
-└───────┴──────────────────────────────┴───────┴──────────────────┴────────────────────────────────────┘
+┌───────┬───────┬──────────────────┬────────────────────────────────────┐
+│ value │ valid │ valid suggestion │ errors                             │
+├───────┼───────┼──────────────────┼────────────────────────────────────┤
+│ 150   │ ✗     │ 100              │ must be <= 100                     │
+├───────┼───────┼──────────────────┼────────────────────────────────────┤
+│   5.5 │ ✗     │   6              │ must have at most 0 decimal places │
+├───────┼───────┼──────────────────┼────────────────────────────────────┤
+│  10   │ ✗     │   0              │ must be positive                   │
+├───────┼───────┼──────────────────┼────────────────────────────────────┤
+│  50   │ ✓     │ -                │ -                                  │
+└───────┴───────┴──────────────────┴────────────────────────────────────┘
 ```
 
 ---

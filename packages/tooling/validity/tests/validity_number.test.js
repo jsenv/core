@@ -52,52 +52,76 @@ await snapshotTests(import.meta.url, ({ test }) => {
   });
 
   test("number min", () => {
+    const cases = ["-10", "0", "50"];
+
+    const makeRow = (validity, applyOn, value) => {
+      applyOn(value);
+      return [
+        cell(humanize(value)),
+        cell(humanize(validity.value)),
+        cell(validity.valid ? "✓" : "✗"),
+        cell(validity.representations.valid?.value ?? "-"),
+        cell(
+          validity.representations.custom
+            ? humanize(validity.representations.custom.value)
+            : "-",
+        ),
+        cell(validity.min ?? "-"),
+      ];
+    };
+    const headers = [
+      cell("value"),
+      cell("validity.value"),
+      cell("valid"),
+      cell("valid suggestion"),
+      cell("customRepresentation: string"),
+      cell("min error"),
+    ];
+
     const [validity, applyOn] = createValidity({
       type: "number",
       customRepresentation: "string",
       min: 0,
     });
+    const table1 = renderTable(
+      [headers, ...cases.map((value) => makeRow(validity, applyOn, value))],
+      { borderCollapse: true },
+    );
 
-    const cases = ["-10", "0", "50"];
-    const rows = cases.map((value) => {
-      applyOn(value);
-      return [
-        cell(humanize(value)),
-        cell(validity.representations.custom ? humanize(validity.representations.custom.value) : "-"),
-        cell(validity.valid ? "✓" : "✗"),
-        cell(validity.representations.valid?.value ?? "-"),
-        cell(validity.min ?? "-"),
-      ];
+    const [validityAutoFix, applyOnAutoFix] = createValidity({
+      type: "number",
+      customRepresentation: "string",
+      min: 0,
+      autoFix: true,
     });
-
-    return renderTable(
+    const table2 = renderTable(
       [
-        [
-          cell("value"),
-          cell("customRepresentation: string"),
-          cell("valid"),
-          cell("valid suggestion"),
-          cell("min error"),
-        ],
-        ...rows,
+        headers,
+        ...cases.map((value) =>
+          makeRow(validityAutoFix, applyOnAutoFix, value),
+        ),
       ],
       { borderCollapse: true },
     );
+
+    return `without autoFix:
+${table1}
+
+with autoFix: true:
+${table2}`;
   });
 
   test("number max", () => {
     const [validity, applyOn] = createValidity({
       type: "number",
-      customRepresentation: "string",
       max: 100,
     });
 
-    const cases = ["50", "100", "150"];
+    const cases = [50, 100, 150];
     const rows = cases.map((value) => {
       applyOn(value);
       return [
         cell(humanize(value)),
-        cell(validity.representations.custom ? humanize(validity.representations.custom.value) : "-"),
         cell(validity.valid ? "✓" : "✗"),
         cell(validity.representations.valid?.value ?? "-"),
         cell(validity.max ?? "-"),
@@ -108,7 +132,6 @@ await snapshotTests(import.meta.url, ({ test }) => {
       [
         [
           cell("value"),
-          cell("customRepresentation: string"),
           cell("valid"),
           cell("valid suggestion"),
           cell("max error"),
@@ -122,16 +145,14 @@ await snapshotTests(import.meta.url, ({ test }) => {
   test("number step", () => {
     const [validity, applyOn] = createValidity({
       type: "number",
-      customRepresentation: "string",
       step: 0.1,
     });
 
-    const cases = ["1.2", "1.23", "3.000001", "3.05", "2.67"];
+    const cases = [1.2, 1.23, 3.000001, 3.05, 2.67];
     const rows = cases.map((value) => {
       applyOn(value);
       return [
         cell(humanize(value)),
-        cell(validity.representations.custom ? humanize(validity.representations.custom.value) : "-"),
         cell(validity.valid ? "✓" : "✗"),
         cell(validity.representations.valid?.value ?? "-"),
         cell(validity.step ?? "-"),
@@ -142,7 +163,6 @@ await snapshotTests(import.meta.url, ({ test }) => {
       [
         [
           cell("value"),
-          cell("customRepresentation: string"),
           cell("valid"),
           cell("valid suggestion"),
           cell("step error"),
@@ -156,16 +176,14 @@ await snapshotTests(import.meta.url, ({ test }) => {
   test("number step integer", () => {
     const [validity, applyOn] = createValidity({
       type: "number",
-      customRepresentation: "string",
       step: 1,
     });
 
-    const cases = ["5", "5.5"];
+    const cases = [5, 5.5];
     const rows = cases.map((value) => {
       applyOn(value);
       return [
         cell(humanize(value)),
-        cell(validity.representations.custom ? humanize(validity.representations.custom.value) : "-"),
         cell(validity.valid ? "✓" : "✗"),
         cell(validity.representations.valid?.value ?? "-"),
         cell(validity.step ?? "-"),
@@ -176,7 +194,6 @@ await snapshotTests(import.meta.url, ({ test }) => {
       [
         [
           cell("value"),
-          cell("customRepresentation: string"),
           cell("valid"),
           cell("valid suggestion"),
           cell("step error"),
@@ -190,18 +207,16 @@ await snapshotTests(import.meta.url, ({ test }) => {
   test("number combined min max step", () => {
     const [validity, applyOn] = createValidity({
       type: "number",
-      customRepresentation: "string",
       min: 0,
       max: 10,
       step: 0.5,
     });
 
-    const cases = ["5.5", "-2.3"];
+    const cases = [5.5, -2.3];
     const rows = cases.map((value) => {
       applyOn(value);
       return [
         cell(humanize(value)),
-        cell(validity.representations.custom ? humanize(validity.representations.custom.value) : "-"),
         cell(validity.valid ? "✓" : "✗"),
         cell(validity.representations.valid?.value ?? "-"),
         cell(
@@ -216,7 +231,6 @@ await snapshotTests(import.meta.url, ({ test }) => {
       [
         [
           cell("value"),
-          cell("customRepresentation: string"),
           cell("valid"),
           cell("valid suggestion"),
           cell("errors"),
@@ -231,18 +245,16 @@ await snapshotTests(import.meta.url, ({ test }) => {
     // String inputs get converted, then suggestions from one rule are validated against all others
     const [validity, applyOn] = createValidity({
       type: "number",
-      customRepresentation: "string",
       min: 0,
       max: 100,
       step: 1,
     });
 
-    const cases = ["150", "5.5", "-10", "50"];
+    const cases = [150, 5.5, -10, 50];
     const rows = cases.map((value) => {
       applyOn(value);
       return [
         cell(humanize(value)),
-        cell(validity.representations.custom ? humanize(validity.representations.custom.value) : "-"),
         cell(validity.valid ? "✓" : "✗"),
         cell(validity.representations.valid?.value ?? "-"),
         cell(
@@ -257,7 +269,6 @@ await snapshotTests(import.meta.url, ({ test }) => {
       [
         [
           cell("value"),
-          cell("customRepresentation: string"),
           cell("valid"),
           cell("valid suggestion"),
           cell("errors"),

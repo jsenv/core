@@ -1,49 +1,87 @@
 # [number min](../../validity_number.test.js)
 
 ```js
+const cases = ["-10", "0", "50"];
+
+const makeRow = (validity, applyOn, value) => {
+  applyOn(value);
+  return [
+    cell(humanize(value)),
+    cell(humanize(validity.value)),
+    cell(validity.valid ? "✓" : "✗"),
+    cell(validity.representations.valid?.value ?? "-"),
+    cell(
+      validity.representations.custom
+        ? humanize(validity.representations.custom.value)
+        : "-",
+    ),
+    cell(validity.min ?? "-"),
+  ];
+};
+const headers = [
+  cell("value"),
+  cell("validity.value"),
+  cell("valid"),
+  cell("valid suggestion"),
+  cell("customRepresentation: string"),
+  cell("min error"),
+];
+
 const [validity, applyOn] = createValidity({
   type: "number",
   customRepresentation: "string",
   min: 0,
 });
+const table1 = renderTable(
+  [headers, ...cases.map((value) => makeRow(validity, applyOn, value))],
+  { borderCollapse: true },
+);
 
-const cases = ["-10", "0", "50"];
-const rows = cases.map((value) => {
-  applyOn(value);
-  return [
-    cell(humanize(value)),
-    cell(validity.representations.custom ? humanize(validity.representations.custom.value) : "-"),
-    cell(validity.valid ? "✓" : "✗"),
-    cell(validity.representations.valid?.value ?? "-"),
-    cell(validity.min ?? "-"),
-  ];
+const [validityAutoFix, applyOnAutoFix] = createValidity({
+  type: "number",
+  customRepresentation: "string",
+  min: 0,
+  autoFix: true,
 });
-
-return renderTable(
+const table2 = renderTable(
   [
-    [
-      cell("value"),
-      cell("customRepresentation: string"),
-      cell("valid"),
-      cell("valid suggestion"),
-      cell("min error"),
-    ],
-    ...rows,
+    headers,
+    ...cases.map((value) =>
+      makeRow(validityAutoFix, applyOnAutoFix, value),
+    ),
   ],
   { borderCollapse: true },
 );
+
+return `without autoFix:
+${table1}
+
+with autoFix: true:
+${table2}`;
 ```
 
 ```js
-┌───────┬──────────────────────────────┬───────┬──────────────────┬──────────────────┐
-│ value │ customRepresentation: string │ valid │ valid suggestion │ min error        │
-├───────┼──────────────────────────────┼───────┼──────────────────┼──────────────────┤
-│ "-10" │ "0"                          │ ✗     │ 0                │ must be positive │
-├───────┼──────────────────────────────┼───────┼──────────────────┼──────────────────┤
-│ "0"   │ "0"                          │ ✓     │ -                │ -                │
-├───────┼──────────────────────────────┼───────┼──────────────────┼──────────────────┤
-│ "50"  │ "50"                         │ ✓     │ -                │ -                │
-└───────┴──────────────────────────────┴───────┴──────────────────┴──────────────────┘
+without autoFix:
+┌───────┬────────────────┬───────┬──────────────────┬──────────────────────────────┬──────────────────┐
+│ value │ validity.value │ valid │ valid suggestion │ customRepresentation: string │ min error        │
+├───────┼────────────────┼───────┼──────────────────┼──────────────────────────────┼──────────────────┤
+│ "-10" │ 10             │ ✗     │ 0                │ "-10"                        │ must be positive │
+├───────┼────────────────┼───────┼──────────────────┼──────────────────────────────┼──────────────────┤
+│ "0"   │  0             │ ✓     │ -                │ "0"                          │ -                │
+├───────┼────────────────┼───────┼──────────────────┼──────────────────────────────┼──────────────────┤
+│ "50"  │ 50             │ ✓     │ -                │ "50"                         │ -                │
+└───────┴────────────────┴───────┴──────────────────┴──────────────────────────────┴──────────────────┘
+
+with autoFix: true:
+┌───────┬────────────────┬───────┬──────────────────┬──────────────────────────────┬───────────┐
+│ value │ validity.value │ valid │ valid suggestion │ customRepresentation: string │ min error │
+├───────┼────────────────┼───────┼──────────────────┼──────────────────────────────┼───────────┤
+│ "-10" │  0             │ ✓     │ -                │ "0"                          │ -         │
+├───────┼────────────────┼───────┼──────────────────┼──────────────────────────────┼───────────┤
+│ "0"   │  0             │ ✓     │ -                │ "0"                          │ -         │
+├───────┼────────────────┼───────┼──────────────────┼──────────────────────────────┼───────────┤
+│ "50"  │ 50             │ ✓     │ -                │ "50"                         │ -         │
+└───────┴────────────────┴───────┴──────────────────┴──────────────────────────────┴───────────┘
 ```
 
 ---

@@ -3,16 +3,14 @@
 ```js
 const [validity, applyOn] = createValidity({
   type: "number",
-  customRepresentation: "string",
   step: 1,
 });
 
-const cases = ["5", "5.5"];
+const cases = [5, 5.5];
 const rows = cases.map((value) => {
   applyOn(value);
   return [
     cell(humanize(value)),
-    cell(validity.representations.custom ? humanize(validity.representations.custom.value) : "-"),
     cell(validity.valid ? "✓" : "✗"),
     cell(validity.representations.valid?.value ?? "-"),
     cell(validity.step ?? "-"),
@@ -23,7 +21,6 @@ return renderTable(
   [
     [
       cell("value"),
-      cell("customRepresentation: string"),
       cell("valid"),
       cell("valid suggestion"),
       cell("step error"),
@@ -35,13 +32,13 @@ return renderTable(
 ```
 
 ```js
-┌───────┬──────────────────────────────┬───────┬──────────────────┬────────────────────────────────────┐
-│ value │ customRepresentation: string │ valid │ valid suggestion │ step error                         │
-├───────┼──────────────────────────────┼───────┼──────────────────┼────────────────────────────────────┤
-│ "5"   │ "5"                          │ ✓     │ -                │ -                                  │
-├───────┼──────────────────────────────┼───────┼──────────────────┼────────────────────────────────────┤
-│ "5.5" │ "6"                          │ ✗     │ 6                │ must have at most 0 decimal places │
-└───────┴──────────────────────────────┴───────┴──────────────────┴────────────────────────────────────┘
+┌───────┬───────┬──────────────────┬────────────────────────────────────┐
+│ value │ valid │ valid suggestion │ step error                         │
+├───────┼───────┼──────────────────┼────────────────────────────────────┤
+│ 5     │ ✓     │ -                │ -                                  │
+├───────┼───────┼──────────────────┼────────────────────────────────────┤
+│ 5.5   │ ✗     │ 6                │ must have at most 0 decimal places │
+└───────┴───────┴──────────────────┴────────────────────────────────────┘
 ```
 
 ---

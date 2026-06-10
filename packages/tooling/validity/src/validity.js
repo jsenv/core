@@ -82,6 +82,7 @@ export const createValidity = (ruleConfig) => {
     urlRepresentation: urlRepresentationOverride,
     customRepresentation,
     typeCoercion = true,
+    autoFix: autoFixOption = false,
     ...ruleConfigWithoutRepresentation
   } = ruleConfig;
   ruleConfig = ruleConfigWithoutRepresentation;
@@ -218,6 +219,7 @@ export const createValidity = (ruleConfig) => {
       });
     }
     validity.valid = true;
+    validity.value = undefined;
     validity.representations = { valid: null };
     for (const [key, { type }] of storageTargets) {
       validity.representations[key] = {
@@ -316,17 +318,35 @@ export const createValidity = (ruleConfig) => {
     }
 
     validity.valid = valid;
-    const canonicalValue = valid ? value : validCanonicalValue;
+    // If autoFix is enabled and a suggestion exists, apply it silently
+    if (autoFixOption && !valid && validCanonicalValue !== undefined) {
+      value = validCanonicalValue;
+      valid = true;
+      validCanonicalValue = undefined;
+      for (const { key } of ruleSet) {
+        validity[key] = undefined;
+      }
+      validity.valid = true;
+    }
+    validity.value = value;
     validity.representations.valid =
       validCanonicalValue === undefined
         ? null
         : { type: theType, value: validCanonicalValue };
     for (const [key, { type, format }] of storageTargets) {
-      validity.representations[key] = {
-        type,
-        value:
-          canonicalValue !== undefined ? format(canonicalValue) : undefined,
-      };
+      if (key === "custom") {
+        // custom always shows the coerced (and possibly autoFixed) input value
+        validity.representations[key] = {
+          type,
+          value: value !== undefined ? format(value) : undefined,
+        };
+      } else {
+        // localStorage/url only written when value is valid
+        validity.representations[key] = {
+          type,
+          value: valid && value !== undefined ? format(value) : undefined,
+        };
+      }
     }
     return value;
   };
