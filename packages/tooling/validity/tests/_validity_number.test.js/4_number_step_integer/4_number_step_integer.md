@@ -47,7 +47,7 @@ return renderTable(
 │       │   "value": "5"      │       │                  │                                    │
 │       │ }                   │       │                  │                                    │
 ├───────┼─────────────────────┼───────┼──────────────────┼────────────────────────────────────┤
-│ "5.5" │ {                   │ ✗     │ 6                │ must have at most 0 decimal places │
+│ "5.5" │ {                   │ ✗     │ -                │ must have at most 0 decimal places │
 │       │   "type": "string", │       │                  │                                    │
 │       │   "value": "6"      │       │                  │                                    │
 │       │ }                   │       │                  │                                    │

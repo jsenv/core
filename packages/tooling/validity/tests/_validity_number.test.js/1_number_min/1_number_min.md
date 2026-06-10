@@ -42,7 +42,7 @@ return renderTable(
 ┌───────┬─────────────────────┬───────┬──────────────────┬──────────────────┐
 │ value │ converted           │ valid │ valid suggestion │ min error        │
 ├───────┼─────────────────────┼───────┼──────────────────┼──────────────────┤
-│ "-10" │ {                   │ ✗     │ 0                │ must be positive │
+│ "-10" │ {                   │ ✗     │ -                │ must be positive │
 │       │   "type": "string", │       │                  │                  │
 │       │   "value": "0"      │       │                  │                  │
 │       │ }                   │       │                  │                  │

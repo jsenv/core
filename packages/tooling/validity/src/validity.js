@@ -24,7 +24,7 @@ import { CANNOT_CONVERT, TYPES } from "./types.js";
  * @description
  * The returned validity object contains:
  * - `valid` {boolean}: Overall validation status
- * - `validSuggestion` {Object|null}: Auto-fix suggestion with `{value}` property
+ * - `representations.valid` {Object|null}: Valid canonical value `{type, value}`, or null if no fix is possible
  * - `type` {string|undefined}: Type validation error message or undefined if valid
  * - `min` {string|undefined}: Minimum validation error message or undefined if valid
  * - `max` {string|undefined}: Maximum validation error message or undefined if valid
@@ -49,7 +49,7 @@ import { CANNOT_CONVERT, TYPES } from "./types.js";
  * applyOn(1.23); // Invalid step
  * console.log(validity.valid); // false
  * console.log(validity.step); // "must be a multiple of 0.5"
- * console.log(validity.validSuggestion); // { value: 1 }
+ * console.log(validity.representations.valid); // { type: 'number', value: 1 }
  *
  * @example
  * // Type validation with auto-conversion
@@ -57,7 +57,7 @@ import { CANNOT_CONVERT, TYPES } from "./types.js";
  *
  * applyOn('123');
  * console.log(validity.valid); // false
- * console.log(validity.validSuggestion); // { value: 123 }
+ * console.log(validity.representations.valid); // { type: 'number', value: 123 }
  *
  * @example
  * // Enumeration validation
@@ -67,7 +67,7 @@ import { CANNOT_CONVERT, TYPES } from "./types.js";
  *
  * applyOn('yellow');
  * console.log(validity.oneOf); // "must be one of: red, green, blue"
- * console.log(validity.validSuggestion); // { value: 'red' }
+ * console.log(validity.representations.valid); // { type: undefined, value: 'red' }
  *
  * @throws {Error} When ruleConfig contains invalid rule values:
  * - type must be a string
@@ -218,15 +218,12 @@ export const createValidity = (ruleConfig) => {
       });
     }
     validity.valid = true;
-    validity.validSuggestion = null;
-    if (storageTargets.size > 0) {
-      validity.representations = {};
-      for (const [key, { type }] of storageTargets) {
-        validity.representations[key] = {
-          type,
-          value: undefined,
-        };
-      }
+    validity.representations = { valid: null };
+    for (const [key, { type }] of storageTargets) {
+      validity.representations[key] = {
+        type,
+        value: undefined,
+      };
     }
   }
 
@@ -246,7 +243,7 @@ export const createValidity = (ruleConfig) => {
       }
     }
     let valid = true;
-    let validSuggestion = null;
+    let validCanonicalValue;
 
     for (const { key, rule, ruleValue } of ruleSet) {
       const result = rule.applyOn(ruleValue, value, effectiveRuleConfig);
@@ -261,7 +258,7 @@ export const createValidity = (ruleConfig) => {
       if (!autoFix) {
         continue;
       }
-      if (validSuggestion) {
+      if (validCanonicalValue !== undefined) {
         // Don't try to create a new suggestion if we already have a valid one
         continue;
       }
@@ -299,12 +296,6 @@ export const createValidity = (ruleConfig) => {
       if (!candidateIsValid) {
         continue;
       }
-      if (candidateIsValid) {
-        validSuggestion = {
-          value: valueCandidate,
-        };
-      }
-
       // Test the final suggestion against all rules
       // (in case nested autofix is actually incompatible with all rules)
       let suggestionIsValid = true;
@@ -320,28 +311,22 @@ export const createValidity = (ruleConfig) => {
         }
       }
       if (suggestionIsValid) {
-        validSuggestion = {
-          value: valueCandidate,
-        };
+        validCanonicalValue = valueCandidate;
       }
     }
 
     validity.valid = valid;
-    validity.validSuggestion = validSuggestion;
-    // Update validity.representations for each storage target
-    if (storageTargets.size > 0) {
-      const canonicalValue = valid
-        ? value
-        : validSuggestion
-          ? validSuggestion.value
-          : undefined;
-      for (const [key, { type, format }] of storageTargets) {
-        validity.representations[key] = {
-          type,
-          value:
-            canonicalValue !== undefined ? format(canonicalValue) : undefined,
-        };
-      }
+    const canonicalValue = valid ? value : validCanonicalValue;
+    validity.representations.valid =
+      validCanonicalValue === undefined
+        ? null
+        : { type: theType, value: validCanonicalValue };
+    for (const [key, { type, format }] of storageTargets) {
+      validity.representations[key] = {
+        type,
+        value:
+          canonicalValue !== undefined ? format(canonicalValue) : undefined,
+      };
     }
     return value;
   };

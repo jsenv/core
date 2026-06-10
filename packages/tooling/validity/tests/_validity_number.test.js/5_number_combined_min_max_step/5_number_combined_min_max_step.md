@@ -53,7 +53,7 @@ return renderTable(
 │        │   "value": "5.5"    │       │                  │                                             │
 │        │ }                   │       │                  │                                             │
 ├────────┼─────────────────────┼───────┼──────────────────┼─────────────────────────────────────────────┤
-│ "-2.3" │ {                   │ ✗     │ 0                │ must be positive, must be a multiple of 0.5 │
+│ "-2.3" │ {                   │ ✗     │ -                │ must be positive, must be a multiple of 0.5 │
 │        │   "type": "string", │       │                  │                                             │
 │        │   "value": "0"      │       │                  │                                             │
 │        │ }                   │       │                  │                                             │

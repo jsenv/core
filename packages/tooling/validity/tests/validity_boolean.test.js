@@ -86,8 +86,8 @@ await snapshotTests(import.meta.url, ({ test }) => {
           cell(humanize(value)),
           cell(validity.valid ? "✓" : "✗"),
           cell(
-            validity.validSuggestion
-              ? humanize(validity.validSuggestion.value)
+            validity.representations.valid
+              ? humanize(validity.representations.valid.value)
               : "-",
           ),
           cell(validity.type ?? "-"),
