@@ -89,16 +89,6 @@ export const createValidity = (ruleConfig) => {
   const theType = ruleConfig.type;
   const typeDef = theType ? TYPES[theType] : null;
 
-  if (representation) {
-    for (const [key, reprName] of Object.entries(representation)) {
-      if (!typeDef?.representations?.[reprName]) {
-        throw new Error(
-          `[createValidity] Unknown representation "${reprName}" for type "${theType}"`,
-        );
-      }
-    }
-  }
-
   // Determine which named storage targets to track in validity.representations.
   // Each target: { reprName, formatFn } — used to populate { type, value } entries.
   // "url" and "localStorage" come from the type def (overridable via ruleConfig options).
@@ -122,6 +112,11 @@ export const createValidity = (ruleConfig) => {
   addStorageTarget("url", effectiveUrlRepr);
   if (representation) {
     for (const [key, reprName] of Object.entries(representation)) {
+      if (!typeDef?.representations?.[reprName]) {
+        throw new Error(
+          `[createValidity] Unknown representation "${reprName}" for type "${theType}"`,
+        );
+      }
       addStorageTarget(key, reprName);
     }
   }
