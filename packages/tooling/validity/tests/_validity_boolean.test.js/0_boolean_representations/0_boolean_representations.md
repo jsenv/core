@@ -23,24 +23,24 @@ const cases = [
   undefined,
 ];
 
-const reprCell = (validity, reprName) => {
-  const v = validity.representations?.[reprName];
+const customCell = (validity) => {
+  const v = validity.representations?.custom?.value;
   return cell(v !== undefined ? humanize(v) : "[[CANNOT_CONVERT]]");
 };
 
 const grid = [
   [
     cell("value"),
-    cell("representation: string"),
-    cell("representation: number"),
+    cell("customRepresentation: string"),
+    cell("customRepresentation: number"),
   ],
   ...cases.map((value) => {
     applyOnString(value);
     applyOnNumber(value);
     return [
       cell(humanize(value)),
-      reprCell(validityString, "string"),
-      reprCell(validityNumber, "number"),
+      customCell(validityString),
+      customCell(validityNumber),
     ];
   }),
 ];
@@ -49,29 +49,29 @@ return renderTable(grid, { borderCollapse: true });
 ```
 
 ```js
-┌───────────┬────────────────────────┬────────────────────────┐
-│ value     │ representation: string │ representation: number │
-├───────────┼────────────────────────┼────────────────────────┤
-│ true      │ [[CANNOT_CONVERT]]     │ [[CANNOT_CONVERT]]     │
-├───────────┼────────────────────────┼────────────────────────┤
-│ false     │ [[CANNOT_CONVERT]]     │ [[CANNOT_CONVERT]]     │
-├───────────┼────────────────────────┼────────────────────────┤
-│ "true"    │ [[CANNOT_CONVERT]]     │ [[CANNOT_CONVERT]]     │
-├───────────┼────────────────────────┼────────────────────────┤
-│ "false"   │ [[CANNOT_CONVERT]]     │ [[CANNOT_CONVERT]]     │
-├───────────┼────────────────────────┼────────────────────────┤
-│ "on"      │ [[CANNOT_CONVERT]]     │ [[CANNOT_CONVERT]]     │
-├───────────┼────────────────────────┼────────────────────────┤
-│ "1"       │ [[CANNOT_CONVERT]]     │ [[CANNOT_CONVERT]]     │
-├───────────┼────────────────────────┼────────────────────────┤
-│ 1         │ [[CANNOT_CONVERT]]     │ [[CANNOT_CONVERT]]     │
-├───────────┼────────────────────────┼────────────────────────┤
-│ 0         │ [[CANNOT_CONVERT]]     │ [[CANNOT_CONVERT]]     │
-├───────────┼────────────────────────┼────────────────────────┤
-│ "toto"    │ [[CANNOT_CONVERT]]     │ [[CANNOT_CONVERT]]     │
-├───────────┼────────────────────────┼────────────────────────┤
-│ undefined │ [[CANNOT_CONVERT]]     │ [[CANNOT_CONVERT]]     │
-└───────────┴────────────────────────┴────────────────────────┘
+┌───────────┬──────────────────────────────┬──────────────────────────────┐
+│ value     │ customRepresentation: string │ customRepresentation: number │
+├───────────┼──────────────────────────────┼──────────────────────────────┤
+│ true      │ "true"                       │ 1                            │
+├───────────┼──────────────────────────────┼──────────────────────────────┤
+│ false     │ "false"                      │ 0                            │
+├───────────┼──────────────────────────────┼──────────────────────────────┤
+│ "true"    │ [[CANNOT_CONVERT]]           │ [[CANNOT_CONVERT]]           │
+├───────────┼──────────────────────────────┼──────────────────────────────┤
+│ "false"   │ [[CANNOT_CONVERT]]           │ [[CANNOT_CONVERT]]           │
+├───────────┼──────────────────────────────┼──────────────────────────────┤
+│ "on"      │ [[CANNOT_CONVERT]]           │ [[CANNOT_CONVERT]]           │
+├───────────┼──────────────────────────────┼──────────────────────────────┤
+│ "1"       │ [[CANNOT_CONVERT]]           │ [[CANNOT_CONVERT]]           │
+├───────────┼──────────────────────────────┼──────────────────────────────┤
+│ 1         │ [[CANNOT_CONVERT]]           │ [[CANNOT_CONVERT]]           │
+├───────────┼──────────────────────────────┼──────────────────────────────┤
+│ 0         │ [[CANNOT_CONVERT]]           │ [[CANNOT_CONVERT]]           │
+├───────────┼──────────────────────────────┼──────────────────────────────┤
+│ "toto"    │ [[CANNOT_CONVERT]]           │ [[CANNOT_CONVERT]]           │
+├───────────┼──────────────────────────────┼──────────────────────────────┤
+│ undefined │ [[CANNOT_CONVERT]]           │ [[CANNOT_CONVERT]]           │
+└───────────┴──────────────────────────────┴──────────────────────────────┘
 ```
 
 ---

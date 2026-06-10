@@ -31,24 +31,24 @@ await snapshotTests(import.meta.url, ({ test }) => {
       undefined,
     ];
 
-    const reprCell = (validity, reprName) => {
-      const v = validity.representations?.[reprName];
+    const customCell = (validity) => {
+      const v = validity.representations?.custom?.value;
       return cell(v !== undefined ? humanize(v) : "[[CANNOT_CONVERT]]");
     };
 
     const grid = [
       [
         cell("value"),
-        cell("representation: string"),
-        cell("representation: number"),
+        cell("customRepresentation: string"),
+        cell("customRepresentation: number"),
       ],
       ...cases.map((value) => {
         applyOnString(value);
         applyOnNumber(value);
         return [
           cell(humanize(value)),
-          reprCell(validityString, "string"),
-          reprCell(validityNumber, "number"),
+          customCell(validityString),
+          customCell(validityNumber),
         ];
       }),
     ];
