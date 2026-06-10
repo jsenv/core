@@ -202,14 +202,16 @@
       // It embeds a Picker so the user can type any minute value.
 
       const CustomDurationOption = ({ selected, index }) => {
-        const customDuration = customDurationSignal.value;
+        const totalMinutes = customDurationSignal.value ?? 0;
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
 
         return (
           <List.Item
             selectable
             index={index}
             id="custom"
-            value={customDuration}
+            value={totalMinutes}
             selected={selected}
             borderRadius="s"
             borderWidth="1"
@@ -221,22 +223,19 @@
             Autre
             <Input
               type="navi_hour"
-              value={customDuration} // TODO: should be compination of hour + min
+              value={hours}
               uiAction={(v) => {
-                // TODO: should be compination of hour + min
-                customDurationSignal.value = v;
+                const h = typeof v === "number" ? v : 0;
+                customDurationSignal.value = h * 60 + minutes;
               }}
             />
             h
             <Input
               type="navi_minute"
-              min={customDurationSignal.options.min}
-              max={customDurationSignal.options.max}
-              step={customDurationSignal.options.step}
-              value={customDuration} // TODO: should be compination of hour + min
+              value={minutes}
               uiAction={(v) => {
-                // TODO: should be compination of hour + min
-                customDurationSignal.value = v;
+                const m = typeof v === "number" ? v : 0;
+                customDurationSignal.value = hours * 60 + m;
               }}
             />
           </List.Item>
