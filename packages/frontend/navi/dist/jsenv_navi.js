@@ -34256,11 +34256,11 @@ installImportMetaCssBuild(import.meta);const css$m = /* css */`
       --list-item-outline-width: 2px;
       --list-item-outline-offset: calc(-1 * var(--list-item-outline-width));
       /* Hover (mouse) */
-      --list-item-color-hover: var(--list-item-color);
       --list-item-background-color-hover: light-dark(#f5f5f5, #2a2a2a);
+      --list-item-color-hover: var(--list-item-color);
       /* Pointed by mouse — subtle, just a shade above background */
-      --list-item-color-mouse-pointed: var(--list-item-color);
       --list-item-background-color-mouse-pointed: light-dark(#ebebeb, #303030);
+      --list-item-color-mouse-pointed: var(--list-item-color);
       /* Pointed by keyboard — subtle light blue highlight */
       --list-item-color-keyboard-pointed: var(--list-item-color);
       --list-item-background-color-keyboard-pointed: light-dark(
@@ -34268,8 +34268,8 @@ installImportMetaCssBuild(import.meta);const css$m = /* css */`
         #1c3a6e
       );
       /* Pointed by proxy */
-      --list-item-color-pointed: var(--list-item-color);
       --list-item-background-color-pointed: light-dark(#dbeafe, #1c3a6e);
+      --list-item-color-pointed: var(--list-item-color);
       /* Selected — vivid blue accent */
       --list-item-color-selected: white;
       --list-item-background-color-selected: rgb(3, 30, 60);
@@ -34351,7 +34351,7 @@ installImportMetaCssBuild(import.meta);const css$m = /* css */`
     }
     /* No input proxy: focused,selected */
     &:not(:has(input[navi-control-proxy-for])) {
-      &:has([data-focus-visible]) {
+      &:has([navi-selectable-real-input][data-focus-visible]) {
         --x-list-item-color: var(--list-item-color-keyboard-pointed);
         --x-list-item-background-color: var(
           --list-item-background-color-keyboard-pointed
@@ -34363,6 +34363,10 @@ installImportMetaCssBuild(import.meta);const css$m = /* css */`
           --x-list-item-background-color: var(
             --list-item-background-color-selected,
             var(--list-item-background-color-keyboard-pointed)
+          );
+          --x-list-item-color: var(
+            --list-item-color-selected,
+            var(--list-item-color-keyboard-pointed)
           );
         }
       }
