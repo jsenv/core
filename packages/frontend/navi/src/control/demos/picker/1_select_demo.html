@@ -55,38 +55,34 @@
         color: #333;
       }
       h1 {
-        margin-bottom: 24px;
-        font-size: 1.4rem;
+        margin-bottom: 32px;
+        color: #333;
+        font-size: 1.8rem;
+        text-align: center;
       }
-      h2 {
-        margin: 0 0 6px;
-        font-size: 1rem;
+      .demo-section h2 {
+        margin: 0 0 8px;
+        padding-bottom: 10px;
+        color: #333;
+        font-size: 1.1rem;
+        border-bottom: 2px solid #eee;
       }
-      p {
+      .demo-section p {
         margin: 0 0 16px;
         color: #555;
-        font-size: 13px;
+        font-size: 0.9rem;
+        line-height: 1.5;
       }
-      .toc {
-        margin-bottom: 24px;
-        padding: 16px 20px;
-        font-size: 13px;
-        background: white;
-        border-radius: 8px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-      }
-      .toc ol {
+      .toc-list {
         margin: 0;
         padding-left: 20px;
+        line-height: 2;
       }
-      .toc li {
-        line-height: 1.8;
-      }
-      .toc a {
+      .toc-list a {
         color: #1a56cc;
         text-decoration: none;
       }
-      .toc a:hover {
+      .toc-list a:hover {
         text-decoration: underline;
       }
     </style>
@@ -94,27 +90,6 @@
   <body>
     <div id="container">
       <h1>Select Picker Demo</h1>
-      <nav class="toc">
-        <ol>
-          <li>
-            <a href="#section-1"
-              >1. <code>action="send"</code> — closes on click</a
-            >
-          </li>
-          <li>
-            <a href="#section-2"
-              >2. <code>action="update"</code> — stays open until closed</a
-            >
-          </li>
-          <li><a href="#section-3">3. Searchable select — empty list</a></li>
-          <li><a href="#section-4">4. Searchable select — full list</a></li>
-          <li><a href="#section-5">5. Searchable select — few results</a></li>
-          <li><a href="#section-6">6. Searchable select — no results</a></li>
-          <li>
-            <a href="#section-7">7. Place picker — rich items with search</a>
-          </li>
-        </ol>
-      </nav>
       <div id="app"></div>
     </div>
     <script type="module" jsenv-type="module/jsx">
@@ -215,8 +190,45 @@
       });
       setupRoutes([DEMO_ROUTE]);
 
+      const TableOfContents = () => (
+        <div class="demo-section">
+          <h2>Table of contents</h2>
+          <ol class="toc-list">
+            <li>
+              <a href="#section-1">
+                1. <code>action="send"</code> — closes on click
+              </a>
+            </li>
+            <li>
+              <a href="#section-2">
+                2. <code>action="update"</code> — stays open until closed
+              </a>
+            </li>
+            <li>
+              <a href="#section-3">3. Searchable select — empty list</a>
+            </li>
+            <li>
+              <a href="#section-4">4. Searchable select — full list</a>
+            </li>
+            <li>
+              <a href="#section-5">5. Searchable select — few results</a>
+            </li>
+            <li>
+              <a href="#section-6">6. Searchable select — no results</a>
+            </li>
+            <li>
+              <a href="#section-7">7. Place picker — rich items with search</a>
+            </li>
+            <li>
+              <a href="#section-8">8. Customization — font size</a>
+            </li>
+          </ol>
+        </div>
+      );
+
       const App = () => (
         <Box flex="y" spacing="l">
+          <TableOfContents />
           <SelectWithSend />
           <SelectWithUpdate />
           <SearchableSelectEmpty />
@@ -224,6 +236,7 @@
           <SearchableSelectFewResults />
           <SearchableSelectNoResults />
           <PlacePickerDemo />
+          <CustomizationDemo />
         </Box>
       );
 
@@ -711,6 +724,66 @@
               </Picker>
             </Field>
             <CallLog entries={logSignal.value} />
+          </div>
+        );
+      };
+
+      // ── 8. Customization — font size ────────────────────────────────────
+
+      const FONT_SIZE_OPTIONS = [
+        "12px",
+        "14px",
+        "16px",
+        "18px",
+        "20px",
+        "24px",
+      ];
+
+      const CustomizationDemo = () => {
+        const selectedSignal = useSignal("16px");
+        const selected = selectedSignal.value;
+
+        return (
+          <div id="section-8" class="demo-section">
+            <h2>8. Customization — font size</h2>
+            <p>
+              The picker inherits CSS custom properties from its container,
+              making it straightforward to adjust visual properties like font
+              size. Here the picker itself renders at the chosen font size.
+            </p>
+            <Field vertical>
+              <Label>Font size</Label>
+              <Picker
+                name="font_size_picker"
+                placeholder="Pick a size…"
+                value={selected}
+                action={(v) => {
+                  selectedSignal.value = v;
+                }}
+                minWidth="160"
+                style={{ fontSize: selected }}
+              >
+                <List selectable action="send">
+                  {FONT_SIZE_OPTIONS.map((size, i) => (
+                    <List.Item
+                      selectable
+                      key={size}
+                      id={`font_size_${size}`}
+                      index={i}
+                      value={size}
+                      selected={selected === size}
+                      padding="s"
+                      spacing="s"
+                    >
+                      {size}
+                    </List.Item>
+                  ))}
+                </List>
+              </Picker>
+            </Field>
+            <p style={{ marginTop: "16px", marginBottom: 0 }}>
+              Selected: <code>{selected}</code>
+            </p>
           </div>
         );
       };
