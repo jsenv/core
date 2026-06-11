@@ -11,7 +11,7 @@ import { Icon } from "@jsenv/navi/src/text/icon.jsx";
 import { ControlChildrenWrapper, useControlProps } from "../control_hooks.jsx";
 import { resolveInputProps } from "../input/resolve_input_props.js";
 import { getUIStateControllerById } from "../ui_state_controller.js";
-import { PickerPlaceholder, PickerValue } from "./picker_components.jsx";
+import { PickerValue } from "./picker_components.jsx";
 import { PickerContext } from "./picker_context.jsx";
 import { pickerResolvers } from "./picker_resolvers.jsx";
 import {
@@ -333,9 +333,12 @@ const PickerButton = (props) => {
         onClick={undefined}
         onKeyDown={undefined}
       />
-      <PickerContext.Provider value={{ value, placeholder }}>
-        {ui === undefined ? <PickerDefaultUI /> : ui}
-      </PickerContext.Provider>
+      <PickerValue>
+        <PickerContext.Provider value={{ value, placeholder }}>
+          {ui === undefined ? <PickerDefaultUI /> : ui}
+        </PickerContext.Provider>
+      </PickerValue>
+
       <span className="navi_picker_right_slot">
         <Icon size="m">{icon === undefined ? <ChevronDownSvg /> : icon}</Icon>
       </span>
@@ -411,9 +414,9 @@ const PickerDefaultUI = () => {
     if (!placeholder) {
       return null;
     }
-    return <PickerPlaceholder>{placeholder}</PickerPlaceholder>;
+    return placeholder;
   }
-  return <PickerValue>{value}</PickerValue>;
+  return value;
 };
 
 const PickerFirstResolver = (props) => {
@@ -433,8 +436,6 @@ export const Picker = createComponentResolver([
   PickerButton,
 ]);
 
-Picker.Placeholder = PickerPlaceholder;
-Picker.Value = PickerValue;
 Picker.UI = PickerDefaultUI;
 
 Picker.UI.Date = PickerDateUI;
