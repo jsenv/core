@@ -19,7 +19,7 @@ export const PickerArray = (props) => {
   );
 };
 export const PickerArrayUI = () => {
-  const { value, placeholder } = useContext(PickerContext);
+  const { value, placeholder, maxRows } = useContext(PickerContext);
   if (!value || value.length === 0) {
     if (!placeholder) {
       return null;
@@ -27,7 +27,12 @@ export const PickerArrayUI = () => {
     return placeholder;
   }
   return (
-    <Text spacing=", " shrinkWrap>
+    <Text
+      spacing=", "
+      shrinkWrap
+      lineClamp={maxRows > 1 ? maxRows : undefined}
+      overflowEllipsis={maxRows === 1 ? true : undefined}
+    >
       {value.map((item) => {
         return <span key={item}>{item}</span>;
       })}

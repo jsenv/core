@@ -33465,7 +33465,8 @@ const PickerArray = props => {
 const PickerArrayUI = () => {
   const {
     value,
-    placeholder
+    placeholder,
+    maxRows
   } = useContext(PickerContext);
   if (!value || value.length === 0) {
     if (!placeholder) {
@@ -33476,6 +33477,8 @@ const PickerArrayUI = () => {
   return jsx(Text, {
     spacing: ", ",
     shrinkWrap: true,
+    lineClamp: maxRows > 1 ? maxRows : undefined,
+    overflowEllipsis: maxRows === 1 ? true : undefined,
     children: value.map(item => {
       return jsx("span", {
         children: item
@@ -36479,13 +36482,6 @@ installImportMetaCssBuild(import.meta);const css$k = /* css */`
 
       &[navi-placeholder] {
         color: var(--picker-placeholder-color);
-      }
-
-      .navi_text:not(.navi_more_badge) {
-        max-width: 100%;
-        text-overflow: inherit;
-        vertical-align: middle; /* For some reason it's required to disminish inline-block height */
-        overflow: inherit;
       }
     }
     .navi_picker_right_slot {

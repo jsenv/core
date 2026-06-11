@@ -150,8 +150,25 @@
         ]);
         const selectedArray = selectedSignal.value;
 
-        const selectedSignalMr1 = useSignal(["Apple", "Cherry"]);
+        const selectedSignalMr1 = useSignal([
+          "Apple",
+          "Banana",
+          "Cherry",
+          "Date",
+          "Elderberry",
+        ]);
         const selectedArrayMr1 = selectedSignalMr1.value;
+
+        const selectedSignalMr2 = useSignal([
+          "Apple",
+          "Banana",
+          "Cherry",
+          "Date",
+          "Elderberry",
+          "Fig",
+          "Grape",
+        ]);
+        const selectedArrayMr2 = selectedSignalMr2.value;
 
         return (
           <div class="demo-section">
@@ -224,6 +241,42 @@
                         index={i}
                         value={opt}
                         selected={selectedArrayMr1.includes(opt)}
+                        padding="s"
+                        spacing="s"
+                      >
+                        {opt}
+                      </List.Item>
+                    ))}
+                  </List>
+                </Picker>
+              </Field>
+              <Field vertical>
+                <Label>
+                  Fruits <code style="font-weight:normal">(maxRows=2)</code>
+                </Label>
+                <Picker
+                  type="array"
+                  name="multiselect_text_maxrows2"
+                  placeholder="Select fruits…"
+                  value={selectedArrayMr2}
+                  uiAction={(v) => {
+                    selectedSignalMr2.value = v;
+                  }}
+                  action={(v) => {
+                    selectedSignalMr2.value = v;
+                  }}
+                  maxWidth="150"
+                  maxRows={2}
+                >
+                  <List selectable multiple action="update">
+                    {FRUIT_OPTIONS.map((opt, i) => (
+                      <List.Item
+                        selectable
+                        key={opt}
+                        id={`${opt}_chip_mr2`}
+                        index={i}
+                        value={opt}
+                        selected={selectedArrayMr2.includes(opt)}
                         padding="s"
                         spacing="s"
                       >
