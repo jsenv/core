@@ -27,16 +27,15 @@ export const BadgeList = ({
   ...props
 }) => {
   import.meta.css = css;
-  const visibleRef = useRef();
   const measureRef = useRef();
   const [hiddenCount, setHiddenCount] = useState(0);
 
   useLayoutEffect(() => {
     const measureEl = measureRef.current;
-    const visibleEl = visibleRef.current;
-    if (!measureEl || !visibleEl) {
+    if (!measureEl) {
       return undefined;
     }
+    const visibleEl = measureEl.nextElementSibling;
     let observer;
     let rafId;
 
@@ -96,39 +95,41 @@ export const BadgeList = ({
   }, [shrinkWrap, maxRows, children]);
 
   const childArray = toChildArray(children);
+  // Hide one extra child beyond the overflow to guarantee a slot for the
+  // "+N more" badge without it wrapping to a new row.
+  const extraHidden = hiddenCount > 0 ? 1 : 0;
   const visibleChildren =
     maxRows !== undefined && hiddenCount > 0
-      ? childArray.slice(0, childArray.length - hiddenCount)
+      ? childArray.slice(0, childArray.length - hiddenCount - extraHidden)
       : childArray;
+  const displayedHiddenCount = hiddenCount + extraHidden;
 
   const sharedProps = {
     inline: true,
     flex: "x",
     alignY: "center",
     spacing: "xs",
+    ...props,
   };
 
   return (
     <Box relative>
       {/* Measurement ghost: all children, invisible, out-of-flow */}
       <Box
+        baseCassName="navi_badge_list"
         {...sharedProps}
         ref={measureRef}
         aria-hidden="true"
-        className="navi_badge_list"
         navi-badge-list-clone=""
       >
         {childArray}
       </Box>
       {/* Visible element */}
-      <Box
-        {...sharedProps}
-        ref={visibleRef}
-        className="navi_badge_list"
-        {...props}
-      >
+      <Box baseCassName="navi_badge_list" {...sharedProps}>
         {visibleChildren.length ? visibleChildren : fallback}
-        {hiddenCount > 0 && <Badge>+{hiddenCount} more</Badge>}
+        {displayedHiddenCount > 0 && (
+          <Badge>+{displayedHiddenCount} more</Badge>
+        )}
       </Box>
     </Box>
   );
