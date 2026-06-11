@@ -48,7 +48,10 @@ const MIN_CONTENT_VISIBILITY_RATIO = 0.6;
 export const visibleRectEffect = (
   element,
   update,
-  { event: initialEvent = new CustomEvent("initialization") } = {},
+  {
+    event: initialEvent = new CustomEvent("initialization"),
+    skipElementResize,
+  } = {},
 ) => {
   const [teardown, addTeardown] = createPubSub();
   const scrollContainer = getScrollContainer(element);
@@ -299,8 +302,17 @@ export const visibleRectEffect = (
       }
     }
     on_element_resize: {
-      let handlingResize = true;
+      if (skipElementResize) {
+        break on_element_resize;
+      }
+
+      let isFirst = true;
+      let handlingResize = false;
       const resizeObserver = new ResizeObserver(() => {
+        if (isFirst) {
+          isFirst = false;
+          return;
+        }
         if (handlingResize) {
           return;
         }
