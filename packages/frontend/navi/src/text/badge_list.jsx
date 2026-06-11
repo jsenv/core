@@ -2,14 +2,27 @@ import { measureWidestChildRow } from "@jsenv/dom";
 import { toChildArray } from "preact";
 import { useLayoutEffect, useRef } from "preact/hooks";
 
-import { Box } from "../box/box.jsx";
+import { stringifySpacingStyle } from "../box/box_style_util.js";
 import { withPropsClassName } from "../utils/with_props_class_name.js";
+import { Text } from "./text.jsx";
 
 const css = /* css */ `
   @layer navi {
+    .navi_badge_list {
+      --badge-list-spacing: var(--navi-s);
+    }
   }
   .navi_badge_list {
+    --badge-list-spacing-px: round(var(--badge-list-spacing), 1px);
+    display: inline-block;
+    margin-right: calc(-1 * var(--badge-list-spacing-px));
+    margin-bottom: calc(-1 * var(--badge-list-spacing-px));
     flex-wrap: wrap;
+
+    .navi_badge {
+      margin-right: var(--badge-list-spacing-px);
+      margin-bottom: var(--badge-list-spacing-px);
+    }
   }
 `;
 
@@ -18,7 +31,6 @@ export const BadgeList = ({
   children,
   className,
   shrinkWrap = true,
-  maxRows,
   ...props
 }) => {
   import.meta.css = css;
@@ -42,40 +54,6 @@ export const BadgeList = ({
           el.style.width = `${Math.ceil(optimalWidth)}px`;
         }
       }
-
-      if (maxRows !== undefined) {
-        el.style.maxHeight = "";
-        el.style.overflow = "";
-        const containerTop = el.getBoundingClientRect().top;
-        const rowTops = [];
-        for (const child of el.children) {
-          const childTop = Math.round(
-            child.getBoundingClientRect().top - containerTop,
-          );
-          if (!rowTops.includes(childTop)) {
-            rowTops.push(childTop);
-          }
-          if (rowTops.length > maxRows) {
-            break;
-          }
-        }
-        if (rowTops.length >= maxRows) {
-          const lastAllowedTop = rowTops[maxRows - 1];
-          let maxBottom = 0;
-          for (const child of el.children) {
-            const rect = child.getBoundingClientRect();
-            const childTop = Math.round(rect.top - containerTop);
-            if (childTop === lastAllowedTop) {
-              const childBottom = Math.round(rect.bottom - containerTop);
-              if (childBottom > maxBottom) {
-                maxBottom = childBottom;
-              }
-            }
-          }
-          el.style.maxHeight = `${maxBottom}px`;
-          el.style.overflow = "hidden";
-        }
-      }
     };
     applyLayout();
     const parent = el.parentElement;
@@ -95,16 +73,18 @@ export const BadgeList = ({
   });
 
   const childArray = toChildArray(children);
+  const { spacing = "xxl" } = props;
+
   return (
-    <Box
-      inline
-      flex="x"
-      alignY="center"
-      spacing="xs"
+    <Text
+      spacing="pre"
       className={withPropsClassName("navi_badge_list", className)}
+      style={{
+        "--badge-list-spacing": stringifySpacingStyle(spacing),
+      }}
       {...props}
     >
       {childArray.length ? children : fallback}
-    </Box>
+    </Text>
   );
 };
