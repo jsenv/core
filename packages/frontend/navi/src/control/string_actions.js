@@ -5,11 +5,11 @@ import {
   getParentControl,
 } from "./control_dom.js";
 import { createUICallback } from "./ui_callback.js";
-import { dispatchRequestSetUIState } from "./ui_state_controller.js";
+import { dispatchRequestSetUIState } from "./ui_state_dom.js";
 import { dispatchRequestAction } from "./validation/custom_constraint_validation.js";
 
-export const triggerStringAction = (actionName, event, options) => {
-  return resolveActionProp(actionName)(event, options);
+export const triggerStringAction = (actionName, ...args) => {
+  return resolveActionProp(actionName)(...args);
 };
 export const resolveActionProp = (action) => {
   if (typeof action === "string") {
@@ -115,12 +115,14 @@ const requestUnselect = (e, getUnselectParam) => {
  */
 const update = createUICallback({
   name: "update",
-  action: (value, { event }) => {
-    return requestUpdate(event, value);
+  action: (value, { event, actionTarget }) => {
+    return requestUpdate(event, value, { actionTarget });
   },
 });
-const requestUpdate = (event, value, { isClear } = {}) => {
-  const actionTarget = getActionTarget(event);
+const requestUpdate = (event, value, { actionTarget, isClear } = {}) => {
+  if (!actionTarget) {
+    actionTarget = getActionTarget(event);
+  }
   if (!actionTarget) {
     return false;
   }
@@ -207,8 +209,8 @@ const requestClosestAction = (event) => {
  */
 const clear = createUICallback({
   name: "clear",
-  event: (event, { skipClose } = {}) => {
-    requestUpdate(event, undefined, { isClear: true });
+  event: (event, { actionTarget, skipClose } = {}) => {
+    requestUpdate(event, "", { actionTarget, isClear: true });
     if (!skipClose) {
       const expandableEl = event.currentTarget.closest("[aria-expanded]");
       if (expandableEl) {
@@ -217,8 +219,8 @@ const clear = createUICallback({
     }
     return true;
   },
-  action: (v, { event }) => {
-    requestUpdate(event, undefined, { isClear: true });
+  action: (v, { event, actionTarget }) => {
+    requestUpdate(event, "", { actionTarget, isClear: true });
     const expandableEl = event.currentTarget.closest("[aria-expanded]");
     if (expandableEl) {
       return requestClose(event);

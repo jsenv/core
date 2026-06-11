@@ -6,7 +6,7 @@ import { Box } from "../../box/box.jsx";
 import { useKeyboardShortcuts } from "../../keyboard/keyboard_shortcuts.js";
 import { useFocusGroup } from "../../utils/focus/use_focus_group.js";
 import { ActionContext } from "../control_context.js";
-import { useControlProps } from "../control_hooks.jsx";
+import { ControlChildrenWrapper, useControlProps } from "../control_hooks.jsx";
 import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
 import { SummaryMarker } from "./summary_marker.jsx";
 
@@ -70,26 +70,25 @@ const DetailsField = (props) => {
     closeKeyShortcut = "ArrowLeft",
     onToggle,
   } = props;
-  const [detailsProps, remainingProps, ControlChildrenWrapper] =
-    useControlProps(
-      {
-        resetOnCancel: true,
-        resetOnAbort: true,
-        resetOnError: true,
-        // errors are shown by ActionRenderer inside <details>, not as validation messages
-        actionErrorEffect: "none",
-        ...props,
-      },
-      {
-        controlType: "details",
-        statePropName: "open",
-        defaultStatePropName: "defaultOpen",
-        fallbackState: false,
-        getStateFromProp: (open) => (open ? props.value : undefined),
-        getPropFromState: Boolean,
-        persists,
-      },
-    );
+  const [detailsProps, remainingProps] = useControlProps(
+    {
+      resetOnCancel: true,
+      resetOnAbort: true,
+      resetOnError: true,
+      // errors are shown by ActionRenderer inside <details>, not as validation messages
+      actionErrorEffect: "none",
+      ...props,
+    },
+    {
+      controlType: "details",
+      statePropName: "open",
+      defaultStatePropName: "defaultOpen",
+      fallbackState: false,
+      getStateFromProp: (open) => (open ? props.value : undefined),
+      getPropFromState: Boolean,
+      persists,
+    },
+  );
   const { value, children } = detailsProps;
   const open = Boolean(value);
 

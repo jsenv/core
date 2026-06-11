@@ -1,6 +1,6 @@
 import { dispatchCustomEvent } from "@jsenv/dom";
 
-import { getUIStateFromElement } from "./ui_state_controller.js";
+import { getUIStateFromElement } from "./ui_state_dom.js";
 
 /**
  * Converts a JS value into the form expected by the browser DOM property for a
@@ -19,12 +19,15 @@ import { getUIStateFromElement } from "./ui_state_controller.js";
  * @param {{ controlType: string, type: string }} options
  * @returns {any} The DOM-compatible value or a converter function.
  */
-export const asControlHostValue = (jsValue, { controlType, type }) => {
+export const asControlHostValue = (
+  jsValue,
+  { controlType, type, inputMode },
+) => {
   if (controlType === "input") {
     if (type === "datetime-local") {
       return asDatetimeLocalString(jsValue);
     }
-    if (type === "number" || type === "range") {
+    if (type === "number" || type === "range" || inputMode === "numeric") {
       return asNumberString(jsValue);
     }
     if (type === "color") {
@@ -95,7 +98,11 @@ export const readControlValue = (controlHost) => {
     // so use getAttribute
     const type = controlHost.getAttribute("type");
 
-    if (type === "number" || type === "range") {
+    if (
+      type === "number" ||
+      type === "range" ||
+      controlHost.inputMode === "numeric"
+    ) {
       return readNumberFromInput(controlHost);
     }
     if (type === "color") {
@@ -127,7 +134,7 @@ const readValueFromButton = (button) => {
 const readDatetimeLocalFromInput = (input) => {
   const localDateTimeString = input.value;
   if (localDateTimeString === "") {
-    return undefined;
+    return "";
   }
   const localDate = new Date(localDateTimeString);
   if (isNaN(localDate.getTime())) {
@@ -138,7 +145,7 @@ const readDatetimeLocalFromInput = (input) => {
 const readNumberFromInput = (input) => {
   const numberString = input.value;
   if (numberString === "") {
-    return undefined;
+    return "";
   }
   const asNumber = Number(numberString);
   if (isNaN(asNumber)) {

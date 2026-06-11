@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Duration Preset + Custom Demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 40px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      #container {
+        max-width: 600px;
+        margin: 0 auto;
+      }
+      h1 {
+        margin: 0 0 32px;
+        font-size: 1.4rem;
+      }
+      h2 {
+        margin: 0 0 8px;
+        font-size: 1.1rem;
+      }
+      .demo-section {
+        margin-bottom: 24px;
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      p.desc {
+        margin: 0 0 16px;
+        color: #555;
+        font-size: 13px;
+      }
+      .form-result {
+        min-height: 32px;
+        margin-top: 16px;
+        padding: 10px 12px;
+        color: #333;
+        font-size: 12px;
+        font-family: monospace;
+        background: #f9f9f9;
+        border: 1px solid #e0e0e0;
+        border-radius: 6px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <h1>Duration Preset + Custom Demo</h1>
+      <div id="app"></div>
+    </div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useSignal } from "@preact/signals";
+      import { stateSignal, route, setupRoutes } from "@jsenv/navi";
+      import {
+        Box,
+        Field,
+        Label,
+        List,
+        Input,
+        Picker,
+        Form,
+        Button,
+        Time,
+        NaviDebug,
+      } from "@jsenv/navi";
+
+      const PRESET_DURATIONS = [60, 90, 120];
+
+      // Value is one of the preset numbers (60, 90, 120) or the string "custom".
+      // When "custom", the actual duration is derived from customDurationHourSignal
+      // and customDurationMinuteSignal.
+      const durationSignal = stateSignal(90, {
+        id: "duration",
+        oneOf: [...PRESET_DURATIONS, "custom"],
+        // persists: true,
+      });
+      const customDurationHourSignal = stateSignal(2, {
+        id: "custom_hour",
+        type: "hour",
+        min: 0,
+        max: 5,
+      });
+      const customDurationMinuteSignal = stateSignal(15, {
+        id: "custom_minute",
+        type: "minute",
+        min: 0,
+        max: 59,
+      });
+
+      const DEMO_ROUTE = route("", {
+        searchParams: {
+          duration: durationSignal,
+          custom_hour: customDurationHourSignal,
+          custom_minute: customDurationMinuteSignal,
+        },
+      });
+      setupRoutes([DEMO_ROUTE]);
+
+      const App = () => {
+        const formResultSignal = useSignal(null);
+
+        return (
+          <Box flex="y" spacing="l">
+            <div class="demo-section">
+              <h2>Duration selector — presets + custom</h2>
+              <p class="desc">
+                3 preset options (60, 90, 120 min) and a "custom" option with a
+                time Picker. The custom item is selected when the current value
+                is not one of the presets. The Picker opens to let the user
+                enter any duration. Everything is wired in a Form.
+              </p>
+              <Form
+                action={({ duration }) => {
+                  if (duration === "custom") {
+                    const hours = customDurationHourSignal.value || 0;
+                    const minutes = customDurationMinuteSignal.value || 0;
+                    duration = hours * 60 + minutes;
+                  }
+                  formResultSignal.value = { duration };
+                }}
+                flex="y"
+                spacing="m"
+                alignX="start"
+              >
+                <DurationControl />
+                <Button type="submit">Submit</Button>
+              </Form>
+              {formResultSignal.value !== null ? (
+                <div class="form-result">
+                  Form submitted:{" "}
+                  {JSON.stringify(formResultSignal.value, null, 2)}
+                </div>
+              ) : (
+                <div class="form-result" style="color:#aaa">
+                  Submit the form to see values…
+                </div>
+              )}
+            </div>
+          </Box>
+        );
+      };
+
+      // ── DurationField ─────────────────────────────────────────────────────
+      const DurationControl = () => {
+        const value = durationSignal.value;
+
+        return (
+          <Field vertical>
+            <Label>Durée</Label>
+            <List
+              selectable
+              horizontal
+              spacing="s"
+              id="duration"
+              name="duration"
+              border="none"
+              required
+              value={value}
+              action={(v) => {
+                durationSignal.value = v;
+              }}
+            >
+              {PRESET_DURATIONS.map((minutes, i) => (
+                <MinuteOption
+                  key={minutes}
+                  index={i}
+                  id={minutes}
+                  value={minutes}
+                  selected={value === minutes}
+                >
+                  {minutes}
+                </MinuteOption>
+              ))}
+              <CustomDurationOption
+                index={PRESET_DURATIONS.length}
+                selected={value === "custom"}
+              />
+            </List>
+          </Field>
+        );
+      };
+
+      // ── MinuteOption ─────────────────────────────────────────────────────
+
+      const MinuteOption = ({ children, ...props }) => {
+        return (
+          <List.Item
+            selectable
+            borderRadius="s"
+            borderWidth="1"
+            minWidth="64"
+            paddingX="m"
+            paddingY="s"
+            alignX="center"
+            {...props}
+          >
+            <Time type="minute">{children}</Time>
+          </List.Item>
+        );
+      };
+
+      // ── CustomDurationOption ─────────────────────────────────────────────
+      // A List.Item that is "selected" when the current value is not a preset.
+      // It embeds a Picker so the user can type any minute value.
+
+      const CustomDurationOption = ({ selected, index }) => {
+        const hours = customDurationHourSignal.value;
+        const minutes = customDurationMinuteSignal.value;
+
+        return (
+          <List.Item
+            selectable
+            index={index}
+            id="custom"
+            value="custom"
+            selected={selected}
+            borderRadius="s"
+            borderWidth="1"
+            minWidth="64"
+            paddingX="m"
+            paddingY="s"
+            alignX="center"
+            noWrap
+          >
+            Autre
+            <Box flex spacing="xxs">
+              <Input
+                type="navi_hour"
+                value={hours}
+                action={(v) => {
+                  customDurationHourSignal.value = v;
+                }}
+              />
+              <Input
+                type="navi_minute"
+                value={minutes}
+                action={(v) => {
+                  customDurationMinuteSignal.value = v;
+                }}
+              />
+            </Box>
+          </List.Item>
+        );
+      };
+
+      // ── App ───────────────────────────────────────────────────────────────
+
+      render(
+        <NaviDebug debugAction debugInteraction>
+          <App />
+        </NaviDebug>,
+        document.getElementById("app"),
+      );
+    </script>
+  </body>
+</html>

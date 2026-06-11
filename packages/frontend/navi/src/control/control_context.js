@@ -13,6 +13,11 @@ export const CONTROL_ATTRIBUTE_SET = new Set([
   "type",
   "value",
   "checked",
+  "placeholder",
+  "inputMode",
+  "autoComplete",
+  "spellcheck",
+  "autoCorrect",
 
   "navi-input-type",
   "navi-control-proxy-for",

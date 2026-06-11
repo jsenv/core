@@ -2,7 +2,6 @@ import { createValidity } from "@jsenv/validity";
 import { effect, signal } from "@preact/signals";
 
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
-import { valueInLocalStorage } from "./value_in_local_storage.js";
 
 // Global signal registry for route template detection
 export const globalSignalRegistry = new Map();
@@ -103,20 +102,6 @@ if (import.meta.hot) {
  * const childTab = stateSignal(parentTab);
  * // childTab follows parentTab changes unless explicitly set
  */
-const stringUndefinedAliasSet = new Set([""]);
-const stringTypeSet = new Set([
-  "string",
-  "date",
-  "month",
-  "week",
-  "time",
-  "datetime",
-  "date",
-  "url",
-  "email",
-  "percentage",
-  "color",
-]);
 export const stateSignal = (defaultValue, options = {}) => {
   const {
     id,
@@ -125,18 +110,13 @@ export const stateSignal = (defaultValue, options = {}) => {
     max,
     step,
     oneOf,
+    localStorageRepresentation,
+    urlRepresentation,
     persists = false,
     debug,
     default: staticFallback,
     ignoreArrayOrder,
-    undefinedAlias,
   } = options;
-  const undefinedAliasSet =
-    undefinedAlias === undefined
-      ? stringTypeSet.has(type)
-        ? stringUndefinedAliasSet
-        : undefined
-      : new Set(undefinedAlias);
 
   // Check if defaultValue is a signal (dynamic default) or static value
   const isDynamicDefault =
@@ -158,12 +138,39 @@ export const stateSignal = (defaultValue, options = {}) => {
 
   // Determine localStorage key: use id if persists=true, or legacy localStorage option
   const localStorageKey = signalIdString;
-  const [readFromLocalStorage, writeIntoLocalStorage, removeFromLocalStorage] =
-    persists
-      ? valueInLocalStorage(localStorageKey, {
-          type: localStorageTypeMap[type] || type,
-        })
-      : NO_LOCAL_STORAGE;
+  const [validity, updateValidity] = createValidity({
+    type,
+    min,
+    max,
+    step,
+    oneOf,
+    localStorageRepresentation,
+    urlRepresentation,
+  });
+  const readFromLocalStorage = persists
+    ? () => {
+        const raw = window.localStorage.getItem(localStorageKey);
+        if (raw === null) {
+          return undefined;
+        }
+        return raw;
+      }
+    : () => undefined;
+  const updateLocalStorage = persists
+    ? () => {
+        const localStorageValue = validity.representations.localStorage.value;
+        if (localStorageValue === undefined) {
+          window.localStorage.removeItem(localStorageKey);
+        } else {
+          window.localStorage.setItem(localStorageKey, localStorageValue);
+        }
+      }
+    : () => {};
+  const removeFromLocalStorage = persists
+    ? () => {
+        window.localStorage.removeItem(localStorageKey);
+      }
+    : () => {};
 
   /**
    * Returns the current default value from code logic only (static or dynamic).
@@ -241,63 +248,15 @@ export const stateSignal = (defaultValue, options = {}) => {
   };
 
   // Create signal with initial value: use stored value, or undefined to indicate no explicit value
-  const [validity, updateValidity] = createValidity({
-    type,
-    min,
-    max,
-    step,
-    oneOf,
-  });
   const processValue = (value) => {
     if (value === undefined) {
       return undefined;
     }
-    if (undefinedAliasSet && undefinedAliasSet.has(value)) {
-      return undefined;
-    }
-    const wasValid = validity.valid;
     updateValidity(value);
-    if (validity.valid) {
-      if (!wasValid) {
-        if (debug) {
-          console.debug(
-            `[stateSignal:${signalIdString}] validation now passes`,
-            { value },
-          );
-        }
-      }
-      return value;
-    }
-
-    const hasAutoFix = Boolean(validity.validSuggestion);
-    if (hasAutoFix) {
-      if (debug) {
-        console.debug(`[stateSignal:${signalIdString}] validation failed: `, {
-          value,
-          validValue: validity.validSuggestion.value,
-          validity,
-        });
-      }
-    } else {
-      console.warn(
-        `[stateSignal:${signalIdString}] validation failed with no valid suggestion: `,
-        { value, validity },
-      );
-    }
-    if (validity.validSuggestion) {
-      const validValue = validity.validSuggestion.value;
-      if (debug) {
-        console.debug(
-          `[stateSignal:${signalIdString}] autoFix applied: ${value} → ${validValue}`,
-          {
-            value,
-            validValue,
-          },
-        );
-      }
-      return validValue;
-    }
-    return value;
+    // Always return the coerced value (type coercion applies), even if invalid.
+    // Invalid values are preserved as-is so the UI can display them and the URL
+    // can reflect the current input state without silently correcting it.
+    return validity.value;
   };
   const preactSignal = signal(processValue(getFallbackValue()));
 
@@ -413,7 +372,7 @@ export const stateSignal = (defaultValue, options = {}) => {
               `[stateSignal:${signalIdString}] dynamic default: writing to localStorage "${localStorageKey}"=${value}`,
             );
           }
-          writeIntoLocalStorage(value);
+          updateLocalStorage();
         }
         return;
       }
@@ -424,7 +383,7 @@ export const stateSignal = (defaultValue, options = {}) => {
             `[stateSignal:${signalIdString}] writing into localStorage "${localStorageKey}"=${value}`,
           );
         }
-        writeIntoLocalStorage(value);
+        updateLocalStorage();
       } else {
         if (debug) {
           console.debug(
@@ -484,22 +443,4 @@ export const stateSignal = (defaultValue, options = {}) => {
   }
 
   return facadeSignal;
-};
-
-const NO_LOCAL_STORAGE = [() => undefined, () => {}, () => {}];
-const localStorageTypeMap = {
-  float: "number",
-  integer: "number",
-  minute: "number",
-  hour: "number",
-  second: "number",
-  ratio: "number",
-  longitude: "number",
-  latitude: "number",
-  percentage: "string",
-  url: "string",
-  date: "string",
-  time: "string",
-  email: "string",
-  array: "object",
 };

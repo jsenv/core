@@ -3,10 +3,10 @@ import { isValidElement, createContext, h, toChildArray, render, Fragment, clone
 import { useErrorBoundary, useLayoutEffect, useEffect, useContext, useMemo, useRef, useState, useCallback, useId } from "preact/hooks";
 import { jsxs, jsx, Fragment as Fragment$1 } from "preact/jsx-runtime";
 import { signal, effect, computed, batch, useSignal } from "@preact/signals";
-import { createIterableWeakSet, createEventGroupLogger, mergeOneStyle, normalizeStyle, createPubSub, findEvent, dispatchInternalCustomEvent, getElementSignature, mergeTwoStyles, normalizeStyles, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, findBefore, findAfter, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, createStyleController, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, measureLongestVisualLineWidth, findFocusDelegateTarget, getKeyboardEventDefaultAction, resolveCSSSize, activeElementSignal, hasCSSSizeUnit, resolveOklchLightness, contrastColor, dispatchCustomEvent, initFocusGroup, elementIsFocusable, findFocusable, snapToPixel, trapScrollInside, trapFocusInside, scrollIntoViewScoped, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement, measureWidestChildRow } from "@jsenv/dom";
+import { createIterableWeakSet, createEventGroupLogger, mergeOneStyle, normalizeStyle, createPubSub, findEvent, dispatchInternalCustomEvent, mergeTwoStyles, normalizeStyles, createGroupTransitionController, getElementSignature, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, findBefore, findAfter, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, createStyleController, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, measureLongestVisualLineWidth, findFocusDelegateTarget, getKeyboardEventDefaultAction, resolveCSSSize, activeElementSignal, hasCSSSizeUnit, resolveOklchLightness, contrastColor, dispatchCustomEvent, initFocusGroup, elementIsFocusable, findFocusable, snapToPixel, trapScrollInside, trapFocusInside, scrollIntoViewScoped, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement, measureWidestChildRow } from "@jsenv/dom";
 export { contrastColor, startDragToReorder } from "@jsenv/dom";
 import { prefixFirstAndIndentRemainingLines } from "@jsenv/humanize";
-import { createValidity } from "@jsenv/validity";
+import { createValidity, parseDurationToSeconds } from "@jsenv/validity";
 import { Suspense, createPortal, forwardRef } from "preact/compat";
 
 const actionPrivatePropertiesWeakMap = new WeakMap();
@@ -5168,90 +5168,6 @@ const syncOwnedResourceToSignals = (
   });
 };
 
-const valueInLocalStorage = (key, { type = "any" } = {}) => {
-  const converter = TYPE_CONVERTERS[type];
-
-  const get = () => {
-    let valueInLocalStorage = window.localStorage.getItem(key);
-    if (valueInLocalStorage === null) {
-      return undefined;
-    }
-    let valueToReturn = valueInLocalStorage;
-    if (converter && converter.decode) {
-      try {
-        const valueDecoded = converter.decode(valueInLocalStorage);
-        valueToReturn = valueDecoded;
-      } catch (e) {
-        console.error(`Error decoding localStorage "${key}" value:`, e);
-        return undefined;
-      }
-    }
-    if (type !== "any" && typeof valueToReturn !== type) {
-      console.warn(
-        `localStorage "${key}" value is invalid: should be a "${type}", got ${valueInLocalStorage}`,
-      );
-      return undefined;
-    }
-    return valueToReturn;
-  };
-
-  const set = (value) => {
-    if (value === undefined) {
-      window.localStorage.removeItem(key);
-      return;
-    }
-    let valueToStore = value;
-    if (converter && converter.encode) {
-      const valueEncoded = converter.encode(valueToStore);
-      valueToStore = valueEncoded;
-    }
-    window.localStorage.setItem(key, valueToStore);
-  };
-  const remove = () => {
-    window.localStorage.removeItem(key);
-  };
-
-  return [get, set, remove];
-};
-
-const TYPE_CONVERTERS = {
-  any: {
-    decode: (valueFromLocalStorage) => JSON.parse(valueFromLocalStorage),
-    encode: (value) => JSON.stringify(value),
-  },
-  boolean: {
-    decode: (valueFromLocalStorage) => {
-      if (
-        valueFromLocalStorage === "true" ||
-        valueFromLocalStorage === "on" ||
-        valueFromLocalStorage === "1"
-      ) {
-        return true;
-      }
-      return false;
-    },
-    encode: (value) => {
-      return value ? "true" : "false";
-    },
-  },
-  number: {
-    decode: (valueFromLocalStorage) => {
-      const valueParsed = parseFloat(valueFromLocalStorage);
-      return valueParsed;
-    },
-  },
-  object: {
-    decode: (valueFromLocalStorage) => {
-      const valueParsed = JSON.parse(valueFromLocalStorage);
-      return valueParsed;
-    },
-    encode: (value) => {
-      const valueStringified = JSON.stringify(value);
-      return valueStringified;
-    },
-  },
-};
-
 // Global signal registry for route template detection
 const globalSignalRegistry = new Map();
 let signalIdCounter = 0;
@@ -5344,20 +5260,6 @@ const generateSignalId = () => {
  * const childTab = stateSignal(parentTab);
  * // childTab follows parentTab changes unless explicitly set
  */
-const stringUndefinedAliasSet = new Set([""]);
-const stringTypeSet = new Set([
-  "string",
-  "date",
-  "month",
-  "week",
-  "time",
-  "datetime",
-  "date",
-  "url",
-  "email",
-  "percentage",
-  "color",
-]);
 const stateSignal = (defaultValue, options = {}) => {
   const {
     id,
@@ -5366,18 +5268,13 @@ const stateSignal = (defaultValue, options = {}) => {
     max,
     step,
     oneOf,
+    localStorageRepresentation,
+    urlRepresentation,
     persists = false,
     debug,
     default: staticFallback,
     ignoreArrayOrder,
-    undefinedAlias,
   } = options;
-  const undefinedAliasSet =
-    undefinedAlias === undefined
-      ? stringTypeSet.has(type)
-        ? stringUndefinedAliasSet
-        : undefined
-      : new Set(undefinedAlias);
 
   // Check if defaultValue is a signal (dynamic default) or static value
   const isDynamicDefault =
@@ -5399,12 +5296,39 @@ const stateSignal = (defaultValue, options = {}) => {
 
   // Determine localStorage key: use id if persists=true, or legacy localStorage option
   const localStorageKey = signalIdString;
-  const [readFromLocalStorage, writeIntoLocalStorage, removeFromLocalStorage] =
-    persists
-      ? valueInLocalStorage(localStorageKey, {
-          type: localStorageTypeMap[type] || type,
-        })
-      : NO_LOCAL_STORAGE;
+  const [validity, updateValidity] = createValidity({
+    type,
+    min,
+    max,
+    step,
+    oneOf,
+    localStorageRepresentation,
+    urlRepresentation,
+  });
+  const readFromLocalStorage = persists
+    ? () => {
+        const raw = window.localStorage.getItem(localStorageKey);
+        if (raw === null) {
+          return undefined;
+        }
+        return raw;
+      }
+    : () => undefined;
+  const updateLocalStorage = persists
+    ? () => {
+        const localStorageValue = validity.representations.localStorage.value;
+        if (localStorageValue === undefined) {
+          window.localStorage.removeItem(localStorageKey);
+        } else {
+          window.localStorage.setItem(localStorageKey, localStorageValue);
+        }
+      }
+    : () => {};
+  const removeFromLocalStorage = persists
+    ? () => {
+        window.localStorage.removeItem(localStorageKey);
+      }
+    : () => {};
 
   /**
    * Returns the current default value from code logic only (static or dynamic).
@@ -5482,63 +5406,15 @@ const stateSignal = (defaultValue, options = {}) => {
   };
 
   // Create signal with initial value: use stored value, or undefined to indicate no explicit value
-  const [validity, updateValidity] = createValidity({
-    type,
-    min,
-    max,
-    step,
-    oneOf,
-  });
   const processValue = (value) => {
     if (value === undefined) {
       return undefined;
     }
-    if (undefinedAliasSet && undefinedAliasSet.has(value)) {
-      return undefined;
-    }
-    const wasValid = validity.valid;
     updateValidity(value);
-    if (validity.valid) {
-      if (!wasValid) {
-        if (debug) {
-          console.debug(
-            `[stateSignal:${signalIdString}] validation now passes`,
-            { value },
-          );
-        }
-      }
-      return value;
-    }
-
-    const hasAutoFix = Boolean(validity.validSuggestion);
-    if (hasAutoFix) {
-      if (debug) {
-        console.debug(`[stateSignal:${signalIdString}] validation failed: `, {
-          value,
-          validValue: validity.validSuggestion.value,
-          validity,
-        });
-      }
-    } else {
-      console.warn(
-        `[stateSignal:${signalIdString}] validation failed with no valid suggestion: `,
-        { value, validity },
-      );
-    }
-    if (validity.validSuggestion) {
-      const validValue = validity.validSuggestion.value;
-      if (debug) {
-        console.debug(
-          `[stateSignal:${signalIdString}] autoFix applied: ${value} → ${validValue}`,
-          {
-            value,
-            validValue,
-          },
-        );
-      }
-      return validValue;
-    }
-    return value;
+    // Always return the coerced value (type coercion applies), even if invalid.
+    // Invalid values are preserved as-is so the UI can display them and the URL
+    // can reflect the current input state without silently correcting it.
+    return validity.value;
   };
   const preactSignal = signal(processValue(getFallbackValue()));
 
@@ -5654,7 +5530,7 @@ const stateSignal = (defaultValue, options = {}) => {
               `[stateSignal:${signalIdString}] dynamic default: writing to localStorage "${localStorageKey}"=${value}`,
             );
           }
-          writeIntoLocalStorage(value);
+          updateLocalStorage();
         }
         return;
       }
@@ -5665,7 +5541,7 @@ const stateSignal = (defaultValue, options = {}) => {
             `[stateSignal:${signalIdString}] writing into localStorage "${localStorageKey}"=${value}`,
           );
         }
-        writeIntoLocalStorage(value);
+        updateLocalStorage();
       } else {
         if (debug) {
           console.debug(
@@ -5691,24 +5567,26 @@ const stateSignal = (defaultValue, options = {}) => {
   };
 
   // Store signal with its options (used by route_pattern.js)
+  const effectiveOptions = {
+    staticDefaultValue,
+    getDefaultValue,
+    dynamicDefaultSignal,
+    isCustomValue,
+    isDefaultValue,
+    type,
+    step,
+    min,
+    max,
+    persists,
+    localStorageKey,
+    debug,
+    ...options,
+  };
   globalSignalRegistry.set(signalIdString, {
     signal: facadeSignal,
-    options: {
-      staticDefaultValue,
-      getDefaultValue,
-      dynamicDefaultSignal,
-      isCustomValue,
-      isDefaultValue,
-      type,
-      step,
-      min,
-      max,
-      persists,
-      localStorageKey,
-      debug,
-      ...options,
-    },
+    options: effectiveOptions,
   });
+  facadeSignal.options = effectiveOptions;
   if (debug) {
     console.debug(
       `[stateSignal:${signalIdString}] created with initial value=${facadeSignal.value}`,
@@ -5723,24 +5601,6 @@ const stateSignal = (defaultValue, options = {}) => {
   }
 
   return facadeSignal;
-};
-
-const NO_LOCAL_STORAGE = [() => undefined, () => {}, () => {}];
-const localStorageTypeMap = {
-  float: "number",
-  integer: "number",
-  minute: "number",
-  hour: "number",
-  second: "number",
-  ratio: "number",
-  longitude: "number",
-  latitude: "number",
-  percentage: "string",
-  url: "string",
-  date: "string",
-  time: "string",
-  email: "string",
-  array: "object",
 };
 
 /**
@@ -5900,6 +5760,106 @@ const useStateArray = (
   }, [initialValue]);
 
   return [array, add, remove, reset];
+};
+
+const valueInLocalStorage = (key, { type = "any" } = {}) => {
+  const converter = TYPE_CONVERTERS[type];
+
+  const get = () => {
+    let valueInLocalStorage = window.localStorage.getItem(key);
+    if (valueInLocalStorage === null) {
+      return undefined;
+    }
+    let valueToReturn = valueInLocalStorage;
+    if (converter && converter.decode) {
+      try {
+        const valueDecoded = converter.decode(valueInLocalStorage);
+        valueToReturn = valueDecoded;
+      } catch (e) {
+        console.error(`Error decoding localStorage "${key}" value:`, e);
+        return undefined;
+      }
+    }
+    if (type !== "any" && typeof valueToReturn !== type) {
+      console.warn(
+        `localStorage "${key}" value is invalid: should be a "${type}", got ${valueInLocalStorage}`,
+      );
+      return undefined;
+    }
+    return valueToReturn;
+  };
+
+  const set = (value) => {
+    if (value === undefined) {
+      window.localStorage.removeItem(key);
+      return;
+    }
+    let valueToStore = value;
+    if (converter && converter.encode) {
+      const valueEncoded = converter.encode(valueToStore);
+      valueToStore = valueEncoded;
+    }
+    window.localStorage.setItem(key, valueToStore);
+  };
+  const remove = () => {
+    window.localStorage.removeItem(key);
+  };
+
+  return [get, set, remove];
+};
+
+const TYPE_CONVERTERS = {
+  any: {
+    decode: (valueFromLocalStorage) => JSON.parse(valueFromLocalStorage),
+    encode: (value) => JSON.stringify(value),
+  },
+  boolean: {
+    decode: (valueFromLocalStorage) => {
+      if (
+        valueFromLocalStorage === "true" ||
+        valueFromLocalStorage === "on" ||
+        valueFromLocalStorage === "1"
+      ) {
+        return true;
+      }
+      return false;
+    },
+    encode: (value) => {
+      return value ? "true" : "false";
+    },
+  },
+  number: {
+    decode: (valueFromLocalStorage) => {
+      const valueParsed = parseFloat(valueFromLocalStorage);
+      return valueParsed;
+    },
+  },
+  array: {
+    decode: (valueFromLocalStorage) => {
+      const valueParsed = JSON.parse(valueFromLocalStorage);
+      if (!Array.isArray(valueParsed)) {
+        throw new Error(`Expected an array, got ${valueParsed}`);
+      }
+      return valueParsed;
+    },
+    encode: (value) => {
+      if (!Array.isArray(value)) {
+        throw new Error(`Expected an array, got ${value}`);
+      }
+      const valueStringified = JSON.stringify(value);
+      return valueStringified;
+    },
+  },
+  object: {
+    decode: (valueFromLocalStorage) => {
+      const valueParsed = JSON.parse(valueFromLocalStorage);
+      return valueParsed;
+    },
+    encode: (value) => {
+      const valueStringified = JSON.stringify(value);
+      return valueStringified;
+    },
+  },
 };
 
 const promiseStateWeakMap = new WeakMap();
@@ -6438,6 +6398,7 @@ const DIMENSION_PROPS = {
   height: PASS_THROUGH,
   minHeight: PASS_THROUGH,
   maxHeight: PASS_THROUGH,
+  fieldSizing: PASS_THROUGH,
   square: (v, context) => {
     if (!v) {
       return null;
@@ -7557,6 +7518,2741 @@ const listenInputStateChange = (input, callback, { getState }) => {
   }
 
   return teardown;
+};
+
+const dispatchRequestSetUIState = (element, value, detail) => {
+  const controlHost = findControlHost(element) || element;
+  return dispatchInternalCustomEvent(controlHost, "navi_set_ui_state", {
+    ...detail,
+    value,
+  });
+};
+const dispatchRequestResetUIState = (element, e) => {
+  return dispatchInternalCustomEvent(element, "navi_request_reset_ui_state", {
+    event: e,
+  });
+};
+const getUIStateFromElement = (el) => {
+  let uiState;
+  dispatchInternalCustomEvent(el, "navi_get_ui_state", {
+    respondWith: (v) => {
+      uiState = v;
+    },
+  });
+  return uiState;
+};
+
+const requestPseudoStateCheck = (element, detail) => {
+  dispatchInternalCustomEvent(
+    element,
+    "navi_pseudo_state_request_check",
+    detail,
+  );
+  // When a control has a visible proxy mirroring its state (e.g. selectable
+  // radio with `navi-control-proxy-for`), re-check the proxy too so it stays
+  // in sync with the real control.
+  const proxy = findControlProxy(element);
+  if (proxy) {
+    dispatchInternalCustomEvent(
+      proxy,
+      "navi_pseudo_state_request_check",
+      detail,
+    );
+  }
+};
+const NAVI_PSEUDO_STATE_CUSTOM_EVENT = "navi_pseudo_state";
+const dispatchPseudoStateCustomEvent = (element, value, oldValue) => {
+  dispatchInternalCustomEvent(element, NAVI_PSEUDO_STATE_CUSTOM_EVENT, {
+    pseudoState: value,
+    oldPseudoState: oldValue,
+  });
+};
+
+const PSEUDO_CLASSES = {};
+Object.assign(PSEUDO_CLASSES, {
+  ":valid": {
+    attribute: "data-valid",
+    test: (el) => el.matches(":valid"),
+  },
+  ":invalid": {
+    attribute: "data-invalid",
+    test: (el) => el.matches(":invalid"),
+  },
+  ":visited": {
+    attribute: "data-visited",
+  },
+});
+const definePseudoClass = (pseudoClass, definition) => {
+  PSEUDO_CLASSES[pseudoClass] = definition;
+};
+
+definePseudoClass(":hover", {
+  attribute: "data-hover",
+  setup: (el, callback) => {
+    const recheckProxy = (e) => {
+      const proxy = findControlProxy(el);
+      if (proxy) {
+        requestPseudoStateCheck(proxy, { event: e });
+      }
+    };
+    const recheckProxyTarget = (e) => {
+      const proxyTarget = findControlProxyTarget(el);
+      if (proxyTarget) {
+        requestPseudoStateCheck(proxyTarget, { event: e });
+      }
+    };
+    let onmouseenter = (e) => {
+      callback();
+      recheckProxy(e);
+      recheckProxyTarget(e);
+    };
+    let onmouseleave = (e) => {
+      callback();
+      recheckProxy(e);
+      recheckProxyTarget(e);
+    };
+
+    if (el.tagName === "LABEL") {
+      // input.matches(":hover") is true when hovering the label
+      // so when label is hovered/not hovered we need to recheck the input too
+      const recheckInput = (e) => {
+        if (el.htmlFor) {
+          const input = document.getElementById(el.htmlFor);
+          if (!input) {
+            // cannot find the input for this label in the DOM
+            return;
+          }
+          requestPseudoStateCheck(input, { event: e });
+          return;
+        }
+        const input = el.querySelector("input, textarea, select");
+        if (!input) {
+          // label does not contain an input
+          return;
+        }
+        requestPseudoStateCheck(input, { event: e });
+      };
+      const _onmouseenter = onmouseenter;
+      onmouseenter = (e) => {
+        recheckInput(e);
+        _onmouseenter(e);
+      };
+      const _onmouseleave = onmouseleave;
+      onmouseleave = (e) => {
+        recheckInput(e);
+        _onmouseleave(e);
+      };
+    }
+
+    el.addEventListener("mouseenter", onmouseenter);
+    el.addEventListener("mouseleave", onmouseleave);
+    return () => {
+      el.removeEventListener("mouseenter", onmouseenter);
+      el.removeEventListener("mouseleave", onmouseleave);
+    };
+  },
+  test: (el) => {
+    if (el.matches(":hover")) {
+      return true;
+    }
+    const proxy = findControlProxy(el);
+    if (proxy && proxy.matches(":hover")) {
+      return true;
+    }
+    return false;
+  },
+});
+definePseudoClass(":disabled", {
+  attribute: "data-disabled",
+  add: (el) => {
+    if (
+      el.tagName === "BUTTON" ||
+      el.tagName === "INPUT" ||
+      el.tagName === "SELECT" ||
+      el.tagName === "TEXTAREA"
+    ) {
+      el.disabled = true;
+    }
+  },
+  remove: (el) => {
+    if (
+      el.tagName === "BUTTON" ||
+      el.tagName === "INPUT" ||
+      el.tagName === "SELECT" ||
+      el.tagName === "TEXTAREA"
+    ) {
+      el.disabled = false;
+    }
+  },
+});
+definePseudoClass(":read-only", {
+  attribute: "data-readonly",
+  add: (el) => {
+    if (
+      el.tagName === "INPUT" ||
+      el.tagName === "SELECT" ||
+      el.tagName === "TEXTAREA"
+    ) {
+      if (el.type === "checkbox" || el.type === "radio") {
+        // there is no readOnly for checkboxes/radios
+        return;
+      }
+      // el.readOnly = true;
+    }
+  },
+  remove: (el) => {
+    if (
+      el.tagName === "INPUT" ||
+      el.tagName === "SELECT" ||
+      el.tagName === "TEXTAREA"
+    ) {
+      if (el.type === "checkbox" || el.type === "radio") {
+        // there is no readOnly for checkboxes/radios
+        return;
+      }
+      // el.readOnly = false;
+    }
+  },
+});
+definePseudoClass(":checked", {
+  attribute: "data-checked",
+  setup: (el, callback) => {
+    if (el.type === "checkbox") {
+      // Listen to user interactions
+      el.addEventListener("input", callback);
+      // Intercept programmatic changes to .checked property
+      const originalDescriptor = Object.getOwnPropertyDescriptor(
+        HTMLInputElement.prototype,
+        "checked",
+      );
+      Object.defineProperty(el, "checked", {
+        get: originalDescriptor.get,
+        set(value) {
+          originalDescriptor.set.call(this, value);
+          callback();
+        },
+        configurable: true,
+      });
+      return () => {
+        // Restore original property descriptor
+        Object.defineProperty(el, "checked", originalDescriptor);
+        el.removeEventListener("input", callback);
+      };
+    }
+    if (el.type === "radio") {
+      // Listen to changes on the radio
+      el.addEventListener("input", callback);
+      // Intercept programmatic changes to .checked property
+      const originalDescriptor = Object.getOwnPropertyDescriptor(
+        HTMLInputElement.prototype,
+        "checked",
+      );
+      Object.defineProperty(el, "checked", {
+        get: originalDescriptor.get,
+        set(value) {
+          originalDescriptor.set.call(this, value);
+          callback();
+        },
+        configurable: true,
+      });
+      return () => {
+        el.removeEventListener("input", callback);
+        // Restore original property descriptor
+        Object.defineProperty(el, "checked", originalDescriptor);
+      };
+    }
+    if (el.tagName === "INPUT") {
+      el.addEventListener("input", callback);
+      return () => {
+        el.removeEventListener("input", callback);
+      };
+    }
+    return () => {};
+  },
+  test: (el) => el.matches(":checked"),
+});
+definePseudoClass(":active", {
+  attribute: "data-active",
+  setup: (el, callback) => {
+    // I'ts recommended to use :-navi-pressed over :active for interactive elements.
+    const onPointerDown = () => {
+      const onRelease = () => {
+        document.removeEventListener("pointercancel", onRelease, true);
+        document.removeEventListener("pointerup", onRelease, true);
+        callback();
+      };
+      document.addEventListener("pointercancel", onRelease, true);
+      document.addEventListener("pointerup", onRelease, true);
+      callback();
+    };
+    el.addEventListener("pointerdown", onPointerDown);
+    return () => {
+      el.removeEventListener("pointerdown", onPointerDown);
+    };
+  },
+  test: (el) => el.matches(":active"),
+});
+{
+  // We implement :focus and :focus-visible with enriched semantics:
+  // an element is considered focused not only when it natively has focus, but also
+  // when a "focus proxy" element has focus (e.g. a read-only range input delegates
+  // focus to a sibling span) or when a controlling element has focus (e.g. a combobox
+  // input with aria-controls pointing to a listbox — the listbox should appear focused
+  // while the input is focused).
+  //
+  // We intentionally reuse the native :focus / :focus-visible names rather than
+  // introducing new navi-specific pseudo-classes (e.g. :-navi-focus). This is a
+  // deliberate exception: all existing CSS and code written as [data-focus] or
+  // [data-focus-visible] automatically benefits from the enriched behavior without
+  // any changes. A separate navi-specific class would require updating every
+  // component.
+  //
+  // When a controller element (e.g. combobox input) gains or loses focus,
+  // notify the elements it controls via aria-controls so they re-check their
+  // focus state. `requestPseudoStateCheck` also re-checks the controlled
+  // element's proxy (if any), so the visible proxy mirrors the hidden real
+  // input's inherited focus.
+  const notifyAriaControlled = (el, e) => {
+    const controlledIds = el.getAttribute("aria-controls");
+    if (!controlledIds) {
+      return;
+    }
+    for (const id of controlledIds.split(" ")) {
+      const controlled = document.getElementById(id);
+      if (controlled) {
+        requestPseudoStateCheck(controlled, { event: e });
+      }
+    }
+  };
+  // Returns true when el holds focus indirectly — either because a controlling
+  // element (aria-controls) has focus, or because el is a proxy whose target
+  // is itself controlled by a focused element.
+  const hasIndirectFocus = (el, { requireFocusVisible = false } = {}) => {
+    const pseudoClass = requireFocusVisible ? ":focus-visible" : ":focus";
+    const isControlledBy = (target) => {
+      const id = target.id;
+      if (!id) {
+        return false;
+      }
+      const controllers = document.querySelectorAll(`[aria-controls~="${id}"]`);
+      for (const controller of controllers) {
+        // If the controller is inside the element it controls, focus is already
+        // native (:focus-within) — no need to inherit it.
+        if (target.contains(controller)) {
+          continue;
+        }
+        if (controller.matches(pseudoClass)) {
+          return true;
+        }
+      }
+      return false;
+    };
+    if (isControlledBy(el)) {
+      return true;
+    }
+    const proxyTarget = findControlProxyTarget(el);
+    if (proxyTarget) {
+      if (proxyTarget.matches(pseudoClass)) {
+        return true;
+      }
+      if (isControlledBy(proxyTarget)) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  // Shared setup for :focus and :focus-visible. Both need focusin/focusout
+  // listeners + a MutationObserver on aria-controls so that when the attribute
+  // changes while the element is focused, old and new controlled elements are
+  // notified to re-check their own focus state.
+  // extraSetup: optional (el, callback) => teardown for pseudo-class-specific
+  // listeners (e.g. keydown/keyup for :focus-visible).
+  const setupFocus = (el, callback) => {
+    const onFocusChange = (e) => {
+      callback();
+      notifyAriaControlled(el, e);
+    };
+    el.addEventListener("focusin", onFocusChange);
+    el.addEventListener("focusout", onFocusChange);
+    // Only observe aria-controls mutations when the element already has the
+    // attribute at setup time. If aria-controls is guaranteed to be set before
+    // initPseudoStyles runs (e.g. passed as a prop in box.jsx), this covers all
+    // real cases without paying the MutationObserver cost for every element.
+    let observer;
+    // if (el.hasAttribute("aria-controls")) {
+    observer = new MutationObserver((mutations) => {
+      if (!el.matches(":focus-within")) {
+        return;
+      }
+      for (const mutation of mutations) {
+        const oldIds = (mutation.oldValue || "").split(" ").filter(Boolean);
+        for (const id of oldIds) {
+          const controlled = document.getElementById(id);
+          if (controlled) {
+            requestPseudoStateCheck(controlled, {});
+          }
+        }
+      }
+      notifyAriaControlled(el, {});
+    });
+    observer.observe(el, {
+      attributes: true,
+      attributeFilter: ["aria-controls"],
+      attributeOldValue: true,
+    });
+    // }
+    return () => {
+      el.removeEventListener("focusin", onFocusChange);
+      el.removeEventListener("focusout", onFocusChange);
+      observer?.disconnect();
+    };
+  };
+
+  definePseudoClass(":focus", {
+    attribute: "data-focus",
+    setup: (el, callback) => {
+      const cleanup = setupFocus(el, callback);
+      return () => {
+        cleanup();
+      };
+    },
+    test: (el) => {
+      if (el.matches(":focus")) {
+        return true;
+      }
+      if (hasIndirectFocus(el)) {
+        return true;
+      }
+      return false;
+    },
+  });
+  definePseudoClass(":focus-visible", {
+    attribute: "data-focus-visible",
+    setup: (el, callback) => {
+      const cleanup = setupFocus(el, callback);
+      document.addEventListener("keydown", callback);
+      document.addEventListener("keyup", callback);
+      return () => {
+        cleanup();
+        document.removeEventListener("keydown", callback);
+        document.removeEventListener("keyup", callback);
+      };
+    },
+    test: (el) => {
+      if (el.matches(":focus-visible")) {
+        return true;
+      }
+      if (hasIndirectFocus(el, { requireFocusVisible: true })) {
+        return true;
+      }
+      return false;
+    },
+  });
+  definePseudoClass(":focus-within", {
+    attribute: "data-focus-within",
+    setup: (el, callback) => {
+      const onFocusChange = (e) => {
+        callback();
+        notifyAriaControlled(el, e);
+      };
+      el.addEventListener("focusin", onFocusChange);
+      el.addEventListener("focusout", onFocusChange);
+      return () => {
+        el.removeEventListener("focusin", onFocusChange);
+        el.removeEventListener("focusout", onFocusChange);
+      };
+    },
+    test: (el) => {
+      if (el.matches(":focus-within")) {
+        return true;
+      }
+      if (hasIndirectFocus(el)) {
+        return true;
+      }
+      if (el.contains(document.activeElement)) {
+        // for some reason :focus-within sometimes is false while focus is within...
+        // (popover with chrome for some reason)
+        return true;
+      }
+      return false;
+    },
+  });
+}
+
+Object.assign(PSEUDO_CLASSES, {
+  ":-navi-pointed": {
+    attribute: "data-pointed",
+  },
+  ":-navi-pointed-by-mouse": {
+    attribute: "data-pointed-by-mouse",
+  },
+  ":-navi-pointed-by-keyboard": {
+    attribute: "data-pointed-by-keyboard",
+  },
+  ":-navi-pointed-by-proxy": {
+    attribute: "data-pointed-by-proxy",
+  },
+  ":-navi-selected": {
+    attribute: "data-selected",
+  },
+  ":-navi-loading": {
+    attribute: "data-loading",
+  },
+  ":-navi-status-info": {
+    attribute: "data-status-info",
+  },
+  ":-navi-status-success": {
+    attribute: "data-status-success",
+  },
+  ":-navi-status-warning": {
+    attribute: "data-status-warning",
+  },
+  ":-navi-status-error": {
+    attribute: "data-status-error",
+  },
+  ":-navi-expanded": {
+    attribute: "data-expanded",
+  },
+  ":-navi-void": {
+    attribute: "data-void",
+  },
+  "::highlight": {},
+});
+definePseudoClass(":-navi-has-value", {
+  attribute: "data-has-value",
+  setup: (el, callback) => {
+    const controlHost = findControlHost(el) || el;
+    return addInputEffect(controlHost, callback);
+  },
+  test: (el) => {
+    if (el.hasAttribute("navi-ui-state")) {
+      const uiState = getUIStateFromElement(el);
+      if (uiState === undefined || uiState === "") {
+        return false;
+      }
+      return true;
+    }
+    if (el.value === "") {
+      return false;
+    }
+    return true;
+  },
+});
+{
+  const pressedElements = new WeakSet();
+  definePseudoClass(":-navi-pressed", {
+    attribute: "data-pressed",
+    setup: (el, callback) => {
+      // Prefer :-navi-pressed over :active for interactive elements because:
+      // - :active only tracks the primary (left) button; right-click and touch
+      //   long-press do not trigger :active reliably across browsers.
+      // - :-navi-pressed explicitly ignores non-primary buttons (e.g. right-click)
+      //   and correctly clears pressed state when a context menu opens on long-press,
+      //   which would otherwise leave the element stuck in a pressed appearance.
+
+      // Note: it might be tempting to use el.setPointerCapture() here so that pointerup
+      // always fires on el regardless of where the pointer is released. However,
+      // pointer capture routes all subsequent pointer events to the capturing element,
+      // which means any other element in the tree that expects to receive pointerup,
+      // mouseup, click, etc. after a pointerdown will silently not get them.
+      // For example a <label> that reacts to mousedown + click, or a third-party
+      // library that attaches its own listeners, would break because an ancestor
+      // grabbed the pointer out from under them.
+      // To avoid forcing every such element to declare an opt-out attribute
+      // (e.g. navi-own-pointer-capture) we simply listen on document instead,
+      // which is safe and does not interfere with anyone else's event flow.
+      const onPointerDown = (e) => {
+        if (e.button !== 0) {
+          // only left pointer (mouse left click, touch, pen)
+          return;
+        }
+        pressedElements.add(el);
+        const onRelease = () => {
+          pressedElements.delete(el);
+          document.removeEventListener("pointercancel", onRelease, true);
+          document.removeEventListener("pointerup", onRelease, true);
+          document.removeEventListener("contextmenu", onContextMenu, true);
+          callback();
+        };
+        const onContextMenu = (e) => {
+          // On touch devices, a long-press triggers the context menu.
+          // If the context menu is not prevented, it means it will open and the
+          // pointer events (pointerup, lostpointercapture) won't fire normally,
+          // leaving the element stuck in pressed state. We clear it manually.
+          // e.button === -1 means the event was synthesized from a long-press (not a real mouse click).
+          if (e.button === -1 && !e.defaultPrevented) {
+            pressedElements.delete(el);
+            document.removeEventListener("pointercancel", onRelease, true);
+            document.removeEventListener("pointerup", onRelease, true);
+            document.removeEventListener("contextmenu", onContextMenu, true);
+            callback();
+          }
+        };
+        document.addEventListener("pointercancel", onRelease, true);
+        document.addEventListener("pointerup", onRelease, true);
+        document.addEventListener("contextmenu", onContextMenu, true);
+        callback();
+      };
+      el.addEventListener("pointerdown", onPointerDown);
+      return () => {
+        el.removeEventListener("pointerdown", onPointerDown);
+        pressedElements.delete(el);
+      };
+    },
+    test: (el) => pressedElements.has(el),
+  });
+}
+
+{
+  definePseudoClass(":-navi-drag-grabbed", {
+    attribute: "navi-drag-grabbed",
+    setup: (el, callback) => {
+      const onGrab = () => {
+        callback();
+        const onRelease = () => {
+          el.removeEventListener("navi_drag_release", onRelease);
+          callback();
+        };
+        el.addEventListener("navi_drag_release", onRelease);
+      };
+      el.addEventListener("navi_drag_grab", onGrab);
+      return () => {
+        el.removeEventListener("navi_drag_grab", onGrab);
+      };
+    },
+    test: (el) => el.hasAttribute("data-drag-grabbed"),
+  });
+  definePseudoClass(":-navi-dragging", {
+    attribute: "navi-dragging",
+    setup: (el, callback) => {
+      const onStart = () => {
+        callback();
+        const onRelease = () => {
+          el.removeEventListener("navi_drag_release", onRelease);
+          callback();
+        };
+        el.addEventListener("navi_drag_release", onRelease);
+      };
+      el.addEventListener("navi_drag_start", onStart);
+      return () => {
+        el.removeEventListener("navi_drag_start", onStart);
+      };
+    },
+    test: (el) => el.hasAttribute("data-dragging"),
+  });
+}
+
+const EMPTY_STATE = {};
+const elementToImpactWeakMap = new WeakMap();
+const initPseudoStyles = (
+  element,
+  {
+    pseudoClasses,
+    pseudoState, // ":disabled", ":read-only", ":-navi-loading", etc...
+    effect,
+    elementToImpact = element,
+    elementListeningPseudoState,
+  },
+) => {
+  elementToImpactWeakMap.set(element, elementToImpact);
+  if (elementListeningPseudoState === element) {
+    console.warn(
+      `elementListeningPseudoState should not be the same as element to avoid infinite loop`,
+    );
+    elementListeningPseudoState = null;
+  }
+
+  const proxyTarget = findControlProxyTarget(element);
+
+  const onStateChange = (value, oldValue) => {
+    effect?.(value, oldValue);
+    if (elementListeningPseudoState) {
+      dispatchPseudoStateCustomEvent(
+        elementListeningPseudoState,
+        value,
+        oldValue,
+      );
+    }
+    // When this element's state changes, notify any proxy element that mirrors it
+    // so it can re-check and visually reflect the new state.
+    const proxy = findControlProxy(element);
+    if (proxy) {
+      requestPseudoStateCheck(proxy, {});
+    }
+  };
+
+  if (!pseudoClasses || pseudoClasses.length === 0) {
+    onStateChange(EMPTY_STATE);
+    return () => {};
+  }
+
+  const [teardown, addTeardown] = createPubSub();
+
+  let state;
+  const checkPseudoClasses = () => {
+    let someChange = false;
+    const currentState = {};
+    for (const pseudoClass of pseudoClasses) {
+      const pseudoClassDefinition = PSEUDO_CLASSES[pseudoClass];
+      if (!pseudoClassDefinition) {
+        console.warn(`Unknown pseudo class: ${pseudoClass}`);
+        continue;
+      }
+      let currentValue;
+      if (
+        pseudoState &&
+        Object.hasOwn(pseudoState, pseudoClass) &&
+        pseudoState[pseudoClass] !== undefined
+      ) {
+        currentValue = pseudoState[pseudoClass];
+      } else {
+        const { test } = pseudoClassDefinition;
+        if (test) {
+          currentValue = test(element, pseudoState);
+        }
+      }
+      // If this element is a proxy for another (navi-control-proxy-for="targetId"),
+      // inherit the target's active pseudo-state when the element itself isn't in that state.
+      // We check the target's elementToImpact (not the target itself) because the
+      // data-* attribute may be set on a different element (e.g. pseudoStateSelector).
+      if (!currentValue && proxyTarget) {
+        const { attribute } = pseudoClassDefinition;
+        if (attribute) {
+          const targetElementToImpact =
+            elementToImpactWeakMap.get(proxyTarget) || proxyTarget;
+          if (targetElementToImpact.hasAttribute(attribute)) {
+            currentValue = true;
+          }
+        }
+      }
+      currentState[pseudoClass] = currentValue;
+      const oldValue = state ? state[pseudoClass] : undefined;
+      if (oldValue !== currentValue || !state) {
+        someChange = true;
+        const { attribute, add, remove } = pseudoClassDefinition;
+        if (currentValue) {
+          if (attribute) {
+            elementToImpact.setAttribute(attribute, "");
+          }
+          add?.(element);
+        } else {
+          if (attribute) {
+            elementToImpact.removeAttribute(attribute);
+          }
+          remove?.(element);
+        }
+      }
+    }
+    if (!someChange) {
+      return;
+    }
+    const oldState = state;
+    state = currentState;
+    onStateChange(state, oldState);
+  };
+
+  element.addEventListener(NAVI_PSEUDO_STATE_CUSTOM_EVENT, (event) => {
+    const oldState = event.detail.oldPseudoState;
+    state = event.detail.pseudoState;
+    onStateChange(state, oldState);
+  });
+  element.addEventListener("navi_pseudo_state_request_check", () => {
+    checkPseudoClasses();
+  });
+
+  for (const pseudoClass of pseudoClasses) {
+    const pseudoClassDefinition = PSEUDO_CLASSES[pseudoClass];
+    if (!pseudoClassDefinition) {
+      console.warn(`Unknown pseudo class: ${pseudoClass}`);
+      continue;
+    }
+    const { setup } = pseudoClassDefinition;
+    if (setup) {
+      const cleanup = setup(element, () => {
+        checkPseudoClasses();
+      });
+      addTeardown(cleanup);
+    }
+  }
+  checkPseudoClasses();
+
+  return teardown;
+};
+
+const applyStyle = (
+  element,
+  style,
+  pseudoState,
+  pseudoNamedStyles,
+  preventInitialTransition,
+) => {
+  if (!element) {
+    return;
+  }
+  const styleToApply = getStyleToApply(style, pseudoState, pseudoNamedStyles);
+  updateStyle(element, styleToApply, preventInitialTransition);
+};
+
+const PSEUDO_STATE_DEFAULT = {};
+const PSEUDO_NAMED_STYLES_DEFAULT = {};
+const getStyleToApply = (styles, pseudoState, pseudoNamedStyles) => {
+  if (
+    !pseudoState ||
+    pseudoState === PSEUDO_STATE_DEFAULT ||
+    !pseudoNamedStyles ||
+    pseudoNamedStyles === PSEUDO_NAMED_STYLES_DEFAULT
+  ) {
+    return styles;
+  }
+
+  const isMatching = (pseudoKey) => {
+    if (pseudoKey.startsWith("::")) {
+      const nextColonIndex = pseudoKey.indexOf(":", 2);
+      if (nextColonIndex === -1) {
+        return true;
+      }
+      // Handle pseudo-elements with states like "::-navi-loader:checked:disabled"
+      const pseudoStatesString = pseudoKey.slice(nextColonIndex);
+      return isMatching(pseudoStatesString);
+    }
+    const nextColonIndex = pseudoKey.indexOf(":", 1);
+    if (nextColonIndex === -1) {
+      return pseudoState[pseudoKey];
+    }
+    // Handle compound pseudo-states like ":checked:disabled"
+    return pseudoKey
+      .slice(1)
+      .split(":")
+      .every((state) => pseudoState[state]);
+  };
+
+  const styleToAddSet = new Set();
+  for (const pseudoKey of Object.keys(pseudoNamedStyles)) {
+    if (isMatching(pseudoKey)) {
+      const stylesToApply = pseudoNamedStyles[pseudoKey];
+      styleToAddSet.add(stylesToApply);
+    }
+  }
+  if (styleToAddSet.size === 0) {
+    return styles;
+  }
+  let style = styles || {};
+  for (const styleToAdd of styleToAddSet) {
+    style = mergeTwoStyles(style, styleToAdd, "css");
+  }
+  return style;
+};
+
+const styleKeySetWeakMap = new WeakMap();
+const elementTransitionWeakMap = new WeakMap();
+const elementRenderedWeakSet = new WeakSet();
+const NO_STYLE_KEY_SET = new Set();
+const updateStyle = (element, style, preventInitialTransition) => {
+  const styleKeySet = style ? new Set(Object.keys(style)) : NO_STYLE_KEY_SET;
+  const oldStyleKeySet = styleKeySetWeakMap.get(element) || NO_STYLE_KEY_SET;
+  // TRANSITION ANTI-FLICKER STRATEGY:
+  // Problem: When setting both transition and styled properties simultaneously
+  // (e.g., el.style.transition = "border-radius 0.3s ease"; el.style.borderRadius = "20px"),
+  // the browser will immediately perform a transition even if no transition existed before.
+  //
+  // Solution: Temporarily disable transitions during initial style application by setting
+  // transition to "none", then restore the intended transition after the frame completes.
+  // We handle multiple updateStyle calls in the same frame gracefully - only one
+  // requestAnimationFrame is scheduled per element, and the final transition value wins.
+  let styleKeySetToApply = styleKeySet;
+  if (!elementRenderedWeakSet.has(element)) {
+    const hasTransition = styleKeySet.has("transition");
+    if (hasTransition || preventInitialTransition) {
+      if (elementTransitionWeakMap.has(element)) {
+        elementTransitionWeakMap.set(element, style?.transition);
+      } else {
+        element.style.transition = "none";
+        elementTransitionWeakMap.set(element, style?.transition);
+      }
+      // Don't apply the transition property now - we've set it to "none" temporarily
+      styleKeySetToApply = new Set(styleKeySet);
+      styleKeySetToApply.delete("transition");
+    }
+    requestAnimationFrame(() => {
+      if (elementTransitionWeakMap.has(element)) {
+        const transitionToRestore = elementTransitionWeakMap.get(element);
+        if (transitionToRestore === undefined) {
+          element.style.transition = "";
+        } else {
+          element.style.transition = transitionToRestore;
+        }
+        elementTransitionWeakMap.delete(element);
+      }
+      elementRenderedWeakSet.add(element);
+    });
+  }
+
+  // Apply all styles normally (excluding transition during anti-flicker)
+  const keysToDelete = new Set(oldStyleKeySet);
+  for (const key of styleKeySetToApply) {
+    const value = style[key];
+    if (value === undefined || value === null) {
+      // Treat undefined/null as "remove" — leave key in keysToDelete
+      continue;
+    }
+    keysToDelete.delete(key);
+    if (key.startsWith("--")) {
+      element.style.setProperty(key, value);
+    } else {
+      element.style[key] = value;
+    }
+  }
+
+  // Remove obsolete styles
+  for (const key of keysToDelete) {
+    if (key.startsWith("--")) {
+      element.style.removeProperty(key);
+    } else {
+      element.style[key] = "";
+    }
+  }
+
+  styleKeySetWeakMap.set(element, styleKeySet);
+};
+
+/**
+ * Keeps a DOM element in sync with `syncElement(el)` whenever syncElement changes.
+ * - If element is already mounted: runs syncElement immediately during render.
+ * - If not yet mounted: runs syncElement in the ref callback when element arrives.
+ * - Calls cleanup (if returned by syncElement) before each re-run and on unmount.
+ *
+ * Wrap `syncElement` in `useCallback(fn, deps)` at the call site to control
+ * when re-sync happens.
+ *
+ * @param {function} syncElement - Called with the DOM element when its reference changes
+ * @param {function|object|null} externalRef - Optional ref to forward to
+ */
+const useComposeElementRef = (syncElement, externalRef) => {
+  const cleanupRef = useRef(null);
+  const elRef = useRef(null);
+  const prevSyncElementRef = useRef(undefined);
+  const refCallbackRef = useRef(null);
+  const externalRefRef = useRef(externalRef);
+  // Detect external ref identity change between renders. The refCallback is
+  // stable across renders, so when the parent passes a new ref object (or
+  // switches from null to a ref), Preact does NOT re-fire the callback while
+  // the DOM element is unchanged. We must manually clear the old ref and
+  // populate the new one with the current element to avoid leaving the new
+  // ref's `.current` stuck at `null`.
+  const prevExternalRefRef = useRef(externalRef);
+  if (prevExternalRefRef.current !== externalRef) {
+    const previous = prevExternalRefRef.current;
+    if (previous && typeof previous !== "function") {
+      previous.current = null;
+    }
+    if (externalRef && elRef.current) {
+      if (typeof externalRef === "function") {
+        externalRef(elRef.current);
+      } else {
+        externalRef.current = elRef.current;
+      }
+    }
+    prevExternalRefRef.current = externalRef;
+  }
+  externalRefRef.current = externalRef;
+
+  const runSync = (el) => {
+    if (cleanupRef.current) {
+      cleanupRef.current();
+      cleanupRef.current = null;
+    }
+    prevSyncElementRef.current = syncElement;
+    const cleanup = syncElement(el);
+    if (typeof cleanup === "function") {
+      cleanupRef.current = cleanup;
+    }
+  };
+
+  // If element already mounted, re-sync when syncElement reference changed.
+  if (elRef.current && syncElement !== prevSyncElementRef.current) {
+    runSync(elRef.current);
+  }
+
+  if (!refCallbackRef.current) {
+    const refCallback = (el) => {
+      elRef.current = el;
+      // Keep .current in sync immediately so useEffect callbacks that read
+      // ref.current (e.g. usePartiallyHidden) see the element, not null.
+      refCallback.current = el;
+      const currentExternalRef = externalRefRef.current;
+      if (currentExternalRef) {
+        if (typeof currentExternalRef === "function") {
+          currentExternalRef(el);
+        } else {
+          currentExternalRef.current = el;
+        }
+      }
+      if (el) {
+        runSync(el);
+      } else {
+        if (cleanupRef.current) {
+          cleanupRef.current();
+          cleanupRef.current = null;
+        }
+        prevSyncElementRef.current = undefined;
+      }
+    };
+    refCallbackRef.current = refCallback;
+  }
+
+  const refCallback = refCallbackRef.current;
+  refCallback.current = elRef.current;
+  return refCallback;
+};
+
+/**
+ * Tracks whether an element is fully visible in its scroll container and sets
+ * the `navi-partially-hidden` attribute when any part of it is clipped.
+ *
+ * This is used to suppress `view-transition-name` on elements that are partially
+ * outside the viewport or a scrollable container. Without this, a partially clipped
+ * element would still participate in view transitions, producing ghost animations or
+ * incorrect cross-fade effects.
+ *
+ * CSS usage:
+ * ```css
+ * [navi-partially-hidden] {
+ *   view-transition-name: none !important;
+ * }
+ * ```
+ *
+ * `Box` enables this hook automatically when a `viewTransitionName` prop is provided.
+ *
+ * @param {import("preact").RefObject} ref - Ref to the element to observe.
+ * @param {boolean} enabled - Only observe when true (typically when view-transition-name is set).
+ */
+const usePartiallyHidden = (ref, enabled) => {
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || !enabled) {
+      return undefined;
+    }
+    return setupPartiallyHidden(el);
+  }, [enabled]);
+};
+
+const setupPartiallyHidden = (el) => {
+  const observer = new IntersectionObserver(
+    ([entry]) => {
+      if (entry.intersectionRatio >= 0.99) {
+        el.removeAttribute("navi-partially-hidden");
+      } else {
+        el.setAttribute("navi-partially-hidden", "");
+      }
+    },
+    { threshold: 0.99 },
+  );
+  observer.observe(el);
+  return () => {
+    observer.disconnect();
+  };
+};
+
+installImportMetaCssBuild(import.meta);/**
+ * Box - A Swiss Army Knife for Layout
+ *
+ * A regular div by default, enhanced with styling props for spacing, sizing,
+ * and layout. The main value is a friendlier API over raw CSS Flexbox.
+ *
+ * ## Display & Layout
+ *
+ * - `flex` — horizontal flex container (items side by side)
+ * - `flex="y"` — vertical flex container (items stacked). The prop name makes
+ *   the axis explicit, avoiding the classic CSS trap where `flex-direction: column`
+ *   actually stacks items vertically despite "column" feeling horizontal.
+ * - `grid` — grid container
+ * - `inline` — switches to inline display (works with flex and grid too)
+ *
+ * ## Alignment
+ *
+ * Instead of CSS's justify-content/align-items which swap meaning based on flex-direction:
+ * - `alignX` — horizontal alignment, always
+ * - `alignY` — vertical alignment, always
+ *
+ * ## Spacing & Sizing
+ *
+ * Props for margin, padding, gap, width, height, expand, shrink, and more.
+ *
+ * ## Pseudo-class Styles
+ *
+ * The `style` prop supports pseudo-class keys alongside regular CSS properties.
+ * This lets you express hover, focus, and custom interaction states in one object,
+ * without writing CSS or adding class names:
+ *
+ * ```jsx
+ * <Box
+ *   style={{
+ *     backgroundColor: "blue",
+ *     ":-navi:pressed": {
+ *       backgroundColor: "darkblue",
+ *     },
+ *     ":hover": {
+ *       backgroundColor: "lightblue",
+ *     },
+ *   }}
+ * />
+ * ```
+ *
+ * Styles are applied directly to the DOM (not via Preact's style prop) for two reasons:
+ * 1. **Pseudo-class support**: reacting to `:hover`, `:focus`, or custom states like
+ *    `:-navi:pressed` without re-rendering the component on every pseudo state change.
+ * 2. **Correct initial render**: pseudo-class state must be read from the DOM node at
+ *    mount time. Preact's style prop runs before the DOM exists, so the right initial
+ *    style can only be determined once the node is available.
+ */
+const BoxForwardedPropsContext = createContext({});
+import.meta.css = [/* css */`
+  @layer navi {
+    /*
+    When using square/circle/aspectRatio prop we expect box to respect the aspect ratio.
+    But within flex containers or stuff like that the min-width/min-height auto
+    will prevent the item from shrinking to respect aspect-ratio
+    We put that in a layer navi + a specific attribute so that it's very easy to override this
+    */
+    [navi-aspect-ratio] {
+      min-width: 0;
+      min-height: 0;
+    }
+  }
+
+  /* We force a given display style using html attribute instead of inline style */
+  /* No particular reason for this, logic could be moved to inline style like the rest */
+  /* It was an attempt to see if attributes where a good candidate to set style based on props */
+  /* Actullay it's not that much as it make the attribute and CSS complexity explode */
+  /* For now it's kept here and must be outside layer navi to be able to override any given display
+  Set by navi itself on their default display */
+  [navi-box-flow="inline"] {
+    display: inline;
+  }
+  [navi-box-flow="block"] {
+    display: block;
+  }
+  [navi-box-flow="inline-block"] {
+    display: inline-block;
+  }
+  [navi-box-flow="flex-x"] {
+    display: flex;
+  }
+  [navi-box-flow="flex-y"] {
+    display: flex;
+    flex-direction: column;
+  }
+  [navi-box-flow="inline-flex-x"] {
+    display: inline-flex;
+  }
+  [navi-box-flow="inline-flex-y"] {
+    display: inline-flex;
+    flex-direction: column;
+  }
+  [navi-box-flow="grid"] {
+    display: grid;
+    &[navi-box-flow-column] {
+      grid-auto-flow: column;
+    }
+    &[navi-box-flow-row] {
+      grid-auto-flow: row;
+    }
+    &[navi-box-flow-column][navi-box-flow-row] {
+      grid-auto-flow: unset;
+    }
+  }
+  [navi-box-flow="inline-grid"] {
+    display: inline-grid;
+    &[navi-box-flow-column] {
+      grid-auto-flow: column;
+    }
+    &[navi-box-flow-row] {
+      grid-auto-flow: row;
+    }
+    &[navi-box-flow-column][navi-box-flow-row] {
+      grid-auto-flow: unset;
+    }
+  }
+  /*
+
+  It's very common to declare a display on component as follow
+  .component_class { display: component_display; }
+
+  This kill the default behavior of [hidden] attribute and we need to explicitly handle it with:
+  .component_class[hidden] { display: none; }
+
+  To avoid this extra work and potential mistakes we force the default behavior of [hidden] attribute.
+  */
+  [hidden] {
+    display: none !important;
+  }
+
+  /* Partially hidden (or fully hidden) element should not participate in view transition no matter what */
+  /* Otherwise they appear immedatly and fully visible from a fully/partially hidden state */
+  [navi-partially-hidden] {
+    view-transition-name: none !important;
+  }
+`, "@jsenv/navi/src/box/box.jsx"];
+const PSEUDO_CLASSES_DEFAULT = [];
+const PSEUDO_ELEMENTS_DEFAULT = [];
+const STYLE_CSS_VARS_DEFAULT = {};
+const PROPS_CSS_VARS_DEFAULT = {};
+// When only pseudoStateSelector is set (no visualSelector), the box owns its
+// visual identity. Only event handlers and these explicit props are forwarded
+// to the inner semantic/interactive child element.
+const PSEUDO_STATE_CHILD_PROP_SET = new Set(["tabIndex", "tabindex"]);
+const Box = props => {
+  const {
+    ref,
+    as = "div",
+    baseClassName,
+    className,
+    baseStyle,
+    // style management
+    style,
+    styleCSSVars = STYLE_CSS_VARS_DEFAULT,
+    propsCSSVars = PROPS_CSS_VARS_DEFAULT,
+    basePseudoState,
+    pseudoState,
+    // for demo purposes it's possible to control pseudo state from props
+    pseudoClasses = PSEUDO_CLASSES_DEFAULT,
+    pseudoElements = PSEUDO_ELEMENTS_DEFAULT,
+    // visualSelector convey the following:
+    // The box itself is visually "invisible", one of its descendant is responsible for visual representation
+    // - Some styles will be used on the box itself (for instance margins)
+    // - Some styles will be used on the visual element (for instance paddings, backgroundColor)
+    // -> introduced for <Button /> with transform:scale on press
+    visualSelector,
+    // pseudoStateSelector convey the following:
+    // The box contains content that holds pseudoState
+    // -> introduced for <Input /> with a wrapped for loading, checkboxes, etc
+    pseudoStateSelector,
+    hasChildUsingForwardedProps,
+    baseChildPropSet,
+    childPropSet,
+    // preventInitialTransition can be used to prevent transition on mount
+    // (when transition is set via props, this is done automatically)
+    // so this prop is useful only when transition is enabled from "outside" (via CSS)
+    preventInitialTransition,
+    children,
+    separator,
+    ...rest
+  } = props;
+  const TagName = as;
+  const defaultDisplay = getDefaultDisplay(TagName);
+  // Read the parent flow early so we can use it when display="inherit" is requested.
+  const parentBoxFlow = useContext(BoxFlowContext);
+  let {
+    inline,
+    block,
+    flex,
+    grid,
+    row,
+    column
+  } = rest;
+  // To obtain flex direction we have the following deprecated props:
+  // - [deprecated] <Box column> -> <Box flex> or <Box flex="x">
+  // - [deprecated] <Box row> -> <Box flex="y">
+  // - [deprecated] <Box flex column> -> <Box flex="x">
+  // - [deprecated] <Box flex row> -> <Box flex="y">
+
+  if (flex === true) {
+    flex = row ? "y" : "x";
+  }
+  if (flex === undefined && grid === undefined) {
+    if (column) {
+      flex = "x";
+    } else if (row) {
+      flex = "y";
+    }
+  }
+  if (defaultDisplay === "inline") {
+    if (inline === undefined && !block) {
+      inline = true;
+    }
+  } else if (defaultDisplay === "block") {
+    if (block === undefined && !flex && !grid) {
+      block = true;
+    }
+  } else if (defaultDisplay === "inline-block") {
+    if (inline === undefined && !block) {
+      inline = true;
+    }
+    if (block === undefined && !flex && !grid) {
+      block = true;
+    }
+  }
+  if (inline && (rest.width !== undefined || rest.height !== undefined) && flex === undefined) {
+    flex = "x";
+  }
+  let boxFlow;
+  if (inline) {
+    if (flex === "x") {
+      boxFlow = "inline-flex-x";
+    } else if (flex === "y") {
+      boxFlow = "inline-flex-y";
+    } else if (grid) {
+      boxFlow = "inline-grid";
+    } else if (block) {
+      boxFlow = "inline-block";
+    } else {
+      boxFlow = "inline";
+    }
+  } else if (flex === "x") {
+    boxFlow = "flex-x";
+  } else if (flex === "y") {
+    boxFlow = "flex-y";
+  } else if (grid) {
+    boxFlow = "grid";
+  } else if (block) {
+    boxFlow = "block";
+  } else {
+    boxFlow = defaultDisplay;
+  }
+  // When display="inherit" is passed, adopt the parent's flow instead of computing one.
+  // This lets a child Box mirror its parent's flex/grid/block layout without repeating
+  // the same layout props, and is used e.g. by Button's inner content element.
+  if (rest.display === "inherit") {
+    boxFlow = parentBoxFlow;
+  }
+  const boxFlowIsDefault = boxFlow === defaultDisplay;
+  const remainingPropKeySet = new Set(Object.keys(rest));
+  const innerClassName = withPropsClassName(baseClassName, className);
+  const selfForwardedProps = {};
+  const childForwardedProps = {};
+  let finalRef;
+  {
+    const styleDeps = [
+    // Layout and alignment props
+    parentBoxFlow, boxFlow,
+    // Style context dependencies
+    styleCSSVars, pseudoClasses, pseudoElements,
+    // Selectors
+    visualSelector, pseudoStateSelector, preventInitialTransition];
+    let innerPseudoState;
+    if (basePseudoState && pseudoState) {
+      innerPseudoState = {};
+      const baseStateKeys = Object.keys(basePseudoState);
+      const pseudoStateKeySet = new Set(Object.keys(pseudoState));
+      for (const key of baseStateKeys) {
+        if (pseudoStateKeySet.has(key)) {
+          pseudoStateKeySet.delete(key);
+          const value = pseudoState[key];
+          styleDeps.push(value);
+          innerPseudoState[key] = value;
+        } else {
+          const value = basePseudoState[key];
+          styleDeps.push(value);
+          innerPseudoState[key] = value;
+        }
+      }
+      for (const key of pseudoStateKeySet) {
+        const value = pseudoState[key];
+        styleDeps.push(value);
+        innerPseudoState[key] = value;
+      }
+    } else if (basePseudoState) {
+      innerPseudoState = basePseudoState;
+      for (const key of Object.keys(basePseudoState)) {
+        const value = basePseudoState[key];
+        styleDeps.push(value);
+      }
+    } else if (pseudoState) {
+      innerPseudoState = pseudoState;
+      for (const key of Object.keys(pseudoState)) {
+        const value = pseudoState[key];
+        styleDeps.push(value);
+      }
+    } else {
+      innerPseudoState = PSEUDO_STATE_DEFAULT;
+    }
+    const boxStyles = {};
+    const styleContext = {
+      parentBoxFlow,
+      boxFlow,
+      styleCSSVars,
+      pseudoState: innerPseudoState,
+      pseudoClasses,
+      pseudoElements,
+      remainingProps: rest,
+      styles: boxStyles
+    };
+    let boxPseudoNamedStyles = PSEUDO_NAMED_STYLES_DEFAULT;
+    const canForwardToChild = hasChildUsingForwardedProps;
+    const shouldForwardAllToChild = canForwardToChild && visualSelector && pseudoStateSelector;
+    const addStyle = (value, name, styleContext, stylesTarget, context) => {
+      const mergedValue = prepareStyleValue(stylesTarget[name], value, name, styleContext, context);
+      const cssVar = styleContext.styleCSSVars[name];
+      if (cssVar) {
+        addCSSVar(mergedValue, cssVar, stylesTarget);
+        if (name === "borderRadius" && value === "inherit") {
+          // "inherit" cannot be expressed via a CSS variable — a var() reference
+          // never propagates the inherit keyword itself. So when borderRadius="inherit"
+          // we must also set the inline style directly so the element actually
+          // inherits the radius from its parent.
+          styleDeps.push(name, value);
+          stylesTarget[name] = mergedValue;
+        }
+        return true;
+      }
+      styleDeps.push(name, value); // impact box style -> add to deps
+      stylesTarget[name] = mergedValue;
+      return false;
+    };
+    const addCSSVar = (value, name, stylesTarget) => {
+      styleDeps.push(name, value); // impact box style -> add to deps
+      stylesTarget[name] = value;
+    };
+    const addStyleMaybeForwarding = (value, name, styleContext, stylesTarget, context, visualChildPropStrategy) => {
+      if (!visualChildPropStrategy) {
+        addStyle(value, name, styleContext, stylesTarget, context);
+        return false;
+      }
+      const cssVar = styleCSSVars[name];
+      if (cssVar) {
+        // css var wins over visual child handling
+        addStyle(value, name, styleContext, stylesTarget, context);
+        return false;
+      }
+      if (visualChildPropStrategy === "copy") {
+        // we stylyze ourself + forward prop to the child
+        addStyle(value, name, styleContext, stylesTarget, context);
+      }
+      if (!canForwardToChild) {
+        return false;
+      }
+      return true;
+    };
+
+    // By default ":hover", ":active" are not tracked.
+    // But if code explicitely do something like:
+    // style={{ ":hover": { backgroundColor: "red" } }}
+    // then we'll track ":hover" state changes even for basic elements like <div>
+    const pseudoClassesFromStyleSet = new Set();
+    boxPseudoNamedStyles = {};
+    const visitProp = (value, name, styleContext, boxStylesTarget, styleOrigin) => {
+      const isPseudoElement = name.startsWith("::");
+      const isPseudoClass = name.startsWith(":");
+      if (isPseudoElement || isPseudoClass) {
+        styleDeps.push(name);
+        pseudoClassesFromStyleSet.add(name);
+        const pseudoStyleContext = {
+          ...styleContext,
+          styleCSSVars: {
+            ...styleCSSVars,
+            ...styleCSSVars[name]
+          },
+          pseudoName: name
+        };
+        const pseudoStyleKeys = Object.keys(value);
+        if (isPseudoElement) {
+          const pseudoElementStyles = {};
+          for (const key of pseudoStyleKeys) {
+            visitProp(value[key], key, pseudoStyleContext, pseudoElementStyles, "pseudo_style");
+          }
+          boxPseudoNamedStyles[name] = pseudoElementStyles;
+          return;
+        }
+        const pseudoClassStyles = {};
+        for (const key of pseudoStyleKeys) {
+          visitProp(value[key], key, pseudoStyleContext, pseudoClassStyles, "pseudo_style");
+          boxPseudoNamedStyles[name] = pseudoClassStyles;
+        }
+        return;
+      }
+      const context = styleOrigin === "base_style" ? "js" : "css";
+      const isCss = styleOrigin === "base_style" || styleOrigin === "style";
+      if (isCss) {
+        addStyle(value, name, styleContext, boxStylesTarget, context);
+        return;
+      }
+      if (name.startsWith("--")) {
+        addStyle(value, name, styleContext, boxStylesTarget, context);
+        return;
+      }
+      const propCssVar = propsCSSVars[name];
+      if (propCssVar) {
+        if (value !== undefined) {
+          addCSSVar(value, propCssVar, boxStylesTarget);
+        }
+        return;
+      }
+      const isPseudoStyle = styleOrigin === "pseudo_style";
+      if (isStyleProp(name)) {
+        // it's a style prop, we need first to check if we have css var to handle them
+        // otherwise we decide to put it either on self or child
+        const visualChildPropStrategy = visualSelector && getVisualChildStylePropStrategy(name);
+        const getStyle = getHowToHandleStyleProp(name);
+        if (
+        // prop name === css style name
+        !getStyle) {
+          const needForwarding = addStyleMaybeForwarding(value, name, styleContext, boxStylesTarget, context, visualChildPropStrategy);
+          if (needForwarding) {
+            if (isPseudoStyle) ; else {
+              childForwardedProps[name] = value;
+            }
+          }
+          return;
+        }
+        const cssValues = getStyle(value, styleContext);
+        if (!cssValues) {
+          return;
+        }
+        let needForwarding = false;
+        for (const styleName of Object.keys(cssValues)) {
+          const cssValue = cssValues[styleName];
+          needForwarding = addStyleMaybeForwarding(cssValue, styleName, styleContext, boxStylesTarget, context, visualChildPropStrategy);
+        }
+        if (needForwarding) {
+          if (isPseudoStyle) ; else {
+            childForwardedProps[name] = value;
+          }
+        }
+        return;
+      }
+      // not a style prop what do we do with it?
+      // When pseudoStateSelector is set, the child element is the semantic/interactive one
+      // When both selectors are set the child IS the component (e.g. Button with scale
+      // transform) — forward everything so it behaves like a normal element.
+      // When only pseudoStateSelector is set, the box keeps its own visual identity
+      // (border, background, overflow…) and the child is just the interactive/semantic
+      // element inside it. Only event handlers (onXxx) belong on that child; everything
+      // else stays on the box.
+      if (isPseudoStyle) {
+        if (shouldForwardAllToChild) ; else {
+          console.warn(`unsupported pseudo style key "${name}"`);
+          selfForwardedProps[name] = value;
+        }
+      } else if (shouldForwardAllToChild) {
+        childForwardedProps[name] = value;
+      } else {
+        selfForwardedProps[name] = value;
+      }
+      return;
+    };
+    if (baseStyle) {
+      for (const key of baseStyle) {
+        const value = baseStyle[key];
+        visitProp(value, key, styleContext, boxStyles, "baseStyle");
+      }
+    }
+    for (const propName of remainingPropKeySet) {
+      const propValue = rest[propName];
+      if (baseChildPropSet?.has(propName) || childPropSet?.has(propName)) {
+        if (canForwardToChild) {
+          childForwardedProps[propName] = propValue;
+        } else {
+          selfForwardedProps[propName] = propValue;
+        }
+        continue;
+      }
+      if (canForwardToChild && toCopySet.has(propName)) {
+        childForwardedProps[propName] = propValue;
+      }
+      const isDataAttribute = propName.startsWith("data-");
+      if (isDataAttribute) {
+        selfForwardedProps[propName] = propValue;
+        continue;
+      }
+      // At some point I'd like to transform all data-* attribute in the DOM
+      // into navi-* attribute so that when you look at the DOM you can easily understand which attributes
+      // where added by navi or your code.
+      // This help human to better scan the DOM
+      const isNaviAttribute = propName.startsWith("navi-");
+      if (isNaviAttribute) {
+        selfForwardedProps[propName] = propValue;
+        continue;
+      }
+      const isEventHandler = propName.startsWith("on");
+      if (isEventHandler) {
+        if (shouldForwardAllToChild) {
+          childForwardedProps[propName] = propValue;
+          continue;
+        }
+        selfForwardedProps[propName] = propValue;
+        continue;
+      }
+      if (canForwardToChild && pseudoStateSelector && PSEUDO_STATE_CHILD_PROP_SET.has(propName)) {
+        childForwardedProps[propName] = propValue;
+        continue;
+      }
+      visitProp(propValue, propName, styleContext, boxStyles, "prop");
+    }
+    if (typeof style === "string") {
+      const styleObject = normalizeStyles(style, "css");
+      for (const styleName of Object.keys(styleObject)) {
+        const styleValue = styleObject[styleName];
+        visitProp(styleValue, styleName, styleContext, boxStyles, "style");
+      }
+    } else if (style && typeof style === "object") {
+      for (const styleName of Object.keys(style)) {
+        const styleValue = style[styleName];
+        visitProp(styleValue, styleName, styleContext, boxStyles, "style");
+      }
+    }
+    styleDeps.push(pseudoStateSelector, innerPseudoState);
+    let innerPseudoClasses;
+    if (pseudoClassesFromStyleSet.size) {
+      innerPseudoClasses = [...pseudoClasses];
+      if (pseudoClasses !== PSEUDO_CLASSES_DEFAULT) {
+        styleDeps.push(...pseudoClasses);
+      }
+      for (const key of pseudoClassesFromStyleSet) {
+        innerPseudoClasses.push(key);
+        styleDeps.push(key);
+      }
+    } else {
+      innerPseudoClasses = pseudoClasses;
+      if (pseudoClasses !== PSEUDO_CLASSES_DEFAULT) {
+        styleDeps.push(...pseudoClasses);
+      }
+    }
+    const syncBox = useCallback(boxEl => {
+      const pseudoStateEl = pseudoStateSelector ? boxEl.querySelector(pseudoStateSelector) : boxEl;
+      if (!pseudoStateEl) {
+        console.error(`pseudoStateSelector "${pseudoStateSelector}" did not match any element inside the box`, boxEl);
+      }
+      const visualEl = visualSelector ? boxEl.querySelector(visualSelector) : null;
+      return initPseudoStyles(pseudoStateEl, {
+        pseudoClasses: innerPseudoClasses,
+        pseudoState: innerPseudoState,
+        effect: state => {
+          applyStyle(boxEl, boxStyles, state, boxPseudoNamedStyles, preventInitialTransition);
+        },
+        elementToImpact: boxEl,
+        elementListeningPseudoState: visualEl === pseudoStateEl ? null : visualEl
+      });
+    }, styleDeps);
+    finalRef = useComposeElementRef(syncBox, ref);
+    usePartiallyHidden(finalRef, Boolean(rest.viewTransitionName));
+  }
+  let innerChildren = children;
+  if (separator) {
+    // Flatten nested arrays (e.g., from .map()) to treat each element as individual child
+    innerChildren = applySeparatorOnChildren(innerChildren, separator);
+  }
+
+  // When hasChildUsingForwardedProps is used it means
+  // Some/all the children needs to access remainingProps
+  // to render and will provide a function to do so.
+  if (hasChildUsingForwardedProps) {
+    innerChildren = jsx(BoxForwardedPropsContext.Provider, {
+      value: childForwardedProps,
+      children: innerChildren
+    });
+  }
+  const aspectRatio = rest.square || rest.circle ? "1/1" : rest.aspectRatio;
+  return jsx(TagName, {
+    ref: finalRef,
+    className: innerClassName,
+    "navi-box-flow": boxFlowIsDefault ? undefined : boxFlow,
+    "navi-box-flow-row": row ? "" : undefined,
+    "navi-box-flow-column": column ? "" : undefined,
+    "navi-aspect-ratio": aspectRatio ? aspectRatio : undefined,
+    "data-visual-selector": visualSelector,
+    ...selfForwardedProps,
+    children: jsx(BoxFlowContext.Provider, {
+      value: boxFlow,
+      children: innerChildren
+    })
+  });
+};
+const toCopySet = new Set([]);
+const applySeparatorOnChildren = (children, separator) => {
+  const flattenedChildren = toChildArray(children);
+  if (flattenedChildren.length <= 1) {
+    return children;
+  }
+  const childrenWithSeparators = [];
+  let i = 0;
+  while (true) {
+    const child = flattenedChildren[i];
+    childrenWithSeparators.push(child);
+    i++;
+    const isLast = i === flattenedChildren.length;
+    if (isLast) {
+      break;
+    }
+    const nextChild = flattenedChildren[i];
+    if (!shouldInjectSeparatorBetween(child, nextChild)) {
+      continue;
+    }
+    // Support function separators that receive separator index
+    const separatorElement = typeof separator === "function" ? separator(i - 1) // i-1 because i was incremented after pushing child
+    : separator;
+    childrenWithSeparators.push(separatorElement);
+  }
+  return childrenWithSeparators;
+};
+const shouldInjectSeparatorBetween = (left, right) => {
+  if (isValidElement(left) && left.props?.hidden) {
+    return false;
+  }
+  if (isValidElement(right) && right.props?.hidden) {
+    return false;
+  }
+  return true;
+};
+
+const ensureDocumentStartViewTransition = () => {
+  if (document.startViewTransition) {
+    return;
+  }
+  document.startViewTransition = (updateCallback) => {
+    updateCallback();
+    return {
+      ready: Promise.resolve(),
+      finished: Promise.resolve(),
+    };
+  };
+};
+
+/**
+ * Fix alignment behavior for flex/grid containers that use `height: 100%`.
+ *
+ * Context:
+ * - When a flex/grid container has `height: 100%`, it is "height-locked".
+ * - If its content becomes taller than the container, alignment rules like
+ *   `align-items: center` will cause content to be partially clipped.
+ *
+ * Goal:
+ * - Center content only when it fits.
+ * - Align content at start when it overflows.
+ *
+ * How:
+ * - Temporarily remove height-constraint (`height:auto`) to measure natural height.
+ * - Compare natural height to container height.
+ * - Add/remove an attribute so CSS can adapt alignment.
+ *
+ * Usage:
+ *   monitorItemsOverflow(containerElement);
+ *
+ * CSS example:
+ *   .container { align-items: center; }
+ *   .container[data-items-height-overflow] { align-items: flex-start; }
+ */
+
+
+const WIDTH_ATTRIBUTE_NAME = "data-items-width-overflow";
+const HEIGHT_ATTRIBUTE_NAME = "data-items-height-overflow";
+const monitorItemsOverflow = (container) => {
+  let widthIsOverflowing;
+  let heightIsOverflowing;
+  const onItemsWidthOverflowChange = () => {
+    if (widthIsOverflowing) {
+      container.setAttribute(WIDTH_ATTRIBUTE_NAME, "");
+    } else {
+      container.removeAttribute(WIDTH_ATTRIBUTE_NAME);
+    }
+  };
+  const onItemsHeightOverflowChange = () => {
+    if (heightIsOverflowing) {
+      container.setAttribute(HEIGHT_ATTRIBUTE_NAME, "");
+    } else {
+      container.removeAttribute(HEIGHT_ATTRIBUTE_NAME);
+    }
+  };
+
+  const update = () => {
+    // Save current manual height constraint
+    const prevWidth = container.style.width;
+    const prevHeight = container.style.height;
+    // Remove constraint → get true content dimension
+    container.style.width = "auto";
+    container.style.height = "auto";
+    const naturalWidth = container.scrollWidth;
+    const naturalHeight = container.scrollHeight;
+    if (prevWidth) {
+      container.style.width = prevWidth;
+    } else {
+      container.style.removeProperty("width");
+    }
+    if (prevHeight) {
+      container.style.height = prevHeight;
+    } else {
+      container.style.removeProperty("height");
+    }
+
+    const lockedWidth = container.clientWidth;
+    const lockedHeight = container.clientHeight;
+    const currentWidthIsOverflowing = naturalWidth > lockedWidth;
+    const currentHeightIsOverflowing = naturalHeight > lockedHeight;
+    if (currentWidthIsOverflowing !== widthIsOverflowing) {
+      widthIsOverflowing = currentWidthIsOverflowing;
+      onItemsWidthOverflowChange();
+    }
+    if (currentHeightIsOverflowing !== heightIsOverflowing) {
+      heightIsOverflowing = currentHeightIsOverflowing;
+      onItemsHeightOverflowChange();
+    }
+  };
+
+  const [teardown, addTeardown] = createPubSub();
+
+  update();
+
+  // mutation observer
+  const mutationObserver = new MutationObserver(() => {
+    update();
+  });
+  mutationObserver.observe(container, {
+    childList: true,
+    characterData: true,
+  });
+  addTeardown(() => {
+    mutationObserver.disconnect();
+  });
+
+  // resize observer
+  const resizeObserver = new ResizeObserver(update);
+  resizeObserver.observe(container);
+  addTeardown(() => {
+    resizeObserver.disconnect();
+  });
+
+  const destroy = () => {
+    teardown();
+    container.removeAttribute(WIDTH_ATTRIBUTE_NAME);
+    container.removeAttribute(HEIGHT_ATTRIBUTE_NAME);
+  };
+  return destroy;
+};
+
+installImportMetaCssBuild(import.meta);/**
+ * UI Transition - Core Implementation
+ * Provides smooth resize transitions with cross-fade effects between content states
+ *
+ * Content Types and Terminology:
+ *
+ * - ui: What the user currently sees rendered in the UI
+ * - dom_nodes: The actual DOM elements that make up the visual representation
+ * - content_id: Unique identifier for a content and its content_phase(s)
+ * - content_phase: Intermediate states (loading spinners, error messages, empty states)
+ * - content: The primary/final content we want to display (e.g., car details, user profile)
+ *
+ * Required HTML structure:
+ *
+ * <div class="ui_transition">
+ *   <div class="ui_transition_active_group">
+ *     <div class="ui_transition_target_slot"></div>
+ *     <div class="ui_transition_outgoing_slot"></div>
+ *   </div>
+ *   <div class="ui_transition_previous_group">
+ *     <div class="ui_transition_previous_target_slot"></div>
+ *     <div class="ui_transition_previous_outgoing_slot"></div>
+ *   </div>
+ * </div>
+ *
+ * Architecture Overview:
+ *
+ * .ui_transition
+ *   The main container that handles dimensional transitions. Its width and height animate
+ *   smoothly from current to target dimensions. Has overflow:hidden to clip ui during transitions.
+ *
+ * .active_group
+ *   Contains the ui that should be active after the transition completes. Groups both the target
+ *   ui (.target_slot) and transitional ui (.outgoing_slot) as a single unit that can
+ *   be manipulated together (e.g., applying transforms or slides).
+ *
+ * .target_slot
+ *   Always contains the target ui - what should be displayed at the end of the transition.
+ *   Whether transitioning to content or content_phase, this slot receives the new dom_nodes.
+ *   Receives fade-in transitions (opacity 0 → 1) during all transition types.
+ *
+ * .outgoing_slot
+ *   Holds content_phase that's being replaced during content_phase transitions. When transitioning
+ *   from one content_phase to another, or from content_phase to content, the old content_phase moves
+ *   here for fade-out. Receives fade-out transitions (opacity 1 → 0).
+ *
+ * .previous_group
+ *   Used for content-to-content transitions. When switching between content (not phases),
+ *   the entire .active_group dom_nodes are cloned here to fade out while the new content fades in.
+ *   Can slide out when sliding transitions are enabled, otherwise fades out.
+ *
+ * Transition Scenarios:
+ * - content → content: Car A details → Car B details (clone to previous_group)
+ * - content_phase → content_phase: Loading state → Error state (move to outgoing_slot, same content_id)
+ * - content → content_phase: Car A details → Loading Car B (use outgoing_slot for cross-fade)
+ * - content_phase → content: Loading Car B → Car B details (use outgoing_slot for cross-fade)
+ *
+ * Size Transition Handling:
+ * During dimensional transitions, both .target_slot and .outgoing_slot have their dimensions
+ * explicitly set to prevent dom_nodes reflow and maintain visual consistency.
+ */
+import.meta.css = [/* css */`
+  * {
+    box-sizing: border-box;
+  }
+
+  .ui_transition {
+    --transition-duration: 300ms;
+    --justify-content: center;
+    --align-items: center;
+
+    --x-transition-duration: var(--transition-duration);
+    --x-justify-content: var(--justify-content);
+    --x-align-items: var(--align-items);
+
+    position: relative;
+  }
+  /* Alignment controls */
+  .ui_transition[data-align-x="start"] {
+    --x-justify-content: flex-start;
+  }
+  .ui_transition[data-align-x="center"] {
+    --x-justify-content: center;
+  }
+  .ui_transition[data-align-x="end"] {
+    --x-justify-content: flex-end;
+  }
+  .ui_transition[data-align-y="start"] {
+    --x-align-items: flex-start;
+  }
+  .ui_transition[data-align-y="center"] {
+    --x-align-items: center;
+  }
+  .ui_transition[data-align-y="end"] {
+    --x-align-items: flex-end;
+  }
+
+  .ui_transition,
+  .ui_transition_active_group,
+  .ui_transition_previous_group,
+  .ui_transition_target_slot,
+  .ui_transition_previous_target_slot,
+  .ui_transition_outgoing_slot,
+  .ui_transition_previous_outgoing_slot {
+    width: 100%;
+    height: 100%;
+  }
+
+  .ui_transition_target_slot,
+  .ui_transition_outgoing_slot,
+  .ui_transition_previous_target_slot,
+  .ui_transition_previous_outgoing_slot {
+    display: flex;
+    align-items: var(--x-align-items);
+    justify-content: var(--x-justify-content);
+  }
+  .ui_transition_target_slot[data-items-width-overflow],
+  .ui_transition_previous_target_slot[data-items-width-overflow],
+  .ui_transition_previous_target_slot[data-items-width-overflow],
+  .ui_transition_previous_outgoing_slot[data-items-width-overflow] {
+    --x-justify-content: flex-start;
+  }
+  .ui_transition_target_slot[data-items-height-overflow],
+  .ui_transition_previous_slot[data-items-height-overflow],
+  .ui_transition_previous_target_slot[data-items-height-overflow],
+  .ui_transition_previous_outgoing_slot[data-items-height-overflow] {
+    --x-align-items: flex-start;
+  }
+
+  .ui_transition_active_group {
+    position: relative;
+  }
+  .ui_transition_target_slot {
+    position: relative;
+  }
+  .ui_transition_outgoing_slot,
+  .ui_transition_previous_outgoing_slot {
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+  .ui_transition_previous_group {
+    position: absolute;
+    inset: 0;
+  }
+  .ui_transition[data-only-previous-group] .ui_transition_previous_group {
+    position: relative;
+  }
+
+  .ui_transition_target_slot_background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: -1;
+    display: none;
+    width: var(--target-slot-width, 100%);
+    height: var(--target-slot-height, 100%);
+    background: var(--target-slot-background, transparent);
+    pointer-events: none;
+  }
+  .ui_transition[data-transitioning] .ui_transition_target_slot_background {
+    display: block;
+  }
+`, "@jsenv/navi/src/transition/ui_transition.js"];
+const CONTENT_ID_ATTRIBUTE = "data-content-id";
+const CONTENT_PHASE_ATTRIBUTE = "data-content-phase";
+const UNSET = {
+  domNodes: [],
+  domNodesClone: [],
+  isEmpty: true,
+  type: "unset",
+  contentId: "unset",
+  contentPhase: undefined,
+  isContentPhase: false,
+  isContent: false,
+  toString: () => "unset"
+};
+const isSameConfiguration = (configA, configB) => {
+  return configA.toString() === configB.toString();
+};
+const createUITransitionController = (root, {
+  duration = 300,
+  alignX = "center",
+  alignY = "center",
+  onStateChange = () => {},
+  pauseBreakpoints = []
+} = {}) => {
+  const debugConfig = {
+    detection: root.hasAttribute("data-debug-detection"),
+    size: root.hasAttribute("data-debug-size")
+  };
+  const hasDebugLogs = debugConfig.size;
+  const debugDetection = message => {
+    if (!debugConfig.detection) return;
+    console.debug(`[detection]`, message);
+  };
+  const debugSize = message => {
+    if (!debugConfig.size) return;
+    console.debug(`[size]`, message);
+  };
+  const activeGroup = root.querySelector(".ui_transition_active_group");
+  const targetSlot = root.querySelector(".ui_transition_target_slot");
+  const outgoingSlot = root.querySelector(".ui_transition_outgoing_slot");
+  const previousGroup = root.querySelector(".ui_transition_previous_group");
+  const previousTargetSlot = previousGroup?.querySelector(".ui_transition_previous_target_slot");
+  const previousOutgoingSlot = previousGroup?.querySelector(".ui_transition_previous_outgoing_slot");
+  if (!root || !activeGroup || !targetSlot || !outgoingSlot || !previousGroup || !previousTargetSlot || !previousOutgoingSlot) {
+    throw new Error("createUITransitionController requires element with .active_group, .target_slot, .outgoing_slot, .previous_group, .previous_target_slot, and .previous_outgoing_slot elements");
+  }
+
+  // we maintain a background copy behind target slot to avoid showing
+  // the body flashing during the fade-in
+  const targetSlotBackground = document.createElement("div");
+  targetSlotBackground.className = "ui_transition_target_slot_background";
+  activeGroup.insertBefore(targetSlotBackground, targetSlot);
+  root.style.setProperty("--x-transition-duration", `${duration}ms`);
+  outgoingSlot.setAttribute("inert", "");
+  previousGroup.setAttribute("inert", "");
+  const detectConfiguration = (slot, {
+    contentId,
+    contentPhase
+  } = {}) => {
+    const domNodes = Array.from(slot.childNodes);
+    if (!domNodes) {
+      return UNSET;
+    }
+    const isEmpty = domNodes.length === 0;
+    let textNodeCount = 0;
+    let elementNodeCount = 0;
+    let firstElementNode;
+    const domNodesClone = [];
+    if (isEmpty) {
+      if (contentPhase === undefined) {
+        contentPhase = "empty";
+      }
+    } else {
+      const contentIdSlotAttr = slot.getAttribute(CONTENT_ID_ATTRIBUTE);
+      let contentIdChildAttr;
+      for (const domNode of domNodes) {
+        if (domNode.nodeType === Node.TEXT_NODE) {
+          textNodeCount++;
+        } else {
+          if (!firstElementNode) {
+            firstElementNode = domNode;
+          }
+          elementNodeCount++;
+          if (domNode.hasAttribute("data-content-phase")) {
+            const contentPhaseAttr = domNode.getAttribute("data-content-phase");
+            contentPhase = contentPhaseAttr || "attr";
+          }
+          if (domNode.hasAttribute("data-content-key")) {
+            contentIdChildAttr = domNode.getAttribute("data-content-key");
+          }
+        }
+        const domNodeClone = domNode.cloneNode(true);
+        domNodesClone.push(domNodeClone);
+      }
+      if (contentIdSlotAttr && contentIdChildAttr) {
+        console.warn(`Slot and slot child both have a [${CONTENT_ID_ATTRIBUTE}]. Slot is ${contentIdSlotAttr} and child is ${contentIdChildAttr}, using the child.`);
+      }
+      if (contentId === undefined) {
+        contentId = contentIdChildAttr || contentIdSlotAttr || undefined;
+      }
+    }
+    const isOnlyTextNodes = elementNodeCount === 0 && textNodeCount > 1;
+    const singleElementNode = elementNodeCount === 1 ? firstElementNode : null;
+    contentId = contentId || getElementSignature(domNodes[0]);
+    if (!contentPhase && isEmpty) {
+      // Imagine code rendering null while switching to a new content
+      // or even while staying on the same content.
+      // In the UI we want to consider this as an "empty" phase.
+      // meaning the ui will keep the same size until something else happens
+      // This prevent layout shifts of code not properly handling
+      // intermediate states.
+      contentPhase = "empty";
+    }
+    let width;
+    let height;
+    let borderRadius;
+    let border;
+    let background;
+    if (isEmpty) {
+      debugSize(`measureSlot(".${slot.className}") -> it is empty`);
+    } else if (singleElementNode) {
+      const visualSelector = singleElementNode.getAttribute("data-visual-selector");
+      const visualElement = visualSelector ? singleElementNode.querySelector(visualSelector) || singleElementNode : singleElementNode;
+      const rect = visualElement.getBoundingClientRect();
+      width = rect.width;
+      height = rect.height;
+      debugSize(`measureSlot(".${slot.className}") -> [${width}x${height}]`);
+      borderRadius = getBorderRadius(visualElement);
+      border = getComputedStyle(visualElement).border;
+      background = getComputedStyle(visualElement).background;
+    } else {
+      // text, multiple elements
+      const rect = slot.getBoundingClientRect();
+      width = rect.width;
+      height = rect.height;
+      debugSize(`measureSlot(".${slot.className}") -> [${width}x${height}]`);
+    }
+    const commonProperties = {
+      domNodes,
+      domNodesClone,
+      isEmpty,
+      isOnlyTextNodes,
+      singleElementNode,
+      width,
+      height,
+      borderRadius,
+      border,
+      background,
+      contentId
+    };
+    if (contentPhase) {
+      return {
+        ...commonProperties,
+        type: "content_phase",
+        contentPhase,
+        isContentPhase: true,
+        isContent: false,
+        toString: () => `content(${contentId}).phase(${contentPhase})`
+      };
+    }
+    return {
+      ...commonProperties,
+      type: "content",
+      contentPhase: undefined,
+      isContentPhase: false,
+      isContent: true,
+      toString: () => `content(${contentId})`
+    };
+  };
+  const targetSlotInitialConfiguration = detectConfiguration(targetSlot);
+  const outgoingSlotInitialConfiguration = detectConfiguration(outgoingSlot, {
+    contentPhase: "true"
+  });
+  let targetSlotConfiguration = targetSlotInitialConfiguration;
+  let outgoingSlotConfiguration = outgoingSlotInitialConfiguration;
+  let previousTargetSlotConfiguration = UNSET;
+  const updateSlotAttributes = () => {
+    if (targetSlotConfiguration.isEmpty && outgoingSlotConfiguration.isEmpty) {
+      root.setAttribute("data-only-previous-group", "");
+    } else {
+      root.removeAttribute("data-only-previous-group");
+    }
+  };
+  const updateAlignment = () => {
+    // Set data attributes for CSS-based alignment
+    root.setAttribute("data-align-x", alignX);
+    root.setAttribute("data-align-y", alignY);
+  };
+  const moveConfigurationIntoSlot = (configuration, slot) => {
+    slot.innerHTML = "";
+    for (const domNode of configuration.domNodesClone) {
+      slot.appendChild(domNode);
+    }
+    // in case border or stuff like that have changed we re-detect the config
+    const updatedConfig = detectConfiguration(slot);
+    if (slot === targetSlot) {
+      targetSlotConfiguration = updatedConfig;
+    } else if (slot === outgoingSlot) {
+      outgoingSlotConfiguration = updatedConfig;
+    } else if (slot === previousTargetSlot) {
+      previousTargetSlotConfiguration = updatedConfig;
+    } else if (slot === previousOutgoingSlot) ; else {
+      throw new Error("Unknown slot for applyConfiguration");
+    }
+  };
+  updateAlignment();
+  let transitionType = "none";
+  const groupTransitionOptions = {
+    // debugBreakpoints: [0.25],
+    pauseBreakpoints,
+    lifecycle: {
+      setup: () => {
+        updateSlotAttributes();
+        root.setAttribute("data-transitioning", "");
+        onStateChange({
+          isTransitioning: true
+        });
+        return {
+          teardown: () => {
+            root.removeAttribute("data-transitioning");
+            updateSlotAttributes(); // Update positioning after transition
+            onStateChange({
+              isTransitioning: false
+            });
+          }
+        };
+      }
+    }
+  };
+  const transitionController = createGroupTransitionController(groupTransitionOptions);
+  const elementToClip = root;
+  const morphContainerIntoTarget = () => {
+    const morphTransitions = [];
+    {
+      // TODO: ideally when scrollContainer is document AND we transition
+      // from a layout with scrollbar to a layout without
+      // we have clip path detecting we go from a given width/height to a new width/height
+      // that might just be the result of scrollbar appearing/disappearing
+      // we should detect when this happens to avoid clipping what correspond to the scrollbar presence toggling
+      const fromWidth = previousTargetSlotConfiguration.width || 0;
+      const fromHeight = previousTargetSlotConfiguration.height || 0;
+      const toWidth = targetSlotConfiguration.width || 0;
+      const toHeight = targetSlotConfiguration.height || 0;
+      debugSize(`transition from [${fromWidth}x${fromHeight}] to [${toWidth}x${toHeight}]`);
+      const restoreOverflow = preventIntermediateScrollbar(root, {
+        fromWidth,
+        fromHeight,
+        toWidth,
+        toHeight,
+        onPrevent: ({
+          x,
+          y,
+          scrollContainer
+        }) => {
+          if (x) {
+            debugSize(`Temporarily hiding horizontal overflow during transition on ${getElementSignature(scrollContainer)}`);
+          }
+          if (y) {
+            debugSize(`Temporarily hiding vertical overflow during transition on ${getElementSignature(scrollContainer)}`);
+          }
+        },
+        onRestore: () => {
+          debugSize(`Restored overflow after transition`);
+        }
+      });
+      const onSizeTransitionFinished = () => {
+        // Restore overflow when transition is complete
+        restoreOverflow();
+      };
+
+      // https://emilkowal.ski/ui/the-magic-of-clip-path
+      const elementToClipRect = elementToClip.getBoundingClientRect();
+      const elementToClipWidth = elementToClipRect.width;
+      const elementToClipHeight = elementToClipRect.height;
+      // Calculate where content is positioned within the large container
+      const getAlignedPosition = (containerSize, contentSize, align) => {
+        switch (align) {
+          case "start":
+            return 0;
+          case "end":
+            return containerSize - contentSize;
+          case "center":
+          default:
+            return (containerSize - contentSize) / 2;
+        }
+      };
+      // Position of "from" content within large container
+      const fromLeft = getAlignedPosition(elementToClipWidth, fromWidth, alignX);
+      const fromTop = getAlignedPosition(elementToClipHeight, fromHeight, alignY);
+      // Position of target content within large container
+      const targetLeft = getAlignedPosition(elementToClipWidth, toWidth, alignX);
+      const targetTop = getAlignedPosition(elementToClipHeight, toHeight, alignY);
+      debugSize(`Positions in container: from [${fromLeft},${fromTop}] ${fromWidth}x${fromHeight} to [${targetLeft},${targetTop}] ${toWidth}x${toHeight}`);
+      // Get border-radius values
+      const fromBorderRadius = previousTargetSlotConfiguration.borderRadius || 0;
+      const toBorderRadius = targetSlotConfiguration.borderRadius || 0;
+      const startInsetTop = fromTop;
+      const startInsetRight = elementToClipWidth - (fromLeft + fromWidth);
+      const startInsetBottom = elementToClipHeight - (fromTop + fromHeight);
+      const startInsetLeft = fromLeft;
+      const endInsetTop = targetTop;
+      const endInsetRight = elementToClipWidth - (targetLeft + toWidth);
+      const endInsetBottom = elementToClipHeight - (targetTop + toHeight);
+      const endInsetLeft = targetLeft;
+      const startClipPath = `inset(${startInsetTop}px ${startInsetRight}px ${startInsetBottom}px ${startInsetLeft}px round ${fromBorderRadius}px)`;
+      const endClipPath = `inset(${endInsetTop}px ${endInsetRight}px ${endInsetBottom}px ${endInsetLeft}px round ${toBorderRadius}px)`;
+      // Create clip-path animation using Web Animations API
+      const clipAnimation = elementToClip.animate([{
+        clipPath: startClipPath
+      }, {
+        clipPath: endClipPath
+      }], {
+        duration,
+        easing: "ease",
+        fill: "forwards"
+      });
+
+      // Handle finish
+      clipAnimation.finished.then(() => {
+        // Clear clip-path to restore normal behavior
+        elementToClip.style.clipPath = "";
+        clipAnimation.cancel();
+        onSizeTransitionFinished();
+      }).catch(() => {
+        // Animation was cancelled
+      });
+      clipAnimation.play();
+    }
+    return morphTransitions;
+  };
+  const fadeInTargetSlot = () => {
+    targetSlotBackground.style.setProperty("--target-slot-background", targetSlotConfiguration.background);
+    targetSlotBackground.style.setProperty("--target-slot-width", `${targetSlotConfiguration.width || 0}px`);
+    targetSlotBackground.style.setProperty("--target-slot-height", `${targetSlotConfiguration.height || 0}px`);
+    return createOpacityTransition(targetSlot, 1, {
+      from: 0,
+      duration,
+      styleSynchronizer: "inline_style",
+      onFinish: targetSlotOpacityTransition => {
+        targetSlotBackground.style.removeProperty("--target-slot-background");
+        targetSlotBackground.style.removeProperty("--target-slot-width");
+        targetSlotBackground.style.removeProperty("--target-slot-height");
+        targetSlotOpacityTransition.cancel();
+      }
+    });
+  };
+  const fadeOutPreviousGroup = () => {
+    return createOpacityTransition(previousGroup, 0, {
+      from: 1,
+      duration,
+      styleSynchronizer: "inline_style",
+      onFinish: previousGroupOpacityTransition => {
+        previousGroupOpacityTransition.cancel();
+        previousGroup.style.opacity = "0"; // keep previous group visually hidden
+      }
+    });
+  };
+  const fadeOutOutgoingSlot = () => {
+    return createOpacityTransition(outgoingSlot, 0, {
+      duration,
+      from: 1,
+      styleSynchronizer: "inline_style",
+      onFinish: outgoingSlotOpacityTransition => {
+        outgoingSlotOpacityTransition.cancel();
+        outgoingSlot.style.opacity = "0"; // keep outgoing slot visually hidden
+      }
+    });
+  };
+
+  // content_to_content transition (uses previous_group)
+  const applyContentToContentTransition = toConfiguration => {
+    // 1. move target slot to previous
+    moveConfigurationIntoSlot(targetSlotConfiguration, previousTargetSlot);
+    targetSlotConfiguration = toConfiguration;
+    // 2. move outgoing slot to previous
+    moveConfigurationIntoSlot(outgoingSlotConfiguration, previousOutgoingSlot);
+    moveConfigurationIntoSlot(UNSET, outgoingSlot);
+    const transitions = [...morphContainerIntoTarget(), fadeInTargetSlot(), fadeOutPreviousGroup()];
+    const transition = transitionController.update(transitions, {
+      onFinish: () => {
+        moveConfigurationIntoSlot(UNSET, previousTargetSlot);
+        moveConfigurationIntoSlot(UNSET, previousOutgoingSlot);
+        if (hasDebugLogs) {
+          console.groupEnd();
+        }
+      }
+    });
+    transition.play();
+  };
+  // content_phase_to_content_phase transition (uses outgoing_slot)
+  const applyContentPhaseToContentPhaseTransition = toConfiguration => {
+    // 1. Move target slot to outgoing
+    moveConfigurationIntoSlot(targetSlotConfiguration, outgoingSlot);
+    targetSlotConfiguration = toConfiguration;
+    const transitions = [...morphContainerIntoTarget(), fadeInTargetSlot(), fadeOutOutgoingSlot()];
+    const transition = transitionController.update(transitions, {
+      onFinish: () => {
+        moveConfigurationIntoSlot(UNSET, outgoingSlot);
+        if (hasDebugLogs) {
+          console.groupEnd();
+        }
+      }
+    });
+    transition.play();
+  };
+  // any_to_empty transition
+  const applyToEmptyTransition = () => {
+    // 1. move target slot to previous
+    moveConfigurationIntoSlot(targetSlotConfiguration, previousTargetSlot);
+    targetSlotConfiguration = UNSET;
+    // 2. move outgoing slot to previous
+    moveConfigurationIntoSlot(outgoingSlotConfiguration, previousOutgoingSlot);
+    outgoingSlotConfiguration = UNSET;
+    const transitions = [...morphContainerIntoTarget(), fadeOutPreviousGroup()];
+    const transition = transitionController.update(transitions, {
+      onFinish: () => {
+        moveConfigurationIntoSlot(UNSET, previousTargetSlot);
+        moveConfigurationIntoSlot(UNSET, previousOutgoingSlot);
+        if (hasDebugLogs) {
+          console.groupEnd();
+        }
+      }
+    });
+    transition.play();
+  };
+  // Main transition method
+  const transitionTo = (newContentElement, {
+    contentPhase,
+    contentId
+  } = {}) => {
+    if (contentId) {
+      targetSlot.setAttribute(CONTENT_ID_ATTRIBUTE, contentId);
+    } else {
+      targetSlot.removeAttribute(CONTENT_ID_ATTRIBUTE);
+    }
+    if (contentPhase) {
+      targetSlot.setAttribute(CONTENT_PHASE_ATTRIBUTE, contentPhase);
+    } else {
+      targetSlot.removeAttribute(CONTENT_PHASE_ATTRIBUTE);
+    }
+    if (newContentElement) {
+      targetSlot.innerHTML = "";
+      targetSlot.appendChild(newContentElement);
+    } else {
+      targetSlot.innerHTML = "";
+    }
+  };
+  // Reset to initial content
+  const resetContent = () => {
+    transitionController.cancel();
+    moveConfigurationIntoSlot(targetSlotInitialConfiguration, targetSlot);
+    moveConfigurationIntoSlot(outgoingSlotInitialConfiguration, outgoingSlot);
+    moveConfigurationIntoSlot(UNSET, previousTargetSlot);
+    moveConfigurationIntoSlot(UNSET, previousOutgoingSlot);
+  };
+  const targetSlotEffect = reasons => {
+    if (root.hasAttribute("data-disabled")) {
+      return;
+    }
+    const fromConfiguration = targetSlotConfiguration;
+    const toConfiguration = detectConfiguration(targetSlot);
+    if (hasDebugLogs) {
+      console.group(`targetSlotEffect()`);
+      console.debug(`reasons:`);
+      console.debug(`- ${reasons.join("\n- ")}`);
+    }
+    if (isSameConfiguration(fromConfiguration, toConfiguration)) {
+      debugDetection(`already in desired state (${toConfiguration}) -> early return`);
+      if (hasDebugLogs) {
+        console.groupEnd();
+      }
+      return;
+    }
+    const fromConfigType = fromConfiguration.type;
+    const toConfigType = toConfiguration.type;
+    transitionType = `${fromConfigType}_to_${toConfigType}`;
+    debugDetection(`Prepare "${transitionType}" transition (${fromConfiguration} -> ${toConfiguration})`);
+    // content_to_empty / content_phase_to_empty
+    if (toConfiguration.isEmpty) {
+      applyToEmptyTransition();
+      return;
+    }
+    // content_phase_to_content_phase
+    if (fromConfiguration.isContentPhase && toConfiguration.isContentPhase) {
+      applyContentPhaseToContentPhaseTransition(toConfiguration);
+      return;
+    }
+    // content_phase_to_content
+    if (fromConfiguration.isContentPhase && toConfiguration.isContent) {
+      applyContentPhaseToContentPhaseTransition(toConfiguration);
+      return;
+    }
+    // content_to_content_phase
+    if (fromConfiguration.isContent && toConfiguration.isContentPhase) {
+      applyContentPhaseToContentPhaseTransition(toConfiguration);
+      return;
+    }
+    // content_to_content (default case)
+    applyContentToContentTransition(toConfiguration);
+  };
+  const [teardown, addTeardown] = createPubSub();
+  {
+    const mutationObserver = new MutationObserver(mutations => {
+      const reasonParts = [];
+      for (const mutation of mutations) {
+        if (mutation.type === "childList") {
+          const added = mutation.addedNodes.length;
+          const removed = mutation.removedNodes.length;
+          if (added && removed) {
+            reasonParts.push(`addedNodes(${added}) removedNodes(${removed})`);
+          } else if (added) {
+            reasonParts.push(`addedNodes(${added})`);
+          } else {
+            reasonParts.push(`removedNodes(${removed})`);
+          }
+          continue;
+        }
+        if (mutation.type === "attributes") {
+          const {
+            attributeName
+          } = mutation;
+          if (attributeName === CONTENT_ID_ATTRIBUTE || attributeName === CONTENT_PHASE_ATTRIBUTE) {
+            const {
+              oldValue
+            } = mutation;
+            if (oldValue === null) {
+              const value = targetSlot.getAttribute(attributeName);
+              reasonParts.push(value ? `added [${attributeName}=${value}]` : `added [${attributeName}]`);
+            } else if (targetSlot.hasAttribute(attributeName)) {
+              const value = targetSlot.getAttribute(attributeName);
+              reasonParts.push(`[${attributeName}] ${oldValue} -> ${value}`);
+            } else {
+              reasonParts.push(oldValue ? `removed [${attributeName}=${oldValue}]` : `removed [${attributeName}]`);
+            }
+          }
+        }
+      }
+      if (reasonParts.length === 0) {
+        return;
+      }
+      targetSlotEffect(reasonParts);
+    });
+    mutationObserver.observe(targetSlot, {
+      childList: true,
+      attributes: true,
+      attributeFilter: [CONTENT_ID_ATTRIBUTE, CONTENT_PHASE_ATTRIBUTE],
+      characterData: false
+    });
+    addTeardown(() => {
+      mutationObserver.disconnect();
+    });
+  }
+  {
+    const slots = [targetSlot, outgoingSlot, previousTargetSlot, previousOutgoingSlot];
+    for (const slot of slots) {
+      addTeardown(monitorItemsOverflow(slot));
+    }
+  }
+  const setDuration = newDuration => {
+    duration = newDuration;
+    // Update CSS variable immediately
+    root.style.setProperty("--x-transition-duration", `${duration}ms`);
+  };
+  const setAlignment = (newAlignX, newAlignY) => {
+    alignX = newAlignX;
+    alignY = newAlignY;
+    updateAlignment();
+  };
+  return {
+    updateContentId: value => {
+      if (value) {
+        targetSlot.setAttribute(CONTENT_ID_ATTRIBUTE, value);
+      } else {
+        targetSlot.removeAttribute(CONTENT_ID_ATTRIBUTE);
+      }
+    },
+    transitionTo,
+    resetContent,
+    setDuration,
+    setAlignment,
+    updateAlignment,
+    setPauseBreakpoints: value => {
+      groupTransitionOptions.pauseBreakpoints = value;
+    },
+    cleanup: () => {
+      teardown();
+    }
+  };
+};
+
+/**
+ * UITransition
+ *
+ * A Preact component that enables smooth animated transitions between its children when the content changes.
+ * It observes content keys and phases to create different types of transitions.
+ *
+ * Features:
+ * - Content transitions: Between different content keys (e.g., user profiles, search results)
+ * - Phase transitions: Between loading/content/error states for the same content key
+ * - Automatic size animation to accommodate content changes
+ * - Configurable transition types: "slide-left", "cross-fade"
+ * - Independent duration control for content and phase transitions
+ *
+ * Usage:
+ * - Wrap dynamic content in <UITransition> to animate between states
+ * - Set a unique `data-content-id` on your rendered content to identify each content variant
+ * - Use `data-content-phase` to mark loading/error states for phase transitions
+ * - Configure transition types and durations for both content and phase changes
+ *
+ * Example:
+ *
+ *   <UITransition>
+ *     {isLoading
+ *       ? <Spinner data-content-key={userId} data-content-phase />
+ *       : <UserProfile user={user} data-content-key={userId} />}
+ *   </UITransition>
+ *
+ * When `data-content-id` changes, UITransition animates content transitions.
+ * When `data-content-phase` changes for the same key, it animates phase transitions.
+ */
+
+const UITransitionContentIdContext = createContext();
+const UITransition = ({
+  children,
+  contentId,
+  type,
+  duration,
+  debugDetection,
+  debugContent,
+  debugSize,
+  disabled,
+  uiTransitionRef,
+  alignX,
+  alignY,
+  ...props
+}) => {
+  const contentIdRef = useRef(contentId);
+  const updateContentId = () => {
+    const uiTransition = uiTransitionRef.current;
+    if (!uiTransition) {
+      return;
+    }
+    const value = contentIdRef.current;
+    uiTransition.updateContentId(value);
+  };
+  const uiTransitionContentIdContextValue = useMemo(() => {
+    const set = new Set();
+    const onSetChange = () => {
+      const value = Array.from(set).join("|");
+      contentIdRef.current = value;
+      updateContentId();
+    };
+    const update = (part, newPart) => {
+      if (!set.has(part)) {
+        if (set.size === 0) {
+          console.warn(`UITransition: content id update "${part}" -> "${newPart}" ignored because content id set is empty`);
+          return;
+        }
+        console.warn(`UITransition: content id update "${part}" -> "${newPart}" ignored because content id not found in set, only got [${Array.from(set).join(", ")}]`);
+        return;
+      }
+      set.delete(part);
+      set.add(newPart);
+      onSetChange();
+    };
+    const add = part => {
+      if (!part) {
+        return;
+      }
+      if (set.has(part)) {
+        return;
+      }
+      set.add(part);
+      onSetChange();
+    };
+    const remove = part => {
+      if (!part) {
+        return;
+      }
+      if (!set.has(part)) {
+        return;
+      }
+      set.delete(part);
+      onSetChange();
+    };
+    return {
+      add,
+      update,
+      remove
+    };
+  }, []);
+  const ref = useRef();
+  const uiTransitionRefDefault = useRef();
+  uiTransitionRef = uiTransitionRef || uiTransitionRefDefault;
+  useLayoutEffect(() => {
+    const uiTransition = createUITransitionController(ref.current, {
+      alignX,
+      alignY
+    });
+    uiTransitionRef.current = uiTransition;
+    return () => {
+      uiTransition.cleanup();
+    };
+  }, [disabled, alignX, alignY]);
+  return jsxs("div", {
+    ref: ref,
+    ...props,
+    className: "ui_transition",
+    "data-disabled": disabled ? "" : undefined,
+    "data-transition-type": type,
+    "data-transition-duration": duration,
+    "data-debug-detection": debugDetection ? "" : undefined,
+    "data-debug-size": debugSize ? "" : undefined,
+    "data-debug-content": debugContent ? "" : undefined,
+    children: [jsxs("div", {
+      className: "ui_transition_active_group",
+      children: [jsx("div", {
+        className: "ui_transition_target_slot",
+        "data-content-id": contentIdRef.current ? contentIdRef.current : undefined,
+        children: jsx(UITransitionContentIdContext.Provider, {
+          value: uiTransitionContentIdContextValue,
+          children: children
+        })
+      }), jsx("div", {
+        className: "ui_transition_outgoing_slot",
+        inert: true
+      })]
+    }), jsxs("div", {
+      className: "ui_transition_previous_group",
+      inert: true,
+      children: [jsx("div", {
+        className: "ui_transition_previous_target_slot"
+      }), jsx("div", {
+        className: "ui_transition_previous_outgoing_slot"
+      })]
+    })]
+  });
+};
+
+/**
+ * The goal of this hook is to allow a component to set a "content key"
+ * Meaning all content within the component is identified by that key
+ *
+ * When the key changes, UITransition will be able to detect that and consider the content
+ * as changed even if the component is still the same
+ *
+ * This is used by <Route> to set the content key to the route path
+ * When the route becomes inactive it will call useUITransitionContentId(undefined)
+ * And if a sibling route becones active it will call useUITransitionContentId with its own path
+ *
+ */
+const useUITransitionContentId = value => {
+  const contentId = useContext(UITransitionContentIdContext);
+  const valueRef = useRef();
+  if (contentId !== undefined && valueRef.current !== value) {
+    const previousValue = valueRef.current;
+    valueRef.current = value;
+    if (previousValue === undefined) {
+      contentId.add(value);
+    } else {
+      contentId.update(previousValue, value);
+    }
+  }
+  useLayoutEffect(() => {
+    if (contentId === undefined) {
+      return null;
+    }
+    return () => {
+      contentId.remove(valueRef.current);
+    };
+  }, []);
 };
 
 /**
@@ -11060,9 +13756,14 @@ const route = (pattern, { searchParams } = {}) => {
       // eslint-disable-next-line no-loop-func
       const cleanupSignalUrlEffect = effect(() => {
         const value = paramSignal.value;
-        const rawParams = route.rawParamsSignal.value;
+        const urlValue =
+          paramSignal.validity?.representations.url.value ?? value;
+        // Use peek() to avoid subscribing to URL-derived signals.
+        // This effect should only re-run when the param signal changes,
+        // not when the URL changes (which would create a cycle: signal→URL→signal).
+        const rawParams = route.rawParamsSignal.peek();
         const urlParamValue = rawParams[paramName];
-        const matching = route.matchingSignal.value;
+        const matching = route.matchingSignal.peek();
 
         // Signal returned to default - clean up URL by removing the parameter
         // Skip cleanup during URL-to-signal synchronization to prevent recursion
@@ -11082,11 +13783,11 @@ const route = (pattern, { searchParams } = {}) => {
           }
           if (debug) {
             console.debug(
-              `[route] Signal->URL: ${paramName} adding custom value ${value} to URL (default: ${connection.getDefaultValue()})`,
+              `[route] Signal->URL: ${paramName} adding custom value ${urlValue} to URL (default: ${connection.getDefaultValue()})`,
             );
           }
           route.replaceParams(
-            { [paramName]: value },
+            { [paramName]: urlValue },
             {
               callReason: `${paramName} signal change on ${route}`,
               isSignalChange: true,
@@ -11112,17 +13813,17 @@ const route = (pattern, { searchParams } = {}) => {
           return;
         }
 
-        if (value === urlParamValue) {
+        if (urlValue === urlParamValue) {
           // Values already match, no sync needed
           return;
         }
         if (debug) {
           console.debug(
-            `[route] Signal->URL: ${paramName} updating URL ${urlParamValue} -> ${value}`,
+            `[route] Signal->URL: ${paramName} updating URL ${urlParamValue} -> ${urlValue}`,
           );
         }
         route.replaceParams(
-          { [paramName]: value },
+          { [paramName]: urlValue },
           {
             callReason: `${paramName} signal change on ${route}`,
             isSignalChange: true,
@@ -12115,3445 +14816,6 @@ const useNavStateBasic = (id, initialValue, { debug } = {}) => {
 
 const useNavState = useNavStateBasic;
 
-const FormContext = createContext();
-
-// In-memory registry of all mounted ui state controllers keyed by their id.
-// Allows direct controller access without dispatching DOM events — used by external
-// callers (e.g. selectable_list) to call setUIState by id instead of via the DOM.
-const controllersById = new Map();
-const getUIStateControllerById = (id) => controllersById.get(id);
-
-// In-memory registry for radio controllers, keyed by input name.
-// Allows radio sibling unchecking without querying the DOM — necessary when
-// items are virtualized and their DOM element may not exist at the time.
-// Form scoping is reproduced by comparing parentUIStateController references.
-const radioControllersByName = new Map();
-
-const registerRadioController = (uiStateController) => {
-  const { name } = uiStateController;
-  if (!name) {
-    return;
-  }
-  let set = radioControllersByName.get(name);
-  if (!set) {
-    set = new Set();
-    radioControllersByName.set(name, set);
-  }
-  set.add(uiStateController);
-};
-
-const unregisterRadioController = (uiStateController) => {
-  const { name } = uiStateController;
-  if (!name) {
-    return;
-  }
-  const set = radioControllersByName.get(name);
-  if (!set) {
-    return;
-  }
-  set.delete(uiStateController);
-  if (set.size === 0) {
-    radioControllersByName.delete(name);
-  }
-};
-const debugUIState = (...args) => {
-};
-const debugUIGroup = (...args) => {
-};
-
-const ParentUIStateControllerContext = createContext();
-
-/**
- * UI State Controller Hook
- *
- * Manages the relationship between external state (props) and UI state (what user sees).
- * Allows UI state to diverge temporarily for responsive interactions, with mechanisms
- * to sync back to external state when needed.
- *
- * Key features:
- * - Immediate UI updates for responsive interactions
- * - State divergence with sync capabilities (resetUIState)
- * - Group integration for coordinated form inputs
- * - External control via DOM events (navi_set_ui_state / navi_request_reset_ui_state)
- * - Error recovery and form reset support
- *
- * State change flow:
- * All state changes (interaction, action result, external reset) go through DOM events:
- * - `navi_set_ui_state` dispatched on the field's DOM element triggers setUIState
- * - `navi_request_reset_ui_state` dispatched on the field's DOM element resets to controller.state
- * This ensures any subscriber (e.g. useUIState) receives every state change regardless of origin.
- *
- * The controller stores `elementRef` so parent group controllers can dispatch DOM events
- * directly on child DOM elements when performing group-level operations like resetUIState.
- */
-const useUIStateController = (
-  props,
-  controlType,
-  {
-    statePropName,
-    defaultStatePropName,
-    fallbackState = undefined,
-    getStateFromProp = (prop) => prop,
-    getPropFromState = (state) => state,
-    getStateFromParent,
-    uiActionInternal,
-    persists,
-    allowNameless = false,
-    debugInteraction,
-  } = {},
-) => {
-  const uiStateControllerRef = useRef();
-  const parentUIStateController = useContext(ParentUIStateControllerContext);
-  const formContext = useContext(FormContext);
-  const { id, name, uiAction, action } = props;
-  const ref = props.ref;
-  const isProxy = Boolean(props["navi-control-proxy-for"]);
-  const hasStateProp = Object.hasOwn(props, statePropName);
-  /**
-   * This check is needed only for basic field because
-   * When using action/form we consider the action/form code
-   * will have a side effect that will re-render the component with the up-to-date state
-   *
-   * In practice we set the checked from the backend state
-   * We use action to fetch the new state and update the local state
-   * The component re-renders so it's the action/form that is considered as responsible
-   * to update the state and as a result allowed to have "checked"/"value" prop without "onUIStateChange"
-   */
-  const uncontrolled =
-    !uiAction &&
-    !action &&
-    !formContext &&
-    !parentUIStateController &&
-    !isProxy;
-  const readOnly = uncontrolled && hasStateProp;
-
-  if (persists === undefined && formContext) {
-    persists = true;
-  }
-  const [navState, setNavState] = useNavState(id);
-  const state = props[statePropName];
-  const stateValue = state;
-  const defaultState = props[defaultStatePropName];
-  const stateInitial = useInitialValue(() => {
-    if (hasStateProp) {
-      // controlled by state prop ("value" or "checked")
-      return getStateFromProp(stateValue);
-    }
-    if (defaultState) {
-      // not controlled but want an initial state (a value or being checked)
-      return getStateFromProp(defaultState);
-    }
-    if (persists && navState) {
-      // not controlled but want to use value from nav state
-      // (I think this should likely move earlier to win over the hasUIStateProp when it's undefined)
-      return getStateFromProp(navState);
-    }
-    if (parentUIStateController && getStateFromParent) {
-      return getStateFromParent(parentUIStateController);
-    }
-    return getStateFromProp(fallbackState);
-  });
-  const isRadio = controlType === "input" && props.type === "radio";
-
-  const [
-    notifyParentAboutChildMount,
-    notifyParentAboutChildUIStateChange,
-    notifyParentAboutChildUnmount,
-  ] = useParentControllerNotifiers(
-    parentUIStateController,
-    uiStateControllerRef);
-  useLayoutEffect(() => {
-    const controller = uiStateControllerRef.current;
-    if (id) {
-      controllersById.set(id, controller);
-    }
-    notifyParentAboutChildMount();
-    if (isRadio) {
-      registerRadioController(controller);
-    }
-    return () => {
-      if (id) {
-        controllersById.delete(id);
-      }
-      notifyParentAboutChildUnmount();
-      if (isRadio) {
-        unregisterRadioController(controller);
-      }
-    };
-  }, []);
-
-  const existingUIStateController = uiStateControllerRef.current;
-  if (existingUIStateController) {
-    existingUIStateController._checkForUpdates({
-      readOnly,
-      name,
-      getPropFromState,
-      getStateFromProp,
-      hasStateProp,
-      stateInitial,
-      state,
-      props,
-    });
-    return existingUIStateController;
-  }
-  debugUIState(
-    `Creating "${controlType}" ui state controller - initial state:`,
-    JSON.stringify(stateInitial),
-  );
-  const [publishUIState, subscribeUIState] = createPubSub();
-  const ownUIStateSignal = signal(stateInitial);
-  const inherit =
-    controlType === "button" && !hasStateProp && parentUIStateController;
-  const uiStateSignal = inherit
-    ? computed(() => {
-        const parentUIState = parentUIStateController.uiStateSignal.value;
-        const ownUIState = ownUIStateSignal.value;
-        return ownUIState || parentUIState;
-      })
-    : ownUIStateSignal;
-
-  const uiStateController = {
-    _checkForUpdates: ({
-      readOnly,
-      name,
-      getPropFromState,
-      getStateFromProp,
-      hasStateProp,
-      stateInitial,
-      state,
-      props,
-    }) => {
-      uiStateController.readOnly = readOnly;
-      uiStateController.name = name;
-      uiStateController.getPropFromState = getPropFromState;
-      uiStateController.getStateFromProp = getStateFromProp;
-      uiStateController.stateInitial = stateInitial;
-      uiStateController.props = props;
-
-      if (hasStateProp) {
-        uiStateController.hasStateProp = true;
-        const currentState = uiStateController.state;
-        const stateFromProp = getStateFromProp(state);
-        if (stateFromProp !== currentState) {
-          uiStateController.state = stateFromProp;
-          uiStateController.setUIState(
-            uiStateController.getPropFromState(state),
-            new CustomEvent("state_prop", {
-              detail: { internalBehavior: true },
-            }),
-          );
-        }
-      } else if (uiStateController.hasStateProp) {
-        uiStateController.hasStateProp = false;
-        uiStateController.state = uiStateController.stateInitial;
-      }
-    },
-
-    id,
-    controlType,
-    parentUIStateController,
-    isProxy,
-    allowNameless,
-    readOnly,
-    name,
-    props,
-    statePropName,
-    defaultStatePropName,
-    hasStateProp,
-    state: stateInitial,
-    uiState: stateInitial,
-    uiStateSignal,
-    elementRef: ref,
-    getPropFromState,
-    getStateFromProp,
-    setUIState: (prop, e) => {
-      const newUIState = uiStateController.getStateFromProp(prop);
-      const controllerSig = getElementSignature(e.currentTarget || ref.current);
-      if (persists) {
-        setNavState(prop);
-      }
-      const currentUIState = uiStateController.uiState;
-      const stateIsTheSame = compareTwoJsValues(newUIState, currentUIState);
-      if (stateIsTheSame) {
-        if (controlType === "button") {
-          debugInteraction(
-            e,
-            `${controllerSig}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> trigger button action`,
-          );
-          uiActionInternal?.(newUIState, e);
-          uiAction?.(newUIState, e);
-          return true;
-        }
-        debugInteraction(
-          e,
-          `${controllerSig}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> state unchanged, no update needed`,
-        );
-        return false;
-      }
-      debugInteraction(
-        e,
-        `${controllerSig}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> updating from ${JSON.stringify(currentUIState)}`,
-      );
-      const el = ref.current;
-      if (el) {
-        // set immediatly (don't wait for preact re-render) so ui is in the right state for:
-        // - side effect
-        // - any "input" event that might be dispatched below
-        const propValue = uiStateController.getPropFromState(newUIState);
-        debugInteraction(
-          e,
-          `[${statePropName}] = ${JSON.stringify(propValue)};`,
-        );
-        el[statePropName] = propValue;
-      }
-      uiStateController.uiState = newUIState;
-      ownUIStateSignal.value = newUIState;
-      // Radio group: when a radio becomes checked, uncheck all siblings.
-      // We only update their UIState — no parent notification, no synthetic
-      // input event (the browser never fires input on the unchecked radios,
-      // and we don't want to trigger their action flow with a stale DOM value).
-      // Uses the in-memory registry instead of DOM queries so this works even
-      // when sibling items are virtualized (not in the DOM).
-      // Form scoping is preserved by comparing parentUIStateController references.
-      const controlProxyFor = uiStateController.props["navi-control-proxy-for"];
-      if (isRadio && newUIState && uiStateController.name && !controlProxyFor) {
-        const siblings = radioControllersByName.get(uiStateController.name);
-        if (siblings) {
-          const siblingUncheckEvent = new CustomEvent("radio_sibling_uncheck", {
-            detail: { event: e, internalBehavior: true },
-          });
-          for (const siblingController of siblings) {
-            if (siblingController === uiStateController) {
-              continue;
-            }
-            if (
-              siblingController.parentUIStateController !==
-              parentUIStateController
-            ) {
-              continue;
-            }
-            siblingController.setUIState(false, siblingUncheckEvent);
-          }
-        }
-      }
-      debugInteraction(e, `publishUIState(${JSON.stringify(newUIState)})`);
-      publishUIState(newUIState, e);
-      // Always notify the element that its UI state changed.
-      // Listeners use this to stay in sync (e.g. input_effect.js tracks currentState,
-      // useUIState subscribes for reactive updates). Separate from navi_set_ui_state
-      // which is the command; navi_ui_state_change is the notification.
-      if (el) {
-        dispatchInternalCustomEvent(el, "navi_ui_state_change", {
-          event: e,
-          value: newUIState,
-        });
-      }
-      // When this controller is a real input that has a visible proxy
-      // (linked via `navi-control-proxy-for`), mirror the new state to the
-      // proxy DOM synchronously. Otherwise the proxy would only catch up
-      // later through a React re-render — visible as e.g. two radios
-      // appearing checked at once between the real input update and the
-      // next render (radio_sibling_uncheck case).
-      if (el && !controlProxyFor) {
-        const proxyEl = findControlProxy(el);
-        if (proxyEl) {
-          const propValue = uiStateController.getPropFromState(newUIState);
-          proxyEl[statePropName] = propValue;
-          // Also notify the proxy's controller so it can stay in sync with
-          // state changes that originate from the real input (e.g. radio_sibling_uncheck).
-          // Without this the proxy only learns about deselection later via state_prop
-          // (Preact re-render), too late for lastActionValueRef to be updated.
-          dispatchInternalCustomEvent(proxyEl, "navi_ui_state_change", {
-            event: e,
-            value: newUIState,
-          });
-        }
-      }
-      const internalBehavior = e.detail?.internalBehavior;
-      if (internalBehavior) {
-        return true;
-      }
-      notifyParentAboutChildUIStateChange(e);
-      if (controlProxyFor) {
-        // Proxy: forward the state change to the real input
-        // The real input will handle its own UIState update + synthetic input.
-        const targetController = getUIStateControllerById(controlProxyFor);
-        if (targetController) {
-          debugInteraction(
-            e,
-            `forwarding set_ui_state "${prop}" to ${getElementSignature(targetController.elementRef.current)}`,
-          );
-          targetController.setUIState(prop, e);
-        }
-      }
-      if (el) {
-        // Dispatch a synthetic "input" event so external listeners see the new
-        // value. Skip when an input event on this element already exists in the chain.
-        const existingInputEvent = findEvent(e, (eInChain) => {
-          return eInChain.type === "input" && eInChain.target === el;
-        });
-        if (!existingInputEvent) {
-          if (el.tagName === "INPUT") {
-            if (el.type === "radio" || el.type === "checkbox") {
-              debugInteraction(
-                e,
-                "dispatching synthetic input event without data for checkbox/radio",
-              );
-              el.dispatchEvent(new Event("input", { bubbles: true }));
-            } else {
-              debugInteraction(
-                e,
-                `dispatching synthetic input event with data "${newUIState}" for input`,
-              );
-              el.dispatchEvent(
-                new InputEvent("input", {
-                  bubbles: true,
-                  cancelable: true,
-                  inputType: "insertText",
-                  data: newUIState,
-                }),
-              );
-            }
-          }
-          // TODO: select, textarea
-        }
-      }
-      uiActionInternal?.(newUIState, e);
-      uiAction?.(newUIState, e);
-      return true;
-    },
-    resetUIState: (e) => {
-      dispatchRequestSetUIState(e.currentTarget, uiStateController.state, {
-        event: e,
-      });
-    },
-    actionEnd: () => {
-      if (persists) {
-        setNavState(undefined);
-      }
-    },
-    subscribe: subscribeUIState,
-  };
-  uiStateControllerRef.current = uiStateController;
-  return uiStateController;
-};
-
-const NO_PARENT = [() => {}, () => {}, () => {}];
-const useParentControllerNotifiers = (
-  parentUIStateController,
-  uiStateControllerRef,
-  controlType,
-) => {
-  return useMemo(() => {
-    if (!parentUIStateController) {
-      return NO_PARENT;
-    }
-
-    parentUIStateController.controlType;
-    const notifyParentAboutChildMount = () => {
-      const uiStateController = uiStateControllerRef.current;
-      parentUIStateController.registerChild(uiStateController);
-    };
-
-    const notifyParentAboutChildUIStateChange = (e) => {
-      const uiStateController = uiStateControllerRef.current;
-      parentUIStateController.onChildUIStateChange(uiStateController, e);
-    };
-
-    const notifyParentAboutChildUnmount = () => {
-      const uiStateController = uiStateControllerRef.current;
-      parentUIStateController.unregisterChild(uiStateController);
-    };
-
-    return [
-      notifyParentAboutChildMount,
-      notifyParentAboutChildUIStateChange,
-      notifyParentAboutChildUnmount,
-    ];
-  }, []);
-};
-
-/**
- * UI Group State Controller Hook
- *
- * This hook manages a collection of child UI state controllers and aggregates their states
- * into a unified group state. It provides a way to coordinate multiple form inputs that
- * work together as a logical unit.
- *
- * What it provides:
- *
- * 1. **Child State Aggregation**:
- *    - Collects state from multiple child UI controllers
- *    - Combines them into a single meaningful group state
- *    - Updates group state automatically when any child changes
- *
- * 2. **Child Filtering**:
- *    - Can filter which child controllers to include based on component type
- *    - Useful for mixed content where only specific inputs matter
- *    - Enables type-safe aggregation patterns
- *
- * 3. **Group Operations**:
- *    - Provides `resetUIState()` that cascades to all monitored children
- *    - Dispatches `navi_request_reset_ui_state` DOM events on each child's DOM element
- *    - Children handle the event independently, allowing nested groups to cascade further
- *    - Enables group-level operations like "clear all" or "reset form section"
- *
- * 4. **External State Management**:
- *    - Notifies external code of group state changes via `onUIStateChange`
- *    - Allows external systems to react to group-level state changes
- *    - Supports complex form validation and submission logic
- *
- * Why use it:
- * - When you have multiple related inputs that should be treated as one logical unit
- * - For implementing checkbox lists, radio groups, or form sections
- * - When you need to perform operations on multiple inputs simultaneously
- * - To aggregate input states for validation or submission
- *
- * How it works:
- * - Child controllers automatically register themselves when mounted
- * - Group controller listens for child state changes and re-aggregates
- * - Custom aggregation function determines how child states combine
- * - Group state updates trigger notifications to external code
- *
- * @param {Object} props - Component props containing onUIStateChange callback
- * @param {string} controlType - Type identifier for this group controller
- * @param {Object} config - Configuration object
- * @param {string} [config.childControlType] - Filter children by this type (e.g., "checkbox")
- * @param {Function} config.aggregateChildStates - Function to aggregate child states
- * @param {any} [config.emptyState] - State to use when no children have values
- * @returns {Object} UI group state controller
- *
- * Usage Examples:
- * - **Checkbox List**: Aggregates multiple checkboxes into array of checked values
- * - **Radio Group**: Manages radio buttons to ensure single selection
- * - **Form Section**: Groups related inputs for validation and reset operations
- * - **Dynamic Lists**: Handles variable number of repeated input groups
- */
-const useUIGroupStateController = (
-  props,
-  controlType,
-  { stateType, childControlFilter, aggregateChildStates, debugAction },
-) => {
-  if (typeof aggregateChildStates !== "function") {
-    throw new TypeError("aggregateChildStates must be a function");
-  }
-  const parentUIStateController = useContext(ParentUIStateControllerContext);
-  const { name, value } = props;
-  const ref = props.ref;
-  const fallbackState =
-    stateType === "array"
-      ? EMPTY_ARRAY
-      : stateType === "object"
-        ? EMPTY_OBJECT
-        : undefined;
-  const childUIStateControllerArrayRef = useRef([]);
-  const childUIStateControllerArray = childUIStateControllerArrayRef.current;
-  const uiStateControllerRef = useRef();
-
-  const groupIsRenderingRef = useRef(false);
-  const pendingChangeRef = useRef(false);
-  groupIsRenderingRef.current = true;
-  pendingChangeRef.current = false;
-
-  const [
-    notifyParentAboutChildMount,
-    notifyParentAboutChildUIStateChange,
-    notifyParentAboutChildUnmount,
-  ] = useParentControllerNotifiers(
-    parentUIStateController,
-    uiStateControllerRef);
-  useLayoutEffect(() => {
-    notifyParentAboutChildMount();
-    return notifyParentAboutChildUnmount;
-  }, []);
-
-  const onChange = (_, e, { notifyExternal = true } = {}) => {
-    if (groupIsRenderingRef.current) {
-      pendingChangeRef.current = true;
-      return;
-    }
-    const aggChildState = aggregateChildStates(
-      childUIStateControllerArray,
-      fallbackState,
-    );
-    const groupUIState =
-      aggChildState === undefined ? fallbackState : aggChildState;
-    debugAction(
-      e,
-      `${controlType}.getUIState -> ${JSON.stringify(groupUIState)}`,
-    );
-    const uiStateController = uiStateControllerRef.current;
-    uiStateController.setUIState(groupUIState, e, { notifyExternal });
-  };
-
-  useLayoutEffect(() => {
-    groupIsRenderingRef.current = false;
-    if (pendingChangeRef.current) {
-      pendingChangeRef.current = false;
-      onChange(
-        null,
-        new CustomEvent(`${controlType}_batched_ui_state_update`),
-        { notifyExternal: false },
-      );
-    }
-  });
-
-  const existingUIStateController = uiStateControllerRef.current;
-  if (existingUIStateController) {
-    existingUIStateController.name = name;
-    existingUIStateController.value = value;
-    return existingUIStateController;
-  }
-
-  const [publishUIState, subscribeUIState] = createPubSub();
-  const uiStateSignal = signal(fallbackState);
-  const isMonitoringChild = (childUIStateController) => {
-    if (childUIStateController.isProxy) {
-      return false;
-    }
-    if (childControlFilter && !childControlFilter(childUIStateController)) {
-      return false;
-    }
-    return true;
-  };
-  const uiStateController = {
-    controlType,
-    name,
-    value,
-    uiState: fallbackState,
-    uiStateSignal,
-    elementRef: ref,
-    getPropFromState: (uiState) => uiState,
-    setUIState: (newUIState, e, { notifyExternal = true } = {}) => {
-      const currentUIState = uiStateController.uiState;
-      if (newUIState === currentUIState) {
-        return;
-      }
-      uiStateController.uiState = newUIState;
-      uiStateSignal.value = newUIState;
-      debugUIGroup(
-        `${controlType}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> updates from ${JSON.stringify(currentUIState)} to ${JSON.stringify(newUIState)}`,
-      );
-      publishUIState(newUIState);
-      if (notifyExternal) {
-        notifyParentAboutChildUIStateChange(e);
-      }
-    },
-    registerChild: (childUIStateController) => {
-      if (!isMonitoringChild(childUIStateController)) {
-        return;
-      }
-      const childControlType = childUIStateController.controlType;
-      childUIStateControllerArray.push(childUIStateController);
-      debugUIGroup(
-        `${controlType}.registerChild("${childControlType}") -> registered (total: ${childUIStateControllerArray.length})`,
-      );
-      onChange(
-        childUIStateController,
-        new CustomEvent(`${childControlType}_mount`),
-        { notifyExternal: false },
-      );
-    },
-    onChildUIStateChange: (childUIStateController, e) => {
-      if (!isMonitoringChild(childUIStateController)) {
-        return;
-      }
-      const childControlType = childUIStateController.controlType;
-      debugUIGroup(
-        `${controlType}.onChildUIStateChange("${childControlType}") to ${JSON.stringify(
-          childUIStateController.uiState,
-        )}`,
-      );
-      onChange(childUIStateController, e);
-    },
-    unregisterChild: (childUIStateController) => {
-      if (!isMonitoringChild(childUIStateController)) {
-        return;
-      }
-      const childControlType = childUIStateController.controlType;
-      const index = childUIStateControllerArray.indexOf(childUIStateController);
-      if (index === -1) {
-        return;
-      }
-      childUIStateControllerArray.splice(index, 1);
-      debugUIGroup(
-        `${controlType}.unregisterChild("${childControlType}") -> unregisteed (remaining: ${childUIStateControllerArray.length})`,
-      );
-      onChange(
-        childUIStateController,
-        new CustomEvent(`${childControlType}_unmount`),
-        { notifyExternal: false },
-      );
-    },
-    resetUIState: (e) => {
-      for (const childUIStateController of childUIStateControllerArray) {
-        if (!isMonitoringChild(childUIStateController)) {
-          continue;
-        }
-        const el = childUIStateController.elementRef?.current;
-        if (el) {
-          dispatchRequestResetUIState(el, e);
-        }
-      }
-    },
-    actionEnd: (e) => {
-      for (const childUIStateController of childUIStateControllerArray) {
-        childUIStateController.actionEnd(e);
-      }
-    },
-    findChildById: (id) => {
-      for (const childUIStateController of childUIStateControllerArray) {
-        if (childUIStateController.id === id) {
-          return childUIStateController;
-        }
-      }
-      return null;
-    },
-    subscribe: subscribeUIState,
-  };
-  uiStateControllerRef.current = uiStateController;
-  return uiStateController;
-};
-// Stable reference for an empty selection so the action always receives an
-// array (never undefined) and callers don't get a new reference each render.
-const EMPTY_ARRAY = [];
-const EMPTY_OBJECT = {};
-
-const dispatchRequestSetUIState = (element, value, detail) => {
-  const controlHost = findControlHost(element) || element;
-  return dispatchInternalCustomEvent(controlHost, "navi_set_ui_state", {
-    ...detail,
-    value,
-  });
-};
-const dispatchRequestResetUIState = (element, e) => {
-  return dispatchInternalCustomEvent(element, "navi_request_reset_ui_state", {
-    event: e,
-  });
-};
-const getUIStateFromElement = (el) => {
-  let uiState;
-  dispatchInternalCustomEvent(el, "navi_get_ui_state", {
-    respondWith: (v) => {
-      uiState = v;
-    },
-  });
-  return uiState;
-};
-
-const requestPseudoStateCheck = (element, detail) => {
-  dispatchInternalCustomEvent(
-    element,
-    "navi_pseudo_state_request_check",
-    detail,
-  );
-  // When a control has a visible proxy mirroring its state (e.g. selectable
-  // radio with `navi-control-proxy-for`), re-check the proxy too so it stays
-  // in sync with the real control.
-  const proxy = findControlProxy(element);
-  if (proxy) {
-    dispatchInternalCustomEvent(
-      proxy,
-      "navi_pseudo_state_request_check",
-      detail,
-    );
-  }
-};
-const NAVI_PSEUDO_STATE_CUSTOM_EVENT = "navi_pseudo_state";
-const dispatchPseudoStateCustomEvent = (element, value, oldValue) => {
-  dispatchInternalCustomEvent(element, NAVI_PSEUDO_STATE_CUSTOM_EVENT, {
-    pseudoState: value,
-    oldPseudoState: oldValue,
-  });
-};
-
-const PSEUDO_CLASSES = {};
-Object.assign(PSEUDO_CLASSES, {
-  ":valid": {
-    attribute: "data-valid",
-    test: (el) => el.matches(":valid"),
-  },
-  ":invalid": {
-    attribute: "data-invalid",
-    test: (el) => el.matches(":invalid"),
-  },
-  ":visited": {
-    attribute: "data-visited",
-  },
-});
-const definePseudoClass = (pseudoClass, definition) => {
-  PSEUDO_CLASSES[pseudoClass] = definition;
-};
-
-definePseudoClass(":hover", {
-  attribute: "data-hover",
-  setup: (el, callback) => {
-    const recheckProxy = (e) => {
-      const proxy = findControlProxy(el);
-      if (proxy) {
-        requestPseudoStateCheck(proxy, { event: e });
-      }
-    };
-    const recheckProxyTarget = (e) => {
-      const proxyTarget = findControlProxyTarget(el);
-      if (proxyTarget) {
-        requestPseudoStateCheck(proxyTarget, { event: e });
-      }
-    };
-    let onmouseenter = (e) => {
-      callback();
-      recheckProxy(e);
-      recheckProxyTarget(e);
-    };
-    let onmouseleave = (e) => {
-      callback();
-      recheckProxy(e);
-      recheckProxyTarget(e);
-    };
-
-    if (el.tagName === "LABEL") {
-      // input.matches(":hover") is true when hovering the label
-      // so when label is hovered/not hovered we need to recheck the input too
-      const recheckInput = (e) => {
-        if (el.htmlFor) {
-          const input = document.getElementById(el.htmlFor);
-          if (!input) {
-            // cannot find the input for this label in the DOM
-            return;
-          }
-          requestPseudoStateCheck(input, { event: e });
-          return;
-        }
-        const input = el.querySelector("input, textarea, select");
-        if (!input) {
-          // label does not contain an input
-          return;
-        }
-        requestPseudoStateCheck(input, { event: e });
-      };
-      const _onmouseenter = onmouseenter;
-      onmouseenter = (e) => {
-        recheckInput(e);
-        _onmouseenter(e);
-      };
-      const _onmouseleave = onmouseleave;
-      onmouseleave = (e) => {
-        recheckInput(e);
-        _onmouseleave(e);
-      };
-    }
-
-    el.addEventListener("mouseenter", onmouseenter);
-    el.addEventListener("mouseleave", onmouseleave);
-    return () => {
-      el.removeEventListener("mouseenter", onmouseenter);
-      el.removeEventListener("mouseleave", onmouseleave);
-    };
-  },
-  test: (el) => {
-    if (el.matches(":hover")) {
-      return true;
-    }
-    const proxy = findControlProxy(el);
-    if (proxy && proxy.matches(":hover")) {
-      return true;
-    }
-    return false;
-  },
-});
-definePseudoClass(":disabled", {
-  attribute: "data-disabled",
-  add: (el) => {
-    if (
-      el.tagName === "BUTTON" ||
-      el.tagName === "INPUT" ||
-      el.tagName === "SELECT" ||
-      el.tagName === "TEXTAREA"
-    ) {
-      el.disabled = true;
-    }
-  },
-  remove: (el) => {
-    if (
-      el.tagName === "BUTTON" ||
-      el.tagName === "INPUT" ||
-      el.tagName === "SELECT" ||
-      el.tagName === "TEXTAREA"
-    ) {
-      el.disabled = false;
-    }
-  },
-});
-definePseudoClass(":read-only", {
-  attribute: "data-readonly",
-  add: (el) => {
-    if (
-      el.tagName === "INPUT" ||
-      el.tagName === "SELECT" ||
-      el.tagName === "TEXTAREA"
-    ) {
-      if (el.type === "checkbox" || el.type === "radio") {
-        // there is no readOnly for checkboxes/radios
-        return;
-      }
-      // el.readOnly = true;
-    }
-  },
-  remove: (el) => {
-    if (
-      el.tagName === "INPUT" ||
-      el.tagName === "SELECT" ||
-      el.tagName === "TEXTAREA"
-    ) {
-      if (el.type === "checkbox" || el.type === "radio") {
-        // there is no readOnly for checkboxes/radios
-        return;
-      }
-      // el.readOnly = false;
-    }
-  },
-});
-definePseudoClass(":checked", {
-  attribute: "data-checked",
-  setup: (el, callback) => {
-    if (el.type === "checkbox") {
-      // Listen to user interactions
-      el.addEventListener("input", callback);
-      // Intercept programmatic changes to .checked property
-      const originalDescriptor = Object.getOwnPropertyDescriptor(
-        HTMLInputElement.prototype,
-        "checked",
-      );
-      Object.defineProperty(el, "checked", {
-        get: originalDescriptor.get,
-        set(value) {
-          originalDescriptor.set.call(this, value);
-          callback();
-        },
-        configurable: true,
-      });
-      return () => {
-        // Restore original property descriptor
-        Object.defineProperty(el, "checked", originalDescriptor);
-        el.removeEventListener("input", callback);
-      };
-    }
-    if (el.type === "radio") {
-      // Listen to changes on the radio
-      el.addEventListener("input", callback);
-      // Intercept programmatic changes to .checked property
-      const originalDescriptor = Object.getOwnPropertyDescriptor(
-        HTMLInputElement.prototype,
-        "checked",
-      );
-      Object.defineProperty(el, "checked", {
-        get: originalDescriptor.get,
-        set(value) {
-          originalDescriptor.set.call(this, value);
-          callback();
-        },
-        configurable: true,
-      });
-      return () => {
-        el.removeEventListener("input", callback);
-        // Restore original property descriptor
-        Object.defineProperty(el, "checked", originalDescriptor);
-      };
-    }
-    if (el.tagName === "INPUT") {
-      el.addEventListener("input", callback);
-      return () => {
-        el.removeEventListener("input", callback);
-      };
-    }
-    return () => {};
-  },
-  test: (el) => el.matches(":checked"),
-});
-definePseudoClass(":active", {
-  attribute: "data-active",
-  setup: (el, callback) => {
-    // I'ts recommended to use :-navi-pressed over :active for interactive elements.
-    const onPointerDown = () => {
-      const onRelease = () => {
-        document.removeEventListener("pointercancel", onRelease, true);
-        document.removeEventListener("pointerup", onRelease, true);
-        callback();
-      };
-      document.addEventListener("pointercancel", onRelease, true);
-      document.addEventListener("pointerup", onRelease, true);
-      callback();
-    };
-    el.addEventListener("pointerdown", onPointerDown);
-    return () => {
-      el.removeEventListener("pointerdown", onPointerDown);
-    };
-  },
-  test: (el) => el.matches(":active"),
-});
-{
-  // We implement :focus and :focus-visible with enriched semantics:
-  // an element is considered focused not only when it natively has focus, but also
-  // when a "focus proxy" element has focus (e.g. a read-only range input delegates
-  // focus to a sibling span) or when a controlling element has focus (e.g. a combobox
-  // input with aria-controls pointing to a listbox — the listbox should appear focused
-  // while the input is focused).
-  //
-  // We intentionally reuse the native :focus / :focus-visible names rather than
-  // introducing new navi-specific pseudo-classes (e.g. :-navi-focus). This is a
-  // deliberate exception: all existing CSS and code written as [data-focus] or
-  // [data-focus-visible] automatically benefits from the enriched behavior without
-  // any changes. A separate navi-specific class would require updating every
-  // component.
-  //
-  // When a controller element (e.g. combobox input) gains or loses focus,
-  // notify the elements it controls via aria-controls so they re-check their
-  // focus state. `requestPseudoStateCheck` also re-checks the controlled
-  // element's proxy (if any), so the visible proxy mirrors the hidden real
-  // input's inherited focus.
-  const notifyAriaControlled = (el, e) => {
-    const controlledIds = el.getAttribute("aria-controls");
-    if (!controlledIds) {
-      return;
-    }
-    for (const id of controlledIds.split(" ")) {
-      const controlled = document.getElementById(id);
-      if (controlled) {
-        requestPseudoStateCheck(controlled, { event: e });
-      }
-    }
-  };
-  // Returns true when el holds focus indirectly — either because a controlling
-  // element (aria-controls) has focus, or because el is a proxy whose target
-  // is itself controlled by a focused element.
-  const hasIndirectFocus = (el, { requireFocusVisible = false } = {}) => {
-    const pseudoClass = requireFocusVisible ? ":focus-visible" : ":focus";
-    const isControlledBy = (target) => {
-      const id = target.id;
-      if (!id) {
-        return false;
-      }
-      const controllers = document.querySelectorAll(`[aria-controls~="${id}"]`);
-      for (const controller of controllers) {
-        // If the controller is inside the element it controls, focus is already
-        // native (:focus-within) — no need to inherit it.
-        if (target.contains(controller)) {
-          continue;
-        }
-        if (controller.matches(pseudoClass)) {
-          return true;
-        }
-      }
-      return false;
-    };
-    if (isControlledBy(el)) {
-      return true;
-    }
-    const proxyTarget = findControlProxyTarget(el);
-    if (proxyTarget) {
-      if (proxyTarget.matches(pseudoClass)) {
-        return true;
-      }
-      if (isControlledBy(proxyTarget)) {
-        return true;
-      }
-    }
-    return false;
-  };
-
-  // Shared setup for :focus and :focus-visible. Both need focusin/focusout
-  // listeners + a MutationObserver on aria-controls so that when the attribute
-  // changes while the element is focused, old and new controlled elements are
-  // notified to re-check their own focus state.
-  // extraSetup: optional (el, callback) => teardown for pseudo-class-specific
-  // listeners (e.g. keydown/keyup for :focus-visible).
-  const setupFocus = (el, callback) => {
-    const onFocusChange = (e) => {
-      callback();
-      notifyAriaControlled(el, e);
-    };
-    el.addEventListener("focusin", onFocusChange);
-    el.addEventListener("focusout", onFocusChange);
-    // Only observe aria-controls mutations when the element already has the
-    // attribute at setup time. If aria-controls is guaranteed to be set before
-    // initPseudoStyles runs (e.g. passed as a prop in box.jsx), this covers all
-    // real cases without paying the MutationObserver cost for every element.
-    let observer;
-    // if (el.hasAttribute("aria-controls")) {
-    observer = new MutationObserver((mutations) => {
-      if (!el.matches(":focus-within")) {
-        return;
-      }
-      for (const mutation of mutations) {
-        const oldIds = (mutation.oldValue || "").split(" ").filter(Boolean);
-        for (const id of oldIds) {
-          const controlled = document.getElementById(id);
-          if (controlled) {
-            requestPseudoStateCheck(controlled, {});
-          }
-        }
-      }
-      notifyAriaControlled(el, {});
-    });
-    observer.observe(el, {
-      attributes: true,
-      attributeFilter: ["aria-controls"],
-      attributeOldValue: true,
-    });
-    // }
-    return () => {
-      el.removeEventListener("focusin", onFocusChange);
-      el.removeEventListener("focusout", onFocusChange);
-      observer?.disconnect();
-    };
-  };
-
-  definePseudoClass(":focus", {
-    attribute: "data-focus",
-    setup: (el, callback) => {
-      const cleanup = setupFocus(el, callback);
-      return () => {
-        cleanup();
-      };
-    },
-    test: (el) => {
-      if (el.matches(":focus")) {
-        return true;
-      }
-      if (hasIndirectFocus(el)) {
-        return true;
-      }
-      return false;
-    },
-  });
-  definePseudoClass(":focus-visible", {
-    attribute: "data-focus-visible",
-    setup: (el, callback) => {
-      const cleanup = setupFocus(el, callback);
-      document.addEventListener("keydown", callback);
-      document.addEventListener("keyup", callback);
-      return () => {
-        cleanup();
-        document.removeEventListener("keydown", callback);
-        document.removeEventListener("keyup", callback);
-      };
-    },
-    test: (el) => {
-      if (el.matches(":focus-visible")) {
-        return true;
-      }
-      if (hasIndirectFocus(el, { requireFocusVisible: true })) {
-        return true;
-      }
-      return false;
-    },
-  });
-  definePseudoClass(":focus-within", {
-    attribute: "data-focus-within",
-    setup: (el, callback) => {
-      const onFocusChange = (e) => {
-        callback();
-        notifyAriaControlled(el, e);
-      };
-      el.addEventListener("focusin", onFocusChange);
-      el.addEventListener("focusout", onFocusChange);
-      return () => {
-        el.removeEventListener("focusin", onFocusChange);
-        el.removeEventListener("focusout", onFocusChange);
-      };
-    },
-    test: (el) => {
-      if (el.matches(":focus-within")) {
-        return true;
-      }
-      if (hasIndirectFocus(el)) {
-        return true;
-      }
-      if (el.contains(document.activeElement)) {
-        // for some reason :focus-within sometimes is false while focus is within...
-        // (popover with chrome for some reason)
-        return true;
-      }
-      return false;
-    },
-  });
-}
-
-Object.assign(PSEUDO_CLASSES, {
-  ":-navi-pointed": {
-    attribute: "data-pointed",
-  },
-  ":-navi-pointed-by-mouse": {
-    attribute: "data-pointed-by-mouse",
-  },
-  ":-navi-pointed-by-keyboard": {
-    attribute: "data-pointed-by-keyboard",
-  },
-  ":-navi-pointed-by-proxy": {
-    attribute: "data-pointed-by-proxy",
-  },
-  ":-navi-selected": {
-    attribute: "data-selected",
-  },
-  ":-navi-loading": {
-    attribute: "data-loading",
-  },
-  ":-navi-status-info": {
-    attribute: "data-status-info",
-  },
-  ":-navi-status-success": {
-    attribute: "data-status-success",
-  },
-  ":-navi-status-warning": {
-    attribute: "data-status-warning",
-  },
-  ":-navi-status-error": {
-    attribute: "data-status-error",
-  },
-  ":-navi-expanded": {
-    attribute: "data-expanded",
-  },
-  ":-navi-void": {
-    attribute: "data-void",
-  },
-  "::highlight": {},
-});
-definePseudoClass(":-navi-has-value", {
-  attribute: "data-has-value",
-  setup: (el, callback) => {
-    const controlHost = findControlHost(el) || el;
-    return addInputEffect(controlHost, callback);
-  },
-  test: (el) => {
-    if (el.hasAttribute("navi-ui-state")) {
-      const uiState = getUIStateFromElement(el);
-      if (uiState === undefined || uiState === "") {
-        return false;
-      }
-      return true;
-    }
-    if (el.value === "") {
-      return false;
-    }
-    return true;
-  },
-});
-{
-  const pressedElements = new WeakSet();
-  definePseudoClass(":-navi-pressed", {
-    attribute: "data-pressed",
-    setup: (el, callback) => {
-      // Prefer :-navi-pressed over :active for interactive elements because:
-      // - :active only tracks the primary (left) button; right-click and touch
-      //   long-press do not trigger :active reliably across browsers.
-      // - :-navi-pressed explicitly ignores non-primary buttons (e.g. right-click)
-      //   and correctly clears pressed state when a context menu opens on long-press,
-      //   which would otherwise leave the element stuck in a pressed appearance.
-
-      // Note: it might be tempting to use el.setPointerCapture() here so that pointerup
-      // always fires on el regardless of where the pointer is released. However,
-      // pointer capture routes all subsequent pointer events to the capturing element,
-      // which means any other element in the tree that expects to receive pointerup,
-      // mouseup, click, etc. after a pointerdown will silently not get them.
-      // For example a <label> that reacts to mousedown + click, or a third-party
-      // library that attaches its own listeners, would break because an ancestor
-      // grabbed the pointer out from under them.
-      // To avoid forcing every such element to declare an opt-out attribute
-      // (e.g. navi-own-pointer-capture) we simply listen on document instead,
-      // which is safe and does not interfere with anyone else's event flow.
-      const onPointerDown = (e) => {
-        if (e.button !== 0) {
-          // only left pointer (mouse left click, touch, pen)
-          return;
-        }
-        pressedElements.add(el);
-        const onRelease = () => {
-          pressedElements.delete(el);
-          document.removeEventListener("pointercancel", onRelease, true);
-          document.removeEventListener("pointerup", onRelease, true);
-          document.removeEventListener("contextmenu", onContextMenu, true);
-          callback();
-        };
-        const onContextMenu = (e) => {
-          // On touch devices, a long-press triggers the context menu.
-          // If the context menu is not prevented, it means it will open and the
-          // pointer events (pointerup, lostpointercapture) won't fire normally,
-          // leaving the element stuck in pressed state. We clear it manually.
-          // e.button === -1 means the event was synthesized from a long-press (not a real mouse click).
-          if (e.button === -1 && !e.defaultPrevented) {
-            pressedElements.delete(el);
-            document.removeEventListener("pointercancel", onRelease, true);
-            document.removeEventListener("pointerup", onRelease, true);
-            document.removeEventListener("contextmenu", onContextMenu, true);
-            callback();
-          }
-        };
-        document.addEventListener("pointercancel", onRelease, true);
-        document.addEventListener("pointerup", onRelease, true);
-        document.addEventListener("contextmenu", onContextMenu, true);
-        callback();
-      };
-      el.addEventListener("pointerdown", onPointerDown);
-      return () => {
-        el.removeEventListener("pointerdown", onPointerDown);
-        pressedElements.delete(el);
-      };
-    },
-    test: (el) => pressedElements.has(el),
-  });
-}
-
-{
-  definePseudoClass(":-navi-drag-grabbed", {
-    attribute: "navi-drag-grabbed",
-    setup: (el, callback) => {
-      const onGrab = () => {
-        callback();
-        const onRelease = () => {
-          el.removeEventListener("navi_drag_release", onRelease);
-          callback();
-        };
-        el.addEventListener("navi_drag_release", onRelease);
-      };
-      el.addEventListener("navi_drag_grab", onGrab);
-      return () => {
-        el.removeEventListener("navi_drag_grab", onGrab);
-      };
-    },
-    test: (el) => el.hasAttribute("data-drag-grabbed"),
-  });
-  definePseudoClass(":-navi-dragging", {
-    attribute: "navi-dragging",
-    setup: (el, callback) => {
-      const onStart = () => {
-        callback();
-        const onRelease = () => {
-          el.removeEventListener("navi_drag_release", onRelease);
-          callback();
-        };
-        el.addEventListener("navi_drag_release", onRelease);
-      };
-      el.addEventListener("navi_drag_start", onStart);
-      return () => {
-        el.removeEventListener("navi_drag_start", onStart);
-      };
-    },
-    test: (el) => el.hasAttribute("data-dragging"),
-  });
-}
-
-const EMPTY_STATE = {};
-const elementToImpactWeakMap = new WeakMap();
-const initPseudoStyles = (
-  element,
-  {
-    pseudoClasses,
-    pseudoState, // ":disabled", ":read-only", ":-navi-loading", etc...
-    effect,
-    elementToImpact = element,
-    elementListeningPseudoState,
-  },
-) => {
-  elementToImpactWeakMap.set(element, elementToImpact);
-  if (elementListeningPseudoState === element) {
-    console.warn(
-      `elementListeningPseudoState should not be the same as element to avoid infinite loop`,
-    );
-    elementListeningPseudoState = null;
-  }
-
-  const proxyTarget = findControlProxyTarget(element);
-
-  const onStateChange = (value, oldValue) => {
-    effect?.(value, oldValue);
-    if (elementListeningPseudoState) {
-      dispatchPseudoStateCustomEvent(
-        elementListeningPseudoState,
-        value,
-        oldValue,
-      );
-    }
-    // When this element's state changes, notify any proxy element that mirrors it
-    // so it can re-check and visually reflect the new state.
-    const proxy = findControlProxy(element);
-    if (proxy) {
-      requestPseudoStateCheck(proxy, {});
-    }
-  };
-
-  if (!pseudoClasses || pseudoClasses.length === 0) {
-    onStateChange(EMPTY_STATE);
-    return () => {};
-  }
-
-  const [teardown, addTeardown] = createPubSub();
-
-  let state;
-  const checkPseudoClasses = () => {
-    let someChange = false;
-    const currentState = {};
-    for (const pseudoClass of pseudoClasses) {
-      const pseudoClassDefinition = PSEUDO_CLASSES[pseudoClass];
-      if (!pseudoClassDefinition) {
-        console.warn(`Unknown pseudo class: ${pseudoClass}`);
-        continue;
-      }
-      let currentValue;
-      if (
-        pseudoState &&
-        Object.hasOwn(pseudoState, pseudoClass) &&
-        pseudoState[pseudoClass] !== undefined
-      ) {
-        currentValue = pseudoState[pseudoClass];
-      } else {
-        const { test } = pseudoClassDefinition;
-        if (test) {
-          currentValue = test(element, pseudoState);
-        }
-      }
-      // If this element is a proxy for another (navi-control-proxy-for="targetId"),
-      // inherit the target's active pseudo-state when the element itself isn't in that state.
-      // We check the target's elementToImpact (not the target itself) because the
-      // data-* attribute may be set on a different element (e.g. pseudoStateSelector).
-      if (!currentValue && proxyTarget) {
-        const { attribute } = pseudoClassDefinition;
-        if (attribute) {
-          const targetElementToImpact =
-            elementToImpactWeakMap.get(proxyTarget) || proxyTarget;
-          if (targetElementToImpact.hasAttribute(attribute)) {
-            currentValue = true;
-          }
-        }
-      }
-      currentState[pseudoClass] = currentValue;
-      const oldValue = state ? state[pseudoClass] : undefined;
-      if (oldValue !== currentValue || !state) {
-        someChange = true;
-        const { attribute, add, remove } = pseudoClassDefinition;
-        if (currentValue) {
-          if (attribute) {
-            elementToImpact.setAttribute(attribute, "");
-          }
-          add?.(element);
-        } else {
-          if (attribute) {
-            elementToImpact.removeAttribute(attribute);
-          }
-          remove?.(element);
-        }
-      }
-    }
-    if (!someChange) {
-      return;
-    }
-    const oldState = state;
-    state = currentState;
-    onStateChange(state, oldState);
-  };
-
-  element.addEventListener(NAVI_PSEUDO_STATE_CUSTOM_EVENT, (event) => {
-    const oldState = event.detail.oldPseudoState;
-    state = event.detail.pseudoState;
-    onStateChange(state, oldState);
-  });
-  element.addEventListener("navi_pseudo_state_request_check", () => {
-    checkPseudoClasses();
-  });
-
-  for (const pseudoClass of pseudoClasses) {
-    const pseudoClassDefinition = PSEUDO_CLASSES[pseudoClass];
-    if (!pseudoClassDefinition) {
-      console.warn(`Unknown pseudo class: ${pseudoClass}`);
-      continue;
-    }
-    const { setup } = pseudoClassDefinition;
-    if (setup) {
-      const cleanup = setup(element, () => {
-        checkPseudoClasses();
-      });
-      addTeardown(cleanup);
-    }
-  }
-  checkPseudoClasses();
-
-  return teardown;
-};
-
-const applyStyle = (
-  element,
-  style,
-  pseudoState,
-  pseudoNamedStyles,
-  preventInitialTransition,
-) => {
-  if (!element) {
-    return;
-  }
-  const styleToApply = getStyleToApply(style, pseudoState, pseudoNamedStyles);
-  updateStyle(element, styleToApply, preventInitialTransition);
-};
-
-const PSEUDO_STATE_DEFAULT = {};
-const PSEUDO_NAMED_STYLES_DEFAULT = {};
-const getStyleToApply = (styles, pseudoState, pseudoNamedStyles) => {
-  if (
-    !pseudoState ||
-    pseudoState === PSEUDO_STATE_DEFAULT ||
-    !pseudoNamedStyles ||
-    pseudoNamedStyles === PSEUDO_NAMED_STYLES_DEFAULT
-  ) {
-    return styles;
-  }
-
-  const isMatching = (pseudoKey) => {
-    if (pseudoKey.startsWith("::")) {
-      const nextColonIndex = pseudoKey.indexOf(":", 2);
-      if (nextColonIndex === -1) {
-        return true;
-      }
-      // Handle pseudo-elements with states like "::-navi-loader:checked:disabled"
-      const pseudoStatesString = pseudoKey.slice(nextColonIndex);
-      return isMatching(pseudoStatesString);
-    }
-    const nextColonIndex = pseudoKey.indexOf(":", 1);
-    if (nextColonIndex === -1) {
-      return pseudoState[pseudoKey];
-    }
-    // Handle compound pseudo-states like ":checked:disabled"
-    return pseudoKey
-      .slice(1)
-      .split(":")
-      .every((state) => pseudoState[state]);
-  };
-
-  const styleToAddSet = new Set();
-  for (const pseudoKey of Object.keys(pseudoNamedStyles)) {
-    if (isMatching(pseudoKey)) {
-      const stylesToApply = pseudoNamedStyles[pseudoKey];
-      styleToAddSet.add(stylesToApply);
-    }
-  }
-  if (styleToAddSet.size === 0) {
-    return styles;
-  }
-  let style = styles || {};
-  for (const styleToAdd of styleToAddSet) {
-    style = mergeTwoStyles(style, styleToAdd, "css");
-  }
-  return style;
-};
-
-const styleKeySetWeakMap = new WeakMap();
-const elementTransitionWeakMap = new WeakMap();
-const elementRenderedWeakSet = new WeakSet();
-const NO_STYLE_KEY_SET = new Set();
-const updateStyle = (element, style, preventInitialTransition) => {
-  const styleKeySet = style ? new Set(Object.keys(style)) : NO_STYLE_KEY_SET;
-  const oldStyleKeySet = styleKeySetWeakMap.get(element) || NO_STYLE_KEY_SET;
-  // TRANSITION ANTI-FLICKER STRATEGY:
-  // Problem: When setting both transition and styled properties simultaneously
-  // (e.g., el.style.transition = "border-radius 0.3s ease"; el.style.borderRadius = "20px"),
-  // the browser will immediately perform a transition even if no transition existed before.
-  //
-  // Solution: Temporarily disable transitions during initial style application by setting
-  // transition to "none", then restore the intended transition after the frame completes.
-  // We handle multiple updateStyle calls in the same frame gracefully - only one
-  // requestAnimationFrame is scheduled per element, and the final transition value wins.
-  let styleKeySetToApply = styleKeySet;
-  if (!elementRenderedWeakSet.has(element)) {
-    const hasTransition = styleKeySet.has("transition");
-    if (hasTransition || preventInitialTransition) {
-      if (elementTransitionWeakMap.has(element)) {
-        elementTransitionWeakMap.set(element, style?.transition);
-      } else {
-        element.style.transition = "none";
-        elementTransitionWeakMap.set(element, style?.transition);
-      }
-      // Don't apply the transition property now - we've set it to "none" temporarily
-      styleKeySetToApply = new Set(styleKeySet);
-      styleKeySetToApply.delete("transition");
-    }
-    requestAnimationFrame(() => {
-      if (elementTransitionWeakMap.has(element)) {
-        const transitionToRestore = elementTransitionWeakMap.get(element);
-        if (transitionToRestore === undefined) {
-          element.style.transition = "";
-        } else {
-          element.style.transition = transitionToRestore;
-        }
-        elementTransitionWeakMap.delete(element);
-      }
-      elementRenderedWeakSet.add(element);
-    });
-  }
-
-  // Apply all styles normally (excluding transition during anti-flicker)
-  const keysToDelete = new Set(oldStyleKeySet);
-  for (const key of styleKeySetToApply) {
-    const value = style[key];
-    if (value === undefined || value === null) {
-      // Treat undefined/null as "remove" — leave key in keysToDelete
-      continue;
-    }
-    keysToDelete.delete(key);
-    if (key.startsWith("--")) {
-      element.style.setProperty(key, value);
-    } else {
-      element.style[key] = value;
-    }
-  }
-
-  // Remove obsolete styles
-  for (const key of keysToDelete) {
-    if (key.startsWith("--")) {
-      element.style.removeProperty(key);
-    } else {
-      element.style[key] = "";
-    }
-  }
-
-  styleKeySetWeakMap.set(element, styleKeySet);
-};
-
-/**
- * Keeps a DOM element in sync with `syncElement(el)` whenever syncElement changes.
- * - If element is already mounted: runs syncElement immediately during render.
- * - If not yet mounted: runs syncElement in the ref callback when element arrives.
- * - Calls cleanup (if returned by syncElement) before each re-run and on unmount.
- *
- * Wrap `syncElement` in `useCallback(fn, deps)` at the call site to control
- * when re-sync happens.
- *
- * @param {function} syncElement - Called with the DOM element when its reference changes
- * @param {function|object|null} externalRef - Optional ref to forward to
- */
-const useComposeElementRef = (syncElement, externalRef) => {
-  const cleanupRef = useRef(null);
-  const elRef = useRef(null);
-  const prevSyncElementRef = useRef(undefined);
-  const refCallbackRef = useRef(null);
-  const externalRefRef = useRef(externalRef);
-  // Detect external ref identity change between renders. The refCallback is
-  // stable across renders, so when the parent passes a new ref object (or
-  // switches from null to a ref), Preact does NOT re-fire the callback while
-  // the DOM element is unchanged. We must manually clear the old ref and
-  // populate the new one with the current element to avoid leaving the new
-  // ref's `.current` stuck at `null`.
-  const prevExternalRefRef = useRef(externalRef);
-  if (prevExternalRefRef.current !== externalRef) {
-    const previous = prevExternalRefRef.current;
-    if (previous && typeof previous !== "function") {
-      previous.current = null;
-    }
-    if (externalRef && elRef.current) {
-      if (typeof externalRef === "function") {
-        externalRef(elRef.current);
-      } else {
-        externalRef.current = elRef.current;
-      }
-    }
-    prevExternalRefRef.current = externalRef;
-  }
-  externalRefRef.current = externalRef;
-
-  const runSync = (el) => {
-    if (cleanupRef.current) {
-      cleanupRef.current();
-      cleanupRef.current = null;
-    }
-    prevSyncElementRef.current = syncElement;
-    const cleanup = syncElement(el);
-    if (typeof cleanup === "function") {
-      cleanupRef.current = cleanup;
-    }
-  };
-
-  // If element already mounted, re-sync when syncElement reference changed.
-  if (elRef.current && syncElement !== prevSyncElementRef.current) {
-    runSync(elRef.current);
-  }
-
-  if (!refCallbackRef.current) {
-    const refCallback = (el) => {
-      elRef.current = el;
-      // Keep .current in sync immediately so useEffect callbacks that read
-      // ref.current (e.g. usePartiallyHidden) see the element, not null.
-      refCallback.current = el;
-      const currentExternalRef = externalRefRef.current;
-      if (currentExternalRef) {
-        if (typeof currentExternalRef === "function") {
-          currentExternalRef(el);
-        } else {
-          currentExternalRef.current = el;
-        }
-      }
-      if (el) {
-        runSync(el);
-      } else {
-        if (cleanupRef.current) {
-          cleanupRef.current();
-          cleanupRef.current = null;
-        }
-        prevSyncElementRef.current = undefined;
-      }
-    };
-    refCallbackRef.current = refCallback;
-  }
-
-  const refCallback = refCallbackRef.current;
-  refCallback.current = elRef.current;
-  return refCallback;
-};
-
-/**
- * Tracks whether an element is fully visible in its scroll container and sets
- * the `navi-partially-hidden` attribute when any part of it is clipped.
- *
- * This is used to suppress `view-transition-name` on elements that are partially
- * outside the viewport or a scrollable container. Without this, a partially clipped
- * element would still participate in view transitions, producing ghost animations or
- * incorrect cross-fade effects.
- *
- * CSS usage:
- * ```css
- * [navi-partially-hidden] {
- *   view-transition-name: none !important;
- * }
- * ```
- *
- * `Box` enables this hook automatically when a `viewTransitionName` prop is provided.
- *
- * @param {import("preact").RefObject} ref - Ref to the element to observe.
- * @param {boolean} enabled - Only observe when true (typically when view-transition-name is set).
- */
-const usePartiallyHidden = (ref, enabled) => {
-  useEffect(() => {
-    const el = ref.current;
-    if (!el || !enabled) {
-      return undefined;
-    }
-    return setupPartiallyHidden(el);
-  }, [enabled]);
-};
-
-const setupPartiallyHidden = (el) => {
-  const observer = new IntersectionObserver(
-    ([entry]) => {
-      if (entry.intersectionRatio >= 0.99) {
-        el.removeAttribute("navi-partially-hidden");
-      } else {
-        el.setAttribute("navi-partially-hidden", "");
-      }
-    },
-    { threshold: 0.99 },
-  );
-  observer.observe(el);
-  return () => {
-    observer.disconnect();
-  };
-};
-
-installImportMetaCssBuild(import.meta);/**
- * Box - A Swiss Army Knife for Layout
- *
- * A regular div by default, enhanced with styling props for spacing, sizing,
- * and layout. The main value is a friendlier API over raw CSS Flexbox.
- *
- * ## Display & Layout
- *
- * - `flex` — horizontal flex container (items side by side)
- * - `flex="y"` — vertical flex container (items stacked). The prop name makes
- *   the axis explicit, avoiding the classic CSS trap where `flex-direction: column`
- *   actually stacks items vertically despite "column" feeling horizontal.
- * - `grid` — grid container
- * - `inline` — switches to inline display (works with flex and grid too)
- *
- * ## Alignment
- *
- * Instead of CSS's justify-content/align-items which swap meaning based on flex-direction:
- * - `alignX` — horizontal alignment, always
- * - `alignY` — vertical alignment, always
- *
- * ## Spacing & Sizing
- *
- * Props for margin, padding, gap, width, height, expand, shrink, and more.
- *
- * ## Pseudo-class Styles
- *
- * The `style` prop supports pseudo-class keys alongside regular CSS properties.
- * This lets you express hover, focus, and custom interaction states in one object,
- * without writing CSS or adding class names:
- *
- * ```jsx
- * <Box
- *   style={{
- *     backgroundColor: "blue",
- *     ":-navi:pressed": {
- *       backgroundColor: "darkblue",
- *     },
- *     ":hover": {
- *       backgroundColor: "lightblue",
- *     },
- *   }}
- * />
- * ```
- *
- * Styles are applied directly to the DOM (not via Preact's style prop) for two reasons:
- * 1. **Pseudo-class support**: reacting to `:hover`, `:focus`, or custom states like
- *    `:-navi:pressed` without re-rendering the component on every pseudo state change.
- * 2. **Correct initial render**: pseudo-class state must be read from the DOM node at
- *    mount time. Preact's style prop runs before the DOM exists, so the right initial
- *    style can only be determined once the node is available.
- */
-const BoxForwardedPropsContext = createContext({});
-import.meta.css = [/* css */`
-  @layer navi {
-    /*
-    When using square/circle/aspectRatio prop we expect box to respect the aspect ratio.
-    But within flex containers or stuff like that the min-width/min-height auto
-    will prevent the item from shrinking to respect aspect-ratio
-    We put that in a layer navi + a specific attribute so that it's very easy to override this
-    */
-    [navi-aspect-ratio] {
-      min-width: 0;
-      min-height: 0;
-    }
-  }
-
-  /* We force a given display style using html attribute instead of inline style */
-  /* No particular reason for this, logic could be moved to inline style like the rest */
-  /* It was an attempt to see if attributes where a good candidate to set style based on props */
-  /* Actullay it's not that much as it make the attribute and CSS complexity explode */
-  /* For now it's kept here and must be outside layer navi to be able to override any given display
-  Set by navi itself on their default display */
-  [navi-box-flow="inline"] {
-    display: inline;
-  }
-  [navi-box-flow="block"] {
-    display: block;
-  }
-  [navi-box-flow="inline-block"] {
-    display: inline-block;
-  }
-  [navi-box-flow="flex-x"] {
-    display: flex;
-  }
-  [navi-box-flow="flex-y"] {
-    display: flex;
-    flex-direction: column;
-  }
-  [navi-box-flow="inline-flex-x"] {
-    display: inline-flex;
-  }
-  [navi-box-flow="inline-flex-y"] {
-    display: inline-flex;
-    flex-direction: column;
-  }
-  [navi-box-flow="grid"] {
-    display: grid;
-    &[navi-box-flow-column] {
-      grid-auto-flow: column;
-    }
-    &[navi-box-flow-row] {
-      grid-auto-flow: row;
-    }
-    &[navi-box-flow-column][navi-box-flow-row] {
-      grid-auto-flow: unset;
-    }
-  }
-  [navi-box-flow="inline-grid"] {
-    display: inline-grid;
-    &[navi-box-flow-column] {
-      grid-auto-flow: column;
-    }
-    &[navi-box-flow-row] {
-      grid-auto-flow: row;
-    }
-    &[navi-box-flow-column][navi-box-flow-row] {
-      grid-auto-flow: unset;
-    }
-  }
-  /*
-
-  It's very common to declare a display on component as follow
-  .component_class { display: component_display; }
-
-  This kill the default behavior of [hidden] attribute and we need to explicitly handle it with:
-  .component_class[hidden] { display: none; }
-
-  To avoid this extra work and potential mistakes we force the default behavior of [hidden] attribute.
-  */
-  [hidden] {
-    display: none !important;
-  }
-
-  /* Partially hidden (or fully hidden) element should not participate in view transition no matter what */
-  /* Otherwise they appear immedatly and fully visible from a fully/partially hidden state */
-  [navi-partially-hidden] {
-    view-transition-name: none !important;
-  }
-`, "@jsenv/navi/src/box/box.jsx"];
-const PSEUDO_CLASSES_DEFAULT = [];
-const PSEUDO_ELEMENTS_DEFAULT = [];
-const STYLE_CSS_VARS_DEFAULT = {};
-const PROPS_CSS_VARS_DEFAULT = {};
-// When only pseudoStateSelector is set (no visualSelector), the box owns its
-// visual identity. Only event handlers and these explicit props are forwarded
-// to the inner semantic/interactive child element.
-const PSEUDO_STATE_CHILD_PROP_SET = new Set(["tabIndex", "tabindex"]);
-const Box = props => {
-  const {
-    ref,
-    as = "div",
-    baseClassName,
-    className,
-    baseStyle,
-    // style management
-    style,
-    styleCSSVars = STYLE_CSS_VARS_DEFAULT,
-    propsCSSVars = PROPS_CSS_VARS_DEFAULT,
-    basePseudoState,
-    pseudoState,
-    // for demo purposes it's possible to control pseudo state from props
-    pseudoClasses = PSEUDO_CLASSES_DEFAULT,
-    pseudoElements = PSEUDO_ELEMENTS_DEFAULT,
-    // visualSelector convey the following:
-    // The box itself is visually "invisible", one of its descendant is responsible for visual representation
-    // - Some styles will be used on the box itself (for instance margins)
-    // - Some styles will be used on the visual element (for instance paddings, backgroundColor)
-    // -> introduced for <Button /> with transform:scale on press
-    visualSelector,
-    // pseudoStateSelector convey the following:
-    // The box contains content that holds pseudoState
-    // -> introduced for <Input /> with a wrapped for loading, checkboxes, etc
-    pseudoStateSelector,
-    hasChildUsingForwardedProps,
-    baseChildPropSet,
-    childPropSet,
-    // preventInitialTransition can be used to prevent transition on mount
-    // (when transition is set via props, this is done automatically)
-    // so this prop is useful only when transition is enabled from "outside" (via CSS)
-    preventInitialTransition,
-    children,
-    separator,
-    ...rest
-  } = props;
-  const TagName = as;
-  const defaultDisplay = getDefaultDisplay(TagName);
-  // Read the parent flow early so we can use it when display="inherit" is requested.
-  const parentBoxFlow = useContext(BoxFlowContext);
-  let {
-    inline,
-    block,
-    flex,
-    grid,
-    row,
-    column
-  } = rest;
-  // To obtain flex direction we have the following deprecated props:
-  // - [deprecated] <Box column> -> <Box flex> or <Box flex="x">
-  // - [deprecated] <Box row> -> <Box flex="y">
-  // - [deprecated] <Box flex column> -> <Box flex="x">
-  // - [deprecated] <Box flex row> -> <Box flex="y">
-
-  if (flex === true) {
-    flex = row ? "y" : "x";
-  }
-  if (flex === undefined && grid === undefined) {
-    if (column) {
-      flex = "x";
-    } else if (row) {
-      flex = "y";
-    }
-  }
-  if (defaultDisplay === "inline") {
-    if (inline === undefined && !block) {
-      inline = true;
-    }
-  } else if (defaultDisplay === "block") {
-    if (block === undefined && !flex && !grid) {
-      block = true;
-    }
-  } else if (defaultDisplay === "inline-block") {
-    if (inline === undefined && !block) {
-      inline = true;
-    }
-    if (block === undefined && !flex && !grid) {
-      block = true;
-    }
-  }
-  if (inline && (rest.width !== undefined || rest.height !== undefined) && flex === undefined) {
-    flex = "x";
-  }
-  let boxFlow;
-  if (inline) {
-    if (flex === "x") {
-      boxFlow = "inline-flex-x";
-    } else if (flex === "y") {
-      boxFlow = "inline-flex-y";
-    } else if (grid) {
-      boxFlow = "inline-grid";
-    } else if (block) {
-      boxFlow = "inline-block";
-    } else {
-      boxFlow = "inline";
-    }
-  } else if (flex === "x") {
-    boxFlow = "flex-x";
-  } else if (flex === "y") {
-    boxFlow = "flex-y";
-  } else if (grid) {
-    boxFlow = "grid";
-  } else if (block) {
-    boxFlow = "block";
-  } else {
-    boxFlow = defaultDisplay;
-  }
-  // When display="inherit" is passed, adopt the parent's flow instead of computing one.
-  // This lets a child Box mirror its parent's flex/grid/block layout without repeating
-  // the same layout props, and is used e.g. by Button's inner content element.
-  if (rest.display === "inherit") {
-    boxFlow = parentBoxFlow;
-  }
-  const boxFlowIsDefault = boxFlow === defaultDisplay;
-  const remainingPropKeySet = new Set(Object.keys(rest));
-  const innerClassName = withPropsClassName(baseClassName, className);
-  const selfForwardedProps = {};
-  const childForwardedProps = {};
-  let finalRef;
-  {
-    const styleDeps = [
-    // Layout and alignment props
-    parentBoxFlow, boxFlow,
-    // Style context dependencies
-    styleCSSVars, pseudoClasses, pseudoElements,
-    // Selectors
-    visualSelector, pseudoStateSelector, preventInitialTransition];
-    let innerPseudoState;
-    if (basePseudoState && pseudoState) {
-      innerPseudoState = {};
-      const baseStateKeys = Object.keys(basePseudoState);
-      const pseudoStateKeySet = new Set(Object.keys(pseudoState));
-      for (const key of baseStateKeys) {
-        if (pseudoStateKeySet.has(key)) {
-          pseudoStateKeySet.delete(key);
-          const value = pseudoState[key];
-          styleDeps.push(value);
-          innerPseudoState[key] = value;
-        } else {
-          const value = basePseudoState[key];
-          styleDeps.push(value);
-          innerPseudoState[key] = value;
-        }
-      }
-      for (const key of pseudoStateKeySet) {
-        const value = pseudoState[key];
-        styleDeps.push(value);
-        innerPseudoState[key] = value;
-      }
-    } else if (basePseudoState) {
-      innerPseudoState = basePseudoState;
-      for (const key of Object.keys(basePseudoState)) {
-        const value = basePseudoState[key];
-        styleDeps.push(value);
-      }
-    } else if (pseudoState) {
-      innerPseudoState = pseudoState;
-      for (const key of Object.keys(pseudoState)) {
-        const value = pseudoState[key];
-        styleDeps.push(value);
-      }
-    } else {
-      innerPseudoState = PSEUDO_STATE_DEFAULT;
-    }
-    const boxStyles = {};
-    const styleContext = {
-      parentBoxFlow,
-      boxFlow,
-      styleCSSVars,
-      pseudoState: innerPseudoState,
-      pseudoClasses,
-      pseudoElements,
-      remainingProps: rest,
-      styles: boxStyles
-    };
-    let boxPseudoNamedStyles = PSEUDO_NAMED_STYLES_DEFAULT;
-    const canForwardToChild = hasChildUsingForwardedProps;
-    const shouldForwardAllToChild = canForwardToChild && visualSelector && pseudoStateSelector;
-    const addStyle = (value, name, styleContext, stylesTarget, context) => {
-      const mergedValue = prepareStyleValue(stylesTarget[name], value, name, styleContext, context);
-      const cssVar = styleContext.styleCSSVars[name];
-      if (cssVar) {
-        addCSSVar(mergedValue, cssVar, stylesTarget);
-        if (name === "borderRadius" && value === "inherit") {
-          // "inherit" cannot be expressed via a CSS variable — a var() reference
-          // never propagates the inherit keyword itself. So when borderRadius="inherit"
-          // we must also set the inline style directly so the element actually
-          // inherits the radius from its parent.
-          styleDeps.push(name, value);
-          stylesTarget[name] = mergedValue;
-        }
-        return true;
-      }
-      styleDeps.push(name, value); // impact box style -> add to deps
-      stylesTarget[name] = mergedValue;
-      return false;
-    };
-    const addCSSVar = (value, name, stylesTarget) => {
-      styleDeps.push(name, value); // impact box style -> add to deps
-      stylesTarget[name] = value;
-    };
-    const addStyleMaybeForwarding = (value, name, styleContext, stylesTarget, context, visualChildPropStrategy) => {
-      if (!visualChildPropStrategy) {
-        addStyle(value, name, styleContext, stylesTarget, context);
-        return false;
-      }
-      const cssVar = styleCSSVars[name];
-      if (cssVar) {
-        // css var wins over visual child handling
-        addStyle(value, name, styleContext, stylesTarget, context);
-        return false;
-      }
-      if (visualChildPropStrategy === "copy") {
-        // we stylyze ourself + forward prop to the child
-        addStyle(value, name, styleContext, stylesTarget, context);
-      }
-      if (!canForwardToChild) {
-        return false;
-      }
-      return true;
-    };
-
-    // By default ":hover", ":active" are not tracked.
-    // But if code explicitely do something like:
-    // style={{ ":hover": { backgroundColor: "red" } }}
-    // then we'll track ":hover" state changes even for basic elements like <div>
-    const pseudoClassesFromStyleSet = new Set();
-    boxPseudoNamedStyles = {};
-    const visitProp = (value, name, styleContext, boxStylesTarget, styleOrigin) => {
-      const isPseudoElement = name.startsWith("::");
-      const isPseudoClass = name.startsWith(":");
-      if (isPseudoElement || isPseudoClass) {
-        styleDeps.push(name);
-        pseudoClassesFromStyleSet.add(name);
-        const pseudoStyleContext = {
-          ...styleContext,
-          styleCSSVars: {
-            ...styleCSSVars,
-            ...styleCSSVars[name]
-          },
-          pseudoName: name
-        };
-        const pseudoStyleKeys = Object.keys(value);
-        if (isPseudoElement) {
-          const pseudoElementStyles = {};
-          for (const key of pseudoStyleKeys) {
-            visitProp(value[key], key, pseudoStyleContext, pseudoElementStyles, "pseudo_style");
-          }
-          boxPseudoNamedStyles[name] = pseudoElementStyles;
-          return;
-        }
-        const pseudoClassStyles = {};
-        for (const key of pseudoStyleKeys) {
-          visitProp(value[key], key, pseudoStyleContext, pseudoClassStyles, "pseudo_style");
-          boxPseudoNamedStyles[name] = pseudoClassStyles;
-        }
-        return;
-      }
-      const context = styleOrigin === "base_style" ? "js" : "css";
-      const isCss = styleOrigin === "base_style" || styleOrigin === "style";
-      if (isCss) {
-        addStyle(value, name, styleContext, boxStylesTarget, context);
-        return;
-      }
-      if (name.startsWith("--")) {
-        addStyle(value, name, styleContext, boxStylesTarget, context);
-        return;
-      }
-      const propCssVar = propsCSSVars[name];
-      if (propCssVar) {
-        if (value !== undefined) {
-          addCSSVar(value, propCssVar, boxStylesTarget);
-        }
-        return;
-      }
-      const isPseudoStyle = styleOrigin === "pseudo_style";
-      if (isStyleProp(name)) {
-        // it's a style prop, we need first to check if we have css var to handle them
-        // otherwise we decide to put it either on self or child
-        const visualChildPropStrategy = visualSelector && getVisualChildStylePropStrategy(name);
-        const getStyle = getHowToHandleStyleProp(name);
-        if (
-        // prop name === css style name
-        !getStyle) {
-          const needForwarding = addStyleMaybeForwarding(value, name, styleContext, boxStylesTarget, context, visualChildPropStrategy);
-          if (needForwarding) {
-            if (isPseudoStyle) ; else {
-              childForwardedProps[name] = value;
-            }
-          }
-          return;
-        }
-        const cssValues = getStyle(value, styleContext);
-        if (!cssValues) {
-          return;
-        }
-        let needForwarding = false;
-        for (const styleName of Object.keys(cssValues)) {
-          const cssValue = cssValues[styleName];
-          needForwarding = addStyleMaybeForwarding(cssValue, styleName, styleContext, boxStylesTarget, context, visualChildPropStrategy);
-        }
-        if (needForwarding) {
-          if (isPseudoStyle) ; else {
-            childForwardedProps[name] = value;
-          }
-        }
-        return;
-      }
-      // not a style prop what do we do with it?
-      // When pseudoStateSelector is set, the child element is the semantic/interactive one
-      // When both selectors are set the child IS the component (e.g. Button with scale
-      // transform) — forward everything so it behaves like a normal element.
-      // When only pseudoStateSelector is set, the box keeps its own visual identity
-      // (border, background, overflow…) and the child is just the interactive/semantic
-      // element inside it. Only event handlers (onXxx) belong on that child; everything
-      // else stays on the box.
-      if (isPseudoStyle) {
-        if (shouldForwardAllToChild) ; else {
-          console.warn(`unsupported pseudo style key "${name}"`);
-          selfForwardedProps[name] = value;
-        }
-      } else if (shouldForwardAllToChild) {
-        childForwardedProps[name] = value;
-      } else {
-        selfForwardedProps[name] = value;
-      }
-      return;
-    };
-    if (baseStyle) {
-      for (const key of baseStyle) {
-        const value = baseStyle[key];
-        visitProp(value, key, styleContext, boxStyles, "baseStyle");
-      }
-    }
-    for (const propName of remainingPropKeySet) {
-      const propValue = rest[propName];
-      if (baseChildPropSet?.has(propName) || childPropSet?.has(propName)) {
-        if (canForwardToChild) {
-          childForwardedProps[propName] = propValue;
-        } else {
-          selfForwardedProps[propName] = propValue;
-        }
-        continue;
-      }
-      if (canForwardToChild && toCopySet.has(propName)) {
-        childForwardedProps[propName] = propValue;
-      }
-      const isDataAttribute = propName.startsWith("data-");
-      if (isDataAttribute) {
-        selfForwardedProps[propName] = propValue;
-        continue;
-      }
-      // At some point I'd like to transform all data-* attribute in the DOM
-      // into navi-* attribute so that when you look at the DOM you can easily understand which attributes
-      // where added by navi or your code.
-      // This help human to better scan the DOM
-      const isNaviAttribute = propName.startsWith("navi-");
-      if (isNaviAttribute) {
-        selfForwardedProps[propName] = propValue;
-        continue;
-      }
-      const isEventHandler = propName.startsWith("on");
-      if (isEventHandler) {
-        if (shouldForwardAllToChild) {
-          childForwardedProps[propName] = propValue;
-          continue;
-        }
-        selfForwardedProps[propName] = propValue;
-        continue;
-      }
-      if (canForwardToChild && pseudoStateSelector && PSEUDO_STATE_CHILD_PROP_SET.has(propName)) {
-        childForwardedProps[propName] = propValue;
-        continue;
-      }
-      visitProp(propValue, propName, styleContext, boxStyles, "prop");
-    }
-    if (typeof style === "string") {
-      const styleObject = normalizeStyles(style, "css");
-      for (const styleName of Object.keys(styleObject)) {
-        const styleValue = styleObject[styleName];
-        visitProp(styleValue, styleName, styleContext, boxStyles, "style");
-      }
-    } else if (style && typeof style === "object") {
-      for (const styleName of Object.keys(style)) {
-        const styleValue = style[styleName];
-        visitProp(styleValue, styleName, styleContext, boxStyles, "style");
-      }
-    }
-    styleDeps.push(pseudoStateSelector, innerPseudoState);
-    let innerPseudoClasses;
-    if (pseudoClassesFromStyleSet.size) {
-      innerPseudoClasses = [...pseudoClasses];
-      if (pseudoClasses !== PSEUDO_CLASSES_DEFAULT) {
-        styleDeps.push(...pseudoClasses);
-      }
-      for (const key of pseudoClassesFromStyleSet) {
-        innerPseudoClasses.push(key);
-        styleDeps.push(key);
-      }
-    } else {
-      innerPseudoClasses = pseudoClasses;
-      if (pseudoClasses !== PSEUDO_CLASSES_DEFAULT) {
-        styleDeps.push(...pseudoClasses);
-      }
-    }
-    const syncBox = useCallback(boxEl => {
-      const pseudoStateEl = pseudoStateSelector ? boxEl.querySelector(pseudoStateSelector) : boxEl;
-      if (!pseudoStateEl) {
-        console.error(`pseudoStateSelector "${pseudoStateSelector}" did not match any element inside the box`, boxEl);
-      }
-      const visualEl = visualSelector ? boxEl.querySelector(visualSelector) : null;
-      return initPseudoStyles(pseudoStateEl, {
-        pseudoClasses: innerPseudoClasses,
-        pseudoState: innerPseudoState,
-        effect: state => {
-          applyStyle(boxEl, boxStyles, state, boxPseudoNamedStyles, preventInitialTransition);
-        },
-        elementToImpact: boxEl,
-        elementListeningPseudoState: visualEl === pseudoStateEl ? null : visualEl
-      });
-    }, styleDeps);
-    finalRef = useComposeElementRef(syncBox, ref);
-    usePartiallyHidden(finalRef, Boolean(rest.viewTransitionName));
-  }
-  let innerChildren = children;
-  if (separator) {
-    // Flatten nested arrays (e.g., from .map()) to treat each element as individual child
-    innerChildren = applySeparatorOnChildren(innerChildren, separator);
-  }
-
-  // When hasChildUsingForwardedProps is used it means
-  // Some/all the children needs to access remainingProps
-  // to render and will provide a function to do so.
-  if (hasChildUsingForwardedProps) {
-    innerChildren = jsx(BoxForwardedPropsContext.Provider, {
-      value: childForwardedProps,
-      children: innerChildren
-    });
-  }
-  const aspectRatio = rest.square || rest.circle ? "1/1" : rest.aspectRatio;
-  return jsx(TagName, {
-    ref: finalRef,
-    className: innerClassName,
-    "navi-box-flow": boxFlowIsDefault ? undefined : boxFlow,
-    "navi-box-flow-row": row ? "" : undefined,
-    "navi-box-flow-column": column ? "" : undefined,
-    "navi-aspect-ratio": aspectRatio ? aspectRatio : undefined,
-    "data-visual-selector": visualSelector,
-    ...selfForwardedProps,
-    children: jsx(BoxFlowContext.Provider, {
-      value: boxFlow,
-      children: innerChildren
-    })
-  });
-};
-const toCopySet = new Set([]);
-const applySeparatorOnChildren = (children, separator) => {
-  const flattenedChildren = toChildArray(children);
-  if (flattenedChildren.length <= 1) {
-    return children;
-  }
-  const childrenWithSeparators = [];
-  let i = 0;
-  while (true) {
-    const child = flattenedChildren[i];
-    childrenWithSeparators.push(child);
-    i++;
-    const isLast = i === flattenedChildren.length;
-    if (isLast) {
-      break;
-    }
-    const nextChild = flattenedChildren[i];
-    if (!shouldInjectSeparatorBetween(child, nextChild)) {
-      continue;
-    }
-    // Support function separators that receive separator index
-    const separatorElement = typeof separator === "function" ? separator(i - 1) // i-1 because i was incremented after pushing child
-    : separator;
-    childrenWithSeparators.push(separatorElement);
-  }
-  return childrenWithSeparators;
-};
-const shouldInjectSeparatorBetween = (left, right) => {
-  if (isValidElement(left) && left.props?.hidden) {
-    return false;
-  }
-  if (isValidElement(right) && right.props?.hidden) {
-    return false;
-  }
-  return true;
-};
-
-const ensureDocumentStartViewTransition = () => {
-  if (document.startViewTransition) {
-    return;
-  }
-  document.startViewTransition = (updateCallback) => {
-    updateCallback();
-    return {
-      ready: Promise.resolve(),
-      finished: Promise.resolve(),
-    };
-  };
-};
-
-/**
- * Fix alignment behavior for flex/grid containers that use `height: 100%`.
- *
- * Context:
- * - When a flex/grid container has `height: 100%`, it is "height-locked".
- * - If its content becomes taller than the container, alignment rules like
- *   `align-items: center` will cause content to be partially clipped.
- *
- * Goal:
- * - Center content only when it fits.
- * - Align content at start when it overflows.
- *
- * How:
- * - Temporarily remove height-constraint (`height:auto`) to measure natural height.
- * - Compare natural height to container height.
- * - Add/remove an attribute so CSS can adapt alignment.
- *
- * Usage:
- *   monitorItemsOverflow(containerElement);
- *
- * CSS example:
- *   .container { align-items: center; }
- *   .container[data-items-height-overflow] { align-items: flex-start; }
- */
-
-
-const WIDTH_ATTRIBUTE_NAME = "data-items-width-overflow";
-const HEIGHT_ATTRIBUTE_NAME = "data-items-height-overflow";
-const monitorItemsOverflow = (container) => {
-  let widthIsOverflowing;
-  let heightIsOverflowing;
-  const onItemsWidthOverflowChange = () => {
-    if (widthIsOverflowing) {
-      container.setAttribute(WIDTH_ATTRIBUTE_NAME, "");
-    } else {
-      container.removeAttribute(WIDTH_ATTRIBUTE_NAME);
-    }
-  };
-  const onItemsHeightOverflowChange = () => {
-    if (heightIsOverflowing) {
-      container.setAttribute(HEIGHT_ATTRIBUTE_NAME, "");
-    } else {
-      container.removeAttribute(HEIGHT_ATTRIBUTE_NAME);
-    }
-  };
-
-  const update = () => {
-    // Save current manual height constraint
-    const prevWidth = container.style.width;
-    const prevHeight = container.style.height;
-    // Remove constraint → get true content dimension
-    container.style.width = "auto";
-    container.style.height = "auto";
-    const naturalWidth = container.scrollWidth;
-    const naturalHeight = container.scrollHeight;
-    if (prevWidth) {
-      container.style.width = prevWidth;
-    } else {
-      container.style.removeProperty("width");
-    }
-    if (prevHeight) {
-      container.style.height = prevHeight;
-    } else {
-      container.style.removeProperty("height");
-    }
-
-    const lockedWidth = container.clientWidth;
-    const lockedHeight = container.clientHeight;
-    const currentWidthIsOverflowing = naturalWidth > lockedWidth;
-    const currentHeightIsOverflowing = naturalHeight > lockedHeight;
-    if (currentWidthIsOverflowing !== widthIsOverflowing) {
-      widthIsOverflowing = currentWidthIsOverflowing;
-      onItemsWidthOverflowChange();
-    }
-    if (currentHeightIsOverflowing !== heightIsOverflowing) {
-      heightIsOverflowing = currentHeightIsOverflowing;
-      onItemsHeightOverflowChange();
-    }
-  };
-
-  const [teardown, addTeardown] = createPubSub();
-
-  update();
-
-  // mutation observer
-  const mutationObserver = new MutationObserver(() => {
-    update();
-  });
-  mutationObserver.observe(container, {
-    childList: true,
-    characterData: true,
-  });
-  addTeardown(() => {
-    mutationObserver.disconnect();
-  });
-
-  // resize observer
-  const resizeObserver = new ResizeObserver(update);
-  resizeObserver.observe(container);
-  addTeardown(() => {
-    resizeObserver.disconnect();
-  });
-
-  const destroy = () => {
-    teardown();
-    container.removeAttribute(WIDTH_ATTRIBUTE_NAME);
-    container.removeAttribute(HEIGHT_ATTRIBUTE_NAME);
-  };
-  return destroy;
-};
-
-installImportMetaCssBuild(import.meta);/**
- * UI Transition - Core Implementation
- * Provides smooth resize transitions with cross-fade effects between content states
- *
- * Content Types and Terminology:
- *
- * - ui: What the user currently sees rendered in the UI
- * - dom_nodes: The actual DOM elements that make up the visual representation
- * - content_id: Unique identifier for a content and its content_phase(s)
- * - content_phase: Intermediate states (loading spinners, error messages, empty states)
- * - content: The primary/final content we want to display (e.g., car details, user profile)
- *
- * Required HTML structure:
- *
- * <div class="ui_transition">
- *   <div class="ui_transition_active_group">
- *     <div class="ui_transition_target_slot"></div>
- *     <div class="ui_transition_outgoing_slot"></div>
- *   </div>
- *   <div class="ui_transition_previous_group">
- *     <div class="ui_transition_previous_target_slot"></div>
- *     <div class="ui_transition_previous_outgoing_slot"></div>
- *   </div>
- * </div>
- *
- * Architecture Overview:
- *
- * .ui_transition
- *   The main container that handles dimensional transitions. Its width and height animate
- *   smoothly from current to target dimensions. Has overflow:hidden to clip ui during transitions.
- *
- * .active_group
- *   Contains the ui that should be active after the transition completes. Groups both the target
- *   ui (.target_slot) and transitional ui (.outgoing_slot) as a single unit that can
- *   be manipulated together (e.g., applying transforms or slides).
- *
- * .target_slot
- *   Always contains the target ui - what should be displayed at the end of the transition.
- *   Whether transitioning to content or content_phase, this slot receives the new dom_nodes.
- *   Receives fade-in transitions (opacity 0 → 1) during all transition types.
- *
- * .outgoing_slot
- *   Holds content_phase that's being replaced during content_phase transitions. When transitioning
- *   from one content_phase to another, or from content_phase to content, the old content_phase moves
- *   here for fade-out. Receives fade-out transitions (opacity 1 → 0).
- *
- * .previous_group
- *   Used for content-to-content transitions. When switching between content (not phases),
- *   the entire .active_group dom_nodes are cloned here to fade out while the new content fades in.
- *   Can slide out when sliding transitions are enabled, otherwise fades out.
- *
- * Transition Scenarios:
- * - content → content: Car A details → Car B details (clone to previous_group)
- * - content_phase → content_phase: Loading state → Error state (move to outgoing_slot, same content_id)
- * - content → content_phase: Car A details → Loading Car B (use outgoing_slot for cross-fade)
- * - content_phase → content: Loading Car B → Car B details (use outgoing_slot for cross-fade)
- *
- * Size Transition Handling:
- * During dimensional transitions, both .target_slot and .outgoing_slot have their dimensions
- * explicitly set to prevent dom_nodes reflow and maintain visual consistency.
- */
-import.meta.css = [/* css */`
-  * {
-    box-sizing: border-box;
-  }
-
-  .ui_transition {
-    --transition-duration: 300ms;
-    --justify-content: center;
-    --align-items: center;
-
-    --x-transition-duration: var(--transition-duration);
-    --x-justify-content: var(--justify-content);
-    --x-align-items: var(--align-items);
-
-    position: relative;
-  }
-  /* Alignment controls */
-  .ui_transition[data-align-x="start"] {
-    --x-justify-content: flex-start;
-  }
-  .ui_transition[data-align-x="center"] {
-    --x-justify-content: center;
-  }
-  .ui_transition[data-align-x="end"] {
-    --x-justify-content: flex-end;
-  }
-  .ui_transition[data-align-y="start"] {
-    --x-align-items: flex-start;
-  }
-  .ui_transition[data-align-y="center"] {
-    --x-align-items: center;
-  }
-  .ui_transition[data-align-y="end"] {
-    --x-align-items: flex-end;
-  }
-
-  .ui_transition,
-  .ui_transition_active_group,
-  .ui_transition_previous_group,
-  .ui_transition_target_slot,
-  .ui_transition_previous_target_slot,
-  .ui_transition_outgoing_slot,
-  .ui_transition_previous_outgoing_slot {
-    width: 100%;
-    height: 100%;
-  }
-
-  .ui_transition_target_slot,
-  .ui_transition_outgoing_slot,
-  .ui_transition_previous_target_slot,
-  .ui_transition_previous_outgoing_slot {
-    display: flex;
-    align-items: var(--x-align-items);
-    justify-content: var(--x-justify-content);
-  }
-  .ui_transition_target_slot[data-items-width-overflow],
-  .ui_transition_previous_target_slot[data-items-width-overflow],
-  .ui_transition_previous_target_slot[data-items-width-overflow],
-  .ui_transition_previous_outgoing_slot[data-items-width-overflow] {
-    --x-justify-content: flex-start;
-  }
-  .ui_transition_target_slot[data-items-height-overflow],
-  .ui_transition_previous_slot[data-items-height-overflow],
-  .ui_transition_previous_target_slot[data-items-height-overflow],
-  .ui_transition_previous_outgoing_slot[data-items-height-overflow] {
-    --x-align-items: flex-start;
-  }
-
-  .ui_transition_active_group {
-    position: relative;
-  }
-  .ui_transition_target_slot {
-    position: relative;
-  }
-  .ui_transition_outgoing_slot,
-  .ui_transition_previous_outgoing_slot {
-    position: absolute;
-    top: 0;
-    left: 0;
-  }
-  .ui_transition_previous_group {
-    position: absolute;
-    inset: 0;
-  }
-  .ui_transition[data-only-previous-group] .ui_transition_previous_group {
-    position: relative;
-  }
-
-  .ui_transition_target_slot_background {
-    position: absolute;
-    top: 0;
-    left: 0;
-    z-index: -1;
-    display: none;
-    width: var(--target-slot-width, 100%);
-    height: var(--target-slot-height, 100%);
-    background: var(--target-slot-background, transparent);
-    pointer-events: none;
-  }
-  .ui_transition[data-transitioning] .ui_transition_target_slot_background {
-    display: block;
-  }
-`, "@jsenv/navi/src/transition/ui_transition.js"];
-const CONTENT_ID_ATTRIBUTE = "data-content-id";
-const CONTENT_PHASE_ATTRIBUTE = "data-content-phase";
-const UNSET = {
-  domNodes: [],
-  domNodesClone: [],
-  isEmpty: true,
-  type: "unset",
-  contentId: "unset",
-  contentPhase: undefined,
-  isContentPhase: false,
-  isContent: false,
-  toString: () => "unset"
-};
-const isSameConfiguration = (configA, configB) => {
-  return configA.toString() === configB.toString();
-};
-const createUITransitionController = (root, {
-  duration = 300,
-  alignX = "center",
-  alignY = "center",
-  onStateChange = () => {},
-  pauseBreakpoints = []
-} = {}) => {
-  const debugConfig = {
-    detection: root.hasAttribute("data-debug-detection"),
-    size: root.hasAttribute("data-debug-size")
-  };
-  const hasDebugLogs = debugConfig.size;
-  const debugDetection = message => {
-    if (!debugConfig.detection) return;
-    console.debug(`[detection]`, message);
-  };
-  const debugSize = message => {
-    if (!debugConfig.size) return;
-    console.debug(`[size]`, message);
-  };
-  const activeGroup = root.querySelector(".ui_transition_active_group");
-  const targetSlot = root.querySelector(".ui_transition_target_slot");
-  const outgoingSlot = root.querySelector(".ui_transition_outgoing_slot");
-  const previousGroup = root.querySelector(".ui_transition_previous_group");
-  const previousTargetSlot = previousGroup?.querySelector(".ui_transition_previous_target_slot");
-  const previousOutgoingSlot = previousGroup?.querySelector(".ui_transition_previous_outgoing_slot");
-  if (!root || !activeGroup || !targetSlot || !outgoingSlot || !previousGroup || !previousTargetSlot || !previousOutgoingSlot) {
-    throw new Error("createUITransitionController requires element with .active_group, .target_slot, .outgoing_slot, .previous_group, .previous_target_slot, and .previous_outgoing_slot elements");
-  }
-
-  // we maintain a background copy behind target slot to avoid showing
-  // the body flashing during the fade-in
-  const targetSlotBackground = document.createElement("div");
-  targetSlotBackground.className = "ui_transition_target_slot_background";
-  activeGroup.insertBefore(targetSlotBackground, targetSlot);
-  root.style.setProperty("--x-transition-duration", `${duration}ms`);
-  outgoingSlot.setAttribute("inert", "");
-  previousGroup.setAttribute("inert", "");
-  const detectConfiguration = (slot, {
-    contentId,
-    contentPhase
-  } = {}) => {
-    const domNodes = Array.from(slot.childNodes);
-    if (!domNodes) {
-      return UNSET;
-    }
-    const isEmpty = domNodes.length === 0;
-    let textNodeCount = 0;
-    let elementNodeCount = 0;
-    let firstElementNode;
-    const domNodesClone = [];
-    if (isEmpty) {
-      if (contentPhase === undefined) {
-        contentPhase = "empty";
-      }
-    } else {
-      const contentIdSlotAttr = slot.getAttribute(CONTENT_ID_ATTRIBUTE);
-      let contentIdChildAttr;
-      for (const domNode of domNodes) {
-        if (domNode.nodeType === Node.TEXT_NODE) {
-          textNodeCount++;
-        } else {
-          if (!firstElementNode) {
-            firstElementNode = domNode;
-          }
-          elementNodeCount++;
-          if (domNode.hasAttribute("data-content-phase")) {
-            const contentPhaseAttr = domNode.getAttribute("data-content-phase");
-            contentPhase = contentPhaseAttr || "attr";
-          }
-          if (domNode.hasAttribute("data-content-key")) {
-            contentIdChildAttr = domNode.getAttribute("data-content-key");
-          }
-        }
-        const domNodeClone = domNode.cloneNode(true);
-        domNodesClone.push(domNodeClone);
-      }
-      if (contentIdSlotAttr && contentIdChildAttr) {
-        console.warn(`Slot and slot child both have a [${CONTENT_ID_ATTRIBUTE}]. Slot is ${contentIdSlotAttr} and child is ${contentIdChildAttr}, using the child.`);
-      }
-      if (contentId === undefined) {
-        contentId = contentIdChildAttr || contentIdSlotAttr || undefined;
-      }
-    }
-    const isOnlyTextNodes = elementNodeCount === 0 && textNodeCount > 1;
-    const singleElementNode = elementNodeCount === 1 ? firstElementNode : null;
-    contentId = contentId || getElementSignature(domNodes[0]);
-    if (!contentPhase && isEmpty) {
-      // Imagine code rendering null while switching to a new content
-      // or even while staying on the same content.
-      // In the UI we want to consider this as an "empty" phase.
-      // meaning the ui will keep the same size until something else happens
-      // This prevent layout shifts of code not properly handling
-      // intermediate states.
-      contentPhase = "empty";
-    }
-    let width;
-    let height;
-    let borderRadius;
-    let border;
-    let background;
-    if (isEmpty) {
-      debugSize(`measureSlot(".${slot.className}") -> it is empty`);
-    } else if (singleElementNode) {
-      const visualSelector = singleElementNode.getAttribute("data-visual-selector");
-      const visualElement = visualSelector ? singleElementNode.querySelector(visualSelector) || singleElementNode : singleElementNode;
-      const rect = visualElement.getBoundingClientRect();
-      width = rect.width;
-      height = rect.height;
-      debugSize(`measureSlot(".${slot.className}") -> [${width}x${height}]`);
-      borderRadius = getBorderRadius(visualElement);
-      border = getComputedStyle(visualElement).border;
-      background = getComputedStyle(visualElement).background;
-    } else {
-      // text, multiple elements
-      const rect = slot.getBoundingClientRect();
-      width = rect.width;
-      height = rect.height;
-      debugSize(`measureSlot(".${slot.className}") -> [${width}x${height}]`);
-    }
-    const commonProperties = {
-      domNodes,
-      domNodesClone,
-      isEmpty,
-      isOnlyTextNodes,
-      singleElementNode,
-      width,
-      height,
-      borderRadius,
-      border,
-      background,
-      contentId
-    };
-    if (contentPhase) {
-      return {
-        ...commonProperties,
-        type: "content_phase",
-        contentPhase,
-        isContentPhase: true,
-        isContent: false,
-        toString: () => `content(${contentId}).phase(${contentPhase})`
-      };
-    }
-    return {
-      ...commonProperties,
-      type: "content",
-      contentPhase: undefined,
-      isContentPhase: false,
-      isContent: true,
-      toString: () => `content(${contentId})`
-    };
-  };
-  const targetSlotInitialConfiguration = detectConfiguration(targetSlot);
-  const outgoingSlotInitialConfiguration = detectConfiguration(outgoingSlot, {
-    contentPhase: "true"
-  });
-  let targetSlotConfiguration = targetSlotInitialConfiguration;
-  let outgoingSlotConfiguration = outgoingSlotInitialConfiguration;
-  let previousTargetSlotConfiguration = UNSET;
-  const updateSlotAttributes = () => {
-    if (targetSlotConfiguration.isEmpty && outgoingSlotConfiguration.isEmpty) {
-      root.setAttribute("data-only-previous-group", "");
-    } else {
-      root.removeAttribute("data-only-previous-group");
-    }
-  };
-  const updateAlignment = () => {
-    // Set data attributes for CSS-based alignment
-    root.setAttribute("data-align-x", alignX);
-    root.setAttribute("data-align-y", alignY);
-  };
-  const moveConfigurationIntoSlot = (configuration, slot) => {
-    slot.innerHTML = "";
-    for (const domNode of configuration.domNodesClone) {
-      slot.appendChild(domNode);
-    }
-    // in case border or stuff like that have changed we re-detect the config
-    const updatedConfig = detectConfiguration(slot);
-    if (slot === targetSlot) {
-      targetSlotConfiguration = updatedConfig;
-    } else if (slot === outgoingSlot) {
-      outgoingSlotConfiguration = updatedConfig;
-    } else if (slot === previousTargetSlot) {
-      previousTargetSlotConfiguration = updatedConfig;
-    } else if (slot === previousOutgoingSlot) ; else {
-      throw new Error("Unknown slot for applyConfiguration");
-    }
-  };
-  updateAlignment();
-  let transitionType = "none";
-  const groupTransitionOptions = {
-    // debugBreakpoints: [0.25],
-    pauseBreakpoints,
-    lifecycle: {
-      setup: () => {
-        updateSlotAttributes();
-        root.setAttribute("data-transitioning", "");
-        onStateChange({
-          isTransitioning: true
-        });
-        return {
-          teardown: () => {
-            root.removeAttribute("data-transitioning");
-            updateSlotAttributes(); // Update positioning after transition
-            onStateChange({
-              isTransitioning: false
-            });
-          }
-        };
-      }
-    }
-  };
-  const transitionController = createGroupTransitionController(groupTransitionOptions);
-  const elementToClip = root;
-  const morphContainerIntoTarget = () => {
-    const morphTransitions = [];
-    {
-      // TODO: ideally when scrollContainer is document AND we transition
-      // from a layout with scrollbar to a layout without
-      // we have clip path detecting we go from a given width/height to a new width/height
-      // that might just be the result of scrollbar appearing/disappearing
-      // we should detect when this happens to avoid clipping what correspond to the scrollbar presence toggling
-      const fromWidth = previousTargetSlotConfiguration.width || 0;
-      const fromHeight = previousTargetSlotConfiguration.height || 0;
-      const toWidth = targetSlotConfiguration.width || 0;
-      const toHeight = targetSlotConfiguration.height || 0;
-      debugSize(`transition from [${fromWidth}x${fromHeight}] to [${toWidth}x${toHeight}]`);
-      const restoreOverflow = preventIntermediateScrollbar(root, {
-        fromWidth,
-        fromHeight,
-        toWidth,
-        toHeight,
-        onPrevent: ({
-          x,
-          y,
-          scrollContainer
-        }) => {
-          if (x) {
-            debugSize(`Temporarily hiding horizontal overflow during transition on ${getElementSignature(scrollContainer)}`);
-          }
-          if (y) {
-            debugSize(`Temporarily hiding vertical overflow during transition on ${getElementSignature(scrollContainer)}`);
-          }
-        },
-        onRestore: () => {
-          debugSize(`Restored overflow after transition`);
-        }
-      });
-      const onSizeTransitionFinished = () => {
-        // Restore overflow when transition is complete
-        restoreOverflow();
-      };
-
-      // https://emilkowal.ski/ui/the-magic-of-clip-path
-      const elementToClipRect = elementToClip.getBoundingClientRect();
-      const elementToClipWidth = elementToClipRect.width;
-      const elementToClipHeight = elementToClipRect.height;
-      // Calculate where content is positioned within the large container
-      const getAlignedPosition = (containerSize, contentSize, align) => {
-        switch (align) {
-          case "start":
-            return 0;
-          case "end":
-            return containerSize - contentSize;
-          case "center":
-          default:
-            return (containerSize - contentSize) / 2;
-        }
-      };
-      // Position of "from" content within large container
-      const fromLeft = getAlignedPosition(elementToClipWidth, fromWidth, alignX);
-      const fromTop = getAlignedPosition(elementToClipHeight, fromHeight, alignY);
-      // Position of target content within large container
-      const targetLeft = getAlignedPosition(elementToClipWidth, toWidth, alignX);
-      const targetTop = getAlignedPosition(elementToClipHeight, toHeight, alignY);
-      debugSize(`Positions in container: from [${fromLeft},${fromTop}] ${fromWidth}x${fromHeight} to [${targetLeft},${targetTop}] ${toWidth}x${toHeight}`);
-      // Get border-radius values
-      const fromBorderRadius = previousTargetSlotConfiguration.borderRadius || 0;
-      const toBorderRadius = targetSlotConfiguration.borderRadius || 0;
-      const startInsetTop = fromTop;
-      const startInsetRight = elementToClipWidth - (fromLeft + fromWidth);
-      const startInsetBottom = elementToClipHeight - (fromTop + fromHeight);
-      const startInsetLeft = fromLeft;
-      const endInsetTop = targetTop;
-      const endInsetRight = elementToClipWidth - (targetLeft + toWidth);
-      const endInsetBottom = elementToClipHeight - (targetTop + toHeight);
-      const endInsetLeft = targetLeft;
-      const startClipPath = `inset(${startInsetTop}px ${startInsetRight}px ${startInsetBottom}px ${startInsetLeft}px round ${fromBorderRadius}px)`;
-      const endClipPath = `inset(${endInsetTop}px ${endInsetRight}px ${endInsetBottom}px ${endInsetLeft}px round ${toBorderRadius}px)`;
-      // Create clip-path animation using Web Animations API
-      const clipAnimation = elementToClip.animate([{
-        clipPath: startClipPath
-      }, {
-        clipPath: endClipPath
-      }], {
-        duration,
-        easing: "ease",
-        fill: "forwards"
-      });
-
-      // Handle finish
-      clipAnimation.finished.then(() => {
-        // Clear clip-path to restore normal behavior
-        elementToClip.style.clipPath = "";
-        clipAnimation.cancel();
-        onSizeTransitionFinished();
-      }).catch(() => {
-        // Animation was cancelled
-      });
-      clipAnimation.play();
-    }
-    return morphTransitions;
-  };
-  const fadeInTargetSlot = () => {
-    targetSlotBackground.style.setProperty("--target-slot-background", targetSlotConfiguration.background);
-    targetSlotBackground.style.setProperty("--target-slot-width", `${targetSlotConfiguration.width || 0}px`);
-    targetSlotBackground.style.setProperty("--target-slot-height", `${targetSlotConfiguration.height || 0}px`);
-    return createOpacityTransition(targetSlot, 1, {
-      from: 0,
-      duration,
-      styleSynchronizer: "inline_style",
-      onFinish: targetSlotOpacityTransition => {
-        targetSlotBackground.style.removeProperty("--target-slot-background");
-        targetSlotBackground.style.removeProperty("--target-slot-width");
-        targetSlotBackground.style.removeProperty("--target-slot-height");
-        targetSlotOpacityTransition.cancel();
-      }
-    });
-  };
-  const fadeOutPreviousGroup = () => {
-    return createOpacityTransition(previousGroup, 0, {
-      from: 1,
-      duration,
-      styleSynchronizer: "inline_style",
-      onFinish: previousGroupOpacityTransition => {
-        previousGroupOpacityTransition.cancel();
-        previousGroup.style.opacity = "0"; // keep previous group visually hidden
-      }
-    });
-  };
-  const fadeOutOutgoingSlot = () => {
-    return createOpacityTransition(outgoingSlot, 0, {
-      duration,
-      from: 1,
-      styleSynchronizer: "inline_style",
-      onFinish: outgoingSlotOpacityTransition => {
-        outgoingSlotOpacityTransition.cancel();
-        outgoingSlot.style.opacity = "0"; // keep outgoing slot visually hidden
-      }
-    });
-  };
-
-  // content_to_content transition (uses previous_group)
-  const applyContentToContentTransition = toConfiguration => {
-    // 1. move target slot to previous
-    moveConfigurationIntoSlot(targetSlotConfiguration, previousTargetSlot);
-    targetSlotConfiguration = toConfiguration;
-    // 2. move outgoing slot to previous
-    moveConfigurationIntoSlot(outgoingSlotConfiguration, previousOutgoingSlot);
-    moveConfigurationIntoSlot(UNSET, outgoingSlot);
-    const transitions = [...morphContainerIntoTarget(), fadeInTargetSlot(), fadeOutPreviousGroup()];
-    const transition = transitionController.update(transitions, {
-      onFinish: () => {
-        moveConfigurationIntoSlot(UNSET, previousTargetSlot);
-        moveConfigurationIntoSlot(UNSET, previousOutgoingSlot);
-        if (hasDebugLogs) {
-          console.groupEnd();
-        }
-      }
-    });
-    transition.play();
-  };
-  // content_phase_to_content_phase transition (uses outgoing_slot)
-  const applyContentPhaseToContentPhaseTransition = toConfiguration => {
-    // 1. Move target slot to outgoing
-    moveConfigurationIntoSlot(targetSlotConfiguration, outgoingSlot);
-    targetSlotConfiguration = toConfiguration;
-    const transitions = [...morphContainerIntoTarget(), fadeInTargetSlot(), fadeOutOutgoingSlot()];
-    const transition = transitionController.update(transitions, {
-      onFinish: () => {
-        moveConfigurationIntoSlot(UNSET, outgoingSlot);
-        if (hasDebugLogs) {
-          console.groupEnd();
-        }
-      }
-    });
-    transition.play();
-  };
-  // any_to_empty transition
-  const applyToEmptyTransition = () => {
-    // 1. move target slot to previous
-    moveConfigurationIntoSlot(targetSlotConfiguration, previousTargetSlot);
-    targetSlotConfiguration = UNSET;
-    // 2. move outgoing slot to previous
-    moveConfigurationIntoSlot(outgoingSlotConfiguration, previousOutgoingSlot);
-    outgoingSlotConfiguration = UNSET;
-    const transitions = [...morphContainerIntoTarget(), fadeOutPreviousGroup()];
-    const transition = transitionController.update(transitions, {
-      onFinish: () => {
-        moveConfigurationIntoSlot(UNSET, previousTargetSlot);
-        moveConfigurationIntoSlot(UNSET, previousOutgoingSlot);
-        if (hasDebugLogs) {
-          console.groupEnd();
-        }
-      }
-    });
-    transition.play();
-  };
-  // Main transition method
-  const transitionTo = (newContentElement, {
-    contentPhase,
-    contentId
-  } = {}) => {
-    if (contentId) {
-      targetSlot.setAttribute(CONTENT_ID_ATTRIBUTE, contentId);
-    } else {
-      targetSlot.removeAttribute(CONTENT_ID_ATTRIBUTE);
-    }
-    if (contentPhase) {
-      targetSlot.setAttribute(CONTENT_PHASE_ATTRIBUTE, contentPhase);
-    } else {
-      targetSlot.removeAttribute(CONTENT_PHASE_ATTRIBUTE);
-    }
-    if (newContentElement) {
-      targetSlot.innerHTML = "";
-      targetSlot.appendChild(newContentElement);
-    } else {
-      targetSlot.innerHTML = "";
-    }
-  };
-  // Reset to initial content
-  const resetContent = () => {
-    transitionController.cancel();
-    moveConfigurationIntoSlot(targetSlotInitialConfiguration, targetSlot);
-    moveConfigurationIntoSlot(outgoingSlotInitialConfiguration, outgoingSlot);
-    moveConfigurationIntoSlot(UNSET, previousTargetSlot);
-    moveConfigurationIntoSlot(UNSET, previousOutgoingSlot);
-  };
-  const targetSlotEffect = reasons => {
-    if (root.hasAttribute("data-disabled")) {
-      return;
-    }
-    const fromConfiguration = targetSlotConfiguration;
-    const toConfiguration = detectConfiguration(targetSlot);
-    if (hasDebugLogs) {
-      console.group(`targetSlotEffect()`);
-      console.debug(`reasons:`);
-      console.debug(`- ${reasons.join("\n- ")}`);
-    }
-    if (isSameConfiguration(fromConfiguration, toConfiguration)) {
-      debugDetection(`already in desired state (${toConfiguration}) -> early return`);
-      if (hasDebugLogs) {
-        console.groupEnd();
-      }
-      return;
-    }
-    const fromConfigType = fromConfiguration.type;
-    const toConfigType = toConfiguration.type;
-    transitionType = `${fromConfigType}_to_${toConfigType}`;
-    debugDetection(`Prepare "${transitionType}" transition (${fromConfiguration} -> ${toConfiguration})`);
-    // content_to_empty / content_phase_to_empty
-    if (toConfiguration.isEmpty) {
-      applyToEmptyTransition();
-      return;
-    }
-    // content_phase_to_content_phase
-    if (fromConfiguration.isContentPhase && toConfiguration.isContentPhase) {
-      applyContentPhaseToContentPhaseTransition(toConfiguration);
-      return;
-    }
-    // content_phase_to_content
-    if (fromConfiguration.isContentPhase && toConfiguration.isContent) {
-      applyContentPhaseToContentPhaseTransition(toConfiguration);
-      return;
-    }
-    // content_to_content_phase
-    if (fromConfiguration.isContent && toConfiguration.isContentPhase) {
-      applyContentPhaseToContentPhaseTransition(toConfiguration);
-      return;
-    }
-    // content_to_content (default case)
-    applyContentToContentTransition(toConfiguration);
-  };
-  const [teardown, addTeardown] = createPubSub();
-  {
-    const mutationObserver = new MutationObserver(mutations => {
-      const reasonParts = [];
-      for (const mutation of mutations) {
-        if (mutation.type === "childList") {
-          const added = mutation.addedNodes.length;
-          const removed = mutation.removedNodes.length;
-          if (added && removed) {
-            reasonParts.push(`addedNodes(${added}) removedNodes(${removed})`);
-          } else if (added) {
-            reasonParts.push(`addedNodes(${added})`);
-          } else {
-            reasonParts.push(`removedNodes(${removed})`);
-          }
-          continue;
-        }
-        if (mutation.type === "attributes") {
-          const {
-            attributeName
-          } = mutation;
-          if (attributeName === CONTENT_ID_ATTRIBUTE || attributeName === CONTENT_PHASE_ATTRIBUTE) {
-            const {
-              oldValue
-            } = mutation;
-            if (oldValue === null) {
-              const value = targetSlot.getAttribute(attributeName);
-              reasonParts.push(value ? `added [${attributeName}=${value}]` : `added [${attributeName}]`);
-            } else if (targetSlot.hasAttribute(attributeName)) {
-              const value = targetSlot.getAttribute(attributeName);
-              reasonParts.push(`[${attributeName}] ${oldValue} -> ${value}`);
-            } else {
-              reasonParts.push(oldValue ? `removed [${attributeName}=${oldValue}]` : `removed [${attributeName}]`);
-            }
-          }
-        }
-      }
-      if (reasonParts.length === 0) {
-        return;
-      }
-      targetSlotEffect(reasonParts);
-    });
-    mutationObserver.observe(targetSlot, {
-      childList: true,
-      attributes: true,
-      attributeFilter: [CONTENT_ID_ATTRIBUTE, CONTENT_PHASE_ATTRIBUTE],
-      characterData: false
-    });
-    addTeardown(() => {
-      mutationObserver.disconnect();
-    });
-  }
-  {
-    const slots = [targetSlot, outgoingSlot, previousTargetSlot, previousOutgoingSlot];
-    for (const slot of slots) {
-      addTeardown(monitorItemsOverflow(slot));
-    }
-  }
-  const setDuration = newDuration => {
-    duration = newDuration;
-    // Update CSS variable immediately
-    root.style.setProperty("--x-transition-duration", `${duration}ms`);
-  };
-  const setAlignment = (newAlignX, newAlignY) => {
-    alignX = newAlignX;
-    alignY = newAlignY;
-    updateAlignment();
-  };
-  return {
-    updateContentId: value => {
-      if (value) {
-        targetSlot.setAttribute(CONTENT_ID_ATTRIBUTE, value);
-      } else {
-        targetSlot.removeAttribute(CONTENT_ID_ATTRIBUTE);
-      }
-    },
-    transitionTo,
-    resetContent,
-    setDuration,
-    setAlignment,
-    updateAlignment,
-    setPauseBreakpoints: value => {
-      groupTransitionOptions.pauseBreakpoints = value;
-    },
-    cleanup: () => {
-      teardown();
-    }
-  };
-};
-
-/**
- * UITransition
- *
- * A Preact component that enables smooth animated transitions between its children when the content changes.
- * It observes content keys and phases to create different types of transitions.
- *
- * Features:
- * - Content transitions: Between different content keys (e.g., user profiles, search results)
- * - Phase transitions: Between loading/content/error states for the same content key
- * - Automatic size animation to accommodate content changes
- * - Configurable transition types: "slide-left", "cross-fade"
- * - Independent duration control for content and phase transitions
- *
- * Usage:
- * - Wrap dynamic content in <UITransition> to animate between states
- * - Set a unique `data-content-id` on your rendered content to identify each content variant
- * - Use `data-content-phase` to mark loading/error states for phase transitions
- * - Configure transition types and durations for both content and phase changes
- *
- * Example:
- *
- *   <UITransition>
- *     {isLoading
- *       ? <Spinner data-content-key={userId} data-content-phase />
- *       : <UserProfile user={user} data-content-key={userId} />}
- *   </UITransition>
- *
- * When `data-content-id` changes, UITransition animates content transitions.
- * When `data-content-phase` changes for the same key, it animates phase transitions.
- */
-
-const UITransitionContentIdContext = createContext();
-const UITransition = ({
-  children,
-  contentId,
-  type,
-  duration,
-  debugDetection,
-  debugContent,
-  debugSize,
-  disabled,
-  uiTransitionRef,
-  alignX,
-  alignY,
-  ...props
-}) => {
-  const contentIdRef = useRef(contentId);
-  const updateContentId = () => {
-    const uiTransition = uiTransitionRef.current;
-    if (!uiTransition) {
-      return;
-    }
-    const value = contentIdRef.current;
-    uiTransition.updateContentId(value);
-  };
-  const uiTransitionContentIdContextValue = useMemo(() => {
-    const set = new Set();
-    const onSetChange = () => {
-      const value = Array.from(set).join("|");
-      contentIdRef.current = value;
-      updateContentId();
-    };
-    const update = (part, newPart) => {
-      if (!set.has(part)) {
-        if (set.size === 0) {
-          console.warn(`UITransition: content id update "${part}" -> "${newPart}" ignored because content id set is empty`);
-          return;
-        }
-        console.warn(`UITransition: content id update "${part}" -> "${newPart}" ignored because content id not found in set, only got [${Array.from(set).join(", ")}]`);
-        return;
-      }
-      set.delete(part);
-      set.add(newPart);
-      onSetChange();
-    };
-    const add = part => {
-      if (!part) {
-        return;
-      }
-      if (set.has(part)) {
-        return;
-      }
-      set.add(part);
-      onSetChange();
-    };
-    const remove = part => {
-      if (!part) {
-        return;
-      }
-      if (!set.has(part)) {
-        return;
-      }
-      set.delete(part);
-      onSetChange();
-    };
-    return {
-      add,
-      update,
-      remove
-    };
-  }, []);
-  const ref = useRef();
-  const uiTransitionRefDefault = useRef();
-  uiTransitionRef = uiTransitionRef || uiTransitionRefDefault;
-  useLayoutEffect(() => {
-    const uiTransition = createUITransitionController(ref.current, {
-      alignX,
-      alignY
-    });
-    uiTransitionRef.current = uiTransition;
-    return () => {
-      uiTransition.cleanup();
-    };
-  }, [disabled, alignX, alignY]);
-  return jsxs("div", {
-    ref: ref,
-    ...props,
-    className: "ui_transition",
-    "data-disabled": disabled ? "" : undefined,
-    "data-transition-type": type,
-    "data-transition-duration": duration,
-    "data-debug-detection": debugDetection ? "" : undefined,
-    "data-debug-size": debugSize ? "" : undefined,
-    "data-debug-content": debugContent ? "" : undefined,
-    children: [jsxs("div", {
-      className: "ui_transition_active_group",
-      children: [jsx("div", {
-        className: "ui_transition_target_slot",
-        "data-content-id": contentIdRef.current ? contentIdRef.current : undefined,
-        children: jsx(UITransitionContentIdContext.Provider, {
-          value: uiTransitionContentIdContextValue,
-          children: children
-        })
-      }), jsx("div", {
-        className: "ui_transition_outgoing_slot",
-        inert: true
-      })]
-    }), jsxs("div", {
-      className: "ui_transition_previous_group",
-      inert: true,
-      children: [jsx("div", {
-        className: "ui_transition_previous_target_slot"
-      }), jsx("div", {
-        className: "ui_transition_previous_outgoing_slot"
-      })]
-    })]
-  });
-};
-
-/**
- * The goal of this hook is to allow a component to set a "content key"
- * Meaning all content within the component is identified by that key
- *
- * When the key changes, UITransition will be able to detect that and consider the content
- * as changed even if the component is still the same
- *
- * This is used by <Route> to set the content key to the route path
- * When the route becomes inactive it will call useUITransitionContentId(undefined)
- * And if a sibling route becones active it will call useUITransitionContentId with its own path
- *
- */
-const useUITransitionContentId = value => {
-  const contentId = useContext(UITransitionContentIdContext);
-  const valueRef = useRef();
-  if (contentId !== undefined && valueRef.current !== value) {
-    const previousValue = valueRef.current;
-    valueRef.current = value;
-    if (previousValue === undefined) {
-      contentId.add(value);
-    } else {
-      contentId.update(previousValue, value);
-    }
-  }
-  useLayoutEffect(() => {
-    if (contentId === undefined) {
-      return null;
-    }
-    return () => {
-      contentId.remove(valueRef.current);
-    };
-  }, []);
-};
-
 const NEVER_SET = {};
 const useUrlSearchParam = (paramName, defaultValue) => {
   const documentUrl = documentUrlSignal.value;
@@ -15873,6 +15135,8 @@ const anyMatchingRouteSignal = (routes) => {
   });
   return anyMatchingSignal;
 };
+
+const FormContext = createContext();
 
 const renderActionableComponent = (props, {
   Basic,
@@ -19301,23 +18565,39 @@ naviI18n.addAll({
     fr: "Ce champ doit être un nombre.",
     en: "This field must be a number.",
   },
+  "constraint.type.hour.default": {
+    fr: "Ce champ doit contenir un nombre d'heures.",
+    en: "This field must contain a number of hours.",
+  },
+  "constraint.type.minute.default": {
+    fr: "Ce champ doit contenir un nombre de minutes.",
+    en: "This field must contain a number of minutes.",
+  },
+  "constraint.type.second.default": {
+    fr: "Ce champ doit contenir un nombre de secondes.",
+    en: "This field must contain a number of seconds.",
+  },
+  "constraint.type.percentage.default": {
+    fr: "Ce champ doit contenir un pourcentage.",
+    en: "This field must contain a percentage.",
+  },
   "constraint.min.number.default": {
     fr: "Ce nombre doit être <strong>[min]</strong> ou plus.",
     en: "This number must be <strong>[min]</strong> or greater.",
   },
-  "constraint.min.navi_hours.default": {
-    fr: "Les heures doivent être <strong>[min]</strong> ou plus.",
-    en: "The hours must be <strong>[min]</strong> or greater.",
+  "constraint.min.hour.default": {
+    fr: "Le nombre d'heures doit être <strong>[min]</strong> ou plus.",
+    en: "The number of hours must be <strong>[min]</strong> or greater.",
   },
-  "constraint.min.navi_minutes.default": {
-    fr: "Les minutes doivent être <strong>[min]</strong> ou plus.",
-    en: "The minutes must be <strong>[min]</strong> or greater.",
+  "constraint.min.minute.default": {
+    fr: "Le nombre de minutes doit être <strong>[min]</strong> ou plus.",
+    en: "The number of minutes must be <strong>[min]</strong> or greater.",
   },
-  "constraint.min.navi_seconds.default": {
-    fr: "Les secondes doivent être <strong>[min]</strong> ou plus.",
-    en: "The seconds must be <strong>[min]</strong> or greater.",
+  "constraint.min.second.default": {
+    fr: "Le nombre de secondes doit être <strong>[min]</strong> ou plus.",
+    en: "The number of seconds must be <strong>[min]</strong> or greater.",
   },
-  "constraint.min.navi_percentage.default": {
+  "constraint.min.percentage.default": {
     fr: "Le pourcentage doit être <strong>[min]</strong> ou plus.",
     en: "The percentage must be <strong>[min]</strong> or greater.",
   },
@@ -19345,19 +18625,19 @@ naviI18n.addAll({
     fr: "Ce nombre doit être <strong>[max]</strong> ou moins.",
     en: "This number must be <strong>[max]</strong> or less.",
   },
-  "constraint.max.navi_hours.default": {
-    fr: "Les heures doivent être <strong>[max]</strong> ou moins.",
-    en: "The hours must be <strong>[max]</strong> or less.",
+  "constraint.max.hour.default": {
+    fr: "Le nombre d'heures doit être <strong>[max]</strong> ou moins.",
+    en: "The number of hours must be <strong>[max]</strong> or less.",
   },
-  "constraint.max.navi_minutes.default": {
-    fr: "Les minutes doivent être <strong>[max]</strong> ou moins.",
-    en: "The minutes must be <strong>[max]</strong> or less.",
+  "constraint.max.minute.default": {
+    fr: "Le nombre de minutes doit être <strong>[max]</strong> ou moins.",
+    en: "The number of minutes must be <strong>[max]</strong> or less.",
   },
-  "constraint.max.navi_seconds.default": {
-    fr: "Les secondes doivent être <strong>[max]</strong> ou moins.",
-    en: "The seconds must be <strong>[max]</strong> or less.",
+  "constraint.max.second.default": {
+    fr: "Le nombre de secondes doit être <strong>[max]</strong> ou moins.",
+    en: "The number of seconds must be <strong>[max]</strong> or less.",
   },
-  "constraint.max.navi_percentage.default": {
+  "constraint.max.percentage.default": {
     fr: "Le pourcentage doit être <strong>[max]</strong> ou moins.",
     en: "The percentage must be <strong>[max]</strong> or less.",
   },
@@ -19365,31 +18645,31 @@ naviI18n.addAll({
     fr: "Ce nombre doit être un multiple de <strong>[step]</strong> (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
     en: "This number must be a multiple of <strong>[step]</strong> (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
   },
-  "constraint.step.navi_hours.default": {
-    fr: "Les heures doivent être un multiple de <strong>[step]</strong> (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
-    en: "The hours must be a multiple of <strong>[step]</strong> (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
+  "constraint.step.hour.default": {
+    fr: "Le nombre d'heures doit être un multiple de <strong>[step]</strong> (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
+    en: "The number of hours must be a multiple of <strong>[step]</strong> (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
   },
-  "constraint.step.navi_minutes.default": {
-    fr: "Les minutes doivent être un multiple de <strong>[step]</strong> (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
-    en: "The minutes must be a multiple of <strong>[step]</strong> (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
+  "constraint.step.minute.default": {
+    fr: "Le nombre de minutes doit être un multiple de <strong>[step]</strong> (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
+    en: "The number of minutes must be a multiple of <strong>[step]</strong> (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
   },
-  "constraint.step.navi_seconds.default": {
-    fr: "Les secondes doivent être un multiple de <strong>[step]</strong> (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
-    en: "The seconds must be a multiple of <strong>[step]</strong> (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
+  "constraint.step.second.default": {
+    fr: "Le nombre de secondes doit être un multiple de <strong>[step]</strong> (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
+    en: "The number of seconds must be a multiple of <strong>[step]</strong> (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
   },
-  "constraint.step.navi_percentage.default": {
+  "constraint.step.percentage.default": {
     fr: "Le pourcentage doit être un multiple de <strong>[step]</strong> (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
     en: "The percentage must be a multiple of <strong>[step]</strong> (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
   },
-  "constraint.step.time.hours": {
+  "constraint.step.time.hour": {
     fr: "L'heure doit être dans un intervalle de <strong>[step]</strong> heure(s) (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
     en: "The time must be within an interval of <strong>[step]</strong> hour(s) (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
   },
-  "constraint.step.time.minutes": {
+  "constraint.step.time.minute": {
     fr: "L'heure doit être dans un intervalle de <strong>[step]</strong> minute(s) (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
     en: "The time must be within an interval of <strong>[step]</strong> minute(s) (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
   },
-  "constraint.step.time.seconds": {
+  "constraint.step.time.second": {
     fr: "L'heure doit être dans un intervalle de <strong>[step]</strong> seconde(s) (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
     en: "The time must be within an interval of <strong>[step]</strong> second(s) (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
   },
@@ -20434,7 +19714,7 @@ const REQUIRED_CONSTRAINT = {
     if (field.type === "time") {
       return naviI18n("constraint.required.time");
     }
-    if (field.type === "number") {
+    if (field.type === "number" || field.inputMode === "numeric") {
       return naviI18n("constraint.required.number");
     }
     if (field.type === "datetime-local") {
@@ -20588,19 +19868,24 @@ const TYPE_NUMBER_CONSTRAINT = {
     if (field.tagName !== "INPUT") {
       return null;
     }
-    if (field.type !== "number") {
+    const isNumber = field.type === "number" || field.inputMode === "numeric";
+    if (!isNumber) {
       return null;
     }
     if (field.validity.valueMissing) {
       // let required handle that
       return null;
     }
-    const valueAsNumber = field.valueAsNumber;
-    const valueAsNumberIsNaN = isNaN(valueAsNumber);
-    if (valueAsNumberIsNaN) {
-      return naviI18n("constraint.type.number.default");
+    // valueAsNumber only works for type="number"; for inputMode="numeric"
+    // (which is type="text" under the hood) we must parse field.value manually.
+    const numericValue =
+      field.type === "number" ? field.valueAsNumber : Number(field.value);
+    const valueAsNumberIsNaN = isNaN(numericValue);
+    if (!valueAsNumberIsNaN) {
+      return null;
     }
-    return null;
+    const naviInputType = field.getAttribute("navi-input-type");
+    return naviI18n(`constraint.type.${naviInputType || "number"}.default`);
   },
 };
 
@@ -20625,17 +19910,19 @@ const MIN_CONSTRAINT = {
     if (minString === "") {
       return null;
     }
-    if (field.type === "number") {
+    const isNumber = field.type === "number" || field.inputMode === "numeric";
+    if (isNumber) {
       const minNumber = parseFloat(minString);
       if (isNaN(minNumber)) {
         return null;
       }
-      const valueAsNumber = field.valueAsNumber;
+      const valueAsNumber =
+        field.type === "number" ? field.valueAsNumber : Number(field.value);
       if (isNaN(valueAsNumber)) {
         return null;
       }
       if (valueAsNumber < minNumber) {
-        const naviInputType = field.getAttribute("data-navi-input-type");
+        const naviInputType = field.getAttribute("navi-input-type");
         return naviI18n(`constraint.min.${naviInputType || "number"}.default`, {
           min: minString,
         });
@@ -20690,17 +19977,19 @@ const MAX_CONSTRAINT = {
     if (maxString === "") {
       return null;
     }
-    if (field.type === "number") {
+    const isNumber = field.type === "number" || field.inputMode === "numeric";
+    if (isNumber) {
       const maxNumber = parseFloat(maxString);
       if (isNaN(maxNumber)) {
         return null;
       }
-      const valueAsNumber = field.valueAsNumber;
+      const valueAsNumber =
+        field.type === "number" ? field.valueAsNumber : Number(field.value);
       if (isNaN(valueAsNumber)) {
         return null;
       }
       if (valueAsNumber > maxNumber) {
-        const naviInputType = field.getAttribute("data-navi-input-type");
+        const naviInputType = field.getAttribute("navi-input-type");
         return naviI18n(`constraint.max.${naviInputType || "number"}.default`, {
           max: maxString,
         });
@@ -20758,21 +20047,32 @@ const STEP_CONSTRAINT = {
     if (field.tagName !== "INPUT") {
       return null;
     }
-    if (!STEP_SUPPORTED_TYPE_SET.has(field.type)) {
+    const isNumericText =
+      field.type === "text" && field.inputMode === "numeric";
+    if (!isNumericText && !STEP_SUPPORTED_TYPE_SET.has(field.type)) {
       return null;
     }
     const stepString = field.step;
     if (stepString === "" || stepString === "any") {
       return null;
     }
-    if (!field.validity.stepMismatch) {
-      return null;
-    }
-    if (field.type === "number") {
+    const isNumber = field.type === "number" || isNumericText;
+    if (isNumber) {
       const step = parseFloat(stepString);
       const minString = field.min;
       const base = minString !== "" ? parseFloat(minString) : 0;
-      const valueAsNumber = field.valueAsNumber;
+      const valueAsNumber =
+        field.type === "number" ? field.valueAsNumber : Number(field.value);
+      if (isNaN(valueAsNumber)) {
+        return null;
+      }
+      const remainder = (((valueAsNumber - base) % step) + step) % step;
+      // Use a small epsilon to handle floating-point imprecision
+      const epsilon = step * 1e-9;
+      const hasMismatch = remainder > epsilon && remainder < step - epsilon;
+      if (!hasMismatch) {
+        return null;
+      }
       const before = base + Math.floor((valueAsNumber - base) / step) * step;
       const after = before + step;
       const decimals = (stepString.split(".")[1] || "").length;
@@ -20791,6 +20091,9 @@ const STEP_CONSTRAINT = {
         const minString = field.min;
         const baseMs = minString !== "" ? timeStringToMs(minString) : 0;
         const remainder = (((valueMs - baseMs) % stepMs) + stepMs) % stepMs;
+        if (remainder === 0) {
+          return null;
+        }
         const beforeMs = valueMs - remainder;
         const afterMs = beforeMs + stepMs;
         const showSeconds = stepSeconds % 60 !== 0;
@@ -20826,6 +20129,9 @@ const STEP_CONSTRAINT = {
         : new Date(0);
       const valueDate = new Date(`${value}T00:00:00`);
       const diffDays = Math.round((valueDate - baseDate) / 86400000);
+      if (diffDays % step === 0) {
+        return null;
+      }
       const beforeDays = Math.floor(diffDays / step) * step;
       const afterDays = beforeDays + step;
       const beforeDate = new Date(baseDate);
@@ -24904,6 +24210,11 @@ const CONTROL_ATTRIBUTE_SET = new Set([
   "type",
   "value",
   "checked",
+  "placeholder",
+  "inputMode",
+  "autoComplete",
+  "spellcheck",
+  "autoCorrect",
 
   "navi-input-type",
   "navi-control-proxy-for",
@@ -24991,12 +24302,15 @@ const ActionRequesterContext = createContext();
  * @param {{ controlType: string, type: string }} options
  * @returns {any} The DOM-compatible value or a converter function.
  */
-const asControlHostValue = (jsValue, { controlType, type }) => {
-  {
+const asControlHostValue = (
+  jsValue,
+  { controlType, type, inputMode },
+) => {
+  if (controlType === "input") {
     if (type === "datetime-local") {
       return asDatetimeLocalString(jsValue);
     }
-    if (type === "number" || type === "range") {
+    if (type === "number" || type === "range" || inputMode === "numeric") {
       return asNumberString(jsValue);
     }
     if (type === "color") {
@@ -25004,6 +24318,7 @@ const asControlHostValue = (jsValue, { controlType, type }) => {
     }
     return asInputValue(jsValue);
   }
+  return jsValue;
 };
 // As explained in https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/datetime-local#setting_timezones
 // datetime-local does not support timezones
@@ -25066,7 +24381,11 @@ const readControlValue = (controlHost) => {
     // so use getAttribute
     const type = controlHost.getAttribute("type");
 
-    if (type === "number" || type === "range") {
+    if (
+      type === "number" ||
+      type === "range" ||
+      controlHost.inputMode === "numeric"
+    ) {
       return readNumberFromInput(controlHost);
     }
     if (type === "color") {
@@ -25098,7 +24417,7 @@ const readValueFromButton = (button) => {
 const readDatetimeLocalFromInput = (input) => {
   const localDateTimeString = input.value;
   if (localDateTimeString === "") {
-    return undefined;
+    return "";
   }
   const localDate = new Date(localDateTimeString);
   if (isNaN(localDate.getTime())) {
@@ -25109,7 +24428,7 @@ const readDatetimeLocalFromInput = (input) => {
 const readNumberFromInput = (input) => {
   const numberString = input.value;
   if (numberString === "") {
-    return undefined;
+    return "";
   }
   const asNumber = Number(numberString);
   if (isNaN(asNumber)) {
@@ -25264,8 +24583,8 @@ const routeArgs = (args, { event, action, other }) => {
   return other(...args);
 };
 
-const triggerStringAction = (actionName, event, options) => {
-  return resolveActionProp(actionName)(event, options);
+const triggerStringAction = (actionName, ...args) => {
+  return resolveActionProp(actionName)(...args);
 };
 const resolveActionProp = (action) => {
   if (typeof action === "string") {
@@ -25371,12 +24690,14 @@ const requestUnselect = (e, getUnselectParam) => {
  */
 const update = createUICallback({
   name: "update",
-  action: (value, { event }) => {
-    return requestUpdate(event, value);
+  action: (value, { event, actionTarget }) => {
+    return requestUpdate(event, value, { actionTarget });
   },
 });
-const requestUpdate = (event, value, { isClear } = {}) => {
-  const actionTarget = getActionTarget(event);
+const requestUpdate = (event, value, { actionTarget, isClear } = {}) => {
+  if (!actionTarget) {
+    actionTarget = getActionTarget(event);
+  }
   if (!actionTarget) {
     return false;
   }
@@ -25463,8 +24784,8 @@ const requestClosestAction = (event) => {
  */
 const clear = createUICallback({
   name: "clear",
-  event: (event, { skipClose } = {}) => {
-    requestUpdate(event, "", { isClear: true });
+  event: (event, { actionTarget, skipClose } = {}) => {
+    requestUpdate(event, "", { actionTarget, isClear: true });
     if (!skipClose) {
       const expandableEl = event.currentTarget.closest("[aria-expanded]");
       if (expandableEl) {
@@ -25473,8 +24794,8 @@ const clear = createUICallback({
     }
     return true;
   },
-  action: (v, { event }) => {
-    requestUpdate(event, "", { isClear: true });
+  action: (v, { event, actionTarget }) => {
+    requestUpdate(event, "", { actionTarget, isClear: true });
     const expandableEl = event.currentTarget.closest("[aria-expanded]");
     if (expandableEl) {
       return requestClose(event);
@@ -25576,6 +24897,733 @@ const STRING_ACTIONS = {
   clear,
   cancel,
 };
+
+// In-memory registry of all mounted ui state controllers keyed by their id.
+// Allows direct controller access without dispatching DOM events — used by external
+// callers (e.g. selectable_list) to call setUIState by id instead of via the DOM.
+const controllersById = new Map();
+const getUIStateControllerById = (id) => controllersById.get(id);
+
+// In-memory registry for radio controllers, keyed by input name.
+// Allows radio sibling unchecking without querying the DOM — necessary when
+// items are virtualized and their DOM element may not exist at the time.
+// Form scoping is reproduced by comparing parentUIStateController references.
+const radioControllersByName = new Map();
+
+const registerRadioController = (uiStateController) => {
+  const { name } = uiStateController;
+  if (!name) {
+    return;
+  }
+  let set = radioControllersByName.get(name);
+  if (!set) {
+    set = new Set();
+    radioControllersByName.set(name, set);
+  }
+  set.add(uiStateController);
+};
+
+const unregisterRadioController = (uiStateController) => {
+  const { name } = uiStateController;
+  if (!name) {
+    return;
+  }
+  const set = radioControllersByName.get(name);
+  if (!set) {
+    return;
+  }
+  set.delete(uiStateController);
+  if (set.size === 0) {
+    radioControllersByName.delete(name);
+  }
+};
+const debugUIState = (...args) => {
+};
+const debugUIGroup = (...args) => {
+};
+
+const ParentUIStateControllerContext = createContext();
+
+/**
+ * UI State Controller Hook
+ *
+ * Manages the relationship between external state (props) and UI state (what user sees).
+ * Allows UI state to diverge temporarily for responsive interactions, with mechanisms
+ * to sync back to external state when needed.
+ *
+ * Key features:
+ * - Immediate UI updates for responsive interactions
+ * - State divergence with sync capabilities (resetUIState)
+ * - Group integration for coordinated form inputs
+ * - External control via DOM events (navi_set_ui_state / navi_request_reset_ui_state)
+ * - Error recovery and form reset support
+ *
+ * State change flow:
+ * All state changes (interaction, action result, external reset) go through DOM events:
+ * - `navi_set_ui_state` dispatched on the field's DOM element triggers setUIState
+ * - `navi_request_reset_ui_state` dispatched on the field's DOM element resets to controller.state
+ * This ensures any subscriber (e.g. useUIState) receives every state change regardless of origin.
+ *
+ * The controller stores `elementRef` so parent group controllers can dispatch DOM events
+ * directly on child DOM elements when performing group-level operations like resetUIState.
+ */
+const useUIStateController = (
+  props,
+  controlType,
+  {
+    statePropName,
+    defaultStatePropName,
+    fallbackState = undefined,
+    getStateFromProp = (prop) => prop,
+    getPropFromState = (state) => state,
+    getStateFromParent,
+    uiActionInternal,
+    persists,
+    allowNameless = false,
+    debugInteraction,
+  } = {},
+) => {
+  const uiStateControllerRef = useRef();
+  const parentUIStateController = useContext(ParentUIStateControllerContext);
+  const formContext = useContext(FormContext);
+  const { id, name, uiAction, action } = props;
+  const ref = props.ref;
+  const isProxy = Boolean(props["navi-control-proxy-for"]);
+  const hasStateProp = Object.hasOwn(props, statePropName);
+  /**
+   * This check is needed only for basic field because
+   * When using action/form we consider the action/form code
+   * will have a side effect that will re-render the component with the up-to-date state
+   *
+   * In practice we set the checked from the backend state
+   * We use action to fetch the new state and update the local state
+   * The component re-renders so it's the action/form that is considered as responsible
+   * to update the state and as a result allowed to have "checked"/"value" prop without "onUIStateChange"
+   */
+  const uncontrolled =
+    !uiAction &&
+    !action &&
+    !formContext &&
+    !parentUIStateController &&
+    !isProxy;
+  const readOnly = uncontrolled && hasStateProp;
+
+  if (persists === undefined && formContext) {
+    persists = true;
+  }
+  const [navState, setNavState] = useNavState(id);
+  const state = props[statePropName];
+  const stateValue = state;
+  const defaultState = props[defaultStatePropName];
+  const stateInitial = useInitialValue(() => {
+    if (hasStateProp) {
+      // controlled by state prop ("value" or "checked")
+      return getStateFromProp(stateValue);
+    }
+    if (defaultState) {
+      // not controlled but want an initial state (a value or being checked)
+      return getStateFromProp(defaultState);
+    }
+    if (persists && navState) {
+      // not controlled but want to use value from nav state
+      // (I think this should likely move earlier to win over the hasUIStateProp when it's undefined)
+      return getStateFromProp(navState);
+    }
+    if (parentUIStateController && getStateFromParent) {
+      return getStateFromParent(parentUIStateController);
+    }
+    return getStateFromProp(fallbackState);
+  });
+  const isRadio = controlType === "input" && props.type === "radio";
+
+  const [
+    notifyParentAboutChildMount,
+    notifyParentAboutChildUIStateChange,
+    notifyParentAboutChildUnmount,
+  ] = useParentControllerNotifiers(
+    parentUIStateController,
+    uiStateControllerRef);
+  useLayoutEffect(() => {
+    const controller = uiStateControllerRef.current;
+    if (id) {
+      controllersById.set(id, controller);
+    }
+    notifyParentAboutChildMount();
+    if (isRadio) {
+      registerRadioController(controller);
+    }
+    return () => {
+      if (id) {
+        controllersById.delete(id);
+      }
+      notifyParentAboutChildUnmount();
+      if (isRadio) {
+        unregisterRadioController(controller);
+      }
+    };
+  }, []);
+
+  const existingUIStateController = uiStateControllerRef.current;
+  if (existingUIStateController) {
+    existingUIStateController._checkForUpdates({
+      readOnly,
+      name,
+      getPropFromState,
+      getStateFromProp,
+      hasStateProp,
+      stateInitial,
+      state,
+      props,
+    });
+    return existingUIStateController;
+  }
+  debugUIState(
+    `Creating "${controlType}" ui state controller - initial state:`,
+    JSON.stringify(stateInitial),
+  );
+  const [publishUIState, subscribeUIState] = createPubSub();
+  const ownUIStateSignal = signal(stateInitial);
+  const inherit =
+    controlType === "button" && !hasStateProp && parentUIStateController;
+  const uiStateSignal = inherit
+    ? computed(() => {
+        const parentUIState = parentUIStateController.uiStateSignal.value;
+        const ownUIState = ownUIStateSignal.value;
+        return ownUIState || parentUIState;
+      })
+    : ownUIStateSignal;
+
+  const uiStateController = {
+    _checkForUpdates: ({
+      readOnly,
+      name,
+      getPropFromState,
+      getStateFromProp,
+      hasStateProp,
+      stateInitial,
+      state,
+      props,
+    }) => {
+      uiStateController.readOnly = readOnly;
+      uiStateController.name = name;
+      uiStateController.getPropFromState = getPropFromState;
+      uiStateController.getStateFromProp = getStateFromProp;
+      uiStateController.stateInitial = stateInitial;
+      uiStateController.props = props;
+
+      if (hasStateProp) {
+        uiStateController.hasStateProp = true;
+        const currentState = uiStateController.state;
+        const stateFromProp = getStateFromProp(state);
+        if (stateFromProp !== currentState) {
+          uiStateController.state = stateFromProp;
+          uiStateController.setUIState(
+            uiStateController.getPropFromState(state),
+            new CustomEvent("state_prop", {
+              detail: { internalBehavior: true },
+            }),
+          );
+        }
+      } else if (uiStateController.hasStateProp) {
+        uiStateController.hasStateProp = false;
+        uiStateController.state = uiStateController.stateInitial;
+      }
+    },
+
+    id,
+    controlType,
+    parentUIStateController,
+    isProxy,
+    allowNameless,
+    readOnly,
+    name,
+    props,
+    statePropName,
+    defaultStatePropName,
+    hasStateProp,
+    state: stateInitial,
+    uiState: stateInitial,
+    uiStateSignal,
+    elementRef: ref,
+    getPropFromState,
+    getStateFromProp,
+    toControlHostValue: (jsValue) => {
+      return asControlHostValue(jsValue, {
+        controlType,
+        type: uiStateController.props.type,
+        inputMode: uiStateController.props.inputMode,
+      });
+    },
+    setUIState: (prop, e) => {
+      const newUIState = uiStateController.getStateFromProp(prop);
+      const controllerSig = getElementSignature(e.currentTarget || ref.current);
+      if (persists) {
+        setNavState(prop);
+      }
+      const currentUIState = uiStateController.uiState;
+      const stateIsTheSame = compareTwoJsValues(newUIState, currentUIState);
+      if (stateIsTheSame) {
+        if (controlType === "button") {
+          debugInteraction(
+            e,
+            `${controllerSig}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> trigger button action`,
+          );
+          uiActionInternal?.(newUIState, e);
+          uiAction?.(newUIState, e);
+          return true;
+        }
+        debugInteraction(
+          e,
+          `${controllerSig}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> state unchanged, no update needed`,
+        );
+        return false;
+      }
+      debugInteraction(
+        e,
+        `${controllerSig}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> updating from ${JSON.stringify(currentUIState)}`,
+      );
+      const el = ref.current;
+      if (el) {
+        // set immediatly (don't wait for preact re-render) so ui is in the right state for:
+        // - side effect
+        // - any "input" event that might be dispatched below
+        const propValue = uiStateController.getPropFromState(newUIState);
+        debugInteraction(
+          e,
+          `[${statePropName}] = ${JSON.stringify(propValue)};`,
+        );
+        el[statePropName] = uiStateController.toControlHostValue(propValue);
+      }
+      uiStateController.uiState = newUIState;
+      ownUIStateSignal.value = newUIState;
+      // Radio group: when a radio becomes checked, uncheck all siblings.
+      // We only update their UIState — no parent notification, no synthetic
+      // input event (the browser never fires input on the unchecked radios,
+      // and we don't want to trigger their action flow with a stale DOM value).
+      // Uses the in-memory registry instead of DOM queries so this works even
+      // when sibling items are virtualized (not in the DOM).
+      // Form scoping is preserved by comparing parentUIStateController references.
+      const controlProxyFor = uiStateController.props["navi-control-proxy-for"];
+      if (isRadio && newUIState && uiStateController.name && !controlProxyFor) {
+        const siblings = radioControllersByName.get(uiStateController.name);
+        if (siblings) {
+          const siblingUncheckEvent = new CustomEvent("radio_sibling_uncheck", {
+            detail: { event: e, internalBehavior: true },
+          });
+          for (const siblingController of siblings) {
+            if (siblingController === uiStateController) {
+              continue;
+            }
+            if (
+              siblingController.parentUIStateController !==
+              parentUIStateController
+            ) {
+              continue;
+            }
+            siblingController.setUIState(false, siblingUncheckEvent);
+          }
+        }
+      }
+      debugInteraction(e, `publishUIState(${JSON.stringify(newUIState)})`);
+      publishUIState(newUIState, e);
+      // Always notify the element that its UI state changed.
+      // Listeners use this to stay in sync (e.g. input_effect.js tracks currentState,
+      // useUIState subscribes for reactive updates). Separate from navi_set_ui_state
+      // which is the command; navi_ui_state_change is the notification.
+      if (el) {
+        dispatchInternalCustomEvent(el, "navi_ui_state_change", {
+          event: e,
+          value: newUIState,
+        });
+      }
+      // When this controller is a real input that has a visible proxy
+      // (linked via `navi-control-proxy-for`), mirror the new state to the
+      // proxy DOM synchronously. Otherwise the proxy would only catch up
+      // later through a React re-render — visible as e.g. two radios
+      // appearing checked at once between the real input update and the
+      // next render (radio_sibling_uncheck case).
+      if (el && !controlProxyFor) {
+        const proxyEl = findControlProxy(el);
+        if (proxyEl) {
+          const propValue = uiStateController.getPropFromState(newUIState);
+          proxyEl[statePropName] = propValue;
+          // Also notify the proxy's controller so it can stay in sync with
+          // state changes that originate from the real input (e.g. radio_sibling_uncheck).
+          // Without this the proxy only learns about deselection later via state_prop
+          // (Preact re-render), too late for lastActionValueRef to be updated.
+          dispatchInternalCustomEvent(proxyEl, "navi_ui_state_change", {
+            event: e,
+            value: newUIState,
+          });
+        }
+      }
+      const internalBehavior = e.detail?.internalBehavior;
+      if (internalBehavior) {
+        return true;
+      }
+      notifyParentAboutChildUIStateChange(e);
+      if (controlProxyFor) {
+        // Proxy: forward the state change to the real input
+        // The real input will handle its own UIState update + synthetic input.
+        const targetController = getUIStateControllerById(controlProxyFor);
+        if (targetController) {
+          debugInteraction(
+            e,
+            `forwarding set_ui_state "${prop}" to ${getElementSignature(targetController.elementRef.current)}`,
+          );
+          targetController.setUIState(prop, e);
+        }
+      }
+      if (el) {
+        // Dispatch a synthetic "input" event so external listeners see the new
+        // value. Skip when an input event on this element already exists in the chain.
+        const existingInputEvent = findEvent(e, (eInChain) => {
+          return eInChain.type === "input" && eInChain.target === el;
+        });
+        if (!existingInputEvent) {
+          if (el.tagName === "INPUT") {
+            if (el.type === "radio" || el.type === "checkbox") {
+              debugInteraction(
+                e,
+                "dispatching synthetic input event without data for checkbox/radio",
+              );
+              el.dispatchEvent(new Event("input", { bubbles: true }));
+            } else {
+              debugInteraction(
+                e,
+                `dispatching synthetic input event with data "${newUIState}" for input`,
+              );
+              el.dispatchEvent(
+                new InputEvent("input", {
+                  bubbles: true,
+                  cancelable: true,
+                  inputType: "insertText",
+                  data: newUIState,
+                }),
+              );
+            }
+          }
+          // TODO: select, textarea
+        }
+      }
+      uiActionInternal?.(newUIState, e);
+      uiAction?.(newUIState, e);
+      return true;
+    },
+    resetUIState: (e) => {
+      dispatchRequestSetUIState(e.currentTarget, uiStateController.state, {
+        event: e,
+      });
+    },
+    actionEnd: () => {
+      if (persists) {
+        setNavState(undefined);
+      }
+    },
+    subscribe: subscribeUIState,
+  };
+  uiStateControllerRef.current = uiStateController;
+  // Register synchronously during render so getUIStateControllerById works
+  // immediately in the same render cycle (e.g. InputTextualUI reading uiState).
+  if (id) {
+    controllersById.set(id, uiStateController);
+  }
+  return uiStateController;
+};
+
+const NO_PARENT = [() => {}, () => {}, () => {}];
+const useParentControllerNotifiers = (
+  parentUIStateController,
+  uiStateControllerRef,
+  controlType,
+) => {
+  return useMemo(() => {
+    if (!parentUIStateController) {
+      return NO_PARENT;
+    }
+
+    parentUIStateController.controlType;
+    const notifyParentAboutChildMount = () => {
+      const uiStateController = uiStateControllerRef.current;
+      parentUIStateController.registerChild(uiStateController);
+    };
+
+    const notifyParentAboutChildUIStateChange = (e) => {
+      const uiStateController = uiStateControllerRef.current;
+      parentUIStateController.onChildUIStateChange(uiStateController, e);
+    };
+
+    const notifyParentAboutChildUnmount = () => {
+      const uiStateController = uiStateControllerRef.current;
+      parentUIStateController.unregisterChild(uiStateController);
+    };
+
+    return [
+      notifyParentAboutChildMount,
+      notifyParentAboutChildUIStateChange,
+      notifyParentAboutChildUnmount,
+    ];
+  }, []);
+};
+
+/**
+ * UI Group State Controller Hook
+ *
+ * This hook manages a collection of child UI state controllers and aggregates their states
+ * into a unified group state. It provides a way to coordinate multiple form inputs that
+ * work together as a logical unit.
+ *
+ * What it provides:
+ *
+ * 1. **Child State Aggregation**:
+ *    - Collects state from multiple child UI controllers
+ *    - Combines them into a single meaningful group state
+ *    - Updates group state automatically when any child changes
+ *
+ * 2. **Child Filtering**:
+ *    - Can filter which child controllers to include based on component type
+ *    - Useful for mixed content where only specific inputs matter
+ *    - Enables type-safe aggregation patterns
+ *
+ * 3. **Group Operations**:
+ *    - Provides `resetUIState()` that cascades to all monitored children
+ *    - Dispatches `navi_request_reset_ui_state` DOM events on each child's DOM element
+ *    - Children handle the event independently, allowing nested groups to cascade further
+ *    - Enables group-level operations like "clear all" or "reset form section"
+ *
+ * 4. **External State Management**:
+ *    - Notifies external code of group state changes via `onUIStateChange`
+ *    - Allows external systems to react to group-level state changes
+ *    - Supports complex form validation and submission logic
+ *
+ * Why use it:
+ * - When you have multiple related inputs that should be treated as one logical unit
+ * - For implementing checkbox lists, radio groups, or form sections
+ * - When you need to perform operations on multiple inputs simultaneously
+ * - To aggregate input states for validation or submission
+ *
+ * How it works:
+ * - Child controllers automatically register themselves when mounted
+ * - Group controller listens for child state changes and re-aggregates
+ * - Custom aggregation function determines how child states combine
+ * - Group state updates trigger notifications to external code
+ *
+ * @param {Object} props - Component props containing onUIStateChange callback
+ * @param {string} controlType - Type identifier for this group controller
+ * @param {Object} config - Configuration object
+ * @param {string} [config.childControlType] - Filter children by this type (e.g., "checkbox")
+ * @param {Function} config.aggregateChildStates - Function to aggregate child states
+ * @param {any} [config.emptyState] - State to use when no children have values
+ * @returns {Object} UI group state controller
+ *
+ * Usage Examples:
+ * - **Checkbox List**: Aggregates multiple checkboxes into array of checked values
+ * - **Radio Group**: Manages radio buttons to ensure single selection
+ * - **Form Section**: Groups related inputs for validation and reset operations
+ * - **Dynamic Lists**: Handles variable number of repeated input groups
+ */
+const useUIGroupStateController = (
+  props,
+  controlType,
+  { stateType, childControlFilter, aggregateChildStates, debugAction },
+) => {
+  if (typeof aggregateChildStates !== "function") {
+    throw new TypeError("aggregateChildStates must be a function");
+  }
+  const parentUIStateController = useContext(ParentUIStateControllerContext);
+  const { id, name, value } = props;
+  const ref = props.ref;
+  const fallbackState =
+    stateType === "array"
+      ? EMPTY_ARRAY
+      : stateType === "object"
+        ? EMPTY_OBJECT
+        : undefined;
+  const childUIStateControllerArrayRef = useRef([]);
+  const childUIStateControllerArray = childUIStateControllerArrayRef.current;
+  const uiStateControllerRef = useRef();
+
+  const groupIsRenderingRef = useRef(false);
+  const pendingChangeRef = useRef(false);
+  groupIsRenderingRef.current = true;
+  pendingChangeRef.current = false;
+
+  const [
+    notifyParentAboutChildMount,
+    notifyParentAboutChildUIStateChange,
+    notifyParentAboutChildUnmount,
+  ] = useParentControllerNotifiers(
+    parentUIStateController,
+    uiStateControllerRef);
+  useLayoutEffect(() => {
+    if (id) {
+      controllersById.set(id, uiStateControllerRef.current);
+    }
+    notifyParentAboutChildMount();
+    return () => {
+      if (id) {
+        controllersById.delete(id);
+      }
+      notifyParentAboutChildUnmount();
+    };
+  }, []);
+
+  const onChange = (_, e, { notifyExternal = true } = {}) => {
+    if (groupIsRenderingRef.current) {
+      pendingChangeRef.current = true;
+      return;
+    }
+    const aggChildState = aggregateChildStates(
+      childUIStateControllerArray,
+      fallbackState,
+    );
+    const groupUIState =
+      aggChildState === undefined ? fallbackState : aggChildState;
+    debugAction(
+      e,
+      `${controlType}.getUIState -> ${JSON.stringify(groupUIState)}`,
+    );
+    const uiStateController = uiStateControllerRef.current;
+    uiStateController.setUIState(groupUIState, e, { notifyExternal });
+  };
+
+  useLayoutEffect(() => {
+    groupIsRenderingRef.current = false;
+    if (pendingChangeRef.current) {
+      pendingChangeRef.current = false;
+      onChange(
+        null,
+        new CustomEvent(`${controlType}_batched_ui_state_update`),
+        { notifyExternal: false },
+      );
+    }
+  });
+
+  const existingUIStateController = uiStateControllerRef.current;
+  if (existingUIStateController) {
+    existingUIStateController.id = id;
+    existingUIStateController.name = name;
+    existingUIStateController.value = value;
+    return existingUIStateController;
+  }
+
+  const [publishUIState, subscribeUIState] = createPubSub();
+  const uiStateSignal = signal(fallbackState);
+  const isMonitoringChild = (childUIStateController) => {
+    if (childUIStateController.isProxy) {
+      return false;
+    }
+    if (childControlFilter && !childControlFilter(childUIStateController)) {
+      return false;
+    }
+    return true;
+  };
+  const uiStateController = {
+    controlType,
+    id,
+    name,
+    value,
+    uiState: fallbackState,
+    uiStateSignal,
+    elementRef: ref,
+    getPropFromState: (uiState) => uiState,
+    setUIState: (newUIState, e, { notifyExternal = true } = {}) => {
+      const currentUIState = uiStateController.uiState;
+      if (newUIState === currentUIState) {
+        return;
+      }
+      uiStateController.uiState = newUIState;
+      uiStateSignal.value = newUIState;
+      debugUIGroup(
+        `${controlType}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> updates from ${JSON.stringify(currentUIState)} to ${JSON.stringify(newUIState)}`,
+      );
+      publishUIState(newUIState);
+      if (notifyExternal) {
+        notifyParentAboutChildUIStateChange(e);
+      }
+    },
+    registerChild: (childUIStateController) => {
+      if (!isMonitoringChild(childUIStateController)) {
+        return;
+      }
+      const childControlType = childUIStateController.controlType;
+      childUIStateControllerArray.push(childUIStateController);
+      debugUIGroup(
+        `${controlType}.registerChild("${childControlType}") -> registered (total: ${childUIStateControllerArray.length})`,
+      );
+      onChange(
+        childUIStateController,
+        new CustomEvent(`${childControlType}_mount`),
+        { notifyExternal: false },
+      );
+    },
+    onChildUIStateChange: (childUIStateController, e) => {
+      if (!isMonitoringChild(childUIStateController)) {
+        return;
+      }
+      const childControlType = childUIStateController.controlType;
+      debugUIGroup(
+        `${controlType}.onChildUIStateChange("${childControlType}") to ${JSON.stringify(
+          childUIStateController.uiState,
+        )}`,
+      );
+      onChange(childUIStateController, e);
+    },
+    unregisterChild: (childUIStateController) => {
+      if (!isMonitoringChild(childUIStateController)) {
+        return;
+      }
+      const childControlType = childUIStateController.controlType;
+      const index = childUIStateControllerArray.indexOf(childUIStateController);
+      if (index === -1) {
+        return;
+      }
+      childUIStateControllerArray.splice(index, 1);
+      debugUIGroup(
+        `${controlType}.unregisterChild("${childControlType}") -> unregisteed (remaining: ${childUIStateControllerArray.length})`,
+      );
+      onChange(
+        childUIStateController,
+        new CustomEvent(`${childControlType}_unmount`),
+        { notifyExternal: false },
+      );
+    },
+    resetUIState: (e) => {
+      for (const childUIStateController of childUIStateControllerArray) {
+        if (!isMonitoringChild(childUIStateController)) {
+          continue;
+        }
+        const el = childUIStateController.elementRef?.current;
+        if (el) {
+          dispatchRequestResetUIState(el, e);
+        }
+      }
+    },
+    actionEnd: (e) => {
+      for (const childUIStateController of childUIStateControllerArray) {
+        childUIStateController.actionEnd(e);
+      }
+    },
+    findChildById: (id) => {
+      for (const childUIStateController of childUIStateControllerArray) {
+        if (childUIStateController.id === id) {
+          return childUIStateController;
+        }
+      }
+      return null;
+    },
+    subscribe: subscribeUIState,
+  };
+  uiStateControllerRef.current = uiStateController;
+  if (id) {
+    controllersById.set(id, uiStateController);
+  }
+  return uiStateController;
+};
+// Stable reference for an empty selection so the action always receives an
+// array (never undefined) and callers don't get a new reference each render.
+const EMPTY_ARRAY = [];
+const EMPTY_OBJECT = {};
 
 /**
  * Installs a navi_constraint_message event listener on the given element.
@@ -25745,7 +25793,7 @@ const useControlProps = (props, {
     uiActionInternal
   });
   const [boundAction] = useActionBoundToOneParam(resolveActionProp(props.action), uiStateController.uiStateSignal);
-  const [controlProps, remainingProps, ControlChildrenWrapper] = useInteractiveProps(props, {
+  const [controlProps, remainingProps] = useInteractiveProps(props, {
     uiStateController,
     boundAction,
     readOnlySupported
@@ -25939,6 +25987,10 @@ const useControlProps = (props, {
       props.onClick?.(e);
       applyInteraction(clickInteraction, e);
       transferFocusToTarget(e);
+      if (controlType === "button" && e.currentTarget.form) {
+        // prevent form submission
+        e.preventDefault();
+      }
     };
     const onKeyDown = e => {
       props.onKeyDown?.(e);
@@ -25986,7 +26038,7 @@ const useControlProps = (props, {
       onInput
     });
   }
-  return [controlProps, remainingProps, ControlChildrenWrapper];
+  return [controlProps, remainingProps];
 };
 
 /**
@@ -26009,7 +26061,8 @@ const useControlgroupProps = (props, {
   aggregateChildStates
 }) => {
   const {
-    action
+    action,
+    uiAction
   } = props;
   const debugAction = useDebugAction();
   const uiGroupStateController = useUIGroupStateController(props, controlType, {
@@ -26018,6 +26071,13 @@ const useControlgroupProps = (props, {
     aggregateChildStates,
     debugAction
   });
+  const uiActionRef = useRef(uiAction);
+  uiActionRef.current = uiAction;
+  useLayoutEffect(() => {
+    return uiGroupStateController.subscribe(newState => {
+      uiActionRef.current?.(newState);
+    });
+  }, [uiGroupStateController]);
   const [boundAction] = useActionBoundToOneParam(resolveActionProp(action), uiGroupStateController.uiStateSignal);
   const [actionRequester, setActionRequester] = useState();
   const [controlgroupProps, remainingProps] = useInteractiveProps(props, {
@@ -26030,7 +26090,7 @@ const useControlgroupProps = (props, {
   const disabled = basePseudoState[":disabled"];
   const readOnly = basePseudoState[":read-only"];
   const loading = basePseudoState[":-navi-loading"];
-  const childrenWrapperProps = useMemo(() => ({
+  const controlgroupChildrenWrapperProps = useMemo(() => ({
     uiGroupStateController,
     name: controlgroupProps.name,
     required: controlgroupProps.required,
@@ -26050,7 +26110,7 @@ const useControlgroupProps = (props, {
       setActionRequester(e.detail.requester);
       controlgroupProps.onnavi_action_allowed(e);
     }
-  }, remainingProps, childrenWrapperProps, uiGroupStateController];
+  }, remainingProps, controlgroupChildrenWrapperProps];
 };
 const useInteractiveProps = (props, {
   uiStateController,
@@ -26172,7 +26232,8 @@ const useInteractiveProps = (props, {
     } = uiStateController;
     if (statePropName) {
       const statePropValueRaw = uiStateController.getPropFromState(uiState);
-      controlProps[statePropName] = statePropValueRaw;
+      const statePropValueDom = uiStateController.toControlHostValue(statePropValueRaw);
+      controlProps[statePropName] = statePropValueDom;
       if (statePropName === "checked") {
         const {
           value
@@ -26350,7 +26411,7 @@ const useInteractiveProps = (props, {
       }
     });
   }
-  return [controlProps, remainingProps, ControlChildrenWrapper];
+  return [controlProps, remainingProps];
 };
 
 installImportMetaCssBuild(import.meta);const css$I = /* css */`
@@ -26622,7 +26683,7 @@ const ButtonUI = props => {
     discrete = icon && !revealOnInteraction,
     spacing
   } = props;
-  const [buttonProps, remainingProps, ControlChildrenWrapper] = useControlProps(props, {
+  const [buttonProps, remainingProps] = useControlProps(props, {
     controlType: "button",
     statePropName: "value",
     allowNameless: true
@@ -28039,7 +28100,7 @@ const DetailsField = props => {
     closeKeyShortcut = "ArrowLeft",
     onToggle
   } = props;
-  const [detailsProps, remainingProps, ControlChildrenWrapper] = useControlProps({
+  const [detailsProps, remainingProps] = useControlProps({
     resetOnCancel: true,
     resetOnAbort: true,
     resetOnError: true,
@@ -29381,56 +29442,166 @@ const getNowHoursRoundedToStep = (stepMinutes, offsetMinutes = 0) => {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 };
 
-/**
- * resolveInputProps — normalizes input-related props that are shared across
- * `<Picker>`, `<Input>` (textual) and `<Range>`. Mutates the props object in place.
- *
- * Currently it normalizes:
- * - `min` / `max`: accepts a `Date` instance and converts it to the string
- *   format the native input expects, based on `props.type`. Picker aliases
- *   (`day`, `datetime`) are mapped to their native equivalent (`date`,
- *   `datetime-local`).
- * - `step`: for time-based types (`time`, `datetime-local`/`datetime`)
- *   accepts an `"HH:MM"` string and converts it to seconds.
- * - Navi conceptual number types (`navi_hours`, `navi_minutes`, `navi_seconds`,
- *   `navi_percentage`): converted to `type="number"` with sensible min/max/step
- *   defaults and a `data-navi-input-type` attribute for constraint messages.
- */
-const resolveInputProps = (props) => {
-  const naviTypeDefaults = NAVI_NUMBER_TYPE_DEFAULTS[props.type];
-  if (naviTypeDefaults) {
-    props["navi-input-type"] = props.type;
-    props.type = naviTypeDefaults.type;
-    if (props.min === undefined) {
-      props.min = naviTypeDefaults.min;
-    }
-    if (props.max === undefined) {
-      props.max = naviTypeDefaults.max;
-    }
-    if (props.step === undefined) {
-      props.step = naviTypeDefaults.step;
-    }
-  }
-  const { type } = props;
-  const minMaxFormatter = MIN_MAX_FORMATTER_BY_TYPE[type];
-  const stepFormatter = STEP_FORMATTER_BY_TYPE[type];
-  if (minMaxFormatter) {
-    props.min = minMaxFormatter(props.min);
-    props.max = minMaxFormatter(props.max);
-  }
-  if (stepFormatter) {
-    props.step = stepFormatter(props.step);
-  }
+// Maps validity type names → navi input type names
+const VALIDITY_TYPE_TO_INPUT_TYPE = {
+  hour: "navi_hour",
+  minute: "navi_minute",
+  second: "navi_second",
+  percentage: "navi_percentage",
 };
 
 // Conceptual number types: define defaults and map to native type="number".
 // The `data-navi-input-type` attribute is set so constraint messages can use
 // domain-specific wording instead of the generic "Ce nombre doit être...".
-const NAVI_NUMBER_TYPE_DEFAULTS = {
-  navi_hours: { type: "number", min: 0, max: 23, step: 1 },
-  navi_minutes: { type: "number", min: 0, max: 59, step: 1 },
-  navi_seconds: { type: "number", min: 0, max: 59, step: 1 },
-  navi_percentage: { type: "number", min: 0, max: 100, step: 1 },
+const NAVI_TYPE_DEFAULTS = {
+  navi_time: {
+    "type": "time",
+    "navi-input-type": "time",
+    "min": 0,
+    "max": 24 * 3600 - 1,
+    "step": 1,
+  },
+  navi_hour: {
+    "type": "navi_number",
+    "navi-input-type": "hour",
+    "min": 0,
+    "max": 23,
+    "step": 1,
+  },
+  navi_minute: {
+    "type": "navi_number",
+    "navi-input-type": "minute",
+    "min": 0,
+    "max": 59,
+    "step": 1,
+  },
+  navi_second: {
+    "type": "navi_number",
+    "navi-input-type": "second",
+    "min": 0,
+    "max": 59,
+    "step": 1,
+  },
+  navi_percentage: {
+    "type": "navi_number",
+    "navi-input-type": "percentage",
+    "min": 0,
+    "max": 100,
+    "step": 1,
+  },
+  navi_number: {
+    type: "text",
+    inputMode: "numeric",
+    autoCorrect: "off",
+    spellcheck: "false",
+    autoComplete: "off",
+  },
+};
+
+/**
+ * resolveInputProps — normalizes input-related props that are shared across
+ * `<Picker>`, `<Input>` (textual) and `<Range>`. Mutates the props object in place.
+ *
+ * Normalization is applied recursively: a navi type may resolve to another navi
+ * type (e.g. `navi_hour` → `navi_number` → `text`), and each step applies its
+ * own formatters and defaults before moving to the next.
+ *
+ * Steps applied for each type:
+ * 1. Record the original navi type in `props["navi-input-type"]` (first call only).
+ * 2. Apply defaults for the current type (min, max, step, and any other props),
+ *    only when the prop is not already set.
+ * 3. Apply min/max formatters (e.g. HH:MM string → number for duration types,
+ *    Date → formatted string for date/time types).
+ * 4. Apply step formatter (same conversion rules).
+ * 5. Remap `props.type` to the target type defined by the current type's defaults,
+ *    then recurse.
+ *
+ * Supported navi types and their targets:
+ * - `navi_hour`       → `navi_number`  (HH:MM strings accepted for min/max/step → hours as float)
+ * - `navi_minute`     → `navi_number`  (HH:MM strings → total minutes as integer)
+ * - `navi_second`     → `navi_number`  (HH:MM strings → total seconds as integer)
+ * - `navi_percentage` → `navi_number`  (0–100, step 1)
+ * - `navi_number`     → `text`         (inputMode="numeric", no spin buttons implied)
+ * - `navi_time`       → `time`         (step in seconds)
+ *
+ * Standard HTML input types with formatters:
+ * - `date`, `month`, `week`, `time`, `datetime-local`, `datetime`:
+ *   min/max accept `Date` instances or timestamps and are converted to the
+ *   string format expected by the native input.
+ * - `time`, `datetime-local`, `datetime`:
+ *   step accepts `"HH:MM"` and is converted to seconds.
+ */
+const resolveInputProps = (props) => {
+  // If value is a stateSignal, pull type/min/max/step defaults from the signal's options.
+  // Explicit props take precedence over signal options.
+  const valueSignal = props.value;
+  if (isSignal(valueSignal) && valueSignal.options) {
+    const signalOptions = valueSignal.options;
+    for (const key of ["min", "max", "step"]) {
+      if (props[key] === undefined && signalOptions[key] !== undefined) {
+        props[key] = signalOptions[key];
+      }
+    }
+    if (props.type === undefined && signalOptions.type !== undefined) {
+      props.type =
+        VALIDITY_TYPE_TO_INPUT_TYPE[signalOptions.type] ?? signalOptions.type;
+    }
+  }
+
+  const currentType = props.type;
+  const currentTypeDefaults = NAVI_TYPE_DEFAULTS[currentType];
+  if (!currentTypeDefaults) {
+    return;
+  }
+  for (const key of Object.keys(currentTypeDefaults)) {
+    if (props[key] === undefined) {
+      props[key] = currentTypeDefaults[key];
+    }
+  }
+  // Apply formatters for the original navi type before remapping
+  const currentTypeMinMaxFormatter = MIN_MAX_FORMATTER_BY_TYPE[currentType];
+  const currentTypeStepFormatter = STEP_FORMATTER_BY_TYPE[currentType];
+  if (currentTypeMinMaxFormatter) {
+    props.min = currentTypeMinMaxFormatter(props.min);
+    props.max = currentTypeMinMaxFormatter(props.max);
+  }
+  if (currentTypeStepFormatter) {
+    props.step = currentTypeStepFormatter(props.step);
+  }
+  const targetType = currentTypeDefaults.type;
+  props.type = targetType;
+  resolveInputProps(props);
+};
+
+const timeStringToMinutes = (value) => {
+  if (typeof value !== "string") {
+    return value;
+  }
+  const seconds = parseDurationToSeconds(value);
+  if (seconds !== null) {
+    return seconds / 60;
+  }
+  return value;
+};
+const timeStringToHours = (value) => {
+  if (typeof value !== "string") {
+    return value;
+  }
+  const seconds = parseDurationToSeconds(value);
+  if (seconds !== null) {
+    return seconds / 3600;
+  }
+  return value;
+};
+const timeStringToSeconds = (value) => {
+  if (typeof value !== "string") {
+    return value;
+  }
+  const seconds = parseDurationToSeconds(value);
+  if (seconds !== null) {
+    return seconds;
+  }
+  return value;
 };
 
 const normalizeToDate = (value) => {
@@ -29504,6 +29675,9 @@ const toInputDatetime = (value) => {
 };
 
 const MIN_MAX_FORMATTER_BY_TYPE = {
+  "navi_minute": timeStringToMinutes,
+  "navi_hour": timeStringToHours,
+  "navi_second": timeStringToSeconds,
   "date": toInputDate,
   "month": toInputMonth,
   "week": toInputWeek,
@@ -29511,8 +29685,10 @@ const MIN_MAX_FORMATTER_BY_TYPE = {
   "datetime-local": toInputDatetime,
   "datetime": toInputDatetime,
 };
-
 const STEP_FORMATTER_BY_TYPE = {
+  "navi_minute": timeStringToMinutes,
+  "navi_hour": timeStringToHours,
+  "navi_second": timeStringToSeconds,
   "time": parseStepToSeconds,
   "datetime-local": parseStepToSeconds,
   "datetime": parseStepToSeconds,
@@ -29879,17 +30055,6 @@ const RangeStyleCSSVars = {
 const RangePseudoClasses = [":hover", ":active", ":-navi-pressed", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
 const RangePseudoElements = ["::-navi-loader"];
 
-const SearchSvg = () => jsx("svg", {
-  viewBox: "0 0 24 24",
-  xmlns: "http://www.w3.org/2000/svg",
-  children: jsx("path", {
-    d: "M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z",
-    fill: "currentColor"
-  })
-});
-
-const InputTextualContext = createContext(null);
-
 installImportMetaCssBuild(import.meta);const css$x = /* css */`
   @layer navi {
     [data-navi-field] {
@@ -30114,6 +30279,46 @@ const Label = props => {
 };
 const LabelPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
 
+const InputTextualContext = createContext(null);
+
+const InputLeftSlot = props => {
+  return jsx(InputSlot, {
+    ...props,
+    side: "left"
+  });
+};
+const InputRightSlot = props => {
+  return jsx(InputSlot, {
+    ...props,
+    side: "right"
+  });
+};
+const InputIconSlot = ({
+  children,
+  side = "right",
+  ...props
+}) => {
+  return jsx(InputSlot, {
+    side: side,
+    children: jsx(Icon, {
+      ...props,
+      children: children
+    })
+  });
+};
+const InputUnitSlot = ({
+  children,
+  side = "right",
+  ...props
+}) => {
+  return jsx(InputSlot, {
+    side: side,
+    marginLeft: "xxs",
+    noWrap: true,
+    ...props,
+    children: children
+  });
+};
 const InputSlot = ({
   side,
   onClick,
@@ -30159,16 +30364,275 @@ const InputSlot = ({
     ...props
   });
 };
-const InputLeftSlot = props => {
-  return jsx(InputSlot, {
-    ...props,
-    side: "left"
+
+const InputNaviHourResolver = props => {
+  const Next = useNextResolver();
+  if (props["navi-input-type"] === "hour") {
+    return jsx(InputNaviHour, {
+      ...props
+    });
+  }
+  return jsx(Next, {
+    ...props
   });
 };
-const InputRightSlot = props => {
-  return jsx(InputSlot, {
+const InputNaviHour = props => {
+  const Next = useNextResolver();
+  const {
+    unit = true
+  } = props;
+  return jsx(Next, {
+    alignX: "center",
+    ui: unit ? jsx(InputNaviHourUI, {}) : undefined,
+    ...props
+  });
+};
+const InputNaviHourUI = () => {
+  const unitText = naviI18n("time.duration.hour_symbol");
+  return jsx(InputUnitSlot, {
+    children: unitText
+  });
+};
+
+const InputNaviMinuteResolver = props => {
+  const Next = useNextResolver();
+  if (props["navi-input-type"] === "minute") {
+    return jsx(InputNaviMinute, {
+      ...props
+    });
+  }
+  return jsx(Next, {
+    ...props
+  });
+};
+const InputNaviMinute = props => {
+  const Next = useNextResolver();
+  const {
+    unit = true
+  } = props;
+  return jsx(Next, {
+    alignX: "center",
+    ui: unit ? jsx(InputNaviMinuteUI, {}) : undefined,
+    ...props
+  });
+};
+const InputNaviMinuteUI = () => {
+  const unitText = naviI18n("time.duration.minute_symbol");
+  return jsx(InputUnitSlot, {
+    children: unitText
+  });
+};
+
+const InputModeResolver = props => {
+  const Next = useNextResolver();
+  if (props.inputMode === "numeric") {
+    return jsx(InputModeNumeric, {
+      ...props
+    });
+  }
+  return jsx(Next, {
+    ...props
+  });
+};
+const InputModeNumeric = props => {
+  const Next = useNextResolver();
+  const {
+    min,
+    max,
+    step = 1
+  } = props;
+  let maxLength;
+  if (max !== undefined) {
+    const integerDigits = String(Math.floor(max)).length;
+    // If step has decimal places, the value can contain a separator + those digits
+    const stepStr = String(step);
+    const dotIndex = stepStr.indexOf(".");
+    const decimalDigits = dotIndex === -1 ? 0 : stepStr.length - dotIndex - 1;
+    // If min is negative (or unknown and max itself is negative), a "-" sign can appear
+    const canBeNegative = min !== undefined ? min < 0 : max < 0;
+    const signChar = canBeNegative ? 1 : 0;
+    maxLength = signChar + integerDigits + (decimalDigits > 0 ? 1 + decimalDigits : 0);
+  }
+  return jsx(Next, {
+    maxLength: maxLength,
     ...props,
-    side: "right"
+    onKeyDown: e => {
+      props.onKeyDown?.(e);
+      if (e.defaultPrevented) {
+        return;
+      }
+      if (e.key !== "ArrowUp" && e.key !== "ArrowDown") {
+        return;
+      }
+      e.preventDefault();
+      const currentValue = Number(e.currentTarget.value);
+      if (Number.isNaN(currentValue)) {
+        return;
+      }
+      const delta = e.key === "ArrowUp" ? step : -step;
+      // Snap to step grid relative to step base (min ?? 0), then move
+      const stepBase = min !== undefined ? min : 0;
+      const offset = currentValue - stepBase;
+      const currentStepIndex = Math.round(offset / step);
+      const snapped = stepBase + currentStepIndex * step;
+      let nextValue = snapped + delta;
+      if (min !== undefined && nextValue < min) {
+        nextValue = min;
+      }
+      if (max !== undefined && nextValue > max) {
+        nextValue = max;
+      }
+      triggerStringAction("update", nextValue, {
+        event: e,
+        actionTarget: e.currentTarget
+      });
+    }
+  });
+};
+
+const SearchSvg = () => jsx("svg", {
+  viewBox: "0 0 24 24",
+  xmlns: "http://www.w3.org/2000/svg",
+  children: jsx("path", {
+    d: "M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z",
+    fill: "currentColor"
+  })
+});
+
+const InputTypeResolver = props => {
+  const Next = useNextResolver();
+  if (props.type === "search") {
+    return jsx(InputSearch, {
+      ...props
+    });
+  }
+  if (props.type === "email") {
+    return jsx(InputEmail, {
+      ...props
+    });
+  }
+  if (props.type === "tel") {
+    return jsx(InputTel, {
+      ...props
+    });
+  }
+  if (props.type === "number") {
+    return jsx(InputNumber, {
+      ...props
+    });
+  }
+  if (props.type === "color") {
+    return jsx(InputColor, {
+      ...props
+    });
+  }
+  if (props.type === "datetime-local") {
+    return jsx(InputDatetimeLocal, {
+      ...props
+    });
+  }
+  return jsx(Next, {
+    ...props
+  });
+};
+const InputSearch = props => {
+  const Next = useNextResolver();
+  return jsx(Next, {
+    ui: jsx(InputSearchUI, {
+      icon: props.icon
+    }),
+    ...props
+  });
+};
+const InputSearchUI = ({
+  icon
+}) => {
+  const {
+    value
+  } = useContext(InputTextualContext);
+  const searchIcon = icon === undefined ? jsx(SearchSvg, {}) : icon;
+  const hasValue = Boolean(value);
+  if (!hasValue) {
+    if (!searchIcon) {
+      return null;
+    }
+    return jsx(InputIconSlot, {
+      children: searchIcon
+    });
+  }
+  return jsx(InputRightSlot, {
+    onClick: e => {
+      if (e.button !== 0) {
+        return;
+      }
+      const slot = e.currentTarget;
+      const label = slot.closest("label");
+      const input = document.getElementById(label.getAttribute("for"));
+      const allowed = dispatchRequestInteraction(input, e);
+      if (allowed) {
+        triggerStringAction("clear", e, {
+          actionTarget: input,
+          skipClose: true
+        });
+      }
+    },
+    children: jsx(Icon, {
+      children: jsx(CloseSvg, {})
+    })
+  });
+};
+const InputEmail = props => {
+  const Next = useNextResolver();
+  return jsx(Next, {
+    ui: jsx(InputEmailUI, {}),
+    ...props
+  });
+};
+const InputEmailUI = ({
+  icon
+}) => {
+  if (icon !== undefined) {
+    return null;
+  }
+  return jsx(InputIconSlot, {
+    children: jsx(EmailSvg, {})
+  });
+};
+const InputTel = props => {
+  const Next = useNextResolver();
+  return jsx(Next, {
+    ui: jsx(InputTelUI, {
+      icon: props.icon
+    }),
+    ...props
+  });
+};
+const InputTelUI = ({
+  icon
+}) => {
+  if (icon !== undefined) {
+    return null;
+  }
+  return jsx(InputIconSlot, {
+    children: jsx(PhoneSvg, {})
+  });
+};
+const InputNumber = props => {
+  const Next = useNextResolver();
+  return jsx(Next, {
+    ...props
+  });
+};
+const InputColor = props => {
+  const Next = useNextResolver();
+  return jsx(Next, {
+    ...props
+  });
+};
+const InputDatetimeLocal = props => {
+  const Next = useNextResolver();
+  return jsx(Next, {
+    ...props
   });
 };
 
@@ -30486,6 +30950,9 @@ const InputTextualWithSuggestions = props => {
 installImportMetaCssBuild(import.meta);/**
  * Input component for all textual input types.
  *
+ * Note pour plus tard: un jour on voudra un cas field-sizing: content;
+ *
+ *
  * Supports:
  * - text (default)
  * - password
@@ -30581,32 +31048,52 @@ const css$w = /* css */`
       --padding-left,
       var(--padding-x, var(--padding, 2px))
     );
+    --x-padding-top: var(--x-padding-top-base);
+    --x-padding-right: var(--x-padding-right-base);
+    --x-padding-bottom: var(--x-padding-bottom-base);
+    --x-padding-left: var(--x-padding-left-base);
 
     position: relative;
+    display: inline-flex;
     box-sizing: border-box;
     width: fit-content;
     height: fit-content;
-    flex-direction: inherit;
-    border-radius: inherit;
+    padding-top: var(--x-padding-top);
+    padding-right: var(--x-padding-right);
+    padding-bottom: var(--x-padding-bottom);
+    padding-left: var(--x-padding-left);
+    flex-direction: row;
+    color: var(--x-color);
+    font-size: var(--font-size);
+    background-color: var(--x-background-color);
+    border-width: var(--border-width);
+    border-style: solid;
+    border-color: var(--x-border-color);
+    border-radius: var(--border-radius);
+    outline-width: var(--x-outline-width);
+    outline-color: var(--outline-color);
+    outline-offset: var(--x-outline-offset);
     cursor: inherit;
+    pointer-events: auto;
 
     .navi_control_input {
-      box-sizing: border-box;
-      min-width: 50px;
-      padding-top: var(--x-padding-top-base);
-      padding-right: var(--x-padding-right-base);
-      padding-bottom: var(--x-padding-bottom-base);
-      padding-left: var(--x-padding-left-base);
-      color: var(--x-color);
-      font-size: var(--font-size);
-      background-color: var(--x-background-color);
-      border-width: var(--border-width);
-      border-style: solid;
-      border-color: var(--x-border-color);
-      border-radius: var(--border-radius);
-      outline-width: var(--x-outline-width);
-      outline-color: var(--outline-color);
-      outline-offset: var(--x-outline-offset);
+      box-sizing: content-box;
+      min-width: 1ch;
+      margin-top: calc(-1 * var(--x-padding-top));
+      margin-right: calc(-1 * var(--x-padding-right));
+      margin-bottom: calc(-1 * var(--x-padding-bottom));
+      margin-left: calc(-1 * var(--x-padding-left));
+      padding-top: var(--x-padding-top);
+      padding-right: var(--x-padding-right);
+      padding-bottom: var(--x-padding-bottom);
+      padding-left: var(--x-padding-left);
+      flex-grow: 1;
+      color: inherit;
+      font-size: inherit;
+      background: none;
+      border: none;
+      border-radius: inherit;
+      outline: none;
 
       &[type="search"] {
         -webkit-appearance: textfield;
@@ -30617,43 +31104,14 @@ const css$w = /* css */`
       }
     }
 
-    &:has(.navi_input_slot[data-left]) {
-      --x-left-slot-size: calc(
-        var(--left-slot-size) + var(--x-padding-left-base) / 2
-      );
-
-      .navi_control_input {
-        padding-left: var(--x-left-slot-size);
-      }
-    }
-    &:has(.navi_input_slot[data-right]) {
-      --x-right-slot-size: calc(
-        var(--right-slot-size) + var(--x-padding-right-base) / 2
-      );
-
-      .navi_control_input {
-        padding-right: var(--x-right-slot-size);
-      }
-    }
-
     .navi_input_slot {
-      position: absolute;
-      top: 0;
-      bottom: 0;
-      margin: 0;
-      padding: 0;
-      font-size: var(--font-size);
-      background: none;
-      border: none;
+      color: #5e4e4e;
 
       &[data-left] {
-        left: 0;
-        width: var(--x-left-slot-size);
+        margin-right: var(--x-padding-left);
+        order: -1;
       }
-      &[data-right] {
-        right: 0;
-        width: var(--x-right-slot-size);
-      }
+
       &[data-hide-while-empty] {
         opacity: 0;
         pointer-events: none;
@@ -30665,7 +31123,6 @@ const css$w = /* css */`
         cursor: pointer;
         pointer-events: auto;
       }
-
       &[data-readonly] {
         .navi_input_slot[data-hide-while-empty] {
           opacity: 0;
@@ -30696,10 +31153,7 @@ const css$w = /* css */`
     &[data-focus-visible] {
       --x-background-color: var(--background-color-focus);
       --x-border-color: transparent;
-
-      .navi_control_input {
-        outline-style: solid;
-      }
+      outline-style: solid;
     }
     /* Disabled */
     &[data-disabled] {
@@ -30741,42 +31195,6 @@ const css$w = /* css */`
     -webkit-text-fill-color: var(--x-color) !important;
   }
 `;
-const InputTypeResolver = props => {
-  const Next = useNextResolver();
-  if (props.type === "search") {
-    return jsx(InputSearch, {
-      ...props
-    });
-  }
-  if (props.type === "email") {
-    return jsx(InputEmail, {
-      ...props
-    });
-  }
-  if (props.type === "tel") {
-    return jsx(InputTel, {
-      ...props
-    });
-  }
-  if (props.type === "number") {
-    return jsx(InputNumber, {
-      ...props
-    });
-  }
-  if (props.type === "color") {
-    return jsx(InputColor, {
-      ...props
-    });
-  }
-  if (props.type === "datetime-local") {
-    return jsx(InputDatetimeLocal, {
-      ...props
-    });
-  }
-  return jsx(Next, {
-    ...props
-  });
-};
 const InputHeadlessResolver = props => {
   const Next = useNextResolver();
   if (props.headless) {
@@ -30790,42 +31208,34 @@ const InputHeadlessResolver = props => {
 };
 const InputTextualHeadless = props => {
   const [inputProps, remainingProps] = useInputTextualProps(props);
-  return jsx(BoxForwardedPropsContext.Provider, {
-    value: undefined,
-    children: jsx(RealInput, {
-      ...inputProps,
-      ...remainingProps
-    })
+  return jsx(RealInput, {
+    ...inputProps,
+    ...remainingProps
   });
 };
 const useInputTextualProps = props => {
-  resolveInputProps(props);
-  const [controlProps, remainingProps, ControlChildrenWrapper] = useControlProps(props, {
+  return useControlProps(props, {
     controlType: "input",
     statePropName: "value",
     defaultStatePropName: "defaultValue",
     readOnlySupported: true
   });
-  controlProps.value = asControlHostValue(controlProps.value, {
-    controlType: "input",
-    type: props.type
-  });
-  return [controlProps, remainingProps, ControlChildrenWrapper];
 };
 const InputTextualUI = props => {
   import.meta.css = [css$w, "@jsenv/navi/src/control/input/input_textual.jsx"];
   const {
     ui,
-    discrete
+    discrete,
+    width = "maxLength"
   } = props;
-  const [inputProps, remainingProps, ControlChildrenWrapper] = useInputTextualProps(props);
-  const idDefault = useId();
-  inputProps.id = inputProps.id || `input_${idDefault}`;
+  const [inputProps, remainingProps] = useInputTextualProps(props);
   const {
     id,
     basePseudoState,
     children
   } = inputProps;
+  const uiStateController = getUIStateControllerById(id);
+  const value = uiStateController.uiState;
   const disabled = basePseudoState[":disabled"];
   const readOnly = basePseudoState[":read-only"];
   const loading = basePseudoState[":-navi-loading"];
@@ -30834,11 +31244,30 @@ const InputTextualUI = props => {
       value: {
         id,
         readOnly,
-        disabled
+        disabled,
+        value
       },
       children: children || ui
     })
   });
+
+  // meant to end on input
+  // we have to use delete otherwise it could override width: undefined
+  // when remainingProps contains expandX which would try to set width to 100%
+  delete remainingProps.width;
+  if (width === "maxLength") {
+    const {
+      maxLength
+    } = inputProps;
+    if (maxLength !== undefined) {
+      const isNumeric = props.inputMode === "numeric";
+      inputProps.width = isNumeric ? `${maxLength}ch` : `calc(${maxLength} * 1.5ch)`;
+    }
+  } else if (width === "content") {
+    inputProps.fieldSizing = "content";
+  } else {
+    inputProps.width = width;
+  }
   return jsxs(Box, {
     as: "span",
     flex: true,
@@ -30852,10 +31281,8 @@ const InputTextualUI = props => {
 
     styleCSSVars: InputStyleCSSVars,
     pseudoStateSelector: ".navi_control_input",
-    visualSelector: ".navi_control_input",
     pseudoClasses: InputPseudoClasses,
     pseudoElements: InputPseudoElements,
-    hasChildUsingForwardedProps: true,
     children: [jsx(LoadingOutline, {
       loading: loading,
       color: "var(--loader-color)",
@@ -30869,15 +31296,16 @@ const InputTextualFirstResolver = props => {
   const Next = useNextResolver();
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
+  const idDefault = useId(); // needed by ui state controller and slot labels
+  props.id = props.id || idDefault;
+  resolveInputProps(props);
   return jsx(Next, {
     ...props
   });
 };
-const InputTextual = createComponentResolver([InputTextualFirstResolver, InputWithListResolver, InputWithSuggestionsResolver, InputTypeResolver, InputHeadlessResolver, InputTextualUI]);
+const InputTextual = createComponentResolver([InputTextualFirstResolver, InputWithListResolver, InputWithSuggestionsResolver, InputNaviHourResolver, InputNaviMinuteResolver, InputTypeResolver, InputModeResolver, InputHeadlessResolver, InputTextualUI]);
 const RealInput = props => {
-  const inputProps = useContext(BoxForwardedPropsContext);
   return jsx(Box, {
-    ...inputProps,
     ...props,
     as: "input",
     baseClassName: "navi_control_input"
@@ -30923,109 +31351,8 @@ const InputStyleCSSVars = {
     color: "--color-disabled"
   }
 };
-const InputPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading", ":-navi-has-value", ":-navi-expanded"];
+const InputPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading", ":-navi-has-value"];
 const InputPseudoElements = ["::-navi-loader"];
-const InputSearch = props => {
-  const Next = useNextResolver();
-  return jsx(Next, {
-    ui: jsx(InputSearchUI, {
-      icon: props.icon
-    }),
-    ...props
-  });
-};
-const InputSearchUI = ({
-  icon
-}) => {
-  const ctx = useContext(InputTextualContext);
-  const {
-    id
-  } = ctx;
-  return jsxs(Fragment$1, {
-    children: [icon === undefined && jsx(InputLeftSlot, {
-      children: jsx(Icon, {
-        color: "rgba(28, 43, 52, 0.5)",
-        children: jsx(SearchSvg, {})
-      })
-    }), jsx(InputRightSlot, {
-      hideWhileEmpty: true,
-      "action-target": id,
-      onClick: e => {
-        const input = e.currentTarget;
-        const allowed = dispatchRequestInteraction(input, e);
-        if (allowed) {
-          triggerStringAction("clear", e, {
-            skipClose: true
-          });
-        }
-      },
-      children: jsx(Icon, {
-        color: "rgba(28, 43, 52, 0.5)",
-        children: jsx(CloseSvg, {})
-      })
-    })]
-  });
-};
-const InputEmail = props => {
-  const Next = useNextResolver();
-  return jsx(Next, {
-    ui: jsx(InputEmailUI, {}),
-    ...props
-  });
-};
-const InputEmailUI = ({
-  icon
-}) => {
-  if (icon !== undefined) {
-    return null;
-  }
-  return jsx(InputLeftSlot, {
-    children: jsx(Icon, {
-      color: "rgba(28, 43, 52, 0.5)",
-      children: jsx(EmailSvg, {})
-    })
-  });
-};
-const InputTel = props => {
-  const Next = useNextResolver();
-  return jsx(Next, {
-    ui: jsx(InputTelUI, {
-      icon: props.icon
-    }),
-    ...props
-  });
-};
-const InputTelUI = ({
-  icon
-}) => {
-  if (icon !== undefined) {
-    return null;
-  }
-  return jsx(InputLeftSlot, {
-    children: jsx(Icon, {
-      color: "rgba(28, 43, 52, 0.5)",
-      children: jsx(PhoneSvg, {})
-    })
-  });
-};
-const InputNumber = props => {
-  const Next = useNextResolver();
-  return jsx(Next, {
-    ...props
-  });
-};
-const InputColor = props => {
-  const Next = useNextResolver();
-  return jsx(Next, {
-    ...props
-  });
-};
-const InputDatetimeLocal = props => {
-  const Next = useNextResolver();
-  return jsx(Next, {
-    ...props
-  });
-};
 
 const Input = props => {
   const {
@@ -31778,6 +32105,11 @@ installImportMetaCssBuild(import.meta);const css$r = /* css */`
   .navi_dialog {
     &[open] {
       display: flex;
+      /* When centerInVisualViewport is enabled, --dialog-top-inset is set
+         dynamically to keep the dialog centered in the visual viewport
+         (accounts for the virtual keyboard on mobile). */
+      margin-top: var(--dialog-top-inset, auto);
+      margin-bottom: auto;
       flex-direction: column;
     }
 
@@ -31792,6 +32124,7 @@ const Dialog = props => {
     children,
     scrollTrap,
     pointerTrap,
+    centerInVisualViewport: centerInVisualViewportProp,
     ...rest
   } = props;
   const defaultRef = useRef();
@@ -31816,6 +32149,24 @@ const Dialog = props => {
     focusFirstAutofocusOrFocusable(dialogEl, debugFocus, e);
     if (scrollTrap) {
       addCleanup(trapScrollInside(dialogEl));
+    }
+    if (centerInVisualViewportProp && window.visualViewport) {
+      const centerInVisualViewport = () => {
+        const vv = window.visualViewport;
+        const dialogHeight = dialogEl.offsetHeight;
+        const availableHeight = vv.height;
+        const topOffset = vv.offsetTop;
+        const marginTop = availableHeight > dialogHeight ? topOffset + (availableHeight - dialogHeight) / 2 : topOffset;
+        dialogEl.style.setProperty("--dialog-top-inset", `${snapToPixel(marginTop)}px`);
+      };
+      centerInVisualViewport();
+      window.visualViewport.addEventListener("resize", centerInVisualViewport);
+      window.visualViewport.addEventListener("scroll", centerInVisualViewport);
+      addCleanup(() => {
+        window.visualViewport.removeEventListener("resize", centerInVisualViewport);
+        window.visualViewport.removeEventListener("scroll", centerInVisualViewport);
+        dialogEl.style.removeProperty("--dialog-top-inset");
+      });
     }
     openedRef.current = true;
     dispatchCustomEvent(dialogEl, "navi_open", {
@@ -32107,7 +32458,7 @@ installImportMetaCssBuild(import.meta);const css$p = /* css */`
         outline-width: var(--x-picker-outline-width);
         outline-color: var(--picker-outline-color);
         outline-offset: var(--x-picker-outline-offset);
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08), 0 12px 40px rgba(0, 0, 0, 0.22);
         cursor: default; /* Reset pointer cursor within the select */
         overflow: hidden;
         overscroll-behavior: none;
@@ -32177,28 +32528,6 @@ installImportMetaCssBuild(import.meta);const css$p = /* css */`
           flex-direction: column;
         }
       }
-
-      /* &:has([data-hover]) {
-        .navi_picker_popover {
-          --x-picker-border-color: var(--picker-border-color-hover);
-        }
-      } */
-
-      /* .navi_list_container {
-        width: 100%;
-        border: none;
-        border-radius: 0;
-        outline: none;
-
-        .navi_list {
-          width: 100%;
-        }
-      }
-      &:has([data-focus-visible]) {
-        .navi_picker_popover {
-          outline-style: solid;
-        }
-      } */
     }
 
     /* dialog */
@@ -32213,7 +32542,7 @@ installImportMetaCssBuild(import.meta);const css$p = /* css */`
         outline-width: var(--x-picker-outline-width);
         outline-color: var(--picker-outline-color);
         outline-offset: var(--x-picker-outline-offset);
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08), 0 12px 40px rgba(0, 0, 0, 0.22);
         cursor: default; /* Reset pointer cursor within the select */
         /* overscroll-behavior: contain; */
 
@@ -32236,23 +32565,6 @@ installImportMetaCssBuild(import.meta);const css$p = /* css */`
         overflow: auto;
         overscroll-behavior: none;
       }
-
-      /* .navi_list_container {
-        --list-max-height: none;
-        width: 100%;
-        border: none;
-        border-radius: 0;
-        outline: none;
-
-        .navi_list {
-          width: 100%;
-        }
-      }
-      &:has([data-focus-visible]) {
-        .navi_select_dialog {
-          outline-style: solid;
-        }
-      } */
     }
   }
 `;
@@ -32610,6 +32922,7 @@ const PickerContentInsideDialog = props => {
       className: "navi_picker_dialog",
       scrollTrap: scrollTrap,
       pointerTrap: pointerTrap,
+      centerInVisualViewport: true,
       children: children
     })
   });
@@ -33072,6 +33385,7 @@ const TimeRelative = ({
 const TimeText = props => {
   return jsx(Text, {
     as: "time",
+    noWrap: true,
     ...props
   });
 };
@@ -33394,6 +33708,46 @@ const FileSvg = () => {
     fill: "currentColor",
     children: jsx("path", {
       d: "M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z"
+    })
+  });
+};
+
+const PickerNaviMinute = props => {
+  const Next = useNextResolver();
+  const {
+    min,
+    max,
+    step,
+    value
+  } = props;
+  return jsx(Next, {
+    ...props,
+    type: "minute",
+    children: jsxs(Box, {
+      flex: "y",
+      spacing: "s",
+      padding: "s",
+      children: [jsx(InputTextual, {
+        type: "number",
+        action: "update",
+        min: min,
+        max: max,
+        step: step,
+        value: value
+      }), jsxs(Box, {
+        flex: true,
+        spacing: "s",
+        children: [jsx(Button, {
+          action: "send",
+          children: "Confirmer"
+        }), jsx(Button, {
+          action: "clear",
+          children: "Vider"
+        }), jsx(Button, {
+          action: "cancel",
+          children: "Annuler"
+        })]
+      })]
     })
   });
 };
@@ -33892,12 +34246,12 @@ installImportMetaCssBuild(import.meta);const css$m = /* css */`
     }
   }
 
-  fieldset.navi_list_container {
+  fieldset.navi_list_container[navi-selectable] {
     margin: 0; /* Reset margin that might come from fieldset */
     padding: 0; /* Reset padding that might come from fieldset */
   }
 
-  .navi_list_container {
+  .navi_list_container[navi-selectable] {
     --x-list-outline-width: calc(
       var(--list-outline-width) + var(--list-border-width)
     );
@@ -33919,7 +34273,7 @@ installImportMetaCssBuild(import.meta);const css$m = /* css */`
     }
   }
 
-  .navi_list_item {
+  .navi_list_item[navi-selectable] {
     --x-list-item-cursor: default;
 
     position: relative;
@@ -33990,6 +34344,11 @@ installImportMetaCssBuild(import.meta);const css$m = /* css */`
             var(--list-item-background-color-mouse-pointed)
           ) !important;
         }
+
+        input,
+        .navi_picker {
+          color: revert;
+        }
       }
     }
 
@@ -34035,7 +34394,7 @@ const ListSelectable = props => {
     focusGroupDirection,
     focusGroupWrap
   } = props;
-  const [listControlProps, remainingProps, childrenWrapperProps, uiGroupStateController] = useControlgroupProps(props, {
+  const [listControlProps, remainingProps, childrenWrapperProps] = useControlgroupProps(props, {
     stateType: multiple ? "array" : "",
     controlType: multiple ? "checkbox_group" : "radio_group",
     childControlFilter: multiple ? childUIStateController => {
@@ -34062,6 +34421,7 @@ const ListSelectable = props => {
       return activeValue;
     }
   });
+  const uiGroupStateController = getUIStateControllerById(listControlProps.id);
   useFocusGroup(ref, {
     direction: focusGroupDirection,
     wrap: focusGroupWrap,
@@ -34139,11 +34499,13 @@ const ListSelectable = props => {
   }, []);
   const listVnode = jsx(Next, {
     as: "fieldset",
+    "navi-selectable": "",
     "navi-has-selected-background": selectedIndicator === "backgroundColor" ? "" : undefined,
     ...listControlProps,
     ...remainingProps,
     name: undefined,
     selectedIndicator: undefined,
+    selectable: undefined,
     multiple: undefined
     // Track focus inside the list: whichever item gets focus becomes current.
     ,
@@ -34312,7 +34674,7 @@ const ListItemSelectable = props => {
   const inputType = multiple ? "checkbox" : "radio";
   const inputId = `${id}_input`;
   inputRef.nullCanHappen = true; // virtualization
-  const [checkableProps, remainingProps, ChildrenContextWrapper] = useCheckableProps({
+  const [checkableProps, remainingProps] = useCheckableProps({
     readOnlyMessage: naviI18n(`constraint.readonly.option`, props),
     ...rest,
     ref: inputRef,
@@ -34377,7 +34739,7 @@ const ListItemSelectable = props => {
       children: undefined
     }), jsx(SelectableRealInputContext.Provider, {
       value: realInputContextValue,
-      children: jsx(ChildrenContextWrapper, {
+      children: jsx(ControlChildrenWrapper, {
         children: children
       })
     })]
@@ -35468,8 +35830,9 @@ const UnorderedList = ({
 }) => {
   return jsxs(Box, {
     as: "ul",
-    ...rest,
     flex: horizontal ? "x" : "y",
+    flexWrap: true,
+    ...rest,
     spacing: spacing,
     baseClassName: "navi_list",
     children: [jsx(BeforeFiller, {
@@ -35887,6 +36250,11 @@ const PickerPresetResolver = props => {
       ...props
     });
   }
+  if (props.type === "navi_minute") {
+    return jsx(PickerNaviMinute, {
+      ...props
+    });
+  }
   return jsx(Next, {
     ...props
   });
@@ -36053,6 +36421,7 @@ installImportMetaCssBuild(import.meta);const css$k = /* css */`
       )
     );
     --x-picker-color: var(--picker-color);
+    --x-picker-icon-color: var(--picker-icon-color);
 
     position: relative;
     display: inline-block;
@@ -36080,6 +36449,7 @@ installImportMetaCssBuild(import.meta);const css$k = /* css */`
     outline-color: var(--picker-outline-color);
     outline-offset: var(--x-picker-outline-offset);
     cursor: var(--x-picker-cursor, pointer);
+    pointer-events: auto;
     user-select: none;
     overflow: hidden;
 
@@ -36108,7 +36478,7 @@ installImportMetaCssBuild(import.meta);const css$k = /* css */`
       padding-top: var(--x-picker-padding-top);
       flex-shrink: 0;
       justify-content: center;
-      color: var(--x-picker-icon-color, var(--picker-icon-color));
+      color: var(--x-picker-icon-color);
       transform: translateX(25%);
     }
     .navi_picker_input {
@@ -36203,17 +36573,15 @@ installImportMetaCssBuild(import.meta);const css$k = /* css */`
  */
 const PickerButton = props => {
   import.meta.css = [css$k, "@jsenv/navi/src/control/picker/picker.jsx"];
-  resolveInputProps(props);
   const {
     ref,
     icon,
     placeholder,
     singleLine,
-    ui,
-    dayLabel
+    ui
   } = props;
   const inputRef = useRef(null);
-  const [inputProps, pickerRemainingProps, ControlChildrenWrapper] = useControlProps({
+  const [inputProps, pickerRemainingProps] = useControlProps({
     ...props,
     ref: inputRef
   }, {
@@ -36223,9 +36591,10 @@ const PickerButton = props => {
     readOnlySupported: true,
     picker: true
   });
+  const uiStateController = getUIStateControllerById(inputProps.id);
+  const value = uiStateController.uiState;
   const {
     id,
-    value,
     basePseudoState,
     disabled,
     children
@@ -36284,8 +36653,7 @@ const PickerButton = props => {
     }), jsx(PickerContext.Provider, {
       value: {
         value,
-        placeholder,
-        dayLabel
+        placeholder
       },
       children: ui === undefined ? jsx(PickerDefaultUI, {}) : ui
     }), jsx("span", {
@@ -36300,16 +36668,9 @@ const PickerButton = props => {
   });
 };
 const PickerInput = props => {
-  const {
-    type
-  } = props;
   return jsx(Box, {
     as: "input",
     ...props,
-    value: asControlHostValue(props.value, {
-      controlType: "input",
-      type
-    }),
     className: "navi_picker_input",
     pseudoClasses: PickerInputPseudoClasses,
     tabIndex: -1 // Make input non tabbable
@@ -36370,6 +36731,9 @@ const PickerFirstResolver = props => {
   const Next = useNextResolver();
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
+  const idDefault = useId(); // needed by ui state controller
+  props.id = props.id || idDefault;
+  resolveInputProps(props);
   return jsx(Next, {
     ...props
   });

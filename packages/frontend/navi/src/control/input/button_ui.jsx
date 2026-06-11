@@ -5,7 +5,7 @@ import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
 import { getHrefTargetInfo } from "../../nav/browser_integration/href_target_info.js";
 import { Text, markAsOutsideTextFlow } from "../../text/text.jsx";
 import { useAccentColorAttributes } from "../../utils/use_accent_color_attributes.js";
-import { useControlProps } from "../control_hooks.jsx";
+import { ControlChildrenWrapper, useControlProps } from "../control_hooks.jsx";
 
 /**
  * We need the content to visually shrink (scale down) but the button interactive area MUST remain intact
@@ -289,14 +289,11 @@ export const ButtonUI = (props) => {
     discrete = icon && !revealOnInteraction,
     spacing,
   } = props;
-  const [buttonProps, remainingProps, ControlChildrenWrapper] = useControlProps(
-    props,
-    {
-      controlType: "button",
-      statePropName: "value",
-      allowNameless: true,
-    },
-  );
+  const [buttonProps, remainingProps] = useControlProps(props, {
+    controlType: "button",
+    statePropName: "value",
+    allowNameless: true,
+  });
   const { basePseudoState, children } = buttonProps;
   const loading = basePseudoState[":-navi-loading"];
 

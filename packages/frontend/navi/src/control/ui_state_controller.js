@@ -17,15 +17,19 @@ import {
 import { useNavState } from "../nav/browser_integration/browser_integration.js";
 import { useInitialValue } from "../state/use_initial_value.js";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
-import { findControlHost } from "./control_dom.js";
 import { findControlProxy } from "./control_proxy.js";
+import { asControlHostValue } from "./control_value.js";
 import { FormContext } from "./form_context.js";
+import {
+  dispatchRequestResetUIState,
+  dispatchRequestSetUIState,
+} from "./ui_state_dom.js";
 
 // In-memory registry of all mounted ui state controllers keyed by their id.
 // Allows direct controller access without dispatching DOM events — used by external
 // callers (e.g. selectable_list) to call setUIState by id instead of via the DOM.
 const controllersById = new Map();
-const getUIStateControllerById = (id) => controllersById.get(id);
+export const getUIStateControllerById = (id) => controllersById.get(id);
 
 // In-memory registry for radio controllers, keyed by input name.
 // Allows radio sibling unchecking without querying the DOM — necessary when
@@ -287,6 +291,13 @@ export const useUIStateController = (
     elementRef: ref,
     getPropFromState,
     getStateFromProp,
+    toControlHostValue: (jsValue) => {
+      return asControlHostValue(jsValue, {
+        controlType,
+        type: uiStateController.props.type,
+        inputMode: uiStateController.props.inputMode,
+      });
+    },
     setUIState: (prop, e) => {
       const newUIState = uiStateController.getStateFromProp(prop);
       const controllerSig = getElementSignature(e.currentTarget || ref.current);
@@ -325,7 +336,7 @@ export const useUIStateController = (
           e,
           `[${statePropName}] = ${JSON.stringify(propValue)};`,
         );
-        el[statePropName] = propValue;
+        el[statePropName] = uiStateController.toControlHostValue(propValue);
       }
       uiStateController.uiState = newUIState;
       ownUIStateSignal.value = newUIState;
@@ -457,6 +468,11 @@ export const useUIStateController = (
     subscribe: subscribeUIState,
   };
   uiStateControllerRef.current = uiStateController;
+  // Register synchronously during render so getUIStateControllerById works
+  // immediately in the same render cycle (e.g. InputTextualUI reading uiState).
+  if (id) {
+    controllersById.set(id, uiStateController);
+  }
   return uiStateController;
 };
 
@@ -567,7 +583,7 @@ export const useUIGroupStateController = (
     throw new TypeError("aggregateChildStates must be a function");
   }
   const parentUIStateController = useContext(ParentUIStateControllerContext);
-  const { name, value } = props;
+  const { id, name, value } = props;
   const ref = props.ref;
   const fallbackState =
     stateType === "array"
@@ -594,8 +610,16 @@ export const useUIGroupStateController = (
     controlType,
   );
   useLayoutEffect(() => {
+    if (id) {
+      controllersById.set(id, uiStateControllerRef.current);
+    }
     notifyParentAboutChildMount();
-    return notifyParentAboutChildUnmount;
+    return () => {
+      if (id) {
+        controllersById.delete(id);
+      }
+      notifyParentAboutChildUnmount();
+    };
   }, []);
 
   const onChange = (_, e, { notifyExternal = true } = {}) => {
@@ -631,6 +655,7 @@ export const useUIGroupStateController = (
 
   const existingUIStateController = uiStateControllerRef.current;
   if (existingUIStateController) {
+    existingUIStateController.id = id;
     existingUIStateController.name = name;
     existingUIStateController.value = value;
     return existingUIStateController;
@@ -652,6 +677,7 @@ export const useUIGroupStateController = (
   };
   const uiStateController = {
     controlType,
+    id,
     name,
     value,
     uiState: fallbackState,
@@ -749,34 +775,15 @@ export const useUIGroupStateController = (
     subscribe: subscribeUIState,
   };
   uiStateControllerRef.current = uiStateController;
+  if (id) {
+    controllersById.set(id, uiStateController);
+  }
   return uiStateController;
 };
 // Stable reference for an empty selection so the action always receives an
 // array (never undefined) and callers don't get a new reference each render.
 const EMPTY_ARRAY = [];
 const EMPTY_OBJECT = {};
-
-export const dispatchRequestSetUIState = (element, value, detail) => {
-  const controlHost = findControlHost(element) || element;
-  return dispatchInternalCustomEvent(controlHost, "navi_set_ui_state", {
-    ...detail,
-    value,
-  });
-};
-export const dispatchRequestResetUIState = (element, e) => {
-  return dispatchInternalCustomEvent(element, "navi_request_reset_ui_state", {
-    event: e,
-  });
-};
-export const getUIStateFromElement = (el) => {
-  let uiState;
-  dispatchInternalCustomEvent(el, "navi_get_ui_state", {
-    respondWith: (v) => {
-      uiState = v;
-    },
-  });
-  return uiState;
-};
 
 /**
  * Hook to subscribe to the UI state of a field from its DOM element ref.

@@ -37,6 +37,12 @@ import { performTabNavigation } from "./tab_navigation.js";
  *   when navigating on the x axis. Omit to allow any focusable element.
  * @param {string} [options.ySelector] - CSS selector that candidates must match
  *   when navigating on the y axis. Omit to allow any focusable element.
+ * @param {string} [options.manages] - CSS selector declaring which descendants
+ *   this group "manages" for Tab navigation. When set, Tab only skips managed
+ *   elements; other focusable descendants (e.g. inputs inside a radio widget)
+ *   remain individually tabbable. When omitted, Tab skips the entire group.
+ * @param {boolean} [options.strictTab=false] - When true AND manages is set,
+ *   Tab always exits the group regardless of where focus is inside it.
  * @returns {{ cleanup: () => void }} Call cleanup() to remove all event listeners.
  */
 export const initFocusGroup = (
@@ -53,6 +59,10 @@ export const initFocusGroup = (
     // CSS selector to restrict candidates on each axis
     xSelector,
     ySelector,
+    // CSS selector declaring which elements the group "manages" for Tab purposes.
+    // Defaults to ySelector ?? xSelector so arrow-nav and tab-nav stay in sync.
+    manages = ySelector ?? xSelector,
+    strictTab = false,
   } = {},
 ) => {
   const cleanupCallbackSet = new Set();
@@ -69,10 +79,16 @@ export const initFocusGroup = (
     name, // Store undefined as-is for implicit grouping
   });
   cleanupCallbackSet.add(removeFocusGroup);
-  element.setAttribute("navi-focus-group", "");
+  element.setAttribute("navi-focus-group", manages ?? "");
   cleanupCallbackSet.add(() => {
     element.removeAttribute("navi-focus-group");
   });
+  if (manages && strictTab) {
+    element.setAttribute("navi-focus-group-strict", "");
+    cleanupCallbackSet.add(() => {
+      element.removeAttribute("navi-focus-group-strict");
+    });
+  }
 
   tab: {
     if (!skipTab) {
@@ -83,8 +99,18 @@ export const initFocusGroup = (
         // Prevent double handling of the same event + allow preventing focus nav from outside
         return;
       }
+      // Smart mode: when focus is inside an unmanaged element (e.g. an input
+      // inside a radio widget), do NOT skip the entire group — let Tab navigate
+      // freely. The predicate in performTabNavigation will still skip managed
+      // items (those matching `manages`) encountered along the way.
+      const activeElement = document.activeElement;
+      const focusIsOnUnmanagedDescendant =
+        manages &&
+        !strictTab &&
+        element.contains(activeElement) &&
+        !activeElement.matches(manages);
       performTabNavigation(event, {
-        outsideOfElement: element,
+        outsideOfElement: focusIsOnUnmanagedDescendant ? null : element,
         excludeAriaHidden,
       });
     };

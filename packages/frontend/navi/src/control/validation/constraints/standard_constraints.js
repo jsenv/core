@@ -5,7 +5,7 @@
 import { formatDay, formatMonth } from "@jsenv/navi/src/text/format_time.js";
 import { langSignal } from "@jsenv/navi/src/text/lang_signal.js";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
-import { getUIStateFromElement } from "../../ui_state_controller.js";
+import { getUIStateFromElement } from "../../ui_state_dom.js";
 import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
 import { fieldTypeSuffix } from "./constraint_message_util.js";
 
@@ -152,7 +152,7 @@ export const REQUIRED_CONSTRAINT = {
     if (field.type === "time") {
       return naviI18n("constraint.required.time");
     }
-    if (field.type === "number") {
+    if (field.type === "number" || field.inputMode === "numeric") {
       return naviI18n("constraint.required.number");
     }
     if (field.type === "datetime-local") {
@@ -306,19 +306,24 @@ export const TYPE_NUMBER_CONSTRAINT = {
     if (field.tagName !== "INPUT") {
       return null;
     }
-    if (field.type !== "number") {
+    const isNumber = field.type === "number" || field.inputMode === "numeric";
+    if (!isNumber) {
       return null;
     }
     if (field.validity.valueMissing) {
       // let required handle that
       return null;
     }
-    const valueAsNumber = field.valueAsNumber;
-    const valueAsNumberIsNaN = isNaN(valueAsNumber);
-    if (valueAsNumberIsNaN) {
-      return naviI18n("constraint.type.number.default");
+    // valueAsNumber only works for type="number"; for inputMode="numeric"
+    // (which is type="text" under the hood) we must parse field.value manually.
+    const numericValue =
+      field.type === "number" ? field.valueAsNumber : Number(field.value);
+    const valueAsNumberIsNaN = isNaN(numericValue);
+    if (!valueAsNumberIsNaN) {
+      return null;
     }
-    return null;
+    const naviInputType = field.getAttribute("navi-input-type");
+    return naviI18n(`constraint.type.${naviInputType || "number"}.default`);
   },
 };
 
@@ -343,17 +348,19 @@ export const MIN_CONSTRAINT = {
     if (minString === "") {
       return null;
     }
-    if (field.type === "number") {
+    const isNumber = field.type === "number" || field.inputMode === "numeric";
+    if (isNumber) {
       const minNumber = parseFloat(minString);
       if (isNaN(minNumber)) {
         return null;
       }
-      const valueAsNumber = field.valueAsNumber;
+      const valueAsNumber =
+        field.type === "number" ? field.valueAsNumber : Number(field.value);
       if (isNaN(valueAsNumber)) {
         return null;
       }
       if (valueAsNumber < minNumber) {
-        const naviInputType = field.getAttribute("data-navi-input-type");
+        const naviInputType = field.getAttribute("navi-input-type");
         return naviI18n(`constraint.min.${naviInputType || "number"}.default`, {
           min: minString,
         });
@@ -408,17 +415,19 @@ export const MAX_CONSTRAINT = {
     if (maxString === "") {
       return null;
     }
-    if (field.type === "number") {
+    const isNumber = field.type === "number" || field.inputMode === "numeric";
+    if (isNumber) {
       const maxNumber = parseFloat(maxString);
       if (isNaN(maxNumber)) {
         return null;
       }
-      const valueAsNumber = field.valueAsNumber;
+      const valueAsNumber =
+        field.type === "number" ? field.valueAsNumber : Number(field.value);
       if (isNaN(valueAsNumber)) {
         return null;
       }
       if (valueAsNumber > maxNumber) {
-        const naviInputType = field.getAttribute("data-navi-input-type");
+        const naviInputType = field.getAttribute("navi-input-type");
         return naviI18n(`constraint.max.${naviInputType || "number"}.default`, {
           max: maxString,
         });
@@ -476,21 +485,32 @@ export const STEP_CONSTRAINT = {
     if (field.tagName !== "INPUT") {
       return null;
     }
-    if (!STEP_SUPPORTED_TYPE_SET.has(field.type)) {
+    const isNumericText =
+      field.type === "text" && field.inputMode === "numeric";
+    if (!isNumericText && !STEP_SUPPORTED_TYPE_SET.has(field.type)) {
       return null;
     }
     const stepString = field.step;
     if (stepString === "" || stepString === "any") {
       return null;
     }
-    if (!field.validity.stepMismatch) {
-      return null;
-    }
-    if (field.type === "number") {
+    const isNumber = field.type === "number" || isNumericText;
+    if (isNumber) {
       const step = parseFloat(stepString);
       const minString = field.min;
       const base = minString !== "" ? parseFloat(minString) : 0;
-      const valueAsNumber = field.valueAsNumber;
+      const valueAsNumber =
+        field.type === "number" ? field.valueAsNumber : Number(field.value);
+      if (isNaN(valueAsNumber)) {
+        return null;
+      }
+      const remainder = (((valueAsNumber - base) % step) + step) % step;
+      // Use a small epsilon to handle floating-point imprecision
+      const epsilon = step * 1e-9;
+      const hasMismatch = remainder > epsilon && remainder < step - epsilon;
+      if (!hasMismatch) {
+        return null;
+      }
       const before = base + Math.floor((valueAsNumber - base) / step) * step;
       const after = before + step;
       const decimals = (stepString.split(".")[1] || "").length;
@@ -509,6 +529,9 @@ export const STEP_CONSTRAINT = {
         const minString = field.min;
         const baseMs = minString !== "" ? timeStringToMs(minString) : 0;
         const remainder = (((valueMs - baseMs) % stepMs) + stepMs) % stepMs;
+        if (remainder === 0) {
+          return null;
+        }
         const beforeMs = valueMs - remainder;
         const afterMs = beforeMs + stepMs;
         const showSeconds = stepSeconds % 60 !== 0;
@@ -544,6 +567,9 @@ export const STEP_CONSTRAINT = {
         : new Date(0);
       const valueDate = new Date(`${value}T00:00:00`);
       const diffDays = Math.round((valueDate - baseDate) / 86400000);
+      if (diffDays % step === 0) {
+        return null;
+      }
       const beforeDays = Math.floor(diffDays / step) * step;
       const afterDays = beforeDays + step;
       const beforeDate = new Date(baseDate);

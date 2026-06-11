@@ -1,6 +1,9 @@
 /**
  * Input component for all textual input types.
  *
+ * Note pour plus tard: un jour on voudra un cas field-sizing: content;
+ *
+ *
  * Supports:
  * - text (default)
  * - password
@@ -16,26 +19,21 @@
  * - <InputRadio /> for type="radio"
  */
 
-import { useContext, useId, useRef } from "preact/hooks";
+import { useId, useRef } from "preact/hooks";
 
-import { Box, BoxForwardedPropsContext } from "@jsenv/navi/src/box/box.jsx";
-import { CloseSvg } from "@jsenv/navi/src/graphic/icons/close_svg.jsx";
-import { EmailSvg } from "@jsenv/navi/src/graphic/icons/email_svg.jsx";
-import { PhoneSvg } from "@jsenv/navi/src/graphic/icons/phone_svg.jsx";
-import { SearchSvg } from "@jsenv/navi/src/graphic/icons/search_svg.jsx";
+import { Box } from "@jsenv/navi/src/box/box.jsx";
 import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.jsx";
-import { Icon } from "@jsenv/navi/src/text/icon.jsx";
 import {
   createComponentResolver,
   useNextResolver,
-} from "../../resolver/resolver.jsx";
-import { useControlProps } from "../control_hooks.jsx";
-import { asControlHostValue } from "../control_value.js";
-import { triggerStringAction } from "../string_actions.js";
-import { dispatchRequestInteraction } from "../validation/custom_constraint_validation.js";
+} from "@jsenv/navi/src/resolver/resolver.jsx";
+import { ControlChildrenWrapper, useControlProps } from "../control_hooks.jsx";
+import { getUIStateControllerById } from "../ui_state_controller.js";
 import { InputNaviHourResolver } from "./input_navi_hour.jsx";
+import { InputNaviMinuteResolver } from "./input_navi_minute.jsx";
+import { InputModeResolver } from "./input_resolver_mode.jsx";
+import { InputTypeResolver } from "./input_resolver_type.jsx";
 import { InputTextualContext } from "./input_textual_context.js";
-import { InputLeftSlot, InputRightSlot } from "./input_ui_components.jsx";
 import { InputWithListResolver } from "./input_with_list.jsx";
 import { InputWithSuggestionsResolver } from "./input_with_suggestions.jsx";
 import { resolveInputProps } from "./resolve_input_props.js";
@@ -121,33 +119,52 @@ const css = /* css */ `
       --padding-left,
       var(--padding-x, var(--padding, 2px))
     );
+    --x-padding-top: var(--x-padding-top-base);
+    --x-padding-right: var(--x-padding-right-base);
+    --x-padding-bottom: var(--x-padding-bottom-base);
+    --x-padding-left: var(--x-padding-left-base);
 
     position: relative;
+    display: inline-flex;
     box-sizing: border-box;
     width: fit-content;
     height: fit-content;
-    flex-direction: inherit;
-    border-radius: inherit;
+    padding-top: var(--x-padding-top);
+    padding-right: var(--x-padding-right);
+    padding-bottom: var(--x-padding-bottom);
+    padding-left: var(--x-padding-left);
+    flex-direction: row;
+    color: var(--x-color);
+    font-size: var(--font-size);
+    background-color: var(--x-background-color);
+    border-width: var(--border-width);
+    border-style: solid;
+    border-color: var(--x-border-color);
+    border-radius: var(--border-radius);
+    outline-width: var(--x-outline-width);
+    outline-color: var(--outline-color);
+    outline-offset: var(--x-outline-offset);
     cursor: inherit;
     pointer-events: auto;
 
     .navi_control_input {
-      box-sizing: border-box;
-      min-width: 50px;
-      padding-top: var(--x-padding-top-base);
-      padding-right: var(--x-padding-right-base);
-      padding-bottom: var(--x-padding-bottom-base);
-      padding-left: var(--x-padding-left-base);
-      color: var(--x-color);
-      font-size: var(--font-size);
-      background-color: var(--x-background-color);
-      border-width: var(--border-width);
-      border-style: solid;
-      border-color: var(--x-border-color);
-      border-radius: var(--border-radius);
-      outline-width: var(--x-outline-width);
-      outline-color: var(--outline-color);
-      outline-offset: var(--x-outline-offset);
+      box-sizing: content-box;
+      min-width: 1ch;
+      margin-top: calc(-1 * var(--x-padding-top));
+      margin-right: calc(-1 * var(--x-padding-right));
+      margin-bottom: calc(-1 * var(--x-padding-bottom));
+      margin-left: calc(-1 * var(--x-padding-left));
+      padding-top: var(--x-padding-top);
+      padding-right: var(--x-padding-right);
+      padding-bottom: var(--x-padding-bottom);
+      padding-left: var(--x-padding-left);
+      flex-grow: 1;
+      color: inherit;
+      font-size: inherit;
+      background: none;
+      border: none;
+      border-radius: inherit;
+      outline: none;
 
       &[type="search"] {
         -webkit-appearance: textfield;
@@ -156,61 +173,16 @@ const css = /* css */ `
           display: none;
         }
       }
-
-      &[type="number"] {
-        min-width: 10px;
-      }
-    }
-
-    &[data-no-spin] {
-      .navi_control_input {
-        appearance: textfield;
-      }
-      .navi_control_input::-webkit-outer-spin-button,
-      .navi_control_input::-webkit-inner-spin-button {
-        margin: 0;
-
-        -webkit-appearance: none;
-      }
-    }
-
-    &:has(.navi_input_slot[data-left]) {
-      --x-left-slot-size: calc(
-        var(--left-slot-size) + var(--x-padding-left-base) / 2
-      );
-
-      .navi_control_input {
-        padding-left: var(--x-left-slot-size);
-      }
-    }
-    &:has(.navi_input_slot[data-right]) {
-      --x-right-slot-size: calc(
-        var(--right-slot-size) + var(--x-padding-right-base) / 2
-      );
-
-      .navi_control_input {
-        padding-right: var(--x-right-slot-size);
-      }
     }
 
     .navi_input_slot {
-      position: absolute;
-      top: 0;
-      bottom: 0;
-      margin: 0;
-      padding: 0;
-      font-size: var(--font-size);
-      background: none;
-      border: none;
+      color: #5e4e4e;
 
       &[data-left] {
-        left: 0;
-        width: var(--x-left-slot-size);
+        margin-right: var(--x-padding-left);
+        order: -1;
       }
-      &[data-right] {
-        right: 0;
-        width: var(--x-right-slot-size);
-      }
+
       &[data-hide-while-empty] {
         opacity: 0;
         pointer-events: none;
@@ -222,7 +194,6 @@ const css = /* css */ `
         cursor: pointer;
         pointer-events: auto;
       }
-
       &[data-readonly] {
         .navi_input_slot[data-hide-while-empty] {
           opacity: 0;
@@ -253,10 +224,7 @@ const css = /* css */ `
     &[data-focus-visible] {
       --x-background-color: var(--background-color-focus);
       --x-border-color: transparent;
-
-      .navi_control_input {
-        outline-style: solid;
-      }
+      outline-style: solid;
     }
     /* Disabled */
     &[data-disabled] {
@@ -299,30 +267,9 @@ const css = /* css */ `
   }
 `;
 
-const InputTypeResolver = (props) => {
-  const Next = useNextResolver();
-  if (props.type === "search") {
-    return <InputSearch {...props} />;
-  }
-  if (props.type === "email") {
-    return <InputEmail {...props} />;
-  }
-  if (props.type === "tel") {
-    return <InputTel {...props} />;
-  }
-  if (props.type === "number") {
-    return <InputNumber {...props} />;
-  }
-  if (props.type === "color") {
-    return <InputColor {...props} />;
-  }
-  if (props.type === "datetime-local") {
-    return <InputDatetimeLocal {...props} />;
-  }
-  return <Next {...props} />;
-};
 const InputHeadlessResolver = (props) => {
   const Next = useNextResolver();
+
   if (props.headless) {
     return <InputTextualHeadless {...props} />;
   }
@@ -330,44 +277,52 @@ const InputHeadlessResolver = (props) => {
 };
 const InputTextualHeadless = (props) => {
   const [inputProps, remainingProps] = useInputTextualProps(props);
-  return (
-    <BoxForwardedPropsContext.Provider value={undefined}>
-      <RealInput {...inputProps} {...remainingProps} />
-    </BoxForwardedPropsContext.Provider>
-  );
+
+  return <RealInput {...inputProps} {...remainingProps} />;
 };
 const useInputTextualProps = (props) => {
-  const [controlProps, remainingProps, ControlChildrenWrapper] =
-    useControlProps(props, {
-      controlType: "input",
-      statePropName: "value",
-      defaultStatePropName: "defaultValue",
-      readOnlySupported: true,
-    });
-  controlProps.value = asControlHostValue(controlProps.value, {
+  return useControlProps(props, {
     controlType: "input",
-    type: props.type,
+    statePropName: "value",
+    defaultStatePropName: "defaultValue",
+    readOnlySupported: true,
   });
-  return [controlProps, remainingProps, ControlChildrenWrapper];
 };
 const InputTextualUI = (props) => {
   import.meta.css = css;
-  const { ui, discrete } = props;
-  const [inputProps, remainingProps, ControlChildrenWrapper] =
-    useInputTextualProps(props);
-  const idDefault = useId();
-  inputProps.id = inputProps.id || `input_${idDefault}`;
+  const { ui, discrete, width = "maxLength" } = props;
+  const [inputProps, remainingProps] = useInputTextualProps(props);
   const { id, basePseudoState, children } = inputProps;
+  const uiStateController = getUIStateControllerById(id);
+  const value = uiStateController.uiState;
   const disabled = basePseudoState[":disabled"];
   const readOnly = basePseudoState[":read-only"];
   const loading = basePseudoState[":-navi-loading"];
   const childrenWithContext = (
     <ControlChildrenWrapper>
-      <InputTextualContext.Provider value={{ id, readOnly, disabled }}>
+      <InputTextualContext.Provider value={{ id, readOnly, disabled, value }}>
         {children || ui}
       </InputTextualContext.Provider>
     </ControlChildrenWrapper>
   );
+
+  // meant to end on input
+  // we have to use delete otherwise it could override width: undefined
+  // when remainingProps contains expandX which would try to set width to 100%
+  delete remainingProps.width;
+  if (width === "maxLength") {
+    const { maxLength } = inputProps;
+    if (maxLength !== undefined) {
+      const isNumeric = props.inputMode === "numeric";
+      inputProps.width = isNumeric
+        ? `${maxLength}ch`
+        : `calc(${maxLength} * 1.5ch)`;
+    }
+  } else if (width === "content") {
+    inputProps.fieldSizing = "content";
+  } else {
+    inputProps.width = width;
+  }
 
   return (
     <Box
@@ -381,10 +336,8 @@ const InputTextualUI = (props) => {
       discrete={undefined} // handled via data attribute
       styleCSSVars={InputStyleCSSVars}
       pseudoStateSelector=".navi_control_input"
-      visualSelector=".navi_control_input"
       pseudoClasses={InputPseudoClasses}
       pseudoElements={InputPseudoElements}
-      hasChildUsingForwardedProps
     >
       <LoadingOutline
         loading={loading}
@@ -400,6 +353,8 @@ const InputTextualFirstResolver = (props) => {
   const Next = useNextResolver();
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
+  const idDefault = useId(); // needed by ui state controller and slot labels
+  props.id = props.id || idDefault;
   resolveInputProps(props);
 
   return <Next {...props} />;
@@ -409,21 +364,15 @@ export const InputTextual = createComponentResolver([
   InputWithListResolver,
   InputWithSuggestionsResolver,
   InputNaviHourResolver,
+  InputNaviMinuteResolver,
   InputTypeResolver,
+  InputModeResolver,
   InputHeadlessResolver,
   InputTextualUI,
 ]);
 
 const RealInput = (props) => {
-  const inputProps = useContext(BoxForwardedPropsContext);
-  return (
-    <Box
-      {...inputProps}
-      {...props}
-      as="input"
-      baseClassName="navi_control_input"
-    />
-  );
+  return <Box {...props} as="input" baseClassName="navi_control_input" />;
 };
 
 const InputStyleCSSVars = {
@@ -475,91 +424,5 @@ const InputPseudoClasses = [
   ":disabled",
   ":-navi-loading",
   ":-navi-has-value",
-  ":-navi-expanded",
 ];
 const InputPseudoElements = ["::-navi-loader"];
-
-const InputSearch = (props) => {
-  const Next = useNextResolver();
-
-  return <Next ui={<InputSearchUI icon={props.icon} />} {...props} />;
-};
-const InputSearchUI = ({ icon }) => {
-  const ctx = useContext(InputTextualContext);
-  const { id } = ctx;
-
-  return (
-    <>
-      {icon === undefined && (
-        <InputLeftSlot>
-          <Icon color="rgba(28, 43, 52, 0.5)">
-            <SearchSvg />
-          </Icon>
-        </InputLeftSlot>
-      )}
-      <InputRightSlot
-        hideWhileEmpty
-        action-target={id}
-        onClick={(e) => {
-          const input = e.currentTarget;
-          const allowed = dispatchRequestInteraction(input, e);
-          if (allowed) {
-            triggerStringAction("clear", e, { skipClose: true });
-          }
-        }}
-      >
-        <Icon color="rgba(28, 43, 52, 0.5)">
-          <CloseSvg />
-        </Icon>
-      </InputRightSlot>
-    </>
-  );
-};
-const InputEmail = (props) => {
-  const Next = useNextResolver();
-
-  return <Next ui={<InputEmailUI />} {...props} />;
-};
-const InputEmailUI = ({ icon }) => {
-  if (icon !== undefined) {
-    return null;
-  }
-  return (
-    <InputLeftSlot>
-      <Icon color="rgba(28, 43, 52, 0.5)">
-        <EmailSvg />
-      </Icon>
-    </InputLeftSlot>
-  );
-};
-const InputTel = (props) => {
-  const Next = useNextResolver();
-  return <Next ui={<InputTelUI icon={props.icon} />} {...props} />;
-};
-const InputTelUI = ({ icon }) => {
-  if (icon !== undefined) {
-    return null;
-  }
-  return (
-    <InputLeftSlot>
-      <Icon color="rgba(28, 43, 52, 0.5)">
-        <PhoneSvg />
-      </Icon>
-    </InputLeftSlot>
-  );
-};
-const InputNumber = (props) => {
-  const Next = useNextResolver();
-
-  return <Next {...props} />;
-};
-const InputColor = (props) => {
-  const Next = useNextResolver();
-
-  return <Next {...props} />;
-};
-const InputDatetimeLocal = (props) => {
-  const Next = useNextResolver();
-
-  return <Next {...props} />;
-};

@@ -199,6 +199,7 @@
             <TypeVariationsDemo />
             <DatetimeDemo />
             <SizeVariationsDemo />
+            <MaxLengthWidthDemo />
             <InteractiveDemo />
           </div>
         );
@@ -247,6 +248,9 @@
               </li>
               <li>
                 <a href="#sizes">Size Variations</a>
+              </li>
+              <li>
+                <a href="#max-length">maxLength → automatic width</a>
               </li>
               <li>
                 <a href="#interactive-controls">Interactive Controls</a>
@@ -1153,6 +1157,59 @@
           </div>
         );
       };
+
+      // ── maxLength → automatic width ────────────────────────────────────────
+      // When maxLength is set, InputTextual automatically sizes itself.
+      // For inputMode="numeric": `maxLength * 1ch` — digits are uniform-width.
+      // Otherwise: `maxLength * 1.5ch` — 1.5x factor accounts for wide chars
+      //   like "M" or "W" (1.2ch was not enough in practice).
+      // Note: type="number" does not support maxLength, so only inputMode="numeric"
+      //   gets the 1ch treatment.
+
+      const MaxLengthWidthDemo = () => (
+        <div class="demo-section" id="max-length">
+          <h2>maxLength → automatic width</h2>
+          <p class="desc">
+            Setting <code>maxLength</code> automatically restricts the input
+            width to fit the maximum number of characters. This gives users a
+            visual hint about the expected length and enables compact UIs.
+            Especially useful for numbers with a fixed number of digits.
+          </p>
+
+          <h3 style="margin: 0 0 8px; font-size: 0.9rem;">
+            Number — maxLength=3
+          </h3>
+          <Input inputMode="numeric" maxLength={3} defaultValue="425" />
+
+          <h3 style="margin: 16px 0 8px; font-size: 0.9rem;">
+            Number with big padding — maxLength=3
+          </h3>
+          <Input
+            inputMode="numeric"
+            maxLength={3}
+            padding="l"
+            defaultValue="425"
+          />
+
+          <h3 style="margin: 16px 0 8px; font-size: 0.9rem;">
+            Text — maxLength=2
+          </h3>
+          <p class="desc">
+            For text inputs a <code>×1.5ch</code> multiplier accounts for
+            variable-width characters.
+          </p>
+          <Input type="text" maxLength={2} defaultValue="MM" />
+
+          <h3 style="margin: 16px 0 8px; font-size: 0.9rem;">
+            Very wide chars — maxLength=2, value="WW"
+          </h3>
+          <p class="desc">
+            "W" is wider than "M" so 1.5× may still be slightly short. The input
+            is scrollable so no content is lost.
+          </p>
+          <Input type="text" maxLength={2} defaultValue="WW" />
+        </div>
+      );
 
       render(
         <NaviDebug debugAction debugInteraction>

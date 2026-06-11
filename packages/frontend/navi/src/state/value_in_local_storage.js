@@ -70,6 +70,22 @@ const TYPE_CONVERTERS = {
       return valueParsed;
     },
   },
+  array: {
+    decode: (valueFromLocalStorage) => {
+      const valueParsed = JSON.parse(valueFromLocalStorage);
+      if (!Array.isArray(valueParsed)) {
+        throw new Error(`Expected an array, got ${valueParsed}`);
+      }
+      return valueParsed;
+    },
+    encode: (value) => {
+      if (!Array.isArray(value)) {
+        throw new Error(`Expected an array, got ${value}`);
+      }
+      const valueStringified = JSON.stringify(value);
+      return valueStringified;
+    },
+  },
   object: {
     decode: (valueFromLocalStorage) => {
       const valueParsed = JSON.parse(valueFromLocalStorage);

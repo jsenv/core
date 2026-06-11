@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Input Navi Minute Demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 40px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      #container {
+        max-width: 600px;
+        margin: 0 auto;
+      }
+      h1 {
+        margin: 0 0 32px;
+        font-size: 1.4rem;
+      }
+      h2 {
+        margin: 0 0 8px;
+        font-size: 1.1rem;
+      }
+      .demo-section {
+        margin-bottom: 24px;
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      p.desc {
+        margin: 0 0 16px;
+        color: #555;
+        font-size: 13px;
+      }
+      .value-display {
+        margin-top: 12px;
+        color: #333;
+        font-size: 13px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <h1>Input Navi Minute Demo</h1>
+      <div id="app"></div>
+    </div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import {
+        Box,
+        Button,
+        Field,
+        Form,
+        Label,
+        Input,
+        NaviDebug,
+        route,
+        setupRoutes,
+        stateSignal,
+      } from "@jsenv/navi";
+
+      // ── State signals (persisted in URL search params) ────────────────────
+
+      const defaultSignal = stateSignal(30, {
+        id: "default",
+        type: "minute",
+      });
+      const invalidSignal = stateSignal("aa", {
+        id: "invalid",
+        type: "minute",
+      });
+      const minBasicSignal = stateSignal(5, {
+        id: "min_basic",
+        type: "minute",
+      });
+      const maxBasicSignal = stateSignal(65, {
+        id: "max_basic",
+        type: "minute",
+      });
+      const stepBasicSignal = stateSignal(7, {
+        id: "step_int",
+        type: "minute",
+      });
+      const stepFloatSignal = stateSignal(1.3, {
+        id: "step_float",
+        type: "minute",
+      });
+
+      const DEMO_ROUTE = route("", {
+        searchParams: {
+          default: defaultSignal,
+          invalid: invalidSignal,
+          min_basic: minBasicSignal,
+          max_basic: maxBasicSignal,
+          step_int: stepBasicSignal,
+          step_float: stepFloatSignal,
+        },
+      });
+      setupRoutes([DEMO_ROUTE]);
+
+      // ── TOC ───────────────────────────────────────────────────────────────
+      const TOC = () => (
+        <nav style="margin-bottom:32px">
+          <strong>Contents</strong>
+          <ol style="margin:8px 0 0;padding-left:20px;line-height:2">
+            <li>
+              <a href="#default">Default behavior</a>
+            </li>
+            <li>
+              <a href="#invalid">Invalid (non-numeric) value</a>
+            </li>
+            <li>
+              <a href="#min">min</a>
+            </li>
+            <li>
+              <a href="#max">max</a>
+            </li>
+            <li>
+              <a href="#step">step</a>
+              <ol style="padding-left:16px;line-height:2">
+                <li>
+                  <a href="#step-basic">Integer step</a>
+                </li>
+                <li>
+                  <a href="#step-float">Float step (decimal values)</a>
+                </li>
+              </ol>
+            </li>
+          </ol>
+        </nav>
+      );
+
+      // ── Shared helpers ────────────────────────────────────────────────────
+      const DemoForm = ({
+        id,
+        title,
+        desc,
+        inputProps,
+        valueSignal,
+        name = "minute",
+      }) => {
+        return (
+          <div class="demo-section" id={id}>
+            <h2>{title}</h2>
+            {desc && <p class="desc">{desc}</p>}
+            <Form
+              action={(fields) => {
+                valueSignal.value = fields[name];
+              }}
+              flex="y"
+              alignX="start"
+              spacing="s"
+            >
+              <Field>
+                <Label>Minutes</Label>
+                <Input
+                  name={name}
+                  type="navi_minute"
+                  value={valueSignal.value}
+                  action={(v) => {
+                    valueSignal.value = v;
+                  }}
+                  {...inputProps}
+                />
+              </Field>
+              <Button type="submit">Submit</Button>
+            </Form>
+            <p class="value-display">
+              Value: <strong>{String(valueSignal.value)}</strong>
+            </p>
+          </div>
+        );
+      };
+
+      // ── App ───────────────────────────────────────────────────────────────
+      const App = () => (
+        <NaviDebug>
+          <TOC />
+          <Box flex="y" spacing="l">
+            {/* ── 1. Default ── */}
+            <DemoForm
+              id="default"
+              title="1. Default — 0 to 59min, step 1"
+              desc="No explicit min/max/step. Defaults: min=0, max=59, step=1. Width is 2ch (2 digits). No spin buttons. 'min' suffix. Centered text."
+              valueSignal={defaultSignal}
+            />
+
+            {/* ── 2. Invalid value ── */}
+            <DemoForm
+              id="invalid"
+              title='2. Invalid value — initialValue="aa"'
+              desc='The initial value "aa" cannot be converted to a number. The type constraint fires and shows a validation message on submit.'
+              valueSignal={invalidSignal}
+            />
+
+            {/* ── 3. Min ── */}
+            <DemoForm
+              id="min"
+              title="3. min — min=10, max=59"
+              desc="Values below 10 are invalid. Initial value is 5 (below min) — submit to see the validation message."
+              valueSignal={minBasicSignal}
+              inputProps={{ min: 10, max: 59 }}
+            />
+
+            {/* ── 4. Max ── */}
+            <DemoForm
+              id="max"
+              title="4. max — max=45"
+              desc="Values above 45 are invalid. Initial value is 65 (above max) — submit to see the validation message."
+              valueSignal={maxBasicSignal}
+              inputProps={{ max: 45 }}
+            />
+
+            {/* ── 5. Step ── */}
+            <h2 id="step" style="margin:0">
+              5. step
+            </h2>
+
+            <DemoForm
+              id="step-basic"
+              title="5a. Integer step — step=5, min=0, max=55"
+              desc="Only multiples of 5 are valid (0, 5, 10, …). Initial value is 7 (not a multiple of 5) — submit to see the validation message."
+              valueSignal={stepBasicSignal}
+              inputProps={{ min: 0, max: 55, step: 5 }}
+            />
+
+            <DemoForm
+              id="step-float"
+              title="5b. Float step — step=0.5, min=0, max=9.5"
+              desc="Step is 0.5 so values like 1.5 or 3.5 are valid. Initial value is 1.3 (invalid step) — submit to see the validation message."
+              valueSignal={stepFloatSignal}
+              inputProps={{ min: 0, max: 9.5, step: 0.5 }}
+            />
+          </Box>
+        </NaviDebug>
+      );
+
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>

@@ -62,12 +62,14 @@ import { readControlValue } from "./control_value.js";
 import { addInputEffect } from "./input_effect.js";
 import { resolveActionProp, triggerStringAction } from "./string_actions.js";
 import {
-  dispatchRequestResetUIState,
-  dispatchRequestSetUIState,
   ParentUIStateControllerContext,
   useUIGroupStateController,
   useUIStateController,
 } from "./ui_state_controller.js";
+import {
+  dispatchRequestResetUIState,
+  dispatchRequestSetUIState,
+} from "./ui_state_dom.js";
 import { useConstraintMessages } from "./validation/hooks/use_constraint_messages.js";
 import { useConstraints } from "./validation/hooks/use_constraints.js";
 
@@ -78,7 +80,7 @@ import { useConstraints } from "./validation/hooks/use_constraints.js";
 // A controlgroup is always enough: when a group (SelectableList, etc.) is
 // present, the form gets the group's aggregated value; individual controls
 // inside the group register to the group, not the form.
-const ControlChildrenWrapper = ({ children }) => (
+export const ControlChildrenWrapper = ({ children }) => (
   <ParentUIStateControllerContext.Provider value={null}>
     <MessagePropsRefContext.Provider value={undefined}>
       <ControlToInterfaceContext.Provider value={undefined}>
@@ -87,7 +89,6 @@ const ControlChildrenWrapper = ({ children }) => (
     </MessagePropsRefContext.Provider>
   </ParentUIStateControllerContext.Provider>
 );
-
 export const ControlgroupChildrenWrapper = ({
   children,
   uiGroupStateController,
@@ -184,12 +185,11 @@ export const useControlProps = (
     resolveActionProp(props.action),
     uiStateController.uiStateSignal,
   );
-  const [controlProps, remainingProps, ControlChildrenWrapper] =
-    useInteractiveProps(props, {
-      uiStateController,
-      boundAction,
-      readOnlySupported,
-    });
+  const [controlProps, remainingProps] = useInteractiveProps(props, {
+    uiStateController,
+    boundAction,
+    readOnlySupported,
+  });
 
   interactions: {
     const {
@@ -381,6 +381,10 @@ export const useControlProps = (
       props.onClick?.(e);
       applyInteraction(clickInteraction, e);
       transferFocusToTarget(e);
+      if (controlType === "button" && e.currentTarget.form) {
+        // prevent form submission
+        e.preventDefault();
+      }
     };
     const onKeyDown = (e) => {
       props.onKeyDown?.(e);
@@ -439,7 +443,7 @@ export const useControlProps = (
     });
   }
 
-  return [controlProps, remainingProps, ControlChildrenWrapper];
+  return [controlProps, remainingProps];
 };
 
 /**
@@ -459,7 +463,7 @@ export const useControlgroupProps = (
   props,
   { stateType, controlType, childControlFilter, aggregateChildStates },
 ) => {
-  const { action } = props;
+  const { action, uiAction } = props;
   const debugAction = useDebugAction();
   const uiGroupStateController = useUIGroupStateController(props, controlType, {
     stateType,
@@ -467,6 +471,14 @@ export const useControlgroupProps = (
     aggregateChildStates,
     debugAction,
   });
+
+  const uiActionRef = useRef(uiAction);
+  uiActionRef.current = uiAction;
+  useLayoutEffect(() => {
+    return uiGroupStateController.subscribe((newState) => {
+      uiActionRef.current?.(newState);
+    });
+  }, [uiGroupStateController]);
   const [boundAction] = useActionBoundToOneParam(
     resolveActionProp(action),
     uiGroupStateController.uiStateSignal,
@@ -482,7 +494,7 @@ export const useControlgroupProps = (
   const readOnly = basePseudoState[":read-only"];
   const loading = basePseudoState[":-navi-loading"];
 
-  const childrenWrapperProps = useMemo(
+  const controlgroupChildrenWrapperProps = useMemo(
     () => ({
       uiGroupStateController,
       name: controlgroupProps.name,
@@ -516,8 +528,7 @@ export const useControlgroupProps = (
       },
     },
     remainingProps,
-    childrenWrapperProps,
-    uiGroupStateController,
+    controlgroupChildrenWrapperProps,
   ];
 };
 
@@ -644,7 +655,9 @@ const useInteractiveProps = (
     const { statePropName } = uiStateController;
     if (statePropName) {
       const statePropValueRaw = uiStateController.getPropFromState(uiState);
-      controlProps[statePropName] = statePropValueRaw;
+      const statePropValueDom =
+        uiStateController.toControlHostValue(statePropValueRaw);
+      controlProps[statePropName] = statePropValueDom;
       if (statePropName === "checked") {
         const { value } = props;
         controlProps.value = value;
@@ -819,5 +832,5 @@ const useInteractiveProps = (
     });
   }
 
-  return [controlProps, remainingProps, ControlChildrenWrapper];
+  return [controlProps, remainingProps];
 };

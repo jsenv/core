@@ -11,7 +11,7 @@ import { compareTwoJsValues } from "@jsenv/navi/src/utils/compare_two_js_values.
 import {
   dispatchRequestSetUIState,
   getUIStateFromElement,
-} from "../ui_state_controller.js";
+} from "../ui_state_dom.js";
 import {
   dispatchRequestAction,
   dispatchRequestInteraction,
@@ -38,7 +38,7 @@ const css = /* css */ `
         outline-width: var(--x-picker-outline-width);
         outline-color: var(--picker-outline-color);
         outline-offset: var(--x-picker-outline-offset);
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08), 0 12px 40px rgba(0, 0, 0, 0.22);
         cursor: default; /* Reset pointer cursor within the select */
         overflow: hidden;
         overscroll-behavior: none;
@@ -108,28 +108,6 @@ const css = /* css */ `
           flex-direction: column;
         }
       }
-
-      /* &:has([data-hover]) {
-        .navi_picker_popover {
-          --x-picker-border-color: var(--picker-border-color-hover);
-        }
-      } */
-
-      /* .navi_list_container {
-        width: 100%;
-        border: none;
-        border-radius: 0;
-        outline: none;
-
-        .navi_list {
-          width: 100%;
-        }
-      }
-      &:has([data-focus-visible]) {
-        .navi_picker_popover {
-          outline-style: solid;
-        }
-      } */
     }
 
     /* dialog */
@@ -144,7 +122,7 @@ const css = /* css */ `
         outline-width: var(--x-picker-outline-width);
         outline-color: var(--picker-outline-color);
         outline-offset: var(--x-picker-outline-offset);
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08), 0 12px 40px rgba(0, 0, 0, 0.22);
         cursor: default; /* Reset pointer cursor within the select */
         /* overscroll-behavior: contain; */
 
@@ -167,23 +145,6 @@ const css = /* css */ `
         overflow: auto;
         overscroll-behavior: none;
       }
-
-      /* .navi_list_container {
-        --list-max-height: none;
-        width: 100%;
-        border: none;
-        border-radius: 0;
-        outline: none;
-
-        .navi_list {
-          width: 100%;
-        }
-      }
-      &:has([data-focus-visible]) {
-        .navi_select_dialog {
-          outline-style: solid;
-        }
-      } */
     }
   }
 `;
@@ -562,6 +523,7 @@ const PickerContentInsideDialog = (props) => {
         className="navi_picker_dialog"
         scrollTrap={scrollTrap}
         pointerTrap={pointerTrap}
+        centerInVisualViewport
       >
         {children}
       </Dialog>

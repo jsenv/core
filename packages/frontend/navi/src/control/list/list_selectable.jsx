@@ -14,11 +14,13 @@ import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { useFocusGroup } from "@jsenv/navi/src/utils/focus/use_focus_group.js";
 import { ControlToInterfaceContext } from "../control_context.js";
 import {
+  ControlChildrenWrapper,
   ControlgroupChildrenWrapper,
   useControlgroupProps,
 } from "../control_hooks.jsx";
 import { Input } from "../input/input.jsx";
 import { useCheckableProps } from "../input/use_checkable_props.js";
+import { getUIStateControllerById } from "../ui_state_controller.js";
 import {
   dispatchRequestAction,
   dispatchRequestInteraction,
@@ -185,6 +187,7 @@ const SelectableListMultipleContext = createContext(false);
 // and fires it on select. When only uiAction is provided it calls it directly.
 export const ListSelectableResolver = (props) => {
   const Next = useNextResolver();
+
   if (props.selectable) {
     return <ListSelectable {...props} />;
   }
@@ -203,48 +206,45 @@ const ListSelectable = (props) => {
     focusGroupDirection,
     focusGroupWrap,
   } = props;
-  const [
-    listControlProps,
-    remainingProps,
-    childrenWrapperProps,
-    uiGroupStateController,
-  ] = useControlgroupProps(props, {
-    stateType: multiple ? "array" : "",
-    controlType: multiple ? "checkbox_group" : "radio_group",
-    childControlFilter: multiple
-      ? (childUIStateController) => {
-          return (
-            childUIStateController.controlType === "input" &&
-            childUIStateController.props.type === "checkbox"
-          );
-        }
-      : (childUIStateController) => {
-          return (
-            childUIStateController.controlType === "input" &&
-            childUIStateController.props.type === "radio"
-          );
-        },
-    aggregateChildStates: multiple
-      ? (childUIStateControllers) => {
-          const values = [];
-          for (const childUIStateController of childUIStateControllers) {
-            if (childUIStateController.uiState) {
-              values.push(childUIStateController.uiState);
-            }
+  const [listControlProps, remainingProps, childrenWrapperProps] =
+    useControlgroupProps(props, {
+      stateType: multiple ? "array" : "",
+      controlType: multiple ? "checkbox_group" : "radio_group",
+      childControlFilter: multiple
+        ? (childUIStateController) => {
+            return (
+              childUIStateController.controlType === "input" &&
+              childUIStateController.props.type === "checkbox"
+            );
           }
-          return values.length === 0 ? undefined : values;
-        }
-      : (childUIStateControllers) => {
-          let activeValue;
-          for (const childUIStateController of childUIStateControllers) {
-            if (childUIStateController.uiState) {
-              activeValue = childUIStateController.uiState;
-              break;
+        : (childUIStateController) => {
+            return (
+              childUIStateController.controlType === "input" &&
+              childUIStateController.props.type === "radio"
+            );
+          },
+      aggregateChildStates: multiple
+        ? (childUIStateControllers) => {
+            const values = [];
+            for (const childUIStateController of childUIStateControllers) {
+              if (childUIStateController.uiState) {
+                values.push(childUIStateController.uiState);
+              }
             }
+            return values.length === 0 ? undefined : values;
           }
-          return activeValue;
-        },
-  });
+        : (childUIStateControllers) => {
+            let activeValue;
+            for (const childUIStateController of childUIStateControllers) {
+              if (childUIStateController.uiState) {
+                activeValue = childUIStateController.uiState;
+                break;
+              }
+            }
+            return activeValue;
+          },
+    });
+  const uiGroupStateController = getUIStateControllerById(listControlProps.id);
   useFocusGroup(ref, {
     direction: focusGroupDirection,
     wrap: focusGroupWrap,
@@ -492,22 +492,21 @@ const ListItemSelectable = (props) => {
   const inputType = multiple ? "checkbox" : "radio";
   const inputId = `${id}_input`;
   inputRef.nullCanHappen = true; // virtualization
-  const [checkableProps, remainingProps, ChildrenContextWrapper] =
-    useCheckableProps({
-      readOnlyMessage: naviI18n(`constraint.readonly.option`, props),
-      ...rest,
-      ref: inputRef,
-      id: inputId,
-      type: inputType,
-      defaultChecked: defaultSelected,
-      checked: selected,
-      action: (v, { event }) => {
-        const listContainerEl = event.currentTarget.closest(
-          ".navi_list_container",
-        );
-        dispatchRequestAction(listContainerEl, { event });
-      },
-    });
+  const [checkableProps, remainingProps] = useCheckableProps({
+    readOnlyMessage: naviI18n(`constraint.readonly.option`, props),
+    ...rest,
+    ref: inputRef,
+    id: inputId,
+    type: inputType,
+    defaultChecked: defaultSelected,
+    checked: selected,
+    action: (v, { event }) => {
+      const listContainerEl = event.currentTarget.closest(
+        ".navi_list_container",
+      );
+      dispatchRequestAction(listContainerEl, { event });
+    },
+  });
   const { checked, value, basePseudoState, children } = checkableProps;
   const readOnly = basePseudoState[":read-only"];
   // const disabled = basePseudoState[":disabled"];
@@ -554,7 +553,7 @@ const ListItemSelectable = (props) => {
         children={undefined}
       />
       <SelectableRealInputContext.Provider value={realInputContextValue}>
-        <ChildrenContextWrapper>{children}</ChildrenContextWrapper>
+        <ControlChildrenWrapper>{children}</ControlChildrenWrapper>
       </SelectableRealInputContext.Provider>
     </Next>
   );
