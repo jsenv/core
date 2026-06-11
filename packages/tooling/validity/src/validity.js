@@ -372,11 +372,15 @@ export const createValidity = (ruleConfig) => {
       // the format function would produce garbage (NaN etc.). Fall back to String(value).
       let representedValue;
       if (value !== undefined) {
-        const jsType = typeDef?.jsType;
-        if (jsType && typeof value !== jsType) {
-          representedValue = String(value);
-        } else {
+        if (type === "inherit") {
           representedValue = format(value);
+        } else {
+          const jsType = typeDef?.jsType;
+          if (jsType && typeof value !== jsType) {
+            representedValue = String(value);
+          } else {
+            representedValue = format(value);
+          }
         }
       }
       validity.representations[key] = {
