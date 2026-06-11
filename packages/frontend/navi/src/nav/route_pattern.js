@@ -2669,8 +2669,9 @@ const extractSearchParams = (urlObj, queryConnectionMap) => {
         decodedValue === "true" || decodedValue === "1" || decodedValue === "";
     } else if (signalType === "date") {
       const decodedValue = decodeURIComponent(rawValue);
-      // Parse as UTC midnight to match how new Date('YYYY-MM-DD') works
-      const [year, month, day] = decodedValue.split("-").map(Number);
+      // Accept both "YYYY-MM-DD" and full ISO string, always parse as UTC date
+      const datePart = decodedValue.slice(0, 10);
+      const [year, month, day] = datePart.split("-").map(Number);
       const d = new Date(Date.UTC(year, month - 1, day));
       params[key] = isNaN(d.getTime()) ? decodedValue : d;
     } else if (signalType === "datetime") {

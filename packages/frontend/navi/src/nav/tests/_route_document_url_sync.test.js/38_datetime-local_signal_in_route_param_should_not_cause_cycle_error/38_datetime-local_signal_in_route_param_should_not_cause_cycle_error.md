@@ -1,4 +1,4 @@
-# [date signal in route param should not cause cycle error](../../route_document_url_sync.test.js)
+# [datetime-local signal in route param should not cause cycle error](../../route_document_url_sync.test.js)
 
 ```js
 const urlProgression = [];
@@ -9,18 +9,20 @@ setRouteIntegration({
     return Promise.resolve();
   },
 });
-const dateSignal = stateSignal(undefined, { type: "date" });
+const datetimeLocalSignal = stateSignal(undefined, {
+  type: "datetime-local",
+});
 const ROUTE = route("/map/", {
-  searchParams: { date: dateSignal },
+  searchParams: { dt: datetimeLocalSignal },
 });
 const { updateRoutes, clearRoutes } = setupRoutes([ROUTE]);
 try {
   updateRoutes(`${baseUrl}/map/`);
-  dateSignal.value = new Date("2024-03-15");
+  datetimeLocalSignal.value = "2024-03-15T14:30";
 
   return {
     urlProgression,
-    date_signal_value: humanize(dateSignal.value),
+    datetime_local_signal_value: datetimeLocalSignal.value,
   };
 } finally {
   clearRoutes();
@@ -32,9 +34,9 @@ try {
 ```js
 {
   "urlProgression": [
-    "http://127.0.0.1/map?date=2024-03-15"
+    "http://127.0.0.1/map?dt=2024-03-15T14%3A30"
   ],
-  "date_signal_value": 'Date("2024-03-15T00:00:00.000Z")'
+  "datetime_local_signal_value": "2024-03-15T14:30"
 }
 ```
 

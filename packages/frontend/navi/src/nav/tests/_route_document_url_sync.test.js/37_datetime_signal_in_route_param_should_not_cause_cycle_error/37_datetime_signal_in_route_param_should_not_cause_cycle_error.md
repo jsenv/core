@@ -1,4 +1,4 @@
-# [date signal in route param should not cause cycle error](../../route_document_url_sync.test.js)
+# [datetime signal in route param should not cause cycle error](../../route_document_url_sync.test.js)
 
 ```js
 const urlProgression = [];
@@ -9,18 +9,18 @@ setRouteIntegration({
     return Promise.resolve();
   },
 });
-const dateSignal = stateSignal(undefined, { type: "date" });
+const datetimeSignal = stateSignal(undefined, { type: "datetime" });
 const ROUTE = route("/map/", {
-  searchParams: { date: dateSignal },
+  searchParams: { datetime: datetimeSignal },
 });
 const { updateRoutes, clearRoutes } = setupRoutes([ROUTE]);
 try {
   updateRoutes(`${baseUrl}/map/`);
-  dateSignal.value = new Date("2024-03-15");
+  datetimeSignal.value = new Date("2024-03-15T14:30:00.000Z");
 
   return {
     urlProgression,
-    date_signal_value: humanize(dateSignal.value),
+    datetime_signal_value: humanize(datetimeSignal.value),
   };
 } finally {
   clearRoutes();
@@ -32,9 +32,9 @@ try {
 ```js
 {
   "urlProgression": [
-    "http://127.0.0.1/map?date=2024-03-15"
+    "http://127.0.0.1/map?datetime=2024-03-15"
   ],
-  "date_signal_value": 'Date("2024-03-15T00:00:00.000Z")'
+  "datetime_signal_value": 'Date("2024-03-15T00:00:00.000Z")'
 }
 ```
 

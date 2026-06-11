@@ -2258,4 +2258,64 @@ await snapshotTests(import.meta.url, ({ test }) => {
       setRouteIntegration(undefined);
     }
   });
+
+  test("datetime signal in route param should not cause cycle error", () => {
+    const urlProgression = [];
+    setRouteIntegration({
+      navTo: (url) => {
+        urlProgression.push(url);
+        updateRoutes(url);
+        return Promise.resolve();
+      },
+    });
+    const datetimeSignal = stateSignal(undefined, { type: "datetime" });
+    const ROUTE = route("/map/", {
+      searchParams: { datetime: datetimeSignal },
+    });
+    const { updateRoutes, clearRoutes } = setupRoutes([ROUTE]);
+    try {
+      updateRoutes(`${baseUrl}/map/`);
+      datetimeSignal.value = new Date("2024-03-15T14:30:00.000Z");
+
+      return {
+        urlProgression,
+        datetime_signal_value: humanize(datetimeSignal.value),
+      };
+    } finally {
+      clearRoutes();
+      globalSignalRegistry.clear();
+      setRouteIntegration(undefined);
+    }
+  });
+
+  test("datetime-local signal in route param should not cause cycle error", () => {
+    const urlProgression = [];
+    setRouteIntegration({
+      navTo: (url) => {
+        urlProgression.push(url);
+        updateRoutes(url);
+        return Promise.resolve();
+      },
+    });
+    const datetimeLocalSignal = stateSignal(undefined, {
+      type: "datetime-local",
+    });
+    const ROUTE = route("/map/", {
+      searchParams: { dt: datetimeLocalSignal },
+    });
+    const { updateRoutes, clearRoutes } = setupRoutes([ROUTE]);
+    try {
+      updateRoutes(`${baseUrl}/map/`);
+      datetimeLocalSignal.value = "2024-03-15T14:30";
+
+      return {
+        urlProgression,
+        datetime_local_signal_value: datetimeLocalSignal.value,
+      };
+    } finally {
+      clearRoutes();
+      globalSignalRegistry.clear();
+      setRouteIntegration(undefined);
+    }
+  });
 });

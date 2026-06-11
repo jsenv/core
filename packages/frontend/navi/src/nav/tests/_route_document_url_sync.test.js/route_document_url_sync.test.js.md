@@ -38,6 +38,8 @@
 - [catch-all section route should preserve current path when updating search param on /profile/404](34_catch-all_section_route_should_preserve_current_path_when_updating_search_param_on_profile404/34_catch-all_section_route_should_preserve_current_path_when_updating_search_param_on_profile404.md)
 - [updating signals on a route, document url should sync](35_updating_signals_on_a_route__document_url_should_sync/35_updating_signals_on_a_route__document_url_should_sync.md)
 - [date signal in route param should not cause cycle error](36_date_signal_in_route_param_should_not_cause_cycle_error/36_date_signal_in_route_param_should_not_cause_cycle_error.md)
+- [datetime signal in route param should not cause cycle error](37_datetime_signal_in_route_param_should_not_cause_cycle_error/37_datetime_signal_in_route_param_should_not_cause_cycle_error.md)
+- [datetime-local signal in route param should not cause cycle error](38_datetime-local_signal_in_route_param_should_not_cause_cycle_error/38_datetime-local_signal_in_route_param_should_not_cause_cycle_error.md)
 
 ---
 
