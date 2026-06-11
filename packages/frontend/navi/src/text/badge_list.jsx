@@ -18,7 +18,7 @@ const css = /* css */ `
     }
   }
 
-  .navi_more_badge {
+  .navi_badge.navi_more_badge {
     max-width: var(--more-badge-max-width, none);
   }
 `;
@@ -45,6 +45,12 @@ export const BadgeList = ({
 
     const measure = () => {
       let nextHiddenCount = 0;
+
+      // Constrain ghost to the parent's available width so flex-wrap behaves
+      // the same as the visible element.
+      const parent = measureEl.parentElement;
+      const availableWidth = parent ? parent.getBoundingClientRect().width : 0;
+      measureEl.style.width = `${availableWidth}px`;
 
       if (shrinkWrap) {
         const optimalWidth = measureWidestChildRow(measureEl);
