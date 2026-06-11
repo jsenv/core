@@ -203,10 +203,18 @@
             <li>
               <a href="#section-1">1. Dimensions — size &amp; overflow</a>
               <ol class="toc-list" style={{ marginTop: 0 }}>
-                <li><a href="#dim-font-size">Font size</a></li>
-                <li><a href="#dim-width">Width adapts to value</a></li>
-                <li><a href="#dim-overflow">Single-line overflow</a></li>
-                <li><a href="#dim-maxrows">Multi-line with maxRows</a></li>
+                <li>
+                  <a href="#dim-font-size">Font size</a>
+                </li>
+                <li>
+                  <a href="#dim-width">Width adapts to value</a>
+                </li>
+                <li>
+                  <a href="#dim-overflow">Single-line overflow</a>
+                </li>
+                <li>
+                  <a href="#dim-maxrows">Multi-line with maxRows</a>
+                </li>
               </ol>
             </li>
             <li>
@@ -767,7 +775,9 @@
           <div id="section-1" class="demo-section">
             <h2>1. Dimensions — size &amp; overflow</h2>
 
-            <h3 id="dim-font-size" style={{ marginTop: "24px" }}>Font size</h3>
+            <h3 id="dim-font-size" style={{ marginTop: "24px" }}>
+              Font size
+            </h3>
             <p>
               The picker inherits font size from its container, which drives its
               overall size.
@@ -808,10 +818,15 @@
               ))}
             </Box>
 
-            <h3 id="dim-width" style={{ marginTop: "24px" }}>Width adapts to value</h3>
+            <h3 id="dim-width" style={{ marginTop: "24px" }}>
+              Width adapts to value
+            </h3>
             <p>
-              By default the picker grows to fit its selected value. This can
-              cause layout shift as the width changes between values.
+              By default the picker grows to fit its selected value. When
+              something sits to the right of the picker, a width change shifts
+              it — notice the button being pushed as the picker grows. Even with
+              nothing to the right, a picker that changes size on every
+              selection feels unstable and is generally more pleasant to avoid.
             </p>
             <Box flex="y" spacing="m">
               <Field vertical>
@@ -819,32 +834,42 @@
                   Short value{" "}
                   <code style={{ fontWeight: "normal" }}>(default)</code>
                 </Label>
-                <Picker
-                  name="dim_width_short"
-                  value={SHORT_VALUE}
-                  action={() => {}}
-                >
-                  <DimensionPickerItems
-                    id="dim_width_short"
-                    values={[SHORT_VALUE, MEDIUM_VALUE]}
-                  />
-                </Picker>
+                <Box flex="x" spacing="s" alignY="center">
+                  <Picker
+                    name="dim_width_short"
+                    value={SHORT_VALUE}
+                    action={() => {}}
+                  >
+                    <DimensionPickerItems
+                      id="dim_width_short"
+                      values={[SHORT_VALUE, MEDIUM_VALUE]}
+                    />
+                  </Picker>
+                  <button type="button" style={{ flexShrink: 0 }}>
+                    Submit
+                  </button>
+                </Box>
               </Field>
               <Field vertical>
                 <Label>
                   Medium value{" "}
                   <code style={{ fontWeight: "normal" }}>(default)</code>
                 </Label>
-                <Picker
-                  name="dim_width_medium"
-                  value={MEDIUM_VALUE}
-                  action={() => {}}
-                >
-                  <DimensionPickerItems
-                    id="dim_width_medium"
-                    values={[SHORT_VALUE, MEDIUM_VALUE]}
-                  />
-                </Picker>
+                <Box flex="x" spacing="s" alignY="center">
+                  <Picker
+                    name="dim_width_medium"
+                    value={MEDIUM_VALUE}
+                    action={() => {}}
+                  >
+                    <DimensionPickerItems
+                      id="dim_width_medium"
+                      values={[SHORT_VALUE, MEDIUM_VALUE]}
+                    />
+                  </Picker>
+                  <button type="button" style={{ flexShrink: 0 }}>
+                    Submit
+                  </button>
+                </Box>
               </Field>
             </Box>
 
@@ -858,34 +883,44 @@
                   Short value{" "}
                   <code style={{ fontWeight: "normal" }}>(minWidth="140")</code>
                 </Label>
-                <Picker
-                  name="dim_minwidth_short"
-                  value={SHORT_VALUE}
-                  action={() => {}}
-                  minWidth="140"
-                >
-                  <DimensionPickerItems
-                    id="dim_minwidth_short"
-                    values={[SHORT_VALUE, MEDIUM_VALUE]}
-                  />
-                </Picker>
+                <Box flex="x" spacing="s" alignY="center">
+                  <Picker
+                    name="dim_minwidth_short"
+                    value={SHORT_VALUE}
+                    action={() => {}}
+                    minWidth="140"
+                  >
+                    <DimensionPickerItems
+                      id="dim_minwidth_short"
+                      values={[SHORT_VALUE, MEDIUM_VALUE]}
+                    />
+                  </Picker>
+                  <button type="button" style={{ flexShrink: 0 }}>
+                    Submit
+                  </button>
+                </Box>
               </Field>
               <Field vertical>
                 <Label>
                   Medium value{" "}
                   <code style={{ fontWeight: "normal" }}>(minWidth="140")</code>
                 </Label>
-                <Picker
-                  name="dim_minwidth_medium"
-                  value={MEDIUM_VALUE}
-                  action={() => {}}
-                  minWidth="140"
-                >
-                  <DimensionPickerItems
-                    id="dim_minwidth_medium"
-                    values={[SHORT_VALUE, MEDIUM_VALUE]}
-                  />
-                </Picker>
+                <Box flex="x" spacing="s" alignY="center">
+                  <Picker
+                    name="dim_minwidth_medium"
+                    value={MEDIUM_VALUE}
+                    action={() => {}}
+                    minWidth="140"
+                  >
+                    <DimensionPickerItems
+                      id="dim_minwidth_medium"
+                      values={[SHORT_VALUE, MEDIUM_VALUE]}
+                    />
+                  </Picker>
+                  <button type="button" style={{ flexShrink: 0 }}>
+                    Submit
+                  </button>
+                </Box>
               </Field>
             </Box>
 
@@ -899,38 +934,50 @@
                   Short value{" "}
                   <code style={{ fontWeight: "normal" }}>(expandX)</code>
                 </Label>
-                <Picker
-                  name="dim_expandx_short"
-                  value={SHORT_VALUE}
-                  action={() => {}}
-                  expandX
-                >
-                  <DimensionPickerItems
-                    id="dim_expandx_short"
-                    values={[SHORT_VALUE, MEDIUM_VALUE]}
-                  />
-                </Picker>
+                <Box flex="x" spacing="s" alignY="center" expandX>
+                  <Picker
+                    name="dim_expandx_short"
+                    value={SHORT_VALUE}
+                    action={() => {}}
+                    expandX
+                  >
+                    <DimensionPickerItems
+                      id="dim_expandx_short"
+                      values={[SHORT_VALUE, MEDIUM_VALUE]}
+                    />
+                  </Picker>
+                  <button type="button" style={{ flexShrink: 0 }}>
+                    Submit
+                  </button>
+                </Box>
               </Field>
               <Field vertical>
                 <Label>
                   Medium value{" "}
                   <code style={{ fontWeight: "normal" }}>(expandX)</code>
                 </Label>
-                <Picker
-                  name="dim_expandx_medium"
-                  value={MEDIUM_VALUE}
-                  action={() => {}}
-                  expandX
-                >
-                  <DimensionPickerItems
-                    id="dim_expandx_medium"
-                    values={[SHORT_VALUE, MEDIUM_VALUE]}
-                  />
-                </Picker>
+                <Box flex="x" spacing="s" alignY="center" expandX>
+                  <Picker
+                    name="dim_expandx_medium"
+                    value={MEDIUM_VALUE}
+                    action={() => {}}
+                    expandX
+                  >
+                    <DimensionPickerItems
+                      id="dim_expandx_medium"
+                      values={[SHORT_VALUE, MEDIUM_VALUE]}
+                    />
+                  </Picker>
+                  <button type="button" style={{ flexShrink: 0 }}>
+                    Submit
+                  </button>
+                </Box>
               </Field>
             </Box>
 
-            <h3 id="dim-overflow" style={{ marginTop: "24px" }}>Single-line overflow</h3>
+            <h3 id="dim-overflow" style={{ marginTop: "24px" }}>
+              Single-line overflow
+            </h3>
             <p>
               When the value is wider than the picker (here constrained to{" "}
               <code>maxWidth="200"</code>), the text is clipped with an ellipsis
@@ -967,7 +1014,9 @@
               </Field>
             </Box>
 
-            <h3 id="dim-maxrows" style={{ marginTop: "24px" }}>Multi-line with maxRows</h3>
+            <h3 id="dim-maxrows" style={{ marginTop: "24px" }}>
+              Multi-line with maxRows
+            </h3>
             <p>
               <code>maxRows</code> lets the text flow onto multiple lines before
               truncating. At <code>maxRows=3</code> the text wraps up to three
