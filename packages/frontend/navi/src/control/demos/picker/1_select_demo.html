@@ -63,8 +63,8 @@
       .demo-section h3 {
         margin: 24px 0 6px;
         color: #555;
-        font-size: 0.95rem;
         font-weight: 600;
+        font-size: 0.95rem;
       }
       .demo-section h2 {
         margin: 0 0 8px;
@@ -760,7 +760,6 @@
       );
 
       const DimensionsDemo = () => {
-        const widthSignal = useSignal(SHORT_VALUE);
         const sentenceSignal = useSignal(LONG_SENTENCE);
         const wordSignal = useSignal(LONG_WORD);
         const clampSignal = useSignal(VERY_LONG_TEXT);
@@ -812,24 +811,125 @@
 
             <h3 style={{ marginTop: "24px" }}>Width adapts to value</h3>
             <p>
-              By default the picker grows to fit its selected value. Select a
-              short then a medium value to see the width adapt.
+              By default the picker grows to fit its selected value. This can
+              cause layout shift as the width changes between values.
             </p>
-            <Field vertical>
-              <Label>Width adapts to value</Label>
-              <Picker
-                name="dim_width"
-                value={widthSignal.value}
-                action={(v) => {
-                  widthSignal.value = v;
-                }}
-              >
-                <DimensionPickerItems
-                  id="dim_width"
-                  values={[SHORT_VALUE, MEDIUM_VALUE]}
-                />
-              </Picker>
-            </Field>
+            <Box flex="y" spacing="m">
+              <Field vertical>
+                <Label>
+                  Short value{" "}
+                  <code style={{ fontWeight: "normal" }}>(default)</code>
+                </Label>
+                <Picker
+                  name="dim_width_short"
+                  value={SHORT_VALUE}
+                  action={() => {}}
+                >
+                  <DimensionPickerItems
+                    id="dim_width_short"
+                    values={[SHORT_VALUE, MEDIUM_VALUE]}
+                  />
+                </Picker>
+              </Field>
+              <Field vertical>
+                <Label>
+                  Medium value{" "}
+                  <code style={{ fontWeight: "normal" }}>(default)</code>
+                </Label>
+                <Picker
+                  name="dim_width_medium"
+                  value={MEDIUM_VALUE}
+                  action={() => {}}
+                >
+                  <DimensionPickerItems
+                    id="dim_width_medium"
+                    values={[SHORT_VALUE, MEDIUM_VALUE]}
+                  />
+                </Picker>
+              </Field>
+            </Box>
+
+            <p style={{ marginTop: "16px" }}>
+              Set <code>minWidth</code> to a fixed value to prevent layout shift
+              while still allowing the picker to grow for longer values.
+            </p>
+            <Box flex="y" spacing="m">
+              <Field vertical>
+                <Label>
+                  Short value{" "}
+                  <code style={{ fontWeight: "normal" }}>(minWidth="140")</code>
+                </Label>
+                <Picker
+                  name="dim_minwidth_short"
+                  value={SHORT_VALUE}
+                  action={() => {}}
+                  minWidth="140"
+                >
+                  <DimensionPickerItems
+                    id="dim_minwidth_short"
+                    values={[SHORT_VALUE, MEDIUM_VALUE]}
+                  />
+                </Picker>
+              </Field>
+              <Field vertical>
+                <Label>
+                  Medium value{" "}
+                  <code style={{ fontWeight: "normal" }}>(minWidth="140")</code>
+                </Label>
+                <Picker
+                  name="dim_minwidth_medium"
+                  value={MEDIUM_VALUE}
+                  action={() => {}}
+                  minWidth="140"
+                >
+                  <DimensionPickerItems
+                    id="dim_minwidth_medium"
+                    values={[SHORT_VALUE, MEDIUM_VALUE]}
+                  />
+                </Picker>
+              </Field>
+            </Box>
+
+            <p style={{ marginTop: "16px" }}>
+              Use <code>expandX</code> to make the picker fill its container
+              width entirely, also preventing layout shift.
+            </p>
+            <Box flex="y" spacing="m">
+              <Field vertical>
+                <Label>
+                  Short value{" "}
+                  <code style={{ fontWeight: "normal" }}>(expandX)</code>
+                </Label>
+                <Picker
+                  name="dim_expandx_short"
+                  value={SHORT_VALUE}
+                  action={() => {}}
+                  expandX
+                >
+                  <DimensionPickerItems
+                    id="dim_expandx_short"
+                    values={[SHORT_VALUE, MEDIUM_VALUE]}
+                  />
+                </Picker>
+              </Field>
+              <Field vertical>
+                <Label>
+                  Medium value{" "}
+                  <code style={{ fontWeight: "normal" }}>(expandX)</code>
+                </Label>
+                <Picker
+                  name="dim_expandx_medium"
+                  value={MEDIUM_VALUE}
+                  action={() => {}}
+                  expandX
+                >
+                  <DimensionPickerItems
+                    id="dim_expandx_medium"
+                    values={[SHORT_VALUE, MEDIUM_VALUE]}
+                  />
+                </Picker>
+              </Field>
+            </Box>
 
             <h3 style={{ marginTop: "24px" }}>Single-line overflow</h3>
             <p>
