@@ -4,6 +4,7 @@ import { useLayoutEffect, useRef, useState } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
 import { Badge } from "./badge.jsx";
+import { naviI18n } from "./navi_i18n.js";
 
 const css = /* css */ `
   @layer navi {
@@ -20,9 +21,7 @@ const css = /* css */ `
   }
 
   .navi_badge.navi_more_badge {
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    overflow: hidden;
+    max-width: var(--more-badge-max-width, none);
   }
 `;
 
@@ -72,7 +71,8 @@ export const BadgeList = ({
         }
         if (rowTops.length > maxRows) {
           const allowedTops = new Set(rowTops.slice(0, maxRows));
-          for (const child of measureEl.children) {
+          const ghostChildren = Array.from(measureEl.children);
+          for (const child of ghostChildren) {
             const childTop = Math.round(
               child.getBoundingClientRect().top - top,
             );
@@ -80,6 +80,26 @@ export const BadgeList = ({
               nextHiddenCount++;
             }
           }
+          // The visible list will show ghostChildren.length - nextHiddenCount - 1 badges
+          // (one extra freed for the "+N more" badge). Find the right edge of the
+          // last visible badge in the ghost to compute the remaining width precisely.
+          const lastVisibleIndex =
+            ghostChildren.length - nextHiddenCount - 1 - 1;
+          const lastVisibleChild = ghostChildren[lastVisibleIndex];
+          if (lastVisibleChild) {
+            const spacing = parseFloat(getComputedStyle(measureEl).gap || "0");
+            const lastVisibleRight =
+              lastVisibleChild.getBoundingClientRect().right;
+            const remainingWidth = Math.floor(
+              containerRect.right - lastVisibleRight - spacing,
+            );
+            visibleEl.style.setProperty(
+              "--more-badge-max-width",
+              `${remainingWidth}px`,
+            );
+          }
+        } else {
+          visibleEl.style.removeProperty("--more-badge-max-width");
         }
       }
 
@@ -144,5 +164,6 @@ export const BadgeList = ({
 };
 
 const MoreBadge = ({ count }) => {
-  return <Badge className="navi_more_badge">+{count} more</Badge>;
+  const label = naviI18n("badge_list.more", { count });
+  return <Badge className="navi_more_badge">{label}</Badge>;
 };
