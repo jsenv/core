@@ -1,6 +1,6 @@
 import { measureWidestChildRow } from "@jsenv/dom";
 import { createContext, toChildArray } from "preact";
-import { useContext, useLayoutEffect, useRef, useState } from "preact/hooks";
+import { useContext, useLayoutEffect, useRef } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
 import { Badge } from "./badge.jsx";
@@ -22,8 +22,8 @@ const css = /* css */ `
     }
   }
 
-  .navi_badge.navi_more_badge {
-    max-width: var(--more-badge-max-width, none);
+  .navi_badge_more {
+    display: none;
   }
 `;
 
@@ -37,79 +37,92 @@ export const BadgeList = ({
   import.meta.css = css;
   const maxRowsFromContext = useContext(BadgeListMaxRowsContext);
   const measureRef = useRef();
-  const [hiddenCount, setHiddenCount] = useState(0);
+  const visibleRef = useRef();
+  const moreBadgeRef = useRef();
   if (maxRows === undefined) {
     maxRows = maxRowsFromContext;
   }
 
   useLayoutEffect(() => {
     const measureEl = measureRef.current;
-    if (!measureEl) {
+    const visibleEl = visibleRef.current;
+    const moreBadgeEl = moreBadgeRef.current;
+    if (!measureEl || !visibleEl || !moreBadgeEl) {
       return undefined;
     }
-    const visibleEl = measureEl.nextElementSibling;
     let observer;
     let rafId;
 
     const measure = () => {
-      let nextHiddenCount = 0;
+      // Reset: show all visible children, hide more badge
+      moreBadgeEl.style.display = "none";
+      const visibleChildren = Array.from(visibleEl.children).filter(
+        (c) => c !== moreBadgeEl,
+      );
+      for (const child of visibleChildren) {
+        child.style.display = "";
+      }
+      visibleEl.style.width = "";
 
-      // Constrain ghost to the parent's available width so flex-wrap behaves
-      // the same as the visible element.
       if (shrinkWrap) {
         const optimalWidth = measureWidestChildRow(measureEl);
         if (optimalWidth !== null) {
           visibleEl.style.width = `${Math.ceil(optimalWidth)}px`;
-        } else {
-          visibleEl.style.width = "";
         }
       }
 
-      if (maxRows !== undefined) {
-        const containerRect = measureEl.getBoundingClientRect();
-        const top = containerRect.top;
-        const rowTops = [];
-        for (const child of measureEl.children) {
-          const childTop = Math.round(child.getBoundingClientRect().top - top);
-          if (!rowTops.includes(childTop)) {
-            rowTops.push(childTop);
-          }
+      if (maxRows === undefined) {
+        return;
+      }
+
+      const containerRect = measureEl.getBoundingClientRect();
+      const top = containerRect.top;
+      const rowTops = [];
+      for (const child of measureEl.children) {
+        const childTop = Math.round(child.getBoundingClientRect().top - top);
+        if (!rowTops.includes(childTop)) {
+          rowTops.push(childTop);
         }
-        if (rowTops.length > maxRows) {
-          const allowedTops = new Set(rowTops.slice(0, maxRows));
-          const ghostChildren = Array.from(measureEl.children);
-          for (const child of ghostChildren) {
-            const childTop = Math.round(
-              child.getBoundingClientRect().top - top,
-            );
-            if (!allowedTops.has(childTop)) {
-              nextHiddenCount++;
-            }
-          }
-          // The visible list will show ghostChildren.length - nextHiddenCount - 1 badges
-          // (one extra freed for the "+N more" badge). Find the right edge of the
-          // last visible badge in the ghost to compute the remaining width precisely.
-          const lastVisibleIndex =
-            ghostChildren.length - nextHiddenCount - 1 - 1;
-          const lastVisibleChild = ghostChildren[lastVisibleIndex];
-          if (lastVisibleChild) {
-            const spacing = parseFloat(getComputedStyle(measureEl).gap || "0");
-            const lastVisibleRight =
-              lastVisibleChild.getBoundingClientRect().right;
-            const remainingWidth = Math.floor(
-              containerRect.right - lastVisibleRight - spacing,
-            );
-            visibleEl.style.setProperty(
-              "--more-badge-max-width",
-              `${remainingWidth}px`,
-            );
-          }
-        } else {
-          visibleEl.style.removeProperty("--more-badge-max-width");
+      }
+      if (rowTops.length <= maxRows) {
+        return;
+      }
+
+      const allowedTops = new Set(rowTops.slice(0, maxRows));
+      const ghostChildren = Array.from(measureEl.children);
+      let overflowCount = 0;
+      for (const child of ghostChildren) {
+        const childTop = Math.round(child.getBoundingClientRect().top - top);
+        if (!allowedTops.has(childTop)) {
+          overflowCount++;
         }
       }
 
-      setHiddenCount(nextHiddenCount);
+      // Hide overflow + 1 extra children to free a slot for the more badge
+      const hideCount = overflowCount + 1;
+      const hideFrom = visibleChildren.length - hideCount;
+      for (let i = hideFrom; i < visibleChildren.length; i++) {
+        if (visibleChildren[i]) {
+          visibleChildren[i].style.display = "none";
+        }
+      }
+
+      // Compute max-width for the more badge from the last visible ghost child
+      const lastVisibleGhostIndex = ghostChildren.length - hideCount - 1;
+      const lastVisibleGhostChild = ghostChildren[lastVisibleGhostIndex];
+      if (lastVisibleGhostChild) {
+        const spacing = parseFloat(getComputedStyle(measureEl).gap || "0");
+        const lastRight = lastVisibleGhostChild.getBoundingClientRect().right;
+        const remainingWidth = Math.floor(
+          containerRect.right - lastRight - spacing,
+        );
+        moreBadgeEl.style.maxWidth = `${remainingWidth - 1}px`;
+      }
+
+      moreBadgeEl.textContent = naviI18n("badge_list.more", {
+        count: hideCount,
+      });
+      moreBadgeEl.style.display = "";
     };
 
     measure();
@@ -131,14 +144,6 @@ export const BadgeList = ({
   }, [shrinkWrap, maxRows, children]);
 
   const childArray = toChildArray(children);
-  // Hide one extra child beyond the overflow to guarantee a slot for the
-  // "+N more" badge without it wrapping to a new row.
-  const extraHidden = hiddenCount > 0 ? 1 : 0;
-  const visibleChildren =
-    maxRows !== undefined && hiddenCount > 0
-      ? childArray.slice(0, childArray.length - hiddenCount - extraHidden)
-      : childArray;
-  const displayedHiddenCount = hiddenCount + extraHidden;
 
   const sharedProps = {
     inline: true,
@@ -160,16 +165,16 @@ export const BadgeList = ({
       >
         {childArray}
       </Box>
-      {/* Visible element */}
-      <Box baseClassName="navi_badge_list" {...sharedProps}>
-        {visibleChildren.length ? visibleChildren : fallback}
-        {displayedHiddenCount > 0 && <MoreBadge count={displayedHiddenCount} />}
+      {/* Visible element: all children always in DOM, overflow toggled via display:none */}
+      <Box baseClassName="navi_badge_list" {...sharedProps} ref={visibleRef}>
+        {childArray.length ? childArray : fallback}
+        {/* More badge: always in DOM, shown/hidden and updated directly in the effect */}
+        <MoreBadge ref={moreBadgeRef} />
       </Box>
     </Box>
   );
 };
 
-const MoreBadge = ({ count }) => {
-  const label = naviI18n("badge_list.more", { count });
-  return <Badge className="navi_more_badge">{label}</Badge>;
+const MoreBadge = (props) => {
+  return <Badge aria-hidden="true" className="navi_badge_more" {...props} />;
 };
