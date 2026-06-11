@@ -103,6 +103,11 @@ export const createValidity = (ruleConfig) => {
     if (!type) {
       return;
     }
+    // "inherit" means keep the JS value as-is (identity format, no conversion).
+    if (type === "inherit") {
+      storageTargets.set(key, { type: "inherit", format: (value) => value });
+      return;
+    }
     const repr = typeDef?.representations?.[type];
     if (repr?.format) {
       storageTargets.set(key, { type, format: repr.format });
@@ -129,7 +134,7 @@ export const createValidity = (ruleConfig) => {
     typeDef?.localStorageRepresentation ??
     "string";
   const effectiveUrlRepr =
-    urlRepresentationOverride ?? typeDef?.urlRepresentation ?? "string";
+    urlRepresentationOverride ?? typeDef?.urlRepresentation ?? "inherit";
   addStorageTarget("localStorage", effectiveLocalStorageRepr);
   addStorageTarget("url", effectiveUrlRepr);
   if (representation) {
