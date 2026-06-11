@@ -38,7 +38,7 @@ const css = /* css */ `
         outline-width: var(--x-picker-outline-width);
         outline-color: var(--picker-outline-color);
         outline-offset: var(--x-picker-outline-offset);
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08), 0 12px 40px rgba(0, 0, 0, 0.22);
         cursor: default; /* Reset pointer cursor within the select */
         overflow: hidden;
         overscroll-behavior: none;
@@ -122,7 +122,7 @@ const css = /* css */ `
         outline-width: var(--x-picker-outline-width);
         outline-color: var(--picker-outline-color);
         outline-offset: var(--x-picker-outline-offset);
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08), 0 12px 40px rgba(0, 0, 0, 0.22);
         cursor: default; /* Reset pointer cursor within the select */
         /* overscroll-behavior: contain; */
 
