@@ -270,7 +270,12 @@ export const stateSignal = (defaultValue, options = {}) => {
       return valueDescriptor.get.call(preactSignal);
     },
     set(newValue) {
-      valueDescriptor.set.call(preactSignal, processValue(newValue));
+      const processedValue = processValue(newValue);
+      // const currentValue = valueDescriptor.get.call(preactSignal);
+      // if (compareTwoJsValues(processedValue, currentValue)) {
+      //   return;
+      // }
+      valueDescriptor.set.call(preactSignal, processedValue);
     },
     enumerable: true,
     configurable: true,
@@ -400,14 +405,6 @@ export const stateSignal = (defaultValue, options = {}) => {
       }
     });
   }
-  // update validity object according to the signal value
-  validation: {
-    effect(() => {
-      const value = preactSignal.value;
-      facadeSignal.value = processValue(value);
-    });
-  }
-
   // Create isDefaultValue function for this signal
   const isDefaultValue = (value) => {
     const currentDefault = getDefaultValue(false);

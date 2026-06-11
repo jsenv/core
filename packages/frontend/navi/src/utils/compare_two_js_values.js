@@ -200,10 +200,12 @@ export const compareTwoJsValues = (
       if (aIsDate !== bIsDate) {
         return false;
       }
-      const aTime = a.getTime();
-      const bTime = b.getTime();
-      if (aTime !== bTime) {
-        return false;
+      if (aIsDate && bIsDate) {
+        const aTime = a.getTime();
+        const bTime = b.getTime();
+        if (aTime !== bTime) {
+          return false;
+        }
       }
     }
     const aKeys = Object.keys(a);
