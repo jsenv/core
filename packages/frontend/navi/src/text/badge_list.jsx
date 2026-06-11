@@ -109,7 +109,7 @@ export const BadgeList = ({
   };
 
   return (
-    <>
+    <Box relative>
       {/* Measurement ghost: all children, invisible, out-of-flow */}
       <Box
         {...sharedProps}
@@ -130,6 +130,6 @@ export const BadgeList = ({
         {visibleChildren.length ? visibleChildren : fallback}
         {hiddenCount > 0 && <Badge>+{hiddenCount} more</Badge>}
       </Box>
-    </>
+    </Box>
   );
 };
