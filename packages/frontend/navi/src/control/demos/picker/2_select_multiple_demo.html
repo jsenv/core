@@ -150,6 +150,9 @@
         ]);
         const selectedArray = selectedSignal.value;
 
+        const selectedSignalMr1 = useSignal(["Apple", "Cherry"]);
+        const selectedArrayMr1 = selectedSignalMr1.value;
+
         return (
           <div class="demo-section">
             <h2>1. Text display — comma-separated</h2>
@@ -202,12 +205,12 @@
                   type="array"
                   name="multiselect_text_maxrows1"
                   placeholder="Select fruits, a very long placeholder to trigger multiline behavior"
-                  value={selectedArray}
+                  value={selectedArrayMr1}
                   uiAction={(v) => {
-                    selectedSignal.value = v;
+                    selectedSignalMr1.value = v;
                   }}
                   action={(v) => {
-                    selectedSignal.value = v;
+                    selectedSignalMr1.value = v;
                   }}
                   maxWidth="150"
                   maxRows={1}
@@ -220,7 +223,7 @@
                         id={`${opt}_chip_mr1`}
                         index={i}
                         value={opt}
-                        selected={selectedArray.includes(opt)}
+                        selected={selectedArrayMr1.includes(opt)}
                         padding="s"
                         spacing="s"
                       >
@@ -238,10 +241,20 @@
       // ── 2. Chips display (no delete) ──────────────────────────────────────
 
       const ChipsSimpleDisplay = () => {
-        const selectedSignal = useSignal(["HTML"]);
+        const selectedSignal = useSignal([
+          "HTML",
+          "CSS",
+          "JavaScript",
+          "TypeScript",
+          "React",
+          "Vue",
+        ]);
         const selectedArray = selectedSignal.value;
 
-        const ChipsUI = () => {
+        const selectedSignalMr1 = useSignal(["HTML"]);
+        const selectedArrayMr1 = selectedSignalMr1.value;
+
+        const ChipsUI = ({ arr }) => {
           return (
             <BadgeList
               fallback={
@@ -253,7 +266,7 @@
                 </Badge>
               }
             >
-              {selectedArray.map((opt) => (
+              {arr.map((opt) => (
                 <Badge key={opt}>{opt}</Badge>
               ))}
             </BadgeList>
@@ -277,7 +290,7 @@
                   type="array"
                   name="multiselect_chips_simple"
                   value={selectedArray}
-                  ui={<ChipsUI />}
+                  ui={<ChipsUI arr={selectedArray} />}
                   uiAction={(v) => {
                     selectedSignal.value = v;
                   }}
@@ -317,13 +330,13 @@
                 <Picker
                   type="array"
                   name="multiselect_chips_simple_mr1"
-                  value={selectedArray}
-                  ui={<ChipsUI />}
+                  value={selectedArrayMr1}
+                  ui={<ChipsUI arr={selectedArrayMr1} />}
                   uiAction={(v) => {
-                    selectedSignal.value = v;
+                    selectedSignalMr1.value = v;
                   }}
                   action={(v) => {
-                    selectedSignal.value = v;
+                    selectedSignalMr1.value = v;
                   }}
                   maxWidth="150"
                   maxRows={1}
@@ -342,7 +355,7 @@
                         id={`simple_mr1_${opt}`}
                         index={i}
                         value={opt}
-                        selected={selectedArray.includes(opt)}
+                        selected={selectedArrayMr1.includes(opt)}
                         padding="s"
                         spacing="s"
                       >
@@ -365,10 +378,21 @@
           "CSS",
           "JavaScript",
           "TypeScript",
+          "React",
+          "Vue",
+          "Node.js",
+          "Python",
         ]);
         const listRef = useRef(null);
-
         const selectedArray = selectedSignal.value;
+
+        const selectedSignalMr1 = useSignal([
+          "HTML",
+          "CSS",
+          "JavaScript",
+          "TypeScript",
+        ]);
+        const selectedArrayMr1 = selectedSignalMr1.value;
 
         const ChipsUI = () => {
           if (selectedArray.length === 0) {
@@ -461,13 +485,32 @@
                 <Picker
                   type="array"
                   name="multiselect_chips_delete_mr1"
-                  value={selectedArray}
-                  ui={<ChipsUI />}
+                  value={selectedArrayMr1}
+                  ui={
+                    <BadgeList>
+                      {selectedArrayMr1.map((opt) => (
+                        <Badge key={opt} data-has-button="">
+                          {opt}
+                          <Badge.Button
+                            action="unselect"
+                            action-target="skills_list_delete_mr1"
+                            actionOnMouseDown
+                            value={opt}
+                            aria-label={`Remove ${opt}`}
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            ×
+                          </Badge.Button>
+                        </Badge>
+                      ))}
+                    </BadgeList>
+                  }
                   uiAction={(v) => {
-                    selectedSignal.value = v;
+                    selectedSignalMr1.value = v;
                   }}
                   action={(v) => {
-                    selectedSignal.value = v;
+                    selectedSignalMr1.value = v;
                   }}
                   maxWidth="200"
                   maxRows={1}
@@ -486,7 +529,7 @@
                         id={`mr1_${opt}`}
                         index={i}
                         value={opt}
-                        selected={selectedArray.includes(opt)}
+                        selected={selectedArrayMr1.includes(opt)}
                         padding="s"
                         spacing="s"
                       >

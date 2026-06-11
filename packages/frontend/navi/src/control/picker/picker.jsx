@@ -164,7 +164,7 @@ const css = /* css */ `
         color: var(--picker-placeholder-color);
       }
 
-      .navi_text {
+      .navi_text:not(.navi_more_badge) {
         max-width: 100%;
         text-overflow: inherit;
         vertical-align: middle; /* For some reason it's required to disminish inline-block height */
