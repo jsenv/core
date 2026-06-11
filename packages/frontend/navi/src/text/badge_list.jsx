@@ -13,6 +13,7 @@ const css = /* css */ `
 
     &[navi-badge-list-clone] {
       position: absolute;
+      width: 100%;
       visibility: hidden;
       pointer-events: none;
     }
@@ -48,10 +49,6 @@ export const BadgeList = ({
 
       // Constrain ghost to the parent's available width so flex-wrap behaves
       // the same as the visible element.
-      const parent = measureEl.parentElement;
-      const availableWidth = parent ? parent.getBoundingClientRect().width : 0;
-      measureEl.style.width = `${availableWidth}px`;
-
       if (shrinkWrap) {
         const optimalWidth = measureWidestChildRow(measureEl);
         if (optimalWidth !== null) {
@@ -104,10 +101,10 @@ export const BadgeList = ({
       cancelAnimationFrame(rafId);
       rafId = requestAnimationFrame(measure);
     };
-    const parent = measureEl.parentElement;
-    if (parent) {
+    const outerParent = measureEl.parentElement?.parentElement;
+    if (outerParent) {
       observer = new ResizeObserver(onResize);
-      observer.observe(parent);
+      observer.observe(outerParent);
     }
     window.addEventListener("resize", onResize);
     return () => {
