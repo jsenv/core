@@ -669,13 +669,13 @@
                   )
                 }
                 expandX
+                maxWidth="250"
               >
                 <List
                   selectable
                   id="place_list"
                   action="send"
                   maxHeight="260"
-                  maxWidth="250"
                   searchText={searchText}
                   separator
                   noMatchFallback={
@@ -683,6 +683,7 @@
                       Aucun lieu ne correspond à votre recherche.
                     </Box>
                   }
+                  maxWidth="250"
                 >
                   {matchingPlaces.map((place, i) => {
                     const { match, score, ranges } = getPlaceMatchInfo(place);

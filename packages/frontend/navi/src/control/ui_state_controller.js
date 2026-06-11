@@ -583,7 +583,7 @@ export const useUIGroupStateController = (
     throw new TypeError("aggregateChildStates must be a function");
   }
   const parentUIStateController = useContext(ParentUIStateControllerContext);
-  const { name, value } = props;
+  const { id, name, value } = props;
   const ref = props.ref;
   const fallbackState =
     stateType === "array"
@@ -610,8 +610,16 @@ export const useUIGroupStateController = (
     controlType,
   );
   useLayoutEffect(() => {
+    if (id) {
+      controllersById.set(id, uiStateControllerRef.current);
+    }
     notifyParentAboutChildMount();
-    return notifyParentAboutChildUnmount;
+    return () => {
+      if (id) {
+        controllersById.delete(id);
+      }
+      notifyParentAboutChildUnmount();
+    };
   }, []);
 
   const onChange = (_, e, { notifyExternal = true } = {}) => {
@@ -647,6 +655,7 @@ export const useUIGroupStateController = (
 
   const existingUIStateController = uiStateControllerRef.current;
   if (existingUIStateController) {
+    existingUIStateController.id = id;
     existingUIStateController.name = name;
     existingUIStateController.value = value;
     return existingUIStateController;
@@ -668,6 +677,7 @@ export const useUIGroupStateController = (
   };
   const uiStateController = {
     controlType,
+    id,
     name,
     value,
     uiState: fallbackState,
@@ -765,6 +775,9 @@ export const useUIGroupStateController = (
     subscribe: subscribeUIState,
   };
   uiStateControllerRef.current = uiStateController;
+  if (id) {
+    controllersById.set(id, uiStateController);
+  }
   return uiStateController;
 };
 // Stable reference for an empty selection so the action always receives an
