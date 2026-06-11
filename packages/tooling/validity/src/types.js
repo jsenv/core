@@ -105,6 +105,9 @@ const convertStringToNumber = (value) => {
   return CANNOT_CONVERT;
 };
 
+// When adding a new type, also update route_pattern.js:
+// - buildQueryString: handle encoding the canonical JS value to a URL string
+// - extractSearchParams: handle decoding the URL string back to the canonical JS value
 export const TYPES = {
   "boolean": {
     jsType: "boolean",

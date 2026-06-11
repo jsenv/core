@@ -105,6 +105,8 @@ if (import.meta.hot) {
 export const stateSignal = (defaultValue, options = {}) => {
   const {
     id,
+    // NOTE: when adding support for a new type here, also update route_pattern.js
+    // (buildQueryString for encoding, extractSearchParams for decoding)
     type,
     min,
     max,

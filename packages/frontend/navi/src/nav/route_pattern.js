@@ -2583,6 +2583,13 @@ const buildQueryString = (params) => {
       // Handle boolean values - if true, just add the key without value
       else if (value === true || value === "") {
         searchParamPairs.push(encodedKey);
+      }
+      // Handle Date objects - format as YYYY-MM-DD using UTC to match new Date('YYYY-MM-DD') semantics
+      else if (value instanceof Date) {
+        const yyyy = value.getUTCFullYear();
+        const mm = String(value.getUTCMonth() + 1).padStart(2, "0");
+        const dd = String(value.getUTCDate()).padStart(2, "0");
+        searchParamPairs.push(`${encodedKey}=${yyyy}-${mm}-${dd}`);
       } else {
         const encodedValue = encodeParamValue(value, false); // Search params encode slashes
         searchParamPairs.push(`${encodedKey}=${encodedValue}`);
@@ -2660,6 +2667,16 @@ const extractSearchParams = (urlObj, queryConnectionMap) => {
       // ?walk=0 → false
       params[key] =
         decodedValue === "true" || decodedValue === "1" || decodedValue === "";
+    } else if (signalType === "date") {
+      const decodedValue = decodeURIComponent(rawValue);
+      // Parse as UTC midnight to match how new Date('YYYY-MM-DD') works
+      const [year, month, day] = decodedValue.split("-").map(Number);
+      const d = new Date(Date.UTC(year, month - 1, day));
+      params[key] = isNaN(d.getTime()) ? decodedValue : d;
+    } else if (signalType === "datetime") {
+      const decodedValue = decodeURIComponent(rawValue);
+      const d = new Date(decodedValue);
+      params[key] = isNaN(d.getTime()) ? decodedValue : d;
     } else {
       params[key] = decodeURIComponent(rawValue);
     }

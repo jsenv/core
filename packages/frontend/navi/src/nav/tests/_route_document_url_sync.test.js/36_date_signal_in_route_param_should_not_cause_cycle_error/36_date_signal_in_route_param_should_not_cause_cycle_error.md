@@ -29,18 +29,13 @@ try {
 }
 ```
 
-```console
-Error: Cycle detected
-  at y.set (@jsenv/core/node_modules/@preact/signals-core/dist/signals-core.mjs:1:1890)
-  at y.set [as value] (@jsenv/core/packages/frontend/navi/src/state/state_signal.js:278:27)
-  at @jsenv/core/packages/frontend/navi/src/nav/route.js:710:31
-  at n (@jsenv/core/node_modules/@preact/signals-core/dist/signals-core.mjs:1:359)
-  at updateRoutes (@jsenv/core/packages/frontend/navi/src/nav/route.js:532:7)
-  at Object.navTo (base/route_document_url_sync.test.js:2237:9)
-  at route.replaceParams (@jsenv/core/packages/frontend/navi/src/nav/route.js:270:26)
-  at E.<anonymous> (@jsenv/core/packages/frontend/navi/src/nav/route.js:415:15)
-  at E.c (@jsenv/core/node_modules/@preact/signals-core/dist/signals-core.mjs:1:4257)
-  at t (@jsenv/core/node_modules/@preact/signals-core/dist/signals-core.mjs:1:275)
+```js
+{
+  "urlProgression": [
+    "http://127.0.0.1/map?date=2024-03-15"
+  ],
+  "date_signal_value": {}
+}
 ```
 
 ---
