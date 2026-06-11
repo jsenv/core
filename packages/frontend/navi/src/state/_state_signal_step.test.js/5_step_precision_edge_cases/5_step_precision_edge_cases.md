@@ -4,27 +4,32 @@
 try {
   const signal = stateSignal(0, { type: "number", step: 0.1 });
 
+  const entry = (description) => ({
+    description,
+    value: signal.value,
+    validValue: signal.validity.representations.valid?.value,
+  });
   const results = [];
 
   // Test values near zero
   signal.value = 0.05; // Should round to 0.1
-  results.push({ description: "0.05 -> 0.1", value: signal.value });
+  results.push(entry("0.05 -> 0.1"));
 
   signal.value = 0.04; // Should round to 0.0
-  results.push({ description: "0.04 -> 0.0", value: signal.value });
+  results.push(entry("0.04 -> 0.0"));
 
   signal.value = -0.05; // Should round to -0.1
-  results.push({ description: "-0.05 -> -0.1", value: signal.value });
+  results.push(entry("-0.05 -> -0.1"));
 
   signal.value = -0.04; // Should round to 0.0
-  results.push({ description: "-0.04 -> 0.0", value: signal.value });
+  results.push(entry("-0.04 -> 0.0"));
 
   // Test larger values
   signal.value = 99.97; // Should round to 100.0
-  results.push({ description: "99.97 -> 100.0", value: signal.value });
+  results.push(entry("99.97 -> 100.0"));
 
   signal.value = 99.93; // Should round to 99.9
-  results.push({ description: "99.93 -> 99.9", value: signal.value });
+  results.push(entry("99.93 -> 99.9"));
 
   return { results };
 } finally {
@@ -37,27 +42,33 @@ try {
   "results": [
     {
       "description": "0.05 -> 0.1",
-      "value": 0.1
+      "value": 0.05,
+      "validValue": 0.1
     },
     {
       "description": "0.04 -> 0.0",
-      "value": 0
+      "value": 0.04,
+      "validValue": 0
     },
     {
       "description": "-0.05 -> -0.1",
-      "value": -0.1
+      "value": -0.05,
+      "validValue": -0.1
     },
     {
       "description": "-0.04 -> 0.0",
-      "value": 0
+      "value": -0.04,
+      "validValue": 0
     },
     {
       "description": "99.97 -> 100.0",
-      "value": 100
+      "value": 99.97,
+      "validValue": 100
     },
     {
       "description": "99.93 -> 99.9",
-      "value": 99.9
+      "value": 99.93,
+      "validValue": 99.9
     }
   ]
 }

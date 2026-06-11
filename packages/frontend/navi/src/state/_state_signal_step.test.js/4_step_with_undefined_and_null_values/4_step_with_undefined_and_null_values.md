@@ -5,19 +5,24 @@ try {
   const signal = stateSignal(1.0, { type: "number", step: 0.1 });
 
   const results = [];
-  results.push({ description: "initial", value: signal.value });
+  const entry = (description) => ({
+    description,
+    value: signal.value,
+    validValue: signal.validity.representations.valid?.value,
+  });
+  results.push(entry("initial"));
 
   // Setting undefined should pass through (not processed)
   signal.value = undefined;
-  results.push({ description: "after undefined", value: signal.value });
+  results.push(entry("after undefined"));
 
   // Setting null should pass through (not processed)
   signal.value = null;
-  results.push({ description: "after null", value: signal.value });
+  results.push(entry("after null"));
 
   // Setting back to a number should process with step
   signal.value = 2.34;
-  results.push({ description: "back to number 2.34", value: signal.value });
+  results.push(entry("back to number 2.34"));
 
   return { results };
 } finally {
@@ -25,69 +30,28 @@ try {
 }
 ```
 
-# 1/2 logs
-
-![img](log_group.svg)
-
-<details>
-  <summary>see without style</summary>
-
-```console
-[stateSignal:8] validation failed with no valid suggestion:  {
-  value: null,
-  validity: {
-    type: 'must be a number',
-    step: undefined,
-    valid: false,
-    validSuggestion: null
-  }
-}
-[stateSignal:8] validation failed with no valid suggestion: 
-[stateSignal:8] validation failed with no valid suggestion:  {
-  value: null,
-  validity: {
-    type: 'must be a number',
-    step: undefined,
-    valid: false,
-    validSuggestion: null
-  }
-}
-[stateSignal:8] validation failed with no valid suggestion: 
-[stateSignal:8] validation failed with no valid suggestion:  {
-  value: null,
-  validity: {
-    type: 'must be a number',
-    step: undefined,
-    valid: false,
-    validSuggestion: null
-  }
-}
-[stateSignal:8] validation failed with no valid suggestion: 
-```
-
-</details>
-
-
-# 2/2 return
-
 ```js
 {
   "results": [
     {
       "description": "initial",
-      "value": 1
+      "value": 1,
+      "validValue": 1
     },
     {
       "description": "after undefined",
-      "value": 1
+      "value": 1,
+      "validValue": 1
     },
     {
       "description": "after null",
-      "value": null
+      "value": null,
+      "validValue": undefined
     },
     {
       "description": "back to number 2.34",
-      "value": 2.3
+      "value": 2.34,
+      "validValue": 2.3
     }
   ]
 }

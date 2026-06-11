@@ -7,23 +7,20 @@ try {
 
   const results = [];
 
-  microSignal.value = 0.0015; // Should round to 0.002
-  results.push({
-    description: "0.0015 with step 0.001",
+  const entry = (description) => ({
+    description,
     value: microSignal.value,
+    validValue: microSignal.validity.representations.valid?.value,
   });
+
+  microSignal.value = 0.0015; // Should round to 0.002
+  results.push(entry("0.0015 with step 0.001"));
 
   microSignal.value = 0.0014; // Should round to 0.001
-  results.push({
-    description: "0.0014 with step 0.001",
-    value: microSignal.value,
-  });
+  results.push(entry("0.0014 with step 0.001"));
 
   microSignal.value = 1.2345678; // Should round to 1.235
-  results.push({
-    description: "1.2345678 with step 0.001",
-    value: microSignal.value,
-  });
+  results.push(entry("1.2345678 with step 0.001"));
 
   return { results };
 } finally {
@@ -36,15 +33,18 @@ try {
   "results": [
     {
       "description": "0.0015 with step 0.001",
-      "value": 0.002
+      "value": 0.0015,
+      "validValue": 0.002
     },
     {
       "description": "0.0014 with step 0.001",
-      "value": 0.001
+      "value": 0.0014,
+      "validValue": 0.001
     },
     {
       "description": "1.2345678 with step 0.001",
-      "value": 1.235
+      "value": 1.2345678,
+      "validValue": 1.235
     }
   ]
 }

@@ -46,34 +46,33 @@ await snapshotTests(import.meta.url, ({ test }) => {
       // Test step 0.5 (half units)
       const halfSignal = stateSignal(2.5, { type: "number", step: 0.5 });
 
+      const entry = (description, sig) => ({
+        description,
+        value: sig.value,
+        validValue: sig.validity.representations.valid?.value,
+      });
       const results = [];
 
       // Cent precision
       centSignal.value = 19.999999;
-      results.push({
-        description: "cent step 19.999999",
-        value: centSignal.value,
-      });
+      results.push(entry("cent step 19.999999", centSignal));
 
       centSignal.value = 20.004;
-      results.push({
-        description: "cent step 20.004",
-        value: centSignal.value,
-      });
+      results.push(entry("cent step 20.004", centSignal));
 
       // Whole number precision
       wholeSignal.value = 5.7;
-      results.push({ description: "whole step 5.7", value: wholeSignal.value });
+      results.push(entry("whole step 5.7", wholeSignal));
 
       wholeSignal.value = 5.3;
-      results.push({ description: "whole step 5.3", value: wholeSignal.value });
+      results.push(entry("whole step 5.3", wholeSignal));
 
       // Half unit precision
       halfSignal.value = 2.3;
-      results.push({ description: "half step 2.3", value: halfSignal.value });
+      results.push(entry("half step 2.3", halfSignal));
 
       halfSignal.value = 2.8;
-      results.push({ description: "half step 2.8", value: halfSignal.value });
+      results.push(entry("half step 2.8", halfSignal));
 
       return { results };
     } finally {
@@ -185,19 +184,24 @@ await snapshotTests(import.meta.url, ({ test }) => {
       const signal = stateSignal(1.0, { type: "number", step: 0.1 });
 
       const results = [];
-      results.push({ description: "initial", value: signal.value });
+      const entry = (description) => ({
+        description,
+        value: signal.value,
+        validValue: signal.validity.representations.valid?.value,
+      });
+      results.push(entry("initial"));
 
       // Setting undefined should pass through (not processed)
       signal.value = undefined;
-      results.push({ description: "after undefined", value: signal.value });
+      results.push(entry("after undefined"));
 
       // Setting null should pass through (not processed)
       signal.value = null;
-      results.push({ description: "after null", value: signal.value });
+      results.push(entry("after null"));
 
       // Setting back to a number should process with step
       signal.value = 2.34;
-      results.push({ description: "back to number 2.34", value: signal.value });
+      results.push(entry("back to number 2.34"));
 
       return { results };
     } finally {
@@ -209,27 +213,32 @@ await snapshotTests(import.meta.url, ({ test }) => {
     try {
       const signal = stateSignal(0, { type: "number", step: 0.1 });
 
+      const entry = (description) => ({
+        description,
+        value: signal.value,
+        validValue: signal.validity.representations.valid?.value,
+      });
       const results = [];
 
       // Test values near zero
       signal.value = 0.05; // Should round to 0.1
-      results.push({ description: "0.05 -> 0.1", value: signal.value });
+      results.push(entry("0.05 -> 0.1"));
 
       signal.value = 0.04; // Should round to 0.0
-      results.push({ description: "0.04 -> 0.0", value: signal.value });
+      results.push(entry("0.04 -> 0.0"));
 
       signal.value = -0.05; // Should round to -0.1
-      results.push({ description: "-0.05 -> -0.1", value: signal.value });
+      results.push(entry("-0.05 -> -0.1"));
 
       signal.value = -0.04; // Should round to 0.0
-      results.push({ description: "-0.04 -> 0.0", value: signal.value });
+      results.push(entry("-0.04 -> 0.0"));
 
       // Test larger values
       signal.value = 99.97; // Should round to 100.0
-      results.push({ description: "99.97 -> 100.0", value: signal.value });
+      results.push(entry("99.97 -> 100.0"));
 
       signal.value = 99.93; // Should round to 99.9
-      results.push({ description: "99.93 -> 99.9", value: signal.value });
+      results.push(entry("99.93 -> 99.9"));
 
       return { results };
     } finally {
@@ -292,23 +301,20 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
       const results = [];
 
-      microSignal.value = 0.0015; // Should round to 0.002
-      results.push({
-        description: "0.0015 with step 0.001",
+      const entry = (description) => ({
+        description,
         value: microSignal.value,
+        validValue: microSignal.validity.representations.valid?.value,
       });
+
+      microSignal.value = 0.0015; // Should round to 0.002
+      results.push(entry("0.0015 with step 0.001"));
 
       microSignal.value = 0.0014; // Should round to 0.001
-      results.push({
-        description: "0.0014 with step 0.001",
-        value: microSignal.value,
-      });
+      results.push(entry("0.0014 with step 0.001"));
 
       microSignal.value = 1.2345678; // Should round to 1.235
-      results.push({
-        description: "1.2345678 with step 0.001",
-        value: microSignal.value,
-      });
+      results.push(entry("1.2345678 with step 0.001"));
 
       return { results };
     } finally {
@@ -350,6 +356,8 @@ await snapshotTests(import.meta.url, ({ test }) => {
         total_computations: computationCount,
         derived_values: derivedValues,
         final_source_value: sourceSignal.value,
+        final_source_valid_value:
+          sourceSignal.validity.representations.valid?.value,
       };
     } finally {
       globalSignalRegistry.clear();
