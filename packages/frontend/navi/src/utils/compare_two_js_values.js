@@ -193,6 +193,19 @@ export const compareTwoJsValues = (
     ) {
       return true;
     }
+    // Date objects must be compared by time value, not by enumerable keys (which are empty)
+    date_compare: {
+      const aIsDate = a instanceof Date;
+      const bIsDate = b instanceof Date;
+      if (aIsDate !== bIsDate) {
+        return false;
+      }
+      const aTime = a.getTime();
+      const bTime = b.getTime();
+      if (aTime !== bTime) {
+        return false;
+      }
+    }
     const aKeys = Object.keys(a);
     const bKeys = Object.keys(b);
     if (aKeys.length !== bKeys.length) {

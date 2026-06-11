@@ -372,8 +372,17 @@ export const createValidity = (ruleConfig) => {
           representedValue = format(value);
         } else {
           const jsType = typeDef?.jsType;
-          if (jsType && typeof value !== jsType) {
-            representedValue = String(value);
+          if (jsType) {
+            // "Date" is a class name, not a typeof result — use instanceof for it
+            const valueMatchesJsType =
+              jsType === "Date"
+                ? value instanceof Date
+                : typeof value === jsType;
+            if (!valueMatchesJsType) {
+              representedValue = String(value);
+            } else {
+              representedValue = format(value);
+            }
           } else {
             representedValue = format(value);
           }
