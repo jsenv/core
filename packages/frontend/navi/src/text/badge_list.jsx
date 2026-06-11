@@ -1,110 +1,135 @@
 import { measureWidestChildRow } from "@jsenv/dom";
 import { toChildArray } from "preact";
-import { useLayoutEffect, useRef } from "preact/hooks";
+import { useLayoutEffect, useRef, useState } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
-import { withPropsClassName } from "../utils/with_props_class_name.js";
+import { Badge } from "./badge.jsx";
 
 const css = /* css */ `
   @layer navi {
   }
   .navi_badge_list {
     flex-wrap: wrap;
+
+    &[navi-badge-list-clone] {
+      position: absolute;
+      visibility: hidden;
+      pointer-events: none;
+    }
   }
 `;
 
 export const BadgeList = ({
   fallback,
   children,
-  className,
   shrinkWrap = true,
   maxRows,
   ...props
 }) => {
   import.meta.css = css;
-  const defaultRef = useRef();
-  props.ref = props.ref || defaultRef;
-  const { ref } = props;
+  const visibleRef = useRef();
+  const measureRef = useRef();
+  const [hiddenCount, setHiddenCount] = useState(0);
 
   useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) {
+    const measureEl = measureRef.current;
+    const visibleEl = visibleRef.current;
+    if (!measureEl || !visibleEl) {
       return undefined;
     }
     let observer;
     let rafId;
-    const applyLayout = () => {
-      // Reset constraints so measurements are unconstrained
+
+    const measure = () => {
+      let nextHiddenCount = 0;
+
       if (shrinkWrap) {
-        el.style.width = "";
-        const optimalWidth = measureWidestChildRow(el);
+        const optimalWidth = measureWidestChildRow(measureEl);
         if (optimalWidth !== null) {
-          el.style.width = `${Math.ceil(optimalWidth)}px`;
+          visibleEl.style.width = `${Math.ceil(optimalWidth)}px`;
+        } else {
+          visibleEl.style.width = "";
         }
       }
 
       if (maxRows !== undefined) {
-        el.style.maxHeight = "";
-        el.style.overflow = "";
-        const containerTop = el.getBoundingClientRect().top;
+        const top = measureEl.getBoundingClientRect().top;
         const rowTops = [];
-        for (const child of el.children) {
-          const childTop = Math.round(
-            child.getBoundingClientRect().top - containerTop,
-          );
+        for (const child of measureEl.children) {
+          const childTop = Math.round(child.getBoundingClientRect().top - top);
           if (!rowTops.includes(childTop)) {
             rowTops.push(childTop);
           }
-          if (rowTops.length > maxRows) {
-            break;
-          }
         }
-        if (rowTops.length >= maxRows) {
-          const lastAllowedTop = rowTops[maxRows - 1];
-          let maxBottom = 0;
-          for (const child of el.children) {
-            const rect = child.getBoundingClientRect();
-            const childTop = Math.round(rect.top - containerTop);
-            if (childTop === lastAllowedTop) {
-              const childBottom = Math.round(rect.bottom - containerTop);
-              if (childBottom > maxBottom) {
-                maxBottom = childBottom;
-              }
+        if (rowTops.length > maxRows) {
+          const allowedTops = new Set(rowTops.slice(0, maxRows));
+          for (const child of measureEl.children) {
+            const childTop = Math.round(
+              child.getBoundingClientRect().top - top,
+            );
+            if (!allowedTops.has(childTop)) {
+              nextHiddenCount++;
             }
           }
-          el.style.maxHeight = `${maxBottom}px`;
-          el.style.overflow = "hidden";
         }
       }
+
+      setHiddenCount(nextHiddenCount);
     };
-    applyLayout();
-    const parent = el.parentElement;
+
+    measure();
+    const onResize = () => {
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(measure);
+    };
+    const parent = measureEl.parentElement;
     if (parent) {
-      observer = new ResizeObserver(() => {
-        cancelAnimationFrame(rafId);
-        rafId = requestAnimationFrame(applyLayout);
-      });
+      observer = new ResizeObserver(onResize);
       observer.observe(parent);
     }
-    window.addEventListener("resize", applyLayout);
+    window.addEventListener("resize", onResize);
     return () => {
       cancelAnimationFrame(rafId);
       observer?.disconnect();
-      window.removeEventListener("resize", applyLayout);
+      window.removeEventListener("resize", onResize);
     };
-  });
+  }, [shrinkWrap, maxRows, children]);
 
   const childArray = toChildArray(children);
+  const visibleChildren =
+    maxRows !== undefined && hiddenCount > 0
+      ? childArray.slice(0, childArray.length - hiddenCount)
+      : childArray;
+
+  const sharedProps = {
+    inline: true,
+    flex: "x",
+    alignY: "center",
+    spacing: "xs",
+  };
+
   return (
-    <Box
-      inline
-      flex="x"
-      alignY="center"
-      spacing="xs"
-      className={withPropsClassName("navi_badge_list", className)}
-      {...props}
-    >
-      {childArray.length ? children : fallback}
-    </Box>
+    <>
+      {/* Measurement ghost: all children, invisible, out-of-flow */}
+      <Box
+        {...sharedProps}
+        ref={measureRef}
+        aria-hidden="true"
+        className="navi_badge_list"
+        navi-badge-list-clone=""
+      >
+        {childArray}
+      </Box>
+      {/* Visible element */}
+      <Box
+        {...sharedProps}
+        ref={visibleRef}
+        className="navi_badge_list"
+        {...props}
+      >
+        {visibleChildren.length ? visibleChildren : fallback}
+        {hiddenCount > 0 && <Badge>+{hiddenCount} more</Badge>}
+      </Box>
+    </>
   );
 };
