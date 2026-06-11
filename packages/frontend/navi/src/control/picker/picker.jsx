@@ -96,16 +96,12 @@ const css = /* css */ `
         var(--picker-padding, var(--picker-padding-y-default))
       )
     );
-    --x-picker-padding-right-base: var(
+    --x-picker-padding-right: var(
       --picker-padding-right,
       var(
         --picker-padding-x,
         var(--picker-padding, var(--picker-padding-x-default))
       )
-    );
-    --x-picker-padding-right: calc(
-      var(--x-picker-padding-right-base) + var(--picker-right-slot-size) +
-        var(--picker-right-slot-size) * 0.25
     );
     --x-picker-padding-left: var(
       --picker-padding-left,
@@ -125,7 +121,7 @@ const css = /* css */ `
     --x-picker-icon-color: var(--picker-icon-color);
 
     position: relative;
-    display: inline-block;
+    display: inline-flex;
     box-sizing: border-box;
     max-width: 100%;
     min-height: calc(
@@ -154,32 +150,28 @@ const css = /* css */ `
     overflow: hidden;
 
     .navi_picker_value {
-      display: block;
+      display: inline-block;
       min-width: 0;
       max-width: 100%;
+      flex-grow: 1;
       text-overflow: ellipsis;
       white-space: nowrap;
       overflow: hidden;
     }
     .navi_picker_placeholder {
-      display: block;
+      display: inline-block;
       max-width: 100%;
+      flex-grow: 1;
       color: var(--picker-placeholder-color);
       text-overflow: ellipsis;
       white-space: nowrap;
       overflow: hidden;
     }
     .navi_picker_right_slot {
-      position: absolute;
-      top: 0;
-      right: var(--x-picker-padding-right-base);
       display: inline-flex;
-      width: var(--picker-right-slot-size);
-      padding-top: var(--x-picker-padding-top);
       flex-shrink: 0;
       justify-content: center;
       color: var(--x-picker-icon-color);
-      transform: translateX(25%);
     }
     .navi_picker_input {
       position: absolute;

@@ -730,60 +730,50 @@
 
       // ── 8. Customization — font size ────────────────────────────────────
 
-      const FONT_SIZE_OPTIONS = [
-        "12px",
-        "14px",
-        "16px",
-        "18px",
-        "20px",
-        "24px",
-      ];
-
       const CustomizationDemo = () => {
-        const selectedSignal = useSignal("16px");
-        const selected = selectedSignal.value;
-
         return (
           <div id="section-8" class="demo-section">
             <h2>8. Customization — font size</h2>
             <p>
-              The picker inherits CSS custom properties from its container,
-              making it straightforward to adjust visual properties like font
-              size. Here the picker itself renders at the chosen font size.
+              The picker inherits font size from its container. Below are the
+              same fruit picker rendered at three different font sizes.
             </p>
-            <Field vertical>
-              <Label>Font size</Label>
-              <Picker
-                name="font_size_picker"
-                placeholder="Pick a size…"
-                value={selected}
-                action={(v) => {
-                  selectedSignal.value = v;
-                }}
-                minWidth="160"
-                style={{ fontSize: selected }}
-              >
-                <List selectable action="send">
-                  {FONT_SIZE_OPTIONS.map((size, i) => (
-                    <List.Item
-                      selectable
-                      key={size}
-                      id={`font_size_${size}`}
-                      index={i}
-                      value={size}
-                      selected={selected === size}
-                      padding="s"
-                      spacing="s"
-                    >
-                      {size}
-                    </List.Item>
-                  ))}
-                </List>
-              </Picker>
-            </Field>
-            <p style={{ marginTop: "16px", marginBottom: 0 }}>
-              Selected: <code>{selected}</code>
-            </p>
+            <Box flex="y" spacing="m">
+              {["xs", "m", "xl", "xxl"].map((size) => (
+                <Field key={size} vertical>
+                  <Label>
+                    Fruit <code style={{ fontWeight: "normal" }}>({size})</code>
+                  </Label>
+                  <Picker
+                    name={`custom_font_${size}`}
+                    placeholder="Select a fruit…"
+                    value={sendFruitSignal.value}
+                    action={(v) => {
+                      sendFruitSignal.value = v;
+                    }}
+                    minWidth="200"
+                    size={size}
+                  >
+                    <List selectable action="send">
+                      {FRUIT_OPTIONS.map((opt, i) => (
+                        <List.Item
+                          selectable
+                          key={opt}
+                          id={`custom_${size}_${opt}`}
+                          index={i}
+                          value={opt}
+                          selected={sendFruitSignal.value === opt}
+                          padding="s"
+                          spacing="s"
+                        >
+                          {opt}
+                        </List.Item>
+                      ))}
+                    </List>
+                  </Picker>
+                </Field>
+              ))}
+            </Box>
           </div>
         );
       };
