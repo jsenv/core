@@ -1022,8 +1022,9 @@ const UnorderedList = ({
   return (
     <Box
       as="ul"
-      {...rest}
       flex={horizontal ? "x" : "y"}
+      flexWrap
+      {...rest}
       spacing={spacing}
       baseClassName="navi_list"
     >

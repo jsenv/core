@@ -20,7 +20,7 @@ export const InputIconSlot = ({ children, side = "right", ...props }) => {
 };
 export const InputUnitSlot = ({ children, side = "right", ...props }) => {
   return (
-    <InputSlot side={side} marginLeft="xxs" {...props}>
+    <InputSlot side={side} marginLeft="xxs" noWrap {...props}>
       {children}
     </InputSlot>
   );

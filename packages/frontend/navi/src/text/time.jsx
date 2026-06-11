@@ -207,7 +207,9 @@ const TimeTime = ({ children, locale, durationFormat, ...props }) => {
   const dateTime = `${hh}:${mm}`; // See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
   if (durationFormat) {
     const totalMinutes = date.getHours() * 60 + date.getMinutes();
-    const text = formatMinuteDuration(totalMinutes, lang, { long: durationFormat === "long" });
+    const text = formatMinuteDuration(totalMinutes, lang, {
+      long: durationFormat === "long",
+    });
     return (
       <TimeText dateTime={dateTime} {...props}>
         {text}
@@ -307,7 +309,7 @@ const TimeRelative = ({
 };
 
 const TimeText = (props) => {
-  return <Text as="time" {...props} />;
+  return <Text as="time" noWrap {...props} />;
 };
 
 const toDate = (value, parseString) => {
