@@ -333,9 +333,9 @@ await snapshotTests(import.meta.url, ({ test }) => {
       const derivedValues = [];
       let computationCount = 0;
 
-      // Create a derived computation that depends on the stepped signal
+      // Create a derived computation that depends on the stepped signal's valid value
       const disposeEffect = effect(() => {
-        const sourceValue = sourceSignal.value; // Track the signal
+        const sourceValue = sourceSignal.validSignal.value; // Track the valid signal
         computationCount++;
         derivedValues.push({
           computation: computationCount,

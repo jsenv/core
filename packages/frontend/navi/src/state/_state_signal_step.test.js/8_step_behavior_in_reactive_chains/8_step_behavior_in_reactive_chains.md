@@ -10,9 +10,9 @@ try {
   const derivedValues = [];
   let computationCount = 0;
 
-  // Create a derived computation that depends on the stepped signal
+  // Create a derived computation that depends on the stepped signal's valid value
   const disposeEffect = effect(() => {
-    const sourceValue = sourceSignal.value; // Track the signal
+    const sourceValue = sourceSignal.validSignal.value; // Track the valid signal
     computationCount++;
     derivedValues.push({
       computation: computationCount,
@@ -34,6 +34,8 @@ try {
     total_computations: computationCount,
     derived_values: derivedValues,
     final_source_value: sourceSignal.value,
+    final_source_valid_value:
+      sourceSignal.validity.representations.valid?.value,
   };
 } finally {
   globalSignalRegistry.clear();
@@ -60,7 +62,8 @@ try {
       "doubled": 2.6
     }
   ],
-  "final_source_value": 1.3
+  "final_source_value": 1.25,
+  "final_source_valid_value": 1.3
 }
 ```
 
