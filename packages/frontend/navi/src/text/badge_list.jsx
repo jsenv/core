@@ -63,6 +63,7 @@ export const BadgeList = ({
   const childArray = toChildArray(children);
   return (
     <Box
+      inline
       flex="x"
       alignY="center"
       spacing="xs"
