@@ -17,6 +17,10 @@ const css = /* css */ `
       pointer-events: none;
     }
   }
+
+  .navi_more_badge {
+    max-width: var(--more-badge-max-width, none);
+  }
 `;
 
 export const BadgeList = ({
@@ -52,7 +56,8 @@ export const BadgeList = ({
       }
 
       if (maxRows !== undefined) {
-        const top = measureEl.getBoundingClientRect().top;
+        const containerRect = measureEl.getBoundingClientRect();
+        const top = containerRect.top;
         const rowTops = [];
         for (const child of measureEl.children) {
           const childTop = Math.round(child.getBoundingClientRect().top - top);
@@ -62,14 +67,26 @@ export const BadgeList = ({
         }
         if (rowTops.length > maxRows) {
           const allowedTops = new Set(rowTops.slice(0, maxRows));
+          const lastAllowedTop = rowTops[maxRows - 1];
+          let lastRowRight = containerRect.left;
           for (const child of measureEl.children) {
-            const childTop = Math.round(
-              child.getBoundingClientRect().top - top,
-            );
+            const rect = child.getBoundingClientRect();
+            const childTop = Math.round(rect.top - top);
             if (!allowedTops.has(childTop)) {
               nextHiddenCount++;
+            } else if (childTop === lastAllowedTop) {
+              if (rect.right > lastRowRight) {
+                lastRowRight = rect.right;
+              }
             }
           }
+          const remainingWidth = Math.floor(containerRect.right - lastRowRight);
+          visibleEl.style.setProperty(
+            "--more-badge-max-width",
+            `${remainingWidth}px`,
+          );
+        } else {
+          visibleEl.style.removeProperty("--more-badge-max-width");
         }
       }
 
@@ -127,10 +144,12 @@ export const BadgeList = ({
       {/* Visible element */}
       <Box baseClassName="navi_badge_list" {...sharedProps}>
         {visibleChildren.length ? visibleChildren : fallback}
-        {displayedHiddenCount > 0 && (
-          <Badge>+{displayedHiddenCount} more</Badge>
-        )}
+        {displayedHiddenCount > 0 && <MoreBadge count={displayedHiddenCount} />}
       </Box>
     </Box>
   );
+};
+
+const MoreBadge = ({ count }) => {
+  return <Badge className="navi_more_badge">+{count} more</Badge>;
 };
