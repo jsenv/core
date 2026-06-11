@@ -199,7 +199,7 @@
             </li>
             <li>
               <a href="#section-2">
-                2. Overflow — long sentence &amp; long word
+                2. Dimensions — width &amp; overflow
               </a>
             </li>
             <li>
@@ -780,162 +780,168 @@
 
       // ── 2. Overflow — long sentence & long word ──────────────────────────
 
+      const SHORT_VALUE = "Apple";
+      const MEDIUM_VALUE = "Elderberry";
       const LONG_SENTENCE =
         "A very long selected value that definitely overflows the picker trigger button";
       const LONG_WORD = "Supercalifragilisticexpialidocious";
       const VERY_LONG_TEXT =
         "This value is intentionally so long that it spans more than three lines inside the constrained picker width, so the line-clamp kicks in and an ellipsis appears at the end";
 
-      const OverflowPickerItems = ({ id, value, longValue }) => (
+      const DimensionPickerItems = ({ id, values }) => (
         <List selectable action="send">
-          <List.Item
-            selectable
-            key="short"
-            id={`${id}_short`}
-            index={0}
-            value="Short"
-            selected={value === "Short"}
-            padding="s"
-            spacing="s"
-          >
-            Short
-          </List.Item>
-          <List.Item
-            selectable
-            key="long"
-            id={`${id}_long`}
-            index={1}
-            value={longValue}
-            selected={value === longValue}
-            padding="s"
-            spacing="s"
-          >
-            {longValue}
-          </List.Item>
+          {values.map((v, i) => (
+            <List.Item
+              selectable
+              key={v}
+              id={`${id}_${i}`}
+              index={i}
+              value={v}
+              padding="s"
+              spacing="s"
+            >
+              {v}
+            </List.Item>
+          ))}
         </List>
       );
 
       const OverflowDemo = () => {
+        const widthSignal = useSignal(SHORT_VALUE);
         const sentenceSignal = useSignal(LONG_SENTENCE);
         const wordSignal = useSignal(LONG_WORD);
-        const veryLongSignal = useSignal(VERY_LONG_TEXT);
+        const clampSignal = useSignal(VERY_LONG_TEXT);
 
         return (
           <div id="section-2" class="demo-section">
-            <h2>2. Overflow — long sentence &amp; long word</h2>
+            <h2>2. Dimensions — width &amp; overflow</h2>
+
             <p>
-              Shows how the picker trigger handles values wider than itself
-              (constrained to <code>maxWidth="200"</code>), with and without{" "}
-              <code>maxRows</code>.
+              By default the picker grows to fit its selected value. Select a
+              short then a medium value to see the width adapt.
             </p>
-            <Box flex="y" spacing="l">
-              <Box flex="x" spacing="m">
-                <Field vertical>
-                  <Label>
-                    Long sentence{" "}
-                    <code style={{ fontWeight: "normal" }}>(default)</code>
-                  </Label>
-                  <Picker
-                    name="overflow_sentence"
-                    value={sentenceSignal.value}
-                    action={(v) => {
-                      sentenceSignal.value = v;
-                    }}
-                    maxWidth="200"
-                  >
-                    <OverflowPickerItems
-                      id="overflow_sentence"
-                      value={sentenceSignal.value}
-                      longValue={LONG_SENTENCE}
-                    />
-                  </Picker>
-                </Field>
-                <Field vertical>
-                  <Label>
-                    Long word{" "}
-                    <code style={{ fontWeight: "normal" }}>(default)</code>
-                  </Label>
-                  <Picker
-                    name="overflow_word"
-                    value={wordSignal.value}
-                    action={(v) => {
-                      wordSignal.value = v;
-                    }}
-                    maxWidth="200"
-                  >
-                    <OverflowPickerItems
-                      id="overflow_word"
-                      value={wordSignal.value}
-                      longValue={LONG_WORD}
-                    />
-                  </Picker>
-                </Field>
-              </Box>
-              <Box flex="x" spacing="m">
-                <Field vertical>
-                  <Label>
-                    Long sentence{" "}
-                    <code style={{ fontWeight: "normal" }}>(maxRows=3)</code>
-                  </Label>
-                  <Picker
-                    name="overflow_sentence_maxrows"
-                    value={sentenceSignal.value}
-                    action={(v) => {
-                      sentenceSignal.value = v;
-                    }}
-                    maxWidth="200"
-                    maxRows={3}
-                  >
-                    <OverflowPickerItems
-                      id="overflow_sentence_ml"
-                      value={sentenceSignal.value}
-                      longValue={LONG_SENTENCE}
-                    />
-                  </Picker>
-                </Field>
-                <Field vertical>
-                  <Label>
-                    Long word{" "}
-                    <code style={{ fontWeight: "normal" }}>(maxRows=3)</code>
-                  </Label>
-                  <Picker
-                    name="overflow_word_maxrows"
-                    value={wordSignal.value}
-                    action={(v) => {
-                      wordSignal.value = v;
-                    }}
-                    maxWidth="200"
-                    maxRows={3}
-                  >
-                    <OverflowPickerItems
-                      id="overflow_word_ml"
-                      value={wordSignal.value}
-                      longValue={LONG_WORD}
-                    />
-                  </Picker>
-                </Field>
-                <Field vertical>
-                  <Label>
-                    Very long text{" "}
-                    <code style={{ fontWeight: "normal" }}>(maxRows=3 + ellipsis)</code>
-                  </Label>
-                  <Picker
-                    name="overflow_very_long_maxrows"
-                    value={veryLongSignal.value}
-                    action={(v) => {
-                      veryLongSignal.value = v;
-                    }}
-                    maxWidth="200"
-                    maxRows={3}
-                  >
-                    <OverflowPickerItems
-                      id="overflow_very_long_ml"
-                      value={veryLongSignal.value}
-                      longValue={VERY_LONG_TEXT}
-                    />
-                  </Picker>
-                </Field>
-              </Box>
+            <Field vertical>
+              <Label>Width adapts to value</Label>
+              <Picker
+                name="dim_width"
+                value={widthSignal.value}
+                action={(v) => {
+                  widthSignal.value = v;
+                }}
+              >
+                <DimensionPickerItems
+                  id="dim_width"
+                  values={[SHORT_VALUE, MEDIUM_VALUE]}
+                />
+              </Picker>
+            </Field>
+
+            <p style={{ marginTop: "24px" }}>
+              When the value is wider than the picker (here constrained to{" "}
+              <code>maxWidth="200"</code>), the text is clipped with an ellipsis
+              on a single line.
+            </p>
+            <Box flex="x" spacing="m" alignY="end">
+              <Field vertical>
+                <Label>Long sentence</Label>
+                <Picker
+                  name="dim_sentence"
+                  value={sentenceSignal.value}
+                  action={(v) => {
+                    sentenceSignal.value = v;
+                  }}
+                  maxWidth="200"
+                >
+                  <DimensionPickerItems
+                    id="dim_sentence"
+                    values={[SHORT_VALUE, LONG_SENTENCE]}
+                  />
+                </Picker>
+              </Field>
+              <Field vertical>
+                <Label>Long word</Label>
+                <Picker
+                  name="dim_word"
+                  value={wordSignal.value}
+                  action={(v) => {
+                    wordSignal.value = v;
+                  }}
+                  maxWidth="200"
+                >
+                  <DimensionPickerItems
+                    id="dim_word"
+                    values={[SHORT_VALUE, LONG_WORD]}
+                  />
+                </Picker>
+              </Field>
+            </Box>
+
+            <p style={{ marginTop: "24px" }}>
+              <code>maxRows</code> lets the text flow onto multiple lines before
+              truncating. At <code>maxRows=3</code> the text wraps up to three
+              rows then clips.
+            </p>
+            <Box flex="x" spacing="m" alignY="end">
+              <Field vertical>
+                <Label>
+                  Long sentence{" "}
+                  <code style={{ fontWeight: "normal" }}>(maxRows=3)</code>
+                </Label>
+                <Picker
+                  name="dim_sentence_maxrows"
+                  value={sentenceSignal.value}
+                  action={(v) => {
+                    sentenceSignal.value = v;
+                  }}
+                  maxWidth="200"
+                  maxRows={3}
+                >
+                  <DimensionPickerItems
+                    id="dim_sentence_maxrows"
+                    values={[SHORT_VALUE, LONG_SENTENCE]}
+                  />
+                </Picker>
+              </Field>
+              <Field vertical>
+                <Label>
+                  Long word{" "}
+                  <code style={{ fontWeight: "normal" }}>(maxRows=3)</code>
+                </Label>
+                <Picker
+                  name="dim_word_maxrows"
+                  value={wordSignal.value}
+                  action={(v) => {
+                    wordSignal.value = v;
+                  }}
+                  maxWidth="200"
+                  maxRows={3}
+                >
+                  <DimensionPickerItems
+                    id="dim_word_maxrows"
+                    values={[SHORT_VALUE, LONG_WORD]}
+                  />
+                </Picker>
+              </Field>
+              <Field vertical>
+                <Label>
+                  Exceeds maxRows{" "}
+                  <code style={{ fontWeight: "normal" }}>(ellipsis)</code>
+                </Label>
+                <Picker
+                  name="dim_clamp_maxrows"
+                  value={clampSignal.value}
+                  action={(v) => {
+                    clampSignal.value = v;
+                  }}
+                  maxWidth="200"
+                  maxRows={3}
+                >
+                  <DimensionPickerItems
+                    id="dim_clamp_maxrows"
+                    values={[SHORT_VALUE, VERY_LONG_TEXT]}
+                  />
+                </Picker>
+              </Field>
             </Box>
           </div>
         );
