@@ -2093,40 +2093,6 @@ const encodeParamValue = (value, isWildcard = false) => {
   return encodeURIComponent(value);
 };
 
-/**
- * Build query string from parameters, respecting rawUrlPart values
- */
-const buildQueryString = (params) => {
-  const searchParamPairs = [];
-
-  for (const [key, value] of Object.entries(params)) {
-    if (value !== undefined && value !== null) {
-      const encodedKey = encodeURIComponent(key);
-
-      // Handle array values - join with commas
-      if (Array.isArray(value)) {
-        if (value.length === 0) {
-          // Empty array - omit entirely
-        } else {
-          const encodedValue = value
-            .map((item) => encodeURIComponent(String(item)))
-            .join(",");
-          searchParamPairs.push(`${encodedKey}=${encodedValue}`);
-        }
-      }
-      // Handle boolean values - if true, just add the key without value
-      else if (value === true || value === "") {
-        searchParamPairs.push(encodedKey);
-      } else {
-        const encodedValue = encodeParamValue(value, false); // Search params encode slashes
-        searchParamPairs.push(`${encodedKey}=${encodedValue}`);
-      }
-    }
-  }
-
-  return searchParamPairs.join("&");
-};
-
 // Function to detect signals in route patterns and connect them
 const detectSignals = (routePattern) => {
   const signalConnections = [];
@@ -2591,6 +2557,40 @@ const matchUrl = (
   // Defaults are handled by resolveParams() to create the final merged parameters
 
   return params;
+};
+
+/**
+ * Build query string from parameters, respecting rawUrlPart values
+ */
+const buildQueryString = (params) => {
+  const searchParamPairs = [];
+
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== null) {
+      const encodedKey = encodeURIComponent(key);
+
+      // Handle array values - join with commas
+      if (Array.isArray(value)) {
+        if (value.length === 0) {
+          // Empty array - omit entirely
+        } else {
+          const encodedValue = value
+            .map((item) => encodeURIComponent(String(item)))
+            .join(",");
+          searchParamPairs.push(`${encodedKey}=${encodedValue}`);
+        }
+      }
+      // Handle boolean values - if true, just add the key without value
+      else if (value === true || value === "") {
+        searchParamPairs.push(encodedKey);
+      } else {
+        const encodedValue = encodeParamValue(value, false); // Search params encode slashes
+        searchParamPairs.push(`${encodedKey}=${encodedValue}`);
+      }
+    }
+  }
+
+  return searchParamPairs.join("&");
 };
 
 /**
