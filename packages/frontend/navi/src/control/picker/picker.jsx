@@ -30,7 +30,6 @@ const css = /* css */ `
       --picker-border-radius: 2px;
       --picker-outline-width: 1px;
       --picker-border-width: 1px;
-      --picker-font-size: 14px;
       --picker-padding-x-default: 8px;
       --picker-padding-y-default: 5px;
       --picker-outline-color: var(--navi-focus-outline-color);
@@ -138,7 +137,6 @@ const css = /* css */ `
     padding-left: var(--x-picker-padding-left);
     flex-direction: row;
     color: var(--x-picker-color);
-    font-size: var(--picker-font-size);
     text-align: inherit;
     text-overflow: ellipsis;
     background-color: var(--x-picker-background-color);
