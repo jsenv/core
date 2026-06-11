@@ -4447,6 +4447,10 @@ const normalizeKeyboardKey = (rawKey) => {
 
 const getKeyboardEventDefaultAction = (keyboardEvent) => {
   const target = keyboardEvent.target;
+  if (keyboardEvent.key === undefined) {
+    // Happens for enter after autocomplete
+    return "activate";
+  }
   const key = normalizeKeyboardKey(keyboardEvent.key);
 
   // Nothing special occurs when the target or an ancestor is disabled/inert
@@ -4486,6 +4490,10 @@ const getKeyboardEventDefaultAction = (keyboardEvent) => {
 const isTypingIntent = (e) => {
   // Modifier keys used for shortcuts: skip
   if (e.metaKey || e.ctrlKey) {
+    return false;
+  }
+  if (!e.key) {
+    // can happen when pressing enter for autocomplete for instance
     return false;
   }
   const key = normalizeKeyboardKey(e.key);
@@ -5451,10 +5459,40 @@ const performTabNavigation = (
   // A focus group "owns" the activeElement when activeElement is inside it.
   // From the inside, Tab should exit the group (skip its remaining children).
   // From the outside, Tab should enter the group normally (first focusable child).
+  //
+  // Smart mode (navi-focus-group="[role=radio]"):
+  //   - activeElement directly matches the selector (IS a radio):
+  //     Tab skips ALL elements in the group → exits to next focusable outside.
+  //   - activeElement is inside a managed element but doesn't match (e.g. an
+  //     input inside a custom radio widget): Tab navigates freely within the
+  //     group, only skipping elements that directly match the managed selector.
+  //
+  // Strict mode (navi-focus-group with no value, or navi-focus-group-strict):
+  //   Tab always exits the group regardless of where focus is inside it.
   const activeFocusGroup =
     activeElement.closest?.("[navi-focus-group]") || null;
-  const isOwnedByActiveFocusGroup = (el) =>
-    activeFocusGroup && activeFocusGroup.contains(el);
+  const activeFocusGroupManages = activeFocusGroup
+    ? activeFocusGroup.getAttribute("navi-focus-group") || null
+    : null;
+  const activeFocusGroupIsStrict = activeFocusGroup
+    ? !activeFocusGroupManages ||
+      activeFocusGroup.hasAttribute("navi-focus-group-strict")
+    : false;
+  const activeElementIsManaged =
+    activeFocusGroup && activeFocusGroupManages
+      ? activeElement.matches(activeFocusGroupManages)
+      : false;
+  const isOwnedByActiveFocusGroup = (el) => {
+    if (!activeFocusGroup || !activeFocusGroup.contains(el)) {
+      return false;
+    }
+    if (activeFocusGroupIsStrict || activeElementIsManaged) {
+      // Strict: skip everything inside the group so Tab exits.
+      return true;
+    }
+    // Smart: only skip elements that are themselves managed items.
+    return el.matches(activeFocusGroupManages);
+  };
 
   const predicate = (candidate, skip) => {
     if (!isFocusableByTab(candidate)) {
@@ -5589,6 +5627,12 @@ const hasNegativeTabIndex = (element) => {
  *   when navigating on the x axis. Omit to allow any focusable element.
  * @param {string} [options.ySelector] - CSS selector that candidates must match
  *   when navigating on the y axis. Omit to allow any focusable element.
+ * @param {string} [options.manages] - CSS selector declaring which descendants
+ *   this group "manages" for Tab navigation. When set, Tab only skips managed
+ *   elements; other focusable descendants (e.g. inputs inside a radio widget)
+ *   remain individually tabbable. When omitted, Tab skips the entire group.
+ * @param {boolean} [options.strictTab=false] - When true AND manages is set,
+ *   Tab always exits the group regardless of where focus is inside it.
  * @returns {{ cleanup: () => void }} Call cleanup() to remove all event listeners.
  */
 const initFocusGroup = (
@@ -5605,6 +5649,10 @@ const initFocusGroup = (
     // CSS selector to restrict candidates on each axis
     xSelector,
     ySelector,
+    // CSS selector declaring which elements the group "manages" for Tab purposes.
+    // Defaults to ySelector ?? xSelector so arrow-nav and tab-nav stay in sync.
+    manages = ySelector ?? xSelector,
+    strictTab = false,
   } = {},
 ) => {
   const cleanupCallbackSet = new Set();
@@ -5621,10 +5669,16 @@ const initFocusGroup = (
     name, // Store undefined as-is for implicit grouping
   });
   cleanupCallbackSet.add(removeFocusGroup);
-  element.setAttribute("navi-focus-group", "");
+  element.setAttribute("navi-focus-group", manages ?? "");
   cleanupCallbackSet.add(() => {
     element.removeAttribute("navi-focus-group");
   });
+  if (manages && strictTab) {
+    element.setAttribute("navi-focus-group-strict", "");
+    cleanupCallbackSet.add(() => {
+      element.removeAttribute("navi-focus-group-strict");
+    });
+  }
 
   tab: {
     if (!skipTab) {
@@ -5635,8 +5689,18 @@ const initFocusGroup = (
         // Prevent double handling of the same event + allow preventing focus nav from outside
         return;
       }
+      // Smart mode: when focus is inside an unmanaged element (e.g. an input
+      // inside a radio widget), do NOT skip the entire group — let Tab navigate
+      // freely. The predicate in performTabNavigation will still skip managed
+      // items (those matching `manages`) encountered along the way.
+      const activeElement = document.activeElement;
+      const focusIsOnUnmanagedDescendant =
+        manages &&
+        !strictTab &&
+        element.contains(activeElement) &&
+        !activeElement.matches(manages);
       performTabNavigation(event, {
-        outsideOfElement: element,
+        outsideOfElement: focusIsOnUnmanagedDescendant ? null : element,
         excludeAriaHidden,
       });
     };
@@ -11191,13 +11255,43 @@ const visibleRectEffect = (
       }
     }
     {
-      const onWindowResize = (e) => {
+      // visualViewport resize is a superset of window resize:
+      // it also fires when the virtual keyboard opens/closes on mobile.
+      // Fall back to window resize when visualViewport is unavailable.
+      const onResize = (e) => {
         autoCheck(e);
       };
-      window.addEventListener("resize", onWindowResize);
-      addTeardown(() => {
-        window.removeEventListener("resize", onWindowResize);
-      });
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener("resize", onResize);
+        addTeardown(() => {
+          window.visualViewport.removeEventListener("resize", onResize);
+        });
+      } else {
+        window.addEventListener("resize", onResize);
+        addTeardown(() => {
+          window.removeEventListener("resize", onResize);
+        });
+      }
+    }
+    {
+      // visualViewport scroll fires when the visual viewport pans independently
+      // of the layout viewport (e.g. during pinch-zoom). This is distinct from
+      // document scroll and must be observed separately.
+      if (window.visualViewport) {
+        const onVisualViewportScroll = (e) => {
+          autoCheck(e);
+        };
+        window.visualViewport.addEventListener(
+          "scroll",
+          onVisualViewportScroll,
+        );
+        addTeardown(() => {
+          window.visualViewport.removeEventListener(
+            "scroll",
+            onVisualViewportScroll,
+          );
+        });
+      }
     }
     {
       const resizeObserver = new ResizeObserver(() => {
