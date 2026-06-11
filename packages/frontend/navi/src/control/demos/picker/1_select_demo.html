@@ -201,35 +201,38 @@
           <h2>Table of contents</h2>
           <ol class="toc-list">
             <li>
-              <a href="#section-1">1. Customization — font size</a>
+              <a href="#section-1">1. Dimensions — size &amp; overflow</a>
+              <ol class="toc-list" style={{ marginTop: 0 }}>
+                <li><a href="#dim-font-size">Font size</a></li>
+                <li><a href="#dim-width">Width adapts to value</a></li>
+                <li><a href="#dim-overflow">Single-line overflow</a></li>
+                <li><a href="#dim-maxrows">Multi-line with maxRows</a></li>
+              </ol>
             </li>
             <li>
-              <a href="#section-2">2. Dimensions — width &amp; overflow</a>
+              <a href="#section-2">
+                2. <code>action="send"</code> — closes on click
+              </a>
             </li>
             <li>
               <a href="#section-3">
-                3. <code>action="send"</code> — closes on click
+                3. <code>action="update"</code> — stays open until closed
               </a>
             </li>
             <li>
-              <a href="#section-4">
-                4. <code>action="update"</code> — stays open until closed
-              </a>
+              <a href="#section-4">4. Searchable select — empty list</a>
             </li>
             <li>
-              <a href="#section-5">5. Searchable select — empty list</a>
+              <a href="#section-5">5. Searchable select — full list</a>
             </li>
             <li>
-              <a href="#section-6">6. Searchable select — full list</a>
+              <a href="#section-6">6. Searchable select — few results</a>
             </li>
             <li>
-              <a href="#section-7">7. Searchable select — few results</a>
+              <a href="#section-7">7. Searchable select — no results</a>
             </li>
             <li>
-              <a href="#section-8">8. Searchable select — no results</a>
-            </li>
-            <li>
-              <a href="#section-9">9. Place picker — rich items with search</a>
+              <a href="#section-8">8. Place picker — rich items with search</a>
             </li>
           </ol>
         </div>
@@ -760,15 +763,11 @@
       );
 
       const DimensionsDemo = () => {
-        const sentenceSignal = useSignal(LONG_SENTENCE);
-        const wordSignal = useSignal(LONG_WORD);
-        const clampSignal = useSignal(VERY_LONG_TEXT);
-
         return (
           <div id="section-1" class="demo-section">
             <h2>1. Dimensions — size &amp; overflow</h2>
 
-            <h3>Font size</h3>
+            <h3 id="dim-font-size" style={{ marginTop: "24px" }}>Font size</h3>
             <p>
               The picker inherits font size from its container, which drives its
               overall size.
@@ -809,7 +808,7 @@
               ))}
             </Box>
 
-            <h3 style={{ marginTop: "24px" }}>Width adapts to value</h3>
+            <h3 id="dim-width" style={{ marginTop: "24px" }}>Width adapts to value</h3>
             <p>
               By default the picker grows to fit its selected value. This can
               cause layout shift as the width changes between values.
@@ -931,21 +930,19 @@
               </Field>
             </Box>
 
-            <h3 style={{ marginTop: "24px" }}>Single-line overflow</h3>
+            <h3 id="dim-overflow" style={{ marginTop: "24px" }}>Single-line overflow</h3>
             <p>
               When the value is wider than the picker (here constrained to{" "}
               <code>maxWidth="200"</code>), the text is clipped with an ellipsis
               on a single line.
             </p>
-            <Box flex="x" spacing="m" alignY="end">
+            <Box flex="y" spacing="m">
               <Field vertical>
                 <Label>Long sentence</Label>
                 <Picker
                   name="dim_sentence"
-                  value={sentenceSignal.value}
-                  action={(v) => {
-                    sentenceSignal.value = v;
-                  }}
+                  value={LONG_SENTENCE}
+                  action={() => {}}
                   maxWidth="200"
                 >
                   <DimensionPickerItems
@@ -958,10 +955,8 @@
                 <Label>Long word</Label>
                 <Picker
                   name="dim_word"
-                  value={wordSignal.value}
-                  action={(v) => {
-                    wordSignal.value = v;
-                  }}
+                  value={LONG_WORD}
+                  action={() => {}}
                   maxWidth="200"
                 >
                   <DimensionPickerItems
@@ -972,13 +967,13 @@
               </Field>
             </Box>
 
-            <h3 style={{ marginTop: "24px" }}>Multi-line with maxRows</h3>
+            <h3 id="dim-maxrows" style={{ marginTop: "24px" }}>Multi-line with maxRows</h3>
             <p>
               <code>maxRows</code> lets the text flow onto multiple lines before
               truncating. At <code>maxRows=3</code> the text wraps up to three
               rows then clips with an ellipsis.
             </p>
-            <Box flex="x" spacing="m" alignY="end">
+            <Box flex="y" spacing="m">
               <Field vertical>
                 <Label>
                   Long sentence{" "}
@@ -986,10 +981,8 @@
                 </Label>
                 <Picker
                   name="dim_sentence_maxrows"
-                  value={sentenceSignal.value}
-                  action={(v) => {
-                    sentenceSignal.value = v;
-                  }}
+                  value={LONG_SENTENCE}
+                  action={() => {}}
                   maxWidth="200"
                   maxRows={3}
                 >
@@ -1006,10 +999,8 @@
                 </Label>
                 <Picker
                   name="dim_word_maxrows"
-                  value={wordSignal.value}
-                  action={(v) => {
-                    wordSignal.value = v;
-                  }}
+                  value={LONG_WORD}
+                  action={() => {}}
                   maxWidth="200"
                   maxRows={3}
                 >
@@ -1026,10 +1017,8 @@
                 </Label>
                 <Picker
                   name="dim_clamp_maxrows"
-                  value={clampSignal.value}
-                  action={(v) => {
-                    clampSignal.value = v;
-                  }}
+                  value={VERY_LONG_TEXT}
+                  action={() => {}}
                   maxWidth="200"
                   maxRows={3}
                 >
