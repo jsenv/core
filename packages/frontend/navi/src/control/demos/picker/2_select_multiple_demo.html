@@ -171,6 +171,7 @@
                 action={(v) => {
                   selectedSignal.value = v;
                 }}
+                maxWidth="150"
               >
                 <List selectable multiple action="update">
                   {FRUIT_OPTIONS.map((opt, i) => (
@@ -240,6 +241,7 @@
                 action={(v) => {
                   selectedSignal.value = v;
                 }}
+                maxWidth="150"
               >
                 <List
                   selectable
@@ -277,8 +279,6 @@
           "CSS",
           "JavaScript",
           "TypeScript",
-          "React",
-          "Node.js",
         ]);
         const listRef = useRef(null);
 
@@ -338,6 +338,7 @@
                 action={(v) => {
                   selectedSignal.value = v;
                 }}
+                maxWidth="150"
               >
                 <List
                   selectable
