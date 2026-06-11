@@ -18,6 +18,7 @@ export const BadgeList = ({
   children,
   className,
   shrinkWrap = true,
+  maxRows,
   ...props
 }) => {
   import.meta.css = css;
@@ -26,37 +27,70 @@ export const BadgeList = ({
   const { ref } = props;
 
   useLayoutEffect(() => {
-    if (!shrinkWrap) {
-      return undefined;
-    }
     const el = ref.current;
     if (!el) {
       return undefined;
     }
     let observer;
     let rafId;
-    const applyWidth = () => {
-      el.style.width = "";
-      const optimalWidth = measureWidestChildRow(el);
-      if (optimalWidth === null) {
-        return;
+    const applyLayout = () => {
+      // Reset constraints so measurements are unconstrained
+      if (shrinkWrap) {
+        el.style.width = "";
+        const optimalWidth = measureWidestChildRow(el);
+        if (optimalWidth !== null) {
+          el.style.width = `${Math.ceil(optimalWidth)}px`;
+        }
       }
-      el.style.width = `${Math.ceil(optimalWidth)}px`;
+
+      if (maxRows !== undefined) {
+        el.style.maxHeight = "";
+        el.style.overflow = "";
+        const containerTop = el.getBoundingClientRect().top;
+        const rowTops = [];
+        for (const child of el.children) {
+          const childTop = Math.round(
+            child.getBoundingClientRect().top - containerTop,
+          );
+          if (!rowTops.includes(childTop)) {
+            rowTops.push(childTop);
+          }
+          if (rowTops.length > maxRows) {
+            break;
+          }
+        }
+        if (rowTops.length >= maxRows) {
+          const lastAllowedTop = rowTops[maxRows - 1];
+          let maxBottom = 0;
+          for (const child of el.children) {
+            const rect = child.getBoundingClientRect();
+            const childTop = Math.round(rect.top - containerTop);
+            if (childTop === lastAllowedTop) {
+              const childBottom = Math.round(rect.bottom - containerTop);
+              if (childBottom > maxBottom) {
+                maxBottom = childBottom;
+              }
+            }
+          }
+          el.style.maxHeight = `${maxBottom}px`;
+          el.style.overflow = "hidden";
+        }
+      }
     };
-    applyWidth();
+    applyLayout();
     const parent = el.parentElement;
     if (parent) {
       observer = new ResizeObserver(() => {
         cancelAnimationFrame(rafId);
-        rafId = requestAnimationFrame(applyWidth);
+        rafId = requestAnimationFrame(applyLayout);
       });
       observer.observe(parent);
     }
-    window.addEventListener("resize", applyWidth);
+    window.addEventListener("resize", applyLayout);
     return () => {
       cancelAnimationFrame(rafId);
       observer?.disconnect();
-      window.removeEventListener("resize", applyWidth);
+      window.removeEventListener("resize", applyLayout);
     };
   });
 
