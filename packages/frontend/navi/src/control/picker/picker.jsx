@@ -118,6 +118,7 @@ const css = /* css */ `
     );
     --x-picker-color: var(--picker-color);
     --x-picker-icon-color: var(--picker-icon-color);
+    --x-picker-max-rows: var(--picker-max-rows, 3);
 
     position: relative;
     display: inline-flex;
@@ -189,10 +190,13 @@ const css = /* css */ `
       pointer-events: none;
     }
 
-    &[data-multiline] {
+    &[data-max-rows] {
       overflow-wrap: anywhere;
       .navi_picker_value {
+        display: -webkit-box;
         white-space: normal;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: var(--x-picker-max-rows);
       }
     }
 
@@ -262,7 +266,7 @@ const css = /* css */ `
  */
 const PickerButton = (props) => {
   import.meta.css = css;
-  const { ref, icon, placeholder, singleLine, ui, multiline } = props;
+  const { ref, icon, placeholder, singleLine, ui, maxRows } = props;
   const inputRef = useRef(null);
   const [inputProps, pickerRemainingProps] = useControlProps(
     {
@@ -292,7 +296,12 @@ const PickerButton = (props) => {
       pseudoClasses={PICKER_BUTTON_PSEUDO_CLASSES}
       disabled={disabled}
       data-single-line={singleLine ? "" : undefined}
-      data-multiline={multiline ? "" : undefined}
+      data-max-rows={maxRows !== undefined && maxRows > 1 ? maxRows : undefined}
+      style={
+        maxRows !== undefined && maxRows > 1
+          ? { "--picker-max-rows": maxRows }
+          : undefined
+      }
       {...pickerRemainingProps}
       basePseudoState={basePseudoState}
       styleCSSVars={PickerStyleCSSVars}
@@ -302,7 +311,7 @@ const PickerButton = (props) => {
       icon={undefined}
       ui={undefined}
       singleLine={undefined}
-      multiline={undefined}
+      maxRows={undefined}
       dayLabel={undefined}
       // The button is handling the pointer interactions
       onMouseDown={(e) => {

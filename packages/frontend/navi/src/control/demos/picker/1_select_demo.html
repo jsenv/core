@@ -823,7 +823,7 @@
             <p>
               Shows how the picker trigger handles values wider than itself
               (constrained to <code>maxWidth="200"</code>), with and without{" "}
-              <code>multiline</code>.
+              <code>maxRows</code>.
             </p>
             <Box flex="y" spacing="l">
               <Box flex="x" spacing="m">
@@ -872,16 +872,16 @@
                 <Field vertical>
                   <Label>
                     Long sentence{" "}
-                    <code style={{ fontWeight: "normal" }}>(multiline)</code>
+                    <code style={{ fontWeight: "normal" }}>(maxRows=3)</code>
                   </Label>
                   <Picker
-                    name="overflow_sentence_multiline"
+                    name="overflow_sentence_maxrows"
                     value={sentenceSignal.value}
                     action={(v) => {
                       sentenceSignal.value = v;
                     }}
                     maxWidth="200"
-                    multiline
+                    maxRows={3}
                   >
                     <OverflowPickerItems
                       id="overflow_sentence_ml"
@@ -893,16 +893,16 @@
                 <Field vertical>
                   <Label>
                     Long word{" "}
-                    <code style={{ fontWeight: "normal" }}>(multiline)</code>
+                    <code style={{ fontWeight: "normal" }}>(maxRows=3)</code>
                   </Label>
                   <Picker
-                    name="overflow_word_multiline"
+                    name="overflow_word_maxrows"
                     value={wordSignal.value}
                     action={(v) => {
                       wordSignal.value = v;
                     }}
                     maxWidth="200"
-                    multiline
+                    maxRows={3}
                   >
                     <OverflowPickerItems
                       id="overflow_word_ml"
