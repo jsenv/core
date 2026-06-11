@@ -1,5 +1,5 @@
 import { createValidity } from "@jsenv/validity";
-import { effect, signal } from "@preact/signals";
+import { computed, effect, signal } from "@preact/signals";
 
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 
@@ -280,6 +280,12 @@ export const stateSignal = (defaultValue, options = {}) => {
 
   const facadeSignal = preactSignal;
   facadeSignal.validity = validity;
+  facadeSignal.validSignal = computed(() => {
+    // Reading facadeSignal.value establishes the reactive dependency.
+    // eslint-disable-next-line no-unused-expressions
+    facadeSignal.value;
+    return validity.representations.valid?.value;
+  });
   facadeSignal.__signalId = signalIdString;
   facadeSignal.toString = () => `{navi_state_signal:${signalIdString}}`;
   // 1. when signal value changes to undefined, it needs to fallback to default value

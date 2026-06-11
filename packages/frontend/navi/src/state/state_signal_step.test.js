@@ -87,14 +87,15 @@ await snapshotTests(import.meta.url, ({ test }) => {
       const effectCalls = [];
       let effectRunCount = 0;
 
-      // Use effect to track signal changes
+      // Use effect to track validSignal changes (holds the auto-fixed/rounded value)
+      // This verifies that effects only fire when the valid value actually changes,
+      // not for every raw write that rounds to the same result.
       const disposeEffect = effect(() => {
-        const currentValue = signal.value; // This tracks the signal
+        const validValue = signal.validSignal.value; // This tracks the valid signal
         effectRunCount++;
         effectCalls.push({
           run: effectRunCount,
-          value: currentValue,
-          timestamp: Date.now(),
+          validValue,
         });
       });
 
@@ -127,7 +128,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
         total_effect_calls: effectCalls.length,
         effect_calls: effectCalls.map((call) => ({
           run: call.run,
-          value: call.value,
+          validValue: call.validValue,
         })),
       };
     } finally {
