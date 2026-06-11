@@ -79,7 +79,6 @@ export const createValidity = (ruleConfig) => {
   const validity = {};
   const {
     localStorageRepresentation: localStorageRepresentationOverride,
-    urlRepresentation: urlRepresentationOverride,
     representation,
     typeCoercion = true,
     autoFix: autoFixOption = false,
@@ -101,6 +100,11 @@ export const createValidity = (ruleConfig) => {
   const storageTargets = new Map(); // key → { type, formatFn }
   const addStorageTarget = (key, type) => {
     if (!type) {
+      return;
+    }
+    // "inherit" means keep the JS value as-is (identity format, no conversion).
+    if (type === "inherit") {
+      storageTargets.set(key, { type: "inherit", format: (value) => value });
       return;
     }
     const repr = typeDef?.representations?.[type];
@@ -128,10 +132,7 @@ export const createValidity = (ruleConfig) => {
     localStorageRepresentationOverride ??
     typeDef?.localStorageRepresentation ??
     "string";
-  const effectiveUrlRepr =
-    urlRepresentationOverride ?? typeDef?.urlRepresentation ?? "string";
   addStorageTarget("localStorage", effectiveLocalStorageRepr);
-  addStorageTarget("url", effectiveUrlRepr);
   if (representation) {
     for (const [key, reprName] of Object.entries(representation)) {
       if (!typeDef?.representations?.[reprName]) {
@@ -367,11 +368,15 @@ export const createValidity = (ruleConfig) => {
       // the format function would produce garbage (NaN etc.). Fall back to String(value).
       let representedValue;
       if (value !== undefined) {
-        const jsType = typeDef?.jsType;
-        if (jsType && typeof value !== jsType) {
-          representedValue = String(value);
-        } else {
+        if (type === "inherit") {
           representedValue = format(value);
+        } else {
+          const jsType = typeDef?.jsType;
+          if (jsType && typeof value !== jsType) {
+            representedValue = String(value);
+          } else {
+            representedValue = format(value);
+          }
         }
       }
       validity.representations[key] = {

@@ -21,17 +21,9 @@ return {
 };
 ```
 
-# 1/2 console.error
-
-```console
-Error decoding localStorage "existing" value:
-```
-
-# 2/2 return
-
 ```js
 {
-  "valueFromStorage": "default",
+  "valueFromStorage": "pre_existing_value",
   "defaultWouldBe": "default"
 }
 ```

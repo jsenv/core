@@ -109,7 +109,6 @@ export const TYPES = {
   "boolean": {
     jsType: "boolean",
     localStorageRepresentation: "string",
-    urlRepresentation: "string",
     representations: {
       string: {
         parse: (value) => {
@@ -136,7 +135,6 @@ export const TYPES = {
   "number": {
     jsType: "number",
     localStorageRepresentation: "string",
-    urlRepresentation: "string",
     validate: validateNumber,
     representations: {
       string: {
@@ -148,7 +146,6 @@ export const TYPES = {
   "string": {
     jsType: "string",
     localStorageRepresentation: "string",
-    urlRepresentation: "string",
     representations: {
       number: {
         parse: String,
@@ -167,7 +164,6 @@ export const TYPES = {
   "array": {
     jsType: "array",
     localStorageRepresentation: "string",
-    urlRepresentation: "string",
     validate: (value) => {
       if (!Array.isArray(value)) {
         return `must be an array, got ${typeof value}`;
@@ -191,7 +187,6 @@ export const TYPES = {
   "object": {
     jsType: "object",
     localStorageRepresentation: "string",
-    urlRepresentation: "string",
     validate: (value) => {
       if (Array.isArray(value)) {
         return `must be an object, got array`;
@@ -218,7 +213,6 @@ export const TYPES = {
   "date": {
     jsType: "Date",
     localStorageRepresentation: "string",
-    urlRepresentation: "string",
     // canonical: Date object
     representations: {
       // "YYYY-MM-DD" string — also used for auto-converting string inputs
@@ -276,7 +270,6 @@ export const TYPES = {
   "datetime": {
     jsType: "Date",
     localStorageRepresentation: "string",
-    urlRepresentation: "string",
     // canonical: Date object (same as "date" but with time component)
     representations: {
       string: {
@@ -305,7 +298,6 @@ export const TYPES = {
   "datetime-local": {
     jsType: "string",
     localStorageRepresentation: "string",
-    urlRepresentation: "string",
     validate: (value) => {
       if (typeof value !== "string") {
         return `must be a string in YYYY-MM-DDTHH:MM format`;
@@ -356,7 +348,6 @@ export const TYPES = {
   "float": {
     jsType: "number",
     localStorageRepresentation: "string",
-    urlRepresentation: "string",
     validate: validateNumber,
     representations: {
       string: {
@@ -368,7 +359,6 @@ export const TYPES = {
   "integer": {
     jsType: "number",
     localStorageRepresentation: "string",
-    urlRepresentation: "string",
     validate: (value) => {
       const numberError = validateNumber(value);
       if (numberError) {
@@ -399,7 +389,6 @@ export const TYPES = {
   "ratio": {
     jsType: "number",
     localStorageRepresentation: "string",
-    urlRepresentation: "string",
     props: {
       min: { default: 0 },
       max: { default: 1 },
@@ -415,7 +404,6 @@ export const TYPES = {
   "longitude": {
     jsType: "number",
     localStorageRepresentation: "string",
-    urlRepresentation: "string",
     props: {
       min: { default: -180 },
       max: { default: 180 },
@@ -431,7 +419,6 @@ export const TYPES = {
   "latitude": {
     jsType: "number",
     localStorageRepresentation: "string",
-    urlRepresentation: "string",
     props: {
       min: { default: -90 },
       max: { default: 90 },
@@ -447,7 +434,6 @@ export const TYPES = {
   "second": {
     jsType: "number",
     localStorageRepresentation: "string",
-    urlRepresentation: "string",
     props: {
       min: { default: 0, resolver: resolveToSeconds },
       max: { default: 60, resolver: resolveToSeconds },
@@ -476,7 +462,6 @@ export const TYPES = {
   "minute": {
     jsType: "number",
     localStorageRepresentation: "string",
-    urlRepresentation: "string",
     props: {
       min: { default: 0, resolver: resolveToMinutes },
       max: { default: 60, resolver: resolveToMinutes },
@@ -505,7 +490,6 @@ export const TYPES = {
   "hour": {
     jsType: "number",
     localStorageRepresentation: "string",
-    urlRepresentation: "string",
     props: {
       min: { default: 0, resolver: resolveToHours },
       max: { default: 24, resolver: resolveToHours },
@@ -535,7 +519,6 @@ export const TYPES = {
   "week": {
     jsType: "string",
     localStorageRepresentation: "string",
-    urlRepresentation: "string",
     validate: (value) => {
       if (typeof value !== "string") {
         return `must be a string in YYYY-Www format`;
@@ -550,7 +533,6 @@ export const TYPES = {
   "month": {
     jsType: "string",
     localStorageRepresentation: "string",
-    urlRepresentation: "string",
     validate: (value) => {
       if (typeof value === "number" && Number.isFinite(value)) {
         return ""; // timestamp
@@ -577,7 +559,6 @@ export const TYPES = {
   "year": {
     jsType: "number",
     localStorageRepresentation: "string",
-    urlRepresentation: "string",
     validate: (value) => {
       if (typeof value !== "number" || !Number.isInteger(value)) {
         return `must be an integer year`;
@@ -600,7 +581,6 @@ export const TYPES = {
   "percentage": {
     jsType: "number",
     localStorageRepresentation: "string",
-    urlRepresentation: "string",
     props: {
       min: { default: 0 },
       max: { default: 100 },
@@ -634,7 +614,6 @@ export const TYPES = {
   "time": {
     jsType: "string",
     localStorageRepresentation: "string",
-    urlRepresentation: "string",
     validate: (value) => {
       if (typeof value !== "string") {
         return `must be a string`;
@@ -649,7 +628,6 @@ export const TYPES = {
   "email": {
     jsType: "string",
     localStorageRepresentation: "string",
-    urlRepresentation: "string",
     validate: (value) => {
       if (typeof value !== "string") {
         return `must be a string`;
@@ -668,7 +646,6 @@ export const TYPES = {
   "url": {
     jsType: "string",
     localStorageRepresentation: "string",
-    urlRepresentation: "string",
     validate: (value) => {
       if (typeof value !== "string") {
         return `must be a string`;
@@ -685,7 +662,6 @@ export const TYPES = {
   "color": {
     jsType: "string",
     localStorageRepresentation: "string",
-    urlRepresentation: "string",
     validate: (value) => {
       if (typeof value !== "string") {
         return `must be a string`;

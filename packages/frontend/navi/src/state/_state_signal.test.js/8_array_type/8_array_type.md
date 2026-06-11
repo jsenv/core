@@ -37,48 +37,6 @@ return {
 };
 ```
 
-# 1/2 logs
-
-![img](log_group.svg)
-
-<details>
-  <summary>see without style</summary>
-
-```console
-[stateSignal:array_signal] validation failed with no valid suggestion:  {
-  value: { key: 'value' },
-  validity: {
-    type: 'must be an array, got object',
-    valid: false,
-    validSuggestion: null
-  }
-}
-[stateSignal:array_signal] validation failed with no valid suggestion: 
-[stateSignal:array_signal] validation failed with no valid suggestion:  {
-  value: { key: 'value' },
-  validity: {
-    type: 'must be an array, got object',
-    valid: false,
-    validSuggestion: null
-  }
-}
-[stateSignal:array_signal] validation failed with no valid suggestion: 
-[stateSignal:array_signal] validation failed with no valid suggestion:  {
-  value: { key: 'value' },
-  validity: {
-    type: 'must be an array, got object',
-    valid: false,
-    validSuggestion: null
-  }
-}
-[stateSignal:array_signal] validation failed with no valid suggestion: 
-```
-
-</details>
-
-
-# 2/2 return
-
 ```js
 {
   "initialValue": [],
@@ -92,7 +50,7 @@ return {
   "validAfterObject": false,
   "typeErrorAfterObject": "must be an array, got object",
   "validAfterString": true,
-  "suggestionAfterString": null
+  "suggestionAfterString": undefined
 }
 ```
 

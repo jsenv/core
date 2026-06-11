@@ -11,12 +11,12 @@ const initialValid = sig.validity.valid;
 sig.value = "option2";
 const stillValid = sig.validity.valid;
 sig.value = "invalid_option";
-const nowInvalid = sig.validity.valid;
+const nowValid = sig.validity.valid;
 
 return {
   initialValid,
   stillValid,
-  nowInvalid,
+  nowValid,
 };
 ```
 
@@ -24,7 +24,7 @@ return {
 {
   "initialValid": true,
   "stillValid": true,
-  "nowInvalid": true
+  "nowValid": false
 }
 ```
 

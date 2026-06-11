@@ -99,12 +99,12 @@ await snapshotTests(import.meta.url, ({ test }) => {
     sig.value = "option2";
     const stillValid = sig.validity.valid;
     sig.value = "invalid_option";
-    const nowInvalid = sig.validity.valid;
+    const nowValid = sig.validity.valid;
 
     return {
       initialValid,
       stillValid,
-      nowInvalid,
+      nowValid,
     };
   });
 

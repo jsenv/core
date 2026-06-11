@@ -4,21 +4,26 @@
 try {
   const signal = stateSignal(1.0, { type: "number", step: 0.1 });
 
+  const entry = (description, value) => ({
+    description,
+    value,
+    validValue: signal.validity.representations.valid?.value,
+  });
   const results = [];
-  results.push({ description: "initial value", value: signal.value });
+  results.push(entry("initial value", signal.value));
 
   // Test various values that should round to different steps
   signal.value = 1.234567;
-  results.push({ description: "after 1.234567", value: signal.value });
+  results.push(entry("after 1.234567", signal.value));
 
   signal.value = 1.05; // Should round to 1.1
-  results.push({ description: "after 1.05", value: signal.value });
+  results.push(entry("after 1.05", signal.value));
 
   signal.value = 1.04; // Should round to 1.0
-  results.push({ description: "after 1.04", value: signal.value });
+  results.push(entry("after 1.04", signal.value));
 
   signal.value = 1.777; // Should round to 1.8
-  results.push({ description: "after 1.777", value: signal.value });
+  results.push(entry("after 1.777", signal.value));
 
   return { results };
 } finally {
@@ -31,23 +36,28 @@ try {
   "results": [
     {
       "description": "initial value",
-      "value": 1
+      "value": 1,
+      "validValue": 1
     },
     {
       "description": "after 1.234567",
-      "value": 1.2
+      "value": 1.234567,
+      "validValue": 1.2
     },
     {
       "description": "after 1.05",
-      "value": 1.1
+      "value": 1.05,
+      "validValue": 1.1
     },
     {
       "description": "after 1.04",
-      "value": 1
+      "value": 1.04,
+      "validValue": 1
     },
     {
       "description": "after 1.777",
-      "value": 1.8
+      "value": 1.777,
+      "validValue": 1.8
     }
   ]
 }
