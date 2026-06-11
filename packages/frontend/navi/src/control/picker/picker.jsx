@@ -118,7 +118,6 @@ const css = /* css */ `
     );
     --x-picker-color: var(--picker-color);
     --x-picker-icon-color: var(--picker-icon-color);
-    --x-picker-max-rows: var(--picker-max-rows, 3);
 
     position: relative;
     display: inline-flex;
@@ -163,6 +162,13 @@ const css = /* css */ `
       &[navi-placeholder] {
         color: var(--picker-placeholder-color);
       }
+
+      .navi_text {
+        max-width: 100%;
+        text-overflow: inherit;
+        vertical-align: middle; /* For some reason it's required to disminish inline-block height */
+        overflow: inherit;
+      }
     }
     .navi_picker_right_slot {
       display: inline-flex;
@@ -190,13 +196,13 @@ const css = /* css */ `
       pointer-events: none;
     }
 
-    &[data-max-rows] {
+    &[data-line-clamp] {
       overflow-wrap: anywhere;
       .navi_picker_value {
         display: -webkit-box;
         white-space: normal;
         -webkit-box-orient: vertical;
-        -webkit-line-clamp: var(--x-picker-max-rows);
+        -webkit-line-clamp: var(--picker-max-rows);
       }
     }
 
@@ -266,7 +272,7 @@ const css = /* css */ `
  */
 const PickerButton = (props) => {
   import.meta.css = css;
-  const { ref, icon, placeholder, singleLine, ui, maxRows } = props;
+  const { ref, icon, placeholder, ui, maxRows } = props;
   const inputRef = useRef(null);
   const [inputProps, pickerRemainingProps] = useControlProps(
     {
@@ -285,6 +291,7 @@ const PickerButton = (props) => {
   const value = uiStateController.uiState;
   const { id, basePseudoState, disabled, children } = inputProps;
   const loading = basePseudoState[":-navi-loading"];
+  const hasLineClamp = maxRows && maxRows > 1;
 
   return (
     <Box
@@ -295,13 +302,10 @@ const PickerButton = (props) => {
       navi-has-placeholder={placeholder ? "" : undefined}
       pseudoClasses={PICKER_BUTTON_PSEUDO_CLASSES}
       disabled={disabled}
-      data-single-line={singleLine ? "" : undefined}
-      data-max-rows={maxRows !== undefined && maxRows > 1 ? maxRows : undefined}
-      style={
-        maxRows !== undefined && maxRows > 1
-          ? { "--picker-max-rows": maxRows }
-          : undefined
-      }
+      data-line-clamp={hasLineClamp ? "" : undefined}
+      style={{
+        "--picker-max-rows": maxRows || -1,
+      }}
       {...pickerRemainingProps}
       basePseudoState={basePseudoState}
       styleCSSVars={PickerStyleCSSVars}
@@ -310,7 +314,6 @@ const PickerButton = (props) => {
       id={id}
       icon={undefined}
       ui={undefined}
-      singleLine={undefined}
       maxRows={undefined}
       dayLabel={undefined}
       // The button is handling the pointer interactions
