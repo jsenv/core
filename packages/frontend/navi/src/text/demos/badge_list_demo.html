@@ -224,6 +224,34 @@
                 <Badge>WebAssembly</Badge>
               </BadgeList>
             </Box>
+
+            <Text bold>Resizable — drag to test adaptation</Text>
+            <Box
+              border="2px dotted #aaa"
+              borderRadius="4px"
+              style={{
+                resize: "horizontal",
+                overflow: "hidden",
+                width: "300px",
+                minWidth: "100px",
+                maxWidth: "600px",
+              }}
+            >
+              <BadgeList maxRows={2}>
+                <Badge>HTML</Badge>
+                <Badge>CSS</Badge>
+                <Badge>JavaScript</Badge>
+                <Badge>TypeScript</Badge>
+                <Badge>React</Badge>
+                <Badge>Vue</Badge>
+                <Badge>Node.js</Badge>
+                <Badge>Python</Badge>
+                <Badge>Rust</Badge>
+                <Badge>Go</Badge>
+                <Badge>Java</Badge>
+                <Badge>C++</Badge>
+              </BadgeList>
+            </Box>
           </Box>
         </Box>
       );

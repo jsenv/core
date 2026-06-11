@@ -20,7 +20,9 @@ const css = /* css */ `
   }
 
   .navi_badge.navi_more_badge {
-    max-width: var(--more-badge-max-width, none);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
   }
 `;
 
@@ -70,26 +72,14 @@ export const BadgeList = ({
         }
         if (rowTops.length > maxRows) {
           const allowedTops = new Set(rowTops.slice(0, maxRows));
-          const lastAllowedTop = rowTops[maxRows - 1];
-          let lastRowRight = containerRect.left;
           for (const child of measureEl.children) {
-            const rect = child.getBoundingClientRect();
-            const childTop = Math.round(rect.top - top);
+            const childTop = Math.round(
+              child.getBoundingClientRect().top - top,
+            );
             if (!allowedTops.has(childTop)) {
               nextHiddenCount++;
-            } else if (childTop === lastAllowedTop) {
-              if (rect.right > lastRowRight) {
-                lastRowRight = rect.right;
-              }
             }
           }
-          const remainingWidth = Math.floor(containerRect.right - lastRowRight);
-          visibleEl.style.setProperty(
-            "--more-badge-max-width",
-            `${remainingWidth}px`,
-          );
-        } else {
-          visibleEl.style.removeProperty("--more-badge-max-width");
         }
       }
 
