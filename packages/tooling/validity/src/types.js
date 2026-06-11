@@ -109,7 +109,7 @@ export const TYPES = {
   "boolean": {
     jsType: "boolean",
     localStorageRepresentation: "string",
-    urlRepresentation: "string",
+    urlRepresentation: "boolean",
     representations: {
       string: {
         parse: (value) => {
@@ -136,7 +136,7 @@ export const TYPES = {
   "number": {
     jsType: "number",
     localStorageRepresentation: "string",
-    urlRepresentation: "string",
+    urlRepresentation: "number",
     validate: validateNumber,
     representations: {
       string: {
@@ -167,7 +167,7 @@ export const TYPES = {
   "array": {
     jsType: "array",
     localStorageRepresentation: "string",
-    urlRepresentation: "string",
+    urlRepresentation: "array",
     validate: (value) => {
       if (!Array.isArray(value)) {
         return `must be an array, got ${typeof value}`;
@@ -191,7 +191,7 @@ export const TYPES = {
   "object": {
     jsType: "object",
     localStorageRepresentation: "string",
-    urlRepresentation: "string",
+    urlRepresentation: "object",
     validate: (value) => {
       if (Array.isArray(value)) {
         return `must be an object, got array`;
