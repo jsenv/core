@@ -849,6 +849,28 @@
                 </Field>
                 <Field vertical>
                   <Label>
+                    Long word{" "}
+                    <code style={{ fontWeight: "normal" }}>(default)</code>
+                  </Label>
+                  <Picker
+                    name="overflow_word"
+                    value={wordSignal.value}
+                    action={(v) => {
+                      wordSignal.value = v;
+                    }}
+                    maxWidth="200"
+                  >
+                    <OverflowPickerItems
+                      id="overflow_word"
+                      value={wordSignal.value}
+                      longValue={LONG_WORD}
+                    />
+                  </Picker>
+                </Field>
+              </Box>
+              <Box flex="x" spacing="m">
+                <Field vertical>
+                  <Label>
                     Long sentence{" "}
                     <code style={{ fontWeight: "normal" }}>(multiline)</code>
                   </Label>
@@ -865,28 +887,6 @@
                       id="overflow_sentence_ml"
                       value={sentenceSignal.value}
                       longValue={LONG_SENTENCE}
-                    />
-                  </Picker>
-                </Field>
-              </Box>
-              <Box flex="x" spacing="m">
-                <Field vertical>
-                  <Label>
-                    Long word{" "}
-                    <code style={{ fontWeight: "normal" }}>(default)</code>
-                  </Label>
-                  <Picker
-                    name="overflow_word"
-                    value={wordSignal.value}
-                    action={(v) => {
-                      wordSignal.value = v;
-                    }}
-                    maxWidth="200"
-                  >
-                    <OverflowPickerItems
-                      id="overflow_word"
-                      value={wordSignal.value}
-                      longValue={LONG_WORD}
                     />
                   </Picker>
                 </Field>

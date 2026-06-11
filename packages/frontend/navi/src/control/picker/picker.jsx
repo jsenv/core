@@ -8,10 +8,10 @@ import {
   useNextResolver,
 } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
+import { Text } from "@jsenv/navi/src/text/text.jsx";
 import { ControlChildrenWrapper, useControlProps } from "../control_hooks.jsx";
 import { resolveInputProps } from "../input/resolve_input_props.js";
 import { getUIStateControllerById } from "../ui_state_controller.js";
-import { PickerValue } from "./picker_components.jsx";
 import { PickerContext } from "./picker_context.jsx";
 import { pickerResolvers } from "./picker_resolvers.jsx";
 import {
@@ -43,7 +43,6 @@ const css = /* css */ `
         transparent
       );
       --picker-color-dimmed: color-mix(in srgb, currentColor 60%, transparent);
-      --picker-right-slot-size: 1em;
       /* Hover */
       --picker-border-color-hover: color-mix(
         in srgb,
@@ -132,6 +131,7 @@ const css = /* css */ `
     padding-bottom: var(--x-picker-padding-bottom);
     padding-left: var(--x-picker-padding-left);
     flex-direction: row;
+    gap: var(--navi-xs);
     color: var(--x-picker-color);
     text-align: inherit;
     text-overflow: ellipsis;
@@ -157,21 +157,17 @@ const css = /* css */ `
       text-overflow: ellipsis;
       white-space: nowrap;
       overflow: hidden;
-    }
-    .navi_picker_placeholder {
-      display: inline-block;
-      max-width: 100%;
-      flex-grow: 1;
-      color: var(--picker-placeholder-color);
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      overflow: hidden;
+
+      &[navi-placeholder] {
+        color: var(--picker-placeholder-color);
+      }
     }
     .navi_picker_right_slot {
       display: inline-flex;
       flex-shrink: 0;
       justify-content: center;
       color: var(--x-picker-icon-color);
+      transform: translateX(25%);
     }
     .navi_picker_input {
       position: absolute;
@@ -190,10 +186,6 @@ const css = /* css */ `
 
     &[data-multiline] {
       overflow-wrap: anywhere;
-
-      .navi_picker_placeholder {
-        white-space: normal;
-      }
       .navi_picker_value {
         white-space: normal;
       }
@@ -265,7 +257,7 @@ const css = /* css */ `
  */
 const PickerButton = (props) => {
   import.meta.css = css;
-  const { ref, icon, placeholder, singleLine, ui } = props;
+  const { ref, icon, placeholder, singleLine, ui, multiline } = props;
   const inputRef = useRef(null);
   const [inputProps, pickerRemainingProps] = useControlProps(
     {
@@ -295,6 +287,7 @@ const PickerButton = (props) => {
       pseudoClasses={PICKER_BUTTON_PSEUDO_CLASSES}
       disabled={disabled}
       data-single-line={singleLine ? "" : undefined}
+      data-multiline={multiline ? "" : undefined}
       {...pickerRemainingProps}
       basePseudoState={basePseudoState}
       styleCSSVars={PickerStyleCSSVars}
@@ -304,6 +297,7 @@ const PickerButton = (props) => {
       icon={undefined}
       ui={undefined}
       singleLine={undefined}
+      multiline={undefined}
       dayLabel={undefined}
       // The button is handling the pointer interactions
       onMouseDown={(e) => {
@@ -333,12 +327,14 @@ const PickerButton = (props) => {
         onClick={undefined}
         onKeyDown={undefined}
       />
-      <PickerValue>
+      <Text
+        className="navi_picker_value"
+        navi-placeholder={value === undefined || value === "" ? "" : undefined}
+      >
         <PickerContext.Provider value={{ value, placeholder }}>
           {ui === undefined ? <PickerDefaultUI /> : ui}
         </PickerContext.Provider>
-      </PickerValue>
-
+      </Text>
       <span className="navi_picker_right_slot">
         <Icon size="m">{icon === undefined ? <ChevronDownSvg /> : icon}</Icon>
       </span>
