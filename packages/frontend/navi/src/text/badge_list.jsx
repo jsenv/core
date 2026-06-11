@@ -1,10 +1,12 @@
 import { measureWidestChildRow } from "@jsenv/dom";
-import { toChildArray } from "preact";
-import { useLayoutEffect, useRef, useState } from "preact/hooks";
+import { createContext, toChildArray } from "preact";
+import { useContext, useLayoutEffect, useRef, useState } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
 import { Badge } from "./badge.jsx";
 import { naviI18n } from "./navi_i18n.js";
+
+export const BadgeListMaxRowsContext = createContext();
 
 const css = /* css */ `
   @layer navi {
@@ -33,8 +35,12 @@ export const BadgeList = ({
   ...props
 }) => {
   import.meta.css = css;
+  const maxRowsFromContext = useContext(BadgeListMaxRowsContext);
   const measureRef = useRef();
   const [hiddenCount, setHiddenCount] = useState(0);
+  if (maxRows === undefined) {
+    maxRows = maxRowsFromContext;
+  }
 
   useLayoutEffect(() => {
     const measureEl = measureRef.current;
