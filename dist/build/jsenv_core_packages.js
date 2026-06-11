@@ -871,44 +871,53 @@ const TIME_DICTIONARY_EN = {
   second: { long: "second", plural: "seconds", short: "s" },
   joinDuration: (primary, remaining) => `${primary} and ${remaining}`,
 };
-const TIME_DICTIONARY_FR = {
-  year: { long: "an", plural: "ans", short: "a" },
-  month: { long: "mois", plural: "mois", short: "m" },
-  week: { long: "semaine", plural: "semaines", short: "s" },
-  day: { long: "jour", plural: "jours", short: "j" },
-  hour: { long: "heure", plural: "heures", short: "h" },
-  minute: { long: "minute", plural: "minutes", short: "m" },
-  second: { long: "seconde", plural: "secondes", short: "s" },
-  joinDuration: (primary, remaining) => `${primary} et ${remaining}`,
-};
 
+/**
+ * Converts a duration in milliseconds into a human-readable string intended for display in
+ * CLI output — where readability matters more than precision.
+ *
+ * - Values below 1ms are displayed as "0 second". Sub-millisecond durations are not
+ *   meaningful at human scale, and showing "0.0001 second" (or switching to a "millisecond"
+ *   unit) would hurt readability. The chosen trade-off is to always use "second" as the
+ *   smallest unit and accept the loss of precision for very small values.
+ * - Values below 1s are displayed in fractional seconds (e.g. "0.05 second").
+ * - Values are expressed using the two most significant units (e.g. "1 hour and 23 minutes").
+ * - Rounding never causes a value to display as the next unit boundary
+ *   (e.g. 59_999ms → "59.9 seconds", never "60 seconds").
+ *
+ * @param {number} ms - Duration in milliseconds.
+ * @param {object} [options]
+ * @param {boolean} [options.short=false] - Use compact unit symbols (e.g. "1h and 23m").
+ * @param {boolean} [options.rounded=true] - Round the last displayed digit. When false, truncates instead.
+ * @param {number} [options.decimals] - Override the number of decimal places shown.
+ * @returns {string}
+ */
 const humanizeDuration = (
   ms,
   {
     short,
     rounded = true,
     decimals,
-    lang = "en",
-    timeDictionnary = lang === "fr" ? TIME_DICTIONARY_FR : TIME_DICTIONARY_EN,
+    timeDictionnary = TIME_DICTIONARY_EN,
   } = {},
 ) => {
-  // ignore ms below meaningfulMs so that:
-  // humanizeDuration(0.5) -> "0 second"
-  // humanizeDuration(1.1) -> "0.001 second" (and not "0.0011 second")
-  // This tool is meant to be read by humans and it would be barely readable to see
-  // "0.0001 second" (stands for 0.1 millisecond)
-  // yes we could return "0.1 millisecond" but we choosed consistency over precision
-  // so that the prefered unit is "second" (and does not become millisecond when ms is super small)
   if (ms < 1) {
-    return short
-      ? `0${timeDictionnary.second.short}`
-      : `0 ${timeDictionnary.second.long}`;
+    if (short) {
+      return `0${timeDictionnary.second.short}`;
+    }
+    return `0 ${timeDictionnary.second.long}`;
   }
   const { primary, remaining } = parseMs(ms);
   if (!remaining) {
+    const primaryUnitIndex = UNIT_KEYS.indexOf(primary.name);
+    const nextUnitName = UNIT_KEYS[primaryUnitIndex - 1];
+    const maxCount = nextUnitName
+      ? UNIT_MS[nextUnitName] / UNIT_MS[primary.name]
+      : null;
     return humanizeDurationUnit(primary, {
       decimals:
         decimals === undefined ? (primary.name === "second" ? 1 : 0) : decimals,
+      maxCount,
       short,
       rounded,
       timeDictionnary,
@@ -926,15 +935,23 @@ const humanizeDuration = (
     rounded,
     timeDictionnary,
   });
+  if (short) {
+    return `${primaryText}${remainingText}`;
+  }
   return timeDictionnary.joinDuration(primaryText, remainingText);
 };
 const humanizeDurationUnit = (
   unit,
-  { decimals, short, rounded, timeDictionnary },
+  { decimals, maxCount, short, rounded, timeDictionnary },
 ) => {
-  const count = rounded
+  let count = rounded
     ? setRoundedPrecision(unit.count, { decimals })
     : setPrecision(unit.count, { decimals });
+  if (maxCount !== null && maxCount !== undefined && count >= maxCount) {
+    // Prevent rounding up to the next unit boundary (e.g. 59.999s → 60s → cap to 59.9s)
+    const factor = Math.pow(10, decimals ?? 0);
+    count = Math.floor(unit.count * factor) / factor;
+  }
   const name = unit.name;
   if (short) {
     const unitText = timeDictionnary[name].short;
@@ -987,6 +1004,17 @@ const parseMs = (ms) => {
       },
     };
   }
+  // When remaining rounds up to a full next-unit (e.g. 59.999s rounds to 60s = 1min),
+  // drop the remaining to avoid displaying "59 minutes and 60 seconds".
+  const remainingUnitMs = UNIT_MS[remainingUnitName];
+  const nextUnitMs = UNIT_MS[firstUnitName];
+  const maxRemainingCount = nextUnitMs / remainingUnitMs; // e.g. 60 for seconds-in-a-minute
+  // Cap remaining so it never rounds up to the next unit boundary
+  // (e.g. 59.5s stays as 59s instead of rounding to 60s = 1min)
+  const cappedRemainingCount =
+    remainingUnitCount >= maxRemainingCount - 1
+      ? maxRemainingCount - 1
+      : remainingUnitCount;
   // - 1 year and 1 month is great
   return {
     primary: {
@@ -995,7 +1023,7 @@ const parseMs = (ms) => {
     },
     remaining: {
       name: remainingUnitName,
-      count: remainingUnitCount,
+      count: cappedRemainingCount,
     },
   };
 };

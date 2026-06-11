@@ -1,3 +1,4 @@
+import { humanize } from "@jsenv/humanize";
 import { snapshotTests } from "@jsenv/snapshot";
 import { batch } from "@preact/signals";
 
@@ -2226,6 +2227,95 @@ await snapshotTests(import.meta.url, ({ test }) => {
       setRouteIntegration(undefined);
       clearRoutes();
       globalSignalRegistry.clear();
+    }
+  });
+
+  test("date signal in route param should not cause cycle error", () => {
+    const urlProgression = [];
+    setRouteIntegration({
+      navTo: (url) => {
+        urlProgression.push(url);
+        updateRoutes(url);
+        return Promise.resolve();
+      },
+    });
+    const dateSignal = stateSignal(undefined, { type: "date" });
+    const ROUTE = route("/map/", {
+      searchParams: { date: dateSignal },
+    });
+    const { updateRoutes, clearRoutes } = setupRoutes([ROUTE]);
+    try {
+      updateRoutes(`${baseUrl}/map/`);
+      dateSignal.value = new Date("2024-03-15");
+
+      return {
+        urlProgression,
+        date_signal_value: humanize(dateSignal.value),
+      };
+    } finally {
+      clearRoutes();
+      globalSignalRegistry.clear();
+      setRouteIntegration(undefined);
+    }
+  });
+
+  test("datetime signal in route param should not cause cycle error", () => {
+    const urlProgression = [];
+    setRouteIntegration({
+      navTo: (url) => {
+        urlProgression.push(url);
+        updateRoutes(url);
+        return Promise.resolve();
+      },
+    });
+    const datetimeSignal = stateSignal(undefined, { type: "datetime" });
+    const ROUTE = route("/map/", {
+      searchParams: { datetime: datetimeSignal },
+    });
+    const { updateRoutes, clearRoutes } = setupRoutes([ROUTE]);
+    try {
+      updateRoutes(`${baseUrl}/map/`);
+      datetimeSignal.value = new Date("2024-03-15T14:30:00.000Z");
+
+      return {
+        urlProgression,
+        datetime_signal_value: humanize(datetimeSignal.value),
+      };
+    } finally {
+      clearRoutes();
+      globalSignalRegistry.clear();
+      setRouteIntegration(undefined);
+    }
+  });
+
+  test("datetime-local signal in route param should not cause cycle error", () => {
+    const urlProgression = [];
+    setRouteIntegration({
+      navTo: (url) => {
+        urlProgression.push(url);
+        updateRoutes(url);
+        return Promise.resolve();
+      },
+    });
+    const datetimeLocalSignal = stateSignal(undefined, {
+      type: "datetime-local",
+    });
+    const ROUTE = route("/map/", {
+      searchParams: { dt: datetimeLocalSignal },
+    });
+    const { updateRoutes, clearRoutes } = setupRoutes([ROUTE]);
+    try {
+      updateRoutes(`${baseUrl}/map/`);
+      datetimeLocalSignal.value = "2024-03-15T14:30";
+
+      return {
+        urlProgression,
+        datetime_local_signal_value: datetimeLocalSignal.value,
+      };
+    } finally {
+      clearRoutes();
+      globalSignalRegistry.clear();
+      setRouteIntegration(undefined);
     }
   });
 });

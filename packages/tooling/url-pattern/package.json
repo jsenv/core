@@ -5,7 +5,7 @@
   "private": true,
   "main": "./index.js",
   "dependencies": {
-    "@jsenv/urls": "2.9.9",
+    "@jsenv/urls": "2.9.10",
     "@jsenv/utils": "2.3.1"
   },
   "devDependencies": {

@@ -427,6 +427,21 @@ const compareTwoJsValues = (
     ) {
       return true;
     }
+    // Date objects must be compared by time value, not by enumerable keys (which are empty)
+    {
+      const aIsDate = a instanceof Date;
+      const bIsDate = b instanceof Date;
+      if (aIsDate !== bIsDate) {
+        return false;
+      }
+      if (aIsDate && bIsDate) {
+        const aTime = a.getTime();
+        const bTime = b.getTime();
+        if (aTime !== bTime) {
+          return false;
+        }
+      }
+    }
     const aKeys = Object.keys(a);
     const bKeys = Object.keys(b);
     if (aKeys.length !== bKeys.length) {
@@ -5263,17 +5278,19 @@ const generateSignalId = () => {
 const stateSignal = (defaultValue, options = {}) => {
   const {
     id,
+    // NOTE: when adding support for a new type here, also update route_pattern.js
+    // (buildQueryString for encoding, extractSearchParams for decoding)
     type,
     min,
     max,
     step,
     oneOf,
     localStorageRepresentation,
-    urlRepresentation,
     persists = false,
     debug,
     default: staticFallback,
     ignoreArrayOrder,
+    autoFix,
   } = options;
 
   // Check if defaultValue is a signal (dynamic default) or static value
@@ -5303,7 +5320,7 @@ const stateSignal = (defaultValue, options = {}) => {
     step,
     oneOf,
     localStorageRepresentation,
-    urlRepresentation,
+    autoFix,
   });
   const readFromLocalStorage = persists
     ? () => {
@@ -5428,7 +5445,12 @@ const stateSignal = (defaultValue, options = {}) => {
       return valueDescriptor.get.call(preactSignal);
     },
     set(newValue) {
-      valueDescriptor.set.call(preactSignal, processValue(newValue));
+      const processedValue = processValue(newValue);
+      // const currentValue = valueDescriptor.get.call(preactSignal);
+      // if (compareTwoJsValues(processedValue, currentValue)) {
+      //   return;
+      // }
+      valueDescriptor.set.call(preactSignal, processedValue);
     },
     enumerable: true,
     configurable: true,
@@ -5436,6 +5458,12 @@ const stateSignal = (defaultValue, options = {}) => {
 
   const facadeSignal = preactSignal;
   facadeSignal.validity = validity;
+  facadeSignal.validSignal = computed(() => {
+    // Reading facadeSignal.value establishes the reactive dependency.
+    // eslint-disable-next-line no-unused-expressions
+    facadeSignal.value;
+    return validity.representations.valid?.value;
+  });
   facadeSignal.__signalId = signalIdString;
   facadeSignal.toString = () => `{navi_state_signal:${signalIdString}}`;
   // 1. when signal value changes to undefined, it needs to fallback to default value
@@ -5552,14 +5580,6 @@ const stateSignal = (defaultValue, options = {}) => {
       }
     });
   }
-  // update validity object according to the signal value
-  {
-    effect(() => {
-      const value = preactSignal.value;
-      facadeSignal.value = processValue(value);
-    });
-  }
-
   // Create isDefaultValue function for this signal
   const isDefaultValue = (value) => {
     const currentDefault = getDefaultValue(false);
@@ -12340,38 +12360,6 @@ const encodeParamValue = (value, isWildcard = false) => {
   return encodeURIComponent(value);
 };
 
-/**
- * Build query string from parameters, respecting rawUrlPart values
- */
-const buildQueryString = (params) => {
-  const searchParamPairs = [];
-
-  for (const [key, value] of Object.entries(params)) {
-    if (value !== undefined && value !== null) {
-      const encodedKey = encodeURIComponent(key);
-
-      // Handle array values - join with commas
-      if (Array.isArray(value)) {
-        if (value.length === 0) ; else {
-          const encodedValue = value
-            .map((item) => encodeURIComponent(String(item)))
-            .join(",");
-          searchParamPairs.push(`${encodedKey}=${encodedValue}`);
-        }
-      }
-      // Handle boolean values - if true, just add the key without value
-      else if (value === true || value === "") {
-        searchParamPairs.push(encodedKey);
-      } else {
-        const encodedValue = encodeParamValue(value, false); // Search params encode slashes
-        searchParamPairs.push(`${encodedKey}=${encodedValue}`);
-      }
-    }
-  }
-
-  return searchParamPairs.join("&");
-};
-
 // Function to detect signals in route patterns and connect them
 const detectSignals = (routePattern) => {
   const signalConnections = [];
@@ -12839,6 +12827,45 @@ const matchUrl = (
 };
 
 /**
+ * Build query string from parameters, respecting rawUrlPart values
+ */
+const buildQueryString = (params) => {
+  const searchParamPairs = [];
+
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== null) {
+      const encodedKey = encodeURIComponent(key);
+
+      // Handle array values - join with commas
+      if (Array.isArray(value)) {
+        if (value.length === 0) ; else {
+          const encodedValue = value
+            .map((item) => encodeURIComponent(String(item)))
+            .join(",");
+          searchParamPairs.push(`${encodedKey}=${encodedValue}`);
+        }
+      }
+      // Handle boolean values - if true, just add the key without value
+      else if (value === true || value === "") {
+        searchParamPairs.push(encodedKey);
+      }
+      // Handle Date objects - format as YYYY-MM-DD using UTC to match new Date('YYYY-MM-DD') semantics
+      else if (value instanceof Date) {
+        const yyyy = value.getUTCFullYear();
+        const mm = String(value.getUTCMonth() + 1).padStart(2, "0");
+        const dd = String(value.getUTCDate()).padStart(2, "0");
+        searchParamPairs.push(`${encodedKey}=${yyyy}-${mm}-${dd}`);
+      } else {
+        const encodedValue = encodeParamValue(value, false); // Search params encode slashes
+        searchParamPairs.push(`${encodedKey}=${encodedValue}`);
+      }
+    }
+  }
+
+  return searchParamPairs.join("&");
+};
+
+/**
  * Extract search parameters from URL
  */
 const extractSearchParams = (urlObj, queryConnectionMap) => {
@@ -12905,6 +12932,17 @@ const extractSearchParams = (urlObj, queryConnectionMap) => {
       // ?walk=0 → false
       params[key] =
         decodedValue === "true" || decodedValue === "1" || decodedValue === "";
+    } else if (signalType === "date") {
+      const decodedValue = decodeURIComponent(rawValue);
+      // Accept both "YYYY-MM-DD" and full ISO string, always parse as UTC date
+      const datePart = decodedValue.slice(0, 10);
+      const [year, month, day] = datePart.split("-").map(Number);
+      const d = new Date(Date.UTC(year, month - 1, day));
+      params[key] = isNaN(d.getTime()) ? decodedValue : d;
+    } else if (signalType === "datetime") {
+      const decodedValue = decodeURIComponent(rawValue);
+      const d = new Date(decodedValue);
+      params[key] = isNaN(d.getTime()) ? decodedValue : d;
     } else {
       params[key] = decodeURIComponent(rawValue);
     }
@@ -13756,8 +13794,6 @@ const route = (pattern, { searchParams } = {}) => {
       // eslint-disable-next-line no-loop-func
       const cleanupSignalUrlEffect = effect(() => {
         const value = paramSignal.value;
-        const urlValue =
-          paramSignal.validity?.representations.url.value ?? value;
         // Use peek() to avoid subscribing to URL-derived signals.
         // This effect should only re-run when the param signal changes,
         // not when the URL changes (which would create a cycle: signal→URL→signal).
@@ -13783,11 +13819,11 @@ const route = (pattern, { searchParams } = {}) => {
           }
           if (debug) {
             console.debug(
-              `[route] Signal->URL: ${paramName} adding custom value ${urlValue} to URL (default: ${connection.getDefaultValue()})`,
+              `[route] Signal->URL: ${paramName} adding custom value ${value} to URL (default: ${connection.getDefaultValue()})`,
             );
           }
           route.replaceParams(
-            { [paramName]: urlValue },
+            { [paramName]: value },
             {
               callReason: `${paramName} signal change on ${route}`,
               isSignalChange: true,
@@ -13813,17 +13849,17 @@ const route = (pattern, { searchParams } = {}) => {
           return;
         }
 
-        if (urlValue === urlParamValue) {
+        if (compareTwoJsValues(value, urlParamValue)) {
           // Values already match, no sync needed
           return;
         }
         if (debug) {
           console.debug(
-            `[route] Signal->URL: ${paramName} updating URL ${urlParamValue} -> ${urlValue}`,
+            `[route] Signal->URL: ${paramName} updating URL ${urlParamValue} -> ${value}`,
           );
         }
         route.replaceParams(
-          { [paramName]: urlValue },
+          { [paramName]: value },
           {
             callReason: `${paramName} signal change on ${route}`,
             isSignalChange: true,

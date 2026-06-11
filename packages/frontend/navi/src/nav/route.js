@@ -403,7 +403,7 @@ export const route = (pattern, { searchParams } = {}) => {
           return;
         }
 
-        if (value === urlParamValue) {
+        if (compareTwoJsValues(value, urlParamValue)) {
           // Values already match, no sync needed
           return;
         }

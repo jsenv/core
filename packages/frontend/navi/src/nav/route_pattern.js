@@ -2093,40 +2093,6 @@ const encodeParamValue = (value, isWildcard = false) => {
   return encodeURIComponent(value);
 };
 
-/**
- * Build query string from parameters, respecting rawUrlPart values
- */
-const buildQueryString = (params) => {
-  const searchParamPairs = [];
-
-  for (const [key, value] of Object.entries(params)) {
-    if (value !== undefined && value !== null) {
-      const encodedKey = encodeURIComponent(key);
-
-      // Handle array values - join with commas
-      if (Array.isArray(value)) {
-        if (value.length === 0) {
-          // Empty array - omit entirely
-        } else {
-          const encodedValue = value
-            .map((item) => encodeURIComponent(String(item)))
-            .join(",");
-          searchParamPairs.push(`${encodedKey}=${encodedValue}`);
-        }
-      }
-      // Handle boolean values - if true, just add the key without value
-      else if (value === true || value === "") {
-        searchParamPairs.push(encodedKey);
-      } else {
-        const encodedValue = encodeParamValue(value, false); // Search params encode slashes
-        searchParamPairs.push(`${encodedKey}=${encodedValue}`);
-      }
-    }
-  }
-
-  return searchParamPairs.join("&");
-};
-
 // Function to detect signals in route patterns and connect them
 const detectSignals = (routePattern) => {
   const signalConnections = [];
@@ -2594,6 +2560,47 @@ const matchUrl = (
 };
 
 /**
+ * Build query string from parameters, respecting rawUrlPart values
+ */
+const buildQueryString = (params) => {
+  const searchParamPairs = [];
+
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== null) {
+      const encodedKey = encodeURIComponent(key);
+
+      // Handle array values - join with commas
+      if (Array.isArray(value)) {
+        if (value.length === 0) {
+          // Empty array - omit entirely
+        } else {
+          const encodedValue = value
+            .map((item) => encodeURIComponent(String(item)))
+            .join(",");
+          searchParamPairs.push(`${encodedKey}=${encodedValue}`);
+        }
+      }
+      // Handle boolean values - if true, just add the key without value
+      else if (value === true || value === "") {
+        searchParamPairs.push(encodedKey);
+      }
+      // Handle Date objects - format as YYYY-MM-DD using UTC to match new Date('YYYY-MM-DD') semantics
+      else if (value instanceof Date) {
+        const yyyy = value.getUTCFullYear();
+        const mm = String(value.getUTCMonth() + 1).padStart(2, "0");
+        const dd = String(value.getUTCDate()).padStart(2, "0");
+        searchParamPairs.push(`${encodedKey}=${yyyy}-${mm}-${dd}`);
+      } else {
+        const encodedValue = encodeParamValue(value, false); // Search params encode slashes
+        searchParamPairs.push(`${encodedKey}=${encodedValue}`);
+      }
+    }
+  }
+
+  return searchParamPairs.join("&");
+};
+
+/**
  * Extract search parameters from URL
  */
 const extractSearchParams = (urlObj, queryConnectionMap) => {
@@ -2660,6 +2667,17 @@ const extractSearchParams = (urlObj, queryConnectionMap) => {
       // ?walk=0 → false
       params[key] =
         decodedValue === "true" || decodedValue === "1" || decodedValue === "";
+    } else if (signalType === "date") {
+      const decodedValue = decodeURIComponent(rawValue);
+      // Accept both "YYYY-MM-DD" and full ISO string, always parse as UTC date
+      const datePart = decodedValue.slice(0, 10);
+      const [year, month, day] = datePart.split("-").map(Number);
+      const d = new Date(Date.UTC(year, month - 1, day));
+      params[key] = isNaN(d.getTime()) ? decodedValue : d;
+    } else if (signalType === "datetime") {
+      const decodedValue = decodeURIComponent(rawValue);
+      const d = new Date(decodedValue);
+      params[key] = isNaN(d.getTime()) ? decodedValue : d;
     } else {
       params[key] = decodeURIComponent(rawValue);
     }
