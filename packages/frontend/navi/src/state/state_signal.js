@@ -116,6 +116,7 @@ export const stateSignal = (defaultValue, options = {}) => {
     debug,
     default: staticFallback,
     ignoreArrayOrder,
+    autoFix,
   } = options;
 
   // Check if defaultValue is a signal (dynamic default) or static value
@@ -146,6 +147,7 @@ export const stateSignal = (defaultValue, options = {}) => {
     oneOf,
     localStorageRepresentation,
     urlRepresentation,
+    autoFix,
   });
   const readFromLocalStorage = persists
     ? () => {
