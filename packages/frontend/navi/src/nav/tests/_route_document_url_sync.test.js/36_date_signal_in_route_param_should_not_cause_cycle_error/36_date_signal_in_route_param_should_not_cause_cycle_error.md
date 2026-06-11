@@ -20,7 +20,7 @@ try {
 
   return {
     urlProgression,
-    date_signal_value: dateSignal.value,
+    date_signal_value: humanize(dateSignal.value),
   };
 } finally {
   clearRoutes();
@@ -34,7 +34,7 @@ try {
   "urlProgression": [
     "http://127.0.0.1/map?date=2024-03-15"
   ],
-  "date_signal_value": {}
+  "date_signal_value": "Date(1710460800000)"
 }
 ```
 

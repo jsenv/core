@@ -1,3 +1,4 @@
+import { humanize } from "@jsenv/humanize";
 import { snapshotTests } from "@jsenv/snapshot";
 import { batch } from "@preact/signals";
 
@@ -2249,7 +2250,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
       return {
         urlProgression,
-        date_signal_value: dateSignal.value,
+        date_signal_value: humanize(dateSignal.value),
       };
     } finally {
       clearRoutes();
