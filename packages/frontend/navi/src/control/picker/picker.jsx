@@ -131,6 +131,7 @@ const css = /* css */ `
     padding-bottom: var(--x-picker-padding-bottom);
     padding-left: var(--x-picker-padding-left);
     flex-direction: row;
+    align-items: center;
     gap: var(--navi-xs);
     color: var(--x-picker-color);
     text-align: inherit;
@@ -164,7 +165,11 @@ const css = /* css */ `
     }
     .navi_picker_right_slot {
       display: inline-flex;
+      height: 1em;
+      height: 1lh;
       flex-shrink: 0;
+      align-items: center;
+      align-self: flex-start;
       justify-content: center;
       color: var(--x-picker-icon-color);
       transform: translateX(25%);
