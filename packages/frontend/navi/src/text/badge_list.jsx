@@ -116,7 +116,7 @@ export const BadgeList = ({
     <Box relative>
       {/* Measurement ghost: all children, invisible, out-of-flow */}
       <Box
-        baseCassName="navi_badge_list"
+        baseClassName="navi_badge_list"
         {...sharedProps}
         ref={measureRef}
         aria-hidden="true"
@@ -125,7 +125,7 @@ export const BadgeList = ({
         {childArray}
       </Box>
       {/* Visible element */}
-      <Box baseCassName="navi_badge_list" {...sharedProps}>
+      <Box baseClassName="navi_badge_list" {...sharedProps}>
         {visibleChildren.length ? visibleChildren : fallback}
         {displayedHiddenCount > 0 && (
           <Badge>+{displayedHiddenCount} more</Badge>
