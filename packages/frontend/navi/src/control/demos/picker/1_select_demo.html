@@ -742,7 +742,38 @@
         );
       };
 
-      // ── 1. Dimensions — size & overflow ─────────────────────────────────
+      // ── Position marker used in the width-adapts demo ───────────────────
+      const PositionMarker = () => (
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            flexShrink: 0,
+            gap: "2px",
+          }}
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#c07000"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            {/* map pin */}
+            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" />
+            <circle cx="12" cy="9" r="2.5" />
+          </svg>
+          <span
+            style={{ fontSize: "9px", color: "#c07000", whiteSpace: "nowrap" }}
+          >
+            icon position
+          </span>
+        </div>
+      );
 
       const SHORT_VALUE = "Apple";
       const MEDIUM_VALUE = "Elderberry";
@@ -824,7 +855,7 @@
             <p>
               By default the picker grows to fit its selected value. When
               something sits to the right of the picker, a width change shifts
-              it — notice the button being pushed as the picker grows. Even with
+              it — notice the icon being pushed as the picker grows. Even with
               nothing to the right, a picker that changes size on every
               selection feels unstable and is generally more pleasant to avoid.
             </p>
@@ -845,9 +876,7 @@
                       values={[SHORT_VALUE, MEDIUM_VALUE]}
                     />
                   </Picker>
-                  <button type="button" style={{ flexShrink: 0 }}>
-                    Submit
-                  </button>
+                  <PositionMarker />
                 </Box>
               </Field>
               <Field vertical>
@@ -866,9 +895,7 @@
                       values={[SHORT_VALUE, MEDIUM_VALUE]}
                     />
                   </Picker>
-                  <button type="button" style={{ flexShrink: 0 }}>
-                    Submit
-                  </button>
+                  <PositionMarker />
                 </Box>
               </Field>
             </Box>
@@ -895,9 +922,7 @@
                       values={[SHORT_VALUE, MEDIUM_VALUE]}
                     />
                   </Picker>
-                  <button type="button" style={{ flexShrink: 0 }}>
-                    Submit
-                  </button>
+                  <PositionMarker />
                 </Box>
               </Field>
               <Field vertical>
@@ -917,9 +942,7 @@
                       values={[SHORT_VALUE, MEDIUM_VALUE]}
                     />
                   </Picker>
-                  <button type="button" style={{ flexShrink: 0 }}>
-                    Submit
-                  </button>
+                  <PositionMarker />
                 </Box>
               </Field>
             </Box>
@@ -946,9 +969,7 @@
                       values={[SHORT_VALUE, MEDIUM_VALUE]}
                     />
                   </Picker>
-                  <button type="button" style={{ flexShrink: 0 }}>
-                    Submit
-                  </button>
+                  <PositionMarker />
                 </Box>
               </Field>
               <Field vertical>
@@ -968,9 +989,7 @@
                       values={[SHORT_VALUE, MEDIUM_VALUE]}
                     />
                   </Picker>
-                  <button type="button" style={{ flexShrink: 0 }}>
-                    Submit
-                  </button>
+                  <PositionMarker />
                 </Box>
               </Field>
             </Box>
