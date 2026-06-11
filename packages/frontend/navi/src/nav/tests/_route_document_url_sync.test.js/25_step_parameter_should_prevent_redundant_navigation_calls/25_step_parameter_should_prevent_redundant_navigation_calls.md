@@ -14,6 +14,7 @@ const lonSignal = stateSignal(2.3, {
   id: "longitude",
   type: "longitude",
   step: 0.1,
+  autoFix: true,
 });
 const MAP_ROUTE = route("/map", { searchParams: { lon: lonSignal } });
 const { updateRoutes, clearRoutes } = setupRoutes([MAP_ROUTE]);
@@ -89,7 +90,6 @@ try {
       "lon_signal_value": 2.5,
       "route_url": "http://127.0.0.1/map?lon=2.5",
       "navToCalls": [
-        "http://127.0.0.1/map?lon=2.5",
         "http://127.0.0.1/map?lon=2.5"
       ]
     },
@@ -107,7 +107,6 @@ try {
       "lon_signal_value": 3,
       "route_url": "http://127.0.0.1/map?lon=3",
       "navToCalls": [
-        "http://127.0.0.1/map?lon=3",
         "http://127.0.0.1/map?lon=3"
       ]
     },

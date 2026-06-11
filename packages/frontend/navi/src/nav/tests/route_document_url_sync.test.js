@@ -1676,6 +1676,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
       id: "longitude",
       type: "longitude",
       step: 0.1,
+      autoFix: true,
     });
     const MAP_ROUTE = route("/map", { searchParams: { lon: lonSignal } });
     const { updateRoutes, clearRoutes } = setupRoutes([MAP_ROUTE]);

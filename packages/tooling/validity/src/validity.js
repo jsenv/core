@@ -79,7 +79,6 @@ export const createValidity = (ruleConfig) => {
   const validity = {};
   const {
     localStorageRepresentation: localStorageRepresentationOverride,
-    urlRepresentation: urlRepresentationOverride,
     representation,
     typeCoercion = true,
     autoFix: autoFixOption = false,
@@ -133,10 +132,7 @@ export const createValidity = (ruleConfig) => {
     localStorageRepresentationOverride ??
     typeDef?.localStorageRepresentation ??
     "string";
-  const effectiveUrlRepr =
-    urlRepresentationOverride ?? typeDef?.urlRepresentation ?? "inherit";
   addStorageTarget("localStorage", effectiveLocalStorageRepr);
-  addStorageTarget("url", effectiveUrlRepr);
   if (representation) {
     for (const [key, reprName] of Object.entries(representation)) {
       if (!typeDef?.representations?.[reprName]) {
