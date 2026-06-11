@@ -784,6 +784,35 @@
         "A very long selected value that definitely overflows the picker trigger button";
       const LONG_WORD = "Supercalifragilisticexpialidocious";
 
+      const OverflowPickerItems = ({ id, value, longValue }) => (
+        <List selectable action="send">
+          <List.Item
+            selectable
+            key="short"
+            id={`${id}_short`}
+            index={0}
+            value="Short"
+            selected={value === "Short"}
+            padding="s"
+            spacing="s"
+          >
+            Short
+          </List.Item>
+          <List.Item
+            selectable
+            key="long"
+            id={`${id}_long`}
+            index={1}
+            value={longValue}
+            selected={value === longValue}
+            padding="s"
+            spacing="s"
+          >
+            {longValue}
+          </List.Item>
+        </List>
+      );
+
       const OverflowDemo = () => {
         const sentenceSignal = useSignal(LONG_SENTENCE);
         const wordSignal = useSignal(LONG_WORD);
@@ -792,87 +821,97 @@
           <div id="section-2" class="demo-section">
             <h2>2. Overflow — long sentence &amp; long word</h2>
             <p>
-              Shows how the picker trigger handles values that are wider than
-              the picker itself. The picker is constrained to{" "}
-              <code>maxWidth="200"</code>.
+              Shows how the picker trigger handles values wider than itself
+              (constrained to <code>maxWidth="200"</code>), with and without{" "}
+              <code>multiline</code>.
             </p>
-            <Box flex="y" spacing="m">
-              <Field vertical>
-                <Label>Long sentence</Label>
-                <Picker
-                  name="overflow_sentence"
-                  value={sentenceSignal.value}
-                  action={(v) => {
-                    sentenceSignal.value = v;
-                  }}
-                  maxWidth="200"
-                >
-                  <List selectable action="send">
-                    <List.Item
-                      selectable
-                      key="short"
-                      id="overflow_sentence_short"
-                      index={0}
-                      value="Short"
-                      selected={sentenceSignal.value === "Short"}
-                      padding="s"
-                      spacing="s"
-                    >
-                      Short
-                    </List.Item>
-                    <List.Item
-                      selectable
-                      key="long"
-                      id="overflow_sentence_long"
-                      index={1}
-                      value={LONG_SENTENCE}
-                      selected={sentenceSignal.value === LONG_SENTENCE}
-                      padding="s"
-                      spacing="s"
-                    >
-                      {LONG_SENTENCE}
-                    </List.Item>
-                  </List>
-                </Picker>
-              </Field>
-              <Field vertical>
-                <Label>Long word</Label>
-                <Picker
-                  name="overflow_word"
-                  value={wordSignal.value}
-                  action={(v) => {
-                    wordSignal.value = v;
-                  }}
-                  maxWidth="200"
-                >
-                  <List selectable action="send">
-                    <List.Item
-                      selectable
-                      key="short"
-                      id="overflow_word_short"
-                      index={0}
-                      value="Short"
-                      selected={wordSignal.value === "Short"}
-                      padding="s"
-                      spacing="s"
-                    >
-                      Short
-                    </List.Item>
-                    <List.Item
-                      selectable
-                      key="long"
-                      id="overflow_word_long"
-                      index={1}
-                      value={LONG_WORD}
-                      selected={wordSignal.value === LONG_WORD}
-                      padding="s"
-                      spacing="s"
-                    >
-                      {LONG_WORD}
-                    </List.Item>
-                  </List>
-                </Picker>
-              </Field>
+            <Box flex="y" spacing="l">
+              <Box flex="x" spacing="m">
+                <Field vertical>
+                  <Label>
+                    Long sentence{" "}
+                    <code style={{ fontWeight: "normal" }}>(default)</code>
+                  </Label>
+                  <Picker
+                    name="overflow_sentence"
+                    value={sentenceSignal.value}
+                    action={(v) => {
+                      sentenceSignal.value = v;
+                    }}
+                    maxWidth="200"
+                  >
+                    <OverflowPickerItems
+                      id="overflow_sentence"
+                      value={sentenceSignal.value}
+                      longValue={LONG_SENTENCE}
+                    />
+                  </Picker>
+                </Field>
+                <Field vertical>
+                  <Label>
+                    Long sentence{" "}
+                    <code style={{ fontWeight: "normal" }}>(multiline)</code>
+                  </Label>
+                  <Picker
+                    name="overflow_sentence_multiline"
+                    value={sentenceSignal.value}
+                    action={(v) => {
+                      sentenceSignal.value = v;
+                    }}
+                    maxWidth="200"
+                    multiline
+                  >
+                    <OverflowPickerItems
+                      id="overflow_sentence_ml"
+                      value={sentenceSignal.value}
+                      longValue={LONG_SENTENCE}
+                    />
+                  </Picker>
+                </Field>
+              </Box>
+              <Box flex="x" spacing="m">
+                <Field vertical>
+                  <Label>
+                    Long word{" "}
+                    <code style={{ fontWeight: "normal" }}>(default)</code>
+                  </Label>
+                  <Picker
+                    name="overflow_word"
+                    value={wordSignal.value}
+                    action={(v) => {
+                      wordSignal.value = v;
+                    }}
+                    maxWidth="200"
+                  >
+                    <OverflowPickerItems
+                      id="overflow_word"
+                      value={wordSignal.value}
+                      longValue={LONG_WORD}
+                    />
+                  </Picker>
+                </Field>
+                <Field vertical>
+                  <Label>
+                    Long word{" "}
+                    <code style={{ fontWeight: "normal" }}>(multiline)</code>
+                  </Label>
+                  <Picker
+                    name="overflow_word_multiline"
+                    value={wordSignal.value}
+                    action={(v) => {
+                      wordSignal.value = v;
+                    }}
+                    maxWidth="200"
+                    multiline
+                  >
+                    <OverflowPickerItems
+                      id="overflow_word_ml"
+                      value={wordSignal.value}
+                      longValue={LONG_WORD}
+                    />
+                  </Picker>
+                </Field>
+              </Box>
             </Box>
           </div>
         );
