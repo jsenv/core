@@ -9,7 +9,6 @@ import {
 } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
 import { Text } from "@jsenv/navi/src/text/text.jsx";
-import { BadgeListMaxRowsContext } from "../../text/badge_list.jsx";
 import { ControlChildrenWrapper, useControlProps } from "../control_hooks.jsx";
 import { resolveInputProps } from "../input/resolve_input_props.js";
 import { getUIStateControllerById } from "../ui_state_controller.js";
@@ -349,11 +348,9 @@ const PickerButton = (props) => {
         className="navi_picker_value"
         navi-placeholder={value === undefined || value === "" ? "" : undefined}
       >
-        <BadgeListMaxRowsContext.Provider value={maxRows}>
-          <PickerContext.Provider value={{ value, placeholder, maxRows }}>
-            {ui === undefined ? <PickerDefaultUI /> : ui}
-          </PickerContext.Provider>
-        </BadgeListMaxRowsContext.Provider>
+        <PickerContext.Provider value={{ value, placeholder, maxRows }}>
+          {ui === undefined ? <PickerDefaultUI /> : ui}
+        </PickerContext.Provider>
       </Text>
       <span className="navi_picker_right_slot">
         <Icon size="m">{icon === undefined ? <ChevronDownSvg /> : icon}</Icon>
