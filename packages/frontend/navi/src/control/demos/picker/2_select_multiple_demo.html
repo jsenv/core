@@ -150,6 +150,9 @@
         ]);
         const selectedArray = selectedSignal.value;
 
+        const selectedSignalMr1 = useSignal(["Apple", "Cherry"]);
+        const selectedArrayMr1 = selectedSignalMr1.value;
+
         return (
           <div class="demo-section">
             <h2>1. Text display — comma-separated</h2>
@@ -158,38 +161,79 @@
               picker's pending state on each click. Confirming commits the array
               to the action callback, which updates the displayed value.
             </p>
-            <Field vertical>
-              <Label>Fruits</Label>
-              <Picker
-                type="array"
-                name="multiselect_text"
-                placeholder="Select fruits, a very long placeholder to trigger multiline behavior"
-                value={selectedArray}
-                uiAction={(v) => {
-                  selectedSignal.value = v;
-                }}
-                action={(v) => {
-                  selectedSignal.value = v;
-                }}
-              >
-                <List selectable multiple action="update">
-                  {FRUIT_OPTIONS.map((opt, i) => (
-                    <List.Item
-                      selectable
-                      key={opt}
-                      id={`${opt}_chip`}
-                      index={i}
-                      value={opt}
-                      selected={selectedArray.includes(opt)}
-                      padding="s"
-                      spacing="s"
-                    >
-                      {opt}
-                    </List.Item>
-                  ))}
-                </List>
-              </Picker>
-            </Field>
+            <Box flex="y" spacing="m">
+              <Field vertical>
+                <Label>
+                  Fruits <code style="font-weight:normal">(default)</code>
+                </Label>
+                <Picker
+                  type="array"
+                  name="multiselect_text"
+                  placeholder="Select fruits, a very long placeholder to trigger multiline behavior"
+                  value={selectedArray}
+                  uiAction={(v) => {
+                    selectedSignal.value = v;
+                  }}
+                  action={(v) => {
+                    selectedSignal.value = v;
+                  }}
+                  maxWidth="150"
+                >
+                  <List selectable multiple action="update">
+                    {FRUIT_OPTIONS.map((opt, i) => (
+                      <List.Item
+                        selectable
+                        key={opt}
+                        id={`${opt}_chip`}
+                        index={i}
+                        value={opt}
+                        selected={selectedArray.includes(opt)}
+                        padding="s"
+                        spacing="s"
+                      >
+                        {opt}
+                      </List.Item>
+                    ))}
+                  </List>
+                </Picker>
+              </Field>
+              <Field vertical>
+                <Label>
+                  Fruits <code style="font-weight:normal">(maxRows=1)</code>
+                </Label>
+                <Picker
+                  type="array"
+                  name="multiselect_text_maxrows1"
+                  placeholder="Select fruits, a very long placeholder to trigger multiline behavior"
+                  value={selectedArrayMr1}
+                  uiAction={(v) => {
+                    selectedSignalMr1.value = v;
+                  }}
+                  action={(v) => {
+                    selectedSignalMr1.value = v;
+                  }}
+                  maxWidth="150"
+                  maxRows={1}
+                >
+                  <List selectable multiple action="update">
+                    {FRUIT_OPTIONS.map((opt, i) => (
+                      <List.Item
+                        selectable
+                        key={opt}
+                        id={`${opt}_chip_mr1`}
+                        index={i}
+                        value={opt}
+                        selected={selectedArrayMr1.includes(opt)}
+                        padding="s"
+                        spacing="s"
+                      >
+                        {opt}
+                      </List.Item>
+                    ))}
+                  </List>
+                </Picker>
+              </Field>
+            </Box>
           </div>
         );
       };
@@ -197,10 +241,20 @@
       // ── 2. Chips display (no delete) ──────────────────────────────────────
 
       const ChipsSimpleDisplay = () => {
-        const selectedSignal = useSignal(["HTML"]);
+        const selectedSignal = useSignal([
+          "HTML",
+          "CSS",
+          "JavaScript",
+          "TypeScript",
+          "React",
+          "Vue",
+        ]);
         const selectedArray = selectedSignal.value;
 
-        const ChipsUI = () => {
+        const selectedSignalMr1 = useSignal(["HTML", "React", "Vue"]);
+        const selectedArrayMr1 = selectedSignalMr1.value;
+
+        const ChipsUI = ({ arr }) => {
           return (
             <BadgeList
               fallback={
@@ -212,7 +266,7 @@
                 </Badge>
               }
             >
-              {selectedArray.map((opt) => (
+              {arr.map((opt) => (
                 <Badge key={opt}>{opt}</Badge>
               ))}
             </BadgeList>
@@ -227,44 +281,99 @@
               anywhere on the picker opens the dropdown where items can be
               toggled.
             </p>
-            <Field vertical>
-              <Label>Skills</Label>
-              <Picker
-                type="array"
-                name="multiselect_chips_simple"
-                value={selectedArray}
-                ui={<ChipsUI />}
-                uiAction={(v) => {
-                  selectedSignal.value = v;
-                }}
-                action={(v) => {
-                  selectedSignal.value = v;
-                }}
-              >
-                <List
-                  selectable
-                  multiple
-                  id="skills_list_simple"
-                  action="update"
-                  style="min-width: 180px"
+            <p style="color: #b45309; background: #fef3c7; border: 1px solid #fde68a; padding: 8px 12px; border-radius: 6px; font-size: 13px; margin: 0 0 16px">
+              <strong>maxRows not supported with chips.</strong> Chips are flex
+              items with spacing, not plain text — CSS <code>line-clamp</code>{" "}
+              does not apply, and detecting which chips overflow and where they
+              break across rows requires expensive DOM measurement on every
+              render. This complexity is not worth it; use <code>max</code> on{" "}
+              <code>BadgeList</code> to cap the number of visible chips instead.
+            </p>
+            <Box flex="y" spacing="m">
+              <Field vertical>
+                <Label>
+                  Skills <code style="font-weight:normal">(default)</code>
+                </Label>
+                <Picker
+                  type="array"
+                  name="multiselect_chips_simple"
+                  value={selectedArray}
+                  ui={<ChipsUI arr={selectedArray} />}
+                  uiAction={(v) => {
+                    selectedSignal.value = v;
+                  }}
+                  action={(v) => {
+                    selectedSignal.value = v;
+                  }}
+                  maxWidth="150"
                 >
-                  {SKILL_OPTIONS.map((opt, i) => (
-                    <List.Item
-                      selectable
-                      key={opt}
-                      id={`simple_${opt}`}
-                      index={i}
-                      value={opt}
-                      selected={selectedArray.includes(opt)}
-                      padding="s"
-                      spacing="s"
-                    >
-                      {opt}
-                    </List.Item>
-                  ))}
-                </List>
-              </Picker>
-            </Field>
+                  <List
+                    selectable
+                    multiple
+                    id="skills_list_simple"
+                    action="update"
+                    style="min-width: 180px"
+                  >
+                    {SKILL_OPTIONS.map((opt, i) => (
+                      <List.Item
+                        selectable
+                        key={opt}
+                        id={`simple_${opt}`}
+                        index={i}
+                        value={opt}
+                        selected={selectedArray.includes(opt)}
+                        padding="s"
+                        spacing="s"
+                      >
+                        {opt}
+                      </List.Item>
+                    ))}
+                  </List>
+                </Picker>
+              </Field>
+              <Field vertical>
+                <Label>
+                  Skills <code style="font-weight:normal">(maxRows=1)</code>
+                </Label>
+                <Picker
+                  type="array"
+                  name="multiselect_chips_simple_mr1"
+                  value={selectedArrayMr1}
+                  ui={<ChipsUI arr={selectedArrayMr1} />}
+                  uiAction={(v) => {
+                    selectedSignalMr1.value = v;
+                  }}
+                  action={(v) => {
+                    selectedSignalMr1.value = v;
+                  }}
+                  maxWidth="150"
+                  maxRows={1}
+                >
+                  <List
+                    selectable
+                    multiple
+                    id="skills_list_simple_mr1"
+                    action="update"
+                    style="min-width: 180px"
+                  >
+                    {SKILL_OPTIONS.map((opt, i) => (
+                      <List.Item
+                        selectable
+                        key={opt}
+                        id={`simple_mr1_${opt}`}
+                        index={i}
+                        value={opt}
+                        selected={selectedArrayMr1.includes(opt)}
+                        padding="s"
+                        spacing="s"
+                      >
+                        {opt}
+                      </List.Item>
+                    ))}
+                  </List>
+                </Picker>
+              </Field>
+            </Box>
           </div>
         );
       };
@@ -278,11 +387,20 @@
           "JavaScript",
           "TypeScript",
           "React",
+          "Vue",
           "Node.js",
+          "Python",
         ]);
         const listRef = useRef(null);
-
         const selectedArray = selectedSignal.value;
+
+        const selectedSignalMr1 = useSignal([
+          "HTML",
+          "CSS",
+          "JavaScript",
+          "TypeScript",
+        ]);
+        const selectedArrayMr1 = selectedSignalMr1.value;
 
         const ChipsUI = () => {
           if (selectedArray.length === 0) {
@@ -325,45 +443,116 @@
               removing the chip, which can surprise users who expect the whole
               chip to be the delete target.
             </p>
-            <Field vertical>
-              <Label>Skills</Label>
-              <Picker
-                type="array"
-                name="multiselect_chips_delete"
-                value={selectedArray}
-                ui={<ChipsUI />}
-                uiAction={(v) => {
-                  selectedSignal.value = v;
-                }}
-                action={(v) => {
-                  selectedSignal.value = v;
-                }}
-              >
-                <List
-                  selectable
-                  ref={listRef}
-                  multiple
-                  id="skills_list_delete"
-                  action="update"
-                  style="min-width: 180px"
+            <p style="color: #b45309; background: #fef3c7; border: 1px solid #fde68a; padding: 8px 12px; border-radius: 6px; font-size: 13px; margin: 0 0 16px">
+              <strong>maxRows not supported with chips.</strong> Same reason as
+              section 2 — use <code>max</code> on <code>BadgeList</code>
+              instead.
+            </p>
+            <Box flex="y" spacing="m">
+              <Field vertical>
+                <Label>
+                  Skills <code style="font-weight:normal">(default)</code>
+                </Label>
+                <Picker
+                  type="array"
+                  name="multiselect_chips_delete"
+                  value={selectedArray}
+                  ui={<ChipsUI />}
+                  uiAction={(v) => {
+                    selectedSignal.value = v;
+                  }}
+                  action={(v) => {
+                    selectedSignal.value = v;
+                  }}
+                  maxWidth="200"
                 >
-                  {SKILL_OPTIONS.map((opt, i) => (
-                    <List.Item
-                      selectable
-                      key={opt}
-                      id={opt}
-                      index={i}
-                      value={opt}
-                      selected={selectedArray.includes(opt)}
-                      padding="s"
-                      spacing="s"
-                    >
-                      {opt}
-                    </List.Item>
-                  ))}
-                </List>
-              </Picker>
-            </Field>
+                  <List
+                    selectable
+                    ref={listRef}
+                    multiple
+                    id="skills_list_delete"
+                    action="update"
+                    style="min-width: 180px"
+                  >
+                    {SKILL_OPTIONS.map((opt, i) => (
+                      <List.Item
+                        selectable
+                        key={opt}
+                        id={opt}
+                        index={i}
+                        value={opt}
+                        selected={selectedArray.includes(opt)}
+                        padding="s"
+                        spacing="s"
+                      >
+                        {opt}
+                      </List.Item>
+                    ))}
+                  </List>
+                </Picker>
+              </Field>
+              <Field vertical>
+                <Label>
+                  Skills <code style="font-weight:normal">(maxRows=1)</code>
+                </Label>
+                <Picker
+                  type="array"
+                  name="multiselect_chips_delete_mr1"
+                  value={selectedArrayMr1}
+                  ui={
+                    <BadgeList>
+                      {selectedArrayMr1.map((opt) => (
+                        <Badge key={opt} data-has-button="">
+                          {opt}
+                          <Badge.Button
+                            action="unselect"
+                            action-target="skills_list_delete_mr1"
+                            actionOnMouseDown
+                            value={opt}
+                            aria-label={`Remove ${opt}`}
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            ×
+                          </Badge.Button>
+                        </Badge>
+                      ))}
+                    </BadgeList>
+                  }
+                  uiAction={(v) => {
+                    selectedSignalMr1.value = v;
+                  }}
+                  action={(v) => {
+                    selectedSignalMr1.value = v;
+                  }}
+                  maxWidth="200"
+                  maxRows={1}
+                >
+                  <List
+                    selectable
+                    multiple
+                    id="skills_list_delete_mr1"
+                    action="update"
+                    style="min-width: 180px"
+                  >
+                    {SKILL_OPTIONS.map((opt, i) => (
+                      <List.Item
+                        selectable
+                        key={opt}
+                        id={`mr1_${opt}`}
+                        index={i}
+                        value={opt}
+                        selected={selectedArrayMr1.includes(opt)}
+                        padding="s"
+                        spacing="s"
+                      >
+                        {opt}
+                      </List.Item>
+                    ))}
+                  </List>
+                </Picker>
+              </Field>
+            </Box>
           </div>
         );
       };

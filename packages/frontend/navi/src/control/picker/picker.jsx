@@ -8,10 +8,10 @@ import {
   useNextResolver,
 } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
+import { Text } from "@jsenv/navi/src/text/text.jsx";
 import { ControlChildrenWrapper, useControlProps } from "../control_hooks.jsx";
 import { resolveInputProps } from "../input/resolve_input_props.js";
 import { getUIStateControllerById } from "../ui_state_controller.js";
-import { PickerPlaceholder, PickerValue } from "./picker_components.jsx";
 import { PickerContext } from "./picker_context.jsx";
 import { pickerResolvers } from "./picker_resolvers.jsx";
 import {
@@ -30,7 +30,6 @@ const css = /* css */ `
       --picker-border-radius: 2px;
       --picker-outline-width: 1px;
       --picker-border-width: 1px;
-      --picker-font-size: 14px;
       --picker-padding-x-default: 8px;
       --picker-padding-y-default: 5px;
       --picker-outline-color: var(--navi-focus-outline-color);
@@ -44,7 +43,6 @@ const css = /* css */ `
         transparent
       );
       --picker-color-dimmed: color-mix(in srgb, currentColor 60%, transparent);
-      --picker-right-slot-size: 1em;
       /* Hover */
       --picker-border-color-hover: color-mix(
         in srgb,
@@ -97,16 +95,12 @@ const css = /* css */ `
         var(--picker-padding, var(--picker-padding-y-default))
       )
     );
-    --x-picker-padding-right-base: var(
+    --x-picker-padding-right: var(
       --picker-padding-right,
       var(
         --picker-padding-x,
         var(--picker-padding, var(--picker-padding-x-default))
       )
-    );
-    --x-picker-padding-right: calc(
-      var(--x-picker-padding-right-base) + var(--picker-right-slot-size) +
-        var(--picker-right-slot-size) * 0.25
     );
     --x-picker-padding-left: var(
       --picker-padding-left,
@@ -126,7 +120,7 @@ const css = /* css */ `
     --x-picker-icon-color: var(--picker-icon-color);
 
     position: relative;
-    display: inline-block;
+    display: inline-flex;
     box-sizing: border-box;
     max-width: 100%;
     min-height: calc(
@@ -137,8 +131,9 @@ const css = /* css */ `
     padding-bottom: var(--x-picker-padding-bottom);
     padding-left: var(--x-picker-padding-left);
     flex-direction: row;
+    align-items: center;
+    gap: var(--navi-xs);
     color: var(--x-picker-color);
-    font-size: var(--picker-font-size);
     text-align: inherit;
     text-overflow: ellipsis;
     background-color: var(--x-picker-background-color);
@@ -156,29 +151,32 @@ const css = /* css */ `
     overflow: hidden;
 
     .navi_picker_value {
-      display: block;
+      display: inline-block;
       min-width: 0;
       max-width: 100%;
+      flex-grow: 1;
       text-overflow: ellipsis;
       white-space: nowrap;
       overflow: hidden;
-    }
-    .navi_picker_placeholder {
-      display: block;
-      max-width: 100%;
-      color: var(--picker-placeholder-color);
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      overflow: hidden;
+
+      &[navi-placeholder] {
+        color: var(--picker-placeholder-color);
+      }
+
+      .navi_text:not(.navi_more_badge) {
+        max-width: 100%;
+        text-overflow: inherit;
+        vertical-align: middle; /* For some reason it's required to disminish inline-block height */
+        overflow: inherit;
+      }
     }
     .navi_picker_right_slot {
-      position: absolute;
-      top: 0;
-      right: var(--x-picker-padding-right-base);
       display: inline-flex;
-      width: var(--picker-right-slot-size);
-      padding-top: var(--x-picker-padding-top);
+      height: 1em;
+      height: 1lh;
       flex-shrink: 0;
+      align-items: center;
+      align-self: flex-start;
       justify-content: center;
       color: var(--x-picker-icon-color);
       transform: translateX(25%);
@@ -198,14 +196,13 @@ const css = /* css */ `
       pointer-events: none;
     }
 
-    &[data-multiline] {
+    &[data-line-clamp] {
       overflow-wrap: anywhere;
-
-      .navi_picker_placeholder {
-        white-space: normal;
-      }
       .navi_picker_value {
+        display: -webkit-box;
         white-space: normal;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: var(--picker-max-rows);
       }
     }
 
@@ -275,7 +272,7 @@ const css = /* css */ `
  */
 const PickerButton = (props) => {
   import.meta.css = css;
-  const { ref, icon, placeholder, singleLine, ui } = props;
+  const { ref, icon, placeholder, ui, maxRows } = props;
   const inputRef = useRef(null);
   const [inputProps, pickerRemainingProps] = useControlProps(
     {
@@ -294,6 +291,7 @@ const PickerButton = (props) => {
   const value = uiStateController.uiState;
   const { id, basePseudoState, disabled, children } = inputProps;
   const loading = basePseudoState[":-navi-loading"];
+  const hasLineClamp = maxRows && maxRows > 1;
 
   return (
     <Box
@@ -304,7 +302,10 @@ const PickerButton = (props) => {
       navi-has-placeholder={placeholder ? "" : undefined}
       pseudoClasses={PICKER_BUTTON_PSEUDO_CLASSES}
       disabled={disabled}
-      data-single-line={singleLine ? "" : undefined}
+      data-line-clamp={hasLineClamp ? "" : undefined}
+      style={{
+        "--picker-max-rows": maxRows || -1,
+      }}
       {...pickerRemainingProps}
       basePseudoState={basePseudoState}
       styleCSSVars={PickerStyleCSSVars}
@@ -313,7 +314,7 @@ const PickerButton = (props) => {
       id={id}
       icon={undefined}
       ui={undefined}
-      singleLine={undefined}
+      maxRows={undefined}
       dayLabel={undefined}
       // The button is handling the pointer interactions
       onMouseDown={(e) => {
@@ -343,9 +344,14 @@ const PickerButton = (props) => {
         onClick={undefined}
         onKeyDown={undefined}
       />
-      <PickerContext.Provider value={{ value, placeholder }}>
-        {ui === undefined ? <PickerDefaultUI /> : ui}
-      </PickerContext.Provider>
+      <Text
+        className="navi_picker_value"
+        navi-placeholder={value === undefined || value === "" ? "" : undefined}
+      >
+        <PickerContext.Provider value={{ value, placeholder, maxRows }}>
+          {ui === undefined ? <PickerDefaultUI /> : ui}
+        </PickerContext.Provider>
+      </Text>
       <span className="navi_picker_right_slot">
         <Icon size="m">{icon === undefined ? <ChevronDownSvg /> : icon}</Icon>
       </span>
@@ -421,9 +427,9 @@ const PickerDefaultUI = () => {
     if (!placeholder) {
       return null;
     }
-    return <PickerPlaceholder>{placeholder}</PickerPlaceholder>;
+    return placeholder;
   }
-  return <PickerValue>{value}</PickerValue>;
+  return value;
 };
 
 const PickerFirstResolver = (props) => {
@@ -443,8 +449,6 @@ export const Picker = createComponentResolver([
   PickerButton,
 ]);
 
-Picker.Placeholder = PickerPlaceholder;
-Picker.Value = PickerValue;
 Picker.UI = PickerDefaultUI;
 
 Picker.UI.Date = PickerDateUI;

@@ -2,8 +2,8 @@ import { useContext } from "preact/hooks";
 
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Color } from "@jsenv/navi/src/text/color.jsx";
+import { Text } from "@jsenv/navi/src/text/text.jsx";
 import { Time } from "@jsenv/navi/src/text/time.jsx";
-import { PickerPlaceholder, PickerValue } from "./picker_components.jsx";
 import { PickerContext } from "./picker_context.jsx";
 
 export const PickerText = (props) => {
@@ -13,13 +13,9 @@ export const PickerText = (props) => {
 
 export const PickerArray = (props) => {
   const Next = useNextResolver();
+
   return (
-    <Next
-      data-multiline=""
-      ui={<PickerArrayUI />}
-      {...props}
-      type="navi_picker"
-    />
+    <Next maxRows={3} ui={<PickerArrayUI />} {...props} type="navi_picker" />
   );
 };
 export const PickerArrayUI = () => {
@@ -28,14 +24,14 @@ export const PickerArrayUI = () => {
     if (!placeholder) {
       return null;
     }
-    return <PickerPlaceholder>{placeholder}</PickerPlaceholder>;
+    return placeholder;
   }
   return (
-    <PickerValue spacing=", " shrinkWrap>
+    <Text spacing=", " shrinkWrap>
       {value.map((item) => {
         return <span key={item}>{item}</span>;
       })}
-    </PickerValue>
+    </Text>
   );
 };
 
@@ -51,7 +47,7 @@ export const PickerColorUI = () => {
     if (!placeholder) {
       return <Color />;
     }
-    return <PickerPlaceholder>{placeholder}</PickerPlaceholder>;
+    return placeholder;
   }
   return <Color>{value}</Color>;
 };
@@ -71,7 +67,7 @@ export const PickerDateUI = (props) => {
         <Time type="date" color="var(--picker-placeholder-color" {...props} />
       );
     }
-    return <PickerPlaceholder>{placeholder}</PickerPlaceholder>;
+    return placeholder;
   }
   return (
     <Time type="date" capitalize {...props}>
@@ -98,7 +94,7 @@ export const PickerMonthUI = () => {
     if (!placeholder) {
       return <Time type="month" color="var(--picker-placeholder-color" />;
     }
-    return <PickerPlaceholder>{placeholder}</PickerPlaceholder>;
+    return placeholder;
   }
   return (
     <Time type="month" capitalize>
@@ -120,7 +116,7 @@ export const PickerWeekUI = () => {
     if (!placeholder) {
       return <Time type="week" color="var(--picker-placeholder-color" />;
     }
-    return <PickerPlaceholder>{placeholder}</PickerPlaceholder>;
+    return placeholder;
   }
   return (
     <Time type="week" capitalize>
@@ -144,7 +140,7 @@ export const PickerTimeUI = (props) => {
         <Time type="time" color="var(--picker-placeholder-color" {...props} />
       );
     }
-    return <PickerPlaceholder>{placeholder}</PickerPlaceholder>;
+    return placeholder;
   }
   return (
     <Time type="time" {...props}>
@@ -171,7 +167,7 @@ export const PickerDatetimeUI = () => {
     if (!placeholder) {
       return <Time type="datetime" color="var(--picker-placeholder-color" />;
     }
-    return <PickerPlaceholder>{placeholder}</PickerPlaceholder>;
+    return placeholder;
   }
   return <Time type="datetime">{value}</Time>;
 };
@@ -190,10 +186,10 @@ export const PickerFileUI = () => {
     if (!placeholder) {
       return null;
     }
-    return <PickerPlaceholder>placeholder</PickerPlaceholder>;
+    return placeholder;
   }
   // value is a FileList-like string from the input; display file names
-  return <PickerValue>{value}</PickerValue>;
+  return value;
 };
 
 const PencilSvg = () => {

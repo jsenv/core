@@ -139,7 +139,12 @@ export const Popover = (props) => {
         popoverEl.removeAttribute("data-anchor-hidden");
         positionPopover(event);
       },
-      { event: e },
+      {
+        event: e,
+        // it's ok for the popover to become unsync with the anchor size
+        // (we could even argue it's a feature as it helps to keep the popover position stable)
+        skipElementResize: true,
+      },
     );
     addCleanup(() => {
       rectEffect.disconnect();

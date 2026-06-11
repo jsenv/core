@@ -11055,12 +11055,17 @@ const MIN_CONTENT_VISIBILITY_RATIO = 0.6;
 const visibleRectEffect = (
   element,
   update,
-  { event: initialEvent = new CustomEvent("initialization") } = {},
+  {
+    event: initialEvent = new CustomEvent("initialization"),
+    skipElementResize,
+  } = {},
 ) => {
   const [teardown, addTeardown] = createPubSub();
   const scrollContainer = getScrollContainer(element);
   const scrollContainerIsDocument =
     scrollContainer === document.documentElement;
+  let lastMeasuredWidth;
+  let lastMeasuredHeight;
   let ancestorClosedCount = 0;
   const check = (event) => {
 
@@ -11107,6 +11112,8 @@ const visibleRectEffect = (
 
     // 2. Calculate element visible width/height
     const { width, height } = element.getBoundingClientRect();
+    lastMeasuredWidth = width;
+    lastMeasuredHeight = height;
     const visibleAreaWidth = scrollContainer.clientWidth;
     const visibleAreaHeight = scrollContainer.clientHeight;
     const visibleAreaRight = visibleAreaLeft + visibleAreaWidth;
@@ -11293,11 +11300,37 @@ const visibleRectEffect = (
         });
       }
     }
-    {
+    on_element_resize: {
+      if (skipElementResize) {
+        break on_element_resize;
+      }
+
+      let isFirst = true;
+      let handlingResize = false;
       const resizeObserver = new ResizeObserver(() => {
-        {
+        if (isFirst) {
+          isFirst = false;
           return;
         }
+        if (handlingResize) {
+          return;
+        }
+        // we use directly the result of getBoundingClientRect() instead of the resizeEntry.contentRect or resizeEntry.borderBoxSize
+        // so that:
+        // - We can compare the dimensions measure in the last check and the current one
+        // - We don't have to check element boz-sizing to know what to compare
+        // - resizeEntry.borderBoxSize browser support is not that great
+        const { width, height } = element.getBoundingClientRect();
+        const widthDiff = Math.abs(width - lastMeasuredWidth);
+        const heightDiff = Math.abs(height - lastMeasuredHeight);
+        if (widthDiff === 0 && heightDiff === 0) {
+          return;
+        }
+        handlingResize = true;
+        autoCheck(
+          new CustomEvent("element_size_change", { detail: { width, height } }),
+        );
+        handlingResize = false;
       });
       resizeObserver.observe(element);
       // Temporarily disconnect ResizeObserver to prevent feedback loops eventually caused by update function

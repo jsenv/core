@@ -116,6 +116,14 @@ naviI18n.addAll({
   },
 });
 
+// Badge list messages
+naviI18n.addAll({
+  "badge_list.more": {
+    en: "+[count] more",
+    fr: "+[count] de plus",
+  },
+});
+
 // Constraint validation messages — override any key to customize error messages
 naviI18n.addAll({
   "constraint.available": {

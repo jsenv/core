@@ -55,38 +55,40 @@
         color: #333;
       }
       h1 {
-        margin-bottom: 24px;
-        font-size: 1.4rem;
+        margin-bottom: 32px;
+        color: #333;
+        font-size: 1.8rem;
+        text-align: center;
       }
-      h2 {
-        margin: 0 0 6px;
-        font-size: 1rem;
+      .demo-section h3 {
+        margin: 24px 0 6px;
+        color: #555;
+        font-weight: 600;
+        font-size: 0.95rem;
       }
-      p {
+      .demo-section h2 {
+        margin: 0 0 8px;
+        padding-bottom: 10px;
+        color: #333;
+        font-size: 1.1rem;
+        border-bottom: 2px solid #eee;
+      }
+      .demo-section p {
         margin: 0 0 16px;
         color: #555;
-        font-size: 13px;
+        font-size: 0.9rem;
+        line-height: 1.5;
       }
-      .toc {
-        margin-bottom: 24px;
-        padding: 16px 20px;
-        font-size: 13px;
-        background: white;
-        border-radius: 8px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-      }
-      .toc ol {
+      .toc-list {
         margin: 0;
         padding-left: 20px;
+        line-height: 2;
       }
-      .toc li {
-        line-height: 1.8;
-      }
-      .toc a {
+      .toc-list a {
         color: #1a56cc;
         text-decoration: none;
       }
-      .toc a:hover {
+      .toc-list a:hover {
         text-decoration: underline;
       }
     </style>
@@ -94,27 +96,6 @@
   <body>
     <div id="container">
       <h1>Select Picker Demo</h1>
-      <nav class="toc">
-        <ol>
-          <li>
-            <a href="#section-1"
-              >1. <code>action="send"</code> — closes on click</a
-            >
-          </li>
-          <li>
-            <a href="#section-2"
-              >2. <code>action="update"</code> — stays open until closed</a
-            >
-          </li>
-          <li><a href="#section-3">3. Searchable select — empty list</a></li>
-          <li><a href="#section-4">4. Searchable select — full list</a></li>
-          <li><a href="#section-5">5. Searchable select — few results</a></li>
-          <li><a href="#section-6">6. Searchable select — no results</a></li>
-          <li>
-            <a href="#section-7">7. Place picker — rich items with search</a>
-          </li>
-        </ol>
-      </nav>
       <div id="app"></div>
     </div>
     <script type="module" jsenv-type="module/jsx">
@@ -215,8 +196,60 @@
       });
       setupRoutes([DEMO_ROUTE]);
 
+      const TableOfContents = () => (
+        <div class="demo-section">
+          <h2>Table of contents</h2>
+          <ol class="toc-list">
+            <li>
+              <a href="#section-1">1. Dimensions — size &amp; overflow</a>
+              <ol class="toc-list" style={{ marginTop: 0 }}>
+                <li>
+                  <a href="#dim-font-size">Font size</a>
+                </li>
+                <li>
+                  <a href="#dim-width">Width adapts to value</a>
+                </li>
+                <li>
+                  <a href="#dim-overflow">Single-line overflow</a>
+                </li>
+                <li>
+                  <a href="#dim-maxrows">Multi-line with maxRows</a>
+                </li>
+              </ol>
+            </li>
+            <li>
+              <a href="#section-2">
+                2. <code>action="send"</code> — closes on click
+              </a>
+            </li>
+            <li>
+              <a href="#section-3">
+                3. <code>action="update"</code> — stays open until closed
+              </a>
+            </li>
+            <li>
+              <a href="#section-4">4. Searchable select — empty list</a>
+            </li>
+            <li>
+              <a href="#section-5">5. Searchable select — full list</a>
+            </li>
+            <li>
+              <a href="#section-6">6. Searchable select — few results</a>
+            </li>
+            <li>
+              <a href="#section-7">7. Searchable select — no results</a>
+            </li>
+            <li>
+              <a href="#section-8">8. Place picker — rich items with search</a>
+            </li>
+          </ol>
+        </div>
+      );
+
       const App = () => (
         <Box flex="y" spacing="l">
+          <TableOfContents />
+          <DimensionsDemo />
           <SelectWithSend />
           <SelectWithUpdate />
           <SearchableSelectEmpty />
@@ -268,9 +301,9 @@
         };
 
         return (
-          <div id="section-1" class="demo-section">
+          <div id="section-2" class="demo-section">
             <h2>
-              1. <code>action="send"</code> — closes on click
+              2. <code>action="send"</code> — closes on click
             </h2>
             <p>
               Each click immediately commits the value and closes the picker.
@@ -330,9 +363,9 @@
         };
 
         return (
-          <div id="section-2" class="demo-section">
+          <div id="section-3" class="demo-section">
             <h2>
-              2. <code>action="update"</code> — stays open until closed
+              3. <code>action="update"</code> — stays open until closed
             </h2>
             <p>
               Clicking an item highlights it but keeps the popover open. The
@@ -470,8 +503,8 @@
         const searchText = useSignal("").value;
         const logSignal = useSignal([]);
         return (
-          <div id="section-3" class="demo-section">
-            <h2>3. Searchable select — empty list</h2>
+          <div id="section-4" class="demo-section">
+            <h2>4. Searchable select — empty list</h2>
             <p>The list has no items at all.</p>
             <Field vertical>
               <Label>Fruit</Label>
@@ -498,8 +531,8 @@
         const searchText = searchTextSignal.value;
         const logSignal = useSignal([]);
         return (
-          <div id="section-4" class="demo-section">
-            <h2>4. Searchable select — full list</h2>
+          <div id="section-5" class="demo-section">
+            <h2>5. Searchable select — full list</h2>
             <p>All items shown, search is empty.</p>
             <Field vertical>
               <Label>Fruit</Label>
@@ -528,8 +561,8 @@
         const searchText = searchTextSignal.value;
         const logSignal = useSignal([]);
         return (
-          <div id="section-5" class="demo-section">
-            <h2>5. Searchable select — few results</h2>
+          <div id="section-6" class="demo-section">
+            <h2>6. Searchable select — few results</h2>
             <p>
               Search pre-filled with <code>"rr"</code> — matches Cherry and
               Elderberry.
@@ -561,8 +594,8 @@
         const searchText = searchTextSignal.value;
         const logSignal = useSignal([]);
         return (
-          <div id="section-6" class="demo-section">
-            <h2>6. Searchable select — no results</h2>
+          <div id="section-7" class="demo-section">
+            <h2>7. Searchable select — no results</h2>
             <p>
               Search pre-filled with <code>"zzz"</code> — matches nothing.
             </p>
@@ -642,8 +675,8 @@
         );
 
         return (
-          <div id="section-7" class="demo-section">
-            <h2>7. Place picker — rich items with search</h2>
+          <div id="section-8" class="demo-section">
+            <h2>8. Place picker — rich items with search</h2>
             <p>
               Each item shows a name and an address. The search filters across
               all fields. The trigger displays the selected place label (or a
@@ -661,13 +694,7 @@
                 }}
                 borderRadius="s"
                 padding="m"
-                ui={
-                  selectedPlace ? (
-                    <Picker.Value>{selectedPlace.label}</Picker.Value>
-                  ) : (
-                    <Picker.Placeholder>Choisir un lieu</Picker.Placeholder>
-                  )
-                }
+                ui={selectedPlace ? selectedPlace.label : "Choisir un lieu"}
                 expandX
                 maxWidth="250"
               >
@@ -714,6 +741,363 @@
           </div>
         );
       };
+
+      // ── Position marker used in the width-adapts demo ───────────────────
+      const AdjacentElement = () => (
+        <div
+          style={{
+            flexShrink: 0,
+            padding: "4px 10px",
+            fontSize: "11px",
+            color: "#7a5c00",
+            background: "#fff8e1",
+            border: "1.5px dashed #f0c040",
+            borderRadius: "4px",
+            whiteSpace: "nowrap",
+          }}
+        >
+          adjacent element
+        </div>
+      );
+
+      const SHORT_VALUE = "Apple";
+      const MEDIUM_VALUE = "Elderberry";
+      const LONG_SENTENCE =
+        "A very long selected value that definitely overflows the picker trigger button";
+      const LONG_WORD = "Supercalifragilisticexpialidocious";
+      const VERY_LONG_TEXT =
+        "This value is intentionally so long that it spans more than three lines inside the constrained picker width, so the line-clamp kicks in and an ellipsis appears at the end";
+
+      const DimensionPickerItems = ({ id, values }) => (
+        <List selectable action="send">
+          {values.map((v, i) => (
+            <List.Item
+              selectable
+              key={v}
+              id={`${id}_${i}`}
+              index={i}
+              value={v}
+              padding="s"
+              spacing="s"
+            >
+              {v}
+            </List.Item>
+          ))}
+        </List>
+      );
+
+      const DimensionsDemo = () => {
+        return (
+          <div id="section-1" class="demo-section">
+            <h2>1. Dimensions — size &amp; overflow</h2>
+
+            <h3 id="dim-font-size" style={{ marginTop: "24px" }}>
+              Font size
+            </h3>
+            <p>
+              The picker inherits font size from its container, which drives its
+              overall size.
+            </p>
+            <Box flex="x" spacing="m" alignY="end">
+              {["xs", "m", "xl", "xxl"].map((size) => (
+                <Field key={size} vertical>
+                  <Label>
+                    <code style={{ fontWeight: "normal" }}>size={size}</code>
+                  </Label>
+                  <Picker
+                    name={`dim_font_${size}`}
+                    placeholder="Fruit…"
+                    value={sendFruitSignal.value}
+                    action={(v) => {
+                      sendFruitSignal.value = v;
+                    }}
+                    size={size}
+                  >
+                    <List selectable action="send">
+                      {FRUIT_OPTIONS.map((opt, i) => (
+                        <List.Item
+                          selectable
+                          key={opt}
+                          id={`dim_font_${size}_${opt}`}
+                          index={i}
+                          value={opt}
+                          selected={sendFruitSignal.value === opt}
+                          padding="s"
+                          spacing="s"
+                        >
+                          {opt}
+                        </List.Item>
+                      ))}
+                    </List>
+                  </Picker>
+                </Field>
+              ))}
+            </Box>
+
+            <h3 id="dim-width" style={{ marginTop: "24px" }}>
+              Width adapts to value
+            </h3>
+            <Box
+              flex="x"
+              spacing="s"
+              alignY="center"
+              style={{ marginBottom: "12px" }}
+            >
+              <AdjacentElement />
+              <span style={{ fontSize: "12px", color: "#555" }}>
+                ← this represents an element sitting next to the picker
+              </span>
+            </Box>
+            <Box flex="y" spacing="m">
+              <Field vertical>
+                <Label>
+                  Short value{" "}
+                  <code style={{ fontWeight: "normal" }}>(default)</code>
+                </Label>
+                <Box flex="x" spacing="s" alignY="center">
+                  <Picker
+                    name="dim_width_short"
+                    value={SHORT_VALUE}
+                    action={() => {}}
+                  >
+                    <DimensionPickerItems
+                      id="dim_width_short"
+                      values={[SHORT_VALUE, MEDIUM_VALUE]}
+                    />
+                  </Picker>
+                  <AdjacentElement />
+                </Box>
+              </Field>
+              <Field vertical>
+                <Label>
+                  Medium value{" "}
+                  <code style={{ fontWeight: "normal" }}>(default)</code>
+                </Label>
+                <Box flex="x" spacing="s" alignY="center">
+                  <Picker
+                    name="dim_width_medium"
+                    value={MEDIUM_VALUE}
+                    action={() => {}}
+                  >
+                    <DimensionPickerItems
+                      id="dim_width_medium"
+                      values={[SHORT_VALUE, MEDIUM_VALUE]}
+                    />
+                  </Picker>
+                  <AdjacentElement />
+                </Box>
+              </Field>
+            </Box>
+
+            <p
+              style={{ marginTop: "12px", color: "#666", fontStyle: "italic" }}
+            >
+              The adjacent element shifts as the picker grows. Even without
+              anything next to it, an unstable width feels unpolished.
+            </p>
+
+            <p style={{ marginTop: "16px" }}>
+              Set <code>minWidth</code> to a fixed value to prevent layout shift
+              while still allowing the picker to grow for longer values.
+            </p>
+            <Box flex="y" spacing="m">
+              <Field vertical>
+                <Label>
+                  Short value{" "}
+                  <code style={{ fontWeight: "normal" }}>(minWidth="140")</code>
+                </Label>
+                <Box flex="x" spacing="s" alignY="center">
+                  <Picker
+                    name="dim_minwidth_short"
+                    value={SHORT_VALUE}
+                    action={() => {}}
+                    minWidth="140"
+                  >
+                    <DimensionPickerItems
+                      id="dim_minwidth_short"
+                      values={[SHORT_VALUE, MEDIUM_VALUE]}
+                    />
+                  </Picker>
+                  <AdjacentElement />
+                </Box>
+              </Field>
+              <Field vertical>
+                <Label>
+                  Medium value{" "}
+                  <code style={{ fontWeight: "normal" }}>(minWidth="140")</code>
+                </Label>
+                <Box flex="x" spacing="s" alignY="center">
+                  <Picker
+                    name="dim_minwidth_medium"
+                    value={MEDIUM_VALUE}
+                    action={() => {}}
+                    minWidth="140"
+                  >
+                    <DimensionPickerItems
+                      id="dim_minwidth_medium"
+                      values={[SHORT_VALUE, MEDIUM_VALUE]}
+                    />
+                  </Picker>
+                  <AdjacentElement />
+                </Box>
+              </Field>
+            </Box>
+
+            <p style={{ marginTop: "16px" }}>
+              Use <code>expandX</code> to make the picker fill its container
+              width entirely, also preventing layout shift.
+            </p>
+            <Box flex="y" spacing="m">
+              <Field vertical>
+                <Label>
+                  Short value{" "}
+                  <code style={{ fontWeight: "normal" }}>(expandX)</code>
+                </Label>
+                <Box flex="x" spacing="s" alignY="center" expandX>
+                  <Picker
+                    name="dim_expandx_short"
+                    value={SHORT_VALUE}
+                    action={() => {}}
+                    expandX
+                  >
+                    <DimensionPickerItems
+                      id="dim_expandx_short"
+                      values={[SHORT_VALUE, MEDIUM_VALUE]}
+                    />
+                  </Picker>
+                  <AdjacentElement />
+                </Box>
+              </Field>
+              <Field vertical>
+                <Label>
+                  Medium value{" "}
+                  <code style={{ fontWeight: "normal" }}>(expandX)</code>
+                </Label>
+                <Box flex="x" spacing="s" alignY="center" expandX>
+                  <Picker
+                    name="dim_expandx_medium"
+                    value={MEDIUM_VALUE}
+                    action={() => {}}
+                    expandX
+                  >
+                    <DimensionPickerItems
+                      id="dim_expandx_medium"
+                      values={[SHORT_VALUE, MEDIUM_VALUE]}
+                    />
+                  </Picker>
+                  <AdjacentElement />
+                </Box>
+              </Field>
+            </Box>
+
+            <h3 id="dim-overflow" style={{ marginTop: "24px" }}>
+              Single-line overflow
+            </h3>
+            <p>
+              When the value is wider than the picker (here constrained to{" "}
+              <code>maxWidth="200"</code>), the text is clipped with an ellipsis
+              on a single line.
+            </p>
+            <Box flex="y" spacing="m">
+              <Field vertical>
+                <Label>Long sentence</Label>
+                <Picker
+                  name="dim_sentence"
+                  value={LONG_SENTENCE}
+                  action={() => {}}
+                  maxWidth="200"
+                >
+                  <DimensionPickerItems
+                    id="dim_sentence"
+                    values={[SHORT_VALUE, LONG_SENTENCE]}
+                  />
+                </Picker>
+              </Field>
+              <Field vertical>
+                <Label>Long word</Label>
+                <Picker
+                  name="dim_word"
+                  value={LONG_WORD}
+                  action={() => {}}
+                  maxWidth="200"
+                >
+                  <DimensionPickerItems
+                    id="dim_word"
+                    values={[SHORT_VALUE, LONG_WORD]}
+                  />
+                </Picker>
+              </Field>
+            </Box>
+
+            <h3 id="dim-maxrows" style={{ marginTop: "24px" }}>
+              Multi-line with maxRows
+            </h3>
+            <p>
+              <code>maxRows</code> lets the text flow onto multiple lines before
+              truncating. At <code>maxRows=3</code> the text wraps up to three
+              rows then clips with an ellipsis.
+            </p>
+            <Box flex="y" spacing="m">
+              <Field vertical>
+                <Label>
+                  Long sentence{" "}
+                  <code style={{ fontWeight: "normal" }}>(maxRows=3)</code>
+                </Label>
+                <Picker
+                  name="dim_sentence_maxrows"
+                  value={LONG_SENTENCE}
+                  action={() => {}}
+                  maxWidth="200"
+                  maxRows={3}
+                >
+                  <DimensionPickerItems
+                    id="dim_sentence_maxrows"
+                    values={[SHORT_VALUE, LONG_SENTENCE]}
+                  />
+                </Picker>
+              </Field>
+              <Field vertical>
+                <Label>
+                  Long word{" "}
+                  <code style={{ fontWeight: "normal" }}>(maxRows=3)</code>
+                </Label>
+                <Picker
+                  name="dim_word_maxrows"
+                  value={LONG_WORD}
+                  action={() => {}}
+                  maxWidth="200"
+                  maxRows={3}
+                >
+                  <DimensionPickerItems
+                    id="dim_word_maxrows"
+                    values={[SHORT_VALUE, LONG_WORD]}
+                  />
+                </Picker>
+              </Field>
+              <Field vertical>
+                <Label>
+                  Exceeds maxRows{" "}
+                  <code style={{ fontWeight: "normal" }}>(ellipsis)</code>
+                </Label>
+                <Picker
+                  name="dim_clamp_maxrows"
+                  value={VERY_LONG_TEXT}
+                  action={() => {}}
+                  maxWidth="200"
+                  maxRows={3}
+                >
+                  <DimensionPickerItems
+                    id="dim_clamp_maxrows"
+                    values={[SHORT_VALUE, VERY_LONG_TEXT]}
+                  />
+                </Picker>
+              </Field>
+            </Box>
+          </div>
+        );
+      };
+
+      // ── 3–9. Renumbered sections ──────────────────────────────────────────
 
       render(
         <NaviDebug debugAction debugInteraction debugPopup>

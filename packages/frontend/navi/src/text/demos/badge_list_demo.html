@@ -26,7 +26,8 @@
             <Link href="#default">1. Default badges</Link>
             <Link href="#colored">2. Colored badges</Link>
             <Link href="#shrinkwrap">3. Shrink wrap</Link>
-            <Link href="#spacing">4. Custom spacing</Link>
+            <Link href="#maxrows">4. Max rows</Link>
+            <Link href="#spacing">5. Custom spacing</Link>
           </Box>
         </Box>
       );
@@ -159,6 +160,102 @@
         </Box>
       );
 
+      const MaxRowsSection = () => (
+        <Box as="section" marginBottom="xl">
+          <Title as="h2">
+            <Link anchor href="#maxrows" />
+            Max rows
+          </Title>
+          <Paragraph>
+            Use <code>maxRows</code> to cap how many rows of badges are visible.
+            The list is clipped after the specified number of rows.
+          </Paragraph>
+          <Box flex="y" spacing="m" alignX="start">
+            <Text bold>maxRows={1}</Text>
+            <Box maxWidth="300px" border="2px dotted #aaa" borderRadius="4px">
+              <BadgeList maxRows={1}>
+                <Badge>HTML</Badge>
+                <Badge>CSS</Badge>
+                <Badge>JavaScript</Badge>
+                <Badge>TypeScript</Badge>
+                <Badge>React</Badge>
+                <Badge>Vue</Badge>
+                <Badge>Node.js</Badge>
+                <Badge>Python</Badge>
+              </BadgeList>
+            </Box>
+
+            <Text bold>maxRows={2}</Text>
+            <Box maxWidth="300px" border="2px dotted #aaa" borderRadius="4px">
+              <BadgeList maxRows={2}>
+                <Badge>HTML</Badge>
+                <Badge>CSS</Badge>
+                <Badge>JavaScript</Badge>
+                <Badge>TypeScript</Badge>
+                <Badge>React</Badge>
+                <Badge>Vue</Badge>
+                <Badge>Node.js</Badge>
+                <Badge>Python</Badge>
+                <Badge>Rust</Badge>
+                <Badge>Go</Badge>
+                <Badge>Java</Badge>
+                <Badge>C++</Badge>
+              </BadgeList>
+            </Box>
+
+            <Text bold>maxRows={3}</Text>
+            <Box maxWidth="300px" border="2px dotted #aaa" borderRadius="4px">
+              <BadgeList maxRows={3}>
+                <Badge>HTML</Badge>
+                <Badge>CSS</Badge>
+                <Badge>JavaScript</Badge>
+                <Badge>TypeScript</Badge>
+                <Badge>React</Badge>
+                <Badge>Vue</Badge>
+                <Badge>Node.js</Badge>
+                <Badge>Python</Badge>
+                <Badge>Rust</Badge>
+                <Badge>Go</Badge>
+                <Badge>Java</Badge>
+                <Badge>C++</Badge>
+                <Badge>Swift</Badge>
+                <Badge>Kotlin</Badge>
+                <Badge>SQL</Badge>
+                <Badge>WebAssembly</Badge>
+              </BadgeList>
+            </Box>
+
+            <Text bold>Resizable — drag to test adaptation</Text>
+            <Box
+              border="2px dotted #aaa"
+              borderRadius="4px"
+              style={{
+                resize: "horizontal",
+                overflow: "hidden",
+                width: "300px",
+                minWidth: "100px",
+                maxWidth: "600px",
+              }}
+            >
+              <BadgeList maxRows={2}>
+                <Badge>HTML</Badge>
+                <Badge>CSS</Badge>
+                <Badge>JavaScript</Badge>
+                <Badge>TypeScript</Badge>
+                <Badge>React</Badge>
+                <Badge>Vue</Badge>
+                <Badge>Node.js</Badge>
+                <Badge>Python</Badge>
+                <Badge>Rust</Badge>
+                <Badge>Go</Badge>
+                <Badge>Java</Badge>
+                <Badge>C++</Badge>
+              </BadgeList>
+            </Box>
+          </Box>
+        </Box>
+      );
+
       const SpacingSection = () => (
         <Box as="section" marginBottom="xl">
           <Title as="h2">
@@ -185,6 +282,7 @@
           <DefaultSection />
           <ColoredSection />
           <WrappingSection />
+          <MaxRowsSection />
           <SpacingSection />
         </Box>
       );
