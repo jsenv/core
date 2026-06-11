@@ -282,13 +282,12 @@
               toggled.
             </p>
             <p style="color: #b45309; background: #fef3c7; border: 1px solid #fde68a; padding: 8px 12px; border-radius: 6px; font-size: 13px; margin: 0 0 16px">
-              <strong>maxRows not supported with chips.</strong> Chips are
-              flex items with spacing, not plain text — CSS{" "}
-              <code>line-clamp</code> does not apply, and detecting which chips
-              overflow and where they break across rows requires expensive DOM
-              measurement on every render. This complexity is not worth it;
-              use <code>max</code> on <code>BadgeList</code> to cap the number
-              of visible chips instead.
+              <strong>maxRows not supported with chips.</strong> Chips are flex
+              items with spacing, not plain text — CSS <code>line-clamp</code>{" "}
+              does not apply, and detecting which chips overflow and where they
+              break across rows requires expensive DOM measurement on every
+              render. This complexity is not worth it; use <code>max</code> on{" "}
+              <code>BadgeList</code> to cap the number of visible chips instead.
             </p>
             <Box flex="y" spacing="m">
               <Field vertical>

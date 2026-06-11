@@ -18403,6 +18403,14 @@ naviI18n.addAll({
   },
 });
 
+// Badge list messages
+naviI18n.addAll({
+  "badge_list.more": {
+    en: "+[count] more",
+    fr: "+[count] de plus",
+  },
+});
+
 // Constraint validation messages — override any key to customize error messages
 naviI18n.addAll({
   "constraint.available": {
@@ -32019,19 +32027,6 @@ const RadioGroupInterface = props => {
   });
 };
 
-const PickerPlaceholder = props => {
-  return jsx(Text, {
-    className: "navi_picker_placeholder",
-    ...props
-  });
-};
-const PickerValue = props => {
-  return jsx(Text, {
-    className: "navi_picker_value",
-    ...props
-  });
-};
-
 const PickerContext = createContext();
 
 const windowWidthSignal = signal(window.innerWidth);
@@ -32388,7 +32383,10 @@ const Popover = props => {
       popoverEl.removeAttribute("data-anchor-hidden");
       positionPopover(event);
     }, {
-      event: e
+      event: e,
+      // it's ok for the popover to become unsync with the anchor size
+      // (we could even argue it's a feature as it helps to keep the popover position stable)
+      skipElementResize: true
     });
     addCleanup(() => {
       rectEffect.disconnect();
@@ -33458,7 +33456,7 @@ const PickerText = props => {
 const PickerArray = props => {
   const Next = useNextResolver();
   return jsx(Next, {
-    "data-multiline": "",
+    maxRows: 3,
     ui: jsx(PickerArrayUI, {}),
     ...props,
     type: "navi_picker"
@@ -33473,11 +33471,9 @@ const PickerArrayUI = () => {
     if (!placeholder) {
       return null;
     }
-    return jsx(PickerPlaceholder, {
-      children: placeholder
-    });
+    return placeholder;
   }
-  return jsx(PickerValue, {
+  return jsx(Text, {
     spacing: ", ",
     shrinkWrap: true,
     children: value.map(item => {
@@ -33505,9 +33501,7 @@ const PickerColorUI = () => {
     if (!placeholder) {
       return jsx(Color, {});
     }
-    return jsx(PickerPlaceholder, {
-      children: placeholder
-    });
+    return placeholder;
   }
   return jsx(Color, {
     children: value
@@ -33535,9 +33529,7 @@ const PickerDateUI = props => {
         ...props
       });
     }
-    return jsx(PickerPlaceholder, {
-      children: placeholder
-    });
+    return placeholder;
   }
   return jsx(Time, {
     type: "date",
@@ -33567,9 +33559,7 @@ const PickerMonthUI = () => {
         color: "var(--picker-placeholder-color"
       });
     }
-    return jsx(PickerPlaceholder, {
-      children: placeholder
-    });
+    return placeholder;
   }
   return jsx(Time, {
     type: "month",
@@ -33598,9 +33588,7 @@ const PickerWeekUI = () => {
         color: "var(--picker-placeholder-color"
       });
     }
-    return jsx(PickerPlaceholder, {
-      children: placeholder
-    });
+    return placeholder;
   }
   return jsx(Time, {
     type: "week",
@@ -33630,9 +33618,7 @@ const PickerTimeUI = props => {
         ...props
       });
     }
-    return jsx(PickerPlaceholder, {
-      children: placeholder
-    });
+    return placeholder;
   }
   return jsx(Time, {
     type: "time",
@@ -33661,9 +33647,7 @@ const PickerDatetimeUI = () => {
         color: "var(--picker-placeholder-color"
       });
     }
-    return jsx(PickerPlaceholder, {
-      children: placeholder
-    });
+    return placeholder;
   }
   return jsx(Time, {
     type: "datetime",
@@ -33688,14 +33672,10 @@ const PickerFileUI = () => {
     if (!placeholder) {
       return null;
     }
-    return jsx(PickerPlaceholder, {
-      children: "placeholder"
-    });
+    return placeholder;
   }
   // value is a FileList-like string from the input; display file names
-  return jsx(PickerValue, {
-    children: value
-  });
+  return value;
 };
 const PencilSvg = () => {
   return jsx("svg", {
@@ -36368,7 +36348,6 @@ installImportMetaCssBuild(import.meta);const css$k = /* css */`
       --picker-border-radius: 2px;
       --picker-outline-width: 1px;
       --picker-border-width: 1px;
-      --picker-font-size: 14px;
       --picker-padding-x-default: 8px;
       --picker-padding-y-default: 5px;
       --picker-outline-color: var(--navi-focus-outline-color);
@@ -36382,7 +36361,6 @@ installImportMetaCssBuild(import.meta);const css$k = /* css */`
         transparent
       );
       --picker-color-dimmed: color-mix(in srgb, currentColor 60%, transparent);
-      --picker-right-slot-size: 1em;
       /* Hover */
       --picker-border-color-hover: color-mix(
         in srgb,
@@ -36435,16 +36413,12 @@ installImportMetaCssBuild(import.meta);const css$k = /* css */`
         var(--picker-padding, var(--picker-padding-y-default))
       )
     );
-    --x-picker-padding-right-base: var(
+    --x-picker-padding-right: var(
       --picker-padding-right,
       var(
         --picker-padding-x,
         var(--picker-padding, var(--picker-padding-x-default))
       )
-    );
-    --x-picker-padding-right: calc(
-      var(--x-picker-padding-right-base) + var(--picker-right-slot-size) +
-        var(--picker-right-slot-size) * 0.25
     );
     --x-picker-padding-left: var(
       --picker-padding-left,
@@ -36464,7 +36438,7 @@ installImportMetaCssBuild(import.meta);const css$k = /* css */`
     --x-picker-icon-color: var(--picker-icon-color);
 
     position: relative;
-    display: inline-block;
+    display: inline-flex;
     box-sizing: border-box;
     max-width: 100%;
     min-height: calc(
@@ -36475,8 +36449,9 @@ installImportMetaCssBuild(import.meta);const css$k = /* css */`
     padding-bottom: var(--x-picker-padding-bottom);
     padding-left: var(--x-picker-padding-left);
     flex-direction: row;
+    align-items: center;
+    gap: var(--navi-xs);
     color: var(--x-picker-color);
-    font-size: var(--picker-font-size);
     text-align: inherit;
     text-overflow: ellipsis;
     background-color: var(--x-picker-background-color);
@@ -36494,29 +36469,32 @@ installImportMetaCssBuild(import.meta);const css$k = /* css */`
     overflow: hidden;
 
     .navi_picker_value {
-      display: block;
+      display: inline-block;
       min-width: 0;
       max-width: 100%;
+      flex-grow: 1;
       text-overflow: ellipsis;
       white-space: nowrap;
       overflow: hidden;
-    }
-    .navi_picker_placeholder {
-      display: block;
-      max-width: 100%;
-      color: var(--picker-placeholder-color);
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      overflow: hidden;
+
+      &[navi-placeholder] {
+        color: var(--picker-placeholder-color);
+      }
+
+      .navi_text:not(.navi_more_badge) {
+        max-width: 100%;
+        text-overflow: inherit;
+        vertical-align: middle; /* For some reason it's required to disminish inline-block height */
+        overflow: inherit;
+      }
     }
     .navi_picker_right_slot {
-      position: absolute;
-      top: 0;
-      right: var(--x-picker-padding-right-base);
       display: inline-flex;
-      width: var(--picker-right-slot-size);
-      padding-top: var(--x-picker-padding-top);
+      height: 1em;
+      height: 1lh;
       flex-shrink: 0;
+      align-items: center;
+      align-self: flex-start;
       justify-content: center;
       color: var(--x-picker-icon-color);
       transform: translateX(25%);
@@ -36536,14 +36514,13 @@ installImportMetaCssBuild(import.meta);const css$k = /* css */`
       pointer-events: none;
     }
 
-    &[data-multiline] {
+    &[data-line-clamp] {
       overflow-wrap: anywhere;
-
-      .navi_picker_placeholder {
-        white-space: normal;
-      }
       .navi_picker_value {
+        display: -webkit-box;
         white-space: normal;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: var(--picker-max-rows);
       }
     }
 
@@ -36617,8 +36594,8 @@ const PickerButton = props => {
     ref,
     icon,
     placeholder,
-    singleLine,
-    ui
+    ui,
+    maxRows
   } = props;
   const inputRef = useRef(null);
   const [inputProps, pickerRemainingProps] = useControlProps({
@@ -36640,6 +36617,7 @@ const PickerButton = props => {
     children
   } = inputProps;
   const loading = basePseudoState[":-navi-loading"];
+  const hasLineClamp = maxRows && maxRows > 1;
   return jsxs(Box, {
     as: "button",
     ref: ref,
@@ -36648,7 +36626,10 @@ const PickerButton = props => {
     "navi-has-placeholder": placeholder ? "" : undefined,
     pseudoClasses: PICKER_BUTTON_PSEUDO_CLASSES,
     disabled: disabled,
-    "data-single-line": singleLine ? "" : undefined,
+    "data-line-clamp": hasLineClamp ? "" : undefined,
+    style: {
+      "--picker-max-rows": maxRows || -1
+    },
     ...pickerRemainingProps,
     basePseudoState: basePseudoState,
     styleCSSVars: PickerStyleCSSVars
@@ -36659,7 +36640,7 @@ const PickerButton = props => {
     id: id,
     icon: undefined,
     ui: undefined,
-    singleLine: undefined,
+    maxRows: undefined,
     dayLabel: undefined
     // The button is handling the pointer interactions
     ,
@@ -36690,12 +36671,17 @@ const PickerButton = props => {
       onMouseDown: undefined,
       onClick: undefined,
       onKeyDown: undefined
-    }), jsx(PickerContext.Provider, {
-      value: {
-        value,
-        placeholder
-      },
-      children: ui === undefined ? jsx(PickerDefaultUI, {}) : ui
+    }), jsx(Text, {
+      className: "navi_picker_value",
+      "navi-placeholder": value === undefined || value === "" ? "" : undefined,
+      children: jsx(PickerContext.Provider, {
+        value: {
+          value,
+          placeholder,
+          maxRows
+        },
+        children: ui === undefined ? jsx(PickerDefaultUI, {}) : ui
+      })
     }), jsx("span", {
       className: "navi_picker_right_slot",
       children: jsx(Icon, {
@@ -36759,13 +36745,9 @@ const PickerDefaultUI = () => {
     if (!placeholder) {
       return null;
     }
-    return jsx(PickerPlaceholder, {
-      children: placeholder
-    });
+    return placeholder;
   }
-  return jsx(PickerValue, {
-    children: value
-  });
+  return value;
 };
 const PickerFirstResolver = props => {
   const Next = useNextResolver();
@@ -36779,8 +36761,6 @@ const PickerFirstResolver = props => {
   });
 };
 const Picker = createComponentResolver([PickerFirstResolver, ...pickerResolvers, PickerButton]);
-Picker.Placeholder = PickerPlaceholder;
-Picker.Value = PickerValue;
 Picker.UI = PickerDefaultUI;
 Picker.UI.Date = PickerDateUI;
 Picker.UI.Time = PickerTimeUI;
@@ -41340,63 +41320,96 @@ installImportMetaCssBuild(import.meta);const css$9 = /* css */`
   }
   .navi_badge_list {
     flex-wrap: wrap;
+
+    &[navi-badge-list-clone] {
+      position: absolute;
+      width: 100%;
+      visibility: hidden;
+      pointer-events: none;
+    }
+  }
+
+  .navi_badge.navi_badge_more {
+    white-space: nowrap;
   }
 `;
 const BadgeList = ({
   fallback,
   children,
-  className,
   shrinkWrap = true,
+  max,
+  maxRows,
   ...props
 }) => {
   import.meta.css = [css$9, "@jsenv/navi/src/text/badge_list.jsx"];
-  const defaultRef = useRef();
-  props.ref = props.ref || defaultRef;
-  const {
-    ref
-  } = props;
+  const measureRef = useRef();
+  const visibleRef = useRef();
   useLayoutEffect(() => {
-    if (!shrinkWrap) {
-      return undefined;
-    }
-    const el = ref.current;
-    if (!el) {
+    const measureEl = measureRef.current;
+    const visibleEl = visibleRef.current;
+    if (!measureEl || !visibleEl) {
       return undefined;
     }
     let observer;
     let rafId;
-    const applyWidth = () => {
-      el.style.width = "";
-      const optimalWidth = measureWidestChildRow(el);
-      if (optimalWidth === null) {
-        return;
+    const measure = () => {
+      visibleEl.style.width = "";
+      if (shrinkWrap) {
+        const optimalWidth = measureWidestChildRow(measureEl);
+        if (optimalWidth !== null) {
+          visibleEl.style.width = `${Math.ceil(optimalWidth)}px`;
+        }
       }
-      el.style.width = `${Math.ceil(optimalWidth)}px`;
     };
-    applyWidth();
-    const parent = el.parentElement;
-    if (parent) {
-      observer = new ResizeObserver(() => {
-        cancelAnimationFrame(rafId);
-        rafId = requestAnimationFrame(applyWidth);
-      });
-      observer.observe(parent);
+    measure();
+    const onResize = () => {
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(measure);
+    };
+    const outerParent = measureEl.parentElement?.parentElement;
+    if (outerParent) {
+      observer = new ResizeObserver(onResize);
+      observer.observe(outerParent);
     }
-    window.addEventListener("resize", applyWidth);
+    window.addEventListener("resize", onResize);
     return () => {
       cancelAnimationFrame(rafId);
       observer?.disconnect();
-      window.removeEventListener("resize", applyWidth);
+      window.removeEventListener("resize", onResize);
     };
-  });
+  }, [shrinkWrap, children]);
   const childArray = toChildArray(children);
-  return jsx(Box, {
+  const hasMax = max !== undefined && childArray.length > max;
+  const visibleChildren = hasMax ? childArray.slice(0, max - 1) : childArray;
+  const hiddenCount = hasMax ? childArray.length - (max - 1) : 0;
+  const sharedProps = {
+    inline: true,
     flex: "x",
     alignY: "center",
     spacing: "xs",
-    className: withPropsClassName("navi_badge_list", className),
-    ...props,
-    children: childArray.length ? children : fallback
+    ...props
+  };
+  return jsxs(Box, {
+    relative: true,
+    children: [jsx(Box, {
+      baseClassName: "navi_badge_list",
+      ...sharedProps,
+      ref: measureRef,
+      "aria-hidden": "true",
+      "navi-badge-list-clone": "",
+      children: childArray
+    }), jsxs(Box, {
+      baseClassName: "navi_badge_list",
+      ...sharedProps,
+      ref: visibleRef,
+      lineClamp: maxRows,
+      children: [visibleChildren.length ? visibleChildren : fallback, hiddenCount > 0 && jsx(Badge, {
+        className: "navi_badge_more",
+        children: naviI18n("badge_list.more", {
+          count: hiddenCount
+        })
+      })]
+    })]
   });
 };
 
