@@ -783,6 +783,8 @@
       const LONG_SENTENCE =
         "A very long selected value that definitely overflows the picker trigger button";
       const LONG_WORD = "Supercalifragilisticexpialidocious";
+      const VERY_LONG_TEXT =
+        "This value is intentionally so long that it spans more than three lines inside the constrained picker width, so the line-clamp kicks in and an ellipsis appears at the end";
 
       const OverflowPickerItems = ({ id, value, longValue }) => (
         <List selectable action="send">
@@ -816,6 +818,7 @@
       const OverflowDemo = () => {
         const sentenceSignal = useSignal(LONG_SENTENCE);
         const wordSignal = useSignal(LONG_WORD);
+        const veryLongSignal = useSignal(VERY_LONG_TEXT);
 
         return (
           <div id="section-2" class="demo-section">
@@ -908,6 +911,27 @@
                       id="overflow_word_ml"
                       value={wordSignal.value}
                       longValue={LONG_WORD}
+                    />
+                  </Picker>
+                </Field>
+                <Field vertical>
+                  <Label>
+                    Very long text{" "}
+                    <code style={{ fontWeight: "normal" }}>(maxRows=3 + ellipsis)</code>
+                  </Label>
+                  <Picker
+                    name="overflow_very_long_maxrows"
+                    value={veryLongSignal.value}
+                    action={(v) => {
+                      veryLongSignal.value = v;
+                    }}
+                    maxWidth="200"
+                    maxRows={3}
+                  >
+                    <OverflowPickerItems
+                      id="overflow_very_long_ml"
+                      value={veryLongSignal.value}
+                      longValue={VERY_LONG_TEXT}
                     />
                   </Picker>
                 </Field>
