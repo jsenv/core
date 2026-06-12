@@ -123,11 +123,11 @@
                 "gram",
                 "liter",
                 "milliliter",
-              ].map((type) => (
-                <Row key={type} label={type}>
-                  <Unit type={type} lang={lang} />
+              ].map((unit) => (
+                <Row key={unit} label={unit}>
+                  <Unit unit={unit} lang={lang} />
                   <Text style={{ color: "#aaa" }}>/</Text>
-                  <Unit type={type} plural lang={lang} />
+                  <Unit unit={unit} plural lang={lang} />
                 </Row>
               ))}
             </Section>
@@ -138,29 +138,17 @@
               desc='Units registered via naviI18n.addAll(). The "item" unit is registered with English and French translations.'
             >
               <Row label="item (singular)">
-                <Unit type="item" lang={lang} />
+                <Unit unit="item" lang={lang} />
               </Row>
               <Row label="item (plural)">
-                <Unit type="item" plural lang={lang} />
-              </Row>
-            </Section>
-
-            <Section
-              id="array"
-              title="3. Inline array [singular, plural]"
-              desc="Pass an array directly when no i18n lookup is needed."
-            >
-              <Row label='["person", "people"]'>
-                <Unit type={["person", "people"]} />
-                <Text style={{ color: "#aaa" }}>/</Text>
-                <Unit type={["person", "people"]} plural />
+                <Unit unit="item" plural lang={lang} />
               </Row>
             </Section>
 
             <Section
               id="inline"
-              title="4. Standalone usage next to an input"
-              desc="Unit placed next to an input element, similar to <Unit type='hour' /> next to a time picker."
+              title="3. Standalone usage next to an input"
+              desc="Unit placed next to an input element, similar to <Unit unit='hour' /> next to a time picker."
             >
               <Box flex="x" spacing="s" style={{ alignItems: "center" }}>
                 <input
@@ -172,19 +160,19 @@
                     fontSize: "1rem",
                   }}
                 />
-                <Unit type="hour" plural lang={lang} />
+                <Unit unit="hour" plural lang={lang} />
               </Box>
             </Section>
 
             <Section
               id="unknown"
-              title="5. Unknown type (raw fallback)"
-              desc="When the type is not known to naviI18n and not a valid Intl unit, the raw string is displayed as-is."
+              title="4. Unknown unit (raw fallback)"
+              desc="When the unit is not known to naviI18n and not a valid Intl unit, the raw string is displayed as-is."
             >
               <Row label="foobar">
-                <Unit type="foobar" />
+                <Unit unit="foobar" />
                 <Text style={{ color: "#aaa" }}>/</Text>
-                <Unit type="foobar" plural />
+                <Unit unit="foobar" plural />
               </Row>
             </Section>
           </div>

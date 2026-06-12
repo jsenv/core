@@ -26,6 +26,8 @@
         item__plural: { en: "items", fr: "articles", de: "Artikel" },
         people: { en: "person", fr: "personne", de: "Person", ja: "人" },
         people__plural: { en: "people", fr: "personnes", de: "Personen" },
+        cheval: { fr: "cheval" },
+        cheval__plural: { fr: "chevaux" },
       });
 
       const Demo = () => {
@@ -309,24 +311,21 @@
             </Box>
           </Box>
 
-          <Title as="h3">
-            unit={`["singular", "plural"]`} — tableau direct
-          </Title>
+          <Title as="h3">naviI18n custom (cheval / chevaux)</Title>
           <Paragraph>
-            Passer un tableau <code>[singulier, pluriel]</code> directement
-            bypasse toute traduction : la forme est choisie selon{" "}
-            <code>value &gt; 1</code>.
+            Enregistrer une unité irrégulière via <code>naviI18n.addAll()</code>{" "}
+            avec des clés singulier et pluriel séparées.
           </Paragraph>
           <Box row spacing="xl" alignY="end" marginBottom="m">
             <Box row spacing="s">
               <Caption>1 cheval (singulier)</Caption>
-              <Quantity label="Montures" unit={["cheval", "chevaux"]}>
+              <Quantity label="Montures" unit="cheval">
                 {1}
               </Quantity>
             </Box>
             <Box row spacing="s">
               <Caption>3 chevaux (pluriel)</Caption>
-              <Quantity label="Montures" unit={["cheval", "chevaux"]}>
+              <Quantity label="Montures" unit="cheval">
                 {3}
               </Quantity>
             </Box>

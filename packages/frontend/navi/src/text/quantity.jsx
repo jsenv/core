@@ -118,7 +118,7 @@ export const Quantity = ({
         </span>
         {unit && (
           <Unit
-            type={unit}
+            unit={unit}
             plural={typeof value === "number" ? value > 1 : false}
             lang={lang}
           />
