@@ -268,7 +268,10 @@ const css = /* css */ `
  */
 const PickerButton = (props) => {
   import.meta.css = css;
-  const { ref, icon, placeholder, ui, maxRows } = props;
+  if (typeof props.maxLines === "string") {
+    props.maxLines = parseInt(props.maxLines);
+  }
+  const { ref, icon, placeholder, ui, maxLines } = props;
   const inputRef = useRef(null);
   const [inputProps, pickerRemainingProps] = useControlProps(
     {
@@ -287,7 +290,7 @@ const PickerButton = (props) => {
   const value = uiStateController.uiState;
   const { id, basePseudoState, disabled, children } = inputProps;
   const loading = basePseudoState[":-navi-loading"];
-  const hasLineClamp = maxRows && maxRows > 1;
+  const hasLineClamp = maxLines && maxLines > 1;
 
   return (
     <Box
@@ -300,7 +303,7 @@ const PickerButton = (props) => {
       disabled={disabled}
       data-line-clamp={hasLineClamp ? "" : undefined}
       style={{
-        "--picker-max-rows": maxRows || -1,
+        "--picker-max-lines": maxLines || -1,
       }}
       {...pickerRemainingProps}
       basePseudoState={basePseudoState}
@@ -310,7 +313,7 @@ const PickerButton = (props) => {
       id={id}
       icon={undefined}
       ui={undefined}
-      maxRows={undefined}
+      maxLines={undefined}
       dayLabel={undefined}
       // The button is handling the pointer interactions
       onMouseDown={(e) => {
@@ -344,7 +347,7 @@ const PickerButton = (props) => {
         className="navi_picker_value"
         navi-placeholder={value === undefined || value === "" ? "" : undefined}
       >
-        <PickerContext.Provider value={{ value, placeholder, maxRows }}>
+        <PickerContext.Provider value={{ value, placeholder, maxLines }}>
           {ui === undefined ? <PickerDefaultUI /> : ui}
         </PickerContext.Provider>
       </Text>
