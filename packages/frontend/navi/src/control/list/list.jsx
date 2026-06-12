@@ -84,135 +84,134 @@ const css = /* css */ `
     .navi_list_item_footer {
       background: var(--list-background-color);
     }
-  }
 
-  .navi_list_container {
-    --x-list-border-radius: var(--list-border-radius);
-    --x-list-border-width: var(--list-border-width);
-    --x-list-border-color: var(--list-border-color);
-    --x-list-background-color: var(--list-background-color);
-    /* When typing inside an input browser tries to keep caret visible */
-    /* For input within a sticky element inside a scrollable container */
-    /* Browser will try to scroll that input into view */
-    /* When that scrollable container has a scroll padding it causes scroll on each keystroke */
-    /* Even putting a scroll margin on the input won't fix */
-    /* The only solution is to use scroll-margins on each item that can scroll */
-    /* This is why these props are named list-scroll-spacing-top and applied via scroll-margin on items */
-    --x-list-scroll-spacing-top: calc(
-      var(--list-header-height, 0px) + var(--list-scroll-padding-top, 0px)
-    );
-    --x-list-scroll-spacing-bottom: calc(
-      var(--list-footer-height, 0px) + var(--list-scroll-padding-bottom, 0px)
-    );
-    --x-list-scroll-spacing-left: calc(
-      var(--list-header-width, 0px) + var(--list-scroll-padding-left, 0px)
-    );
-    --x-list-scroll-spacing-right: calc(
-      var(--list-footer-width, 0px) + var(--list-scroll-padding-right, 0px)
-    );
+    .navi_list_container {
+      --x-list-border-radius: var(--list-border-radius);
+      --x-list-border-width: var(--list-border-width);
+      --x-list-border-color: var(--list-border-color);
+      --x-list-background-color: var(--list-background-color);
+      /* When typing inside an input browser tries to keep caret visible */
+      /* For input within a sticky element inside a scrollable container */
+      /* Browser will try to scroll that input into view */
+      /* When that scrollable container has a scroll padding it causes scroll on each keystroke */
+      /* Even putting a scroll margin on the input won't fix */
+      /* The only solution is to use scroll-margins on each item that can scroll */
+      /* This is why these props are named list-scroll-spacing-top and applied via scroll-margin on items */
+      --x-list-scroll-spacing-top: calc(
+        var(--list-header-height, 0px) + var(--list-scroll-padding-top, 0px)
+      );
+      --x-list-scroll-spacing-bottom: calc(
+        var(--list-footer-height, 0px) + var(--list-scroll-padding-bottom, 0px)
+      );
+      --x-list-scroll-spacing-left: calc(
+        var(--list-header-width, 0px) + var(--list-scroll-padding-left, 0px)
+      );
+      --x-list-scroll-spacing-right: calc(
+        var(--list-footer-width, 0px) + var(--list-scroll-padding-right, 0px)
+      );
 
-    display: flex;
-    min-width: 0;
-    /* fit-content by default, but never wider than the parent */
-    max-width: 100%;
-    flex-direction: column;
-    background-color: var(--x-list-background-color);
-    border: var(--x-list-border-width) solid var(--x-list-border-color);
-    border-radius: var(--x-list-border-radius);
+      display: flex;
+      min-width: 0;
+      /* fit-content by default, but never wider than the parent */
+      max-width: 100%;
+      flex-direction: column;
+      background-color: var(--x-list-background-color);
+      border: var(--x-list-border-width) solid var(--x-list-border-color);
+      border-radius: var(--x-list-border-radius);
 
-    transition: opacity 0.2s ease;
-    /* overflow:hidden is required on the container (not the inner scroll element)
+      transition: opacity 0.2s ease;
+      /* overflow:hidden is required on the container (not the inner scroll element)
        so that border-radius clips the content correctly. Without it, items near
        the corners would visually overflow the rounded corners during scroll. */
-    overflow: hidden;
+      overflow: hidden;
 
-    .navi_list_scroll_container {
-      width: inherit;
-      min-width: inherit;
-      max-width: inherit;
-      max-height: var(--list-max-height);
-      overflow: auto;
-      overscroll-behavior: inherit; /* inherit select behavior */
-    }
-
-    &[data-expand-x] {
-      width: 100%;
-    }
-    &[popover] {
-      position: absolute;
-      inset: unset;
-      display: none;
-      min-width: var(--list-anchor-width, 0px);
-      max-width: 95vw;
-      margin: 0;
-      padding: 0;
-
-      &:popover-open {
-        display: flex;
+      .navi_list_scroll_container {
+        width: inherit;
+        min-width: inherit;
+        max-width: inherit;
+        max-height: var(--list-max-height);
+        overflow: auto;
+        overscroll-behavior: inherit; /* inherit select behavior */
       }
-      .navi_list {
+
+      &[data-expand-x] {
         width: 100%;
       }
+      &[popover] {
+        position: absolute;
+        inset: unset;
+        display: none;
+        min-width: var(--list-anchor-width, 0px);
+        max-width: 95vw;
+        margin: 0;
+        padding: 0;
 
-      &[data-anchor-hidden] {
-        opacity: 0;
-        pointer-events: none;
+        &:popover-open {
+          display: flex;
+        }
+        .navi_list {
+          width: 100%;
+        }
+
+        &[data-anchor-hidden] {
+          opacity: 0;
+          pointer-events: none;
+        }
       }
     }
-  }
 
-  .navi_list {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-    outline: none; /*  Focus is displayed on the container */
-  }
+    .navi_list {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      outline: none; /*  Focus is displayed on the container */
+    }
 
-  .navi_list_item {
-    --x-list-item-color: var(--list-item-color);
-    --x-list-item-background-color: var(--list-item-background-color);
-    --x-list-item-font-weight: var(--list-item-font-weight);
-    --x-list-item-border-width: var(--list-item-border-width, 0px);
-    --x-list-item-border-color: var(--list-item-border-color, black);
+    .navi_list_item {
+      --x-list-item-color: var(--list-item-color);
+      --x-list-item-background-color: var(--list-item-background-color);
+      --x-list-item-font-weight: var(--list-item-font-weight);
+      --x-list-item-border-width: var(--list-item-border-width, 0px);
+      --x-list-item-border-color: var(--list-item-border-color, black);
 
-    box-sizing: border-box;
-    min-width: 0;
-    max-width: 100%;
-    padding-top: var(
-      --list-item-padding-top,
-      var(
-        --list-item-padding-y,
-        var(--list-item-padding, var(--list-item-y-default))
-      )
-    );
-    padding-right: var(
-      --list-item-padding-right,
-      var(
-        --list-item-padding-x,
-        var(--list-item-padding, var(--list-item-padding-x-default))
-      )
-    );
-    padding-bottom: var(
-      --list-item-padding-bottom,
-      var(
-        --list-item-padding-y,
-        var(--list-item-padding, var(--list-item-padding-y-default))
-      )
-    );
-    padding-left: var(
-      --list-item-padding-left,
-      var(
-        --list-item-padding-x,
-        var(--list-item-padding, var(--list-item-padding-x-default))
-      )
-    );
-    color: var(--x-list-item-color);
-    font-weight: var(--x-list-item-font-weight);
-    background-color: var(--x-list-item-background-color);
-    border: var(--x-list-item-border-width) solid
-      var(--x-list-item-border-color);
-    /*
+      box-sizing: border-box;
+      min-width: 0;
+      max-width: 100%;
+      padding-top: var(
+        --list-item-padding-top,
+        var(
+          --list-item-padding-y,
+          var(--list-item-padding, var(--list-item-y-default))
+        )
+      );
+      padding-right: var(
+        --list-item-padding-right,
+        var(
+          --list-item-padding-x,
+          var(--list-item-padding, var(--list-item-padding-x-default))
+        )
+      );
+      padding-bottom: var(
+        --list-item-padding-bottom,
+        var(
+          --list-item-padding-y,
+          var(--list-item-padding, var(--list-item-padding-y-default))
+        )
+      );
+      padding-left: var(
+        --list-item-padding-left,
+        var(
+          --list-item-padding-x,
+          var(--list-item-padding, var(--list-item-padding-x-default))
+        )
+      );
+      color: var(--x-list-item-color);
+      font-weight: var(--x-list-item-font-weight);
+      background-color: var(--x-list-item-background-color);
+      border: var(--x-list-item-border-width) solid
+        var(--x-list-item-border-color);
+      /*
     CSS impossible d'obtenir un layout qui ferait en gros:
     width = max(min(max-content, 100%), unbreakable-content)
     Donc 3 options:
@@ -227,31 +226,31 @@ const css = /* css */ `
       - Aucun des inconvénient ci dessus 
       -> Comportement par défaut
     */
-    overflow-wrap: anywhere;
-    /* When list has sticky header/footer, put a scroll padding */
-    scroll-margin-top: var(--x-list-scroll-spacing-top);
-    scroll-margin-right: var(--x-list-scroll-spacing-right);
-    scroll-margin-bottom: var(--x-list-scroll-spacing-bottom);
-    scroll-margin-left: var(--x-list-scroll-spacing-left);
-  }
+      overflow-wrap: anywhere;
+      /* When list has sticky header/footer, put a scroll padding */
+      scroll-margin-top: var(--x-list-scroll-spacing-top);
+      scroll-margin-right: var(--x-list-scroll-spacing-right);
+      scroll-margin-bottom: var(--x-list-scroll-spacing-bottom);
+      scroll-margin-left: var(--x-list-scroll-spacing-left);
+    }
 
-  /* Virtual scroll fillers — must remain invisible.
+    /* Virtual scroll fillers — must remain invisible.
      The browser may briefly flash them during scroll before the render window
      updates, so giving them a visible background would cause visual glitches. */
-  .navi_list_virtual_filler {
-    display: inline-block;
-    height: var(--size-to-fill, 0px);
-    list-style: none;
-    /* background: pink; */
-  }
-  &[data-horizontal] {
     .navi_list_virtual_filler {
-      width: var(--size-to-fill, 0px);
-      height: 100%;
+      display: inline-block;
+      height: var(--size-to-fill, 0px);
+      list-style: none;
+      /* background: pink; */
     }
-  }
+    &[data-horizontal] {
+      .navi_list_virtual_filler {
+        width: var(--size-to-fill, 0px);
+        height: 100%;
+      }
+    }
 
-  /* Empty state — hidden by default, shown when no list items are rendered.
+    /* Empty state — hidden by default, shown when no list items are rendered.
      order: 1 pushes fallbacks after all regular items in flex column layout.
      The list children are open-ended (headers, presentation items, real items),
      so we cannot control where the consumer places the fallback nodes in the DOM.
@@ -265,92 +264,95 @@ const css = /* css */ `
        4. HOT FIX OF THE DEAD for bottom filler + preact issue: order: 1
        5. sticky footer (order: 2)
   */
-  /* order: 0 keeps the header pinned before fallbacks (order: 1) in flex order,
+    /* order: 0 keeps the header pinned before fallbacks (order: 1) in flex order,
      ensuring the header (e.g. a search input) always appears above them. */
-  .navi_list_item_header {
-    position: sticky;
-    top: 0;
-    left: 0;
-    z-index: 1;
-    order: -2;
-  }
-  .navi_list_fallback,
-  .navi_list_no_match_fallback {
-    order: -1;
-    color: light-dark(#888, #aaa);
-    &[navi-default] {
-      display: inline;
-      padding: var(--list-item-padding);
-      text-align: center;
-      user-select: none;
+    .navi_list_item_header {
+      position: sticky;
+      top: 0;
+      left: 0;
+      z-index: 1;
+      order: -2;
     }
-  }
-  [navi-virtual-filler="after"] {
-    /* for some reason preact ends up puttin this element before the list items in some scenarios
+    .navi_list_fallback,
+    .navi_list_no_match_fallback {
+      order: -1;
+      color: light-dark(#888, #aaa);
+      &[navi-default] {
+        display: inline;
+        padding: var(--list-item-padding);
+        text-align: center;
+        user-select: none;
+      }
+    }
+    [navi-virtual-filler="after"] {
+      /* for some reason preact ends up puttin this element before the list items in some scenarios
      I've noticed that removing the ItemIndexToScrollOnMountRefContext.Provider
      does fix this issue (I suppose it's because it cause on less render of the list which is the problematic one)
      this order ENSURE that even when preact hallucinates we are still correctly putting the bottom filler
      after the list items */
-    order: 1;
-  }
-  /* order: 2 pins the footer after fallbacks (order: 1) and all items. */
-  .navi_list_item_footer {
-    position: sticky;
-    right: 0;
-    bottom: 0;
-    z-index: 1;
-    order: 2;
-  }
-
-  ::highlight(navi-search-match) {
-    color: var(--list-item-color-highlight);
-    background-color: var(--list-item-background-color-highlight);
-  }
-
-  /* Hide groups that have no rendered items. */
-  .navi_list_item_group {
-    min-width: 100%;
-
-    .navi_list_item_group_label {
+      order: 1;
+    }
+    /* order: 2 pins the footer after fallbacks (order: 1) and all items. */
+    .navi_list_item_footer {
       position: sticky;
-      top: 0;
+      right: 0;
+      bottom: 0;
       z-index: 1;
-      display: block;
-      background-color: var(--list-group-label-background-color);
-      user-select: none;
-
-      &[navi-default] {
-        padding: 4px 12px 2px;
-        color: light-dark(#888, #aaa);
-        font-weight: 600;
-        font-size: 0.75em;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-      }
+      order: 2;
     }
-    .navi_list_item_group_list {
-      display: flex;
-      width: max-content;
+
+    ::highlight(navi-search-match) {
+      color: var(--list-item-color-highlight);
+      background-color: var(--list-item-background-color-highlight);
+    }
+
+    /* Hide groups that have no rendered items. */
+    .navi_list_item_group {
       min-width: 100%;
-      margin: 0;
-      padding: 0;
-      flex-direction: column;
-      list-style: none;
 
-      /* Items inside a group must account for the sticky group label height
-         on top of the list's global header/scroll-padding spacing. */
-      .navi_list_item {
-        scroll-margin-top: calc(
-          var(--x-list-scroll-spacing-top) + var(--list-group-label-height, 0px)
-        );
-        scroll-margin-left: calc(
-          var(--x-list-scroll-spacing-left) + var(--list-group-label-width, 0px)
-        );
+      .navi_list_item_group_label {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        display: block;
+        background-color: var(--list-group-label-background-color);
+        user-select: none;
+
+        &[navi-default] {
+          padding: 4px 12px 2px;
+          color: light-dark(#888, #aaa);
+          font-weight: 600;
+          font-size: 0.75em;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+        }
       }
-    }
+      .navi_list_item_group_list {
+        display: flex;
+        width: max-content;
+        min-width: 100%;
+        margin: 0;
+        padding: 0;
+        flex-direction: column;
+        list-style: none;
 
-    &[data-hidden-while-empty]:not(:has([navi-list-item-real])) {
-      display: none;
+        /* Items inside a group must account for the sticky group label height
+         on top of the list's global header/scroll-padding spacing. */
+        .navi_list_item {
+          scroll-margin-top: calc(
+            var(--x-list-scroll-spacing-top) +
+              var(--list-group-label-height, 0px)
+          );
+          scroll-margin-left: calc(
+            var(--x-list-scroll-spacing-left) +
+              var(--list-group-label-width, 0px)
+          );
+        }
+      }
+
+      &[data-hidden-while-empty]:not(:has([navi-list-item-real])) {
+        display: none;
+      }
     }
   }
 `;
