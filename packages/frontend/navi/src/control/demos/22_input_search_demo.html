@@ -374,6 +374,7 @@
         const [searchValue4, setSearchValue4] = useState("");
 
         return (
+          <>
           <div className="demo-section">
             <h2>Search Input Variations</h2>
             <p className="states-description">
@@ -449,14 +450,6 @@
               </fieldset>
 
               <fieldset>
-                <legend>Long placeholder</legend>
-                <Input
-                  type="search"
-                  placeholder="Search by name, email address, phone number or any other identifier…"
-                />
-              </fieldset>
-
-              <fieldset>
                 <legend>WTF</legend>
                 <Input
                   type="search"
@@ -480,6 +473,86 @@
               </fieldset>
             </Box>
           </div>
+
+          <div className="demo-section">
+            <h2>Custom Icon &amp; Long Placeholder</h2>
+            <p className="states-description">
+              The icon prop replaces the default search icon. The red rectangle
+              shows the exact bounding box the icon occupies, so you can see
+              where the placeholder text gets clipped.
+            </p>
+            <Box column spacing="lg">
+              <fieldset>
+                <legend>Custom icon — short placeholder</legend>
+                <Input
+                  type="search"
+                  placeholder="Search…"
+                  icon={
+                    <svg
+                      width="100%"
+                      height="100%"
+                      viewBox="0 0 1 1"
+                      preserveAspectRatio="none"
+                      style={{ display: "block", position: "absolute", inset: 0 }}
+                    >
+                      <rect
+                        width="1"
+                        height="1"
+                        fill="rgba(255,0,0,0.15)"
+                        stroke="red"
+                        stroke-width="0.05"
+                        vector-effect="non-scaling-stroke"
+                      />
+                    </svg>
+                  }
+                />
+              </fieldset>
+
+              <fieldset>
+                <legend>Custom icon — long placeholder (cropped near icon)</legend>
+                <Input
+                  type="search"
+                  placeholder="Search by name, email address, phone number or any other identifier…"
+                  icon={
+                    <svg
+                      width="100%"
+                      height="100%"
+                      viewBox="0 0 1 1"
+                      preserveAspectRatio="none"
+                      style={{ display: "block", position: "absolute", inset: 0 }}
+                    >
+                      <rect
+                        width="1"
+                        height="1"
+                        fill="rgba(255,0,0,0.15)"
+                        stroke="red"
+                        stroke-width="0.05"
+                        vector-effect="non-scaling-stroke"
+                      />
+                    </svg>
+                  }
+                />
+              </fieldset>
+
+              <fieldset>
+                <legend>Default icon — long placeholder</legend>
+                <Input
+                  type="search"
+                  placeholder="Search by name, email address, phone number or any other identifier…"
+                />
+              </fieldset>
+
+              <fieldset>
+                <legend>Default icon — long placeholder — paddingX="m"</legend>
+                <Input
+                  type="search"
+                  placeholder="Search by name, email address, phone number or any other identifier…"
+                  paddingX="m"
+                />
+              </fieldset>
+            </Box>
+          </div>
+          </>
         );
       };
 
