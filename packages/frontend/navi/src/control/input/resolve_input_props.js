@@ -54,7 +54,7 @@ const NAVI_TYPE_DEFAULTS = {
     type: "text",
     inputMode: "numeric",
     autoCorrect: "off",
-    spellcheck: "false",
+    spellcheck: false,
     autoComplete: "off",
   },
 };
