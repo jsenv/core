@@ -26461,11 +26461,13 @@ const useInteractiveProps = (props, {
 installImportMetaCssBuild(import.meta);const css$I = /* css */`
   @layer navi {
     .navi_button {
-      --button-border-radius: 2px;
-      --button-outline-width: 1px;
-      --button-border-width: 1px;
-
+      --button-border-radius: var(--navi-control-border-radius);
+      --button-border-width: var(--navi-control-border-width);
+      /* Focus outline */
+      --button-outline-width: var(--navi-focus-outline-width);
+      --button-outline-offset: calc(-1 * var(--button-outline-width) / 2);
       --button-outline-color: var(--navi-focus-outline-color);
+      /* Focus outline end */
       --button-loader-color: var(--navi-loader-color);
       --button-border-color: light-dark(#767676, #8e8e93);
       --button-background-color: var(
@@ -26522,11 +26524,7 @@ installImportMetaCssBuild(import.meta);const css$I = /* css */`
   }
 
   .navi_button {
-    /* outline will draw the border when visible */
-    --x-button-outline-width: calc(
-      var(--button-outline-width) + var(--button-border-width)
-    );
-    --x-button-outline-offset: calc(-1 * var(--button-border-width));
+    --x-button-outline-offset: var(--button-outline-offset);
     --x-button-border-color: var(--button-border-color);
     --x-button-background: var(--button-background);
     --x-button-background-color: var(--button-background-color);
@@ -26602,9 +26600,9 @@ installImportMetaCssBuild(import.meta);const css$I = /* css */`
       border-style: solid;
       border-color: var(--x-button-border-color);
       border-radius: inherit;
-      outline-width: var(--x-button-outline-width);
+      outline-width: var(--button-outline-width);
       outline-color: var(--button-outline-color);
-      outline-offset: var(--x-button-outline-offset);
+      outline-offset: var(--button-outline-offset);
       transition-property: transform;
       transition-duration: 0.15s;
       transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
@@ -28467,15 +28465,16 @@ const useCheckableProps = (props) => {
 installImportMetaCssBuild(import.meta);const css$A = /* css */`
   @layer navi {
     .navi_checkbox {
-      --margin: 3px 3px 3px 4px;
-      --outline-offset: 1px;
-      --outline-width: 2px;
-      --border-width: 1px;
-      --border-radius: 2px;
-      --width: 0.815em;
-      --height: 0.815em;
-
+      --border-radius: var(--navi-control-border-radius);
+      --border-width: var(--navi-control-border-width);
+      /* Focus outline */
+      --outline-width: var(--navi-focus-outline-width);
+      --outline-offset: calc(var(--outline-width) / 2);
       --outline-color: var(--navi-focus-outline-color);
+      /* Focus outline end */
+      --margin: 3px 3px 3px 4px;
+      --width: round(0.815em, 1px);
+      --height: round(0.815em, 1px);
       --loader-color: var(--navi-loader-color);
       --border-color: light-dark(#767676, #8e8e93);
       --background-color: white;
@@ -29741,7 +29740,13 @@ installImportMetaCssBuild(import.meta);const css$y = /* css */`
   @layer navi {
     .navi_input_range {
       --border-radius: 6px;
-      --outline-width: 2px;
+      --border-width: var(--navi-control-border-width);
+      /* Focus outline */
+      --outline-border-radius: var(--navi-control-border-radius);
+      --outline-width: var(--navi-focus-outline-width);
+      --outline-offset: var(--outline-width);
+      --outline-color: var(--navi-focus-outline-color);
+      /* Focus outline end */
       --height: 8px;
       --thumb-size: 16px;
       --thumb-width: var(--thumb-size);
@@ -29749,7 +29754,6 @@ installImportMetaCssBuild(import.meta);const css$y = /* css */`
       --thumb-border-radius: 100%;
       --thumb-cursor: pointer;
 
-      --outline-color: var(--navi-focus-outline-color);
       --loader-color: var(--navi-loader-color);
       --accent-color: rgb(24, 117, 255);
       --color-mix-light: black;
@@ -29841,11 +29845,12 @@ installImportMetaCssBuild(import.meta);const css$y = /* css */`
     margin: 2px;
     flex-direction: inherit;
     align-items: center;
-    border-radius: 2px;
+    /* Just for the outline, the real border radius of the range is fixed */
+    border-radius: var(--outline-border-radius);
     outline-width: var(--outline-width);
     outline-style: none;
     outline-color: var(--outline-color);
-    outline-offset: 2px;
+    outline-offset: var(--outline-offset);
 
     .navi_control_input {
       margin: 0;
@@ -29878,7 +29883,7 @@ installImportMetaCssBuild(import.meta);const css$y = /* css */`
       width: 100%;
       height: var(--height);
       background: var(--x-background-color);
-      border-width: 1px;
+      border-width: var(--border-width);
       border-style: solid;
       border-color: var(--x-border-color);
       border-radius: var(--border-radius);
@@ -29888,7 +29893,7 @@ installImportMetaCssBuild(import.meta);const css$y = /* css */`
       box-sizing: border-box;
       width: 100%;
       height: var(--height);
-      border-width: 1px;
+      border-width: var(--border-width);
       border-style: solid;
       border-color: var(--x-track-border-color);
       border-radius: var(--border-radius);
@@ -31013,13 +31018,14 @@ installImportMetaCssBuild(import.meta);/**
 const css$w = /* css */`
   @layer navi {
     .navi_input {
-      --border-radius: 2px;
-      --border-width: 1px;
-      --outline-width: 1px;
-      --font-size: 14px;
-
-      /* Default */
+      --border-radius: var(--navi-control-border-radius);
+      --border-width: var(--navi-control-border-width);
+      /* Focus outline */
+      --outline-width: var(--navi-focus-outline-width);
+      --outline-offset: calc(var(--outline-width) / 2 * -1);
       --outline-color: var(--navi-focus-outline-color);
+      /* Focus outline end */
+      --font-size: var(--navi-control-font-size);
       --loader-color: var(--navi-loader-color);
       --border-color: light-dark(#767676, #8e8e93);
       --background-color: white;
@@ -31059,18 +31065,10 @@ const css$w = /* css */`
         grey
       );
       --color-disabled: var(--color-dimmed);
-
-      --left-slot-size: 1.2em;
-      --right-slot-size: 1.2em;
     }
   }
 
   .navi_input {
-    /* outline will draw the border when visible */
-    --x-outline-width: calc(var(--outline-width) + var(--border-width));
-    --x-outline-offset: calc(-1 * var(--border-width));
-    --x-left-slot-size: 0px;
-    --x-right-slot-size: 0xp;
     --x-border-color: var(--border-color);
     --x-background-color: var(--background-color);
     --x-color: var(--color);
@@ -31109,9 +31107,9 @@ const css$w = /* css */`
     border-style: solid;
     border-color: var(--x-border-color);
     border-radius: var(--border-radius);
-    outline-width: var(--x-outline-width);
+    outline-width: var(--outline-width);
     outline-color: var(--outline-color);
-    outline-offset: var(--x-outline-offset);
+    outline-offset: var(--outline-offset);
     cursor: inherit;
     pointer-events: auto;
 
@@ -34229,10 +34227,20 @@ const ListItemFooter = props => {
 installImportMetaCssBuild(import.meta);const css$m = /* css */`
   @layer navi {
     .navi_list_container {
-      --list-outline-color: var(--navi-focus-outline-color);
-      --list-item-outline-color: var(--navi-focus-outline-color);
-      --list-item-outline-width: 2px;
+      /* Focus outline */
+      --list-item-outline-width: var(--navi-focus-outline-width);
+      /* here we draw the outline ON the item, not outside of it */
+      /* This ensure the outline is visible even when there is scrollbars (which happens a lot on list items) */
       --list-item-outline-offset: calc(-1 * var(--list-item-outline-width));
+      --list-item-outline-color: var(--navi-focus-outline-color);
+      /* Focus outline end */
+      --selectable-item-padding-x-default: var(
+        --navi-control-padding-x-default
+      );
+      --selectable-item-padding-y-default: var(
+        --navi-control-padding-y-default
+      );
+
       /* Hover (mouse) */
       --list-item-background-color-hover: light-dark(#f5f5f5, #2a2a2a);
       --list-item-color-hover: var(--list-item-color);
@@ -34257,13 +34265,6 @@ installImportMetaCssBuild(import.meta);const css$m = /* css */`
       /* Disabled */
       --list-item-color-disabled: light-dark(#aaa, #555);
       --list-item-background-color-disabled: var(--list-item-background-color);
-
-      --selectable-item-padding-x-default: var(
-        --navi-control-padding-x-default
-      );
-      --selectable-item-padding-y-default: var(
-        --navi-control-padding-y-default
-      );
     }
   }
 
@@ -34273,20 +34274,8 @@ installImportMetaCssBuild(import.meta);const css$m = /* css */`
   }
 
   .navi_list_container[navi-selectable] {
-    --x-list-outline-width: calc(
-      var(--list-outline-width) + var(--list-border-width)
-    );
-    --x-list-outline-offset: calc(-1 * var(--list-border-width));
-
     font-size: var(--navi-control-font-size);
     font-family: var(--navi-control-font-family);
-    outline-width: var(--x-list-outline-width);
-    outline-color: var(--list-outline-color);
-    outline-offset: var(--x-list-outline-offset);
-
-    &[data-focus-visible] {
-      outline-style: solid;
-    }
     &[data-callout] {
       --x-list-border-color: var(--callout-color);
     }
@@ -36380,12 +36369,15 @@ const pickerResolvers = [PickerPresetResolver, PickerCustomResolver, PickerTypeR
 installImportMetaCssBuild(import.meta);const css$k = /* css */`
   @layer navi {
     .navi_picker {
-      --picker-border-radius: 2px;
-      --picker-outline-width: 1px;
-      --picker-border-width: 1px;
+      --picker-border-radius: var(--navi-control-border-radius);
+      --picker-border-width: var(--navi-control-border-width);
+      /* Focus outline */
+      --picker-outline-width: var(--navi-focus-outline-width);
+      --picker-outline-offset: calc(-1 * var(--picker-outline-width) / 2);
+      --picker-outline-color: var(--navi-focus-outline-color);
+      /* Focus outline end */
       --picker-padding-x-default: var(--navi-control-padding-x-default);
       --picker-padding-y-default: var(--navi-control-padding-y-default);
-      --picker-outline-color: var(--navi-focus-outline-color);
       --picker-loader-color: var(--navi-loader-color);
       --picker-border-color: light-dark(#767676, #8e8e93);
       --picker-background-color: white;
@@ -36435,10 +36427,6 @@ installImportMetaCssBuild(import.meta);const css$k = /* css */`
   }
 
   .navi_picker {
-    --x-picker-outline-width: calc(
-      var(--picker-outline-width) + var(--picker-border-width)
-    );
-    --x-picker-outline-offset: calc(-1 * var(--picker-border-width));
     --x-picker-background-color: var(--picker-background-color);
     --x-picker-border-color: var(--picker-border-color);
     --x-picker-padding-top: var(
@@ -36494,10 +36482,10 @@ installImportMetaCssBuild(import.meta);const css$k = /* css */`
     border-style: solid;
     border-color: var(--x-picker-border-color);
     border-radius: var(--picker-border-radius);
-    outline-width: var(--x-picker-outline-width);
+    outline-width: var(--picker-outline-width);
     outline-style: none;
     outline-color: var(--picker-outline-color);
-    outline-offset: var(--x-picker-outline-offset);
+    outline-offset: var(--picker-outline-offset);
     cursor: var(--x-picker-cursor, pointer);
     pointer-events: auto;
     user-select: none;
