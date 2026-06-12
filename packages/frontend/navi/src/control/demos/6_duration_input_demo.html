@@ -45,12 +45,71 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useSignal } from "@preact/signals";
-      import { Box, Input, Unit, NaviDebug } from "@jsenv/navi";
+      import { Box, Input, Unit, Text, NaviDebug } from "@jsenv/navi";
 
       const App = () => (
         <Box flex="y" spacing="l">
           <BasicDemo />
+          <LongUnitDemo />
         </Box>
+      );
+
+      const DurationInputWidget = ({
+        hours,
+        minutes,
+        onHours,
+        onMinutes,
+        unitHour,
+        unitMinute,
+      }) => (
+        <div
+          style={{
+            display: "inline-flex",
+            alignItems: "flex-end",
+            gap: "8px",
+            padding: "16px",
+            border: "1px dotted #aaa",
+            borderRadius: "4px",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+            }}
+          >
+            <Input
+              type="navi_hour"
+              unit={false}
+              variant="underline"
+              size="l"
+              width="100%"
+              value={hours}
+              action={onHours}
+            />
+            {unitHour}
+          </div>
+          <span style={{ paddingBottom: "4px" }}>:</span>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+            }}
+          >
+            <Input
+              type="navi_minute"
+              size="l"
+              unit={false}
+              variant="underline"
+              width="100%"
+              value={minutes}
+              action={onMinutes}
+            />
+            {unitMinute}
+          </div>
+        </div>
       );
 
       // ── BasicDemo ─────────────────────────────────────────────────────────
@@ -69,53 +128,55 @@
               accompagné de son label d'unité (<code>&lt;Unit&gt;</code>)
               affiché en dessous.
             </p>
-            <div
-              style={{
-                display: "inline-block",
-                padding: "16px",
-                border: "1px dotted #aaa",
-                borderRadius: "4px",
+            <DurationInputWidget
+              hours={hours}
+              minutes={minutes}
+              onHours={(v) => {
+                hoursSignal.value = v;
               }}
-            >
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "auto auto auto",
-                  gridTemplateRows: "auto auto",
-                  alignItems: "end",
-                  columnGap: "8px",
-                }}
-              >
-                <Input
-                  type="navi_hour"
-                  unit={false}
-                  variant="underline"
-                  size="l"
-                  width="30"
-                  value={hours}
-                  action={(v) => {
-                    hoursSignal.value = v;
-                  }}
-                />
-                <span style={{ textAlign: "center", paddingBottom: "4px" }}>
-                  :
-                </span>
-                <Input
-                  type="navi_minute"
-                  size="l"
-                  unit={false}
-                  variant="underline"
-                  width="30"
-                  value={minutes}
-                  action={(v) => {
-                    minutesSignal.value = v;
-                  }}
-                />
-                <Unit unit="hour" plural={hours !== 1} size="xs" />
-                <span />
+              onMinutes={(v) => {
+                minutesSignal.value = v;
+              }}
+              unitHour={<Unit unit="hour" plural={hours !== 1} size="xs" />}
+              unitMinute={
                 <Unit unit="minute" plural={minutes !== 1} size="xs" />
-              </div>
-            </div>
+              }
+            />
+            <p style={{ marginTop: "16px", color: "#555", fontSize: "13px" }}>
+              Total : <strong>{totalMinutes} min</strong>
+            </p>
+          </div>
+        );
+      };
+
+      // ── LongUnitDemo ──────────────────────────────────────────────────────
+      const LongUnitDemo = () => {
+        const hoursSignal = useSignal(1);
+        const minutesSignal = useSignal(30);
+        const hours = hoursSignal.value;
+        const minutes = minutesSignal.value;
+        const totalMinutes = hours * 60 + minutes;
+
+        return (
+          <div class="demo-section">
+            <h2>Long unit labels → input stretches</h2>
+            <p class="desc">
+              Quand le label d'unité est plus large que l'input, c'est le label
+              qui dicte la largeur de la colonne et l'input s'étire pour remplir
+              cet espace.
+            </p>
+            <DurationInputWidget
+              hours={hours}
+              minutes={minutes}
+              onHours={(v) => {
+                hoursSignal.value = v;
+              }}
+              onMinutes={(v) => {
+                minutesSignal.value = v;
+              }}
+              unitHour={<Unit unit="hour" plural size="xs" />}
+              unitMinute={<Unit unit="minute" plural size="xs" />}
+            />
             <p style={{ marginTop: "16px", color: "#555", fontSize: "13px" }}>
               Total : <strong>{totalMinutes} min</strong>
             </p>
