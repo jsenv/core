@@ -28,7 +28,7 @@ import {
 
 const css = /* css */ `
   @layer navi {
-    .navi_list_container {
+    .navi_list_item[navi-selectable] {
       /* Focus outline */
       --list-item-outline-width: var(--navi-focus-outline-width);
       /* here we draw the outline ON the item, not outside of it */
@@ -36,12 +36,9 @@ const css = /* css */ `
       --list-item-outline-offset: calc(-1 * var(--list-item-outline-width));
       --list-item-outline-color: var(--navi-focus-outline-color);
       /* Focus outline end */
-      --selectable-item-padding-x-default: var(
-        --navi-control-padding-x-default
-      );
-      --selectable-item-padding-y-default: var(
-        --navi-control-padding-y-default
-      );
+      --list-item-border-color: var(--navi-control-border-color);
+      --list-item-padding-x-default: var(--navi-control-padding-x-default);
+      --list-item-padding-y-default: var(--navi-control-padding-y-default);
 
       /* Hover (mouse) */
       --list-item-background-color-hover: light-dark(#f5f5f5, #2a2a2a);
@@ -74,10 +71,7 @@ const css = /* css */ `
     margin: 0; /* Reset margin that might come from fieldset */
     padding: 0; /* Reset padding that might come from fieldset */
   }
-
   .navi_list_container[navi-selectable] {
-    font-size: var(--navi-control-font-size);
-    font-family: var(--navi-control-font-family);
     &[data-callout] {
       --x-list-border-color: var(--callout-color);
     }
@@ -85,10 +79,11 @@ const css = /* css */ `
 
   .navi_list_item[navi-selectable] {
     --x-list-item-cursor: default;
-    --list-item-padding-x-default: var(--selectable-item-padding-x-default);
-    --list-item-padding-y-default: var(--selectable-item-padding-y-default);
+    --x-list-item-border-color: var(--list-item-border-color);
 
     position: relative;
+    font-size: var(--navi-control-font-size);
+    font-family: var(--navi-control-font-family);
     outline-width: var(--list-item-outline-width);
     outline-color: var(--list-item-outline-color);
     outline-offset: var(--list-item-outline-offset);
