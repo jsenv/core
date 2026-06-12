@@ -71,7 +71,6 @@
       } from "@jsenv/navi";
 
       const PRESET_DURATIONS = [60, 90, 120];
-
       // Value is one of the preset numbers (60, 90, 120) or the string "custom".
       // When "custom", the actual duration is derived from customDurationHourSignal
       // and customDurationMinuteSignal.
@@ -148,7 +147,7 @@
 
       // ── DurationField ─────────────────────────────────────────────────────
       const DurationControl = () => {
-        const value = durationSignal.value;
+        const duration = durationSignal.value;
 
         return (
           <Field vertical>
@@ -161,7 +160,7 @@
               name="duration"
               border="none"
               required
-              value={value}
+              value={duration}
               action={(v) => {
                 durationSignal.value = v;
               }}
@@ -172,14 +171,14 @@
                   index={i}
                   id={minutes}
                   value={minutes}
-                  selected={value === minutes}
+                  selected={duration === String(minutes)}
                 >
                   {minutes}
                 </MinuteOption>
               ))}
               <CustomDurationOption
                 index={PRESET_DURATIONS.length}
-                selected={value === "custom"}
+                selected={duration === "custom"}
               />
             </List>
           </Field>
