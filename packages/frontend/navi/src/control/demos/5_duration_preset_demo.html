@@ -83,13 +83,16 @@
         id: "custom_hour",
         type: "hour",
         min: 0,
-        max: 5,
+        max: 4,
+        // persists: true,
       });
       const customDurationMinuteSignal = stateSignal(15, {
         id: "custom_minute",
         type: "minute",
         min: 0,
         max: 59,
+        step: 5,
+        // persists: true,
       });
 
       const DEMO_ROUTE = route("", {
