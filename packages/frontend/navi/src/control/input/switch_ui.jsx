@@ -51,28 +51,28 @@ const css = /* css */ `
         --switch-thumb-color: rgb(55, 55, 55);
       }
     }
+  }
 
-    .navi_checkbox {
+  .navi_checkbox {
+    .navi_switch {
+      width: var(--switch-thumb-size);
+      height: var(--switch-thumb-size);
+      border-radius: var(--switch-thumb-border-radius);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+      fill: var(--switch-thumb-color);
+      transform: translateX(0);
+      transition: transform 0.2s ease;
+      user-select: none;
+    }
+
+    &[data-checked] {
       .navi_switch {
-        width: var(--switch-thumb-size);
-        height: var(--switch-thumb-size);
-        border-radius: var(--switch-thumb-border-radius);
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-        fill: var(--switch-thumb-color);
-        transform: translateX(0);
-        transition: transform 0.2s ease;
-        user-select: none;
-      }
-
-      &[data-checked] {
-        .navi_switch {
-          transform: translateX(
-            calc(
-              var(--switch-width) - var(--switch-thumb-size) +
-                var(--switch-padding)
-            )
-          );
-        }
+        transform: translateX(
+          calc(
+            var(--switch-width) - var(--switch-thumb-size) +
+              var(--switch-padding)
+          )
+        );
       }
     }
   }

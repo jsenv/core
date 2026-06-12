@@ -77,219 +77,219 @@ const css = /* css */ `
         black
       );
     }
+  }
 
-    .navi_checkbox {
-      --x-background-color: var(--background-color);
-      --x-border-color: var(--border-color);
-      --x-checkmark-color: var(--checkmark-color);
-      --x-cursor: var(--cursor);
+  .navi_checkbox {
+    --x-background-color: var(--background-color);
+    --x-border-color: var(--border-color);
+    --x-checkmark-color: var(--checkmark-color);
+    --x-cursor: var(--cursor);
+
+    position: relative;
+    display: inline-flex;
+    box-sizing: border-box;
+    width: var(--width);
+    min-width: var(--width); /* Do not allow to shrink */
+    height: var(--height);
+    min-height: var(--height); /* Do not allow to shrink */
+    margin: var(--margin);
+    background-color: var(--x-background-color);
+    border-width: var(--border-width);
+    border-style: solid;
+    border-color: var(--x-border-color);
+    border-radius: var(--border-radius);
+    outline-width: var(--outline-width);
+    outline-style: none;
+    outline-color: var(--outline-color);
+    outline-offset: var(--outline-offset);
+
+    .navi_control_input {
+      position: absolute;
+      inset: 0;
+      margin: 0;
+      border: none;
+      border-radius: inherit;
+      opacity: 0;
+      appearance: none; /* This allows border-radius to have an effect */
+      cursor: var(--x-cursor);
+    }
+
+    .navi_checkbox_accent_probe {
+      position: absolute;
+      width: 0;
+      height: 0;
+      background-color: var(--accent-color);
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    /* Focus */
+    &[data-focus-visible] {
+      z-index: 1;
+      outline-style: solid;
+    }
+    /* Hover */
+    &[data-hover] {
+      --x-background-color: var(--background-color-hover);
+      --x-border-color: var(--border-color-hover);
+
+      &[data-checked] {
+        --x-border-color: var(--border-color-hover-checked);
+        --x-background-color: var(--background-color-hover-checked);
+      }
+    }
+    /* Checked */
+    &[data-checked] {
+      --x-background-color: var(--background-color-checked);
+      --x-border-color: var(--border-color-checked);
+    }
+    /* Readonly */
+    &[data-readonly],
+    &[data-readonly][data-hover] {
+      --x-border-color: var(--border-color-readonly);
+      --x-background-color: var(--background-color-readonly);
+      --x-cursor: default;
+
+      &[data-checked] {
+        --x-border-color: var(--border-color-readonly-checked);
+        --x-background-color: var(--background-color-readonly-checked);
+        --x-checkmark-color: var(--checkmark-color-readonly);
+      }
+    }
+    /* Disabled */
+    &[data-disabled] {
+      --x-border-color: var(--border-color-disabled);
+      --x-background-color: var(--background-color-disabled);
+      --x-cursor: default;
+
+      &[data-checked] {
+        --x-border-color: var(--border-color-disabled-checked);
+        --x-background-color: var(--background-color-disabled-checked);
+        --x-checkmark-color: var(--checkmark-color-disabled);
+      }
+    }
+
+    /* Accent color adaptations */
+    &[data-accent-light] {
+      --color-mix: var(--color-mix-light);
+    }
+
+    /* Checkbox appearance */
+    &[data-appearance="checkbox"] {
+      .navi_checkbox_marker {
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        stroke: var(--x-checkmark-color);
+        transform: scale(0.5);
+      }
+
+      &[data-checked] {
+        .navi_checkbox_marker {
+          opacity: 1;
+          transform: scale(1);
+          transition-property: opacity, transform;
+          transition-duration: 0.15s;
+          transition-timing-function: ease;
+        }
+      }
+
+      &[data-accent-very-light] {
+        --x-background-color: rgba(0, 0, 0, 0.15);
+        &[data-checked] {
+          --x-background-color: var(--background-color-checked);
+        }
+      }
+      &[data-accent-needs-dark-fg] {
+        --x-checkmark-color: rgb(55, 55, 55);
+      }
+    }
+
+    /* Switch appearance */
+    &[data-appearance="switch"] {
+      --switch-outer-width: calc(var(--switch-width) + var(--switch-padding));
+      --margin: var(--switch-margin);
+      --width: var(--switch-outer-width);
+      --height: unset;
+      --border-radius: var(--switch-border-radius);
+      --background-color: var(--switch-background-color);
+      --background-color-hover: var(--switch-background-color-hover);
+      --background-color-readonly: var(--switch-background-color-readonly);
+      --background-color-disabled: var(--switch-background-color-disabled);
+      --background-color-checked: var(--switch-background-color-checked);
+      --background-color-hover-checked: var(
+        --switch-background-color-hover-checked
+      );
+      --background-color-readonly-checked: var(
+        --switch-background-color-readonly-checked
+      );
+      --background-color-disabled-checked: var(
+        --switch-background-color-disabled-checked
+      );
 
       position: relative;
-      display: inline-flex;
-      box-sizing: border-box;
-      width: var(--width);
-      min-width: var(--width); /* Do not allow to shrink */
-      height: var(--height);
-      min-height: var(--height); /* Do not allow to shrink */
-      margin: var(--margin);
+      /* We compute ourselves the width + padding otherwise during */
+      /* translation subpixel rounding makes the thumb feels too much to the right by 1px */
+      /* We use !important to win over anything that would be set globally */
+      box-sizing: content-box !important;
+      min-width: var(--switch-outer-width);
+      padding: var(--switch-padding);
       background-color: var(--x-background-color);
-      border-width: var(--border-width);
-      border-style: solid;
-      border-color: var(--x-border-color);
-      border-radius: var(--border-radius);
-      outline-width: var(--outline-width);
-      outline-style: none;
-      outline-color: var(--outline-color);
-      outline-offset: var(--outline-offset);
+      border-color: transparent;
+    }
 
-      .navi_control_input {
-        position: absolute;
-        inset: 0;
-        margin: 0;
-        border: none;
-        border-radius: inherit;
-        opacity: 0;
-        appearance: none; /* This allows border-radius to have an effect */
-        cursor: var(--x-cursor);
-      }
+    &[data-appearance="icon"] {
+      --margin: 0;
+      --width: auto;
+      --height: auto;
 
-      .navi_checkbox_accent_probe {
-        position: absolute;
-        width: 0;
-        height: 0;
-        background-color: var(--accent-color);
-        visibility: hidden;
-        pointer-events: none;
-      }
+      background: none;
+      border: none;
+    }
 
-      /* Focus */
-      &[data-focus-visible] {
-        z-index: 1;
-        outline-style: solid;
-      }
-      /* Hover */
-      &[data-hover] {
-        --x-background-color: var(--background-color-hover);
-        --x-border-color: var(--border-color-hover);
+    &[data-appearance="button"] {
+      --margin: 0;
+      --width: auto;
+      --height: auto;
+      --border-color: var(--button-border-color);
+      --border-color-hover: var(--button-border-color-hover);
+      --background-color: var(--button-background-color);
+      --background-color-hover: var(--button-background-color-hover);
+      --background-color-readonly: var(--button-background-color-readonly);
+      --background-color-disabled: var(--button-background-color-disabled);
+      --border-color-checked: var(--button-border-color);
+      --background-color-checked: var(--button-background-color);
 
-        &[data-checked] {
-          --x-border-color: var(--border-color-hover-checked);
-          --x-background-color: var(--background-color-hover-checked);
-        }
-      }
-      /* Checked */
-      &[data-checked] {
-        --x-background-color: var(--background-color-checked);
-        --x-border-color: var(--border-color-checked);
-      }
-      /* Readonly */
-      &[data-readonly],
-      &[data-readonly][data-hover] {
-        --x-border-color: var(--border-color-readonly);
-        --x-background-color: var(--background-color-readonly);
-        --x-cursor: default;
-
-        &[data-checked] {
-          --x-border-color: var(--border-color-readonly-checked);
-          --x-background-color: var(--background-color-readonly-checked);
-          --x-checkmark-color: var(--checkmark-color-readonly);
-        }
-      }
-      /* Disabled */
-      &[data-disabled] {
-        --x-border-color: var(--border-color-disabled);
-        --x-background-color: var(--background-color-disabled);
-        --x-cursor: default;
-
-        &[data-checked] {
-          --x-border-color: var(--border-color-disabled-checked);
-          --x-background-color: var(--background-color-disabled-checked);
-          --x-checkmark-color: var(--checkmark-color-disabled);
-        }
-      }
-
-      /* Accent color adaptations */
-      &[data-accent-light] {
-        --color-mix: var(--color-mix-light);
-      }
-
-      /* Checkbox appearance */
-      &[data-appearance="checkbox"] {
-        .navi_checkbox_marker {
-          width: 100%;
-          height: 100%;
-          opacity: 0;
-          stroke: var(--x-checkmark-color);
-          transform: scale(0.5);
-        }
-
-        &[data-checked] {
-          .navi_checkbox_marker {
-            opacity: 1;
-            transform: scale(1);
-            transition-property: opacity, transform;
-            transition-duration: 0.15s;
-            transition-timing-function: ease;
-          }
-        }
-
-        &[data-accent-very-light] {
-          --x-background-color: rgba(0, 0, 0, 0.15);
-          &[data-checked] {
-            --x-background-color: var(--background-color-checked);
-          }
-        }
-        &[data-accent-needs-dark-fg] {
-          --x-checkmark-color: rgb(55, 55, 55);
-        }
-      }
-
-      /* Switch appearance */
-      &[data-appearance="switch"] {
-        --switch-outer-width: calc(var(--switch-width) + var(--switch-padding));
-        --margin: var(--switch-margin);
-        --width: var(--switch-outer-width);
-        --height: unset;
-        --border-radius: var(--switch-border-radius);
-        --background-color: var(--switch-background-color);
-        --background-color-hover: var(--switch-background-color-hover);
-        --background-color-readonly: var(--switch-background-color-readonly);
-        --background-color-disabled: var(--switch-background-color-disabled);
-        --background-color-checked: var(--switch-background-color-checked);
-        --background-color-hover-checked: var(
-          --switch-background-color-hover-checked
-        );
-        --background-color-readonly-checked: var(
-          --switch-background-color-readonly-checked
-        );
-        --background-color-disabled-checked: var(
-          --switch-background-color-disabled-checked
-        );
-
-        position: relative;
-        /* We compute ourselves the width + padding otherwise during */
-        /* translation subpixel rounding makes the thumb feels too much to the right by 1px */
-        /* We use !important to win over anything that would be set globally */
-        box-sizing: content-box !important;
-        min-width: var(--switch-outer-width);
-        padding: var(--switch-padding);
-        background-color: var(--x-background-color);
-        border-color: transparent;
-      }
-
-      &[data-appearance="icon"] {
-        --margin: 0;
-        --width: auto;
-        --height: auto;
-
-        background: none;
-        border: none;
-      }
-
-      &[data-appearance="button"] {
-        --margin: 0;
-        --width: auto;
-        --height: auto;
-        --border-color: var(--button-border-color);
-        --border-color-hover: var(--button-border-color-hover);
-        --background-color: var(--button-background-color);
-        --background-color-hover: var(--button-background-color-hover);
-        --background-color-readonly: var(--button-background-color-readonly);
-        --background-color-disabled: var(--button-background-color-disabled);
-        --border-color-checked: var(--button-border-color);
-        --background-color-checked: var(--button-background-color);
-
-        padding-top: var(
-          --button-padding-top,
-          var(
-            --button-padding-y,
-            var(--button-padding, var(--button-padding-y-default))
-          )
-        );
-        padding-right: var(
-          --button-padding-right,
-          var(
-            --button-padding-x,
-            var(--button-padding, var(--button-padding-x-default))
-          )
-        );
-        padding-bottom: var(
-          --button-padding-bottom,
-          var(
-            --button-padding-y,
-            var(--button-padding, var(--button-padding-y-default))
-          )
-        );
-        padding-left: var(
-          --button-padding-left,
-          var(
-            --button-padding-x,
-            var(--button-padding, var(--button-padding-x-default))
-          )
-        );
-        align-items: center;
-        justify-content: center;
-      }
+      padding-top: var(
+        --button-padding-top,
+        var(
+          --button-padding-y,
+          var(--button-padding, var(--button-padding-y-default))
+        )
+      );
+      padding-right: var(
+        --button-padding-right,
+        var(
+          --button-padding-x,
+          var(--button-padding, var(--button-padding-x-default))
+        )
+      );
+      padding-bottom: var(
+        --button-padding-bottom,
+        var(
+          --button-padding-y,
+          var(--button-padding, var(--button-padding-y-default))
+        )
+      );
+      padding-left: var(
+        --button-padding-left,
+        var(
+          --button-padding-x,
+          var(--button-padding, var(--button-padding-x-default))
+        )
+      );
+      align-items: center;
+      justify-content: center;
     }
   }
 `;

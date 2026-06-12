@@ -89,243 +89,243 @@ const css = /* css */ `
       --button-border-color-disabled: var(--border-color-readonly);
       --button-background-color-disabled: var(--background-color-readonly);
     }
+  }
 
-    .navi_radio {
-      --x-outline-offset: var(--outline-offset);
-      --x-outline-width: var(--outline-width);
-      --x-border-width: var(--border-width);
-      --x-width: var(--width);
-      --x-height: var(--height);
-      --x-outline-color: var(--outline-color);
-      --x-background-color: var(--background-color);
-      --x-border-color: var(--border-color);
-      --x-radiomark-color: var(--radiomark-color);
-      --x-cursor: var(--cursor);
+  .navi_radio {
+    --x-outline-offset: var(--outline-offset);
+    --x-outline-width: var(--outline-width);
+    --x-border-width: var(--border-width);
+    --x-width: var(--width);
+    --x-height: var(--height);
+    --x-outline-color: var(--outline-color);
+    --x-background-color: var(--background-color);
+    --x-border-color: var(--border-color);
+    --x-radiomark-color: var(--radiomark-color);
+    --x-cursor: var(--cursor);
 
-      position: relative;
+    position: relative;
+    display: inline-flex;
+    box-sizing: border-box;
+    width: var(--x-width);
+    min-width: var(--x-width); /* Do not allow to shrink */
+    height: var(--x-height);
+    min-height: var(--x-height); /* Do not allow to shrink */
+    margin: var(--margin);
+    outline-width: var(--x-outline-width);
+    outline-style: none;
+    outline-color: var(--x-outline-color);
+    outline-offset: var(--x-outline-offset);
+
+    .navi_radio_accent_probe {
+      position: absolute;
+      width: 0;
+      height: 0;
+      background-color: var(--accent-color);
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .navi_control_input {
+      position: absolute;
+      inset: 0;
+      margin: 0;
+      padding: 0;
+      border: none;
+      border-radius: inherit;
+      opacity: 0;
+      appearance: none; /* This allows border-radius to have an effect */
+      cursor: var(--x-cursor);
+    }
+
+    /* Focus */
+    &[data-focus-visible] {
+      z-index: 1;
+      outline-style: solid;
+    }
+    /* Hover */
+    &[data-hover] {
+      --x-background-color: var(--background-color-hover);
+      --x-border-color: var(--border-color-hover);
+      --x-radiomark-color: var(--radiomark-color-hover);
+
+      &[data-checked] {
+        --x-background-color: var(--background-color-hover-checked);
+        --x-border-color: var(--border-color-hover-checked);
+      }
+    }
+    /* Checked */
+    &[data-checked] {
+      --x-background-color: var(--background-color-checked);
+      --x-border-color: var(--border-color-checked);
+    }
+    /* Readonly */
+    &[data-readonly] {
+      --x-cursor: default;
+      --x-background-color: var(--background-color-readonly);
+      --x-border-color: var(--border-color-readonly);
+      --x-radiomark-color: var(--radiomark-color-readonly);
+
+      .navi_radio_dashed_border {
+        display: none;
+      }
+      &[data-checked] {
+        --x-background-color: var(--background-color-readonly-checked);
+        --x-border-color: var(--border-color-readonly-checked);
+        --x-radiomark-color: var(--radiomark-color-readonly);
+      }
+    }
+    /* Disabled */
+    &[data-disabled] {
+      --x-cursor: default;
+      --x-background-color: var(--background-color-disabled);
+      --x-border-color: var(--border-color-disabled);
+      --x-radiomark-color: var(--radiomark-color-disabled);
+
+      &[data-checked] {
+        --x-background-color: var(--background-color-disabled-checked);
+        --x-border-color: var(--border-color-disabled);
+        --x-radiomark-color: var(--radiomark-color-disabled);
+      }
+    }
+
+    &[data-accent-light] {
+      --color-mix: var(--color-mix-light);
+    }
+
+    &[data-accent-very-light] {
+      --x-background-color: rgba(0, 0, 0, 0.15);
+      &[data-checked] {
+        --x-background-color: rgba(0, 0, 0, 0.15);
+      }
+    }
+
+    /* Radio appearance */
+    &[data-appearance="radio"] {
       display: inline-flex;
-      box-sizing: border-box;
-      width: var(--x-width);
-      min-width: var(--x-width); /* Do not allow to shrink */
-      height: var(--x-height);
-      min-height: var(--x-height); /* Do not allow to shrink */
-      margin: var(--margin);
-      outline-width: var(--x-outline-width);
-      outline-style: none;
-      outline-color: var(--x-outline-color);
-      outline-offset: var(--x-outline-offset);
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
 
-      .navi_radio_accent_probe {
-        position: absolute;
-        width: 0;
-        height: 0;
-        background-color: var(--accent-color);
-        visibility: hidden;
+      svg {
+        overflow: visible;
+      }
+
+      .navi_radio_border {
+        fill: var(--x-background-color);
+        stroke: var(--x-border-color);
+      }
+      .navi_radio_dashed_border {
+        display: none;
+      }
+      .navi_radio_marker {
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        fill: var(--x-radiomark-color);
+        transform: scale(0.3);
+        transform-origin: center;
         pointer-events: none;
       }
 
-      .navi_control_input {
-        position: absolute;
-        inset: 0;
-        margin: 0;
-        padding: 0;
-        border: none;
-        border-radius: inherit;
-        opacity: 0;
-        appearance: none; /* This allows border-radius to have an effect */
-        cursor: var(--x-cursor);
-      }
-
-      /* Focus */
-      &[data-focus-visible] {
-        z-index: 1;
-        outline-style: solid;
-      }
-      /* Hover */
-      &[data-hover] {
-        --x-background-color: var(--background-color-hover);
-        --x-border-color: var(--border-color-hover);
-        --x-radiomark-color: var(--radiomark-color-hover);
-
-        &[data-checked] {
-          --x-background-color: var(--background-color-hover-checked);
-          --x-border-color: var(--border-color-hover-checked);
-        }
-      }
-      /* Checked */
-      &[data-checked] {
-        --x-background-color: var(--background-color-checked);
-        --x-border-color: var(--border-color-checked);
-      }
-      /* Readonly */
-      &[data-readonly] {
-        --x-cursor: default;
-        --x-background-color: var(--background-color-readonly);
-        --x-border-color: var(--border-color-readonly);
-        --x-radiomark-color: var(--radiomark-color-readonly);
-
-        .navi_radio_dashed_border {
-          display: none;
-        }
-        &[data-checked] {
-          --x-background-color: var(--background-color-readonly-checked);
-          --x-border-color: var(--border-color-readonly-checked);
-          --x-radiomark-color: var(--radiomark-color-readonly);
-        }
-      }
-      /* Disabled */
-      &[data-disabled] {
-        --x-cursor: default;
-        --x-background-color: var(--background-color-disabled);
-        --x-border-color: var(--border-color-disabled);
-        --x-radiomark-color: var(--radiomark-color-disabled);
-
-        &[data-checked] {
-          --x-background-color: var(--background-color-disabled-checked);
-          --x-border-color: var(--border-color-disabled);
-          --x-radiomark-color: var(--radiomark-color-disabled);
-        }
-      }
-
-      &[data-accent-light] {
-        --color-mix: var(--color-mix-light);
-      }
-
-      &[data-accent-very-light] {
-        --x-background-color: rgba(0, 0, 0, 0.15);
-        &[data-checked] {
-          --x-background-color: rgba(0, 0, 0, 0.15);
-        }
-      }
-
-      /* Radio appearance */
-      &[data-appearance="radio"] {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 50%;
-
-        svg {
-          overflow: visible;
-        }
-
+      &[data-transition] {
         .navi_radio_border {
-          fill: var(--x-background-color);
-          stroke: var(--x-border-color);
+          transition: all 0.15s ease;
         }
         .navi_radio_dashed_border {
-          display: none;
+          transition: all 0.15s ease;
         }
         .navi_radio_marker {
-          width: 100%;
-          height: 100%;
-          opacity: 0;
-          fill: var(--x-radiomark-color);
-          transform: scale(0.3);
-          transform-origin: center;
-          pointer-events: none;
-        }
-
-        &[data-transition] {
-          .navi_radio_border {
-            transition: all 0.15s ease;
-          }
-          .navi_radio_dashed_border {
-            transition: all 0.15s ease;
-          }
-          .navi_radio_marker {
-            transition: all 0.15s ease;
-          }
-        }
-
-        &[data-checked] {
-          .navi_radio_marker {
-            opacity: 1;
-            transform: scale(1);
-          }
+          transition: all 0.15s ease;
         }
       }
 
-      /* Icon appearance */
-      &[data-appearance="icon"] {
-        --width: auto;
-        --height: auto;
-        --outline-offset: 2px;
-        --outline-width: 2px;
+      &[data-checked] {
+        .navi_radio_marker {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+    }
+
+    /* Icon appearance */
+    &[data-appearance="icon"] {
+      --width: auto;
+      --height: auto;
+      --outline-offset: 2px;
+      --outline-width: 2px;
+    }
+
+    /* Button appearance */
+    &[data-appearance="button"] {
+      --margin: 0;
+      --outline-offset: 0px;
+      --width: auto;
+      --height: auto;
+      --border-color: var(--button-border-color);
+      --border-color-hover: var(--button-border-color-hover);
+      --background-color: var(--button-background-color);
+      --background-color-hover: var(--button-background-color-hover);
+      --background-color-readonly: var(--button-background-color-readonly);
+      --background-color-disabled: var(--button-background-color-disabled);
+      --border-color-checked: var(--button-border-color);
+      --background-color-checked: var(--button-background-color);
+
+      padding-top: var(
+        --button-padding-top,
+        var(
+          --button-padding-y,
+          var(--button-padding, var(--button-padding-y-default))
+        )
+      );
+      padding-right: var(
+        --button-padding-right,
+        var(
+          --button-padding-x,
+          var(--button-padding, var(--button-padding-x-default))
+        )
+      );
+      padding-bottom: var(
+        --button-padding-bottom,
+        var(
+          --button-padding-y,
+          var(--button-padding, var(--button-padding-y-default))
+        )
+      );
+      padding-left: var(
+        --button-padding-left,
+        var(
+          --button-padding-x,
+          var(--button-padding, var(--button-padding-x-default))
+        )
+      );
+      align-items: center;
+      justify-content: center;
+      background-color: var(--x-background-color);
+      border-width: var(--button-border-width);
+      border-style: solid;
+      border-color: var(--x-border-color);
+      border-radius: var(--button-border-radius);
+
+      .navi_icon,
+      img {
+        border-radius: inherit;
       }
 
-      /* Button appearance */
-      &[data-appearance="button"] {
-        --margin: 0;
-        --outline-offset: 0px;
-        --width: auto;
-        --height: auto;
-        --border-color: var(--button-border-color);
-        --border-color-hover: var(--button-border-color-hover);
-        --background-color: var(--button-background-color);
-        --background-color-hover: var(--button-background-color-hover);
-        --background-color-readonly: var(--button-background-color-readonly);
-        --background-color-disabled: var(--button-background-color-disabled);
-        --border-color-checked: var(--button-border-color);
-        --background-color-checked: var(--button-background-color);
+      &[data-hover] {
+        --x-background-color: var(--button-background-color-hover);
+        --x-border-color: var(--button-border-color-hover);
+      }
+      &[data-checked] {
+        --x-border-color: var(--button-border-color-checked);
+        --x-background-color: var(--button-background-color-checked);
 
-        padding-top: var(
-          --button-padding-top,
-          var(
-            --button-padding-y,
-            var(--button-padding, var(--button-padding-y-default))
-          )
-        );
-        padding-right: var(
-          --button-padding-right,
-          var(
-            --button-padding-x,
-            var(--button-padding, var(--button-padding-x-default))
-          )
-        );
-        padding-bottom: var(
-          --button-padding-bottom,
-          var(
-            --button-padding-y,
-            var(--button-padding, var(--button-padding-y-default))
-          )
-        );
-        padding-left: var(
-          --button-padding-left,
-          var(
-            --button-padding-x,
-            var(--button-padding, var(--button-padding-x-default))
-          )
-        );
-        align-items: center;
-        justify-content: center;
-        background-color: var(--x-background-color);
-        border-width: var(--button-border-width);
-        border-style: solid;
-        border-color: var(--x-border-color);
-        border-radius: var(--button-border-radius);
-
-        .navi_icon,
-        img {
-          border-radius: inherit;
-        }
-
-        &[data-hover] {
-          --x-background-color: var(--button-background-color-hover);
-          --x-border-color: var(--button-border-color-hover);
-        }
-        &[data-checked] {
-          --x-border-color: var(--button-border-color-checked);
-          --x-background-color: var(--button-background-color-checked);
-
-          box-shadow:
-            inset 0 2px 4px rgba(0, 0, 0, 0.15),
-            inset 0 0 0 1px var(--button-border-color-checked);
-        }
-        &[data-disabled] {
-          --x-border-color: var(--button-border-color-disabled);
-          --x-background-color: var(--button-background-color-disabled);
-        }
+        box-shadow:
+          inset 0 2px 4px rgba(0, 0, 0, 0.15),
+          inset 0 0 0 1px var(--button-border-color-checked);
+      }
+      &[data-disabled] {
+        --x-border-color: var(--button-border-color-disabled);
+        --x-background-color: var(--button-background-color-disabled);
       }
     }
   }
