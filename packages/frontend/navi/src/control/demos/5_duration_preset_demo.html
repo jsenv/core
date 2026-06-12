@@ -393,7 +393,7 @@
             >
               <Box flex="y" alignX="center" padding="m" spacing="m">
                 <Text bold>Veuillez saisir une durée</Text>
-                <InputGroup flex spacing="xxs" alignY="start">
+                <InputGroup flex spacing="xxs">
                   <Box flex="y">
                     <Input
                       type="navi_hour"
@@ -406,9 +406,9 @@
                         customDurationHourSignal2.value = v;
                       }}
                     />
-                    <Unit unit="hour" plural color="secondary" />
+                    <Unit unit="hour" plural />
                   </Box>
-                  <span style={{ paddingTop: "0.3em" }}>:</span>
+                  <span>:</span>
                   <Box flex="y">
                     <Input
                       type="navi_minute"
