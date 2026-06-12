@@ -53,6 +53,7 @@
         Text,
         NaviDebug,
       } from "@jsenv/navi";
+      import { CallLog, useCallLog } from "./utils/call_log.jsx";
 
       const App = () => (
         <Box flex="y" spacing="l">
@@ -68,37 +69,55 @@
         onMinutes,
         unitHour,
         unitMinute,
-      }) => (
-        <Box border="1px dotted #aaa">
-          <InputGroup flex spacing="xxs">
-            <Box flex="y">
-              <Input
-                type="navi_hour"
-                unit={false}
-                variant="underline"
-                size="l"
-                expandX
-                value={hours}
-                action={onHours}
-              />
-              {unitHour}
+      }) => {
+        const [entries, push, clear] = useCallLog();
+        return (
+          <>
+            <Box border="1px dotted #aaa" width="fit-content">
+              <InputGroup flex spacing="xxs" width="fit-content">
+                <Box flex="y">
+                  <Input
+                    type="navi_hour"
+                    unit={false}
+                    variant="underline"
+                    size="l"
+                    expandX
+                    value={hours}
+                    uiAction={(v) => {
+                      push("hour uiAction", v);
+                    }}
+                    action={(v) => {
+                      push("hour action", v);
+                      onHours(v);
+                    }}
+                  />
+                  {unitHour}
+                </Box>
+                <span style={{ paddingBottom: "4px" }}>:</span>
+                <Box flex="y">
+                  <Input
+                    type="navi_minute"
+                    size="l"
+                    unit={false}
+                    variant="underline"
+                    expandX
+                    value={minutes}
+                    uiAction={(v) => {
+                      push("minute uiAction", v);
+                    }}
+                    action={(v) => {
+                      push("minute action", v);
+                      onMinutes(v);
+                    }}
+                  />
+                  {unitMinute}
+                </Box>
+              </InputGroup>
             </Box>
-            <span style={{ paddingBottom: "4px" }}>:</span>
-            <Box flex="y">
-              <Input
-                type="navi_minute"
-                size="l"
-                unit={false}
-                variant="underline"
-                expandX
-                value={minutes}
-                action={onMinutes}
-              />
-              {unitMinute}
-            </Box>
-          </InputGroup>
-        </Box>
-      );
+            <CallLog entries={entries} onClear={clear} />
+          </>
+        );
+      };
 
       // ── BasicDemo ─────────────────────────────────────────────────────────
       const BasicDemo = () => {
@@ -106,7 +125,6 @@
         const minutesSignal = useSignal(15);
         const hours = hoursSignal.value;
         const minutes = minutesSignal.value;
-        const totalMinutes = hours * 60 + minutes;
 
         return (
           <div class="demo-section">
@@ -128,9 +146,6 @@
               unitHour={<Unit unit="hour" plural color="secondary" />}
               unitMinute={<Unit unit="minute" plural color="secondary" />}
             />
-            <p style={{ marginTop: "16px", color: "#555", fontSize: "13px" }}>
-              Total : <strong>{totalMinutes} min</strong>
-            </p>
           </div>
         );
       };
@@ -141,7 +156,6 @@
         const minutesSignal = useSignal(30);
         const hours = hoursSignal.value;
         const minutes = minutesSignal.value;
-        const totalMinutes = hours * 60 + minutes;
 
         return (
           <div class="demo-section">
@@ -163,9 +177,6 @@
               unitHour={<Text size="xs">This is way longer</Text>}
               unitMinute={<Unit unit="minute" plural size="xs" />}
             />
-            <p style={{ marginTop: "16px", color: "#555", fontSize: "13px" }}>
-              Total : <strong>{totalMinutes} min</strong>
-            </p>
           </div>
         );
       };
