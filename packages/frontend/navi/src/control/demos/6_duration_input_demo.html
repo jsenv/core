@@ -44,6 +44,7 @@
     </div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
+      import { useRef } from "preact/hooks";
       import { useSignal } from "@preact/signals";
       import { Box, Input, Unit, Text, NaviDebug } from "@jsenv/navi";
 
@@ -61,37 +62,45 @@
         onMinutes,
         unitHour,
         unitMinute,
-      }) => (
-        <Box border="1px dotted #aaa">
-          <Box flex spacing="xxs">
-            <Box flex="y">
-              <Input
-                type="navi_hour"
-                unit={false}
-                variant="underline"
-                size="l"
-                expandX
-                value={hours}
-                action={onHours}
-              />
-              {unitHour}
-            </Box>
-            <span style={{ paddingBottom: "4px" }}>:</span>
-            <Box flex="y">
-              <Input
-                type="navi_minute"
-                size="l"
-                unit={false}
-                variant="underline"
-                expandX
-                value={minutes}
-                action={onMinutes}
-              />
-              {unitMinute}
+      }) => {
+        const minuteInputRef = useRef(null);
+        return (
+          <Box border="1px dotted #aaa">
+            <Box flex spacing="xxs">
+              <Box flex="y">
+                <Input
+                  type="navi_hour"
+                  unit={false}
+                  variant="underline"
+                  size="l"
+                  expandX
+                  value={hours}
+                  action={onHours}
+                  onnavi_input_filled={() => {
+                    minuteInputRef.current?.focus();
+                    minuteInputRef.current?.select();
+                  }}
+                />
+                {unitHour}
+              </Box>
+              <span style={{ paddingBottom: "4px" }}>:</span>
+              <Box flex="y">
+                <Input
+                  type="navi_minute"
+                  size="l"
+                  unit={false}
+                  variant="underline"
+                  expandX
+                  ref={minuteInputRef}
+                  value={minutes}
+                  action={onMinutes}
+                />
+                {unitMinute}
+              </Box>
             </Box>
           </Box>
-        </Box>
-      );
+        );
+      };
 
       // ── BasicDemo ─────────────────────────────────────────────────────────
       const BasicDemo = () => {

@@ -32,6 +32,7 @@ export const CONTROL_ATTRIBUTE_SET = new Set([
   "data-callout-position-fixed",
 
   "data-testid",
+  "onnavi_input_filled",
 ]);
 // prop concerning control but that won't end up in the DOM if not inside CONTROL_ATTRIBUTE_SET
 export const CONTROL_PROP_SET = new Set([

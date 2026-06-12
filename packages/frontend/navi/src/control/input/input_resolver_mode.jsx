@@ -32,6 +32,29 @@ const InputModeNumeric = (props) => {
     <Next
       maxLength={maxLength}
       {...props}
+      onInput={(e) => {
+        props.onInput?.(e);
+        if (e.defaultPrevented) {
+          return;
+        }
+        if (maxLength === undefined) {
+          return;
+        }
+        const input = e.currentTarget;
+        if (input.value.length < maxLength) {
+          return;
+        }
+        if (input.selectionStart !== maxLength) {
+          return;
+        }
+        // Field is full and caret is at the end: notify listeners then
+        // select all so the next keystroke starts a fresh value instead of
+        // being silently blocked by maxlength.
+        input.dispatchEvent(
+          new CustomEvent("navi_input_filled", { bubbles: true }),
+        );
+        input.select();
+      }}
       onKeyDown={(e) => {
         props.onKeyDown?.(e);
         if (e.defaultPrevented) {
