@@ -177,6 +177,16 @@
                     disabled
                   />
                 </Field>
+                <Field vertical>
+                  <Label>Overflow (width contrainte)</Label>
+                  <Picker
+                    name="date_overflow"
+                    type="date"
+                    defaultValue="2026-09-11"
+                    ui={<Picker.UI.Date long />}
+                    style={{ width: "120px" }}
+                  />
+                </Field>
               </Box>
             </div>
             <div>
@@ -612,6 +622,30 @@
               </Box>
             </div>
           </div>
+
+          <hr
+            style={{
+              margin: "20px 0",
+              border: "none",
+              borderTop: "1px solid #eee",
+            }}
+          />
+          <div class="states-col-header">numeric — jj/mm/aaaa</div>
+          <p class="desc">
+            Format numérique&nbsp;: chiffres uniquement, séparateurs selon la
+            locale (ex&nbsp;: «&nbsp;03/06/2026&nbsp;» en français).
+          </p>
+          <Box flex="y" spacing="xs" alignX="start">
+            {DEMO_DATES.map((d, i) => (
+              <Picker
+                key={i}
+                name={`date_numeric_${i}`}
+                type="date"
+                defaultValue={d}
+                ui={<Picker.UI.Date numeric />}
+              />
+            ))}
+          </Box>
         </div>
       );
 

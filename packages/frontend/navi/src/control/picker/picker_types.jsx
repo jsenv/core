@@ -69,13 +69,19 @@ export const PickerDateUI = (props) => {
   if (!value) {
     if (!placeholder) {
       return (
-        <Time type="date" color="var(--picker-placeholder-color" {...props} />
+        <Time
+          type="date"
+          color="var(--picker-placeholder-color"
+          capitalize
+          overflowEllipsis
+          {...props}
+        />
       );
     }
     return placeholder;
   }
   return (
-    <Time type="date" capitalize {...props}>
+    <Time type="date" capitalize overflowEllipsis {...props}>
       {value}
     </Time>
   );
