@@ -245,6 +245,32 @@ const css = /* css */ `
         --x-background-color: transparent;
       }
     }
+
+    &[data-variant="underline"] {
+      border-top: none;
+      border-right: none;
+      border-left: none;
+      border-radius: 0;
+      --border-width: 2px;
+      --x-background-color: transparent;
+      padding-right: 0;
+      padding-left: 0;
+
+      &[data-hover] {
+        --x-background-color: transparent;
+      }
+      &[data-focus-visible] {
+        --x-background-color: transparent;
+        --x-border-color: var(--outline-color);
+        outline-style: none;
+      }
+      &[data-readonly] {
+        --x-background-color: transparent;
+      }
+      &[data-disabled] {
+        --x-background-color: transparent;
+      }
+    }
   }
 
   .navi_input .navi_control_input::placeholder {
@@ -281,7 +307,7 @@ const useInputTextualProps = (props) => {
 };
 const InputTextualUI = (props) => {
   import.meta.css = css;
-  const { ui, discrete, width = "maxLength" } = props;
+  const { ui, discrete, variant, width = "maxLength" } = props;
   const [inputProps, remainingProps] = useInputTextualProps(props);
   const { id, basePseudoState, children } = inputProps;
   const uiStateController = getUIStateControllerById(id);
@@ -325,6 +351,7 @@ const InputTextualUI = (props) => {
       ui={undefined}
       data-discrete={discrete ? "" : undefined}
       discrete={undefined} // handled via data attribute
+      data-variant={variant || undefined}
       styleCSSVars={InputStyleCSSVars}
       pseudoStateSelector=".navi_control_input"
       pseudoClasses={InputPseudoClasses}
