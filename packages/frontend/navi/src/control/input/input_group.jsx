@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
+import { useDebugInteraction } from "@jsenv/navi/src/navi_debug.jsx";
 
 /**
  * Wraps multiple inputs together and handles keyboard navigation between them.
@@ -16,6 +17,8 @@ export const InputGroup = (props) => {
 };
 
 const useInputGroup = (ref) => {
+  const debug = useDebugInteraction();
+
   useEffect(() => {
     const el = ref.current;
     if (!el) {
@@ -49,6 +52,12 @@ const useInputGroup = (ref) => {
         const idx = inputs.indexOf(active);
         if (idx !== -1 && idx < inputs.length - 1) {
           e.preventDefault();
+          debug(
+            e,
+            "InputGroup ArrowRight at end of input[%d] → focus input[%d]",
+            idx,
+            idx + 1,
+          );
           focusInput(inputs[idx + 1]);
         }
       } else {
@@ -61,6 +70,12 @@ const useInputGroup = (ref) => {
         const idx = inputs.indexOf(active);
         if (idx > 0) {
           e.preventDefault();
+          debug(
+            e,
+            "InputGroup ArrowLeft at start of input[%d] → focus input[%d]",
+            idx,
+            idx - 1,
+          );
           focusInput(inputs[idx - 1]);
         }
       }
@@ -74,6 +89,12 @@ const useInputGroup = (ref) => {
       const inputs = getInputs();
       const idx = inputs.indexOf(input);
       if (idx !== -1 && idx < inputs.length - 1) {
+        debug(
+          e,
+          "InputGroup navi_input_full on input[%d] → focus input[%d]",
+          idx,
+          idx + 1,
+        );
         focusInput(inputs[idx + 1]);
         e.preventDefault();
       }
@@ -85,7 +106,7 @@ const useInputGroup = (ref) => {
       el.removeEventListener("keydown", handleKeyDown, { capture: false });
       el.removeEventListener("navi_input_full", handleNaviInputFull);
     };
-  }, []);
+  }, [debug]);
 };
 
 const isTextInputElement = (el) => {
