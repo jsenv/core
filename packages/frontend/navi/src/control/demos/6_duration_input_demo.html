@@ -47,6 +47,8 @@
       import { useSignal } from "@preact/signals";
       import {
         Box,
+        Button,
+        Form,
         Input,
         InputGroup,
         Unit,
@@ -71,51 +73,61 @@
         unitMinute,
       }) => {
         const [entries, push, clear] = useCallLog();
+
         return (
-          <>
-            <Box border="1px dotted #aaa" width="fit-content">
-              <InputGroup flex spacing="xxs" width="fit-content">
-                <Box flex="y">
-                  <Input
-                    type="navi_hour"
-                    unit={false}
-                    variant="underline"
-                    size="l"
-                    expandX
-                    value={hours}
-                    uiAction={(v) => {
-                      push("hour uiAction", v);
-                    }}
-                    action={(v) => {
-                      push("hour action", v);
-                      onHours(v);
-                    }}
-                  />
-                  {unitHour}
-                </Box>
-                <span style={{ paddingBottom: "4px" }}>:</span>
-                <Box flex="y">
-                  <Input
-                    type="navi_minute"
-                    size="l"
-                    unit={false}
-                    variant="underline"
-                    expandX
-                    value={minutes}
-                    uiAction={(v) => {
-                      push("minute uiAction", v);
-                    }}
-                    action={(v) => {
-                      push("minute action", v);
-                      onMinutes(v);
-                    }}
-                  />
-                  {unitMinute}
-                </Box>
-              </InputGroup>
+          <Form
+            action={(values) => {
+              push("submit", values);
+            }}
+          >
+            <Box flex="y" spacing="s" alignX="start">
+              <Box border="1px dotted #aaa" width="fit-content">
+                <InputGroup flex spacing="xxs" width="fit-content">
+                  <Box flex="y">
+                    <Input
+                      type="navi_hour"
+                      name="hours"
+                      unit={false}
+                      variant="underline"
+                      size="l"
+                      expandX
+                      value={hours}
+                      uiAction={(v) => {
+                        push("hour uiAction", v);
+                      }}
+                      action={(v) => {
+                        push("hour action", v);
+                        onHours(v);
+                      }}
+                    />
+                    {unitHour}
+                  </Box>
+                  <span style={{ paddingBottom: "4px" }}>:</span>
+                  <Box flex="y">
+                    <Input
+                      type="navi_minute"
+                      name="minutes"
+                      size="l"
+                      unit={false}
+                      variant="underline"
+                      expandX
+                      value={minutes}
+                      uiAction={(v) => {
+                        push("minute uiAction", v);
+                      }}
+                      action={(v) => {
+                        push("minute action", v);
+                        onMinutes(v);
+                      }}
+                    />
+                    {unitMinute}
+                  </Box>
+                </InputGroup>
+              </Box>
+              <Button type="submit">Submit</Button>
+              <CallLog entries={entries} onClear={clear} />
             </Box>
-            <CallLog entries={entries} onClear={clear} />
-          </>
+          </Form>
         );
       };
 
