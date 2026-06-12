@@ -116,9 +116,9 @@
                   <List
                     selectable
                     horizontal
-                    borderWidth="1"
-                    action="send"
-                    onAction={(v) => {
+                    spacing="xxs"
+                    border="none"
+                    action={(v) => {
                       pickerValue.value = v;
                     }}
                   >
@@ -129,6 +129,8 @@
                         index={i}
                         value={c}
                         selected={pickerValue.value === c}
+                        borderWidth="1"
+                        borderRadius="xs"
                       >
                         {c}
                       </List.Item>
