@@ -32,9 +32,9 @@ try {
 ```js
 {
   "urlProgression": [
-    "http://127.0.0.1/map?datetime=2024-03-15"
+    "http://127.0.0.1/map?datetime=2024-03-15T14%3A30%3A00.000Z"
   ],
-  "datetime_signal_value": 'Date("2024-03-15T00:00:00.000Z")'
+  "datetime_signal_value": '"2024-03-15T14:30:00.000Z"'
 }
 ```
 

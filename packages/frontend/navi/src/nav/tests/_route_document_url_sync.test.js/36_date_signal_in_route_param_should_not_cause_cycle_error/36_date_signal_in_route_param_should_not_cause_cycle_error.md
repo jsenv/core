@@ -34,7 +34,7 @@ try {
   "urlProgression": [
     "http://127.0.0.1/map?date=2024-03-15"
   ],
-  "date_signal_value": 'Date("2024-03-15T00:00:00.000Z")'
+  "date_signal_value": '"2024-03-15"'
 }
 ```
 
