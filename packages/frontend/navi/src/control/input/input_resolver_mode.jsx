@@ -62,48 +62,41 @@ const InputModeNumeric = (props) => {
         if (e.defaultPrevented) {
           return;
         }
-        if (e.key === "ArrowRight") {
-          const input = e.currentTarget;
-          if (
-            maxLength !== undefined &&
-            input.value.length >= maxLength &&
-            input.selectionStart === maxLength &&
-            input.selectionEnd === maxLength
-          ) {
-            e.preventDefault();
-            dispatchInternalCustomEvent(input, "navi_input_next", {
-              event: e,
-              reason: "arrow_right",
-            });
-          }
+        if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+          performArrowUpDown(e);
           return;
         }
-        if (e.key !== "ArrowUp" && e.key !== "ArrowDown") {
-          return;
-        }
-        e.preventDefault();
-        const currentValue = Number(e.currentTarget.value);
-        if (Number.isNaN(currentValue)) {
-          return;
-        }
-        const delta = e.key === "ArrowUp" ? step : -step;
-        // Snap to step grid relative to step base (min ?? 0), then move
-        const stepBase = min !== undefined ? min : 0;
-        const offset = currentValue - stepBase;
-        const currentStepIndex = Math.round(offset / step);
-        const snapped = stepBase + currentStepIndex * step;
-        let nextValue = snapped + delta;
-        if (min !== undefined && nextValue < min) {
-          nextValue = min;
-        }
-        if (max !== undefined && nextValue > max) {
-          nextValue = max;
-        }
-        triggerStringAction("update", nextValue, {
-          event: e,
-          actionTarget: e.currentTarget,
-        });
       }}
     />
   );
+};
+
+const performArrowUpDown = (e) => {
+  const input = e.currentTarget;
+  const currentValue = Number(input.value);
+  if (Number.isNaN(currentValue)) {
+    e.preventDefault();
+    return;
+  }
+  const min = input.min;
+  const max = input.max;
+  const step = input.step;
+  const delta = e.key === "ArrowUp" ? step : -step;
+  // Snap to step grid relative to step base (min ?? 0), then move
+  const stepBase = min !== undefined ? min : 0;
+  const offset = currentValue - stepBase;
+  const currentStepIndex = Math.round(offset / step);
+  const snapped = stepBase + currentStepIndex * step;
+  let nextValue = snapped + delta;
+  if (min !== undefined && nextValue < min) {
+    nextValue = min;
+  }
+  if (max !== undefined && nextValue > max) {
+    nextValue = max;
+  }
+  triggerStringAction("update", nextValue, {
+    event: e,
+    actionTarget: e.currentTarget,
+  });
+  e.preventDefault();
 };
