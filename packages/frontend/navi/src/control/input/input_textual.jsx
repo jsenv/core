@@ -19,7 +19,6 @@
  * - <InputRadio /> for type="radio"
  */
 
-import { dispatchPublicCustomEvent } from "@jsenv/dom";
 import { useId, useRef } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
@@ -374,38 +373,7 @@ const InputTextualUI = (props) => {
         color="var(--loader-color)"
         inset={-1}
       />
-      <RealInput
-        {...inputProps}
-        onKeyDown={(e) => {
-          inputProps.onKeyDown?.(e);
-          if (e.defaultPrevented) {
-            return;
-          }
-          if (e.key === "ArrowLeft") {
-            const input = e.currentTarget;
-            const atStart =
-              input.selectionStart === 0 && input.selectionEnd === 0;
-            if (atStart) {
-              dispatchPublicCustomEvent(input, "navi_input_nav", {
-                event: e,
-                direction: "prev",
-              });
-            }
-          }
-          if (e.key === "ArrowRight") {
-            const input = e.currentTarget;
-            const atEnd =
-              input.selectionStart === input.value.length &&
-              input.selectionEnd === input.value.length;
-            if (atEnd) {
-              dispatchPublicCustomEvent(input, "navi_input_nav", {
-                event: e,
-                direction: "next",
-              });
-            }
-          }
-        }}
-      />
+      <RealInput {...inputProps} />
       {childrenWithContext}
       {variant === "underline" ? (
         <span className="navi_input_underline" />

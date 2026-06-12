@@ -44,9 +44,15 @@
     </div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useRef } from "preact/hooks";
       import { useSignal } from "@preact/signals";
-      import { Box, Input, Unit, Text, NaviDebug } from "@jsenv/navi";
+      import {
+        Box,
+        Input,
+        InputGroup,
+        Unit,
+        Text,
+        NaviDebug,
+      } from "@jsenv/navi";
 
       const App = () => (
         <Box flex="y" spacing="l">
@@ -62,46 +68,37 @@
         onMinutes,
         unitHour,
         unitMinute,
-      }) => {
-        const minuteInputRef = useRef(null);
-        return (
-          <Box border="1px dotted #aaa">
-            <Box flex spacing="xxs">
-              <Box flex="y">
-                <Input
-                  type="navi_hour"
-                  unit={false}
-                  variant="underline"
-                  size="l"
-                  expandX
-                  value={hours}
-                  action={onHours}
-                  onnavi_input_nav={(e) => {
-                    if (e.detail.direction !== "next") return;
-                    minuteInputRef.current?.focus();
-                    minuteInputRef.current?.select();
-                  }}
-                />
-                {unitHour}
-              </Box>
-              <span style={{ paddingBottom: "4px" }}>:</span>
-              <Box flex="y">
-                <Input
-                  type="navi_minute"
-                  size="l"
-                  unit={false}
-                  variant="underline"
-                  expandX
-                  ref={minuteInputRef}
-                  value={minutes}
-                  action={onMinutes}
-                />
-                {unitMinute}
-              </Box>
+      }) => (
+        <Box border="1px dotted #aaa">
+          <InputGroup>
+            <Box flex="y">
+              <Input
+                type="navi_hour"
+                unit={false}
+                variant="underline"
+                size="l"
+                expandX
+                value={hours}
+                action={onHours}
+              />
+              {unitHour}
             </Box>
-          </Box>
-        );
-      };
+            <span style={{ paddingBottom: "4px" }}>:</span>
+            <Box flex="y">
+              <Input
+                type="navi_minute"
+                size="l"
+                unit={false}
+                variant="underline"
+                expandX
+                value={minutes}
+                action={onMinutes}
+              />
+              {unitMinute}
+            </Box>
+          </InputGroup>
+        </Box>
+      );
 
       // ── BasicDemo ─────────────────────────────────────────────────────────
       const BasicDemo = () => {
