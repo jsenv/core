@@ -56,9 +56,19 @@ const definePseudoClass = (pseudoClass, definition) => {
   PSEUDO_CLASSES[pseudoClass] = definition;
 };
 
+// On touch devices (hover: none), browsers synthesize mouseenter/mouseleave
+// from touch events but never fire mouseleave when the finger lifts, leaving
+// el.matches(":hover") stuck at true. This causes hover styles (e.g. input
+// background highlight) to remain visible long after the user has stopped
+// touching the element. Checking (hover: hover) lets us skip hover tracking
+// entirely on touch-only devices where persistent hover makes no sense.
+const hoverSupported = window.matchMedia("(hover: hover)").matches;
 definePseudoClass(":hover", {
   attribute: "data-hover",
   setup: (el, callback) => {
+    if (!hoverSupported) {
+      return () => {};
+    }
     const recheckProxy = (e) => {
       const proxy = findControlProxy(el);
       if (proxy) {
@@ -122,6 +132,9 @@ definePseudoClass(":hover", {
     };
   },
   test: (el) => {
+    if (!hoverSupported) {
+      return false;
+    }
     if (el.matches(":hover")) {
       return true;
     }
