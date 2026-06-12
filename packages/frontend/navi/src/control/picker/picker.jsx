@@ -30,8 +30,8 @@ const css = /* css */ `
       --picker-border-radius: 2px;
       --picker-outline-width: 1px;
       --picker-border-width: 1px;
-      --picker-padding-x-default: 8px;
-      --picker-padding-y-default: 5px;
+      --picker-padding-x-default: 2px;
+      --picker-padding-y-default: 1px;
       --picker-outline-color: var(--navi-focus-outline-color);
       --picker-loader-color: var(--navi-loader-color);
       --picker-border-color: light-dark(#767676, #8e8e93);
