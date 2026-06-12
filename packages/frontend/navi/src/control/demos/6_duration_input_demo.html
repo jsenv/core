@@ -82,14 +82,8 @@
           >
             <Box flex="y" spacing="s" alignX="start">
               <Box border="1px dotted #aaa" width="fit-content">
-                <InputGroup
-                  flex
-                  spacing="xxs"
-                  width="fit-content"
-                  font="var(--navi-control-font-family)"
-                  size="var(--navi-control-font-size)"
-                >
-                  <Box flex="y">
+                <InputGroup flex="y" spacing="xxs" width="fit-content">
+                  <Box flex spacing="xxs" alignY="center">
                     <Input
                       type="navi_hour"
                       name="hours"
@@ -105,11 +99,9 @@
                         push("hour action", v);
                         onHours(v);
                       }}
-                    />
-                    {unitHour}
-                  </Box>
-                  <span>:</span>
-                  <Box flex="y">
+                    >
+                      <span>:</span>
+                    </Input>
                     <Input
                       type="navi_minute"
                       name="minutes"
@@ -126,8 +118,14 @@
                         onMinutes(v);
                       }}
                     />
-                    {unitMinute}
                   </Box>
+                  {unitHour || unitMinute ? (
+                    <Box flex spacing="xxs">
+                      {unitHour ? <Box expandX>{unitHour}</Box> : null}
+                      <span style={{ visibility: "hidden" }}>:</span>
+                      {unitMinute ? <Box expandX>{unitMinute}</Box> : null}
+                    </Box>
+                  ) : null}
                 </InputGroup>
               </Box>
               <Button type="submit">Submit</Button>
