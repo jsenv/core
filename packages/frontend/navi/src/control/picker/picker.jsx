@@ -27,12 +27,15 @@ import {
 const css = /* css */ `
   @layer navi {
     .navi_picker {
-      --picker-border-radius: 2px;
-      --picker-outline-width: 1px;
-      --picker-border-width: 1px;
+      --picker-border-radius: var(--navi-control-border-radius);
+      --picker-border-width: var(--navi-control-border-width);
+      /* Focus outline */
+      --picker-outline-width: var(--navi-focus-outline-width);
+      --picker-outline-offset: calc(-1 * var(--picker-outline-width) / 2);
+      --picker-outline-color: var(--navi-focus-outline-color);
+      /* Focus outline end */
       --picker-padding-x-default: var(--navi-control-padding-x-default);
       --picker-padding-y-default: var(--navi-control-padding-y-default);
-      --picker-outline-color: var(--navi-focus-outline-color);
       --picker-loader-color: var(--navi-loader-color);
       --picker-border-color: light-dark(#767676, #8e8e93);
       --picker-background-color: white;
@@ -82,10 +85,6 @@ const css = /* css */ `
   }
 
   .navi_picker {
-    --x-picker-outline-width: calc(
-      var(--picker-outline-width) + var(--picker-border-width)
-    );
-    --x-picker-outline-offset: calc(-1 * var(--picker-border-width));
     --x-picker-background-color: var(--picker-background-color);
     --x-picker-border-color: var(--picker-border-color);
     --x-picker-padding-top: var(
@@ -141,10 +140,10 @@ const css = /* css */ `
     border-style: solid;
     border-color: var(--x-picker-border-color);
     border-radius: var(--picker-border-radius);
-    outline-width: var(--x-picker-outline-width);
+    outline-width: var(--picker-outline-width);
     outline-style: none;
     outline-color: var(--picker-outline-color);
-    outline-offset: var(--x-picker-outline-offset);
+    outline-offset: var(--picker-outline-offset);
     cursor: var(--x-picker-cursor, pointer);
     pointer-events: auto;
     user-select: none;

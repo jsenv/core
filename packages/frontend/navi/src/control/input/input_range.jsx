@@ -10,7 +10,13 @@ const css = /* css */ `
   @layer navi {
     .navi_input_range {
       --border-radius: 6px;
-      --outline-width: 2px;
+      --border-width: var(--navi-control-border-width);
+      /* Focus outline */
+      --outline-border-radius: var(--navi-control-border-radius);
+      --outline-width: var(--navi-focus-outline-width);
+      --outline-offset: var(--outline-width);
+      --outline-color: var(--navi-focus-outline-color);
+      /* Focus outline end */
       --height: 8px;
       --thumb-size: 16px;
       --thumb-width: var(--thumb-size);
@@ -18,7 +24,6 @@ const css = /* css */ `
       --thumb-border-radius: 100%;
       --thumb-cursor: pointer;
 
-      --outline-color: var(--navi-focus-outline-color);
       --loader-color: var(--navi-loader-color);
       --accent-color: rgb(24, 117, 255);
       --color-mix-light: black;
@@ -110,11 +115,12 @@ const css = /* css */ `
     margin: 2px;
     flex-direction: inherit;
     align-items: center;
-    border-radius: 2px;
+    /* Just for the outline, the real border radius of the range is fixed */
+    border-radius: var(--outline-border-radius);
     outline-width: var(--outline-width);
     outline-style: none;
     outline-color: var(--outline-color);
-    outline-offset: 2px;
+    outline-offset: var(--outline-offset);
 
     .navi_control_input {
       margin: 0;
@@ -147,7 +153,7 @@ const css = /* css */ `
       width: 100%;
       height: var(--height);
       background: var(--x-background-color);
-      border-width: 1px;
+      border-width: var(--border-width);
       border-style: solid;
       border-color: var(--x-border-color);
       border-radius: var(--border-radius);
@@ -157,7 +163,7 @@ const css = /* css */ `
       box-sizing: border-box;
       width: 100%;
       height: var(--height);
-      border-width: 1px;
+      border-width: var(--border-width);
       border-style: solid;
       border-color: var(--x-track-border-color);
       border-radius: var(--border-radius);

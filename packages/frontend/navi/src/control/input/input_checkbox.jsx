@@ -9,15 +9,16 @@ import { useCheckableProps } from "./use_checkable_props.js";
 const css = /* css */ `
   @layer navi {
     .navi_checkbox {
-      --margin: 3px 3px 3px 4px;
-      --outline-offset: 1px;
-      --outline-width: 2px;
-      --border-width: 1px;
-      --border-radius: 2px;
-      --width: 0.815em;
-      --height: 0.815em;
-
+      --border-radius: var(--navi-control-border-radius);
+      --border-width: var(--navi-control-border-width);
+      /* Focus outline */
+      --outline-width: var(--navi-focus-outline-width);
+      --outline-offset: calc(var(--outline-width) / 2);
       --outline-color: var(--navi-focus-outline-color);
+      /* Focus outline end */
+      --margin: 3px 3px 3px 4px;
+      --width: round(0.815em, 1px);
+      --height: round(0.815em, 1px);
       --loader-color: var(--navi-loader-color);
       --border-color: light-dark(#767676, #8e8e93);
       --background-color: white;

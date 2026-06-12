@@ -29,10 +29,20 @@ import {
 const css = /* css */ `
   @layer navi {
     .navi_list_container {
-      --list-outline-color: var(--navi-focus-outline-color);
-      --list-item-outline-color: var(--navi-focus-outline-color);
-      --list-item-outline-width: 2px;
+      /* Focus outline */
+      --list-item-outline-width: var(--navi-focus-outline-width);
+      /* here we draw the outline ON the item, not outside of it */
+      /* This ensure the outline is visible even when there is scrollbars (which happens a lot on list items) */
       --list-item-outline-offset: calc(-1 * var(--list-item-outline-width));
+      --list-item-outline-color: var(--navi-focus-outline-color);
+      /* Focus outline end */
+      --selectable-item-padding-x-default: var(
+        --navi-control-padding-x-default
+      );
+      --selectable-item-padding-y-default: var(
+        --navi-control-padding-y-default
+      );
+
       /* Hover (mouse) */
       --list-item-background-color-hover: light-dark(#f5f5f5, #2a2a2a);
       --list-item-color-hover: var(--list-item-color);
@@ -57,13 +67,6 @@ const css = /* css */ `
       /* Disabled */
       --list-item-color-disabled: light-dark(#aaa, #555);
       --list-item-background-color-disabled: var(--list-item-background-color);
-
-      --selectable-item-padding-x-default: var(
-        --navi-control-padding-x-default
-      );
-      --selectable-item-padding-y-default: var(
-        --navi-control-padding-y-default
-      );
     }
   }
 
@@ -73,20 +76,8 @@ const css = /* css */ `
   }
 
   .navi_list_container[navi-selectable] {
-    --x-list-outline-width: calc(
-      var(--list-outline-width) + var(--list-border-width)
-    );
-    --x-list-outline-offset: calc(-1 * var(--list-border-width));
-
     font-size: var(--navi-control-font-size);
     font-family: var(--navi-control-font-family);
-    outline-width: var(--x-list-outline-width);
-    outline-color: var(--list-outline-color);
-    outline-offset: var(--x-list-outline-offset);
-
-    &[data-focus-visible] {
-      outline-style: solid;
-    }
     &[data-callout] {
       --x-list-border-color: var(--callout-color);
     }

@@ -41,13 +41,14 @@ import { resolveInputProps } from "./resolve_input_props.js";
 const css = /* css */ `
   @layer navi {
     .navi_input {
-      --border-radius: 2px;
-      --border-width: 1px;
-      --outline-width: 1px;
-      --font-size: 14px;
-
-      /* Default */
+      --border-radius: var(--navi-control-border-radius);
+      --border-width: var(--navi-control-border-width);
+      /* Focus outline */
+      --outline-width: var(--navi-focus-outline-width);
+      --outline-offset: calc(var(--outline-width) / 2 * -1);
       --outline-color: var(--navi-focus-outline-color);
+      /* Focus outline end */
+      --font-size: var(--navi-control-font-size);
       --loader-color: var(--navi-loader-color);
       --border-color: light-dark(#767676, #8e8e93);
       --background-color: white;
@@ -87,18 +88,10 @@ const css = /* css */ `
         grey
       );
       --color-disabled: var(--color-dimmed);
-
-      --left-slot-size: 1.2em;
-      --right-slot-size: 1.2em;
     }
   }
 
   .navi_input {
-    /* outline will draw the border when visible */
-    --x-outline-width: calc(var(--outline-width) + var(--border-width));
-    --x-outline-offset: calc(-1 * var(--border-width));
-    --x-left-slot-size: 0px;
-    --x-right-slot-size: 0xp;
     --x-border-color: var(--border-color);
     --x-background-color: var(--background-color);
     --x-color: var(--color);
@@ -137,9 +130,9 @@ const css = /* css */ `
     border-style: solid;
     border-color: var(--x-border-color);
     border-radius: var(--border-radius);
-    outline-width: var(--x-outline-width);
+    outline-width: var(--outline-width);
     outline-color: var(--outline-color);
-    outline-offset: var(--x-outline-offset);
+    outline-offset: var(--outline-offset);
     cursor: inherit;
     pointer-events: auto;
 

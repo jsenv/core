@@ -20,11 +20,13 @@ import { ControlChildrenWrapper, useControlProps } from "../control_hooks.jsx";
 const css = /* css */ `
   @layer navi {
     .navi_button {
-      --button-border-radius: 2px;
-      --button-outline-width: 1px;
-      --button-border-width: 1px;
-
+      --button-border-radius: var(--navi-control-border-radius);
+      --button-border-width: var(--navi-control-border-width);
+      /* Focus outline */
+      --button-outline-width: var(--navi-focus-outline-width);
+      --button-outline-offset: calc(-1 * var(--button-outline-width) / 2);
       --button-outline-color: var(--navi-focus-outline-color);
+      /* Focus outline end */
       --button-loader-color: var(--navi-loader-color);
       --button-border-color: light-dark(#767676, #8e8e93);
       --button-background-color: var(
@@ -81,11 +83,7 @@ const css = /* css */ `
   }
 
   .navi_button {
-    /* outline will draw the border when visible */
-    --x-button-outline-width: calc(
-      var(--button-outline-width) + var(--button-border-width)
-    );
-    --x-button-outline-offset: calc(-1 * var(--button-border-width));
+    --x-button-outline-offset: var(--button-outline-offset);
     --x-button-border-color: var(--button-border-color);
     --x-button-background: var(--button-background);
     --x-button-background-color: var(--button-background-color);
@@ -161,9 +159,9 @@ const css = /* css */ `
       border-style: solid;
       border-color: var(--x-button-border-color);
       border-radius: inherit;
-      outline-width: var(--x-button-outline-width);
+      outline-width: var(--button-outline-width);
       outline-color: var(--button-outline-color);
-      outline-offset: var(--x-button-outline-offset);
+      outline-offset: var(--button-outline-offset);
       transition-property: transform;
       transition-duration: 0.15s;
       transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);

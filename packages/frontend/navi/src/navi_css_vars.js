@@ -13,19 +13,22 @@ document.body.removeChild(button);
 const css = /* css */ `
   @layer navi {
     :root {
+      --navi-focus-outline-width: 2px;
+      --navi-focus-outline-color: light-dark(#4476ff, #3b82f6);
+      --navi-loader-color: light-dark(#355fcc, #3b82f6);
+
       --navi-control-font-family: ${controlDefaultFontFamily};
       --navi-control-font-size: ${controlDefaultFontSize};
+      --navi-control-border-radius: 2px;
+      --navi-control-border-width: 1px;
       --navi-control-padding-x-default: 2px;
       --navi-control-padding-y-default: 1px;
-
       /* Global padding defaults — override these to change all button paddings. */
       /* Use --button-padding, --button-padding-x, --button-padding-y for per-button overrides. */
       --button-padding-x-default: 6px;
       --button-padding-y-default: 1px;
       /* default */
 
-      --navi-focus-outline-color: light-dark(#4476ff, #3b82f6);
-      --navi-loader-color: light-dark(#355fcc, #3b82f6);
       --navi-selection-border-color: #0078d4;
       --navi-selection-background-color: #eaf1fd;
       --navi-color-white: white;
