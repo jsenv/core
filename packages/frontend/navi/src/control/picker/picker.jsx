@@ -198,7 +198,7 @@ const css = /* css */ `
         display: -webkit-box;
         white-space: normal;
         -webkit-box-orient: vertical;
-        -webkit-line-clamp: var(--picker-max-rows);
+        -webkit-line-clamp: var(--picker-max-lines);
       }
     }
 

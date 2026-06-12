@@ -213,7 +213,7 @@
                   <a href="#dim-overflow">Single-line overflow</a>
                 </li>
                 <li>
-                  <a href="#dim-maxrows">Multi-line with maxRows</a>
+                  <a href="#dim-maxrows">Multi-line with maxLines</a>
                 </li>
               </ol>
             </li>
@@ -651,22 +651,11 @@
         );
 
         const PlaceItem = ({ maxLines }) => (
-          <Box flex="y" expandX spacing="xs" minWidth="0" alignX="start">
-            <Text
-              bold
-              noWrap={maxLines === 1}
-              maxLines={maxLines}
-              
-            >
+          <Box flex="y" expandX spacing="xs" minWidth="0">
+            <Text bold maxLines={maxLines}>
               Boulangerie Artisanale et Pâtisserie du Vieux Marché de Lyon
             </Text>
-            <Text
-              size="xs"
-              color="secondary"
-              noWrap={maxLines === 1}
-              maxLines={maxLines}
-              
-            >
+            <Text size="xs" color="secondary" maxLines={maxLines}>
               <Icon>
                 <PinSvg />
               </Icon>
@@ -801,7 +790,7 @@
               The picker inherits font size from its container, which drives its
               overall size.
             </p>
-            <Box flex="x" spacing="m" alignY="end">
+            <Box flex="x" spacing="m" alignY="end" flexWrap>
               {["xs", "m", "xl", "xxl"].map((size) => (
                 <Field key={size} vertical>
                   <Label>
@@ -1033,25 +1022,25 @@
             </Box>
 
             <h3 id="dim-maxrows" style={{ marginTop: "24px" }}>
-              Multi-line with maxRows
+              Multi-line with maxLines
             </h3>
             <p>
-              <code>maxRows</code> lets the text flow onto multiple lines before
-              truncating. At <code>maxRows=3</code> the text wraps up to three
-              rows then clips with an ellipsis.
+              <code>maxLines</code> lets the text flow onto multiple lines
+              before truncating. At <code>maxLines=3</code> the text wraps up to
+              three rows then clips with an ellipsis.
             </p>
             <Box flex="y" spacing="m">
               <Field vertical>
                 <Label>
                   Long sentence{" "}
-                  <code style={{ fontWeight: "normal" }}>(maxRows=3)</code>
+                  <code style={{ fontWeight: "normal" }}>(maxLines=3)</code>
                 </Label>
                 <Picker
                   name="dim_sentence_maxrows"
                   value={LONG_SENTENCE}
                   action={() => {}}
                   maxWidth="200"
-                  maxRows={3}
+                  maxLines={3}
                 >
                   <DimensionPickerItems
                     id="dim_sentence_maxrows"
@@ -1062,14 +1051,14 @@
               <Field vertical>
                 <Label>
                   Long word{" "}
-                  <code style={{ fontWeight: "normal" }}>(maxRows=3)</code>
+                  <code style={{ fontWeight: "normal" }}>(maxLines=3)</code>
                 </Label>
                 <Picker
                   name="dim_word_maxrows"
                   value={LONG_WORD}
                   action={() => {}}
                   maxWidth="200"
-                  maxRows={3}
+                  maxLines={3}
                 >
                   <DimensionPickerItems
                     id="dim_word_maxrows"
@@ -1079,7 +1068,7 @@
               </Field>
               <Field vertical>
                 <Label>
-                  Exceeds maxRows{" "}
+                  Exceeds maxLines{" "}
                   <code style={{ fontWeight: "normal" }}>(ellipsis)</code>
                 </Label>
                 <Picker
@@ -1087,7 +1076,7 @@
                   value={VERY_LONG_TEXT}
                   action={() => {}}
                   maxWidth="200"
-                  maxRows={3}
+                  maxLines={3}
                 >
                   <DimensionPickerItems
                     id="dim_clamp_maxrows"

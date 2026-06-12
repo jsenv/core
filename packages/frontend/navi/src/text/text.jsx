@@ -390,7 +390,7 @@ const TextDispatcher = (props) => {
   if (props.shrinkWrap) {
     return <TextShrinkWrap {...props} />;
   }
-  if (props.maxLines === 1) {
+  if (props.maxLines === 1 || props.maxLines === "1") {
     return <TextOverflow {...props} />;
   }
   if (props.overflowPinned) {
