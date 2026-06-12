@@ -14142,7 +14142,7 @@ This prevents cross-test pollution and ensures clean state.`,
               paramSignal.value = defaultValue;
               continue;
             }
-            if (urlParamValue === value) {
+            if (compareTwoJsValues(urlParamValue, value)) {
               // Values already match, no sync needed
               continue;
             }
