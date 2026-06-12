@@ -538,20 +538,20 @@ export const STEP_CONSTRAINT = {
         const before = formatMsToTime(beforeMs, showSeconds);
         const after = formatMsToTime(afterMs, showSeconds);
         if (stepSeconds % 3600 === 0) {
-          return naviI18n("constraint.step.time.hours", {
+          return naviI18n("constraint.step.time.hour", {
             step: String(stepSeconds / 3600),
             before,
             after,
           });
         }
         if (stepSeconds % 60 === 0) {
-          return naviI18n("constraint.step.time.minutes", {
+          return naviI18n("constraint.step.time.minute", {
             step: String(stepSeconds / 60),
             before,
             after,
           });
         }
-        return naviI18n("constraint.step.time.seconds", {
+        return naviI18n("constraint.step.time.second", {
           step: stepString,
           before,
           after,
