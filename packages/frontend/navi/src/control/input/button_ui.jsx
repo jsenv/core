@@ -37,6 +37,8 @@ const css = /* css */ `
       );
       --button-color: currentColor;
       --button-cursor: pointer;
+      --button-font-size: var(--navi-control-font-size);
+      --button-font-family: var(--navi-control-font-family);
 
       /* Hover */
       --button-border-color-hover: color-mix(
@@ -102,6 +104,8 @@ const css = /* css */ `
     cursor: var(--x-button-cursor);
     -webkit-tap-highlight-color: transparent;
     position: relative;
+    font-size: var(--button-font-size);
+    font-family: var(--button-font-family);
     touch-action: manipulation;
     user-select: none;
 

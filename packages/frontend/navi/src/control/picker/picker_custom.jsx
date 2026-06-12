@@ -35,10 +35,12 @@ const css = /* css */ `
         border-style: solid;
         border-color: var(--x-picker-border-color);
         border-radius: var(--picker-border-radius);
-        outline-width: var(--x-picker-outline-width);
+        outline-width: var(--picker-outline-width);
         outline-color: var(--picker-outline-color);
-        outline-offset: var(--x-picker-outline-offset);
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08), 0 12px 40px rgba(0, 0, 0, 0.22);
+        outline-offset: var(--picker-outline-offset);
+        box-shadow:
+          0 4px 8px rgba(0, 0, 0, 0.08),
+          0 12px 40px rgba(0, 0, 0, 0.22);
         cursor: default; /* Reset pointer cursor within the select */
         overflow: hidden;
         overscroll-behavior: none;
@@ -119,10 +121,12 @@ const css = /* css */ `
         background: var(--picker-background-color);
         border: var(--picker-border-width) solid var(--x-picker-border-color);
         border-radius: var(--picker-border-radius);
-        outline-width: var(--x-picker-outline-width);
+        outline-width: var(--picker-outline-width);
         outline-color: var(--picker-outline-color);
-        outline-offset: var(--x-picker-outline-offset);
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08), 0 12px 40px rgba(0, 0, 0, 0.22);
+        outline-offset: var(--picker-outline-offset);
+        box-shadow:
+          0 4px 8px rgba(0, 0, 0, 0.08),
+          0 12px 40px rgba(0, 0, 0, 0.22);
         cursor: default; /* Reset pointer cursor within the select */
         /* overscroll-behavior: contain; */
 

@@ -36,6 +36,8 @@ const css = /* css */ `
       /* Focus outline end */
       --picker-padding-x-default: var(--navi-picker-padding-x-default);
       --picker-padding-y-default: var(--navi-picker-padding-y-default);
+      --picker-font-size: var(--navi-control-font-size);
+      --picker-font-family: var(--navi-control-font-family);
       --picker-loader-color: var(--navi-loader-color);
       --picker-border-color: var(--navi-control-border-color);
       --picker-background-color: white;
@@ -133,6 +135,8 @@ const css = /* css */ `
     align-items: center;
     gap: var(--navi-xs);
     color: var(--x-picker-color);
+    font-size: var(--picker-font-size);
+    font-family: var(--picker-font-family);
     text-align: inherit;
     text-overflow: ellipsis;
     background-color: var(--x-picker-background-color);

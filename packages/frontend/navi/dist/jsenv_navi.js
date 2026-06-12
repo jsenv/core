@@ -26471,13 +26471,15 @@ installImportMetaCssBuild(import.meta);const css$I = /* css */`
       --button-padding-x-default: var(--navi-button-padding-x-default);
       --button-padding-y-default: var(--navi-button-padding-y-default);
       --button-loader-color: var(--navi-loader-color);
-      --button-border-color: light-dark(#767676, #8e8e93);
+      --button-border-color: var(--navi-control-border-color);
       --button-background-color: var(
         --button-background,
         light-dark(#f3f4f6, #2d3748)
       );
       --button-color: currentColor;
       --button-cursor: pointer;
+      --button-font-size: var(--navi-control-font-size);
+      --button-font-family: var(--navi-control-font-family);
 
       /* Hover */
       --button-border-color-hover: color-mix(
@@ -26543,6 +26545,8 @@ installImportMetaCssBuild(import.meta);const css$I = /* css */`
     cursor: var(--x-button-cursor);
     -webkit-tap-highlight-color: transparent;
     position: relative;
+    font-size: var(--button-font-size);
+    font-family: var(--button-font-family);
     touch-action: manipulation;
     user-select: none;
 
@@ -28475,10 +28479,12 @@ installImportMetaCssBuild(import.meta);const css$A = /* css */`
       --outline-color: var(--navi-focus-outline-color);
       /* Focus outline end */
       --margin: 3px 3px 3px 4px;
-      --width: round(0.815em, 1px);
-      --height: round(0.815em, 1px);
+      --font-size: var(--navi-control-font-size);
+      --font-family: var(--navi-control-font-family);
+      --width: round(1em, 1px);
+      --height: round(1em, 1px);
       --loader-color: var(--navi-loader-color);
-      --border-color: light-dark(#767676, #8e8e93);
+      --border-color: var(--navi-control-border-color);
       --background-color: white;
       --accent-color: light-dark(#4476ff, #3b82f6);
       --background-color-checked: var(--accent-color);
@@ -28552,6 +28558,8 @@ installImportMetaCssBuild(import.meta);const css$A = /* css */`
     height: var(--height);
     min-height: var(--height); /* Do not allow to shrink */
     margin: var(--margin);
+    font-size: var(--font-size);
+    font-family: var(--font-family);
     background-color: var(--x-background-color);
     border-width: var(--border-width);
     border-style: solid;
@@ -28905,8 +28913,8 @@ installImportMetaCssBuild(import.meta);const css$z = /* css */`
       --outline-offset: 1px;
       --outline-width: 2px;
       /* Rounding ensures outline is visually a nice circle */
-      --width: round(0.815em, 1px);
-      --height: round(0.815em, 1px);
+      --width: round(1em, 1px);
+      --height: round(1em, 1px);
 
       --color-mix-light: black;
       --color-mix-dark: white;
@@ -28914,13 +28922,15 @@ installImportMetaCssBuild(import.meta);const css$z = /* css */`
 
       --outline-color: var(--navi-focus-outline-color);
       --loader-color: var(--navi-loader-color);
-      --border-color: light-dark(#767676, #8e8e93);
+      --border-color: var(--navi-control-border-color);
       --background-color: white;
       --background-color-checked: var(--background-color);
       --accent-color: light-dark(#4476ff, #3b82f6);
       --radiomark-color: var(--accent-color);
       --border-color-checked: var(--accent-color);
       --cursor: pointer;
+      --font-size: var(--navi-control-font-size);
+      --font-family: var(--navi-control-font-family);
 
       /* Hover */
       --border-color-hover: color-mix(in srgb, var(--border-color) 60%, black);
@@ -29004,6 +29014,8 @@ installImportMetaCssBuild(import.meta);const css$z = /* css */`
     height: var(--x-height);
     min-height: var(--x-height); /* Do not allow to shrink */
     margin: var(--margin);
+    font-size: var(--font-size);
+    font-family: var(--font-family);
     outline-width: var(--x-outline-width);
     outline-style: none;
     outline-color: var(--x-outline-color);
@@ -29755,6 +29767,9 @@ installImportMetaCssBuild(import.meta);const css$y = /* css */`
       --thumb-height: var(--thumb-size);
       --thumb-border-radius: 100%;
       --thumb-cursor: pointer;
+      /* Range can contains text (legend etc) */
+      --font-size: var(--navi-control-font-size);
+      --font-family: var(--navi-control-font-family);
 
       --loader-color: var(--navi-loader-color);
       --accent-color: rgb(24, 117, 255);
@@ -29848,6 +29863,8 @@ installImportMetaCssBuild(import.meta);const css$y = /* css */`
     flex-direction: inherit;
     align-items: center;
     /* Just for the outline, the real border radius of the range is fixed */
+    font-size: var(--font-size);
+    font-family: var(--font-family);
     border-radius: var(--outline-border-radius);
     outline-width: var(--outline-width);
     outline-style: none;
@@ -31028,8 +31045,9 @@ const css$w = /* css */`
       --outline-color: var(--navi-focus-outline-color);
       /* Focus outline end */
       --font-size: var(--navi-control-font-size);
+      --font-family: var(--navi-control-font-family);
       --loader-color: var(--navi-loader-color);
-      --border-color: light-dark(#767676, #8e8e93);
+      --border-color: var(--navi-control-border-color);
       --background-color: white;
       --color: currentColor;
       --color-dimmed: color-mix(in srgb, currentColor 60%, transparent);
@@ -31104,6 +31122,7 @@ const css$w = /* css */`
     flex-direction: row;
     color: var(--x-color);
     font-size: var(--font-size);
+    font-family: var(--font-family);
     background-color: var(--x-background-color);
     border-width: var(--border-width);
     border-style: solid;
@@ -32484,10 +32503,12 @@ installImportMetaCssBuild(import.meta);const css$p = /* css */`
         border-style: solid;
         border-color: var(--x-picker-border-color);
         border-radius: var(--picker-border-radius);
-        outline-width: var(--x-picker-outline-width);
+        outline-width: var(--picker-outline-width);
         outline-color: var(--picker-outline-color);
-        outline-offset: var(--x-picker-outline-offset);
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08), 0 12px 40px rgba(0, 0, 0, 0.22);
+        outline-offset: var(--picker-outline-offset);
+        box-shadow:
+          0 4px 8px rgba(0, 0, 0, 0.08),
+          0 12px 40px rgba(0, 0, 0, 0.22);
         cursor: default; /* Reset pointer cursor within the select */
         overflow: hidden;
         overscroll-behavior: none;
@@ -32568,10 +32589,12 @@ installImportMetaCssBuild(import.meta);const css$p = /* css */`
         background: var(--picker-background-color);
         border: var(--picker-border-width) solid var(--x-picker-border-color);
         border-radius: var(--picker-border-radius);
-        outline-width: var(--x-picker-outline-width);
+        outline-width: var(--picker-outline-width);
         outline-color: var(--picker-outline-color);
-        outline-offset: var(--x-picker-outline-offset);
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08), 0 12px 40px rgba(0, 0, 0, 0.22);
+        outline-offset: var(--picker-outline-offset);
+        box-shadow:
+          0 4px 8px rgba(0, 0, 0, 0.08),
+          0 12px 40px rgba(0, 0, 0, 0.22);
         cursor: default; /* Reset pointer cursor within the select */
         /* overscroll-behavior: contain; */
 
@@ -36380,8 +36403,10 @@ installImportMetaCssBuild(import.meta);const css$k = /* css */`
       /* Focus outline end */
       --picker-padding-x-default: var(--navi-picker-padding-x-default);
       --picker-padding-y-default: var(--navi-picker-padding-y-default);
+      --picker-font-size: var(--navi-control-font-size);
+      --picker-font-family: var(--navi-control-font-family);
       --picker-loader-color: var(--navi-loader-color);
-      --picker-border-color: light-dark(#767676, #8e8e93);
+      --picker-border-color: var(--navi-control-border-color);
       --picker-background-color: white;
       --picker-color: currentColor;
       --picker-placeholder-color: color-mix(
@@ -36477,6 +36502,8 @@ installImportMetaCssBuild(import.meta);const css$k = /* css */`
     align-items: center;
     gap: var(--navi-xs);
     color: var(--x-picker-color);
+    font-size: var(--picker-font-size);
+    font-family: var(--picker-font-family);
     text-align: inherit;
     text-overflow: ellipsis;
     background-color: var(--x-picker-background-color);

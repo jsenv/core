@@ -12,8 +12,8 @@ const css = /* css */ `
       --outline-offset: 1px;
       --outline-width: 2px;
       /* Rounding ensures outline is visually a nice circle */
-      --width: round(0.815em, 1px);
-      --height: round(0.815em, 1px);
+      --width: round(1em, 1px);
+      --height: round(1em, 1px);
 
       --color-mix-light: black;
       --color-mix-dark: white;
@@ -28,6 +28,8 @@ const css = /* css */ `
       --radiomark-color: var(--accent-color);
       --border-color-checked: var(--accent-color);
       --cursor: pointer;
+      --font-size: var(--navi-control-font-size);
+      --font-family: var(--navi-control-font-family);
 
       /* Hover */
       --border-color-hover: color-mix(in srgb, var(--border-color) 60%, black);
@@ -111,6 +113,8 @@ const css = /* css */ `
     height: var(--x-height);
     min-height: var(--x-height); /* Do not allow to shrink */
     margin: var(--margin);
+    font-size: var(--font-size);
+    font-family: var(--font-family);
     outline-width: var(--x-outline-width);
     outline-style: none;
     outline-color: var(--x-outline-color);

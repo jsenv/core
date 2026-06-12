@@ -17,8 +17,10 @@ const css = /* css */ `
       --outline-color: var(--navi-focus-outline-color);
       /* Focus outline end */
       --margin: 3px 3px 3px 4px;
-      --width: round(0.815em, 1px);
-      --height: round(0.815em, 1px);
+      --font-size: var(--navi-control-font-size);
+      --font-family: var(--navi-control-font-family);
+      --width: round(1em, 1px);
+      --height: round(1em, 1px);
       --loader-color: var(--navi-loader-color);
       --border-color: var(--navi-control-border-color);
       --background-color: white;
@@ -94,6 +96,8 @@ const css = /* css */ `
     height: var(--height);
     min-height: var(--height); /* Do not allow to shrink */
     margin: var(--margin);
+    font-size: var(--font-size);
+    font-family: var(--font-family);
     background-color: var(--x-background-color);
     border-width: var(--border-width);
     border-style: solid;

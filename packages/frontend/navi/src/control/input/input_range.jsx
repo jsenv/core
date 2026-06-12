@@ -23,6 +23,9 @@ const css = /* css */ `
       --thumb-height: var(--thumb-size);
       --thumb-border-radius: 100%;
       --thumb-cursor: pointer;
+      /* Range can contains text (legend etc) */
+      --font-size: var(--navi-control-font-size);
+      --font-family: var(--navi-control-font-family);
 
       --loader-color: var(--navi-loader-color);
       --accent-color: rgb(24, 117, 255);
@@ -116,6 +119,8 @@ const css = /* css */ `
     flex-direction: inherit;
     align-items: center;
     /* Just for the outline, the real border radius of the range is fixed */
+    font-size: var(--font-size);
+    font-family: var(--font-family);
     border-radius: var(--outline-border-radius);
     outline-width: var(--outline-width);
     outline-style: none;

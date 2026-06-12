@@ -49,6 +49,7 @@ const css = /* css */ `
       --outline-color: var(--navi-focus-outline-color);
       /* Focus outline end */
       --font-size: var(--navi-control-font-size);
+      --font-family: var(--navi-control-font-family);
       --loader-color: var(--navi-loader-color);
       --border-color: var(--navi-control-border-color);
       --background-color: white;
@@ -125,6 +126,7 @@ const css = /* css */ `
     flex-direction: row;
     color: var(--x-color);
     font-size: var(--font-size);
+    font-family: var(--font-family);
     background-color: var(--x-background-color);
     border-width: var(--border-width);
     border-style: solid;

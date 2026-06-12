@@ -70,6 +70,7 @@ const css = /* css */`
       --navi-control-font-size: ${controlDefaultFontSize};
       --navi-control-border-radius: 2px;
       --navi-control-border-width: 1px;
+      --navi-control-border-color: light-dark(#767676, #8e8e93);
       --navi-control-padding-x-default: 2px;
       --navi-control-padding-y-default: 1px;
       /* Global padding defaults — override these to change all button paddings. */

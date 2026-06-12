@@ -71,6 +71,17 @@
                   <Button>Click me</Button>
                 </Box>
                 <Box flex="x" alignY="center">
+                  <Input
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={50}
+                    uiAction={() => {}}
+                  />
+                  <Input type="checkbox" margin="0" />
+                  <Input type="radio" margin="0" />
+                </Box>
+                <Box flex="x" alignY="center">
                   <Button>Click me</Button>
                   <Picker
                     name="color_picker_a"
