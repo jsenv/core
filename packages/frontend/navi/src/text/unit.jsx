@@ -5,7 +5,7 @@ export const Unit = ({
   unit,
   plural,
   lang,
-  size,
+  size = "smaller",
   sizeRatio,
   style,
   ...props
@@ -14,7 +14,7 @@ export const Unit = ({
   let resolvedStyle = style;
   if (size === "smaller" || sizeRatio !== undefined) {
     resolvedSize = undefined;
-    const ratio = sizeRatio !== undefined ? sizeRatio : 0.7;
+    const ratio = sizeRatio !== undefined ? sizeRatio : 0.8;
     resolvedStyle = { fontSize: `calc(${ratio} * 1em)`, ...style };
   }
   const isPlural = Boolean(plural);

@@ -6,9 +6,6 @@ import { Unit } from "./unit.jsx";
 
 const css = /* css */ `
   @layer navi {
-    .navi_quantity {
-      --unit-color: color-mix(in srgb, currentColor 50%, white);
-    }
   }
 
   .navi_quantity {
@@ -27,7 +24,6 @@ const css = /* css */ `
     }
     .navi_quantity_body {
       .navi_unit {
-        color: var(--unit-color);
         font-weight: normal;
       }
     }
@@ -66,6 +62,7 @@ export const Quantity = ({
   unitPosition = "right",
   unitSize = "smaller",
   unitSizeRatio,
+  unitColor,
   label,
   size,
   lang,
@@ -123,6 +120,7 @@ export const Quantity = ({
             lang={lang}
             size={unitSize}
             sizeRatio={unitSizeRatio}
+            color={unitColor}
           />
         )}
       </Text>
