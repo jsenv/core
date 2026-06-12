@@ -65,131 +65,129 @@ const css = /* css */ `
         --navi-control-padding-y-default
       );
     }
+  }
 
-    fieldset.navi_list_container[navi-selectable] {
-      margin: 0; /* Reset margin that might come from fieldset */
-      padding: 0; /* Reset padding that might come from fieldset */
+  fieldset.navi_list_container[navi-selectable] {
+    margin: 0; /* Reset margin that might come from fieldset */
+    padding: 0; /* Reset padding that might come from fieldset */
+  }
+
+  .navi_list_container[navi-selectable] {
+    --x-list-outline-width: calc(
+      var(--list-outline-width) + var(--list-border-width)
+    );
+    --x-list-outline-offset: calc(-1 * var(--list-border-width));
+
+    font-size: var(--navi-control-font-size);
+    font-family: var(--navi-control-font-family);
+    outline-width: var(--x-list-outline-width);
+    outline-color: var(--list-outline-color);
+    outline-offset: var(--x-list-outline-offset);
+
+    &[data-focus-visible] {
+      outline-style: solid;
+    }
+    &[data-callout] {
+      --x-list-border-color: var(--callout-color);
+    }
+  }
+
+  .navi_list_item[navi-selectable] {
+    --x-list-item-cursor: default;
+    --list-item-padding-x-default: var(--selectable-item-padding-x-default);
+    --list-item-padding-y-default: var(--selectable-item-padding-y-default);
+
+    position: relative;
+    outline-width: var(--list-item-outline-width);
+    outline-color: var(--list-item-outline-color);
+    outline-offset: var(--list-item-outline-offset);
+    cursor: var(--x-list-item-cursor);
+
+    &[navi-selectable] {
+      user-select: none;
+    }
+    &[navi-selectable-area-all] {
+      --x-list-item-cursor: pointer;
+      pointer-events: none;
+
+      [navi-selectable-real-input] {
+        z-index: 0;
+        outline: none;
+        opacity: 0;
+        clip-path: none;
+        cursor: var(--x-list-item-cursor);
+        pointer-events: auto;
+      }
     }
 
-    .navi_list_container[navi-selectable] {
-      --x-list-outline-width: calc(
-        var(--list-outline-width) + var(--list-border-width)
+    &[data-interactive] {
+      cursor: pointer;
+      user-select: none;
+    }
+    &[data-hover] {
+      --x-list-item-color: var(--list-item-color-mouse-pointed);
+      --x-list-item-background-color: var(
+        --list-item-background-color-mouse-pointed
       );
-      --x-list-outline-offset: calc(-1 * var(--list-border-width));
-
-      font-size: var(--navi-control-font-size);
-      font-family: var(--navi-control-font-family);
-      outline-width: var(--x-list-outline-width);
-      outline-color: var(--list-outline-color);
-      outline-offset: var(--x-list-outline-offset);
-
-      &[data-focus-visible] {
+    }
+    &[data-pointed] {
+      --x-list-item-color: var(--list-item-color-pointed);
+      --x-list-item-background-color: var(--list-item-background-color-pointed);
+    }
+    /* No input proxy: focused,selected */
+    &:not(:has(input[navi-control-proxy-for])) {
+      &:has([navi-selectable-real-input][data-focus-visible]) {
+        --x-list-item-color: var(--list-item-color-keyboard-pointed);
+        --x-list-item-background-color: var(
+          --list-item-background-color-keyboard-pointed
+        );
         outline-style: solid;
+
+        /* Selected must win over keyboard-pointed */
+        &[data-selected] {
+          --x-list-item-background-color: var(
+            --list-item-background-color-selected,
+            var(--list-item-background-color-keyboard-pointed)
+          );
+          --x-list-item-color: var(
+            --list-item-color-selected,
+            var(--list-item-color-keyboard-pointed)
+          );
+        }
       }
-      &[data-callout] {
-        --x-list-border-color: var(--callout-color);
+
+      &[data-selected] {
+        --x-list-item-border-color: var(--list-item-border-color-selected);
+        --x-list-item-background-color: var(
+          --list-item-background-color-selected
+        );
+        --x-list-item-color: var(--list-item-color-selected);
+
+        &[data-hover] {
+          --x-list-item-background-color: var(
+            --list-item-background-color-selected,
+            var(--list-item-background-color-mouse-pointed)
+          ) !important;
+        }
+
+        input,
+        .navi_picker {
+          color: revert;
+        }
       }
     }
 
-    .navi_list_item[navi-selectable] {
+    &[data-disabled] {
+      --x-list-item-color: var(--list-item-color-disabled);
+      --x-list-item-background-color: var(
+        --list-item-background-color-disabled
+      );
       --x-list-item-cursor: default;
-      --list-item-padding-x-default: var(--selectable-item-padding-x-default);
-      --list-item-padding-y-default: var(--selectable-item-padding-y-default);
-
-      position: relative;
-      outline-width: var(--list-item-outline-width);
-      outline-color: var(--list-item-outline-color);
-      outline-offset: var(--list-item-outline-offset);
-      cursor: var(--x-list-item-cursor);
-
-      &[navi-selectable] {
-        user-select: none;
-      }
-      &[navi-selectable-area-all] {
-        --x-list-item-cursor: pointer;
-        pointer-events: none;
-
-        [navi-selectable-real-input] {
-          z-index: 0;
-          outline: none;
-          opacity: 0;
-          clip-path: none;
-          cursor: var(--x-list-item-cursor);
-          pointer-events: auto;
-        }
-      }
-
-      &[data-interactive] {
-        cursor: pointer;
-        user-select: none;
-      }
-      &[data-hover] {
-        --x-list-item-color: var(--list-item-color-mouse-pointed);
-        --x-list-item-background-color: var(
-          --list-item-background-color-mouse-pointed
-        );
-      }
-      &[data-pointed] {
-        --x-list-item-color: var(--list-item-color-pointed);
-        --x-list-item-background-color: var(
-          --list-item-background-color-pointed
-        );
-      }
-      /* No input proxy: focused,selected */
-      &:not(:has(input[navi-control-proxy-for])) {
-        &:has([navi-selectable-real-input][data-focus-visible]) {
-          --x-list-item-color: var(--list-item-color-keyboard-pointed);
-          --x-list-item-background-color: var(
-            --list-item-background-color-keyboard-pointed
-          );
-          outline-style: solid;
-
-          /* Selected must win over keyboard-pointed */
-          &[data-selected] {
-            --x-list-item-background-color: var(
-              --list-item-background-color-selected,
-              var(--list-item-background-color-keyboard-pointed)
-            );
-            --x-list-item-color: var(
-              --list-item-color-selected,
-              var(--list-item-color-keyboard-pointed)
-            );
-          }
-        }
-
-        &[data-selected] {
-          --x-list-item-border-color: var(--list-item-border-color-selected);
-          --x-list-item-background-color: var(
-            --list-item-background-color-selected
-          );
-          --x-list-item-color: var(--list-item-color-selected);
-
-          &[data-hover] {
-            --x-list-item-background-color: var(
-              --list-item-background-color-selected,
-              var(--list-item-background-color-mouse-pointed)
-            ) !important;
-          }
-
-          input,
-          .navi_picker {
-            color: revert;
-          }
-        }
-      }
-
-      &[data-disabled] {
-        --x-list-item-color: var(--list-item-color-disabled);
-        --x-list-item-background-color: var(
-          --list-item-background-color-disabled
-        );
-        --x-list-item-cursor: default;
-        pointer-events: none;
-      }
-      &[data-readonly] {
-        --x-list-item-color: var(--list-item-color-disabled);
-        --x-list-item-cursor: default;
-      }
+      pointer-events: none;
+    }
+    &[data-readonly] {
+      --x-list-item-color: var(--list-item-color-disabled);
+      --x-list-item-cursor: default;
     }
   }
 `;

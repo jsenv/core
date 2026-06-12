@@ -66,32 +66,32 @@ const css = /* css */ `
       --navi-color-discrete: color-mix(in srgb, currentColor 60%, transparent);
       --navi-color-hint: color-mix(in srgb, currentColor 25%, transparent);
     }
+  }
 
-    /* Hidden appearance */
-    input[navi-visually-hidden] {
-      position: absolute;
-      top: 0;
-      left: 0;
-      z-index: -1;
-      /* Important to take full size so that scrollIntoView work as expected */
-      width: 100%;
-      height: 100%;
+  /* Hidden appearance */
+  input[navi-visually-hidden] {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: -1;
+    /* Important to take full size so that scrollIntoView work as expected */
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    white-space: nowrap;
+    border: 0;
+    clip-path: inset(50%);
+    appearance: none;
+    overflow: hidden;
+
+    &[navi-debug] {
+      position: static;
+      width: auto;
+      height: auto;
       margin: 0;
-      padding: 0;
-      white-space: nowrap;
-      border: 0;
-      clip-path: inset(50%);
-      appearance: none;
-      overflow: hidden;
-
-      &[navi-debug] {
-        position: static;
-        width: auto;
-        height: auto;
-        margin: 0;
-        clip-path: none;
-        appearance: auto;
-      }
+      clip-path: none;
+      appearance: auto;
     }
   }
 `;
