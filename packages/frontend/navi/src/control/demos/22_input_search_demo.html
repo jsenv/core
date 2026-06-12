@@ -88,12 +88,58 @@
   </head>
   <body>
     <h1>Input Search Demo</h1>
+    <nav
+      style="
+        margin-bottom: 32px;
+        padding: 16px 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      "
+    >
+      <strong
+        style="
+          display: block;
+          margin-bottom: 8px;
+          font-size: 0.85rem;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          color: #888;
+        "
+        >Contents</strong
+      >
+      <ol style="margin: 0; padding-left: 20px; line-height: 2">
+        <li><a href="#states">Search Input States</a></li>
+        <li><a href="#live">Live Search Demo</a></li>
+        <li><a href="#variations">Search Input Variations</a></li>
+        <li><a href="#custom-icon">Custom Icon &amp; Long Placeholder</a></li>
+      </ol>
+    </nav>
     <div id="root"></div>
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
       import { Input, Box, Caption, NaviDebug } from "@jsenv/navi";
+
+      const RectIcon = () => (
+        <svg
+          width="100%"
+          height="100%"
+          viewBox="0 0 1 1"
+          preserveAspectRatio="none"
+          style={{ display: "block", position: "absolute", inset: 0 }}
+        >
+          <rect
+            width="1"
+            height="1"
+            fill="rgba(255,0,0,0.15)"
+            stroke="red"
+            stroke-width="0.05"
+            vector-effect="non-scaling-stroke"
+          />
+        </svg>
+      );
 
       const App = () => {
         return (
@@ -110,7 +156,7 @@
       const BasicStatesDemo = () => {
         return (
           <div className="demo-section">
-            <h2>Search Input States</h2>
+            <h2 id="states">Search Input States</h2>
 
             <div className="states-section">
               <div className="states-title">
@@ -326,7 +372,7 @@
 
         return (
           <div className="demo-section">
-            <h2>Live Search Demo</h2>
+            <h2 id="live">Live Search Demo</h2>
 
             <fieldset>
               <legend>Filter Product List</legend>
@@ -375,183 +421,151 @@
 
         return (
           <>
-          <div className="demo-section">
-            <h2>Search Input Variations</h2>
-            <p className="states-description">
-              Different styling variations of the search input to show
-              customization possibilities.
-            </p>
+            <div className="demo-section">
+              <h2 id="variations">Search Input Variations</h2>
+              <p className="states-description">
+                Different styling variations of the search input to show
+                customization possibilities.
+              </p>
 
-            <Box column spacing="lg">
-              <fieldset>
-                <legend>Extra Padding</legend>
-                <Input
-                  type="search"
-                  value={searchValue1}
-                  action={setSearchValue1}
-                  placeholder="Placholder..."
-                  paddingX="16"
-                  paddingY="10"
-                  size="l"
-                  borderRadius="12"
-                />
-              </fieldset>
+              <Box column spacing="lg">
+                <fieldset>
+                  <legend>Extra Padding</legend>
+                  <Input
+                    type="search"
+                    value={searchValue1}
+                    action={setSearchValue1}
+                    placeholder="Placholder..."
+                    paddingX="16"
+                    paddingY="10"
+                    size="l"
+                    borderRadius="12"
+                  />
+                </fieldset>
 
-              <fieldset>
-                <legend>Rounded Pill Style</legend>
-                <Input
-                  type="search"
-                  value={searchValue2}
-                  action={setSearchValue2}
-                  placeholder="Pill-shaped search..."
-                  paddingX="12"
-                  paddingY="24"
-                  borderRadius="50"
-                  borderColor="#007bff"
-                />
-              </fieldset>
-            </Box>
+                <fieldset>
+                  <legend>Rounded Pill Style</legend>
+                  <Input
+                    type="search"
+                    value={searchValue2}
+                    action={setSearchValue2}
+                    placeholder="Pill-shaped search..."
+                    paddingX="12"
+                    paddingY="24"
+                    borderRadius="50"
+                    borderColor="#007bff"
+                  />
+                </fieldset>
+              </Box>
 
-            <Box column>
-              <fieldset>
-                <legend>Large Size</legend>
-                <Input
-                  type="search"
-                  value={searchValue3}
-                  action={setSearchValue3}
-                  placeholder="Large search input..."
-                  padding="24"
-                  size="l"
-                  minHeight="56"
-                  borderRadius="8"
-                  borderWidth="2"
-                  borderColor="#ddd"
-                />
-              </fieldset>
+              <Box column>
+                <fieldset>
+                  <legend>Large Size</legend>
+                  <Input
+                    type="search"
+                    value={searchValue3}
+                    action={setSearchValue3}
+                    placeholder="Large search input..."
+                    padding="24"
+                    size="l"
+                    minHeight="56"
+                    borderRadius="8"
+                    borderWidth="2"
+                    borderColor="#ddd"
+                  />
+                </fieldset>
 
-              <fieldset>
-                <legend>Parent smaller font</legend>
-                <Box size="xxs">
-                  <Input type="search" placeholder="Placeholder" />
-                </Box>
-              </fieldset>
-            </Box>
+                <fieldset>
+                  <legend>Parent smaller font</legend>
+                  <Box size="xxs">
+                    <Input type="search" placeholder="Placeholder" />
+                  </Box>
+                </fieldset>
+              </Box>
 
-            <Box column>
-              <fieldset style="background:grey">
-                <legend>Discrete</legend>
-                <Input
-                  type="search"
-                  placeholder="Discrete search..."
-                  borderRadius="6"
-                  discrete
-                  padding="14"
-                />
-              </fieldset>
+              <Box column>
+                <fieldset style="background:grey">
+                  <legend>Discrete</legend>
+                  <Input
+                    type="search"
+                    placeholder="Discrete search..."
+                    borderRadius="6"
+                    discrete
+                    padding="14"
+                  />
+                </fieldset>
 
-              <fieldset>
-                <legend>WTF</legend>
-                <Input
-                  type="search"
-                  value={searchValue4}
-                  action={setSearchValue4}
-                  placeholder="Subtle search..."
-                  boxShadow="inset 0 1px 3px rgba(0,0,0,0.1)"
-                  borderRadius="6"
-                  borderColor="transparent"
-                  backgroundColor="violet"
-                  padding="14"
-                  style={{
-                    ":hover": {
-                      backgroundColor: "yellow",
-                    },
-                    ":focus": {
-                      backgroundColor: "orange",
-                    },
-                  }}
-                />
-              </fieldset>
-            </Box>
-          </div>
+                <fieldset>
+                  <legend>WTF</legend>
+                  <Input
+                    type="search"
+                    value={searchValue4}
+                    action={setSearchValue4}
+                    placeholder="Subtle search..."
+                    boxShadow="inset 0 1px 3px rgba(0,0,0,0.1)"
+                    borderRadius="6"
+                    borderColor="transparent"
+                    backgroundColor="violet"
+                    padding="14"
+                    style={{
+                      ":hover": {
+                        backgroundColor: "yellow",
+                      },
+                      ":focus": {
+                        backgroundColor: "orange",
+                      },
+                    }}
+                  />
+                </fieldset>
+              </Box>
+            </div>
 
-          <div className="demo-section">
-            <h2>Custom Icon &amp; Long Placeholder</h2>
-            <p className="states-description">
-              The icon prop replaces the default search icon. The red rectangle
-              shows the exact bounding box the icon occupies, so you can see
-              where the placeholder text gets clipped.
-            </p>
-            <Box column spacing="lg">
+            <div className="demo-section">
+              <h2 id="custom-icon">Custom Icon &amp; Long Placeholder</h2>
+              <p className="states-description">
+                The icon prop replaces the default search icon. The red
+                rectangle shows the exact bounding box the icon occupies, so you
+                can see where the placeholder text gets clipped.
+              </p>
+
               <fieldset>
                 <legend>Custom icon — short placeholder</legend>
-                <Input
-                  type="search"
-                  placeholder="Search…"
-                  icon={
-                    <svg
-                      width="100%"
-                      height="100%"
-                      viewBox="0 0 1 1"
-                      preserveAspectRatio="none"
-                      style={{ display: "block", position: "absolute", inset: 0 }}
-                    >
-                      <rect
-                        width="1"
-                        height="1"
-                        fill="rgba(255,0,0,0.15)"
-                        stroke="red"
-                        stroke-width="0.05"
-                        vector-effect="non-scaling-stroke"
-                      />
-                    </svg>
-                  }
-                />
-              </fieldset>
-
-              <fieldset>
-                <legend>Custom icon — long placeholder (cropped near icon)</legend>
-                <Input
-                  type="search"
-                  placeholder="Search by name, email address, phone number or any other identifier…"
-                  icon={
-                    <svg
-                      width="100%"
-                      height="100%"
-                      viewBox="0 0 1 1"
-                      preserveAspectRatio="none"
-                      style={{ display: "block", position: "absolute", inset: 0 }}
-                    >
-                      <rect
-                        width="1"
-                        height="1"
-                        fill="rgba(255,0,0,0.15)"
-                        stroke="red"
-                        stroke-width="0.05"
-                        vector-effect="non-scaling-stroke"
-                      />
-                    </svg>
-                  }
-                />
+                <Box column spacing="s">
+                  <Input
+                    type="search"
+                    placeholder="Search…"
+                    icon={<RectIcon />}
+                  />
+                  <Input
+                    type="search"
+                    placeholder="Search by name, email address, phone number or any other identifier…"
+                    icon={<RectIcon />}
+                  />
+                  <Input
+                    type="search"
+                    placeholder="Search by name, email address, phone number or any other identifier…"
+                    paddingX="m"
+                    icon={<RectIcon />}
+                  />
+                </Box>
               </fieldset>
 
               <fieldset>
                 <legend>Default icon — long placeholder</legend>
-                <Input
-                  type="search"
-                  placeholder="Search by name, email address, phone number or any other identifier…"
-                />
+                <Box column spacing="s">
+                  <Input type="search" placeholder="Search…" />
+                  <Input
+                    type="search"
+                    placeholder="Search by name, email address, phone number or any other identifier…"
+                  />
+                  <Input
+                    type="search"
+                    placeholder="Search by name, email address, phone number or any other identifier…"
+                    paddingX="m"
+                  />
+                </Box>
               </fieldset>
-
-              <fieldset>
-                <legend>Default icon — long placeholder — paddingX="m"</legend>
-                <Input
-                  type="search"
-                  placeholder="Search by name, email address, phone number or any other identifier…"
-                  paddingX="m"
-                />
-              </fieldset>
-            </Box>
-          </div>
+            </div>
           </>
         );
       };
