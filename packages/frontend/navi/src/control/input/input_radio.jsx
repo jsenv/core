@@ -21,7 +21,7 @@ const css = /* css */ `
 
       --outline-color: var(--navi-focus-outline-color);
       --loader-color: var(--navi-loader-color);
-      --border-color: light-dark(#767676, #8e8e93);
+      --border-color: var(--navi-control-border-color);
       --background-color: white;
       --background-color-checked: var(--background-color);
       --accent-color: light-dark(#4476ff, #3b82f6);

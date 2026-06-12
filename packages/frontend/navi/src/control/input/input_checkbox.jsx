@@ -20,7 +20,7 @@ const css = /* css */ `
       --width: round(0.815em, 1px);
       --height: round(0.815em, 1px);
       --loader-color: var(--navi-loader-color);
-      --border-color: light-dark(#767676, #8e8e93);
+      --border-color: var(--navi-control-border-color);
       --background-color: white;
       --accent-color: light-dark(#4476ff, #3b82f6);
       --background-color-checked: var(--accent-color);

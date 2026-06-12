@@ -37,7 +37,7 @@ const css = /* css */ `
       --picker-padding-x-default: var(--navi-picker-padding-x-default);
       --picker-padding-y-default: var(--navi-picker-padding-y-default);
       --picker-loader-color: var(--navi-loader-color);
-      --picker-border-color: light-dark(#767676, #8e8e93);
+      --picker-border-color: var(--navi-control-border-color);
       --picker-background-color: white;
       --picker-color: currentColor;
       --picker-placeholder-color: color-mix(

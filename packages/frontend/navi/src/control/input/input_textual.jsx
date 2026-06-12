@@ -50,7 +50,7 @@ const css = /* css */ `
       /* Focus outline end */
       --font-size: var(--navi-control-font-size);
       --loader-color: var(--navi-loader-color);
-      --border-color: light-dark(#767676, #8e8e93);
+      --border-color: var(--navi-control-border-color);
       --background-color: white;
       --color: currentColor;
       --color-dimmed: color-mix(in srgb, currentColor 60%, transparent);

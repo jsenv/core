@@ -30,7 +30,7 @@ const css = /* css */ `
       --button-padding-x-default: var(--navi-button-padding-x-default);
       --button-padding-y-default: var(--navi-button-padding-y-default);
       --button-loader-color: var(--navi-loader-color);
-      --button-border-color: light-dark(#767676, #8e8e93);
+      --button-border-color: var(--navi-control-border-color);
       --button-background-color: var(
         --button-background,
         light-dark(#f3f4f6, #2d3748)
