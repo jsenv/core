@@ -25,9 +25,11 @@ const css = /* css */ `
       --navi-control-padding-y-default: 1px;
       /* Global padding defaults — override these to change all button paddings. */
       /* Use --button-padding, --button-padding-x, --button-padding-y for per-button overrides. */
-      --button-padding-x-default: 6px;
-      --button-padding-y-default: 1px;
+      --navi-button-padding-x-default: 6px;
+      --navi-button-padding-y-default: 1px;
       /* default */
+      --navi-picker-padding-x-default: var(--navi-button-padding-x-default);
+      --navi-picker-padding-y-default: var(--navi-button-padding-y-default);
 
       --navi-selection-border-color: #0078d4;
       --navi-selection-background-color: #eaf1fd;

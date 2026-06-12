@@ -27,6 +27,8 @@ const css = /* css */ `
       --button-outline-offset: calc(-1 * var(--button-outline-width) / 2);
       --button-outline-color: var(--navi-focus-outline-color);
       /* Focus outline end */
+      --button-padding-x-default: var(--navi-button-padding-x-default);
+      --button-padding-y-default: var(--navi-button-padding-y-default);
       --button-loader-color: var(--navi-loader-color);
       --button-border-color: light-dark(#767676, #8e8e93);
       --button-background-color: var(

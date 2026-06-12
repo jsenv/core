@@ -34,8 +34,8 @@ const css = /* css */ `
       --picker-outline-offset: calc(-1 * var(--picker-outline-width) / 2);
       --picker-outline-color: var(--navi-focus-outline-color);
       /* Focus outline end */
-      --picker-padding-x-default: var(--navi-control-padding-x-default);
-      --picker-padding-y-default: var(--navi-control-padding-y-default);
+      --picker-padding-x-default: var(--navi-picker-padding-x-default);
+      --picker-padding-y-default: var(--navi-picker-padding-y-default);
       --picker-loader-color: var(--navi-loader-color);
       --picker-border-color: light-dark(#767676, #8e8e93);
       --picker-background-color: white;
