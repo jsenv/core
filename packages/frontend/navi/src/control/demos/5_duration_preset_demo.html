@@ -63,6 +63,7 @@
         Label,
         List,
         Input,
+        InputGroup,
         Picker,
         Form,
         Text,
@@ -391,12 +392,15 @@
               ui={`Autre${props.selected ? ` (${label})` : ""}`}
             >
               <Box flex="y" alignX="center" padding="m" spacing="m">
-                <Text bold>Veuillez indiquer une durée</Text>
-                <Box inline flex alignY="start">
-                  <Box flex="y" alignX="start">
+                <Text bold>Veuillez saisir une durée</Text>
+                <InputGroup flex spacing="xxs">
+                  <Box flex="y">
                     <Input
                       type="navi_hour"
                       unit={false}
+                      variant="underline"
+                      size="l"
+                      expandX
                       value={hours}
                       action={(v) => {
                         customDurationHourSignal2.value = v;
@@ -404,11 +408,14 @@
                     />
                     <Unit unit="hour" plural />
                   </Box>
-                  <span>:</span>
-                  <Box flex="y" alignX="start">
+                  <span style={{ paddingBottom: "4px" }}>:</span>
+                  <Box flex="y">
                     <Input
                       type="navi_minute"
                       unit={false}
+                      variant="underline"
+                      size="l"
+                      expandX
                       value={minutes}
                       action={(v) => {
                         customDurationMinuteSignal2.value = v;
@@ -416,7 +423,7 @@
                     />
                     <Unit unit="minute" plural />
                   </Box>
-                </Box>
+                </InputGroup>
               </Box>
             </Picker>
           </List.Item>
