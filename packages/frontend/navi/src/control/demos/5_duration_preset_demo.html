@@ -145,28 +145,28 @@
         );
       };
 
-      // ── DurationField ─────────────────────────────────────────────────────
+      // ── DurationControl ───────────────────────────────────────────────────
       const DurationControl = () => {
         const duration = durationSignal.value;
 
         return (
           <Field vertical>
-            <Label>Durée</Label>
+            <Label bold>Durée</Label>
             <List
               selectable
               horizontal
               spacing="s"
               id="duration"
               name="duration"
-              border="none"
               required
               value={duration}
-              action={(v) => {
+              uiAction={(v) => {
                 durationSignal.value = v;
               }}
+              border="none"
             >
               {PRESET_DURATIONS.map((minutes, i) => (
-                <MinuteOption
+                <DurationPreset
                   key={minutes}
                   index={i}
                   id={minutes}
@@ -174,10 +174,12 @@
                   selected={duration === String(minutes)}
                 >
                   {minutes}
-                </MinuteOption>
+                </DurationPreset>
               ))}
               <CustomDurationOption
                 index={PRESET_DURATIONS.length}
+                id="custom"
+                value="custom"
                 selected={duration === "custom"}
               />
             </List>
@@ -185,9 +187,9 @@
         );
       };
 
-      // ── MinuteOption ─────────────────────────────────────────────────────
+      // ── DurationPreset ────────────────────────────────────────────────────
 
-      const MinuteOption = ({ children, ...props }) => {
+      const DurationPreset = ({ children, ...props }) => {
         return (
           <List.Item
             selectable
@@ -205,20 +207,14 @@
       };
 
       // ── CustomDurationOption ─────────────────────────────────────────────
-      // A List.Item that is "selected" when the current value is not a preset.
-      // It embeds a Picker so the user can type any minute value.
 
-      const CustomDurationOption = ({ selected, index }) => {
+      const CustomDurationOption = (props) => {
         const hours = customDurationHourSignal.value;
         const minutes = customDurationMinuteSignal.value;
 
         return (
           <List.Item
             selectable
-            index={index}
-            id="custom"
-            value="custom"
-            selected={selected}
             borderRadius="s"
             borderWidth="1"
             minWidth="64"
@@ -226,6 +222,7 @@
             paddingY="s"
             alignX="center"
             noWrap
+            {...props}
           >
             Autre
             <Box flex spacing="xxs">
