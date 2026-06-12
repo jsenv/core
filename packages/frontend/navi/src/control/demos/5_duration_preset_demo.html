@@ -405,8 +405,10 @@
                       action={(v) => {
                         customDurationHourSignal2.value = v;
                       }}
-                    />
-                    <span>:</span>
+                    >
+                      <Input.UI.UnitSlot>:</Input.UI.UnitSlot>
+                    </Input>
+
                     <Input
                       type="navi_minute"
                       unit={false}

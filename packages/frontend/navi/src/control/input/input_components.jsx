@@ -28,7 +28,7 @@ export const InputUnitSlot = ({ children, side = "right", ...props }) => {
 
 const InputSlot = ({ side, onClick, hideWhileEmpty, ...props }) => {
   const ctx = useContext(InputTextualContext);
-  const { id, readOnly, disabled } = ctx;
+  const { id, readOnly, disabled } = ctx || {};
 
   return (
     <Label

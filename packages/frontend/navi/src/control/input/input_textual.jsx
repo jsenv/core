@@ -253,6 +253,12 @@ const css = /* css */ `
       padding-right: 0;
       padding-left: 0;
 
+      .navi_input_real_input_wrapper {
+        position: relative;
+        display: inline-flex;
+        flex-grow: 1;
+      }
+
       .navi_input_underline {
         position: absolute;
         top: calc(100% - 1px);
@@ -373,11 +379,15 @@ const InputTextualUI = (props) => {
         color="var(--loader-color)"
         inset={-1}
       />
-      <RealInput {...inputProps} />
-      {childrenWithContext}
       {variant === "underline" ? (
-        <span className="navi_input_underline" />
-      ) : null}
+        <span className="navi_input_real_input_wrapper">
+          <RealInput {...inputProps} />
+          <span className="navi_input_underline" />
+        </span>
+      ) : (
+        <RealInput {...inputProps} />
+      )}
+      {childrenWithContext}
     </Box>
   );
 };
