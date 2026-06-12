@@ -18,27 +18,14 @@
         Quantity,
         Text,
         Title,
+        naviI18n,
       } from "@jsenv/navi";
 
-      window.QuantityIntl = Quantity.Intl; // expose intl for debugging
-
-      Quantity.Intl.addUnit("item", {
-        en: ["item", "items"],
-        fr: ["article", "articles"],
-        de: "artikel",
-        ja: "点",
-      });
-      Quantity.Intl.addUnit("minute", {
-        en: ["minute", "minutes"],
-        fr: ["minute", "minutes"],
-        de: ["Minute", "Minuten"],
-        ja: "分",
-      });
-      Quantity.Intl.addUnit("people", {
-        en: ["person", "people"],
-        fr: ["personne", "personnes"],
-        de: ["Person", "Personen"],
-        ja: "人",
+      naviI18n.addAll({
+        item: { en: "item", fr: "article", de: "Artikel", ja: "点" },
+        item__plural: { en: "items", fr: "articles", de: "Artikel" },
+        people: { en: "person", fr: "personne", de: "Person", ja: "人" },
+        people__plural: { en: "people", fr: "personnes", de: "Personen" },
       });
 
       const Demo = () => {
@@ -273,17 +260,18 @@
         <Box as="section" marginBottom="xl">
           <Title as="h2">
             <Link anchor href="#intl-unit" />
-            Unités traduites (intl)
+            Unités traduites
           </Title>
           <Paragraph>
-            <code>Quantity.Intl.addUnit()</code> enregistre une unité connue
-            avec ses traductions par langue. La forme singulière ou plurielle
-            est choisie automatiquement selon la valeur. Les langues qui n'ont
-            pas de distinction de nombre acceptent une chaîne simple. Les unités
-            non enregistrées s'affichent telles quelles.
+            Les unités standard (CLDR) comme <code>minute</code>,{" "}
+            <code>hour</code>, <code>kilometer</code> sont résolues
+            automatiquement via <code>Intl.NumberFormat</code>. Les unités
+            personnalisées sont enregistrées via <code>naviI18n.addAll()</code>.
+            Les tableaux <code>[singulier, pluriel]</code> bypassen toute
+            traduction. Les unités inconnues s'affichent telles quelles.
           </Paragraph>
 
-          <Title as="h3">minute</Title>
+          <Title as="h3">minute (Intl standard)</Title>
           <Box row spacing="xl" alignY="end" marginBottom="m">
             <Box row spacing="s">
               <Caption>1 minute (singulier)</Caption>
@@ -293,7 +281,7 @@
             </Box>
             <Box row spacing="s">
               <Caption>5 minutes (pluriel)</Caption>
-              <Quantity debug label="Durée" unit="minute">
+              <Quantity label="Durée" unit="minute">
                 {5}
               </Quantity>
             </Box>
@@ -305,7 +293,7 @@
             </Box>
           </Box>
 
-          <Title as="h3">people</Title>
+          <Title as="h3">people (naviI18n personnalisé)</Title>
           <Box row spacing="xl" alignY="end" marginBottom="m">
             <Box row spacing="s">
               <Caption>1 personne (singulier)</Caption>
@@ -326,8 +314,8 @@
           </Title>
           <Paragraph>
             Passer un tableau <code>[singulier, pluriel]</code> directement
-            bypasse l'intl : la forme est choisie selon{" "}
-            <code>value &gt; 1</code>, sans traduction.
+            bypasse toute traduction : la forme est choisie selon{" "}
+            <code>value &gt; 1</code>.
           </Paragraph>
           <Box row spacing="xl" alignY="end" marginBottom="m">
             <Box row spacing="s">

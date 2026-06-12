@@ -184,6 +184,7 @@ export { Text } from "./src/text/text.jsx";
 export { TextBox } from "./src/text/text_box.jsx";
 export { Time } from "./src/text/time.jsx";
 export { Title, useTitleLevel } from "./src/text/title.jsx";
+export { Unit } from "./src/text/unit.jsx";
 
 // Graphics
 export { Image } from "./src/graphic/image.jsx";

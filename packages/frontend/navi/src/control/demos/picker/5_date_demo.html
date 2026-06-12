@@ -58,7 +58,6 @@
     </div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useSignal } from "@preact/signals";
       import { CallLog, useCallLog } from "../utils/call_log.jsx";
       import {
         Box,
@@ -71,6 +70,8 @@
         isToday,
         getNowHoursRoundedToStep,
         stateSignal,
+        route,
+        setupRoutes,
       } from "@jsenv/navi";
 
       const App = () => (
@@ -206,9 +207,25 @@
 
       const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+      const noInitialDateSignal = stateSignal("", {
+        id: "no_initial_date",
+        type: "date",
+      });
+      const withInitialDateSignal = stateSignal(DEFAULT_DATE, {
+        id: "with_initial_date",
+        type: "date",
+      });
+
+      const DEMO_ROUTE = route("", {
+        searchParams: {
+          no_initial_date: noInitialDateSignal,
+          with_initial_date: withInitialDateSignal,
+        },
+      });
+      setupRoutes([DEMO_ROUTE]);
+
       const WithActionDemo = () => {
         const [entries, push, clear] = useCallLog();
-        const dateSignal = useSignal(DEFAULT_DATE);
 
         return (
           <div class="demo-section" id="outside-form">
@@ -223,12 +240,14 @@
                 <Picker
                   name="date_no_initial"
                   type="date"
+                  value={noInitialDateSignal.value}
                   uiAction={(v) => {
                     push("Picker uiAction", v);
                   }}
                   action={async (v) => {
                     push("Picker action", v);
                     await sleep(800);
+                    noInitialDateSignal.value = v;
                   }}
                 />
               </Field>
@@ -237,14 +256,14 @@
                 <Picker
                   name="date_with_initial"
                   type="date"
-                  value={dateSignal.value}
+                  value={withInitialDateSignal.value}
                   uiAction={(v) => {
                     push("Picker uiAction", v);
                   }}
                   action={async (v) => {
                     push("Picker action", v);
                     await sleep(800);
-                    dateSignal.value = v;
+                    withInitialDateSignal.value = v;
                   }}
                 />
               </Field>
