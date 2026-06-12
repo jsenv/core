@@ -8,8 +8,8 @@ import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
 import { triggerStringAction } from "../string_actions.js";
 import { dispatchRequestInteraction } from "../validation/custom_constraint_validation.js";
+import { InputIconSlot, InputRightSlot } from "./input_components.jsx";
 import { InputTextualContext } from "./input_textual_context.js";
-import { InputIconSlot, InputRightSlot } from "./input_ui_components.jsx";
 
 export const InputTypeResolver = (props) => {
   const Next = useNextResolver();

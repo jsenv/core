@@ -1,6 +1,6 @@
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { useNextResolver } from "../../resolver/resolver.jsx";
-import { InputUnitSlot } from "./input_ui_components.jsx";
+import { InputUnitSlot } from "./input_components.jsx";
 
 export const InputNaviMinuteResolver = (props) => {
   const Next = useNextResolver();
