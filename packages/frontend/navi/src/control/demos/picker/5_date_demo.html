@@ -492,6 +492,13 @@
       // "2026-01-20" → mardi 20 janvier      (short day, medium month)
       const DEMO_DATES = ["2026-06-03", "2026-09-11", "2026-01-20"];
 
+      // Fixed reference point for dayLabel demos so yesterday/today/tomorrow
+      // labels are always visible regardless of the actual current date.
+      const DAY_LABEL_NOW = new Date("2026-06-03T12:00:00");
+      const DAY_LABEL_YESTERDAY = "2026-06-02";
+      const DAY_LABEL_TODAY = "2026-06-03";
+      const DAY_LABEL_TOMORROW = "2026-06-04";
+
       const CustomizationDemo = () => (
         <div class="demo-section" id="customization">
           <h2>5. Customization — Picker.UI.Date</h2>
@@ -535,20 +542,20 @@
                 <Picker
                   name="date_daylabel_yesterday"
                   type="date"
-                  defaultValue="2026-06-02"
-                  ui={<Picker.UI.Date dayLabel />}
+                  defaultValue={DAY_LABEL_YESTERDAY}
+                  ui={<Picker.UI.Date dayLabel now={DAY_LABEL_NOW} />}
                 />
                 <Picker
                   name="date_daylabel_today"
                   type="date"
-                  defaultValue="2026-06-03"
-                  ui={<Picker.UI.Date dayLabel />}
+                  defaultValue={DAY_LABEL_TODAY}
+                  ui={<Picker.UI.Date dayLabel now={DAY_LABEL_NOW} />}
                 />
                 <Picker
                   name="date_daylabel_tomorrow"
                   type="date"
-                  defaultValue="2026-06-04"
-                  ui={<Picker.UI.Date dayLabel />}
+                  defaultValue={DAY_LABEL_TOMORROW}
+                  ui={<Picker.UI.Date dayLabel now={DAY_LABEL_NOW} />}
                 />
               </Box>
             </div>
@@ -587,20 +594,20 @@
                 <Picker
                   name="date_long_daylabel_yesterday"
                   type="date"
-                  defaultValue="2026-06-02"
-                  ui={<Picker.UI.Date long dayLabel />}
+                  defaultValue={DAY_LABEL_YESTERDAY}
+                  ui={<Picker.UI.Date long dayLabel now={DAY_LABEL_NOW} />}
                 />
                 <Picker
                   name="date_long_daylabel_today"
                   type="date"
-                  defaultValue="2026-06-03"
-                  ui={<Picker.UI.Date long dayLabel />}
+                  defaultValue={DAY_LABEL_TODAY}
+                  ui={<Picker.UI.Date long dayLabel now={DAY_LABEL_NOW} />}
                 />
                 <Picker
                   name="date_long_daylabel_tomorrow"
                   type="date"
-                  defaultValue="2026-06-04"
-                  ui={<Picker.UI.Date long dayLabel />}
+                  defaultValue={DAY_LABEL_TOMORROW}
+                  ui={<Picker.UI.Date long dayLabel now={DAY_LABEL_NOW} />}
                 />
               </Box>
             </div>
