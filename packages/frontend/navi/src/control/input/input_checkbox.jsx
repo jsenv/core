@@ -206,15 +206,10 @@ const css = /* css */ `
 
       /* Switch appearance */
       &[data-appearance="switch"] {
-        /* We compute ourselves the width + padding otherwise during 
-      translation subpixel rounding makes the thumb feels too much to the right by 1px */
-        box-sizing: content-box;
         --switch-outer-width: calc(var(--switch-width) + var(--switch-padding));
-
         --margin: var(--switch-margin);
         --width: var(--switch-outer-width);
         --height: unset;
-        min-width: var(--switch-outer-width);
         --border-radius: var(--switch-border-radius);
         --background-color: var(--switch-background-color);
         --background-color-hover: var(--switch-background-color-hover);
@@ -232,6 +227,11 @@ const css = /* css */ `
         );
 
         position: relative;
+        /* We compute ourselves the width + padding otherwise during */
+        /* translation subpixel rounding makes the thumb feels too much to the right by 1px */
+        /* We use !important to win over anything that would be set globally */
+        box-sizing: content-box !important;
+        min-width: var(--switch-outer-width);
         padding: var(--switch-padding);
         background-color: var(--x-background-color);
         border-color: transparent;
@@ -366,7 +366,6 @@ const InputCheckboxFieldInterface = (props) => {
       appearance={undefined}
       switch={undefined}
       icon={undefined}
-      accentColor={undefined}
       data-appearance={appearance}
       baseClassName="navi_checkbox"
       pseudoStateSelector=".navi_control_input"
