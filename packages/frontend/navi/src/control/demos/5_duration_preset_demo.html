@@ -95,8 +95,16 @@
         // persists: true,
       });
 
+      const dateSignal = stateSignal(Date.now(), {
+        id: "date",
+        type: "date",
+        min: Date.now(),
+        max: Date.now() + 10 * 24 * 60 * 60 * 1000, // 10 days in the future
+      });
+
       const DEMO_ROUTE = route("", {
         searchParams: {
+          date: dateSignal,
           duration: durationSignal,
           custom_hour: customDurationHourSignal,
           custom_minute: customDurationMinuteSignal,
