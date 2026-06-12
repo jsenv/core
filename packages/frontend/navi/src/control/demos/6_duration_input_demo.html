@@ -137,10 +137,8 @@
               onMinutes={(v) => {
                 minutesSignal.value = v;
               }}
-              unitHour={<Unit unit="hour" plural={hours !== 1} size="xs" />}
-              unitMinute={
-                <Unit unit="minute" plural={minutes !== 1} size="xs" />
-              }
+              unitHour={<Unit unit="hour" plural size="xs" />}
+              unitMinute={<Unit unit="minute" plural size="xs" />}
             />
             <p style={{ marginTop: "16px", color: "#555", fontSize: "13px" }}>
               Total : <strong>{totalMinutes} min</strong>
@@ -174,7 +172,7 @@
               onMinutes={(v) => {
                 minutesSignal.value = v;
               }}
-              unitHour={<Unit unit="hour" plural size="xs" />}
+              unitHour={<Text size="xs">This is way longer</Text>}
               unitMinute={<Unit unit="minute" plural size="xs" />}
             />
             <p style={{ marginTop: "16px", color: "#555", fontSize: "13px" }}>
