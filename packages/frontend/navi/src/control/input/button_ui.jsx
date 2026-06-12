@@ -71,204 +71,204 @@ const css = /* css */ `
       );
       --button-color-disabled: var(--button-color-readonly);
     }
-  }
 
-  a.navi_button {
-    display: inline-block;
-    color: inherit;
-    text-align: center;
-    text-decoration: none;
-  }
-
-  .navi_button {
-    /* outline will draw the border when visible */
-    --x-button-outline-width: calc(
-      var(--button-outline-width) + var(--button-border-width)
-    );
-    --x-button-outline-offset: calc(-1 * var(--button-border-width));
-    --x-button-border-color: var(--button-border-color);
-    --x-button-background: var(--button-background);
-    --x-button-background-color: var(--button-background-color);
-    --x-button-color: var(--button-color);
-    --x-button-cursor: var(--button-cursor);
-
-    box-sizing: border-box;
-    aspect-ratio: inherit;
-    padding: 0;
-    background: none;
-    border: none;
-    border-radius: var(--button-border-radius);
-    outline: none;
-    cursor: var(--x-button-cursor);
-    -webkit-tap-highlight-color: transparent;
-    position: relative;
-    touch-action: manipulation;
-    user-select: none;
-
-    &[data-accent-needs-dark-fg] {
-      --button-color: black;
+    a.navi_button {
+      display: inline-block;
+      color: inherit;
+      text-align: center;
+      text-decoration: none;
     }
 
-    &[data-icon] {
-      --button-padding: 0;
-    }
-
-    .navi_button_content {
-      position: relative;
-      display: inherit;
-      box-sizing: border-box;
-      aspect-ratio: inherit;
-      width: 100%;
-      height: 100%;
-      padding-top: var(
-        --button-padding-top,
-        var(
-          --button-padding-y,
-          var(--button-padding, var(--button-padding-y-default))
-        )
+    .navi_button {
+      /* outline will draw the border when visible */
+      --x-button-outline-width: calc(
+        var(--button-outline-width) + var(--button-border-width)
       );
-      padding-right: var(
-        --button-padding-right,
-        var(
-          --button-padding-x,
-          var(--button-padding, var(--button-padding-x-default))
-        )
-      );
-      padding-bottom: var(
-        --button-padding-bottom,
-        var(
-          --button-padding-y,
-          var(--button-padding, var(--button-padding-y-default))
-        )
-      );
-      padding-left: var(
-        --button-padding-left,
-        var(
-          --button-padding-x,
-          var(--button-padding, var(--button-padding-x-default))
-        )
-      );
-      align-items: inherit;
-      justify-content: inherit;
-      color: var(--x-button-color);
-      vertical-align: inherit;
-      background: var(--x-button-background);
-      background-color: var(
-        --x-button-background-color,
-        var(--x-button-background)
-      );
-      border-width: var(--button-border-width);
-      border-style: solid;
-      border-color: var(--x-button-border-color);
-      border-radius: inherit;
-      outline-width: var(--x-button-outline-width);
-      outline-color: var(--button-outline-color);
-      outline-offset: var(--x-button-outline-offset);
-      transition-property: transform;
-      transition-duration: 0.15s;
-      transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-
-      .navi_button_shadow {
-        position: absolute;
-        inset: calc(-1 * var(--x-button-outer-width));
-        border-radius: inherit;
-        pointer-events: none;
-      }
-
-      & > img {
-        border-radius: inherit;
-      }
-    }
-
-    &[data-reveal-on-interaction] {
-      --x-button-background-color: transparent;
-      --x-button-border-color: transparent;
-    }
-
-    /* Hover */
-    &[data-hover] {
-      --x-button-border-color: var(--button-border-color-hover);
-      --x-button-background-color: var(--button-background-color-hover);
-      --x-button-color: var(--button-color-hover);
-    }
-    &[data-nohover] {
+      --x-button-outline-offset: calc(-1 * var(--button-border-width));
       --x-button-border-color: var(--button-border-color);
+      --x-button-background: var(--button-background);
       --x-button-background-color: var(--button-background-color);
       --x-button-color: var(--button-color);
-    }
-    /* Pressed */
-    &[data-pressed] {
-      --x-button-outline-color: var(--button-border-color-pressed);
-    }
-    &[data-pressed] {
-      .navi_button_content {
-        transform: scale(0.9);
+      --x-button-cursor: var(--button-cursor);
+
+      box-sizing: border-box;
+      aspect-ratio: inherit;
+      padding: 0;
+      background: none;
+      border: none;
+      border-radius: var(--button-border-radius);
+      outline: none;
+      cursor: var(--x-button-cursor);
+      -webkit-tap-highlight-color: transparent;
+      position: relative;
+      touch-action: manipulation;
+      user-select: none;
+
+      &[data-accent-needs-dark-fg] {
+        --button-color: black;
       }
-    }
-    &[data-pressed] {
-      .navi_button_shadow {
-        box-shadow:
-          inset 0 3px 6px rgba(0, 0, 0, 0.2),
-          inset 0 1px 2px rgba(0, 0, 0, 0.3),
-          inset 0 0 0 1px rgba(0, 0, 0, 0.1),
-          inset 2px 0 4px rgba(0, 0, 0, 0.1),
-          inset -2px 0 4px rgba(0, 0, 0, 0.1);
+
+      &[data-icon] {
+        --button-padding: 0;
       }
-    }
-    /* Readonly */
-    &[data-readonly] {
-      --x-button-border-color: var(--button-border-color-readonly);
-      --x-button-background-color: var(--button-background-color-readonly);
-      --x-button-color: var(--button-color-readonly);
-      --x-button-cursor: default;
-    }
-    /* Focus */
-    &[data-focus-visible] {
-      --x-button-border-color: transparent;
 
       .navi_button_content {
-        outline-style: solid;
-      }
-    }
-    /* Disabled */
-    &[data-disabled] {
-      --x-button-border-color: var(--button-border-color-disabled);
-      --x-button-background-color: var(--button-background-color-disabled);
-      --x-button-color: var(--button-color-disabled);
-      --x-button-cursor: default;
-
-      color: unset;
-
-      /* Remove pressed effects */
-      .navi_button_content {
-        transform: none;
+        position: relative;
+        display: inherit;
+        box-sizing: border-box;
+        aspect-ratio: inherit;
+        width: 100%;
+        height: 100%;
+        padding-top: var(
+          --button-padding-top,
+          var(
+            --button-padding-y,
+            var(--button-padding, var(--button-padding-y-default))
+          )
+        );
+        padding-right: var(
+          --button-padding-right,
+          var(
+            --button-padding-x,
+            var(--button-padding, var(--button-padding-x-default))
+          )
+        );
+        padding-bottom: var(
+          --button-padding-bottom,
+          var(
+            --button-padding-y,
+            var(--button-padding, var(--button-padding-y-default))
+          )
+        );
+        padding-left: var(
+          --button-padding-left,
+          var(
+            --button-padding-x,
+            var(--button-padding, var(--button-padding-x-default))
+          )
+        );
+        align-items: inherit;
+        justify-content: inherit;
+        color: var(--x-button-color);
+        vertical-align: inherit;
+        background: var(--x-button-background);
+        background-color: var(
+          --x-button-background-color,
+          var(--x-button-background)
+        );
+        border-width: var(--button-border-width);
+        border-style: solid;
+        border-color: var(--x-button-border-color);
+        border-radius: inherit;
+        outline-width: var(--x-button-outline-width);
+        outline-color: var(--button-outline-color);
+        outline-offset: var(--x-button-outline-offset);
+        transition-property: transform;
+        transition-duration: 0.15s;
+        transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 
         .navi_button_shadow {
-          box-shadow: none;
+          position: absolute;
+          inset: calc(-1 * var(--x-button-outer-width));
+          border-radius: inherit;
+          pointer-events: none;
+        }
+
+        & > img {
+          border-radius: inherit;
         }
       }
-    }
-    /* Discrete variant */
-    &[data-discrete] {
-      --x-button-background-color: transparent;
-      --x-button-border-color: transparent;
 
+      &[data-reveal-on-interaction] {
+        --x-button-background-color: transparent;
+        --x-button-border-color: transparent;
+      }
+
+      /* Hover */
       &[data-hover] {
         --x-button-border-color: var(--button-border-color-hover);
+        --x-button-background-color: var(--button-background-color-hover);
+        --x-button-color: var(--button-color-hover);
       }
       &[data-nohover] {
-        --x-button-border-color: transparent;
+        --x-button-border-color: var(--button-border-color);
+        --x-button-background-color: var(--button-background-color);
+        --x-button-color: var(--button-color);
       }
+      /* Pressed */
+      &[data-pressed] {
+        --x-button-outline-color: var(--button-border-color-pressed);
+      }
+      &[data-pressed] {
+        .navi_button_content {
+          transform: scale(0.9);
+        }
+      }
+      &[data-pressed] {
+        .navi_button_shadow {
+          box-shadow:
+            inset 0 3px 6px rgba(0, 0, 0, 0.2),
+            inset 0 1px 2px rgba(0, 0, 0, 0.3),
+            inset 0 0 0 1px rgba(0, 0, 0, 0.1),
+            inset 2px 0 4px rgba(0, 0, 0, 0.1),
+            inset -2px 0 4px rgba(0, 0, 0, 0.1);
+        }
+      }
+      /* Readonly */
       &[data-readonly] {
-        --x-button-border-color: transparent;
+        --x-button-border-color: var(--button-border-color-readonly);
+        --x-button-background-color: var(--button-background-color-readonly);
+        --x-button-color: var(--button-color-readonly);
+        --x-button-cursor: default;
       }
+      /* Focus */
+      &[data-focus-visible] {
+        --x-button-border-color: transparent;
+
+        .navi_button_content {
+          outline-style: solid;
+        }
+      }
+      /* Disabled */
       &[data-disabled] {
-        --x-button-border-color: transparent;
+        --x-button-border-color: var(--button-border-color-disabled);
+        --x-button-background-color: var(--button-background-color-disabled);
+        --x-button-color: var(--button-color-disabled);
+        --x-button-cursor: default;
+
+        color: unset;
+
+        /* Remove pressed effects */
+        .navi_button_content {
+          transform: none;
+
+          .navi_button_shadow {
+            box-shadow: none;
+          }
+        }
       }
-    }
-    /* Callout (info, warning, error) */
-    &[data-callout] {
-      --x-button-border-color: var(--callout-color);
+      /* Discrete variant */
+      &[data-discrete] {
+        --x-button-background-color: transparent;
+        --x-button-border-color: transparent;
+
+        &[data-hover] {
+          --x-button-border-color: var(--button-border-color-hover);
+        }
+        &[data-nohover] {
+          --x-button-border-color: transparent;
+        }
+        &[data-readonly] {
+          --x-button-border-color: transparent;
+        }
+        &[data-disabled] {
+          --x-button-border-color: transparent;
+        }
+      }
+      /* Callout (info, warning, error) */
+      &[data-callout] {
+        --x-button-border-color: var(--callout-color);
+      }
     }
   }
 `;

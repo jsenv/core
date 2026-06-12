@@ -91,179 +91,179 @@ const css = /* css */ `
       --left-slot-size: 1.2em;
       --right-slot-size: 1.2em;
     }
-  }
 
-  .navi_input {
-    /* outline will draw the border when visible */
-    --x-outline-width: calc(var(--outline-width) + var(--border-width));
-    --x-outline-offset: calc(-1 * var(--border-width));
-    --x-left-slot-size: 0px;
-    --x-right-slot-size: 0xp;
-    --x-border-color: var(--border-color);
-    --x-background-color: var(--background-color);
-    --x-color: var(--color);
-    --x-placeholder-color: var(--placeholder-color);
-    --x-padding-top-base: var(
-      --padding-top,
-      var(--padding-y, var(--padding, 1px))
-    );
-    --x-padding-right-base: var(
-      --padding-right,
-      var(--padding-x, var(--padding, 2px))
-    );
-    --x-padding-bottom-base: var(
-      --padding-bottom,
-      var(--padding-y, var(--padding, 1px))
-    );
-    --x-padding-left-base: var(
-      --padding-left,
-      var(--padding-x, var(--padding, 2px))
-    );
-    --x-padding-top: var(--x-padding-top-base);
-    --x-padding-right: var(--x-padding-right-base);
-    --x-padding-bottom: var(--x-padding-bottom-base);
-    --x-padding-left: var(--x-padding-left-base);
+    .navi_input {
+      /* outline will draw the border when visible */
+      --x-outline-width: calc(var(--outline-width) + var(--border-width));
+      --x-outline-offset: calc(-1 * var(--border-width));
+      --x-left-slot-size: 0px;
+      --x-right-slot-size: 0xp;
+      --x-border-color: var(--border-color);
+      --x-background-color: var(--background-color);
+      --x-color: var(--color);
+      --x-placeholder-color: var(--placeholder-color);
+      --x-padding-top-base: var(
+        --padding-top,
+        var(--padding-y, var(--padding, 1px))
+      );
+      --x-padding-right-base: var(
+        --padding-right,
+        var(--padding-x, var(--padding, 2px))
+      );
+      --x-padding-bottom-base: var(
+        --padding-bottom,
+        var(--padding-y, var(--padding, 1px))
+      );
+      --x-padding-left-base: var(
+        --padding-left,
+        var(--padding-x, var(--padding, 2px))
+      );
+      --x-padding-top: var(--x-padding-top-base);
+      --x-padding-right: var(--x-padding-right-base);
+      --x-padding-bottom: var(--x-padding-bottom-base);
+      --x-padding-left: var(--x-padding-left-base);
 
-    position: relative;
-    display: inline-flex;
-    box-sizing: border-box;
-    width: fit-content;
-    height: fit-content;
-    padding-top: var(--x-padding-top);
-    padding-right: var(--x-padding-right);
-    padding-bottom: var(--x-padding-bottom);
-    padding-left: var(--x-padding-left);
-    flex-direction: row;
-    color: var(--x-color);
-    font-size: var(--font-size);
-    background-color: var(--x-background-color);
-    border-width: var(--border-width);
-    border-style: solid;
-    border-color: var(--x-border-color);
-    border-radius: var(--border-radius);
-    outline-width: var(--x-outline-width);
-    outline-color: var(--outline-color);
-    outline-offset: var(--x-outline-offset);
-    cursor: inherit;
-    pointer-events: auto;
-
-    .navi_control_input {
-      box-sizing: content-box;
-      min-width: 1ch;
-      margin-top: calc(-1 * var(--x-padding-top));
-      margin-right: calc(-1 * var(--x-padding-right));
-      margin-bottom: calc(-1 * var(--x-padding-bottom));
-      margin-left: calc(-1 * var(--x-padding-left));
+      position: relative;
+      display: inline-flex;
+      box-sizing: border-box;
+      width: fit-content;
+      height: fit-content;
       padding-top: var(--x-padding-top);
       padding-right: var(--x-padding-right);
       padding-bottom: var(--x-padding-bottom);
       padding-left: var(--x-padding-left);
-      flex-grow: 1;
-      color: inherit;
-      font-size: inherit;
-      background: none;
-      border: none;
-      border-radius: inherit;
-      outline: none;
+      flex-direction: row;
+      color: var(--x-color);
+      font-size: var(--font-size);
+      background-color: var(--x-background-color);
+      border-width: var(--border-width);
+      border-style: solid;
+      border-color: var(--x-border-color);
+      border-radius: var(--border-radius);
+      outline-width: var(--x-outline-width);
+      outline-color: var(--outline-color);
+      outline-offset: var(--x-outline-offset);
+      cursor: inherit;
+      pointer-events: auto;
 
-      &[type="search"] {
-        -webkit-appearance: textfield;
+      .navi_control_input {
+        box-sizing: content-box;
+        min-width: 1ch;
+        margin-top: calc(-1 * var(--x-padding-top));
+        margin-right: calc(-1 * var(--x-padding-right));
+        margin-bottom: calc(-1 * var(--x-padding-bottom));
+        margin-left: calc(-1 * var(--x-padding-left));
+        padding-top: var(--x-padding-top);
+        padding-right: var(--x-padding-right);
+        padding-bottom: var(--x-padding-bottom);
+        padding-left: var(--x-padding-left);
+        flex-grow: 1;
+        color: inherit;
+        font-size: inherit;
+        background: none;
+        border: none;
+        border-radius: inherit;
+        outline: none;
 
-        &::-webkit-search-cancel-button {
-          display: none;
+        &[type="search"] {
+          -webkit-appearance: textfield;
+
+          &::-webkit-search-cancel-button {
+            display: none;
+          }
         }
       }
-    }
 
-    .navi_input_slot {
-      color: #5e4e4e;
+      .navi_input_slot {
+        color: #5e4e4e;
 
-      &[data-left] {
-        margin-right: var(--x-padding-left);
-        order: -1;
-      }
+        &[data-left] {
+          margin-right: var(--x-padding-left);
+          order: -1;
+        }
 
-      &[data-hide-while-empty] {
-        opacity: 0;
-        pointer-events: none;
-      }
-    }
-    &[data-has-value] {
-      .navi_input_slot[data-hide-while-empty] {
-        opacity: 1;
-        cursor: pointer;
-        pointer-events: auto;
-      }
-      &[data-readonly] {
-        .navi_input_slot[data-hide-while-empty] {
+        &[data-hide-while-empty] {
           opacity: 0;
           pointer-events: none;
         }
       }
-      &[data-disabled] {
+      &[data-has-value] {
         .navi_input_slot[data-hide-while-empty] {
-          opacity: 0;
-          pointer-events: none;
+          opacity: 1;
+          cursor: pointer;
+          pointer-events: auto;
+        }
+        &[data-readonly] {
+          .navi_input_slot[data-hide-while-empty] {
+            opacity: 0;
+            pointer-events: none;
+          }
+        }
+        &[data-disabled] {
+          .navi_input_slot[data-hide-while-empty] {
+            opacity: 0;
+            pointer-events: none;
+          }
         }
       }
-    }
 
-    /* Hover */
-    &[data-hover] {
-      --x-background-color: var(--background-color-hover);
-      --x-border-color: var(--border-color-hover);
-      --x-color: var(--color-hover);
-    }
-    /* Readonly */
-    &[data-readonly] {
-      --x-border-color: var(--border-color-readonly);
-      --x-background-color: var(--background-color-readonly);
-      --x-color: var(--color-readonly);
-    }
-    /* Focus */
-    &[data-focus-visible] {
-      --x-background-color: var(--background-color-focus);
-      --x-border-color: transparent;
-      outline-style: solid;
-    }
-    /* Disabled */
-    &[data-disabled] {
-      --x-border-color: var(--border-color-disabled);
-      --x-background-color: var(--background-color-disabled);
-      --x-color: var(--color-disabled);
-    }
-    /* Callout (info, warning, error) */
-    &[data-callout] {
-      --x-border-color: var(--callout-color);
-      --x-outline-color: var(--callout-color);
-    }
-
-    &[data-discrete] {
-      --x-background-color: transparent;
-
+      /* Hover */
       &[data-hover] {
-        --x-background-color: white;
+        --x-background-color: var(--background-color-hover);
+        --x-border-color: var(--border-color-hover);
+        --x-color: var(--color-hover);
       }
-      &[data-focus] {
-        --x-background-color: white;
-      }
+      /* Readonly */
       &[data-readonly] {
-        --x-background-color: transparent;
+        --x-border-color: var(--border-color-readonly);
+        --x-background-color: var(--background-color-readonly);
+        --x-color: var(--color-readonly);
       }
+      /* Focus */
+      &[data-focus-visible] {
+        --x-background-color: var(--background-color-focus);
+        --x-border-color: transparent;
+        outline-style: solid;
+      }
+      /* Disabled */
       &[data-disabled] {
+        --x-border-color: var(--border-color-disabled);
+        --x-background-color: var(--background-color-disabled);
+        --x-color: var(--color-disabled);
+      }
+      /* Callout (info, warning, error) */
+      &[data-callout] {
+        --x-border-color: var(--callout-color);
+        --x-outline-color: var(--callout-color);
+      }
+
+      &[data-discrete] {
         --x-background-color: transparent;
+
+        &[data-hover] {
+          --x-background-color: white;
+        }
+        &[data-focus] {
+          --x-background-color: white;
+        }
+        &[data-readonly] {
+          --x-background-color: transparent;
+        }
+        &[data-disabled] {
+          --x-background-color: transparent;
+        }
       }
     }
-  }
 
-  .navi_input .navi_control_input::placeholder {
-    color: var(--x-placeholder-color);
-  }
-  .navi_input .navi_control_input:-internal-autofill-selected {
-    /* Webkit is putting some nasty styles after automplete that look as follow */
-    /* input:-internal-autofill-selected { color: FieldText !important; } */
-    /* Fortunately we can override it as follow */
-    -webkit-text-fill-color: var(--x-color) !important;
+    .navi_input .navi_control_input::placeholder {
+      color: var(--x-placeholder-color);
+    }
+    .navi_input .navi_control_input:-internal-autofill-selected {
+      /* Webkit is putting some nasty styles after automplete that look as follow */
+      /* input:-internal-autofill-selected { color: FieldText !important; } */
+      /* Fortunately we can override it as follow */
+      -webkit-text-fill-color: var(--x-color) !important;
+    }
   }
 `;
 
