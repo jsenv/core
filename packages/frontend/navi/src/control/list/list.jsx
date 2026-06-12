@@ -62,9 +62,8 @@ const css = /* css */ `
       --list-max-height: 220px;
     }
     .navi_list_item {
-      --list-item-padding-x: 0px;
-      --list-item-padding-y: 0px;
-      --list-item-padding: var(--list-item-padding-y) var(--list-item-padding-x);
+      --list-item-padding-x-default: 0px;
+      --list-item-padding-y-default: 0px;
       --list-item-color: inherit;
       --list-item-font-weight: inherit;
       --list-item-background-color: transparent;
@@ -180,7 +179,34 @@ const css = /* css */ `
     box-sizing: border-box;
     min-width: 0;
     max-width: 100%;
-    padding: var(--list-item-padding);
+    padding-top: var(
+      --list-item-padding-top,
+      var(
+        --list-item-padding-y,
+        var(--list-item-padding, var(--list-item-y-default))
+      )
+    );
+    padding-right: var(
+      --list-item-padding-right,
+      var(
+        --list-item-padding-x,
+        var(--list-item-padding, var(--list-item-padding-x-default))
+      )
+    );
+    padding-bottom: var(
+      --list-item-padding-bottom,
+      var(
+        --list-item-padding-y,
+        var(--list-item-padding, var(--list-item-padding-y-default))
+      )
+    );
+    padding-left: var(
+      --list-item-padding-left,
+      var(
+        --list-item-padding-x,
+        var(--list-item-padding, var(--list-item-padding-x-default))
+      )
+    );
     color: var(--x-list-item-color);
     font-weight: var(--x-list-item-font-weight);
     background-color: var(--x-list-item-background-color);
@@ -1280,9 +1306,13 @@ const ListItemReal = (props) => {
   );
 };
 const LIST_ITEM_STYLE_CSS_VARS = {
+  "padding": "--list-item-padding",
   "paddingX": "--list-item-padding-x",
   "paddingY": "--list-item-padding-y",
-  "padding": "--list-item-padding",
+  "paddingTop": "--list-item-padding-top",
+  "paddingRight": "--list-item-padding-right",
+  "paddingBottom": "--list-item-padding-bottom",
+  "paddingLeft": "--list-item-padding-left",
   "color": "--list-item-color",
   "backgroundColor": "--list-item-background-color",
   "fontWeight": "--list-item-font-weight",

@@ -57,6 +57,9 @@ const css = /* css */ `
       /* Disabled */
       --list-item-color-disabled: light-dark(#aaa, #555);
       --list-item-background-color-disabled: var(--list-item-background-color);
+
+      --selectable-item-padding-x-default: 2px;
+      --selectable-item-padding-y-default: 1px;
     }
   }
 
@@ -89,6 +92,8 @@ const css = /* css */ `
 
   .navi_list_item[navi-selectable] {
     --x-list-item-cursor: default;
+    --list-item-padding-x-default: var(--selectable-item-padding-x-default);
+    --list-item-padding-y-default: var(--selectable-item-padding-y-default);
 
     position: relative;
     outline-width: var(--list-item-outline-width);
@@ -536,7 +541,6 @@ const ListItemSelectable = (props) => {
       aria-selected={checked}
       selected={checked}
       navi-selectable=""
-      padding="m"
       spacing="s"
       flex
       alignY="center"

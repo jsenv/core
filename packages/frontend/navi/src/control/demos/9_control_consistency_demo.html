@@ -52,13 +52,14 @@
       import { Box, Input, Button, Picker, List } from "@jsenv/navi";
 
       const COLORS = ["Red", "Green", "Blue", "Yellow", "Purple"];
+      const SHORT_COLORS = COLORS.slice(0, 3);
 
       const App = () => {
         const pickerValue = useSignal("Green");
 
         return (
           <Box flex="y" spacing="xl">
-            {/* Row: all controls on the same baseline */}
+            {/* Side by side pairs */}
             <div class="section">
               <h2>Side by side — default size</h2>
               <Box flex="y" spacing="m">
@@ -83,7 +84,6 @@
                           index={i}
                           value={c}
                           selected={pickerValue.value === c}
-                          padding="s"
                         >
                           {c}
                         </List.Item>
@@ -92,8 +92,6 @@
                   </Picker>
                 </Box>
                 <Box flex="x" alignY="center">
-                  <Input type="text" value="Hello" />
-                  <Button>Click me</Button>
                   <Picker
                     name="color_picker_b"
                     value={pickerValue.value}
@@ -109,43 +107,34 @@
                           index={i}
                           value={c}
                           selected={pickerValue.value === c}
-                          padding="s"
                         >
                           {c}
                         </List.Item>
                       ))}
                     </List>
                   </Picker>
-                </Box>
-              </Box>
-            </div>
-
-            {/* Row: horizontal selectable list */}
-            <div class="section">
-              <h2>Horizontal selectable list</h2>
-              <List
-                selectable
-                horizontal
-                action="send"
-                onAction={(v) => {
-                  pickerValue.value = v;
-                }}
-              >
-                {COLORS.map((c, i) => (
-                  <List.Item
+                  <List
                     selectable
-                    key={c}
-                    index={i}
-                    value={c}
-                    selected={pickerValue.value === c}
-                    padding="s"
+                    horizontal
+                    borderWidth="1"
+                    action="send"
+                    onAction={(v) => {
+                      pickerValue.value = v;
+                    }}
                   >
-                    {c}
-                  </List.Item>
-                ))}
-              </List>
-              <Box marginTop="s" style={{ color: "#555", fontSize: "0.85rem" }}>
-                Selected: {pickerValue.value}
+                    {SHORT_COLORS.map((c, i) => (
+                      <List.Item
+                        selectable
+                        key={c}
+                        index={i}
+                        value={c}
+                        selected={pickerValue.value === c}
+                      >
+                        {c}
+                      </List.Item>
+                    ))}
+                  </List>
+                </Box>
               </Box>
             </div>
 
