@@ -57,6 +57,7 @@ const InputModeNumeric = (props) => {
         if (allowed) {
           input.select();
         } else {
+          e.preventDefault();
           // navi_input_full called preventDefault()
           // (it consumed the event likely meaning an other input got focused)
         }

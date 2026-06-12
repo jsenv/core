@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
-import { useDebugInteraction } from "@jsenv/navi/src/navi_debug.jsx";
+import { useDebugFocus } from "@jsenv/navi/src/navi_debug.jsx";
 
 /**
  * Wraps multiple inputs together and handles keyboard navigation between them.
@@ -17,7 +17,7 @@ export const InputGroup = (props) => {
 };
 
 const useInputGroup = (ref) => {
-  const debug = useDebugInteraction();
+  const debugFocus = useDebugFocus();
 
   useEffect(() => {
     const el = ref.current;
@@ -50,35 +50,48 @@ const useInputGroup = (ref) => {
         }
         const inputs = getInputs();
         const idx = inputs.indexOf(active);
-        if (idx !== -1 && idx < inputs.length - 1) {
-          e.preventDefault();
-          debug(
+        if (idx === -1) {
+          debugFocus(
             e,
-            "InputGroup ArrowRight at end of input[%d] → focus input[%d]",
-            idx,
-            idx + 1,
+            "InputGroup ArrowRight on non group input → do nothing",
           );
-          focusInput(inputs[idx + 1]);
-        }
-      } else {
-        const atStart =
-          active.selectionStart === 0 && active.selectionEnd === 0;
-        if (!atStart) {
           return;
         }
-        const inputs = getInputs();
-        const idx = inputs.indexOf(active);
-        if (idx > 0) {
-          e.preventDefault();
-          debug(
+        if (idx === inputs.length - 1) {
+          debugFocus(
             e,
-            "InputGroup ArrowLeft at start of input[%d] → focus input[%d]",
-            idx,
-            idx - 1,
+            "InputGroup ArrowRight at end of last input → do nothing",
           );
-          focusInput(inputs[idx - 1]);
+          return;
         }
+
+        debugFocus(
+          e,
+          "InputGroup ArrowRight at end of input[%d] → focus input[%d]",
+          idx,
+          idx + 1,
+        );
+        e.preventDefault();
+        focusInput(inputs[idx + 1]);
+        return;
       }
+      const atStart = active.selectionStart === 0 && active.selectionEnd === 0;
+      if (!atStart) {
+        return;
+      }
+      const inputs = getInputs();
+      const idx = inputs.indexOf(active);
+      if (idx === 0) {
+        return;
+      }
+      debugFocus(
+        e,
+        "InputGroup ArrowLeft at start of input[%d] → focus input[%d]",
+        idx,
+        idx - 1,
+      );
+      e.preventDefault();
+      focusInput(inputs[idx - 1]);
     };
 
     const handleNaviInputFull = (e) => {
@@ -86,10 +99,11 @@ const useInputGroup = (ref) => {
       if (!el.contains(input)) {
         return;
       }
+      debugger;
       const inputs = getInputs();
       const idx = inputs.indexOf(input);
       if (idx !== -1 && idx < inputs.length - 1) {
-        debug(
+        debugFocus(
           e,
           "InputGroup navi_input_full on input[%d] → focus input[%d]",
           idx,
@@ -106,7 +120,7 @@ const useInputGroup = (ref) => {
       el.removeEventListener("keydown", handleKeyDown, { capture: false });
       el.removeEventListener("navi_input_full", handleNaviInputFull);
     };
-  }, [debug]);
+  }, [debugFocus]);
 };
 
 const isTextInputElement = (el) => {
