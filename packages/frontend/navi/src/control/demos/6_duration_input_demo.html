@@ -69,35 +69,53 @@
               accompagné de son label d'unité (<code>&lt;Unit&gt;</code>)
               affiché en dessous.
             </p>
-            <Box inline flex alignY="start" spacing="xs">
-              <Box flex="y" alignX="start">
+            <div
+              style={{
+                display: "inline-block",
+                padding: "16px",
+                border: "1px dotted #aaa",
+                borderRadius: "4px",
+              }}
+            >
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "80px auto 80px",
+                  gridTemplateRows: "auto auto",
+                  alignItems: "end",
+                  columnGap: "8px",
+                }}
+              >
                 <Input
                   type="navi_hour"
                   unit={false}
                   variant="underline"
-                  width="auto"
+                  size="l"
+                  width="60"
                   value={hours}
                   action={(v) => {
                     hoursSignal.value = v;
                   }}
                 />
-                <Unit unit="hour" plural={hours !== 1} />
-              </Box>
-              <span style={{ paddingTop: "6px" }}>:</span>
-              <Box flex="y" alignX="start">
+                <span style={{ textAlign: "center", paddingBottom: "4px" }}>
+                  :
+                </span>
                 <Input
                   type="navi_minute"
+                  size="l"
                   unit={false}
                   variant="underline"
-                  width="auto"
+                  width="60"
                   value={minutes}
                   action={(v) => {
                     minutesSignal.value = v;
                   }}
                 />
-                <Unit unit="minute" plural={minutes !== 1} />
-              </Box>
-            </Box>
+                <Unit unit="hour" plural={hours !== 1} size="xs" />
+                <span />
+                <Unit unit="minute" plural={minutes !== 1} size="xs" />
+              </div>
+            </div>
             <p style={{ marginTop: "16px", color: "#555", fontSize: "13px" }}>
               Total : <strong>{totalMinutes} min</strong>
             </p>

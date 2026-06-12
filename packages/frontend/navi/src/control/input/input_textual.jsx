@@ -247,22 +247,33 @@ const css = /* css */ `
     }
 
     &[data-variant="underline"] {
-      border-top: none;
-      border-right: none;
-      border-left: none;
+      border: none;
       border-radius: 0;
-      --border-width: 2px;
       --x-background-color: transparent;
       padding-right: 0;
       padding-left: 0;
+
+      .navi_input_underline {
+        position: absolute;
+        top: calc(100% - 1px);
+        right: 0;
+        left: 0;
+        height: 1px;
+        background-color: var(--x-border-color);
+        pointer-events: none;
+      }
 
       &[data-hover] {
         --x-background-color: transparent;
       }
       &[data-focus-visible] {
         --x-background-color: transparent;
-        --x-border-color: var(--outline-color);
         outline-style: none;
+
+        .navi_input_underline {
+          height: 2px;
+          background-color: var(--outline-color);
+        }
       }
       &[data-readonly] {
         --x-background-color: transparent;
@@ -364,6 +375,9 @@ const InputTextualUI = (props) => {
       />
       <RealInput {...inputProps} />
       {childrenWithContext}
+      {variant === "underline" ? (
+        <span className="navi_input_underline" />
+      ) : null}
     </Box>
   );
 };
