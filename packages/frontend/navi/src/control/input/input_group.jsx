@@ -99,19 +99,23 @@ const useInputGroup = (ref) => {
       if (!el.contains(input)) {
         return;
       }
-      debugger;
       const inputs = getInputs();
       const idx = inputs.indexOf(input);
-      if (idx !== -1 && idx < inputs.length - 1) {
-        debugFocus(
-          e,
-          "InputGroup navi_input_full on input[%d] → focus input[%d]",
-          idx,
-          idx + 1,
-        );
-        focusInput(inputs[idx + 1]);
-        e.preventDefault();
+      if (idx === -1) {
+        return;
       }
+      if (idx === inputs.length - 1) {
+        return;
+      }
+      const nextInput = inputs[idx + 1];
+      debugFocus(
+        e,
+        "InputGroup navi_input_full on input -> move to next input",
+        input,
+        nextInput,
+      );
+      e.preventDefault();
+      focusInput(nextInput);
     };
 
     el.addEventListener("keydown", handleKeyDown, { capture: false });
