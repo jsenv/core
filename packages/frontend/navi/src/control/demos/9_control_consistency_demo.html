@@ -55,7 +55,11 @@
       const SHORT_COLORS = COLORS.slice(0, 3);
 
       const App = () => {
-        const pickerValue = useSignal("Green");
+        const pickerA = useSignal("Green");
+        const pickerB = useSignal("Green");
+        const pickerC = useSignal("Green");
+        const listValue = useSignal("Red");
+        const pickerStacked = useSignal("Green");
 
         return (
           <Box flex="y" spacing="xl">
@@ -71,9 +75,9 @@
                   <Button>Click me</Button>
                   <Picker
                     name="color_picker_a"
-                    value={pickerValue.value}
+                    value={pickerA.value}
                     action={(v) => {
-                      pickerValue.value = v;
+                      pickerA.value = v;
                     }}
                   >
                     <List selectable action="send">
@@ -83,7 +87,7 @@
                           key={c}
                           index={i}
                           value={c}
-                          selected={pickerValue.value === c}
+                          selected={pickerA.value === c}
                         >
                           {c}
                         </List.Item>
@@ -94,9 +98,9 @@
                 <Box flex="x" alignY="center">
                   <Picker
                     name="color_picker_b"
-                    value={pickerValue.value}
+                    value={pickerB.value}
                     action={(v) => {
-                      pickerValue.value = v;
+                      pickerB.value = v;
                     }}
                   >
                     <List selectable action="send">
@@ -106,7 +110,7 @@
                           key={c}
                           index={i}
                           value={c}
-                          selected={pickerValue.value === c}
+                          selected={pickerB.value === c}
                         >
                           {c}
                         </List.Item>
@@ -119,7 +123,7 @@
                     spacing="xxs"
                     border="none"
                     action={(v) => {
-                      pickerValue.value = v;
+                      listValue.value = v;
                     }}
                   >
                     {SHORT_COLORS.map((c, i) => (
@@ -128,7 +132,7 @@
                         key={c}
                         index={i}
                         value={c}
-                        selected={pickerValue.value === c}
+                        selected={listValue.value === c}
                         borderWidth="1"
                         borderRadius="xs"
                       >
@@ -195,10 +199,10 @@
                     Picker
                   </span>
                   <Picker
-                    name="color_picker2"
-                    value={pickerValue.value}
+                    name="color_picker_stacked"
+                    value={pickerStacked.value}
                     action={(v) => {
-                      pickerValue.value = v;
+                      pickerStacked.value = v;
                     }}
                   >
                     <List selectable action="send">
@@ -208,7 +212,7 @@
                           key={c}
                           index={i}
                           value={c}
-                          selected={pickerValue.value === c}
+                          selected={pickerStacked.value === c}
                           padding="s"
                         >
                           {c}
