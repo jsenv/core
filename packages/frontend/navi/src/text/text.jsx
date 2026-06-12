@@ -567,7 +567,7 @@ const TextSkeleton = ({ loading, children, ...props }) => {
     </TextDispatcher>
   );
 };
-const TextOverflow = ({ noWrap, spacing, children, ...rest }) => {
+const TextOverflow = ({ noWrap, spacing, capitalize, children, ...rest }) => {
   const [overflowPinned, setOverflowPinned] = useState(null);
 
   return (
@@ -589,7 +589,11 @@ const TextOverflow = ({ noWrap, spacing, children, ...rest }) => {
           ? overflowPinned.vnode
           : null}
         <OverflowPinnedContext.Provider value={setOverflowPinned}>
-          <Text className="navi_text_overflow_text" spacing={spacing}>
+          <Text
+            className="navi_text_overflow_text"
+            spacing={spacing}
+            capitalize={capitalize}
+          >
             {children}
           </Text>
         </OverflowPinnedContext.Provider>
