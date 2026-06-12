@@ -67,15 +67,15 @@ const useInputGroup = (ref) => {
     };
 
     const handleNaviInputFull = (e) => {
-      debugger;
-      const input = e.target.closest(".navi_control_input");
-      if (!input || !el.contains(input)) {
+      const input = e.detail.event.currentTarget;
+      if (!el.contains(input)) {
         return;
       }
       const inputs = getInputs();
       const idx = inputs.indexOf(input);
       if (idx !== -1 && idx < inputs.length - 1) {
         focusInput(inputs[idx + 1]);
+        e.preventDefault();
       }
     };
 
