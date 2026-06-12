@@ -58,8 +58,12 @@ const css = /* css */ `
       --list-item-color-disabled: light-dark(#aaa, #555);
       --list-item-background-color-disabled: var(--list-item-background-color);
 
-      --selectable-item-padding-x-default: 2px;
-      --selectable-item-padding-y-default: 1px;
+      --selectable-item-padding-x-default: var(
+        --navi-control-padding-x-default
+      );
+      --selectable-item-padding-y-default: var(
+        --navi-control-padding-y-default
+      );
     }
 
     fieldset.navi_list_container[navi-selectable] {
@@ -73,14 +77,12 @@ const css = /* css */ `
       );
       --x-list-outline-offset: calc(-1 * var(--list-border-width));
 
+      font-size: var(--navi-control-font-size);
+      font-family: var(--navi-control-font-family);
       outline-width: var(--x-list-outline-width);
       outline-color: var(--list-outline-color);
       outline-offset: var(--x-list-outline-offset);
 
-      &[data-focus] {
-        /* outline: var(--list-outline-width) solid var(--navi-focus-outline-color);
-      outline-offset: calc(-1 * var(--list-outline-width)); */
-      }
       &[data-focus-visible] {
         outline-style: solid;
       }

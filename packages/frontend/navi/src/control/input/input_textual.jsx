@@ -102,26 +102,22 @@ const css = /* css */ `
       --x-background-color: var(--background-color);
       --x-color: var(--color);
       --x-placeholder-color: var(--placeholder-color);
-      --x-padding-top-base: var(
+      --x-padding-top: var(
         --padding-top,
-        var(--padding-y, var(--padding, 1px))
+        var(--padding-y, var(--padding, var(--navi-control-padding-y-default)))
       );
-      --x-padding-right-base: var(
+      --x-padding-right: var(
         --padding-right,
-        var(--padding-x, var(--padding, 2px))
+        var(--padding-x, var(--padding, var(--navi-control-padding-x-default)))
       );
-      --x-padding-bottom-base: var(
+      --x-padding-bottom: var(
         --padding-bottom,
-        var(--padding-y, var(--padding, 1px))
+        var(--padding-y, var(--padding, var(--navi-control-padding-y-default)))
       );
-      --x-padding-left-base: var(
+      --x-padding-left: var(
         --padding-left,
-        var(--padding-x, var(--padding, 2px))
+        var(--padding-x, var(--padding, var(--navi-control-padding-x-default)))
       );
-      --x-padding-top: var(--x-padding-top-base);
-      --x-padding-right: var(--x-padding-right-base);
-      --x-padding-bottom: var(--x-padding-bottom-base);
-      --x-padding-left: var(--x-padding-left-base);
 
       position: relative;
       display: inline-flex;

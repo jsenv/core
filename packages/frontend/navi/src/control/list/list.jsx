@@ -182,7 +182,7 @@ const css = /* css */ `
         --list-item-padding-top,
         var(
           --list-item-padding-y,
-          var(--list-item-padding, var(--list-item-y-default))
+          var(--list-item-padding, var(--list-item-padding-y-default))
         )
       );
       padding-right: var(
