@@ -36400,155 +36400,155 @@ installImportMetaCssBuild(import.meta);const css$k = /* css */`
       );
       --picker-icon-color-disabled: var(--picker-icon-color-readonly);
     }
-  }
 
-  .navi_picker {
-    --x-picker-outline-width: calc(
-      var(--picker-outline-width) + var(--picker-border-width)
-    );
-    --x-picker-outline-offset: calc(-1 * var(--picker-border-width));
-    --x-picker-background-color: var(--picker-background-color);
-    --x-picker-border-color: var(--picker-border-color);
-    --x-picker-padding-top: var(
-      --picker-padding-top,
-      var(
-        --picker-padding-y,
-        var(--picker-padding, var(--picker-padding-y-default))
-      )
-    );
-    --x-picker-padding-right: var(
-      --picker-padding-right,
-      var(
-        --picker-padding-x,
-        var(--picker-padding, var(--picker-padding-x-default))
-      )
-    );
-    --x-picker-padding-left: var(
-      --picker-padding-left,
-      var(
-        --picker-padding-x,
-        var(--picker-padding, var(--picker-padding-x-default))
-      )
-    );
-    --x-picker-padding-bottom: var(
-      --picker-padding-bottom,
-      var(
-        --picker-padding-y,
-        var(--picker-padding, var(--picker-padding-y-default))
-      )
-    );
-    --x-picker-color: var(--picker-color);
-    --x-picker-icon-color: var(--picker-icon-color);
+    .navi_picker {
+      --x-picker-outline-width: calc(
+        var(--picker-outline-width) + var(--picker-border-width)
+      );
+      --x-picker-outline-offset: calc(-1 * var(--picker-border-width));
+      --x-picker-background-color: var(--picker-background-color);
+      --x-picker-border-color: var(--picker-border-color);
+      --x-picker-padding-top: var(
+        --picker-padding-top,
+        var(
+          --picker-padding-y,
+          var(--picker-padding, var(--picker-padding-y-default))
+        )
+      );
+      --x-picker-padding-right: var(
+        --picker-padding-right,
+        var(
+          --picker-padding-x,
+          var(--picker-padding, var(--picker-padding-x-default))
+        )
+      );
+      --x-picker-padding-left: var(
+        --picker-padding-left,
+        var(
+          --picker-padding-x,
+          var(--picker-padding, var(--picker-padding-x-default))
+        )
+      );
+      --x-picker-padding-bottom: var(
+        --picker-padding-bottom,
+        var(
+          --picker-padding-y,
+          var(--picker-padding, var(--picker-padding-y-default))
+        )
+      );
+      --x-picker-color: var(--picker-color);
+      --x-picker-icon-color: var(--picker-icon-color);
 
-    position: relative;
-    display: inline-flex;
-    box-sizing: border-box;
-    max-width: 100%;
-    min-height: calc(
-      1lh + var(--x-picker-padding-top) + var(--x-picker-padding-bottom)
-    );
-    padding-top: var(--x-picker-padding-top);
-    padding-right: var(--x-picker-padding-right);
-    padding-bottom: var(--x-picker-padding-bottom);
-    padding-left: var(--x-picker-padding-left);
-    flex-direction: row;
-    align-items: center;
-    gap: var(--navi-xs);
-    color: var(--x-picker-color);
-    text-align: inherit;
-    text-overflow: ellipsis;
-    background-color: var(--x-picker-background-color);
-    border-width: var(--picker-border-width);
-    border-style: solid;
-    border-color: var(--x-picker-border-color);
-    border-radius: var(--picker-border-radius);
-    outline-width: var(--x-picker-outline-width);
-    outline-style: none;
-    outline-color: var(--picker-outline-color);
-    outline-offset: var(--x-picker-outline-offset);
-    cursor: var(--x-picker-cursor, pointer);
-    pointer-events: auto;
-    user-select: none;
-    overflow: hidden;
-
-    .navi_picker_value {
-      display: inline-block;
-      min-width: 0;
+      position: relative;
+      display: inline-flex;
+      box-sizing: border-box;
       max-width: 100%;
-      flex-grow: 1;
+      min-height: calc(
+        1lh + var(--x-picker-padding-top) + var(--x-picker-padding-bottom)
+      );
+      padding-top: var(--x-picker-padding-top);
+      padding-right: var(--x-picker-padding-right);
+      padding-bottom: var(--x-picker-padding-bottom);
+      padding-left: var(--x-picker-padding-left);
+      flex-direction: row;
+      align-items: center;
+      gap: var(--navi-xs);
+      color: var(--x-picker-color);
+      text-align: inherit;
       text-overflow: ellipsis;
-      white-space: nowrap;
+      background-color: var(--x-picker-background-color);
+      border-width: var(--picker-border-width);
+      border-style: solid;
+      border-color: var(--x-picker-border-color);
+      border-radius: var(--picker-border-radius);
+      outline-width: var(--x-picker-outline-width);
+      outline-style: none;
+      outline-color: var(--picker-outline-color);
+      outline-offset: var(--x-picker-outline-offset);
+      cursor: var(--x-picker-cursor, pointer);
+      pointer-events: auto;
+      user-select: none;
       overflow: hidden;
 
-      &[navi-placeholder] {
-        color: var(--picker-placeholder-color);
-      }
-    }
-    .navi_picker_right_slot {
-      display: inline-flex;
-      height: 1em;
-      height: 1lh;
-      flex-shrink: 0;
-      align-items: center;
-      align-self: flex-start;
-      justify-content: center;
-      color: var(--x-picker-icon-color);
-      transform: translateX(25%);
-    }
-    .navi_picker_input {
-      position: absolute;
-      inset: 0;
-      box-sizing: border-box;
-      width: 100%;
-      height: 100%;
-      margin: 0;
-      padding: 0;
-      background: none;
-      border: none;
-      opacity: 0;
-      appearance: none;
-      pointer-events: none;
-    }
-
-    &[data-line-clamp] {
-      overflow-wrap: anywhere;
       .navi_picker_value {
-        display: -webkit-box;
-        white-space: normal;
-        -webkit-box-orient: vertical;
-        -webkit-line-clamp: var(--picker-max-rows);
-      }
-    }
+        display: inline-block;
+        min-width: 0;
+        max-width: 100%;
+        flex-grow: 1;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        overflow: hidden;
 
-    /* Hover */
-    &[data-hover] {
-      --x-picker-background-color: var(--picker-background-color-hover);
-      --x-picker-border-color: var(--picker-border-color-hover);
-    }
-    /* Readonly */
-    &[data-readonly] {
-      --x-picker-border-color: var(--picker-border-color-readonly);
-      --x-picker-background-color: var(--picker-background-color-readonly);
-      --x-picker-color: var(--picker-color-readonly);
-      --x-picker-icon-color: var(--picker-icon-color-readonly);
-      --x-picker-cursor: default;
-    }
-    /* Focus */
-    &[data-focus-visible] {
-      --x-picker-border-color: transparent;
-      outline-style: solid;
-    }
-    /* Disabled */
-    &[data-disabled] {
-      --x-picker-border-color: var(--picker-border-color-disabled);
-      --x-picker-background-color: var(--picker-background-color-disabled);
-      --x-picker-color: var(--picker-color-disabled);
-      --x-picker-icon-color: var(--picker-icon-color-disabled);
-      --x-picker-cursor: default;
-    }
-    /* Callout (info, warning, error) */
-    &[data-callout] {
-      --x-picker-border-color: var(--callout-color);
+        &[navi-placeholder] {
+          color: var(--picker-placeholder-color);
+        }
+      }
+      .navi_picker_right_slot {
+        display: inline-flex;
+        height: 1em;
+        height: 1lh;
+        flex-shrink: 0;
+        align-items: center;
+        align-self: flex-start;
+        justify-content: center;
+        color: var(--x-picker-icon-color);
+        transform: translateX(25%);
+      }
+      .navi_picker_input {
+        position: absolute;
+        inset: 0;
+        box-sizing: border-box;
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        background: none;
+        border: none;
+        opacity: 0;
+        appearance: none;
+        pointer-events: none;
+      }
+
+      &[data-line-clamp] {
+        overflow-wrap: anywhere;
+        .navi_picker_value {
+          display: -webkit-box;
+          white-space: normal;
+          -webkit-box-orient: vertical;
+          -webkit-line-clamp: var(--picker-max-rows);
+        }
+      }
+
+      /* Hover */
+      &[data-hover] {
+        --x-picker-background-color: var(--picker-background-color-hover);
+        --x-picker-border-color: var(--picker-border-color-hover);
+      }
+      /* Readonly */
+      &[data-readonly] {
+        --x-picker-border-color: var(--picker-border-color-readonly);
+        --x-picker-background-color: var(--picker-background-color-readonly);
+        --x-picker-color: var(--picker-color-readonly);
+        --x-picker-icon-color: var(--picker-icon-color-readonly);
+        --x-picker-cursor: default;
+      }
+      /* Focus */
+      &[data-focus-visible] {
+        --x-picker-border-color: transparent;
+        outline-style: solid;
+      }
+      /* Disabled */
+      &[data-disabled] {
+        --x-picker-border-color: var(--picker-border-color-disabled);
+        --x-picker-background-color: var(--picker-background-color-disabled);
+        --x-picker-color: var(--picker-color-disabled);
+        --x-picker-icon-color: var(--picker-icon-color-disabled);
+        --x-picker-cursor: default;
+      }
+      /* Callout (info, warning, error) */
+      &[data-callout] {
+        --x-picker-border-color: var(--callout-color);
+      }
     }
   }
 `;
