@@ -65,6 +65,8 @@
         Input,
         Picker,
         Form,
+        Text,
+        Unit,
         Button,
         Time,
         NaviDebug,
@@ -388,25 +390,33 @@
               name="custom_duration_picker2"
               ui={`Autre${props.selected ? ` (${label})` : ""}`}
             >
-              <Box flex spacing="s" padding="m" alignY="center">
-                <Input
-                  type="navi_hour"
-                  unit={false}
-                  value={hours}
-                  action={(v) => {
-                    customDurationHourSignal2.value = v;
-                  }}
-                />
-                <span>h</span>
-                <Input
-                  type="navi_minute"
-                  unit={false}
-                  value={minutes}
-                  action={(v) => {
-                    customDurationMinuteSignal2.value = v;
-                  }}
-                />
-                <span>min</span>
+              <Box flex="y" alignX="center" padding="m" spacing="m">
+                <Text bold>Veuillez indiquer une durée</Text>
+                <Box inline flex alignY="start">
+                  <Box flex="y" alignX="start">
+                    <Input
+                      type="navi_hour"
+                      unit={false}
+                      value={hours}
+                      action={(v) => {
+                        customDurationHourSignal2.value = v;
+                      }}
+                    />
+                    <Unit unit="hour" plural />
+                  </Box>
+                  <span>:</span>
+                  <Box flex="y" alignX="start">
+                    <Input
+                      type="navi_minute"
+                      unit={false}
+                      value={minutes}
+                      action={(v) => {
+                        customDurationMinuteSignal2.value = v;
+                      }}
+                    />
+                    <Unit unit="minute" plural />
+                  </Box>
+                </Box>
               </Box>
             </Picker>
           </List.Item>
