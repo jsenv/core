@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Duration Input Demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 40px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      #container {
+        max-width: 600px;
+        margin: 0 auto;
+      }
+      h1 {
+        margin: 0 0 32px;
+        font-size: 1.4rem;
+      }
+      h2 {
+        margin: 0 0 8px;
+        font-size: 1.1rem;
+      }
+      .demo-section {
+        margin-bottom: 24px;
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      p.desc {
+        margin: 0 0 16px;
+        color: #555;
+        font-size: 13px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <h1>Duration Input Demo</h1>
+      <div id="app"></div>
+    </div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useSignal } from "@preact/signals";
+      import { Box, Input, Unit, NaviDebug } from "@jsenv/navi";
+
+      const App = () => (
+        <Box flex="y" spacing="l">
+          <BasicDemo />
+        </Box>
+      );
+
+      // ── BasicDemo ─────────────────────────────────────────────────────────
+      const BasicDemo = () => {
+        const hoursSignal = useSignal(2);
+        const minutesSignal = useSignal(15);
+        const hours = hoursSignal.value;
+        const minutes = minutesSignal.value;
+        const totalMinutes = hours * 60 + minutes;
+
+        return (
+          <div class="demo-section">
+            <h2>Hours + minutes inputs with unit label</h2>
+            <p class="desc">
+              Deux inputs <code>unit={"{false}"}</code> côte à côte, chacun
+              accompagné de son label d'unité (<code>&lt;Unit&gt;</code>)
+              affiché en dessous.
+            </p>
+            <Box inline flex alignY="start" spacing="xs">
+              <Box flex="y" alignX="start">
+                <Input
+                  type="navi_hour"
+                  unit={false}
+                  value={hours}
+                  action={(v) => {
+                    hoursSignal.value = v;
+                  }}
+                />
+                <Unit unit="hour" plural={hours !== 1} />
+              </Box>
+              <span style={{ paddingTop: "6px" }}>:</span>
+              <Box flex="y" alignX="start">
+                <Input
+                  type="navi_minute"
+                  unit={false}
+                  value={minutes}
+                  action={(v) => {
+                    minutesSignal.value = v;
+                  }}
+                />
+                <Unit unit="minute" plural={minutes !== 1} />
+              </Box>
+            </Box>
+            <p style={{ marginTop: "16px", color: "#555", fontSize: "13px" }}>
+              Total : <strong>{totalMinutes} min</strong>
+            </p>
+          </div>
+        );
+      };
+
+      render(
+        <NaviDebug debugAction debugInteraction>
+          <App />
+        </NaviDebug>,
+        document.getElementById("app"),
+      );
+    </script>
+  </body>
+</html>
