@@ -52,9 +52,21 @@ installImportMetaCssBuild(import.meta);/**
  * Regroup CSS vars that makes sense to share across all navi components.
  */
 
+const button = document.createElement("button");
+button.style.display = "none";
+document.body.appendChild(button);
+const computedStyle = getComputedStyle(button);
+const controlDefaultFontFamily = computedStyle.fontFamily;
+const controlDefaultFontSize = computedStyle.fontSize;
+document.body.removeChild(button);
 const css = /* css */`
   @layer navi {
     :root {
+      --navi-control-font-family: ${controlDefaultFontFamily};
+      --navi-control-font-size: ${controlDefaultFontSize};
+      --navi-control-padding-x-default: 2px;
+      --navi-control-padding-y-default: 1px;
+
       /* Global padding defaults — override these to change all button paddings. */
       /* Use --button-padding, --button-padding-x, --button-padding-y for per-button overrides. */
       --button-padding-x-default: 6px;

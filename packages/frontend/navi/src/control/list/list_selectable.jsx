@@ -57,6 +57,13 @@ const css = /* css */ `
       /* Disabled */
       --list-item-color-disabled: light-dark(#aaa, #555);
       --list-item-background-color-disabled: var(--list-item-background-color);
+
+      --selectable-item-padding-x-default: var(
+        --navi-control-padding-x-default
+      );
+      --selectable-item-padding-y-default: var(
+        --navi-control-padding-y-default
+      );
     }
   }
 
@@ -71,14 +78,12 @@ const css = /* css */ `
     );
     --x-list-outline-offset: calc(-1 * var(--list-border-width));
 
+    font-size: var(--navi-control-font-size);
+    font-family: var(--navi-control-font-family);
     outline-width: var(--x-list-outline-width);
     outline-color: var(--list-outline-color);
     outline-offset: var(--x-list-outline-offset);
 
-    &[data-focus] {
-      /* outline: var(--list-outline-width) solid var(--navi-focus-outline-color);
-      outline-offset: calc(-1 * var(--list-outline-width)); */
-    }
     &[data-focus-visible] {
       outline-style: solid;
     }
@@ -89,6 +94,8 @@ const css = /* css */ `
 
   .navi_list_item[navi-selectable] {
     --x-list-item-cursor: default;
+    --list-item-padding-x-default: var(--selectable-item-padding-x-default);
+    --list-item-padding-y-default: var(--selectable-item-padding-y-default);
 
     position: relative;
     outline-width: var(--list-item-outline-width);
@@ -536,7 +543,6 @@ const ListItemSelectable = (props) => {
       aria-selected={checked}
       selected={checked}
       navi-selectable=""
-      padding="m"
       spacing="s"
       flex
       alignY="center"

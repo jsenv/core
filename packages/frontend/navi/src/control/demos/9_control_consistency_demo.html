@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Control Consistency Demo</title>
+    <style>
+      body {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 40px 20px;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: #f5f5f5;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 1.6rem;
+      }
+      .subtitle {
+        margin: 0 0 32px;
+        color: #555;
+        font-size: 0.9rem;
+      }
+      .section {
+        margin-bottom: 32px;
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      .section h2 {
+        margin: 0 0 16px;
+        padding-bottom: 8px;
+        color: #333;
+        font-size: 1rem;
+        border-bottom: 1px solid #eee;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Control Consistency</h1>
+    <p class="subtitle">
+      Controls rendered side by side to verify consistent default font size,
+      height, and visual weight.
+    </p>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useSignal } from "@preact/signals";
+      import { Box, Input, Button, Picker, List } from "@jsenv/navi";
+
+      const COLORS = ["Red", "Green", "Blue", "Yellow", "Purple"];
+      const SHORT_COLORS = COLORS.slice(0, 3);
+
+      const App = () => {
+        const pickerA = useSignal("Green");
+        const pickerB = useSignal("Green");
+        const listValue = useSignal("Red");
+        const pickerStacked = useSignal("Green");
+
+        return (
+          <Box flex="y" spacing="xl">
+            {/* Side by side pairs */}
+            <div class="section">
+              <h2>Side by side — default size</h2>
+              <Box flex="y" spacing="m">
+                <Box flex="x" alignY="center">
+                  <Input type="text" value="Hello" />
+                  <Button>Click me</Button>
+                </Box>
+                <Box flex="x" alignY="center">
+                  <Button>Click me</Button>
+                  <Picker
+                    name="color_picker_a"
+                    value={pickerA.value}
+                    action={(v) => {
+                      pickerA.value = v;
+                    }}
+                  >
+                    <List selectable action="send">
+                      {COLORS.map((c, i) => (
+                        <List.Item
+                          selectable
+                          key={c}
+                          index={i}
+                          value={c}
+                          selected={pickerA.value === c}
+                        >
+                          {c}
+                        </List.Item>
+                      ))}
+                    </List>
+                  </Picker>
+                </Box>
+                <Box flex="x" alignY="center">
+                  <Picker
+                    name="color_picker_b"
+                    value={pickerB.value}
+                    action={(v) => {
+                      pickerB.value = v;
+                    }}
+                  >
+                    <List selectable action="send">
+                      {COLORS.map((c, i) => (
+                        <List.Item
+                          selectable
+                          key={c}
+                          index={i}
+                          value={c}
+                          selected={pickerB.value === c}
+                        >
+                          {c}
+                        </List.Item>
+                      ))}
+                    </List>
+                  </Picker>
+                  <List
+                    selectable
+                    horizontal
+                    spacing="xxs"
+                    border="none"
+                    action={(v) => {
+                      listValue.value = v;
+                    }}
+                  >
+                    {SHORT_COLORS.map((c, i) => (
+                      <List.Item
+                        selectable
+                        key={c}
+                        index={i}
+                        value={c}
+                        selected={listValue.value === c}
+                        borderWidth="1"
+                        borderRadius="xs"
+                      >
+                        {c}
+                      </List.Item>
+                    ))}
+                  </List>
+                </Box>
+              </Box>
+            </div>
+
+            {/* Row: stacked to compare heights with a ruler line */}
+            <div class="section">
+              <h2>Height comparison — stacked with baseline guide</h2>
+              <Box
+                flex="y"
+                spacing="s"
+                style={{ borderLeft: "3px solid #ddd", paddingLeft: "16px" }}
+              >
+                <Box flex="x" alignY="center" spacing="m">
+                  <span
+                    style={{
+                      width: "160px",
+                      fontSize: "0.8rem",
+                      color: "#888",
+                    }}
+                  >
+                    Input
+                  </span>
+                  <Input type="text" placeholder="Placeholder" />
+                </Box>
+                <Box flex="x" alignY="center" spacing="m">
+                  <span
+                    style={{
+                      width: "160px",
+                      fontSize: "0.8rem",
+                      color: "#888",
+                    }}
+                  >
+                    Button
+                  </span>
+                  <Button>Label</Button>
+                </Box>
+                <Box flex="x" alignY="center" spacing="m">
+                  <span
+                    style={{
+                      width: "160px",
+                      fontSize: "0.8rem",
+                      color: "#888",
+                    }}
+                  >
+                    Button (primary)
+                  </span>
+                  <Button primary>Label</Button>
+                </Box>
+                <Box flex="x" alignY="center" spacing="m">
+                  <span
+                    style={{
+                      width: "160px",
+                      fontSize: "0.8rem",
+                      color: "#888",
+                    }}
+                  >
+                    Picker
+                  </span>
+                  <Picker
+                    name="color_picker_stacked"
+                    value={pickerStacked.value}
+                    action={(v) => {
+                      pickerStacked.value = v;
+                    }}
+                  >
+                    <List selectable action="send">
+                      {COLORS.map((c, i) => (
+                        <List.Item
+                          selectable
+                          key={c}
+                          index={i}
+                          value={c}
+                          selected={pickerStacked.value === c}
+                          padding="s"
+                        >
+                          {c}
+                        </List.Item>
+                      ))}
+                    </List>
+                  </Picker>
+                </Box>
+              </Box>
+            </div>
+          </Box>
+        );
+      };
+
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>
