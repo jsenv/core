@@ -628,8 +628,15 @@ const formatDateIso = (iso, inputType) => {
     const date = new Date(`${iso}-01T00:00:00`);
     return formatMonth(date, locale);
   }
-  // date, week, datetime-local: parse and use formatDay
-  const dateStr = iso.slice(0, 10);
-  const date = new Date(`${dateStr}T00:00:00`);
+  // date, week, datetime-local: extract YYYY-MM-DD part and parse as local date
+  const isoMatch = /^(\d{4}-\d{2}-\d{2})/.exec(iso);
+  if (!isoMatch) {
+    return iso;
+  }
+  const datePart = isoMatch[1];
+  const date = new Date(`${datePart}T00:00:00`);
+  if (isNaN(date.getTime())) {
+    return iso;
+  }
   return formatDay(date, locale, { long: true });
 };
