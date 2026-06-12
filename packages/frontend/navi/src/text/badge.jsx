@@ -85,7 +85,7 @@ export const Badge = ({ children, className, ...props }) => {
     <Text
       className={withPropsClassName("navi_badge", className)}
       bold
-      overflowEllipsis
+      maxLines={1}
       {...props}
       styleCSSVars={BadgeStyleCSSVars}
       spacing={<span></span>}

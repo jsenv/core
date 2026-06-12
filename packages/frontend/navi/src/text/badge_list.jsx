@@ -30,7 +30,6 @@ export const BadgeList = ({
   children,
   shrinkWrap = true,
   max,
-  maxRows,
   ...props
 }) => {
   import.meta.css = css;
@@ -100,12 +99,7 @@ export const BadgeList = ({
         {childArray}
       </Box>
       {/* Visible element */}
-      <Box
-        baseClassName="navi_badge_list"
-        {...sharedProps}
-        ref={visibleRef}
-        lineClamp={maxRows}
-      >
+      <Box baseClassName="navi_badge_list" {...sharedProps} ref={visibleRef}>
         {visibleChildren.length ? visibleChildren : fallback}
         {hiddenCount > 0 && (
           <Badge className="navi_badge_more">

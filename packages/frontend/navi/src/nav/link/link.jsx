@@ -472,7 +472,7 @@ const LinkPlain = (props) => {
     endIcon,
     revealOnInteraction = Boolean(titleLevel),
     hrefFallback = !anchor,
-    overflowEllipsis,
+    maxLines,
 
     children,
     constraints,
@@ -573,7 +573,7 @@ const LinkPlain = (props) => {
       }}
       holdSpaceForStyle={currentEffectBold ? { fontWeight: "bold" } : undefined}
       preventSpaceUnderlines
-      overflowEllipsis={overflowEllipsis}
+      maxLines={maxLines}
       // Visual
       data-appearance={appearance}
       data-current-effect-bold={currentEffectBold ? "" : undefined}
@@ -631,7 +631,7 @@ const LinkPlain = (props) => {
       {startIconEl}
       {innerChildren}
       {endIconEl ? (
-        overflowEllipsis ? (
+        maxLines === 1 || maxLines === "1" ? (
           <Text overflowPinned>{endIconEl}</Text>
         ) : (
           endIconEl

@@ -207,7 +207,7 @@
           </Title>
           <Paragraph>
             Cette section démontre comment le composant Editable fonctionne en
-            combinaison avec Text overflowEllipsis. Le texte affiche des points
+            combinaison avec Text maxLines={1}. Le texte affiche des points
             de suspension quand il dépasse la largeur disponible, mais se
             transforme en champ de saisie complet lors de l'édition.
           </Paragraph>
@@ -300,7 +300,7 @@
                   expandX
                   font="Arial"
                 >
-                  <Text overflowEllipsis font="Arial">
+                  <Text maxLines={1} font="Arial">
                     {value}
                   </Text>
                 </Editable>

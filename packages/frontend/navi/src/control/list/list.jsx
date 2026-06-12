@@ -222,7 +222,7 @@ const css = /* css */ `
       -> NOPE
     - Force overflow hidden + ellipsis
       - casse la lisibilité des mots insécables
-      - possible d'optin en utilisant overflowEllipsis sur le ListItem
+      - possible d'optin en utilisant maxLines sur le ListItem
       -> Bien mais pas par défaut
     - Forcer le retour a la ligne des mot inécables
       - Aucun des inconvénient ci dessus 

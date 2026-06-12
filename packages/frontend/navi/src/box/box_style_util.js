@@ -358,6 +358,24 @@ const TYPO_PROPS = {
   uppercase: applyToCssPropWhenTruthy("textTransform", "uppercase", "none"),
   lowercase: applyToCssPropWhenTruthy("textTransform", "lowercase", "none"),
   letterSpacing: PASS_THROUGH,
+  maxLines: (value) => {
+    if (!value) {
+      return null;
+    }
+    if (value === 1 || value === "1") {
+      return {
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        overflowWrap: "normal",
+      };
+    }
+    return {
+      "overflow": "hidden",
+      "display": "-webkit-box",
+      "-webkit-box-orient": "vertical",
+      "-webkit-line-clamp": value,
+    };
+  },
   overflowEllipsis: (value) => {
     if (!value) {
       return null;

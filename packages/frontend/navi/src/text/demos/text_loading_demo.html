@@ -76,7 +76,7 @@
       );
 
       /* ------------------------------------------------------------------ */
-      /* 0. All features — icon | overflowEllipsis + bold + loading | icon  */
+      /* 0. All features — icon | maxLines + bold + loading | icon  */
       /* ------------------------------------------------------------------ */
       const AllFeaturesDemo = () => {
         const [loading, setLoading] = useState(true);
@@ -84,7 +84,7 @@
         return (
           <div class="demo-section">
             <h2>
-              All features: icon | overflowEllipsis + holdSpaceForBold + loading
+              All features: icon | maxLines + holdSpaceForBold + loading
               | icon
             </h2>
             <p>
@@ -108,7 +108,7 @@
                   <StarSvg />
                 </Icon>
                 <Text
-                  overflowEllipsis
+                  maxLines={1}
                   holdSpaceForStyle={{ fontWeight: "bold" }}
                   bold={bold}
                   loading={loading}
@@ -301,16 +301,16 @@
       };
 
       /* ------------------------------------------------------------------ */
-      /* 5. Inside overflowEllipsis                                         */
+      /* 5. Inside maxLines                                         */
       /* ------------------------------------------------------------------ */
       const OverflowEllipsisDemo = () => {
         const [loading, setLoading] = useState(true);
         const [width, setWidth] = useState(300);
         return (
           <div class="demo-section">
-            <h2>Inside overflowEllipsis</h2>
+            <h2>Inside maxLines</h2>
             <p>
-              When <code>overflowEllipsis</code> is also set, the overflow
+              When <code>maxLines</code> is also set, the overflow
               machinery is disabled while skeleton is active. The skeleton fills
               the dotted container width. Toggle loading to see the real
               truncated text.
@@ -328,7 +328,7 @@
               />
             </label>
             <div class="container-box" style={`width: ${width}px;`}>
-              <Text overflowEllipsis loading={loading}>
+              <Text maxLines={1} loading={loading}>
                 A very long label that would normally be truncated with an
                 ellipsis when the container is too narrow
               </Text>
@@ -338,14 +338,14 @@
       };
 
       /* ------------------------------------------------------------------ */
-      /* 6. overflowEllipsis + icon in flex row                            */
+      /* 6. maxLines + icon in flex row                            */
       /* ------------------------------------------------------------------ */
       const OverflowEllipsisWithIconDemo = () => {
         const [loading, setLoading] = useState(true);
         const [width, setWidth] = useState(280);
         return (
           <div class="demo-section">
-            <h2>overflowEllipsis inside a flex row with icon</h2>
+            <h2>maxLines inside a flex row with icon</h2>
             <p>
               Combines overflow ellipsis, icon, and loading state. The skeleton
               should fill the space between the icon and the right edge of the
@@ -368,7 +368,7 @@
                 <Icon shrink={false}>
                   <StarSvg />
                 </Icon>
-                <Text overflowEllipsis loading={loading} minWidth="0">
+                <Text maxLines={1} loading={loading} minWidth="0">
                   A very long label that will be truncated when the container is
                   too narrow
                 </Text>

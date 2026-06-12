@@ -650,20 +650,22 @@
           </svg>
         );
 
-        const PlaceItem = ({ overflowEllipsis }) => (
-          <Box flex="y" expandX spacing="xs" minWidth="0">
+        const PlaceItem = ({ maxLines }) => (
+          <Box flex="y" expandX spacing="xs" minWidth="0" alignX="start">
             <Text
               bold
-              noWrap={overflowEllipsis}
-              overflowEllipsis={overflowEllipsis}
+              noWrap={maxLines === 1}
+              maxLines={maxLines}
+              
             >
               Boulangerie Artisanale et Pâtisserie du Vieux Marché de Lyon
             </Text>
             <Text
               size="xs"
               color="secondary"
-              noWrap={overflowEllipsis}
-              overflowEllipsis={overflowEllipsis}
+              noWrap={maxLines === 1}
+              maxLines={maxLines}
+              
             >
               <Icon>
                 <PinSvg />
@@ -728,9 +730,10 @@
                         flex
                         alignY="center"
                         spacing="m"
+                        padding="m"
                       >
                         <SelectableInput marginLeft="-xs" />
-                        <PlaceItem overflowEllipsis={i === 0} />
+                        <PlaceItem maxLines={i === 0 ? 1 : undefined} />
                       </List.Item>
                     );
                   })}

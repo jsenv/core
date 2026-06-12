@@ -298,20 +298,20 @@
         </svg>
       );
 
-      const PlaceItem = ({ overflowEllipsis }) => (
+      const PlaceItem = ({ maxLines }) => (
         <Box flex="y" expandX spacing="xs" minWidth="0">
           <Text
             bold
-            noWrap={overflowEllipsis}
-            overflowEllipsis={overflowEllipsis}
+            noWrap={Boolean(maxLines)}
+            maxLines={maxLines}
           >
             Boulangerie Artisanale et Pâtisserie du Vieux Marché de Lyon
           </Text>
           <Text
             size="xs"
             color="secondary"
-            noWrap={overflowEllipsis}
-            overflowEllipsis={overflowEllipsis}
+            noWrap={Boolean(maxLines)}
+            maxLines={maxLines}
           >
             <Icon>
               <PinSvg />
@@ -378,20 +378,20 @@
               </Box>
               <Box flex="y" spacing="xs" alignX="start">
                 <strong style={{ fontSize: "0.8rem", color: "#888" }}>
-                  Long sentence + overflowEllipsis
+                  Long sentence + maxLines={1}
                 </strong>
                 <List>
                   <ListItem
                     index={0}
                     style={{ backgroundColor: BG_SHORT }}
-                    overflowEllipsis
+                    maxLines={1}
                   >
                     {SHORT}
                   </ListItem>
                   <ListItem
                     index={1}
                     style={{ backgroundColor: BG_CONTENT }}
-                    overflowEllipsis
+                    maxLines={1}
                   >
                     {LONG_SENTENCE}
                   </ListItem>
@@ -399,14 +399,14 @@
               </Box>
               <Box flex="y" spacing="xs" alignX="start" maxWidth="100%">
                 <strong style={{ fontSize: "0.8rem", color: "#888" }}>
-                  Long sentence + noWrap + overflowEllipsis
+                  Long sentence + noWrap + maxLines={1}
                 </strong>
                 <List>
                   <ListItem
                     index={0}
                     style={{ backgroundColor: BG_SHORT }}
                     noWrap
-                    overflowEllipsis
+                    maxLines={1}
                   >
                     {SHORT}
                   </ListItem>
@@ -414,7 +414,7 @@
                     index={1}
                     style={{ backgroundColor: BG_CONTENT }}
                     noWrap
-                    overflowEllipsis
+                    maxLines={1}
                   >
                     {LONG_SENTENCE}
                   </ListItem>
@@ -422,20 +422,20 @@
               </Box>
               <Box flex="y" spacing="xs" alignX="start" maxWidth="100%">
                 <strong style={{ fontSize: "0.8rem", color: "#888" }}>
-                  URL + overflowEllipsis
+                  URL + maxLines={1}
                 </strong>
                 <List expandX>
                   <ListItem
                     index={0}
                     style={{ backgroundColor: BG_SHORT }}
-                    overflowEllipsis
+                    maxLines={1}
                   >
                     {SHORT}
                   </ListItem>
                   <ListItem
                     index={1}
                     style={{ backgroundColor: BG_CONTENT }}
-                    overflowEllipsis
+                    maxLines={1}
                   >
                     {URL}
                   </ListItem>
@@ -443,14 +443,14 @@
               </Box>
               <Box flex="y" spacing="xs" alignX="start" maxWidth="100%">
                 <strong style={{ fontSize: "0.8rem", color: "#888" }}>
-                  URL + noWrap + overflowEllipsis
+                  URL + noWrap + maxLines={1}
                 </strong>
                 <List expandX>
                   <ListItem
                     index={0}
                     style={{ backgroundColor: BG_SHORT }}
                     noWrap
-                    overflowEllipsis
+                    maxLines={1}
                   >
                     {SHORT}
                   </ListItem>
@@ -458,7 +458,7 @@
                     index={1}
                     style={{ backgroundColor: BG_CONTENT }}
                     noWrap
-                    overflowEllipsis
+                    maxLines={1}
                   >
                     {URL}
                   </ListItem>
@@ -487,7 +487,7 @@
               </Box>
               <Box flex="y" spacing="xs" alignX="start">
                 <strong style={{ fontSize: "0.8rem", color: "#888" }}>
-                  Complex item + overflowEllipsis
+                  Complex item + maxLines={1}
                 </strong>
                 <div
                   style={{
@@ -501,7 +501,7 @@
                       {SHORT}
                     </ListItem>
                     <ListItem index={1} style={{ backgroundColor: BG_CONTENT }}>
-                      <PlaceItem overflowEllipsis />
+                      <PlaceItem maxLines={1} />
                     </ListItem>
                   </List>
                 </div>
@@ -537,7 +537,7 @@
 
               <Box flex="y" spacing="xs" alignX="start">
                 <strong style={{ fontSize: "0.8rem", color: "#888" }}>
-                  Complex item right column + overflowEllipsis
+                  Complex item right column + maxLines={1}
                 </strong>
                 <div
                   style={{
@@ -557,7 +557,7 @@
                       style={{ backgroundColor: BG_CONTENT }}
                     >
                       <Box shrink={false}>Coucou</Box>
-                      <PlaceItem overflowEllipsis />
+                      <PlaceItem maxLines={1} />
                     </ListItem>
                   </List>
                 </div>
@@ -590,7 +590,7 @@
 
               <Box flex="y" spacing="xs" alignX="start">
                 <strong style={{ fontSize: "0.8rem", color: "#888" }}>
-                  Flex wrapper + overflowEllipsis
+                  Flex wrapper + maxLines={1}
                 </strong>
                 <div
                   style={{
@@ -606,7 +606,7 @@
                     <ListItem index={1} style={{ backgroundColor: BG_CONTENT }}>
                       <Box flex spacing="xs">
                         <Box shrink={false}>Coucou</Box>
-                        <PlaceItem overflowEllipsis />
+                        <PlaceItem maxLines={1} />
                       </Box>
                     </ListItem>
                   </List>
@@ -670,20 +670,20 @@
               </Box>
               <Box flex="y" spacing="xs" alignX="start">
                 <strong style={{ fontSize: "0.8rem", color: "#888" }}>
-                  Long sentence + overflowEllipsis
+                  Long sentence + maxLines={1}
                 </strong>
                 <List expandX>
                   <ListItem
                     index={0}
                     style={{ backgroundColor: BG_SHORT }}
-                    overflowEllipsis
+                    maxLines={1}
                   >
                     {SHORT}
                   </ListItem>
                   <ListItem
                     index={1}
                     style={{ backgroundColor: BG_CONTENT }}
-                    overflowEllipsis
+                    maxLines={1}
                   >
                     {LONG_SENTENCE}
                   </ListItem>
@@ -691,14 +691,14 @@
               </Box>
               <Box flex="y" spacing="xs" alignX="start" maxWidth="100%">
                 <strong style={{ fontSize: "0.8rem", color: "#888" }}>
-                  Long sentence + noWrap + overflowEllipsis
+                  Long sentence + noWrap + maxLines={1}
                 </strong>
                 <List expandX>
                   <ListItem
                     index={0}
                     style={{ backgroundColor: BG_SHORT }}
                     noWrap
-                    overflowEllipsis
+                    maxLines={1}
                   >
                     {SHORT}
                   </ListItem>
@@ -706,7 +706,7 @@
                     index={1}
                     style={{ backgroundColor: BG_CONTENT }}
                     noWrap
-                    overflowEllipsis
+                    maxLines={1}
                   >
                     {LONG_SENTENCE}
                   </ListItem>
@@ -714,20 +714,20 @@
               </Box>
               <Box flex="y" spacing="xs" alignX="start" maxWidth="100%">
                 <strong style={{ fontSize: "0.8rem", color: "#888" }}>
-                  URL + overflowEllipsis
+                  URL + maxLines={1}
                 </strong>
                 <List expandX>
                   <ListItem
                     index={0}
                     style={{ backgroundColor: BG_SHORT }}
-                    overflowEllipsis
+                    maxLines={1}
                   >
                     {SHORT}
                   </ListItem>
                   <ListItem
                     index={1}
                     style={{ backgroundColor: BG_CONTENT }}
-                    overflowEllipsis
+                    maxLines={1}
                   >
                     {URL}
                   </ListItem>
@@ -735,14 +735,14 @@
               </Box>
               <Box flex="y" spacing="xs" alignX="start" maxWidth="100%">
                 <strong style={{ fontSize: "0.8rem", color: "#888" }}>
-                  URL + noWrap + overflowEllipsis
+                  URL + noWrap + maxLines={1}
                 </strong>
                 <List expandX>
                   <ListItem
                     index={0}
                     style={{ backgroundColor: BG_SHORT }}
                     noWrap
-                    overflowEllipsis
+                    maxLines={1}
                   >
                     {SHORT}
                   </ListItem>
@@ -750,7 +750,7 @@
                     index={1}
                     style={{ backgroundColor: BG_CONTENT }}
                     noWrap
-                    overflowEllipsis
+                    maxLines={1}
                   >
                     {URL}
                   </ListItem>
