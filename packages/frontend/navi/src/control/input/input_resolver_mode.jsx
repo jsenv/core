@@ -78,9 +78,10 @@ const performArrowUpDown = (e) => {
     e.preventDefault();
     return;
   }
-  const min = input.min;
-  const max = input.max;
-  const step = input.step;
+  const min = input.min !== "" ? Number(input.min) : undefined;
+  const max = input.max !== "" ? Number(input.max) : undefined;
+  const step =
+    input.step !== "" && input.step !== "any" ? Number(input.step) : 1;
   const delta = e.key === "ArrowUp" ? step : -step;
   // Snap to step grid relative to step base (min ?? 0), then move
   const stepBase = min !== undefined ? min : 0;
