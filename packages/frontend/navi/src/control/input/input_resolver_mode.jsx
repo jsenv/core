@@ -1,3 +1,4 @@
+import { dispatchInternalCustomEvent } from "@jsenv/dom";
 import { triggerStringAction } from "@jsenv/navi/src/control/string_actions.js";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 
@@ -50,14 +51,31 @@ const InputModeNumeric = (props) => {
         // Field is full and caret is at the end: notify listeners then
         // select all so the next keystroke starts a fresh value instead of
         // being silently blocked by maxlength.
-        input.dispatchEvent(
-          new CustomEvent("navi_input_filled", { bubbles: true }),
-        );
+        dispatchInternalCustomEvent(input, "navi_input_next", {
+          event: e,
+          reason: "filled",
+        });
         input.select();
       }}
       onKeyDown={(e) => {
         props.onKeyDown?.(e);
         if (e.defaultPrevented) {
+          return;
+        }
+        if (e.key === "ArrowRight") {
+          const input = e.currentTarget;
+          if (
+            maxLength !== undefined &&
+            input.value.length >= maxLength &&
+            input.selectionStart === maxLength &&
+            input.selectionEnd === maxLength
+          ) {
+            e.preventDefault();
+            dispatchInternalCustomEvent(input, "navi_input_next", {
+              event: e,
+              reason: "arrow_right",
+            });
+          }
           return;
         }
         if (e.key !== "ArrowUp" && e.key !== "ArrowDown") {
