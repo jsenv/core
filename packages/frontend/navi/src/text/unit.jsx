@@ -1,7 +1,22 @@
 import { naviI18n } from "./navi_i18n.js";
 import { Text } from "./text.jsx";
 
-export const Unit = ({ unit, plural, lang, ...props }) => {
+export const Unit = ({
+  unit,
+  plural,
+  lang,
+  size,
+  sizeRatio,
+  style,
+  ...props
+}) => {
+  let resolvedSize = size;
+  let resolvedStyle = style;
+  if (size === "smaller" || sizeRatio !== undefined) {
+    resolvedSize = undefined;
+    const ratio = sizeRatio !== undefined ? sizeRatio : 0.7;
+    resolvedStyle = { fontSize: `calc(${ratio} * 1em)`, ...style };
+  }
   const isPlural = Boolean(plural);
   let unitText = unit;
   const singularText = naviI18n(unit, undefined, { lang });
@@ -24,7 +39,12 @@ export const Unit = ({ unit, plural, lang, ...props }) => {
   }
 
   return (
-    <Text baseClassName="navi_unit" {...props}>
+    <Text
+      baseClassName="navi_unit"
+      size={resolvedSize}
+      style={resolvedStyle}
+      {...props}
+    >
       {unitText}
     </Text>
   );

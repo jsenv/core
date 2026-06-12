@@ -62,54 +62,35 @@
         unitHour,
         unitMinute,
       }) => (
-        <div
-          style={{
-            display: "inline-flex",
-            alignItems: "flex-end",
-            gap: "8px",
-            padding: "16px",
-            border: "1px dotted #aaa",
-            borderRadius: "4px",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-            }}
-          >
-            <Input
-              type="navi_hour"
-              unit={false}
-              variant="underline"
-              size="l"
-              width="100%"
-              value={hours}
-              action={onHours}
-            />
-            {unitHour}
-          </div>
-          <span style={{ paddingBottom: "4px" }}>:</span>
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-            }}
-          >
-            <Input
-              type="navi_minute"
-              size="l"
-              unit={false}
-              variant="underline"
-              width="100%"
-              value={minutes}
-              action={onMinutes}
-            />
-            {unitMinute}
-          </div>
-        </div>
+        <Box border="1px dotted #aaa">
+          <Box flex spacing="xxs">
+            <Box flex="y">
+              <Input
+                type="navi_hour"
+                unit={false}
+                variant="underline"
+                size="l"
+                expandX
+                value={hours}
+                action={onHours}
+              />
+              {unitHour}
+            </Box>
+            <span style={{ paddingBottom: "4px" }}>:</span>
+            <Box flex="y">
+              <Input
+                type="navi_minute"
+                size="l"
+                unit={false}
+                variant="underline"
+                expandX
+                value={minutes}
+                action={onMinutes}
+              />
+              {unitMinute}
+            </Box>
+          </Box>
+        </Box>
       );
 
       // ── BasicDemo ─────────────────────────────────────────────────────────

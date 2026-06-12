@@ -8,7 +8,6 @@ const css = /* css */ `
   @layer navi {
     .navi_quantity {
       --unit-color: color-mix(in srgb, currentColor 50%, white);
-      --unit-size-ratio: 0.7;
     }
   }
 
@@ -30,7 +29,6 @@ const css = /* css */ `
       .navi_unit {
         color: var(--unit-color);
         font-weight: normal;
-        font-size: calc(var(--unit-size-ratio) * 1em);
       }
     }
 
@@ -66,6 +64,8 @@ export const Quantity = ({
   children,
   unit,
   unitPosition = "right",
+  unitSize = "smaller",
+  unitSizeRatio,
   label,
   size,
   lang,
@@ -121,6 +121,8 @@ export const Quantity = ({
             unit={unit}
             plural={typeof value === "number" ? value > 1 : false}
             lang={lang}
+            size={unitSize}
+            sizeRatio={unitSizeRatio}
           />
         )}
       </Text>
@@ -129,7 +131,6 @@ export const Quantity = ({
 };
 const QuantityPropsCSSVars = {
   unitColor: "--unit-color",
-  unitSizeRatio: "--unit-size-ratio",
 };
 const QuantityPseudoClasses = [
   ":hover",
