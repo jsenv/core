@@ -76,7 +76,8 @@
                   expandX
                   value={hours}
                   action={onHours}
-                  onnavi_input_next={() => {
+                  onnavi_input_nav={(e) => {
+                    if (e.detail.direction !== "next") return;
                     minuteInputRef.current?.focus();
                     minuteInputRef.current?.select();
                   }}

@@ -51,8 +51,9 @@ const InputModeNumeric = (props) => {
         // Field is full and caret is at the end: notify listeners then
         // select all so the next keystroke starts a fresh value instead of
         // being silently blocked by maxlength.
-        dispatchInternalCustomEvent(input, "navi_input_next", {
+        dispatchInternalCustomEvent(input, "navi_input_nav", {
           event: e,
+          direction: "next",
           reason: "filled",
         });
         input.select();

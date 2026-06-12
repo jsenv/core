@@ -381,15 +381,26 @@ const InputTextualUI = (props) => {
           if (e.defaultPrevented) {
             return;
           }
+          if (e.key === "ArrowLeft") {
+            const input = e.currentTarget;
+            const atStart =
+              input.selectionStart === 0 && input.selectionEnd === 0;
+            if (atStart) {
+              dispatchPublicCustomEvent(input, "navi_input_nav", {
+                event: e,
+                direction: "prev",
+              });
+            }
+          }
           if (e.key === "ArrowRight") {
             const input = e.currentTarget;
             const atEnd =
               input.selectionStart === input.value.length &&
               input.selectionEnd === input.value.length;
             if (atEnd) {
-              dispatchPublicCustomEvent(input, "navi_input_next", {
+              dispatchPublicCustomEvent(input, "navi_input_nav", {
                 event: e,
-                reason: "arrow_right",
+                direction: "next",
               });
             }
           }
