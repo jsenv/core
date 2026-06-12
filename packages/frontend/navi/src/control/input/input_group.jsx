@@ -67,6 +67,7 @@ const useInputGroup = (ref) => {
     };
 
     const handleNaviInputFull = (e) => {
+      debugger;
       const input = e.target.closest(".navi_control_input");
       if (!input || !el.contains(input)) {
         return;

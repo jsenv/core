@@ -51,13 +51,11 @@ const InputModeNumeric = (props) => {
         // Field is full and caret is at the end: notify listeners then
         // select all so the next keystroke starts a fresh value instead of
         // being silently blocked by maxlength.
-        dispatchPublicCustomEvent(input, "navi_input_nav", {
+        dispatchPublicCustomEvent(input, "navi_input_full", {
           event: e,
-          direction: "next",
-          reason: "filled",
         });
         if (e.defaultPrevented) {
-          // navi_input_nav called preventDefault()
+          // navi_input_full called preventDefault()
           // (it consumed the event likely meaning an other input got focused)
         } else {
           input.select();

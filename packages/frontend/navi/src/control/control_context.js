@@ -23,7 +23,6 @@ export const CONTROL_ATTRIBUTE_SET = new Set([
 
   "navi-input-type",
   "navi-control-proxy-for",
-  "onnavi_input_nav",
 
   "data-callout-arrow-x",
   "data-callout-point-to-border-box",
