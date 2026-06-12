@@ -28665,15 +28665,10 @@ installImportMetaCssBuild(import.meta);const css$A = /* css */`
 
     /* Switch appearance */
     &[data-appearance="switch"] {
-      /* We compute ourselves the width + padding otherwise during 
-      translation subpixel rounding makes the thumb feels too much to the right by 1px */
-      box-sizing: content-box;
       --switch-outer-width: calc(var(--switch-width) + var(--switch-padding));
-
       --margin: var(--switch-margin);
       --width: var(--switch-outer-width);
       --height: unset;
-      min-width: var(--switch-outer-width);
       --border-radius: var(--switch-border-radius);
       --background-color: var(--switch-background-color);
       --background-color-hover: var(--switch-background-color-hover);
@@ -28691,6 +28686,11 @@ installImportMetaCssBuild(import.meta);const css$A = /* css */`
       );
 
       position: relative;
+      /* We compute ourselves the width + padding otherwise during */
+      /* translation subpixel rounding makes the thumb feels too much to the right by 1px */
+      /* We use !important to win over anything that would be set globally */
+      box-sizing: content-box !important;
+      min-width: var(--switch-outer-width);
       padding: var(--switch-padding);
       background-color: var(--x-background-color);
       border-color: transparent;
@@ -28827,7 +28827,6 @@ const InputCheckboxFieldInterface = props => {
     appearance: undefined,
     switch: undefined,
     icon: undefined,
-    accentColor: undefined,
     "data-appearance": appearance,
     baseClassName: "navi_checkbox",
     pseudoStateSelector: ".navi_control_input",
@@ -31076,26 +31075,22 @@ const css$w = /* css */`
     --x-background-color: var(--background-color);
     --x-color: var(--color);
     --x-placeholder-color: var(--placeholder-color);
-    --x-padding-top-base: var(
+    --x-padding-top: var(
       --padding-top,
-      var(--padding-y, var(--padding, 1px))
+      var(--padding-y, var(--padding, var(--navi-control-padding-y-default)))
     );
-    --x-padding-right-base: var(
+    --x-padding-right: var(
       --padding-right,
-      var(--padding-x, var(--padding, 2px))
+      var(--padding-x, var(--padding, var(--navi-control-padding-x-default)))
     );
-    --x-padding-bottom-base: var(
+    --x-padding-bottom: var(
       --padding-bottom,
-      var(--padding-y, var(--padding, 1px))
+      var(--padding-y, var(--padding, var(--navi-control-padding-y-default)))
     );
-    --x-padding-left-base: var(
+    --x-padding-left: var(
       --padding-left,
-      var(--padding-x, var(--padding, 2px))
+      var(--padding-x, var(--padding, var(--navi-control-padding-x-default)))
     );
-    --x-padding-top: var(--x-padding-top-base);
-    --x-padding-right: var(--x-padding-right-base);
-    --x-padding-bottom: var(--x-padding-bottom-base);
-    --x-padding-left: var(--x-padding-left-base);
 
     position: relative;
     display: inline-flex;
@@ -34262,6 +34257,13 @@ installImportMetaCssBuild(import.meta);const css$m = /* css */`
       /* Disabled */
       --list-item-color-disabled: light-dark(#aaa, #555);
       --list-item-background-color-disabled: var(--list-item-background-color);
+
+      --selectable-item-padding-x-default: var(
+        --navi-control-padding-x-default
+      );
+      --selectable-item-padding-y-default: var(
+        --navi-control-padding-y-default
+      );
     }
   }
 
@@ -34276,14 +34278,12 @@ installImportMetaCssBuild(import.meta);const css$m = /* css */`
     );
     --x-list-outline-offset: calc(-1 * var(--list-border-width));
 
+    font-size: var(--navi-control-font-size);
+    font-family: var(--navi-control-font-family);
     outline-width: var(--x-list-outline-width);
     outline-color: var(--list-outline-color);
     outline-offset: var(--x-list-outline-offset);
 
-    &[data-focus] {
-      /* outline: var(--list-outline-width) solid var(--navi-focus-outline-color);
-      outline-offset: calc(-1 * var(--list-outline-width)); */
-    }
     &[data-focus-visible] {
       outline-style: solid;
     }
@@ -34294,6 +34294,8 @@ installImportMetaCssBuild(import.meta);const css$m = /* css */`
 
   .navi_list_item[navi-selectable] {
     --x-list-item-cursor: default;
+    --list-item-padding-x-default: var(--selectable-item-padding-x-default);
+    --list-item-padding-y-default: var(--selectable-item-padding-y-default);
 
     position: relative;
     outline-width: var(--list-item-outline-width);
@@ -34742,7 +34744,6 @@ const ListItemSelectable = props => {
     "aria-selected": checked,
     selected: checked,
     "navi-selectable": "",
-    padding: "m",
     spacing: "s",
     flex: true,
     alignY: "center",
@@ -34968,9 +34969,8 @@ const css$l = /* css */`
       --list-max-height: 220px;
     }
     .navi_list_item {
-      --list-item-padding-x: 0px;
-      --list-item-padding-y: 0px;
-      --list-item-padding: var(--list-item-padding-y) var(--list-item-padding-x);
+      --list-item-padding-x-default: 0px;
+      --list-item-padding-y-default: 0px;
       --list-item-color: inherit;
       --list-item-font-weight: inherit;
       --list-item-background-color: transparent;
@@ -34982,15 +34982,16 @@ const css$l = /* css */`
       /* Here to be overridable by box layout props such as flex */
       display: inline-block;
     }
-    .navi_list_item_group_label {
-      --list-group-label-background-color: var(--list-background-color);
-    }
-    .navi_list_item_header {
-      background: var(--list-background-color);
-    }
-    .navi_list_item_footer {
-      background: var(--list-background-color);
-    }
+  }
+
+  .navi_list_item_group_label {
+    --list-group-label-background-color: var(--list-background-color);
+  }
+  .navi_list_item_header {
+    background: var(--list-background-color);
+  }
+  .navi_list_item_footer {
+    background: var(--list-background-color);
   }
 
   .navi_list_container {
@@ -35086,7 +35087,34 @@ const css$l = /* css */`
     box-sizing: border-box;
     min-width: 0;
     max-width: 100%;
-    padding: var(--list-item-padding);
+    padding-top: var(
+      --list-item-padding-top,
+      var(
+        --list-item-padding-y,
+        var(--list-item-padding, var(--list-item-padding-y-default))
+      )
+    );
+    padding-right: var(
+      --list-item-padding-right,
+      var(
+        --list-item-padding-x,
+        var(--list-item-padding, var(--list-item-padding-x-default))
+      )
+    );
+    padding-bottom: var(
+      --list-item-padding-bottom,
+      var(
+        --list-item-padding-y,
+        var(--list-item-padding, var(--list-item-padding-y-default))
+      )
+    );
+    padding-left: var(
+      --list-item-padding-left,
+      var(
+        --list-item-padding-x,
+        var(--list-item-padding, var(--list-item-padding-x-default))
+      )
+    );
     color: var(--x-list-item-color);
     font-weight: var(--x-list-item-font-weight);
     background-color: var(--x-list-item-background-color);
@@ -36110,9 +36138,13 @@ const ListItemReal = props => {
   });
 };
 const LIST_ITEM_STYLE_CSS_VARS = {
+  "padding": "--list-item-padding",
   "paddingX": "--list-item-padding-x",
   "paddingY": "--list-item-padding-y",
-  "padding": "--list-item-padding",
+  "paddingTop": "--list-item-padding-top",
+  "paddingRight": "--list-item-padding-right",
+  "paddingBottom": "--list-item-padding-bottom",
+  "paddingLeft": "--list-item-padding-left",
   "color": "--list-item-color",
   "backgroundColor": "--list-item-background-color",
   "fontWeight": "--list-item-font-weight",
@@ -36351,8 +36383,8 @@ installImportMetaCssBuild(import.meta);const css$k = /* css */`
       --picker-border-radius: 2px;
       --picker-outline-width: 1px;
       --picker-border-width: 1px;
-      --picker-padding-x-default: 8px;
-      --picker-padding-y-default: 5px;
+      --picker-padding-x-default: var(--navi-control-padding-x-default);
+      --picker-padding-y-default: var(--navi-control-padding-y-default);
       --picker-outline-color: var(--navi-focus-outline-color);
       --picker-loader-color: var(--navi-loader-color);
       --picker-border-color: light-dark(#767676, #8e8e93);
@@ -36400,155 +36432,155 @@ installImportMetaCssBuild(import.meta);const css$k = /* css */`
       );
       --picker-icon-color-disabled: var(--picker-icon-color-readonly);
     }
+  }
 
-    .navi_picker {
-      --x-picker-outline-width: calc(
-        var(--picker-outline-width) + var(--picker-border-width)
-      );
-      --x-picker-outline-offset: calc(-1 * var(--picker-border-width));
-      --x-picker-background-color: var(--picker-background-color);
-      --x-picker-border-color: var(--picker-border-color);
-      --x-picker-padding-top: var(
-        --picker-padding-top,
-        var(
-          --picker-padding-y,
-          var(--picker-padding, var(--picker-padding-y-default))
-        )
-      );
-      --x-picker-padding-right: var(
-        --picker-padding-right,
-        var(
-          --picker-padding-x,
-          var(--picker-padding, var(--picker-padding-x-default))
-        )
-      );
-      --x-picker-padding-left: var(
-        --picker-padding-left,
-        var(
-          --picker-padding-x,
-          var(--picker-padding, var(--picker-padding-x-default))
-        )
-      );
-      --x-picker-padding-bottom: var(
-        --picker-padding-bottom,
-        var(
-          --picker-padding-y,
-          var(--picker-padding, var(--picker-padding-y-default))
-        )
-      );
-      --x-picker-color: var(--picker-color);
-      --x-picker-icon-color: var(--picker-icon-color);
+  .navi_picker {
+    --x-picker-outline-width: calc(
+      var(--picker-outline-width) + var(--picker-border-width)
+    );
+    --x-picker-outline-offset: calc(-1 * var(--picker-border-width));
+    --x-picker-background-color: var(--picker-background-color);
+    --x-picker-border-color: var(--picker-border-color);
+    --x-picker-padding-top: var(
+      --picker-padding-top,
+      var(
+        --picker-padding-y,
+        var(--picker-padding, var(--picker-padding-y-default))
+      )
+    );
+    --x-picker-padding-right: var(
+      --picker-padding-right,
+      var(
+        --picker-padding-x,
+        var(--picker-padding, var(--picker-padding-x-default))
+      )
+    );
+    --x-picker-padding-left: var(
+      --picker-padding-left,
+      var(
+        --picker-padding-x,
+        var(--picker-padding, var(--picker-padding-x-default))
+      )
+    );
+    --x-picker-padding-bottom: var(
+      --picker-padding-bottom,
+      var(
+        --picker-padding-y,
+        var(--picker-padding, var(--picker-padding-y-default))
+      )
+    );
+    --x-picker-color: var(--picker-color);
+    --x-picker-icon-color: var(--picker-icon-color);
 
-      position: relative;
-      display: inline-flex;
-      box-sizing: border-box;
+    position: relative;
+    display: inline-flex;
+    box-sizing: border-box;
+    max-width: 100%;
+    min-height: calc(
+      1lh + var(--x-picker-padding-top) + var(--x-picker-padding-bottom)
+    );
+    padding-top: var(--x-picker-padding-top);
+    padding-right: var(--x-picker-padding-right);
+    padding-bottom: var(--x-picker-padding-bottom);
+    padding-left: var(--x-picker-padding-left);
+    flex-direction: row;
+    align-items: center;
+    gap: var(--navi-xs);
+    color: var(--x-picker-color);
+    text-align: inherit;
+    text-overflow: ellipsis;
+    background-color: var(--x-picker-background-color);
+    border-width: var(--picker-border-width);
+    border-style: solid;
+    border-color: var(--x-picker-border-color);
+    border-radius: var(--picker-border-radius);
+    outline-width: var(--x-picker-outline-width);
+    outline-style: none;
+    outline-color: var(--picker-outline-color);
+    outline-offset: var(--x-picker-outline-offset);
+    cursor: var(--x-picker-cursor, pointer);
+    pointer-events: auto;
+    user-select: none;
+    overflow: hidden;
+
+    .navi_picker_value {
+      display: inline-block;
+      min-width: 0;
       max-width: 100%;
-      min-height: calc(
-        1lh + var(--x-picker-padding-top) + var(--x-picker-padding-bottom)
-      );
-      padding-top: var(--x-picker-padding-top);
-      padding-right: var(--x-picker-padding-right);
-      padding-bottom: var(--x-picker-padding-bottom);
-      padding-left: var(--x-picker-padding-left);
-      flex-direction: row;
-      align-items: center;
-      gap: var(--navi-xs);
-      color: var(--x-picker-color);
-      text-align: inherit;
+      flex-grow: 1;
       text-overflow: ellipsis;
-      background-color: var(--x-picker-background-color);
-      border-width: var(--picker-border-width);
-      border-style: solid;
-      border-color: var(--x-picker-border-color);
-      border-radius: var(--picker-border-radius);
-      outline-width: var(--x-picker-outline-width);
-      outline-style: none;
-      outline-color: var(--picker-outline-color);
-      outline-offset: var(--x-picker-outline-offset);
-      cursor: var(--x-picker-cursor, pointer);
-      pointer-events: auto;
-      user-select: none;
+      white-space: nowrap;
       overflow: hidden;
 
+      &[navi-placeholder] {
+        color: var(--picker-placeholder-color);
+      }
+    }
+    .navi_picker_right_slot {
+      display: inline-flex;
+      height: 1em;
+      height: 1lh;
+      flex-shrink: 0;
+      align-items: center;
+      align-self: flex-start;
+      justify-content: center;
+      color: var(--x-picker-icon-color);
+      transform: translateX(25%);
+    }
+    .navi_picker_input {
+      position: absolute;
+      inset: 0;
+      box-sizing: border-box;
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      background: none;
+      border: none;
+      opacity: 0;
+      appearance: none;
+      pointer-events: none;
+    }
+
+    &[data-line-clamp] {
+      overflow-wrap: anywhere;
       .navi_picker_value {
-        display: inline-block;
-        min-width: 0;
-        max-width: 100%;
-        flex-grow: 1;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        overflow: hidden;
+        display: -webkit-box;
+        white-space: normal;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: var(--picker-max-rows);
+      }
+    }
 
-        &[navi-placeholder] {
-          color: var(--picker-placeholder-color);
-        }
-      }
-      .navi_picker_right_slot {
-        display: inline-flex;
-        height: 1em;
-        height: 1lh;
-        flex-shrink: 0;
-        align-items: center;
-        align-self: flex-start;
-        justify-content: center;
-        color: var(--x-picker-icon-color);
-        transform: translateX(25%);
-      }
-      .navi_picker_input {
-        position: absolute;
-        inset: 0;
-        box-sizing: border-box;
-        width: 100%;
-        height: 100%;
-        margin: 0;
-        padding: 0;
-        background: none;
-        border: none;
-        opacity: 0;
-        appearance: none;
-        pointer-events: none;
-      }
-
-      &[data-line-clamp] {
-        overflow-wrap: anywhere;
-        .navi_picker_value {
-          display: -webkit-box;
-          white-space: normal;
-          -webkit-box-orient: vertical;
-          -webkit-line-clamp: var(--picker-max-rows);
-        }
-      }
-
-      /* Hover */
-      &[data-hover] {
-        --x-picker-background-color: var(--picker-background-color-hover);
-        --x-picker-border-color: var(--picker-border-color-hover);
-      }
-      /* Readonly */
-      &[data-readonly] {
-        --x-picker-border-color: var(--picker-border-color-readonly);
-        --x-picker-background-color: var(--picker-background-color-readonly);
-        --x-picker-color: var(--picker-color-readonly);
-        --x-picker-icon-color: var(--picker-icon-color-readonly);
-        --x-picker-cursor: default;
-      }
-      /* Focus */
-      &[data-focus-visible] {
-        --x-picker-border-color: transparent;
-        outline-style: solid;
-      }
-      /* Disabled */
-      &[data-disabled] {
-        --x-picker-border-color: var(--picker-border-color-disabled);
-        --x-picker-background-color: var(--picker-background-color-disabled);
-        --x-picker-color: var(--picker-color-disabled);
-        --x-picker-icon-color: var(--picker-icon-color-disabled);
-        --x-picker-cursor: default;
-      }
-      /* Callout (info, warning, error) */
-      &[data-callout] {
-        --x-picker-border-color: var(--callout-color);
-      }
+    /* Hover */
+    &[data-hover] {
+      --x-picker-background-color: var(--picker-background-color-hover);
+      --x-picker-border-color: var(--picker-border-color-hover);
+    }
+    /* Readonly */
+    &[data-readonly] {
+      --x-picker-border-color: var(--picker-border-color-readonly);
+      --x-picker-background-color: var(--picker-background-color-readonly);
+      --x-picker-color: var(--picker-color-readonly);
+      --x-picker-icon-color: var(--picker-icon-color-readonly);
+      --x-picker-cursor: default;
+    }
+    /* Focus */
+    &[data-focus-visible] {
+      --x-picker-border-color: transparent;
+      outline-style: solid;
+    }
+    /* Disabled */
+    &[data-disabled] {
+      --x-picker-border-color: var(--picker-border-color-disabled);
+      --x-picker-background-color: var(--picker-background-color-disabled);
+      --x-picker-color: var(--picker-color-disabled);
+      --x-picker-icon-color: var(--picker-icon-color-disabled);
+      --x-picker-cursor: default;
+    }
+    /* Callout (info, warning, error) */
+    &[data-callout] {
+      --x-picker-border-color: var(--callout-color);
     }
   }
 `;
