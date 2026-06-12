@@ -80,7 +80,7 @@
               <div
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "80px auto 80px",
+                  gridTemplateColumns: "auto auto auto",
                   gridTemplateRows: "auto auto",
                   alignItems: "end",
                   columnGap: "8px",
@@ -91,7 +91,7 @@
                   unit={false}
                   variant="underline"
                   size="l"
-                  width="60"
+                  width="30"
                   value={hours}
                   action={(v) => {
                     hoursSignal.value = v;
@@ -105,7 +105,7 @@
                   size="l"
                   unit={false}
                   variant="underline"
-                  width="60"
+                  width="30"
                   value={minutes}
                   action={(v) => {
                     minutesSignal.value = v;
