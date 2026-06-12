@@ -15,11 +15,12 @@ import { naviI18n } from "./navi_i18n.js";
  * formatDay(nextWeek, "fr")   // "lundi 18 mai"
  */
 export const formatDay = (date, locale, { long = false } = {}) => {
-  return new Intl.DateTimeFormat(locale, {
+  const result = new Intl.DateTimeFormat(locale, {
     weekday: long ? "long" : "short",
     day: "numeric",
     month: long ? "long" : "short",
   }).format(date);
+  return result;
 };
 
 /**
