@@ -68,16 +68,14 @@ export const dispatchCustomEvent = (el, customEventName, customEventDetail) => {
 
 const resolveEventDetail = (customEventDetail) => {
   const { event, ...rest } = customEventDetail ?? {};
-  const isWrappedCustomEvent = event?.detail?.event !== undefined;
-  if (!isWrappedCustomEvent) {
-    return { ...rest, event };
+  if (!event) {
+    return { ...rest };
   }
-  // Keep `event` as the direct parent so callers see the immediate facade.
-  // Build eventChain as [root, ...grandparents] — oldest first, excluding `event`.
-  const previousChain = event.detail.eventChain;
-  const eventChain = previousChain
-    ? [...previousChain, event.detail.event]
-    : [event.detail.event];
+  // Always build eventChain from the first wrapping so callers can rely on it
+  // being present whenever `event` is set.
+  // eventChain = [oldest, ..., event] — the full ancestor list including the direct parent.
+  const previousChain = event.detail?.eventChain;
+  const eventChain = previousChain ? [...previousChain, event] : [event];
   return { ...rest, event, eventChain };
 };
 
@@ -108,12 +106,6 @@ export const findEvent = (event, predicate) => {
       }
     }
   }
-  const initiator = event.detail?.event;
-  if (initiator) {
-    if (match(initiator)) {
-      return initiator;
-    }
-  }
   return undefined;
 };
 
@@ -134,17 +126,15 @@ const resolveEventPredicate = (predicate) => {
  */
 export const formatEventSideEffect = (e, sideEffect) => {
   const parts = [];
-  if (e.detail?.event !== undefined) {
+  if (e.detail?.eventChain) {
     const chain = e.detail.eventChain;
-    const initiator = chain ? chain[0] : e.detail.event;
+    const initiator = chain[0];
     parts.push(
       `"${initiator.type}" on ${getElementSignature(initiator.target)}`,
     );
-    if (chain) {
-      for (const chainedEvent of chain.slice(1)) {
-        parts.push(chainedEvent.type);
-      }
-      parts.push(e.detail.event.type);
+    // chain[0] is shown as initiator above; chain includes event as last element
+    for (const chainedEvent of chain.slice(1)) {
+      parts.push(chainedEvent.type);
     }
     parts.push(e.type);
   } else {
@@ -185,7 +175,7 @@ export const createEventGroupLogger = () => {
     }
     const e = eOrMessage;
     const chain = e.detail?.eventChain;
-    const initiator = chain ? chain[0] : (e.detail?.event ?? e);
+    const initiator = chain ? chain[0] : e;
     if (initiator !== currentInitiator) {
       if (currentInitiator !== null) {
         clearTimeout(closeGroupTimeout);
@@ -208,12 +198,10 @@ const formatSideEffectLine = (e, sideEffect) => {
   const parts = [];
   const chain = e.detail?.eventChain;
   if (chain) {
-    // chain[0] is the root event, already shown as the group label — skip it
+    // chain[0] is the root event, already shown as the group label — skip it.
+    // chain includes the direct parent (e.detail.event) as its last element.
     for (const chainedEvent of chain.slice(1)) {
       parts.push(chainedEvent.type);
-    }
-    if (e.detail?.event) {
-      parts.push(e.detail.event.type);
     }
   }
   parts.push(sideEffect);
