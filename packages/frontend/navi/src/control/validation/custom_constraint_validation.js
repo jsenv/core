@@ -648,9 +648,11 @@ export const installCustomConstraintValidation = (
       if (!hasTitleAttribute) {
         element.removeAttribute("title");
       }
+      const checkValidityCallEvent =
+        event || new CustomEvent("checkValidity called with no event");
       closeElementValidationMessage(
-        event || new CustomEvent("checkValidity called with no event"),
-        "becomes_valid",
+        checkValidityCallEvent,
+        `now_valid (after ${checkValidityCallEvent.type})`,
       );
     }
 
