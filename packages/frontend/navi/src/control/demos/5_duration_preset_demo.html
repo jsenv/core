@@ -70,6 +70,7 @@
         Unit,
         Button,
         Time,
+        Icon,
         NaviDebug,
       } from "@jsenv/navi";
 
@@ -388,13 +389,10 @@
             {...props}
           >
             <Time type="minute">{hours * 60 + minutes}</Time>
-            <Picker
-              name="custom_duration_picker2"
-              variant="icon"
-              icon={<Picker.UI.PencilSvg />}
-              mode="dialog"
-              marginRight="-1ch"
-            >
+            <Icon marginRight="-1ch">
+              <Picker.UI.PencilSvg />
+            </Icon>
+            <Picker name="custom_duration_picker2" headless mode="dialog">
               <Box flex="y" alignX="center" padding="m" spacing="m">
                 <Text bold>Veuillez saisir une durée</Text>
                 <InputGroup flex spacing="xxs">
@@ -409,6 +407,7 @@
                       action={(v) => {
                         customDurationHourSignal2.value = v;
                       }}
+                      textAlign="right"
                     >
                       <Input.UI.UnitSlot>:</Input.UI.UnitSlot>
                     </Input>
