@@ -68,8 +68,19 @@ export const findClosestControlWithAction = (el) => {
   // data-action is now set on both the host and the control root/wrapper,
   // so starting from el.parentNode alone could hit the wrapper of the same
   // control rather than a true ancestor control.
+  //
+  // Do not cross popover/dialog boundaries: an element inside a popover or
+  // dialog can only be associated with an action that lives in the same popup.
   const ownControlRoot = el.closest("[navi-control]") || el;
-  return ownControlRoot.parentNode.closest("[data-action]");
+  const candidate = ownControlRoot.parentNode.closest("[data-action]");
+  if (!candidate) {
+    return undefined;
+  }
+  const popupBoundary = el.closest("[popover], dialog, [role='dialog']");
+  if (popupBoundary && !popupBoundary.contains(candidate)) {
+    return undefined;
+  }
+  return candidate;
 };
 
 /**

@@ -364,7 +364,9 @@ export const useControlProps = (
       };
       enterEffect = (e) => {
         const checkable = e.currentTarget;
-        dispatchNaviCommand(checkable, "--navi-send", e);
+        if (!checkable.command) {
+          // dispatchNaviCommand(checkable, "--navi-send", e);
+        }
       };
       if (picker) {
         mousedownInteraction = {
