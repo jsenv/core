@@ -136,9 +136,10 @@ export const onRequestInteraction = (
       }
     }
     if (!skipConstraints) {
-      checkAndReportConstraints(requestStatus, INTERACTION_CONSTRAINTS, {
+      checkAndReportConstraints(requestStatus, {
         event: requestInteractionCustomEvent,
         requester: event.target,
+        fromRequestInteraction: true,
         debug: debugInteraction,
       });
     }
@@ -226,11 +227,11 @@ export const onRequestAction = (
     checkEvent(requestStatus, event);
   }
   if (requestStatus.canProceed) {
-    checkAndReportConstraints(requestStatus, DEFAULT_CONSTRAINT_SET, {
+    checkAndReportConstraints(requestStatus, {
       event: requestActionCustomEvent,
       requester,
-      debug: debugAction,
       fromRequestAction: true,
+      debug: debugAction,
     });
   }
   if (requestStatus.canProceed) {
@@ -305,8 +306,7 @@ const checkEvent = (requestStatus, event) => {
 
 const checkAndReportConstraints = (
   requestStatus,
-  constraints,
-  { event, requester, debug, fromRequestAction } = {},
+  { event, requester, fromRequestInteraction, fromRequestAction, debug } = {},
 ) => {
   const onInvalid = (failedValidationInterface) => {
     Object.assign(requestStatus, {
@@ -335,9 +335,9 @@ const checkAndReportConstraints = (
   }
   const isValid = validationInterface.checkValidity({
     event,
-    constraints,
-    fromRequestAction,
     requester,
+    fromRequestInteraction,
+    fromRequestAction,
   });
   if (!isValid) {
     // checkValidity delegates to the proxy target's VI when the element is a proxy.
@@ -520,9 +520,9 @@ export const installCustomConstraintValidation = (
   addTeardown(resetValidity);
 
   const checkValidity = ({
-    constraints,
     event,
     requester = element,
+    fromRequestInteraction,
     fromRequestAction,
     skipReadonly,
   } = {}) => {
@@ -534,8 +534,8 @@ export const installCustomConstraintValidation = (
         targetVI = installCustomConstraintValidation(proxyTarget);
       }
       return targetVI.checkValidity({
-        constraints,
         event,
+        fromRequestInteraction,
         fromRequestAction,
         requester,
         skipReadonly,
@@ -552,9 +552,9 @@ export const installCustomConstraintValidation = (
         continue;
       }
       const managedIsValid = managedVI.checkValidity({
-        constraints,
         event,
         requester,
+        fromRequestInteraction,
         fromRequestAction,
         skipReadonly:
           managedControl.tagName === "BUTTON" && managedControl !== requester,
@@ -565,14 +565,31 @@ export const installCustomConstraintValidation = (
       }
     }
 
+    // When checking a subset of constraints (e.g. INTERACTION_CONSTRAINTS), we must NOT
+    // reset the full validity state — other constraints (like PATTERN) may still be failing
+    // and we must preserve their state (failedConstraintInfo, callout, etc.).
+    // We only do a scoped check and return its result without touching global state.
+    if (fromRequestInteraction) {
+      for (const constraint of INTERACTION_CONSTRAINTS) {
+        const checkResult = constraint.check(element, {
+          fromRequestAction,
+          skipReadonly,
+          skipRequired: element === requester,
+          registerChange: () => {},
+        });
+        if (checkResult) {
+          return false;
+        }
+      }
+      return true;
+    }
     let newConstraintValidityState = { valid: true };
-    // When constraints are explicitly provided (e.g. pointer interaction), use only those.
-    // Otherwise use default set merged with dynamic constraints.
-    const effectiveConstraints = constraints
-      ? constraints
-      : new Set([...DEFAULT_CONSTRAINT_SET, ...dynamicConstraintSet]);
+    const constraintSet = new Set([
+      ...DEFAULT_CONSTRAINT_SET,
+      ...dynamicConstraintSet,
+    ]);
     resetValidity({ fromRequestAction });
-    for (const constraint of effectiveConstraints) {
+    for (const constraint of constraintSet) {
       const fieldForConstraint = element;
       const constraintCleanupSet = new Set();
       const registerChange = (register) => {
