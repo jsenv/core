@@ -217,15 +217,6 @@ export const useControlProps = (
       const value = readControlValue(ref.current);
       uiStateController.setUIState(value, e);
     };
-    // For now it's a duplicate of updateUIState
-    // but we might have different path later one to trigger command
-    // without going through this path
-    // it's ok as updating ui state will do exactly what it needs even
-    // if it's only to dispatch navi command in the end
-    const triggerCommand = (e) => {
-      const value = readControlValue(ref.current);
-      uiStateController.setUIState(value, e);
-    };
 
     const transferFocusToTarget = (pointerEvent) => {
       const naviProxyTarget =
@@ -266,6 +257,7 @@ export const useControlProps = (
     };
     const lastEventRequestingActionRef = useRef();
     const lastActionValueRef = useRef();
+    const wasCheckedAtMousedownRef = useRef(false);
     // Keep lastActionValueRef in sync with state changes that happen outside of asAction
     // (e.g. radio_sibling_uncheck when another radio in the group becomes checked).
     // Otherwise the dedup below would wrongly skip a real user click that re-checks a radio
@@ -383,12 +375,18 @@ export const useControlProps = (
         clickInteraction = {
           name: "click",
           callback: asBrowserAction,
-          // radio do trigger "command" when we click on them
-          // even if they are checked
+          // When a radio is already checked and gets clicked, the browser does NOT
+          // fire an input event (state doesn't change), so asAction never runs.
+          // We still want uiAction + command to fire. We can tell whether the click
+          // is on an already-checked radio by looking at wasCheckedAtMousedownRef:
+          // if it was checked at mousedown, the input event won't come, so we do it here.
           effect: (e) => {
             const checkable = e.currentTarget;
-            if (checkable.type === "radio" && checkable.checked) {
-              triggerCommand(e);
+            if (
+              checkable.type === "radio" &&
+              wasCheckedAtMousedownRef.current
+            ) {
+              updateUIState(e);
             }
           },
         };
@@ -417,6 +415,9 @@ export const useControlProps = (
 
     const onMouseDown = (e) => {
       props.onMouseDown?.(e);
+      if (isCheckable && props.type === "radio") {
+        wasCheckedAtMousedownRef.current = e.currentTarget.checked;
+      }
       applyInteraction(mousedownInteraction, e);
       transferFocusToTarget(e);
     };
