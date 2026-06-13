@@ -352,10 +352,11 @@ const InputRadioHeadless = (props) => {
   return (
     <RealInputRadio
       pseudoClasses={RadioPseudoClasses}
+      navi-visually-hidden=""
+      navi-focus-delegate=""
+      aria-hidden="true"
       {...remainingProps}
       {...radioProps}
-      appearance={undefined}
-      navi-visually-hidden=""
     />
   );
 };

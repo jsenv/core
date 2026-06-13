@@ -316,9 +316,11 @@ const InputCheckboxHeadless = (props) => {
   return (
     <RealInputCheckbox
       pseudoClasses={CheckboxPseudoClasses}
+      navi-visually-hidden=""
+      navi-focus-delegate=""
+      aria-hidden="true"
       {...checkboxProps}
       {...remainingProps}
-      navi-visually-hidden=""
     />
   );
 };
