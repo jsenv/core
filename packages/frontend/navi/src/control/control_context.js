@@ -18,11 +18,11 @@ export const CONTROL_ATTRIBUTE_SET = new Set([
   "autoComplete",
   "spellcheck",
   "autoCorrect",
+  "aria-controls",
+  "tabIndex",
 
   "navi-input-type",
   "navi-control-proxy-for",
-  "aria-controls",
-  "tabIndex",
 
   "data-callout-arrow-x",
   "data-callout-point-to-border-box",
@@ -31,7 +31,7 @@ export const CONTROL_ATTRIBUTE_SET = new Set([
   "data-callout-position",
   "data-callout-position-fixed",
 
-  "data-testid",
+  "data-testid", // playwright, cypress
 ]);
 // prop concerning control but that won't end up in the DOM if not inside CONTROL_ATTRIBUTE_SET
 export const CONTROL_PROP_SET = new Set([

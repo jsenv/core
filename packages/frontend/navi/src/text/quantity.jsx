@@ -1,15 +1,11 @@
 import { LoadingDotsSvg } from "../graphic/loading/loading_dots_svg.jsx";
 import { formatNumber } from "./format_number.js";
 import { Icon } from "./icon.jsx";
-import { naviI18n } from "./navi_i18n.js";
 import { Text } from "./text.jsx";
+import { Unit } from "./unit.jsx";
 
 const css = /* css */ `
   @layer navi {
-    .navi_quantity {
-      --unit-color: color-mix(in srgb, currentColor 50%, white);
-      --unit-size-ratio: 0.7;
-    }
   }
 
   .navi_quantity {
@@ -27,10 +23,8 @@ const css = /* css */ `
       letter-spacing: 0.06em;
     }
     .navi_quantity_body {
-      .navi_quantity_unit {
-        color: var(--unit-color);
+      .navi_unit {
         font-weight: normal;
-        font-size: calc(var(--unit-size-ratio) * 1em);
       }
     }
 
@@ -52,7 +46,7 @@ const css = /* css */ `
         text-align: center;
       }
       .navi_quantity_body {
-        .navi_quantity_unit {
+        .navi_unit {
           display: inline-block;
           width: 100%;
           text-align: center;
@@ -66,6 +60,9 @@ export const Quantity = ({
   children,
   unit,
   unitPosition = "right",
+  unitSize = "smaller",
+  unitSizeRatio,
+  unitColor,
   label,
   size,
   lang,
@@ -116,14 +113,22 @@ export const Quantity = ({
             valueFormatted
           )}
         </span>
-        {unit && <Unit value={value} unit={unit} lang={lang} />}
+        {unit && (
+          <Unit
+            unit={unit}
+            plural={typeof value === "number" ? value > 1 : false}
+            lang={lang}
+            size={unitSize}
+            sizeRatio={unitSizeRatio}
+            color={unitColor}
+          />
+        )}
       </Text>
     </Text>
   );
 };
 const QuantityPropsCSSVars = {
   unitColor: "--unit-color",
-  unitSizeRatio: "--unit-size-ratio",
 };
 const QuantityPseudoClasses = [
   ":hover",
@@ -132,29 +137,6 @@ const QuantityPseudoClasses = [
   ":disabled",
   ":-navi-loading",
 ];
-
-const Unit = ({ value, unit, lang }) => {
-  let unitText = unit;
-  if (Array.isArray(unit)) {
-    const [singular, plural] = unit;
-    unitText = value > 1 ? plural : singular;
-  } else {
-    const singularText = naviI18n(unit, undefined, { lang });
-    if (singularText !== unit) {
-      // unit is known to naviI18n
-      if (value > 1) {
-        const pluralKey = `${unit}__plural`;
-        const pluralText = naviI18n(pluralKey, undefined, { lang });
-        // fallback to singular if no plural key registered
-        unitText = pluralText !== pluralKey ? pluralText : singularText;
-      } else {
-        unitText = singularText;
-      }
-    }
-  }
-
-  return <span className="navi_quantity_unit">{unitText}</span>;
-};
 
 const parseQuantityValue = (children) => {
   if (typeof children !== "string") {

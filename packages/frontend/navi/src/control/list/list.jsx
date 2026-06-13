@@ -213,6 +213,7 @@ const css = /* css */ `
     background-color: var(--x-list-item-background-color);
     border: var(--x-list-item-border-width) solid
       var(--x-list-item-border-color);
+    border-radius: var(--list-item-border-radius, 0px);
     /*
     CSS impossible d'obtenir un layout qui ferait en gros:
     width = max(min(max-content, 100%), unbreakable-content)
@@ -222,7 +223,7 @@ const css = /* css */ `
       -> NOPE
     - Force overflow hidden + ellipsis
       - casse la lisibilité des mots insécables
-      - possible d'optin en utilisant overflowEllipsis sur le ListItem
+      - possible d'optin en utilisant maxLines sur le ListItem
       -> Bien mais pas par défaut
     - Forcer le retour a la ligne des mot inécables
       - Aucun des inconvénient ci dessus 
@@ -1307,6 +1308,8 @@ const ListItemReal = (props) => {
   );
 };
 const LIST_ITEM_STYLE_CSS_VARS = {
+  "borderRadius": "--list-item-border-radius",
+  "borderWidth": "--list-item-border-width",
   "padding": "--list-item-padding",
   "paddingX": "--list-item-padding-x",
   "paddingY": "--list-item-padding-y",
@@ -1317,7 +1320,6 @@ const LIST_ITEM_STYLE_CSS_VARS = {
   "color": "--list-item-color",
   "backgroundColor": "--list-item-background-color",
   "fontWeight": "--list-item-font-weight",
-  "borderWidth": "--list-item-border-width",
   "borderColor": "--list-item-border-color",
   ":-navi-pointed": {
     color: "--list-item-color-keyboard-pointed",

@@ -226,6 +226,7 @@ const dispatchPublicCustomEvent = (
   const customEvent = new CustomEvent(customEventName, {
     detail: resolveEventDetail(customEventDetail),
     bubbles: true,
+    cancelable: true,
   });
   return el.dispatchEvent(customEvent);
 };
@@ -357,7 +358,7 @@ const createEventGroupLogger = () => {
     }, 0);
   };
 
-  return (eOrMessage, sideEffect) => {
+  return (eOrMessage, sideEffect, ...args) => {
     if (!(eOrMessage instanceof Event)) {
       console.debug(eOrMessage);
       return;
@@ -378,7 +379,7 @@ const createEventGroupLogger = () => {
       currentInitiator = initiator;
     }
     const line = formatSideEffectLine(e, sideEffect);
-    console.debug(line);
+    console.debug(line, ...args);
     scheduleGroupEnd();
   };
 };

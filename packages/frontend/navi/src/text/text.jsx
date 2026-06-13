@@ -327,11 +327,13 @@ const OverflowPinnedContext = createContext(null);
  *
  * @param {object} props
  *
- * @param {boolean} [props.overflowEllipsis]
- *   Truncates overflowing text with an ellipsis.
+ * @param {number} [props.maxLines]
+ *   Truncates overflowing text with an ellipsis after at most N lines.
+ *   `maxLines={1}` truncates after one line (single-line ellipsis).
+ *   `maxLines={n}` (n > 1) truncates after n lines (multi-line clamp).
  *
  * @param {boolean} [props.overflowPinned]
- *   Must be used inside a `<Text overflowEllipsis>` parent.
+ *   Must be used inside a `<Text maxLines>` parent.
  *   Pins this element outside the truncated text flow (e.g. a badge or icon).
  *
  * @param {string} [props.spacing]
@@ -388,7 +390,7 @@ const TextDispatcher = (props) => {
   if (props.shrinkWrap) {
     return <TextShrinkWrap {...props} />;
   }
-  if (props.overflowEllipsis) {
+  if (props.maxLines === 1 || props.maxLines === "1") {
     return <TextOverflow {...props} />;
   }
   if (props.overflowPinned) {
@@ -567,7 +569,7 @@ const TextSkeleton = ({ loading, children, ...props }) => {
     </TextDispatcher>
   );
 };
-const TextOverflow = ({ noWrap, spacing, children, ...rest }) => {
+const TextOverflow = ({ noWrap, spacing, capitalize, children, ...rest }) => {
   const [overflowPinned, setOverflowPinned] = useState(null);
 
   return (
@@ -580,7 +582,7 @@ const TextOverflow = ({ noWrap, spacing, children, ...rest }) => {
       preLine={rest.as === "p" ? true : undefined}
       noWrap={noWrap}
       {...rest}
-      overflowEllipsis={undefined}
+      maxLines={undefined}
       data-text-overflow=""
       spacing="pre"
     >
@@ -589,7 +591,11 @@ const TextOverflow = ({ noWrap, spacing, children, ...rest }) => {
           ? overflowPinned.vnode
           : null}
         <OverflowPinnedContext.Provider value={setOverflowPinned}>
-          <Text className="navi_text_overflow_text" spacing={spacing}>
+          <Text
+            className="navi_text_overflow_text"
+            spacing={spacing}
+            capitalize={capitalize}
+          >
             {children}
           </Text>
         </OverflowPinnedContext.Provider>
@@ -608,7 +614,7 @@ const TextOverflowPinned = (props) => {
   );
   if (!setOverflowPinned) {
     console.warn(
-      "<Text overflowPinned> declared outside a <Text overflowEllipsis>",
+      `<Text overflowPinned> declared outside a <Text maxLines="1">`,
     );
     return text;
   }

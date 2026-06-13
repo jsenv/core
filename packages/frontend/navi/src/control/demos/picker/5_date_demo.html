@@ -71,6 +71,8 @@
         isToday,
         getNowHoursRoundedToStep,
         stateSignal,
+        route,
+        setupRoutes,
       } from "@jsenv/navi";
 
       const App = () => (
@@ -175,6 +177,16 @@
                     disabled
                   />
                 </Field>
+                <Field vertical>
+                  <Label>Overflow (width contrainte)</Label>
+                  <Picker
+                    name="date_overflow"
+                    type="date"
+                    defaultValue="2026-09-11"
+                    ui={<Picker.UI.Date long />}
+                    style={{ width: "120px" }}
+                  />
+                </Field>
               </Box>
             </div>
             <div>
@@ -206,9 +218,25 @@
 
       const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+      const noInitialDateSignal = stateSignal("", {
+        id: "no_initial_date",
+        type: "date",
+      });
+      const withInitialDateSignal = stateSignal(DEFAULT_DATE, {
+        id: "with_initial_date",
+        type: "date",
+      });
+
+      const DEMO_ROUTE = route("", {
+        searchParams: {
+          no_initial_date: noInitialDateSignal,
+          with_initial_date: withInitialDateSignal,
+        },
+      });
+      setupRoutes([DEMO_ROUTE]);
+
       const WithActionDemo = () => {
         const [entries, push, clear] = useCallLog();
-        const dateSignal = useSignal(DEFAULT_DATE);
 
         return (
           <div class="demo-section" id="outside-form">
@@ -223,12 +251,14 @@
                 <Picker
                   name="date_no_initial"
                   type="date"
+                  value={noInitialDateSignal.value}
                   uiAction={(v) => {
                     push("Picker uiAction", v);
                   }}
                   action={async (v) => {
                     push("Picker action", v);
                     await sleep(800);
+                    noInitialDateSignal.value = v;
                   }}
                 />
               </Field>
@@ -237,14 +267,14 @@
                 <Picker
                   name="date_with_initial"
                   type="date"
-                  value={dateSignal.value}
+                  value={withInitialDateSignal.value}
                   uiAction={(v) => {
                     push("Picker uiAction", v);
                   }}
                   action={async (v) => {
                     push("Picker action", v);
                     await sleep(800);
-                    dateSignal.value = v;
+                    withInitialDateSignal.value = v;
                   }}
                 />
               </Field>
@@ -472,6 +502,13 @@
       // "2026-01-20" → mardi 20 janvier      (short day, medium month)
       const DEMO_DATES = ["2026-06-03", "2026-09-11", "2026-01-20"];
 
+      // Fixed reference point for dayLabel demos so yesterday/today/tomorrow
+      // labels are always visible regardless of the actual current date.
+      const DAY_LABEL_NOW = new Date("2026-06-03T12:00:00");
+      const DAY_LABEL_YESTERDAY = "2026-06-02";
+      const DAY_LABEL_TODAY = "2026-06-03";
+      const DAY_LABEL_TOMORROW = "2026-06-04";
+
       const CustomizationDemo = () => (
         <div class="demo-section" id="customization">
           <h2>5. Customization — Picker.UI.Date</h2>
@@ -515,20 +552,20 @@
                 <Picker
                   name="date_daylabel_yesterday"
                   type="date"
-                  defaultValue="2026-06-02"
-                  ui={<Picker.UI.Date dayLabel />}
+                  defaultValue={DAY_LABEL_YESTERDAY}
+                  ui={<Picker.UI.Date dayLabel now={DAY_LABEL_NOW} />}
                 />
                 <Picker
                   name="date_daylabel_today"
                   type="date"
-                  defaultValue="2026-06-03"
-                  ui={<Picker.UI.Date dayLabel />}
+                  defaultValue={DAY_LABEL_TODAY}
+                  ui={<Picker.UI.Date dayLabel now={DAY_LABEL_NOW} />}
                 />
                 <Picker
                   name="date_daylabel_tomorrow"
                   type="date"
-                  defaultValue="2026-06-04"
-                  ui={<Picker.UI.Date dayLabel />}
+                  defaultValue={DAY_LABEL_TOMORROW}
+                  ui={<Picker.UI.Date dayLabel now={DAY_LABEL_NOW} />}
                 />
               </Box>
             </div>
@@ -567,24 +604,48 @@
                 <Picker
                   name="date_long_daylabel_yesterday"
                   type="date"
-                  defaultValue="2026-06-02"
-                  ui={<Picker.UI.Date long dayLabel />}
+                  defaultValue={DAY_LABEL_YESTERDAY}
+                  ui={<Picker.UI.Date long dayLabel now={DAY_LABEL_NOW} />}
                 />
                 <Picker
                   name="date_long_daylabel_today"
                   type="date"
-                  defaultValue="2026-06-03"
-                  ui={<Picker.UI.Date long dayLabel />}
+                  defaultValue={DAY_LABEL_TODAY}
+                  ui={<Picker.UI.Date long dayLabel now={DAY_LABEL_NOW} />}
                 />
                 <Picker
                   name="date_long_daylabel_tomorrow"
                   type="date"
-                  defaultValue="2026-06-04"
-                  ui={<Picker.UI.Date long dayLabel />}
+                  defaultValue={DAY_LABEL_TOMORROW}
+                  ui={<Picker.UI.Date long dayLabel now={DAY_LABEL_NOW} />}
                 />
               </Box>
             </div>
           </div>
+
+          <hr
+            style={{
+              margin: "20px 0",
+              border: "none",
+              borderTop: "1px solid #eee",
+            }}
+          />
+          <div class="states-col-header">numeric — jj/mm/aaaa</div>
+          <p class="desc">
+            Format numérique&nbsp;: chiffres uniquement, séparateurs selon la
+            locale (ex&nbsp;: «&nbsp;03/06/2026&nbsp;» en français).
+          </p>
+          <Box flex="y" spacing="xs" alignX="start">
+            {DEMO_DATES.map((d, i) => (
+              <Picker
+                key={i}
+                name={`date_numeric_${i}`}
+                type="date"
+                defaultValue={d}
+                ui={<Picker.UI.Date numeric />}
+              />
+            ))}
+          </Box>
         </div>
       );
 

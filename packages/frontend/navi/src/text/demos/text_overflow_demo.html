@@ -69,7 +69,7 @@
             </section>
             <section>
               <h2 id="s-line-clamp">Line Clamp</h2>
-              <LineClampSection />
+              <MaxLinesSection />
             </section>
           </div>
         );
@@ -142,7 +142,7 @@
       const TwoColFlexSection = () => {
         return (
           <Box flex spacing="0" width="300">
-            <Text overflowEllipsis border="1px solid #ccc">
+            <Text maxLines={1} border="1px solid #ccc">
               This is a long text in the first column that should be truncated
               with an ellipsis when there is not enough space.
             </Text>
@@ -207,7 +207,7 @@
               <Icon shrink={false}>
                 <StarSvg />
               </Icon>
-              <Text overflowEllipsis loading={isLoading} minWidth="0">
+              <Text maxLines={1} loading={isLoading} minWidth="0">
                 A very long label that will be truncated when the container is
                 too narrow to show it all
               </Text>
@@ -243,7 +243,7 @@
                 expandX
                 minWidth="0"
               >
-                <Text overflowEllipsis expandX loading={isLoading}>
+                <Text maxLines={1} expandX loading={isLoading}>
                   A very long label inside the inner flex that should truncate
                   before the trailing icon disappears
                 </Text>
@@ -280,7 +280,7 @@
                   spacing="12"
                   width="300"
                 >
-                  <Text overflowEllipsis border="1px solid #ccc">
+                  <Text maxLines={1} border="1px solid #ccc">
                     This is a long text in the first column that should be
                     truncated with an ellipsis when there is not enough space.
                   </Text>
@@ -297,7 +297,7 @@
       const BasicSection = () => {
         return (
           <Box width="220" border="1px solid #ccc" padding="sm">
-            <Text overflowEllipsis>
+            <Text maxLines={1}>
               This is a very long text that should be truncated with ellipsis
               when it overflows this small container.
             </Text>
@@ -309,7 +309,7 @@
         return (
           <Box row spacing="16px">
             <Box width="260" border="1px solid #ccc" padding="sm">
-              <Text overflowEllipsis>
+              <Text maxLines={1}>
                 This text has extra info that stays visible
                 <Text overflowPinned color="#666">
                   (modified)
@@ -317,7 +317,7 @@
               </Text>
             </Box>
             <Box width="260" border="1px solid #ccc" padding="sm">
-              <Text overflowEllipsis>
+              <Text maxLines={1}>
                 Text with a dynamic count that is long and will overflow
                 <Text overflowPinned color="#4caf50">
                   <BadgeCount background="violet" color="white">
@@ -339,7 +339,7 @@
             </p>
             <Box row spacing="16px">
               <Box width="300" border="1px solid #ccc" padding="sm">
-                <Text overflowEllipsis>
+                <Text maxLines={1}>
                   <Icon color="orange">
                     <StarSvg />
                   </Icon>
@@ -355,7 +355,7 @@
                 </Text>
               </Box>
               <Box width="300" border="1px solid #ccc" padding="sm">
-                <Text overflowEllipsis spacing="l">
+                <Text maxLines={1} spacing="l">
                   <Icon color="orange">
                     <StarSvg />
                   </Icon>
@@ -371,7 +371,7 @@
                 </Text>
               </Box>
               <Box width="180" border="1px solid #ccc" padding="sm">
-                <Text overflowEllipsis>
+                <Text maxLines={1}>
                   <Icon>
                     <StarSvg />
                   </Icon>
@@ -408,7 +408,7 @@
                 >
                   Width: {width}px
                 </div>
-                <Text overflowEllipsis>
+                <Text maxLines={1}>
                   Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed
                   do eiusmod tempor
                 </Text>
@@ -437,7 +437,7 @@
               >
                 as=&quot;div&quot; (default)
               </div>
-              <Text overflowEllipsis>
+              <Text maxLines={1}>
                 This is rendered as a div element with overflow handling
               </Text>
             </div>
@@ -457,7 +457,7 @@
               >
                 as=&quot;p&quot;
               </div>
-              <Text as="p" overflowEllipsis>
+              <Text as="p" maxLines={1}>
                 This is rendered as a paragraph element with overflow
               </Text>
             </div>
@@ -477,7 +477,7 @@
               >
                 as=&quot;span&quot;
               </div>
-              <Text as="span" overflowEllipsis>
+              <Text as="span" maxLines={1}>
                 This is rendered as a span element with overflow
               </Text>
             </div>
@@ -504,7 +504,7 @@
               >
                 With icon after
               </div>
-              <Text overflowEllipsis>
+              <Text maxLines={1}>
                 Important message that might be too long to display fully
                 <Text overflowPinned color="#f44336" size="sm">
                   ⚠️
@@ -527,7 +527,7 @@
               >
                 With multiple elements after
               </div>
-              <Text overflowEllipsis>
+              <Text maxLines={1}>
                 Document title with attachment count and icon that demonstrates
                 overflow
                 <Text overflowPinned>
@@ -565,7 +565,7 @@
               />
             </Box>
             <Box width={width} border="2px solid #2196f3" padding="s">
-              <Text overflowEllipsis textBold>
+              <Text maxLines={1} textBold>
                 Resize me to see how the text overflow behavior adapts to
                 different container widths
                 <Text overflowPinned textColor="#666">
@@ -596,7 +596,7 @@
               >
                 Text with line breaks
               </div>
-              <Text overflowEllipsis>
+              <Text maxLines={1}>
                 First line of text{"\n"}
                 Second line of text{"\n"}
                 Third line that should overflow
@@ -619,10 +619,10 @@
                 Vertical alignment comparison
               </div>
               <Box layoutRow lineHeight="100px">
-                <Text overflowEllipsis>
+                <Text maxLines={1}>
                   Just a long line of text that would get overflowed.
                 </Text>
-                <Text overflowEllipsis>
+                <Text maxLines={1}>
                   Just a long line of text that would get overflowed.
                 </Text>
               </Box>
@@ -631,7 +631,7 @@
         );
       };
 
-      const LineClampSection = () => {
+      const MaxLinesSection = () => {
         return (
           <>
             <p
@@ -645,17 +645,17 @@
               }}
             >
               <strong>Which to use?</strong>
-              <br />→ Single-line truncation: use <code>overflowEllipsis</code>.
+              <br />→ Single-line truncation: use <code>maxLines={1}</code>.
               It collapses the text to one line and appends <code>…</code>.
               <br />→ Multi-line truncation: use{" "}
               <code>-webkit-line-clamp</code>. It lets N lines show and truncates
               the rest with <code>…</code>. The two don't compose —{" "}
-              <code>overflowEllipsis</code> forces{" "}
+              <code>maxLines={1}</code> forces{" "}
               <code>white-space: nowrap</code> which makes line-clamp a no-op.
             </p>
             <p style={{ color: "#555", fontSize: "14px" }}>
               <code>-webkit-line-clamp</code> truncates text after N lines and
-              adds an ellipsis. Unlike <code>overflowEllipsis</code> (which is
+              adds an ellipsis. Unlike <code>maxLines={1}</code> (which is
               single-line), line clamping works on multi-line blocks.
             </p>
             <Box row spacing="16px" style={{ flexWrap: "wrap" }}>
@@ -747,8 +747,8 @@
                 marginTop: "20px",
               }}
             >
-              Combined with <code>overflowEllipsis</code>: the two don't compose
-              naturally. <code>overflowEllipsis</code> forces{" "}
+              Combined with <code>maxLines={1}</code>: the two don't compose
+              naturally. <code>maxLines={1}</code> forces{" "}
               <code>white-space: nowrap</code>, which collapses everything to one
               line — line-clamp then has no effect.
             </p>
@@ -767,9 +767,9 @@
                     marginBottom: "4px",
                   }}
                 >
-                  overflowEllipsis + line-clamp: 2 → single-line wins
+                  maxLines={1} + line-clamp: 2 → single-line wins
                 </div>
-                <Text overflowEllipsis lineClamp={2}>
+                <Text maxLines={2}>
                   Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed
                   do eiusmod tempor incididunt ut labore et dolore magna aliqua.
                 </Text>
@@ -788,9 +788,9 @@
                     marginBottom: "4px",
                   }}
                 >
-                  line-clamp only (no overflowEllipsis) → multiline truncation
+                  line-clamp only (no maxLines={1}) → multiline truncation
                 </div>
-                <Box lineClamp={2}>
+                <Box maxLines={2}>
                   Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed
                   do eiusmod tempor incididunt ut labore et dolore magna aliqua.
                 </Box>

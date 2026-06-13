@@ -1,3 +1,4 @@
+import { dispatchPublicCustomEvent } from "@jsenv/dom";
 import { triggerStringAction } from "@jsenv/navi/src/control/string_actions.js";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 
@@ -32,37 +33,76 @@ const InputModeNumeric = (props) => {
     <Next
       maxLength={maxLength}
       {...props}
+      onInput={(e) => {
+        props.onInput?.(e);
+        if (e.defaultPrevented) {
+          return;
+        }
+        if (maxLength === undefined) {
+          return;
+        }
+        const input = e.currentTarget;
+        if (input.value.length < maxLength) {
+          return;
+        }
+        if (input.selectionStart !== maxLength) {
+          return;
+        }
+        // Field is full and caret is at the end: notify listeners then
+        // select all so the next keystroke starts a fresh value instead of
+        // being silently blocked by maxlength.
+        const allowed = dispatchPublicCustomEvent(input, "navi_input_full", {
+          event: e,
+        });
+        if (allowed) {
+          input.select();
+        } else {
+          // e.preventDefault();
+          // navi_input_full called preventDefault()
+          // (it consumed the event likely meaning an other input got focused)
+        }
+      }}
       onKeyDown={(e) => {
         props.onKeyDown?.(e);
         if (e.defaultPrevented) {
           return;
         }
-        if (e.key !== "ArrowUp" && e.key !== "ArrowDown") {
+        if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+          performArrowUpDown(e);
           return;
         }
-        e.preventDefault();
-        const currentValue = Number(e.currentTarget.value);
-        if (Number.isNaN(currentValue)) {
-          return;
-        }
-        const delta = e.key === "ArrowUp" ? step : -step;
-        // Snap to step grid relative to step base (min ?? 0), then move
-        const stepBase = min !== undefined ? min : 0;
-        const offset = currentValue - stepBase;
-        const currentStepIndex = Math.round(offset / step);
-        const snapped = stepBase + currentStepIndex * step;
-        let nextValue = snapped + delta;
-        if (min !== undefined && nextValue < min) {
-          nextValue = min;
-        }
-        if (max !== undefined && nextValue > max) {
-          nextValue = max;
-        }
-        triggerStringAction("update", nextValue, {
-          event: e,
-          actionTarget: e.currentTarget,
-        });
       }}
     />
   );
+};
+
+const performArrowUpDown = (e) => {
+  const input = e.currentTarget;
+  const currentValue = Number(input.value);
+  if (Number.isNaN(currentValue)) {
+    e.preventDefault();
+    return;
+  }
+  const min = input.min !== "" ? Number(input.min) : undefined;
+  const max = input.max !== "" ? Number(input.max) : undefined;
+  const step =
+    input.step !== "" && input.step !== "any" ? Number(input.step) : 1;
+  const delta = e.key === "ArrowUp" ? step : -step;
+  // Snap to step grid relative to step base (min ?? 0), then move
+  const stepBase = min !== undefined ? min : 0;
+  const offset = currentValue - stepBase;
+  const currentStepIndex = Math.round(offset / step);
+  const snapped = stepBase + currentStepIndex * step;
+  let nextValue = snapped + delta;
+  if (min !== undefined && nextValue < min) {
+    nextValue = min;
+  }
+  if (max !== undefined && nextValue > max) {
+    nextValue = max;
+  }
+  triggerStringAction("update", nextValue, {
+    event: e,
+    actionTarget: e.currentTarget,
+  });
+  e.preventDefault();
 };

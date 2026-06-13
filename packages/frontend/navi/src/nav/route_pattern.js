@@ -2669,15 +2669,13 @@ const extractSearchParams = (urlObj, queryConnectionMap) => {
         decodedValue === "true" || decodedValue === "1" || decodedValue === "";
     } else if (signalType === "date") {
       const decodedValue = decodeURIComponent(rawValue);
-      // Accept both "YYYY-MM-DD" and full ISO string, always parse as UTC date
-      const datePart = decodedValue.slice(0, 10);
-      const [year, month, day] = datePart.split("-").map(Number);
-      const d = new Date(Date.UTC(year, month - 1, day));
-      params[key] = isNaN(d.getTime()) ? decodedValue : d;
+      // Keep as "YYYY-MM-DD" string — canonical date form, no timezone conversion
+      params[key] = decodedValue.slice(0, 10);
     } else if (signalType === "datetime") {
       const decodedValue = decodeURIComponent(rawValue);
+      // Normalize to ISO string — canonical datetime form
       const d = new Date(decodedValue);
-      params[key] = isNaN(d.getTime()) ? decodedValue : d;
+      params[key] = isNaN(d.getTime()) ? decodedValue : d.toISOString();
     } else {
       params[key] = decodeURIComponent(rawValue);
     }

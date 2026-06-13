@@ -8,6 +8,7 @@ import { PickerContext } from "./picker_context.jsx";
 
 export const PickerText = (props) => {
   const Next = useNextResolver();
+
   return <Next icon={<PencilSvg />} {...props} />;
 };
 
@@ -15,11 +16,12 @@ export const PickerArray = (props) => {
   const Next = useNextResolver();
 
   return (
-    <Next maxRows={3} ui={<PickerArrayUI />} {...props} type="navi_picker" />
+    <Next maxLines="3" ui={<PickerArrayUI />} {...props} type="navi_picker" />
   );
 };
 export const PickerArrayUI = () => {
-  const { value, placeholder, maxRows } = useContext(PickerContext);
+  const { value, placeholder, maxLines } = useContext(PickerContext);
+
   if (!value || value.length === 0) {
     if (!placeholder) {
       return null;
@@ -27,12 +29,7 @@ export const PickerArrayUI = () => {
     return placeholder;
   }
   return (
-    <Text
-      spacing=", "
-      shrinkWrap
-      lineClamp={maxRows > 1 ? maxRows : undefined}
-      overflowEllipsis={maxRows === 1 ? true : undefined}
-    >
+    <Text spacing=", " shrinkWrap maxLines={maxLines}>
       {value.map((item) => {
         return <span key={item}>{item}</span>;
       })}
@@ -42,12 +39,14 @@ export const PickerArrayUI = () => {
 
 export const PickerColor = (props) => {
   const Next = useNextResolver();
+
   return (
     <Next ui={<PickerColorUI />} icon={<ColorSvg />} type="color" {...props} />
   );
 };
 export const PickerColorUI = () => {
   const { value, placeholder } = useContext(PickerContext);
+
   if (!value) {
     if (!placeholder) {
       return <Color />;
@@ -66,16 +65,23 @@ export const PickerDate = (props) => {
 };
 export const PickerDateUI = (props) => {
   const { value, placeholder } = useContext(PickerContext);
+
   if (!value) {
     if (!placeholder) {
       return (
-        <Time type="date" color="var(--picker-placeholder-color" {...props} />
+        <Time
+          type="date"
+          color="var(--picker-placeholder-color"
+          capitalize
+          maxLines="1"
+          {...props}
+        />
       );
     }
     return placeholder;
   }
   return (
-    <Time type="date" capitalize {...props}>
+    <Time type="date" capitalize maxLines="1" {...props}>
       {value}
     </Time>
   );
@@ -93,16 +99,24 @@ export const PickerMonth = (props) => {
     />
   );
 };
-export const PickerMonthUI = () => {
+export const PickerMonthUI = (props) => {
   const { value, placeholder } = useContext(PickerContext);
+
   if (!value) {
     if (!placeholder) {
-      return <Time type="month" color="var(--picker-placeholder-color" />;
+      return (
+        <Time
+          type="month"
+          color="var(--picker-placeholder-color"
+          maxLines="1"
+          {...props}
+        />
+      );
     }
     return placeholder;
   }
   return (
-    <Time type="month" capitalize>
+    <Time type="month" maxLines="1" capitalize {...props}>
       {value}
     </Time>
   );
@@ -115,16 +129,24 @@ export const PickerWeek = (props) => {
     <Next ui={<PickerWeekUI />} icon={<CalendarSvg />} {...props} type="week" />
   );
 };
-export const PickerWeekUI = () => {
+export const PickerWeekUI = (props) => {
   const { value, placeholder } = useContext(PickerContext);
+
   if (!value) {
     if (!placeholder) {
-      return <Time type="week" color="var(--picker-placeholder-color" />;
+      return (
+        <Time
+          type="week"
+          color="var(--picker-placeholder-color"
+          maxLines="1"
+          {...props}
+        />
+      );
     }
     return placeholder;
   }
   return (
-    <Time type="week" capitalize>
+    <Time type="week" capitalize maxLines="1" {...props}>
       {value}
     </Time>
   );
@@ -139,16 +161,22 @@ export const PickerTime = (props) => {
 };
 export const PickerTimeUI = (props) => {
   const { value, placeholder } = useContext(PickerContext);
+
   if (!value) {
     if (!placeholder) {
       return (
-        <Time type="time" color="var(--picker-placeholder-color" {...props} />
+        <Time
+          type="time"
+          color="var(--picker-placeholder-color"
+          maxLines="1"
+          {...props}
+        />
       );
     }
     return placeholder;
   }
   return (
-    <Time type="time" {...props}>
+    <Time type="time" maxLines="1" {...props}>
       {value}
     </Time>
   );
@@ -166,15 +194,27 @@ export const PickerDatetime = (props) => {
     />
   );
 };
-export const PickerDatetimeUI = () => {
+export const PickerDatetimeUI = (props) => {
   const { value, placeholder } = useContext(PickerContext);
+
   if (!value) {
     if (!placeholder) {
-      return <Time type="datetime" color="var(--picker-placeholder-color" />;
+      return (
+        <Time
+          type="datetime"
+          color="var(--picker-placeholder-color"
+          maxLines="1"
+          {...props}
+        />
+      );
     }
     return placeholder;
   }
-  return <Time type="datetime">{value}</Time>;
+  return (
+    <Time type="datetime" maxLines="1">
+      {value}
+    </Time>
+  );
 };
 
 export const PickerFile = (props) => {
@@ -197,7 +237,7 @@ export const PickerFileUI = () => {
   return value;
 };
 
-const PencilSvg = () => {
+export const PencilSvg = () => {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -208,7 +248,7 @@ const PencilSvg = () => {
     </svg>
   );
 };
-const CalendarSvg = () => {
+export const CalendarSvg = () => {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -219,7 +259,7 @@ const CalendarSvg = () => {
     </svg>
   );
 };
-const ClockSvg = () => {
+export const ClockSvg = () => {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -230,7 +270,7 @@ const ClockSvg = () => {
     </svg>
   );
 };
-const ColorSvg = () => {
+export const ColorSvg = () => {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -241,7 +281,7 @@ const ColorSvg = () => {
     </svg>
   );
 };
-const FileSvg = () => {
+export const FileSvg = () => {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"

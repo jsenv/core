@@ -75,15 +75,18 @@ const css = /* css */ `
     &[data-callout] {
       --x-list-border-color: var(--callout-color);
     }
+
+    .navi_list_item {
+      --x-list-item-cursor: default;
+      --x-list-item-border-color: var(--list-item-border-color);
+
+      position: relative;
+      font-size: var(--navi-control-font-size);
+      font-family: var(--navi-control-font-family);
+    }
   }
 
   .navi_list_item[navi-selectable] {
-    --x-list-item-cursor: default;
-    --x-list-item-border-color: var(--list-item-border-color);
-
-    position: relative;
-    font-size: var(--navi-control-font-size);
-    font-family: var(--navi-control-font-family);
     outline-width: var(--list-item-outline-width);
     outline-color: var(--list-item-outline-color);
     outline-offset: var(--list-item-outline-offset);
@@ -157,7 +160,7 @@ const css = /* css */ `
         }
 
         input,
-        .navi_picker {
+        .navi_picker_content {
           color: revert;
         }
       }

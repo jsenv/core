@@ -15,6 +15,11 @@ import { getUIStateControllerById } from "../ui_state_controller.js";
 import { PickerContext } from "./picker_context.jsx";
 import { pickerResolvers } from "./picker_resolvers.jsx";
 import {
+  CalendarSvg,
+  ClockSvg,
+  ColorSvg,
+  FileSvg,
+  PencilSvg,
   PickerArrayUI,
   PickerColorUI,
   PickerDatetimeUI,
@@ -175,7 +180,6 @@ const css = /* css */ `
       align-self: flex-start;
       justify-content: center;
       color: var(--x-picker-icon-color);
-      transform: translateX(25%);
     }
     .navi_picker_input {
       position: absolute;
@@ -192,13 +196,17 @@ const css = /* css */ `
       pointer-events: none;
     }
 
+    .navi_picker_content {
+      display: contents;
+    }
+
     &[data-line-clamp] {
       overflow-wrap: anywhere;
       .navi_picker_value {
         display: -webkit-box;
         white-space: normal;
         -webkit-box-orient: vertical;
-        -webkit-line-clamp: var(--picker-max-rows);
+        -webkit-line-clamp: var(--picker-max-lines);
       }
     }
 
@@ -231,6 +239,17 @@ const css = /* css */ `
     /* Callout (info, warning, error) */
     &[data-callout] {
       --x-picker-border-color: var(--callout-color);
+    }
+
+    &[data-variant="icon"] {
+      --x-picker-padding-top: 0;
+      --x-picker-padding-right: 0;
+      --x-picker-padding-bottom: 0;
+      --x-picker-padding-left: 0;
+      --picker-border-width: 0;
+      --x-picker-border-color: transparent;
+      --x-picker-background-color: transparent;
+      --x-picker-icon-color: currentColor;
     }
   }
 `;
@@ -268,7 +287,10 @@ const css = /* css */ `
  */
 const PickerButton = (props) => {
   import.meta.css = css;
-  const { ref, icon, placeholder, ui, maxRows } = props;
+  if (typeof props.maxLines === "string") {
+    props.maxLines = parseInt(props.maxLines);
+  }
+  const { ref, variant, icon, placeholder, ui, maxLines } = props;
   const inputRef = useRef(null);
   const [inputProps, pickerRemainingProps] = useControlProps(
     {
@@ -287,7 +309,7 @@ const PickerButton = (props) => {
   const value = uiStateController.uiState;
   const { id, basePseudoState, disabled, children } = inputProps;
   const loading = basePseudoState[":-navi-loading"];
-  const hasLineClamp = maxRows && maxRows > 1;
+  const hasLineClamp = maxLines && maxLines > 1;
 
   return (
     <Box
@@ -299,8 +321,9 @@ const PickerButton = (props) => {
       pseudoClasses={PICKER_BUTTON_PSEUDO_CLASSES}
       disabled={disabled}
       data-line-clamp={hasLineClamp ? "" : undefined}
+      data-variant={variant}
       style={{
-        "--picker-max-rows": maxRows || -1,
+        "--picker-max-lines": maxLines,
       }}
       {...pickerRemainingProps}
       basePseudoState={basePseudoState}
@@ -308,9 +331,10 @@ const PickerButton = (props) => {
       // we must put the id on the button and not the input
       // so that a <label> tries to give focus to the button and not the input
       id={id}
+      variant={undefined}
       icon={undefined}
       ui={undefined}
-      maxRows={undefined}
+      maxLines={undefined}
       dayLabel={undefined}
       // The button is handling the pointer interactions
       onMouseDown={(e) => {
@@ -340,18 +364,24 @@ const PickerButton = (props) => {
         onClick={undefined}
         onKeyDown={undefined}
       />
-      <Text
-        className="navi_picker_value"
-        navi-placeholder={value === undefined || value === "" ? "" : undefined}
-      >
-        <PickerContext.Provider value={{ value, placeholder, maxRows }}>
-          {ui === undefined ? <PickerDefaultUI /> : ui}
-        </PickerContext.Provider>
-      </Text>
+      {variant === "icon" ? null : (
+        <Text
+          className="navi_picker_value"
+          navi-placeholder={
+            value === undefined || value === "" ? "" : undefined
+          }
+        >
+          <PickerContext.Provider value={{ value, placeholder, maxLines }}>
+            {ui === undefined ? <PickerDefaultUI /> : ui}
+          </PickerContext.Provider>
+        </Text>
+      )}
       <span className="navi_picker_right_slot">
         <Icon size="m">{icon === undefined ? <ChevronDownSvg /> : icon}</Icon>
       </span>
-      <ControlChildrenWrapper>{children}</ControlChildrenWrapper>
+      <ControlChildrenWrapper>
+        <div className="navi_picker_content">{children}</div>
+      </ControlChildrenWrapper>
     </Box>
   );
 };
@@ -454,3 +484,10 @@ Picker.UI.Datetime = PickerDatetimeUI;
 Picker.UI.File = PickerFileUI;
 Picker.UI.Color = PickerColorUI;
 Picker.UI.Multiple = PickerArrayUI;
+
+Picker.UI.PencilSvg = PencilSvg;
+Picker.UI.ChevronDownSvg = ChevronDownSvg;
+Picker.UI.ClockSvg = ClockSvg;
+Picker.UI.CalendarSvg = CalendarSvg;
+Picker.UI.FileSvg = FileSvg;
+Picker.UI.ColorSvg = ColorSvg;

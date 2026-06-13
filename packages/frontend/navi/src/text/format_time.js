@@ -14,12 +14,20 @@ import { naviI18n } from "./navi_i18n.js";
  * formatDay(tomorrow, "fr")   // "mardi 12 mai (demain)"
  * formatDay(nextWeek, "fr")   // "lundi 18 mai"
  */
-export const formatDay = (date, locale, { long = false } = {}) => {
-  return new Intl.DateTimeFormat(locale, {
+export const formatDay = (date, locale, { long = false, numeric = false } = {}) => {
+  if (numeric) {
+    return new Intl.DateTimeFormat(locale, {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    }).format(date);
+  }
+  const result = new Intl.DateTimeFormat(locale, {
     weekday: long ? "long" : "short",
     day: "numeric",
     month: long ? "long" : "short",
   }).format(date);
+  return result;
 };
 
 /**

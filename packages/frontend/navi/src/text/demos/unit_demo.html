@@ -1,0 +1,185 @@
+<!doctype html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Unit Demo</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import { Box, Title, Text, Unit, naviI18n } from "@jsenv/navi";
+
+      naviI18n.addAll({
+        item: { en: "item", fr: "article" },
+        item__plural: { en: "items", fr: "articles" },
+      });
+
+      const Section = ({ id, title, desc, children }) => (
+        <Box
+          as="section"
+          id={id}
+          style={{
+            marginBottom: "32px",
+            padding: "24px",
+            background: "white",
+            borderRadius: "8px",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+          }}
+        >
+          <Title as="h2" style={{ margin: "0 0 6px" }}>
+            {title}
+          </Title>
+          {desc && (
+            <Text
+              style={{
+                display: "block",
+                marginBottom: "16px",
+                color: "#555",
+                fontSize: "13px",
+              }}
+            >
+              {desc}
+            </Text>
+          )}
+          {children}
+        </Box>
+      );
+
+      const Row = ({ label, children }) => (
+        <Box
+          flex="x"
+          spacing="m"
+          style={{ alignItems: "center", marginBottom: "8px" }}
+        >
+          <Text style={{ minWidth: "160px", color: "#888", fontSize: "13px" }}>
+            {label}
+          </Text>
+          {children}
+        </Box>
+      );
+
+      const Demo = () => {
+        const [lang, setLang] = useState("en");
+
+        return (
+          <div
+            style={{
+              padding: "20px",
+              fontFamily: "system-ui, sans-serif",
+              maxWidth: "800px",
+            }}
+          >
+            <Title as="h1">Unit Demo</Title>
+
+            <Box
+              flex="x"
+              spacing="m"
+              style={{ alignItems: "center", marginBottom: "24px" }}
+            >
+              <Text>Language:</Text>
+              {["en", "fr", "de", "ja"].map((l) => (
+                <button
+                  key={l}
+                  onClick={() => setLang(l)}
+                  style={{
+                    padding: "4px 12px",
+                    borderRadius: "4px",
+                    border: "1px solid #ccc",
+                    background: lang === l ? "#0070f3" : "white",
+                    color: lang === l ? "white" : "inherit",
+                    cursor: "pointer",
+                  }}
+                >
+                  {l}
+                </button>
+              ))}
+            </Box>
+
+            <Section
+              id="intl"
+              title="1. Intl units (browser built-in)"
+              desc="Standard CLDR unit identifiers resolved via Intl.NumberFormat. Singular and plural forms are derived automatically."
+            >
+              {[
+                "hour",
+                "minute",
+                "second",
+                "day",
+                "week",
+                "month",
+                "year",
+                "meter",
+                "kilometer",
+                "byte",
+                "kilobyte",
+                "megabyte",
+                "gigabyte",
+                "celsius",
+                "fahrenheit",
+                "kilogram",
+                "gram",
+                "liter",
+                "milliliter",
+              ].map((unit) => (
+                <Row key={unit} label={unit}>
+                  <Unit unit={unit} lang={lang} />
+                  <Text style={{ color: "#aaa" }}>/</Text>
+                  <Unit unit={unit} plural lang={lang} />
+                </Row>
+              ))}
+            </Section>
+
+            <Section
+              id="navi-i18n"
+              title="2. naviI18n units (custom translations)"
+              desc='Units registered via naviI18n.addAll(). The "item" unit is registered with English and French translations.'
+            >
+              <Row label="item (singular)">
+                <Unit unit="item" lang={lang} />
+              </Row>
+              <Row label="item (plural)">
+                <Unit unit="item" plural lang={lang} />
+              </Row>
+            </Section>
+
+            <Section
+              id="inline"
+              title="3. Standalone usage next to an input"
+              desc="Unit placed next to an input element, similar to <Unit unit='hour' /> next to a time picker."
+            >
+              <Box flex="x" spacing="s" style={{ alignItems: "center" }}>
+                <input
+                  type="number"
+                  defaultValue={3}
+                  style={{
+                    width: "60px",
+                    padding: "4px 8px",
+                    fontSize: "1rem",
+                  }}
+                />
+                <Unit unit="hour" plural lang={lang} />
+              </Box>
+            </Section>
+
+            <Section
+              id="unknown"
+              title="4. Unknown unit (raw fallback)"
+              desc="When the unit is not known to naviI18n and not a valid Intl unit, the raw string is displayed as-is."
+            >
+              <Row label="foobar">
+                <Unit unit="foobar" />
+                <Text style={{ color: "#aaa" }}>/</Text>
+                <Unit unit="foobar" plural />
+              </Row>
+            </Section>
+          </div>
+        );
+      };
+
+      render(<Demo />, document.getElementById("app"));
+    </script>
+  </body>
+</html>

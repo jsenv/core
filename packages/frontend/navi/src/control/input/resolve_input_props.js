@@ -54,7 +54,7 @@ const NAVI_TYPE_DEFAULTS = {
     type: "text",
     inputMode: "numeric",
     autoCorrect: "off",
-    spellcheck: "false",
+    spellcheck: false,
     autoComplete: "off",
   },
 };
@@ -110,16 +110,8 @@ export const resolveInputProps = (props) => {
   }
 
   const currentType = props.type;
-  const currentTypeDefaults = NAVI_TYPE_DEFAULTS[currentType];
-  if (!currentTypeDefaults) {
-    return;
-  }
-  for (const key of Object.keys(currentTypeDefaults)) {
-    if (props[key] === undefined) {
-      props[key] = currentTypeDefaults[key];
-    }
-  }
-  // Apply formatters for the original navi type before remapping
+  // Apply min/max/step formatters before anything else — this must run even for
+  // standard HTML types (date, time, etc.) that have no NAVI_TYPE_DEFAULTS entry.
   const currentTypeMinMaxFormatter = MIN_MAX_FORMATTER_BY_TYPE[currentType];
   const currentTypeStepFormatter = STEP_FORMATTER_BY_TYPE[currentType];
   if (currentTypeMinMaxFormatter) {
@@ -128,6 +120,15 @@ export const resolveInputProps = (props) => {
   }
   if (currentTypeStepFormatter) {
     props.step = currentTypeStepFormatter(props.step);
+  }
+  const currentTypeDefaults = NAVI_TYPE_DEFAULTS[currentType];
+  if (!currentTypeDefaults) {
+    return;
+  }
+  for (const key of Object.keys(currentTypeDefaults)) {
+    if (props[key] === undefined) {
+      props[key] = currentTypeDefaults[key];
+    }
   }
   const targetType = currentTypeDefaults.type;
   props.type = targetType;

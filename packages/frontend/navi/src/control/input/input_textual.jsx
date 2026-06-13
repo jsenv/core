@@ -75,12 +75,8 @@ const css = /* css */ `
         var(--border-color) 45%,
         transparent
       );
-      --background-color-readonly: var(--background-color);
-      --color-readonly: color-mix(
-        in srgb,
-        var(--picker-border-color) 45%,
-        transparent
-      );
+      --background-color-readonly: var(--background-color-hover);
+      --color-readonly: color-mix(in srgb, var(--color) 65%, transparent);
       /* Disabled */
       --border-color-disabled: var(--border-color-readonly);
       --background-color-disabled: color-mix(
@@ -245,6 +241,49 @@ const css = /* css */ `
         --x-background-color: transparent;
       }
     }
+
+    &[data-variant="underline"] {
+      border: none;
+      border-radius: 0;
+      --x-background-color: transparent;
+      padding-right: 0;
+      padding-left: 0;
+
+      .navi_input_real_input_wrapper {
+        position: relative;
+        display: inline-flex;
+        flex-grow: 1;
+      }
+
+      .navi_input_underline {
+        position: absolute;
+        top: calc(100% - 1px);
+        right: 0;
+        left: 0;
+        height: 1px;
+        background-color: var(--x-border-color);
+        pointer-events: none;
+      }
+
+      &[data-hover] {
+        --x-background-color: transparent;
+      }
+      &[data-focus-visible] {
+        --x-background-color: transparent;
+        outline-style: none;
+
+        .navi_input_underline {
+          height: 2px;
+          background-color: var(--outline-color);
+        }
+      }
+      &[data-readonly] {
+        --x-background-color: transparent;
+      }
+      &[data-disabled] {
+        --x-background-color: transparent;
+      }
+    }
   }
 
   .navi_input .navi_control_input::placeholder {
@@ -281,7 +320,7 @@ const useInputTextualProps = (props) => {
 };
 const InputTextualUI = (props) => {
   import.meta.css = css;
-  const { ui, discrete, width = "maxLength" } = props;
+  const { ui, discrete, variant, width = "maxLength" } = props;
   const [inputProps, remainingProps] = useInputTextualProps(props);
   const { id, basePseudoState, children } = inputProps;
   const uiStateController = getUIStateControllerById(id);
@@ -325,6 +364,7 @@ const InputTextualUI = (props) => {
       ui={undefined}
       data-discrete={discrete ? "" : undefined}
       discrete={undefined} // handled via data attribute
+      data-variant={variant || undefined}
       styleCSSVars={InputStyleCSSVars}
       pseudoStateSelector=".navi_control_input"
       pseudoClasses={InputPseudoClasses}
@@ -335,7 +375,14 @@ const InputTextualUI = (props) => {
         color="var(--loader-color)"
         inset={-1}
       />
-      <RealInput {...inputProps} />
+      {variant === "underline" ? (
+        <span className="navi_input_real_input_wrapper">
+          <RealInput {...inputProps} />
+          <span className="navi_input_underline" />
+        </span>
+      ) : (
+        <RealInput {...inputProps} />
+      )}
       {childrenWithContext}
     </Box>
   );

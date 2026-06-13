@@ -136,9 +136,10 @@ export const onRequestInteraction = (
       }
     }
     if (!skipConstraints) {
-      checkAndReportConstraints(requestStatus, INTERACTION_CONSTRAINTS, {
+      checkAndReportConstraints(requestStatus, {
         event: requestInteractionCustomEvent,
         requester: event.target,
+        fromRequestInteraction: true,
         debug: debugInteraction,
       });
     }
@@ -226,11 +227,11 @@ export const onRequestAction = (
     checkEvent(requestStatus, event);
   }
   if (requestStatus.canProceed) {
-    checkAndReportConstraints(requestStatus, DEFAULT_CONSTRAINT_SET, {
+    checkAndReportConstraints(requestStatus, {
       event: requestActionCustomEvent,
       requester,
-      debug: debugAction,
       fromRequestAction: true,
+      debug: debugAction,
     });
   }
   if (requestStatus.canProceed) {
@@ -305,8 +306,7 @@ const checkEvent = (requestStatus, event) => {
 
 const checkAndReportConstraints = (
   requestStatus,
-  constraints,
-  { event, requester, debug, fromRequestAction } = {},
+  { event, requester, fromRequestInteraction, fromRequestAction, debug } = {},
 ) => {
   const onInvalid = (failedValidationInterface) => {
     Object.assign(requestStatus, {
@@ -335,9 +335,9 @@ const checkAndReportConstraints = (
   }
   const isValid = validationInterface.checkValidity({
     event,
-    constraints,
-    fromRequestAction,
     requester,
+    fromRequestInteraction,
+    fromRequestAction,
   });
   if (!isValid) {
     // checkValidity delegates to the proxy target's VI when the element is a proxy.
@@ -520,9 +520,9 @@ export const installCustomConstraintValidation = (
   addTeardown(resetValidity);
 
   const checkValidity = ({
-    constraints,
     event,
     requester = element,
+    fromRequestInteraction,
     fromRequestAction,
     skipReadonly,
   } = {}) => {
@@ -534,8 +534,8 @@ export const installCustomConstraintValidation = (
         targetVI = installCustomConstraintValidation(proxyTarget);
       }
       return targetVI.checkValidity({
-        constraints,
         event,
+        fromRequestInteraction,
         fromRequestAction,
         requester,
         skipReadonly,
@@ -552,9 +552,9 @@ export const installCustomConstraintValidation = (
         continue;
       }
       const managedIsValid = managedVI.checkValidity({
-        constraints,
         event,
         requester,
+        fromRequestInteraction,
         fromRequestAction,
         skipReadonly:
           managedControl.tagName === "BUTTON" && managedControl !== requester,
@@ -565,14 +565,31 @@ export const installCustomConstraintValidation = (
       }
     }
 
+    // When checking a subset of constraints (e.g. INTERACTION_CONSTRAINTS), we must NOT
+    // reset the full validity state — other constraints (like PATTERN) may still be failing
+    // and we must preserve their state (failedConstraintInfo, callout, etc.).
+    // We only do a scoped check and return its result without touching global state.
+    if (fromRequestInteraction) {
+      for (const constraint of INTERACTION_CONSTRAINTS) {
+        const checkResult = constraint.check(element, {
+          fromRequestAction,
+          skipReadonly,
+          skipRequired: element === requester,
+          registerChange: () => {},
+        });
+        if (checkResult) {
+          return false;
+        }
+      }
+      return true;
+    }
     let newConstraintValidityState = { valid: true };
-    // When constraints are explicitly provided (e.g. pointer interaction), use only those.
-    // Otherwise use default set merged with dynamic constraints.
-    const effectiveConstraints = constraints
-      ? constraints
-      : new Set([...DEFAULT_CONSTRAINT_SET, ...dynamicConstraintSet]);
+    const constraintSet = new Set([
+      ...DEFAULT_CONSTRAINT_SET,
+      ...dynamicConstraintSet,
+    ]);
     resetValidity({ fromRequestAction });
-    for (const constraint of effectiveConstraints) {
+    for (const constraint of constraintSet) {
       const fieldForConstraint = element;
       const constraintCleanupSet = new Set();
       const registerChange = (register) => {
@@ -648,9 +665,11 @@ export const installCustomConstraintValidation = (
       if (!hasTitleAttribute) {
         element.removeAttribute("title");
       }
+      const checkValidityCallEvent =
+        event || new CustomEvent("checkValidity called with no event");
       closeElementValidationMessage(
-        event || new CustomEvent("checkValidity called with no event"),
-        "becomes_valid",
+        checkValidityCallEvent,
+        `now_valid (after ${checkValidityCallEvent.type})`,
       );
     }
 
@@ -666,7 +685,7 @@ export const installCustomConstraintValidation = (
   const [notifyCalloutOpen, onCalloutOpen] = createPubSub();
   const reportValidity = ({ event, requester, debug, skipFocus } = {}) => {
     if (!failedConstraintInfo) {
-      closeElementValidationMessage(event, "becomes_valid");
+      closeElementValidationMessage(event, "is_valid");
       return;
     }
     if (failedConstraintInfo.silent) {
@@ -814,6 +833,7 @@ export const installCustomConstraintValidation = (
   const resetOnInteraction = (e) => {
     customMessageMap.clear();
     closeElementValidationMessage(e, e.type);
+    console.log("resetOnInteraction", e.type, e);
     checkValidity({ event: e });
   };
 
@@ -822,35 +842,57 @@ export const installCustomConstraintValidation = (
       break close_and_check_on_input; // range inputs have a special behavior where "input" is triggered on pointer release, so we don't need to wait for it
     }
 
-    let waitPointerRelease;
     onCalloutOpen((openingEvent) => {
-      if (openingEvent && findEvent(openingEvent, "mousedown")) {
-        waitPointerRelease = true;
+      const openedByMousedown = findEvent(openingEvent, "mousedown");
+      const [cleanup, addCleanup] = createPubSub();
+
+      const setupResetOnInput = () => {
+        const oninput = (e) => {
+          resetOnInteraction(e);
+        };
+        element.addEventListener("input", oninput, { once: true });
+        addCleanup(() => {
+          element.removeEventListener("input", oninput, { once: true });
+        });
+      };
+
+      if (openedByMousedown) {
         const onMouseUp = () => {
-          setTimeout(() => {
-            waitPointerRelease = false;
-          });
+          const timeout = setTimeout(setupResetOnInput);
+          addCleanup(() => clearTimeout(timeout));
         };
         document.addEventListener("mouseup", onMouseUp, {
           once: true,
           capture: true,
         });
-        return () => {
-          document.removeEventListener("mouseup", onMouseUp, true);
-        };
+        addCleanup(() => {
+          document.removeEventListener("mouseup", onMouseUp, {
+            once: true,
+            capture: true,
+          });
+        });
+        return cleanup;
       }
-      return undefined;
-    });
 
-    const oninput = (e) => {
-      if (waitPointerRelease) {
-        return;
-      }
-      resetOnInteraction(e);
-    };
-    element.addEventListener("input", oninput);
-    addTeardown(() => {
-      element.removeEventListener("input", oninput);
+      // "change" can happen after an input looses focus
+      // and if loose focus as the result of typing (navi_input_full going to next input)
+      // the browser will fire an input event shortly after
+      // causing the callout to immediatly close
+      // an other way to express this could be that an "input" event should be allowed
+      // to close callout only if at least event loop or 1ms occurs
+      let closed = false;
+      addCleanup(() => {
+        closed = true;
+      });
+      queueMicrotask(() => {
+        if (closed) {
+          console.log("closed before");
+          return;
+        }
+        console.log("listen input");
+        setupResetOnInput();
+      });
+      return cleanup;
     });
   }
 

@@ -214,41 +214,28 @@ export const TYPES = {
     },
   },
   "date": {
-    jsType: "Date",
+    jsType: "string",
     localStorageRepresentation: "string",
-    // canonical: Date object
+    // canonical: "YYYY-MM-DD" string — timezone-safe, no Date object involved
     representations: {
-      // "YYYY-MM-DD" string — also used for auto-converting string inputs
-      string: {
-        parse: (s) => {
-          const d = new Date(`${s}T00:00:00`);
-          return isNaN(d.getTime()) ? CANNOT_CONVERT : d;
-        },
-        format: (d) => {
-          const yyyy = d.getFullYear();
-          const mm = String(d.getMonth() + 1).padStart(2, "0");
-          const dd = String(d.getDate()).padStart(2, "0");
-          return `${yyyy}-${mm}-${dd}`;
-        },
-      },
-      // Unix timestamp — also used for auto-converting number inputs
+      // Unix timestamp — converts to YYYY-MM-DD using UTC
       number: {
         parse: (n) => {
           const d = new Date(n);
-          return isNaN(d.getTime()) ? CANNOT_CONVERT : d;
+          if (isNaN(d.getTime())) {
+            return CANNOT_CONVERT;
+          }
+          const yyyy = d.getUTCFullYear();
+          const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
+          const dd = String(d.getUTCDate()).padStart(2, "0");
+          return `${yyyy}-${mm}-${dd}`;
         },
-        format: (d) => d.getTime(),
+        format: (s) => new Date(`${s}T00:00:00Z`).getTime(),
       },
     },
     validate: (value) => {
-      if (value instanceof Date) {
-        return isNaN(value.getTime()) ? `must be a valid date` : "";
-      }
-      if (typeof value === "number" && Number.isFinite(value)) {
-        return ""; // timestamp
-      }
       if (typeof value !== "string") {
-        return `must be a string in YYYY-MM-DD format, a timestamp, or a Date object`;
+        return `must be a string in YYYY-MM-DD format`;
       }
       const dateRegex = /^(\d{4})-(\d{2})-(\d{2})$/;
       const match = dateRegex.exec(value);
@@ -271,30 +258,30 @@ export const TYPES = {
     },
   },
   "datetime": {
-    jsType: "Date",
+    jsType: "string",
     localStorageRepresentation: "string",
-    // canonical: Date object (same as "date" but with time component)
+    // canonical: ISO 8601 string (e.g. "2024-03-15T14:30:00.000Z") — timezone-explicit
     representations: {
-      string: {
-        parse: (s) => {
-          const d = new Date(s);
-          return isNaN(d.getTime()) ? CANNOT_CONVERT : d;
-        },
-        format: (d) => d.toISOString(),
-      },
       number: {
         parse: (n) => {
           const d = new Date(n);
-          return isNaN(d.getTime()) ? CANNOT_CONVERT : d;
+          if (isNaN(d.getTime())) {
+            return CANNOT_CONVERT;
+          }
+          return d.toISOString();
         },
-        format: (d) => d.getTime(),
+        format: (s) => new Date(s).getTime(),
       },
     },
     validate: (value) => {
-      if (!(value instanceof Date)) {
-        return `must be a Date`;
+      if (typeof value !== "string") {
+        return `must be an ISO 8601 string`;
       }
-      return isNaN(value.getTime()) ? `must be a valid datetime` : "";
+      const d = new Date(value);
+      if (isNaN(d.getTime())) {
+        return `must be a valid datetime`;
+      }
+      return "";
     },
   },
   // "datetime-local" matches the value format of <input type="datetime-local">: "YYYY-MM-DDTHH:MM"

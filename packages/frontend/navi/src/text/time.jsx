@@ -45,6 +45,8 @@ import { Text } from "./text.jsx";
  *   Only applies to the past state of `type="relative"`.
  * @param {boolean} [long]
  *   When true and `type="date"`, uses the long weekday/month format.
+ * @param {boolean} [numeric]
+ *   When true and `type="date"`, formats as numeric date (e.g. "11/09/2026") using locale separators.
  * @param {boolean} [dayLabel]
  *   When true and `type="date"`, appends the locale-aware relative label
  *   ("hier", "aujourd'hui", "demain") when the date is yesterday, today, or tomorrow.
@@ -78,7 +80,15 @@ export const Time = (props) => {
   return <TimeRelative {...props} />;
 };
 
-const TimeDate = ({ children, locale, long, dayLabel, now, ...props }) => {
+const TimeDate = ({
+  children,
+  locale,
+  long,
+  numeric,
+  dayLabel,
+  now,
+  ...props
+}) => {
   const lang = locale || langSignal.value;
 
   if (children === undefined) {
@@ -96,7 +106,7 @@ const TimeDate = ({ children, locale, long, dayLabel, now, ...props }) => {
     return <TimeText {...props}>{String(children)}</TimeText>;
   }
 
-  const base = formatDay(date, lang, { long });
+  const base = formatDay(date, lang, { long, numeric });
   let text;
   if (dayLabel) {
     const offset = getRelativeDay(date, { now });

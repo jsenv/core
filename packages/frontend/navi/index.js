@@ -111,6 +111,7 @@ export { Group } from "./src/control/group.jsx";
 export { Button } from "./src/control/input/button.jsx";
 export { CheckboxGroup } from "./src/control/input/checkbox_group.jsx";
 export { Input } from "./src/control/input/input.jsx";
+export { InputGroup } from "./src/control/input/input_group.jsx";
 export { RadioGroup } from "./src/control/input/radio_group.jsx";
 export { Picker } from "./src/control/picker/picker.jsx";
 export {
@@ -184,6 +185,7 @@ export { Text } from "./src/text/text.jsx";
 export { TextBox } from "./src/text/text_box.jsx";
 export { Time } from "./src/text/time.jsx";
 export { Title, useTitleLevel } from "./src/text/title.jsx";
+export { Unit } from "./src/text/unit.jsx";
 
 // Graphics
 export { Image } from "./src/graphic/image.jsx";
