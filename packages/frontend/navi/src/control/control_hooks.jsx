@@ -163,7 +163,6 @@ export const useControlProps = (
   },
 ) => {
   const debugInteraction = useDebugInteraction();
-  const debugCommand = useDebugCommand();
   const controlName = useContext(ControlNameContext);
   const state = props[statePropName];
   if (isSignal(state)) {
@@ -485,9 +484,6 @@ export const useControlProps = (
       onKeyDown,
       onPaste,
       onInput,
-      onnavi_command: (e) => {
-        onNaviCommand(e, { debugCommand });
-      },
     });
   }
 
@@ -609,6 +605,7 @@ const useInteractiveProps = (
   const controlRequired = useContext(RequiredContext);
   const controlLoading = useContext(LoadingContext);
   const parentActionRequester = useContext(ActionRequesterContext);
+  const debugCommand = useDebugCommand();
   const debugAction = useDebugAction();
   const debugInteraction = useDebugInteraction();
   const debugFocus = useDebugFocus();
@@ -718,6 +715,13 @@ const useInteractiveProps = (
     // Use the returned ChildrenContextWrapper to reset field-specific contexts
     // (MessagePropsRef, ControlToInterface) around the content you render.
     Object.assign(controlProps, { children });
+  }
+  command_props: {
+    Object.assign(controlProps, {
+      onnavi_command: (e) => {
+        onNaviCommand(e, { debugCommand });
+      },
+    });
   }
   action_props: {
     const { action, actionErrorEffect, errorMapping } = props;

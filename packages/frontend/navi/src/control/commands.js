@@ -98,7 +98,6 @@ const getClosestExpandable = (el) => {
 };
 const getClosestControlWithAction = (el) => {
   const controlWithAction = findClosestControlWithAction(el);
-  debugger;
   return controlWithAction;
 };
 
@@ -185,7 +184,6 @@ const submitSelector = `button[type="submit"], input[type="submit"], input[type=
 registerNaviCommand("--navi-send", {
   resolveTarget: getClosestControlWithAction,
   implementation: (commandTarget, { event, source }) => {
-    debugger;
     dispatchNaviCommand(source, "--navi-update", event);
     dispatchNaviCommand(source, "--navi-close", event);
 
