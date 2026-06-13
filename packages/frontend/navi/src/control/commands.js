@@ -103,7 +103,7 @@ const getClosestControlWithAction = (el) => {
   }
   return controlWithAction;
 };
-export const onNaviCommand = (e) => {
+export const onNaviCommand = (e, { debugCommand }) => {
   const { command, event, source } = e.detail;
   if (typeof command !== "string") {
     console.warn(`navi_command event triggered but no command specified`, e);
@@ -114,8 +114,15 @@ export const onNaviCommand = (e) => {
     console.warn(`Unknown command "${command}"`);
     return false;
   }
-  const commandTarget = event.currentTarget;
+  const commandTarget = e.currentTarget;
   const { implementation } = naviCommand;
+  debugCommand(
+    event,
+    `navi_command "${command}" triggered on`,
+    source,
+    `targeting`,
+    commandTarget,
+  );
   const result = implementation(commandTarget, { event, source });
   return result;
 };

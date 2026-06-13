@@ -38,6 +38,7 @@ import {
 } from "@jsenv/navi/src/control/validation/custom_constraint_validation.js";
 import {
   useDebugAction,
+  useDebugCommand,
   useDebugFocus,
   useDebugInteraction,
 } from "@jsenv/navi/src/navi_debug.jsx";
@@ -162,6 +163,7 @@ export const useControlProps = (
   },
 ) => {
   const debugInteraction = useDebugInteraction();
+  const debugCommand = useDebugCommand();
   const controlName = useContext(ControlNameContext);
   const state = props[statePropName];
   if (isSignal(state)) {
@@ -464,7 +466,7 @@ export const useControlProps = (
       onPaste,
       onInput,
       onnavi_command: (e) => {
-        onNaviCommand(e);
+        onNaviCommand(e, { debugCommand });
       },
     });
   }

@@ -2,6 +2,7 @@ import { createEventGroupLogger } from "@jsenv/dom";
 import { createContext } from "preact";
 import { useContext } from "preact/hooks";
 
+const DebugCommandContext = createContext(false);
 const DebugInteractionContext = createContext(false);
 const DebugPopupContext = createContext(false);
 const DebugActionContext = createContext(false);
@@ -9,6 +10,10 @@ const DebugActionContext = createContext(false);
 const debugNoop = () => {};
 const sharedEventGroupLogger = createEventGroupLogger();
 
+export const useDebugCommand = () => {
+  const debug = useContext(DebugCommandContext);
+  return debug || debugNoop;
+};
 export const useDebugInteraction = () => {
   const debug = useContext(DebugInteractionContext);
   return debug || debugNoop;
@@ -41,11 +46,15 @@ export const useDebugAction = () => {
  * Pass a boolean `true` to use `console.debug`, or pass a custom function.
  */
 export const NaviDebug = ({
+  debugCommand,
   debugInteraction,
   debugPopup,
   debugAction,
   children,
 }) => {
+  if (debugCommand === true) {
+    debugCommand = sharedEventGroupLogger;
+  }
   if (debugInteraction === true) {
     debugInteraction = sharedEventGroupLogger;
   }
@@ -57,12 +66,14 @@ export const NaviDebug = ({
   }
 
   return (
-    <DebugInteractionContext.Provider value={debugInteraction}>
-      <DebugPopupContext.Provider value={debugPopup}>
-        <DebugActionContext.Provider value={debugAction}>
-          {children}
-        </DebugActionContext.Provider>
-      </DebugPopupContext.Provider>
-    </DebugInteractionContext.Provider>
+    <DebugCommandContext.Provider value={debugCommand}>
+      <DebugInteractionContext.Provider value={debugInteraction}>
+        <DebugPopupContext.Provider value={debugPopup}>
+          <DebugActionContext.Provider value={debugAction}>
+            {children}
+          </DebugActionContext.Provider>
+        </DebugPopupContext.Provider>
+      </DebugInteractionContext.Provider>
+    </DebugCommandContext.Provider>
   );
 };
