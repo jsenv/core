@@ -180,16 +180,15 @@ registerNaviCommand("--navi-update", {
     });
   },
 });
-const submitSelector = `button[type="submit"], input[type="submit"], input[type="image"], [data-action="submit"]`;
+const submitSelector = `button[type="submit"], input[type="submit"], input[type="image"], [command="--navi-send"]`;
 registerNaviCommand("--navi-send", {
   resolveTarget: getClosestControlWithAction,
   implementation: (commandTarget, { event, source }) => {
-    dispatchNaviCommand(source, "--navi-update", event);
     dispatchNaviCommand(source, "--navi-close", event);
 
     let requester = source;
     if (source.matches(submitSelector)) {
-      requester = commandTarget;
+      requester = source;
     } else {
       // when present, we use first button submitting the form as the requester
       // not the input, it aligns with browser behavior where
@@ -199,11 +198,15 @@ registerNaviCommand("--navi-send", {
         requester = firstButtonSubmitting;
       }
     }
+
     const allowed = dispatchRequestAction(commandTarget, {
       event,
       requester,
     });
-    const initiator = event.detail ? event.detail.eventChain[0] : event;
+    const initiator =
+      event.detail && typeof event.detail === "object"
+        ? event.detail.eventChain[0]
+        : event;
     const { form } = commandTarget;
     if (form) {
       // prevent form submission when cliking buttons or pressing enter on inputs

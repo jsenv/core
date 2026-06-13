@@ -70,6 +70,7 @@ import {
 import {
   dispatchRequestResetUIState,
   dispatchRequestSetUIState,
+  getUIStateFromElement,
 } from "./ui_state_dom.js";
 import { useConstraintMessages } from "./validation/hooks/use_constraint_messages.js";
 import { useConstraints } from "./validation/hooks/use_constraints.js";
@@ -335,10 +336,12 @@ export const useControlProps = (
       mousedownInteraction = {
         name: "mousedown",
         callback: actionOnMouseDown ? asAction : asInteraction,
+        // effect: updateUIState,
       };
       clickInteraction = {
         name: "click",
         callback: actionOnMouseDown ? asInteraction : asAction,
+        // effect: updateUIState,
       };
     } else if (controlType === "input") {
       isCheckable = props.type === "radio" || props.type === "checkbox";
@@ -817,6 +820,28 @@ const useInteractiveProps = (
               uiState = v;
             },
           });
+          // If this is a form submit and the requester is a named button, ensure
+          // its value wins over any other button sharing the same name.
+          // Native browser behavior: only the clicked/activated submit button
+          // contributes its name+value to form data.
+          const { requester } = e.detail;
+          debugger;
+          if (
+            requester &&
+            requester.name &&
+            requester !== e.currentTarget &&
+            (requester.type === "submit" ||
+              requester.matches?.('[command="--navi-send"]')) &&
+            uiState &&
+            typeof uiState === "object"
+          ) {
+            const requesterUIState = getUIStateFromElement(requester);
+            const requesterValue =
+              requesterUIState !== undefined
+                ? requesterUIState
+                : requester.value;
+            uiState = { ...uiState, [requester.name]: requesterValue };
+          }
           e.detail.uiState = uiState;
         }
         const naviProxyTarget = findControlProxyTarget(e.currentTarget);
