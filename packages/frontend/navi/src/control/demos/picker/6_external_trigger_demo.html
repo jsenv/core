@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Picker — External Trigger Demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 40px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      h1 {
+        margin: 0 0 32px;
+        font-size: 1.4rem;
+      }
+      h2 {
+        margin: 0 0 8px;
+        font-size: 1.1rem;
+      }
+      .demo-section {
+        margin-bottom: 24px;
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      p.desc {
+        margin: 0 0 16px;
+        color: #555;
+        font-size: 13px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Picker — External Trigger Demo</h1>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useRef } from "preact/hooks";
+      import { useSignal } from "@preact/signals";
+      import { dispatchPublicCustomEvent } from "@jsenv/dom";
+      import {
+        Box,
+        Button,
+        Field,
+        Input,
+        Label,
+        List,
+        Picker,
+        NaviDebug,
+      } from "@jsenv/navi";
+
+      const triggerShowPicker = (pickerRef) => {
+        const pickerEl = pickerRef.current;
+        if (!pickerEl) {
+          return;
+        }
+        dispatchPublicCustomEvent(pickerEl, "navi_request_open");
+      };
+
+      // ── Native date picker ────────────────────────────────────────────────
+      const NativeDateDemo = () => {
+        const dateSignal = useSignal(null);
+        const pickerRef = useRef(null);
+
+        return (
+          <div class="demo-section">
+            <h2>Native date picker</h2>
+            <p class="desc">
+              Un bouton séparé dispatche <code>navi_show_picker</code> sur le
+              picker, qui appelle <code>input.showPicker()</code> en interne.
+            </p>
+            <Box flex spacing="m" alignY="center">
+              <Field>
+                <Label>Date</Label>
+                <Input
+                  ref={pickerRef}
+                  type="date"
+                  value={dateSignal.value}
+                  action={(v) => {
+                    dateSignal.value = v;
+                  }}
+                />
+              </Field>
+              <Button
+                selfAlignY="end"
+                onClick={() => {
+                  triggerShowPicker(pickerRef);
+                }}
+              >
+                Ouvrir le calendrier
+              </Button>
+            </Box>
+            {dateSignal.value ? (
+              <p style={{ marginTop: "12px", fontFamily: "monospace" }}>
+                Valeur : {dateSignal.value}
+              </p>
+            ) : null}
+          </div>
+        );
+      };
+
+      // ── Custom select picker ──────────────────────────────────────────────
+      const COLORS = ["Rouge", "Vert", "Bleu", "Jaune", "Violet"];
+
+      const CustomSelectDemo = () => {
+        const valueSignal = useSignal(null);
+        const pickerRef = useRef(null);
+
+        return (
+          <div class="demo-section">
+            <h2>Custom select (Picker popup)</h2>
+            <p class="desc">
+              Un bouton séparé dispatche <code>navi_show_picker</code> sur le
+              picker custom, qui ouvre le popover/dialog en interne.
+            </p>
+            <Box flex spacing="m" alignY="center">
+              <Field>
+                <Label>Couleur</Label>
+                <Picker
+                  ref={pickerRef}
+                  ui={valueSignal.value ?? "Choisir…"}
+                  action={(v) => {
+                    valueSignal.value = v;
+                  }}
+                >
+                  <List
+                    selectable
+                    value={valueSignal.value}
+                    uiAction={(v) => {
+                      valueSignal.value = v;
+                    }}
+                  >
+                    {COLORS.map((color) => (
+                      <List.Item key={color} value={color} id={color}>
+                        {color}
+                      </List.Item>
+                    ))}
+                  </List>
+                </Picker>
+              </Field>
+              <Button
+                selfAlignY="end"
+                onClick={() => {
+                  triggerShowPicker(pickerRef);
+                }}
+              >
+                Ouvrir la liste
+              </Button>
+            </Box>
+            {valueSignal.value ? (
+              <p style={{ marginTop: "12px", fontFamily: "monospace" }}>
+                Valeur : {valueSignal.value}
+              </p>
+            ) : null}
+          </div>
+        );
+      };
+
+      const App = () => (
+        <NaviDebug debugInteraction debugAction>
+          <Box flex="y" spacing="l">
+            <NativeDateDemo />
+            <CustomSelectDemo />
+          </Box>
+        </NaviDebug>
+      );
+
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>
