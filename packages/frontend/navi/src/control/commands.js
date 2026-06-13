@@ -137,39 +137,6 @@ const registerNaviCommand = (command, { resolveTarget, implementation }) => {
   };
 };
 
-registerNaviCommand("--navi-scroll", {
-  resolveTarget: getFirstParentControl,
-  implementation: (commandTarget, { event, source }) => {
-    const scrollParam = getUIStateFromElement(source);
-
-    return dispatchCustomEvent(commandTarget, "navi_request_scroll", {
-      event,
-      id: scrollParam,
-    });
-  },
-});
-registerNaviCommand("--navi-select", {
-  resolveTarget: getFirstParentControl,
-  implementation: (commandTarget, { event, source }) => {
-    const selectParam = getUIStateFromElement(source);
-
-    return dispatchCustomEvent(commandTarget, "navi_request_select", {
-      event,
-      id: selectParam,
-    });
-  },
-});
-registerNaviCommand("--navi-unselect", {
-  resolveTarget: getFirstParentControl,
-  implementation: ({ event, source }) => {
-    const unselectParam = getUIStateFromElement(source);
-
-    return dispatchCustomEvent(event.currentTarget, "navi_request_unselect", {
-      event,
-      id: unselectParam,
-    });
-  },
-});
 registerNaviCommand("--navi-update", {
   resolveTarget: getFirstParentControl,
   implementation: (commandTarget, { event, source }) => {
@@ -219,7 +186,6 @@ registerNaviCommand("--navi-send", {
     return allowed;
   },
 });
-
 registerNaviCommand("--navi-clear", {
   resolveTarget: getFirstParentControl,
   implementation: (commandTarget, { event, source }) => {
@@ -241,7 +207,6 @@ registerNaviCommand("--navi-open", {
     });
   },
 });
-
 registerNaviCommand("--navi-close", {
   resolveTarget: getClosestExpandable,
   implementation: (commandTarget, { event, source }) => {
@@ -251,7 +216,6 @@ registerNaviCommand("--navi-close", {
     });
   },
 });
-
 registerNaviCommand("--navi-cancel", {
   resolveTarget: getClosestExpandable,
   implementation: (commandTarget, { event, source }) => {
@@ -259,6 +223,40 @@ registerNaviCommand("--navi-cancel", {
       event,
       source,
       isCancel: true,
+    });
+  },
+});
+
+registerNaviCommand("--navi-scroll", {
+  resolveTarget: getFirstParentControl,
+  implementation: (commandTarget, { event, source }) => {
+    const scrollParam = getUIStateFromElement(source);
+
+    return dispatchCustomEvent(commandTarget, "navi_request_scroll", {
+      event,
+      id: scrollParam,
+    });
+  },
+});
+registerNaviCommand("--navi-select", {
+  resolveTarget: getFirstParentControl,
+  implementation: (commandTarget, { event, source }) => {
+    const selectParam = getUIStateFromElement(source);
+
+    return dispatchCustomEvent(commandTarget, "navi_request_select", {
+      event,
+      id: selectParam,
+    });
+  },
+});
+registerNaviCommand("--navi-unselect", {
+  resolveTarget: getFirstParentControl,
+  implementation: ({ event, source }) => {
+    const unselectParam = getUIStateFromElement(source);
+
+    return dispatchCustomEvent(event.currentTarget, "navi_request_unselect", {
+      event,
+      id: unselectParam,
     });
   },
 });

@@ -123,7 +123,7 @@ export const useUIStateController = (
   const uiStateControllerRef = useRef();
   const parentUIStateController = useContext(ParentUIStateControllerContext);
   const formContext = useContext(FormContext);
-  const { id, name, uiAction, action } = props;
+  const { id, name, uiAction, action, command } = props;
   const ref = props.ref;
   const isProxy = Boolean(props["navi-control-proxy-for"]);
   const hasStateProp = Object.hasOwn(props, statePropName);
@@ -142,7 +142,8 @@ export const useUIStateController = (
     !action &&
     !formContext &&
     !parentUIStateController &&
-    !isProxy;
+    !isProxy &&
+    !command;
   const readOnly = uncontrolled && hasStateProp;
   if (readOnly && import.meta.dev) {
     console.warn(
