@@ -76,6 +76,7 @@ const InputModeNumeric = (props) => {
   );
 };
 
+// hum il manque le faire de request interaction ici
 const performArrowUpDown = (e) => {
   const input = e.currentTarget;
   const currentValue = Number(input.value);

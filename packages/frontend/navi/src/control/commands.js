@@ -115,7 +115,9 @@ export const onNaviCommand = (e) => {
     return false;
   }
   const commandTarget = event.currentTarget;
-  return naviCommand(commandTarget, { event, source });
+  const { implementation } = naviCommand;
+  const result = implementation(commandTarget, { event, source });
+  return result;
 };
 
 const NAVI_COMMANDS = {};
