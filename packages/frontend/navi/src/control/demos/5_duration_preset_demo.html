@@ -73,7 +73,6 @@
         Icon,
         NaviDebug,
       } from "@jsenv/navi";
-      import { triggerStringAction } from "@jsenv/navi/src/control/string_actions.js";
 
       const PRESET_DURATIONS = [60, 90, 120];
       // Value is one of the preset numbers (60, 90, 120) or the string "custom".
@@ -388,12 +387,7 @@
             flex
             spacing="xs"
             action-target=".navi_picker"
-            onClick={(e) => {
-              if (e.button !== 0) {
-                return;
-              }
-              triggerStringAction("open", e);
-            }}
+            uiAction="open"
             {...props}
           >
             <Time type="minute">{hours * 60 + minutes}</Time>

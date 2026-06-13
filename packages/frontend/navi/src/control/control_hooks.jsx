@@ -209,6 +209,7 @@ export const useControlProps = (
     // synthesizes a click so the browser's native checkbox/radio activation runs
     // (which then fires input -> goes through the action pipeline).
     let enterEffect;
+    let spaceEffect;
 
     const updateUIState = (e) => {
       const value = readControlValue(ref.current);
@@ -369,6 +370,14 @@ export const useControlProps = (
         };
         naviChangeInteraction = undefined;
         enterEffect = (e) => e.currentTarget.click();
+        if (props.type === "radio") {
+          spaceEffect = (e) => {
+            const radio = e.currentTarget;
+            if (radio.checked) {
+              radio.click();
+            }
+          };
+        }
       } else if (props.type === "range") {
         mousedownInteraction = {
           name: "mousedown",
@@ -397,6 +406,10 @@ export const useControlProps = (
       props.onKeyDown?.(e);
       if (e.key === "Enter" && enterEffect) {
         enterEffect(e);
+        return;
+      }
+      if (e.key === " " && spaceEffect) {
+        spaceEffect(e);
         return;
       }
       applyInteraction(keydownInteraction, e);
