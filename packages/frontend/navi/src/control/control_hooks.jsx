@@ -84,7 +84,11 @@ export const ControlChildrenWrapper = ({ children }) => (
   <ParentUIStateControllerContext.Provider value={null}>
     <MessagePropsRefContext.Provider value={undefined}>
       <ControlToInterfaceContext.Provider value={undefined}>
-        {children}
+        <RequiredContext.Provider value={undefined}>
+          <ControlNameContext.Provider value={undefined}>
+            {children}
+          </ControlNameContext.Provider>
+        </RequiredContext.Provider>
       </ControlToInterfaceContext.Provider>
     </MessagePropsRefContext.Provider>
   </ParentUIStateControllerContext.Provider>

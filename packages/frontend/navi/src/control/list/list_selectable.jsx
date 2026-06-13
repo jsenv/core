@@ -28,7 +28,7 @@ import {
 
 const css = /* css */ `
   @layer navi {
-    .navi_list[navi-selectable] {
+    .navi_list_item[navi-selectable] {
       /* Focus outline */
       --list-item-outline-width: var(--navi-focus-outline-width);
       /* here we draw the outline ON the item, not outside of it */
