@@ -75,21 +75,21 @@ const css = /* css */ `
   }
 
   /* Hidden appearance */
-  input[navi-visually-hidden] {
-    position: absolute;
-    top: 0;
-    left: 0;
-    z-index: -1;
+  *[navi-visually-hidden] {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    z-index: -1 !important;
     /* Important to take full size so that scrollIntoView work as expected */
-    width: 100%;
-    height: 100%;
-    margin: 0;
-    padding: 0;
-    white-space: nowrap;
-    border: 0;
+    width: 100% !important;
+    height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    white-space: nowrap !important;
+    border: 0 !important;
     clip-path: inset(50%);
-    appearance: none;
-    overflow: hidden;
+    appearance: none !important;
+    overflow: hidden !important;
 
     &[navi-debug] {
       position: static;

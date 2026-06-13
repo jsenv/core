@@ -239,7 +239,10 @@ export const useControlProps = (
       const control = ref.current;
       const allowed = dispatchRequestInteraction(control, e, interaction.name);
       if (!allowed) {
-        debugInteraction(e, `${e.type}.preventDefault()`);
+        debugInteraction(
+          e,
+          `interaction not allowed -> ${e.type}.preventDefault()`,
+        );
         e.preventDefault();
         return false;
       }
@@ -293,7 +296,7 @@ export const useControlProps = (
         uiState: currentValue,
       });
       if (!allowed) {
-        debugInteraction(e, `${e.type}.preventDefault()`);
+        debugInteraction(e, `action not allowed -> ${e.type}.preventDefault()`);
         e.preventDefault();
         return false;
       }

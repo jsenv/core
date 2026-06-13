@@ -139,9 +139,16 @@
                     uiAction={(v) => {
                       valueSignal.value = v;
                     }}
+                    action="send"
                   >
                     {COLORS.map((color) => (
-                      <List.Item key={color} value={color} id={color}>
+                      <List.Item
+                        selectable
+                        key={color}
+                        value={color}
+                        id={color}
+                        selected={valueSignal.value === color}
+                      >
                         {color}
                       </List.Item>
                     ))}
@@ -158,11 +165,70 @@
         );
       };
 
+      // ── Headless picker inside button ─────────────────────────────────────
+      const FRUITS = ["Pomme", "Banane", "Cerise", "Mangue", "Fraise"];
+
+      const HeadlessPickerDemo = () => {
+        const valueSignal = useSignal(null);
+        const pickerRef = useRef(null);
+
+        return (
+          <div class="demo-section">
+            <h2>Picker headless dans le bouton</h2>
+            <p class="desc">
+              Le picker est invisible et non focusable. Il est intégré dans le
+              bouton lui-même. Le bouton dispatche <code>navi_show_picker</code>{" "}
+              pour ouvrir le popup.
+            </p>
+            <Box flex spacing="m" alignY="center">
+              <Button
+                selfAlignY="end"
+                style={{ position: "relative" }}
+                onClick={() => {
+                  triggerShowPicker(pickerRef);
+                }}
+              >
+                {valueSignal.value ?? "Choisir un fruit"}
+                <Picker
+                  ref={pickerRef}
+                  headless
+                  action={(v) => {
+                    valueSignal.value = v;
+                  }}
+                >
+                  <List
+                    selectable
+                    value={valueSignal.value}
+                    uiAction={(v) => {
+                      valueSignal.value = v;
+                    }}
+                    action="send"
+                  >
+                    {FRUITS.map((fruit) => (
+                      <List.Item
+                        selectable
+                        key={fruit}
+                        value={fruit}
+                        id={fruit}
+                        selected={valueSignal.value === fruit}
+                      >
+                        {fruit}
+                      </List.Item>
+                    ))}
+                  </List>
+                </Picker>
+              </Button>
+            </Box>
+          </div>
+        );
+      };
+
       const App = () => (
         <NaviDebug debugInteraction debugAction>
           <Box flex="y" spacing="l">
             <NativeDateDemo />
             <CustomSelectDemo />
+            <HeadlessPickerDemo />
           </Box>
         </NaviDebug>
       );

@@ -190,37 +190,38 @@ export const PickerCustom = (props) => {
   open_close: {
     const debugFocus = useDebugFocus();
     const debugPopup = useDebugPopup();
-    const moveFocusToPicker = (e) => {
-      const pickerEl = ref.current;
-      const mousedownEvent = findEvent(e, "mousedown");
-      if (mousedownEvent) {
-        debugFocus(
-          e,
-          `move focus to picker (mousedown.preventDefault() + pickerEl.focus()`,
-        );
-        mousedownEvent.preventDefault();
-        pickerEl.focus({ preventScroll: true });
-        return;
-      }
-      const focusoutEvent = findEvent(e, "focusout");
-      if (focusoutEvent) {
-        // If the popover closed because focus left the select (focusout),
-        // don't steal focus back — let focus go where the user intended.
-        debugFocus(e, `let focus go away`);
-        return;
-      }
-      debugFocus(e, `move focus to picker`);
-      pickerEl.focus({ preventScroll: true });
-    };
-
     const [expanded, setExpanded] = useState(false);
     const expandedRef = useRef(expanded);
     expandedRef.current = expanded;
     const valueAtOpenRef = useRef(null);
+    const activeElementAtOpenRef = useRef(null);
     const onOpen = () => {
+      activeElementAtOpenRef.current = document.activeElement;
       expandedRef.current = true;
       setExpanded(true);
       valueAtOpenRef.current = getPickerInputUIState(ref.current);
+    };
+    const restoreFocus = (e) => {
+      const activeElementAtOpen = activeElementAtOpenRef.current;
+      activeElementAtOpenRef.current = null;
+      const mousedownEvent = findEvent(e, "mousedown");
+      if (mousedownEvent) {
+        debugFocus(
+          e,
+          `restore focus to previously focused element (mousedown.preventDefault() + el.focus())`,
+        );
+        mousedownEvent.preventDefault();
+        activeElementAtOpen.focus({ preventScroll: true });
+        return;
+      }
+      const focusoutEvent = findEvent(e, "focusout");
+      if (focusoutEvent) {
+        debugFocus(e, `let focus go away`);
+        return;
+      }
+      debugFocus(e, `restore focus to previously focused element`);
+      activeElementAtOpen.focus({ preventScroll: true });
+      return;
     };
     const onClose = (e) => {
       const cancelEvent = findEvent(
@@ -236,7 +237,7 @@ export const PickerCustom = (props) => {
       const pickerEl = ref.current;
       const inputEl = getPickerInput(pickerEl);
       if (!inputEl) {
-        moveFocusToPicker(e);
+        restoreFocus(e);
         return;
       }
       const valueAtOpen = valueAtOpenRef.current;
@@ -244,7 +245,7 @@ export const PickerCustom = (props) => {
         dispatchRequestSetUIState(inputEl, valueAtOpen, {
           event: e,
         });
-        moveFocusToPicker(e);
+        restoreFocus(e);
         return;
       }
       const valueAtClose = getPickerInputUIState(pickerEl);
@@ -256,7 +257,7 @@ export const PickerCustom = (props) => {
       } else {
         dispatchRequestAction(inputEl, { event: e, uiState: valueAtClose });
       }
-      moveFocusToPicker(e);
+      restoreFocus(e);
     };
     const disableClickFor = useIgnoreClickForMousedown();
     const requestOpen = (e) => {

@@ -290,7 +290,7 @@ const PickerButton = (props) => {
   if (typeof props.maxLines === "string") {
     props.maxLines = parseInt(props.maxLines);
   }
-  const { ref, variant, icon, placeholder, ui, maxLines } = props;
+  const { ref, variant, icon, placeholder, ui, maxLines, headless } = props;
   const inputRef = useRef(null);
   const [inputProps, pickerRemainingProps] = useControlProps(
     {
@@ -313,9 +313,8 @@ const PickerButton = (props) => {
 
   return (
     <Box
-      as="button"
+      as={headless ? "div" : "button"}
       ref={ref}
-      type="button"
       baseClassName="navi_picker"
       navi-has-placeholder={placeholder ? "" : undefined}
       pseudoClasses={PICKER_BUTTON_PSEUDO_CLASSES}
@@ -325,6 +324,7 @@ const PickerButton = (props) => {
       style={{
         "--picker-max-lines": maxLines,
       }}
+      navi-visually-hidden={headless ? "" : undefined}
       {...pickerRemainingProps}
       basePseudoState={basePseudoState}
       styleCSSVars={PickerStyleCSSVars}
@@ -336,6 +336,7 @@ const PickerButton = (props) => {
       ui={undefined}
       maxLines={undefined}
       dayLabel={undefined}
+      headless={undefined}
       // The button is handling the pointer interactions
       onMouseDown={(e) => {
         inputProps.onMouseDown(e);
@@ -348,6 +349,11 @@ const PickerButton = (props) => {
         // it's also the one wrapping other elements so keydown bubbling will reach the button
         // but neevr the input
         inputProps.onKeyDown(e);
+      }}
+      onFocus={(e) => {
+        if (headless) {
+          inputProps.onFocus(e);
+        }
       }}
     >
       <LoadingOutline
@@ -364,7 +370,7 @@ const PickerButton = (props) => {
         onClick={undefined}
         onKeyDown={undefined}
       />
-      {variant === "icon" ? null : (
+      {variant === "icon" || headless ? null : (
         <Text
           className="navi_picker_value"
           navi-placeholder={
@@ -376,9 +382,11 @@ const PickerButton = (props) => {
           </PickerContext.Provider>
         </Text>
       )}
-      <span className="navi_picker_right_slot">
-        <Icon size="m">{icon === undefined ? <ChevronDownSvg /> : icon}</Icon>
-      </span>
+      {headless ? null : (
+        <span className="navi_picker_right_slot">
+          <Icon size="m">{icon === undefined ? <ChevronDownSvg /> : icon}</Icon>
+        </span>
+      )}
       <ControlChildrenWrapper>
         <div className="navi_picker_content">{children}</div>
       </ControlChildrenWrapper>
