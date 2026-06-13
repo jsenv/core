@@ -251,10 +251,10 @@ registerNaviCommand("--navi-select", {
 });
 registerNaviCommand("--navi-unselect", {
   resolveTarget: getFirstParentControl,
-  implementation: ({ event, source }) => {
+  implementation: (commandTarget, { event, source }) => {
     const unselectParam = getUIStateFromElement(source);
 
-    return dispatchCustomEvent(event.currentTarget, "navi_request_unselect", {
+    return dispatchCustomEvent(commandTarget, "navi_request_unselect", {
       event,
       id: unselectParam,
     });
