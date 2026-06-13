@@ -560,12 +560,13 @@ export const useControlgroupProps = (
   return [
     {
       ...controlgroupProps,
-      name: undefined, // useful to children, not the the group itself
-      required: undefined, // useful to children, not the the group itself
-      onnavi_action_allowed: (e) => {
+      "name": undefined, // useful to children, not the the group itself
+      "required": undefined, // useful to children, not the the group itself
+      "onnavi_action_allowed": (e) => {
         setActionRequester(e.detail.requester);
         controlgroupProps.onnavi_action_allowed(e);
       },
+      "navi-control-group": "",
     },
     remainingProps,
     controlgroupChildrenWrapperProps,

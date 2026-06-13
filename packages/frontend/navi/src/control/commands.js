@@ -151,6 +151,9 @@ const submitSelector = `button[type="submit"], input[type="submit"], input[type=
 registerNaviCommand("--navi-send", {
   resolveTarget: getClosestControlWithAction,
   implementation: (commandTarget, { event, source }) => {
+    if (source.hasAttribute("navi-control-group")) {
+       dispatchNaviCommand(source, "--navi-update", event);
+    }
     dispatchNaviCommand(source, "--navi-close", event);
 
     let requester = source;
@@ -186,17 +189,6 @@ registerNaviCommand("--navi-send", {
     return allowed;
   },
 });
-registerNaviCommand("--navi-clear", {
-  resolveTarget: getFirstParentControl,
-  implementation: (commandTarget, { event, source }) => {
-    // ne pas faire si on est dans un input par ex, seul un bouton doit close le closest
-    dispatchNaviCommand(source, "--navi-close", event);
-
-    return dispatchRequestSetUIState(commandTarget, "", {
-      event,
-    });
-  },
-});
 
 registerNaviCommand("--navi-open", {
   resolveTarget: getClosestExpandable,
@@ -223,6 +215,17 @@ registerNaviCommand("--navi-cancel", {
       event,
       source,
       isCancel: true,
+    });
+  },
+});
+registerNaviCommand("--navi-clear", {
+  resolveTarget: getFirstParentControl,
+  implementation: (commandTarget, { event, source }) => {
+    // ne pas faire si on est dans un input par ex, seul un bouton doit close le closest
+    dispatchNaviCommand(source, "--navi-close", event);
+
+    return dispatchRequestSetUIState(commandTarget, "", {
+      event,
     });
   },
 });
