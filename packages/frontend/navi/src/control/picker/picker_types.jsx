@@ -237,7 +237,7 @@ export const PickerFileUI = () => {
   return value;
 };
 
-const PencilSvg = () => {
+export const PencilSvg = () => {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -248,7 +248,7 @@ const PencilSvg = () => {
     </svg>
   );
 };
-const CalendarSvg = () => {
+export const CalendarSvg = () => {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -259,7 +259,7 @@ const CalendarSvg = () => {
     </svg>
   );
 };
-const ClockSvg = () => {
+export const ClockSvg = () => {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -270,7 +270,7 @@ const ClockSvg = () => {
     </svg>
   );
 };
-const ColorSvg = () => {
+export const ColorSvg = () => {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -281,7 +281,7 @@ const ColorSvg = () => {
     </svg>
   );
 };
-const FileSvg = () => {
+export const FileSvg = () => {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"

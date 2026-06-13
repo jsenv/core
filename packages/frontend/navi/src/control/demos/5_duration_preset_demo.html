@@ -389,7 +389,8 @@
           >
             <Picker
               name="custom_duration_picker2"
-              ui={`Autre${props.selected ? ` (${label})` : ""}`}
+              ui="Personnalisé"
+              icon={<Picker.UI.PencilSvg />}
             >
               <Box flex="y" alignX="center" padding="m" spacing="m">
                 <Text bold>Veuillez saisir une durée</Text>

@@ -15,6 +15,11 @@ import { getUIStateControllerById } from "../ui_state_controller.js";
 import { PickerContext } from "./picker_context.jsx";
 import { pickerResolvers } from "./picker_resolvers.jsx";
 import {
+  CalendarSvg,
+  ClockSvg,
+  ColorSvg,
+  FileSvg,
+  PencilSvg,
   PickerArrayUI,
   PickerColorUI,
   PickerDatetimeUI,
@@ -457,3 +462,10 @@ Picker.UI.Datetime = PickerDatetimeUI;
 Picker.UI.File = PickerFileUI;
 Picker.UI.Color = PickerColorUI;
 Picker.UI.Multiple = PickerArrayUI;
+
+Picker.UI.PencilSvg = PencilSvg;
+Picker.UI.ChevronDownSvg = ChevronDownSvg;
+Picker.UI.ClockSvg = ClockSvg;
+Picker.UI.CalendarSvg = CalendarSvg;
+Picker.UI.FileSvg = FileSvg;
+Picker.UI.ColorSvg = ColorSvg;
