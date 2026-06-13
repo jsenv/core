@@ -187,12 +187,14 @@ export const PATTERN_CONSTRAINT = {
     if (regex.test(value)) {
       return null;
     }
-    let message = naviI18n(`constraint.pattern.${fieldTypeSuffix(field)}`);
-    const title = field.title;
-    if (title) {
-      message += `<br />${title}`;
+    const type = field.type;
+    if (type === "email") {
+      return naviI18n("constraint.pattern.email");
     }
-    return message;
+    if (type === "password") {
+      return naviI18n("constraint.pattern.password");
+    }
+    return naviI18n("constraint.pattern.default");
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("pattern");
