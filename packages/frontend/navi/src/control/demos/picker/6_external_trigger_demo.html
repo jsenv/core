@@ -73,6 +73,14 @@
               picker, qui appelle <code>input.showPicker()</code> en interne.
             </p>
             <Box flex spacing="m" alignY="center">
+              <Button
+                selfAlignY="end"
+                onClick={() => {
+                  triggerShowPicker(pickerRef);
+                }}
+              >
+                Ouvrir le calendrier
+              </Button>
               <Field>
                 <Label>Date</Label>
                 <Input
@@ -84,14 +92,6 @@
                   }}
                 />
               </Field>
-              <Button
-                selfAlignY="end"
-                onClick={() => {
-                  triggerShowPicker(pickerRef);
-                }}
-              >
-                Ouvrir le calendrier
-              </Button>
             </Box>
             {dateSignal.value ? (
               <p style={{ marginTop: "12px", fontFamily: "monospace" }}>
@@ -117,6 +117,14 @@
               picker custom, qui ouvre le popover/dialog en interne.
             </p>
             <Box flex spacing="m" alignY="center">
+              <Button
+                selfAlignY="end"
+                onClick={() => {
+                  triggerShowPicker(pickerRef);
+                }}
+              >
+                Ouvrir la liste
+              </Button>
               <Field>
                 <Label>Couleur</Label>
                 <Picker
@@ -141,14 +149,6 @@
                   </List>
                 </Picker>
               </Field>
-              <Button
-                selfAlignY="end"
-                onClick={() => {
-                  triggerShowPicker(pickerRef);
-                }}
-              >
-                Ouvrir la liste
-              </Button>
             </Box>
             {valueSignal.value ? (
               <p style={{ marginTop: "12px", fontFamily: "monospace" }}>
