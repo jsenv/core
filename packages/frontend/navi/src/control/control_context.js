@@ -21,6 +21,7 @@ export const CONTROL_ATTRIBUTE_SET = new Set([
   "aria-controls",
   "tabIndex",
 
+  // "action-target",
   "navi-input-type",
   "navi-control-proxy-for",
 

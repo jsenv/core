@@ -36,6 +36,9 @@ export const findControlHost = (el) => {
   }
   return el.querySelector("[navi-control-host]");
 };
+export const isControlHost = (el) => {
+  return el.hasAttribute("navi-control-host");
+};
 
 /**
  * Returns the nearest ancestor of `el` (exclusive of `el`'s own control) that

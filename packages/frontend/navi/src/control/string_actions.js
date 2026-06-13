@@ -2,7 +2,9 @@ import { dispatchCustomEvent } from "@jsenv/dom";
 
 import {
   findClosestControlWithAction,
+  findControlRoot,
   getParentControl,
+  isControlHost,
 } from "./control_dom.js";
 import { createUICallback } from "./ui_callback.js";
 import { dispatchRequestSetUIState } from "./ui_state_dom.js";
@@ -24,11 +26,22 @@ export const resolveActionProp = (action) => {
 
 const getActionTarget = (e) => {
   const currentTarget = e.currentTarget;
-  const actionTargetAttribute = currentTarget.getAttribute("action-target");
+  let startEl = currentTarget;
+  if (isControlHost(currentTarget)) {
+    // mousedown on input host -> start from the control root which have the action-target attribute
+    // and can have children
+    startEl = findControlRoot(currentTarget);
+  }
+  const actionTargetAttribute = startEl.getAttribute("action-target");
   if (!actionTargetAttribute) {
     return undefined;
   }
-  const actionTarget = document.getElementById(actionTargetAttribute);
+  let actionTarget;
+  if (actionTargetAttribute.startsWith("#")) {
+    actionTarget = document.getElementById(actionTargetAttribute.slice(1));
+  } else {
+    actionTarget = startEl.querySelector(actionTargetAttribute);
+  }
   if (!actionTarget) {
     console.warn(
       `action-target="${actionTargetAttribute}" specified but no element with that id found in the document`,

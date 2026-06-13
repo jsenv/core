@@ -388,7 +388,10 @@
             flex
             spacing="xs"
             action-target=".navi_picker"
-            onMouseDown={(e) => {
+            onClick={(e) => {
+              if (e.button !== 0) {
+                return;
+              }
               triggerStringAction("open", e);
             }}
             {...props}
