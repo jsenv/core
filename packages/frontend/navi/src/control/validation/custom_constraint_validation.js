@@ -666,7 +666,7 @@ export const installCustomConstraintValidation = (
   const [notifyCalloutOpen, onCalloutOpen] = createPubSub();
   const reportValidity = ({ event, requester, debug, skipFocus } = {}) => {
     if (!failedConstraintInfo) {
-      closeElementValidationMessage(event, "becomes_valid");
+      closeElementValidationMessage(event, "is_valid");
       return;
     }
     if (failedConstraintInfo.silent) {
@@ -814,6 +814,7 @@ export const installCustomConstraintValidation = (
   const resetOnInteraction = (e) => {
     customMessageMap.clear();
     closeElementValidationMessage(e, e.type);
+    console.log("resetOnInteraction", e.type, e);
     checkValidity({ event: e });
   };
 
@@ -822,37 +823,57 @@ export const installCustomConstraintValidation = (
       break close_and_check_on_input; // range inputs have a special behavior where "input" is triggered on pointer release, so we don't need to wait for it
     }
 
-    let waitPointerRelease;
     onCalloutOpen((openingEvent) => {
-      if (openingEvent && findEvent(openingEvent, "mousedown")) {
-        waitPointerRelease = true;
+      const openedByMousedown = findEvent(openingEvent, "mousedown");
+      const [cleanup, addCleanup] = createPubSub();
+
+      const setupResetOnInput = () => {
+        const oninput = (e) => {
+          resetOnInteraction(e);
+        };
+        element.addEventListener("input", oninput, { once: true });
+        addCleanup(() => {
+          element.removeEventListener("input", oninput, { once: true });
+        });
+      };
+
+      if (openedByMousedown) {
         const onMouseUp = () => {
-          setTimeout(() => {
-            waitPointerRelease = false;
-          });
+          const timeout = setTimeout(setupResetOnInput);
+          addCleanup(() => clearTimeout(timeout));
         };
         document.addEventListener("mouseup", onMouseUp, {
           once: true,
           capture: true,
         });
-        return () => {
-          document.removeEventListener("mouseup", onMouseUp, true);
-        };
+        addCleanup(() => {
+          document.removeEventListener("mouseup", onMouseUp, {
+            once: true,
+            capture: true,
+          });
+        });
+        return cleanup;
       }
-      return undefined;
-    });
 
-    onCalloutOpen(() => {
-      const oninput = (e) => {
-        if (waitPointerRelease) {
+      // "change" can happen after an input looses focus
+      // and if loose focus as the result of typing (navi_input_full going to next input)
+      // the browser will fire an input event shortly after
+      // causing the callout to immediatly close
+      // an other way to express this could be that an "input" event should be allowed
+      // to close callout only if at least event loop or 1ms occurs
+      let closed = false;
+      addCleanup(() => {
+        closed = true;
+      });
+      queueMicrotask(() => {
+        if (closed) {
+          console.log("closed before");
           return;
         }
-        resetOnInteraction(e);
-      };
-      element.addEventListener("input", oninput);
-      return () => {
-        element.removeEventListener("input", oninput);
-      };
+        console.log("listen input");
+        setupResetOnInput();
+      });
+      return cleanup;
     });
   }
 
