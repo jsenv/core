@@ -180,7 +180,6 @@ const css = /* css */ `
       align-self: flex-start;
       justify-content: center;
       color: var(--x-picker-icon-color);
-      transform: translateX(25%);
     }
     .navi_picker_input {
       position: absolute;
@@ -195,6 +194,10 @@ const css = /* css */ `
       opacity: 0;
       appearance: none;
       pointer-events: none;
+    }
+
+    .navi_picker_content {
+      display: contents;
     }
 
     &[data-line-clamp] {
@@ -237,6 +240,17 @@ const css = /* css */ `
     &[data-callout] {
       --x-picker-border-color: var(--callout-color);
     }
+
+    &[data-variant="icon"] {
+      --x-picker-padding-top: 0;
+      --x-picker-padding-right: 0;
+      --x-picker-padding-bottom: 0;
+      --x-picker-padding-left: 0;
+      --picker-border-width: 0;
+      --x-picker-border-color: transparent;
+      --x-picker-background-color: transparent;
+      --x-picker-icon-color: currentColor;
+    }
   }
 `;
 
@@ -276,7 +290,7 @@ const PickerButton = (props) => {
   if (typeof props.maxLines === "string") {
     props.maxLines = parseInt(props.maxLines);
   }
-  const { ref, icon, placeholder, ui, maxLines } = props;
+  const { ref, variant, icon, placeholder, ui, maxLines } = props;
   const inputRef = useRef(null);
   const [inputProps, pickerRemainingProps] = useControlProps(
     {
@@ -307,8 +321,9 @@ const PickerButton = (props) => {
       pseudoClasses={PICKER_BUTTON_PSEUDO_CLASSES}
       disabled={disabled}
       data-line-clamp={hasLineClamp ? "" : undefined}
+      data-variant={variant}
       style={{
-        "--picker-max-lines": maxLines || -1,
+        "--picker-max-lines": maxLines,
       }}
       {...pickerRemainingProps}
       basePseudoState={basePseudoState}
@@ -316,6 +331,7 @@ const PickerButton = (props) => {
       // we must put the id on the button and not the input
       // so that a <label> tries to give focus to the button and not the input
       id={id}
+      variant={undefined}
       icon={undefined}
       ui={undefined}
       maxLines={undefined}
@@ -348,18 +364,24 @@ const PickerButton = (props) => {
         onClick={undefined}
         onKeyDown={undefined}
       />
-      <Text
-        className="navi_picker_value"
-        navi-placeholder={value === undefined || value === "" ? "" : undefined}
-      >
-        <PickerContext.Provider value={{ value, placeholder, maxLines }}>
-          {ui === undefined ? <PickerDefaultUI /> : ui}
-        </PickerContext.Provider>
-      </Text>
+      {variant === "icon" ? null : (
+        <Text
+          className="navi_picker_value"
+          navi-placeholder={
+            value === undefined || value === "" ? "" : undefined
+          }
+        >
+          <PickerContext.Provider value={{ value, placeholder, maxLines }}>
+            {ui === undefined ? <PickerDefaultUI /> : ui}
+          </PickerContext.Provider>
+        </Text>
+      )}
       <span className="navi_picker_right_slot">
         <Icon size="m">{icon === undefined ? <ChevronDownSvg /> : icon}</Icon>
       </span>
-      <ControlChildrenWrapper>{children}</ControlChildrenWrapper>
+      <ControlChildrenWrapper>
+        <div className="navi_picker_content">{children}</div>
+      </ControlChildrenWrapper>
     </Box>
   );
 };

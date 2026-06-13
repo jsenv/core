@@ -373,8 +373,6 @@
         const hours = customDurationHourSignal2.value;
         const minutes = customDurationMinuteSignal2.value;
 
-        const label = `${String(hours).padStart(2, "0")}h${String(minutes).padStart(2, "0")}`;
-
         return (
           <List.Item
             selectable
@@ -385,12 +383,17 @@
             paddingY="s"
             alignX="center"
             noWrap
+            flex
+            spacing="xs"
             {...props}
           >
+            <Time type="minute">190</Time>
             <Picker
               name="custom_duration_picker2"
-              ui="Personnalisé"
+              variant="icon"
               icon={<Picker.UI.PencilSvg />}
+              mode="dialog"
+              marginRight="-1ch"
             >
               <Box flex="y" alignX="center" padding="m" spacing="m">
                 <Text bold>Veuillez saisir une durée</Text>
