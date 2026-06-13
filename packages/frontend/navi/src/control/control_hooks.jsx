@@ -370,6 +370,10 @@ export const useControlProps = (
         };
       }
       if (isCheckable) {
+        inputInteraction = {
+          name: "input",
+          callback: asAction,
+        };
         // For checkables, click does NOT update state — it only gates the
         // browser's native check/uncheck via interaction constraints (e.g.
         // readOnly). State actually changes via the "input" event that the
@@ -387,10 +391,6 @@ export const useControlProps = (
               triggerCommand(e);
             }
           },
-        };
-        inputInteraction = {
-          name: "input",
-          callback: asAction,
         };
         naviChangeInteraction = undefined;
         enterEffect = (e) => {
