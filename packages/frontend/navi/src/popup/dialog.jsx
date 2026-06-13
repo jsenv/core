@@ -9,9 +9,10 @@ import { useRef } from "preact/hooks";
 import { Box } from "../box/box.jsx";
 import { useDebugFocus, useDebugPopup } from "../navi_debug.jsx";
 import {
-  focusFirstAutofocusOrFocusable,
+  getFocusedBeforeTransfer,
   markAutofocusRestoreOnClose,
-} from "../utils/focus/focus_first_autofocus_or_focusable.js";
+  transferFocus,
+} from "../utils/focus/focus_transfer.js";
 import { useCleanup } from "../utils/use_cleanup.js";
 
 const css = /* css */ `
@@ -54,8 +55,9 @@ export const Dialog = (props) => {
     const { width, height } = effectiveAnchor.getBoundingClientRect();
     dialogEl.style.setProperty("--anchor-width", `${snapToPixel(width)}px`);
     dialogEl.style.setProperty("--anchor-height", `${snapToPixel(height)}px`);
+    const focusedBeforeOpen = getFocusedBeforeTransfer(e);
     dialogEl.showModal();
-    focusFirstAutofocusOrFocusable(dialogEl, debugFocus, e);
+    transferFocus(dialogEl, debugFocus, e);
     if (scrollTrap) {
       addCleanup(trapScrollInside(dialogEl));
     }
@@ -92,6 +94,7 @@ export const Dialog = (props) => {
     openedRef.current = true;
     dispatchCustomEvent(dialogEl, "navi_open", {
       event: e,
+      focusedBeforeOpen,
     });
   };
   const close = (e) => {

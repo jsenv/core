@@ -20,7 +20,25 @@ export const markAutofocusRestoreOnClose = (containerEl) => {
   }
 };
 
-export const focusFirstAutofocusOrFocusable = (containerEl, debugFocus, e) => {
+// Get the active element before we transfer focus in the popover/dialog
+// We don't just use document.activeElement because when dialog is opened by mousedown
+// we prevent default so browser don't steal focus back from the dialog
+// meaning the focus did not yet reach the element receiving the mousedown
+// as a result document.activeElement is not up-to-date (can be document.body for instance)
+export const getFocusedBeforeTransfer = (e) => {
+  const initiator = e.detail.eventChain[0];
+  if (initiator.type === "mousedown" && initiator.defaultPrevented) {
+    // if we we had let browser give focus, the element would be the one that would be focused
+    return initiator.currentTarget;
+  }
+  if (initiator.type === "click") {
+    // label use case
+    return initiator.currentTarget;
+  }
+  return document.activeElement;
+};
+
+export const transferFocus = (containerEl, debugFocus, e) => {
   let target;
   let reason;
   if (containerEl.hasAttribute("navi-autofocus-restore")) {

@@ -14,9 +14,10 @@ import { Box } from "../box/box.jsx";
 import { resolveSpacingSize } from "../box/box_style_util.js";
 import { useDebugFocus, useDebugPopup } from "../navi_debug.jsx";
 import {
-  focusFirstAutofocusOrFocusable,
+  getFocusedBeforeTransfer,
   markAutofocusRestoreOnClose,
-} from "../utils/focus/focus_first_autofocus_or_focusable.js";
+  transferFocus,
+} from "../utils/focus/focus_transfer.js";
 import { useCleanup } from "../utils/use_cleanup.js";
 
 const css = /* css */ `
@@ -65,8 +66,9 @@ export const Popover = (props) => {
   const open = (e, { anchor }) => {
     debugPopup(e, `openPopover()`);
     const popoverEl = ref.current;
+    const focusedBeforeOpen = getFocusedBeforeTransfer(e);
     popoverEl.showPopover();
-    focusFirstAutofocusOrFocusable(popoverEl, debugFocus, e);
+    transferFocus(popoverEl, debugFocus, e);
     const effectiveAnchor = anchor || document.documentElement;
     const positionPopover = (positionEvent) => {
       const { width, height } = effectiveAnchor.getBoundingClientRect();
@@ -153,6 +155,7 @@ export const Popover = (props) => {
     setOpened(true);
     dispatchCustomEvent(popoverEl, "navi_open", {
       event: e,
+      focusedBeforeOpen,
     });
   };
   const close = (e) => {

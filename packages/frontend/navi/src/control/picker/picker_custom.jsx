@@ -195,8 +195,8 @@ export const PickerCustom = (props) => {
     expandedRef.current = expanded;
     const valueAtOpenRef = useRef(null);
     const activeElementAtOpenRef = useRef(null);
-    const onOpen = () => {
-      activeElementAtOpenRef.current = document.activeElement;
+    const onOpen = (e) => {
+      activeElementAtOpenRef.current = e.detail.focusedBeforeOpen;
       expandedRef.current = true;
       setExpanded(true);
       valueAtOpenRef.current = getPickerInputUIState(ref.current);
