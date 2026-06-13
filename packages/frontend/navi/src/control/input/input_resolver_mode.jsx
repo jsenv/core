@@ -1,5 +1,5 @@
 import { dispatchPublicCustomEvent } from "@jsenv/dom";
-import { triggerCommand } from "@jsenv/navi/src/control/commands.js";
+import { dispatchRequestSetUIState } from "@jsenv/navi/src/control/ui_state_dom.js";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 
 export const InputModeResolver = (props) => {
@@ -100,9 +100,6 @@ const performArrowUpDown = (e) => {
   if (max !== undefined && nextValue > max) {
     nextValue = max;
   }
-  triggerCommand("--navi-update", nextValue, {
-    event: e,
-    commandTarget: e.currentTarget,
-  });
+  dispatchRequestSetUIState(input, nextValue, { event: e });
   e.preventDefault();
 };
