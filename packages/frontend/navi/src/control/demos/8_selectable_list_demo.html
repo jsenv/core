@@ -233,6 +233,10 @@
                 setSelected(v);
                 pushLog("action", v ?? "(none)");
               }}
+              uiAction={(v) => {
+                setSelected(v);
+                pushLog("uiAction", v ?? "(none)");
+              }}
               expandX
             >
               {matchingFruits.map((fruit, i) => {
