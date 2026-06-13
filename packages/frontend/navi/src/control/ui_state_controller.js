@@ -301,9 +301,7 @@ export const useUIStateController = (
     },
     setUIState: (prop, e) => {
       const newUIState = uiStateController.getStateFromProp(prop);
-      const onUIAction = () => {
-        uiActionInternal?.(newUIState, e);
-        uiAction?.(newUIState, e);
+      const triggerCommand = () => {
         const command = uiStateController.props.command;
         if (command) {
           const element = uiStateController.elementRef.current;
@@ -311,6 +309,11 @@ export const useUIStateController = (
             dispatchNaviCommand(element, command, e);
           }
         }
+      };
+      const onUIAction = () => {
+        uiActionInternal?.(newUIState, e);
+        uiAction?.(newUIState, e);
+        triggerCommand();
       };
 
       const controllerSig = getElementSignature(e.currentTarget || ref.current);
@@ -332,6 +335,12 @@ export const useUIStateController = (
           e,
           `${controllerSig}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> state unchanged, no update needed`,
         );
+        if (
+          controlType === "input" &&
+          uiStateController.props.type === "radio"
+        ) {
+          triggerCommand();
+        }
         return false;
       }
       const el = ref.current;

@@ -22,7 +22,7 @@ export const dispatchNaviCommand = (element, command, event) => {
   if (!commandTarget) {
     return false;
   }
-  return dispatchCustomEvent(element, "navi_command", {
+  return dispatchCustomEvent(commandTarget, "navi_command", {
     command,
     event,
     source: element,
