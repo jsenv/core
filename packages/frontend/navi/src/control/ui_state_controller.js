@@ -601,8 +601,9 @@ export const useUIGroupStateController = (
     throw new TypeError("aggregateChildStates must be a function");
   }
   const parentUIStateController = useContext(ParentUIStateControllerContext);
-  const { id, name, value } = props;
+  const { id, name, value, uiAction, command } = props;
   const ref = props.ref;
+  const uiActionRef = useRef(uiAction);
   const fallbackState =
     stateType === "array"
       ? EMPTY_ARRAY
@@ -676,6 +677,7 @@ export const useUIGroupStateController = (
     existingUIStateController.id = id;
     existingUIStateController.name = name;
     existingUIStateController.value = value;
+    uiActionRef.current = uiAction;
     return existingUIStateController;
   }
   debugUIGroup(
@@ -713,6 +715,13 @@ export const useUIGroupStateController = (
         `${controlType}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> updates from ${JSON.stringify(currentUIState)} to ${JSON.stringify(newUIState)}`,
       );
       publishUIState(newUIState);
+      uiActionRef.current?.(newUIState, e);
+      if (command) {
+        const el = ref.current;
+        if (el) {
+          dispatchNaviCommand(el, command, e);
+        }
+      }
       if (notifyExternal) {
         notifyParentAboutChildUIStateChange(e);
       }

@@ -510,7 +510,7 @@ export const useControlgroupProps = (
   props,
   { stateType, controlType, childControlFilter, aggregateChildStates },
 ) => {
-  const { action, uiAction } = props;
+  const { action } = props;
   const debugAction = useDebugAction();
   const uiGroupStateController = useUIGroupStateController(props, controlType, {
     stateType,
@@ -519,13 +519,6 @@ export const useControlgroupProps = (
     debugAction,
   });
 
-  const uiActionRef = useRef(uiAction);
-  uiActionRef.current = uiAction;
-  useLayoutEffect(() => {
-    return uiGroupStateController.subscribe((newState) => {
-      uiActionRef.current?.(newState);
-    });
-  }, [uiGroupStateController]);
   const [boundAction] = useActionBoundToOneParam(
     action,
     uiGroupStateController.uiStateSignal,
