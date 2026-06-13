@@ -34,7 +34,7 @@ const resolveCommandTarget = (elementWithCommand, naviCommand) => {
     const commandForElement = document.getElementById(commandFor);
     if (!commandForElement) {
       console.warn(
-        `navi_command triggered on element with command-for="${commandFor}" but no element with that id found`,
+        `${naviCommand} triggered on element with command-for="${commandFor}" but no element with that id found`,
       );
       return undefined;
     }
@@ -45,32 +45,41 @@ const resolveCommandTarget = (elementWithCommand, naviCommand) => {
   );
   const isCommandForParentControl = naviCommandTarget === "parent-control";
   if (isCommandForParentControl) {
-    return getFirstParentControl(elementWithCommand);
-  }
-  const isCommandForChildControl = naviCommandTarget === "child-control";
-  if (isCommandForChildControl) {
-    return getFirstChildControl(elementWithCommand);
-  }
-  const { resolveTarget } = naviCommand;
-  if (resolveTarget) {
-    const resolvedTarget = resolveTarget(elementWithCommand);
-    if (!resolvedTarget) {
+    const firstParentControl = getFirstParentControl(elementWithCommand);
+    if (!firstParentControl) {
       console.warn(
-        `navi_command triggered on element but resolveTarget callback returned no target`,
+        `${naviCommand} triggered on element with navi-command-target="parent-control" but no parent control found`,
       );
       return undefined;
     }
+    return firstParentControl;
+  }
+  const isCommandForChildControl = naviCommandTarget === "child-control";
+  if (isCommandForChildControl) {
+    const firstChildControl = getFirstChildControl(elementWithCommand);
+    if (!firstChildControl) {
+      console.warn(
+        `${naviCommand} triggered on element with navi-command-target="child-control" but no child control found`,
+      );
+      return undefined;
+    }
+    return firstChildControl;
+  }
+  const { resolveTarget } = naviCommand;
+  if (resolveTarget) {
+    const resolveTargetResult = resolveTarget(elementWithCommand);
+    if (!resolveTargetResult) {
+      console.warn(
+        `${naviCommand} triggered on element but resolveTarget callback returned no target`,
+      );
+      return undefined;
+    }
+    return resolveTargetResult;
   }
   return undefined;
 };
 const getFirstParentControl = (el) => {
   const parentControl = getParentControl(el);
-  if (!parentControl) {
-    console.warn(
-      `navi_command triggered on element with navi-command-target="parent-control" but no parent control found`,
-    );
-    return undefined;
-  }
   return parentControl;
 };
 const getFirstChildControl = (el) => {
@@ -81,12 +90,6 @@ const getFirstChildControl = (el) => {
     startEl = el;
   }
   const childControl = startEl.querySelector("[navi-control-host]");
-  if (!childControl) {
-    console.warn(
-      `navi_command triggered on element with navi-command-target="child-control" but no child control found`,
-    );
-    return undefined;
-  }
   return childControl;
 };
 const getClosestExpandable = (el) => {
@@ -95,18 +98,14 @@ const getClosestExpandable = (el) => {
 };
 const getClosestControlWithAction = (el) => {
   const controlWithAction = findClosestControlWithAction(el);
-  if (!controlWithAction) {
-    console.warn(
-      `event triggered but no control with [data-action] found in event path`,
-    );
-    return false;
-  }
+  debugger;
   return controlWithAction;
 };
+
 export const onNaviCommand = (e, { debugCommand }) => {
   const { command, event, source } = e.detail;
   if (typeof command !== "string") {
-    console.warn(`navi_command event triggered but no command specified`, e);
+    console.warn(`navi_command event is missing detail.command`, e);
     return false;
   }
   const naviCommand = NAVI_COMMANDS[command];
@@ -118,7 +117,7 @@ export const onNaviCommand = (e, { debugCommand }) => {
   const { implementation } = naviCommand;
   debugCommand(
     event,
-    `navi_command "${command}" triggered on`,
+    `${naviCommand} triggered on`,
     source,
     `targeting`,
     commandTarget,
@@ -130,8 +129,12 @@ export const onNaviCommand = (e, { debugCommand }) => {
 const NAVI_COMMANDS = {};
 const registerNaviCommand = (command, { resolveTarget, implementation }) => {
   NAVI_COMMANDS[command] = {
+    name: command,
     resolveTarget,
     implementation,
+    toString: () => {
+      return `${command}`;
+    },
   };
 };
 
@@ -182,6 +185,7 @@ const submitSelector = `button[type="submit"], input[type="submit"], input[type=
 registerNaviCommand("--navi-send", {
   resolveTarget: getClosestControlWithAction,
   implementation: (commandTarget, { event, source }) => {
+    debugger;
     dispatchNaviCommand(source, "--navi-update", event);
     dispatchNaviCommand(source, "--navi-close", event);
 
