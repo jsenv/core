@@ -887,6 +887,49 @@
         );
       };
 
+      const NumbersOnlyWithActionDemo = () => {
+        const [lastAction, setLastAction] = useState(null);
+        const [value, setValue] = useState("42");
+
+        return (
+          <Box flex="y" spacing="s" alignX="start">
+            <Field>
+              <Label>Value (numbers only)</Label>
+              <Input
+                type="text"
+                pattern="[0-9]*"
+                patternMessage="Numbers only please"
+                value={value}
+                uiAction={(v) => {
+                  setValue(v);
+                }}
+                action={(v) => {
+                  setLastAction(v);
+                }}
+                placeholder="Type numbers..."
+              />
+            </Field>
+            <div
+              style={{
+                fontFamily: "monospace",
+                fontSize: "12px",
+                padding: "8px 10px",
+                background: "#f9f9f9",
+                border: "1px solid #e0e0e0",
+                borderRadius: "6px",
+              }}
+            >
+              Last action value:{" "}
+              {lastAction === null ? (
+                <span style={{ color: "#aaa" }}>none yet</span>
+              ) : (
+                <strong>{JSON.stringify(lastAction)}</strong>
+              )}
+            </div>
+          </Box>
+        );
+      };
+
       const ValidationDemo = () => {
         return (
           <div className="demo-section" id="validation">
@@ -984,6 +1027,18 @@
                   <Button type="submit">Submit</Button>
                 </Box>
               </Form>
+            </fieldset>
+
+            <h3>Pattern + action</h3>
+            <p className="states-description">
+              Input with <code>pattern="[0-9]*"</code> (numbers only) and an{" "}
+              <code>action</code>. Tests the interaction between client-side
+              constraint validation and action callbacks — action should only
+              fire when the value is valid.
+            </p>
+            <fieldset>
+              <legend>Numbers only, with action</legend>
+              <NumbersOnlyWithActionDemo />
             </fieldset>
           </div>
         );
