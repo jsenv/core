@@ -825,7 +825,6 @@ const useInteractiveProps = (
           // Native browser behavior: only the clicked/activated submit button
           // contributes its name+value to form data.
           const { requester } = e.detail;
-          debugger;
           if (
             requester &&
             requester.name &&
