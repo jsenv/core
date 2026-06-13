@@ -75,6 +75,11 @@ import {
 import { useConstraintMessages } from "./validation/hooks/use_constraint_messages.js";
 import { useConstraints } from "./validation/hooks/use_constraints.js";
 
+// Sentinel used as the initial value of lastActionValueRef.
+// Distinct from undefined so that undefined (e.g. unchecked radio) can itself
+// be stored as a valid "last action value" and trigger the dedup logic.
+const NO_ACTION_YET = Symbol("no_action_yet");
+
 // Resets field-specific contexts so nested fields inside this component
 // don't inherit the current field's id, message props, or interface reporting.
 // Also cuts the parent state controller chain: children of a regular (leaf)
@@ -256,20 +261,30 @@ export const useControlProps = (
       return asInteraction(interaction, e);
     };
     const lastEventRequestingActionRef = useRef();
-    const lastActionValueRef = useRef();
+    const lastActionValueRef = useRef(NO_ACTION_YET);
     const wasCheckedAtMousedownRef = useRef(false);
     // Keep lastActionValueRef in sync with state changes that happen outside of asAction
-    // (e.g. radio_sibling_uncheck when another radio in the group becomes checked).
+    // (e.g. radio_sibling_uncheck, or external programmatic set via navi_set_ui_state).
     // Otherwise the dedup below would wrongly skip a real user click that re-checks a radio
     // whose lastActionValueRef still matched a value from a previous interaction.
     //
-    // We only sync for these external sources — NOT for every UI state change.
-    // Syncing on every change would also capture our own updateUIState calls fired
-    // from the input event, which would then make asAction (triggered later via
-    // navi_change / debounce) think the value is unchanged and skip the action.
+    // For checkables (radio/checkbox): sync on any external state change — not just
+    // radio_sibling_uncheck. When a programmatic set (e.g. --navi-unselect) unchecks a
+    // radio, setUIState dispatches a synthetic input event. Without syncing here, asAction
+    // would run again from that synthetic input and fire the action a second time.
+    //
+    // We do NOT sync when the change originated from the checkable's own user input event,
+    // because at that point asAction hasn't run yet and we must not pre-empt its dedup.
     controlProps.onnavi_ui_state_change = (e) => {
       const originatingEvent = e.detail.event;
-      if (originatingEvent?.type === "radio_sibling_uncheck") {
+      if (isCheckable) {
+        const sourceIsOwnInput =
+          originatingEvent?.type === "input" &&
+          originatingEvent?.target === ref.current;
+        if (!sourceIsOwnInput) {
+          lastActionValueRef.current = e.detail.value;
+        }
+      } else if (originatingEvent?.type === "radio_sibling_uncheck") {
         lastActionValueRef.current = e.detail.value;
       }
     };
@@ -286,7 +301,7 @@ export const useControlProps = (
         // events around mouse release even though the value hasn't moved.
         const lastActionValue = lastActionValueRef.current;
         const valueSameAsLastAction =
-          lastActionValue !== undefined &&
+          lastActionValue !== NO_ACTION_YET &&
           compareTwoJsValues(currentValue, lastActionValue);
         if (valueSameAsLastAction) {
           e.preventDefault();
