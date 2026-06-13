@@ -22,6 +22,26 @@ export const resolveActionProp = (action) => {
   return action;
 };
 
+const getActionTarget = (e) => {
+  const currentTarget = e.currentTarget;
+  const actionTargetAttribute = currentTarget.getAttribute("action-target");
+  if (!actionTargetAttribute) {
+    return undefined;
+  }
+  const actionTarget = document.getElementById(actionTargetAttribute);
+  if (!actionTarget) {
+    console.warn(
+      `action-target="${actionTargetAttribute}" specified but no element with that id found in the document`,
+      e,
+    );
+    return undefined;
+  }
+  return actionTarget;
+};
+const getClosestExpandable = (e) => {
+  return e.currentTarget.closest("[aria-expanded]");
+};
+
 const scroll = createUICallback({
   name: "scroll",
   event: (e) => {
@@ -32,10 +52,8 @@ const scroll = createUICallback({
   },
 });
 const requestScroll = (e, getScrollParam) => {
-  const scrollTarget = getActionTarget(e, "scroll");
-  if (!scrollTarget) {
-    return false;
-  }
+  const scrollTarget =
+    getActionTarget(e) || getParentControl(e) || e.currentTarget;
   const param = getScrollParam();
   if (!param) {
     console.warn(
@@ -69,7 +87,8 @@ const unselect = createUICallback({
   },
 });
 const requestSelect = (e, getSelectParam) => {
-  const selectTarget = getActionTarget(e, "select");
+  const selectTarget =
+    getActionTarget(e) || getParentControl(e) || e.currentTarget;
   if (!selectTarget) {
     return false;
   }
@@ -87,10 +106,8 @@ const requestSelect = (e, getSelectParam) => {
   });
 };
 const requestUnselect = (e, getUnselectParam) => {
-  const selectTarget = getActionTarget(e, "select");
-  if (!selectTarget) {
-    return false;
-  }
+  const unselectTarget =
+    getActionTarget(e) || getParentControl(e) || e.currentTarget;
   const param = getUnselectParam();
   if (!param) {
     console.warn(
@@ -99,7 +116,7 @@ const requestUnselect = (e, getUnselectParam) => {
     );
     return false;
   }
-  return dispatchCustomEvent(selectTarget, "navi_request_unselect", {
+  return dispatchCustomEvent(unselectTarget, "navi_request_unselect", {
     event: e,
     id: param,
   });
@@ -120,13 +137,12 @@ const update = createUICallback({
   },
 });
 const requestUpdate = (event, value, { actionTarget, isClear } = {}) => {
-  if (!actionTarget) {
-    actionTarget = getActionTarget(event);
-  }
-  if (!actionTarget) {
-    return false;
-  }
-  return dispatchRequestSetUIState(actionTarget, value, { event, isClear });
+  const updateTarget =
+    actionTarget ||
+    getActionTarget(event) ||
+    getParentControl(event) ||
+    event.currentTarget;
+  return dispatchRequestSetUIState(updateTarget, value, { event, isClear });
 };
 
 /**
@@ -141,15 +157,15 @@ const requestUpdate = (event, value, { actionTarget, isClear } = {}) => {
 const send = createUICallback({
   name: "send",
   event: (e) => {
-    const expandableEl = e.currentTarget.closest("[aria-expanded]");
-    if (expandableEl) {
+    const expandableTarget = getClosestExpandable(e);
+    if (expandableTarget) {
       return requestClose(e);
     }
     return requestClosestAction(e);
   },
   action: (value, { event }) => {
-    const expandableEl = event.currentTarget.closest("[aria-expanded]");
-    if (expandableEl) {
+    const expandableTarget = getClosestExpandable(event);
+    if (expandableTarget) {
       if (value !== undefined) {
         requestUpdate(event, value);
       }
@@ -228,6 +244,15 @@ const clear = createUICallback({
     return true;
   },
 });
+const open = createUICallback({
+  name: "open",
+  event: (event, { actionTarget } = {}) => {
+    return requestOpen(event, { actionTarget });
+  },
+  action: (value, { event, actionTarget }) => {
+    return requestOpen(event, { actionTarget });
+  },
+});
 /**
  * Closes the nearest expandable ancestor (the element with `[aria-expanded]`).
  * When used on a button inside a picker popup, closing also triggers the
@@ -254,53 +279,36 @@ const close = createUICallback({
  */
 const cancel = createUICallback({
   name: "cancel",
-  event: (event) => {
-    return requestClose(event, { isCancel: true });
+  event: (event, { actionTarget } = {}) => {
+    return requestClose(event, { actionTarget });
   },
-  action: (_, { event }) => {
-    return requestClose(event, { isCancel: true });
+  action: (_, { event, actionTarget }) => {
+    return requestClose(event, { actionTarget });
   },
 });
+const requestOpen = (event, { actionTarget }) => {
+  const openTarget =
+    actionTarget ||
+    getActionTarget(event) ||
+    getClosestExpandable(event) ||
+    event.currentTarget;
+
+  return dispatchCustomEvent(openTarget, "navi_request_open", {
+    event,
+  });
+};
 const requestClose = (event, { isCancel = false } = {}) => {
-  const currentTarget = event.currentTarget;
-  const expandableEl = currentTarget.closest("[aria-expanded]");
-  if (!expandableEl) {
-    console.warn(
-      "close action triggered but no element with [aria-expanded] found in event path",
-      event,
-    );
-    return false;
-  }
-  return dispatchCustomEvent(expandableEl, "navi_request_close", {
+  const closeTarget =
+    getActionTarget(event) ||
+    getClosestExpandable(event) ||
+    event.currentTarget;
+
+  return dispatchCustomEvent(closeTarget, "navi_request_close", {
     event,
     isCancel,
   });
 };
 
-const getActionTarget = (e, actionName) => {
-  const currentTarget = e.currentTarget;
-  const actionTargetAttribute = currentTarget.getAttribute("action-target");
-  if (actionTargetAttribute) {
-    const actionTarget = document.getElementById(actionTargetAttribute);
-    if (!actionTarget) {
-      console.warn(
-        `action-target="${actionTargetAttribute}" specified but no element with that id found in the document`,
-        e,
-      );
-      return null;
-    }
-    return actionTarget;
-  }
-  const parentControl = getParentControl(currentTarget);
-  if (!parentControl) {
-    console.warn(
-      `${actionName} triggered but no element with [navi-control] found in event path`,
-      e,
-    );
-    return null;
-  }
-  return parentControl;
-};
 const getActionParam = (e) => {
   const currentTarget = e.currentTarget;
   const actionParamAttribute = currentTarget.getAttribute("action-param");
@@ -318,6 +326,7 @@ const STRING_ACTIONS = {
 
   send,
 
+  open,
   close,
   clear,
   cancel,
