@@ -75,12 +75,8 @@ const css = /* css */ `
         var(--border-color) 45%,
         transparent
       );
-      --background-color-readonly: var(--background-color);
-      --color-readonly: color-mix(
-        in srgb,
-        var(--picker-border-color) 45%,
-        transparent
-      );
+      --background-color-readonly: var(--background-color-hover);
+      --color-readonly: color-mix(in srgb, var(--color) 65%, transparent);
       /* Disabled */
       --border-color-disabled: var(--border-color-readonly);
       --background-color-disabled: color-mix(
