@@ -148,6 +148,7 @@ const css = /* css */ `
       flex-grow: 1;
       color: inherit;
       font-size: inherit;
+      text-align: inherit;
       background: none;
       border: none;
       border-radius: inherit;
@@ -308,7 +309,15 @@ const InputHeadlessResolver = (props) => {
 const InputTextualHeadless = (props) => {
   const [inputProps, remainingProps] = useInputTextualProps(props);
 
-  return <RealInput {...inputProps} {...remainingProps} />;
+  return (
+    <RealInput
+      navi-visually-hidden=""
+      navi-focus-delegate=""
+      aria-hidden="true"
+      {...inputProps}
+      {...remainingProps}
+    />
+  );
 };
 const useInputTextualProps = (props) => {
   return useControlProps(props, {
@@ -357,6 +366,7 @@ const InputTextualUI = (props) => {
   return (
     <Box
       as="span"
+      inline
       flex
       baseClassName="navi_input"
       {...remainingProps}
