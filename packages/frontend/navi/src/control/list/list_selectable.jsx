@@ -487,14 +487,14 @@ const ListItemSelectable = (props) => {
   inputRef.nullCanHappen = true; // virtualization
   const [checkableProps, remainingProps] = useCheckableProps({
     "readOnlyMessage": naviI18n(`constraint.readonly.option`, props),
+    "command": "--navi-send",
+    "navi-command-target": rest.command ? undefined : "parent-control",
     ...rest,
     "ref": inputRef,
     "id": inputId,
     "type": inputType,
     "defaultChecked": defaultSelected,
     "checked": selected,
-    "command": "--navi-send",
-    "navi-command-target": "parent-control",
   });
   const { checked, value, basePseudoState, children } = checkableProps;
   const readOnly = basePseudoState[":read-only"];
