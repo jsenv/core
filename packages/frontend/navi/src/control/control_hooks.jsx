@@ -217,6 +217,15 @@ export const useControlProps = (
       const value = readControlValue(ref.current);
       uiStateController.setUIState(value, e);
     };
+    // For now it's a duplicate of updateUIState
+    // but we might have different path later one to trigger command
+    // without going through this path
+    // it's ok as updating ui state will do exactly what it needs even
+    // if it's only to dispatch navi command in the end
+    const triggerCommand = (e) => {
+      const value = readControlValue(ref.current);
+      uiStateController.setUIState(value, e);
+    };
 
     const transferFocusToTarget = (pointerEvent) => {
       const naviProxyTarget =
@@ -368,13 +377,24 @@ export const useControlProps = (
         clickInteraction = {
           name: "click",
           callback: asBrowserAction,
+          // radio do trigger "command" when we click on them
+          // even if they are checked
+          effect: (e) => {
+            const checkable = e.currentTarget;
+            if (checkable.type === "radio" && checkable.checked) {
+              triggerCommand(e);
+            }
+          },
         };
         inputInteraction = {
           name: "input",
           callback: asAction,
         };
         naviChangeInteraction = undefined;
-        enterEffect = (e) => e.currentTarget.click();
+        enterEffect = (e) => {
+          const checkable = e.currentTarget;
+          checkable.click();
+        };
         if (props.type === "radio") {
           spaceEffect = (e) => {
             const radio = e.currentTarget;

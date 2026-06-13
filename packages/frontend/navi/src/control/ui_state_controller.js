@@ -337,7 +337,8 @@ export const useUIStateController = (
         );
         if (
           controlType === "input" &&
-          uiStateController.props.type === "radio"
+          uiStateController.props.type === "radio" &&
+          !e.detail.internalBehavior
         ) {
           triggerCommand();
         }
