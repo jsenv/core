@@ -715,14 +715,14 @@ export const useUIGroupStateController = (
         `${controlType}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> updates from ${JSON.stringify(currentUIState)} to ${JSON.stringify(newUIState)}`,
       );
       publishUIState(newUIState);
-      uiActionRef.current?.(newUIState, e);
-      if (command) {
-        const el = ref.current;
-        if (el) {
-          dispatchNaviCommand(el, command, e);
-        }
-      }
       if (notifyExternal) {
+        uiActionRef.current?.(newUIState, e);
+        if (command) {
+          const el = ref.current;
+          if (el) {
+            dispatchNaviCommand(el, command, e);
+          }
+        }
         notifyParentAboutChildUIStateChange(e);
       }
     },
