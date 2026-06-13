@@ -82,8 +82,8 @@
           >
             <Box flex="y" spacing="s" alignX="start">
               <Box border="1px dotted #aaa" width="fit-content">
-                <InputGroup flex="y" spacing="xxs" width="fit-content">
-                  <Box flex spacing="xxs" alignY="center">
+                <InputGroup flex spacing="xxs" width="fit-content">
+                  <Box flex="y">
                     <Input
                       type="navi_hour"
                       name="hours"
@@ -102,6 +102,9 @@
                     >
                       <Input.UI.UnitSlot>:</Input.UI.UnitSlot>
                     </Input>
+                    {unitHour}
+                  </Box>
+                  <Box flex="y">
                     <Input
                       type="navi_minute"
                       name="minutes"
@@ -118,14 +121,8 @@
                         onMinutes(v);
                       }}
                     />
+                    {unitMinute}
                   </Box>
-                  {unitHour || unitMinute ? (
-                    <Box flex spacing="xxs">
-                      {unitHour ? <Box expandX>{unitHour}</Box> : null}
-                      <span style={{ visibility: "hidden" }}>:</span>
-                      {unitMinute ? <Box expandX>{unitMinute}</Box> : null}
-                    </Box>
-                  ) : null}
                 </InputGroup>
               </Box>
               <Button type="submit">Submit</Button>
@@ -159,7 +156,16 @@
               onMinutes={(v) => {
                 minutesSignal.value = v;
               }}
-              unitHour={<Unit unit="hour" plural color="secondary" />}
+              unitHour={
+                <Unit
+                  unit="hour"
+                  plural
+                  color="secondary"
+                  // We need this because ":" is inside the first input so
+                  // in case unit pushes to the right it should account for the space of ":
+                  marginRight="1ch"
+                />
+              }
               unitMinute={<Unit unit="minute" plural color="secondary" />}
             />
           </div>
@@ -190,7 +196,11 @@
               onMinutes={(v) => {
                 minutesSignal.value = v;
               }}
-              unitHour={<Text size="xs">This is way longer</Text>}
+              unitHour={
+                <Text size="xs" marginRight="1ch">
+                  This is way longer
+                </Text>
+              }
               unitMinute={<Unit unit="minute" plural size="xs" />}
             />
           </div>
