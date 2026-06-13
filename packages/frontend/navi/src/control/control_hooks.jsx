@@ -840,13 +840,12 @@ const useInteractiveProps = (
           // contributes its name+value to form data.
           const { requester } = e.detail;
           if (
-            requester &&
+            uiStateController.controlType === "form" &&
             requester.name &&
             requester !== e.currentTarget &&
             (requester.type === "submit" ||
               requester.matches?.('[command="--navi-send"]')) &&
-            uiState &&
-            typeof uiState === "object"
+            uiState
           ) {
             const requesterUIState = getUIStateFromElement(requester);
             const requesterValue =
