@@ -842,15 +842,17 @@ export const installCustomConstraintValidation = (
       return undefined;
     });
 
-    const oninput = (e) => {
-      if (waitPointerRelease) {
-        return;
-      }
-      resetOnInteraction(e);
-    };
-    element.addEventListener("input", oninput);
-    addTeardown(() => {
-      element.removeEventListener("input", oninput);
+    onCalloutOpen(() => {
+      const oninput = (e) => {
+        if (waitPointerRelease) {
+          return;
+        }
+        resetOnInteraction(e);
+      };
+      element.addEventListener("input", oninput);
+      return () => {
+        element.removeEventListener("input", oninput);
+      };
     });
   }
 
