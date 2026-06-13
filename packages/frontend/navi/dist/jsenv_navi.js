@@ -6676,6 +6676,24 @@ const TYPO_PROPS = {
   uppercase: applyToCssPropWhenTruthy("textTransform", "uppercase", "none"),
   lowercase: applyToCssPropWhenTruthy("textTransform", "lowercase", "none"),
   letterSpacing: PASS_THROUGH,
+  maxLines: (value) => {
+    if (!value) {
+      return null;
+    }
+    if (value === 1 || value === "1") {
+      return {
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        overflowWrap: "normal",
+      };
+    }
+    return {
+      "overflow": "hidden",
+      "display": "-webkit-box",
+      "-webkit-box-orient": "vertical",
+      "-webkit-line-clamp": value,
+    };
+  },
   overflowEllipsis: (value) => {
     if (!value) {
       return null;
@@ -7606,9 +7624,19 @@ const definePseudoClass = (pseudoClass, definition) => {
   PSEUDO_CLASSES[pseudoClass] = definition;
 };
 
+// On touch devices (hover: none), browsers synthesize mouseenter/mouseleave
+// from touch events but never fire mouseleave when the finger lifts, leaving
+// el.matches(":hover") stuck at true. This causes hover styles (e.g. input
+// background highlight) to remain visible long after the user has stopped
+// touching the element. Checking (hover: hover) lets us skip hover tracking
+// entirely on touch-only devices where persistent hover makes no sense.
+const hoverSupported = window.matchMedia("(hover: hover)").matches;
 definePseudoClass(":hover", {
   attribute: "data-hover",
   setup: (el, callback) => {
+    if (!hoverSupported) {
+      return () => {};
+    }
     const recheckProxy = (e) => {
       const proxy = findControlProxy(el);
       if (proxy) {
@@ -7672,6 +7700,9 @@ definePseudoClass(":hover", {
     };
   },
   test: (el) => {
+    if (!hoverSupported) {
+      return false;
+    }
     if (el.matches(":hover")) {
       return true;
     }
@@ -12934,15 +12965,13 @@ const extractSearchParams = (urlObj, queryConnectionMap) => {
         decodedValue === "true" || decodedValue === "1" || decodedValue === "";
     } else if (signalType === "date") {
       const decodedValue = decodeURIComponent(rawValue);
-      // Accept both "YYYY-MM-DD" and full ISO string, always parse as UTC date
-      const datePart = decodedValue.slice(0, 10);
-      const [year, month, day] = datePart.split("-").map(Number);
-      const d = new Date(Date.UTC(year, month - 1, day));
-      params[key] = isNaN(d.getTime()) ? decodedValue : d;
+      // Keep as "YYYY-MM-DD" string — canonical date form, no timezone conversion
+      params[key] = decodedValue.slice(0, 10);
     } else if (signalType === "datetime") {
       const decodedValue = decodeURIComponent(rawValue);
+      // Normalize to ISO string — canonical datetime form
       const d = new Date(decodedValue);
-      params[key] = isNaN(d.getTime()) ? decodedValue : d;
+      params[key] = isNaN(d.getTime()) ? decodedValue : d.toISOString();
     } else {
       params[key] = decodeURIComponent(rawValue);
     }
@@ -16709,6 +16738,7 @@ const css$O = /* css */`
     margin: 0;
     padding: 0;
     color: revert; /* Do no inherit element color, callout is inside the element it should use document color though */
+    font-size: initial; /* Callout fells disconnected from the element, font size should be predictible and stable */
     background: transparent;
     border: none;
     opacity: 0;
@@ -19212,12 +19242,20 @@ CONSTRAINT_ATTRIBUTE_SET.add("data-single-space");
  * formatDay(tomorrow, "fr")   // "mardi 12 mai (demain)"
  * formatDay(nextWeek, "fr")   // "lundi 18 mai"
  */
-const formatDay = (date, locale, { long = false } = {}) => {
-  return new Intl.DateTimeFormat(locale, {
+const formatDay = (date, locale, { long = false, numeric = false } = {}) => {
+  if (numeric) {
+    return new Intl.DateTimeFormat(locale, {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    }).format(date);
+  }
+  const result = new Intl.DateTimeFormat(locale, {
     weekday: long ? "long" : "short",
     day: "numeric",
     month: long ? "long" : "short",
   }).format(date);
+  return result;
 };
 
 /**
@@ -19793,12 +19831,14 @@ const PATTERN_CONSTRAINT = {
     if (regex.test(value)) {
       return null;
     }
-    let message = naviI18n(`constraint.pattern.${fieldTypeSuffix(field)}`);
-    const title = field.title;
-    if (title) {
-      message += `<br />${title}`;
+    const type = field.type;
+    if (type === "email") {
+      return naviI18n("constraint.pattern.email");
     }
-    return message;
+    if (type === "password") {
+      return naviI18n("constraint.pattern.password");
+    }
+    return naviI18n("constraint.pattern.default");
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("pattern");
@@ -20144,20 +20184,20 @@ const STEP_CONSTRAINT = {
         const before = formatMsToTime(beforeMs, showSeconds);
         const after = formatMsToTime(afterMs, showSeconds);
         if (stepSeconds % 3600 === 0) {
-          return naviI18n("constraint.step.time.hours", {
+          return naviI18n("constraint.step.time.hour", {
             step: String(stepSeconds / 3600),
             before,
             after,
           });
         }
         if (stepSeconds % 60 === 0) {
-          return naviI18n("constraint.step.time.minutes", {
+          return naviI18n("constraint.step.time.minute", {
             step: String(stepSeconds / 60),
             before,
             after,
           });
         }
-        return naviI18n("constraint.step.time.seconds", {
+        return naviI18n("constraint.step.time.second", {
           step: stepString,
           before,
           after,
@@ -20234,9 +20274,16 @@ const formatDateIso = (iso, inputType) => {
     const date = new Date(`${iso}-01T00:00:00`);
     return formatMonth(date, locale);
   }
-  // date, week, datetime-local: parse and use formatDay
-  const dateStr = iso.slice(0, 10);
-  const date = new Date(`${dateStr}T00:00:00`);
+  // date, week, datetime-local: extract YYYY-MM-DD part and parse as local date
+  const isoMatch = /^(\d{4}-\d{2}-\d{2})/.exec(iso);
+  if (!isoMatch) {
+    return iso;
+  }
+  const datePart = isoMatch[1];
+  const date = new Date(`${datePart}T00:00:00`);
+  if (isNaN(date.getTime())) {
+    return iso;
+  }
   return formatDay(date, locale, { long: true });
 };
 
@@ -20327,9 +20374,10 @@ const onRequestInteraction = (
       }
     }
     if (!skipConstraints) {
-      checkAndReportConstraints(requestStatus, INTERACTION_CONSTRAINTS, {
+      checkAndReportConstraints(requestStatus, {
         event: requestInteractionCustomEvent,
         requester: event.target,
+        fromRequestInteraction: true,
         debug: debugInteraction,
       });
     }
@@ -20417,11 +20465,11 @@ const onRequestAction = (
     checkEvent(requestStatus, event);
   }
   if (requestStatus.canProceed) {
-    checkAndReportConstraints(requestStatus, DEFAULT_CONSTRAINT_SET, {
+    checkAndReportConstraints(requestStatus, {
       event: requestActionCustomEvent,
       requester,
-      debug: debugAction,
       fromRequestAction: true,
+      debug: debugAction,
     });
   }
   if (requestStatus.canProceed) {
@@ -20496,8 +20544,7 @@ const checkEvent = (requestStatus, event) => {
 
 const checkAndReportConstraints = (
   requestStatus,
-  constraints,
-  { event, requester, debug, fromRequestAction } = {},
+  { event, requester, fromRequestInteraction, fromRequestAction, debug } = {},
 ) => {
   const onInvalid = (failedValidationInterface) => {
     Object.assign(requestStatus, {
@@ -20526,9 +20573,9 @@ const checkAndReportConstraints = (
   }
   const isValid = validationInterface.checkValidity({
     event,
-    constraints,
-    fromRequestAction,
     requester,
+    fromRequestInteraction,
+    fromRequestAction,
   });
   if (!isValid) {
     // checkValidity delegates to the proxy target's VI when the element is a proxy.
@@ -20703,9 +20750,9 @@ const installCustomConstraintValidation = (
   addTeardown(resetValidity);
 
   const checkValidity = ({
-    constraints,
     event,
     requester = element,
+    fromRequestInteraction,
     fromRequestAction,
     skipReadonly,
   } = {}) => {
@@ -20717,8 +20764,8 @@ const installCustomConstraintValidation = (
         targetVI = installCustomConstraintValidation(proxyTarget);
       }
       return targetVI.checkValidity({
-        constraints,
         event,
+        fromRequestInteraction,
         fromRequestAction,
         requester,
         skipReadonly,
@@ -20735,9 +20782,9 @@ const installCustomConstraintValidation = (
         continue;
       }
       const managedIsValid = managedVI.checkValidity({
-        constraints,
         event,
         requester,
+        fromRequestInteraction,
         fromRequestAction,
         skipReadonly:
           managedControl.tagName === "BUTTON" && managedControl !== requester,
@@ -20748,14 +20795,31 @@ const installCustomConstraintValidation = (
       }
     }
 
+    // When checking a subset of constraints (e.g. INTERACTION_CONSTRAINTS), we must NOT
+    // reset the full validity state — other constraints (like PATTERN) may still be failing
+    // and we must preserve their state (failedConstraintInfo, callout, etc.).
+    // We only do a scoped check and return its result without touching global state.
+    if (fromRequestInteraction) {
+      for (const constraint of INTERACTION_CONSTRAINTS) {
+        const checkResult = constraint.check(element, {
+          fromRequestAction,
+          skipReadonly,
+          skipRequired: element === requester,
+          registerChange: () => {},
+        });
+        if (checkResult) {
+          return false;
+        }
+      }
+      return true;
+    }
     let newConstraintValidityState = { valid: true };
-    // When constraints are explicitly provided (e.g. pointer interaction), use only those.
-    // Otherwise use default set merged with dynamic constraints.
-    const effectiveConstraints = constraints
-      ? constraints
-      : new Set([...DEFAULT_CONSTRAINT_SET, ...dynamicConstraintSet]);
+    const constraintSet = new Set([
+      ...DEFAULT_CONSTRAINT_SET,
+      ...dynamicConstraintSet,
+    ]);
     resetValidity({ fromRequestAction });
-    for (const constraint of effectiveConstraints) {
+    for (const constraint of constraintSet) {
       const fieldForConstraint = element;
       const constraintCleanupSet = new Set();
       const registerChange = (register) => {
@@ -20829,9 +20893,11 @@ const installCustomConstraintValidation = (
       if (!hasTitleAttribute) {
         element.removeAttribute("title");
       }
+      const checkValidityCallEvent =
+        event || new CustomEvent("checkValidity called with no event");
       closeElementValidationMessage(
-        event || new CustomEvent("checkValidity called with no event"),
-        "becomes_valid",
+        checkValidityCallEvent,
+        `now_valid (after ${checkValidityCallEvent.type})`,
       );
     }
 
@@ -20847,7 +20913,7 @@ const installCustomConstraintValidation = (
   const [notifyCalloutOpen, onCalloutOpen] = createPubSub();
   const reportValidity = ({ event, requester, debug, skipFocus } = {}) => {
     if (!failedConstraintInfo) {
-      closeElementValidationMessage(event, "becomes_valid");
+      closeElementValidationMessage(event, "is_valid");
       return;
     }
     if (failedConstraintInfo.silent) {
@@ -20995,6 +21061,7 @@ const installCustomConstraintValidation = (
   const resetOnInteraction = (e) => {
     customMessageMap.clear();
     closeElementValidationMessage(e, e.type);
+    console.log("resetOnInteraction", e.type, e);
     checkValidity({ event: e });
   };
 
@@ -21003,35 +21070,57 @@ const installCustomConstraintValidation = (
       break close_and_check_on_input; // range inputs have a special behavior where "input" is triggered on pointer release, so we don't need to wait for it
     }
 
-    let waitPointerRelease;
     onCalloutOpen((openingEvent) => {
-      if (openingEvent && findEvent(openingEvent, "mousedown")) {
-        waitPointerRelease = true;
+      const openedByMousedown = findEvent(openingEvent, "mousedown");
+      const [cleanup, addCleanup] = createPubSub();
+
+      const setupResetOnInput = () => {
+        const oninput = (e) => {
+          resetOnInteraction(e);
+        };
+        element.addEventListener("input", oninput, { once: true });
+        addCleanup(() => {
+          element.removeEventListener("input", oninput, { once: true });
+        });
+      };
+
+      if (openedByMousedown) {
         const onMouseUp = () => {
-          setTimeout(() => {
-            waitPointerRelease = false;
-          });
+          const timeout = setTimeout(setupResetOnInput);
+          addCleanup(() => clearTimeout(timeout));
         };
         document.addEventListener("mouseup", onMouseUp, {
           once: true,
           capture: true,
         });
-        return () => {
-          document.removeEventListener("mouseup", onMouseUp, true);
-        };
+        addCleanup(() => {
+          document.removeEventListener("mouseup", onMouseUp, {
+            once: true,
+            capture: true,
+          });
+        });
+        return cleanup;
       }
-      return undefined;
-    });
 
-    const oninput = (e) => {
-      if (waitPointerRelease) {
-        return;
-      }
-      resetOnInteraction(e);
-    };
-    element.addEventListener("input", oninput);
-    addTeardown(() => {
-      element.removeEventListener("input", oninput);
+      // "change" can happen after an input looses focus
+      // and if loose focus as the result of typing (navi_input_full going to next input)
+      // the browser will fire an input event shortly after
+      // causing the callout to immediatly close
+      // an other way to express this could be that an "input" event should be allowed
+      // to close callout only if at least event loop or 1ms occurs
+      let closed = false;
+      addCleanup(() => {
+        closed = true;
+      });
+      queueMicrotask(() => {
+        if (closed) {
+          console.log("closed before");
+          return;
+        }
+        console.log("listen input");
+        setupResetOnInput();
+      });
+      return cleanup;
     });
   }
 
@@ -23160,11 +23249,13 @@ const OverflowPinnedContext = createContext(null);
  *
  * @param {object} props
  *
- * @param {boolean} [props.overflowEllipsis]
- *   Truncates overflowing text with an ellipsis.
+ * @param {number} [props.maxLines]
+ *   Truncates overflowing text with an ellipsis after at most N lines.
+ *   `maxLines={1}` truncates after one line (single-line ellipsis).
+ *   `maxLines={n}` (n > 1) truncates after n lines (multi-line clamp).
  *
  * @param {boolean} [props.overflowPinned]
- *   Must be used inside a `<Text overflowEllipsis>` parent.
+ *   Must be used inside a `<Text maxLines>` parent.
  *   Pins this element outside the truncated text flow (e.g. a badge or icon).
  *
  * @param {string} [props.spacing]
@@ -23226,7 +23317,7 @@ const TextDispatcher = props => {
       ...props
     });
   }
-  if (props.overflowEllipsis) {
+  if (props.maxLines === 1 || props.maxLines === "1") {
     return jsx(TextOverflow, {
       ...props
     });
@@ -23405,6 +23496,7 @@ const TextSkeleton = ({
 const TextOverflow = ({
   noWrap,
   spacing,
+  capitalize,
   children,
   ...rest
 }) => {
@@ -23420,7 +23512,7 @@ const TextOverflow = ({
     preLine: rest.as === "p" ? true : undefined,
     noWrap: noWrap,
     ...rest,
-    overflowEllipsis: undefined,
+    maxLines: undefined,
     "data-text-overflow": "",
     spacing: "pre",
     children: jsxs("span", {
@@ -23430,6 +23522,7 @@ const TextOverflow = ({
         children: jsx(Text, {
           className: "navi_text_overflow_text",
           spacing: spacing,
+          capitalize: capitalize,
           children: children
         })
       }), overflowPinned && overflowPinned.position === "end" ? overflowPinned.vnode : null]
@@ -23447,7 +23540,7 @@ const TextOverflowPinned = props => {
     overflowPinned: undefined
   });
   if (!setOverflowPinned) {
-    console.warn("<Text overflowPinned> declared outside a <Text overflowEllipsis>");
+    console.warn(`<Text overflowPinned> declared outside a <Text maxLines="1">`);
     return text;
   }
   if (overflowPinned) {
@@ -24259,11 +24352,11 @@ const CONTROL_ATTRIBUTE_SET = new Set([
   "autoComplete",
   "spellcheck",
   "autoCorrect",
+  "aria-controls",
+  "tabIndex",
 
   "navi-input-type",
   "navi-control-proxy-for",
-  "aria-controls",
-  "tabIndex",
 
   "data-callout-arrow-x",
   "data-callout-point-to-border-box",
@@ -24272,7 +24365,7 @@ const CONTROL_ATTRIBUTE_SET = new Set([
   "data-callout-position",
   "data-callout-position-fixed",
 
-  "data-testid",
+  "data-testid", // playwright, cypress
 ]);
 // prop concerning control but that won't end up in the DOM if not inside CONTROL_ATTRIBUTE_SET
 const CONTROL_PROP_SET = new Set([
@@ -25736,7 +25829,13 @@ const ControlChildrenWrapper = ({
     value: undefined,
     children: jsx(ControlToInterfaceContext.Provider, {
       value: undefined,
-      children: children
+      children: jsx(RequiredContext.Provider, {
+        value: undefined,
+        children: jsx(ControlNameContext.Provider, {
+          value: undefined,
+          children: children
+        })
+      })
     })
   })
 });
@@ -27551,7 +27650,7 @@ const LinkPlain = props => {
     endIcon,
     revealOnInteraction = Boolean(titleLevel),
     hrefFallback = !anchor,
-    overflowEllipsis,
+    maxLines,
     children,
     constraints,
     ...remainingProps
@@ -27641,7 +27740,7 @@ const LinkPlain = props => {
       fontWeight: "bold"
     } : undefined,
     preventSpaceUnderlines: true,
-    overflowEllipsis: overflowEllipsis
+    maxLines: maxLines
     // Visual
     ,
 
@@ -27694,7 +27793,7 @@ const LinkPlain = props => {
         color: "var(--link-loader-color)"
       }), currentIndicatorEl]
     }),
-    children: [startIconEl, innerChildren, endIconEl ? overflowEllipsis ? jsx(Text, {
+    children: [startIconEl, innerChildren, endIconEl ? maxLines === 1 || maxLines === "1" ? jsx(Text, {
       overflowPinned: true,
       children: endIconEl
     }) : endIconEl : null]
@@ -28908,6 +29007,316 @@ const CheckboxPseudoElements = ["::-navi-loader", "::-navi-checkmark"];
 
 installImportMetaCssBuild(import.meta);const css$z = /* css */`
   @layer navi {
+    [data-navi-field] {
+      .navi_checkbox {
+        --margin: 0;
+      }
+      .navi_radio {
+        --margin: 0;
+      }
+    }
+
+    label[data-navi-field] {
+      &[data-interactive] {
+        cursor: pointer;
+        user-select: none;
+      }
+      &[data-readonly],
+      &[data-disabled] {
+        color: rgba(0, 0, 0, 0.5);
+        cursor: default;
+      }
+    }
+
+    [data-navi-field-container] {
+      --field-spacing: var(--navi-xs);
+
+      > * + .navi_label {
+        padding-left: var(--field-spacing);
+      }
+      > .navi_label:first-child {
+        padding-right: var(--field-spacing);
+      }
+      &[data-vertical] > .navi_label:first-child {
+        padding-bottom: var(--field-spacing);
+      }
+
+      &[data-interactive] {
+        .navi_label {
+          cursor: pointer;
+          /* When label is interactive ability to select text oftens conflicts with other click interactions */
+          user-select: none;
+        }
+      }
+      &[data-readonly],
+      &[data-disabled] {
+        .navi_label {
+          color: rgba(0, 0, 0, 0.5);
+          cursor: default;
+        }
+      }
+    }
+  }
+`;
+
+/**
+ * Field — a semantic wrapper that connects a label to a form control.
+ *
+ * It generates a stable `fieldId` (or accepts an explicit `id`) that is
+ * automatically forwarded to the `Label` inside the field as `htmlFor` and to
+ * any interactive control (Picker, Input, …) as its `id`, so clicking the
+ * label focuses the control without requiring manual wiring.
+ *
+ * It also tracks the readOnly / disabled / interactive state reported by its
+ * child control and reflects it on the `Label` (dimmed color, cursor change).
+ *
+ * Props:
+ *   id        — optional explicit id used as the field id instead of the auto-generated one
+ *   vertical  — shorthand for flex="y" + alignX="start"
+ *   children  — any JSX; should contain a `Label` and a form control
+ *   ...rest   — forwarded to the wrapping `<div>` (className, style, flex, spacing, …)
+ *
+ * @example
+ * <Field flex spacing="s">
+ *   Date de début
+ *   <Input name="start_date" required />
+ * </Field>
+ */
+const Field = props => {
+  import.meta.css = [css$z, "@jsenv/navi/src/control/field.jsx"];
+  const refDefault = useRef();
+  props.ref = props.ref || refDefault;
+  const {
+    as,
+    vertical
+  } = props;
+  if (as === undefined && !vertical) {
+    props.as = "label";
+  }
+  if (props.as === "label") {
+    return jsx(FieldAsLabel, {
+      ...props
+    });
+  }
+  return jsx(FieldAsContainer, {
+    ...props
+  });
+};
+const FieldAsLabel = props => {
+  return jsx(FieldUI, {
+    ...props
+  });
+};
+const FieldAsContainer = props => {
+  const idDefault = useId();
+  const fieldId = `field_${idDefault}`;
+  props.fieldId = props.fieldId || props.id ? `${props.id}_field` : fieldId;
+  return jsx(FieldUI, {
+    ...props,
+    "data-navi-field-container": "",
+    styleCSSVars: FieldCSSVars
+  });
+};
+const FieldCSSVars = {
+  spacing: "--field-spacing"
+};
+const FieldUI = props => {
+  import.meta.css = [css$z, "@jsenv/navi/src/control/field.jsx"];
+  const {
+    vertical
+  } = props;
+  const {
+    fieldId,
+    name,
+    disabled,
+    readOnly,
+    required,
+    loading,
+    interactive,
+    ...rest
+  } = props;
+  const [messageProps, remainingProps] = extractMessageAndRemainingProps(rest);
+  const messagePropsRef = useRef();
+  messagePropsRef.current = messageProps;
+  const [disabledByChild, setDisabledByChild] = useState(false);
+  const [readOnlyFromChild, setReadOnlyFromChild] = useState(false);
+  const [interactiveFromChild, setInteractiveFromChild] = useState(false);
+  const parentControlName = useContext(ControlNameContext);
+  const parentControlDisabled = useContext(DisabledContext);
+  const parentControlReadOnly = useContext(ReadOnlyContext);
+  const parentControlRequired = useContext(RequiredContext);
+  const parentControlLoading = useContext(LoadingContext);
+  const nameResolved = name || parentControlName;
+  const disabledResolved = disabled || parentControlDisabled;
+  const readOnlyResolved = readOnly || parentControlReadOnly;
+  const requiredResolved = required || parentControlRequired;
+  const loadingResolved = loading || parentControlLoading;
+  const controlToInterfaceContextValue = useMemo(() => ({
+    id: fieldId,
+    setReadOnly: setReadOnlyFromChild,
+    setDisabled: setDisabledByChild,
+    setInteractive: setInteractiveFromChild
+  }), [fieldId]);
+  let childrenWithContext;
+  if (props.children === undefined) ; else {
+    childrenWithContext = jsx(MessagePropsRefContext.Provider, {
+      value: messagePropsRef,
+      children: jsx(ControlToInterfaceContext.Provider, {
+        value: controlToInterfaceContextValue,
+        children: jsx(ControlNameContext.Provider, {
+          value: nameResolved,
+          children: jsx(DisabledContext.Provider, {
+            value: disabledResolved,
+            children: jsx(ReadOnlyContext.Provider, {
+              value: readOnlyResolved,
+              children: jsx(RequiredContext.Provider, {
+                value: requiredResolved,
+                children: jsx(LoadingContext.Provider, {
+                  value: loadingResolved,
+                  children: props.children
+                })
+              })
+            })
+          })
+        })
+      })
+    });
+  }
+
+  // a field inteface can make the field component
+  // disabled/readonly when that field interface is disabled/readonly
+  // this is the only bottom up communication there is
+  // (apart from action requested by child which cause ancestor action to execute)
+  const disabledOrByChild = disabledResolved || disabledByChild;
+  const readOnlyOrByChild = readOnlyResolved || readOnlyFromChild;
+  const interactiveOrByChild = interactive || interactiveFromChild;
+  const fieldProps = {
+    "data-navi-field": "",
+    "data-interactive": interactiveOrByChild ? "" : undefined,
+    ...remainingProps,
+    "children": childrenWithContext,
+    "pseudoClasses": FieldPseudoClasses,
+    "basePseudoState": {
+      ":disabled": disabledOrByChild,
+      ":read-only": readOnlyOrByChild,
+      ...remainingProps.basePseudoState
+    }
+  };
+  return jsx(Box, {
+    flex: vertical ? "y" : undefined,
+    alignX: vertical ? "start" : undefined,
+    "data-vertical": vertical ? "" : undefined,
+    ...fieldProps
+  });
+};
+const FieldPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
+const Label = props => {
+  const {
+    children,
+    htmlFor,
+    ...rest
+  } = props;
+  const controlToInterface = useContext(ControlToInterfaceContext);
+  const fieldId = controlToInterface?.id;
+  return jsx(Box, {
+    as: "label",
+    htmlFor: htmlFor || fieldId,
+    baseClassName: "navi_label",
+    pseudoClasses: LabelPseudoClasses,
+    ...rest,
+    children: children
+  });
+};
+const LabelPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
+
+const InputTextualContext = createContext(null);
+
+const InputLeftSlot = props => {
+  return jsx(InputSlot, {
+    ...props,
+    side: "left"
+  });
+};
+const InputRightSlot = props => {
+  return jsx(InputSlot, {
+    ...props,
+    side: "right"
+  });
+};
+const InputIconSlot = ({
+  children,
+  side = "right",
+  ...props
+}) => {
+  return jsx(InputSlot, {
+    side: side,
+    children: jsx(Icon, {
+      ...props,
+      children: children
+    })
+  });
+};
+const InputUnitSlot = ({
+  children,
+  side = "right",
+  ...props
+}) => {
+  return jsx(InputSlot, {
+    side: side,
+    marginLeft: "xxs",
+    noWrap: true,
+    ...props,
+    children: children
+  });
+};
+const InputSlot = ({
+  side,
+  onClick,
+  hideWhileEmpty,
+  ...props
+}) => {
+  const ctx = useContext(InputTextualContext);
+  const {
+    id,
+    readOnly,
+    disabled
+  } = ctx || {};
+  return jsx(Label, {
+    htmlFor: id,
+    className: "navi_input_slot",
+    disabled: disabled,
+    readOnly: readOnly,
+    "data-readonly": readOnly,
+    "data-disabled": disabled,
+    "data-left": side === "left" ? "" : undefined,
+    "data-right": side === "right" ? "" : undefined,
+    "data-hide-while-empty": hideWhileEmpty ? "" : undefined,
+    inline: true,
+    flex: true,
+    align: "center",
+    onMouseDown: e => {
+      // Only prevent focus from leaving when the input already has focus.
+      // If the input is not focused, let the mousedown proceed normally so
+      // the slot element (e.g. a clear button) can receive focus itself.
+      const inputEl = document.getElementById(id);
+      if (inputEl && inputEl === document.activeElement) {
+        e.preventDefault();
+      }
+    },
+    onClick: e => {
+      onClick?.(e);
+      const input = document.getElementById(id);
+      const allowed = dispatchRequestInteraction(input, e);
+      if (!allowed) {
+        e.preventDefault();
+      }
+    },
+    ...props
+  });
+};
+
+installImportMetaCssBuild(import.meta);const css$y = /* css */`
+  @layer navi {
     .navi_radio {
       --margin: 3px 3px 0 5px;
       --outline-offset: 1px;
@@ -29261,7 +29670,7 @@ const InputRadioHeadless = props => {
 };
 const APPEARANCE_SET = new Set(["icon", "button", "radio"]);
 const InputRadioFieldInterface = props => {
-  import.meta.css = [css$z, "@jsenv/navi/src/control/input/input_radio.jsx"];
+  import.meta.css = [css$y, "@jsenv/navi/src/control/input/input_radio.jsx"];
   const [radioProps, remainingProps] = useCheckableProps(props);
   const {
     icon,
@@ -29549,7 +29958,7 @@ const NAVI_TYPE_DEFAULTS = {
     type: "text",
     inputMode: "numeric",
     autoCorrect: "off",
-    spellcheck: "false",
+    spellcheck: false,
     autoComplete: "off",
   },
 };
@@ -29605,16 +30014,8 @@ const resolveInputProps = (props) => {
   }
 
   const currentType = props.type;
-  const currentTypeDefaults = NAVI_TYPE_DEFAULTS[currentType];
-  if (!currentTypeDefaults) {
-    return;
-  }
-  for (const key of Object.keys(currentTypeDefaults)) {
-    if (props[key] === undefined) {
-      props[key] = currentTypeDefaults[key];
-    }
-  }
-  // Apply formatters for the original navi type before remapping
+  // Apply min/max/step formatters before anything else — this must run even for
+  // standard HTML types (date, time, etc.) that have no NAVI_TYPE_DEFAULTS entry.
   const currentTypeMinMaxFormatter = MIN_MAX_FORMATTER_BY_TYPE[currentType];
   const currentTypeStepFormatter = STEP_FORMATTER_BY_TYPE[currentType];
   if (currentTypeMinMaxFormatter) {
@@ -29623,6 +30024,15 @@ const resolveInputProps = (props) => {
   }
   if (currentTypeStepFormatter) {
     props.step = currentTypeStepFormatter(props.step);
+  }
+  const currentTypeDefaults = NAVI_TYPE_DEFAULTS[currentType];
+  if (!currentTypeDefaults) {
+    return;
+  }
+  for (const key of Object.keys(currentTypeDefaults)) {
+    if (props[key] === undefined) {
+      props[key] = currentTypeDefaults[key];
+    }
   }
   const targetType = currentTypeDefaults.type;
   props.type = targetType;
@@ -29750,7 +30160,7 @@ const STEP_FORMATTER_BY_TYPE = {
   "datetime": parseStepToSeconds,
 };
 
-installImportMetaCssBuild(import.meta);const css$y = /* css */`
+installImportMetaCssBuild(import.meta);const css$x = /* css */`
   @layer navi {
     .navi_input_range {
       --border-radius: 6px;
@@ -30004,7 +30414,7 @@ const InputRange = props => {
   });
 };
 const InputRangeFieldInterface = props => {
-  import.meta.css = [css$y, "@jsenv/navi/src/control/input/input_range.jsx"];
+  import.meta.css = [css$x, "@jsenv/navi/src/control/input/input_range.jsx"];
   const {
     ref
   } = props;
@@ -30122,316 +30532,6 @@ const RangeStyleCSSVars = {
 const RangePseudoClasses = [":hover", ":active", ":-navi-pressed", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
 const RangePseudoElements = ["::-navi-loader"];
 
-installImportMetaCssBuild(import.meta);const css$x = /* css */`
-  @layer navi {
-    [data-navi-field] {
-      .navi_checkbox {
-        --margin: 0;
-      }
-      .navi_radio {
-        --margin: 0;
-      }
-    }
-
-    label[data-navi-field] {
-      &[data-interactive] {
-        cursor: pointer;
-        user-select: none;
-      }
-      &[data-readonly],
-      &[data-disabled] {
-        color: rgba(0, 0, 0, 0.5);
-        cursor: default;
-      }
-    }
-
-    [data-navi-field-container] {
-      --field-spacing: var(--navi-xs);
-
-      > * + .navi_label {
-        padding-left: var(--field-spacing);
-      }
-      > .navi_label:first-child {
-        padding-right: var(--field-spacing);
-      }
-      &[data-vertical] > .navi_label:first-child {
-        padding-bottom: var(--field-spacing);
-      }
-
-      &[data-interactive] {
-        .navi_label {
-          cursor: pointer;
-          /* When label is interactive ability to select text oftens conflicts with other click interactions */
-          user-select: none;
-        }
-      }
-      &[data-readonly],
-      &[data-disabled] {
-        .navi_label {
-          color: rgba(0, 0, 0, 0.5);
-          cursor: default;
-        }
-      }
-    }
-  }
-`;
-
-/**
- * Field — a semantic wrapper that connects a label to a form control.
- *
- * It generates a stable `fieldId` (or accepts an explicit `id`) that is
- * automatically forwarded to the `Label` inside the field as `htmlFor` and to
- * any interactive control (Picker, Input, …) as its `id`, so clicking the
- * label focuses the control without requiring manual wiring.
- *
- * It also tracks the readOnly / disabled / interactive state reported by its
- * child control and reflects it on the `Label` (dimmed color, cursor change).
- *
- * Props:
- *   id        — optional explicit id used as the field id instead of the auto-generated one
- *   vertical  — shorthand for flex="y" + alignX="start"
- *   children  — any JSX; should contain a `Label` and a form control
- *   ...rest   — forwarded to the wrapping `<div>` (className, style, flex, spacing, …)
- *
- * @example
- * <Field flex spacing="s">
- *   Date de début
- *   <Input name="start_date" required />
- * </Field>
- */
-const Field = props => {
-  import.meta.css = [css$x, "@jsenv/navi/src/control/field.jsx"];
-  const refDefault = useRef();
-  props.ref = props.ref || refDefault;
-  const {
-    as,
-    vertical
-  } = props;
-  if (as === undefined && !vertical) {
-    props.as = "label";
-  }
-  if (props.as === "label") {
-    return jsx(FieldAsLabel, {
-      ...props
-    });
-  }
-  return jsx(FieldAsContainer, {
-    ...props
-  });
-};
-const FieldAsLabel = props => {
-  return jsx(FieldUI, {
-    ...props
-  });
-};
-const FieldAsContainer = props => {
-  const idDefault = useId();
-  const fieldId = `field_${idDefault}`;
-  props.fieldId = props.fieldId || props.id ? `${props.id}_field` : fieldId;
-  return jsx(FieldUI, {
-    ...props,
-    "data-navi-field-container": "",
-    styleCSSVars: FieldCSSVars
-  });
-};
-const FieldCSSVars = {
-  spacing: "--field-spacing"
-};
-const FieldUI = props => {
-  import.meta.css = [css$x, "@jsenv/navi/src/control/field.jsx"];
-  const {
-    vertical
-  } = props;
-  const {
-    fieldId,
-    name,
-    disabled,
-    readOnly,
-    required,
-    loading,
-    interactive,
-    ...rest
-  } = props;
-  const [messageProps, remainingProps] = extractMessageAndRemainingProps(rest);
-  const messagePropsRef = useRef();
-  messagePropsRef.current = messageProps;
-  const [disabledByChild, setDisabledByChild] = useState(false);
-  const [readOnlyFromChild, setReadOnlyFromChild] = useState(false);
-  const [interactiveFromChild, setInteractiveFromChild] = useState(false);
-  const parentControlName = useContext(ControlNameContext);
-  const parentControlDisabled = useContext(DisabledContext);
-  const parentControlReadOnly = useContext(ReadOnlyContext);
-  const parentControlRequired = useContext(RequiredContext);
-  const parentControlLoading = useContext(LoadingContext);
-  const nameResolved = name || parentControlName;
-  const disabledResolved = disabled || parentControlDisabled;
-  const readOnlyResolved = readOnly || parentControlReadOnly;
-  const requiredResolved = required || parentControlRequired;
-  const loadingResolved = loading || parentControlLoading;
-  const controlToInterfaceContextValue = useMemo(() => ({
-    id: fieldId,
-    setReadOnly: setReadOnlyFromChild,
-    setDisabled: setDisabledByChild,
-    setInteractive: setInteractiveFromChild
-  }), [fieldId]);
-  let childrenWithContext;
-  if (props.children === undefined) ; else {
-    childrenWithContext = jsx(MessagePropsRefContext.Provider, {
-      value: messagePropsRef,
-      children: jsx(ControlToInterfaceContext.Provider, {
-        value: controlToInterfaceContextValue,
-        children: jsx(ControlNameContext.Provider, {
-          value: nameResolved,
-          children: jsx(DisabledContext.Provider, {
-            value: disabledResolved,
-            children: jsx(ReadOnlyContext.Provider, {
-              value: readOnlyResolved,
-              children: jsx(RequiredContext.Provider, {
-                value: requiredResolved,
-                children: jsx(LoadingContext.Provider, {
-                  value: loadingResolved,
-                  children: props.children
-                })
-              })
-            })
-          })
-        })
-      })
-    });
-  }
-
-  // a field inteface can make the field component
-  // disabled/readonly when that field interface is disabled/readonly
-  // this is the only bottom up communication there is
-  // (apart from action requested by child which cause ancestor action to execute)
-  const disabledOrByChild = disabledResolved || disabledByChild;
-  const readOnlyOrByChild = readOnlyResolved || readOnlyFromChild;
-  const interactiveOrByChild = interactive || interactiveFromChild;
-  const fieldProps = {
-    "data-navi-field": "",
-    "data-interactive": interactiveOrByChild ? "" : undefined,
-    ...remainingProps,
-    "children": childrenWithContext,
-    "pseudoClasses": FieldPseudoClasses,
-    "basePseudoState": {
-      ":disabled": disabledOrByChild,
-      ":read-only": readOnlyOrByChild,
-      ...remainingProps.basePseudoState
-    }
-  };
-  return jsx(Box, {
-    flex: vertical ? "y" : undefined,
-    alignX: vertical ? "start" : undefined,
-    "data-vertical": vertical ? "" : undefined,
-    ...fieldProps
-  });
-};
-const FieldPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
-const Label = props => {
-  const {
-    children,
-    htmlFor,
-    ...rest
-  } = props;
-  const controlToInterface = useContext(ControlToInterfaceContext);
-  const fieldId = controlToInterface?.id;
-  return jsx(Box, {
-    as: "label",
-    htmlFor: htmlFor || fieldId,
-    baseClassName: "navi_label",
-    pseudoClasses: LabelPseudoClasses,
-    ...rest,
-    children: children
-  });
-};
-const LabelPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
-
-const InputTextualContext = createContext(null);
-
-const InputLeftSlot = props => {
-  return jsx(InputSlot, {
-    ...props,
-    side: "left"
-  });
-};
-const InputRightSlot = props => {
-  return jsx(InputSlot, {
-    ...props,
-    side: "right"
-  });
-};
-const InputIconSlot = ({
-  children,
-  side = "right",
-  ...props
-}) => {
-  return jsx(InputSlot, {
-    side: side,
-    children: jsx(Icon, {
-      ...props,
-      children: children
-    })
-  });
-};
-const InputUnitSlot = ({
-  children,
-  side = "right",
-  ...props
-}) => {
-  return jsx(InputSlot, {
-    side: side,
-    marginLeft: "xxs",
-    noWrap: true,
-    ...props,
-    children: children
-  });
-};
-const InputSlot = ({
-  side,
-  onClick,
-  hideWhileEmpty,
-  ...props
-}) => {
-  const ctx = useContext(InputTextualContext);
-  const {
-    id,
-    readOnly,
-    disabled
-  } = ctx;
-  return jsx(Label, {
-    htmlFor: id,
-    className: "navi_input_slot",
-    disabled: disabled,
-    readOnly: readOnly,
-    "data-readonly": readOnly,
-    "data-disabled": disabled,
-    "data-left": side === "left" ? "" : undefined,
-    "data-right": side === "right" ? "" : undefined,
-    "data-hide-while-empty": hideWhileEmpty ? "" : undefined,
-    inline: true,
-    flex: true,
-    align: "center",
-    onMouseDown: e => {
-      // Only prevent focus from leaving when the input already has focus.
-      // If the input is not focused, let the mousedown proceed normally so
-      // the slot element (e.g. a clear button) can receive focus itself.
-      const inputEl = document.getElementById(id);
-      if (inputEl && inputEl === document.activeElement) {
-        e.preventDefault();
-      }
-    },
-    onClick: e => {
-      onClick?.(e);
-      const input = document.getElementById(id);
-      const allowed = dispatchRequestInteraction(input, e);
-      if (!allowed) {
-        e.preventDefault();
-      }
-    },
-    ...props
-  });
-};
-
 const InputNaviHourResolver = props => {
   const Next = useNextResolver();
   if (props["navi-input-type"] === "hour") {
@@ -30523,38 +30623,71 @@ const InputModeNumeric = props => {
   return jsx(Next, {
     maxLength: maxLength,
     ...props,
+    onInput: e => {
+      props.onInput?.(e);
+      if (e.defaultPrevented) {
+        return;
+      }
+      if (maxLength === undefined) {
+        return;
+      }
+      const input = e.currentTarget;
+      if (input.value.length < maxLength) {
+        return;
+      }
+      if (input.selectionStart !== maxLength) {
+        return;
+      }
+      // Field is full and caret is at the end: notify listeners then
+      // select all so the next keystroke starts a fresh value instead of
+      // being silently blocked by maxlength.
+      const allowed = dispatchPublicCustomEvent(input, "navi_input_full", {
+        event: e
+      });
+      if (allowed) {
+        input.select();
+      }
+    },
     onKeyDown: e => {
       props.onKeyDown?.(e);
       if (e.defaultPrevented) {
         return;
       }
-      if (e.key !== "ArrowUp" && e.key !== "ArrowDown") {
+      if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+        performArrowUpDown(e);
         return;
       }
-      e.preventDefault();
-      const currentValue = Number(e.currentTarget.value);
-      if (Number.isNaN(currentValue)) {
-        return;
-      }
-      const delta = e.key === "ArrowUp" ? step : -step;
-      // Snap to step grid relative to step base (min ?? 0), then move
-      const stepBase = min !== undefined ? min : 0;
-      const offset = currentValue - stepBase;
-      const currentStepIndex = Math.round(offset / step);
-      const snapped = stepBase + currentStepIndex * step;
-      let nextValue = snapped + delta;
-      if (min !== undefined && nextValue < min) {
-        nextValue = min;
-      }
-      if (max !== undefined && nextValue > max) {
-        nextValue = max;
-      }
-      triggerStringAction("update", nextValue, {
-        event: e,
-        actionTarget: e.currentTarget
-      });
     }
   });
+};
+const performArrowUpDown = e => {
+  const input = e.currentTarget;
+  const currentValue = Number(input.value);
+  if (Number.isNaN(currentValue)) {
+    e.preventDefault();
+    return;
+  }
+  const min = input.min !== "" ? Number(input.min) : undefined;
+  const max = input.max !== "" ? Number(input.max) : undefined;
+  const step = input.step !== "" && input.step !== "any" ? Number(input.step) : 1;
+  const delta = e.key === "ArrowUp" ? step : -step;
+  // Snap to step grid relative to step base (min ?? 0), then move
+  const stepBase = min !== undefined ? min : 0;
+  const offset = currentValue - stepBase;
+  const currentStepIndex = Math.round(offset / step);
+  const snapped = stepBase + currentStepIndex * step;
+  let nextValue = snapped + delta;
+  if (min !== undefined && nextValue < min) {
+    nextValue = min;
+  }
+  if (max !== undefined && nextValue > max) {
+    nextValue = max;
+  }
+  triggerStringAction("update", nextValue, {
+    event: e,
+    actionTarget: e.currentTarget
+  });
+  e.preventDefault();
 };
 
 const SearchSvg = () => jsx("svg", {
@@ -31071,12 +31204,8 @@ const css$w = /* css */`
         var(--border-color) 45%,
         transparent
       );
-      --background-color-readonly: var(--background-color);
-      --color-readonly: color-mix(
-        in srgb,
-        var(--picker-border-color) 45%,
-        transparent
-      );
+      --background-color-readonly: var(--background-color-hover);
+      --color-readonly: color-mix(in srgb, var(--color) 65%, transparent);
       /* Disabled */
       --border-color-disabled: var(--border-color-readonly);
       --background-color-disabled: color-mix(
@@ -31241,6 +31370,49 @@ const css$w = /* css */`
         --x-background-color: transparent;
       }
     }
+
+    &[data-variant="underline"] {
+      border: none;
+      border-radius: 0;
+      --x-background-color: transparent;
+      padding-right: 0;
+      padding-left: 0;
+
+      .navi_input_real_input_wrapper {
+        position: relative;
+        display: inline-flex;
+        flex-grow: 1;
+      }
+
+      .navi_input_underline {
+        position: absolute;
+        top: calc(100% - 1px);
+        right: 0;
+        left: 0;
+        height: 1px;
+        background-color: var(--x-border-color);
+        pointer-events: none;
+      }
+
+      &[data-hover] {
+        --x-background-color: transparent;
+      }
+      &[data-focus-visible] {
+        --x-background-color: transparent;
+        outline-style: none;
+
+        .navi_input_underline {
+          height: 2px;
+          background-color: var(--outline-color);
+        }
+      }
+      &[data-readonly] {
+        --x-background-color: transparent;
+      }
+      &[data-disabled] {
+        --x-background-color: transparent;
+      }
+    }
   }
 
   .navi_input .navi_control_input::placeholder {
@@ -31284,6 +31456,7 @@ const InputTextualUI = props => {
   const {
     ui,
     discrete,
+    variant,
     width = "maxLength"
   } = props;
   const [inputProps, remainingProps] = useInputTextualProps(props);
@@ -31337,6 +31510,7 @@ const InputTextualUI = props => {
     discrete: undefined // handled via data attribute
     ,
 
+    "data-variant": variant || undefined,
     styleCSSVars: InputStyleCSSVars,
     pseudoStateSelector: ".navi_control_input",
     pseudoClasses: InputPseudoClasses,
@@ -31345,7 +31519,14 @@ const InputTextualUI = props => {
       loading: loading,
       color: "var(--loader-color)",
       inset: -1
-    }), jsx(RealInput, {
+    }), variant === "underline" ? jsxs("span", {
+      className: "navi_input_real_input_wrapper",
+      children: [jsx(RealInput, {
+        ...inputProps
+      }), jsx("span", {
+        className: "navi_input_underline"
+      })]
+    }) : jsx(RealInput, {
       ...inputProps
     }), childrenWithContext]
   });
@@ -31437,7 +31618,9 @@ const Input = props => {
 };
 Input.UI = {
   LeftSlot: InputLeftSlot,
-  RightSlot: InputRightSlot
+  RightSlot: InputRightSlot,
+  IconSlot: InputIconSlot,
+  UnitSlot: InputUnitSlot
 };
 
 installImportMetaCssBuild(import.meta);/**
@@ -31961,6 +32144,111 @@ const CheckboxGroupInterface = props => {
       children: props.children
     })
   });
+};
+
+const InputGroup = props => {
+  const ref = useRef(null);
+  useInputGroup(ref);
+  return jsx(Box, {
+    ref: ref,
+    ...props
+  });
+};
+const useInputGroup = ref => {
+  const debugFocus = useDebugFocus();
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) {
+      return () => {};
+    }
+    const getInputs = () => Array.from(el.querySelectorAll(".navi_control_input"));
+    const focusInput = input => {
+      input.focus();
+      input.select();
+    };
+    const handleKeyDown = e => {
+      if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") {
+        return;
+      }
+      const active = document.activeElement;
+      if (!isTextInputElement(active) || !el.contains(active)) {
+        return;
+      }
+      if (e.key === "ArrowRight") {
+        const atEnd = active.selectionStart === active.value.length && active.selectionEnd === active.value.length;
+        if (!atEnd) {
+          return;
+        }
+        const inputs = getInputs();
+        const idx = inputs.indexOf(active);
+        if (idx === -1) {
+          debugFocus(e, "InputGroup ArrowRight on non group input → do nothing");
+          return;
+        }
+        if (idx === inputs.length - 1) {
+          debugFocus(e, "InputGroup ArrowRight at end of last input → do nothing");
+          return;
+        }
+        debugFocus(e, "InputGroup ArrowRight at end of input[%d] → focus input[%d]", idx, idx + 1);
+        e.preventDefault();
+        focusInput(inputs[idx + 1]);
+        return;
+      }
+      const atStart = active.selectionStart === 0 && active.selectionEnd === 0;
+      if (!atStart) {
+        return;
+      }
+      const inputs = getInputs();
+      const idx = inputs.indexOf(active);
+      if (idx === 0) {
+        return;
+      }
+      debugFocus(e, "InputGroup ArrowLeft at start of input[%d] → focus input[%d]", idx, idx - 1);
+      e.preventDefault();
+      focusInput(inputs[idx - 1]);
+    };
+    const handleNaviInputFull = e => {
+      const input = e.detail.event.currentTarget;
+      if (!el.contains(input)) {
+        return;
+      }
+      const inputs = getInputs();
+      const idx = inputs.indexOf(input);
+      if (idx === -1) {
+        return;
+      }
+      if (idx === inputs.length - 1) {
+        return;
+      }
+      const nextInput = inputs[idx + 1];
+      debugFocus(e, "InputGroup navi_input_full on input -> move to next input", input, nextInput);
+      e.preventDefault();
+      focusInput(nextInput);
+    };
+    el.addEventListener("keydown", handleKeyDown, {
+      capture: false
+    });
+    el.addEventListener("navi_input_full", handleNaviInputFull);
+    return () => {
+      el.removeEventListener("keydown", handleKeyDown, {
+        capture: false
+      });
+      el.removeEventListener("navi_input_full", handleNaviInputFull);
+    };
+  }, [debugFocus]);
+};
+const isTextInputElement = el => {
+  if (!el) {
+    return false;
+  }
+  if (el.tagName === "TEXTAREA") {
+    return true;
+  }
+  if (el.tagName !== "INPUT") {
+    return false;
+  }
+  const type = el.type || "text";
+  return type === "text" || type === "search" || type === "url" || type === "tel" || type === "email" || type === "password" || type === "number";
 };
 
 installImportMetaCssBuild(import.meta);const css$s = /* css */`
@@ -33144,6 +33432,7 @@ const TimeDate = ({
   children,
   locale,
   long,
+  numeric,
   dayLabel,
   now,
   ...props
@@ -33169,7 +33458,8 @@ const TimeDate = ({
     });
   }
   const base = formatDay(date, lang, {
-    long
+    long,
+    numeric
   });
   let text;
   if (dayLabel) {
@@ -33474,7 +33764,7 @@ const PickerText = props => {
 const PickerArray = props => {
   const Next = useNextResolver();
   return jsx(Next, {
-    maxRows: 3,
+    maxLines: "3",
     ui: jsx(PickerArrayUI, {}),
     ...props,
     type: "navi_picker"
@@ -33484,7 +33774,7 @@ const PickerArrayUI = () => {
   const {
     value,
     placeholder,
-    maxRows
+    maxLines
   } = useContext(PickerContext);
   if (!value || value.length === 0) {
     if (!placeholder) {
@@ -33495,8 +33785,7 @@ const PickerArrayUI = () => {
   return jsx(Text, {
     spacing: ", ",
     shrinkWrap: true,
-    lineClamp: maxRows > 1 ? maxRows : undefined,
-    overflowEllipsis: maxRows === 1 ? true : undefined,
+    maxLines: maxLines,
     children: value.map(item => {
       return jsx("span", {
         children: item
@@ -33547,6 +33836,8 @@ const PickerDateUI = props => {
       return jsx(Time, {
         type: "date",
         color: "var(--picker-placeholder-color",
+        capitalize: true,
+        maxLines: "1",
         ...props
       });
     }
@@ -33555,6 +33846,7 @@ const PickerDateUI = props => {
   return jsx(Time, {
     type: "date",
     capitalize: true,
+    maxLines: "1",
     ...props,
     children: value
   });
@@ -33568,7 +33860,7 @@ const PickerMonth = props => {
     type: "month"
   });
 };
-const PickerMonthUI = () => {
+const PickerMonthUI = props => {
   const {
     value,
     placeholder
@@ -33577,14 +33869,18 @@ const PickerMonthUI = () => {
     if (!placeholder) {
       return jsx(Time, {
         type: "month",
-        color: "var(--picker-placeholder-color"
+        color: "var(--picker-placeholder-color",
+        maxLines: "1",
+        ...props
       });
     }
     return placeholder;
   }
   return jsx(Time, {
     type: "month",
+    maxLines: "1",
     capitalize: true,
+    ...props,
     children: value
   });
 };
@@ -33597,7 +33893,7 @@ const PickerWeek = props => {
     type: "week"
   });
 };
-const PickerWeekUI = () => {
+const PickerWeekUI = props => {
   const {
     value,
     placeholder
@@ -33606,7 +33902,9 @@ const PickerWeekUI = () => {
     if (!placeholder) {
       return jsx(Time, {
         type: "week",
-        color: "var(--picker-placeholder-color"
+        color: "var(--picker-placeholder-color",
+        maxLines: "1",
+        ...props
       });
     }
     return placeholder;
@@ -33614,6 +33912,8 @@ const PickerWeekUI = () => {
   return jsx(Time, {
     type: "week",
     capitalize: true,
+    maxLines: "1",
+    ...props,
     children: value
   });
 };
@@ -33636,6 +33936,7 @@ const PickerTimeUI = props => {
       return jsx(Time, {
         type: "time",
         color: "var(--picker-placeholder-color",
+        maxLines: "1",
         ...props
       });
     }
@@ -33643,6 +33944,7 @@ const PickerTimeUI = props => {
   }
   return jsx(Time, {
     type: "time",
+    maxLines: "1",
     ...props,
     children: value
   });
@@ -33656,7 +33958,7 @@ const PickerDatetime = props => {
     type: "datetime-local"
   });
 };
-const PickerDatetimeUI = () => {
+const PickerDatetimeUI = props => {
   const {
     value,
     placeholder
@@ -33665,13 +33967,16 @@ const PickerDatetimeUI = () => {
     if (!placeholder) {
       return jsx(Time, {
         type: "datetime",
-        color: "var(--picker-placeholder-color"
+        color: "var(--picker-placeholder-color",
+        maxLines: "1",
+        ...props
       });
     }
     return placeholder;
   }
   return jsx(Time, {
     type: "datetime",
+    maxLines: "1",
     children: value
   });
 };
@@ -34298,15 +34603,18 @@ installImportMetaCssBuild(import.meta);const css$m = /* css */`
     &[data-callout] {
       --x-list-border-color: var(--callout-color);
     }
+
+    .navi_list_item {
+      --x-list-item-cursor: default;
+      --x-list-item-border-color: var(--list-item-border-color);
+
+      position: relative;
+      font-size: var(--navi-control-font-size);
+      font-family: var(--navi-control-font-family);
+    }
   }
 
   .navi_list_item[navi-selectable] {
-    --x-list-item-cursor: default;
-    --x-list-item-border-color: var(--list-item-border-color);
-
-    position: relative;
-    font-size: var(--navi-control-font-size);
-    font-family: var(--navi-control-font-family);
     outline-width: var(--list-item-outline-width);
     outline-color: var(--list-item-outline-color);
     outline-offset: var(--list-item-outline-offset);
@@ -34380,7 +34688,7 @@ installImportMetaCssBuild(import.meta);const css$m = /* css */`
         }
 
         input,
-        .navi_picker {
+        .navi_picker_content {
           color: revert;
         }
       }
@@ -35129,6 +35437,7 @@ const css$l = /* css */`
     background-color: var(--x-list-item-background-color);
     border: var(--x-list-item-border-width) solid
       var(--x-list-item-border-color);
+    border-radius: var(--list-item-border-radius, 0px);
     /*
     CSS impossible d'obtenir un layout qui ferait en gros:
     width = max(min(max-content, 100%), unbreakable-content)
@@ -35138,7 +35447,7 @@ const css$l = /* css */`
       -> NOPE
     - Force overflow hidden + ellipsis
       - casse la lisibilité des mots insécables
-      - possible d'optin en utilisant overflowEllipsis sur le ListItem
+      - possible d'optin en utilisant maxLines sur le ListItem
       -> Bien mais pas par défaut
     - Forcer le retour a la ligne des mot inécables
       - Aucun des inconvénient ci dessus 
@@ -36147,6 +36456,8 @@ const ListItemReal = props => {
   });
 };
 const LIST_ITEM_STYLE_CSS_VARS = {
+  "borderRadius": "--list-item-border-radius",
+  "borderWidth": "--list-item-border-width",
   "padding": "--list-item-padding",
   "paddingX": "--list-item-padding-x",
   "paddingY": "--list-item-padding-y",
@@ -36157,7 +36468,6 @@ const LIST_ITEM_STYLE_CSS_VARS = {
   "color": "--list-item-color",
   "backgroundColor": "--list-item-background-color",
   "fontWeight": "--list-item-font-weight",
-  "borderWidth": "--list-item-border-width",
   "borderColor": "--list-item-border-color",
   ":-navi-pointed": {
     color: "--list-item-color-keyboard-pointed",
@@ -36537,7 +36847,6 @@ installImportMetaCssBuild(import.meta);const css$k = /* css */`
       align-self: flex-start;
       justify-content: center;
       color: var(--x-picker-icon-color);
-      transform: translateX(25%);
     }
     .navi_picker_input {
       position: absolute;
@@ -36554,13 +36863,17 @@ installImportMetaCssBuild(import.meta);const css$k = /* css */`
       pointer-events: none;
     }
 
+    .navi_picker_content {
+      display: contents;
+    }
+
     &[data-line-clamp] {
       overflow-wrap: anywhere;
       .navi_picker_value {
         display: -webkit-box;
         white-space: normal;
         -webkit-box-orient: vertical;
-        -webkit-line-clamp: var(--picker-max-rows);
+        -webkit-line-clamp: var(--picker-max-lines);
       }
     }
 
@@ -36593,6 +36906,17 @@ installImportMetaCssBuild(import.meta);const css$k = /* css */`
     /* Callout (info, warning, error) */
     &[data-callout] {
       --x-picker-border-color: var(--callout-color);
+    }
+
+    &[data-variant="icon"] {
+      --x-picker-padding-top: 0;
+      --x-picker-padding-right: 0;
+      --x-picker-padding-bottom: 0;
+      --x-picker-padding-left: 0;
+      --picker-border-width: 0;
+      --x-picker-border-color: transparent;
+      --x-picker-background-color: transparent;
+      --x-picker-icon-color: currentColor;
     }
   }
 `;
@@ -36630,12 +36954,16 @@ installImportMetaCssBuild(import.meta);const css$k = /* css */`
  */
 const PickerButton = props => {
   import.meta.css = [css$k, "@jsenv/navi/src/control/picker/picker.jsx"];
+  if (typeof props.maxLines === "string") {
+    props.maxLines = parseInt(props.maxLines);
+  }
   const {
     ref,
+    variant,
     icon,
     placeholder,
     ui,
-    maxRows
+    maxLines
   } = props;
   const inputRef = useRef(null);
   const [inputProps, pickerRemainingProps] = useControlProps({
@@ -36657,7 +36985,7 @@ const PickerButton = props => {
     children
   } = inputProps;
   const loading = basePseudoState[":-navi-loading"];
-  const hasLineClamp = maxRows && maxRows > 1;
+  const hasLineClamp = maxLines && maxLines > 1;
   return jsxs(Box, {
     as: "button",
     ref: ref,
@@ -36667,8 +36995,9 @@ const PickerButton = props => {
     pseudoClasses: PICKER_BUTTON_PSEUDO_CLASSES,
     disabled: disabled,
     "data-line-clamp": hasLineClamp ? "" : undefined,
+    "data-variant": variant,
     style: {
-      "--picker-max-rows": maxRows || -1
+      "--picker-max-lines": maxLines
     },
     ...pickerRemainingProps,
     basePseudoState: basePseudoState,
@@ -36678,9 +37007,10 @@ const PickerButton = props => {
     ,
 
     id: id,
+    variant: undefined,
     icon: undefined,
     ui: undefined,
-    maxRows: undefined,
+    maxLines: undefined,
     dayLabel: undefined
     // The button is handling the pointer interactions
     ,
@@ -36711,14 +37041,14 @@ const PickerButton = props => {
       onMouseDown: undefined,
       onClick: undefined,
       onKeyDown: undefined
-    }), jsx(Text, {
+    }), variant === "icon" ? null : jsx(Text, {
       className: "navi_picker_value",
       "navi-placeholder": value === undefined || value === "" ? "" : undefined,
       children: jsx(PickerContext.Provider, {
         value: {
           value,
           placeholder,
-          maxRows
+          maxLines
         },
         children: ui === undefined ? jsx(PickerDefaultUI, {}) : ui
       })
@@ -36729,7 +37059,10 @@ const PickerButton = props => {
         children: icon === undefined ? jsx(ChevronDownSvg, {}) : icon
       })
     }), jsx(ControlChildrenWrapper, {
-      children: children
+      children: jsx("div", {
+        className: "navi_picker_content",
+        children: children
+      })
     })]
   });
 };
@@ -36809,6 +37142,12 @@ Picker.UI.Datetime = PickerDatetimeUI;
 Picker.UI.File = PickerFileUI;
 Picker.UI.Color = PickerColorUI;
 Picker.UI.Multiple = PickerArrayUI;
+Picker.UI.PencilSvg = PencilSvg;
+Picker.UI.ChevronDownSvg = ChevronDownSvg;
+Picker.UI.ClockSvg = ClockSvg;
+Picker.UI.CalendarSvg = CalendarSvg;
+Picker.UI.FileSvg = FileSvg;
+Picker.UI.ColorSvg = ColorSvg;
 
 /**
  * applySearch — matches value against searchText.
@@ -41001,7 +41340,7 @@ const Badge = ({
   return jsx(Text, {
     className: withPropsClassName("navi_badge", className),
     bold: true,
-    overflowEllipsis: true,
+    maxLines: 1,
     ...props,
     styleCSSVars: BadgeStyleCSSVars$1,
     spacing: jsx("span", {}),
@@ -41378,7 +41717,6 @@ const BadgeList = ({
   children,
   shrinkWrap = true,
   max,
-  maxRows,
   ...props
 }) => {
   import.meta.css = [css$9, "@jsenv/navi/src/text/badge_list.jsx"];
@@ -41442,7 +41780,6 @@ const BadgeList = ({
       baseClassName: "navi_badge_list",
       ...sharedProps,
       ref: visibleRef,
-      lineClamp: maxRows,
       children: [visibleChildren.length ? visibleChildren : fallback, hiddenCount > 0 && jsx(Badge, {
         className: "navi_badge_more",
         children: naviI18n("badge_list.more", {
@@ -41831,12 +42168,74 @@ const Interpolate = ({
   });
 };
 
+const Unit = ({
+  unit,
+  plural,
+  lang,
+  size = "smaller",
+  sizeRatio,
+  style,
+  ...props
+}) => {
+  let resolvedSize = size;
+  let resolvedStyle = style;
+  if (size === "smaller" || sizeRatio !== undefined) {
+    resolvedSize = undefined;
+    const ratio = sizeRatio !== undefined ? sizeRatio : 0.8;
+    resolvedStyle = {
+      fontSize: `calc(${ratio} * 1em)`,
+      ...style
+    };
+  }
+  const isPlural = Boolean(plural);
+  let unitText = unit;
+  const singularText = naviI18n(unit, undefined, {
+    lang
+  });
+  if (singularText !== unit) {
+    // unit is known to naviI18n
+    if (isPlural) {
+      const pluralKey = `${unit}__plural`;
+      const pluralText = naviI18n(pluralKey, undefined, {
+        lang
+      });
+      // fallback to singular if no plural key registered
+      unitText = pluralText !== pluralKey ? pluralText : singularText;
+    } else {
+      unitText = singularText;
+    }
+  } else {
+    // naviI18n has no translation — try Intl.NumberFormat with style:"unit"
+    const intlText = formatIntlUnit(unit, isPlural, lang);
+    if (intlText !== null) {
+      unitText = intlText;
+    }
+  }
+  return jsx(Text, {
+    baseClassName: "navi_unit",
+    size: resolvedSize,
+    style: resolvedStyle,
+    ...props,
+    children: unitText
+  });
+};
+const formatIntlUnit = (unit, plural, lang) => {
+  try {
+    const count = plural ? 2 : 1;
+    const parts = new Intl.NumberFormat(lang, {
+      style: "unit",
+      unit,
+      unitDisplay: "long"
+    }).formatToParts(count);
+    const unitPart = parts.find(p => p.type === "unit");
+    return unitPart ? unitPart.value : null;
+  } catch {
+    return null;
+  }
+};
+
 installImportMetaCssBuild(import.meta);const css$7 = /* css */`
   @layer navi {
-    .navi_quantity {
-      --unit-color: color-mix(in srgb, currentColor 50%, white);
-      --unit-size-ratio: 0.7;
-    }
   }
 
   .navi_quantity {
@@ -41854,10 +42253,8 @@ installImportMetaCssBuild(import.meta);const css$7 = /* css */`
       letter-spacing: 0.06em;
     }
     .navi_quantity_body {
-      .navi_quantity_unit {
-        color: var(--unit-color);
+      .navi_unit {
         font-weight: normal;
-        font-size: calc(var(--unit-size-ratio) * 1em);
       }
     }
 
@@ -41879,7 +42276,7 @@ installImportMetaCssBuild(import.meta);const css$7 = /* css */`
         text-align: center;
       }
       .navi_quantity_body {
-        .navi_quantity_unit {
+        .navi_unit {
           display: inline-block;
           width: 100%;
           text-align: center;
@@ -41892,6 +42289,9 @@ const Quantity = ({
   children,
   unit,
   unitPosition = "right",
+  unitSize = "smaller",
+  unitSizeRatio,
+  unitColor,
   label,
   size,
   lang,
@@ -41936,50 +42336,20 @@ const Quantity = ({
           children: jsx(LoadingDotsSvg, {})
         }) : valueFormatted
       }), unit && jsx(Unit, {
-        value: value,
         unit: unit,
-        lang: lang
+        plural: typeof value === "number" ? value > 1 : false,
+        lang: lang,
+        size: unitSize,
+        sizeRatio: unitSizeRatio,
+        color: unitColor
       })]
     })]
   });
 };
 const QuantityPropsCSSVars = {
-  unitColor: "--unit-color",
-  unitSizeRatio: "--unit-size-ratio"
+  unitColor: "--unit-color"
 };
 const QuantityPseudoClasses = [":hover", ":active", ":read-only", ":disabled", ":-navi-loading"];
-const Unit = ({
-  value,
-  unit,
-  lang
-}) => {
-  let unitText = unit;
-  if (Array.isArray(unit)) {
-    const [singular, plural] = unit;
-    unitText = value > 1 ? plural : singular;
-  } else {
-    const singularText = naviI18n(unit, undefined, {
-      lang
-    });
-    if (singularText !== unit) {
-      // unit is known to naviI18n
-      if (value > 1) {
-        const pluralKey = `${unit}__plural`;
-        const pluralText = naviI18n(pluralKey, undefined, {
-          lang
-        });
-        // fallback to singular if no plural key registered
-        unitText = pluralText !== pluralKey ? pluralText : singularText;
-      } else {
-        unitText = singularText;
-      }
-    }
-  }
-  return jsx("span", {
-    className: "navi_quantity_unit",
-    children: unitText
-  });
-};
 const parseQuantityValue = children => {
   if (typeof children !== "string") {
     return children;
@@ -43027,5 +43397,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, Details, Dialog, DialogLayout, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Field, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, Paragraph, Picker, Popover, Quantity, RadioGroup, Route, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Thead, Time, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, actionRunEffect, addCustomMessage, anyMatchingRouteSignal, applySearch, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, installCustomConstraintValidation, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isToday, langSignal, localStorageSignal, moveArrayItemByIndex, navBack, navForward, navTo, naviI18n, openCallout, rawUrlPart, reload, removeCustomMessage, rerunActions, resource, route, routeAction, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSidePanelClose, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage, windowWidthSignal };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, Details, Dialog, DialogLayout, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Field, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, InputGroup, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, Paragraph, Picker, Popover, Quantity, RadioGroup, Route, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Thead, Time, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, actionIntegratedVia, actionRunEffect, addCustomMessage, anyMatchingRouteSignal, applySearch, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, installCustomConstraintValidation, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isToday, langSignal, localStorageSignal, moveArrayItemByIndex, navBack, navForward, navTo, naviI18n, openCallout, rawUrlPart, reload, removeCustomMessage, rerunActions, resource, route, routeAction, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSidePanelClose, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi.js.map
