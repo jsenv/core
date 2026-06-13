@@ -363,10 +363,8 @@ export const useControlProps = (
         callback: asAction,
       };
       enterEffect = (e) => {
-        const checkable = e.currentTarget;
-        if (!checkable.command) {
-          // dispatchNaviCommand(checkable, "--navi-send", e);
-        }
+        const input = e.currentTarget;
+        dispatchNaviCommand(input, "--navi-send", e);
       };
       if (picker) {
         mousedownInteraction = {
@@ -409,14 +407,18 @@ export const useControlProps = (
         };
         naviChangeInteraction = undefined;
         enterEffect = (e) => {
+          // TODO: we should likely request toggle
+          onClick(e);
           const checkable = e.currentTarget;
-          checkable.click();
+          if (checkable.form) {
+            e.preventDefault();
+          }
         };
         if (props.type === "radio") {
           spaceEffect = (e) => {
             const radio = e.currentTarget;
             if (radio.checked) {
-              radio.click();
+              onClick(e);
             }
           };
         }

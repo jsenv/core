@@ -341,7 +341,7 @@ export const useUIStateController = (
           uiStateController.props.type === "radio" &&
           !e.detail.internalBehavior
         ) {
-          triggerCommand();
+          onUIAction();
         }
         return false;
       }
