@@ -20,10 +20,13 @@ export const CONTROL_ATTRIBUTE_SET = new Set([
   "autoCorrect",
   "aria-controls",
   "tabIndex",
+  "command",
+  "commandFor",
 
-  // "action-target",
+  // "ui-action-target",
   "navi-input-type",
   "navi-control-proxy-for",
+  "navi-command-target",
 
   "data-callout-arrow-x",
   "data-callout-point-to-border-box",

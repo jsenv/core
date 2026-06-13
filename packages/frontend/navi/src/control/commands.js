@@ -10,55 +10,74 @@ import { createUICallback } from "./ui_callback.js";
 import { dispatchRequestSetUIState } from "./ui_state_dom.js";
 import { dispatchRequestAction } from "./validation/custom_constraint_validation.js";
 
-export const triggerStringAction = (actionName, ...args) => {
-  return resolveActionProp(actionName)(...args);
+export const triggerCommand = (commandName, ...args) => {
+  return resolveCommandProp(commandName)(...args);
 };
-export const resolveActionProp = (action) => {
-  if (typeof action === "string") {
-    const naviAction = STRING_ACTIONS[action];
-    if (!naviAction) {
-      throw new Error(`Unknown ui action "${action}"`);
+export const resolveCommandProp = (command) => {
+  if (typeof command === "string") {
+    const naviCommand = NAVI_COMMANDS[command];
+    if (!naviCommand) {
+      throw new Error(`Unknown navi command "${command}"`);
     }
-    return naviAction;
+    return naviCommand;
   }
-  return action;
+  return command;
 };
 
-const getActionTarget = (e) => {
+const getCommandTarget = (e) => {
   const currentTarget = e.currentTarget;
   let startEl = currentTarget;
   if (isControlHost(currentTarget)) {
-    // mousedown on input host -> start from the control root which have the action-target attribute
-    // and can have children
+    // mousedown on input host -> start from the control root which has the navi-command-target attribute
     startEl = findControlRoot(currentTarget);
   }
-  const actionTargetAttribute = startEl.getAttribute("action-target");
-  if (!actionTargetAttribute) {
+  const commandTargetAttribute = startEl.getAttribute("navi-command-target");
+  if (!commandTargetAttribute) {
     return undefined;
   }
-  let actionTarget;
-  if (actionTargetAttribute.startsWith("#")) {
-    actionTarget = document.getElementById(actionTargetAttribute.slice(1));
-  } else {
-    actionTarget = startEl.querySelector(actionTargetAttribute);
+  if (commandTargetAttribute === "parent") {
+    const parent = getParentControl(e);
+    if (!parent) {
+      console.warn(
+        `navi-command-target="parent" specified but no parent control found`,
+        e,
+      );
+    }
+    return parent;
   }
-  if (!actionTarget) {
+  if (commandTargetAttribute === "child") {
+    const child = startEl.querySelector("[navi-control-host]");
+    if (!child) {
+      console.warn(
+        `navi-command-target="child" specified but no child control found`,
+        e,
+      );
+    }
+    return child;
+  }
+  let commandTarget;
+  if (commandTargetAttribute.startsWith("#")) {
+    commandTarget = document.getElementById(commandTargetAttribute.slice(1));
+  } else {
+    commandTarget = startEl.querySelector(commandTargetAttribute);
+  }
+  if (!commandTarget) {
     console.warn(
-      `action-target="${actionTargetAttribute}" specified but no element with that id found in the document`,
+      `navi-command-target="${commandTargetAttribute}" specified but no element found`,
       e,
     );
     return undefined;
   }
-  return actionTarget;
+  return commandTarget;
 };
 const getClosestExpandable = (e) => {
   return e.currentTarget.closest("[aria-expanded]");
 };
 
 const scroll = createUICallback({
-  name: "scroll",
+  name: "--navi-scroll",
   event: (e) => {
-    return requestScroll(e, () => getActionParam(e));
+    return requestScroll(e, () => getCommandParam(e));
   },
   action: (value, { event }) => {
     return requestScroll(event, () => value);
@@ -66,11 +85,11 @@ const scroll = createUICallback({
 });
 const requestScroll = (e, getScrollParam) => {
   const scrollTarget =
-    getActionTarget(e) || getParentControl(e) || e.currentTarget;
+    getCommandTarget(e) || getParentControl(e) || e.currentTarget;
   const param = getScrollParam();
   if (!param) {
     console.warn(
-      `scroll action triggered but no action-param specified or returned by getScrollParam callback`,
+      `--navi-scroll command triggered but no command-param specified or returned by getScrollParam callback`,
       e,
     );
     return false;
@@ -82,18 +101,18 @@ const requestScroll = (e, getScrollParam) => {
 };
 
 const select = createUICallback({
-  name: "select",
+  name: "--navi-select",
   event: (e) => {
-    return requestSelect(e, () => getActionParam(e));
+    return requestSelect(e, () => getCommandParam(e));
   },
   action: (value, { event }) => {
     return requestSelect(event, () => value);
   },
 });
 const unselect = createUICallback({
-  name: "unselect",
+  name: "--navi-unselect",
   event: (e) => {
-    return requestUnselect(e, () => getActionParam(e));
+    return requestUnselect(e, () => getCommandParam(e));
   },
   action: (value, { event }) => {
     return requestUnselect(event, () => value);
@@ -101,14 +120,14 @@ const unselect = createUICallback({
 });
 const requestSelect = (e, getSelectParam) => {
   const selectTarget =
-    getActionTarget(e) || getParentControl(e) || e.currentTarget;
+    getCommandTarget(e) || getParentControl(e) || e.currentTarget;
   if (!selectTarget) {
     return false;
   }
   const param = getSelectParam();
   if (!param) {
     console.warn(
-      `select action triggered but no action-param specified or returned by getSelectParam callback`,
+      `--navi-select command triggered but no command-param specified or returned by getSelectParam callback`,
       e,
     );
     return false;
@@ -120,11 +139,11 @@ const requestSelect = (e, getSelectParam) => {
 };
 const requestUnselect = (e, getUnselectParam) => {
   const unselectTarget =
-    getActionTarget(e) || getParentControl(e) || e.currentTarget;
+    getCommandTarget(e) || getParentControl(e) || e.currentTarget;
   const param = getUnselectParam();
   if (!param) {
     console.warn(
-      `unselect action triggered but no action-param specified or returned by getSelectParam callback`,
+      `--navi-unselect command triggered but no command-param specified or returned by getUnselectParam callback`,
       e,
     );
     return false;
@@ -144,31 +163,32 @@ const requestUnselect = (e, getUnselectParam) => {
  * <Input type="text" action="update" />
  */
 const update = createUICallback({
-  name: "update",
-  action: (value, { event, actionTarget }) => {
-    return requestUpdate(event, value, { actionTarget });
+  name: "--navi-update",
+  action: (value, { event, commandTarget }) => {
+    return requestUpdate(event, value, { commandTarget });
   },
 });
-const requestUpdate = (event, value, { actionTarget, isClear } = {}) => {
+const requestUpdate = (event, value, { commandTarget, isClear } = {}) => {
   const updateTarget =
-    actionTarget ||
-    getActionTarget(event) ||
+    commandTarget ||
+    getCommandTarget(event) ||
     getParentControl(event) ||
     event.currentTarget;
+
   return dispatchRequestSetUIState(updateTarget, value, { event, isClear });
 };
 
 /**
  * Submits the closest ancestor field's action.
  * When triggered inside a popup (an element with `[aria-expanded]`), behaves
- * like `send` instead: closes the popup and, if a value is available, updates
+ * like `--navi-send` instead: closes the popup and, if a value is available, updates
  * the parent field with that value before closing.
  *
  * @example
- * <Button action="send">Confirm</Button>
+ * <Button command="--navi-send">Confirm</Button>
  */
 const send = createUICallback({
-  name: "send",
+  name: "--navi-send",
   event: (e) => {
     const expandableTarget = getClosestExpandable(e);
     if (expandableTarget) {
@@ -231,26 +251,26 @@ const requestClosestAction = (event) => {
 
 /**
  * Clears the value of the closest ancestor field then closes the popup.
- * Combines `update('')` + `close` in one action.
+ * Combines `--navi-update('')` + `--navi-close` in one command.
  *
  * @example
- * <Button action="clear">Clear</Button>
+ * <Button command="--navi-clear">Clear</Button>
  */
 const clear = createUICallback({
-  name: "clear",
-  event: (event, { actionTarget, skipClose } = {}) => {
-    requestUpdate(event, "", { actionTarget, isClear: true });
+  name: "--navi-clear",
+  event: (event, { commandTarget, skipClose } = {}) => {
+    requestUpdate(event, "", { commandTarget, isClear: true });
     if (!skipClose) {
-      const expandableEl = event.currentTarget.closest("[aria-expanded]");
+      const expandableEl = getClosestExpandable(event);
       if (expandableEl) {
         return requestClose(event);
       }
     }
     return true;
   },
-  action: (v, { event, actionTarget }) => {
-    requestUpdate(event, "", { actionTarget, isClear: true });
-    const expandableEl = event.currentTarget.closest("[aria-expanded]");
+  action: (v, { event, commandTarget }) => {
+    requestUpdate(event, "", { commandTarget, isClear: true });
+    const expandableEl = getClosestExpandable(event);
     if (expandableEl) {
       return requestClose(event);
     }
@@ -258,12 +278,12 @@ const clear = createUICallback({
   },
 });
 const open = createUICallback({
-  name: "open",
-  event: (event, { actionTarget } = {}) => {
-    return requestOpen(event, { actionTarget });
+  name: "--navi-open",
+  event: (event, { commandTarget } = {}) => {
+    return requestOpen(event, { commandTarget });
   },
-  action: (value, { event, actionTarget }) => {
-    return requestOpen(event, { actionTarget });
+  action: (value, { event, commandTarget }) => {
+    return requestOpen(event, { commandTarget });
   },
 });
 /**
@@ -272,10 +292,10 @@ const open = createUICallback({
  * picker's action if the value changed since the popup was opened.
  *
  * @example
- * <Button action="close">Close</Button>
+ * <Button command="--navi-close">Close</Button>
  */
 const close = createUICallback({
-  name: "close",
+  name: "--navi-close",
   event: (event) => {
     return requestClose(event);
   },
@@ -288,21 +308,21 @@ const close = createUICallback({
  * picker's action. The picker restores the value it had when the popup opened.
  *
  * @example
- * <Button action="cancel">Cancel</Button>
+ * <Button command="--navi-cancel">Cancel</Button>
  */
 const cancel = createUICallback({
-  name: "cancel",
-  event: (event, { actionTarget } = {}) => {
-    return requestClose(event, { actionTarget });
+  name: "--navi-cancel",
+  event: (event, { commandTarget } = {}) => {
+    return requestClose(event, { commandTarget });
   },
-  action: (_, { event, actionTarget }) => {
-    return requestClose(event, { actionTarget });
+  action: (_, { event, commandTarget }) => {
+    return requestClose(event, { commandTarget });
   },
 });
-const requestOpen = (event, { actionTarget }) => {
+const requestOpen = (event, { commandTarget }) => {
   const openTarget =
-    actionTarget ||
-    getActionTarget(event) ||
+    commandTarget ||
+    getCommandTarget(event) ||
     getClosestExpandable(event) ||
     event.currentTarget;
 
@@ -312,7 +332,7 @@ const requestOpen = (event, { actionTarget }) => {
 };
 const requestClose = (event, { isCancel = false } = {}) => {
   const closeTarget =
-    getActionTarget(event) ||
+    getCommandTarget(event) ||
     getClosestExpandable(event) ||
     event.currentTarget;
 
@@ -322,25 +342,26 @@ const requestClose = (event, { isCancel = false } = {}) => {
   });
 };
 
-const getActionParam = (e) => {
+const getCommandParam = (e) => {
   const currentTarget = e.currentTarget;
-  const actionParamAttribute = currentTarget.getAttribute("action-param");
-  if (actionParamAttribute) {
-    return actionParamAttribute;
+  const commandParamAttribute =
+    currentTarget.getAttribute("navi-command-param");
+  if (commandParamAttribute) {
+    return commandParamAttribute;
   }
   return null;
 };
 
-const STRING_ACTIONS = {
-  scroll,
-  select,
-  unselect,
-  update,
+const NAVI_COMMANDS = {
+  "--navi-scroll": scroll,
+  "--navi-select": select,
+  "--navi-unselect": unselect,
+  "--navi-update": update,
 
-  send,
+  "--navi-send": send,
 
-  open,
-  close,
-  clear,
-  cancel,
+  "--navi-open": open,
+  "--navi-close": close,
+  "--navi-clear": clear,
+  "--navi-cancel": cancel,
 };

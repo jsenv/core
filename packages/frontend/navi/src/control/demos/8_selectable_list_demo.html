@@ -568,22 +568,22 @@
                   </select>
                   <div style={{ display: "flex", gap: 8 }}>
                     <Button
-                      action="select"
-                      action-target="#external-control-list"
+                      command="--navi-select"
+                      ui-action-target="#external-control-list"
                       value={targetId}
                     >
                       Select
                     </Button>
                     <Button
-                      action="unselect"
-                      action-target="#external-control-list"
+                      command="--navi-unselect"
+                      ui-action-target="#external-control-list"
                       value={targetId}
                     >
                       Unselect
                     </Button>
                     <Button
-                      action="scroll"
-                      action-target="#external-control-list"
+                      command="--navi-scroll"
+                      ui-action-target="#external-control-list"
                       value={targetId}
                     >
                       Scroll into view

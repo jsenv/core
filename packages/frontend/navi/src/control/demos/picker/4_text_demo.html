@@ -79,9 +79,9 @@
             <h2>1. Basic text picker</h2>
             <p>
               A text picker with a popover containing a text input, a confirm
-              button (<code>action="send"</code>), a clear button (
-              <code>action="clear"</code>), and a cancel button (
-              <code>action="cancel"</code>).
+              button (<code>command="--navi-send"</code>), a clear button (
+              <code>command="--navi-clear"</code>), and a cancel button (
+              <code>command="--navi-cancel"</code>).
             </p>
             <Field vertical>
               <Label>Label</Label>
@@ -98,15 +98,15 @@
                 <Box flex="y" spacing="s" padding="s">
                   <Input
                     type="text"
-                    action="update"
+                    command="--navi-update"
                     value={valueSignal.value}
                     placeholder="Type something…"
                     autoFocus
                   />
                   <Box flex spacing="s">
-                    <Button action="send">Confirm</Button>
-                    <Button action="clear">Clear</Button>
-                    <Button action="cancel">Cancel</Button>
+                    <Button command="--navi-send">Confirm</Button>
+                    <Button command="--navi-clear">Clear</Button>
+                    <Button command="--navi-cancel">Cancel</Button>
                   </Box>
                 </Box>
               </Picker>
@@ -168,15 +168,15 @@
                 <Box flex="y" spacing="s" padding="s">
                   <Input
                     type="text"
-                    action="update"
+                    command="--navi-update"
                     value={valueSignal.value}
                     placeholder="Type something…"
                     autoFocus
                   />
                   <Box flex spacing="s">
-                    <Button action="send">Save</Button>
-                    <Button action="clear">Clear</Button>
-                    <Button action="cancel">Cancel</Button>
+                    <Button command="--navi-send">Save</Button>
+                    <Button command="--navi-clear">Clear</Button>
+                    <Button command="--navi-cancel">Cancel</Button>
                   </Box>
                 </Box>
               </Picker>
@@ -234,15 +234,15 @@
                 <Box flex="y" spacing="s" padding="s">
                   <Input
                     type="text"
-                    action="update"
+                    command="--navi-update"
                     value={valueSignal.value}
                     placeholder="Type something…"
                     autoFocus
                   />
                   <Box flex spacing="s">
-                    <Button action="send">Confirm</Button>
-                    <Button action="clear">Clear</Button>
-                    <Button action="cancel">Cancel</Button>
+                    <Button command="--navi-send">Confirm</Button>
+                    <Button command="--navi-clear">Clear</Button>
+                    <Button command="--navi-cancel">Cancel</Button>
                   </Box>
                 </Box>
               </Picker>
