@@ -152,9 +152,15 @@ registerNaviCommand("--navi-send", {
   resolveTarget: getClosestControlWithAction,
   implementation: (commandTarget, { event, source }) => {
     if (source.hasAttribute("navi-control-group")) {
-       dispatchNaviCommand(source, "--navi-update", event);
+      dispatchNaviCommand(source, "--navi-update", event);
     }
+    const closestExpandable = getClosestExpandable(source);
     dispatchNaviCommand(source, "--navi-close", event);
+    if (closestExpandable) {
+      // The picker's onClose already dispatched the action with the final value.
+      // Dispatching again here would fire the action twice.
+      return true;
+    }
 
     let requester = source;
     if (source.matches(submitSelector)) {
