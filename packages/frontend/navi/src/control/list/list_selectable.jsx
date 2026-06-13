@@ -363,9 +363,7 @@ const ListSelectable = (props) => {
           e.preventDefault();
           return;
         }
-        if (childController.setUIState(true, e)) {
-          dispatchRequestAction(list, { event: e });
-        }
+        childController.setUIState(true, e);
       }}
       onnavi_request_unselect={(e) => {
         const { id } = e.detail;
@@ -383,9 +381,7 @@ const ListSelectable = (props) => {
           e.preventDefault();
           return;
         }
-        if (childController.setUIState(false, e)) {
-          dispatchRequestAction(list, { event: e });
-        }
+        childController.setUIState(false, e);
       }}
       onnavi_request_nav={(e) => {
         const { goal } = e.detail;
@@ -493,19 +489,15 @@ const ListItemSelectable = (props) => {
   const inputId = `${id}_input`;
   inputRef.nullCanHappen = true; // virtualization
   const [checkableProps, remainingProps] = useCheckableProps({
-    readOnlyMessage: naviI18n(`constraint.readonly.option`, props),
+    "readOnlyMessage": naviI18n(`constraint.readonly.option`, props),
     ...rest,
-    ref: inputRef,
-    id: inputId,
-    type: inputType,
-    defaultChecked: defaultSelected,
-    checked: selected,
-    action: (v, { event }) => {
-      const listContainerEl = event.currentTarget.closest(
-        ".navi_list_container",
-      );
-      dispatchRequestAction(listContainerEl, { event });
-    },
+    "ref": inputRef,
+    "id": inputId,
+    "type": inputType,
+    "defaultChecked": defaultSelected,
+    "checked": selected,
+    "command": "--navi-send",
+    "navi-command-target": "parent-control",
   });
   const { checked, value, basePseudoState, children } = checkableProps;
   const readOnly = basePseudoState[":read-only"];
