@@ -44,6 +44,7 @@ import {
 import { compareTwoJsValues } from "@jsenv/navi/src/utils/compare_two_js_values.js";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import { isSignal } from "@jsenv/navi/src/utils/is_signal.js";
+import { dispatchNaviCommand, onNaviCommand } from "./commands.js";
 import {
   ActionContext,
   ActionRequesterContext,
@@ -60,7 +61,6 @@ import {
 import { findControlProxyTarget } from "./control_proxy.js";
 import { readControlValue } from "./control_value.js";
 import { addInputEffect } from "./input_effect.js";
-import { resolveActionProp, triggerStringAction } from "./string_actions.js";
 import {
   ParentUIStateControllerContext,
   useUIGroupStateController,
@@ -186,7 +186,7 @@ export const useControlProps = (
     uiActionInternal,
   });
   const [boundAction] = useActionBoundToOneParam(
-    resolveActionProp(props.action),
+    props.action,
     uiStateController.uiStateSignal,
   );
   const [controlProps, remainingProps] = useInteractiveProps(props, {
@@ -342,7 +342,10 @@ export const useControlProps = (
         name: "navi_change",
         callback: asAction,
       };
-      enterEffect = (e) => triggerStringAction("send", e);
+      enterEffect = (e) => {
+        const checkable = e.currentTarget;
+        dispatchNaviCommand(checkable, "--navi-send", e);
+      };
       if (picker) {
         mousedownInteraction = {
           name: "mousedown to open picker",
@@ -460,6 +463,9 @@ export const useControlProps = (
       onKeyDown,
       onPaste,
       onInput,
+      onnavi_command: (e) => {
+        onNaviCommand(e);
+      },
     });
   }
 
@@ -500,7 +506,7 @@ export const useControlgroupProps = (
     });
   }, [uiGroupStateController]);
   const [boundAction] = useActionBoundToOneParam(
-    resolveActionProp(action),
+    action,
     uiGroupStateController.uiStateSignal,
   );
   const [actionRequester, setActionRequester] = useState();
@@ -698,11 +704,7 @@ const useInteractiveProps = (
       errorMapping,
     });
     const dataAction =
-      action === undefined
-        ? undefined
-        : typeof action === "string"
-          ? action
-          : boundAction.callSource;
+      action === undefined ? undefined : boundAction.callSource;
     Object.assign(controlProps, {
       "data-action": dataAction,
     });

@@ -36,8 +36,14 @@ export const findControlHost = (el) => {
   }
   return el.querySelector("[navi-control-host]");
 };
+export const isControlRoot = (el) => {
+  return el.hasAttribute("navi-control");
+};
 export const isControlHost = (el) => {
   return el.hasAttribute("navi-control-host");
+};
+export const isControl = (el) => {
+  return isControlRoot(el) || isControlHost(el);
 };
 
 /**

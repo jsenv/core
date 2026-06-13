@@ -17,6 +17,7 @@ import {
 import { useNavState } from "../nav/browser_integration/browser_integration.js";
 import { useInitialValue } from "../state/use_initial_value.js";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
+import { dispatchNaviCommand } from "./commands.js";
 import { findControlProxy } from "./control_proxy.js";
 import { asControlHostValue } from "./control_value.js";
 import { FormContext } from "./form_context.js";
@@ -300,6 +301,18 @@ export const useUIStateController = (
     },
     setUIState: (prop, e) => {
       const newUIState = uiStateController.getStateFromProp(prop);
+      const onUIAction = () => {
+        uiActionInternal?.(newUIState, e);
+        uiAction?.(newUIState, e);
+        const command = uiStateController.props.command;
+        if (command) {
+          const element = uiStateController.elementRef.current;
+          if (element) {
+            dispatchNaviCommand(element, command, e);
+          }
+        }
+      };
+
       const controllerSig = getElementSignature(e.currentTarget || ref.current);
       if (persists) {
         setNavState(prop);
@@ -312,8 +325,7 @@ export const useUIStateController = (
             e,
             `${controllerSig}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> trigger button action`,
           );
-          uiActionInternal?.(newUIState, e);
-          uiAction?.(newUIState, e);
+          onUIAction();
           return true;
         }
         debugInteraction(
@@ -322,10 +334,6 @@ export const useUIStateController = (
         );
         return false;
       }
-      debugInteraction(
-        e,
-        `${controllerSig}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> updating from ${JSON.stringify(currentUIState)}`,
-      );
       const el = ref.current;
       if (el) {
         // set immediatly (don't wait for preact re-render) so ui is in the right state for:
@@ -450,8 +458,7 @@ export const useUIStateController = (
           // TODO: select, textarea
         }
       }
-      uiActionInternal?.(newUIState, e);
-      uiAction?.(newUIState, e);
+      onUIAction();
       return true;
     },
     resetUIState: (e) => {
