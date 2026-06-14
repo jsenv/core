@@ -318,7 +318,6 @@ const PickerButton = (props) => {
       as={headless ? "div" : "button"}
       ref={ref}
       baseClassName="navi_picker"
-      navi-has-placeholder={placeholder ? "" : undefined}
       pseudoClasses={PICKER_BUTTON_PSEUDO_CLASSES}
       disabled={disabled}
       data-line-clamp={hasLineClamp ? "" : undefined}
