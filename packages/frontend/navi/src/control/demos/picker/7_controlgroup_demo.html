@@ -45,13 +45,24 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { CallLog, useCallLog } from "../utils/call_log.jsx";
-      import { Box, Field, Label, Picker, Form, Button } from "@jsenv/navi";
+      import {
+        NaviDebug,
+        Box,
+        Field,
+        Label,
+        Picker,
+        Input,
+        Form,
+        Button,
+      } from "@jsenv/navi";
 
       const App = () => (
-        <Box flex="y" spacing="l">
-          <OutsideFormDemo />
-          <InFormDemo />
-        </Box>
+        <NaviDebug debugCommand>
+          <Box flex="y" spacing="l">
+            <OutsideFormDemo />
+            <InFormDemo />
+          </Box>
+        </NaviDebug>
       );
 
       // ── 1. Outside a form ────────────────────────────────────────────────
@@ -84,15 +95,15 @@
                   <Box flex="y" spacing="s" style={{ padding: "12px" }}>
                     <Field vertical>
                       <Label>Rue</Label>
-                      <input name="street" placeholder="12 rue de la Paix" />
+                      <Input name="street" placeholder="12 rue de la Paix" />
                     </Field>
                     <Field vertical>
                       <Label>Ville</Label>
-                      <input name="city" placeholder="Paris" />
+                      <Input name="city" placeholder="Paris" />
                     </Field>
                     <Field vertical>
                       <Label>Code postal</Label>
-                      <input name="zip" placeholder="75001" />
+                      <Input name="zip" placeholder="75001" />
                     </Field>
                   </Box>
                 </Picker>
@@ -123,7 +134,11 @@
               <Box flex="y" spacing="m">
                 <Field vertical>
                   <Label>Email</Label>
-                  <input name="email" type="email" placeholder="you@example.com" />
+                  <Input
+                    name="email"
+                    type="email"
+                    placeholder="you@example.com"
+                  />
                 </Field>
                 <Field vertical>
                   <Label>Adresse</Label>
@@ -135,18 +150,18 @@
                       push("Picker uiAction", v);
                     }}
                   >
-                    <Box flex="y" spacing="s" style={{ padding: "12px" }}>
+                    <Box flex="y" spacing="s" padding="m" alignX="start">
                       <Field vertical>
                         <Label>Rue</Label>
-                        <input name="street" placeholder="12 rue de la Paix" />
+                        <Input name="street" placeholder="12 rue de la Paix" />
                       </Field>
                       <Field vertical>
                         <Label>Ville</Label>
-                        <input name="city" placeholder="Paris" />
+                        <Input name="city" placeholder="Paris" />
                       </Field>
                       <Field vertical>
                         <Label>Code postal</Label>
-                        <input name="zip" placeholder="75001" />
+                        <Input name="zip" placeholder="75001" />
                       </Field>
                     </Box>
                   </Picker>
