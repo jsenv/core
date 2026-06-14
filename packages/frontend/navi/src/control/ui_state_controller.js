@@ -700,16 +700,19 @@ export const useUIGroupStateController = (
     getPropFromState: (uiState) => uiState,
     setUIState: (newUIState, e, { notifyExternal = true } = {}) => {
       const currentUIState = uiStateController.uiState;
-      if (newUIState === currentUIState) {
-        return;
+      const stateChanged = newUIState !== currentUIState;
+      // Update state before calling uiAction/command so they observe the new state.
+      if (stateChanged) {
+        uiStateController.uiState = newUIState;
+        uiStateSignal.value = newUIState;
+        debugUIGroup(
+          `${controlType}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> updates from ${JSON.stringify(currentUIState)} to ${JSON.stringify(newUIState)}`,
+        );
+        publishUIState(newUIState);
       }
-      uiStateController.uiState = newUIState;
-      uiStateSignal.value = newUIState;
-      debugUIGroup(
-        `${controlType}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> updates from ${JSON.stringify(currentUIState)} to ${JSON.stringify(newUIState)}`,
-      );
-      publishUIState(newUIState);
       if (notifyExternal) {
+        // uiAction and command react to every user interaction, even when value doesn't change
+        // (e.g. re-clicking an already-selected radio).
         const uiAction = uiActionRef.current;
         uiAction?.(newUIState, e);
         uiActionInternal?.(newUIState, e);
@@ -719,7 +722,18 @@ export const useUIGroupStateController = (
             dispatchNaviCommand(el, command, e);
           }
         }
-        notifyParentAboutChildUIStateChange(e);
+        if (stateChanged) {
+          // Emit navi_ui_state_change so control_hooks.jsx can dispatch dispatchRequestAction
+          // only when the value actually changed — mirrors what the leaf controller does.
+          const el = ref.current;
+          if (el) {
+            dispatchInternalCustomEvent(el, "navi_ui_state_change", {
+              event: e,
+              value: newUIState,
+            });
+          }
+          notifyParentAboutChildUIStateChange(e);
+        }
       }
     },
     registerChild: (childUIStateController) => {

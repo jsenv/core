@@ -552,6 +552,7 @@ export const useControlgroupProps = (
     childControlFilter,
     aggregateChildStates,
     wantRequesterButtonState,
+    uiActionInternal,
   },
 ) => {
   const { ref, action } = props;
@@ -560,14 +561,7 @@ export const useControlgroupProps = (
     childControlFilter,
     aggregateChildStates,
     wantRequesterButtonState,
-    uiActionInternal: action
-      ? (newUIState, e) => {
-          const el = ref.current;
-          if (el) {
-            dispatchRequestAction(el, { event: e, uiState: newUIState });
-          }
-        }
-      : undefined,
+    uiActionInternal,
   });
 
   const [boundAction] = useActionBoundToOneParam(
@@ -607,6 +601,21 @@ export const useControlgroupProps = (
       actionRequester,
     ],
   );
+
+  if (action) {
+    // When the group's aggregated value changes, dispatch dispatchRequestAction
+    // so the action pipeline (constraints, optimistic update, execute action) runs.
+    // This mirrors what leaf controls do via their synthetic input event + addInputEffect.
+    controlgroupProps.onnavi_ui_state_change = (e) => {
+      const el = ref.current;
+      if (el) {
+        dispatchRequestAction(el, {
+          event: e.detail.event,
+          uiState: e.detail.value,
+        });
+      }
+    };
+  }
 
   return [
     {
