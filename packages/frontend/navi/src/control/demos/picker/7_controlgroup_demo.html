@@ -57,7 +57,7 @@
       } from "@jsenv/navi";
 
       const App = () => (
-        <NaviDebug debugCommand>
+        <NaviDebug debugCommand debugInteraction>
           <Box flex="y" spacing="l">
             <OutsideFormDemo />
             <InFormDemo />
@@ -92,7 +92,7 @@
                     push("action", v);
                   }}
                 >
-                  <Box flex="y" spacing="s" style={{ padding: "12px" }}>
+                  <Box flex="y" spacing="s" padding="s" alignX="start">
                     <Field vertical>
                       <Label>Rue</Label>
                       <Input name="street" placeholder="12 rue de la Paix" />
@@ -131,7 +131,7 @@
                 push("Form action", v);
               }}
             >
-              <Box flex="y" spacing="m">
+              <Box flex="y" spacing="m" alignX="start">
                 <Field vertical>
                   <Label>Email</Label>
                   <Input
@@ -166,7 +166,7 @@
                     </Box>
                   </Picker>
                 </Field>
-                <Button.Send>Envoyer</Button.Send>
+                <Button.Send />
               </Box>
             </Form>
             <CallLog entries={entries} onClear={clear} />
