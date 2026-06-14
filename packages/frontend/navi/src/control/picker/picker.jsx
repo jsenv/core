@@ -26,6 +26,7 @@ import {
   PickerDateUI,
   PickerFileUI,
   PickerTimeUI,
+  PickerTypeResolver,
   PickerWeekUI,
 } from "./picker_types.jsx";
 
@@ -483,6 +484,7 @@ const PickerFirstResolver = (props) => {
 export const Picker = createComponentResolver([
   PickerFirstResolver,
   ...pickerResolvers,
+  PickerTypeResolver,
   PickerButton,
 ]);
 

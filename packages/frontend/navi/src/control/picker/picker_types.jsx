@@ -6,13 +6,45 @@ import { Text } from "@jsenv/navi/src/text/text.jsx";
 import { Time } from "@jsenv/navi/src/text/time.jsx";
 import { PickerContext } from "./picker_context.jsx";
 
-export const PickerText = (props) => {
+export const PickerTypeResolver = (props) => {
+  const Next = useNextResolver();
+  if (props.type === "color") {
+    return <PickerColor {...props} />;
+  }
+  if (props.type === "date") {
+    return <PickerDate {...props} />;
+  }
+  if (props.type === "month") {
+    return <PickerMonth {...props} />;
+  }
+  if (props.type === "week") {
+    return <PickerWeek {...props} />;
+  }
+  if (props.type === "time") {
+    return <PickerTime {...props} />;
+  }
+  if (props.type === "datetime") {
+    return <PickerDatetime {...props} />;
+  }
+  if (props.type === "file") {
+    return <PickerFile {...props} />;
+  }
+  if (props.type === "text") {
+    return <PickerText {...props} />;
+  }
+  if (props.type === "array") {
+    return <PickerArray {...props} />;
+  }
+  return <Next {...props} />;
+};
+
+const PickerText = (props) => {
   const Next = useNextResolver();
 
   return <Next icon={<PencilSvg />} {...props} />;
 };
 
-export const PickerArray = (props) => {
+const PickerArray = (props) => {
   const Next = useNextResolver();
 
   return (
@@ -37,7 +69,7 @@ export const PickerArrayUI = () => {
   );
 };
 
-export const PickerColor = (props) => {
+const PickerColor = (props) => {
   const Next = useNextResolver();
 
   return (
@@ -56,7 +88,7 @@ export const PickerColorUI = () => {
   return <Color>{value}</Color>;
 };
 
-export const PickerDate = (props) => {
+const PickerDate = (props) => {
   const Next = useNextResolver();
 
   return (
@@ -87,7 +119,7 @@ export const PickerDateUI = (props) => {
   );
 };
 
-export const PickerMonth = (props) => {
+const PickerMonth = (props) => {
   const Next = useNextResolver();
 
   return (
@@ -122,7 +154,7 @@ export const PickerMonthUI = (props) => {
   );
 };
 
-export const PickerWeek = (props) => {
+const PickerWeek = (props) => {
   const Next = useNextResolver();
 
   return (
@@ -152,7 +184,7 @@ export const PickerWeekUI = (props) => {
   );
 };
 
-export const PickerTime = (props) => {
+const PickerTime = (props) => {
   const Next = useNextResolver();
 
   return (
@@ -182,7 +214,7 @@ export const PickerTimeUI = (props) => {
   );
 };
 
-export const PickerDatetime = (props) => {
+const PickerDatetime = (props) => {
   const Next = useNextResolver();
 
   return (
@@ -217,7 +249,7 @@ export const PickerDatetimeUI = (props) => {
   );
 };
 
-export const PickerFile = (props) => {
+const PickerFile = (props) => {
   const Next = useNextResolver();
 
   return (
