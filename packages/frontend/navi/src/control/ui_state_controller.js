@@ -735,6 +735,7 @@ export const useUIGroupStateController = (
       const currentUIState = uiStateController.uiState;
       const uiAction = uiActionRef.current;
       uiAction?.(currentUIState, e);
+      uiActionInternal?.(currentUIState, e);
       if (command) {
         const el = ref.current;
         if (el) {
