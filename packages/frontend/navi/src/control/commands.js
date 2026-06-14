@@ -104,6 +104,13 @@ const getClosestControlWithAction = (el) => {
   return controlWithAction;
 };
 
+const resolveCommandValue = (source) => {
+  if (source.hasAttribute("command-value")) {
+    return source.getAttribute("command-value");
+  }
+  return getUIStateFromElement(source);
+};
+
 export const onNaviCommand = (e, { debugCommand }) => {
   const { command, event, source } = e.detail;
   if (typeof command !== "string") {
@@ -152,7 +159,7 @@ registerNaviCommand("--navi-update", {
       event.preventDefault();
       return false;
     }
-    const updateParam = getUIStateFromElement(source);
+    const updateParam = resolveCommandValue(source);
 
     return dispatchRequestSetUIState(commandTarget, updateParam, {
       event,
@@ -262,7 +269,7 @@ registerNaviCommand("--navi-clear", {
 registerNaviCommand("--navi-scroll", {
   resolveTarget: getFirstParentControl,
   implementation: (commandTarget, { event, source }) => {
-    const scrollParam = getUIStateFromElement(source);
+    const scrollParam = resolveCommandValue(source);
 
     return dispatchCustomEvent(commandTarget, "navi_request_scroll", {
       event,
@@ -273,7 +280,7 @@ registerNaviCommand("--navi-scroll", {
 registerNaviCommand("--navi-select", {
   resolveTarget: getFirstParentControl,
   implementation: (commandTarget, { event, source }) => {
-    const selectParam = getUIStateFromElement(source);
+    const selectParam = resolveCommandValue(source);
 
     return dispatchCustomEvent(commandTarget, "navi_request_select", {
       event,
@@ -284,7 +291,7 @@ registerNaviCommand("--navi-select", {
 registerNaviCommand("--navi-unselect", {
   resolveTarget: getFirstParentControl,
   implementation: (commandTarget, { event, source }) => {
-    const unselectParam = getUIStateFromElement(source);
+    const unselectParam = resolveCommandValue(source);
 
     return dispatchCustomEvent(commandTarget, "navi_request_unselect", {
       event,

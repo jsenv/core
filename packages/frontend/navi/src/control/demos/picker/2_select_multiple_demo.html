@@ -174,9 +174,10 @@
           <div class="demo-section">
             <h2>1. Text display — comma-separated</h2>
             <p>
-              <code>List selectable multiple command="--navi-update"</code> updates the
-              picker's pending state on each click. Confirming commits the array
-              to the action callback, which updates the displayed value.
+              <code>List selectable multiple command="--navi-update"</code>{" "}
+              updates the picker's pending state on each click. Confirming
+              commits the array to the action callback, which updates the
+              displayed value.
             </p>
             <Box flex="y" spacing="m">
               <Field vertical>
@@ -466,9 +467,9 @@
                   {opt}
                   <Badge.Button
                     command="--navi-unselect"
-                    ui-action-target="#skills_list_delete"
-                    actionOnMouseDown
+                    commandFor="skills_list_delete"
                     value={opt}
+                    actionOnMouseDown
                     aria-label={`Remove ${opt}`}
                     onMouseDown={(e) => {
                       e.stopPropagation();
@@ -559,9 +560,9 @@
                           {opt}
                           <Badge.Button
                             command="--navi-unselect"
-                            ui-action-target="#skills_list_delete_mr1"
-                            actionOnMouseDown
+                            commandFor="skills_list_delete_mr1"
                             value={opt}
+                            actionOnMouseDown
                             aria-label={`Remove ${opt}`}
                             onMouseDown={(e) => e.stopPropagation()}
                             onClick={(e) => e.stopPropagation()}
