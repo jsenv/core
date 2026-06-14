@@ -407,9 +407,27 @@ export const useControlProps = (
         };
         naviChangeInteraction = undefined;
         enterEffect = (e) => {
-          // TODO: we should likely request toggle
-          onClick(e);
-          const checkable = e.currentTarget;
+          const checkable = ref.current;
+          const interactionAllowed = dispatchRequestInteraction(
+            checkable,
+            e,
+            "enter",
+          );
+          if (!interactionAllowed) {
+            if (checkable.form) {
+              e.preventDefault();
+            }
+            return;
+          }
+          let newState;
+          if (checkable.type === "checkbox") {
+            // toggle: if checked → uncheck (undefined), if unchecked → check (value)
+            newState = checkable.checked ? undefined : checkable.value;
+          } else {
+            // radio: always check
+            newState = checkable.value;
+          }
+          dispatchRequestSetUIState(checkable, newState, { event: e });
           if (checkable.form) {
             e.preventDefault();
           }
@@ -418,6 +436,7 @@ export const useControlProps = (
           spaceEffect = (e) => {
             const radio = e.currentTarget;
             if (radio.checked) {
+              wasCheckedAtMousedownRef.current = true;
               onClick(e);
             }
           };

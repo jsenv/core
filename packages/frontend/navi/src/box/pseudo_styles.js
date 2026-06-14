@@ -307,10 +307,81 @@ focus_classes: {
       }
     }
   };
+  // Tracks whether the user has pressed a keyboard navigation key (arrow keys,
+  // Escape, Enter, Ctrl, Alt, Shift, Space) since the last pointer interaction.
+  // Space is ignored when the target is an editable field.
+  // This flag is used to gate focus-visible inheritance via aria-controls:
+  // on mobile (or when the user hasn't used keyboard nav yet) an input that
+  // controls a radio should not cause the radio to show a focus ring.
+  let keyboardNavigationUsed = false;
+  const NAVIGATION_KEYS = new Set([
+    "ArrowUp",
+    "ArrowDown",
+    "ArrowLeft",
+    "ArrowRight",
+    "Escape",
+    "Enter",
+    "Control",
+    "Alt",
+    "Shift",
+    " ",
+  ]);
+  const isEditableTarget = (target) => {
+    if (!target) {
+      return false;
+    }
+    const tag = target.tagName;
+    if (tag === "TEXTAREA") {
+      return true;
+    }
+    if (tag === "INPUT") {
+      const type = target.type;
+      if (
+        !type ||
+        type === "text" ||
+        type === "search" ||
+        type === "url" ||
+        type === "email" ||
+        type === "password" ||
+        type === "tel" ||
+        type === "number"
+      ) {
+        return true;
+      }
+    }
+    if (target.isContentEditable) {
+      return true;
+    }
+    return false;
+  };
+  document.addEventListener(
+    "keydown",
+    (e) => {
+      if (!NAVIGATION_KEYS.has(e.key)) {
+        return;
+      }
+      if (e.key === " " && isEditableTarget(e.target)) {
+        return;
+      }
+      keyboardNavigationUsed = true;
+    },
+    { capture: true },
+  );
+  document.addEventListener(
+    "pointerdown",
+    () => {
+      keyboardNavigationUsed = false;
+    },
+    { capture: true },
+  );
+
   // Returns true when el holds focus indirectly — either because a controlling
   // element (aria-controls) has focus, or because el is a proxy whose target
   // is itself controlled by a focused element.
   const hasIndirectFocus = (el, { requireFocusVisible = false } = {}) => {
+    if (requireFocusVisible && !keyboardNavigationUsed) {
+      return false;
+    }
     const pseudoClass = requireFocusVisible ? ":focus-visible" : ":focus";
     const isControlledBy = (target) => {
       const id = target.id;
