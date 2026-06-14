@@ -325,7 +325,7 @@ const css = /* css */ `
           white
         );
       }
-      &[data-disabled] {
+      &[data-readonly] {
         --x-button-background-color: color-mix(
           in srgb,
           var(--button-cta-background-color) 50%,
@@ -337,7 +337,7 @@ const css = /* css */ `
           white
         );
       }
-      &[data-readonly] {
+      &[data-disabled] {
         --x-button-background-color: color-mix(
           in srgb,
           var(--button-cta-background-color) 40%,
