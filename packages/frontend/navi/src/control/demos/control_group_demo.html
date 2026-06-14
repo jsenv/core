@@ -44,6 +44,16 @@
               <StandaloneDemo />
             </section>
 
+            {/* ── Standalone with validation ───────────────────────────── */}
+            <section>
+              <h2>Standalone — with required field</h2>
+              <p style={{ color: "#555", fontSize: "0.9rem" }}>
+                Same setup but <code>firstName</code> is required. Submit
+                without filling it to verify validation blocks the action.
+              </p>
+              <StandaloneRequiredDemo />
+            </section>
+
             {/* ── Inside a Form ────────────────────────────────────────── */}
             <section>
               <h2>Inside a Form</h2>
@@ -76,6 +86,37 @@
                 <Field>
                   First name
                   <Input type="text" name="firstName" />
+                </Field>
+                <Field>
+                  Last name
+                  <Input type="text" name="lastName" />
+                </Field>
+                <Button.Send />
+              </Box>
+            </ControlGroup>
+            <CallLog entries={entries} onClear={clearEntries} />
+          </Box>
+        );
+      };
+
+      const StandaloneRequiredDemo = () => {
+        const [entries, pushEntry, clearEntries] = useCallLog();
+
+        return (
+          <Box flex="y" spacing="m" alignX="start">
+            <ControlGroup
+              name="address"
+              action={(value) => {
+                pushEntry("action", value);
+              }}
+              uiAction={(value) => {
+                pushEntry("uiAction", value);
+              }}
+            >
+              <Box flex="y" spacing="s" alignX="start">
+                <Field>
+                  First name (required)
+                  <Input type="text" name="firstName" required />
                 </Field>
                 <Field>
                   Last name
