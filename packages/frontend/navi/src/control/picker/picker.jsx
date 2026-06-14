@@ -23,6 +23,7 @@ import {
   PencilSvg,
   PickerArrayUI,
   PickerColorUI,
+  PickerControlGroupUI,
   PickerDatetimeUI,
   PickerDateUI,
   PickerFileUI,
@@ -497,6 +498,7 @@ Picker.UI.Week = PickerWeekUI;
 Picker.UI.Datetime = PickerDatetimeUI;
 Picker.UI.File = PickerFileUI;
 Picker.UI.Color = PickerColorUI;
+Picker.UI.ControlGroup = PickerControlGroupUI;
 Picker.UI.Multiple = PickerArrayUI;
 
 Picker.UI.PencilSvg = PencilSvg;

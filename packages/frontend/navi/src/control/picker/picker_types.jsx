@@ -1,9 +1,13 @@
-import { useContext } from "preact/hooks";
+import { useContext, useRef } from "preact/hooks";
 
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
+import { Badge } from "@jsenv/navi/src/text/badge.jsx";
+import { BadgeList } from "@jsenv/navi/src/text/badge_list.jsx";
 import { Color } from "@jsenv/navi/src/text/color.jsx";
 import { Text } from "@jsenv/navi/src/text/text.jsx";
 import { Time } from "@jsenv/navi/src/text/time.jsx";
+import { ControlGroup } from "../control_group.jsx";
+import { dispatchRequestSetUIState } from "../ui_state_dom.js";
 import { PickerContext } from "./picker_context.jsx";
 
 export const PickerTypeResolver = (props) => {
@@ -35,6 +39,9 @@ export const PickerTypeResolver = (props) => {
   if (props.type === "array") {
     return <PickerArray {...props} />;
   }
+  if (props.type === "controlgroup") {
+    return <PickerControlGroup {...props} />;
+  }
   return <Next {...props} />;
 };
 
@@ -44,12 +51,67 @@ const PickerText = (props) => {
   return <Next icon={<PencilSvg />} {...props} />;
 };
 
+const PickerControlGroup = (props) => {
+  const Next = useNextResolver();
+  const { children, ...rest } = props;
+  const groupRef = useRef(null);
+
+  const wrappedChildren = (
+    <ControlGroup
+      ref={groupRef}
+      uiAction={(aggregate) => {
+        const groupEl = groupRef.current;
+        if (!groupEl) {
+          return;
+        }
+        const pickerEl = groupEl.closest(".navi_picker");
+        if (!pickerEl) {
+          return;
+        }
+        const pickerInput = pickerEl.querySelector(".navi_picker_input");
+        if (!pickerInput) {
+          return;
+        }
+        dispatchRequestSetUIState(pickerInput, aggregate);
+      }}
+    >
+      {children}
+    </ControlGroup>
+  );
+
+  return (
+    <Next {...rest} type="navi_js" ui={<PickerControlGroupUI />}>
+      {wrappedChildren}
+    </Next>
+  );
+};
+export const PickerControlGroupUI = () => {
+  const { value, placeholder } = useContext(PickerContext);
+
+  if (!value || Object.keys(value).length === 0) {
+    if (!placeholder) {
+      return null;
+    }
+    return placeholder;
+  }
+  return (
+    <BadgeList>
+      {Object.entries(value).map(([key, val]) => {
+        return (
+          <Badge key={key}>
+            <span style={{ opacity: 0.6 }}>{key}:</span>
+            {String(val ?? "")}
+          </Badge>
+        );
+      })}
+    </BadgeList>
+  );
+};
+
 const PickerArray = (props) => {
   const Next = useNextResolver();
 
-  return (
-    <Next maxLines="3" ui={<PickerArrayUI />} {...props} type="navi_array" />
-  );
+  return <Next maxLines="3" ui={<PickerArrayUI />} {...props} type="navi_js" />;
 };
 export const PickerArrayUI = () => {
   const { value, placeholder, maxLines } = useContext(PickerContext);
