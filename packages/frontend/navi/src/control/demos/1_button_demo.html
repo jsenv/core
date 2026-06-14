@@ -229,7 +229,15 @@
                     </a>
                   </li>
                   <li>
-                    <a href="#customization-variant">Variant</a>
+                    Variant
+                    <ol style={{ paddingLeft: "20px" }}>
+                      <li>
+                        <a href="#customization-variant-border">border</a>
+                      </li>
+                      <li>
+                        <a href="#customization-variant-text">text</a>
+                      </li>
+                    </ol>
                   </li>
                   <li>
                     <a href="#customization-cta">CTA</a>
@@ -1515,7 +1523,9 @@
             </fieldset>
 
             <fieldset>
-              <legend>width — full width with text alignment (left / center / end)</legend>
+              <legend>
+                width — full width with text alignment (left / center / end)
+              </legend>
               <div
                 style={{ display: "flex", flexDirection: "column", gap: "8px" }}
               >
@@ -1572,37 +1582,72 @@
             </fieldset>
 
             {/* ── Variant ───────────────────────────────────────────────── */}
-            <h3 id="customization-variant" style={{ margin: "24px 0 12px" }}>
-              Variant
+            {/* ── Variant: border ───────────────────────────────────────── */}
+            <h3
+              id="customization-variant-border"
+              style={{ margin: "24px 0 12px" }}
+            >
+              Variant — border
             </h3>
 
             <fieldset>
-              <legend>fill (default) / border / text</legend>
+              <legend>Regular vs border</legend>
               <div className="button-group">
-                <Button>fill (default)</Button>
+                <Button>Regular</Button>
                 <Button variant="border">border</Button>
-                <Button variant="text">text</Button>
               </div>
             </fieldset>
 
             <fieldset>
-              <legend>hover states — hover each button</legend>
+              <legend>border — states</legend>
               <div className="button-group">
-                <Button>fill</Button>
-                <Button variant="border">border</Button>
-                <Button variant="text">text</Button>
-              </div>
-            </fieldset>
-
-            <fieldset>
-              <legend>disabled states</legend>
-              <div className="button-group">
-                <Button disabled>fill</Button>
+                <Button variant="border">Normal</Button>
+                <Button variant="border" pseudoState={{ ":hover": true }}>
+                  Hover
+                </Button>
+                <Button variant="border" readOnly>
+                  Read-only
+                </Button>
                 <Button variant="border" disabled>
-                  border
+                  Disabled
+                </Button>
+                <Button variant="border" loading>
+                  Loading
+                </Button>
+              </div>
+            </fieldset>
+
+            {/* ── Variant: text ─────────────────────────────────────────── */}
+            <h3
+              id="customization-variant-text"
+              style={{ margin: "24px 0 12px" }}
+            >
+              Variant — text
+            </h3>
+
+            <fieldset>
+              <legend>Regular vs text</legend>
+              <div className="button-group">
+                <Button>Regular</Button>
+                <Button variant="text">text</Button>
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend>text — states</legend>
+              <div className="button-group">
+                <Button variant="text">Normal</Button>
+                <Button variant="text" pseudoState={{ ":hover": true }}>
+                  Hover
+                </Button>
+                <Button variant="text" readOnly>
+                  Read-only
                 </Button>
                 <Button variant="text" disabled>
-                  text
+                  Disabled
+                </Button>
+                <Button variant="text" loading>
+                  Loading
                 </Button>
               </div>
             </fieldset>
