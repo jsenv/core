@@ -248,17 +248,25 @@
       );
 
       const App = () => (
-        <Box flex="y" spacing="l">
-          <TableOfContents />
-          <DimensionsDemo />
-          <SelectWithSend />
-          <SelectWithUpdate />
-          <SearchableSelectEmpty />
-          <SearchableSelectNormal />
-          <SearchableSelectFewResults />
-          <SearchableSelectNoResults />
-          <PlacePickerDemo />
-        </Box>
+        <NaviDebug
+          debugUIState
+          debugCommand
+          debugAction
+          debugInteraction
+          debugPopup
+        >
+          <Box flex="y" spacing="l">
+            <TableOfContents />
+            <DimensionsDemo />
+            <SelectWithSend />
+            <SelectWithUpdate />
+            <SearchableSelectEmpty />
+            <SearchableSelectNormal />
+            <SearchableSelectFewResults />
+            <SearchableSelectNoResults />
+            <PlacePickerDemo />
+          </Box>
+        </NaviDebug>
       );
 
       const CallLog = ({ entries }) => {
@@ -1093,9 +1101,8 @@
       // ── 3–9. Renumbered sections ──────────────────────────────────────────
 
       render(
-        <NaviDebug debugCommand debugAction debugInteraction debugPopup>
-          <App />
-        </NaviDebug>,
+        <App />,
+
         document.getElementById("app"),
       );
     </script>
