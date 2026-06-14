@@ -2,7 +2,7 @@ import { Box } from "@jsenv/navi/src/box/box.jsx";
 
 const css = /* css */ `
   .navi_group {
-    --border-width: 1px;
+    --group-border-width: 1px;
 
     > *:hover,
     > *[data-hover] {
@@ -55,7 +55,7 @@ const css = /* css */ `
     /* Vertical: Cumulative margin for border overlap */
     &[data-vertical] {
       > *:not(:first-child) {
-        margin-top: calc(var(--border-width) * -1);
+        margin-top: calc(var(--group-border-width) * -1);
       }
       > *:first-child:not(:only-child) {
         border-bottom-right-radius: 0 !important;
@@ -91,20 +91,8 @@ const css = /* css */ `
   }
 `;
 
-export const Group = ({
-  children,
-  borderWidth = 1,
-  row,
-  vertical = row,
-  ...props
-}) => {
+export const Group = ({ children, row, vertical = row, ...props }) => {
   import.meta.css = css;
-
-  if (typeof borderWidth === "string") {
-    borderWidth = parseFloat(borderWidth);
-  }
-  const borderWidthCssValue =
-    typeof borderWidth === "number" ? `${borderWidth}px` : borderWidth;
 
   return (
     <Box
@@ -112,10 +100,6 @@ export const Group = ({
       data-vertical={vertical ? "" : undefined}
       row={row}
       {...props}
-      style={{
-        "--border-width": borderWidthCssValue,
-        ...props.style,
-      }}
     >
       {children}
     </Box>

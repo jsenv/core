@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ControlGroup Demo</title>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useSignal } from "@preact/signals";
+      import {
+        Box,
+        Button,
+        ControlGroup,
+        Field,
+        Form,
+        Input,
+      } from "@jsenv/navi";
+      import { NaviDebug } from "@jsenv/navi";
+
+      const App = () => {
+        return (
+          <Box
+            flex="y"
+            spacing="xl"
+            style={{ padding: "20px", maxWidth: "640px" }}
+          >
+            <h1>ControlGroup</h1>
+            <p style={{ margin: 0, color: "#555" }}>
+              <code>ControlGroup</code> aggregates the values of its child
+              controls into a single composite object — like a sub-form. It
+              supports its own <code>action</code>, <code>command</code>,
+              disabled, and read-only propagation, and can live inside or
+              outside a <code>&lt;Form&gt;</code>.
+            </p>
+
+            {/* ── Standalone ────────────────────────────────────────────── */}
+            <section>
+              <h2>Standalone (outside a Form)</h2>
+              <p style={{ color: "#555", fontSize: "0.9rem" }}>
+                The group acts like a mini-form. Clicking "Submit group" fires
+                its <code>action</code> with the aggregated object.
+              </p>
+              <StandaloneDemo />
+            </section>
+
+            {/* ── Inside a Form ────────────────────────────────────────── */}
+            <section>
+              <h2>Inside a Form</h2>
+              <p style={{ color: "#555", fontSize: "0.9rem" }}>
+                Fields inside the <code>ControlGroup</code> report to the group
+                (its composite value is one key in the form state), while the
+                field outside reports directly to the form.
+              </p>
+              <InsideFormDemo />
+            </section>
+          </Box>
+        );
+      };
+
+      const StandaloneDemo = () => {
+        const lastValue = useSignal(null);
+
+        return (
+          <Box flex="y" spacing="m">
+            <ControlGroup
+              name="address"
+              action={(value) => {
+                lastValue.value = value;
+              }}
+              command="--navi-send"
+            >
+              <Box flex="y" spacing="s">
+                <Field>
+                  <label>First name</label>
+                  <Input type="text" name="firstName" />
+                </Field>
+                <Field>
+                  <label>Last name</label>
+                  <Input type="text" name="lastName" />
+                </Field>
+                <Button command="--navi-send">Submit group</Button>
+              </Box>
+            </ControlGroup>
+
+            {lastValue.value !== null && (
+              <fieldset>
+                <legend>Last submitted value</legend>
+                <pre style={{ margin: 0, fontSize: "0.85rem" }}>
+                  {JSON.stringify(lastValue.value, null, 2)}
+                </pre>
+              </fieldset>
+            )}
+          </Box>
+        );
+      };
+
+      const InsideFormDemo = () => {
+        const lastFormValue = useSignal(null);
+
+        return (
+          <Box flex="y" spacing="m">
+            <Form
+              action={(value) => {
+                lastFormValue.value = value;
+              }}
+            >
+              <Box flex="y" spacing="s">
+                {/* This field belongs directly to the Form */}
+                <Field>
+                  <label>Email (form-level field)</label>
+                  <Input type="email" name="email" />
+                </Field>
+
+                {/* This group produces one "address" key in the form value */}
+                <fieldset>
+                  <legend>Address (ControlGroup)</legend>
+                  <ControlGroup name="address">
+                    <Box flex="y" spacing="s">
+                      <Field>
+                        <label>Street</label>
+                        <Input type="text" name="street" />
+                      </Field>
+                      <Field>
+                        <label>City</label>
+                        <Input type="text" name="city" />
+                      </Field>
+                    </Box>
+                  </ControlGroup>
+                </fieldset>
+
+                <Button command="--navi-send">Submit form</Button>
+              </Box>
+            </Form>
+
+            {lastFormValue.value !== null && (
+              <fieldset>
+                <legend>Last submitted form value</legend>
+                <pre style={{ margin: 0, fontSize: "0.85rem" }}>
+                  {JSON.stringify(lastFormValue.value, null, 2)}
+                </pre>
+              </fieldset>
+            )}
+          </Box>
+        );
+      };
+
+      render(
+        <NaviDebug debugCommand debugAction>
+          <App />
+        </NaviDebug>,
+        document.querySelector("#root"),
+      );
+    </script>
+  </body>
+</html>
