@@ -240,13 +240,13 @@
                       <li>
                         <a href="#customization-variant-border">border</a>
                       </li>
+                      <li>
+                        <a href="#customization-variant-icon">icon</a>
+                      </li>
                     </ol>
                   </li>
                   <li>
                     <a href="#customization-cta">CTA</a>
-                  </li>
-                  <li>
-                    <a href="#customization-icon">Icon</a>
                   </li>
                 </ol>
               </li>
@@ -1277,7 +1277,12 @@
               </p>
               <Box background="orange" padding="m" inline flex>
                 <Box circle width="30" inline flex background="white">
-                  <Button borderRadius="inherit" flex align="center">
+                  <Button
+                    variant="icon"
+                    borderRadius="inherit"
+                    flex
+                    align="center"
+                  >
                     <Icon>
                       <EyeSvg />
                     </Icon>
@@ -1796,13 +1801,86 @@
               </Box>
             </fieldset>
 
-            {/* ── Icon ─────────────────────────────────────────────────── */}
-            <h3 id="customization-icon" style={{ margin: "24px 0 12px" }}>
-              Icon
+            {/* ── Variant: icon ────────────────────────────────────────── */}
+            <h3
+              id="customization-variant-icon"
+              style={{ margin: "24px 0 12px" }}
+            >
+              Variant — icon
             </h3>
 
             <fieldset>
-              <legend>Icon-only button (toggle)</legend>
+              <legend>Regular vs icon</legend>
+              <div className="button-group">
+                <Button aria-label="Toggle visibility">
+                  <Icon>
+                    <EyeSvg />
+                  </Icon>
+                </Button>
+                <Button variant="icon" aria-label="Toggle visibility">
+                  <Icon>
+                    <EyeSvg />
+                  </Icon>
+                </Button>
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend>icon — states</legend>
+              <Box flex spacing="s">
+                <fieldset>
+                  <legend>:hover</legend>
+                  <Button
+                    variant="icon"
+                    aria-label="Toggle"
+                    pseudoState={{ ":hover": true }}
+                  >
+                    <Icon>
+                      <EyeSvg />
+                    </Icon>
+                  </Button>
+                </fieldset>
+                <fieldset>
+                  <legend>:focus-visible</legend>
+                  <Button
+                    variant="icon"
+                    aria-label="Toggle"
+                    pseudoState={{ ":focus-visible": true }}
+                  >
+                    <Icon>
+                      <EyeSvg />
+                    </Icon>
+                  </Button>
+                </fieldset>
+                <fieldset>
+                  <legend>:read-only</legend>
+                  <Button variant="icon" aria-label="Toggle" readOnly>
+                    <Icon>
+                      <EyeSvg />
+                    </Icon>
+                  </Button>
+                </fieldset>
+                <fieldset>
+                  <legend>:disabled</legend>
+                  <Button variant="icon" aria-label="Toggle" disabled>
+                    <Icon>
+                      <EyeSvg />
+                    </Icon>
+                  </Button>
+                </fieldset>
+                <fieldset>
+                  <legend>:-navi-loading</legend>
+                  <Button variant="icon" aria-label="Toggle" loading>
+                    <Icon>
+                      <EyeSvg />
+                    </Icon>
+                  </Button>
+                </fieldset>
+              </Box>
+            </fieldset>
+
+            <fieldset>
+              <legend>Icon-only toggle example</legend>
               <IconToggleSection />
             </fieldset>
           </div>
@@ -1815,6 +1893,7 @@
           <>
             <div className="button-group">
               <Button
+                variant="icon"
                 size="xxs"
                 onClick={() => setIsVisible(!isVisible)}
                 aria-label={isVisible ? "Hide content" : "Show content"}
@@ -1822,12 +1901,14 @@
                 <Icon>{isVisible ? <EyeSvg /> : <EyeClosedSvg />}</Icon>
               </Button>
               <Button
+                variant="icon"
                 onClick={() => setIsVisible(!isVisible)}
                 aria-label={isVisible ? "Hide content" : "Show content"}
               >
                 <Icon>{isVisible ? <EyeSvg /> : <EyeClosedSvg />}</Icon>
               </Button>
               <Button
+                variant="icon"
                 size="xl"
                 onClick={() => setIsVisible(!isVisible)}
                 aria-label={isVisible ? "Hide content" : "Show content"}

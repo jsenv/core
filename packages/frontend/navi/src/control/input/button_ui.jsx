@@ -114,10 +114,6 @@ const css = /* css */ `
       --button-color: black;
     }
 
-    &[data-icon] {
-      --button-padding: 0;
-    }
-
     .navi_button_content {
       position: relative;
       display: inherit;
@@ -183,11 +179,6 @@ const css = /* css */ `
       & > img {
         border-radius: inherit;
       }
-    }
-
-    &[data-reveal-on-interaction] {
-      --x-button-background-color: transparent;
-      --x-button-border-color: transparent;
     }
 
     /* Hover */
@@ -307,6 +298,16 @@ const css = /* css */ `
         --x-button-background-color: transparent;
       }
     }
+    &[data-variant="icon"] {
+      --button-padding: 0;
+      --x-button-background-color: transparent;
+      --x-button-border-color: transparent;
+
+      &[data-hover] {
+        --x-button-background-color: var(--button-background-color-hover);
+        --x-button-color: var(--button-color-hover);
+      }
+    }
     /* cta: call-to-action — special background, border matches background */
     &[data-cta] {
       --x-button-background-color: var(--button-cta-background-color);
@@ -365,9 +366,7 @@ export const ButtonUI = (props) => {
     rel,
 
     // visual
-    icon,
-    revealOnInteraction = icon,
-    variant = icon && !revealOnInteraction ? "discrete" : undefined,
+    variant,
     cta,
     spacing,
   } = props;
@@ -432,8 +431,6 @@ export const ButtonUI = (props) => {
         // the event, i.e. it was synthesized from a long-press gesture (right-click gives e.button === 2).
         e.preventDefault();
       }}
-      data-icon={icon ? "" : undefined}
-      data-reveal-on-interaction={revealOnInteraction ? "" : undefined}
       data-variant={variant}
       data-cta={cta ? "" : undefined}
       data-callout-arrow-x="center"

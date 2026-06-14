@@ -6,6 +6,7 @@ import { PhoneSvg } from "@jsenv/navi/src/graphic/icons/phone_svg.jsx";
 import { SearchSvg } from "@jsenv/navi/src/graphic/icons/search_svg.jsx";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
+import { Button } from "./button.jsx";
 import { InputIconSlot, InputRightSlot } from "./input_components.jsx";
 import { InputTextualContext } from "./input_textual_context.js";
 
@@ -49,10 +50,12 @@ const InputSearchUI = ({ icon }) => {
     return <InputIconSlot>{searchIcon}</InputIconSlot>;
   }
   return (
-    <InputRightSlot command="--navi-clear" commandFor={id}>
-      <Icon>
-        <CloseSvg />
-      </Icon>
+    <InputRightSlot>
+      <Button variant="icon" command="--navi-clear" commandFor={id}>
+        <Icon>
+          <CloseSvg />
+        </Icon>
+      </Button>
     </InputRightSlot>
   );
 };
