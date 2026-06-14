@@ -189,7 +189,6 @@ export const useControlProps = (
     getStateFromParent,
     allowNameless,
     persists,
-    debugInteraction,
     uiActionInternal,
   });
   const [boundAction] = useActionBoundToOneParam(
@@ -556,13 +555,11 @@ export const useControlgroupProps = (
   },
 ) => {
   const { action } = props;
-  const debugAction = useDebugAction();
   const uiGroupStateController = useUIGroupStateController(props, controlType, {
     stateType,
     childControlFilter,
     aggregateChildStates,
     wantRequesterButtonState,
-    debugAction,
   });
 
   const [boundAction] = useActionBoundToOneParam(

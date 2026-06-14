@@ -6,6 +6,7 @@ const DebugCommandContext = createContext(false);
 const DebugInteractionContext = createContext(false);
 const DebugPopupContext = createContext(false);
 const DebugActionContext = createContext(false);
+const DebugUIStateContext = createContext(false);
 
 const debugNoop = () => {};
 const eventGroupLogger = createEventGroupLogger();
@@ -22,6 +23,10 @@ const debugActionDefault = eventGroupLogger.createCategory(
   "#e67e22",
 );
 const debugPopupDefault = eventGroupLogger.createCategory("[popup]", "#27ae60");
+const debugUIStateDefault = eventGroupLogger.createCategory(
+  "[uistate]",
+  "#7f8c8d",
+);
 
 export const useDebugCommand = () => {
   const debug = useContext(DebugCommandContext);
@@ -47,6 +52,10 @@ export const useDebugAction = () => {
   const debug = useContext(DebugActionContext);
   return debug || debugNoop;
 };
+export const useDebugUIState = () => {
+  const debug = useContext(DebugUIStateContext);
+  return debug || debugNoop;
+};
 
 /**
  * NaviDebug — enables debug logging for navi UI interactions within its subtree.
@@ -64,6 +73,7 @@ export const NaviDebug = ({
   debugInteraction,
   debugPopup,
   debugAction,
+  debugUIState,
   children,
 }) => {
   if (debugCommand === true) {
@@ -78,13 +88,18 @@ export const NaviDebug = ({
   if (debugAction === true) {
     debugAction = debugActionDefault;
   }
+  if (debugUIState === true) {
+    debugUIState = debugUIStateDefault;
+  }
 
   return (
     <DebugCommandContext.Provider value={debugCommand}>
       <DebugInteractionContext.Provider value={debugInteraction}>
         <DebugPopupContext.Provider value={debugPopup}>
           <DebugActionContext.Provider value={debugAction}>
-            {children}
+            <DebugUIStateContext.Provider value={debugUIState}>
+              {children}
+            </DebugUIStateContext.Provider>
           </DebugActionContext.Provider>
         </DebugPopupContext.Provider>
       </DebugInteractionContext.Provider>

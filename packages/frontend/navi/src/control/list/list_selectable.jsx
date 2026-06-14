@@ -12,7 +12,6 @@ import { Box } from "@jsenv/navi/src/box/box.jsx";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { useFocusGroup } from "@jsenv/navi/src/utils/focus/use_focus_group.js";
-import { dispatchNaviCommand } from "../commands.js";
 import { ControlToInterfaceContext } from "../control_context.js";
 import {
   ControlChildrenWrapper,
@@ -496,11 +495,9 @@ const ListItemSelectable = (props) => {
       defaultChecked: defaultSelected,
       checked: selected,
     },
-    {
-      uiActionInternal: (v, e) => {
-        dispatchNaviCommand(inputRef.current, "--navi-send", e);
-      },
-    },
+    // {
+    //   uiActionInternal: (v, e) => {},
+    // },
   );
   const { checked, value, basePseudoState, children } = checkableProps;
   const readOnly = basePseudoState[":read-only"];

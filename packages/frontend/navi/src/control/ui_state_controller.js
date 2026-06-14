@@ -15,6 +15,7 @@ import {
 } from "preact/hooks";
 
 import { useNavState } from "../nav/browser_integration/browser_integration.js";
+import { useDebugUIState } from "../navi_debug.jsx";
 import { useInitialValue } from "../state/use_initial_value.js";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import { dispatchNaviCommand } from "./commands.js";
@@ -66,19 +67,6 @@ const unregisterRadioController = (uiStateController) => {
   }
 };
 
-const DEBUG_UI_STATE_CONTROLLER = false;
-const DEBUG_UI_GROUP_STATE_CONTROLLER = false;
-const debugUIState = (...args) => {
-  if (DEBUG_UI_STATE_CONTROLLER) {
-    console.debug(...args);
-  }
-};
-const debugUIGroup = (...args) => {
-  if (DEBUG_UI_GROUP_STATE_CONTROLLER) {
-    console.debug(...args);
-  }
-};
-
 export const ParentUIStateControllerContext = createContext();
 
 /**
@@ -117,9 +105,9 @@ export const useUIStateController = (
     uiActionInternal,
     persists,
     allowNameless = false,
-    debugInteraction,
   } = {},
 ) => {
+  const debugUIState = useDebugUIState();
   const uiStateControllerRef = useRef();
   const parentUIStateController = useContext(ParentUIStateControllerContext);
   const formContext = useContext(FormContext);
@@ -188,6 +176,7 @@ export const useUIStateController = (
     parentUIStateController,
     uiStateControllerRef,
     controlType,
+    debugUIState,
   );
   useLayoutEffect(() => {
     const controller = uiStateControllerRef.current;
@@ -325,14 +314,14 @@ export const useUIStateController = (
       const stateIsTheSame = compareTwoJsValues(newUIState, currentUIState);
       if (stateIsTheSame) {
         if (controlType === "button") {
-          debugInteraction(
+          debugUIState(
             e,
             `${controllerSig}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> trigger button action`,
           );
           onUIAction();
           return true;
         }
-        debugInteraction(
+        debugUIState(
           e,
           `${controllerSig}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> state unchanged, no update needed`,
         );
@@ -351,10 +340,7 @@ export const useUIStateController = (
         // - side effect
         // - any "input" event that might be dispatched below
         const propValue = uiStateController.getPropFromState(newUIState);
-        debugInteraction(
-          e,
-          `[${statePropName}] = ${JSON.stringify(propValue)};`,
-        );
+        debugUIState(e, `[${statePropName}] = ${JSON.stringify(propValue)};`);
         el[statePropName] = uiStateController.toControlHostValue(propValue);
       }
       uiStateController.uiState = newUIState;
@@ -387,7 +373,7 @@ export const useUIStateController = (
           }
         }
       }
-      debugInteraction(e, `publishUIState(${JSON.stringify(newUIState)})`);
+      debugUIState(e, `publishUIState(${JSON.stringify(newUIState)})`);
       publishUIState(newUIState, e);
       // Always notify the element that its UI state changed.
       // Listeners use this to stay in sync (e.g. input_effect.js tracks currentState,
@@ -430,7 +416,7 @@ export const useUIStateController = (
         // The real input will handle its own UIState update + synthetic input.
         const targetController = getUIStateControllerById(controlProxyFor);
         if (targetController) {
-          debugInteraction(
+          debugUIState(
             e,
             `forwarding set_ui_state "${prop}" to ${getElementSignature(targetController.elementRef.current)}`,
           );
@@ -446,13 +432,13 @@ export const useUIStateController = (
         if (!existingInputEvent) {
           if (el.tagName === "INPUT") {
             if (el.type === "radio" || el.type === "checkbox") {
-              debugInteraction(
+              debugUIState(
                 e,
                 "dispatching synthetic input event without data for checkbox/radio",
               );
               el.dispatchEvent(new Event("input", { bubbles: true }));
             } else {
-              debugInteraction(
+              debugUIState(
                 e,
                 `dispatching synthetic input event with data "${newUIState}" for input`,
               );
@@ -499,6 +485,7 @@ const useParentControllerNotifiers = (
   parentUIStateController,
   uiStateControllerRef,
   controlType,
+  debugUIState,
 ) => {
   return useMemo(() => {
     if (!parentUIStateController) {
@@ -600,9 +587,9 @@ export const useUIGroupStateController = (
     childControlFilter,
     aggregateChildStates,
     wantRequesterButtonState,
-    debugAction,
   },
 ) => {
+  const debugUIGroup = useDebugUIState();
   if (typeof aggregateChildStates !== "function") {
     throw new TypeError("aggregateChildStates must be a function");
   }
@@ -633,6 +620,7 @@ export const useUIGroupStateController = (
     parentUIStateController,
     uiStateControllerRef,
     controlType,
+    debugUIGroup,
   );
   useLayoutEffect(() => {
     if (id) {
@@ -658,7 +646,7 @@ export const useUIGroupStateController = (
     );
     const groupUIState =
       aggChildState === undefined ? fallbackState : aggChildState;
-    debugAction(
+    debugUIGroup(
       e,
       `${controlType}.getUIState -> ${JSON.stringify(groupUIState)}`,
     );
