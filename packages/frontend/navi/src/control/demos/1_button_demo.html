@@ -1608,6 +1608,12 @@
                   </Button>
                 </fieldset>
                 <fieldset>
+                  <legend>:focus-visible</legend>
+                  <Button variant="text" pseudoState={{ ":focus-visible": true }}>
+                    Text in button
+                  </Button>
+                </fieldset>
+                <fieldset>
                   <legend>:read-only</legend>
                   <Button variant="text" readOnly>
                     Text in button
@@ -1650,6 +1656,12 @@
                 <fieldset>
                   <legend>:hover</legend>
                   <Button variant="discrete" pseudoState={{ ":hover": true }}>
+                    Text in button
+                  </Button>
+                </fieldset>
+                <fieldset>
+                  <legend>:focus-visible</legend>
+                  <Button variant="discrete" pseudoState={{ ":focus-visible": true }}>
                     Text in button
                   </Button>
                 </fieldset>
@@ -1700,6 +1712,12 @@
                   </Button>
                 </fieldset>
                 <fieldset>
+                  <legend>:focus-visible</legend>
+                  <Button variant="border" pseudoState={{ ":focus-visible": true }}>
+                    Text in button
+                  </Button>
+                </fieldset>
+                <fieldset>
                   <legend>:read-only</legend>
                   <Button variant="border" readOnly>
                     Text in button
@@ -1743,6 +1761,12 @@
                   </Button>
                 </fieldset>
                 <fieldset>
+                  <legend>:focus-visible</legend>
+                  <Button cta pseudoState={{ ":focus-visible": true }}>
+                    Text in button
+                  </Button>
+                </fieldset>
+                <fieldset>
                   <legend>:disabled</legend>
                   <Button cta disabled>
                     Text in button
@@ -1755,32 +1779,6 @@
                   </Button>
                 </fieldset>
               </Box>
-            </fieldset>
-
-            <fieldset>
-              <legend>custom color via --button-cta-background-color</legend>
-              <div
-                className="button-group"
-                style={{ "--button-cta-background-color": "#e53935" }}
-              >
-                <Button cta>Danger CTA</Button>
-                <Button cta disabled>
-                  Disabled
-                </Button>
-              </div>
-            </fieldset>
-
-            <fieldset>
-              <legend>cta + variant combined</legend>
-              <div className="button-group">
-                <Button cta>fill</Button>
-                <Button cta variant="border">
-                  border
-                </Button>
-                <Button cta variant="text">
-                  text
-                </Button>
-              </div>
             </fieldset>
 
             {/* ── Icon ─────────────────────────────────────────────────── */}
