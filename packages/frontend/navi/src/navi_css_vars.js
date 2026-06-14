@@ -34,6 +34,10 @@ const css = /* css */ `
 
       --navi-selection-border-color: #0078d4;
       --navi-selection-background-color: #eaf1fd;
+      /* Accent color — used for call-to-action buttons and selected list items.
+         Override this single variable to apply a consistent brand color across
+         all components that need to stand out. */
+      --navi-accent-color: rgb(3, 30, 60);
       --navi-color-white: white;
       --navi-color-dark: rgb(55, 60, 69);
 

@@ -54,7 +54,7 @@ const css = /* css */ `
       --list-item-color-pointed: var(--list-item-color);
       /* Selected — vivid blue accent */
       --list-item-color-selected: white;
-      --list-item-background-color-selected: rgb(3, 30, 60);
+      --list-item-background-color-selected: var(--navi-accent-color);
       --list-item-border-color-selected: var(
         --list-item-background-color-selected
       );

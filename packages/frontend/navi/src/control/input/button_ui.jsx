@@ -22,7 +22,7 @@ const css = /* css */ `
     .navi_button {
       --button-border-radius: var(--navi-control-border-radius);
       --button-border-width: var(--navi-control-border-width);
-      --button-cta-background-color: light-dark(#1a73e8, #4285f4);
+      --button-cta-background-color: var(--navi-accent-color);
       /* Focus outline */
       --button-outline-width: var(--navi-focus-outline-width);
       --button-outline-offset: calc(-1 * var(--button-outline-width) / 2);
