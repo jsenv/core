@@ -136,12 +136,25 @@ export const onRequestInteraction = (
       }
     }
     if (!skipConstraints) {
-      checkAndReportConstraints(requestStatus, {
+      const failingInterface = checkConstraints({
         event: requestInteractionCustomEvent,
         requester: event.target,
         fromRequestInteraction: true,
-        debug: debugInteraction,
       });
+      if (failingInterface) {
+        Object.assign(requestStatus, {
+          canProceed: false,
+          preventReason: failingInterface.failedConstraintInfo
+            ? `failing constraint "${failingInterface.failedConstraintInfo.name}"`
+            : "invalid (no constraint info)",
+        });
+        // Interaction constraints (disabled/readonly) — always show the callout.
+        failingInterface.reportValidity({
+          event: requestInteractionCustomEvent,
+          requester: event.target,
+          debug: debugInteraction,
+        });
+      }
     }
   }
   if (!requestStatus.canProceed) {
@@ -227,12 +240,29 @@ export const onRequestAction = (
     checkEvent(requestStatus, event);
   }
   if (requestStatus.canProceed) {
-    checkAndReportConstraints(requestStatus, {
+    const failingInterface = checkConstraints({
       event: requestActionCustomEvent,
       requester,
       fromRequestAction: true,
-      debug: debugAction,
     });
+    if (failingInterface) {
+      Object.assign(requestStatus, {
+        canProceed: false,
+        preventReason: failingInterface.failedConstraintInfo
+          ? `failing constraint "${failingInterface.failedConstraintInfo.name}"`
+          : "invalid (no constraint info)",
+      });
+      // Only show the callout if the element handling the action has its own
+      // action prop. If it belongs to a parent Form/ControlGroup, the callout
+      // will be shown when the parent tries to execute its own action.
+      if (elementHandlingAction.hasAttribute("data-action")) {
+        failingInterface.reportValidity({
+          event: requestActionCustomEvent,
+          requester,
+          debug: debugAction,
+        });
+      }
+    }
   }
   if (requestStatus.canProceed) {
     // NOTE for future: confirmation must move to to action execution (be part of it when set)
@@ -304,25 +334,14 @@ const checkEvent = (requestStatus, event) => {
   }
 };
 
-const checkAndReportConstraints = (
-  requestStatus,
-  { event, requester, fromRequestInteraction, fromRequestAction, debug } = {},
-) => {
-  const onInvalid = (failedValidationInterface) => {
-    const { failedConstraintInfo } = failedValidationInterface;
-    Object.assign(requestStatus, {
-      canProceed: false,
-      preventReason: failedConstraintInfo
-        ? `failing constraint "${failedConstraintInfo.name}"`
-        : "invalid (no constraint info)",
-    });
-    failedValidationInterface.reportValidity({
-      event,
-      requester,
-      debug,
-    });
-  };
-
+// Returns the failing validation interface, or null if all constraints pass.
+// Never calls reportValidity — callers decide whether to show the callout.
+const checkConstraints = ({
+  event,
+  requester,
+  fromRequestInteraction,
+  fromRequestAction,
+} = {}) => {
   let elementToValidate = event.currentTarget;
   if (!elementToValidate.__validationInterface__) {
     const controlHost = findControlHost(requester);
@@ -331,7 +350,6 @@ const checkAndReportConstraints = (
     }
   }
 
-  // all manageds fields (if any) are checked inside checkValidity
   let validationInterface = elementToValidate.__validationInterface__;
   if (!validationInterface) {
     validationInterface = installCustomConstraintValidation(elementToValidate);
@@ -343,9 +361,6 @@ const checkAndReportConstraints = (
     fromRequestAction,
   });
   if (!isValid) {
-    // checkValidity delegates to the proxy target's VI when the element is a proxy.
-    // In that case validationInterface has no failedConstraintInfo — the target's VI does.
-    // Resolve the proxy target's VI so onInvalid reads failedConstraintInfo from the right place.
     const proxyTarget = findControlProxyTarget(elementToValidate);
     const resolvedValidationInterface = proxyTarget
       ? proxyTarget.__validationInterface__ || validationInterface
@@ -353,15 +368,15 @@ const checkAndReportConstraints = (
     let failingInterface =
       resolvedValidationInterface.failingManagedValidationInterface ||
       resolvedValidationInterface;
-    // Follow the chain until we find a VI that has failedConstraintInfo set.
     while (
       failingInterface.failedConstraintInfo === null &&
       failingInterface.failingManagedValidationInterface
     ) {
       failingInterface = failingInterface.failingManagedValidationInterface;
     }
-    onInvalid(failingInterface);
+    return failingInterface;
   }
+  return null;
 };
 
 const INTERACTION_CONSTRAINTS = [DISABLED_CONSTRAINT, READONLY_CONSTRAINT];
