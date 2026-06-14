@@ -587,6 +587,7 @@ export const useUIGroupStateController = (
     childControlFilter,
     aggregateChildStates,
     wantRequesterButtonState,
+    uiActionInternal,
   },
 ) => {
   const debugUIGroup = useDebugUIState();
@@ -711,6 +712,7 @@ export const useUIGroupStateController = (
       if (notifyExternal) {
         const uiAction = uiActionRef.current;
         uiAction?.(newUIState, e);
+        uiActionInternal?.(newUIState, e);
         if (command) {
           const el = ref.current;
           if (el) {

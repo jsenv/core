@@ -554,12 +554,20 @@ export const useControlgroupProps = (
     wantRequesterButtonState,
   },
 ) => {
-  const { action } = props;
+  const { ref, action } = props;
   const uiGroupStateController = useUIGroupStateController(props, controlType, {
     stateType,
     childControlFilter,
     aggregateChildStates,
     wantRequesterButtonState,
+    uiActionInternal: action
+      ? (newUIState, e) => {
+          const el = ref.current;
+          if (el) {
+            dispatchRequestAction(el, { event: e, uiState: newUIState });
+          }
+        }
+      : undefined,
   });
 
   const [boundAction] = useActionBoundToOneParam(

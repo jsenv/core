@@ -32,6 +32,10 @@ const css = /* css */ `
     color: #1a56cc;
     font-weight: bold;
   }
+  .call-log-entry .label-command {
+    color: #1a8c5c;
+    font-weight: bold;
+  }
   .call-log-entry .label-other {
     color: #7a3ca3;
     font-weight: bold;
@@ -52,6 +56,9 @@ const css = /* css */ `
   }
   .call-log-summary .summary-action {
     color: #1a56cc;
+  }
+  .call-log-summary .summary-command {
+    color: #1a8c5c;
   }
   .call-log-summary .summary-other {
     color: #7a3ca3;
@@ -90,9 +97,14 @@ export const CallLog = ({ entries, onClear }) => {
 
   const uiActionCount = entries.filter((e) => e.type === "uiAction").length;
   const actionCount = entries.filter((e) => e.type === "action").length;
+  const commandCount = entries.filter((e) => e.type === "command").length;
   const otherCounts = {};
   for (const entry of entries) {
-    if (entry.type !== "uiAction" && entry.type !== "action") {
+    if (
+      entry.type !== "uiAction" &&
+      entry.type !== "action" &&
+      entry.type !== "command"
+    ) {
       otherCounts[entry.type] = (otherCounts[entry.type] || 0) + 1;
     }
   }
@@ -113,6 +125,9 @@ export const CallLog = ({ entries, onClear }) => {
           )}
           {actionCount > 0 && (
             <span className="summary-action">action: {actionCount}</span>
+          )}
+          {commandCount > 0 && (
+            <span className="summary-command">command: {commandCount}</span>
           )}
           {Object.entries(otherCounts).map(([type, count]) => (
             <span key={type} className="summary-other">
@@ -136,7 +151,9 @@ export const CallLog = ({ entries, onClear }) => {
                   ? "label-ui"
                   : entry.type === "action"
                     ? "label-action"
-                    : "label-other"
+                    : entry.type === "command"
+                      ? "label-command"
+                      : "label-other"
               }
             >
               {entry.type}
