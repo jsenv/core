@@ -22,6 +22,7 @@ const css = /* css */ `
     .navi_button {
       --button-border-radius: var(--navi-control-border-radius);
       --button-border-width: var(--navi-control-border-width);
+      --button-cta-background-color: light-dark(#1a73e8, #4285f4);
       /* Focus outline */
       --button-outline-width: var(--navi-focus-outline-width);
       --button-outline-offset: calc(-1 * var(--button-outline-width) / 2);
@@ -274,6 +275,88 @@ const css = /* css */ `
     &[data-callout] {
       --x-button-border-color: var(--callout-color);
     }
+    /* text variant: no background, no border */
+    &[data-variant="text"] {
+      --x-button-background-color: transparent;
+      --x-button-border-color: transparent;
+
+      &[data-hover] {
+        --x-button-border-color: transparent;
+        --x-button-background-color: color-mix(
+          in srgb,
+          currentColor 8%,
+          transparent
+        );
+      }
+      &[data-nohover] {
+        --x-button-border-color: transparent;
+        --x-button-background-color: transparent;
+      }
+      &[data-readonly] {
+        --x-button-border-color: transparent;
+        --x-button-background-color: transparent;
+      }
+      &[data-disabled] {
+        --x-button-border-color: transparent;
+        --x-button-background-color: transparent;
+      }
+    }
+    /* border variant: no background, border only */
+    &[data-variant="border"] {
+      --x-button-background-color: transparent;
+
+      &[data-hover] {
+        --x-button-background-color: color-mix(
+          in srgb,
+          currentColor 8%,
+          transparent
+        );
+      }
+      &[data-nohover] {
+        --x-button-background-color: transparent;
+      }
+      &[data-readonly] {
+        --x-button-background-color: transparent;
+      }
+      &[data-disabled] {
+        --x-button-background-color: transparent;
+      }
+    }
+    /* cta: call-to-action — special background, border matches background */
+    &[data-cta] {
+      --x-button-background-color: var(--button-cta-background-color);
+      --x-button-border-color: var(--button-cta-background-color);
+      --x-button-color: white;
+
+      &[data-hover] {
+        --x-button-background-color: color-mix(
+          in srgb,
+          var(--button-cta-background-color) 85%,
+          black
+        );
+        --x-button-border-color: color-mix(
+          in srgb,
+          var(--button-cta-background-color) 85%,
+          black
+        );
+      }
+      &[data-nohover] {
+        --x-button-background-color: var(--button-cta-background-color);
+        --x-button-border-color: var(--button-cta-background-color);
+      }
+      &[data-disabled] {
+        --x-button-background-color: color-mix(
+          in srgb,
+          var(--button-cta-background-color) 50%,
+          white
+        );
+        --x-button-border-color: color-mix(
+          in srgb,
+          var(--button-cta-background-color) 50%,
+          white
+        );
+      }
+    }
   }
 `;
 
@@ -291,6 +374,8 @@ export const ButtonUI = (props) => {
     icon,
     revealOnInteraction = icon,
     discrete = icon && !revealOnInteraction,
+    variant,
+    cta,
     spacing,
   } = props;
   const [buttonProps, remainingProps] = useControlProps(props, {
@@ -357,6 +442,8 @@ export const ButtonUI = (props) => {
       data-icon={icon ? "" : undefined}
       data-reveal-on-interaction={revealOnInteraction ? "" : undefined}
       data-discrete={discrete ? "" : undefined}
+      data-variant={variant}
+      data-cta={cta ? "" : undefined}
       data-callout-arrow-x="center"
       // style management
       baseClassName="navi_button"

@@ -182,6 +182,7 @@
             <IconToggleDemo />
             <CircleButtonDemo />
             <DiscreteVariantDemo />
+            <CustomizationDemo />
             <InteractiveDemo />
             <HrefDemo />
             <PaddingDemo />
@@ -240,6 +241,9 @@
               </li>
               <li>
                 <a href="#discrete">Discrete Variant</a>
+              </li>
+              <li>
+                <a href="#customization">Customization (variant & cta)</a>
               </li>
               <li>
                 <a href="#interactive-controls">Interactive Controls</a>
@@ -1396,6 +1400,89 @@
                   discrete={discrete}
                 >
                   Interactive Button
+                </Button>
+              </div>
+            </fieldset>
+          </div>
+        );
+      };
+
+      const CustomizationDemo = () => {
+        return (
+          <div className="demo-section" id="customization">
+            <h2>Customization</h2>
+
+            <fieldset>
+              <legend>variant prop</legend>
+              <div className="button-group">
+                <Button>fill (default)</Button>
+                <Button variant="border">border</Button>
+                <Button variant="text">text</Button>
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend>variant — hover states</legend>
+              <div className="button-group">
+                <Button>fill</Button>
+                <Button variant="border">border</Button>
+                <Button variant="text">text</Button>
+              </div>
+              <p
+                style={{
+                  color: "#666",
+                  fontSize: "0.85rem",
+                  margin: "8px 0 0",
+                }}
+              >
+                Hover each button to see the hover style.
+              </p>
+            </fieldset>
+
+            <fieldset>
+              <legend>variant — disabled states</legend>
+              <div className="button-group">
+                <Button disabled>fill</Button>
+                <Button variant="border" disabled>
+                  border
+                </Button>
+                <Button variant="text" disabled>
+                  text
+                </Button>
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend>cta prop (call to action)</legend>
+              <div className="button-group">
+                <Button cta>Default CTA</Button>
+                <Button cta disabled>
+                  Disabled CTA
+                </Button>
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend>cta with custom color via CSS variable</legend>
+              <div
+                className="button-group"
+                style={{ "--button-cta-background-color": "#e53935" }}
+              >
+                <Button cta>Danger CTA</Button>
+                <Button cta disabled>
+                  Disabled
+                </Button>
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend>variant + cta combined</legend>
+              <div className="button-group">
+                <Button cta variant="border">
+                  CTA border
+                </Button>
+                <Button cta variant="text">
+                  CTA text
                 </Button>
               </div>
             </fieldset>
