@@ -11,7 +11,6 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useSignal } from "@preact/signals";
       import {
         Box,
         Button,
@@ -82,7 +81,7 @@
                   <label>Last name</label>
                   <Input type="text" name="lastName" />
                 </Field>
-                <Button command="--navi-send">Submit group</Button>
+                <Button.Send />
               </Box>
             </ControlGroup>
             <CallLog entries={entries} onClear={clearEntries} />
