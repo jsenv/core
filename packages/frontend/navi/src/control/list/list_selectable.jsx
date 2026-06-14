@@ -12,6 +12,7 @@ import { Box } from "@jsenv/navi/src/box/box.jsx";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { useFocusGroup } from "@jsenv/navi/src/utils/focus/use_focus_group.js";
+import { dispatchNaviCommand } from "../commands.js";
 import { ControlToInterfaceContext } from "../control_context.js";
 import {
   ControlChildrenWrapper,
@@ -485,17 +486,22 @@ const ListItemSelectable = (props) => {
   const inputType = multiple ? "checkbox" : "radio";
   const inputId = `${id}_input`;
   inputRef.nullCanHappen = true; // virtualization
-  const [checkableProps, remainingProps] = useCheckableProps({
-    "readOnlyMessage": naviI18n(`constraint.readonly.option`, props),
-    "command": "--navi-send",
-    "navi-command-target": rest.command ? undefined : "parent-control",
-    ...rest,
-    "ref": inputRef,
-    "id": inputId,
-    "type": inputType,
-    "defaultChecked": defaultSelected,
-    "checked": selected,
-  });
+  const [checkableProps, remainingProps] = useCheckableProps(
+    {
+      readOnlyMessage: naviI18n(`constraint.readonly.option`, props),
+      ...rest,
+      ref: inputRef,
+      id: inputId,
+      type: inputType,
+      defaultChecked: defaultSelected,
+      checked: selected,
+    },
+    {
+      uiActionInternal: (v, e) => {
+        dispatchNaviCommand(inputRef.current, "--navi-send", e);
+      },
+    },
+  );
   const { checked, value, basePseudoState, children } = checkableProps;
   const readOnly = basePseudoState[":read-only"];
   // const disabled = basePseudoState[":disabled"];

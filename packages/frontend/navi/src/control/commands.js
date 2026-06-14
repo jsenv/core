@@ -163,12 +163,9 @@ const submitSelector = `button[type="submit"], input[type="submit"], input[type=
 registerNaviCommand("--navi-send", {
   resolveTarget: getClosestControlWithAction,
   implementation: (commandTarget, { event, source }) => {
-    if (source.hasAttribute("navi-control-group")) {
-      dispatchNaviCommand(source, "--navi-update", event);
-    }
     const closestExpandable = getClosestExpandable(source);
     if (closestExpandable) {
-      // The picker's onClose already dispatched the action with the final value.
+      // The picker's onClose already dispatches the action with the final value.
       // Dispatching again here would fire the action twice.
       dispatchNaviCommand(closestExpandable, "--navi-close", event);
       return true;
