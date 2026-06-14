@@ -22,6 +22,7 @@ export const CONTROL_ATTRIBUTE_SET = new Set([
   "tabIndex",
   "command",
   "commandFor",
+  "command-value", // not standard but make sense, allow to give param to the command in question
 
   // "ui-action-target",
   "navi-input-type",
