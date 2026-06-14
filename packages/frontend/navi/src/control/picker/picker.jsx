@@ -13,6 +13,7 @@ import { ControlChildrenWrapper, useControlProps } from "../control_hooks.jsx";
 import { resolveInputProps } from "../input/resolve_input_props.js";
 import { getUIStateControllerById } from "../ui_state_controller.js";
 import { PickerContext } from "./picker_context.jsx";
+import { PickerPresetResolver } from "./picker_preset.jsx";
 import { pickerResolvers } from "./picker_resolvers.jsx";
 import {
   CalendarSvg,
@@ -483,6 +484,7 @@ const PickerFirstResolver = (props) => {
 };
 export const Picker = createComponentResolver([
   PickerFirstResolver,
+  PickerPresetResolver,
   ...pickerResolvers,
   PickerTypeResolver,
   PickerButton,
