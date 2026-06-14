@@ -61,6 +61,9 @@ export const ControlGroup = (props) => {
       {...remainingProps}
       type={undefined}
       pseudoClasses={CONTROL_GROUP_PSEUDO_CLASSES}
+      onnavi_get_managed_controls={(e) => {
+        e.detail.respondWith(getControlGroupManagedControls(e.currentTarget));
+      }}
     >
       <ControlgroupChildrenWrapper
         {...childrenWrapperProps}
@@ -72,6 +75,10 @@ export const ControlGroup = (props) => {
       </ControlgroupChildrenWrapper>
     </Box>
   );
+};
+
+const getControlGroupManagedControls = (el) => {
+  return [...el.querySelectorAll("[navi-control-host]")];
 };
 
 const CONTROL_GROUP_PSEUDO_CLASSES = [
