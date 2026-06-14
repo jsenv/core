@@ -16,7 +16,7 @@ export const PickerArray = (props) => {
   const Next = useNextResolver();
 
   return (
-    <Next maxLines="3" ui={<PickerArrayUI />} {...props} type="navi_picker" />
+    <Next maxLines="3" ui={<PickerArrayUI />} {...props} type="navi_array" />
   );
 };
 export const PickerArrayUI = () => {

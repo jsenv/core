@@ -94,7 +94,7 @@ export const readControlValue = (controlHost) => {
     return readValueFromButton(controlHost);
   }
   if (controlHost.tagName === "INPUT") {
-    // important: input.type = "navi_picker" followed by input.type returns "text"
+    // important: input.type = "navi_array"; followed by input.type; returns "text"
     // so use getAttribute
     const type = controlHost.getAttribute("type");
 
@@ -114,7 +114,7 @@ export const readControlValue = (controlHost) => {
     if (type === "datetime-local") {
       return readDatetimeLocalFromInput(controlHost);
     }
-    if (type === "navi_picker") {
+    if (type === "navi_array") {
       return getUIStateFromElement(controlHost);
     }
     return readValueFromInput(controlHost);
