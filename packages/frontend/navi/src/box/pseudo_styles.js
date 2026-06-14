@@ -4,7 +4,7 @@ import {
   mergeTwoStyles,
 } from "@jsenv/dom";
 
-import { findControlHost } from "../control/control_dom.js";
+import { findControlHost, isControlHost } from "../control/control_dom.js";
 import {
   findControlProxy,
   findControlProxyTarget,
@@ -580,7 +580,7 @@ definePseudoClass(":-navi-has-value", {
     return addInputEffect(controlHost, callback);
   },
   test: (el) => {
-    if (el.hasAttribute("navi-ui-state")) {
+    if (isControlHost(el)) {
       const uiState = getUIStateFromElement(el);
       if (uiState === undefined || uiState === "") {
         return false;

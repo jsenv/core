@@ -720,15 +720,13 @@ const useInteractiveProps = (
   ui_state_and_value: {
     const uiState = uiStateController.uiStateSignal.value;
     Object.assign(controlProps, {
-      // for some input navi-ui-state differs (like color where ui-state would be "" while value would be "#000000")
-      "navi-ui-state": uiState,
-      "onnavi_request_reset_ui_state": (e) => {
+      onnavi_request_reset_ui_state: (e) => {
         uiStateController.resetUIState(e);
       },
-      "onnavi_get_ui_state": (e) => {
+      onnavi_get_ui_state: (e) => {
         e.detail.respondWith(uiStateController.uiStateSignal.peek());
       },
-      "onnavi_set_ui_state": (e) => {
+      onnavi_set_ui_state: (e) => {
         uiStateController.setUIState(e.detail.value, e);
       },
     });
