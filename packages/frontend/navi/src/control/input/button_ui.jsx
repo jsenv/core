@@ -317,12 +317,12 @@ const css = /* css */ `
         --x-button-background-color: color-mix(
           in srgb,
           var(--button-cta-background-color) 85%,
-          black
+          white
         );
         --x-button-border-color: color-mix(
           in srgb,
           var(--button-cta-background-color) 85%,
-          black
+          white
         );
       }
       &[data-disabled] {
