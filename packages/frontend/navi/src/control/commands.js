@@ -143,6 +143,15 @@ const registerNaviCommand = (command, { resolveTarget, implementation }) => {
 registerNaviCommand("--navi-update", {
   resolveTarget: getFirstParentControl,
   implementation: (commandTarget, { event, source }) => {
+    const allowed = dispatchRequestInteraction(
+      commandTarget,
+      event,
+      "--navi-update",
+    );
+    if (!allowed) {
+      event.preventDefault();
+      return false;
+    }
     const updateParam = getUIStateFromElement(source);
 
     return dispatchRequestSetUIState(commandTarget, updateParam, {
