@@ -175,17 +175,11 @@
             <TableOfContents />
             <BasicStatesDemo />
             <InteractivityDemo />
-            <SizeVariationsDemo />
-            <ColorVariationsDemo />
-            <FullWidthDemo />
-            <SpacingDemo />
+            <CustomizationDemo />
             <IconToggleDemo />
             <CircleButtonDemo />
-            <DiscreteVariantDemo />
-            <CustomizationDemo />
             <InteractiveDemo />
             <HrefDemo />
-            <PaddingDemo />
           </div>
         );
       };
@@ -222,16 +216,29 @@
                 </ol>
               </li>
               <li>
-                <a href="#sizes">Size Variations</a>
-              </li>
-              <li>
-                <a href="#colors">Color Variations</a>
-              </li>
-              <li>
-                <a href="#full-width">Full Width</a>
-              </li>
-              <li>
-                <a href="#spacing">Button Spacing</a>
+                Customization
+                <ol style={{ paddingLeft: "20px" }}>
+                  <li>
+                    <a href="#customization-size">Size</a>
+                  </li>
+                  <li>
+                    <a href="#customization-color">Color</a>
+                  </li>
+                  <li>
+                    <a href="#customization-dimension">
+                      Dimension (padding &amp; width)
+                    </a>
+                  </li>
+                  <li>
+                    <a href="#customization-variant">Variant</a>
+                  </li>
+                  <li>
+                    <a href="#customization-cta">CTA</a>
+                  </li>
+                  <li>
+                    <a href="#customization-discrete">Discrete</a>
+                  </li>
+                </ol>
               </li>
               <li>
                 <a href="#icon-toggle">Icon Button Toggle</a>
@@ -240,19 +247,10 @@
                 <a href="#border-radius">Border Radius Inheritance</a>
               </li>
               <li>
-                <a href="#discrete">Discrete Variant</a>
-              </li>
-              <li>
-                <a href="#customization">Customization (variant & cta)</a>
-              </li>
-              <li>
                 <a href="#interactive-controls">Interactive Controls</a>
               </li>
               <li>
                 <a href="#href">Button as link</a>
-              </li>
-              <li>
-                <a href="#padding">Padding (advanced)</a>
               </li>
             </ol>
           </div>
@@ -1412,8 +1410,138 @@
           <div className="demo-section" id="customization">
             <h2>Customization</h2>
 
+            {/* ── Size ─────────────────────────────────────────────────── */}
+            <h3 id="customization-size" style={{ margin: "24px 0 12px" }}>
+              Size
+            </h3>
+
             <fieldset>
-              <legend>variant prop</legend>
+              <legend>Intrinsic size</legend>
+              <div className="button-group">
+                <Button>OK</Button>
+                <Button>Save Changes</Button>
+                <Button>This is a very long button text</Button>
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend>Custom font size</legend>
+              <div className="button-group">
+                <Button style={{ fontSize: "11px" }}>Small text</Button>
+                <Button>Default</Button>
+                <Button style={{ fontSize: "18px" }}>Large text</Button>
+              </div>
+            </fieldset>
+
+            {/* ── Color ────────────────────────────────────────────────── */}
+            <h3 id="customization-color" style={{ margin: "24px 0 12px" }}>
+              Color
+            </h3>
+
+            <fieldset>
+              <legend>backgroundColor &amp; color</legend>
+              <div className="button-group">
+                <Button backgroundColor="#28a745" color="white">
+                  Success
+                </Button>
+                <Button backgroundColor="#dc3545" color="white">
+                  Danger
+                </Button>
+                <Button
+                  borderColor="#007bff"
+                  backgroundColor="transparent"
+                  color="#007bff"
+                >
+                  Outline
+                </Button>
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend>Dynamic color on hover</legend>
+              <div className="button-group">
+                <Button
+                  backgroundColor="lightgrey"
+                  color="#dc3545"
+                  style={{
+                    ":hover": {
+                      backgroundColor: "#dc3545",
+                      color: "white",
+                    },
+                  }}
+                >
+                  <Icon>
+                    <svg viewBox="0 0 10 10" xmlns="http://www.w3.org/2000/svg">
+                      <rect
+                        x="0"
+                        y="0"
+                        width="10"
+                        height="10"
+                        fill="currentColor"
+                      />
+                    </svg>
+                  </Icon>
+                  Add to Favorites
+                </Button>
+              </div>
+            </fieldset>
+
+            {/* ── Dimension ─────────────────────────────────────────────── */}
+            <h3 id="customization-dimension" style={{ margin: "24px 0 12px" }}>
+              Dimension (padding &amp; width)
+            </h3>
+
+            <fieldset>
+              <legend>padding props</legend>
+              <div className="button-group">
+                <Button>Default padding</Button>
+                <Button paddingX="xl" paddingY="md">
+                  paddingX="xl" paddingY="md"
+                </Button>
+                <Button padding="0">padding="0"</Button>
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend>width — full width</legend>
+              <Button
+                width="100%"
+                background="#1a1a2e"
+                borderColor="#4a90e2"
+                color="#ffffff"
+                align="center"
+              >
+                Full width dark button
+              </Button>
+            </fieldset>
+
+            <fieldset>
+              <legend>width — fixed widths</legend>
+              <div className="button-group">
+                <Button width="60">60</Button>
+                <Button width="120">120</Button>
+                <Button width="200">200</Button>
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend>spacing between icon and text</legend>
+              <div className="button-group">
+                <SpacingButton spacing="0" />
+                <SpacingButton />
+                <SpacingButton spacing="s" />
+                <SpacingButton spacing="m" />
+                <SpacingButton spacing="l" />
+              </div>
+            </fieldset>
+
+            {/* ── Variant ───────────────────────────────────────────────── */}
+            <h3 id="customization-variant" style={{ margin: "24px 0 12px" }}>
+              Variant
+            </h3>
+
+            <fieldset>
+              <legend>fill (default) / border / text</legend>
               <div className="button-group">
                 <Button>fill (default)</Button>
                 <Button variant="border">border</Button>
@@ -1422,25 +1550,16 @@
             </fieldset>
 
             <fieldset>
-              <legend>variant — hover states</legend>
+              <legend>hover states — hover each button</legend>
               <div className="button-group">
                 <Button>fill</Button>
                 <Button variant="border">border</Button>
                 <Button variant="text">text</Button>
               </div>
-              <p
-                style={{
-                  color: "#666",
-                  fontSize: "0.85rem",
-                  margin: "8px 0 0",
-                }}
-              >
-                Hover each button to see the hover style.
-              </p>
             </fieldset>
 
             <fieldset>
-              <legend>variant — disabled states</legend>
+              <legend>disabled states</legend>
               <div className="button-group">
                 <Button disabled>fill</Button>
                 <Button variant="border" disabled>
@@ -1452,8 +1571,13 @@
               </div>
             </fieldset>
 
+            {/* ── CTA ───────────────────────────────────────────────────── */}
+            <h3 id="customization-cta" style={{ margin: "24px 0 12px" }}>
+              CTA (call to action)
+            </h3>
+
             <fieldset>
-              <legend>cta prop (call to action)</legend>
+              <legend>cta prop</legend>
               <div className="button-group">
                 <Button cta>Default CTA</Button>
                 <Button cta disabled>
@@ -1463,7 +1587,7 @@
             </fieldset>
 
             <fieldset>
-              <legend>cta with custom color via CSS variable</legend>
+              <legend>custom color via --button-cta-background-color</legend>
               <div
                 className="button-group"
                 style={{ "--button-cta-background-color": "#e53935" }}
@@ -1476,13 +1600,43 @@
             </fieldset>
 
             <fieldset>
-              <legend>variant + cta combined</legend>
+              <legend>cta + variant combined</legend>
               <div className="button-group">
+                <Button cta>fill</Button>
                 <Button cta variant="border">
-                  CTA border
+                  border
                 </Button>
                 <Button cta variant="text">
-                  CTA text
+                  text
+                </Button>
+              </div>
+            </fieldset>
+
+            {/* ── Discrete ──────────────────────────────────────────────── */}
+            <h3 id="customization-discrete" style={{ margin: "24px 0 12px" }}>
+              Discrete
+            </h3>
+
+            <fieldset>
+              <legend>Normal vs Discrete</legend>
+              <div className="button-group">
+                <Button>Regular Button</Button>
+                <Button discrete>Discrete Button</Button>
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend>Discrete states</legend>
+              <div className="button-group">
+                <Button discrete>Normal</Button>
+                <Button discrete readOnly>
+                  Read-only
+                </Button>
+                <Button discrete disabled>
+                  Disabled
+                </Button>
+                <Button discrete loading>
+                  Loading
                 </Button>
               </div>
             </fieldset>
