@@ -196,11 +196,6 @@ const css = /* css */ `
       --x-button-background-color: var(--button-background-color-hover);
       --x-button-color: var(--button-color-hover);
     }
-    &[data-nohover] {
-      --x-button-border-color: var(--button-border-color);
-      --x-button-background-color: var(--button-background-color);
-      --x-button-color: var(--button-color);
-    }
     /* Pressed */
     &[data-pressed] {
       --x-button-outline-color: var(--button-border-color-pressed);
@@ -261,9 +256,6 @@ const css = /* css */ `
       &[data-hover] {
         --x-button-border-color: var(--button-border-color-hover);
       }
-      &[data-nohover] {
-        --x-button-border-color: transparent;
-      }
       &[data-readonly] {
         --x-button-border-color: transparent;
       }
@@ -288,10 +280,6 @@ const css = /* css */ `
           transparent
         );
       }
-      &[data-nohover] {
-        --x-button-border-color: transparent;
-        --x-button-background-color: transparent;
-      }
       &[data-readonly] {
         --x-button-border-color: transparent;
         --x-button-background-color: transparent;
@@ -311,9 +299,6 @@ const css = /* css */ `
           currentColor 8%,
           transparent
         );
-      }
-      &[data-nohover] {
-        --x-button-background-color: transparent;
       }
       &[data-readonly] {
         --x-button-background-color: transparent;
@@ -340,10 +325,6 @@ const css = /* css */ `
           black
         );
       }
-      &[data-nohover] {
-        --x-button-background-color: var(--button-cta-background-color);
-        --x-button-border-color: var(--button-cta-background-color);
-      }
       &[data-disabled] {
         --x-button-background-color: color-mix(
           in srgb,
@@ -355,6 +336,19 @@ const css = /* css */ `
           var(--button-cta-background-color) 50%,
           white
         );
+      }
+      &[data-readonly] {
+        --x-button-background-color: color-mix(
+          in srgb,
+          var(--button-cta-background-color) 40%,
+          white
+        );
+        --x-button-border-color: color-mix(
+          in srgb,
+          var(--button-cta-background-color) 40%,
+          white
+        );
+        --x-button-color: color-mix(in srgb, white 60%, transparent);
       }
     }
   }
