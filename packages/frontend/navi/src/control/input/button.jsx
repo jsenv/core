@@ -64,8 +64,19 @@ const ButtonOk = (props) => {
     />
   );
 };
+const ButtonSend = (props) => {
+  return (
+    <Button
+      command="--navi-send"
+      // eslint-disable-next-line react/no-children-prop
+      children={naviI18n("button.send")}
+      {...props}
+    />
+  );
+};
 
 Button.Clear = ButtonClear;
 Button.Cancel = ButtonCancel;
 Button.Define = ButtonDefine;
+Button.Send = ButtonSend;
 Button.Ok = ButtonOk;

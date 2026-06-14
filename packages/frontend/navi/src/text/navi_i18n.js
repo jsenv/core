@@ -50,6 +50,10 @@ naviI18n.addAll({
     en: "Ok",
     fr: "Ok",
   },
+  "button.send": {
+    en: "Send",
+    fr: "Envoyer",
+  },
 });
 
 // Default built-in translations — apps can override any key via add()

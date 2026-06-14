@@ -21,6 +21,7 @@
         Input,
       } from "@jsenv/navi";
       import { NaviDebug } from "@jsenv/navi";
+      import { CallLog, useCallLog } from "./utils/call_log.jsx";
 
       const App = () => {
         return (
@@ -59,24 +60,17 @@
       };
 
       const StandaloneDemo = () => {
-        const lastValue = useSignal(null);
+        const [entries, pushEntry, clearEntries] = useCallLog();
 
         return (
           <Box flex="y" spacing="m" alignX="start">
             <ControlGroup
               name="address"
               action={(value) => {
-                console.debug(
-                  "[standalone] action called with",
-                  JSON.stringify(value),
-                );
-                lastValue.value = value;
+                pushEntry("action", value);
               }}
               uiAction={(value) => {
-                console.debug(
-                  "[standalone] uiAction called with",
-                  JSON.stringify(value),
-                );
+                pushEntry("uiAction", value);
               }}
             >
               <Box flex="y" spacing="s" alignX="start">
@@ -91,37 +85,23 @@
                 <Button command="--navi-send">Submit group</Button>
               </Box>
             </ControlGroup>
-
-            {lastValue.value !== null && (
-              <fieldset>
-                <legend>Last submitted value</legend>
-                <pre style={{ margin: 0, fontSize: "0.85rem" }}>
-                  {JSON.stringify(lastValue.value, null, 2)}
-                </pre>
-              </fieldset>
-            )}
+            <CallLog entries={entries} onClear={clearEntries} />
           </Box>
         );
       };
 
       const InsideFormDemo = () => {
-        const lastFormValue = useSignal(null);
+        const [formEntries, pushFormEntry, clearFormEntries] = useCallLog();
+        const [groupEntries, pushGroupEntry, clearGroupEntries] = useCallLog();
 
         return (
           <Box flex="y" spacing="m">
             <Form
               action={(value) => {
-                console.debug(
-                  "[form] action called with",
-                  JSON.stringify(value),
-                );
-                lastFormValue.value = value;
+                pushFormEntry("action", value);
               }}
               uiAction={(value) => {
-                console.debug(
-                  "[form] uiAction called with",
-                  JSON.stringify(value),
-                );
+                pushFormEntry("uiAction", value);
               }}
             >
               <Box flex="y" spacing="s">
@@ -137,10 +117,7 @@
                   <ControlGroup
                     name="address"
                     uiAction={(value) => {
-                      console.debug(
-                        "[form > controlGroup] uiAction called with",
-                        JSON.stringify(value),
-                      );
+                      pushGroupEntry("uiAction", value);
                     }}
                   >
                     <Box flex="y" spacing="s">
@@ -159,15 +136,14 @@
                 <Button command="--navi-send">Submit form</Button>
               </Box>
             </Form>
-
-            {lastFormValue.value !== null && (
-              <fieldset>
-                <legend>Last submitted form value</legend>
-                <pre style={{ margin: 0, fontSize: "0.85rem" }}>
-                  {JSON.stringify(lastFormValue.value, null, 2)}
-                </pre>
-              </fieldset>
-            )}
+            <p style={{ margin: 0, fontSize: "0.85rem", color: "#555" }}>
+              ControlGroup calls:
+            </p>
+            <CallLog entries={groupEntries} onClear={clearGroupEntries} />
+            <p style={{ margin: 0, fontSize: "0.85rem", color: "#555" }}>
+              Form calls:
+            </p>
+            <CallLog entries={formEntries} onClear={clearFormEntries} />
           </Box>
         );
       };
