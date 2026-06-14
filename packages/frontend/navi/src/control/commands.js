@@ -227,8 +227,12 @@ registerNaviCommand("--navi-cancel", {
 registerNaviCommand("--navi-clear", {
   resolveTarget: getFirstParentControl,
   implementation: (commandTarget, { event, source }) => {
-    // ne pas faire si on est dans un input par ex, seul un bouton doit close le closest
-    dispatchNaviCommand(source, "--navi-close", event);
+    const fromInput = source.closest(`[navi-control="input"]`);
+    if (fromInput) {
+      // clearing input search should not close a popover/dialog
+    } else {
+      dispatchNaviCommand(source, "--navi-close", event);
+    }
 
     return dispatchRequestSetUIState(commandTarget, "", {
       event,
