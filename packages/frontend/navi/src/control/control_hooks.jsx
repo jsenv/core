@@ -572,6 +572,10 @@ export const useControlgroupProps = (
   const [controlgroupProps, remainingProps] = useInteractiveProps(props, {
     uiStateController: uiGroupStateController,
     boundAction,
+    // Group state is set before dispatching navi_ui_state_change → dispatchRequestAction,
+    // so onnavi_action_allowed must not call dispatchRequestSetUIState again (it would
+    // re-trigger uiAction + command a second time).
+    skipSetUIStateOnActionAllowed: true,
   });
 
   const { basePseudoState } = controlgroupProps;
@@ -635,7 +639,12 @@ export const useControlgroupProps = (
 
 const useInteractiveProps = (
   props,
-  { uiStateController, boundAction, readOnlySupported },
+  {
+    uiStateController,
+    boundAction,
+    readOnlySupported,
+    skipSetUIStateOnActionAllowed,
+  },
 ) => {
   const { ref } = props;
   const controlProps = {
@@ -921,9 +930,15 @@ const useInteractiveProps = (
           e.detail.action = boundAction;
         }
         const { uiState } = e.detail;
-        dispatchRequestSetUIState(e.currentTarget, uiState, {
-          event: e,
-        });
+        if (!skipSetUIStateOnActionAllowed) {
+          // For leaf controls: set the UI state optimistically before executing the action.
+          // For groups: state is already set by the group's setUIState (which ran before
+          // dispatching navi_ui_state_change → dispatchRequestAction), so we skip this
+          // to avoid calling uiAction + command a second time.
+          dispatchRequestSetUIState(e.currentTarget, uiState, {
+            event: e,
+          });
+        }
         debugAction(e, `executing action ${e.detail.action.callSource}`);
         executeAction(e);
       },

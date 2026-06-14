@@ -170,7 +170,7 @@ export const useUIStateController = (
 
   const [
     notifyParentAboutChildMount,
-    notifyParentAboutChildUIStateChange,
+    notifyParentAboutChildInteraction,
     notifyParentAboutChildUnmount,
   ] = useParentControllerNotifiers(
     parentUIStateController,
@@ -331,6 +331,7 @@ export const useUIStateController = (
           !e.detail.internalBehavior
         ) {
           onUIAction();
+          notifyParentAboutChildInteraction(e, { stateChanged: false });
         }
         return false;
       }
@@ -410,7 +411,7 @@ export const useUIStateController = (
       if (internalBehavior) {
         return true;
       }
-      notifyParentAboutChildUIStateChange(e);
+      notifyParentAboutChildInteraction(e, { stateChanged: true });
       if (controlProxyFor) {
         // Proxy: forward the state change to the real input
         // The real input will handle its own UIState update + synthetic input.
@@ -499,12 +500,14 @@ const useParentControllerNotifiers = (
       parentUIStateController.registerChild(uiStateController);
     };
 
-    const notifyParentAboutChildUIStateChange = (e) => {
+    const notifyParentAboutChildInteraction = (e, { stateChanged }) => {
       const uiStateController = uiStateControllerRef.current;
       debugUIState(
-        `"${controlType}" notifying "${parentControlType}" of ui state change`,
+        `"${controlType}" notifying "${parentControlType}" of child interaction (stateChanged: ${stateChanged})`,
       );
-      parentUIStateController.onChildUIStateChange(uiStateController, e);
+      parentUIStateController.onChildInteraction(uiStateController, e, {
+        stateChanged,
+      });
     };
 
     const notifyParentAboutChildUnmount = () => {
@@ -517,7 +520,7 @@ const useParentControllerNotifiers = (
 
     return [
       notifyParentAboutChildMount,
-      notifyParentAboutChildUIStateChange,
+      notifyParentAboutChildInteraction,
       notifyParentAboutChildUnmount,
     ];
   }, []);
@@ -615,7 +618,7 @@ export const useUIGroupStateController = (
 
   const [
     notifyParentAboutChildMount,
-    notifyParentAboutChildUIStateChange,
+    notifyParentAboutChildInteraction,
     notifyParentAboutChildUnmount,
   ] = useParentControllerNotifiers(
     parentUIStateController,
@@ -732,7 +735,7 @@ export const useUIGroupStateController = (
               value: newUIState,
             });
           }
-          notifyParentAboutChildUIStateChange(e);
+          notifyParentAboutChildInteraction(e);
         }
       }
     },
@@ -750,20 +753,26 @@ export const useUIGroupStateController = (
         // childUIStateController,
       });
     },
-    onChildUIStateChange: (childUIStateController, e) => {
+    onChildInteraction: (childUIStateController, e, { stateChanged }) => {
       if (!isMonitoringChild(childUIStateController)) {
         return;
       }
       const childControlType = childUIStateController.controlType;
       debugUIGroup(
-        `${controlType}.onChildUIStateChange("${childControlType}") to ${JSON.stringify(
+        `${controlType}.onChildInteraction("${childControlType}") stateChanged=${stateChanged} -> child state: ${JSON.stringify(
           childUIStateController.uiState,
         )}`,
       );
-      onChange(e, {
-        notifyExternal: true,
-        // childUIStateController,
-      });
+      if (stateChanged) {
+        // Value changed: re-aggregate child states and notify external (uiAction + command + action).
+        onChange(e, { notifyExternal: true });
+      } else {
+        // Value unchanged (e.g. radio re-clicked): fire uiAction + command on the group
+        // without re-aggregating or triggering the action pipeline.
+        uiStateController.setUIState(uiStateController.uiState, e, {
+          notifyExternal: true,
+        });
+      }
     },
     unregisterChild: (childUIStateController) => {
       if (!isMonitoringChild(childUIStateController)) {
