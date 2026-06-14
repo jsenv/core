@@ -232,13 +232,13 @@
                     Variant
                     <ol style={{ paddingLeft: "20px" }}>
                       <li>
-                        <a href="#customization-variant-border">border</a>
-                      </li>
-                      <li>
                         <a href="#customization-variant-text">text</a>
                       </li>
                       <li>
                         <a href="#customization-variant-discrete">discrete</a>
+                      </li>
+                      <li>
+                        <a href="#customization-variant-border">border</a>
                       </li>
                     </ol>
                   </li>
@@ -1582,52 +1582,6 @@
             </fieldset>
 
             {/* ── Variant ───────────────────────────────────────────────── */}
-            {/* ── Variant: border ───────────────────────────────────────── */}
-            <h3
-              id="customization-variant-border"
-              style={{ margin: "24px 0 12px" }}
-            >
-              Variant — border
-            </h3>
-
-            <fieldset>
-              <legend>Regular vs border</legend>
-              <div className="button-group">
-                <Button>Text in button</Button>
-                <Button variant="border">Text in button</Button>
-              </div>
-            </fieldset>
-
-            <fieldset>
-              <legend>border — states</legend>
-              <Box flex spacing="s">
-                <fieldset>
-                  <legend>:hover</legend>
-                  <Button variant="border" pseudoState={{ ":hover": true }}>
-                    Text in button
-                  </Button>
-                </fieldset>
-                <fieldset>
-                  <legend>:read-only</legend>
-                  <Button variant="border" readOnly>
-                    Text in button
-                  </Button>
-                </fieldset>
-                <fieldset>
-                  <legend>:disabled</legend>
-                  <Button variant="border" disabled>
-                    Text in button
-                  </Button>
-                </fieldset>
-                <fieldset>
-                  <legend>:-navi-loading</legend>
-                  <Button variant="border" loading>
-                    Text in button
-                  </Button>
-                </fieldset>
-              </Box>
-            </fieldset>
-
             {/* ── Variant: text ─────────────────────────────────────────── */}
             <h3
               id="customization-variant-text"
@@ -1714,6 +1668,52 @@
                 <fieldset>
                   <legend>:-navi-loading</legend>
                   <Button variant="discrete" loading>
+                    Text in button
+                  </Button>
+                </fieldset>
+              </Box>
+            </fieldset>
+
+            {/* ── Variant: border ───────────────────────────────────────── */}
+            <h3
+              id="customization-variant-border"
+              style={{ margin: "24px 0 12px" }}
+            >
+              Variant — border
+            </h3>
+
+            <fieldset>
+              <legend>Regular vs border</legend>
+              <div className="button-group">
+                <Button>Text in button</Button>
+                <Button variant="border">Text in button</Button>
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend>border — states</legend>
+              <Box flex spacing="s">
+                <fieldset>
+                  <legend>:hover</legend>
+                  <Button variant="border" pseudoState={{ ":hover": true }}>
+                    Text in button
+                  </Button>
+                </fieldset>
+                <fieldset>
+                  <legend>:read-only</legend>
+                  <Button variant="border" readOnly>
+                    Text in button
+                  </Button>
+                </fieldset>
+                <fieldset>
+                  <legend>:disabled</legend>
+                  <Button variant="border" disabled>
+                    Text in button
+                  </Button>
+                </fieldset>
+                <fieldset>
+                  <legend>:-navi-loading</legend>
+                  <Button variant="border" loading>
                     Text in button
                   </Button>
                 </fieldset>
