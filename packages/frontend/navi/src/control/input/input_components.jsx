@@ -26,7 +26,7 @@ export const InputUnitSlot = ({ children, side = "right", ...props }) => {
   );
 };
 
-const InputSlot = ({ side, onClick, hideWhileEmpty, ...props }) => {
+const InputSlot = ({ side, onClick, ...props }) => {
   const ctx = useContext(InputTextualContext);
   const { id, readOnly, disabled } = ctx || {};
 
@@ -40,7 +40,6 @@ const InputSlot = ({ side, onClick, hideWhileEmpty, ...props }) => {
       data-disabled={disabled}
       data-left={side === "left" ? "" : undefined}
       data-right={side === "right" ? "" : undefined}
-      data-hide-while-empty={hideWhileEmpty ? "" : undefined}
       inline
       flex
       align="center"

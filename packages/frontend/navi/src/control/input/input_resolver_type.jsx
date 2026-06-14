@@ -48,9 +48,8 @@ const InputSearchUI = ({ icon }) => {
     }
     return <InputIconSlot>{searchIcon}</InputIconSlot>;
   }
-
   return (
-    <InputRightSlot command="--navi-clear" commadFor={id}>
+    <InputRightSlot command="--navi-clear" commandFor={id}>
       <Icon>
         <CloseSvg />
       </Icon>

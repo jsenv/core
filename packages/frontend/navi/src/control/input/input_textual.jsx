@@ -167,30 +167,6 @@ const css = /* css */ `
         margin-right: var(--x-padding-left);
         order: -1;
       }
-
-      &[data-hide-while-empty] {
-        opacity: 0;
-        pointer-events: none;
-      }
-    }
-    &[data-has-value] {
-      .navi_input_slot[data-hide-while-empty] {
-        opacity: 1;
-        cursor: pointer;
-        pointer-events: auto;
-      }
-      &[data-readonly] {
-        .navi_input_slot[data-hide-while-empty] {
-          opacity: 0;
-          pointer-events: none;
-        }
-      }
-      &[data-disabled] {
-        .navi_input_slot[data-hide-while-empty] {
-          opacity: 0;
-          pointer-events: none;
-        }
-      }
     }
 
     /* Hover */
