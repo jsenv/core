@@ -45,6 +45,15 @@ export const useDebugAction = () => {
  *
  * Pass a boolean `true` to use `console.debug`, or pass a custom function.
  */
+const debugCommandDefault = (...args) =>
+  sharedEventGroupLogger("[command]", ...args);
+const debugInteractionDefault = (...args) =>
+  sharedEventGroupLogger("[interaction]", ...args);
+const debugPopupDefault = (...args) =>
+  sharedEventGroupLogger("[popup]", ...args);
+const debugActionDefault = (...args) =>
+  sharedEventGroupLogger("[action]", ...args);
+
 export const NaviDebug = ({
   debugCommand,
   debugInteraction,
@@ -53,16 +62,16 @@ export const NaviDebug = ({
   children,
 }) => {
   if (debugCommand === true) {
-    debugCommand = sharedEventGroupLogger;
+    debugCommand = debugCommandDefault;
   }
   if (debugInteraction === true) {
-    debugInteraction = sharedEventGroupLogger;
+    debugInteraction = debugInteractionDefault;
   }
   if (debugPopup === true) {
-    debugPopup = sharedEventGroupLogger;
+    debugPopup = debugPopupDefault;
   }
   if (debugAction === true) {
-    debugAction = sharedEventGroupLogger;
+    debugAction = debugActionDefault;
   }
 
   return (
