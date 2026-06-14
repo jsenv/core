@@ -165,6 +165,7 @@ registerNaviCommand("--navi-send", {
   implementation: (commandTarget, { event, source }) => {
     const closestExpandable = getClosestExpandable(source);
     if (closestExpandable) {
+      dispatchNaviCommand(source, "--navi-update", event);
       // The picker's onClose already dispatches the action with the final value.
       // Dispatching again here would fire the action twice.
       dispatchNaviCommand(closestExpandable, "--navi-close", event);
