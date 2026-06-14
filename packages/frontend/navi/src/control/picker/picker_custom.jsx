@@ -153,7 +153,56 @@ const css = /* css */ `
   }
 `;
 
-export const PickerCustom = (props) => {
+export const PickerCustomResolver = (props) => {
+  if (props.children === undefined) {
+    return <PickerNative {...props} />;
+  }
+  return <PickerCustom {...props} />;
+};
+
+const PickerNative = (props) => {
+  const Next = useNextResolver();
+  const { onClick } = props;
+
+  const onRequestOpen = (e) => {
+    const pickerButton = e.currentTarget;
+    const pickerInput = getPickerInput(pickerButton);
+    if (!pickerInput) {
+      return;
+    }
+    const allowed = dispatchRequestInteraction(
+      pickerInput,
+      e,
+      e.type === "click" ? "click to show picker" : "navi_request_open event",
+    );
+    if (allowed) {
+      try {
+        pickerInput.showPicker();
+      } catch {
+        pickerInput.click();
+      }
+    }
+  };
+
+  return (
+    <Next
+      {...props}
+      // Only wait for the native "change" event (dialog close) when the picker has its own
+      // action. Without an action, the change event would trigger a noop action cycle and
+      // cause spurious state updates (e.g. when closing the color dialog on form submit).
+      actionInteraction={props.action ? "change" : undefined}
+      onnavi_request_open={(e) => {
+        onRequestOpen(e);
+      }}
+      onClick={(e) => {
+        onClick?.(e);
+        onRequestOpen(e);
+      }}
+    />
+  );
+};
+
+const PickerCustom = (props) => {
   const { ref, mode: modeProp } = props;
   // Freeze the mode for the lifetime of an opening: compute it when closed,
   // keep it stable while open so a screen resize mid-session doesn't switch
