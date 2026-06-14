@@ -168,12 +168,11 @@ export const createEventGroupLogger = () => {
     }, 0);
   };
 
-  return (eOrMessage, sideEffect, ...args) => {
-    if (!(eOrMessage instanceof Event)) {
-      console.debug(eOrMessage);
+  return (prefix, e, ...args) => {
+    if (!(e instanceof Event)) {
+      console.debug(prefix, e, ...args);
       return;
     }
-    const e = eOrMessage;
     const chain = e.detail?.eventChain;
     const initiator = chain ? chain[0] : e;
     if (initiator !== currentInitiator) {
@@ -188,14 +187,14 @@ export const createEventGroupLogger = () => {
       console.group(label);
       currentInitiator = initiator;
     }
-    const line = formatSideEffectLine(e, sideEffect);
+    const line = formatSideEffectLine(e, prefix);
     console.debug(line, ...args);
     scheduleGroupEnd();
   };
 };
 
-const formatSideEffectLine = (e, sideEffect) => {
-  const parts = [];
+const formatSideEffectLine = (e, prefix) => {
+  const parts = [prefix];
   const chain = e.detail?.eventChain;
   if (chain) {
     // chain[0] is the root event, already shown as the group label — skip it.
@@ -204,6 +203,5 @@ const formatSideEffectLine = (e, sideEffect) => {
       parts.push(chainedEvent.type);
     }
   }
-  parts.push(sideEffect);
   return parts.join(" -> ");
 };
