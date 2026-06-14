@@ -4,6 +4,7 @@ import {
   createComponentResolver,
   useNextResolver,
 } from "@jsenv/navi/src/resolver/resolver.jsx";
+import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { ButtonInsideFormResolver } from "./button_inside_form.jsx";
 import { ButtonRouteResolver } from "./button_route.jsx";
 import { ButtonUI } from "./button_ui.jsx";
@@ -22,3 +23,49 @@ export const Button = createComponentResolver([
   ButtonInsideFormResolver,
   ButtonUI,
 ]);
+
+const ButtonClear = (props) => {
+  return (
+    <Button
+      command="--navi-clear"
+      // eslint-disable-next-line react/no-children-prop
+      children={naviI18n("button.clear")}
+      {...props}
+    />
+  );
+};
+const ButtonCancel = (props) => {
+  return (
+    <Button
+      command="--navi-cancel"
+      // eslint-disable-next-line react/no-children-prop
+      children={naviI18n("button.cancel")}
+      {...props}
+    />
+  );
+};
+const ButtonDefine = (props) => {
+  return (
+    <Button
+      command="--navi-send"
+      // eslint-disable-next-line react/no-children-prop
+      children={naviI18n("button.define")}
+      {...props}
+    />
+  );
+};
+const ButtonOk = (props) => {
+  return (
+    <Button
+      command="--navi-send"
+      // eslint-disable-next-line react/no-children-prop
+      children={naviI18n("button.ok")}
+      {...props}
+    />
+  );
+};
+
+Button.Clear = ButtonClear;
+Button.Cancel = ButtonCancel;
+Button.Define = ButtonDefine;
+Button.Ok = ButtonOk;
