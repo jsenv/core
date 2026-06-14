@@ -254,7 +254,7 @@ const css = /* css */ `
       }
     }
     /* Discrete variant */
-    &[data-discrete] {
+    &[data-variant="discrete"] {
       --x-button-background-color: transparent;
       --x-button-border-color: transparent;
 
@@ -373,8 +373,7 @@ export const ButtonUI = (props) => {
     // visual
     icon,
     revealOnInteraction = icon,
-    discrete = icon && !revealOnInteraction,
-    variant,
+    variant = icon && !revealOnInteraction ? "discrete" : undefined,
     cta,
     spacing,
   } = props;
@@ -441,7 +440,6 @@ export const ButtonUI = (props) => {
       }}
       data-icon={icon ? "" : undefined}
       data-reveal-on-interaction={revealOnInteraction ? "" : undefined}
-      data-discrete={discrete ? "" : undefined}
       data-variant={variant}
       data-cta={cta ? "" : undefined}
       data-callout-arrow-x="center"

@@ -237,13 +237,13 @@
                       <li>
                         <a href="#customization-variant-text">text</a>
                       </li>
+                      <li>
+                        <a href="#customization-variant-discrete">discrete</a>
+                      </li>
                     </ol>
                   </li>
                   <li>
                     <a href="#customization-cta">CTA</a>
-                  </li>
-                  <li>
-                    <a href="#customization-discrete">Discrete</a>
                   </li>
                   <li>
                     <a href="#customization-icon">Icon</a>
@@ -1593,28 +1593,39 @@
             <fieldset>
               <legend>Regular vs border</legend>
               <div className="button-group">
-                <Button>Regular</Button>
-                <Button variant="border">border</Button>
+                <Button>Text in button</Button>
+                <Button variant="border">Text in button</Button>
               </div>
             </fieldset>
 
             <fieldset>
               <legend>border — states</legend>
-              <div className="button-group">
-                <Button variant="border">Normal</Button>
-                <Button variant="border" pseudoState={{ ":hover": true }}>
-                  Hover
-                </Button>
-                <Button variant="border" readOnly>
-                  Read-only
-                </Button>
-                <Button variant="border" disabled>
-                  Disabled
-                </Button>
-                <Button variant="border" loading>
-                  Loading
-                </Button>
-              </div>
+              <Box flex spacing="s">
+                <fieldset>
+                  <legend>:hover</legend>
+                  <Button variant="border" pseudoState={{ ":hover": true }}>
+                    Text in button
+                  </Button>
+                </fieldset>
+                <fieldset>
+                  <legend>:read-only</legend>
+                  <Button variant="border" readOnly>
+                    Text in button
+                  </Button>
+                </fieldset>
+                <fieldset>
+                  <legend>:disabled</legend>
+                  <Button variant="border" disabled>
+                    Text in button
+                  </Button>
+                </fieldset>
+                <fieldset>
+                  <legend>:-navi-loading</legend>
+                  <Button variant="border" loading>
+                    Text in button
+                  </Button>
+                </fieldset>
+              </Box>
             </fieldset>
 
             {/* ── Variant: text ─────────────────────────────────────────── */}
@@ -1628,28 +1639,85 @@
             <fieldset>
               <legend>Regular vs text</legend>
               <div className="button-group">
-                <Button>Regular</Button>
-                <Button variant="text">text</Button>
+                <Button>Text in button</Button>
+                <Button variant="text">Text in button</Button>
               </div>
             </fieldset>
 
             <fieldset>
               <legend>text — states</legend>
+              <Box flex spacing="s">
+                <fieldset>
+                  <legend>:hover</legend>
+                  <Button variant="text" pseudoState={{ ":hover": true }}>
+                    Text in button
+                  </Button>
+                </fieldset>
+                <fieldset>
+                  <legend>:read-only</legend>
+                  <Button variant="text" readOnly>
+                    Text in button
+                  </Button>
+                </fieldset>
+                <fieldset>
+                  <legend>:disabled</legend>
+                  <Button variant="text" disabled>
+                    Text in button
+                  </Button>
+                </fieldset>
+                <fieldset>
+                  <legend>:-navi-loading</legend>
+                  <Button variant="text" loading>
+                    Text in button
+                  </Button>
+                </fieldset>
+              </Box>
+            </fieldset>
+
+            {/* ── Variant: discrete ────────────────────────────────────── */}
+            <h3
+              id="customization-variant-discrete"
+              style={{ margin: "24px 0 12px" }}
+            >
+              Variant — discrete
+            </h3>
+
+            <fieldset>
+              <legend>Regular vs discrete</legend>
               <div className="button-group">
-                <Button variant="text">Normal</Button>
-                <Button variant="text" pseudoState={{ ":hover": true }}>
-                  Hover
-                </Button>
-                <Button variant="text" readOnly>
-                  Read-only
-                </Button>
-                <Button variant="text" disabled>
-                  Disabled
-                </Button>
-                <Button variant="text" loading>
-                  Loading
-                </Button>
+                <Button>Text in button</Button>
+                <Button variant="discrete">Text in button</Button>
               </div>
+            </fieldset>
+
+            <fieldset>
+              <legend>discrete — states</legend>
+              <Box flex spacing="s">
+                <fieldset>
+                  <legend>:hover</legend>
+                  <Button variant="discrete" pseudoState={{ ":hover": true }}>
+                    Text in button
+                  </Button>
+                </fieldset>
+                <fieldset>
+                  <legend>:read-only</legend>
+                  <Button variant="discrete" readOnly>
+                    Text in button
+                  </Button>
+                </fieldset>
+                <fieldset>
+                  <legend>:disabled</legend>
+                  <Button variant="discrete" disabled>
+                    Text in button
+                  </Button>
+                </fieldset>
+                <fieldset>
+                  <legend>:-navi-loading</legend>
+                  <Button variant="discrete" loading>
+                    Text in button
+                  </Button>
+                </fieldset>
+              </Box>
             </fieldset>
 
             {/* ── CTA ───────────────────────────────────────────────────── */}
@@ -1658,13 +1726,35 @@
             </h3>
 
             <fieldset>
-              <legend>cta prop</legend>
+              <legend>Regular vs cta</legend>
               <div className="button-group">
-                <Button cta>Default CTA</Button>
-                <Button cta disabled>
-                  Disabled CTA
-                </Button>
+                <Button>Text in button</Button>
+                <Button cta>Text in button</Button>
               </div>
+            </fieldset>
+
+            <fieldset>
+              <legend>cta — states</legend>
+              <Box flex spacing="s">
+                <fieldset>
+                  <legend>:hover</legend>
+                  <Button cta pseudoState={{ ":hover": true }}>
+                    Text in button
+                  </Button>
+                </fieldset>
+                <fieldset>
+                  <legend>:disabled</legend>
+                  <Button cta disabled>
+                    Text in button
+                  </Button>
+                </fieldset>
+                <fieldset>
+                  <legend>:-navi-loading</legend>
+                  <Button cta loading>
+                    Text in button
+                  </Button>
+                </fieldset>
+              </Box>
             </fieldset>
 
             <fieldset>
@@ -1689,35 +1779,6 @@
                 </Button>
                 <Button cta variant="text">
                   text
-                </Button>
-              </div>
-            </fieldset>
-
-            {/* ── Discrete ──────────────────────────────────────────────── */}
-            <h3 id="customization-discrete" style={{ margin: "24px 0 12px" }}>
-              Discrete
-            </h3>
-
-            <fieldset>
-              <legend>Normal vs Discrete</legend>
-              <div className="button-group">
-                <Button>Regular Button</Button>
-                <Button discrete>Discrete Button</Button>
-              </div>
-            </fieldset>
-
-            <fieldset>
-              <legend>Discrete states</legend>
-              <div className="button-group">
-                <Button discrete>Normal</Button>
-                <Button discrete readOnly>
-                  Read-only
-                </Button>
-                <Button discrete disabled>
-                  Disabled
-                </Button>
-                <Button discrete loading>
-                  Loading
                 </Button>
               </div>
             </fieldset>
