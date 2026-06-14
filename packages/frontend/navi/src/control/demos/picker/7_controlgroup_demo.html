@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Picker ControlGroup Demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 40px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      #container {
+        max-width: 900px;
+        margin: 0 auto;
+      }
+      h1 {
+        margin: 0 0 32px;
+        font-size: 1.4rem;
+      }
+      h2 {
+        margin: 0 0 4px;
+        font-size: 1.1rem;
+      }
+      .demo-section {
+        margin-bottom: 24px;
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      p.desc {
+        margin: 0 0 16px;
+        color: #555;
+        font-size: 13px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <h1>Picker ControlGroup Demo</h1>
+      <div id="app"></div>
+    </div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { CallLog, useCallLog } from "../utils/call_log.jsx";
+      import { Box, Field, Label, Picker, Form, Button } from "@jsenv/navi";
+
+      const App = () => (
+        <Box flex="y" spacing="l">
+          <OutsideFormDemo />
+          <InFormDemo />
+        </Box>
+      );
+
+      // ── 1. Outside a form ────────────────────────────────────────────────
+
+      const OutsideFormDemo = () => {
+        const [entries, push, clear] = useCallLog();
+
+        return (
+          <div class="demo-section" id="outside-form">
+            <h2>1. Outside a form</h2>
+            <p class="desc">
+              Le picker agrège les valeurs de ses enfants en un objet. uiAction
+              est appelé à chaque changement d'un champ enfant, action quand le
+              picker se ferme avec une valeur différente.
+            </p>
+            <Box flex="y" spacing="m">
+              <Field vertical>
+                <Label>Adresse</Label>
+                <Picker
+                  name="address"
+                  type="controlgroup"
+                  placeholder="Saisir une adresse"
+                  uiAction={(v) => {
+                    push("uiAction", v);
+                  }}
+                  action={(v) => {
+                    push("action", v);
+                  }}
+                >
+                  <Box flex="y" spacing="s" style={{ padding: "12px" }}>
+                    <Field vertical>
+                      <Label>Rue</Label>
+                      <input name="street" placeholder="12 rue de la Paix" />
+                    </Field>
+                    <Field vertical>
+                      <Label>Ville</Label>
+                      <input name="city" placeholder="Paris" />
+                    </Field>
+                    <Field vertical>
+                      <Label>Code postal</Label>
+                      <input name="zip" placeholder="75001" />
+                    </Field>
+                  </Box>
+                </Picker>
+              </Field>
+            </Box>
+            <CallLog entries={entries} onClear={clear} />
+          </div>
+        );
+      };
+
+      // ── 2. Inside a form ─────────────────────────────────────────────────
+
+      const InFormDemo = () => {
+        const [entries, push, clear] = useCallLog();
+
+        return (
+          <div class="demo-section" id="inside-form">
+            <h2>2. Inside a form</h2>
+            <p class="desc">
+              Le picker controlgroup s'utilise aussi à l'intérieur d'un Form. Sa
+              valeur est incluse sous sa clé name dans l'objet soumis.
+            </p>
+            <Form
+              action={(v) => {
+                push("Form action", v);
+              }}
+            >
+              <Box flex="y" spacing="m">
+                <Field vertical>
+                  <Label>Email</Label>
+                  <input name="email" type="email" placeholder="you@example.com" />
+                </Field>
+                <Field vertical>
+                  <Label>Adresse</Label>
+                  <Picker
+                    name="address"
+                    type="controlgroup"
+                    placeholder="Saisir une adresse"
+                    uiAction={(v) => {
+                      push("Picker uiAction", v);
+                    }}
+                  >
+                    <Box flex="y" spacing="s" style={{ padding: "12px" }}>
+                      <Field vertical>
+                        <Label>Rue</Label>
+                        <input name="street" placeholder="12 rue de la Paix" />
+                      </Field>
+                      <Field vertical>
+                        <Label>Ville</Label>
+                        <input name="city" placeholder="Paris" />
+                      </Field>
+                      <Field vertical>
+                        <Label>Code postal</Label>
+                        <input name="zip" placeholder="75001" />
+                      </Field>
+                    </Box>
+                  </Picker>
+                </Field>
+                <Button.Send>Envoyer</Button.Send>
+              </Box>
+            </Form>
+            <CallLog entries={entries} onClear={clear} />
+          </div>
+        );
+      };
+
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>
