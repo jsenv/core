@@ -98,6 +98,7 @@ const css = /* css */ `
     box-sizing: border-box;
     aspect-ratio: inherit;
     padding: 0;
+    color: var(--x-button-color);
     background: none;
     border: none;
     border-radius: var(--button-border-radius);
@@ -109,10 +110,6 @@ const css = /* css */ `
     font-family: var(--button-font-family);
     touch-action: manipulation;
     user-select: none;
-
-    &[data-accent-needs-dark-fg] {
-      --button-color: black;
-    }
 
     .navi_button_content {
       position: relative;
@@ -151,7 +148,7 @@ const css = /* css */ `
       );
       align-items: inherit;
       justify-content: inherit;
-      color: var(--x-button-color);
+      color: inherit;
       vertical-align: inherit;
       background: var(--x-button-background);
       background-color: var(
@@ -300,6 +297,7 @@ const css = /* css */ `
     }
     &[data-variant="icon"] {
       --button-padding: 0;
+      --button-border-width: 0;
       --x-button-background-color: transparent;
       --x-button-border-color: transparent;
 
@@ -412,9 +410,6 @@ export const ButtonUI = (props) => {
       href={href}
       target={innerTarget}
       rel={innerRel}
-      onnavi_get_value={(e) => {
-        e.detail.respondWith(props.value);
-      }}
       onContextMenu={(e) => {
         if (as === "a") {
           // For link we keep context menu to allow "open in new tab" and other browser features
