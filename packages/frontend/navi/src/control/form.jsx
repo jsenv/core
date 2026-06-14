@@ -36,8 +36,9 @@ const FormControl = (props) => {
   const { ref, method = "GET" } = props;
   const [formProps, remainingProps, childrenWrapperProps] =
     useControlgroupProps(props, {
-      stateType: "object",
+      wantRequesterButtonState: true,
       controlType: "form",
+      stateType: "object",
       aggregateChildStates: (childUIStateControllers) => {
         const formValues = {};
         for (const childUIStateController of childUIStateControllers) {
@@ -97,7 +98,12 @@ const FormControl = (props) => {
       }}
     >
       <FormContext.Provider value={formContextValue}>
-        <ControlgroupChildrenWrapper {...childrenWrapperProps}>
+        <ControlgroupChildrenWrapper
+          {...childrenWrapperProps}
+          // do not propagate name to children like radio group or checkbox group does
+          // (otherwise anonymous button end up using that name)
+          name={undefined}
+        >
           {children}
         </ControlgroupChildrenWrapper>
       </FormContext.Provider>

@@ -32,8 +32,9 @@ export const ControlGroup = (props) => {
 
   const [controlgroupProps, remainingProps, childrenWrapperProps] =
     useControlgroupProps(props, {
-      stateType: "object",
+      wantRequesterButtonState: true,
       controlType: props.type || "control_group",
+      stateType: "object",
       aggregateChildStates: (childUIStateControllers) => {
         const groupValues = {};
         for (const childUIStateController of childUIStateControllers) {
@@ -61,7 +62,12 @@ export const ControlGroup = (props) => {
       type={undefined}
       pseudoClasses={CONTROL_GROUP_PSEUDO_CLASSES}
     >
-      <ControlgroupChildrenWrapper {...childrenWrapperProps}>
+      <ControlgroupChildrenWrapper
+        {...childrenWrapperProps}
+        // do not propagate name to children like radio group or checkbox group does
+        // (otherwise anonymous button end up using that name)
+        name={undefined}
+      >
         {children}
       </ControlgroupChildrenWrapper>
     </Box>

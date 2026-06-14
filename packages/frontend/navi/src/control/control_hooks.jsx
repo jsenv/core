@@ -547,7 +547,13 @@ export const useControlProps = (
  */
 export const useControlgroupProps = (
   props,
-  { stateType, controlType, childControlFilter, aggregateChildStates },
+  {
+    controlType,
+    stateType,
+    childControlFilter,
+    aggregateChildStates,
+    wantRequesterButtonState,
+  },
 ) => {
   const { action } = props;
   const debugAction = useDebugAction();
@@ -555,6 +561,7 @@ export const useControlgroupProps = (
     stateType,
     childControlFilter,
     aggregateChildStates,
+    wantRequesterButtonState,
     debugAction,
   });
 
@@ -857,12 +864,10 @@ const useInteractiveProps = (
           // contributes its name+value to form data.
           const { requester } = e.detail;
           if (
-            uiStateController.controlType === "form" &&
+            uiStateController.wantRequesterButtonState &&
+            requester.tagName === "BUTTON" &&
             requester.name &&
-            requester !== e.currentTarget &&
-            (requester.type === "submit" ||
-              requester.matches?.('[command="--navi-send"]')) &&
-            uiState
+            requester !== e.currentTarget
           ) {
             const requesterUIState = getUIStateFromElement(requester);
             const requesterValue =

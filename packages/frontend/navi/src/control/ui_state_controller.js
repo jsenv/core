@@ -595,7 +595,13 @@ const useParentControllerNotifiers = (
 export const useUIGroupStateController = (
   props,
   controlType,
-  { stateType, childControlFilter, aggregateChildStates, debugAction },
+  {
+    stateType,
+    childControlFilter,
+    aggregateChildStates,
+    wantRequesterButtonState,
+    debugAction,
+  },
 ) => {
   if (typeof aggregateChildStates !== "function") {
     throw new TypeError("aggregateChildStates must be a function");
@@ -702,6 +708,7 @@ export const useUIGroupStateController = (
     value,
     uiState: fallbackState,
     uiStateSignal,
+    wantRequesterButtonState,
     elementRef: ref,
     getPropFromState: (uiState) => uiState,
     setUIState: (newUIState, e, { notifyExternal = true } = {}) => {
