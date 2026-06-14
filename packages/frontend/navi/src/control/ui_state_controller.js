@@ -647,7 +647,7 @@ export const useUIGroupStateController = (
     };
   }, []);
 
-  const onChange = (_, e, { notifyExternal = true } = {}) => {
+  const onChange = (e, { notifyExternal }) => {
     if (groupIsRenderingRef.current) {
       pendingChangeRef.current = true;
       return;
@@ -670,11 +670,9 @@ export const useUIGroupStateController = (
     groupIsRenderingRef.current = false;
     if (pendingChangeRef.current) {
       pendingChangeRef.current = false;
-      onChange(
-        null,
-        new CustomEvent(`${controlType}_batched_ui_state_update`),
-        { notifyExternal: false },
-      );
+      onChange(new CustomEvent(`${controlType}_batched_ui_state_update`), {
+        notifyExternal: false,
+      });
     }
   });
 
@@ -723,7 +721,8 @@ export const useUIGroupStateController = (
       );
       publishUIState(newUIState);
       if (notifyExternal) {
-        uiActionRef.current?.(newUIState, e);
+        const uiAction = uiActionRef.current;
+        uiAction?.(newUIState, e);
         if (command) {
           const el = ref.current;
           if (el) {
@@ -742,11 +741,10 @@ export const useUIGroupStateController = (
       debugUIGroup(
         `${controlType}.registerChild("${childControlType}") -> registered (total: ${childUIStateControllerArray.length})`,
       );
-      onChange(
-        childUIStateController,
-        new CustomEvent(`${childControlType}_mount`),
-        { notifyExternal: false },
-      );
+      onChange(new CustomEvent(`${childControlType}_mount`), {
+        notifyExternal: false,
+        // childUIStateController,
+      });
     },
     onChildUIStateChange: (childUIStateController, e) => {
       if (!isMonitoringChild(childUIStateController)) {
@@ -758,7 +756,10 @@ export const useUIGroupStateController = (
           childUIStateController.uiState,
         )}`,
       );
-      onChange(childUIStateController, e);
+      onChange(e, {
+        notifyExternal: true,
+        // childUIStateController,
+      });
     },
     unregisterChild: (childUIStateController) => {
       if (!isMonitoringChild(childUIStateController)) {
@@ -776,11 +777,10 @@ export const useUIGroupStateController = (
       debugUIGroup(
         `${controlType}.unregisterChild("${childControlType}") -> unregisteed (remaining: ${childUIStateControllerArray.length})`,
       );
-      onChange(
-        childUIStateController,
-        new CustomEvent(`${childControlType}_unmount`),
-        { notifyExternal: false },
-      );
+      onChange(new CustomEvent(`${childControlType}_unmount`), {
+        notifyExternal: false,
+        // childUIStateController,
+      });
     },
     resetUIState: (e) => {
       for (const childUIStateController of childUIStateControllerArray) {
