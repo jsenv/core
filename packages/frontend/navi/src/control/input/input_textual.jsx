@@ -116,9 +116,7 @@ const css = /* css */ `
     width: fit-content;
     height: fit-content;
     padding-top: var(--x-padding-top);
-    padding-right: var(--x-padding-right);
     padding-bottom: var(--x-padding-bottom);
-    padding-left: var(--x-padding-left);
     flex-direction: row;
     color: var(--x-color);
     font-size: var(--font-size);
@@ -138,9 +136,7 @@ const css = /* css */ `
       box-sizing: content-box;
       min-width: 1ch;
       margin-top: calc(-1 * var(--x-padding-top));
-      margin-right: calc(-1 * var(--x-padding-right));
       margin-bottom: calc(-1 * var(--x-padding-bottom));
-      margin-left: calc(-1 * var(--x-padding-left));
       padding-top: var(--x-padding-top);
       padding-right: var(--x-padding-right);
       padding-bottom: var(--x-padding-bottom);
@@ -164,6 +160,7 @@ const css = /* css */ `
     }
 
     .navi_input_slot {
+      margin-inline: 0.2em;
       color: #5e4e4e;
 
       &[data-left] {
