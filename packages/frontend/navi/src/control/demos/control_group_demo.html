@@ -52,7 +52,6 @@
                 (its composite value is one key in the form state), while the
                 field outside reports directly to the form.
               </p>
-              <InsideFormDemo />
             </section>
           </Box>
         );
@@ -64,6 +63,7 @@
         return (
           <Box flex="y" spacing="m" alignX="start">
             <ControlGroup
+              type="address"
               name="address"
               action={(value) => {
                 pushEntry("action", value);

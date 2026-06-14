@@ -33,7 +33,7 @@ export const ControlGroup = (props) => {
   const [controlgroupProps, remainingProps, childrenWrapperProps] =
     useControlgroupProps(props, {
       stateType: "object",
-      controlType: "control_group",
+      controlType: props.type || "control_group",
       aggregateChildStates: (childUIStateControllers) => {
         const groupValues = {};
         for (const childUIStateController of childUIStateControllers) {
@@ -58,7 +58,7 @@ export const ControlGroup = (props) => {
     <Box
       {...controlgroupProps}
       {...remainingProps}
-      as={props.as ?? "div"}
+      type={undefined}
       pseudoClasses={CONTROL_GROUP_PSEUDO_CLASSES}
     >
       <ControlgroupChildrenWrapper {...childrenWrapperProps}>
