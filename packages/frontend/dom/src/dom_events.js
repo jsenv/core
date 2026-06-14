@@ -145,11 +145,12 @@ export const formatEventSideEffect = (e, sideEffect) => {
 
 /**
  * Creates a stateful debug logger that groups side effects by their native initiator event.
+ * Use createCategory(name, color) to get a typed logger function for each concern.
  *
  * Usage:
- *   const log = createEventGroupLogger();
- *   log(e, "navi_action_requested");  // opens/reuses a group for the initiator event
- *   log("plain message");             // logs inside the current group (or standalone)
+ *   const logger = createEventGroupLogger();
+ *   const logAction = logger.createCategory("[action]", "#e67e22");
+ *   logAction(e, "action started");  // opens/reuses a group for the initiator event
  *
  * The group closes automatically after the current JS task completes (setTimeout 0).
  */
@@ -168,9 +169,14 @@ export const createEventGroupLogger = () => {
     }, 0);
   };
 
-  return (prefix, e, ...args) => {
+  const log = (category, color, e, ...args) => {
     if (!(e instanceof Event)) {
-      console.debug(prefix, e, ...args);
+      console.debug(
+        `%c${category}`,
+        `color:${color};font-weight:bold`,
+        e,
+        ...args,
+      );
       return;
     }
     const chain = e.detail?.eventChain;
@@ -187,9 +193,17 @@ export const createEventGroupLogger = () => {
       console.group(label);
       currentInitiator = initiator;
     }
-    const line = formatSideEffectLine(e, prefix);
-    console.debug(line, ...args);
+    const line = formatSideEffectLine(e, category);
+    console.debug(`%c${line}`, `color:${color};font-weight:bold`, ...args);
     scheduleGroupEnd();
+  };
+
+  return {
+    createCategory: (name, color = "inherit") => {
+      return (e, ...args) => {
+        log(name, color, e, ...args);
+      };
+    },
   };
 };
 

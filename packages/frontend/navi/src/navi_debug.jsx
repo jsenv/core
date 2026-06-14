@@ -8,7 +8,20 @@ const DebugPopupContext = createContext(false);
 const DebugActionContext = createContext(false);
 
 const debugNoop = () => {};
-const sharedEventGroupLogger = createEventGroupLogger();
+const eventGroupLogger = createEventGroupLogger();
+const debugCommandDefault = eventGroupLogger.createCategory(
+  "[command]",
+  "#8e44ad",
+);
+const debugInteractionDefault = eventGroupLogger.createCategory(
+  "[interaction]",
+  "#2980b9",
+);
+const debugActionDefault = eventGroupLogger.createCategory(
+  "[action]",
+  "#e67e22",
+);
+const debugPopupDefault = eventGroupLogger.createCategory("[popup]", "#27ae60");
 
 export const useDebugCommand = () => {
   const debug = useContext(DebugCommandContext);
@@ -45,14 +58,6 @@ export const useDebugAction = () => {
  *
  * Pass a boolean `true` to use `console.debug`, or pass a custom function.
  */
-const debugCommandDefault = (e, ...args) =>
-  sharedEventGroupLogger("[command]", e, ...args);
-const debugInteractionDefault = (e, ...args) =>
-  sharedEventGroupLogger("[interaction]", e, ...args);
-const debugActionDefault = (e, ...args) =>
-  sharedEventGroupLogger("[action]", e, ...args);
-const debugPopupDefault = (e, ...args) =>
-  sharedEventGroupLogger("[popup]", e, ...args);
 
 export const NaviDebug = ({
   debugCommand,
