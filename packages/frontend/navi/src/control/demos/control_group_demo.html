@@ -24,11 +24,7 @@
 
       const App = () => {
         return (
-          <Box
-            flex="y"
-            spacing="xl"
-            style={{ padding: "20px", maxWidth: "640px" }}
-          >
+          <Box flex="y" spacing="xl" alignX="start" padding="m" maxWidth="640">
             <h1>ControlGroup</h1>
             <p style={{ margin: 0, color: "#555" }}>
               <code>ControlGroup</code> aggregates the values of its child
@@ -66,15 +62,24 @@
         const lastValue = useSignal(null);
 
         return (
-          <Box flex="y" spacing="m">
+          <Box flex="y" spacing="m" alignX="start">
             <ControlGroup
               name="address"
               action={(value) => {
+                console.debug(
+                  "[standalone] action called with",
+                  JSON.stringify(value),
+                );
                 lastValue.value = value;
               }}
-              command="--navi-send"
+              uiAction={(value) => {
+                console.debug(
+                  "[standalone] uiAction called with",
+                  JSON.stringify(value),
+                );
+              }}
             >
-              <Box flex="y" spacing="s">
+              <Box flex="y" spacing="s" alignX="start">
                 <Field>
                   <label>First name</label>
                   <Input type="text" name="firstName" />
@@ -106,7 +111,17 @@
           <Box flex="y" spacing="m">
             <Form
               action={(value) => {
+                console.debug(
+                  "[form] action called with",
+                  JSON.stringify(value),
+                );
                 lastFormValue.value = value;
+              }}
+              uiAction={(value) => {
+                console.debug(
+                  "[form] uiAction called with",
+                  JSON.stringify(value),
+                );
               }}
             >
               <Box flex="y" spacing="s">
@@ -119,7 +134,15 @@
                 {/* This group produces one "address" key in the form value */}
                 <fieldset>
                   <legend>Address (ControlGroup)</legend>
-                  <ControlGroup name="address">
+                  <ControlGroup
+                    name="address"
+                    uiAction={(value) => {
+                      console.debug(
+                        "[form > controlGroup] uiAction called with",
+                        JSON.stringify(value),
+                      );
+                    }}
+                  >
                     <Box flex="y" spacing="s">
                       <Field>
                         <label>Street</label>
