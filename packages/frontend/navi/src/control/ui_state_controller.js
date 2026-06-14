@@ -64,27 +64,36 @@ const unregisterRadioController = (uiStateController) => {
 export const ParentUIStateControllerContext = createContext();
 
 /**
- * UI State Controller Hook
+ * Manages the UI state of a single interactive leaf control (input, checkbox, radio, button…).
  *
- * Manages the relationship between external state (props) and UI state (what user sees).
- * Allows UI state to diverge temporarily for responsive interactions, with mechanisms
- * to sync back to external state when needed.
+ * **Leaf vs group**: a leaf control owns one atomic value (e.g. a string, a boolean).
+ * Use `useUIGroupStateController` when multiple children aggregate into one value.
  *
- * Key features:
- * - Immediate UI updates for responsive interactions
- * - State divergence with sync capabilities (resetUIState)
- * - Group integration for coordinated form inputs
- * - External control via DOM events (navi_set_ui_state / navi_request_reset_ui_state)
- * - Error recovery and form reset support
+ * **State vs UI state**:
+ * - `state` — the last value acknowledged by the action/form (the "truth" coming from outside).
+ * - `uiState` — what the user currently sees, which may diverge from `state` while an action
+ *   is in flight or the user is mid-edit. On reset, uiState snaps back to state.
  *
- * State change flow:
- * All state changes (interaction, action result, external reset) go through DOM events:
- * - `navi_set_ui_state` dispatched on the field's DOM element triggers setUIState
- * - `navi_request_reset_ui_state` dispatched on the field's DOM element resets to controller.state
- * This ensures any subscriber (e.g. useUIState) receives every state change regardless of origin.
+ * **setUIState flow** (all state changes go through this path):
+ * 1. Update DOM element value synchronously (avoids a re-render flash).
+ * 2. Update `uiState` and the reactive signal.
+ * 3. Uncheck radio siblings (radio-only).
+ * 4. Dispatch `navi_ui_state_change` on the element so external subscribers stay in sync.
+ * 5. Call `uiAction` + `uiActionInternal` + `command` (user-observable reactions).
+ * 6. Notify the parent group controller (if any) via `notifyParentAboutChildInteraction`.
+ * 7. Dispatch a synthetic `input` event so `addInputEffect` / `navi_change` listeners fire.
  *
- * The controller stores `elementRef` so parent group controllers can dispatch DOM events
- * directly on child DOM elements when performing group-level operations like resetUIState.
+ * When `stateIsTheSame` (value didn't change):
+ * - For **buttons**: still fires reactions (a click is always meaningful).
+ * - For **radios**: fires reactions + notifies the parent group so it can fire its own
+ *   `uiAction`/`command` (re-clicking an already-selected radio is a valid user gesture).
+ * - For everything else: no-op.
+ *
+ * **internalBehavior events** (e.g. radio_sibling_uncheck, state_prop re-sync):
+ * skip reactions and parent notification — they are programmatic, not user-initiated.
+ *
+ * The controller exposes `elementRef` so parent groups can dispatch DOM events on children
+ * (e.g. `resetUIState` cascading `navi_request_reset_ui_state`).
  */
 export const useUIStateController = (
   props,
@@ -522,59 +531,35 @@ const useParentControllerNotifiers = (
 
 /**
  * UI Group State Controller Hook
+/**
+ * Manages the aggregated UI state of a group of child controls (radio list, checkbox list, etc.).
  *
- * This hook manages a collection of child UI state controllers and aggregates their states
- * into a unified group state. It provides a way to coordinate multiple form inputs that
- * work together as a logical unit.
+ * Children register themselves automatically on mount and unregister on unmount.
+ * Whenever a child has a user interaction, the group re-aggregates all child states
+ * via `aggregateChildStates` and reacts accordingly.
  *
- * What it provides:
+ * **Three distinct methods — each with a clear responsibility**:
  *
- * 1. **Child State Aggregation**:
- *    - Collects state from multiple child UI controllers
- *    - Combines them into a single meaningful group state
- *    - Updates group state automatically when any child changes
+ * - `setUIState(newUIState, e)` — called when a child interaction **changes** the aggregated value.
+ *   Updates the group state, then calls `onInteraction(e)` for user-observable reactions
+ *   (uiAction, command), then dispatches `navi_ui_state_change` so `control_hooks.jsx`
+ *   can trigger the action pipeline (constraints → execute action).
  *
- * 2. **Child Filtering**:
- *    - Can filter which child controllers to include based on component type
- *    - Useful for mixed content where only specific inputs matter
- *    - Enables type-safe aggregation patterns
+ * - `syncInternalState(newUIState)` — called silently during mount/unmount/render-batch.
+ *   Updates state and signal with no external reactions whatsoever.
  *
- * 3. **Group Operations**:
- *    - Provides `resetUIState()` that cascades to all monitored children
- *    - Dispatches `navi_request_reset_ui_state` DOM events on each child's DOM element
- *    - Children handle the event independently, allowing nested groups to cascade further
- *    - Enables group-level operations like "clear all" or "reset form section"
+ * - `onInteraction(e)` — called when a child interaction does **not** change the aggregated
+ *   value (e.g. re-clicking an already-selected radio). Fires `uiAction` + `command` only;
+ *   does not touch state, does not trigger the action pipeline.
  *
- * 4. **External State Management**:
- *    - Notifies external code of group state changes via `onUIStateChange`
- *    - Allows external systems to react to group-level state changes
- *    - Supports complex form validation and submission logic
+ * **Child interaction flow**:
+ * 1. Child leaf fires `notifyParentAboutChildInteraction(e, { stateChanged })`.
+ * 2. Group's `onChildInteraction` receives it.
+ *    - If `stateChanged=true`: re-aggregates → `setUIState` → full reactions + action pipeline.
+ *    - If `stateChanged=false`: calls `onInteraction` → uiAction + command only.
  *
- * Why use it:
- * - When you have multiple related inputs that should be treated as one logical unit
- * - For implementing checkbox lists, radio groups, or form sections
- * - When you need to perform operations on multiple inputs simultaneously
- * - To aggregate input states for validation or submission
- *
- * How it works:
- * - Child controllers automatically register themselves when mounted
- * - Group controller listens for child state changes and re-aggregates
- * - Custom aggregation function determines how child states combine
- * - Group state updates trigger notifications to external code
- *
- * @param {Object} props - Component props containing onUIStateChange callback
- * @param {string} controlType - Type identifier for this group controller
- * @param {Object} config - Configuration object
- * @param {string} [config.childControlType] - Filter children by this type (e.g., "checkbox")
- * @param {Function} config.aggregateChildStates - Function to aggregate child states
- * @param {any} [config.emptyState] - State to use when no children have values
- * @returns {Object} UI group state controller
- *
- * Usage Examples:
- * - **Checkbox List**: Aggregates multiple checkboxes into array of checked values
- * - **Radio Group**: Manages radio buttons to ensure single selection
- * - **Form Section**: Groups related inputs for validation and reset operations
- * - **Dynamic Lists**: Handles variable number of repeated input groups
+ * **Filtering**: `childControlFilter` can exclude certain child types from aggregation
+ * (e.g. ignoring buttons inside a selectable list).
  */
 export const useUIGroupStateController = (
   props,
