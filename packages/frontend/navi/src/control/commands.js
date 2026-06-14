@@ -161,7 +161,7 @@ registerNaviCommand("--navi-send", {
     if (closestExpandable) {
       // The picker's onClose already dispatched the action with the final value.
       // Dispatching again here would fire the action twice.
-      dispatchNaviCommand(source, "--navi-close", event);
+      dispatchNaviCommand(closestExpandable, "--navi-close", event);
       return true;
     }
 

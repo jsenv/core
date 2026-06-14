@@ -355,7 +355,9 @@ const PickerButton = (props) => {
           inputProps.onFocus(e);
         }
       }}
-      onnavi_command={inputProps.onnavi_command}
+      onnavi_command={(e) => {
+        inputProps.onnavi_command(e);
+      }}
     >
       <LoadingOutline
         loading={loading}
