@@ -10,7 +10,10 @@ import {
   dispatchRequestSetUIState,
   getUIStateFromElement,
 } from "./ui_state_dom.js";
-import { dispatchRequestAction } from "./validation/custom_constraint_validation.js";
+import {
+  dispatchRequestAction,
+  dispatchRequestInteraction,
+} from "./validation/custom_constraint_validation.js";
 
 export const dispatchNaviCommand = (element, command, event) => {
   const naviCommand = NAVI_COMMANDS[command];
@@ -234,6 +237,15 @@ registerNaviCommand("--navi-clear", {
       dispatchNaviCommand(source, "--navi-close", event);
     }
 
+    const allowed = dispatchRequestInteraction(
+      commandTarget,
+      event,
+      "--navi-clear",
+    );
+    if (!allowed) {
+      event.preventDefault();
+      return false;
+    }
     return dispatchRequestSetUIState(commandTarget, "", {
       event,
     });
