@@ -26,42 +26,20 @@
         return (
           <Box flex="y" spacing="xl" alignX="start" padding="m" maxWidth="640">
             <h1>ControlGroup</h1>
-            <p style={{ margin: 0, color: "#555" }}>
-              <code>ControlGroup</code> aggregates the values of its child
-              controls into a single composite object — like a sub-form. It
-              supports its own <code>action</code>, <code>command</code>,
-              disabled, and read-only propagation, and can live inside or
-              outside a <code>&lt;Form&gt;</code>.
-            </p>
 
-            {/* ── Standalone ────────────────────────────────────────────── */}
             <section>
-              <h2>Standalone (outside a Form)</h2>
-              <p style={{ color: "#555", fontSize: "0.9rem" }}>
-                The group acts like a mini-form. Clicking "Submit group" fires
-                its <code>action</code> with the aggregated object.
-              </p>
+              <h2>Standalone</h2>
               <StandaloneDemo />
             </section>
 
-            {/* ── Standalone with validation ───────────────────────────── */}
             <section>
-              <h2>Standalone — with required field</h2>
-              <p style={{ color: "#555", fontSize: "0.9rem" }}>
-                Same setup but <code>firstName</code> is required. Submit
-                without filling it to verify validation blocks the action.
-              </p>
+              <h2>Validation</h2>
               <StandaloneRequiredDemo />
             </section>
 
-            {/* ── Inside a Form ────────────────────────────────────────── */}
             <section>
               <h2>Inside a Form</h2>
-              <p style={{ color: "#555", fontSize: "0.9rem" }}>
-                Fields inside the <code>ControlGroup</code> report to the group
-                (its composite value is one key in the form state), while the
-                field outside reports directly to the form.
-              </p>
+              <InsideFormDemo />
             </section>
           </Box>
         );
@@ -72,8 +50,10 @@
 
         return (
           <Box flex="y" spacing="m" alignX="start">
+            <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+              ControlGroup sans parent — agit comme un mini-formulaire.
+            </p>
             <ControlGroup
-              type="address"
               name="address"
               action={(value) => {
                 pushEntry("action", value);
@@ -104,6 +84,10 @@
 
         return (
           <Box flex="y" spacing="m" alignX="start">
+            <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+              Même chose avec <code>firstName</code> requis — soumettre sans le
+              remplir doit bloquer l'action.
+            </p>
             <ControlGroup
               name="address"
               action={(value) => {
@@ -115,7 +99,7 @@
             >
               <Box flex="y" spacing="s" alignX="start">
                 <Field>
-                  First name (required)
+                  First name
                   <Input type="text" name="firstName" required />
                 </Field>
                 <Field>
@@ -136,6 +120,10 @@
 
         return (
           <Box flex="y" spacing="m">
+            <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+              Le ControlGroup (<code>name="address"</code>) produit une clé{" "}
+              <code>address</code> dans la valeur du Form parent.
+            </p>
             <Form
               action={(value) => {
                 pushFormEntry("action", value);
@@ -145,15 +133,12 @@
               }}
             >
               <Box flex="y" spacing="s">
-                {/* This field belongs directly to the Form */}
                 <Field>
-                  <label>Email (form-level field)</label>
+                  Email
                   <Input type="email" name="email" />
                 </Field>
-
-                {/* This group produces one "address" key in the form value */}
                 <fieldset>
-                  <legend>Address (ControlGroup)</legend>
+                  <legend>Address</legend>
                   <ControlGroup
                     name="address"
                     uiAction={(value) => {
@@ -162,26 +147,25 @@
                   >
                     <Box flex="y" spacing="s">
                       <Field>
-                        <label>Street</label>
+                        Street
                         <Input type="text" name="street" />
                       </Field>
                       <Field>
-                        <label>City</label>
+                        City
                         <Input type="text" name="city" />
                       </Field>
                     </Box>
                   </ControlGroup>
                 </fieldset>
-
-                <Button command="--navi-send">Submit form</Button>
+                <Button.Send />
               </Box>
             </Form>
-            <p style={{ margin: 0, fontSize: "0.85rem", color: "#555" }}>
-              ControlGroup calls:
+            <p style={{ margin: 0, fontSize: "0.85rem", color: "#777" }}>
+              ControlGroup
             </p>
             <CallLog entries={groupEntries} onClear={clearGroupEntries} />
-            <p style={{ margin: 0, fontSize: "0.85rem", color: "#555" }}>
-              Form calls:
+            <p style={{ margin: 0, fontSize: "0.85rem", color: "#777" }}>
+              Form
             </p>
             <CallLog entries={formEntries} onClear={clearFormEntries} />
           </Box>
