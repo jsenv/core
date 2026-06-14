@@ -78,7 +78,15 @@ export const findClosestControlWithAction = (el) => {
   }
   const popupBoundary = el.closest("[popover], dialog, [role='dialog']");
   if (popupBoundary && !popupBoundary.contains(candidate)) {
-    return undefined;
+    // The candidate lives outside the popup boundary.
+    // Exception: if the candidate *contains* the popup boundary, it is the picker
+    // that owns this popup — dispatching on it is intentional (e.g. a button inside
+    // the picker's dropdown wants to trigger the picker's action).
+    // In that case we allow it, but we do NOT go further: a picker above this picker
+    // would also contain the boundary, so we stop at the innermost one.
+    if (!candidate.contains(popupBoundary)) {
+      return undefined;
+    }
   }
   return candidate;
 };
