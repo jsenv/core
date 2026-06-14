@@ -6,13 +6,7 @@ import {
 } from "@jsenv/dom";
 import { computed, signal } from "@preact/signals";
 import { createContext } from "preact";
-import {
-  useContext,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "preact/hooks";
+import { useContext, useLayoutEffect, useMemo, useRef } from "preact/hooks";
 
 import { useNavState } from "../nav/browser_integration/browser_integration.js";
 import { useDebugUIState } from "../navi_debug.jsx";
@@ -655,7 +649,11 @@ export const useUIGroupStateController = (
       `${controlType}.getUIState -> ${JSON.stringify(groupUIState)}`,
     );
     const uiStateController = uiStateControllerRef.current;
-    uiStateController.setUIState(groupUIState, e, { notifyExternal });
+    if (notifyExternal) {
+      uiStateController.setUIState(groupUIState, e);
+    } else {
+      uiStateController.syncInternalState(groupUIState, e);
+    }
   };
 
   useLayoutEffect(() => {
@@ -701,41 +699,46 @@ export const useUIGroupStateController = (
     wantRequesterButtonState,
     elementRef: ref,
     getPropFromState: (uiState) => uiState,
-    setUIState: (newUIState, e, { notifyExternal = true } = {}) => {
+    // Called when a child interaction changes the aggregated value.
+    // Updates state and fires all external reactions (uiAction, command, navi_ui_state_change, action pipeline).
+    setUIState: (newUIState, e) => {
       const currentUIState = uiStateController.uiState;
-      const stateChanged = newUIState !== currentUIState;
-      // Update state before calling uiAction/command so they observe the new state.
-      if (stateChanged) {
-        uiStateController.uiState = newUIState;
-        uiStateSignal.value = newUIState;
-        debugUIGroup(
-          `${controlType}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> updates from ${JSON.stringify(currentUIState)} to ${JSON.stringify(newUIState)}`,
-        );
-        publishUIState(newUIState);
+      uiStateController.uiState = newUIState;
+      uiStateSignal.value = newUIState;
+      debugUIGroup(
+        `${controlType}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> updates from ${JSON.stringify(currentUIState)} to ${JSON.stringify(newUIState)}`,
+      );
+      publishUIState(newUIState);
+      uiStateController.onInteraction(e);
+      const el = ref.current;
+      if (el) {
+        dispatchInternalCustomEvent(el, "navi_ui_state_change", {
+          event: e,
+          value: newUIState,
+        });
       }
-      if (notifyExternal) {
-        // uiAction and command react to every user interaction, even when value doesn't change
-        // (e.g. re-clicking an already-selected radio).
-        const uiAction = uiActionRef.current;
-        uiAction?.(newUIState, e);
-        uiActionInternal?.(newUIState, e);
-        if (command) {
-          const el = ref.current;
-          if (el) {
-            dispatchNaviCommand(el, command, e);
-          }
-        }
-        if (stateChanged) {
-          // Emit navi_ui_state_change so control_hooks.jsx can dispatch dispatchRequestAction
-          // only when the value actually changed — mirrors what the leaf controller does.
-          const el = ref.current;
-          if (el) {
-            dispatchInternalCustomEvent(el, "navi_ui_state_change", {
-              event: e,
-              value: newUIState,
-            });
-          }
-          notifyParentAboutChildInteraction(e);
+      notifyParentAboutChildInteraction(e, { stateChanged: true });
+    },
+    // Called on mount/unmount/render-batch: updates state silently with no external reactions.
+    syncInternalState: (newUIState) => {
+      const currentUIState = uiStateController.uiState;
+      if (newUIState === currentUIState) {
+        return;
+      }
+      uiStateController.uiState = newUIState;
+      uiStateSignal.value = newUIState;
+      publishUIState(newUIState);
+    },
+    // Called when a child interaction does NOT change the aggregated value (e.g. radio re-clicked).
+    // Fires uiAction + command without touching state or the action pipeline.
+    onInteraction: (e) => {
+      const currentUIState = uiStateController.uiState;
+      const uiAction = uiActionRef.current;
+      uiAction?.(currentUIState, e);
+      if (command) {
+        const el = ref.current;
+        if (el) {
+          dispatchNaviCommand(el, command, e);
         }
       }
     },
@@ -764,14 +767,11 @@ export const useUIGroupStateController = (
         )}`,
       );
       if (stateChanged) {
-        // Value changed: re-aggregate child states and notify external (uiAction + command + action).
+        // Value changed: re-aggregate and fire all reactions (uiAction, command, action pipeline).
         onChange(e, { notifyExternal: true });
       } else {
-        // Value unchanged (e.g. radio re-clicked): fire uiAction + command on the group
-        // without re-aggregating or triggering the action pipeline.
-        uiStateController.setUIState(uiStateController.uiState, e, {
-          notifyExternal: true,
-        });
+        // Value unchanged (e.g. radio re-clicked): fire uiAction + command only.
+        uiStateController.onInteraction(e);
       }
     },
     unregisterChild: (childUIStateController) => {
@@ -831,46 +831,3 @@ export const useUIGroupStateController = (
 // array (never undefined) and callers don't get a new reference each render.
 const EMPTY_ARRAY = [];
 const EMPTY_OBJECT = {};
-
-/**
- * Hook to subscribe to the UI state of a field from its DOM element ref.
- *
- * Tracks state from two independent sources:
- * 1. `initialValue` — the external/controlled state coming from props. Passed as the
- *    initial useState value AND synced via a useLayoutEffect whenever it changes.
- *    This ensures the hook stays in sync when the parent re-renders with a new value.
- * 2. `navi_set_ui_state` DOM event — fired on the element whenever a UI interaction
- *    or action result updates the field's state. This handles all internal state changes
- *    that do not cause the parent to re-render with a new prop.
- *
- * The `initialValue` parameter is important: without it the hook starts as `undefined`
- * and misses the initial state. External state changes (e.g. prop update from server)
- * also only reach the hook through `initialValue` since they do not dispatch a DOM event.
- *
- * @param {import('preact').RefObject} ref - Ref pointing to the field's DOM element
- * @param {any} initialValue - The current external/controlled state value
- * @returns {any} The current UI state, updated by both external changes and UI interactions
- */
-export const useUIState = (ref, initialValue) => {
-  const [uiState, setUIState] = useState(initialValue);
-  useLayoutEffect(() => {
-    setUIState(initialValue);
-  }, [initialValue]);
-  useLayoutEffect(() => {
-    const inputEl = ref.current;
-    if (!inputEl) {
-      return undefined;
-    }
-    const onnavi_ui_state_change = (e) => {
-      setUIState(e.detail.value);
-    };
-    inputEl.addEventListener("navi_ui_state_change", onnavi_ui_state_change);
-    return () => {
-      inputEl.removeEventListener(
-        "navi_ui_state_change",
-        onnavi_ui_state_change,
-      );
-    };
-  }, [ref]);
-  return uiState;
-};
