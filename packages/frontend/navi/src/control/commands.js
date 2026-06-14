@@ -291,3 +291,10 @@ registerNaviCommand("--navi-unselect", {
     });
   },
 });
+registerNaviCommand("--navi-void", {
+  resolveTarget: getFirstParentControl,
+  implementation: () => {
+    // intentional no-op — useful to verify command dispatch in demos and tests
+    return true;
+  },
+});

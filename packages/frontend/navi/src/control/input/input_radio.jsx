@@ -8,7 +8,7 @@ import { useCheckableProps } from "./use_checkable_props.js";
 const css = /* css */ `
   @layer navi {
     .navi_radio {
-      --margin: 3px 3px 0 5px;
+      --margin: 3px 3px 3px 5px;
       --outline-offset: 1px;
       --outline-width: 2px;
       /* Rounding ensures outline is visually a nice circle */
