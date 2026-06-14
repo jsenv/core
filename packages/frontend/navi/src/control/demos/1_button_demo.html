@@ -176,7 +176,6 @@
             <BasicStatesDemo />
             <InteractivityDemo />
             <CustomizationDemo />
-            <IconToggleDemo />
             <CircleButtonDemo />
             <InteractiveDemo />
             <HrefDemo />
@@ -238,10 +237,10 @@
                   <li>
                     <a href="#customization-discrete">Discrete</a>
                   </li>
+                  <li>
+                    <a href="#customization-icon">Icon</a>
+                  </li>
                 </ol>
-              </li>
-              <li>
-                <a href="#icon-toggle">Icon Button Toggle</a>
               </li>
               <li>
                 <a href="#border-radius">Border Radius Inheritance</a>
@@ -1516,22 +1515,59 @@
             </fieldset>
 
             <fieldset>
-              <legend>width — fixed widths</legend>
-              <div className="button-group">
-                <Button width="60">60</Button>
-                <Button width="120">120</Button>
-                <Button width="200">200</Button>
+              <legend>width — full width with text alignment (left / center / end)</legend>
+              <div
+                style={{ display: "flex", flexDirection: "column", gap: "8px" }}
+              >
+                <Button
+                  flex
+                  width="100%"
+                  backgroundColor="#e8f5e9"
+                  borderColor="#4caf50"
+                  color="#2e7d32"
+                >
+                  Success — left (default)
+                </Button>
+                <Button
+                  width="100%"
+                  backgroundColor="#fff3e0"
+                  borderColor="#ff9800"
+                  color="#e65100"
+                  alignX="center"
+                >
+                  Warning — center
+                </Button>
+                <Button
+                  width="100%"
+                  backgroundColor="#fce4ec"
+                  borderColor="#e91e63"
+                  color="#880e4f"
+                  alignX="end"
+                >
+                  Danger — end
+                </Button>
               </div>
             </fieldset>
 
             <fieldset>
-              <legend>spacing between icon and text</legend>
+              <legend>spacing between icon and text — without flex</legend>
               <div className="button-group">
-                <SpacingButton spacing="0" />
                 <SpacingButton />
+                <SpacingButton spacing="0" />
                 <SpacingButton spacing="s" />
                 <SpacingButton spacing="m" />
                 <SpacingButton spacing="l" />
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend>spacing between icon and text — with flex</legend>
+              <div className="button-group">
+                <SpacingButton flex />
+                <SpacingButton flex spacing="0" />
+                <SpacingButton flex spacing="s" />
+                <SpacingButton flex spacing="m" />
+                <SpacingButton flex spacing="l" />
               </div>
             </fieldset>
 
@@ -1640,7 +1676,65 @@
                 </Button>
               </div>
             </fieldset>
+
+            {/* ── Icon ─────────────────────────────────────────────────── */}
+            <h3 id="customization-icon" style={{ margin: "24px 0 12px" }}>
+              Icon
+            </h3>
+
+            <fieldset>
+              <legend>Icon-only button (toggle)</legend>
+              <IconToggleSection />
+            </fieldset>
           </div>
+        );
+      };
+
+      const IconToggleSection = () => {
+        const [isVisible, setIsVisible] = useState(false);
+        return (
+          <>
+            <div className="button-group">
+              <Button
+                size="xxs"
+                onClick={() => setIsVisible(!isVisible)}
+                aria-label={isVisible ? "Hide content" : "Show content"}
+              >
+                <Icon>{isVisible ? <EyeSvg /> : <EyeClosedSvg />}</Icon>
+              </Button>
+              <Button
+                onClick={() => setIsVisible(!isVisible)}
+                aria-label={isVisible ? "Hide content" : "Show content"}
+              >
+                <Icon>{isVisible ? <EyeSvg /> : <EyeClosedSvg />}</Icon>
+              </Button>
+              <Button
+                size="xl"
+                onClick={() => setIsVisible(!isVisible)}
+                aria-label={isVisible ? "Hide content" : "Show content"}
+              >
+                <Icon>{isVisible ? <EyeSvg /> : <EyeClosedSvg />}</Icon>
+              </Button>
+              <span style={{ marginLeft: "10px", color: "#666" }}>
+                Content is {isVisible ? "visible" : "hidden"}
+              </span>
+            </div>
+            <div
+              style={{
+                marginTop: "12px",
+                padding: "10px 14px",
+                background: "#fff8e1",
+                border: "1px solid #ffe082",
+                borderRadius: "6px",
+                fontSize: "0.85rem",
+                color: "#795548",
+              }}
+            >
+              <strong>💡 Consider using a checkbox instead.</strong> When a
+              button toggles between two states (on/off, visible/hidden…), a{" "}
+              <code>&lt;Checkbox&gt;</code> is semantically more appropriate.
+            </div>
+          </>
         );
       };
 
