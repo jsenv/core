@@ -7,6 +7,7 @@ import {
   isControlRoot,
 } from "./control_dom.js";
 import {
+  dispatchRequestClearUIState,
   dispatchRequestResetUIState,
   dispatchRequestSetUIState,
   getUIStateFromElement,
@@ -310,7 +311,7 @@ registerNaviCommand("--navi-clear", (source, event) => {
         event.preventDefault();
         return false;
       }
-      return dispatchRequestSetUIState(target, "", { event });
+      return dispatchRequestClearUIState(target, event);
     },
   };
 });

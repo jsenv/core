@@ -9,8 +9,13 @@ export const dispatchRequestSetUIState = (element, value, detail) => {
     value,
   });
 };
+export const dispatchRequestClearUIState = (element, e) => {
+  return dispatchInternalCustomEvent(element, "navi_clear_ui_state", {
+    event: e,
+  });
+};
 export const dispatchRequestResetUIState = (element, e) => {
-  return dispatchInternalCustomEvent(element, "navi_request_reset_ui_state", {
+  return dispatchInternalCustomEvent(element, "navi_reset_ui_state", {
     event: e,
   });
 };

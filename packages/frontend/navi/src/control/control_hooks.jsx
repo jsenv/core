@@ -140,7 +140,7 @@ export const ControlgroupChildrenWrapper = ({
  * Sets up the full field lifecycle:
  * - Creates a UI state controller that manages state divergence between props and user interactions
  * - Binds the field's action to its current UI state via a signal
- * - Wires up all DOM event handlers (navi_set_ui_state, navi_request_reset_ui_state,
+ * - Wires up all DOM event handlers (navi_set_ui_state, navi_reset_ui_state,
  *   navi_action_ready, navi_action_abort, navi_action_error, navi_cancel, etc.)
  * - Resolves inherited context (disabled, readOnly, required, loading, fieldName)
  * - Handles constraint validation and message props
@@ -545,8 +545,8 @@ export const useControlProps = (
  * - Binds the group's action to the aggregated state signal
  * - Provides context to children: ParentUIStateController, FieldName, Disabled, ReadOnly,
  *   Required, Loading, Action, ActionRequester
- * - Overrides `onnavi_request_reset_ui_state` to cascade resets to all monitored children
- *   by dispatching `navi_request_reset_ui_state` DOM events on each child's DOM element
+ * - Overrides `onnavi_reset_ui_state` to cascade resets to all monitored children
+ *   by dispatching `navi_reset_ui_state` DOM events on each child's DOM element
  * - Overrides `onnavi_action_ready` to track the action requester
  *
  * @param {{ controlType: string, childControlType: string, aggregateChildStates: Function }} config
@@ -761,7 +761,10 @@ const useInteractiveProps = (
   ui_state_and_value: {
     const uiState = uiStateController.uiStateSignal.value;
     Object.assign(controlProps, {
-      onnavi_request_reset_ui_state: (e) => {
+      onnavi_clear_ui_state: (e) => {
+        uiStateController.clearUIState(e);
+      },
+      onnavi_reset_ui_state: (e) => {
         uiStateController.resetUIState(e);
       },
       onnavi_get_ui_state: (e) => {

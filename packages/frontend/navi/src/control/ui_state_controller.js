@@ -16,10 +16,6 @@ import { dispatchNaviCommand } from "./commands.js";
 import { findControlProxy } from "./control_proxy.js";
 import { asControlHostValue } from "./control_value.js";
 import { FormContext } from "./form_context.js";
-import {
-  dispatchRequestResetUIState,
-  dispatchRequestSetUIState,
-} from "./ui_state_dom.js";
 
 // In-memory registry of all mounted ui state controllers keyed by their id.
 // Allows direct controller access without dispatching DOM events — used by external
@@ -93,7 +89,7 @@ export const ParentUIStateControllerContext = createContext();
  * skip reactions and parent notification — they are programmatic, not user-initiated.
  *
  * The controller exposes `elementRef` so parent groups can dispatch DOM events on children
- * (e.g. `resetUIState` cascading `navi_request_reset_ui_state`).
+ * (e.g. `resetUIState` cascading `navi_reset_ui_state`).
  */
 export const useUIStateController = (
   props,
@@ -462,10 +458,11 @@ export const useUIStateController = (
       onUIAction();
       return true;
     },
+    clearUIState: (e) => {
+      uiStateController.setUIState("", e);
+    },
     resetUIState: (e) => {
-      dispatchRequestSetUIState(e.currentTarget, uiStateController.state, {
-        event: e,
-      });
+      uiStateController.setUIState(uiStateController.state, e);
     },
     actionEnd: () => {
       debugUIState(`"${controlType}" actionEnd called`);
@@ -786,10 +783,15 @@ export const useUIGroupStateController = (
         if (!isMonitoringChild(childUIStateController)) {
           continue;
         }
-        const el = childUIStateController.elementRef?.current;
-        if (el) {
-          dispatchRequestResetUIState(el, e);
+        childUIStateController.resetUIState(e);
+      }
+    },
+    clearUIState: (e) => {
+      for (const childUIStateController of childUIStateControllerArray) {
+        if (!isMonitoringChild(childUIStateController)) {
+          continue;
         }
+        childUIStateController.clearUIState(e);
       }
     },
     actionEnd: (e) => {
