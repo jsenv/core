@@ -56,6 +56,14 @@
                         SelectableList (valeurs multiples)
                       </a>
                     </li>
+                    <li>
+                      <a href="#picker-text-external">Picker texte simple</a>
+                    </li>
+                    <li>
+                      <a href="#picker-controlgroup-external">
+                        Picker ControlGroup
+                      </a>
+                    </li>
                   </ol>
                 </li>
                 <li>
@@ -84,19 +92,6 @@
                 <li>
                   <a href="#inside-form">Inside a Form</a>
                 </li>
-                <li>
-                  <a href="#picker-external">Picker — contrôle externe</a>
-                  <ol>
-                    <li>
-                      <a href="#picker-text-external">Picker texte simple</a>
-                    </li>
-                    <li>
-                      <a href="#picker-controlgroup-external">
-                        Picker ControlGroup
-                      </a>
-                    </li>
-                  </ol>
-                </li>
               </ol>
             </nav>
 
@@ -116,6 +111,16 @@
               <section id="external-control-multiple">
                 <h3>SelectableList (valeurs multiples)</h3>
                 <ExternalSelectableMultipleDemo />
+              </section>
+
+              <section id="picker-text-external">
+                <h3>Picker texte simple</h3>
+                <PickerTextExternalDemo />
+              </section>
+
+              <section id="picker-controlgroup-external">
+                <h3>Picker ControlGroup</h3>
+                <PickerControlGroupExternalDemo />
               </section>
             </section>
 
@@ -158,20 +163,152 @@
               <h2>Inside a Form</h2>
               <InsideFormDemo />
             </section>
+          </Box>
+        );
+      };
 
-            <section id="picker-external">
-              <h2>Picker — contrôle externe</h2>
+      const FRUITS = ["Apple", "Banana", "Cherry", "Date", "Elderberry"];
 
-              <section id="picker-text-external">
-                <h3>Picker texte simple</h3>
-                <PickerTextExternalDemo />
-              </section>
+      const PickerTextExternalDemo = () => {
+        const [entries, pushEntry, clearEntries] = useCallLog();
+        const pickerId = "picker-text-external-picker";
 
-              <section id="picker-controlgroup-external">
-                <h3>Picker ControlGroup</h3>
-                <PickerControlGroupExternalDemo />
-              </section>
-            </section>
+        return (
+          <Box flex="y" spacing="m" alignX="start">
+            <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+              Des boutons extérieurs envoient <code>--navi-update</code> avec
+              une valeur scalaire sur un <code>Picker</code> texte simple (liste
+              sélectionnable). La valeur affichée et le <code>uiAction</code>{" "}
+              doivent se mettre à jour.
+            </p>
+            <Field>
+              Fruit
+              <Picker
+                id={pickerId}
+                name="fruit"
+                placeholder="Choisir un fruit"
+                uiAction={(v) => {
+                  pushEntry("uiAction", v);
+                }}
+                action={(v) => {
+                  pushEntry("action", v);
+                }}
+              >
+                <List selectable command="--navi-send">
+                  {FRUITS.map((fruit) => (
+                    <List.Item
+                      selectable
+                      key={fruit}
+                      value={fruit}
+                      id={`picker-text-${fruit.toLowerCase()}`}
+                      flex
+                      spacing="s"
+                    >
+                      <SelectableInput />
+                      {fruit}
+                    </List.Item>
+                  ))}
+                </List>
+              </Picker>
+            </Field>
+            <Box flex="x" spacing="s">
+              {FRUITS.map((fruit) => (
+                <Button
+                  key={fruit}
+                  command="--navi-update"
+                  commandfor={pickerId}
+                  value={fruit}
+                >
+                  {fruit}
+                </Button>
+              ))}
+              <Button
+                command="--navi-update"
+                commandfor={pickerId}
+                value={null}
+              >
+                Vider
+              </Button>
+            </Box>
+            <CallLog entries={entries} onClear={clearEntries} />
+          </Box>
+        );
+      };
+
+      const PickerControlGroupExternalDemo = () => {
+        const [entries, pushEntry, clearEntries] = useCallLog();
+        const pickerId = "picker-controlgroup-external-picker";
+
+        return (
+          <Box flex="y" spacing="m" alignX="start">
+            <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+              Des boutons extérieurs envoient <code>--navi-update</code> avec
+              une valeur objet sur un <code>Picker type="controlgroup"</code>.
+              Les champs internes doivent se mettre à jour et le{" "}
+              <code>uiAction</code> doit être appelé.
+            </p>
+            <Field>
+              Adresse
+              <Picker
+                id={pickerId}
+                name="address"
+                type="controlgroup"
+                placeholder="Saisir une adresse"
+                uiAction={(v) => {
+                  pushEntry("uiAction", v);
+                }}
+                action={(v) => {
+                  pushEntry("action", v);
+                }}
+              >
+                <Box flex="y" spacing="s" padding="s" alignX="start">
+                  <Field>
+                    Rue
+                    <Input
+                      name="street"
+                      placeholder="12 rue de la Paix"
+                      uiAction={(v) => {
+                        pushEntry("uiAction (street)", v);
+                      }}
+                    />
+                  </Field>
+                  <Field>
+                    Ville
+                    <Input
+                      name="city"
+                      placeholder="Paris"
+                      uiAction={(v) => {
+                        pushEntry("uiAction (city)", v);
+                      }}
+                    />
+                  </Field>
+                </Box>
+              </Picker>
+            </Field>
+            <Box flex="x" spacing="s">
+              <Button
+                command="--navi-update"
+                commandfor={pickerId}
+                value={{ street: "12 rue de la Paix", city: "Paris" }}
+              >
+                Paris
+              </Button>
+              <Button
+                command="--navi-update"
+                commandfor={pickerId}
+                value={{ street: "1 place Bellecour", city: "Lyon" }}
+              >
+                Lyon
+              </Button>
+              <Button
+                command="--navi-update"
+                commandfor={pickerId}
+                value={{ street: "", city: "" }}
+              >
+                Vider
+              </Button>
+            </Box>
+            <CallLog entries={entries} onClear={clearEntries} />
           </Box>
         );
       };
@@ -695,152 +832,6 @@
               Form
             </p>
             <CallLog entries={formEntries} onClear={clearFormEntries} />
-          </Box>
-        );
-      };
-
-      const FRUITS = ["Apple", "Banana", "Cherry", "Date", "Elderberry"];
-
-      const PickerTextExternalDemo = () => {
-        const [entries, pushEntry, clearEntries] = useCallLog();
-        const pickerId = "picker-text-external-picker";
-
-        return (
-          <Box flex="y" spacing="m" alignX="start">
-            <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
-              Des boutons extérieurs envoient <code>--navi-update</code> avec
-              une valeur scalaire sur un <code>Picker</code> texte simple (liste
-              sélectionnable). La valeur affichée et le <code>uiAction</code>{" "}
-              doivent se mettre à jour.
-            </p>
-            <Field>
-              Fruit
-              <Picker
-                id={pickerId}
-                name="fruit"
-                placeholder="Choisir un fruit"
-                uiAction={(v) => {
-                  pushEntry("uiAction", v);
-                }}
-                action={(v) => {
-                  pushEntry("action", v);
-                }}
-              >
-                <List selectable command="--navi-send">
-                  {FRUITS.map((fruit) => (
-                    <List.Item
-                      selectable
-                      key={fruit}
-                      value={fruit}
-                      id={`picker-text-${fruit.toLowerCase()}`}
-                      flex
-                      spacing="s"
-                    >
-                      <SelectableInput />
-                      {fruit}
-                    </List.Item>
-                  ))}
-                </List>
-              </Picker>
-            </Field>
-            <Box flex="x" spacing="s">
-              {FRUITS.map((fruit) => (
-                <Button
-                  key={fruit}
-                  command="--navi-update"
-                  commandfor={pickerId}
-                  value={fruit}
-                >
-                  {fruit}
-                </Button>
-              ))}
-              <Button
-                command="--navi-update"
-                commandfor={pickerId}
-                value={null}
-              >
-                Vider
-              </Button>
-            </Box>
-            <CallLog entries={entries} onClear={clearEntries} />
-          </Box>
-        );
-      };
-
-      const PickerControlGroupExternalDemo = () => {
-        const [entries, pushEntry, clearEntries] = useCallLog();
-        const pickerId = "picker-controlgroup-external-picker";
-
-        return (
-          <Box flex="y" spacing="m" alignX="start">
-            <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
-              Des boutons extérieurs envoient <code>--navi-update</code> avec
-              une valeur objet sur un <code>Picker type="controlgroup"</code>.
-              Les champs internes doivent se mettre à jour et le{" "}
-              <code>uiAction</code> doit être appelé.
-            </p>
-            <Field>
-              Adresse
-              <Picker
-                id={pickerId}
-                name="address"
-                type="controlgroup"
-                placeholder="Saisir une adresse"
-                uiAction={(v) => {
-                  pushEntry("uiAction", v);
-                }}
-                action={(v) => {
-                  pushEntry("action", v);
-                }}
-              >
-                <Box flex="y" spacing="s" padding="s" alignX="start">
-                  <Field>
-                    Rue
-                    <Input
-                      name="street"
-                      placeholder="12 rue de la Paix"
-                      uiAction={(v) => {
-                        pushEntry("uiAction (street)", v);
-                      }}
-                    />
-                  </Field>
-                  <Field>
-                    Ville
-                    <Input
-                      name="city"
-                      placeholder="Paris"
-                      uiAction={(v) => {
-                        pushEntry("uiAction (city)", v);
-                      }}
-                    />
-                  </Field>
-                </Box>
-              </Picker>
-            </Field>
-            <Box flex="x" spacing="s">
-              <Button
-                command="--navi-update"
-                commandfor={pickerId}
-                value={{ street: "12 rue de la Paix", city: "Paris" }}
-              >
-                Paris
-              </Button>
-              <Button
-                command="--navi-update"
-                commandfor={pickerId}
-                value={{ street: "1 place Bellecour", city: "Lyon" }}
-              >
-                Lyon
-              </Button>
-              <Button
-                command="--navi-update"
-                commandfor={pickerId}
-                value={{ street: "", city: "" }}
-              >
-                Vider
-              </Button>
-            </Box>
-            <CallLog entries={entries} onClear={clearEntries} />
           </Box>
         );
       };
