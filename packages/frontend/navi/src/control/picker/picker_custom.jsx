@@ -488,8 +488,11 @@ const PickerCustom = (props) => {
             return;
           }
           // click inside popover should not bubble to the picker (would re-open it if that click closes it)
-          debugPopup(e, `popover click stopPropagation`);
+          // preventDefault also prevents a form submit that would otherwise be triggered when
+          // the picker is inside a <form> and the click lands on a non-button element
+          debugPopup(e, `popover click stopPropagation + preventDefault`);
           e.stopPropagation();
+          e.preventDefault();
         },
         onKeyDown: (e) => {
           // some keys pressed inside popover should not reach the picker button
@@ -529,7 +532,7 @@ const PickerContentInsidePopover = (props) => {
     popupProps,
     children,
     pointerTrap,
-    scrollTrap = true,
+    scrollTrap,
     focusTrap = true,
     popoverMode = "nearby",
     popoverSpacing = popoverMode === "nearby" ? 5 : 0,
@@ -597,13 +600,7 @@ const PickerContentInsidePopover = (props) => {
 const PickerContentInsideDialog = (props) => {
   const Next = useNextResolver();
   import.meta.css = css;
-  const {
-    popupProps,
-    children,
-    scrollTrap = true,
-    pointerTrap,
-    ...rest
-  } = props;
+  const { popupProps, children, scrollTrap, pointerTrap, ...rest } = props;
 
   return (
     <Next aria-haspopup="dialog" {...rest}>
