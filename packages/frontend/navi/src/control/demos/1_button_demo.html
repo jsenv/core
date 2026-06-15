@@ -1362,8 +1362,8 @@
             </fieldset>
 
             <fieldset>
-              <legend>variant="discrete-border"</legend>
-              <IconStates variant="discrete-border" />
+              <legend>variant="discrete"</legend>
+              <IconStates variant="discrete" />
             </fieldset>
 
             <fieldset>
@@ -1398,14 +1398,31 @@
                 button uses <code>borderRadius="inherit"</code> to adopt the
                 parent's radius.
               </p>
-              <Box background="orange" padding="m" inline flex>
-                <Box circle width="30" inline flex background="white">
-                  <Button icon borderRadius="inherit" flex align="center">
-                    <Icon>
-                      <EyeSvg />
-                    </Icon>
-                  </Button>
-                </Box>
+              <Box flex spacing="m">
+                <fieldset>
+                  <legend>without borderRadius="inherit"</legend>
+                  <Box background="orange" padding="m" inline flex>
+                    <Box circle width="30" inline flex background="white">
+                      <Button icon flex align="center">
+                        <Icon>
+                          <EyeSvg />
+                        </Icon>
+                      </Button>
+                    </Box>
+                  </Box>
+                </fieldset>
+                <fieldset>
+                  <legend>with borderRadius="inherit"</legend>
+                  <Box background="orange" padding="m" inline flex>
+                    <Box circle width="30" inline flex background="white">
+                      <Button icon borderRadius="inherit" flex align="center">
+                        <Icon>
+                          <EyeSvg />
+                        </Icon>
+                      </Button>
+                    </Box>
+                  </Box>
+                </fieldset>
               </Box>
             </fieldset>
           </div>
@@ -1707,17 +1724,17 @@
             {/* ── Variant ───────────────────────────────────────────────── */}
             {/* ── Variant: text ─────────────────────────────────────────── */}
             <h3
-              id="customization-variant-discrete-border"
+              id="customization-variant-discrete"
               style={{ margin: "24px 0 12px" }}
             >
-              Variant — discrete-border
+              Variant — discrete
             </h3>
 
             <fieldset>
-              <legend>Regular vs discrete-border</legend>
+              <legend>Regular vs discrete</legend>
               <div className="button-group">
                 <Button>Text in button</Button>
-                <Button variant="discrete-border">Text in button</Button>
+                <Button variant="discrete">Text in button</Button>
               </div>
             </fieldset>
 
@@ -1726,14 +1743,14 @@
               <Box flex spacing="s">
                 <fieldset>
                   <legend>:hover</legend>
-                  <Button variant="discrete-border" pseudoState={{ ":hover": true }}>
+                  <Button variant="discrete" pseudoState={{ ":hover": true }}>
                     Text in button
                   </Button>
                 </fieldset>
                 <fieldset>
                   <legend>:focus-visible</legend>
                   <Button
-                    variant="discrete-border"
+                    variant="discrete"
                     pseudoState={{ ":focus-visible": true }}
                   >
                     Text in button
@@ -1741,26 +1758,26 @@
                 </fieldset>
                 <fieldset>
                   <legend>:read-only</legend>
-                  <Button variant="discrete-border" readOnly>
+                  <Button variant="discrete" readOnly>
                     Text in button
                   </Button>
                 </fieldset>
                 <fieldset>
                   <legend>:disabled</legend>
-                  <Button variant="discrete-border" disabled>
+                  <Button variant="discrete" disabled>
                     Text in button
                   </Button>
                 </fieldset>
                 <fieldset>
                   <legend>:-navi-loading</legend>
-                  <Button variant="discrete-border" loading>
+                  <Button variant="discrete" loading>
                     Text in button
                   </Button>
                 </fieldset>
               </Box>
             </fieldset>
 
-            {/* ── Variant: discrete ────────────────────────────────────── */}
+            {/* ── Variant: discrete-border ────────────────────────────────────── */}
             <h3
               id="customization-variant-discrete-border"
               style={{ margin: "24px 0 12px" }}
@@ -1781,7 +1798,10 @@
               <Box flex spacing="s">
                 <fieldset>
                   <legend>:hover</legend>
-                  <Button variant="discrete-border" pseudoState={{ ":hover": true }}>
+                  <Button
+                    variant="discrete-border"
+                    pseudoState={{ ":hover": true }}
+                  >
                     Text in button
                   </Button>
                 </fieldset>
