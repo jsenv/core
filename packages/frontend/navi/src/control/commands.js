@@ -21,7 +21,7 @@ export const dispatchNaviCommand = (
   element,
   command,
   event,
-  { optional } = {},
+  { optional, value } = {},
 ) => {
   const naviCommand = NAVI_COMMANDS[command];
   if (!naviCommand) {
@@ -53,6 +53,7 @@ export const dispatchNaviCommand = (
     event,
     source: element,
     implementation,
+    value,
   });
 };
 // Returns the target explicitly declared via HTML attributes (commandfor / navi-command-target),
@@ -113,12 +114,14 @@ const resolveClosestControlWithAction = (el) => {
   return findClosestControlWithAction(el);
 };
 
-const resolveCommandValue = (source) => {
+const resolveCommandValue = (source, event) => {
+  if (Object.hasOwn(event.detail, "value")) {
+    return event.detail.value;
+  }
   if (source.hasAttribute("command-value")) {
     return source.getAttribute("command-value");
   }
-  const value = getUIStateFromElement(source);
-  return value;
+  return getUIStateFromElement(source);
 };
 
 export const onNaviCommand = (e, { debugCommand }) => {
@@ -175,12 +178,18 @@ registerNaviCommand("--navi-update", (source, event) => {
         event.preventDefault();
         return false;
       }
-      dispatchRequestSetUIState(target, resolveCommandValue(source), { event });
+      dispatchRequestSetUIState(target, resolveCommandValue(source, event), {
+        event,
+      });
       const innerControl = resolvePickerInnerControl(target);
       if (innerControl) {
-        dispatchRequestSetUIState(innerControl, resolveCommandValue(source), {
-          event,
-        });
+        dispatchRequestSetUIState(
+          innerControl,
+          resolveCommandValue(source, event),
+          {
+            event,
+          },
+        );
       }
       return true;
     },
@@ -368,7 +377,7 @@ registerNaviCommand("--navi-scroll", (source, event) => {
     implementation: () => {
       return dispatchCustomEvent(target, "navi_request_scroll", {
         event,
-        id: resolveCommandValue(source),
+        id: resolveCommandValue(source, event),
       });
     },
   };
@@ -384,7 +393,7 @@ registerNaviCommand("--navi-select", (source, event) => {
     implementation: () => {
       return dispatchCustomEvent(target, "navi_request_select", {
         event,
-        id: resolveCommandValue(source),
+        id: resolveCommandValue(source, event),
       });
     },
   };
@@ -400,7 +409,7 @@ registerNaviCommand("--navi-unselect", (source, event) => {
     implementation: () => {
       return dispatchCustomEvent(target, "navi_request_unselect", {
         event,
-        id: resolveCommandValue(source),
+        id: resolveCommandValue(source, event),
       });
     },
   };
