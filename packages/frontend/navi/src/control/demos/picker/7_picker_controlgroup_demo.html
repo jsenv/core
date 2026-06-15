@@ -199,6 +199,9 @@
               min="0"
               max="23"
               placeholder="0"
+              uiAction={(v) => {
+                hoursSignal.value = v;
+              }}
             />
           </Field>
           <Field vertical>
@@ -209,6 +212,9 @@
               min="0"
               max="59"
               placeholder="0"
+              uiAction={(v) => {
+                minutesSignal.value = v;
+              }}
             />
           </Field>
           <Box flex="x" spacing="s">
@@ -239,8 +245,6 @@
                   placeholder="Saisir une durée"
                   ui={<DurationPickerUI />}
                   uiAction={(v) => {
-                    hoursSignal.value = Number(v.hours) || 0;
-                    minutesSignal.value = Number(v.minutes) || 0;
                     push("uiAction", v);
                   }}
                   action={(v) => {
