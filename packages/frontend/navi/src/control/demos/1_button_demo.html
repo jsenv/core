@@ -1436,8 +1436,26 @@
               <IconStates icon variant="discrete-border" />
             </fieldset>
 
+            <h3 style={{ margin: "24px 0 8px" }}>
+              Icon toggle — use a checkbox instead
+            </h3>
+            <p
+              style={{
+                color: "#666",
+                fontSize: "0.85rem",
+                margin: "0 0 12px",
+              }}
+            >
+              It's tempting to use an icon button to toggle between two states
+              (show/hide, play/pause…). But a <code>&lt;Checkbox&gt;</code> is
+              the right semantic element for that: it carries built-in checked
+              state, is announced correctly by screen readers, and works with
+              form submission out of the box. The example below shows what the
+              icon-button approach looks like — but prefer a checkbox whenever
+              the interaction is a toggle.
+            </p>
             <fieldset>
-              <legend>Icon-only toggle example</legend>
+              <legend>icon button toggle (avoid this pattern)</legend>
               <IconToggleSection />
             </fieldset>
           </div>
@@ -1461,7 +1479,7 @@
                 The outer <code>Box</code> has a background and padding. The
                 inner <code>Box circle</code> clips its content to a circle. The
                 button uses <code>borderRadius="inherit"</code> to adopt the
-                parent's radius.
+                parent's radius so the focus outline follows the circle shape.
               </p>
               <Box flex spacing="m">
                 <fieldset>
@@ -1500,6 +1518,121 @@
                         </Icon>
                       </Button>
                     </Box>
+                  </Box>
+                </fieldset>
+              </Box>
+            </fieldset>
+
+            <fieldset>
+              <legend>States — icon button inside circle</legend>
+              <Box flex spacing="s" wrap style={{ marginTop: "8px" }}>
+                <fieldset>
+                  <legend>default</legend>
+                  <Box
+                    circle
+                    width="35"
+                    inline
+                    flex
+                    background="violet"
+                    padding="5"
+                  >
+                    <Button icon borderRadius="inherit" flex align="center">
+                      <Icon>
+                        <EyeSvg />
+                      </Icon>
+                    </Button>
+                  </Box>
+                </fieldset>
+                <fieldset>
+                  <legend>:hover</legend>
+                  <Box
+                    circle
+                    width="35"
+                    inline
+                    flex
+                    background="violet"
+                    padding="5"
+                  >
+                    <Button
+                      icon
+                      borderRadius="inherit"
+                      flex
+                      align="center"
+                      pseudoState={{ ":hover": true }}
+                    >
+                      <Icon>
+                        <EyeSvg />
+                      </Icon>
+                    </Button>
+                  </Box>
+                </fieldset>
+                <fieldset>
+                  <legend>:focus-visible</legend>
+                  <Box
+                    circle
+                    width="35"
+                    inline
+                    flex
+                    background="violet"
+                    padding="5"
+                  >
+                    <Button
+                      icon
+                      borderRadius="inherit"
+                      flex
+                      align="center"
+                      pseudoState={{ ":focus-visible": true }}
+                    >
+                      <Icon>
+                        <EyeSvg />
+                      </Icon>
+                    </Button>
+                  </Box>
+                </fieldset>
+                <fieldset>
+                  <legend>:disabled</legend>
+                  <Box
+                    circle
+                    width="35"
+                    inline
+                    flex
+                    background="violet"
+                    padding="5"
+                  >
+                    <Button
+                      icon
+                      borderRadius="inherit"
+                      flex
+                      align="center"
+                      disabled
+                    >
+                      <Icon>
+                        <EyeSvg />
+                      </Icon>
+                    </Button>
+                  </Box>
+                </fieldset>
+                <fieldset>
+                  <legend>:-navi-loading</legend>
+                  <Box
+                    circle
+                    width="35"
+                    inline
+                    flex
+                    background="violet"
+                    padding="5"
+                  >
+                    <Button
+                      icon
+                      borderRadius="inherit"
+                      flex
+                      align="center"
+                      loading
+                    >
+                      <Icon>
+                        <EyeSvg />
+                      </Icon>
+                    </Button>
                   </Box>
                 </fieldset>
               </Box>
