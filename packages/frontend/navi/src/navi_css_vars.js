@@ -29,8 +29,8 @@ const css = /* css */ `
       --navi-button-padding-x-default: 6px;
       --navi-button-padding-y-default: 1px;
       /* default */
-      --navi-picker-padding-x-default: var(--navi-button-padding-x-default);
-      --navi-picker-padding-y-default: var(--navi-button-padding-y-default);
+      --navi-picker-padding-x-default: var(--navi-control-padding-x-default);
+      --navi-picker-padding-y-default: var(--navi-control-padding-y-default);
 
       --navi-selection-border-color: #0078d4;
       --navi-selection-background-color: #eaf1fd;

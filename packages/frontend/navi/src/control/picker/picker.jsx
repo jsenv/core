@@ -136,9 +136,9 @@ const css = /* css */ `
       1lh + var(--x-picker-padding-top) + var(--x-picker-padding-bottom)
     );
     padding-top: var(--x-picker-padding-top);
-    padding-right: var(--x-picker-padding-right);
+    padding-right: 0;
     padding-bottom: var(--x-picker-padding-bottom);
-    padding-left: var(--x-picker-padding-left);
+    padding-left: 0;
     flex-direction: row;
     align-items: center;
     gap: var(--navi-xs);
@@ -165,6 +165,13 @@ const css = /* css */ `
       display: inline-block;
       min-width: 0;
       max-width: 100%;
+      margin-inline: 0.2em;
+      margin-top: calc(-1 * var(--x-picker-padding-top));
+      margin-bottom: calc(-1 * var(--x-picker-padding-bottom));
+      padding-top: var(--x-picker-padding-top);
+      padding-right: var(--x-picker-padding-right);
+      padding-bottom: var(--x-picker-padding-bottom);
+      padding-left: var(--x-picker-padding-left);
       flex-grow: 1;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -183,6 +190,11 @@ const css = /* css */ `
       align-self: flex-start;
       justify-content: center;
       color: var(--x-picker-icon-color);
+
+      .navi_icon {
+        height: 100%;
+        max-height: 100%;
+      }
     }
     .navi_picker_input {
       position: absolute;
