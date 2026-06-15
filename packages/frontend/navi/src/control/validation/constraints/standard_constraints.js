@@ -312,6 +312,10 @@ export const TYPE_NUMBER_CONSTRAINT = {
     if (!isNumber) {
       return null;
     }
+    if (field.value === "") {
+      // empty without required — nothing to validate
+      return null;
+    }
     if (field.validity.valueMissing) {
       // let required handle that
       return null;

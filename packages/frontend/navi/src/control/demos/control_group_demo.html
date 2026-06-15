@@ -42,6 +42,12 @@
                   <a href="#standalone-reset">Standalone — Button.Reset</a>
                 </li>
                 <li>
+                  <a href="#number-empty">Number — sans valeur</a>
+                </li>
+                <li>
+                  <a href="#text-required">Text — required</a>
+                </li>
+                <li>
                   <a href="#validation">Validation</a>
                 </li>
                 <li>
@@ -63,6 +69,16 @@
             <section id="standalone-reset">
               <h2>Standalone — Button.Reset</h2>
               <StandaloneResetDemo />
+            </section>
+
+            <section id="number-empty">
+              <h2>Number — sans valeur</h2>
+              <NumberEmptyDemo />
+            </section>
+
+            <section id="text-required">
+              <h2>Text — required</h2>
+              <TextRequiredDemo />
             </section>
 
             <section id="validation">
@@ -192,6 +208,68 @@
                   <Button.Reset />
                   <Button.Send />
                 </Box>
+              </Box>
+            </ControlGroup>
+            <CallLog entries={entries} onClear={clearEntries} />
+          </Box>
+        );
+      };
+
+      const NumberEmptyDemo = () => {
+        const [entries, pushEntry, clearEntries] = useCallLog();
+
+        return (
+          <Box flex="y" spacing="m" alignX="start">
+            <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+              Un <code>Input type="number"</code> sans valeur — est-ce qu'on
+              peut soumettre ?
+            </p>
+            <ControlGroup
+              name="qty"
+              action={(value) => {
+                pushEntry("action", value);
+              }}
+              uiAction={(value) => {
+                pushEntry("uiAction", value);
+              }}
+            >
+              <Box flex="y" spacing="s" alignX="start">
+                <Field>
+                  Quantity
+                  <Input type="number" name="quantity" />
+                </Field>
+                <Button.Send />
+              </Box>
+            </ControlGroup>
+            <CallLog entries={entries} onClear={clearEntries} />
+          </Box>
+        );
+      };
+
+      const TextRequiredDemo = () => {
+        const [entries, pushEntry, clearEntries] = useCallLog();
+
+        return (
+          <Box flex="y" spacing="m" alignX="start">
+            <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+              Un <code>Input type="text" required</code> — soumettre sans le
+              remplir doit bloquer l'action.
+            </p>
+            <ControlGroup
+              name="info"
+              action={(value) => {
+                pushEntry("action", value);
+              }}
+              uiAction={(value) => {
+                pushEntry("uiAction", value);
+              }}
+            >
+              <Box flex="y" spacing="s" alignX="start">
+                <Field>
+                  Label
+                  <Input type="text" name="label" required />
+                </Field>
+                <Button.Send />
               </Box>
             </ControlGroup>
             <CallLog entries={entries} onClear={clearEntries} />
