@@ -55,7 +55,7 @@ const PickerControlGroup = (props) => {
   const { children, ...rest } = props;
 
   return (
-    <Next {...rest} type="navi_js" ui={<PickerControlGroupUI />}>
+    <Next ui={<PickerControlGroupUI />} {...rest} type="navi_js">
       <ControlGroup command="--navi-update">{children}</ControlGroup>
     </Next>
   );

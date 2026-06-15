@@ -184,8 +184,9 @@
       const minutesSignal = signal(0);
 
       const DurationPickerUI = () => {
-        const date = new Date(0, 0, 0, hoursSignal.value, minutesSignal.value);
-        return <Time type="time">{date}</Time>;
+        const hh = String(hoursSignal.value).padStart(2, "0");
+        const mm = String(minutesSignal.value).padStart(2, "0");
+        return <Time type="time">{`${hh}:${mm}`}</Time>;
       };
 
       const DurationPickerChildren = () => (
