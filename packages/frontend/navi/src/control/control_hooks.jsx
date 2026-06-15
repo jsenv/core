@@ -461,9 +461,18 @@ export const useControlProps = (
       props.onClick?.(e);
       applyInteraction(clickInteraction, e);
       transferFocusToTarget(e);
-      if (controlType === "button" && e.currentTarget.form) {
-        // prevent form submission
-        e.preventDefault();
+
+      const controlHost = e.currentTarget;
+      if (controlHost.form) {
+        if (controlType === "button") {
+          // prevent form submission
+          e.preventDefault();
+        } else if (controlHost.closest("button")) {
+          // prevent button form submission by click
+          // (When an input is inside a <button> like for a picker)
+          // any click in the picker could trigger form submission as browser see this as click on button inside form
+          e.preventDefault();
+        }
       }
     };
     const onKeyDown = (e) => {
