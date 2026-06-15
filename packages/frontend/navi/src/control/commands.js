@@ -21,87 +21,60 @@ export const dispatchNaviCommand = (element, command, event) => {
     console.warn(`Unknown command "${command}"`);
     return false;
   }
-  const commandTarget = resolveCommandTarget(element, naviCommand);
-  if (!commandTarget) {
+  const execute = naviCommand.commandHandler(element, event);
+  if (!execute) {
+    console.warn(
+      `"${naviCommand}" triggered on element but no suitable target found`,
+      element,
+    );
     return false;
   }
-  return dispatchCustomEvent(commandTarget, "navi_command", {
+  const { target, implementation } = execute;
+  return dispatchCustomEvent(target, "navi_command", {
     command,
     event,
     source: element,
+    implementation,
   });
 };
-const resolveCommandTarget = (elementWithCommand, naviCommand) => {
-  const commandFor = elementWithCommand.getAttribute("commandfor");
+// Returns the target explicitly declared via HTML attributes (commandfor / navi-command-target),
+// or undefined when no such attribute is present.
+// Each commandHandler calls this as the first step so the flow is readable per command.
+const resolveExplicitTarget = (element) => {
+  const commandFor = element.getAttribute("commandfor");
   if (commandFor) {
-    const commandForElement = document.getElementById(commandFor);
-    if (!commandForElement) {
-      console.warn(
-        `${naviCommand} triggered on element with command-for="${commandFor}" but no element with that id found`,
-      );
-      return undefined;
-    }
-    return commandForElement;
+    const target = document.getElementById(commandFor);
+    return target;
   }
-  const naviCommandTarget = elementWithCommand.getAttribute(
-    "navi-command-target",
-  );
-  const isCommandForParentControl = naviCommandTarget === "parent-control";
-  if (isCommandForParentControl) {
-    const firstParentControl = getFirstParentControl(elementWithCommand);
-    if (!firstParentControl) {
-      console.warn(
-        `${naviCommand} triggered on element with navi-command-target="parent-control" but no parent control found`,
-      );
-      return undefined;
-    }
-    return firstParentControl;
+  const naviCommandTarget = element.getAttribute("navi-command-target");
+  if (naviCommandTarget === "parent-control") {
+    const target = resolveFirstParentControl(element);
+    return target;
   }
-  const isCommandForChildControl = naviCommandTarget === "child-control";
-  if (isCommandForChildControl) {
-    const firstChildControl = getFirstChildControl(elementWithCommand);
-    if (!firstChildControl) {
-      console.warn(
-        `${naviCommand} triggered on element with navi-command-target="child-control" but no child control found`,
-      );
-      return undefined;
-    }
-    return firstChildControl;
-  }
-  const { resolveTarget } = naviCommand;
-  if (resolveTarget) {
-    const resolveTargetResult = resolveTarget(elementWithCommand);
-    if (!resolveTargetResult) {
-      console.warn(
-        `${naviCommand} triggered on element but resolveTarget callback returned no target`,
-      );
-      return undefined;
-    }
-    return resolveTargetResult;
+  if (naviCommandTarget === "child-control") {
+    const target = resolveFirstChildControl(element);
+
+    return target;
   }
   return undefined;
 };
-const getFirstParentControl = (el) => {
-  const parentControl = getParentControl(el);
-  return parentControl;
+const resolveFirstParentControl = (el) => {
+  return getParentControl(el);
 };
-const getFirstChildControl = (el) => {
+const resolveFirstChildControl = (el) => {
   let startEl;
   if (isControlRoot(el)) {
     startEl = findControlHost(el);
   } else {
     startEl = el;
   }
-  const childControl = startEl.querySelector("[navi-control-host]");
-  return childControl;
+  return startEl.querySelector("[navi-control-host]");
 };
-const getClosestExpandable = (el) => {
-  const expandableElement = el.closest("[aria-expanded]");
-  return expandableElement;
+const resolveClosestExpandable = (el) => {
+  return el.closest("[aria-expanded]");
 };
-const getClosestControlWithAction = (el) => {
-  const controlWithAction = findClosestControlWithAction(el);
-  return controlWithAction;
+const resolveClosestControlWithAction = (el) => {
+  return findClosestControlWithAction(el);
 };
 
 const resolveCommandValue = (source) => {
@@ -112,209 +85,267 @@ const resolveCommandValue = (source) => {
 };
 
 export const onNaviCommand = (e, { debugCommand }) => {
-  const { command, event, source } = e.detail;
+  const { command, event, source, implementation } = e.detail;
   if (typeof command !== "string") {
     console.warn(`navi_command event is missing detail.command`, e);
     return false;
   }
-  const naviCommand = NAVI_COMMANDS[command];
-  if (!naviCommand) {
-    console.warn(`Unknown command "${command}"`);
+  if (typeof implementation !== "function") {
+    console.warn(`navi_command event is missing detail.implementation`, e);
     return false;
   }
   const commandTarget = e.currentTarget;
-  const { implementation } = naviCommand;
   debugCommand(
     event,
-    `${naviCommand} triggered on`,
+    `"${command}" triggered on`,
     source,
     `targeting`,
     commandTarget,
   );
-  const result = implementation(commandTarget, { event, source });
-  return result;
+  return implementation();
 };
 
 const NAVI_COMMANDS = {};
-const registerNaviCommand = (command, { resolveTarget, implementation }) => {
+// commandHandler(source, event, explicitTarget) → { target, implementation } | undefined
+// - explicitTarget is set when an HTML attribute (commandfor / navi-command-target) names
+//   a specific target; undefined otherwise. Each handler receives it and decides whether
+//   to use it as-is or fall back to its own DOM resolution logic.
+// - Returns undefined when no target can be found for this command.
+// - Returns { target, implementation } so dispatchNaviCommand can dispatch navi_command.
+const registerNaviCommand = (command, commandHandler) => {
   NAVI_COMMANDS[command] = {
     name: command,
-    resolveTarget,
-    implementation,
-    toString: () => {
-      return `${command}`;
-    },
+    commandHandler,
+    toString: () => command,
   };
 };
 
-registerNaviCommand("--navi-update", {
-  resolveTarget: getFirstParentControl,
-  implementation: (commandTarget, { event, source }) => {
-    const allowed = dispatchRequestInteraction(
-      commandTarget,
-      event,
-      "--navi-update",
-    );
-    if (!allowed) {
-      event.preventDefault();
-      return false;
-    }
-    const updateParam = resolveCommandValue(source);
-
-    return dispatchRequestSetUIState(commandTarget, updateParam, {
-      event,
-    });
-  },
-});
-const submitSelector = `button[type="submit"], input[type="submit"], input[type="image"], [command="--navi-send"]`;
-registerNaviCommand("--navi-send", {
-  resolveTarget: getClosestControlWithAction,
-  implementation: (commandTarget, { event, source }) => {
-    const closestExpandable = getClosestExpandable(source);
-    if (closestExpandable) {
-      // Skip --navi-update when the source is inside a ControlGroup within the picker.
-      // A ControlGroup already tracks all child values and aggregates them — calling
-      // --navi-update here would override the aggregated value with just the focused
-      // input's single value, which is wrong.
-      const controlGroupInsidePicker = source.closest(
-        "[navi-control='control_group']",
+registerNaviCommand("--navi-update", (source, event) => {
+  const target =
+    resolveExplicitTarget(source) || resolveFirstParentControl(source);
+  if (!target) {
+    return undefined;
+  }
+  return {
+    target,
+    implementation: () => {
+      const allowed = dispatchRequestInteraction(
+        target,
+        event,
+        "--navi-update",
       );
-      const sourceIsInsideControlGroup =
-        controlGroupInsidePicker &&
-        closestExpandable.contains(controlGroupInsidePicker);
-      if (!sourceIsInsideControlGroup) {
-        dispatchNaviCommand(source, "--navi-update", event);
+      if (!allowed) {
+        event.preventDefault();
+        return false;
       }
-      // The picker's onClose already dispatches the action with the final value.
-      // Dispatching again here would fire the action twice.
-      dispatchNaviCommand(closestExpandable, "--navi-close", event);
+      return dispatchRequestSetUIState(target, resolveCommandValue(source), {
+        event,
+      });
+    },
+  };
+});
+
+registerNaviCommand("--navi-send", (source, event) => {
+  const target =
+    resolveExplicitTarget(source) ||
+    resolveClosestExpandable(source) ||
+    resolveClosestControlWithAction(source);
+  if (!target) {
+    return undefined;
+  }
+
+  // send inside expandable
+  if (target.hasAttribute("aria-expanded")) {
+    return {
+      target,
+      implementation: () => {
+        // Skip --navi-update when the source is inside a ControlGroup within the picker.
+        // A ControlGroup already tracks all child values and aggregates them — calling
+        // --navi-update here would override the aggregated value with just the focused
+        // input's single value, which is wrong.
+        const controlGroupInsidePicker = source.closest(
+          "[navi-control='control_group']",
+        );
+        const sourceIsInsideControlGroup =
+          controlGroupInsidePicker && target.contains(controlGroupInsidePicker);
+        if (!sourceIsInsideControlGroup) {
+          dispatchNaviCommand(source, "--navi-update", event);
+        }
+        // The picker's onClose already dispatches the action with the final value.
+        // Dispatching again here would fire the action twice.
+        dispatchNaviCommand(target, "--navi-close", event);
+        return true;
+      },
+    };
+  }
+
+  // send inside a control with action
+  const submitSelector = `button[type="submit"], input[type="submit"], input[type="image"], [command="--navi-send"]`;
+  return {
+    target,
+    implementation: () => {
+      let requester = source;
+      if (!source.matches(submitSelector)) {
+        // When present, use the first submit button as the requester, not the input.
+        // This aligns with browser behavior where Enter in a text input triggers
+        // the first submit button of the form, not the input itself.
+        const firstButtonSubmitting = target.querySelector(submitSelector);
+        if (firstButtonSubmitting) {
+          requester = firstButtonSubmitting;
+        }
+      }
+      const allowed = dispatchRequestAction(target, { event, requester });
+      const initiator =
+        event.detail && typeof event.detail === "object"
+          ? event.detail.eventChain[0]
+          : event;
+      const { form } = target;
+      if (form) {
+        // prevent form submission when clicking buttons or pressing enter on inputs
+        initiator.preventDefault();
+      } else if (initiator.type === "keydown" && initiator.key === "Enter") {
+        // prevent triggering click on such button, they are already performing submit
+        // (this ensures enter inside a picker won't trigger picker button click)
+        initiator.preventDefault();
+      }
+      return allowed;
+    },
+  };
+});
+
+registerNaviCommand("--navi-open", (source, event) => {
+  const target =
+    resolveExplicitTarget(source) || resolveClosestExpandable(source);
+  if (!target) {
+    return undefined;
+  }
+  return {
+    target,
+    implementation: () => {
+      return dispatchCustomEvent(target, "navi_request_open", {
+        event,
+        source,
+      });
+    },
+  };
+});
+registerNaviCommand("--navi-close", (source, event) => {
+  const target =
+    resolveExplicitTarget(source) || resolveClosestExpandable(source);
+  if (!target) {
+    return undefined;
+  }
+  return {
+    target,
+    implementation: () => {
+      return dispatchCustomEvent(target, "navi_request_close", {
+        event,
+        source,
+      });
+    },
+  };
+});
+registerNaviCommand("--navi-cancel", (source, event) => {
+  const target =
+    resolveExplicitTarget(source) || resolveClosestExpandable(source);
+  if (!target) {
+    return undefined;
+  }
+  return {
+    target,
+    implementation: () => {
+      return dispatchCustomEvent(target, "navi_request_close", {
+        event,
+        source,
+        isCancel: true,
+      });
+    },
+  };
+});
+registerNaviCommand("--navi-clear", (source, event) => {
+  const target =
+    resolveExplicitTarget(source) || resolveFirstParentControl(source);
+  if (!target) {
+    return undefined;
+  }
+  return {
+    target,
+    implementation: () => {
+      const fromInput = source.closest(`[navi-control="input"]`);
+      if (fromInput) {
+        // clearing input search should not close a popover/dialog
+      } else {
+        dispatchNaviCommand(source, "--navi-close", event);
+      }
+      const allowed = dispatchRequestInteraction(target, event, "--navi-clear");
+      if (!allowed) {
+        event.preventDefault();
+        return false;
+      }
+      return dispatchRequestSetUIState(target, "", { event });
+    },
+  };
+});
+
+registerNaviCommand("--navi-scroll", (source, event) => {
+  const target =
+    resolveExplicitTarget(source) || resolveFirstParentControl(source);
+  if (!target) {
+    return undefined;
+  }
+  return {
+    target,
+    implementation: () => {
+      return dispatchCustomEvent(target, "navi_request_scroll", {
+        event,
+        id: resolveCommandValue(source),
+      });
+    },
+  };
+});
+registerNaviCommand("--navi-select", (source, event) => {
+  const target =
+    resolveExplicitTarget(source) || resolveFirstParentControl(source);
+  if (!target) {
+    return undefined;
+  }
+  return {
+    target,
+    implementation: () => {
+      return dispatchCustomEvent(target, "navi_request_select", {
+        event,
+        id: resolveCommandValue(source),
+      });
+    },
+  };
+});
+registerNaviCommand("--navi-unselect", (source, event) => {
+  const target =
+    resolveExplicitTarget(source) || resolveFirstParentControl(source);
+  if (!target) {
+    return undefined;
+  }
+  return {
+    target,
+    implementation: () => {
+      return dispatchCustomEvent(target, "navi_request_unselect", {
+        event,
+        id: resolveCommandValue(source),
+      });
+    },
+  };
+});
+registerNaviCommand("--navi-void", (source) => {
+  const target =
+    resolveExplicitTarget(source) || resolveFirstParentControl(source);
+  if (!target) {
+    return undefined;
+  }
+  return {
+    target,
+    implementation: () => {
+      // intentional no-op — useful to verify command dispatch in demos and tests
       return true;
-    }
-
-    let requester = source;
-    if (source.matches(submitSelector)) {
-      requester = source;
-    } else {
-      // when present, we use first button submitting the form as the requester
-      // not the input, it aligns with browser behavior where
-      // hitting Enter in a text input triggers the first submit button of the form, not the input itself
-      const firstButtonSubmitting = commandTarget.querySelector(submitSelector);
-      if (firstButtonSubmitting) {
-        requester = firstButtonSubmitting;
-      }
-    }
-
-    const allowed = dispatchRequestAction(commandTarget, {
-      event,
-      requester,
-    });
-    const initiator =
-      event.detail && typeof event.detail === "object"
-        ? event.detail.eventChain[0]
-        : event;
-    const { form } = commandTarget;
-    if (form) {
-      // prevent form submission when cliking buttons or pressing enter on inputs
-      initiator.preventDefault();
-    } else if (initiator.type === "keydown" && initiator.key === "Enter") {
-      // prevent triggering click on such button, they are already performing submit
-      // (this ensure enter inside a picker won't trigger picker button click)
-      initiator.preventDefault();
-    }
-    return allowed;
-  },
-});
-
-registerNaviCommand("--navi-open", {
-  resolveTarget: getClosestExpandable,
-  implementation: (commandTarget, { event, source }) => {
-    return dispatchCustomEvent(commandTarget, "navi_request_open", {
-      event,
-      source,
-    });
-  },
-});
-registerNaviCommand("--navi-close", {
-  resolveTarget: getClosestExpandable,
-  implementation: (commandTarget, { event, source }) => {
-    return dispatchCustomEvent(commandTarget, "navi_request_close", {
-      event,
-      source,
-    });
-  },
-});
-registerNaviCommand("--navi-cancel", {
-  resolveTarget: getClosestExpandable,
-  implementation: (commandTarget, { event, source }) => {
-    return dispatchCustomEvent(commandTarget, "navi_request_close", {
-      event,
-      source,
-      isCancel: true,
-    });
-  },
-});
-registerNaviCommand("--navi-clear", {
-  resolveTarget: getFirstParentControl,
-  implementation: (commandTarget, { event, source }) => {
-    const fromInput = source.closest(`[navi-control="input"]`);
-    if (fromInput) {
-      // clearing input search should not close a popover/dialog
-    } else {
-      dispatchNaviCommand(source, "--navi-close", event);
-    }
-
-    const allowed = dispatchRequestInteraction(
-      commandTarget,
-      event,
-      "--navi-clear",
-    );
-    if (!allowed) {
-      event.preventDefault();
-      return false;
-    }
-    return dispatchRequestSetUIState(commandTarget, "", {
-      event,
-    });
-  },
-});
-
-registerNaviCommand("--navi-scroll", {
-  resolveTarget: getFirstParentControl,
-  implementation: (commandTarget, { event, source }) => {
-    const scrollParam = resolveCommandValue(source);
-
-    return dispatchCustomEvent(commandTarget, "navi_request_scroll", {
-      event,
-      id: scrollParam,
-    });
-  },
-});
-registerNaviCommand("--navi-select", {
-  resolveTarget: getFirstParentControl,
-  implementation: (commandTarget, { event, source }) => {
-    const selectParam = resolveCommandValue(source);
-
-    return dispatchCustomEvent(commandTarget, "navi_request_select", {
-      event,
-      id: selectParam,
-    });
-  },
-});
-registerNaviCommand("--navi-unselect", {
-  resolveTarget: getFirstParentControl,
-  implementation: (commandTarget, { event, source }) => {
-    const unselectParam = resolveCommandValue(source);
-
-    return dispatchCustomEvent(commandTarget, "navi_request_unselect", {
-      event,
-      id: unselectParam,
-    });
-  },
-});
-registerNaviCommand("--navi-void", {
-  resolveTarget: getFirstParentControl,
-  implementation: () => {
-    // intentional no-op — useful to verify command dispatch in demos and tests
-    return true;
-  },
+    },
+  };
 });
