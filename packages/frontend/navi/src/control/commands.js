@@ -178,18 +178,15 @@ registerNaviCommand("--navi-update", (source, event) => {
         event.preventDefault();
         return false;
       }
-      dispatchRequestSetUIState(target, resolveCommandValue(source, event), {
+      const commandValue = resolveCommandValue(source, event);
+      dispatchRequestSetUIState(target, commandValue, {
         event,
       });
       const innerControl = resolvePickerInnerControl(target);
       if (innerControl) {
-        dispatchRequestSetUIState(
-          innerControl,
-          resolveCommandValue(source, event),
-          {
-            event,
-          },
-        );
+        dispatchRequestSetUIState(innerControl, commandValue, {
+          event,
+        });
       }
       return true;
     },
