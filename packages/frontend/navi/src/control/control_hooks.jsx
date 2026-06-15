@@ -165,7 +165,6 @@ export const useControlProps = (
 
     uiActionInternal,
     readOnlySupported,
-    picker,
   },
 ) => {
   const debugInteraction = useDebugInteraction();
@@ -349,7 +348,7 @@ export const useControlProps = (
         callback: actionOnMouseDown ? asInteraction : asAction,
         // effect: updateUIState,
       };
-    } else if (controlType === "input") {
+    } else if (controlType === "input" || controlType === "picker") {
       isCheckable = props.type === "radio" || props.type === "checkbox";
       // On input, gate the interaction (readonly check) and update UI state to reflect the new value.
       inputInteraction = {
@@ -365,7 +364,7 @@ export const useControlProps = (
         const input = e.currentTarget;
         dispatchNaviCommand(input, "--navi-send", e);
       };
-      if (picker) {
+      if (controlType === "picker") {
         mousedownInteraction = {
           name: "mousedown to open picker",
           callback: asInteraction,

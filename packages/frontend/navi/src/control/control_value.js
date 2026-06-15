@@ -23,7 +23,7 @@ export const asControlHostValue = (
   jsValue,
   { controlType, type, inputMode },
 ) => {
-  if (controlType === "input") {
+  if (controlType === "input" || controlType === "picker") {
     if (type === "datetime-local") {
       return asDatetimeLocalString(jsValue);
     }

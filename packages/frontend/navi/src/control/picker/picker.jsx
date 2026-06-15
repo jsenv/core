@@ -301,11 +301,10 @@ const PickerButton = (props) => {
       ref: inputRef,
     },
     {
-      controlType: "input",
+      controlType: "picker",
       statePropName: "value",
       defaultStatePropName: "defaultValue",
       readOnlySupported: true,
-      picker: true,
     },
   );
   const uiStateController = getUIStateControllerById(inputProps.id);
@@ -327,6 +326,7 @@ const PickerButton = (props) => {
         "--picker-max-lines": maxLines,
       }}
       navi-visually-hidden={headless ? "" : undefined}
+      navi-picker=""
       {...pickerRemainingProps}
       basePseudoState={basePseudoState}
       styleCSSVars={PickerStyleCSSVars}
