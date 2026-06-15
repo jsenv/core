@@ -222,7 +222,7 @@
                   {fruit}
                 </Button>
               ))}
-              <Button command="--navi-update" commandfor={pickerId} value="">
+              <Button command="--navi-clear" commandfor={pickerId}>
                 Vider
               </Button>
             </Box>
@@ -296,11 +296,7 @@
               >
                 Lyon
               </Button>
-              <Button
-                command="--navi-update"
-                commandfor={pickerId}
-                value={{ street: "", city: "" }}
-              >
+              <Button command="--navi-clear" commandfor={pickerId}>
                 Vider
               </Button>
             </Box>
