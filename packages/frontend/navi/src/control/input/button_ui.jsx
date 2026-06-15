@@ -110,6 +110,7 @@ const css = /* css */ `
     font-family: var(--button-font-family);
     touch-action: manipulation;
     user-select: none;
+    -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
 
     .navi_button_content {
       position: relative;

@@ -134,6 +134,7 @@ const css = /* css */ `
       min-width: inherit;
       font-size: inherit;
       appearance: none;
+      -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
 
       &::-webkit-slider-thumb {
         width: var(--thumb-width);

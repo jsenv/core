@@ -149,6 +149,7 @@ const css = /* css */ `
       border: none;
       border-radius: inherit;
       outline: none;
+      -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
 
       &[type="search"] {
         -webkit-appearance: textfield;

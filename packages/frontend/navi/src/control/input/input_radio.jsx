@@ -139,6 +139,7 @@ const css = /* css */ `
       opacity: 0;
       appearance: none; /* This allows border-radius to have an effect */
       cursor: var(--x-cursor);
+      -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
     }
 
     /* Focus */

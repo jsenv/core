@@ -16,6 +16,7 @@ const css = /* css */ `
       --navi-focus-outline-width: 2px;
       --navi-focus-outline-color: light-dark(#4476ff, #3b82f6);
       --navi-loader-color: light-dark(#355fcc, #3b82f6);
+      --navi-control-tap-highlight-color: transparent;
 
       --navi-control-font-family: ${controlDefaultFontFamily};
       --navi-control-font-size: ${controlDefaultFontSize};

@@ -160,6 +160,7 @@ const css = /* css */ `
     pointer-events: auto;
     user-select: none;
     overflow: hidden;
+    -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
 
     .navi_picker_value {
       display: inline-block;
