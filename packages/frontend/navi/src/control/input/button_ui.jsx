@@ -242,7 +242,7 @@ const css = /* css */ `
       --x-button-border-color: var(--callout-color);
     }
 
-    /* discrete: background on hover  */
+    /* discrete: background on hover */
     &[data-variant="discrete"] {
       --x-button-background-color: transparent;
       --x-button-border-color: transparent;
