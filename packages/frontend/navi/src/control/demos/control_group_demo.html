@@ -27,17 +27,47 @@
           <Box flex="y" spacing="xl" alignX="start" padding="m" maxWidth="640">
             <h1>ControlGroup</h1>
 
-            <section>
-              <h2>Standalone</h2>
+            <nav>
+              <ol>
+                <li>
+                  <a href="#standalone-basic">Standalone — basique</a>
+                </li>
+                <li>
+                  <a href="#standalone-clear">Standalone — Button.Clear</a>
+                </li>
+                <li>
+                  <a href="#standalone-reset">Standalone — Button.Reset</a>
+                </li>
+                <li>
+                  <a href="#validation">Validation</a>
+                </li>
+                <li>
+                  <a href="#inside-form">Inside a Form</a>
+                </li>
+              </ol>
+            </nav>
+
+            <section id="standalone-basic">
+              <h2>Standalone — basique</h2>
               <StandaloneDemo />
             </section>
 
-            <section>
+            <section id="standalone-clear">
+              <h2>Standalone — Button.Clear</h2>
+              <StandaloneClearDemo />
+            </section>
+
+            <section id="standalone-reset">
+              <h2>Standalone — Button.Reset</h2>
+              <StandaloneResetDemo />
+            </section>
+
+            <section id="validation">
               <h2>Validation</h2>
               <StandaloneRequiredDemo />
             </section>
 
-            <section>
+            <section id="inside-form">
               <h2>Inside a Form</h2>
               <InsideFormDemo />
             </section>
@@ -72,6 +102,85 @@
                   <Input type="text" name="lastName" />
                 </Field>
                 <Button.Send />
+              </Box>
+            </ControlGroup>
+            <CallLog entries={entries} onClear={clearEntries} />
+          </Box>
+        );
+      };
+
+      const StandaloneClearDemo = () => {
+        const [entries, pushEntry, clearEntries] = useCallLog();
+
+        return (
+          <Box flex="y" spacing="m" alignX="start">
+            <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+              <code>Button.Clear</code> réinitialise tous les champs à vide
+              (chaîne vide). C'est le bouton à privilégier pour permettre à
+              l'utilisateur de repartir de zéro.
+            </p>
+            <ControlGroup
+              name="address"
+              action={(value) => {
+                pushEntry("action", value);
+              }}
+              uiAction={(value) => {
+                pushEntry("uiAction", value);
+              }}
+            >
+              <Box flex="y" spacing="s" alignX="start">
+                <Field>
+                  First name
+                  <Input type="text" name="firstName" defaultValue="Jean" />
+                </Field>
+                <Field>
+                  Last name
+                  <Input type="text" name="lastName" defaultValue="Dupont" />
+                </Field>
+                <Box flex="x" spacing="s">
+                  <Button.Send />
+                  <Button.Clear />
+                </Box>
+              </Box>
+            </ControlGroup>
+            <CallLog entries={entries} onClear={clearEntries} />
+          </Box>
+        );
+      };
+
+      const StandaloneResetDemo = () => {
+        const [entries, pushEntry, clearEntries] = useCallLog();
+
+        return (
+          <Box flex="y" spacing="m" alignX="start">
+            <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+              <code>Button.Reset</code> remet les champs à leur{" "}
+              <code>defaultValue</code>. Si un champ n'a pas de{" "}
+              <code>defaultValue</code>, il revient à vide. À utiliser quand on
+              veut annuler les modifications sans effacer les valeurs initiales.
+            </p>
+            <ControlGroup
+              name="address"
+              action={(value) => {
+                pushEntry("action", value);
+              }}
+              uiAction={(value) => {
+                pushEntry("uiAction", value);
+              }}
+            >
+              <Box flex="y" spacing="s" alignX="start">
+                <Field>
+                  First name (defaultValue="Jean")
+                  <Input type="text" name="firstName" defaultValue="Jean" />
+                </Field>
+                <Field>
+                  Last name (no defaultValue)
+                  <Input type="text" name="lastName" />
+                </Field>
+                <Box flex="x" spacing="s">
+                  <Button.Send />
+                  <Button.Reset />
+                </Box>
               </Box>
             </ControlGroup>
             <CallLog entries={entries} onClear={clearEntries} />

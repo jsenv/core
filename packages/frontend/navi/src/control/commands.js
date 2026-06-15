@@ -7,6 +7,7 @@ import {
   isControlRoot,
 } from "./control_dom.js";
 import {
+  dispatchRequestResetUIState,
   dispatchRequestSetUIState,
   getUIStateFromElement,
 } from "./ui_state_dom.js";
@@ -299,6 +300,25 @@ registerNaviCommand("--navi-clear", (source, event) => {
         return false;
       }
       return dispatchRequestSetUIState(target, "", { event });
+    },
+  };
+});
+
+registerNaviCommand("--navi-reset", (source, event) => {
+  const target =
+    resolveExplicitTarget(source) || resolveFirstParentControl(source);
+  if (!target) {
+    return undefined;
+  }
+  return {
+    target,
+    implementation: () => {
+      const allowed = dispatchRequestInteraction(target, event, "--navi-reset");
+      if (!allowed) {
+        event.preventDefault();
+        return false;
+      }
+      return dispatchRequestResetUIState(target, event);
     },
   };
 });

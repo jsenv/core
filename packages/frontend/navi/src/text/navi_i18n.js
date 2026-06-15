@@ -50,6 +50,10 @@ naviI18n.addAll({
     en: "Ok",
     fr: "Ok",
   },
+  "button.reset": {
+    en: "Reset",
+    fr: "Réinitialiser",
+  },
   "button.send": {
     en: "Send",
     fr: "Envoyer",
