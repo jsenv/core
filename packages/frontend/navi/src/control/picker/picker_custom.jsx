@@ -253,22 +253,26 @@ const PickerCustom = (props) => {
     const restoreFocus = (e) => {
       const activeElementAtOpen = activeElementAtOpenRef.current;
       activeElementAtOpenRef.current = null;
+
+      const focusoutEvent = findEvent(e, "focusout");
+      if (focusoutEvent) {
+        debugFocus(e, `closed by focusout -> let focus go away`);
+        return;
+      }
+
       const mousedownEvent = findEvent(e, "mousedown");
       if (mousedownEvent) {
         debugFocus(
           e,
-          `restore focus to previously focused element (mousedown.preventDefault() + el.focus())`,
+          "closed by mousedown -> prevent browser focus (mousedown.preventDefault())",
         );
         mousedownEvent.preventDefault();
-        activeElementAtOpen.focus({ preventScroll: true });
-        return;
       }
-      const focusoutEvent = findEvent(e, "focusout");
-      if (focusoutEvent) {
-        debugFocus(e, `let focus go away`);
-        return;
-      }
-      debugFocus(e, `restore focus to previously focused element`);
+      debugFocus(
+        e,
+        `restore focus to previously focused element`,
+        activeElementAtOpen,
+      );
       activeElementAtOpen.focus({ preventScroll: true });
       return;
     };
