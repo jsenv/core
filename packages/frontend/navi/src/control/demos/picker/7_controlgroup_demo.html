@@ -235,10 +235,8 @@
                   placeholder="Saisir une durée"
                   ui={<DurationPickerUI />}
                   uiAction={(v) => {
-                    if (v !== null && typeof v === "object") {
-                      hoursSignal.value = Number(v.hours) || 0;
-                      minutesSignal.value = Number(v.minutes) || 0;
-                    }
+                    hoursSignal.value = Number(v.hours) || 0;
+                    minutesSignal.value = Number(v.minutes) || 0;
                     push("uiAction", v);
                   }}
                   action={(v) => {
