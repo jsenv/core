@@ -226,12 +226,12 @@ export const onRequestAction = (
   if (requester === elementHandlingAction) {
     debugAction(
       requestActionCustomEvent,
-      `${getElementSignature(elementHandlingAction)} action requested`,
+      `${getElementSignature(elementHandlingAction)} validates + action requested (origin: ${actionOrigin})`,
     );
   } else {
     debugAction(
       requestActionCustomEvent,
-      `${getElementSignature(elementHandlingAction)} action requested by ${getElementSignature(requester)}`,
+      `${getElementSignature(elementHandlingAction)} validates + action requested by ${getElementSignature(requester)} (origin: ${actionOrigin})`,
     );
   }
 
@@ -307,7 +307,7 @@ export const onRequestAction = (
   }
   debugAction(
     requestActionCustomEvent,
-    `${DEFAULT_CONSTRAINT_SET.size} constraints verified -> ${getElementSignature(elementHandlingAction)}.dispatchEvent("navi_action_allowed")`,
+    `${DEFAULT_CONSTRAINT_SET.size} constraints verified${elementHandlingAction.hasAttribute("data-action") ? ` -> execute action ${action.callSource}` : " -> no own action, nothing to execute"}`,
   );
   dispatchInternalCustomEvent(
     elementHandlingAction,
