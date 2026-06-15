@@ -36,19 +36,26 @@
             <nav>
               <ol>
                 <li>
-                  <a href="#external-control-object">
-                    Contrôle externe — ControlGroup (objet nommé)
+                  <a href="#external-control">
+                    Contrôle externe (--navi-update)
                   </a>
-                </li>
-                <li>
-                  <a href="#external-control-single">
-                    Contrôle externe — SelectableList (valeur unique)
-                  </a>
-                </li>
-                <li>
-                  <a href="#external-control-multiple">
-                    Contrôle externe — SelectableList (valeurs multiples)
-                  </a>
+                  <ol>
+                    <li>
+                      <a href="#external-control-object">
+                        ControlGroup (objet nommé)
+                      </a>
+                    </li>
+                    <li>
+                      <a href="#external-control-single">
+                        SelectableList (valeur unique)
+                      </a>
+                    </li>
+                    <li>
+                      <a href="#external-control-multiple">
+                        SelectableList (valeurs multiples)
+                      </a>
+                    </li>
+                  </ol>
                 </li>
                 <li>
                   <a href="#standalone-basic">Standalone — basique</a>
@@ -79,19 +86,23 @@
               </ol>
             </nav>
 
-            <section id="external-control-object">
-              <h2>Contrôle externe — ControlGroup (objet nommé)</h2>
-              <ExternalControlDemo />
-            </section>
+            <section id="external-control">
+              <h2>Contrôle externe (--navi-update)</h2>
 
-            <section id="external-control-single">
-              <h2>Contrôle externe — SelectableList (valeur unique)</h2>
-              <ExternalSelectableDemo />
-            </section>
+              <section id="external-control-object">
+                <h3>ControlGroup (objet nommé)</h3>
+                <ExternalControlDemo />
+              </section>
 
-            <section id="external-control-multiple">
-              <h2>Contrôle externe — SelectableList (valeurs multiples)</h2>
-              <ExternalSelectableMultipleDemo />
+              <section id="external-control-single">
+                <h3>SelectableList (valeur unique)</h3>
+                <ExternalSelectableDemo />
+              </section>
+
+              <section id="external-control-multiple">
+                <h3>SelectableList (valeurs multiples)</h3>
+                <ExternalSelectableMultipleDemo />
+              </section>
             </section>
 
             <section id="standalone-basic">
