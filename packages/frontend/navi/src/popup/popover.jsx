@@ -29,6 +29,7 @@ const css = /* css */ `
     .navi_popover_backdrop {
       position: fixed;
       inset: 0;
+      z-index: -1;
       background: transparent;
       pointer-events: none;
     }
