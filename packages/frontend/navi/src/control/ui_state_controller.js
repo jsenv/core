@@ -733,7 +733,10 @@ export const useUIGroupStateController = (
     //   - default (ControlGroup): child gets the value at its named key in the state object.
     setUIState: (newUIState, e) => {
       const silentEvent = new CustomEvent("navi_set_ui_state_external", {
-        detail: { event: e, internalBehavior: true },
+        detail: {
+          event: e,
+          internalBehavior: true,
+        },
       });
       for (const childUIStateController of childUIStateControllerArray) {
         if (!isMonitoringChild(childUIStateController)) {
