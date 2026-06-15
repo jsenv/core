@@ -15,6 +15,7 @@ import { PickerContext } from "./picker_context.jsx";
 
 export const PickerTypeResolver = (props) => {
   const Next = useNextResolver();
+
   if (props.type === "color") {
     return <PickerColor {...props} />;
   }
