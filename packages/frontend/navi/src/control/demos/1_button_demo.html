@@ -176,7 +176,6 @@
             <BasicStatesDemo />
             <InteractivityDemo />
             <CustomizationDemo />
-            <CircleButtonDemo />
             <IconsDemo />
             <InteractiveDemo />
             <HrefDemo />
@@ -1394,25 +1393,75 @@
                   margin: "0 0 8px",
                 }}
               >
-                The <code>icon</code> prop resets padding so the button takes
-                exactly the icon's size.
+                Without <code>icon</code>, the button keeps its default padding
+                around the icon. With <code>icon</code>, padding is reset to 0
+                so the button is exactly the icon's size — no extra space.
               </p>
               <div className="button-group">
-                <Button aria-label="Action">
-                  <Icon>
-                    <DemoIconSvg />
-                  </Icon>
-                </Button>
-                <Button icon aria-label="Action">
-                  <Icon>
-                    <DemoIconSvg />
-                  </Icon>
-                </Button>
-                <Button icon padding="s" aria-label="Action">
-                  <Icon>
-                    <DemoIconSvg />
-                  </Icon>
-                </Button>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: "4px",
+                  }}
+                >
+                  <Button aria-label="Action">
+                    <Icon>
+                      <DemoIconSvg />
+                    </Icon>
+                  </Button>
+                  <span style={{ fontSize: "0.75rem", color: "#888" }}>
+                    default
+                  </span>
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: "4px",
+                  }}
+                >
+                  <Button icon aria-label="Action">
+                    <Icon>
+                      <DemoIconSvg />
+                    </Icon>
+                  </Button>
+                  <span style={{ fontSize: "0.75rem", color: "#888" }}>
+                    icon (no padding)
+                  </span>
+                </div>
+              </div>
+              <p
+                style={{
+                  color: "#666",
+                  fontSize: "0.85rem",
+                  margin: "12px 0 8px",
+                }}
+              >
+                No padding at all is often too tight for interactive targets.
+                Pass <code>padding="s"</code> (or any size) to restore some
+                breathing room while still keeping the icon visually centered.
+              </p>
+              <div className="button-group">
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: "4px",
+                  }}
+                >
+                  <Button icon padding="s" aria-label="Action">
+                    <Icon>
+                      <DemoIconSvg />
+                    </Icon>
+                  </Button>
+                  <span style={{ fontSize: "0.75rem", color: "#888" }}>
+                    icon + padding="s"
+                  </span>
+                </div>
               </div>
             </fieldset>
 
@@ -1436,6 +1485,123 @@
               <IconStates icon variant="discrete-border" />
             </fieldset>
 
+            <h3 style={{ margin: "24px 0 8px" }}>Circle icon button</h3>
+            <p
+              style={{
+                color: "#666",
+                fontSize: "0.85rem",
+                margin: "0 0 12px",
+              }}
+            >
+              Use the <code>circle</code> prop directly on the button to make it
+              round.
+            </p>
+            <Box flex spacing="m" wrap>
+              <fieldset>
+                <legend>default</legend>
+                <Button icon circle aria-label="Action">
+                  <Icon>
+                    <EyeSvg />
+                  </Icon>
+                </Button>
+              </fieldset>
+              <fieldset>
+                <legend>:hover</legend>
+                <Button
+                  icon
+                  circle
+                  aria-label="Action"
+                  pseudoState={{ ":hover": true }}
+                >
+                  <Icon>
+                    <EyeSvg />
+                  </Icon>
+                </Button>
+              </fieldset>
+              <fieldset>
+                <legend>:focus-visible</legend>
+                <Button
+                  icon
+                  circle
+                  aria-label="Action"
+                  pseudoState={{ ":focus-visible": true }}
+                >
+                  <Icon>
+                    <EyeSvg />
+                  </Icon>
+                </Button>
+              </fieldset>
+              <fieldset>
+                <legend>:disabled</legend>
+                <Button icon circle aria-label="Action" disabled>
+                  <Icon>
+                    <EyeSvg />
+                  </Icon>
+                </Button>
+              </fieldset>
+              <fieldset>
+                <legend>:-navi-loading</legend>
+                <Button icon circle aria-label="Action" loading>
+                  <Icon>
+                    <EyeSvg />
+                  </Icon>
+                </Button>
+              </fieldset>
+            </Box>
+
+            <h3 style={{ margin: "24px 0 8px" }}>Border-radius inheritance</h3>
+            <p
+              style={{
+                color: "#666",
+                fontSize: "0.85rem",
+                margin: "0 0 12px",
+              }}
+            >
+              When the button lives inside a circular container (a{" "}
+              <code>Box circle</code>), pass <code>borderRadius="inherit"</code>{" "}
+              so its focus outline follows the container's circle shape.
+            </p>
+            <Box flex spacing="m" wrap>
+              <fieldset>
+                <legend>without borderRadius="inherit"</legend>
+                <Box background="orange" padding="m" inline flex>
+                  <Box
+                    circle
+                    width="35"
+                    inline
+                    flex
+                    background="violet"
+                    padding="5"
+                  >
+                    <Button icon flex align="center">
+                      <Icon>
+                        <EyeSvg />
+                      </Icon>
+                    </Button>
+                  </Box>
+                </Box>
+              </fieldset>
+              <fieldset>
+                <legend>with borderRadius="inherit"</legend>
+                <Box background="orange" padding="m" inline flex>
+                  <Box
+                    circle
+                    width="35"
+                    inline
+                    flex
+                    background="violet"
+                    padding="5"
+                  >
+                    <Button icon borderRadius="inherit" flex align="center">
+                      <Icon>
+                        <EyeSvg />
+                      </Icon>
+                    </Button>
+                  </Box>
+                </Box>
+              </fieldset>
+            </Box>
+
             <h3 style={{ margin: "24px 0 8px" }}>
               Icon toggle — use a checkbox instead
             </h3>
@@ -1457,185 +1623,6 @@
             <fieldset>
               <legend>icon button toggle (avoid this pattern)</legend>
               <IconToggleSection />
-            </fieldset>
-          </div>
-        );
-      };
-
-      const CircleButtonDemo = () => {
-        return (
-          <div className="demo-section" id="border-radius">
-            <h2>Border Radius Inheritance</h2>
-
-            <fieldset>
-              <legend>Button inside a circle Box</legend>
-              <p
-                style={{
-                  color: "#666",
-                  fontSize: "0.85rem",
-                  margin: "0 0 12px",
-                }}
-              >
-                The outer <code>Box</code> has a background and padding. The
-                inner <code>Box circle</code> clips its content to a circle. The
-                button uses <code>borderRadius="inherit"</code> to adopt the
-                parent's radius so the focus outline follows the circle shape.
-              </p>
-              <Box flex spacing="m">
-                <fieldset>
-                  <legend>without borderRadius="inherit"</legend>
-                  <Box background="orange" padding="m" inline flex>
-                    <Box
-                      circle
-                      width="35"
-                      inline
-                      flex
-                      background="violet"
-                      padding="5"
-                    >
-                      <Button icon flex align="center">
-                        <Icon>
-                          <EyeSvg />
-                        </Icon>
-                      </Button>
-                    </Box>
-                  </Box>
-                </fieldset>
-                <fieldset>
-                  <legend>with borderRadius="inherit"</legend>
-                  <Box background="orange" padding="m" inline flex>
-                    <Box
-                      circle
-                      width="35"
-                      inline
-                      flex
-                      background="violet"
-                      padding="5"
-                    >
-                      <Button icon borderRadius="inherit" flex align="center">
-                        <Icon>
-                          <EyeSvg />
-                        </Icon>
-                      </Button>
-                    </Box>
-                  </Box>
-                </fieldset>
-              </Box>
-            </fieldset>
-
-            <fieldset>
-              <legend>States — icon button inside circle</legend>
-              <Box flex spacing="s" wrap style={{ marginTop: "8px" }}>
-                <fieldset>
-                  <legend>default</legend>
-                  <Box
-                    circle
-                    width="35"
-                    inline
-                    flex
-                    background="violet"
-                    padding="5"
-                  >
-                    <Button icon borderRadius="inherit" flex align="center">
-                      <Icon>
-                        <EyeSvg />
-                      </Icon>
-                    </Button>
-                  </Box>
-                </fieldset>
-                <fieldset>
-                  <legend>:hover</legend>
-                  <Box
-                    circle
-                    width="35"
-                    inline
-                    flex
-                    background="violet"
-                    padding="5"
-                  >
-                    <Button
-                      icon
-                      borderRadius="inherit"
-                      flex
-                      align="center"
-                      pseudoState={{ ":hover": true }}
-                    >
-                      <Icon>
-                        <EyeSvg />
-                      </Icon>
-                    </Button>
-                  </Box>
-                </fieldset>
-                <fieldset>
-                  <legend>:focus-visible</legend>
-                  <Box
-                    circle
-                    width="35"
-                    inline
-                    flex
-                    background="violet"
-                    padding="5"
-                  >
-                    <Button
-                      icon
-                      borderRadius="inherit"
-                      flex
-                      align="center"
-                      pseudoState={{ ":focus-visible": true }}
-                    >
-                      <Icon>
-                        <EyeSvg />
-                      </Icon>
-                    </Button>
-                  </Box>
-                </fieldset>
-                <fieldset>
-                  <legend>:disabled</legend>
-                  <Box
-                    circle
-                    width="35"
-                    inline
-                    flex
-                    background="violet"
-                    padding="5"
-                  >
-                    <Button
-                      icon
-                      borderRadius="inherit"
-                      flex
-                      align="center"
-                      disabled
-                    >
-                      <Icon>
-                        <EyeSvg />
-                      </Icon>
-                    </Button>
-                  </Box>
-                </fieldset>
-                <fieldset>
-                  <legend>:-navi-loading</legend>
-                  <Box
-                    circle
-                    width="35"
-                    inline
-                    flex
-                    background="violet"
-                    padding="5"
-                  >
-                    <Button
-                      icon
-                      borderRadius="inherit"
-                      flex
-                      align="center"
-                      loading
-                    >
-                      <Icon>
-                        <EyeSvg />
-                      </Icon>
-                    </Button>
-                  </Box>
-                </fieldset>
-              </Box>
             </fieldset>
           </div>
         );
