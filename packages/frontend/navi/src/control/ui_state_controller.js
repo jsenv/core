@@ -779,20 +779,34 @@ export const useUIGroupStateController = (
       });
     },
     resetUIState: (e) => {
+      const silentEvent = new CustomEvent("navi_reset_ui_state", {
+        detail: { event: e, internalBehavior: true },
+      });
       for (const childUIStateController of childUIStateControllerArray) {
         if (!isMonitoringChild(childUIStateController)) {
           continue;
         }
-        childUIStateController.resetUIState(e);
+        if (childUIStateController.controlType === "button") {
+          continue;
+        }
+        childUIStateController.resetUIState(silentEvent);
       }
+      onChange(e, { notifyExternal: true });
     },
     clearUIState: (e) => {
+      const silentEvent = new CustomEvent("navi_clear_ui_state", {
+        detail: { event: e, internalBehavior: true },
+      });
       for (const childUIStateController of childUIStateControllerArray) {
         if (!isMonitoringChild(childUIStateController)) {
           continue;
         }
-        childUIStateController.clearUIState(e);
+        if (childUIStateController.controlType === "button") {
+          continue;
+        }
+        childUIStateController.clearUIState(silentEvent);
       }
+      onChange(e, { notifyExternal: true });
     },
     actionEnd: (e) => {
       for (const childUIStateController of childUIStateControllerArray) {
