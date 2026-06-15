@@ -242,9 +242,6 @@
                       <li>
                         <a href="#customization-variant-border">border</a>
                       </li>
-                      <li>
-                        <a href="#customization-variant-icon">icon</a>
-                      </li>
                     </ol>
                   </li>
                   <li>
@@ -253,10 +250,18 @@
                 </ol>
               </li>
               <li>
-                <a href="#border-radius">Border Radius Inheritance</a>
-              </li>
-              <li>
-                <a href="#icons">Icons</a>
+                Icons
+                <ol style={{ paddingLeft: "20px" }}>
+                  <li>
+                    <a href="#icons">Icon prop</a>
+                  </li>
+                  <li>
+                    <a href="#icons-circle">Circle icon button</a>
+                  </li>
+                  <li>
+                    <a href="#icons-border-radius">Border-radius inheritance</a>
+                  </li>
+                </ol>
               </li>
               <li>
                 <a href="#interactive-controls">Interactive Controls</a>
@@ -1268,7 +1273,7 @@
           viewBox="0 0 16 16"
           xmlns="http://www.w3.org/2000/svg"
         >
-          <rect width="16" height="16" fill="violet" />
+          <rect width="16" height="16" fill="currentColor" />
         </svg>
       );
 
@@ -1364,7 +1369,7 @@
 
       const IconsDemo = () => {
         return (
-          <div className="demo-section" id="icons">
+          <div className="demo-section" id="icons" style={{ color: "violet" }}>
             <h2>Icons</h2>
 
             <fieldset>
@@ -1485,7 +1490,9 @@
               <IconStates icon variant="discrete-border" />
             </fieldset>
 
-            <h3 style={{ margin: "24px 0 8px" }}>Circle icon button</h3>
+            <h3 id="icons-circle" style={{ margin: "24px 0 8px" }}>
+              Circle icon button
+            </h3>
             <p
               style={{
                 color: "#666",
@@ -1494,14 +1501,15 @@
               }}
             >
               Use the <code>circle</code> prop directly on the button to make it
-              round.
+              round. The icon is a square so the circular clipping is clearly
+              visible.
             </p>
             <Box flex spacing="m" wrap>
               <fieldset>
                 <legend>default</legend>
-                <Button icon circle aria-label="Action">
+                <Button icon padding="s" circle aria-label="Action">
                   <Icon>
-                    <EyeSvg />
+                    <DemoIconSvg />
                   </Icon>
                 </Button>
               </fieldset>
@@ -1509,12 +1517,13 @@
                 <legend>:hover</legend>
                 <Button
                   icon
+                  padding="s"
                   circle
                   aria-label="Action"
                   pseudoState={{ ":hover": true }}
                 >
                   <Icon>
-                    <EyeSvg />
+                    <DemoIconSvg />
                   </Icon>
                 </Button>
               </fieldset>
@@ -1522,34 +1531,37 @@
                 <legend>:focus-visible</legend>
                 <Button
                   icon
+                  padding="s"
                   circle
                   aria-label="Action"
                   pseudoState={{ ":focus-visible": true }}
                 >
                   <Icon>
-                    <EyeSvg />
+                    <DemoIconSvg />
                   </Icon>
                 </Button>
               </fieldset>
               <fieldset>
                 <legend>:disabled</legend>
-                <Button icon circle aria-label="Action" disabled>
+                <Button icon padding="s" circle aria-label="Action" disabled>
                   <Icon>
-                    <EyeSvg />
+                    <DemoIconSvg />
                   </Icon>
                 </Button>
               </fieldset>
               <fieldset>
                 <legend>:-navi-loading</legend>
-                <Button icon circle aria-label="Action" loading>
+                <Button icon padding="s" circle aria-label="Action" loading>
                   <Icon>
-                    <EyeSvg />
+                    <DemoIconSvg />
                   </Icon>
                 </Button>
               </fieldset>
             </Box>
 
-            <h3 style={{ margin: "24px 0 8px" }}>Border-radius inheritance</h3>
+            <h3 id="icons-border-radius" style={{ margin: "24px 0 8px" }}>
+              Border-radius inheritance
+            </h3>
             <p
               style={{
                 color: "#666",
