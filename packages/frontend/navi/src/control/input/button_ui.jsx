@@ -296,16 +296,8 @@ const css = /* css */ `
         --x-button-background-color: transparent;
       }
     }
-    &[data-variant="icon"] {
+    &[data-icon] {
       --button-padding: 0;
-      --button-border-width: 0;
-      --x-button-background-color: transparent;
-      --x-button-border-color: transparent;
-
-      &[data-hover] {
-        --x-button-background-color: var(--button-background-color-hover);
-        --x-button-color: var(--button-color-hover);
-      }
     }
     /* cta: call-to-action — special background, border matches background */
     &[data-cta] {
@@ -366,6 +358,7 @@ export const ButtonUI = (props) => {
 
     // visual
     variant,
+    icon,
     cta,
     spacing,
   } = props;
@@ -428,6 +421,7 @@ export const ButtonUI = (props) => {
         e.preventDefault();
       }}
       data-variant={variant}
+      data-icon={icon ? "" : undefined}
       data-cta={cta ? "" : undefined}
       data-callout-arrow-x="center"
       // style management

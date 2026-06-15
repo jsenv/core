@@ -1260,12 +1260,16 @@
         );
       };
 
-      const IconStates = ({ variant }) => {
+      const IconStates = ({ variant, icon }) => {
         return (
           <Box flex spacing="s" wrap>
             <fieldset>
               <legend>default</legend>
-              <Button variant={variant} aria-label="Toggle visibility">
+              <Button
+                variant={variant}
+                icon={icon}
+                aria-label="Toggle visibility"
+              >
                 <Icon>
                   <EyeSvg />
                 </Icon>
@@ -1275,6 +1279,7 @@
               <legend>:hover</legend>
               <Button
                 variant={variant}
+                icon={icon}
                 aria-label="Toggle visibility"
                 pseudoState={{ ":hover": true }}
               >
@@ -1287,6 +1292,7 @@
               <legend>:focus-visible</legend>
               <Button
                 variant={variant}
+                icon={icon}
                 aria-label="Toggle visibility"
                 pseudoState={{ ":focus-visible": true }}
               >
@@ -1297,7 +1303,12 @@
             </fieldset>
             <fieldset>
               <legend>:read-only</legend>
-              <Button variant={variant} aria-label="Toggle visibility" readOnly>
+              <Button
+                variant={variant}
+                icon={icon}
+                aria-label="Toggle visibility"
+                readOnly
+              >
                 <Icon>
                   <EyeSvg />
                 </Icon>
@@ -1305,7 +1316,12 @@
             </fieldset>
             <fieldset>
               <legend>:disabled</legend>
-              <Button variant={variant} aria-label="Toggle visibility" disabled>
+              <Button
+                variant={variant}
+                icon={icon}
+                aria-label="Toggle visibility"
+                disabled
+              >
                 <Icon>
                   <EyeSvg />
                 </Icon>
@@ -1313,7 +1329,12 @@
             </fieldset>
             <fieldset>
               <legend>:-navi-loading</legend>
-              <Button variant={variant} aria-label="Toggle visibility" loading>
+              <Button
+                variant={variant}
+                icon={icon}
+                aria-label="Toggle visibility"
+                loading
+              >
                 <Icon>
                   <EyeSvg />
                 </Icon>
@@ -1330,9 +1351,7 @@
             <p
               style={{ color: "#666", fontSize: "0.9rem", margin: "0 0 16px" }}
             >
-              How an icon-only button renders across different variants. Use
-              this to decide whether <code>variant="icon"</code> adds value over
-              the default or an existing variant.
+              How an icon-only button renders across different variants.
             </p>
 
             <fieldset>
@@ -1351,8 +1370,8 @@
             </fieldset>
 
             <fieldset>
-              <legend>variant="border"</legend>
-              <IconStates variant="border" />
+              <legend>icon prop (padding reset)</legend>
+              <IconStates icon />
             </fieldset>
           </div>
         );
@@ -1379,12 +1398,7 @@
               </p>
               <Box background="orange" padding="m" inline flex>
                 <Box circle width="30" inline flex background="white">
-                  <Button
-                    variant="icon"
-                    borderRadius="inherit"
-                    flex
-                    align="center"
-                  >
+                  <Button icon borderRadius="inherit" flex align="center">
                     <Icon>
                       <EyeSvg />
                     </Icon>
@@ -1903,23 +1917,23 @@
               </Box>
             </fieldset>
 
-            {/* ── Variant: icon ────────────────────────────────────────── */}
+            {/* ── Icon prop ────────────────────────────────────────────── */}
             <h3
               id="customization-variant-icon"
               style={{ margin: "24px 0 12px" }}
             >
-              Variant — icon
+              Icon — prop
             </h3>
 
             <fieldset>
-              <legend>Regular vs icon</legend>
+              <legend>Regular vs icon prop</legend>
               <div className="button-group">
                 <Button aria-label="Toggle visibility">
                   <Icon>
                     <EyeSvg />
                   </Icon>
                 </Button>
-                <Button variant="icon" aria-label="Toggle visibility">
+                <Button icon aria-label="Toggle visibility">
                   <Icon>
                     <EyeSvg />
                   </Icon>
@@ -1933,7 +1947,7 @@
                 <fieldset>
                   <legend>:hover</legend>
                   <Button
-                    variant="icon"
+                    icon
                     aria-label="Toggle"
                     pseudoState={{ ":hover": true }}
                   >
@@ -1945,7 +1959,7 @@
                 <fieldset>
                   <legend>:focus-visible</legend>
                   <Button
-                    variant="icon"
+                    icon
                     aria-label="Toggle"
                     pseudoState={{ ":focus-visible": true }}
                   >
@@ -1956,7 +1970,7 @@
                 </fieldset>
                 <fieldset>
                   <legend>:read-only</legend>
-                  <Button variant="icon" aria-label="Toggle" readOnly>
+                  <Button icon aria-label="Toggle" readOnly>
                     <Icon>
                       <EyeSvg />
                     </Icon>
@@ -1964,7 +1978,7 @@
                 </fieldset>
                 <fieldset>
                   <legend>:disabled</legend>
-                  <Button variant="icon" aria-label="Toggle" disabled>
+                  <Button icon aria-label="Toggle" disabled>
                     <Icon>
                       <EyeSvg />
                     </Icon>
@@ -1972,7 +1986,7 @@
                 </fieldset>
                 <fieldset>
                   <legend>:-navi-loading</legend>
-                  <Button variant="icon" aria-label="Toggle" loading>
+                  <Button icon aria-label="Toggle" loading>
                     <Icon>
                       <EyeSvg />
                     </Icon>
@@ -1995,7 +2009,7 @@
           <>
             <div className="button-group">
               <Button
-                variant="icon"
+                icon
                 size="xxs"
                 onClick={() => setIsVisible(!isVisible)}
                 aria-label={isVisible ? "Hide content" : "Show content"}
@@ -2003,14 +2017,14 @@
                 <Icon>{isVisible ? <EyeSvg /> : <EyeClosedSvg />}</Icon>
               </Button>
               <Button
-                variant="icon"
+                icon
                 onClick={() => setIsVisible(!isVisible)}
                 aria-label={isVisible ? "Hide content" : "Show content"}
               >
                 <Icon>{isVisible ? <EyeSvg /> : <EyeClosedSvg />}</Icon>
               </Button>
               <Button
-                variant="icon"
+                icon
                 size="xl"
                 onClick={() => setIsVisible(!isVisible)}
                 aria-label={isVisible ? "Hide content" : "Show content"}
