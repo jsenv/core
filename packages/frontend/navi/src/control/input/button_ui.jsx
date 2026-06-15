@@ -227,8 +227,6 @@ const css = /* css */ `
       --x-button-color: var(--button-color-disabled);
       --x-button-cursor: default;
 
-      color: unset;
-
       /* Remove pressed effects */
       .navi_button_content {
         transform: none;
