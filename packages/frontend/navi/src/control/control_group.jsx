@@ -78,7 +78,17 @@ export const ControlGroup = (props) => {
 };
 
 const getControlGroupManagedControls = (el) => {
-  return [...el.querySelectorAll("[navi-control-host]")];
+  const managedControls = [];
+  for (const child of el.querySelectorAll("[navi-control-host]")) {
+    // Exclude controls that belong to a nested ControlGroup — that group is itself
+    // a managed control and will cascade validation to its own children.
+    const parentControlGroup = child.closest("[navi-control-group]");
+    if (parentControlGroup && parentControlGroup !== el) {
+      continue;
+    }
+    managedControls.push(child);
+  }
+  return managedControls;
 };
 
 const CONTROL_GROUP_PSEUDO_CLASSES = [
