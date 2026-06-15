@@ -1422,6 +1422,11 @@
             </fieldset>
 
             <fieldset>
+              <legend>icon — states with variant="border"</legend>
+              <IconStates icon variant="border" />
+            </fieldset>
+
+            <fieldset>
               <legend>icon — states with variant="discrete"</legend>
               <IconStates icon variant="discrete" />
             </fieldset>
@@ -1429,11 +1434,6 @@
             <fieldset>
               <legend>icon — states with variant="discrete-border"</legend>
               <IconStates icon variant="discrete-border" />
-            </fieldset>
-
-            <fieldset>
-              <legend>icon — states with variant="border"</legend>
-              <IconStates icon variant="border" />
             </fieldset>
 
             <fieldset>
@@ -1801,6 +1801,61 @@
             </fieldset>
 
             {/* ── Variant ───────────────────────────────────────────────── */}
+            {/* ── Variant: border ──────────────────────────────────────────── */}
+            <h3
+              id="customization-variant-border"
+              style={{ margin: "24px 0 12px" }}
+            >
+              Variant — border
+            </h3>
+
+            <fieldset>
+              <legend>Regular vs border</legend>
+              <div className="button-group">
+                <Button>Text in button</Button>
+                <Button variant="border">Text in button</Button>
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend>border — states</legend>
+              <Box flex spacing="s">
+                <fieldset>
+                  <legend>:hover</legend>
+                  <Button variant="border" pseudoState={{ ":hover": true }}>
+                    Text in button
+                  </Button>
+                </fieldset>
+                <fieldset>
+                  <legend>:focus-visible</legend>
+                  <Button
+                    variant="border"
+                    pseudoState={{ ":focus-visible": true }}
+                  >
+                    Text in button
+                  </Button>
+                </fieldset>
+                <fieldset>
+                  <legend>:read-only</legend>
+                  <Button variant="border" readOnly>
+                    Text in button
+                  </Button>
+                </fieldset>
+                <fieldset>
+                  <legend>:disabled</legend>
+                  <Button variant="border" disabled>
+                    Text in button
+                  </Button>
+                </fieldset>
+                <fieldset>
+                  <legend>:-navi-loading</legend>
+                  <Button variant="border" loading>
+                    Text in button
+                  </Button>
+                </fieldset>
+              </Box>
+            </fieldset>
+
             {/* ── Variant: text ─────────────────────────────────────────── */}
             <h3
               id="customization-variant-discrete"
@@ -1873,7 +1928,7 @@
             </fieldset>
 
             <fieldset>
-              <legend>discrete-border-border — states</legend>
+              <legend>discrete-border — states</legend>
               <Box flex spacing="s">
                 <fieldset>
                   <legend>:hover</legend>
@@ -1908,61 +1963,6 @@
                 <fieldset>
                   <legend>:-navi-loading</legend>
                   <Button variant="discrete-border" loading>
-                    Text in button
-                  </Button>
-                </fieldset>
-              </Box>
-            </fieldset>
-
-            {/* ── Variant: border ───────────────────────────────────────── */}
-            <h3
-              id="customization-variant-border"
-              style={{ margin: "24px 0 12px" }}
-            >
-              Variant — border
-            </h3>
-
-            <fieldset>
-              <legend>Regular vs border</legend>
-              <div className="button-group">
-                <Button>Text in button</Button>
-                <Button variant="border">Text in button</Button>
-              </div>
-            </fieldset>
-
-            <fieldset>
-              <legend>border — states</legend>
-              <Box flex spacing="s">
-                <fieldset>
-                  <legend>:hover</legend>
-                  <Button variant="border" pseudoState={{ ":hover": true }}>
-                    Text in button
-                  </Button>
-                </fieldset>
-                <fieldset>
-                  <legend>:focus-visible</legend>
-                  <Button
-                    variant="border"
-                    pseudoState={{ ":focus-visible": true }}
-                  >
-                    Text in button
-                  </Button>
-                </fieldset>
-                <fieldset>
-                  <legend>:read-only</legend>
-                  <Button variant="border" readOnly>
-                    Text in button
-                  </Button>
-                </fieldset>
-                <fieldset>
-                  <legend>:disabled</legend>
-                  <Button variant="border" disabled>
-                    Text in button
-                  </Button>
-                </fieldset>
-                <fieldset>
-                  <legend>:-navi-loading</legend>
-                  <Button variant="border" loading>
                     Text in button
                   </Button>
                 </fieldset>
