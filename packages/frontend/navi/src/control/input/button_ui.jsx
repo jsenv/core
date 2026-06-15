@@ -404,6 +404,11 @@ export const ButtonUI = (props) => {
       href={href}
       target={innerTarget}
       rel={innerRel}
+      // Respond with the JS prop value directly so callers (e.g. resolveCommandValue)
+      // get the original type instead of the DOM-coerced string (e.g. "[object Object]").
+      onnavi_get_value={(e) => {
+        e.detail.respondWith(props.value);
+      }}
       onContextMenu={(e) => {
         if (as === "a") {
           // For link we keep context menu to allow "open in new tab" and other browser features

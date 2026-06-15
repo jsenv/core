@@ -107,7 +107,8 @@ const resolveCommandValue = (source) => {
   if (source.hasAttribute("command-value")) {
     return source.getAttribute("command-value");
   }
-  return getUIStateFromElement(source);
+  const value = getUIStateFromElement(source);
+  return value;
 };
 
 export const onNaviCommand = (e, { debugCommand }) => {

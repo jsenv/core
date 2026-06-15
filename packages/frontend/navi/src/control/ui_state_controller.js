@@ -23,6 +23,37 @@ import { FormContext } from "./form_context.js";
 const controllersById = new Map();
 export const getUIStateControllerById = (id) => controllersById.get(id);
 
+// Registry for non-serializable JS values that cannot be written to DOM attributes as-is.
+// When a value is an object/array, we store it here and write a reference string to the DOM
+// instead of "[object Object]". Console-inspectable via window.__navi_js('id').
+let naviJsIdCounter = 0;
+const naviJsRegistry = new Map();
+if (import.meta.dev) {
+  window.__navi_js = (id) => naviJsRegistry.get(id);
+}
+const setNonSerializableDomValue = (el, propName, jsValue) => {
+  let id = el.dataset.naviJsId;
+  if (!id) {
+    id = `navi_js_${++naviJsIdCounter}`;
+    el.dataset.naviJsId = id;
+  }
+  naviJsRegistry.set(id, jsValue);
+  el[propName] = `js:navi_js('${id}')`;
+};
+const deleteNonSerializableDomValue = (el) => {
+  const id = el.dataset && el.dataset.naviJsId;
+  if (id) {
+    naviJsRegistry.delete(id);
+  }
+};
+const isSerializableAsDomValue = (value) => {
+  if (value === null || value === undefined) {
+    return true;
+  }
+  const type = typeof value;
+  return type === "string" || type === "number" || type === "boolean";
+};
+
 // In-memory registry for radio controllers, keyed by input name.
 // Allows radio sibling unchecking without querying the DOM — necessary when
 // items are virtualized and their DOM element may not exist at the time.
@@ -191,6 +222,10 @@ export const useUIStateController = (
         controllersById.delete(id);
       }
       notifyParentAboutChildUnmount();
+      const el = ref.current;
+      if (el) {
+        deleteNonSerializableDomValue(el);
+      }
       if (isRadio) {
         unregisterRadioController(controller);
       }
@@ -347,7 +382,12 @@ export const useUIStateController = (
         // - any "input" event that might be dispatched below
         const propValue = uiStateController.getPropFromState(newUIState);
         debugUIState(e, `[${statePropName}] = ${JSON.stringify(propValue)};`);
-        el[statePropName] = uiStateController.toControlHostValue(propValue);
+        const domValue = uiStateController.toControlHostValue(propValue);
+        if (isSerializableAsDomValue(domValue)) {
+          el[statePropName] = domValue;
+        } else {
+          setNonSerializableDomValue(el, statePropName, domValue);
+        }
       }
       uiStateController.uiState = newUIState;
       ownUIStateSignal.value = newUIState;
@@ -732,6 +772,23 @@ export const useUIGroupStateController = (
     //   - "checkbox_group": child gets true/false based on whether its value is in the state array.
     //   - default (ControlGroup): child gets the value at its named key in the state object.
     setUIState: (newUIState, e) => {
+      if (
+        stateType === "object" &&
+        (newUIState === null || typeof newUIState !== "object")
+      ) {
+        console.warn(
+          `[${controlType}] setUIState received a non-object value: ${JSON.stringify(newUIState)} (expected an object). Ignoring.`,
+          newUIState,
+        );
+        return;
+      }
+      if (stateType === "array" && !Array.isArray(newUIState)) {
+        console.warn(
+          `[${controlType}] setUIState received a non-array value: ${JSON.stringify(newUIState)} (expected an array). Ignoring.`,
+          newUIState,
+        );
+        return;
+      }
       const silentEvent = new CustomEvent("navi_set_ui_state_external", {
         detail: {
           event: e,
