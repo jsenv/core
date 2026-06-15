@@ -16,7 +16,12 @@ import {
   dispatchRequestInteraction,
 } from "./validation/custom_constraint_validation.js";
 
-export const dispatchNaviCommand = (element, command, event) => {
+export const dispatchNaviCommand = (
+  element,
+  command,
+  event,
+  { optional } = {},
+) => {
   const naviCommand = NAVI_COMMANDS[command];
   if (!naviCommand) {
     console.warn(`Unknown command "${command}"`);
@@ -32,6 +37,9 @@ export const dispatchNaviCommand = (element, command, event) => {
   }
   const execute = naviCommand.commandHandler(element, event);
   if (!execute) {
+    if (optional) {
+      return false;
+    }
     console.warn(
       `"${command}" triggered on element but no suitable target found`,
       element,
@@ -285,14 +293,17 @@ registerNaviCommand("--navi-clear", (source, event) => {
   if (!target) {
     return undefined;
   }
+  const fromInput = source.closest(`[navi-control="input"]`);
+
   return {
     target,
     implementation: () => {
-      const fromInput = source.closest(`[navi-control="input"]`);
       if (fromInput) {
         // clearing input search should not close a popover/dialog
       } else {
-        dispatchNaviCommand(source, "--navi-close", event);
+        dispatchNaviCommand(source, "--navi-close", event, {
+          optional: true,
+        });
       }
       const allowed = dispatchRequestInteraction(target, event, "--navi-clear");
       if (!allowed) {
