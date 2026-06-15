@@ -1266,37 +1266,57 @@
             <fieldset>
               <legend>default</legend>
               <Button variant={variant} aria-label="Toggle visibility">
-                <Icon><EyeSvg /></Icon>
+                <Icon>
+                  <EyeSvg />
+                </Icon>
               </Button>
             </fieldset>
             <fieldset>
               <legend>:hover</legend>
-              <Button variant={variant} aria-label="Toggle visibility" pseudoState={{ ":hover": true }}>
-                <Icon><EyeSvg /></Icon>
+              <Button
+                variant={variant}
+                aria-label="Toggle visibility"
+                pseudoState={{ ":hover": true }}
+              >
+                <Icon>
+                  <EyeSvg />
+                </Icon>
               </Button>
             </fieldset>
             <fieldset>
               <legend>:focus-visible</legend>
-              <Button variant={variant} aria-label="Toggle visibility" pseudoState={{ ":focus-visible": true }}>
-                <Icon><EyeSvg /></Icon>
+              <Button
+                variant={variant}
+                aria-label="Toggle visibility"
+                pseudoState={{ ":focus-visible": true }}
+              >
+                <Icon>
+                  <EyeSvg />
+                </Icon>
               </Button>
             </fieldset>
             <fieldset>
               <legend>:read-only</legend>
               <Button variant={variant} aria-label="Toggle visibility" readOnly>
-                <Icon><EyeSvg /></Icon>
+                <Icon>
+                  <EyeSvg />
+                </Icon>
               </Button>
             </fieldset>
             <fieldset>
               <legend>:disabled</legend>
               <Button variant={variant} aria-label="Toggle visibility" disabled>
-                <Icon><EyeSvg /></Icon>
+                <Icon>
+                  <EyeSvg />
+                </Icon>
               </Button>
             </fieldset>
             <fieldset>
               <legend>:-navi-loading</legend>
               <Button variant={variant} aria-label="Toggle visibility" loading>
-                <Icon><EyeSvg /></Icon>
+                <Icon>
+                  <EyeSvg />
+                </Icon>
               </Button>
             </fieldset>
           </Box>
@@ -1307,10 +1327,12 @@
         return (
           <div className="demo-section" id="icons">
             <h2>Icons</h2>
-            <p style={{ color: "#666", fontSize: "0.9rem", margin: "0 0 16px" }}>
+            <p
+              style={{ color: "#666", fontSize: "0.9rem", margin: "0 0 16px" }}
+            >
               How an icon-only button renders across different variants. Use
-              this to decide whether <code>variant="icon"</code> adds value
-              over the default or an existing variant.
+              this to decide whether <code>variant="icon"</code> adds value over
+              the default or an existing variant.
             </p>
 
             <fieldset>
@@ -1332,7 +1354,6 @@
               <legend>variant="border"</legend>
               <IconStates variant="border" />
             </fieldset>
-
           </div>
         );
       };
