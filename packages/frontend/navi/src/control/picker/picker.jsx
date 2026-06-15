@@ -12,6 +12,11 @@ import { Text } from "@jsenv/navi/src/text/text.jsx";
 import { ControlChildrenWrapper, useControlProps } from "../control_hooks.jsx";
 import { resolveInputProps } from "../input/resolve_input_props.js";
 import { getUIStateControllerById } from "../ui_state_controller.js";
+import {
+  dispatchRequestClearUIState,
+  dispatchRequestSetUIState,
+  getUIStateFromElement,
+} from "../ui_state_dom.js";
 import { PickerContext } from "./picker_context.jsx";
 import { PickerCustomResolver } from "./picker_custom.jsx";
 import { PickerPresetResolver } from "./picker_preset.jsx";
@@ -372,6 +377,22 @@ const PickerButton = (props) => {
       }}
       onnavi_command={(e) => {
         inputProps.onnavi_command(e);
+        // Forward the command to the inner control host inside the picker popup.
+        // This keeps inner controls (List, ControlGroup, Input…) in sync when
+        // an external --navi-update or --navi-clear targets the picker.
+        const { command, event, source } = e.detail;
+        const pickerEl = ref.current;
+        const innerControlHost = pickerEl
+          .querySelector(".navi_picker_content")
+          ?.querySelector("[navi-control-host]");
+        if (innerControlHost) {
+          if (command === "--navi-clear") {
+            dispatchRequestClearUIState(innerControlHost, event);
+          } else {
+            const value = getUIStateFromElement(source);
+            dispatchRequestSetUIState(innerControlHost, value, { event });
+          }
+        }
       }}
     >
       <LoadingOutline

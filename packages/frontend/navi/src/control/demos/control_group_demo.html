@@ -167,7 +167,7 @@
         );
       };
 
-      const FRUITS = ["Apple", "Banana", "Cherry", "Date", "Elderberry"];
+      const LABELS = ["Alpha", "Beta", "Gamma"];
 
       const PickerTextExternalDemo = () => {
         const [entries, pushEntry, clearEntries] = useCallLog();
@@ -176,50 +176,47 @@
         return (
           <Box flex="y" spacing="m" alignX="start">
             <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
-              Des boutons extérieurs envoient <code>--navi-update</code> avec
-              une valeur scalaire sur un <code>Picker</code> texte simple (liste
-              sélectionnable). La valeur affichée et le <code>uiAction</code>{" "}
-              doivent se mettre à jour.
+              Un <code>Input</code> texte à l'intérieur du picker. Les boutons
+              extérieurs envoient <code>--navi-update</code> — l'input interne
+              doit être mis à jour et son <code>uiAction</code> déclenché.
             </p>
             <Field>
-              Fruit
+              Label
               <Picker
                 id={pickerId}
-                name="fruit"
-                placeholder="Choisir un fruit"
+                name="label"
+                placeholder="Saisir un label"
                 uiAction={(v) => {
-                  pushEntry("uiAction", v);
+                  pushEntry("uiAction (picker)", v);
                 }}
                 action={(v) => {
-                  pushEntry("action", v);
+                  pushEntry("action (picker)", v);
                 }}
               >
-                <List selectable command="--navi-send">
-                  {FRUITS.map((fruit) => (
-                    <List.Item
-                      selectable
-                      key={fruit}
-                      value={fruit}
-                      id={`picker-text-${fruit.toLowerCase()}`}
-                      flex
-                      spacing="s"
-                    >
-                      <SelectableInput />
-                      {fruit}
-                    </List.Item>
-                  ))}
-                </List>
+                <Box flex="y" spacing="s" padding="s" alignX="start">
+                  <Input
+                    name="label"
+                    placeholder="Texte libre"
+                    uiAction={(v) => {
+                      pushEntry("uiAction (input)", v);
+                    }}
+                  />
+                  <Box flex="x" spacing="s">
+                    <Button command="--navi-send">Confirmer</Button>
+                    <Button command="--navi-cancel">Annuler</Button>
+                  </Box>
+                </Box>
               </Picker>
             </Field>
             <Box flex="x" spacing="s">
-              {FRUITS.map((fruit) => (
+              {LABELS.map((label) => (
                 <Button
-                  key={fruit}
+                  key={label}
                   command="--navi-update"
                   commandfor={pickerId}
-                  value={fruit}
+                  value={label}
                 >
-                  {fruit}
+                  {label}
                 </Button>
               ))}
               <Button command="--navi-clear" commandfor={pickerId}>
