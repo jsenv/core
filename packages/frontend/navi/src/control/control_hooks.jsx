@@ -797,6 +797,7 @@ const useInteractiveProps = (
   command_props: {
     Object.assign(controlProps, {
       onnavi_command: (e) => {
+        props.onnavi_command?.(e);
         onNaviCommand(e, { debugCommand });
       },
     });

@@ -1,4 +1,4 @@
-import { useContext } from "preact/hooks";
+import { useContext, useRef } from "preact/hooks";
 
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Badge } from "@jsenv/navi/src/text/badge.jsx";
@@ -7,6 +7,10 @@ import { Color } from "@jsenv/navi/src/text/color.jsx";
 import { Text } from "@jsenv/navi/src/text/text.jsx";
 import { Time } from "@jsenv/navi/src/text/time.jsx";
 import { ControlGroup } from "../control_group.jsx";
+import {
+  dispatchRequestSetUIState,
+  getUIStateFromElement,
+} from "../ui_state_dom.js";
 import { PickerContext } from "./picker_context.jsx";
 
 export const PickerTypeResolver = (props) => {
@@ -53,10 +57,26 @@ const PickerText = (props) => {
 const PickerControlGroup = (props) => {
   const Next = useNextResolver();
   const { children, ...rest } = props;
+  const controlGroupRef = useRef(null);
 
   return (
-    <Next ui={<PickerControlGroupUI />} {...rest} type="navi_js">
-      <ControlGroup command="--navi-update">{children}</ControlGroup>
+    <Next
+      ui={<PickerControlGroupUI />}
+      {...rest}
+      type="navi_js"
+      onnavi_command={(e) => {
+        debugger;
+        const { event, source } = e.detail;
+        const controlGroupEl = controlGroupRef.current;
+        if (controlGroupEl) {
+          const value = getUIStateFromElement(source);
+          dispatchRequestSetUIState(controlGroupEl, value, { event });
+        }
+      }}
+    >
+      <ControlGroup ref={controlGroupRef} command="--navi-update">
+        {children}
+      </ControlGroup>
     </Next>
   );
 };
