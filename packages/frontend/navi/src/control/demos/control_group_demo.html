@@ -20,7 +20,10 @@
         Input,
       } from "@jsenv/navi";
       import { NaviDebug } from "@jsenv/navi";
+      import { signal } from "@preact/signals";
       import { CallLog, useCallLog } from "./utils/call_log.jsx";
+
+      const firstNameStateSignal = signal("Jean");
 
       const App = () => {
         return (
@@ -176,6 +179,14 @@
                 <Field>
                   Last name (no defaultValue)
                   <Input type="text" name="lastName" />
+                </Field>
+                <Field>
+                  Nick name (value=signal "Jean")
+                  <Input
+                    type="text"
+                    name="nickName"
+                    value={firstNameStateSignal.value}
+                  />
                 </Field>
                 <Box flex="x" spacing="s">
                   <Button.Reset />

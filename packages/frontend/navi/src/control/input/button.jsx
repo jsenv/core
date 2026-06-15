@@ -60,7 +60,6 @@ const ButtonOk = (props) => {
       command="--navi-send"
       // eslint-disable-next-line react/no-children-prop
       children={naviI18n("button.ok")}
-      cta
       {...props}
     />
   );
