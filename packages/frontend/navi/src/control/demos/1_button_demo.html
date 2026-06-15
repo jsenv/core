@@ -1277,7 +1277,7 @@
         </svg>
       );
 
-      const IconStates = ({ variant, icon }) => {
+      const IconStates = ({ variant, icon, color }) => {
         return (
           <Box flex spacing="s" wrap>
             <fieldset>
@@ -1285,6 +1285,7 @@
               <Button
                 variant={variant}
                 icon={icon}
+                color={color}
                 padding="s"
                 aria-label="Action"
               >
@@ -1298,6 +1299,7 @@
               <Button
                 variant={variant}
                 icon={icon}
+                color={color}
                 padding="s"
                 aria-label="Action"
                 pseudoState={{ ":hover": true }}
@@ -1312,6 +1314,7 @@
               <Button
                 variant={variant}
                 icon={icon}
+                color={color}
                 padding="s"
                 aria-label="Action"
                 pseudoState={{ ":focus-visible": true }}
@@ -1326,6 +1329,7 @@
               <Button
                 variant={variant}
                 icon={icon}
+                color={color}
                 padding="s"
                 aria-label="Action"
                 readOnly
@@ -1340,6 +1344,7 @@
               <Button
                 variant={variant}
                 icon={icon}
+                color={color}
                 padding="s"
                 aria-label="Action"
                 disabled
@@ -1354,6 +1359,7 @@
               <Button
                 variant={variant}
                 icon={icon}
+                color={color}
                 padding="s"
                 aria-label="Action"
                 loading
@@ -1369,7 +1375,7 @@
 
       const IconsDemo = () => {
         return (
-          <div className="demo-section" id="icons" style={{ color: "violet" }}>
+          <div className="demo-section" id="icons">
             <h2>Icons</h2>
 
             <fieldset>
@@ -1411,7 +1417,7 @@
                     gap: "4px",
                   }}
                 >
-                  <Button aria-label="Action">
+                  <Button color="violet" aria-label="Action">
                     <Icon>
                       <DemoIconSvg />
                     </Icon>
@@ -1428,7 +1434,7 @@
                     gap: "4px",
                   }}
                 >
-                  <Button icon aria-label="Action">
+                  <Button icon color="violet" aria-label="Action">
                     <Icon>
                       <DemoIconSvg />
                     </Icon>
@@ -1458,7 +1464,7 @@
                     gap: "4px",
                   }}
                 >
-                  <Button icon padding="s" aria-label="Action">
+                  <Button icon padding="s" color="violet" aria-label="Action">
                     <Icon>
                       <DemoIconSvg />
                     </Icon>
@@ -1472,22 +1478,22 @@
 
             <fieldset>
               <legend>icon — states (default)</legend>
-              <IconStates icon />
+              <IconStates icon color="violet" />
             </fieldset>
 
             <fieldset>
               <legend>icon — states with variant="border"</legend>
-              <IconStates icon variant="border" />
+              <IconStates icon color="violet" variant="border" />
             </fieldset>
 
             <fieldset>
               <legend>icon — states with variant="discrete"</legend>
-              <IconStates icon variant="discrete" />
+              <IconStates icon color="violet" variant="discrete" />
             </fieldset>
 
             <fieldset>
               <legend>icon — states with variant="discrete-border"</legend>
-              <IconStates icon variant="discrete-border" />
+              <IconStates icon color="violet" variant="discrete-border" />
             </fieldset>
 
             <h3 id="icons-circle" style={{ margin: "24px 0 8px" }}>
@@ -1507,7 +1513,7 @@
             <Box flex spacing="m" wrap>
               <fieldset>
                 <legend>default</legend>
-                <Button icon padding="s" circle aria-label="Action">
+                <Button icon padding="s" color="violet" circle aria-label="Action">
                   <Icon>
                     <DemoIconSvg />
                   </Icon>
@@ -1518,6 +1524,7 @@
                 <Button
                   icon
                   padding="s"
+                  color="violet"
                   circle
                   aria-label="Action"
                   pseudoState={{ ":hover": true }}
@@ -1532,6 +1539,7 @@
                 <Button
                   icon
                   padding="s"
+                  color="violet"
                   circle
                   aria-label="Action"
                   pseudoState={{ ":focus-visible": true }}
@@ -1543,7 +1551,7 @@
               </fieldset>
               <fieldset>
                 <legend>:disabled</legend>
-                <Button icon padding="s" circle aria-label="Action" disabled>
+                <Button icon padding="s" color="violet" circle aria-label="Action" disabled>
                   <Icon>
                     <DemoIconSvg />
                   </Icon>
@@ -1551,7 +1559,7 @@
               </fieldset>
               <fieldset>
                 <legend>:-navi-loading</legend>
-                <Button icon padding="s" circle aria-label="Action" loading>
+                <Button icon padding="s" color="violet" circle aria-label="Action" loading>
                   <Icon>
                     <DemoIconSvg />
                   </Icon>
