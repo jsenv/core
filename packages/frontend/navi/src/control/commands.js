@@ -21,10 +21,18 @@ export const dispatchNaviCommand = (element, command, event) => {
     console.warn(`Unknown command "${command}"`);
     return false;
   }
+  // Check for explicit HTML target overrides early so a misconfigured commandfor
+  // attribute (id not found) aborts immediately rather than silently falling back
+  // to DOM resolution. Handlers receive this info via resolveExplicitTarget().
+  const explicitTarget = resolveExplicitTarget(element);
+  if (explicitTarget === null) {
+    // attribute was present but target not found — already warned inside resolveExplicitTarget
+    return false;
+  }
   const execute = naviCommand.commandHandler(element, event);
   if (!execute) {
     console.warn(
-      `"${naviCommand}" triggered on element but no suitable target found`,
+      `"${command}" triggered on element but no suitable target found`,
       element,
     );
     return false;
@@ -39,11 +47,19 @@ export const dispatchNaviCommand = (element, command, event) => {
 };
 // Returns the target explicitly declared via HTML attributes (commandfor / navi-command-target),
 // or undefined when no such attribute is present.
-// Each commandHandler calls this as the first step so the flow is readable per command.
+// Returns null when the attribute is present but the target element was not found (already warned).
+// Handlers must check for null explicitly — null || fallback() would silently ignore the error.
 const resolveExplicitTarget = (element) => {
   const commandFor = element.getAttribute("commandfor");
   if (commandFor) {
     const target = document.getElementById(commandFor);
+    if (!target) {
+      console.warn(
+        `command triggered on element with commandfor="${commandFor}" but no element with that id found`,
+        element,
+      );
+      return null;
+    }
     return target;
   }
   const naviCommandTarget = element.getAttribute("navi-command-target");
@@ -106,11 +122,11 @@ export const onNaviCommand = (e, { debugCommand }) => {
 };
 
 const NAVI_COMMANDS = {};
-// commandHandler(source, event, explicitTarget) → { target, implementation } | undefined
-// - explicitTarget is set when an HTML attribute (commandfor / navi-command-target) names
-//   a specific target; undefined otherwise. Each handler receives it and decides whether
-//   to use it as-is or fall back to its own DOM resolution logic.
-// - Returns undefined when no target can be found for this command.
+// commandHandler(source, event) → { target, implementation } | undefined
+// - Each handler calls resolveExplicitTarget(source) first, then falls back to
+//   its own DOM resolution logic (closest expandable, parent control, etc.).
+// - Returns undefined when no target can be found — this is a normal outcome for
+//   some commands (e.g. --navi-send when the source is outside any navi context).
 // - Returns { target, implementation } so dispatchNaviCommand can dispatch navi_command.
 const registerNaviCommand = (command, commandHandler) => {
   NAVI_COMMANDS[command] = {
