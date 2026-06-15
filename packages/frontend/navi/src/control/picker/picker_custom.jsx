@@ -312,7 +312,7 @@ const PickerCustom = (props) => {
       }
       restoreFocus(e);
     };
-    const disableClickFor = useIgnoreClickForMousedown((e) => {
+    const disableClickFor = useIgnoreClickForMousedown(ref, (e) => {
       debugPopup(e, `click ignored`);
     });
     const requestOpen = (e) => {
@@ -621,26 +621,37 @@ const PickerContentInsideDialog = (props) => {
 };
 
 /**
- * Returns a `disableClickFor` function that suppresses the `click` event that
- * the browser fires after a `mousedown` which already handled an open/close action.
+ * Returns a `disableClickFor` function that suppresses the next `click` event
+ * that lands on a specific element after a `mousedown` already handled an
+ * open/close action.
  *
- * Problem: when the user clicks a dialog's backdrop to close it, the browser
- * fires `mousedown` on the backdrop (which closes the dialog), then fires
- * `click` on whatever element is underneath once the dialog is gone. If that
- * element is the trigger button that originally opened the dialog, the `click`
- * would immediately re-open it.
+ * Problem: when the popover backdrop closes on mousedown, the browser then
+ * dispatches a `click` on whatever element is under the pointer. If that element
+ * is the picker button, it would immediately re-open the picker.
  *
- * Calling `stopPropagation()` or `preventDefault()` on the backdrop `mousedown`
- * does not help: the browser dispatches the subsequent `click` regardless,
- * targeting whichever element ends up under the pointer after the dialog closes.
+ * We cannot call `stopPropagation()` or `preventDefault()` on the backdrop
+ * `mousedown` to prevent that click — the browser dispatches it regardless.
  *
  * Solution: register a self-removing capture-phase `click` listener on `document`
- * so the click is intercepted before it reaches any element handler.
+ * and suppress the click only if it lands inside the given element (the picker
+ * button). Clicks on any other element (e.g. a submit button) pass through
+ * normally.
+ *
+ * Note: the popover backdrop stays in the DOM (with pointer-events:none) so that
+ * the browser always finds a target for the mousedown → click sequence. If the
+ * backdrop were removed from the DOM between mousedown and mouseup, the browser
+ * would not dispatch a click at all, which would leave this listener armed
+ * forever and cause it to swallow the next unrelated user click.
  */
-const useIgnoreClickForMousedown = (onIgnore) => {
+const useIgnoreClickForMousedown = (elementRef, onIgnore) => {
   const disableClickFor = () => {
     const suppressClick = (clickEvent) => {
       document.removeEventListener("click", suppressClick, { capture: true });
+      const el = elementRef.current;
+      if (!el || !el.contains(clickEvent.target)) {
+        // Click landed outside the element we are guarding — let it through.
+        return;
+      }
       clickEvent.stopPropagation();
       clickEvent.preventDefault();
       onIgnore?.(clickEvent);
