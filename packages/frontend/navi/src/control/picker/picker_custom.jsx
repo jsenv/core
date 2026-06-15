@@ -487,7 +487,7 @@ const PickerCustom = (props) => {
           if (e.button !== 0) {
             return;
           }
-          // click inside popover should not bubble to the select (would re-open it if that click closes it)
+          // click inside popover should not bubble to the picker (would re-open it if that click closes it)
           debugPopup(e, `popover click stopPropagation`);
           e.stopPropagation();
         },
