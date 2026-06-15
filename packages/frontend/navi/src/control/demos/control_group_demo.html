@@ -456,6 +456,9 @@
             <ControlGroup
               id={cgId}
               name="contact"
+              action={(v) => {
+                pushEntry("action (group)", v);
+              }}
               uiAction={(v) => {
                 pushEntry("uiAction (group)", v);
               }}
@@ -481,6 +484,7 @@
                     }}
                   />
                 </Field>
+                <Button.Send />
               </Box>
             </ControlGroup>
             <Box flex="x" spacing="s">
