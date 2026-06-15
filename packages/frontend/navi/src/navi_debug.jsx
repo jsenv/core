@@ -97,7 +97,7 @@ export const NaviDebug = ({
   if (debugScroll === true || (debugInteraction && debugScroll === undefined)) {
     debugScroll = debugScrollDefault;
   }
-  if (debugPopup === true) {
+  if (debugPopup === true || (debugInteraction && debugPopup === undefined)) {
     debugPopup = debugPopupDefault;
   }
   if (debugAction === true) {

@@ -312,7 +312,9 @@ const PickerCustom = (props) => {
       }
       restoreFocus(e);
     };
-    const disableClickFor = useIgnoreClickForMousedown();
+    const disableClickFor = useIgnoreClickForMousedown((e) => {
+      debugPopup(e, `click ignored`);
+    });
     const requestOpen = (e) => {
       // scroll <button> of the picker into view when opening it
       const pickerEl = ref.current;
@@ -635,12 +637,13 @@ const PickerContentInsideDialog = (props) => {
  * Solution: register a self-removing capture-phase `click` listener on `document`
  * so the click is intercepted before it reaches any element handler.
  */
-const useIgnoreClickForMousedown = () => {
+const useIgnoreClickForMousedown = (onIgnore) => {
   const disableClickFor = () => {
     const suppressClick = (clickEvent) => {
+      document.removeEventListener("click", suppressClick, { capture: true });
       clickEvent.stopPropagation();
       clickEvent.preventDefault();
-      document.removeEventListener("click", suppressClick, { capture: true });
+      onIgnore?.(clickEvent);
     };
     document.addEventListener("click", suppressClick, { capture: true });
   };
