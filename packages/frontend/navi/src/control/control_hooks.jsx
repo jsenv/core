@@ -606,10 +606,13 @@ export const useControlgroupProps = (
     ],
   );
 
-  if (action) {
-    // When the group's aggregated value changes, dispatch dispatchRequestAction
-    // so the action pipeline (constraints, optimistic update, execute action) runs.
-    // This mirrors what leaf controls do via their synthetic input event + addInputEffect.
+  // Auto-trigger the group action when a checkable child (radio/checkbox) changes.
+  // For other inputs (text, range…) the action must be triggered explicitly via
+  // a submit button or Enter — same as a regular form field.
+  if (
+    action &&
+    (controlType === "radio_group" || controlType === "checkbox_group")
+  ) {
     controlgroupProps.onnavi_ui_state_change = (e) => {
       const el = ref.current;
       if (el) {
