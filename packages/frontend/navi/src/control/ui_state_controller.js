@@ -313,6 +313,12 @@ export const useUIStateController = (
       const stateIsTheSame = compareTwoJsValues(newUIState, currentUIState);
       if (stateIsTheSame) {
         if (controlType === "button") {
+          if (e.detail?.internalBehavior) {
+            // Programmatic re-render with same value (e.g. state_prop from _checkForUpdates
+            // on a button with a new object reference but same content) — not a user action,
+            // do NOT fire the command or we get an infinite loop.
+            return true;
+          }
           debugUIState(
             e,
             `${controllerSig}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> trigger button action`,
@@ -409,8 +415,11 @@ export const useUIStateController = (
       const internalBehavior = e.detail?.internalBehavior;
       if (internalBehavior) {
         // Still fire uiAction so external listeners (e.g. signals) stay in
-        // sync, but do NOT notify the parent — the group already knows.
-        onUIAction();
+        // sync, but do NOT fire the command and do NOT notify the parent —
+        // both would cause an infinite loop when a group cascades --navi-update
+        // down to its children (child command would re-trigger --navi-update).
+        uiActionInternal?.(newUIState, e);
+        uiAction?.(newUIState, e);
         return true;
       }
       notifyParentAboutChildInteraction(e, { stateChanged: true });
@@ -642,9 +651,9 @@ export const useUIGroupStateController = (
   };
 
   // Applies the aggregated state: updates signal, fires uiAction/command/navi_ui_state_change,
-  // and notifies the parent. Called both from onChange (after re-aggregation) and from
+  // and notifies the parent. Called both from onChange (after child interaction) and from
   // setUIState (after cascading to children).
-  const applyState = (newUIState, e) => {
+  const applyState = (newUIState, e, { internalBehavior = false } = {}) => {
     const uiStateController = uiStateControllerRef.current;
     const currentUIState = uiStateController.uiState;
     uiStateController.uiState = newUIState;
@@ -654,7 +663,15 @@ export const useUIGroupStateController = (
       `${controlType}.applyState(${JSON.stringify(newUIState)}, "${e.type}") -> updates from ${JSON.stringify(currentUIState)} to ${JSON.stringify(newUIState)}`,
     );
     publishUIState(newUIState);
-    uiStateController.onInteraction(e);
+    if (internalBehavior) {
+      // Fire uiAction only — skip command to avoid re-triggering the same command
+      // that caused this setUIState call in the first place.
+      const uiAction = uiActionRef.current;
+      uiAction?.(newUIState, e);
+      uiActionInternal?.(newUIState, e);
+    } else {
+      uiStateController.onInteraction(e);
+    }
     const el = ref.current;
     if (el) {
       dispatchInternalCustomEvent(el, "navi_ui_state_change", {
@@ -757,7 +774,7 @@ export const useUIGroupStateController = (
       );
       const groupUIState =
         aggChildState === undefined ? fallbackState : aggChildState;
-      applyState(groupUIState, e);
+      applyState(groupUIState, e, { internalBehavior: true });
     },
     // Called on mount/unmount/render-batch: updates state silently with no external reactions.
     syncInternalState: (newUIState) => {
