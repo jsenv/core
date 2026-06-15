@@ -408,6 +408,9 @@ export const useUIStateController = (
       }
       const internalBehavior = e.detail?.internalBehavior;
       if (internalBehavior) {
+        // Still fire uiAction so external listeners (e.g. signals) stay in
+        // sync, but do NOT notify the parent — the group already knows.
+        onUIAction();
         return true;
       }
       notifyParentAboutChildInteraction(e, { stateChanged: true });
