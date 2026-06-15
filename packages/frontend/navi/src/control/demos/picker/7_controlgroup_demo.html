@@ -44,6 +44,7 @@
     </div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
+      import { signal } from "@preact/signals";
       import { CallLog, useCallLog } from "../utils/call_log.jsx";
       import {
         NaviDebug,
@@ -54,6 +55,7 @@
         Input,
         Form,
         Button,
+        Time,
       } from "@jsenv/navi";
 
       const App = () => (
@@ -61,6 +63,7 @@
           <Box flex="y" spacing="l">
             <OutsideFormDemo />
             <InFormDemo />
+            <DurationDemo />
           </Box>
         </NaviDebug>
       );
@@ -169,6 +172,135 @@
                 <Button.Send />
               </Box>
             </Form>
+            <CallLog entries={entries} onClear={clear} />
+          </div>
+        );
+      };
+
+      // ── 3. Duration (hours + minutes) ────────────────────────────────────
+
+      const hoursSignal = signal(0);
+      const minutesSignal = signal(0);
+
+      const DurationDemo = () => {
+        const [entries, push, clear] = useCallLog();
+
+        const currentDate = new Date(
+          0,
+          0,
+          0,
+          hoursSignal.value,
+          minutesSignal.value,
+        );
+
+        return (
+          <div class="demo-section" id="duration">
+            <h2>3. Duration picker (hours + minutes)</h2>
+            <p class="desc">
+              Le picker agrège heures et minutes en un objet. Les signaux
+              <code>hoursSignal</code> et <code>minutesSignal</code> sont mis à
+              jour à chaque changement, et le composant{" "}
+              <code>&lt;Time&gt;</code> affiche la durée en temps réel dans le
+              trigger.
+            </p>
+            <Box flex="y" spacing="m" alignX="start">
+              <Field vertical>
+                <Label>Durée</Label>
+                <Picker
+                  name="duration"
+                  type="controlgroup"
+                  placeholder="Saisir une durée"
+                  uiAction={(v) => {
+                    if (v !== null && typeof v === "object") {
+                      hoursSignal.value = Number(v.hours) || 0;
+                      minutesSignal.value = Number(v.minutes) || 0;
+                    }
+                    push("uiAction", v);
+                  }}
+                  action={(v) => {
+                    push("action", v);
+                  }}
+                  renderValue={() => <Time type="time">{currentDate}</Time>}
+                >
+                  <Box flex="y" spacing="s" padding="s" alignX="start">
+                    <Field vertical>
+                      <Label>Heures</Label>
+                      <Input
+                        name="hours"
+                        type="number"
+                        min="0"
+                        max="23"
+                        placeholder="0"
+                        defaultValue={String(hoursSignal.value)}
+                      />
+                    </Field>
+                    <Field vertical>
+                      <Label>Minutes</Label>
+                      <Input
+                        name="minutes"
+                        type="number"
+                        min="0"
+                        max="59"
+                        placeholder="0"
+                        defaultValue={String(minutesSignal.value)}
+                      />
+                    </Field>
+                  </Box>
+                </Picker>
+              </Field>
+
+              <p style={{ margin: "0", fontSize: "13px", color: "#555" }}>
+                Durée actuelle :{" "}
+                <strong>
+                  <Time type="time">{currentDate}</Time>
+                </strong>{" "}
+                ({hoursSignal.value}h {minutesSignal.value}min)
+              </p>
+
+              <Form
+                action={(v) => {
+                  push("Form action", v);
+                }}
+              >
+                <Box flex="y" spacing="m" alignX="start">
+                  <Field vertical>
+                    <Label>Durée (dans un form)</Label>
+                    <Picker
+                      name="duration"
+                      type="controlgroup"
+                      placeholder="Saisir une durée"
+                      uiAction={(v) => {
+                        push("Picker uiAction", v);
+                      }}
+                    >
+                      <Box flex="y" spacing="s" padding="s" alignX="start">
+                        <Field vertical>
+                          <Label>Heures</Label>
+                          <Input
+                            name="hours"
+                            type="number"
+                            min="0"
+                            max="23"
+                            placeholder="0"
+                          />
+                        </Field>
+                        <Field vertical>
+                          <Label>Minutes</Label>
+                          <Input
+                            name="minutes"
+                            type="number"
+                            min="0"
+                            max="59"
+                            placeholder="0"
+                          />
+                        </Field>
+                      </Box>
+                    </Picker>
+                  </Field>
+                  <Button.Send />
+                </Box>
+              </Form>
+            </Box>
             <CallLog entries={entries} onClear={clear} />
           </div>
         );
