@@ -1278,7 +1278,12 @@
           <Box flex spacing="s" wrap>
             <fieldset>
               <legend>default</legend>
-              <Button variant={variant} icon={icon} aria-label="Action">
+              <Button
+                variant={variant}
+                icon={icon}
+                padding="s"
+                aria-label="Action"
+              >
                 <Icon>
                   <DemoIconSvg />
                 </Icon>
@@ -1289,6 +1294,7 @@
               <Button
                 variant={variant}
                 icon={icon}
+                padding="s"
                 aria-label="Action"
                 pseudoState={{ ":hover": true }}
               >
@@ -1302,6 +1308,7 @@
               <Button
                 variant={variant}
                 icon={icon}
+                padding="s"
                 aria-label="Action"
                 pseudoState={{ ":focus-visible": true }}
               >
@@ -1315,6 +1322,7 @@
               <Button
                 variant={variant}
                 icon={icon}
+                padding="s"
                 aria-label="Action"
                 readOnly
               >
@@ -1328,6 +1336,7 @@
               <Button
                 variant={variant}
                 icon={icon}
+                padding="s"
                 aria-label="Action"
                 disabled
               >
@@ -1338,7 +1347,13 @@
             </fieldset>
             <fieldset>
               <legend>:-navi-loading</legend>
-              <Button variant={variant} icon={icon} aria-label="Action" loading>
+              <Button
+                variant={variant}
+                icon={icon}
+                padding="s"
+                aria-label="Action"
+                loading
+              >
                 <Icon>
                   <DemoIconSvg />
                 </Icon>
