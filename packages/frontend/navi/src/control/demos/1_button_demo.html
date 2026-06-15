@@ -1350,30 +1350,56 @@
         return (
           <div className="demo-section" id="icons">
             <h2>Icons</h2>
-            <p
-              style={{ color: "#666", fontSize: "0.9rem", margin: "0 0 16px" }}
-            >
-              How an icon-only button renders across different variants.
-            </p>
 
             <fieldset>
-              <legend>default (no variant)</legend>
-              <IconStates />
+              <legend>without icon prop vs with icon prop</legend>
+              <p
+                style={{
+                  color: "#666",
+                  fontSize: "0.85rem",
+                  margin: "0 0 8px",
+                }}
+              >
+                The <code>icon</code> prop resets padding so the button takes
+                exactly the icon's size.
+              </p>
+              <div className="button-group">
+                <Button aria-label="Toggle visibility">
+                  <Icon>
+                    <EyeSvg />
+                  </Icon>
+                </Button>
+                <Button icon aria-label="Toggle visibility">
+                  <Icon>
+                    <EyeSvg />
+                  </Icon>
+                </Button>
+              </div>
             </fieldset>
 
             <fieldset>
-              <legend>variant="discrete"</legend>
-              <IconStates variant="discrete" />
-            </fieldset>
-
-            <fieldset>
-              <legend>variant="discrete-border"</legend>
-              <IconStates variant="discrete-border" />
-            </fieldset>
-
-            <fieldset>
-              <legend>icon prop (padding reset)</legend>
+              <legend>icon — states (default)</legend>
               <IconStates icon />
+            </fieldset>
+
+            <fieldset>
+              <legend>icon — states with variant="discrete"</legend>
+              <IconStates icon variant="discrete" />
+            </fieldset>
+
+            <fieldset>
+              <legend>icon — states with variant="discrete-border"</legend>
+              <IconStates icon variant="discrete-border" />
+            </fieldset>
+
+            <fieldset>
+              <legend>icon — states with variant="border"</legend>
+              <IconStates icon variant="border" />
+            </fieldset>
+
+            <fieldset>
+              <legend>Icon-only toggle example</legend>
+              <IconToggleSection />
             </fieldset>
           </div>
         );
@@ -1951,89 +1977,6 @@
                   </Button>
                 </fieldset>
               </Box>
-            </fieldset>
-
-            {/* ── Icon prop ────────────────────────────────────────────── */}
-            <h3
-              id="customization-variant-icon"
-              style={{ margin: "24px 0 12px" }}
-            >
-              Icon — prop
-            </h3>
-
-            <fieldset>
-              <legend>Regular vs icon prop</legend>
-              <div className="button-group">
-                <Button aria-label="Toggle visibility">
-                  <Icon>
-                    <EyeSvg />
-                  </Icon>
-                </Button>
-                <Button icon aria-label="Toggle visibility">
-                  <Icon>
-                    <EyeSvg />
-                  </Icon>
-                </Button>
-              </div>
-            </fieldset>
-
-            <fieldset>
-              <legend>icon — states</legend>
-              <Box flex spacing="s">
-                <fieldset>
-                  <legend>:hover</legend>
-                  <Button
-                    icon
-                    aria-label="Toggle"
-                    pseudoState={{ ":hover": true }}
-                  >
-                    <Icon>
-                      <EyeSvg />
-                    </Icon>
-                  </Button>
-                </fieldset>
-                <fieldset>
-                  <legend>:focus-visible</legend>
-                  <Button
-                    icon
-                    aria-label="Toggle"
-                    pseudoState={{ ":focus-visible": true }}
-                  >
-                    <Icon>
-                      <EyeSvg />
-                    </Icon>
-                  </Button>
-                </fieldset>
-                <fieldset>
-                  <legend>:read-only</legend>
-                  <Button icon aria-label="Toggle" readOnly>
-                    <Icon>
-                      <EyeSvg />
-                    </Icon>
-                  </Button>
-                </fieldset>
-                <fieldset>
-                  <legend>:disabled</legend>
-                  <Button icon aria-label="Toggle" disabled>
-                    <Icon>
-                      <EyeSvg />
-                    </Icon>
-                  </Button>
-                </fieldset>
-                <fieldset>
-                  <legend>:-navi-loading</legend>
-                  <Button icon aria-label="Toggle" loading>
-                    <Icon>
-                      <EyeSvg />
-                    </Icon>
-                  </Button>
-                </fieldset>
-              </Box>
-            </fieldset>
-
-            <fieldset>
-              <legend>Icon-only toggle example</legend>
-              <IconToggleSection />
             </fieldset>
           </div>
         );
