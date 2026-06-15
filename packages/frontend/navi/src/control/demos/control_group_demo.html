@@ -18,6 +18,8 @@
         Field,
         Form,
         Input,
+        List,
+        SelectableInput,
       } from "@jsenv/navi";
       import { NaviDebug } from "@jsenv/navi";
       import { signal } from "@preact/signals";
@@ -33,6 +35,21 @@
 
             <nav>
               <ol>
+                <li>
+                  <a href="#external-control-object">
+                    Contrôle externe — ControlGroup (objet nommé)
+                  </a>
+                </li>
+                <li>
+                  <a href="#external-control-single">
+                    Contrôle externe — SelectableList (valeur unique)
+                  </a>
+                </li>
+                <li>
+                  <a href="#external-control-multiple">
+                    Contrôle externe — SelectableList (valeurs multiples)
+                  </a>
+                </li>
                 <li>
                   <a href="#standalone-basic">Standalone — basique</a>
                 </li>
@@ -59,13 +76,23 @@
                 <li>
                   <a href="#inside-form">Inside a Form</a>
                 </li>
-                <li>
-                  <a href="#external-control">
-                    Contrôle externe (--navi-update)
-                  </a>
-                </li>
               </ol>
             </nav>
+
+            <section id="external-control-object">
+              <h2>Contrôle externe — ControlGroup (objet nommé)</h2>
+              <ExternalControlDemo />
+            </section>
+
+            <section id="external-control-single">
+              <h2>Contrôle externe — SelectableList (valeur unique)</h2>
+              <ExternalSelectableDemo />
+            </section>
+
+            <section id="external-control-multiple">
+              <h2>Contrôle externe — SelectableList (valeurs multiples)</h2>
+              <ExternalSelectableMultipleDemo />
+            </section>
 
             <section id="standalone-basic">
               <h2>Standalone — basique</h2>
@@ -105,11 +132,6 @@
             <section id="inside-form">
               <h2>Inside a Form</h2>
               <InsideFormDemo />
-            </section>
-
-            <section id="external-control">
-              <h2>Contrôle externe (--navi-update)</h2>
-              <ExternalControlDemo />
             </section>
           </Box>
         );
@@ -443,7 +465,7 @@
 
       const ExternalControlDemo = () => {
         const [entries, pushEntry, clearEntries] = useCallLog();
-        const cgId = "external-control-cg";
+        const cgId = "external-control-object-cg";
 
         return (
           <Box flex="y" spacing="m" alignX="start">
@@ -508,6 +530,127 @@
                 value={{ firstName: "", lastName: "" }}
               >
                 Vider
+              </Button>
+            </Box>
+            <CallLog entries={entries} onClear={clearEntries} />
+          </Box>
+        );
+      };
+
+      const ExternalSelectableDemo = () => {
+        const [entries, pushEntry, clearEntries] = useCallLog();
+        const listId = "external-control-single-list";
+        const FRUITS = ["Apple", "Banana", "Cherry", "Date", "Elderberry"];
+
+        return (
+          <Box flex="y" spacing="m" alignX="start">
+            <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+              Des boutons extérieurs envoient <code>--navi-update</code> avec
+              une valeur scalaire sur une <code>List selectable</code> (radio
+              group). La sélection doit se mettre à jour et le{" "}
+              <code>uiAction</code> de la liste doit être appelé.
+            </p>
+            <List
+              id={listId}
+              selectable
+              uiAction={(v) => {
+                pushEntry("uiAction", v);
+              }}
+              action={(v) => {
+                pushEntry("action", v);
+              }}
+              expandX
+            >
+              {FRUITS.map((fruit, i) => (
+                <List.Item
+                  selectable
+                  key={fruit}
+                  index={i}
+                  value={fruit}
+                  flex
+                  spacing="s"
+                >
+                  <SelectableInput />
+                  {fruit}
+                </List.Item>
+              ))}
+            </List>
+            <Box flex="x" spacing="s">
+              {FRUITS.map((fruit) => (
+                <Button
+                  key={fruit}
+                  command="--navi-update"
+                  commandfor={listId}
+                  value={fruit}
+                >
+                  {fruit}
+                </Button>
+              ))}
+              <Button command="--navi-update" commandfor={listId} value={null}>
+                Désélectionner
+              </Button>
+            </Box>
+            <CallLog entries={entries} onClear={clearEntries} />
+          </Box>
+        );
+      };
+
+      const ExternalSelectableMultipleDemo = () => {
+        const [entries, pushEntry, clearEntries] = useCallLog();
+        const listId = "external-control-multiple-list";
+        const FRUITS = ["Apple", "Banana", "Cherry", "Date", "Elderberry"];
+
+        return (
+          <Box flex="y" spacing="m" alignX="start">
+            <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+              Des boutons extérieurs envoient <code>--navi-update</code> avec
+              une valeur tableau sur une <code>List selectable multiple</code>{" "}
+              (checkbox group). La sélection doit se mettre à jour et le{" "}
+              <code>uiAction</code> de la liste doit être appelé.
+            </p>
+            <List
+              id={listId}
+              selectable
+              multiple
+              uiAction={(v) => {
+                pushEntry("uiAction", JSON.stringify(v));
+              }}
+              action={(v) => {
+                pushEntry("action", JSON.stringify(v));
+              }}
+              expandX
+            >
+              {FRUITS.map((fruit, i) => (
+                <List.Item
+                  selectable
+                  key={fruit}
+                  index={i}
+                  value={fruit}
+                  flex
+                  spacing="s"
+                >
+                  <SelectableInput />
+                  {fruit}
+                </List.Item>
+              ))}
+            </List>
+            <Box flex="x" spacing="s">
+              <Button
+                command="--navi-update"
+                commandfor={listId}
+                value={["Apple", "Cherry"]}
+              >
+                Apple + Cherry
+              </Button>
+              <Button
+                command="--navi-update"
+                commandfor={listId}
+                value={["Banana", "Date", "Elderberry"]}
+              >
+                Banana + Date + Elderberry
+              </Button>
+              <Button command="--navi-update" commandfor={listId} value={[]}>
+                Tout désélectionner
               </Button>
             </Box>
             <CallLog entries={entries} onClear={clearEntries} />
