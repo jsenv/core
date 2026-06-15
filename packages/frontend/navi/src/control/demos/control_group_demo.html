@@ -59,6 +59,11 @@
                 <li>
                   <a href="#inside-form">Inside a Form</a>
                 </li>
+                <li>
+                  <a href="#external-control">
+                    Contrôle externe (--navi-update)
+                  </a>
+                </li>
               </ol>
             </nav>
 
@@ -100,6 +105,11 @@
             <section id="inside-form">
               <h2>Inside a Form</h2>
               <InsideFormDemo />
+            </section>
+
+            <section id="external-control">
+              <h2>Contrôle externe (--navi-update)</h2>
+              <ExternalControlDemo />
             </section>
           </Box>
         );
@@ -427,6 +437,76 @@
               Form
             </p>
             <CallLog entries={formEntries} onClear={clearFormEntries} />
+          </Box>
+        );
+      };
+
+      const ExternalControlDemo = () => {
+        const [entries, pushEntry, clearEntries] = useCallLog();
+        const cgId = "external-control-cg";
+
+        return (
+          <Box flex="y" spacing="m" alignX="start">
+            <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+              Des boutons extérieurs envoient <code>--navi-update</code> avec
+              une valeur objet sur le ControlGroup. Les champs doivent se mettre
+              à jour et les <code>uiAction</code> des inputs doivent être
+              appelés (pour syncer les signaux).
+            </p>
+            <ControlGroup
+              id={cgId}
+              name="contact"
+              uiAction={(v) => {
+                pushEntry("uiAction (group)", v);
+              }}
+            >
+              <Box flex="y" spacing="s" alignX="start">
+                <Field>
+                  First name
+                  <Input
+                    type="text"
+                    name="firstName"
+                    uiAction={(v) => {
+                      pushEntry("uiAction (firstName)", v);
+                    }}
+                  />
+                </Field>
+                <Field>
+                  Last name
+                  <Input
+                    type="text"
+                    name="lastName"
+                    uiAction={(v) => {
+                      pushEntry("uiAction (lastName)", v);
+                    }}
+                  />
+                </Field>
+              </Box>
+            </ControlGroup>
+            <Box flex="x" spacing="s">
+              <Button
+                command="--navi-update"
+                commandfor={cgId}
+                value={{ firstName: "Jean", lastName: "Dupont" }}
+              >
+                Set Jean Dupont
+              </Button>
+              <Button
+                command="--navi-update"
+                commandfor={cgId}
+                value={{ firstName: "Marie", lastName: "Curie" }}
+              >
+                Set Marie Curie
+              </Button>
+              <Button
+                command="--navi-update"
+                commandfor={cgId}
+                value={{ firstName: "", lastName: "" }}
+              >
+                Vider
+              </Button>
+            </Box>
+            <CallLog entries={entries} onClear={clearEntries} />
           </Box>
         );
       };
