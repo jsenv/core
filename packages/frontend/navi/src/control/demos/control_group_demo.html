@@ -24,6 +24,7 @@
       import { CallLog, useCallLog } from "./utils/call_log.jsx";
 
       const firstNameStateSignal = signal("Jean");
+      const inputSignal = signal("");
 
       const App = () => {
         return (
@@ -37,6 +38,11 @@
                 </li>
                 <li>
                   <a href="#standalone-clear">Standalone — Button.Clear</a>
+                </li>
+                <li>
+                  <a href="#clear-signal">
+                    Button.Clear + uiAction input + signal
+                  </a>
                 </li>
                 <li>
                   <a href="#standalone-reset">Standalone — Button.Reset</a>
@@ -64,6 +70,11 @@
             <section id="standalone-clear">
               <h2>Standalone — Button.Clear</h2>
               <StandaloneClearDemo />
+            </section>
+
+            <section id="clear-signal">
+              <h2>Button.Clear + uiAction input + signal</h2>
+              <ClearSignalDemo />
             </section>
 
             <section id="standalone-reset">
@@ -121,6 +132,55 @@
                   <Input type="text" name="lastName" />
                 </Field>
                 <Button.Send />
+              </Box>
+            </ControlGroup>
+            <CallLog entries={entries} onClear={clearEntries} />
+          </Box>
+        );
+      };
+
+      const ClearSignalDemo = () => {
+        const [entries, pushEntry, clearEntries] = useCallLog();
+
+        return (
+          <Box flex="y" spacing="m" alignX="start">
+            <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+              Le <code>uiAction</code> est sur l'input (pas sur le
+              ControlGroup). Cliquer <code>Button.Clear</code> doit vider
+              l'input et déclencher le <code>uiAction</code> de l'input — ce qui
+              remet le signal à <code>""</code>.
+            </p>
+            <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+              Signal courant :{" "}
+              <strong>
+                {inputSignal.value === "" ? "(vide)" : inputSignal.value}
+              </strong>
+            </p>
+            <ControlGroup
+              name="info"
+              action={(value) => {
+                pushEntry("action", value);
+              }}
+              uiAction={(value) => {
+                pushEntry("uiAction", value);
+              }}
+            >
+              <Box flex="y" spacing="s" alignX="start">
+                <Field>
+                  Label
+                  <Input
+                    type="text"
+                    name="label"
+                    uiAction={(v) => {
+                      inputSignal.value = v;
+                      pushEntry("uiAction (input)", v);
+                    }}
+                  />
+                </Field>
+                <Box flex="x" spacing="s">
+                  <Button.Clear />
+                  <Button.Send />
+                </Box>
               </Box>
             </ControlGroup>
             <CallLog entries={entries} onClear={clearEntries} />
