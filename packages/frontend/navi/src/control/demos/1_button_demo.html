@@ -1262,18 +1262,25 @@
         );
       };
 
+      const DemoIconSvg = () => (
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 16 16"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <rect width="16" height="16" fill="violet" />
+        </svg>
+      );
+
       const IconStates = ({ variant, icon }) => {
         return (
           <Box flex spacing="s" wrap>
             <fieldset>
               <legend>default</legend>
-              <Button
-                variant={variant}
-                icon={icon}
-                aria-label="Toggle visibility"
-              >
+              <Button variant={variant} icon={icon} aria-label="Action">
                 <Icon>
-                  <EyeSvg />
+                  <DemoIconSvg />
                 </Icon>
               </Button>
             </fieldset>
@@ -1282,11 +1289,11 @@
               <Button
                 variant={variant}
                 icon={icon}
-                aria-label="Toggle visibility"
+                aria-label="Action"
                 pseudoState={{ ":hover": true }}
               >
                 <Icon>
-                  <EyeSvg />
+                  <DemoIconSvg />
                 </Icon>
               </Button>
             </fieldset>
@@ -1295,11 +1302,11 @@
               <Button
                 variant={variant}
                 icon={icon}
-                aria-label="Toggle visibility"
+                aria-label="Action"
                 pseudoState={{ ":focus-visible": true }}
               >
                 <Icon>
-                  <EyeSvg />
+                  <DemoIconSvg />
                 </Icon>
               </Button>
             </fieldset>
@@ -1308,11 +1315,11 @@
               <Button
                 variant={variant}
                 icon={icon}
-                aria-label="Toggle visibility"
+                aria-label="Action"
                 readOnly
               >
                 <Icon>
-                  <EyeSvg />
+                  <DemoIconSvg />
                 </Icon>
               </Button>
             </fieldset>
@@ -1321,24 +1328,19 @@
               <Button
                 variant={variant}
                 icon={icon}
-                aria-label="Toggle visibility"
+                aria-label="Action"
                 disabled
               >
                 <Icon>
-                  <EyeSvg />
+                  <DemoIconSvg />
                 </Icon>
               </Button>
             </fieldset>
             <fieldset>
               <legend>:-navi-loading</legend>
-              <Button
-                variant={variant}
-                icon={icon}
-                aria-label="Toggle visibility"
-                loading
-              >
+              <Button variant={variant} icon={icon} aria-label="Action" loading>
                 <Icon>
-                  <EyeSvg />
+                  <DemoIconSvg />
                 </Icon>
               </Button>
             </fieldset>
@@ -1350,6 +1352,23 @@
         return (
           <div className="demo-section" id="icons">
             <h2>Icons</h2>
+
+            <fieldset>
+              <legend>The icon (16×16 square)</legend>
+              <p
+                style={{
+                  color: "#666",
+                  fontSize: "0.85rem",
+                  margin: "0 0 8px",
+                }}
+              >
+                Reference: a plain 16×16 square so you can compare exactly how
+                much space the button adds around it.
+              </p>
+              <Icon>
+                <DemoIconSvg />
+              </Icon>
+            </fieldset>
 
             <fieldset>
               <legend>without icon prop vs with icon prop</legend>
@@ -1364,14 +1383,14 @@
                 exactly the icon's size.
               </p>
               <div className="button-group">
-                <Button aria-label="Toggle visibility">
+                <Button aria-label="Action">
                   <Icon>
-                    <EyeSvg />
+                    <DemoIconSvg />
                   </Icon>
                 </Button>
-                <Button icon aria-label="Toggle visibility">
+                <Button icon aria-label="Action">
                   <Icon>
-                    <EyeSvg />
+                    <DemoIconSvg />
                   </Icon>
                 </Button>
               </div>
