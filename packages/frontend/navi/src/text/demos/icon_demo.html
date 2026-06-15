@@ -80,6 +80,7 @@
             </Box>
 
             <TableOfContents />
+            <IconContainerSizeSection />
             <InlineTextIconsSection />
             <IconPositioningSection />
             <EmojiIconsSection />
@@ -121,6 +122,48 @@
             <Link href="#icon-row">11. Icon in row</Link>
             <Link href="#icon-column">12. Icon in column</Link>
             <Link href="#integration">13. Integration</Link>
+          </Box>
+        </Box>
+      );
+
+      // Icon Container Size Section
+      const SquareSvg = ({ size = 16, color = "currentColor" }) => (
+        <svg
+          width={size}
+          height={size}
+          viewBox={`0 0 ${size} ${size}`}
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <rect width={size} height={size} fill={color} />
+        </svg>
+      );
+
+      const IconContainerSizeSection = () => (
+        <Box as="section" marginBottom="xl" id="icon-container-size">
+          <Title as="h2">Container size</Title>
+          <Text as="p" style={{ marginBottom: "12px", color: "#555" }}>
+            Does the container take exactly the icon size? The dotted border
+            shows the container boundary.
+          </Text>
+
+          <Box flex spacing="l" wrap style={{ alignItems: "flex-start" }}>
+            <fieldset style={{ border: "1px solid #ccc", padding: "12px" }}>
+              <legend>Inline block container</legend>
+              <Box inline block border="1px dotted tomato">
+                <Icon>
+                  <SquareSvg size={16} color="steelblue" />
+                </Icon>
+              </Box>
+            </fieldset>
+
+            <fieldset style={{ border: "1px solid #ccc", padding: "12px" }}>
+              <legend>Inline flex container</legend>
+              <Box inline flex border="1px dotted tomato">
+                <Icon>
+                  <SquareSvg size={16} color="steelblue" />
+                </Icon>
+              </Box>
+            </fieldset>
           </Box>
         </Box>
       );
