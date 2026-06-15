@@ -172,7 +172,19 @@ registerNaviCommand("--navi-send", {
   implementation: (commandTarget, { event, source }) => {
     const closestExpandable = getClosestExpandable(source);
     if (closestExpandable) {
-      dispatchNaviCommand(source, "--navi-update", event);
+      // Skip --navi-update when the source is inside a ControlGroup within the picker.
+      // A ControlGroup already tracks all child values and aggregates them — calling
+      // --navi-update here would override the aggregated value with just the focused
+      // input's single value, which is wrong.
+      const controlGroupInsidePicker = source.closest(
+        "[navi-control='control_group']",
+      );
+      const sourceIsInsideControlGroup =
+        controlGroupInsidePicker &&
+        closestExpandable.contains(controlGroupInsidePicker);
+      if (!sourceIsInsideControlGroup) {
+        dispatchNaviCommand(source, "--navi-update", event);
+      }
       // The picker's onClose already dispatches the action with the final value.
       // Dispatching again here would fire the action twice.
       dispatchNaviCommand(closestExpandable, "--navi-close", event);
