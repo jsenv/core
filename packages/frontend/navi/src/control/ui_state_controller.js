@@ -635,10 +635,34 @@ export const useUIGroupStateController = (
     );
     const uiStateController = uiStateControllerRef.current;
     if (notifyExternal) {
-      uiStateController.setUIState(groupUIState, e);
+      applyState(groupUIState, e);
     } else {
       uiStateController.syncInternalState(groupUIState, e);
     }
+  };
+
+  // Applies the aggregated state: updates signal, fires uiAction/command/navi_ui_state_change,
+  // and notifies the parent. Called both from onChange (after re-aggregation) and from
+  // setUIState (after cascading to children).
+  const applyState = (newUIState, e) => {
+    const uiStateController = uiStateControllerRef.current;
+    const currentUIState = uiStateController.uiState;
+    uiStateController.uiState = newUIState;
+    uiStateSignal.value = newUIState;
+    debugUIGroup(
+      e,
+      `${controlType}.applyState(${JSON.stringify(newUIState)}, "${e.type}") -> updates from ${JSON.stringify(currentUIState)} to ${JSON.stringify(newUIState)}`,
+    );
+    publishUIState(newUIState);
+    uiStateController.onInteraction(e);
+    const el = ref.current;
+    if (el) {
+      dispatchInternalCustomEvent(el, "navi_ui_state_change", {
+        event: e,
+        value: newUIState,
+      });
+    }
+    notifyParentAboutChildInteraction(e, { stateChanged: true });
   };
 
   useLayoutEffect(() => {
@@ -684,25 +708,56 @@ export const useUIGroupStateController = (
     wantRequesterButtonState,
     elementRef: ref,
     getPropFromState: (uiState) => uiState,
-    // Called when a child interaction changes the aggregated value.
-    // Updates state and fires all external reactions (uiAction, command, navi_ui_state_change, action pipeline).
+    // Cascades the new value to each monitored child (fires each child's uiAction
+    // via internalBehavior), then re-aggregates and fires this group's own reactions.
+    // Cascade strategy depends on controlType:
+    //   - "radio_group": child gets true/false based on whether its value matches the scalar state.
+    //   - "checkbox_group": child gets true/false based on whether its value is in the state array.
+    //   - default (ControlGroup): child gets the value at its named key in the state object.
     setUIState: (newUIState, e) => {
-      const currentUIState = uiStateController.uiState;
-      uiStateController.uiState = newUIState;
-      uiStateSignal.value = newUIState;
-      debugUIGroup(
-        `${controlType}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> updates from ${JSON.stringify(currentUIState)} to ${JSON.stringify(newUIState)}`,
-      );
-      publishUIState(newUIState);
-      uiStateController.onInteraction(e);
-      const el = ref.current;
-      if (el) {
-        dispatchInternalCustomEvent(el, "navi_ui_state_change", {
-          event: e,
-          value: newUIState,
-        });
+      const silentEvent = new CustomEvent("navi_set_ui_state_external", {
+        detail: { event: e, internalBehavior: true },
+      });
+      for (const childUIStateController of childUIStateControllerArray) {
+        if (!isMonitoringChild(childUIStateController)) {
+          continue;
+        }
+        if (childUIStateController.controlType === "button") {
+          continue;
+        }
+        if (controlType === "radio_group") {
+          const childChecked =
+            childUIStateController.props.value === newUIState;
+          childUIStateController.setUIState(childChecked, silentEvent);
+        } else if (controlType === "checkbox_group") {
+          const childChecked =
+            Array.isArray(newUIState) &&
+            newUIState.includes(childUIStateController.props.value);
+          childUIStateController.setUIState(childChecked, silentEvent);
+        } else {
+          const childName = childUIStateController.name;
+          if (
+            childName &&
+            newUIState !== null &&
+            typeof newUIState === "object" &&
+            Object.prototype.hasOwnProperty.call(newUIState, childName)
+          ) {
+            childUIStateController.setUIState(
+              newUIState[childName],
+              silentEvent,
+            );
+          }
+        }
       }
-      notifyParentAboutChildInteraction(e, { stateChanged: true });
+      // Re-aggregate from children and apply — do NOT call onChange to avoid a loop
+      // (onChange would call setUIState again, which would cascade again).
+      const aggChildState = aggregateChildStates(
+        childUIStateControllerArray,
+        fallbackState,
+      );
+      const groupUIState =
+        aggChildState === undefined ? fallbackState : aggChildState;
+      applyState(groupUIState, e);
     },
     // Called on mount/unmount/render-batch: updates state silently with no external reactions.
     syncInternalState: (newUIState) => {
