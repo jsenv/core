@@ -233,10 +233,12 @@
                     Variant
                     <ol style={{ paddingLeft: "20px" }}>
                       <li>
-                        <a href="#customization-variant-text">text</a>
+                        <a href="#customization-variant-discrete">discrete</a>
                       </li>
                       <li>
-                        <a href="#customization-variant-discrete">discrete</a>
+                        <a href="#customization-variant-discrete-border">
+                          discrete-border
+                        </a>
                       </li>
                       <li>
                         <a href="#customization-variant-border">border</a>
@@ -1360,13 +1362,13 @@
             </fieldset>
 
             <fieldset>
-              <legend>variant="text"</legend>
-              <IconStates variant="text" />
+              <legend>variant="discrete"</legend>
+              <IconStates variant="discrete" />
             </fieldset>
 
             <fieldset>
-              <legend>variant="discrete"</legend>
-              <IconStates variant="discrete" />
+              <legend>variant="discrete-border"</legend>
+              <IconStates variant="discrete-border" />
             </fieldset>
 
             <fieldset>
@@ -1705,17 +1707,17 @@
             {/* ── Variant ───────────────────────────────────────────────── */}
             {/* ── Variant: text ─────────────────────────────────────────── */}
             <h3
-              id="customization-variant-text"
+              id="customization-variant-discrete"
               style={{ margin: "24px 0 12px" }}
             >
-              Variant — text
+              Variant — discrete
             </h3>
 
             <fieldset>
-              <legend>Regular vs text</legend>
+              <legend>Regular vs discrete</legend>
               <div className="button-group">
                 <Button>Text in button</Button>
-                <Button variant="text">Text in button</Button>
+                <Button variant="discrete">Text in button</Button>
               </div>
             </fieldset>
 
@@ -1724,14 +1726,14 @@
               <Box flex spacing="s">
                 <fieldset>
                   <legend>:hover</legend>
-                  <Button variant="text" pseudoState={{ ":hover": true }}>
+                  <Button variant="discrete" pseudoState={{ ":hover": true }}>
                     Text in button
                   </Button>
                 </fieldset>
                 <fieldset>
                   <legend>:focus-visible</legend>
                   <Button
-                    variant="text"
+                    variant="discrete"
                     pseudoState={{ ":focus-visible": true }}
                   >
                     Text in button
@@ -1739,19 +1741,19 @@
                 </fieldset>
                 <fieldset>
                   <legend>:read-only</legend>
-                  <Button variant="text" readOnly>
+                  <Button variant="discrete" readOnly>
                     Text in button
                   </Button>
                 </fieldset>
                 <fieldset>
                   <legend>:disabled</legend>
-                  <Button variant="text" disabled>
+                  <Button variant="discrete" disabled>
                     Text in button
                   </Button>
                 </fieldset>
                 <fieldset>
                   <legend>:-navi-loading</legend>
-                  <Button variant="text" loading>
+                  <Button variant="discrete" loading>
                     Text in button
                   </Button>
                 </fieldset>

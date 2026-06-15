@@ -242,23 +242,8 @@ const css = /* css */ `
       --x-button-border-color: var(--callout-color);
     }
 
-    /* Discrete variant */
+    /* discrete: background on hover  */
     &[data-variant="discrete"] {
-      --x-button-background-color: transparent;
-      --x-button-border-color: transparent;
-
-      &[data-hover] {
-        --x-button-border-color: var(--button-border-color-hover);
-      }
-      &[data-readonly] {
-        --x-button-border-color: transparent;
-      }
-      &[data-disabled] {
-        --x-button-border-color: transparent;
-      }
-    }
-    /* text variant: no background, no border */
-    &[data-variant="text"] {
       --x-button-background-color: transparent;
       --x-button-border-color: transparent;
 
@@ -277,6 +262,21 @@ const css = /* css */ `
       &[data-disabled] {
         --x-button-border-color: transparent;
         --x-button-background-color: transparent;
+      }
+    }
+    /* discrete-border: border on hover */
+    &[data-variant="discrete-border"] {
+      --x-button-background-color: transparent;
+      --x-button-border-color: transparent;
+
+      &[data-hover] {
+        --x-button-border-color: var(--button-border-color-hover);
+      }
+      &[data-readonly] {
+        --x-button-border-color: transparent;
+      }
+      &[data-disabled] {
+        --x-button-border-color: transparent;
       }
     }
     /* border variant: no background, border only */
