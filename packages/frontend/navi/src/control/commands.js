@@ -84,6 +84,16 @@ const resolveExplicitTarget = (element) => {
   }
   return undefined;
 };
+const resolvePickerInnerControl = (target) => {
+  if (!target.hasAttribute("navi-picker")) {
+    return null;
+  }
+  const content = target.querySelector(".navi_picker_content");
+  if (!content) {
+    return null;
+  }
+  return content.querySelector("[navi-control-host]") ?? null;
+};
 const resolveFirstParentControl = (el) => {
   return getParentControl(el);
 };
@@ -165,9 +175,14 @@ registerNaviCommand("--navi-update", (source, event) => {
         event.preventDefault();
         return false;
       }
-      return dispatchRequestSetUIState(target, resolveCommandValue(source), {
-        event,
-      });
+      dispatchRequestSetUIState(target, resolveCommandValue(source), { event });
+      const innerControl = resolvePickerInnerControl(target);
+      if (innerControl) {
+        dispatchRequestSetUIState(innerControl, resolveCommandValue(source), {
+          event,
+        });
+      }
+      return true;
     },
   };
 });
@@ -312,7 +327,12 @@ registerNaviCommand("--navi-clear", (source, event) => {
         event.preventDefault();
         return false;
       }
-      return dispatchRequestClearUIState(target, event);
+      dispatchRequestClearUIState(target, event);
+      const innerControl = resolvePickerInnerControl(target);
+      if (innerControl) {
+        dispatchRequestClearUIState(innerControl, event);
+      }
+      return true;
     },
   };
 });
