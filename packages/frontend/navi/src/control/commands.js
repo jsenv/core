@@ -201,16 +201,17 @@ registerNaviCommand("--navi-send", (source, event) => {
     return {
       target,
       implementation: () => {
-        // Skip --navi-update when the source is inside a ControlGroup within the picker.
-        // A ControlGroup already tracks all child values and aggregates them — calling
-        // --navi-update here would override the aggregated value with just the focused
-        // input's single value, which is wrong.
-        const controlGroupInsidePicker = source.closest(
-          "[navi-control='control_group']",
-        );
-        const sourceIsInsideControlGroup =
-          controlGroupInsidePicker && target.contains(controlGroupInsidePicker);
-        if (!sourceIsInsideControlGroup) {
+        // Skip --navi-update when the picker already has an inner control that
+        // manages the picker's value autonomously:
+        // - A ControlGroup aggregates all child values and syncs them up via its
+        //   own command="--navi-update". Calling --navi-update from the send button
+        //   (which has no value) would override the aggregated value.
+        // - Any other inner control host (e.g. a plain Input inside the picker
+        //   popup) already propagates its value to the picker via its own
+        //   command="--navi-update" on every change. Calling it again from the
+        //   send button's undefined value would corrupt the picker state.
+        const skipUpdate = resolvePickerInnerControl(target) !== null;
+        if (!skipUpdate) {
           dispatchNaviCommand(source, "--navi-update", event);
         }
         // The picker's onClose already dispatches the action with the final value.
