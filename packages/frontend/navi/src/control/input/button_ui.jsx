@@ -111,6 +111,7 @@ const css = /* css */ `
     touch-action: manipulation;
     user-select: none;
     -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
+    display: inline-flex;
 
     .navi_button_content {
       position: relative;
