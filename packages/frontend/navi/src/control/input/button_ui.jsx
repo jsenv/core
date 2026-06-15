@@ -237,6 +237,11 @@ const css = /* css */ `
         }
       }
     }
+    /* Callout (info, warning, error) */
+    &[data-callout] {
+      --x-button-border-color: var(--callout-color);
+    }
+
     /* Discrete variant */
     &[data-variant="discrete"] {
       --x-button-background-color: transparent;
@@ -251,10 +256,6 @@ const css = /* css */ `
       &[data-disabled] {
         --x-button-border-color: transparent;
       }
-    }
-    /* Callout (info, warning, error) */
-    &[data-callout] {
-      --x-button-border-color: var(--callout-color);
     }
     /* text variant: no background, no border */
     &[data-variant="text"] {
