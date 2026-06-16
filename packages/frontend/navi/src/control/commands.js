@@ -257,7 +257,7 @@ registerNaviCommand("--navi-send", (source, event) => {
   }
 
   // send inside expandable
-  if (target.hasAttribute("aria-expanded")) {
+  if (target.getAttribute("aria-expanded") === "true") {
     return {
       target,
       implementation: () => executeNaviDefine(source, event, target),
