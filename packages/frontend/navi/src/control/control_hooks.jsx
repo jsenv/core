@@ -832,6 +832,14 @@ const useInteractiveProps = (
         uiStateController.setUIState(e.detail.value, e);
       },
     });
+    // Mirror ui state handlers on the root so events dispatched on the root element
+    // (e.g. from a commandfor targeting the picker button) reach the controller.
+    Object.assign(controlRootProps, {
+      onnavi_clear_ui_state: controlHostProps.onnavi_clear_ui_state,
+      onnavi_reset_ui_state: controlHostProps.onnavi_reset_ui_state,
+      onnavi_get_ui_state: controlHostProps.onnavi_get_ui_state,
+      onnavi_set_ui_state: controlHostProps.onnavi_set_ui_state,
+    });
 
     const { statePropName } = uiStateController;
     if (statePropName) {
@@ -866,10 +874,7 @@ const useInteractiveProps = (
     // When root === host the spread order ensures
     // controlHostProps.onnavi_command takes precedence.
     Object.assign(controlRootProps, {
-      onnavi_command: (e) => {
-        props.onnavi_command?.(e);
-        onNaviCommand(e, { debugCommand });
-      },
+      onnavi_command: controlHostProps.onnavi_command,
     });
   }
   action_props: {
