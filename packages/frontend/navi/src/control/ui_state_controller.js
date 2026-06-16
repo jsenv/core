@@ -1009,7 +1009,7 @@ const EMPTY_OBJECT = {};
  * inside the picker popup. It also means `commands.js` no longer has to
  * manually re-dispatch to inner controls.
  */
-export const useUIFacadeStateController = (uiStateController, name) => {
+export const useUIFacadeStateController = (uiStateController) => {
   const firstChildControllerRef = useRef(null);
   const updatingRef = useRef(false);
 
@@ -1038,13 +1038,6 @@ export const useUIFacadeStateController = (uiStateController, name) => {
       uiStateSignal: uiStateController.uiStateSignal,
       registerChild: (child) => {
         if (!firstChildControllerRef.current) {
-          if (name && child.controlType === "control_group" && !child.name) {
-            console.warn(
-              `[useUIFacadeStateController] The first child registered in the picker facade is a "${child.controlType}" without a name. ` +
-                `Add name="..." to the ControlGroup (or equivalent) so the picker can identify and sync its value correctly.`,
-              child,
-            );
-          }
           firstChildControllerRef.current = child;
         } else {
           console.warn(
@@ -1067,14 +1060,14 @@ export const useUIFacadeStateController = (uiStateController, name) => {
           return;
         }
         updatingRef.current = true;
-        const silentEvent = new CustomEvent("facade_propagate_up", {
-          detail: { internalBehavior: true },
+        const propagateUpEvent = new CustomEvent("facade_propagate_up", {
+          detail: {},
         });
-        chainEvent(silentEvent, e);
-        uiStateController.setUIState(child.uiState, silentEvent);
+        chainEvent(propagateUpEvent, e);
+        uiStateController.setUIState(child.uiState, propagateUpEvent);
         updatingRef.current = false;
       },
     }),
-    [name],
+    [],
   );
 };
