@@ -291,17 +291,13 @@
         const minutesSignal = useSignal(null);
 
         const DurationPickerUI = () => {
-          const hh =
-            hoursSignal.value !== null
-              ? String(hoursSignal.value).padStart(2, "0")
-              : null;
-          const mm =
-            minutesSignal.value !== null
-              ? String(minutesSignal.value).padStart(2, "0")
-              : null;
-          if (hh === null || mm === null) {
-            return null;
+          const h = hoursSignal.value;
+          const m = minutesSignal.value;
+          if (h === null && m === null) {
+            return <Time type="time" />;
           }
+          const hh = String(h ?? 0).padStart(2, "0");
+          const mm = String(m ?? 0).padStart(2, "0");
           return <Time type="time">{`${hh}:${mm}`}</Time>;
         };
 
