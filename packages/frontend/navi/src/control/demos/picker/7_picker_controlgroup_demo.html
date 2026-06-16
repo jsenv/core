@@ -56,6 +56,7 @@
         Form,
         Button,
         Time,
+        ControlGroup,
       } from "@jsenv/navi";
 
       const App = () => (
@@ -96,7 +97,7 @@
                     push("action", v);
                   }}
                 >
-                  <Box flex="y" spacing="s" padding="s" alignX="start">
+                  <ControlGroup flex="y" spacing="s" padding="s" alignX="start">
                     <Field vertical>
                       <Label>Rue</Label>
                       <Input name="street" placeholder="12 rue de la Paix" />
@@ -109,7 +110,7 @@
                       <Label>Code postal</Label>
                       <Input name="zip" placeholder="75001" />
                     </Field>
-                  </Box>
+                  </ControlGroup>
                 </Picker>
               </Field>
             </Box>
@@ -154,7 +155,12 @@
                       push("Picker uiAction", v);
                     }}
                   >
-                    <Box flex="y" spacing="s" padding="m" alignX="start">
+                    <ControlGroup
+                      flex="y"
+                      spacing="s"
+                      padding="m"
+                      alignX="start"
+                    >
                       <Field vertical>
                         <Label>Rue</Label>
                         <Input name="street" placeholder="12 rue de la Paix" />
@@ -167,10 +173,10 @@
                         <Label>Code postal</Label>
                         <Input name="zip" placeholder="75001" />
                       </Field>
-                    </Box>
+                    </ControlGroup>
                   </Picker>
                 </Field>
-                <Button.Send />
+                <Button command="--navi-send" />
               </Box>
             </Form>
             <CallLog entries={entries} onClear={clear} />
@@ -190,7 +196,7 @@
       };
 
       const DurationPickerChildren = () => (
-        <Box flex="y" spacing="s" padding="s" alignX="start">
+        <ControlGroup flex="y" spacing="s" padding="s" alignX="start">
           <Field vertical>
             <Label>Heures</Label>
             <Input
@@ -218,10 +224,10 @@
             />
           </Field>
           <Box flex="x" spacing="s">
-            <Button.Cancel variant="discrete" />
-            <Button.Define variant="discrete" />
+            <Button command="--navi-cancel" variant="discrete" />
+            <Button command="--navi-define" variant="discrete" />
           </Box>
-        </Box>
+        </ControlGroup>
       );
 
       const DurationOutsideFormDemo = () => {
@@ -290,7 +296,7 @@
                     <DurationPickerChildren />
                   </Picker>
                 </Field>
-                <Button.Send />
+                <Button command="--navi-send" />
               </Box>
             </Form>
             <CallLog entries={entries} onClear={clear} />
