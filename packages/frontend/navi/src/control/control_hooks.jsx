@@ -64,6 +64,7 @@ import { readControlValue } from "./control_value.js";
 import { addInputEffect } from "./input_effect.js";
 import {
   ParentUIStateControllerContext,
+  useUIFacadeStateController,
   useUIGroupStateController,
   useUIStateController,
 } from "./ui_state_controller.js";
@@ -647,6 +648,44 @@ export const useControlgroupProps = (
     controlgroupChildrenWrapperProps,
   ];
 };
+
+/**
+ * Like `useControlProps` but also establishes a facade that keeps the picker's
+ * hidden input in sync with the first child control inside the picker popup.
+ *
+ * Returns a 3-tuple: `[inputProps, pickerRemainingProps, facadeChildrenProps]`
+ * where `facadeChildrenProps` is meant to be spread onto `ParentUIStateControllerContext.Provider`:
+ *
+ * ```jsx
+ * const [inputProps, pickerRemainingProps, facadeChildrenProps] = useControlFacadeProps(props, options);
+ * // …
+ * <ControlChildrenWrapper>
+ *   <ParentUIStateControllerContext.Provider {...facadeChildrenProps}>
+ *     {children}
+ *   </ParentUIStateControllerContext.Provider>
+ * </ControlChildrenWrapper>
+ * ```
+ */
+export const useControlFacadeProps = (props, options) => {
+  const { ref } = props;
+  const [controlProps, remainingProps] = useControlProps(props, options);
+  const facadeController = useUIFacadeStateController(() => ref.current);
+  return [controlProps, remainingProps, { value: facadeController }];
+};
+
+export const ControlFacadeChildrenWrapper = ({ children, value }) => (
+  <ParentUIStateControllerContext.Provider value={value}>
+    <MessagePropsRefContext.Provider value={undefined}>
+      <ControlToInterfaceContext.Provider value={undefined}>
+        <RequiredContext.Provider value={undefined}>
+          <ControlNameContext.Provider value={undefined}>
+            {children}
+          </ControlNameContext.Provider>
+        </RequiredContext.Provider>
+      </ControlToInterfaceContext.Provider>
+    </MessagePropsRefContext.Provider>
+  </ParentUIStateControllerContext.Provider>
+);
 
 const useInteractiveProps = (
   props,

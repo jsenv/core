@@ -9,10 +9,12 @@ import {
 } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
 import { Text } from "@jsenv/navi/src/text/text.jsx";
-import { ControlChildrenWrapper, useControlProps } from "../control_hooks.jsx";
+import {
+  ControlFacadeChildrenWrapper,
+  useControlFacadeProps,
+} from "../control_hooks.jsx";
 import { resolveInputProps } from "../input/resolve_input_props.js";
 import { getUIStateControllerById } from "../ui_state_controller.js";
-import { PickerContentProxy } from "./picker_content_proxy.jsx";
 import { PickerContext } from "./picker_context.jsx";
 import { PickerCustomResolver } from "./picker_custom.jsx";
 import { PickerPresetResolver } from "./picker_preset.jsx";
@@ -309,18 +311,19 @@ const PickerButton = (props) => {
   }
   const { ref, variant, icon, placeholder, ui, maxLines, headless } = props;
   const inputRef = useRef(null);
-  const [inputProps, pickerRemainingProps] = useControlProps(
-    {
-      ...props,
-      ref: inputRef,
-    },
-    {
-      controlType: "picker",
-      statePropName: "value",
-      defaultStatePropName: "defaultValue",
-      readOnlySupported: true,
-    },
-  );
+  const [inputProps, pickerRemainingProps, facadeChildrenProps] =
+    useControlFacadeProps(
+      {
+        ...props,
+        ref: inputRef,
+      },
+      {
+        controlType: "picker",
+        statePropName: "value",
+        defaultStatePropName: "defaultValue",
+        readOnlySupported: true,
+      },
+    );
   const uiStateController = getUIStateControllerById(inputProps.id);
   const value = uiStateController.uiState;
   const { id, basePseudoState, disabled, children } = inputProps;
@@ -414,11 +417,9 @@ const PickerButton = (props) => {
           <Icon size="m">{icon === undefined ? <ChevronDownSvg /> : icon}</Icon>
         </span>
       )}
-      <ControlChildrenWrapper>
-        <PickerContentProxy pickerRef={ref}>
-          <div className="navi_picker_content">{children}</div>
-        </PickerContentProxy>
-      </ControlChildrenWrapper>
+      <ControlFacadeChildrenWrapper {...facadeChildrenProps}>
+        <div className="navi_picker_content">{children}</div>
+      </ControlFacadeChildrenWrapper>
     </Box>
   );
 };
