@@ -28,7 +28,7 @@ export const dispatchInternalCustomEvent = (
   customEventDetail,
 ) => {
   const customEvent = new CustomEvent(customEventName, {
-    detail: customEventDetail,
+    detail: customEventDetail || {},
     cancelable: true,
   });
   chainEvent(customEvent, customEventDetail?.event);
@@ -45,7 +45,7 @@ export const dispatchPublicCustomEvent = (
   customEventDetail,
 ) => {
   const customEvent = new CustomEvent(customEventName, {
-    detail: customEventDetail,
+    detail: customEventDetail || {},
     bubbles: true,
     cancelable: true,
   });
@@ -61,7 +61,7 @@ export const dispatchPublicCustomEvent = (
  */
 export const dispatchCustomEvent = (el, customEventName, customEventDetail) => {
   const customEvent = new CustomEvent(customEventName, {
-    detail: customEventDetail,
+    detail: customEventDetail || {},
     cancelable: true,
   });
   chainEvent(customEvent, customEventDetail?.event);
@@ -71,6 +71,12 @@ export const dispatchCustomEvent = (el, customEventName, customEventDetail) => {
 
 export const chainEvent = (customEvent, parentEvent) => {
   if (!parentEvent) {
+    return customEvent;
+  }
+  if (!customEvent.detail) {
+    console.warn(
+      `Event "${customEvent.type}" has no detail object. Cannot chain to parent event "${parentEvent.type}".`,
+    );
     return customEvent;
   }
   // Always build eventChain from the first wrapping so callers can rely on it

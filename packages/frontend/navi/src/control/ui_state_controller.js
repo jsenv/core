@@ -407,7 +407,9 @@ export const useUIStateController = (
       if (isRadio && newUIState && uiStateController.name && !controlProxyFor) {
         const siblings = radioControllersByName.get(uiStateController.name);
         if (siblings) {
-          const siblingUncheckEvent = new CustomEvent("radio_sibling_uncheck");
+          const siblingUncheckEvent = new CustomEvent("radio_sibling_uncheck", {
+            detail: {},
+          });
           chainEvent(siblingUncheckEvent, e);
           for (const siblingController of siblings) {
             if (siblingController === uiStateController) {
@@ -792,7 +794,10 @@ export const useUIGroupStateController = (
         );
         return;
       }
-      const propagateDownEvent = new CustomEvent("propagate_down_set_ui_state");
+      const propagateDownEvent = new CustomEvent(
+        "propagate_down_set_ui_state",
+        { detail: {} },
+      );
       chainEvent(propagateDownEvent, e);
       for (const childUIStateController of childUIStateControllerArray) {
         if (!isMonitoringChild(childUIStateController)) {
@@ -915,6 +920,7 @@ export const useUIGroupStateController = (
     resetUIState: (e) => {
       const propagateDownResetEvent = new CustomEvent(
         "propagate_down_reset_ui_state",
+        { detail: {} },
       );
       chainEvent(propagateDownResetEvent, e);
       for (const childUIStateController of childUIStateControllerArray) {
@@ -931,6 +937,7 @@ export const useUIGroupStateController = (
     clearUIState: (e) => {
       const propagateDownClearEvent = new CustomEvent(
         "propagate_down_clear_ui_state",
+        { detail: {} },
       );
       chainEvent(propagateDownClearEvent, e);
       for (const childUIStateController of childUIStateControllerArray) {
@@ -1008,7 +1015,10 @@ export const useUIFacadeStateController = (uiStateController) => {
         return;
       }
       updatingRef.current = true;
-      const propagateDownEvent = new CustomEvent("propagate_down_set_ui_state");
+      const propagateDownEvent = new CustomEvent(
+        "propagate_down_set_ui_state",
+        { detail: {} },
+      );
       chainEvent(propagateDownEvent, e);
       child.setUIState(newUIState, propagateDownEvent);
       updatingRef.current = false;
