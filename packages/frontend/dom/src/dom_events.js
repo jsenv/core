@@ -66,7 +66,7 @@ export const dispatchCustomEvent = (el, customEventName, customEventDetail) => {
   return result;
 };
 
-const resolveEventDetail = (customEventDetail) => {
+export const resolveEventDetail = (customEventDetail) => {
   const { event, ...rest } = customEventDetail ?? {};
   if (!event) {
     return { ...rest };
