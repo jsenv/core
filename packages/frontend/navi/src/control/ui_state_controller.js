@@ -89,6 +89,20 @@ const unregisterRadioController = (uiStateController) => {
   }
 };
 
+/**
+ * Minimal interface that any object placed in `ParentUIStateControllerContext` must satisfy.
+ * Both `useUIGroupStateController` and `useUIFacadeStateController` implement this interface.
+ *
+ * ```ts
+ * interface UIStateController {
+ *   controlType: string;          // Used for debug logging
+ *   uiStateSignal: Signal;        // Accessed by button children to inherit parent value
+ *   registerChild(child): void;   // Called on child mount
+ *   onChildInteraction(child, e, { stateChanged: boolean }): void; // Called on user interaction
+ *   unregisterChild(child): void; // Called on child unmount
+ * }
+ * ```
+ */
 export const ParentUIStateControllerContext = createContext();
 
 /**
@@ -997,6 +1011,7 @@ const EMPTY_OBJECT = {};
 export const useUIFacadeStateController = (getPickerInputEl) => {
   const firstChildControllerRef = useRef(null);
   const updatingRef = useRef(false);
+  const uiStateSignal = useMemo(() => signal(undefined), []);
 
   useLayoutEffect(() => {
     const pickerInputEl = getPickerInputEl();
@@ -1012,6 +1027,7 @@ export const useUIFacadeStateController = (getPickerInputEl) => {
         return;
       }
       updatingRef.current = true;
+      uiStateSignal.value = e.detail.value;
       const silentEvent = new CustomEvent("facade_propagate_down", {
         detail: { event: e, internalBehavior: true },
       });
@@ -1030,6 +1046,7 @@ export const useUIFacadeStateController = (getPickerInputEl) => {
   return useMemo(
     () => ({
       controlType: "facade",
+      uiStateSignal,
       registerChild: (child) => {
         if (!firstChildControllerRef.current) {
           firstChildControllerRef.current = child;
@@ -1052,6 +1069,7 @@ export const useUIFacadeStateController = (getPickerInputEl) => {
           return;
         }
         updatingRef.current = true;
+        uiStateSignal.value = child.uiState;
         dispatchRequestSetUIState(pickerInputEl, child.uiState, {
           event: e,
           internalBehavior: true,
