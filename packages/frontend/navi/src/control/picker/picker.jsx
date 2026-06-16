@@ -12,6 +12,7 @@ import { Text } from "@jsenv/navi/src/text/text.jsx";
 import { ControlChildrenWrapper, useControlProps } from "../control_hooks.jsx";
 import { resolveInputProps } from "../input/resolve_input_props.js";
 import { getUIStateControllerById } from "../ui_state_controller.js";
+import { PickerContentProxy } from "./picker_content_proxy.jsx";
 import { PickerContext } from "./picker_context.jsx";
 import { PickerCustomResolver } from "./picker_custom.jsx";
 import { PickerPresetResolver } from "./picker_preset.jsx";
@@ -414,7 +415,9 @@ const PickerButton = (props) => {
         </span>
       )}
       <ControlChildrenWrapper>
-        <div className="navi_picker_content">{children}</div>
+        <PickerContentProxy pickerRef={ref}>
+          <div className="navi_picker_content">{children}</div>
+        </PickerContentProxy>
       </ControlChildrenWrapper>
     </Box>
   );

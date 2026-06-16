@@ -184,8 +184,12 @@ registerNaviCommand("--navi-update", (source, event) => {
       });
       const innerControl = resolvePickerInnerControl(target);
       if (innerControl) {
+        // internalBehavior: true prevents the proxy from propagating the inner
+        // control's change back to the picker input a second time (we already
+        // set the picker input directly above).
         dispatchRequestSetUIState(innerControl, commandValue, {
           event,
+          internalBehavior: true,
         });
       }
       return true;

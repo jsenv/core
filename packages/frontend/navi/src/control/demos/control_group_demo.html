@@ -196,7 +196,6 @@
                 <Box flex="y" spacing="s" padding="s" alignX="start">
                   <Input
                     name="label"
-                    command="--navi-update"
                     placeholder="Texte libre"
                     uiAction={(v) => {
                       pushEntry("uiAction (input)", v);
@@ -255,28 +254,30 @@
                   pushEntry("action", v);
                 }}
               >
-                <Box flex="y" spacing="s" padding="s" alignX="start">
-                  <Field>
-                    Rue
-                    <Input
-                      name="street"
-                      placeholder="Street"
-                      uiAction={(v) => {
-                        pushEntry("uiAction (street)", v);
-                      }}
-                    />
-                  </Field>
-                  <Field>
-                    Ville
-                    <Input
-                      name="city"
-                      placeholder="City"
-                      uiAction={(v) => {
-                        pushEntry("uiAction (city)", v);
-                      }}
-                    />
-                  </Field>
-                </Box>
+                <ControlGroup>
+                  <Box flex="y" spacing="s" padding="s" alignX="start">
+                    <Field>
+                      Rue
+                      <Input
+                        name="street"
+                        placeholder="Street"
+                        uiAction={(v) => {
+                          pushEntry("uiAction (street)", v);
+                        }}
+                      />
+                    </Field>
+                    <Field>
+                      Ville
+                      <Input
+                        name="city"
+                        placeholder="City"
+                        uiAction={(v) => {
+                          pushEntry("uiAction (city)", v);
+                        }}
+                      />
+                    </Field>
+                  </Box>
+                </ControlGroup>
               </Picker>
             </Field>
             <Box flex="x" spacing="s">

@@ -6,7 +6,6 @@ import { BadgeList } from "@jsenv/navi/src/text/badge_list.jsx";
 import { Color } from "@jsenv/navi/src/text/color.jsx";
 import { Text } from "@jsenv/navi/src/text/text.jsx";
 import { Time } from "@jsenv/navi/src/text/time.jsx";
-import { ControlGroup } from "../control_group.jsx";
 import { PickerContext } from "./picker_context.jsx";
 
 export const PickerTypeResolver = (props) => {
@@ -53,13 +52,8 @@ const PickerText = (props) => {
 
 const PickerControlGroup = (props) => {
   const Next = useNextResolver();
-  const { children, ...rest } = props;
 
-  return (
-    <Next ui={<PickerControlGroupUI />} {...rest} type="navi_js">
-      <ControlGroup command="--navi-update">{children}</ControlGroup>
-    </Next>
-  );
+  return <Next ui={<PickerControlGroupUI />} {...props} type="navi_js" />;
 };
 export const PickerControlGroupUI = () => {
   const { value, placeholder } = useContext(PickerContext);
