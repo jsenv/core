@@ -1008,14 +1008,15 @@ const EMPTY_OBJECT = {};
  * inside the picker popup. It also means `commands.js` no longer has to
  * manually re-dispatch to inner controls.
  */
-export const useUIFacadeStateController = (getPickerInputEl) => {
+export const useUIFacadeStateController = (props) => {
   const firstChildControllerRef = useRef(null);
   const updatingRef = useRef(false);
   const uiStateSignal = useMemo(() => signal(undefined), []);
+  const { ref } = props;
 
   useLayoutEffect(() => {
-    const pickerInputEl = getPickerInputEl();
-    if (!pickerInputEl) {
+    const facadeControlEl = ref.current;
+    if (!facadeControlEl) {
       return undefined;
     }
     const onUIStateChange = (e) => {
@@ -1034,14 +1035,14 @@ export const useUIFacadeStateController = (getPickerInputEl) => {
       child.setUIState(e.detail.value, silentEvent);
       updatingRef.current = false;
     };
-    pickerInputEl.addEventListener("navi_ui_state_change", onUIStateChange);
+    facadeControlEl.addEventListener("navi_ui_state_change", onUIStateChange);
     return () => {
-      pickerInputEl.removeEventListener(
+      facadeControlEl.removeEventListener(
         "navi_ui_state_change",
         onUIStateChange,
       );
     };
-  }, []);
+  }, [ref]);
 
   return useMemo(
     () => ({
@@ -1049,7 +1050,24 @@ export const useUIFacadeStateController = (getPickerInputEl) => {
       uiStateSignal,
       registerChild: (child) => {
         if (!firstChildControllerRef.current) {
+          if (
+            props.name &&
+            child.controlType === "control_group" &&
+            !child.name
+          ) {
+            console.warn(
+              `[useUIFacadeStateController] The first child registered in the picker facade is a "${child.controlType}" without a name. ` +
+                `Add name="..." to the ControlGroup (or equivalent) so the picker can identify and sync its value correctly.`,
+              child,
+            );
+          }
           firstChildControllerRef.current = child;
+        } else {
+          console.warn(
+            `[useUIFacadeStateController] A second child ("${child.controlType}"${child.name ? ` name="${child.name}"` : ""}) tried to register in the picker facade. ` +
+              `The facade only syncs with the first child — wrap multiple controls in a single ControlGroup.`,
+            child,
+          );
         }
       },
       unregisterChild: (child) => {
@@ -1077,6 +1095,6 @@ export const useUIFacadeStateController = (getPickerInputEl) => {
         updatingRef.current = false;
       },
     }),
-    [],
+    [props.name],
   );
 };
