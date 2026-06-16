@@ -203,7 +203,7 @@ const ListSelectable = (props) => {
     focusGroupDirection,
     focusGroupWrap,
   } = props;
-  const [listControlProps, remainingProps, childrenWrapperProps] =
+  const [listControlRootProps, listControlProps, childrenWrapperProps] =
     useControlgroupProps(props, {
       stateType: multiple ? "array" : "",
       controlType: multiple ? "checkbox_group" : "radio_group",
@@ -327,8 +327,8 @@ const ListSelectable = (props) => {
       navi-has-selected-background={
         selectedIndicator === "backgroundColor" ? "" : undefined
       }
+      {...listControlRootProps}
       {...listControlProps}
-      {...remainingProps}
       name={undefined}
       selectedIndicator={undefined}
       selectable={undefined}
@@ -485,7 +485,7 @@ const ListItemSelectable = (props) => {
   const inputType = multiple ? "checkbox" : "radio";
   const inputId = `${id}_input`;
   inputRef.nullCanHappen = true; // virtualization
-  const [checkableProps, remainingProps] = useCheckableProps({
+  const [checkableRootProps, checkableProps] = useCheckableProps({
     readOnlyMessage: naviI18n(`constraint.readonly.option`, props),
     ...rest,
     ref: inputRef,
@@ -522,7 +522,7 @@ const ListItemSelectable = (props) => {
       spacing="s"
       flex
       alignY="center"
-      {...remainingProps}
+      {...checkableRootProps}
       pseudoClasses={SELECTABLE_PSEUDO_CLASSES}
       basePseudoState={{
         ":-navi-selected": checked,

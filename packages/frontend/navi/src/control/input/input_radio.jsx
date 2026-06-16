@@ -348,7 +348,7 @@ export const InputRadio = (props) => {
 };
 
 const InputRadioHeadless = (props) => {
-  const [radioProps, remainingProps] = useCheckableProps(props);
+  const [radioRootProps, radioHostProps] = useCheckableProps(props);
 
   return (
     <RealInputRadio
@@ -356,15 +356,15 @@ const InputRadioHeadless = (props) => {
       navi-visually-hidden=""
       navi-focus-delegate=""
       aria-hidden="true"
-      {...remainingProps}
-      {...radioProps}
+      {...radioRootProps}
+      {...radioHostProps}
     />
   );
 };
 const APPEARANCE_SET = new Set(["icon", "button", "radio"]);
 const InputRadioFieldInterface = (props) => {
   import.meta.css = css;
-  const [radioProps, remainingProps] = useCheckableProps(props);
+  const [radioRootProps, radioHostProps] = useCheckableProps(props);
   const { icon, appearance } = props;
   let appearanceResolved = appearance || (icon ? "icon" : "radio");
   if (appearance && !APPEARANCE_SET.has(appearance)) {
@@ -373,7 +373,7 @@ const InputRadioFieldInterface = (props) => {
     );
     appearanceResolved = "radio";
   }
-  const { basePseudoState, checked } = radioProps;
+  const { basePseudoState, checked } = radioHostProps;
   const loading = basePseudoState[":-navi-loading"];
   const boxRef = useRef();
   useAccentColorAttributes(boxRef, props.accentColor, {
@@ -393,7 +393,7 @@ const InputRadioFieldInterface = (props) => {
       // Radio displayed as button are usually squarish
       // (passsing any custom width/height would auto disable aspectRatio forced by the square prop)
       square={appearanceResolved === "button" ? true : undefined}
-      {...remainingProps}
+      {...radioRootProps}
       ref={boxRef}
       icon={undefined}
       appearance={undefined}
@@ -416,7 +416,7 @@ const InputRadioFieldInterface = (props) => {
         color="var(--loader-color)"
       />
       {visualVNode}
-      <RealInputRadio {...radioProps} />
+      <RealInputRadio {...radioHostProps} />
     </Box>
   );
 };

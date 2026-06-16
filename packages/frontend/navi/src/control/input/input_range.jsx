@@ -274,7 +274,7 @@ const InputRangeFieldInterface = (props) => {
     input.parentNode.style.setProperty("--x-fill-ratio", ratio);
   };
   resolveInputProps(props);
-  const [rangeHostProps, rangeRootProps] = useControlProps(props, {
+  const [rangeRootProps, rangeHostProps] = useControlProps(props, {
     controlType: "input",
     statePropName: "value",
     defaultStatePropName: "defaultValue",

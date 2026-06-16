@@ -195,7 +195,7 @@ export const useControlProps = (
     props.action,
     uiStateController.uiStateSignal,
   );
-  const [controlHostProps, controlRootProps] = useInteractiveProps(props, {
+  const [controlRootProps, controlHostProps] = useInteractiveProps(props, {
     uiStateController,
     boundAction,
     readOnlySupported,
@@ -537,7 +537,7 @@ export const useControlProps = (
     });
   }
 
-  return [controlHostProps, controlRootProps];
+  return [controlRootProps, controlHostProps];
 };
 
 /**
@@ -578,7 +578,7 @@ export const useControlgroupProps = (
     uiGroupStateController.uiStateSignal,
   );
   const [actionRequester, setActionRequester] = useState();
-  const [controlgroupProps, controlRootProps] = useInteractiveProps(props, {
+  const [controlRootProps, controlgroupProps] = useInteractiveProps(props, {
     uiStateController: uiGroupStateController,
     boundAction,
     // Group state is set before dispatching navi_ui_state_change → dispatchRequestAction,
@@ -634,6 +634,7 @@ export const useControlgroupProps = (
   }
 
   return [
+    controlRootProps,
     {
       ...controlgroupProps,
       "name": undefined, // useful to children, not the the group itself
@@ -644,7 +645,6 @@ export const useControlgroupProps = (
       },
       "navi-control-group": "",
     },
-    controlRootProps,
     controlgroupChildrenWrapperProps,
   ];
 };
@@ -660,12 +660,12 @@ export const useControlgroupProps = (
  * via `--navi-update` or `--navi-clear` from outside), the change is
  * propagated down to the child automatically.
  *
- * Returns a 3-tuple `[controlHostProps, controlRootProps, facadeChildrenProps]`.
+ * Returns a 3-tuple `[controlRootProps, controlHostProps, facadeChildrenProps]`.
  * Use `ControlFacadeChildrenWrapper` with the third element to wrap the popup
  * children — it resets field contexts and injects the facade controller:
  *
  * ```jsx
- * const [controlHostProps, controlRootProps, facadeChildrenProps] = useControlFacadeProps(props, options);
+ * const [controlRootProps, controlHostProps, facadeChildrenProps] = useControlFacadeProps(props, options);
  * // …
  * <ControlFacadeChildrenWrapper {...facadeChildrenProps}>
  *   {children}
@@ -674,9 +674,9 @@ export const useControlgroupProps = (
  */
 export const useControlFacadeProps = (props, options) => {
   const { ref } = props;
-  const [controlHostProps, controlRootProps] = useControlProps(props, options);
+  const [controlRootProps, controlHostProps] = useControlProps(props, options);
   const facadeController = useUIFacadeStateController(() => ref.current);
-  return [controlHostProps, controlRootProps, { value: facadeController }];
+  return [controlRootProps, controlHostProps, { value: facadeController }];
 };
 
 /**
@@ -1053,5 +1053,5 @@ const useInteractiveProps = (
     });
   }
 
-  return [controlHostProps, controlRootProps];
+  return [controlRootProps, controlHostProps];
 };

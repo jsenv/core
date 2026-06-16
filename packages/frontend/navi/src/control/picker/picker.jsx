@@ -311,7 +311,7 @@ const PickerButton = (props) => {
   }
   const { ref, variant, icon, placeholder, ui, maxLines, headless } = props;
   const inputRef = useRef(null);
-  const [inputProps, pickerRemainingProps, facadeChildrenProps] =
+  const [pickerRemainingProps, inputProps, facadeChildrenProps] =
     useControlFacadeProps(
       {
         ...props,

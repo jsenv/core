@@ -362,7 +362,7 @@ export const ButtonUI = (props) => {
     cta,
     spacing,
   } = props;
-  const [buttonControlHostProps, buttonControlRootProps] = useControlProps(
+  const [buttonControlRootProps, buttonControlHostProps] = useControlProps(
     props,
     {
       controlType: "button",

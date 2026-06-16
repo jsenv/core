@@ -281,15 +281,15 @@ const InputHeadlessResolver = (props) => {
   return <Next {...props} />;
 };
 const InputTextualHeadless = (props) => {
-  const [inputProps, remainingProps] = useInputTextualProps(props);
+  const [inputRootProps, inputHostProps] = useInputTextualProps(props);
 
   return (
     <RealInput
       navi-visually-hidden=""
       navi-focus-delegate=""
       aria-hidden="true"
-      {...inputProps}
-      {...remainingProps}
+      {...inputRootProps}
+      {...inputHostProps}
     />
   );
 };
@@ -304,7 +304,7 @@ const useInputTextualProps = (props) => {
 const InputTextualUI = (props) => {
   import.meta.css = css;
   const { ui, discrete, variant, width = "maxLength" } = props;
-  const [inputControlHostProps, inputControlRootProps] =
+  const [inputControlRootProps, inputControlHostProps] =
     useInputTextualProps(props);
   const { id, basePseudoState, children } = inputControlHostProps;
   const uiStateController = getUIStateControllerById(id);

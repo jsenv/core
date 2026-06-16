@@ -30,7 +30,7 @@ export const useCheckableProps = (props, options) => {
     getPropFromState: Boolean,
     ...options,
   });
-  result[0].onnavi_get_value = (e) => {
+  result[1].onnavi_get_value = (e) => {
     e.detail.respondWith(props.value);
   };
   return result;

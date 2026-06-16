@@ -109,7 +109,7 @@ const BadgeStyleCSSVars = {
 const BadgeButton = (props) => {
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
-  const [buttonHostProps, buttonRootProps] = useControlProps(props, {
+  const [buttonRootProps, buttonHostProps] = useControlProps(props, {
     controlType: "button",
     statePropName: "value",
     allowNameless: true,

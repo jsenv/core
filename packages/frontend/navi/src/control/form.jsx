@@ -34,8 +34,9 @@ export const Form = (props) => {
 
 const FormControl = (props) => {
   const { ref, method = "GET" } = props;
-  const [formProps, remainingProps, childrenWrapperProps] =
-    useControlgroupProps(props, {
+  const [formRootProps, formProps, childrenWrapperProps] = useControlgroupProps(
+    props,
+    {
       wantRequesterButtonState: true,
       controlType: "form",
       stateType: "object",
@@ -56,7 +57,8 @@ const FormControl = (props) => {
         }
         return formValues;
       },
-    });
+    },
+  );
   const { basePseudoState, children } = formProps;
   // const disabled = basePseudoState[":disabled"];
   // const readOnly = basePseudoState[":read-only"];
@@ -67,8 +69,8 @@ const FormControl = (props) => {
 
   return (
     <Box
+      {...formRootProps}
       {...formProps}
-      {...remainingProps}
       as="form"
       data-method={method}
       novalidate="" // make sure browser don't prevent "submit" when invalid, nor display messages

@@ -30,7 +30,7 @@ export const ControlGroup = (props) => {
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
 
-  const [controlgroupProps, remainingProps, childrenWrapperProps] =
+  const [controlgroupRootProps, controlgroupProps, childrenWrapperProps] =
     useControlgroupProps(props, {
       wantRequesterButtonState: true,
       controlType: props.type || "control_group",
@@ -57,8 +57,8 @@ export const ControlGroup = (props) => {
 
   return (
     <Box
+      {...controlgroupRootProps}
       {...controlgroupProps}
-      {...remainingProps}
       type={undefined}
       pseudoClasses={CONTROL_GROUP_PSEUDO_CLASSES}
       onnavi_get_managed_controls={(e) => {

@@ -312,7 +312,7 @@ export const InputCheckbox = (props) => {
 };
 
 const InputCheckboxHeadless = (props) => {
-  const [checkboxProps, remainingProps] = useCheckableProps(props);
+  const [checkboxRootProps, checkboxHostProps] = useCheckableProps(props);
 
   return (
     <RealInputCheckbox
@@ -320,22 +320,22 @@ const InputCheckboxHeadless = (props) => {
       navi-visually-hidden=""
       navi-focus-delegate=""
       aria-hidden="true"
-      {...checkboxProps}
-      {...remainingProps}
+      {...checkboxRootProps}
+      {...checkboxHostProps}
     />
   );
 };
 
 const InputCheckboxFieldInterface = (props) => {
   import.meta.css = css;
-  const [checkboxProps, remainingProps] = useCheckableProps(props);
+  const [checkboxRootProps, checkboxHostProps] = useCheckableProps(props);
   const {
     icon,
     switch: switchProp,
     appearance = icon ? "icon" : switchProp ? "switch" : "checkbox", // "checkbox", "switch", "icon", "button"
     accentColor,
   } = props;
-  const { basePseudoState, checked } = checkboxProps;
+  const { basePseudoState, checked } = checkboxHostProps;
   const loading = basePseudoState[":-navi-loading"];
   const boxRef = useRef();
   useAccentColorAttributes(boxRef, accentColor, {
@@ -369,7 +369,7 @@ const InputCheckboxFieldInterface = (props) => {
       // Checkbox displayed as button are usually squarish
       // (passsing any custom width/height would auto disable aspectRatio forced by the square prop)
       square={appearance === "button" ? true : undefined}
-      {...remainingProps}
+      {...checkboxRootProps}
       ref={boxRef}
       appearance={undefined}
       switch={undefined}
@@ -395,7 +395,7 @@ const InputCheckboxFieldInterface = (props) => {
         color="var(--loader-color)"
       />
       {visualVnode}
-      <RealInputCheckbox {...checkboxProps} switch={switchProp} />
+      <RealInputCheckbox {...checkboxHostProps} switch={switchProp} />
     </Box>
   );
 };
