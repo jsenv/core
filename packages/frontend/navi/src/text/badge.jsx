@@ -109,7 +109,7 @@ const BadgeStyleCSSVars = {
 const BadgeButton = (props) => {
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
-  const [buttonProps, remainingProps] = useControlProps(props, {
+  const [buttonHostProps, buttonRootProps] = useControlProps(props, {
     controlType: "button",
     statePropName: "value",
     allowNameless: true,
@@ -123,8 +123,8 @@ const BadgeButton = (props) => {
       onnavi_get_value={(e) => {
         e.detail.respondWith(props.value);
       }}
-      {...buttonProps}
-      {...remainingProps}
+      {...buttonRootProps}
+      {...buttonHostProps}
     />
   );
 };

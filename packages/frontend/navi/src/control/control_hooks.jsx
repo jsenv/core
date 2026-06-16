@@ -195,7 +195,7 @@ export const useControlProps = (
     props.action,
     uiStateController.uiStateSignal,
   );
-  const [controlProps, remainingProps] = useInteractiveProps(props, {
+  const [controlHostProps, controlRootProps] = useInteractiveProps(props, {
     uiStateController,
     boundAction,
     readOnlySupported,
@@ -274,7 +274,7 @@ export const useControlProps = (
     //
     // We do NOT sync when the change originated from the checkable's own user input event,
     // because at that point asAction hasn't run yet and we must not pre-empt its dedup.
-    controlProps.onnavi_ui_state_change = (e) => {
+    controlHostProps.onnavi_ui_state_change = (e) => {
       const originatingEvent = e.detail.event;
       if (isCheckable) {
         const sourceIsOwnInput =
@@ -527,7 +527,7 @@ export const useControlProps = (
         e.preventDefault();
       }
     };
-    Object.assign(controlProps, {
+    Object.assign(controlHostProps, {
       ref: refComposed,
       onMouseDown,
       onClick,
@@ -537,7 +537,7 @@ export const useControlProps = (
     });
   }
 
-  return [controlProps, remainingProps];
+  return [controlHostProps, controlRootProps];
 };
 
 /**
@@ -578,7 +578,7 @@ export const useControlgroupProps = (
     uiGroupStateController.uiStateSignal,
   );
   const [actionRequester, setActionRequester] = useState();
-  const [controlgroupProps, remainingProps] = useInteractiveProps(props, {
+  const [controlgroupProps, controlRootProps] = useInteractiveProps(props, {
     uiStateController: uiGroupStateController,
     boundAction,
     // Group state is set before dispatching navi_ui_state_change → dispatchRequestAction,
@@ -644,7 +644,7 @@ export const useControlgroupProps = (
       },
       "navi-control-group": "",
     },
-    remainingProps,
+    controlRootProps,
     controlgroupChildrenWrapperProps,
   ];
 };
@@ -660,12 +660,12 @@ export const useControlgroupProps = (
  * via `--navi-update` or `--navi-clear` from outside), the change is
  * propagated down to the child automatically.
  *
- * Returns a 3-tuple `[inputProps, remainingProps, facadeChildrenProps]`.
+ * Returns a 3-tuple `[controlHostProps, controlRootProps, facadeChildrenProps]`.
  * Use `ControlFacadeChildrenWrapper` with the third element to wrap the popup
  * children — it resets field contexts and injects the facade controller:
  *
  * ```jsx
- * const [inputProps, remainingProps, facadeChildrenProps] = useControlFacadeProps(props, options);
+ * const [controlHostProps, controlRootProps, facadeChildrenProps] = useControlFacadeProps(props, options);
  * // …
  * <ControlFacadeChildrenWrapper {...facadeChildrenProps}>
  *   {children}
@@ -674,9 +674,9 @@ export const useControlgroupProps = (
  */
 export const useControlFacadeProps = (props, options) => {
   const { ref } = props;
-  const [controlProps, remainingProps] = useControlProps(props, options);
+  const [controlHostProps, controlRootProps] = useControlProps(props, options);
   const facadeController = useUIFacadeStateController(() => ref.current);
-  return [controlProps, remainingProps, { value: facadeController }];
+  return [controlHostProps, controlRootProps, { value: facadeController }];
 };
 
 /**
@@ -716,21 +716,21 @@ const useInteractiveProps = (
   },
 ) => {
   const { ref } = props;
-  const controlProps = {
+  const controlHostProps = {
     ref,
     "navi-control-host": "",
   };
-  let remainingProps = {
+  let controlRootProps = {
     "navi-control": uiStateController.controlType,
   };
   const propKeySet = new Set(Object.keys(props));
   for (const key of propKeySet) {
     if (CONTROL_PROP_SET.has(key)) {
       if (CONTROL_ATTRIBUTE_SET.has(key)) {
-        controlProps[key] = props[key];
+        controlHostProps[key] = props[key];
       }
     } else {
-      remainingProps[key] = props[key];
+      controlRootProps[key] = props[key];
     }
   }
   const actionStatus = useActionStatus(boundAction);
@@ -751,7 +751,7 @@ const useInteractiveProps = (
       focusVisible: autoFocusVisible,
       autoSelect,
     });
-    Object.assign(controlProps, {
+    Object.assign(controlHostProps, {
       "navi-autofocus": autoFocus
         ? autoFocus === true
           ? ""
@@ -783,7 +783,7 @@ const useInteractiveProps = (
       controlReadOnly ||
       loadingResolved ||
       uiStateController.readOnly;
-    Object.assign(controlProps, {
+    Object.assign(controlHostProps, {
       "id": idResolved,
       "navi-control-proxy-for": naviProxyFor,
       name,
@@ -799,9 +799,9 @@ const useInteractiveProps = (
       },
     });
     if (readOnlySupported) {
-      controlProps.readOnly = readOnlyResolved;
+      controlHostProps.readOnly = readOnlyResolved;
     } else {
-      controlProps["aria-readonly"] = readOnlyResolved;
+      controlHostProps["aria-readonly"] = readOnlyResolved;
     }
     // infom any <Field> parent of our readOnly state + that we are interactive
     useLayoutEffect(() => {
@@ -812,13 +812,13 @@ const useInteractiveProps = (
       }
     }, [controlToInterfaceContext, disabledResolved, readOnlyResolved]);
 
-    const { constraints } = controlProps;
+    const { constraints } = controlHostProps;
     useConstraints(ref, constraints);
-    remainingProps = useConstraintMessages(ref, remainingProps);
+    controlRootProps = useConstraintMessages(ref, controlRootProps);
   }
   ui_state_and_value: {
     const uiState = uiStateController.uiStateSignal.value;
-    Object.assign(controlProps, {
+    Object.assign(controlHostProps, {
       onnavi_clear_ui_state: (e) => {
         uiStateController.clearUIState(e);
       },
@@ -838,10 +838,10 @@ const useInteractiveProps = (
       const statePropValueRaw = uiStateController.getPropFromState(uiState);
       const statePropValueDom =
         uiStateController.toControlHostValue(statePropValueRaw);
-      controlProps[statePropName] = statePropValueDom;
+      controlHostProps[statePropName] = statePropValueDom;
       if (statePropName === "checked") {
         const { value } = props;
-        controlProps.value = value;
+        controlHostProps.value = value;
       }
     }
   }
@@ -850,22 +850,22 @@ const useInteractiveProps = (
     // Children are returned raw so callers decide how to wrap them.
     // Use the returned ChildrenContextWrapper to reset field-specific contexts
     // (MessagePropsRef, ControlToInterface) around the content you render.
-    Object.assign(controlProps, { children });
+    Object.assign(controlHostProps, { children });
   }
   command_props: {
-    Object.assign(controlProps, {
+    Object.assign(controlHostProps, {
       onnavi_command: (e) => {
         props.onnavi_command?.(e);
         onNaviCommand(e, { debugCommand });
       },
     });
     // The control host (e.g. hidden input inside picker) listens for navi_command
-    // via controlProps above. But when commandfor targets the control root (e.g.
+    // via controlHostProps above. But when commandfor targets the control root (e.g.
     // the picker button), the event fires there instead. Putting onnavi_command on
-    // remainingProps — which ends up on the root element — lets the root forward
-    // to the host automatically. When root === host the spread order ensures
-    // controlProps.onnavi_command takes precedence.
-    Object.assign(remainingProps, {
+    // controlRootProps — which ends up on the root element — lets the root handle it.
+    // When root === host the spread order ensures
+    // controlHostProps.onnavi_command takes precedence.
+    Object.assign(controlRootProps, {
       onnavi_command: (e) => {
         props.onnavi_command?.(e);
         onNaviCommand(e, { debugCommand });
@@ -880,10 +880,10 @@ const useInteractiveProps = (
     });
     const dataAction =
       action === undefined ? undefined : boundAction.callSource;
-    Object.assign(controlProps, {
+    Object.assign(controlHostProps, {
       "data-action": dataAction,
     });
-    Object.assign(remainingProps, {
+    Object.assign(controlRootProps, {
       "data-action": dataAction,
     });
 
@@ -900,7 +900,7 @@ const useInteractiveProps = (
       resetOnAbort,
       resetOnError,
     } = props;
-    Object.assign(controlProps, {
+    Object.assign(controlHostProps, {
       onFocus: (e) => {
         // Transfer programmatic focus to the delegate target (navi-focus-delegate or navi-control-proxy-for)
         const focusProxyTarget =
@@ -1048,10 +1048,10 @@ const useInteractiveProps = (
         uiStateController.actionEnd(e);
         debugAction(e, `action end with data: ${JSON.stringify(data)}`);
         onActionEnd?.(data, e);
-        remainingProps.onnavi_action_end?.(e);
+        controlRootProps.onnavi_action_end?.(e);
       },
     });
   }
 
-  return [controlProps, remainingProps];
+  return [controlHostProps, controlRootProps];
 };

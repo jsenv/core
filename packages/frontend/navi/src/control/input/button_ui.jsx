@@ -362,12 +362,15 @@ export const ButtonUI = (props) => {
     cta,
     spacing,
   } = props;
-  const [buttonProps, remainingProps] = useControlProps(props, {
-    controlType: "button",
-    statePropName: "value",
-    allowNameless: true,
-  });
-  const { basePseudoState, children } = buttonProps;
+  const [buttonControlHostProps, buttonControlRootProps] = useControlProps(
+    props,
+    {
+      controlType: "button",
+      statePropName: "value",
+      allowNameless: true,
+    },
+  );
+  const { basePseudoState, children } = buttonControlHostProps;
   const loading = basePseudoState[":-navi-loading"];
 
   const isLink = href !== undefined;
@@ -394,8 +397,8 @@ export const ButtonUI = (props) => {
 
   return (
     <Box
-      {...buttonProps}
-      {...remainingProps}
+      {...buttonControlRootProps}
+      {...buttonControlHostProps}
       // eslint-disable-next-line react/no-children-prop
       children={undefined}
       spacing={undefined}

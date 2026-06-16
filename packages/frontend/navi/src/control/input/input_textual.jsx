@@ -304,8 +304,9 @@ const useInputTextualProps = (props) => {
 const InputTextualUI = (props) => {
   import.meta.css = css;
   const { ui, discrete, variant, width = "maxLength" } = props;
-  const [inputProps, remainingProps] = useInputTextualProps(props);
-  const { id, basePseudoState, children } = inputProps;
+  const [inputControlHostProps, inputControlRootProps] =
+    useInputTextualProps(props);
+  const { id, basePseudoState, children } = inputControlHostProps;
   const uiStateController = getUIStateControllerById(id);
   const value = uiStateController.uiState;
   const disabled = basePseudoState[":disabled"];
@@ -322,19 +323,19 @@ const InputTextualUI = (props) => {
   // meant to end on input
   // we have to use delete otherwise it could override width: undefined
   // when remainingProps contains expandX which would try to set width to 100%
-  delete remainingProps.width;
+  delete inputControlRootProps.width;
   if (width === "maxLength") {
-    const { maxLength } = inputProps;
+    const { maxLength } = inputControlHostProps;
     if (maxLength !== undefined) {
       const isNumeric = props.inputMode === "numeric";
-      inputProps.width = isNumeric
+      inputControlHostProps.width = isNumeric
         ? `${maxLength}ch`
         : `calc(${maxLength} * 1.5ch)`;
     }
   } else if (width === "content") {
-    inputProps.fieldSizing = "content";
+    inputControlHostProps.fieldSizing = "content";
   } else {
-    inputProps.width = width;
+    inputControlHostProps.width = width;
   }
 
   return (
@@ -343,7 +344,7 @@ const InputTextualUI = (props) => {
       inline
       flex
       baseClassName="navi_input"
-      {...remainingProps}
+      {...inputControlRootProps}
       basePseudoState={basePseudoState}
       ui={undefined}
       data-discrete={discrete ? "" : undefined}
@@ -361,11 +362,11 @@ const InputTextualUI = (props) => {
       />
       {variant === "underline" ? (
         <span className="navi_input_real_input_wrapper">
-          <RealInput {...inputProps} />
+          <RealInput {...inputControlHostProps} />
           <span className="navi_input_underline" />
         </span>
       ) : (
-        <RealInput {...inputProps} />
+        <RealInput {...inputControlHostProps} />
       )}
       {childrenWithContext}
     </Box>

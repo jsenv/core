@@ -274,13 +274,13 @@ const InputRangeFieldInterface = (props) => {
     input.parentNode.style.setProperty("--x-fill-ratio", ratio);
   };
   resolveInputProps(props);
-  const [rangeProps, remainingProps] = useControlProps(props, {
+  const [rangeHostProps, rangeRootProps] = useControlProps(props, {
     controlType: "input",
     statePropName: "value",
     defaultStatePropName: "defaultValue",
     readOnlySupported: true,
   });
-  const { basePseudoState } = rangeProps;
+  const { basePseudoState } = rangeHostProps;
   const loading = basePseudoState[":-navi-loading"];
 
   const boxRef = useRef();
@@ -300,7 +300,7 @@ const InputRangeFieldInterface = (props) => {
       pseudoElements={RangePseudoElements}
       data-callout-anchor=".navi_input_range_thumb"
       hasChildUsingForwardedProps
-      {...remainingProps}
+      {...rangeRootProps}
       basePseudoState={basePseudoState}
       ref={boxRef}
     >
@@ -314,7 +314,7 @@ const InputRangeFieldInterface = (props) => {
       <div className="navi_input_range_fill" />
       <div className="navi_input_range_track" />
       <div className="navi_input_range_thumb" data-callout-arrow-x="center" />
-      <RangeNativeInput {...rangeProps} updateFillRatio={updateFillRatio} />
+      <RangeNativeInput {...rangeHostProps} updateFillRatio={updateFillRatio} />
     </Box>
   );
 };
