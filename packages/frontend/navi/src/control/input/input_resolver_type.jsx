@@ -52,11 +52,12 @@ const InputSearchUI = ({ icon }) => {
   return (
     <InputRightSlot>
       <Button
-        tabIndex="-1"
-        navi-focus-delegate={id}
-        variant="icon"
         command="--navi-clear"
         commandFor={id}
+        tabIndex="-1"
+        navi-focus-delegate={id}
+        icon
+        variant="discrete"
       >
         <Icon>
           <CloseSvg />

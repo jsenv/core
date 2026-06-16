@@ -243,6 +243,7 @@ const css = /* css */ `
 
     /* discrete: background on hover */
     &[data-variant="discrete"] {
+      --button-border-width: 0;
       --x-button-background-color: transparent;
       --x-button-border-color: transparent;
 
