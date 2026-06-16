@@ -29,9 +29,7 @@ export const getUIStateControllerById = (id) => controllersById.get(id);
 // instead of "[object Object]". Console-inspectable via window.__navi_js('id').
 let naviJsIdCounter = 0;
 const naviJsRegistry = new Map();
-if (import.meta.dev) {
-  window.__navi_js = (id) => naviJsRegistry.get(id);
-}
+window.__navi_js = (id) => naviJsRegistry.get(id);
 const setNonSerializableDomValue = (el, propName, jsValue) => {
   let id = el.dataset.naviJsId;
   if (!id) {
@@ -39,7 +37,7 @@ const setNonSerializableDomValue = (el, propName, jsValue) => {
     el.dataset.naviJsId = id;
   }
   naviJsRegistry.set(id, jsValue);
-  el[propName] = `js:navi_js('${id}')`;
+  el[propName] = `window.__navi_js('${id}')`;
 };
 const deleteNonSerializableDomValue = (el) => {
   const id = el.dataset && el.dataset.naviJsId;
