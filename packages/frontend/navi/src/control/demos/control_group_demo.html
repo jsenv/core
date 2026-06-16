@@ -430,11 +430,7 @@
                     {fruit}
                   </Button>
                 ))}
-                <Button
-                  command="--navi-update"
-                  commandfor={listId}
-                  value={null}
-                >
+                <Button command="--navi-clear" commandfor={listId}>
                   Désélectionner
                 </Button>
                 <Button.Send commandfor={listId} />
@@ -502,7 +498,7 @@
                 >
                   Banana + Date + Elderberry
                 </Button>
-                <Button command="--navi-update" commandfor={listId} value={[]}>
+                <Button command="--navi-clear" commandfor={listId}>
                   Tout désélectionner
                 </Button>
                 <Button command="--navi-send" commandfor={listId}>
