@@ -1,9 +1,9 @@
 import {
+  chainEvent,
   createPubSub,
   dispatchInternalCustomEvent,
   findEvent,
   getElementSignature,
-  resolveEventDetail,
 } from "@jsenv/dom";
 import { computed, signal } from "@preact/signals";
 import { createContext } from "preact";
@@ -418,8 +418,9 @@ export const useUIStateController = (
         const siblings = radioControllersByName.get(uiStateController.name);
         if (siblings) {
           const siblingUncheckEvent = new CustomEvent("radio_sibling_uncheck", {
-            detail: resolveEventDetail({ event: e, internalBehavior: true }),
+            detail: { internalBehavior: true },
           });
+          chainEvent(siblingUncheckEvent, e);
           for (const siblingController of siblings) {
             if (siblingController === uiStateController) {
               continue;
@@ -805,11 +806,9 @@ export const useUIGroupStateController = (
         return;
       }
       const silentEvent = new CustomEvent("navi_set_ui_state_external", {
-        detail: resolveEventDetail({
-          event: e,
-          internalBehavior: true,
-        }),
+        detail: { internalBehavior: true },
       });
+      chainEvent(silentEvent, e);
       for (const childUIStateController of childUIStateControllerArray) {
         if (!isMonitoringChild(childUIStateController)) {
           continue;
@@ -930,8 +929,9 @@ export const useUIGroupStateController = (
     },
     resetUIState: (e) => {
       const silentEvent = new CustomEvent("navi_reset_ui_state", {
-        detail: resolveEventDetail({ event: e, internalBehavior: true }),
+        detail: { internalBehavior: true },
       });
+      chainEvent(silentEvent, e);
       for (const childUIStateController of childUIStateControllerArray) {
         if (!isMonitoringChild(childUIStateController)) {
           continue;
@@ -945,8 +945,9 @@ export const useUIGroupStateController = (
     },
     clearUIState: (e) => {
       const silentEvent = new CustomEvent("navi_clear_ui_state", {
-        detail: resolveEventDetail({ event: e, internalBehavior: true }),
+        detail: { internalBehavior: true },
       });
+      chainEvent(silentEvent, e);
       for (const childUIStateController of childUIStateControllerArray) {
         if (!isMonitoringChild(childUIStateController)) {
           continue;
@@ -1023,8 +1024,9 @@ export const useUIFacadeStateController = (uiStateController, name) => {
       }
       updatingRef.current = true;
       const silentEvent = new CustomEvent("facade_propagate_down", {
-        detail: resolveEventDetail({ event: e, internalBehavior: true }),
+        detail: { internalBehavior: true },
       });
+      chainEvent(silentEvent, e);
       child.setUIState(newUIState, silentEvent);
       updatingRef.current = false;
     });
@@ -1066,8 +1068,9 @@ export const useUIFacadeStateController = (uiStateController, name) => {
         }
         updatingRef.current = true;
         const silentEvent = new CustomEvent("facade_propagate_up", {
-          detail: resolveEventDetail({ event: e, internalBehavior: true }),
+          detail: { internalBehavior: true },
         });
+        chainEvent(silentEvent, e);
         uiStateController.setUIState(child.uiState, silentEvent);
         updatingRef.current = false;
       },

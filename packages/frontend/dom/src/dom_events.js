@@ -28,9 +28,10 @@ export const dispatchInternalCustomEvent = (
   customEventDetail,
 ) => {
   const customEvent = new CustomEvent(customEventName, {
-    detail: resolveEventDetail(customEventDetail),
+    detail: customEventDetail,
     cancelable: true,
   });
+  chainEvent(customEvent, customEventDetail?.event);
   return el.dispatchEvent(customEvent);
 };
 
@@ -44,10 +45,11 @@ export const dispatchPublicCustomEvent = (
   customEventDetail,
 ) => {
   const customEvent = new CustomEvent(customEventName, {
-    detail: resolveEventDetail(customEventDetail),
+    detail: customEventDetail,
     bubbles: true,
     cancelable: true,
   });
+  chainEvent(customEvent, customEventDetail?.event);
   return el.dispatchEvent(customEvent);
 };
 
@@ -59,24 +61,28 @@ export const dispatchPublicCustomEvent = (
  */
 export const dispatchCustomEvent = (el, customEventName, customEventDetail) => {
   const customEvent = new CustomEvent(customEventName, {
-    detail: resolveEventDetail(customEventDetail),
+    detail: customEventDetail,
     cancelable: true,
   });
+  chainEvent(customEvent, customEventDetail?.event);
   const result = el.dispatchEvent(customEvent);
   return result;
 };
 
-export const resolveEventDetail = (customEventDetail) => {
-  const { event, ...rest } = customEventDetail ?? {};
-  if (!event) {
-    return { ...rest };
+export const chainEvent = (customEvent, parentEvent) => {
+  if (!parentEvent) {
+    return customEvent;
   }
   // Always build eventChain from the first wrapping so callers can rely on it
-  // being present whenever `event` is set.
-  // eventChain = [oldest, ..., event] — the full ancestor list including the direct parent.
-  const previousChain = event.detail?.eventChain;
-  const eventChain = previousChain ? [...previousChain, event] : [event];
-  return { ...rest, event, eventChain };
+  // being present whenever `parentEvent` is set.
+  // eventChain = [oldest, ..., parentEvent] — the full ancestor list including the direct parent.
+  const previousChain = parentEvent.detail?.eventChain;
+  const eventChain = previousChain
+    ? [...previousChain, parentEvent]
+    : [parentEvent];
+  customEvent.detail.event = parentEvent;
+  customEvent.detail.eventChain = eventChain;
+  return customEvent;
 };
 
 /**

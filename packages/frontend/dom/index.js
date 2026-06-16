@@ -2,13 +2,13 @@ export { getElementSignature } from "./src/element_signature.js";
 
 // state management
 export {
+  chainEvent,
   createEventGroupLogger,
   dispatchCustomEvent,
   dispatchInternalCustomEvent,
   dispatchPublicCustomEvent,
   findEvent,
   formatEventSideEffect,
-  resolveEventDetail,
 } from "./src/dom_events.js";
 export { createIterableWeakSet } from "./src/iterable_weak_set.js";
 export { createPubSub } from "./src/pub_sub.js";
