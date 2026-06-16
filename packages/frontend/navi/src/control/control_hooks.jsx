@@ -537,7 +537,7 @@ export const useControlProps = (
     });
   }
 
-  return [controlRootProps, controlHostProps];
+  return [controlRootProps, controlHostProps, uiStateController];
 };
 
 /**
@@ -673,8 +673,12 @@ export const useControlgroupProps = (
  * ```
  */
 export const useControlFacadeProps = (props, options) => {
-  const [controlRootProps, controlHostProps] = useControlProps(props, options);
-  const facadeController = useUIFacadeStateController(props);
+  const [controlRootProps, controlHostProps, uiStateController] =
+    useControlProps(props, options);
+  const facadeController = useUIFacadeStateController(
+    uiStateController,
+    props.name,
+  );
   return [controlRootProps, controlHostProps, { value: facadeController }];
 };
 

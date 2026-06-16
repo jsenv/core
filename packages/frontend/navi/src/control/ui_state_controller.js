@@ -16,7 +16,6 @@ import { dispatchNaviCommand } from "./commands.js";
 import { findControlProxy } from "./control_proxy.js";
 import { asControlHostValue } from "./control_value.js";
 import { FormContext } from "./form_context.js";
-import { dispatchRequestSetUIState } from "./ui_state_dom.js";
 
 // In-memory registry of all mounted ui state controllers keyed by their id.
 // Allows direct controller access without dispatching DOM events — used by external
@@ -1008,18 +1007,12 @@ const EMPTY_OBJECT = {};
  * inside the picker popup. It also means `commands.js` no longer has to
  * manually re-dispatch to inner controls.
  */
-export const useUIFacadeStateController = (props) => {
+export const useUIFacadeStateController = (uiStateController, name) => {
   const firstChildControllerRef = useRef(null);
   const updatingRef = useRef(false);
-  const uiStateSignal = useMemo(() => signal(undefined), []);
-  const { ref } = props;
 
   useLayoutEffect(() => {
-    const facadeControlEl = ref.current;
-    if (!facadeControlEl) {
-      return undefined;
-    }
-    const onUIStateChange = (e) => {
+    return uiStateController.subscribe((newUIState, e) => {
       if (updatingRef.current) {
         return;
       }
@@ -1028,33 +1021,21 @@ export const useUIFacadeStateController = (props) => {
         return;
       }
       updatingRef.current = true;
-      uiStateSignal.value = e.detail.value;
       const silentEvent = new CustomEvent("facade_propagate_down", {
         detail: { event: e, internalBehavior: true },
       });
-      child.setUIState(e.detail.value, silentEvent);
+      child.setUIState(newUIState, silentEvent);
       updatingRef.current = false;
-    };
-    facadeControlEl.addEventListener("navi_ui_state_change", onUIStateChange);
-    return () => {
-      facadeControlEl.removeEventListener(
-        "navi_ui_state_change",
-        onUIStateChange,
-      );
-    };
-  }, [ref]);
+    });
+  }, []);
 
   return useMemo(
     () => ({
       controlType: "facade",
-      uiStateSignal,
+      uiStateSignal: uiStateController.uiStateSignal,
       registerChild: (child) => {
         if (!firstChildControllerRef.current) {
-          if (
-            props.name &&
-            child.controlType === "control_group" &&
-            !child.name
-          ) {
+          if (name && child.controlType === "control_group" && !child.name) {
             console.warn(
               `[useUIFacadeStateController] The first child registered in the picker facade is a "${child.controlType}" without a name. ` +
                 `Add name="..." to the ControlGroup (or equivalent) so the picker can identify and sync its value correctly.`,
@@ -1082,19 +1063,14 @@ export const useUIFacadeStateController = (props) => {
         if (child !== firstChildControllerRef.current) {
           return;
         }
-        const facadeControlEl = ref.current;
-        if (!facadeControlEl) {
-          return;
-        }
         updatingRef.current = true;
-        uiStateSignal.value = child.uiState;
-        dispatchRequestSetUIState(facadeControlEl, child.uiState, {
-          event: e,
-          internalBehavior: true,
+        const silentEvent = new CustomEvent("facade_propagate_up", {
+          detail: { event: e, internalBehavior: true },
         });
+        uiStateController.setUIState(child.uiState, silentEvent);
         updatingRef.current = false;
       },
     }),
-    [props.name],
+    [name],
   );
 };
