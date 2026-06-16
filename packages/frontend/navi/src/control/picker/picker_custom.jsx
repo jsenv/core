@@ -8,8 +8,10 @@ import { Dialog } from "@jsenv/navi/src/popup/dialog.jsx";
 import { Popover } from "@jsenv/navi/src/popup/popover.jsx";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { compareTwoJsValues } from "@jsenv/navi/src/utils/compare_two_js_values.js";
-import { dispatchNaviCommand } from "../commands.js";
-import { getUIStateFromElement } from "../ui_state_dom.js";
+import {
+  dispatchRequestSetUIState,
+  getUIStateFromElement,
+} from "../ui_state_dom.js";
 import {
   dispatchRequestAction,
   dispatchRequestInteraction,
@@ -293,9 +295,7 @@ const PickerCustom = (props) => {
       }
       const valueAtOpen = valueAtOpenRef.current;
       if (isCancel) {
-        dispatchNaviCommand(pickerEl, "--navi-update", e, {
-          value: valueAtOpen,
-        });
+        dispatchRequestSetUIState(inputEl, valueAtOpen, { event: e });
         restoreFocus(e);
         return;
       }
