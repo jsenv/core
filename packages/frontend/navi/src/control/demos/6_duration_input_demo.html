@@ -72,8 +72,17 @@
         minutes,
         onHours,
         onMinutes,
-        unitHour,
-        unitMinute,
+        unitHour = (
+          <Unit
+            unit="hour"
+            plural
+            color="secondary"
+            // We need this because ":" is inside the first input so
+            // in case unit pushes to the right it should account for the space of ":
+            marginRight="1ch"
+          />
+        ),
+        unitMinute = <Unit unit="minute" plural color="secondary" />,
         onPushEntry,
       }) => (
         <Box border="1px dotted #aaa" width="fit-content">
@@ -127,17 +136,8 @@
         minutes,
         onHours,
         onMinutes,
-        unitHour = (
-          <Unit
-            unit="hour"
-            plural
-            color="secondary"
-            // We need this because ":" is inside the first input so
-            // in case unit pushes to the right it should account for the space of ":
-            marginRight="1ch"
-          />
-        ),
-        unitMinute = <Unit unit="minute" plural color="secondary" />,
+        unitHour,
+        unitMinute,
       }) => {
         const [entries, push, clear] = useCallLog();
 
@@ -218,7 +218,7 @@
                 minutesSignal.value = v;
               }}
               unitHour={
-                <Text size="xs" marginRight="1ch">
+                <Text size="xs" marginRight="1ch" color="secondary">
                   This is way longer
                 </Text>
               }
@@ -229,6 +229,11 @@
 
       // ── ControlGroupInFormDemo ────────────────────────────────────────────
       const ControlGroupInFormDemo = () => {
+        const hoursSignal = useSignal(2);
+        const minutesSignal = useSignal(15);
+        const hours = hoursSignal.value;
+        const minutes = minutesSignal.value;
+
         const [entries, push, clear] = useCallLog();
 
         return (
@@ -255,7 +260,17 @@
                     push("duration uiAction", v);
                   }}
                 >
-                  <DurationInputs onPushEntry={push} />
+                  <DurationInputs
+                    hours={hours}
+                    minutes={minutes}
+                    onHours={(v) => {
+                      hoursSignal.value = v;
+                    }}
+                    onMinutes={(v) => {
+                      minutesSignal.value = v;
+                    }}
+                    onPushEntry={push}
+                  />
                 </ControlGroup>
                 <Button command="--navi-send">Submit</Button>
                 <CallLog entries={entries} onClear={clear} />
