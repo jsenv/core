@@ -188,7 +188,7 @@ const css = /* css */ `
       display: inline-flex;
       height: 1em;
       height: 1lh;
-      margin-inline: 0.2em;
+      margin-inline: 0.1em;
       flex-shrink: 0;
       align-items: center;
       align-self: flex-start;
