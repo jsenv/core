@@ -182,16 +182,6 @@ registerNaviCommand("--navi-update", (source, event) => {
       dispatchRequestSetUIState(target, commandValue, {
         event,
       });
-      const innerControl = resolvePickerInnerControl(target);
-      if (innerControl) {
-        // internalBehavior: true prevents the proxy from propagating the inner
-        // control's change back to the picker input a second time (we already
-        // set the picker input directly above).
-        dispatchRequestSetUIState(innerControl, commandValue, {
-          event,
-          internalBehavior: true,
-        });
-      }
       return true;
     },
   };
@@ -339,10 +329,6 @@ registerNaviCommand("--navi-clear", (source, event) => {
         return false;
       }
       dispatchRequestClearUIState(target, event);
-      const innerControl = resolvePickerInnerControl(target);
-      if (innerControl) {
-        dispatchRequestClearUIState(innerControl, event);
-      }
       return true;
     },
   };

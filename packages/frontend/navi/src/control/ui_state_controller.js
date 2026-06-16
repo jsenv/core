@@ -16,6 +16,7 @@ import { dispatchNaviCommand } from "./commands.js";
 import { findControlProxy } from "./control_proxy.js";
 import { asControlHostValue } from "./control_value.js";
 import { FormContext } from "./form_context.js";
+import { dispatchRequestSetUIState } from "./ui_state_dom.js";
 
 // In-memory registry of all mounted ui state controllers keyed by their id.
 // Allows direct controller access without dispatching DOM events — used by external
@@ -968,3 +969,96 @@ export const useUIGroupStateController = (
 // array (never undefined) and callers don't get a new reference each render.
 const EMPTY_ARRAY = [];
 const EMPTY_OBJECT = {};
+
+/**
+ * Facade UI state controller — establishes a transparent 1:1 sync between
+ * the picker's hidden input and the first child control inside the picker popup.
+ *
+ * **Relationship**: picker input ↔ first child (Input, ControlGroup, …)
+ *
+ * - Child → picker input: when the child's UI state changes (user interaction),
+ *   `onChildInteraction` forwards the new value to the picker input using
+ *   `dispatchRequestSetUIState` with `internalBehavior: true` so the picker input
+ *   updates without triggering another propagation cycle.
+ *
+ * - Picker input → child: we listen to `navi_ui_state_change` on the picker
+ *   input element. When the event fires AND we are not currently in a
+ *   child→picker propagation (`updatingRef`), we push the new value down to
+ *   the child with `internalBehavior: true`.
+ *
+ * The `updatingRef` flag breaks the potential loop:
+ *   child changes → we update picker input → navi_ui_state_change fires →
+ *   we see updatingRef=true → skip → no loop.
+ *
+ * This removes the need for `command="--navi-update"` on controls placed
+ * inside the picker popup. It also means `commands.js` no longer has to
+ * manually re-dispatch to inner controls.
+ */
+export const useUIFacadeStateController = (getPickerInputEl) => {
+  const firstChildControllerRef = useRef(null);
+  const updatingRef = useRef(false);
+
+  useLayoutEffect(() => {
+    const pickerInputEl = getPickerInputEl();
+    if (!pickerInputEl) {
+      return undefined;
+    }
+    const onUIStateChange = (e) => {
+      if (updatingRef.current) {
+        return;
+      }
+      const child = firstChildControllerRef.current;
+      if (!child) {
+        return;
+      }
+      updatingRef.current = true;
+      const silentEvent = new CustomEvent("facade_propagate_down", {
+        detail: { event: e, internalBehavior: true },
+      });
+      child.setUIState(e.detail.value, silentEvent);
+      updatingRef.current = false;
+    };
+    pickerInputEl.addEventListener("navi_ui_state_change", onUIStateChange);
+    return () => {
+      pickerInputEl.removeEventListener(
+        "navi_ui_state_change",
+        onUIStateChange,
+      );
+    };
+  }, []);
+
+  return useMemo(
+    () => ({
+      controlType: "facade",
+      registerChild: (child) => {
+        if (!firstChildControllerRef.current) {
+          firstChildControllerRef.current = child;
+        }
+      },
+      unregisterChild: (child) => {
+        if (firstChildControllerRef.current === child) {
+          firstChildControllerRef.current = null;
+        }
+      },
+      onChildInteraction: (child, e, { stateChanged }) => {
+        if (!stateChanged) {
+          return;
+        }
+        if (child !== firstChildControllerRef.current) {
+          return;
+        }
+        const pickerInputEl = getPickerInputEl();
+        if (!pickerInputEl) {
+          return;
+        }
+        updatingRef.current = true;
+        dispatchRequestSetUIState(pickerInputEl, child.uiState, {
+          event: e,
+          internalBehavior: true,
+        });
+        updatingRef.current = false;
+      },
+    }),
+    [],
+  );
+};
