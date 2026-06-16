@@ -654,10 +654,8 @@
               <code>""</code> après un Clear.
             </p>
             <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
-              inputSignal :{" "}
-              <strong>
-                {inputSignal.value === "" ? "(vide)" : inputSignal.value}
-              </strong>
+              nickNameSignal value :{" "}
+              <strong>{String(inputSignal.value)}</strong>
             </p>
             <fieldset>
               <legend>address</legend>
@@ -673,19 +671,22 @@
                 <Box flex="y" spacing="s" alignX="start">
                   <fieldset>
                     <legend>firstName</legend>
-                    <Input
-                      type="text"
-                      name="firstName"
-                      defaultValue="Jean"
-                      uiAction={(v) => {
-                        inputSignal.value = v;
-                        pushEntry("uiAction (firstName)", v);
-                      }}
-                    />
+                    <Input type="text" name="firstName" defaultValue="Jean" />
                   </fieldset>
                   <fieldset>
                     <legend>lastName</legend>
                     <Input type="text" name="lastName" defaultValue="Dupont" />
+                  </fieldset>
+                  <fieldset>
+                    <legend>nickName (uiAction → signal)</legend>
+                    <Input
+                      type="text"
+                      name="nickName"
+                      uiAction={(v) => {
+                        inputSignal.value = v;
+                        pushEntry("uiAction (nickName)", v);
+                      }}
+                    />
                   </fieldset>
                   <Box flex="x" spacing="s">
                     <Button.Clear />
@@ -735,7 +736,7 @@
                     <Input type="text" name="lastName" />
                   </fieldset>
                   <fieldset>
-                    <legend>nickName (value=signal "Jean")</legend>
+                    <legend>nickName (defaultValue via signal)</legend>
                     <Input
                       type="text"
                       name="nickName"
