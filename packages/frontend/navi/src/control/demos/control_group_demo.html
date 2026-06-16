@@ -63,6 +63,11 @@
                         Picker ControlGroup
                       </a>
                     </li>
+                    <li>
+                      <a href="#external-control-mixed">
+                        ControlGroup (texte + liste)
+                      </a>
+                    </li>
                   </ol>
                 </li>
                 <li>
@@ -120,6 +125,11 @@
               <section id="picker-controlgroup-external">
                 <h3>Picker ControlGroup</h3>
                 <PickerControlGroupExternalDemo />
+              </section>
+
+              <section id="external-control-mixed">
+                <h3>ControlGroup (texte + liste)</h3>
+                <ExternalMixedDemo />
               </section>
             </section>
 
@@ -304,6 +314,95 @@
                 Envoyer
               </Button>
             </Box>
+            <CallLog entries={entries} onClear={clearEntries} />
+          </Box>
+        );
+      };
+
+      const COLORS = ["Red", "Green", "Blue", "Yellow", "Purple"];
+
+      const ExternalMixedDemo = () => {
+        const [entries, pushEntry, clearEntries] = useCallLog();
+        const cgId = "external-control-mixed-cg";
+
+        return (
+          <Box flex="y" spacing="m" alignX="start">
+            <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+              Un <code>ControlGroup</code> qui contient un champ texte{" "}
+              <code>label</code> et une liste sélectable <code>color</code>. Les
+              boutons extérieurs envoient <code>--navi-update</code> avec un
+              objet <code>{"{ label, color }"}</code> pour mettre à jour les
+              deux d'un coup.
+            </p>
+            <fieldset>
+              <legend>info</legend>
+              <ControlGroup
+                id={cgId}
+                name="info"
+                action={(v) => {
+                  pushEntry("action", v);
+                }}
+                uiAction={(v) => {
+                  pushEntry("uiAction", v);
+                }}
+              >
+                <Box flex="y" spacing="s" alignX="start">
+                  <fieldset>
+                    <legend>label</legend>
+                    <Input
+                      type="text"
+                      name="label"
+                      placeholder="Saisir un label"
+                      uiAction={(v) => {
+                        pushEntry("uiAction (label)", v);
+                      }}
+                    />
+                  </fieldset>
+                  <fieldset>
+                    <legend>color</legend>
+                    <List
+                      name="color"
+                      selectable
+                      uiAction={(v) => {
+                        pushEntry("uiAction (color)", v);
+                      }}
+                      expandX
+                    >
+                      {COLORS.map((color, i) => (
+                        <List.Item
+                          selectable
+                          key={color}
+                          index={i}
+                          value={color}
+                          flex
+                          spacing="s"
+                        >
+                          <SelectableInput />
+                          {color}
+                        </List.Item>
+                      ))}
+                    </List>
+                  </fieldset>
+                </Box>
+
+                <Box flex="x" spacing="s" marginTop="s">
+                  <Button
+                    command="--navi-update"
+                    value={{ label: "Ciel", color: "Blue" }}
+                  >
+                    Ciel bleu
+                  </Button>
+                  <Button
+                    command="--navi-update"
+                    value={{ label: "Forêt", color: "Green" }}
+                  >
+                    Forêt verte
+                  </Button>
+                  <Button.Clear />
+                  <Button.Send />
+                </Box>
+              </ControlGroup>
+            </fieldset>
             <CallLog entries={entries} onClear={clearEntries} />
           </Box>
         );
