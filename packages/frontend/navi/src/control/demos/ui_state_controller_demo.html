@@ -526,7 +526,7 @@
                 <Button command="--navi-clear" commandfor={listId}>
                   Désélectionner
                 </Button>
-                <Button.Send commandfor={listId} />
+                <Button command="--navi-send" commandfor={listId} />
               </Box>
             </fieldset>
             <CallLog entries={entries} onClear={clearEntries} />
@@ -576,7 +576,7 @@
                   </List.Item>
                 ))}
               </List>
-              <Box flex="x" spacing="s">
+              <Box flex="x" spacing="s" marginTop="s">
                 <Button
                   command="--navi-update"
                   commandfor={listId}
@@ -594,9 +594,7 @@
                 <Button command="--navi-clear" commandfor={listId}>
                   Tout désélectionner
                 </Button>
-                <Button command="--navi-send" commandfor={listId}>
-                  Envoyer
-                </Button>
+                <Button command="--navi-send" commandfor={listId} />
               </Box>
             </fieldset>
             <CallLog entries={entries} onClear={clearEntries} />
@@ -632,7 +630,7 @@
                     <legend>lastName</legend>
                     <Input type="text" name="lastName" />
                   </fieldset>
-                  <Button.Send />
+                  <Button command="--navi-send" />
                 </Box>
               </ControlGroup>
             </fieldset>

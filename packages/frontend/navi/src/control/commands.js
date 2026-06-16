@@ -160,6 +160,21 @@ const registerNaviCommand = (command, commandHandler) => {
   };
 };
 
+registerNaviCommand("--navi-void", (source) => {
+  const target =
+    resolveExplicitTarget(source) || resolveFirstParentControl(source);
+  if (!target) {
+    return undefined;
+  }
+  return {
+    target,
+    implementation: () => {
+      // intentional no-op — useful to verify command dispatch in demos and tests
+      return true;
+    },
+  };
+});
+
 registerNaviCommand("--navi-update", (source, event) => {
   const target =
     resolveExplicitTarget(source) || resolveFirstParentControl(source);
@@ -186,7 +201,52 @@ registerNaviCommand("--navi-update", (source, event) => {
     },
   };
 });
+registerNaviCommand("--navi-clear", (source, event) => {
+  const target =
+    resolveExplicitTarget(source) || resolveFirstParentControl(source);
+  if (!target) {
+    return undefined;
+  }
+  const fromInput = source.closest(`[navi-control="input"]`);
 
+  return {
+    target,
+    implementation: () => {
+      if (fromInput) {
+        // clearing input search should not close a popover/dialog
+      } else {
+        dispatchNaviCommand(source, "--navi-close", event, {
+          optional: true,
+        });
+      }
+      const allowed = dispatchRequestInteraction(target, event, "--navi-clear");
+      if (!allowed) {
+        event.preventDefault();
+        return false;
+      }
+      dispatchRequestClearUIState(target, event);
+      return true;
+    },
+  };
+});
+registerNaviCommand("--navi-reset", (source, event) => {
+  const target =
+    resolveExplicitTarget(source) || resolveFirstParentControl(source);
+  if (!target) {
+    return undefined;
+  }
+  return {
+    target,
+    implementation: () => {
+      const allowed = dispatchRequestInteraction(target, event, "--navi-reset");
+      if (!allowed) {
+        event.preventDefault();
+        return false;
+      }
+      return dispatchRequestResetUIState(target, event);
+    },
+  };
+});
 registerNaviCommand("--navi-send", (source, event) => {
   const target =
     resolveExplicitTarget(source) ||
@@ -200,25 +260,7 @@ registerNaviCommand("--navi-send", (source, event) => {
   if (target.hasAttribute("aria-expanded")) {
     return {
       target,
-      implementation: () => {
-        // Skip --navi-update when the picker already has an inner control that
-        // manages the picker's value autonomously:
-        // - A ControlGroup aggregates all child values and syncs them up via its
-        //   own command="--navi-update". Calling --navi-update from the send button
-        //   (which has no value) would override the aggregated value.
-        // - Any other inner control host (e.g. a plain Input inside the picker
-        //   popup) already propagates its value to the picker via its own
-        //   command="--navi-update" on every change. Calling it again from the
-        //   send button's undefined value would corrupt the picker state.
-        const skipUpdate = resolvePickerInnerControl(target) !== null;
-        if (!skipUpdate) {
-          dispatchNaviCommand(source, "--navi-update", event);
-        }
-        // The picker's onClose already dispatches the action with the final value.
-        // Dispatching again here would fire the action twice.
-        dispatchNaviCommand(target, "--navi-close", event);
-        return true;
-      },
+      implementation: () => executeNaviDefine(source, event, target),
     };
   }
 
@@ -305,53 +347,35 @@ registerNaviCommand("--navi-cancel", (source, event) => {
     },
   };
 });
-registerNaviCommand("--navi-clear", (source, event) => {
+registerNaviCommand("--navi-define", (source, event) => {
   const target =
-    resolveExplicitTarget(source) || resolveFirstParentControl(source);
-  if (!target) {
-    return undefined;
-  }
-  const fromInput = source.closest(`[navi-control="input"]`);
-
-  return {
-    target,
-    implementation: () => {
-      if (fromInput) {
-        // clearing input search should not close a popover/dialog
-      } else {
-        dispatchNaviCommand(source, "--navi-close", event, {
-          optional: true,
-        });
-      }
-      const allowed = dispatchRequestInteraction(target, event, "--navi-clear");
-      if (!allowed) {
-        event.preventDefault();
-        return false;
-      }
-      dispatchRequestClearUIState(target, event);
-      return true;
-    },
-  };
-});
-
-registerNaviCommand("--navi-reset", (source, event) => {
-  const target =
-    resolveExplicitTarget(source) || resolveFirstParentControl(source);
+    resolveExplicitTarget(source) || resolveClosestExpandable(source);
   if (!target) {
     return undefined;
   }
   return {
     target,
-    implementation: () => {
-      const allowed = dispatchRequestInteraction(target, event, "--navi-reset");
-      if (!allowed) {
-        event.preventDefault();
-        return false;
-      }
-      return dispatchRequestResetUIState(target, event);
-    },
+    implementation: () => executeNaviDefine(source, event, target),
   };
 });
+const executeNaviDefine = (source, event, target) => {
+  // Skip --navi-update when the picker already has an inner control that
+  // manages the picker's value autonomously:
+  // - A ControlGroup aggregates all child values and syncs them up via its
+  //   own command="--navi-update". Calling --navi-update from the send button
+  //   (which has no value) would override the aggregated value.
+  // - Any other inner control host (e.g. a plain Input inside the picker
+  //   popup) already propagates its value to the picker via its own
+  //   command="--navi-update" on every change. Calling it again from the
+  //   send button's undefined value would corrupt the picker state.
+  const skipUpdate = resolvePickerInnerControl(target) !== null;
+  if (!skipUpdate) {
+    dispatchNaviCommand(source, "--navi-update", event);
+  }
+  // The picker's onClose already dispatches the action with the final value.
+  // Dispatching again here would fire the action twice.
+  return dispatchNaviCommand(target, "--navi-close", event);
+};
 
 registerNaviCommand("--navi-scroll", (source, event) => {
   const target =
@@ -398,20 +422,6 @@ registerNaviCommand("--navi-unselect", (source, event) => {
         event,
         id: resolveCommandValue(source, event),
       });
-    },
-  };
-});
-registerNaviCommand("--navi-void", (source) => {
-  const target =
-    resolveExplicitTarget(source) || resolveFirstParentControl(source);
-  if (!target) {
-    return undefined;
-  }
-  return {
-    target,
-    implementation: () => {
-      // intentional no-op — useful to verify command dispatch in demos and tests
-      return true;
     },
   };
 });

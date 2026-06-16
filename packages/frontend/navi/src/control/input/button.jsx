@@ -17,78 +17,48 @@ const ButtonFirstResolver = (props) => {
   return <Next {...props} />;
 };
 
+const ButtonCommandPropResolver = (props) => {
+  const Next = useNextResolver();
+
+  const command = props.command;
+
+  const commandDefaultProps = COMMAND_DEFAULT_PROPS[command];
+  if (commandDefaultProps) {
+    for (const key of Object.keys(commandDefaultProps)) {
+      if (props[key] === undefined) {
+        props[key] = commandDefaultProps[key];
+      }
+    }
+  }
+
+  return <Next {...props} />;
+};
+const COMMAND_DEFAULT_PROPS = {
+  "--navi-clear": {
+    children: naviI18n("button.clear"),
+  },
+  "--navi-reset": {
+    children: naviI18n("button.reset"),
+  },
+  "--navi-send": {
+    children: naviI18n("button.send"),
+    cta: true,
+  },
+  "--navi-cancel": {
+    children: naviI18n("button.cancel"),
+  },
+  "--navi-close": {
+    children: naviI18n("button.close"),
+  },
+  "--navi-open": {
+    children: naviI18n("button.open"),
+  },
+};
+
 export const Button = createComponentResolver([
   ButtonFirstResolver,
   ButtonRouteResolver,
   ButtonInsideFormResolver,
+  ButtonCommandPropResolver,
   ButtonUI,
 ]);
-
-const ButtonClear = (props) => {
-  return (
-    <Button
-      command="--navi-clear"
-      // eslint-disable-next-line react/no-children-prop
-      children={naviI18n("button.clear")}
-      {...props}
-    />
-  );
-};
-const ButtonCancel = (props) => {
-  return (
-    <Button
-      command="--navi-cancel"
-      // eslint-disable-next-line react/no-children-prop
-      children={naviI18n("button.cancel")}
-      {...props}
-    />
-  );
-};
-const ButtonDefine = (props) => {
-  return (
-    <Button
-      command="--navi-send"
-      // eslint-disable-next-line react/no-children-prop
-      children={naviI18n("button.define")}
-      {...props}
-    />
-  );
-};
-const ButtonOk = (props) => {
-  return (
-    <Button
-      command="--navi-send"
-      // eslint-disable-next-line react/no-children-prop
-      children={naviI18n("button.ok")}
-      {...props}
-    />
-  );
-};
-const ButtonReset = (props) => {
-  return (
-    <Button
-      command="--navi-reset"
-      // eslint-disable-next-line react/no-children-prop
-      children={naviI18n("button.reset")}
-      {...props}
-    />
-  );
-};
-const ButtonSend = (props) => {
-  return (
-    <Button
-      command="--navi-send"
-      // eslint-disable-next-line react/no-children-prop
-      children={naviI18n("button.send")}
-      cta
-      {...props}
-    />
-  );
-};
-
-Button.Clear = ButtonClear;
-Button.Cancel = ButtonCancel;
-Button.Define = ButtonDefine;
-Button.Reset = ButtonReset;
-Button.Send = ButtonSend;
-Button.Ok = ButtonOk;

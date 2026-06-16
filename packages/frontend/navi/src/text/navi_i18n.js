@@ -38,18 +38,6 @@ naviI18n.addAll({
     en: "Clear",
     fr: "Effacer",
   },
-  "button.cancel": {
-    en: "Cancel",
-    fr: "Annuler",
-  },
-  "button.define": {
-    en: "Define",
-    fr: "Définir",
-  },
-  "button.ok": {
-    en: "Ok",
-    fr: "Ok",
-  },
   "button.reset": {
     en: "Reset",
     fr: "Réinitialiser",
@@ -57,6 +45,22 @@ naviI18n.addAll({
   "button.send": {
     en: "Send",
     fr: "Envoyer",
+  },
+  "button.open": {
+    en: "Open",
+    fr: "Ouvrir",
+  },
+  "button.close": {
+    en: "Close",
+    fr: "Fermer",
+  },
+  "button.cancel": {
+    en: "Cancel",
+    fr: "Annuler",
+  },
+  "button.define": {
+    en: "Define",
+    fr: "Définir",
   },
 });
 
