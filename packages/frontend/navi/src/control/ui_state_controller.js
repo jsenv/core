@@ -301,9 +301,7 @@ export const useUIStateController = (
           uiStateController.state = stateFromProp;
           uiStateController.setUIState(
             uiStateController.getPropFromState(state),
-            new CustomEvent("state_prop", {
-              detail: { internalBehavior: true },
-            }),
+            new CustomEvent("state_prop_change"),
           );
         }
       } else if (uiStateController.hasStateProp) {
@@ -361,7 +359,7 @@ export const useUIStateController = (
       const stateIsTheSame = compareTwoJsValues(newUIState, currentUIState);
       if (stateIsTheSame) {
         if (controlType === "button") {
-          if (e.detail?.internalBehavior) {
+          if (!shouldNotifyParent(e)) {
             // Programmatic re-render with same value (e.g. state_prop from _checkForUpdates
             // on a button with a new object reference but same content) — not a user action,
             // do NOT fire the command or we get an infinite loop.
@@ -381,7 +379,7 @@ export const useUIStateController = (
         if (
           controlType === "input" &&
           uiStateController.props.type === "radio" &&
-          !e.detail.internalBehavior
+          shouldNotifyParent(e)
         ) {
           onUIAction();
           notifyParentAboutChildInteraction(e, { stateChanged: false });
@@ -415,9 +413,7 @@ export const useUIStateController = (
       if (isRadio && newUIState && uiStateController.name && !controlProxyFor) {
         const siblings = radioControllersByName.get(uiStateController.name);
         if (siblings) {
-          const siblingUncheckEvent = new CustomEvent("radio_sibling_uncheck", {
-            detail: { internalBehavior: true },
-          });
+          const siblingUncheckEvent = new CustomEvent("radio_sibling_uncheck");
           chainEvent(siblingUncheckEvent, e);
           for (const siblingController of siblings) {
             if (siblingController === uiStateController) {
@@ -466,12 +462,11 @@ export const useUIStateController = (
           });
         }
       }
-      const internalBehavior = e.detail?.internalBehavior;
-      if (internalBehavior) {
+      if (!shouldNotifyParent(e)) {
         // Still fire uiAction so external listeners (e.g. signals) stay in
         // sync, but do NOT fire the command and do NOT notify the parent —
-        // both would cause an infinite loop when a group cascades --navi-update
-        // down to its children (child command would re-trigger --navi-update).
+        // both would cause an infinite loop when a parent cascades state
+        // down to its children (child command would re-trigger the cascade).
         uiActionInternal?.(newUIState, e);
         uiAction?.(newUIState, e);
         return true;
@@ -803,9 +798,7 @@ export const useUIGroupStateController = (
         );
         return;
       }
-      const silentEvent = new CustomEvent("navi_set_ui_state_external", {
-        detail: { internalBehavior: true },
-      });
+      const silentEvent = new CustomEvent("navi_set_ui_state_external");
       chainEvent(silentEvent, e);
       for (const childUIStateController of childUIStateControllerArray) {
         if (!isMonitoringChild(childUIStateController)) {
@@ -926,9 +919,7 @@ export const useUIGroupStateController = (
       });
     },
     resetUIState: (e) => {
-      const silentEvent = new CustomEvent("navi_reset_ui_state", {
-        detail: { internalBehavior: true },
-      });
+      const silentEvent = new CustomEvent("navi_reset_ui_state");
       chainEvent(silentEvent, e);
       for (const childUIStateController of childUIStateControllerArray) {
         if (!isMonitoringChild(childUIStateController)) {
@@ -942,9 +933,7 @@ export const useUIGroupStateController = (
       onChange(e, { notifyExternal: true });
     },
     clearUIState: (e) => {
-      const silentEvent = new CustomEvent("navi_clear_ui_state", {
-        detail: { internalBehavior: true },
-      });
+      const silentEvent = new CustomEvent("navi_clear_ui_state");
       chainEvent(silentEvent, e);
       for (const childUIStateController of childUIStateControllerArray) {
         if (!isMonitoringChild(childUIStateController)) {
@@ -1021,9 +1010,7 @@ export const useUIFacadeStateController = (uiStateController) => {
         return;
       }
       updatingRef.current = true;
-      const silentEvent = new CustomEvent("facade_propagate_down", {
-        detail: { internalBehavior: true },
-      });
+      const silentEvent = new CustomEvent("facade_propagate_down");
       chainEvent(silentEvent, e);
       child.setUIState(newUIState, silentEvent);
       updatingRef.current = false;
@@ -1068,4 +1055,30 @@ export const useUIFacadeStateController = (uiStateController) => {
     }),
     [],
   );
+};
+
+/**
+ * Returns true when `e` should trigger parent notification (child → parent bubbling).
+ *
+ * Events that originate from the parent (or from siblings) should NOT bubble back up
+ * to avoid infinite loops. The event type itself carries this information:
+ *
+ * - `"state_prop_change"` — re-syncing with the external `state` prop (`_checkForUpdates`).
+ * - `"radio_sibling_uncheck"` — a radio sibling is being unchecked programmatically.
+ * - `"navi_set_ui_state_external"` / `"navi_reset_ui_state"` / `"navi_clear_ui_state"` —
+ *   parent is pushing state down to children.
+ * - `"facade_propagate_down"` — picker facade is pushing state down to its child.
+ *
+ * Anything else is a real user interaction and should bubble.
+ */
+const TYPES_WITHOUT_PARENT_NOTIFICATION = new Set([
+  "state_prop_change",
+  "radio_sibling_uncheck",
+  "navi_set_ui_state_external",
+  "navi_reset_ui_state",
+  "navi_clear_ui_state",
+  "facade_propagate_down",
+]);
+const shouldNotifyParent = (e) => {
+  return !TYPES_WITHOUT_PARENT_NOTIFICATION.has(e.type);
 };
