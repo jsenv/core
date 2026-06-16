@@ -354,33 +354,25 @@
                       }}
                     />
                   </fieldset>
+                </Box>
+                <Box flex="x" spacing="s" marginTop="s">
+                  <Button
+                    command="--navi-update"
+                    value={{ firstName: "Jean", lastName: "Dupont" }}
+                  >
+                    Set Jean Dupont
+                  </Button>
+                  <Button
+                    command="--navi-update"
+                    value={{ firstName: "Marie", lastName: "Curie" }}
+                  >
+                    Set Marie Curie
+                  </Button>
+                  <Button.Clear />
                   <Button.Send />
                 </Box>
               </ControlGroup>
             </fieldset>
-            <Box flex="x" spacing="s">
-              <Button
-                command="--navi-update"
-                commandfor={cgId}
-                value={{ firstName: "Jean", lastName: "Dupont" }}
-              >
-                Set Jean Dupont
-              </Button>
-              <Button
-                command="--navi-update"
-                commandfor={cgId}
-                value={{ firstName: "Marie", lastName: "Curie" }}
-              >
-                Set Marie Curie
-              </Button>
-              <Button
-                command="--navi-update"
-                commandfor={cgId}
-                value={{ firstName: "", lastName: "" }}
-              >
-                Vider
-              </Button>
-            </Box>
             <CallLog entries={entries} onClear={clearEntries} />
           </Box>
         );
@@ -427,25 +419,27 @@
                   </List.Item>
                 ))}
               </List>
-            </fieldset>
-            <Box flex="x" spacing="s">
-              {FRUITS.map((fruit) => (
+              <Box flex="x" spacing="s" marginTop="s">
+                {FRUITS.map((fruit) => (
+                  <Button
+                    key={fruit}
+                    command="--navi-update"
+                    commandfor={listId}
+                    value={fruit}
+                  >
+                    {fruit}
+                  </Button>
+                ))}
                 <Button
-                  key={fruit}
                   command="--navi-update"
                   commandfor={listId}
-                  value={fruit}
+                  value={null}
                 >
-                  {fruit}
+                  Désélectionner
                 </Button>
-              ))}
-              <Button command="--navi-update" commandfor={listId} value={null}>
-                Désélectionner
-              </Button>
-              <Button command="--navi-send" commandfor={listId}>
-                Envoyer
-              </Button>
-            </Box>
+                <Button.Send commandfor={listId} />
+              </Box>
+            </fieldset>
             <CallLog entries={entries} onClear={clearEntries} />
           </Box>
         );
@@ -493,29 +487,29 @@
                   </List.Item>
                 ))}
               </List>
+              <Box flex="x" spacing="s">
+                <Button
+                  command="--navi-update"
+                  commandfor={listId}
+                  value={["Apple", "Cherry"]}
+                >
+                  Apple + Cherry
+                </Button>
+                <Button
+                  command="--navi-update"
+                  commandfor={listId}
+                  value={["Banana", "Date", "Elderberry"]}
+                >
+                  Banana + Date + Elderberry
+                </Button>
+                <Button command="--navi-update" commandfor={listId} value={[]}>
+                  Tout désélectionner
+                </Button>
+                <Button command="--navi-send" commandfor={listId}>
+                  Envoyer
+                </Button>
+              </Box>
             </fieldset>
-            <Box flex="x" spacing="s">
-              <Button
-                command="--navi-update"
-                commandfor={listId}
-                value={["Apple", "Cherry"]}
-              >
-                Apple + Cherry
-              </Button>
-              <Button
-                command="--navi-update"
-                commandfor={listId}
-                value={["Banana", "Date", "Elderberry"]}
-              >
-                Banana + Date + Elderberry
-              </Button>
-              <Button command="--navi-update" commandfor={listId} value={[]}>
-                Tout désélectionner
-              </Button>
-              <Button command="--navi-send" commandfor={listId}>
-                Envoyer
-              </Button>
-            </Box>
             <CallLog entries={entries} onClear={clearEntries} />
           </Box>
         );
