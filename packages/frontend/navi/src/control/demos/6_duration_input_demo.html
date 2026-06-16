@@ -56,6 +56,7 @@
         Picker,
         Unit,
         Text,
+        Time,
         NaviDebug,
       } from "@jsenv/navi";
       import { CallLog, useCallLog } from "./utils/call_log.jsx";
@@ -286,6 +287,23 @@
       const PickerInFormDemo = () => {
         const [entries, push, clear] = useCallLog();
         const pickerId = "duration-picker";
+        const hoursSignal = useSignal(null);
+        const minutesSignal = useSignal(null);
+
+        const DurationPickerUI = () => {
+          const hh =
+            hoursSignal.value !== null
+              ? String(hoursSignal.value).padStart(2, "0")
+              : null;
+          const mm =
+            minutesSignal.value !== null
+              ? String(minutesSignal.value).padStart(2, "0")
+              : null;
+          if (hh === null || mm === null) {
+            return null;
+          }
+          return <Time type="time">{`${hh}:${mm}`}</Time>;
+        };
 
         return (
           <div class="demo-section">
@@ -310,13 +328,24 @@
                   name="duration"
                   type="controlgroup"
                   placeholder="Saisir une durée"
+                  ui={<DurationPickerUI />}
                   uiAction={(v) => {
                     push("picker uiAction", v);
                   }}
                 >
                   <ControlGroup>
                     <Box flex="y" spacing="s" padding="s" alignX="start">
-                      <DurationInputs onPushEntry={push} />
+                      <DurationInputs
+                        hours={hoursSignal.value}
+                        minutes={minutesSignal.value}
+                        onHours={(v) => {
+                          hoursSignal.value = v;
+                        }}
+                        onMinutes={(v) => {
+                          minutesSignal.value = v;
+                        }}
+                        onPushEntry={push}
+                      />
                       <Box flex="x" spacing="s">
                         <Button command="--navi-send">Confirmer</Button>
                         <Button command="--navi-cancel">Annuler</Button>
