@@ -747,12 +747,36 @@
                 parent avec <code>{'style={{ textAlign: "center" }}'}</code>{" "}
                 (pas de alignX sur le Text)
               </div>
+              <Box
+                style={{
+                  width: "220px",
+                  border: "1px solid #ccc",
+                  padding: "8px",
+                }}
+                textAlign="center"
+              >
+                <Text maxLines={1}>{shortText}</Text>
+              </Box>
+            </div>
+            <div>
+              <div
+                style={{
+                  fontSize: "12px",
+                  color: "#666",
+                  marginBottom: "4px",
+                }}
+              >
+                parent flex avec{" "}
+                <code>{'style={{ justifyContent: "center" }}'}</code> (pas de
+                alignX sur le Text)
+              </div>
               <div
                 style={{
                   width: "220px",
                   border: "1px solid #ccc",
                   padding: "8px",
-                  textAlign: "center",
+                  display: "flex",
+                  justifyContent: "center",
                 }}
               >
                 <Text maxLines={1}>{shortText}</Text>

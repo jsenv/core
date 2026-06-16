@@ -67,6 +67,7 @@ const css = /* css */ `
     &[data-text-overflow] {
       min-width: 0;
       flex-wrap: wrap;
+      justify-content: inherit;
       text-overflow: ellipsis;
       overflow: hidden;
       overflow-wrap: normal;
