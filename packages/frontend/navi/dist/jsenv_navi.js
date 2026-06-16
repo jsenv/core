@@ -27376,6 +27376,10 @@ installImportMetaCssBuild(import.meta);const css$I = /* css */`
         --button-background-color-readonly
       );
       --button-color-disabled: var(--button-color-readonly);
+
+      /* Here to be easy to override */
+      font-size: var(--button-font-size);
+      font-family: var(--button-font-family);
     }
   }
 
@@ -27403,8 +27407,6 @@ installImportMetaCssBuild(import.meta);const css$I = /* css */`
     cursor: var(--x-button-cursor);
     -webkit-tap-highlight-color: transparent;
     position: relative;
-    font-size: var(--button-font-size);
-    font-family: var(--button-font-family);
     touch-action: manipulation;
     user-select: none;
     -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
@@ -38096,7 +38098,6 @@ installImportMetaCssBuild(import.meta);const css$i = /* css */`
       display: inline-block;
       min-width: 0;
       max-width: 100%;
-      margin-inline: 0.2em;
       margin-top: calc(-1 * var(--x-picker-padding-top));
       margin-bottom: calc(-1 * var(--x-picker-padding-bottom));
       padding-top: var(--x-picker-padding-top);
@@ -38116,6 +38117,7 @@ installImportMetaCssBuild(import.meta);const css$i = /* css */`
       display: inline-flex;
       height: 1em;
       height: 1lh;
+      margin-inline: 0.1em;
       flex-shrink: 0;
       align-items: center;
       align-self: flex-start;
@@ -38144,6 +38146,7 @@ installImportMetaCssBuild(import.meta);const css$i = /* css */`
 
     .navi_picker_content {
       display: contents;
+      text-align: initial; /* Don't inherit picker text align */
     }
 
     &[data-line-clamp] {
