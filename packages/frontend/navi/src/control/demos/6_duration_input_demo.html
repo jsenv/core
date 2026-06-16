@@ -48,8 +48,10 @@
       import {
         Box,
         Button,
+        ControlGroup,
         Form,
         Input,
+        Label,
         InputGroup,
         Unit,
         Text,
@@ -61,6 +63,7 @@
         <Box flex="y" spacing="l">
           <BasicDemo />
           <LongUnitDemo />
+          <ControlGroupInFormDemo />
         </Box>
       );
 
@@ -83,7 +86,7 @@
             <Box flex="y" spacing="s" alignX="start">
               <Box border="1px dotted #aaa" width="fit-content">
                 <InputGroup flex spacing="xxs" width="fit-content">
-                  <Box flex="y">
+                  <Label flex="y" textAlign="right">
                     <Input
                       type="navi_hour"
                       name="hours"
@@ -91,7 +94,6 @@
                       variant="underline"
                       size="l"
                       expandX
-                      textAlign="right"
                       value={hours}
                       uiAction={(v) => {
                         push("hour uiAction", v);
@@ -104,8 +106,8 @@
                       <Input.UI.UnitSlot>:</Input.UI.UnitSlot>
                     </Input>
                     {unitHour}
-                  </Box>
-                  <Box flex="y">
+                  </Label>
+                  <Label flex="y">
                     <Input
                       type="navi_minute"
                       name="minutes"
@@ -123,7 +125,7 @@
                       }}
                     />
                     {unitMinute}
-                  </Box>
+                  </Label>
                 </InputGroup>
               </Box>
               <Button type="submit">Submit</Button>
@@ -204,6 +206,85 @@
               }
               unitMinute={<Unit unit="minute" plural size="xs" />}
             />
+          </div>
+        );
+      };
+
+      // ── ControlGroupInFormDemo ────────────────────────────────────────────
+      const ControlGroupInFormDemo = () => {
+        const [entries, push, clear] = useCallLog();
+
+        return (
+          <div class="demo-section">
+            <h2>Duration inside ControlGroup inside Form</h2>
+            <p class="desc">
+              Le widget de durée est dans un{" "}
+              <code>ControlGroup name="duration"</code> lui-même dans un{" "}
+              <code>Form</code>. Le formulaire doit recevoir{" "}
+              <code>{"{ duration: { hours, minutes } }"}</code> au submit.
+            </p>
+            <Form
+              action={(values) => {
+                push("form action", values);
+              }}
+              uiAction={(values) => {
+                push("form uiAction", values);
+              }}
+            >
+              <Box flex="y" spacing="s" alignX="start">
+                <ControlGroup
+                  name="duration"
+                  uiAction={(v) => {
+                    push("duration uiAction", v);
+                  }}
+                >
+                  <Box border="1px dotted #aaa" width="fit-content">
+                    <InputGroup flex spacing="xxs" width="fit-content">
+                      <Box flex="y">
+                        <Input
+                          type="navi_hour"
+                          name="hours"
+                          unit={false}
+                          variant="underline"
+                          size="l"
+                          expandX
+                          textAlign="right"
+                          defaultValue={2}
+                          uiAction={(v) => {
+                            push("hour uiAction", v);
+                          }}
+                        >
+                          <Input.UI.UnitSlot>:</Input.UI.UnitSlot>
+                        </Input>
+                        <Unit
+                          unit="hour"
+                          plural
+                          color="secondary"
+                          marginRight="1ch"
+                        />
+                      </Box>
+                      <Box flex="y">
+                        <Input
+                          type="navi_minute"
+                          name="minutes"
+                          size="l"
+                          unit={false}
+                          variant="underline"
+                          expandX
+                          defaultValue={30}
+                          uiAction={(v) => {
+                            push("minute uiAction", v);
+                          }}
+                        />
+                        <Unit unit="minute" plural color="secondary" />
+                      </Box>
+                    </InputGroup>
+                  </Box>
+                </ControlGroup>
+                <Button command="--navi-send">Submit</Button>
+                <CallLog entries={entries} onClear={clear} />
+              </Box>
+            </Form>
           </div>
         );
       };
