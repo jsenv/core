@@ -20,13 +20,13 @@
         List,
         Picker,
         SelectableInput,
+        stateSignal,
       } from "@jsenv/navi";
       import { NaviDebug } from "@jsenv/navi";
-      import { signal } from "@preact/signals";
       import { CallLog, useCallLog } from "./utils/call_log.jsx";
 
-      const nickNameSignalA = signal("");
-      const nickNameSignalB = signal("Jean");
+      const nickNameSignalA = stateSignal("");
+      const nickNameSignalB = stateSignal("Jean");
 
       const App = () => {
         return (
