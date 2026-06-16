@@ -1,5 +1,6 @@
 import { dispatchPublicCustomEvent } from "@jsenv/dom";
-import { triggerStringAction } from "@jsenv/navi/src/control/string_actions.js";
+import { dispatchRequestSetUIState } from "@jsenv/navi/src/control/ui_state_dom.js";
+import { dispatchRequestInteraction } from "@jsenv/navi/src/control/validation/custom_constraint_validation.js";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 
 export const InputModeResolver = (props) => {
@@ -76,6 +77,7 @@ const InputModeNumeric = (props) => {
   );
 };
 
+// hum il manque le faire de request interaction ici
 const performArrowUpDown = (e) => {
   const input = e.currentTarget;
   const currentValue = Number(input.value);
@@ -100,9 +102,11 @@ const performArrowUpDown = (e) => {
   if (max !== undefined && nextValue > max) {
     nextValue = max;
   }
-  triggerStringAction("update", nextValue, {
-    event: e,
-    actionTarget: e.currentTarget,
-  });
+  const allowed = dispatchRequestInteraction(input, e, "--navi-arrow-up-down");
+  if (!allowed) {
+    e.preventDefault();
+    return;
+  }
+  dispatchRequestSetUIState(input, nextValue, { event: e });
   e.preventDefault();
 };

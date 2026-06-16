@@ -9,11 +9,15 @@ import {
 } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
 import { Text } from "@jsenv/navi/src/text/text.jsx";
-import { ControlChildrenWrapper, useControlProps } from "../control_hooks.jsx";
+import {
+  ControlFacadeChildrenWrapper,
+  useControlFacadeProps,
+} from "../control_hooks.jsx";
 import { resolveInputProps } from "../input/resolve_input_props.js";
 import { getUIStateControllerById } from "../ui_state_controller.js";
 import { PickerContext } from "./picker_context.jsx";
-import { pickerResolvers } from "./picker_resolvers.jsx";
+import { PickerCustomResolver } from "./picker_custom.jsx";
+import { PickerPresetResolver } from "./picker_preset.jsx";
 import {
   CalendarSvg,
   ClockSvg,
@@ -22,10 +26,12 @@ import {
   PencilSvg,
   PickerArrayUI,
   PickerColorUI,
+  PickerControlGroupUI,
   PickerDatetimeUI,
   PickerDateUI,
   PickerFileUI,
   PickerTimeUI,
+  PickerTypeResolver,
   PickerWeekUI,
 } from "./picker_types.jsx";
 
@@ -133,9 +139,9 @@ const css = /* css */ `
       1lh + var(--x-picker-padding-top) + var(--x-picker-padding-bottom)
     );
     padding-top: var(--x-picker-padding-top);
-    padding-right: var(--x-picker-padding-right);
+    padding-right: 0;
     padding-bottom: var(--x-picker-padding-bottom);
-    padding-left: var(--x-picker-padding-left);
+    padding-left: 0;
     flex-direction: row;
     align-items: center;
     gap: var(--navi-xs);
@@ -157,11 +163,19 @@ const css = /* css */ `
     pointer-events: auto;
     user-select: none;
     overflow: hidden;
+    -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
 
     .navi_picker_value {
       display: inline-block;
       min-width: 0;
       max-width: 100%;
+      margin-inline: 0.2em;
+      margin-top: calc(-1 * var(--x-picker-padding-top));
+      margin-bottom: calc(-1 * var(--x-picker-padding-bottom));
+      padding-top: var(--x-picker-padding-top);
+      padding-right: var(--x-picker-padding-right);
+      padding-bottom: var(--x-picker-padding-bottom);
+      padding-left: var(--x-picker-padding-left);
       flex-grow: 1;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -180,6 +194,11 @@ const css = /* css */ `
       align-self: flex-start;
       justify-content: center;
       color: var(--x-picker-icon-color);
+
+      .navi_icon {
+        height: 100%;
+        max-height: 100%;
+      }
     }
     .navi_picker_input {
       position: absolute;
@@ -290,21 +309,21 @@ const PickerButton = (props) => {
   if (typeof props.maxLines === "string") {
     props.maxLines = parseInt(props.maxLines);
   }
-  const { ref, variant, icon, placeholder, ui, maxLines } = props;
+  const { ref, variant, icon, placeholder, ui, maxLines, headless } = props;
   const inputRef = useRef(null);
-  const [inputProps, pickerRemainingProps] = useControlProps(
-    {
-      ...props,
-      ref: inputRef,
-    },
-    {
-      controlType: "input",
-      statePropName: "value",
-      defaultStatePropName: "defaultValue",
-      readOnlySupported: true,
-      picker: true,
-    },
-  );
+  const [pickerRemainingProps, inputProps, facadeChildrenProps] =
+    useControlFacadeProps(
+      {
+        ...props,
+        ref: inputRef,
+      },
+      {
+        controlType: "picker",
+        statePropName: "value",
+        defaultStatePropName: "defaultValue",
+        readOnlySupported: true,
+      },
+    );
   const uiStateController = getUIStateControllerById(inputProps.id);
   const value = uiStateController.uiState;
   const { id, basePseudoState, disabled, children } = inputProps;
@@ -313,11 +332,9 @@ const PickerButton = (props) => {
 
   return (
     <Box
-      as="button"
+      as={headless ? "div" : "button"}
       ref={ref}
-      type="button"
       baseClassName="navi_picker"
-      navi-has-placeholder={placeholder ? "" : undefined}
       pseudoClasses={PICKER_BUTTON_PSEUDO_CLASSES}
       disabled={disabled}
       data-line-clamp={hasLineClamp ? "" : undefined}
@@ -325,6 +342,8 @@ const PickerButton = (props) => {
       style={{
         "--picker-max-lines": maxLines,
       }}
+      navi-visually-hidden={headless ? "" : undefined}
+      navi-picker=""
       {...pickerRemainingProps}
       basePseudoState={basePseudoState}
       styleCSSVars={PickerStyleCSSVars}
@@ -336,6 +355,7 @@ const PickerButton = (props) => {
       ui={undefined}
       maxLines={undefined}
       dayLabel={undefined}
+      headless={undefined}
       // The button is handling the pointer interactions
       onMouseDown={(e) => {
         inputProps.onMouseDown(e);
@@ -348,6 +368,11 @@ const PickerButton = (props) => {
         // it's also the one wrapping other elements so keydown bubbling will reach the button
         // but neevr the input
         inputProps.onKeyDown(e);
+      }}
+      onFocus={(e) => {
+        if (headless) {
+          inputProps.onFocus(e);
+        }
       }}
     >
       <LoadingOutline
@@ -364,7 +389,7 @@ const PickerButton = (props) => {
         onClick={undefined}
         onKeyDown={undefined}
       />
-      {variant === "icon" ? null : (
+      {variant === "icon" || headless ? null : (
         <Text
           className="navi_picker_value"
           navi-placeholder={
@@ -376,12 +401,14 @@ const PickerButton = (props) => {
           </PickerContext.Provider>
         </Text>
       )}
-      <span className="navi_picker_right_slot">
-        <Icon size="m">{icon === undefined ? <ChevronDownSvg /> : icon}</Icon>
-      </span>
-      <ControlChildrenWrapper>
+      {headless ? null : (
+        <span className="navi_picker_right_slot">
+          <Icon size="m">{icon === undefined ? <ChevronDownSvg /> : icon}</Icon>
+        </span>
+      )}
+      <ControlFacadeChildrenWrapper {...facadeChildrenProps}>
         <div className="navi_picker_content">{children}</div>
-      </ControlChildrenWrapper>
+      </ControlFacadeChildrenWrapper>
     </Box>
   );
 };
@@ -471,7 +498,9 @@ const PickerFirstResolver = (props) => {
 };
 export const Picker = createComponentResolver([
   PickerFirstResolver,
-  ...pickerResolvers,
+  PickerPresetResolver,
+  PickerCustomResolver,
+  PickerTypeResolver,
   PickerButton,
 ]);
 
@@ -483,6 +512,7 @@ Picker.UI.Week = PickerWeekUI;
 Picker.UI.Datetime = PickerDatetimeUI;
 Picker.UI.File = PickerFileUI;
 Picker.UI.Color = PickerColorUI;
+Picker.UI.ControlGroup = PickerControlGroupUI;
 Picker.UI.Multiple = PickerArrayUI;
 
 Picker.UI.PencilSvg = PencilSvg;

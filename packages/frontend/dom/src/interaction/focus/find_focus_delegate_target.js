@@ -14,8 +14,15 @@ import { elementIsFocusable } from "./element_is_focusable.js";
  * @returns {Element|null}
  */
 export const findFocusDelegateTarget = (el) => {
-  if (!el.hasAttribute("navi-focus-delegate")) {
+  const naviFocusDelegate = el.getAttribute("navi-focus-delegate");
+  if (naviFocusDelegate === null || naviFocusDelegate === undefined) {
     return null;
+  }
+  if (naviFocusDelegate) {
+    const delegateTarget = document.getElementById(naviFocusDelegate);
+    if (delegateTarget && elementIsFocusable(delegateTarget)) {
+      return delegateTarget;
+    }
   }
   let ancestor = el.parentElement;
   while (ancestor) {

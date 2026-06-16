@@ -174,9 +174,10 @@
           <div class="demo-section">
             <h2>1. Text display — comma-separated</h2>
             <p>
-              <code>List selectable multiple action="update"</code> updates the
-              picker's pending state on each click. Confirming commits the array
-              to the action callback, which updates the displayed value.
+              <code>List selectable multiple command="--navi-update"</code>{" "}
+              updates the picker's pending state on each click. Confirming
+              commits the array to the action callback, which updates the
+              displayed value.
             </p>
             <Box flex="y" spacing="m">
               <Field vertical>
@@ -196,7 +197,7 @@
                   }}
                   maxWidth="150"
                 >
-                  <List selectable multiple action="update">
+                  <List selectable multiple command="--navi-update">
                     {FRUIT_OPTIONS.map((opt, i) => (
                       <List.Item
                         selectable
@@ -216,7 +217,7 @@
               </Field>
               <Field vertical>
                 <Label>
-                  Fruits <code style="font-weight:normal">(maxRows=1)</code>
+                  Fruits <code style="font-weight:normal">(maxLines=1)</code>
                 </Label>
                 <Picker
                   type="array"
@@ -230,9 +231,9 @@
                     selectedSignalMr1.value = v;
                   }}
                   maxWidth="150"
-                  maxRows={1}
+                  maxLines={1}
                 >
-                  <List selectable multiple action="update">
+                  <List selectable multiple command="--navi-update">
                     {FRUIT_OPTIONS.map((opt, i) => (
                       <List.Item
                         selectable
@@ -252,7 +253,7 @@
               </Field>
               <Field vertical>
                 <Label>
-                  Fruits <code style="font-weight:normal">(maxRows=2)</code>
+                  Fruits <code style="font-weight:normal">(maxLines=2)</code>
                 </Label>
                 <Picker
                   type="array"
@@ -266,9 +267,9 @@
                     selectedSignalMr2.value = v;
                   }}
                   maxWidth="150"
-                  maxRows={2}
+                  maxLines={2}
                 >
-                  <List selectable multiple action="update">
+                  <List selectable multiple command="--navi-update">
                     {FRUIT_OPTIONS.map((opt, i) => (
                       <List.Item
                         selectable
@@ -335,7 +336,7 @@
               toggled.
             </p>
             <p style="color: #b45309; background: #fef3c7; border: 1px solid #fde68a; padding: 8px 12px; border-radius: 6px; font-size: 13px; margin: 0 0 16px">
-              <strong>maxRows not supported with chips.</strong> Chips are flex
+              <strong>maxLines not supported with chips.</strong> Chips are flex
               items with spacing, not plain text — CSS <code>line-clamp</code>{" "}
               does not apply, and detecting which chips overflow and where they
               break across rows requires expensive DOM measurement on every
@@ -364,7 +365,7 @@
                     selectable
                     multiple
                     id="skills_list_simple"
-                    action="update"
+                    command="--navi-update"
                     style="min-width: 180px"
                   >
                     {SKILL_OPTIONS.map((opt, i) => (
@@ -386,7 +387,7 @@
               </Field>
               <Field vertical>
                 <Label>
-                  Skills <code style="font-weight:normal">(maxRows=1)</code>
+                  Skills <code style="font-weight:normal">(maxLines=1)</code>
                 </Label>
                 <Picker
                   type="array"
@@ -400,13 +401,13 @@
                     selectedSignalMr1.value = v;
                   }}
                   maxWidth="150"
-                  maxRows={1}
+                  maxLines={1}
                 >
                   <List
                     selectable
                     multiple
                     id="skills_list_simple_mr1"
-                    action="update"
+                    command="--navi-update"
                     style="min-width: 180px"
                   >
                     {SKILL_OPTIONS.map((opt, i) => (
@@ -465,10 +466,10 @@
                 <Badge key={opt} data-has-button="">
                   {opt}
                   <Badge.Button
-                    action="unselect"
-                    action-target="skills_list_delete"
-                    actionOnMouseDown
+                    command="--navi-unselect"
+                    commandFor="skills_list_delete"
                     value={opt}
+                    actionOnMouseDown
                     aria-label={`Remove ${opt}`}
                     onMouseDown={(e) => {
                       e.stopPropagation();
@@ -497,7 +498,7 @@
               chip to be the delete target.
             </p>
             <p style="color: #b45309; background: #fef3c7; border: 1px solid #fde68a; padding: 8px 12px; border-radius: 6px; font-size: 13px; margin: 0 0 16px">
-              <strong>maxRows not supported with chips.</strong> Same reason as
+              <strong>maxLines not supported with chips.</strong> Same reason as
               section 2 — use <code>max</code> on <code>BadgeList</code>
               instead.
             </p>
@@ -524,7 +525,7 @@
                     ref={listRef}
                     multiple
                     id="skills_list_delete"
-                    action="update"
+                    command="--navi-update"
                     style="min-width: 180px"
                   >
                     {SKILL_OPTIONS.map((opt, i) => (
@@ -546,7 +547,7 @@
               </Field>
               <Field vertical>
                 <Label>
-                  Skills <code style="font-weight:normal">(maxRows=1)</code>
+                  Skills <code style="font-weight:normal">(maxLines=1)</code>
                 </Label>
                 <Picker
                   type="array"
@@ -558,10 +559,10 @@
                         <Badge key={opt} data-has-button="">
                           {opt}
                           <Badge.Button
-                            action="unselect"
-                            action-target="skills_list_delete_mr1"
-                            actionOnMouseDown
+                            command="--navi-unselect"
+                            commandFor="skills_list_delete_mr1"
                             value={opt}
+                            actionOnMouseDown
                             aria-label={`Remove ${opt}`}
                             onMouseDown={(e) => e.stopPropagation()}
                             onClick={(e) => e.stopPropagation()}
@@ -579,13 +580,13 @@
                     selectedSignalMr1.value = v;
                   }}
                   maxWidth="200"
-                  maxRows={1}
+                  maxLines={1}
                 >
                   <List
                     selectable
                     multiple
                     id="skills_list_delete_mr1"
-                    action="update"
+                    command="--navi-update"
                     style="min-width: 180px"
                   >
                     {SKILL_OPTIONS.map((opt, i) => (

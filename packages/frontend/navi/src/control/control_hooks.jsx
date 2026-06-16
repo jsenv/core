@@ -38,12 +38,14 @@ import {
 } from "@jsenv/navi/src/control/validation/custom_constraint_validation.js";
 import {
   useDebugAction,
+  useDebugCommand,
   useDebugFocus,
   useDebugInteraction,
 } from "@jsenv/navi/src/navi_debug.jsx";
 import { compareTwoJsValues } from "@jsenv/navi/src/utils/compare_two_js_values.js";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import { isSignal } from "@jsenv/navi/src/utils/is_signal.js";
+import { dispatchNaviCommand, onNaviCommand } from "./commands.js";
 import {
   ActionContext,
   ActionRequesterContext,
@@ -60,18 +62,24 @@ import {
 import { findControlProxyTarget } from "./control_proxy.js";
 import { readControlValue } from "./control_value.js";
 import { addInputEffect } from "./input_effect.js";
-import { resolveActionProp, triggerStringAction } from "./string_actions.js";
 import {
   ParentUIStateControllerContext,
+  useUIFacadeStateController,
   useUIGroupStateController,
   useUIStateController,
 } from "./ui_state_controller.js";
 import {
   dispatchRequestResetUIState,
   dispatchRequestSetUIState,
+  getUIStateFromElement,
 } from "./ui_state_dom.js";
 import { useConstraintMessages } from "./validation/hooks/use_constraint_messages.js";
 import { useConstraints } from "./validation/hooks/use_constraints.js";
+
+// Sentinel used as the initial value of lastActionValueRef.
+// Distinct from undefined so that undefined (e.g. unchecked radio) can itself
+// be stored as a valid "last action value" and trigger the dedup logic.
+const NO_ACTION_YET = Symbol("no_action_yet");
 
 // Resets field-specific contexts so nested fields inside this component
 // don't inherit the current field's id, message props, or interface reporting.
@@ -133,7 +141,7 @@ export const ControlgroupChildrenWrapper = ({
  * Sets up the full field lifecycle:
  * - Creates a UI state controller that manages state divergence between props and user interactions
  * - Binds the field's action to its current UI state via a signal
- * - Wires up all DOM event handlers (navi_set_ui_state, navi_request_reset_ui_state,
+ * - Wires up all DOM event handlers (navi_set_ui_state, navi_reset_ui_state,
  *   navi_action_ready, navi_action_abort, navi_action_error, navi_cancel, etc.)
  * - Resolves inherited context (disabled, readOnly, required, loading, fieldName)
  * - Handles constraint validation and message props
@@ -158,7 +166,6 @@ export const useControlProps = (
 
     uiActionInternal,
     readOnlySupported,
-    picker,
   },
 ) => {
   const debugInteraction = useDebugInteraction();
@@ -182,14 +189,13 @@ export const useControlProps = (
     getStateFromParent,
     allowNameless,
     persists,
-    debugInteraction,
     uiActionInternal,
   });
   const [boundAction] = useActionBoundToOneParam(
-    resolveActionProp(props.action),
+    props.action,
     uiStateController.uiStateSignal,
   );
-  const [controlProps, remainingProps] = useInteractiveProps(props, {
+  const [controlRootProps, controlHostProps] = useInteractiveProps(props, {
     uiStateController,
     boundAction,
     readOnlySupported,
@@ -209,6 +215,7 @@ export const useControlProps = (
     // synthesizes a click so the browser's native checkbox/radio activation runs
     // (which then fires input -> goes through the action pipeline).
     let enterEffect;
+    let spaceEffect;
 
     const updateUIState = (e) => {
       const value = readControlValue(ref.current);
@@ -239,7 +246,10 @@ export const useControlProps = (
       const control = ref.current;
       const allowed = dispatchRequestInteraction(control, e, interaction.name);
       if (!allowed) {
-        debugInteraction(e, `${e.type}.preventDefault()`);
+        debugInteraction(
+          e,
+          `interaction not allowed -> ${e.type}.preventDefault()`,
+        );
         e.preventDefault();
         return false;
       }
@@ -250,19 +260,30 @@ export const useControlProps = (
       return asInteraction(interaction, e);
     };
     const lastEventRequestingActionRef = useRef();
-    const lastActionValueRef = useRef();
+    const lastActionValueRef = useRef(NO_ACTION_YET);
+    const wasCheckedAtMousedownRef = useRef(false);
     // Keep lastActionValueRef in sync with state changes that happen outside of asAction
-    // (e.g. radio_sibling_uncheck when another radio in the group becomes checked).
+    // (e.g. radio_sibling_uncheck, or external programmatic set via navi_set_ui_state).
     // Otherwise the dedup below would wrongly skip a real user click that re-checks a radio
     // whose lastActionValueRef still matched a value from a previous interaction.
     //
-    // We only sync for these external sources — NOT for every UI state change.
-    // Syncing on every change would also capture our own updateUIState calls fired
-    // from the input event, which would then make asAction (triggered later via
-    // navi_change / debounce) think the value is unchanged and skip the action.
-    controlProps.onnavi_ui_state_change = (e) => {
+    // For checkables (radio/checkbox): sync on any external state change — not just
+    // radio_sibling_uncheck. When a programmatic set (e.g. --navi-unselect) unchecks a
+    // radio, setUIState dispatches a synthetic input event. Without syncing here, asAction
+    // would run again from that synthetic input and fire the action a second time.
+    //
+    // We do NOT sync when the change originated from the checkable's own user input event,
+    // because at that point asAction hasn't run yet and we must not pre-empt its dedup.
+    controlHostProps.onnavi_ui_state_change = (e) => {
       const originatingEvent = e.detail.event;
-      if (originatingEvent?.type === "radio_sibling_uncheck") {
+      if (isCheckable) {
+        const sourceIsOwnInput =
+          originatingEvent?.type === "input" &&
+          originatingEvent?.target === ref.current;
+        if (!sourceIsOwnInput) {
+          lastActionValueRef.current = e.detail.value;
+        }
+      } else if (originatingEvent?.type === "radio_sibling_uncheck") {
         lastActionValueRef.current = e.detail.value;
       }
     };
@@ -279,7 +300,7 @@ export const useControlProps = (
         // events around mouse release even though the value hasn't moved.
         const lastActionValue = lastActionValueRef.current;
         const valueSameAsLastAction =
-          lastActionValue !== undefined &&
+          lastActionValue !== NO_ACTION_YET &&
           compareTwoJsValues(currentValue, lastActionValue);
         if (valueSameAsLastAction) {
           e.preventDefault();
@@ -293,7 +314,7 @@ export const useControlProps = (
         uiState: currentValue,
       });
       if (!allowed) {
-        debugInteraction(e, `${e.type}.preventDefault()`);
+        debugInteraction(e, `action not allowed -> ${e.type}.preventDefault()`);
         e.preventDefault();
         return false;
       }
@@ -321,12 +342,14 @@ export const useControlProps = (
       mousedownInteraction = {
         name: "mousedown",
         callback: actionOnMouseDown ? asAction : asInteraction,
+        // effect: updateUIState,
       };
       clickInteraction = {
         name: "click",
         callback: actionOnMouseDown ? asInteraction : asAction,
+        // effect: updateUIState,
       };
-    } else if (controlType === "input") {
+    } else if (controlType === "input" || controlType === "picker") {
       isCheckable = props.type === "radio" || props.type === "checkbox";
       // On input, gate the interaction (readonly check) and update UI state to reflect the new value.
       inputInteraction = {
@@ -338,8 +361,11 @@ export const useControlProps = (
         name: "navi_change",
         callback: asAction,
       };
-      enterEffect = (e) => triggerStringAction("send", e);
-      if (picker) {
+      enterEffect = (e) => {
+        const input = e.currentTarget;
+        dispatchNaviCommand(input, "--navi-send", e);
+      };
+      if (controlType === "picker") {
         mousedownInteraction = {
           name: "mousedown to open picker",
           callback: asInteraction,
@@ -350,6 +376,10 @@ export const useControlProps = (
         };
       }
       if (isCheckable) {
+        inputInteraction = {
+          name: "input",
+          callback: asAction,
+        };
         // For checkables, click does NOT update state — it only gates the
         // browser's native check/uncheck via interaction constraints (e.g.
         // readOnly). State actually changes via the "input" event that the
@@ -359,13 +389,57 @@ export const useControlProps = (
         clickInteraction = {
           name: "click",
           callback: asBrowserAction,
-        };
-        inputInteraction = {
-          name: "input",
-          callback: asAction,
+          // When a radio is already checked and gets clicked, the browser does NOT
+          // fire an input event (state doesn't change), so asAction never runs.
+          // We still want uiAction + command to fire. We can tell whether the click
+          // is on an already-checked radio by looking at wasCheckedAtMousedownRef:
+          // if it was checked at mousedown, the input event won't come, so we do it here.
+          effect: (e) => {
+            const checkable = e.currentTarget;
+            if (
+              checkable.type === "radio" &&
+              wasCheckedAtMousedownRef.current
+            ) {
+              updateUIState(e);
+            }
+          },
         };
         naviChangeInteraction = undefined;
-        enterEffect = (e) => e.currentTarget.click();
+        enterEffect = (e) => {
+          const checkable = ref.current;
+          const interactionAllowed = dispatchRequestInteraction(
+            checkable,
+            e,
+            "enter",
+          );
+          if (!interactionAllowed) {
+            if (checkable.form) {
+              e.preventDefault();
+            }
+            return;
+          }
+          let newState;
+          if (checkable.type === "checkbox") {
+            // toggle: if checked → uncheck (undefined), if unchecked → check (value)
+            newState = checkable.checked ? undefined : checkable.value;
+          } else {
+            // radio: always check
+            newState = checkable.value;
+          }
+          dispatchRequestSetUIState(checkable, newState, { event: e });
+          if (checkable.form) {
+            e.preventDefault();
+          }
+        };
+        if (props.type === "radio") {
+          spaceEffect = (e) => {
+            const radio = e.currentTarget;
+            if (radio.checked) {
+              wasCheckedAtMousedownRef.current = true;
+              onClick(e);
+            }
+          };
+        }
       } else if (props.type === "range") {
         mousedownInteraction = {
           name: "mousedown",
@@ -378,6 +452,9 @@ export const useControlProps = (
 
     const onMouseDown = (e) => {
       props.onMouseDown?.(e);
+      if (isCheckable && props.type === "radio") {
+        wasCheckedAtMousedownRef.current = e.currentTarget.checked;
+      }
       applyInteraction(mousedownInteraction, e);
       transferFocusToTarget(e);
     };
@@ -385,15 +462,28 @@ export const useControlProps = (
       props.onClick?.(e);
       applyInteraction(clickInteraction, e);
       transferFocusToTarget(e);
-      if (controlType === "button" && e.currentTarget.form) {
-        // prevent form submission
-        e.preventDefault();
+
+      const controlHost = e.currentTarget;
+      if (controlHost.form) {
+        if (controlType === "button") {
+          // prevent form submission
+          e.preventDefault();
+        } else if (controlHost.closest("button")) {
+          // prevent button form submission by click
+          // (When an input is inside a <button> like for a picker)
+          // any click in the picker could trigger form submission as browser see this as click on button inside form
+          e.preventDefault();
+        }
       }
     };
     const onKeyDown = (e) => {
       props.onKeyDown?.(e);
       if (e.key === "Enter" && enterEffect) {
         enterEffect(e);
+        return;
+      }
+      if (e.key === " " && spaceEffect) {
+        spaceEffect(e);
         return;
       }
       applyInteraction(keydownInteraction, e);
@@ -437,7 +527,7 @@ export const useControlProps = (
         e.preventDefault();
       }
     };
-    Object.assign(controlProps, {
+    Object.assign(controlHostProps, {
       ref: refComposed,
       onMouseDown,
       onClick,
@@ -447,7 +537,7 @@ export const useControlProps = (
     });
   }
 
-  return [controlProps, remainingProps];
+  return [controlRootProps, controlHostProps, uiStateController];
 };
 
 /**
@@ -456,8 +546,8 @@ export const useControlProps = (
  * - Binds the group's action to the aggregated state signal
  * - Provides context to children: ParentUIStateController, FieldName, Disabled, ReadOnly,
  *   Required, Loading, Action, ActionRequester
- * - Overrides `onnavi_request_reset_ui_state` to cascade resets to all monitored children
- *   by dispatching `navi_request_reset_ui_state` DOM events on each child's DOM element
+ * - Overrides `onnavi_reset_ui_state` to cascade resets to all monitored children
+ *   by dispatching `navi_reset_ui_state` DOM events on each child's DOM element
  * - Overrides `onnavi_action_ready` to track the action requester
  *
  * @param {{ controlType: string, childControlType: string, aggregateChildStates: Function }} config
@@ -465,32 +555,36 @@ export const useControlProps = (
  */
 export const useControlgroupProps = (
   props,
-  { stateType, controlType, childControlFilter, aggregateChildStates },
+  {
+    controlType,
+    stateType,
+    childControlFilter,
+    aggregateChildStates,
+    wantRequesterButtonState,
+    uiActionInternal,
+  },
 ) => {
-  const { action, uiAction } = props;
-  const debugAction = useDebugAction();
+  const { ref, action } = props;
   const uiGroupStateController = useUIGroupStateController(props, controlType, {
     stateType,
     childControlFilter,
     aggregateChildStates,
-    debugAction,
+    wantRequesterButtonState,
+    uiActionInternal,
   });
 
-  const uiActionRef = useRef(uiAction);
-  uiActionRef.current = uiAction;
-  useLayoutEffect(() => {
-    return uiGroupStateController.subscribe((newState) => {
-      uiActionRef.current?.(newState);
-    });
-  }, [uiGroupStateController]);
   const [boundAction] = useActionBoundToOneParam(
-    resolveActionProp(action),
+    action,
     uiGroupStateController.uiStateSignal,
   );
   const [actionRequester, setActionRequester] = useState();
-  const [controlgroupProps, remainingProps] = useInteractiveProps(props, {
+  const [controlRootProps, controlgroupProps] = useInteractiveProps(props, {
     uiStateController: uiGroupStateController,
     boundAction,
+    // Group state is set before dispatching navi_ui_state_change → dispatchRequestAction,
+    // so onnavi_action_allowed must not call dispatchRequestSetUIState again (it would
+    // re-trigger uiAction + command a second time).
+    skipSetUIStateOnActionAllowed: true,
   });
 
   const { basePseudoState } = controlgroupProps;
@@ -521,41 +615,122 @@ export const useControlgroupProps = (
     ],
   );
 
+  // Auto-trigger the group action when a checkable child (radio/checkbox) changes.
+  // For other inputs (text, range…) the action must be triggered explicitly via
+  // a submit button or Enter — same as a regular form field.
+  if (
+    action &&
+    (controlType === "radio_group" || controlType === "checkbox_group")
+  ) {
+    controlgroupProps.onnavi_ui_state_change = (e) => {
+      const el = ref.current;
+      if (el) {
+        dispatchRequestAction(el, {
+          event: e.detail.event,
+          uiState: e.detail.value,
+        });
+      }
+    };
+  }
+
   return [
+    controlRootProps,
     {
       ...controlgroupProps,
-      name: undefined, // useful to children, not the the group itself
-      required: undefined, // useful to children, not the the group itself
-      onnavi_action_allowed: (e) => {
+      "name": undefined, // useful to children, not the the group itself
+      "required": undefined, // useful to children, not the the group itself
+      "onnavi_action_allowed": (e) => {
         setActionRequester(e.detail.requester);
         controlgroupProps.onnavi_action_allowed(e);
       },
+      "navi-control-group": "",
     },
-    remainingProps,
     controlgroupChildrenWrapperProps,
   ];
 };
 
+/**
+ * Like `useControlProps` but also establishes a 1:1 facade sync between the
+ * picker's hidden input and the first child control inside the picker popup.
+ *
+ * Child → picker input: when the child's UI state changes, the picker input
+ * is updated automatically (no `command="--navi-update"` needed on the child).
+ *
+ * Picker input → child: when the picker input is updated externally (e.g.
+ * via `--navi-update` or `--navi-clear` from outside), the change is
+ * propagated down to the child automatically.
+ *
+ * Returns a 3-tuple `[controlRootProps, controlHostProps, facadeChildrenProps]`.
+ * Use `ControlFacadeChildrenWrapper` with the third element to wrap the popup
+ * children — it resets field contexts and injects the facade controller:
+ *
+ * ```jsx
+ * const [controlRootProps, controlHostProps, facadeChildrenProps] = useControlFacadeProps(props, options);
+ * // …
+ * <ControlFacadeChildrenWrapper {...facadeChildrenProps}>
+ *   {children}
+ * </ControlFacadeChildrenWrapper>
+ * ```
+ */
+export const useControlFacadeProps = (props, options) => {
+  const [controlRootProps, controlHostProps, uiStateController] =
+    useControlProps(props, options);
+  const facadeController = useUIFacadeStateController(uiStateController);
+  return [controlRootProps, controlHostProps, { value: facadeController }];
+};
+
+/**
+ * Wrapper for the popup children of a facade-backed picker.
+ *
+ * Resets all inherited field contexts (same as `ControlChildrenWrapper`) so
+ * that children don't accidentally register as form participants of the outer
+ * field. Additionally injects the facade controller as
+ * `ParentUIStateControllerContext` so the first child control automatically
+ * stays in sync with the picker input (bidirectional, without any explicit
+ * `command` prop).
+ *
+ * Receives `facadeChildrenProps` — the third element of the tuple returned by
+ * `useControlFacadeProps` — spread directly onto this component.
+ */
+export const ControlFacadeChildrenWrapper = ({ children, value }) => (
+  <ParentUIStateControllerContext.Provider value={value}>
+    <MessagePropsRefContext.Provider value={undefined}>
+      <ControlToInterfaceContext.Provider value={undefined}>
+        <RequiredContext.Provider value={undefined}>
+          <ControlNameContext.Provider value={undefined}>
+            {children}
+          </ControlNameContext.Provider>
+        </RequiredContext.Provider>
+      </ControlToInterfaceContext.Provider>
+    </MessagePropsRefContext.Provider>
+  </ParentUIStateControllerContext.Provider>
+);
+
 const useInteractiveProps = (
   props,
-  { uiStateController, boundAction, readOnlySupported },
+  {
+    uiStateController,
+    boundAction,
+    readOnlySupported,
+    skipSetUIStateOnActionAllowed,
+  },
 ) => {
   const { ref } = props;
-  const controlProps = {
+  const controlHostProps = {
     ref,
     "navi-control-host": "",
   };
-  let remainingProps = {
+  let controlRootProps = {
     "navi-control": uiStateController.controlType,
   };
   const propKeySet = new Set(Object.keys(props));
   for (const key of propKeySet) {
     if (CONTROL_PROP_SET.has(key)) {
       if (CONTROL_ATTRIBUTE_SET.has(key)) {
-        controlProps[key] = props[key];
+        controlHostProps[key] = props[key];
       }
     } else {
-      remainingProps[key] = props[key];
+      controlRootProps[key] = props[key];
     }
   }
   const actionStatus = useActionStatus(boundAction);
@@ -565,6 +740,7 @@ const useInteractiveProps = (
   const controlRequired = useContext(RequiredContext);
   const controlLoading = useContext(LoadingContext);
   const parentActionRequester = useContext(ActionRequesterContext);
+  const debugCommand = useDebugCommand();
   const debugAction = useDebugAction();
   const debugInteraction = useDebugInteraction();
   const debugFocus = useDebugFocus();
@@ -575,7 +751,7 @@ const useInteractiveProps = (
       focusVisible: autoFocusVisible,
       autoSelect,
     });
-    Object.assign(controlProps, {
+    Object.assign(controlHostProps, {
       "navi-autofocus": autoFocus
         ? autoFocus === true
           ? ""
@@ -607,7 +783,7 @@ const useInteractiveProps = (
       controlReadOnly ||
       loadingResolved ||
       uiStateController.readOnly;
-    Object.assign(controlProps, {
+    Object.assign(controlHostProps, {
       "id": idResolved,
       "navi-control-proxy-for": naviProxyFor,
       name,
@@ -623,9 +799,9 @@ const useInteractiveProps = (
       },
     });
     if (readOnlySupported) {
-      controlProps.readOnly = readOnlyResolved;
+      controlHostProps.readOnly = readOnlyResolved;
     } else {
-      controlProps["aria-readonly"] = readOnlyResolved;
+      controlHostProps["aria-readonly"] = readOnlyResolved;
     }
     // infom any <Field> parent of our readOnly state + that we are interactive
     useLayoutEffect(() => {
@@ -636,24 +812,33 @@ const useInteractiveProps = (
       }
     }, [controlToInterfaceContext, disabledResolved, readOnlyResolved]);
 
-    const { constraints } = controlProps;
+    const { constraints } = controlHostProps;
     useConstraints(ref, constraints);
-    remainingProps = useConstraintMessages(ref, remainingProps);
+    controlRootProps = useConstraintMessages(ref, controlRootProps);
   }
   ui_state_and_value: {
     const uiState = uiStateController.uiStateSignal.value;
-    Object.assign(controlProps, {
-      // for some input navi-ui-state differs (like color where ui-state would be "" while value would be "#000000")
-      "navi-ui-state": uiState,
-      "onnavi_request_reset_ui_state": (e) => {
+    Object.assign(controlHostProps, {
+      onnavi_clear_ui_state: (e) => {
+        uiStateController.clearUIState(e);
+      },
+      onnavi_reset_ui_state: (e) => {
         uiStateController.resetUIState(e);
       },
-      "onnavi_get_ui_state": (e) => {
+      onnavi_get_ui_state: (e) => {
         e.detail.respondWith(uiStateController.uiStateSignal.peek());
       },
-      "onnavi_set_ui_state": (e) => {
+      onnavi_set_ui_state: (e) => {
         uiStateController.setUIState(e.detail.value, e);
       },
+    });
+    // Mirror ui state handlers on the root so events dispatched on the root element
+    // (e.g. from a commandfor targeting the picker button) reach the controller.
+    Object.assign(controlRootProps, {
+      onnavi_clear_ui_state: controlHostProps.onnavi_clear_ui_state,
+      onnavi_reset_ui_state: controlHostProps.onnavi_reset_ui_state,
+      onnavi_get_ui_state: controlHostProps.onnavi_get_ui_state,
+      onnavi_set_ui_state: controlHostProps.onnavi_set_ui_state,
     });
 
     const { statePropName } = uiStateController;
@@ -661,10 +846,10 @@ const useInteractiveProps = (
       const statePropValueRaw = uiStateController.getPropFromState(uiState);
       const statePropValueDom =
         uiStateController.toControlHostValue(statePropValueRaw);
-      controlProps[statePropName] = statePropValueDom;
+      controlHostProps[statePropName] = statePropValueDom;
       if (statePropName === "checked") {
         const { value } = props;
-        controlProps.value = value;
+        controlHostProps.value = value;
       }
     }
   }
@@ -673,7 +858,24 @@ const useInteractiveProps = (
     // Children are returned raw so callers decide how to wrap them.
     // Use the returned ChildrenContextWrapper to reset field-specific contexts
     // (MessagePropsRef, ControlToInterface) around the content you render.
-    Object.assign(controlProps, { children });
+    Object.assign(controlHostProps, { children });
+  }
+  command_props: {
+    Object.assign(controlHostProps, {
+      onnavi_command: (e) => {
+        props.onnavi_command?.(e);
+        onNaviCommand(e, { debugCommand });
+      },
+    });
+    // The control host (e.g. hidden input inside picker) listens for navi_command
+    // via controlHostProps above. But when commandfor targets the control root (e.g.
+    // the picker button), the event fires there instead. Putting onnavi_command on
+    // controlRootProps — which ends up on the root element — lets the root handle it.
+    // When root === host the spread order ensures
+    // controlHostProps.onnavi_command takes precedence.
+    Object.assign(controlRootProps, {
+      onnavi_command: controlHostProps.onnavi_command,
+    });
   }
   action_props: {
     const { action, actionErrorEffect, errorMapping } = props;
@@ -682,15 +884,11 @@ const useInteractiveProps = (
       errorMapping,
     });
     const dataAction =
-      action === undefined
-        ? undefined
-        : typeof action === "string"
-          ? action
-          : boundAction.callSource;
-    Object.assign(controlProps, {
+      action === undefined ? undefined : boundAction.callSource;
+    Object.assign(controlHostProps, {
       "data-action": dataAction,
     });
-    Object.assign(remainingProps, {
+    Object.assign(controlRootProps, {
       "data-action": dataAction,
     });
 
@@ -707,7 +905,7 @@ const useInteractiveProps = (
       resetOnAbort,
       resetOnError,
     } = props;
-    Object.assign(controlProps, {
+    Object.assign(controlHostProps, {
       onFocus: (e) => {
         // Transfer programmatic focus to the delegate target (navi-focus-delegate or navi-control-proxy-for)
         const focusProxyTarget =
@@ -773,6 +971,24 @@ const useInteractiveProps = (
               uiState = v;
             },
           });
+          // If this is a form submit and the requester is a named button, ensure
+          // its value wins over any other button sharing the same name.
+          // Native browser behavior: only the clicked/activated submit button
+          // contributes its name+value to form data.
+          const { requester } = e.detail;
+          if (
+            uiStateController.wantRequesterButtonState &&
+            requester.tagName === "BUTTON" &&
+            requester.name &&
+            requester !== e.currentTarget
+          ) {
+            const requesterUIState = getUIStateFromElement(requester);
+            const requesterValue =
+              requesterUIState !== undefined
+                ? requesterUIState
+                : requester.value;
+            uiState = { ...uiState, [requester.name]: requesterValue };
+          }
           e.detail.uiState = uiState;
         }
         const naviProxyTarget = findControlProxyTarget(e.currentTarget);
@@ -804,9 +1020,15 @@ const useInteractiveProps = (
           e.detail.action = boundAction;
         }
         const { uiState } = e.detail;
-        dispatchRequestSetUIState(e.currentTarget, uiState, {
-          event: e,
-        });
+        if (!skipSetUIStateOnActionAllowed) {
+          // For leaf controls: set the UI state optimistically before executing the action.
+          // For groups: state is already set by the group's setUIState (which ran before
+          // dispatching navi_ui_state_change → dispatchRequestAction), so we skip this
+          // to avoid calling uiAction + command a second time.
+          dispatchRequestSetUIState(e.currentTarget, uiState, {
+            event: e,
+          });
+        }
         debugAction(e, `executing action ${e.detail.action.callSource}`);
         executeAction(e);
       },
@@ -831,10 +1053,10 @@ const useInteractiveProps = (
         uiStateController.actionEnd(e);
         debugAction(e, `action end with data: ${JSON.stringify(data)}`);
         onActionEnd?.(data, e);
-        remainingProps.onnavi_action_end?.(e);
+        controlRootProps.onnavi_action_end?.(e);
       },
     });
   }
 
-  return [controlProps, remainingProps];
+  return [controlRootProps, controlHostProps];
 };

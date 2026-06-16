@@ -22,6 +22,7 @@ const css = /* css */ `
     .navi_button {
       --button-border-radius: var(--navi-control-border-radius);
       --button-border-width: var(--navi-control-border-width);
+      --button-cta-background-color: var(--navi-accent-color);
       /* Focus outline */
       --button-outline-width: var(--navi-focus-outline-width);
       --button-outline-offset: calc(-1 * var(--button-outline-width) / 2);
@@ -97,6 +98,7 @@ const css = /* css */ `
     box-sizing: border-box;
     aspect-ratio: inherit;
     padding: 0;
+    color: var(--x-button-color);
     background: none;
     border: none;
     border-radius: var(--button-border-radius);
@@ -108,14 +110,8 @@ const css = /* css */ `
     font-family: var(--button-font-family);
     touch-action: manipulation;
     user-select: none;
-
-    &[data-accent-needs-dark-fg] {
-      --button-color: black;
-    }
-
-    &[data-icon] {
-      --button-padding: 0;
-    }
+    -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
+    display: inline-flex;
 
     .navi_button_content {
       position: relative;
@@ -154,7 +150,7 @@ const css = /* css */ `
       );
       align-items: inherit;
       justify-content: inherit;
-      color: var(--x-button-color);
+      color: inherit;
       vertical-align: inherit;
       background: var(--x-button-background);
       background-color: var(
@@ -184,21 +180,11 @@ const css = /* css */ `
       }
     }
 
-    &[data-reveal-on-interaction] {
-      --x-button-background-color: transparent;
-      --x-button-border-color: transparent;
-    }
-
     /* Hover */
     &[data-hover] {
       --x-button-border-color: var(--button-border-color-hover);
       --x-button-background-color: var(--button-background-color-hover);
       --x-button-color: var(--button-color-hover);
-    }
-    &[data-nohover] {
-      --x-button-border-color: var(--button-border-color);
-      --x-button-background-color: var(--button-background-color);
-      --x-button-color: var(--button-color);
     }
     /* Pressed */
     &[data-pressed] {
@@ -241,8 +227,6 @@ const css = /* css */ `
       --x-button-color: var(--button-color-disabled);
       --x-button-cursor: default;
 
-      color: unset;
-
       /* Remove pressed effects */
       .navi_button_content {
         transform: none;
@@ -252,16 +236,40 @@ const css = /* css */ `
         }
       }
     }
-    /* Discrete variant */
-    &[data-discrete] {
+    /* Callout (info, warning, error) */
+    &[data-callout] {
+      --x-button-border-color: var(--callout-color);
+    }
+
+    /* discrete: background on hover */
+    &[data-variant="discrete"] {
+      --x-button-background-color: transparent;
+      --x-button-border-color: transparent;
+
+      &[data-hover] {
+        --x-button-border-color: transparent;
+        --x-button-background-color: color-mix(
+          in srgb,
+          currentColor 8%,
+          transparent
+        );
+      }
+      &[data-readonly] {
+        --x-button-border-color: transparent;
+        --x-button-background-color: transparent;
+      }
+      &[data-disabled] {
+        --x-button-border-color: transparent;
+        --x-button-background-color: transparent;
+      }
+    }
+    /* discrete-border: border on hover */
+    &[data-variant="discrete-border"] {
       --x-button-background-color: transparent;
       --x-button-border-color: transparent;
 
       &[data-hover] {
         --x-button-border-color: var(--button-border-color-hover);
-      }
-      &[data-nohover] {
-        --x-button-border-color: transparent;
       }
       &[data-readonly] {
         --x-button-border-color: transparent;
@@ -270,9 +278,70 @@ const css = /* css */ `
         --x-button-border-color: transparent;
       }
     }
-    /* Callout (info, warning, error) */
-    &[data-callout] {
-      --x-button-border-color: var(--callout-color);
+    /* border variant: no background, border only */
+    &[data-variant="border"] {
+      --x-button-background-color: transparent;
+
+      &[data-hover] {
+        --x-button-background-color: color-mix(
+          in srgb,
+          currentColor 8%,
+          transparent
+        );
+      }
+      &[data-readonly] {
+        --x-button-background-color: transparent;
+      }
+      &[data-disabled] {
+        --x-button-background-color: transparent;
+      }
+    }
+    &[data-icon] {
+      --button-padding: 0;
+    }
+    /* cta: call-to-action — special background, border matches background */
+    &[data-cta] {
+      --x-button-background-color: var(--button-cta-background-color);
+      --x-button-border-color: var(--button-cta-background-color);
+      --x-button-color: white;
+
+      &[data-hover] {
+        --x-button-background-color: color-mix(
+          in srgb,
+          var(--button-cta-background-color) 85%,
+          white
+        );
+        --x-button-border-color: color-mix(
+          in srgb,
+          var(--button-cta-background-color) 85%,
+          white
+        );
+      }
+      &[data-readonly] {
+        --x-button-background-color: color-mix(
+          in srgb,
+          var(--button-cta-background-color) 50%,
+          white
+        );
+        --x-button-border-color: color-mix(
+          in srgb,
+          var(--button-cta-background-color) 50%,
+          white
+        );
+      }
+      &[data-disabled] {
+        --x-button-background-color: color-mix(
+          in srgb,
+          var(--button-cta-background-color) 40%,
+          white
+        );
+        --x-button-border-color: color-mix(
+          in srgb,
+          var(--button-cta-background-color) 40%,
+          white
+        );
+        --x-button-color: color-mix(in srgb, white 60%, transparent);
+      }
     }
   }
 `;
@@ -288,17 +357,20 @@ export const ButtonUI = (props) => {
     rel,
 
     // visual
+    variant,
     icon,
-    revealOnInteraction = icon,
-    discrete = icon && !revealOnInteraction,
+    cta,
     spacing,
   } = props;
-  const [buttonProps, remainingProps] = useControlProps(props, {
-    controlType: "button",
-    statePropName: "value",
-    allowNameless: true,
-  });
-  const { basePseudoState, children } = buttonProps;
+  const [buttonControlRootProps, buttonControlHostProps] = useControlProps(
+    props,
+    {
+      controlType: "button",
+      statePropName: "value",
+      allowNameless: true,
+    },
+  );
+  const { basePseudoState, children } = buttonControlHostProps;
   const loading = basePseudoState[":-navi-loading"];
 
   const isLink = href !== undefined;
@@ -325,8 +397,8 @@ export const ButtonUI = (props) => {
 
   return (
     <Box
-      {...buttonProps}
-      {...remainingProps}
+      {...buttonControlRootProps}
+      {...buttonControlHostProps}
       // eslint-disable-next-line react/no-children-prop
       children={undefined}
       spacing={undefined}
@@ -335,6 +407,8 @@ export const ButtonUI = (props) => {
       href={href}
       target={innerTarget}
       rel={innerRel}
+      // Respond with the JS prop value directly so callers (e.g. resolveCommandValue)
+      // get the original type instead of the DOM-coerced string (e.g. "[object Object]").
       onnavi_get_value={(e) => {
         e.detail.respondWith(props.value);
       }}
@@ -354,9 +428,9 @@ export const ButtonUI = (props) => {
         // the event, i.e. it was synthesized from a long-press gesture (right-click gives e.button === 2).
         e.preventDefault();
       }}
+      data-variant={variant}
       data-icon={icon ? "" : undefined}
-      data-reveal-on-interaction={revealOnInteraction ? "" : undefined}
-      data-discrete={discrete ? "" : undefined}
+      data-cta={cta ? "" : undefined}
       data-callout-arrow-x="center"
       // style management
       baseClassName="navi_button"

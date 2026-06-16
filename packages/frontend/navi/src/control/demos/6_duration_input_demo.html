@@ -48,11 +48,15 @@
       import {
         Box,
         Button,
+        ControlGroup,
         Form,
         Input,
+        Label,
         InputGroup,
+        Picker,
         Unit,
         Text,
+        Time,
         NaviDebug,
       } from "@jsenv/navi";
       import { CallLog, useCallLog } from "./utils/call_log.jsx";
@@ -61,6 +65,72 @@
         <Box flex="y" spacing="l">
           <BasicDemo />
           <LongUnitDemo />
+          <ControlGroupInFormDemo />
+          <PickerInFormDemo />
+        </Box>
+      );
+
+      const DurationInputs = ({
+        hours,
+        minutes,
+        onHours,
+        onMinutes,
+        unitHour = (
+          <Unit
+            unit="hour"
+            plural
+            color="secondary"
+            // We need this because ":" is inside the first input so
+            // in case unit pushes to the right it should account for the space of ":
+            marginRight="1ch"
+          />
+        ),
+        unitMinute = <Unit unit="minute" plural color="secondary" />,
+        onPushEntry,
+      }) => (
+        <Box border="1px dotted #aaa" width="fit-content">
+          <InputGroup flex spacing="xxs" width="fit-content">
+            <Label flex="y" textAlign="right">
+              <Input
+                type="navi_hour"
+                name="hours"
+                unit={false}
+                variant="underline"
+                size="l"
+                expandX
+                value={hours}
+                uiAction={(v) => {
+                  onPushEntry?.("hour uiAction", v);
+                }}
+                action={(v) => {
+                  onPushEntry?.("hour action", v);
+                  onHours?.(v);
+                }}
+              >
+                <Input.UI.UnitSlot>:</Input.UI.UnitSlot>
+              </Input>
+              {unitHour}
+            </Label>
+            <Label flex="y">
+              <Input
+                type="navi_minute"
+                name="minutes"
+                size="l"
+                unit={false}
+                variant="underline"
+                expandX
+                value={minutes}
+                uiAction={(v) => {
+                  onPushEntry?.("minute uiAction", v);
+                }}
+                action={(v) => {
+                  onPushEntry?.("minute action", v);
+                  onMinutes?.(v);
+                }}
+              />
+              {unitMinute}
+            </Label>
+          </InputGroup>
         </Box>
       );
 
@@ -81,50 +151,15 @@
             }}
           >
             <Box flex="y" spacing="s" alignX="start">
-              <Box border="1px dotted #aaa" width="fit-content">
-                <InputGroup flex spacing="xxs" width="fit-content">
-                  <Box flex="y">
-                    <Input
-                      type="navi_hour"
-                      name="hours"
-                      unit={false}
-                      variant="underline"
-                      size="l"
-                      expandX
-                      value={hours}
-                      uiAction={(v) => {
-                        push("hour uiAction", v);
-                      }}
-                      action={(v) => {
-                        push("hour action", v);
-                        onHours(v);
-                      }}
-                    >
-                      <Input.UI.UnitSlot>:</Input.UI.UnitSlot>
-                    </Input>
-                    {unitHour}
-                  </Box>
-                  <Box flex="y">
-                    <Input
-                      type="navi_minute"
-                      name="minutes"
-                      size="l"
-                      unit={false}
-                      variant="underline"
-                      expandX
-                      value={minutes}
-                      uiAction={(v) => {
-                        push("minute uiAction", v);
-                      }}
-                      action={(v) => {
-                        push("minute action", v);
-                        onMinutes(v);
-                      }}
-                    />
-                    {unitMinute}
-                  </Box>
-                </InputGroup>
-              </Box>
+              <DurationInputs
+                hours={hours}
+                minutes={minutes}
+                onHours={onHours}
+                onMinutes={onMinutes}
+                unitHour={unitHour}
+                unitMinute={unitMinute}
+                onPushEntry={push}
+              />
               <Button type="submit">Submit</Button>
               <CallLog entries={entries} onClear={clear} />
             </Box>
@@ -156,17 +191,6 @@
               onMinutes={(v) => {
                 minutesSignal.value = v;
               }}
-              unitHour={
-                <Unit
-                  unit="hour"
-                  plural
-                  color="secondary"
-                  // We need this because ":" is inside the first input so
-                  // in case unit pushes to the right it should account for the space of ":
-                  marginRight="1ch"
-                />
-              }
-              unitMinute={<Unit unit="minute" plural color="secondary" />}
             />
           </div>
         );
@@ -197,12 +221,143 @@
                 minutesSignal.value = v;
               }}
               unitHour={
-                <Text size="xs" marginRight="1ch">
+                <Text size="xs" marginRight="1ch" color="secondary">
                   This is way longer
                 </Text>
               }
-              unitMinute={<Unit unit="minute" plural size="xs" />}
             />
+          </div>
+        );
+      };
+
+      // ── ControlGroupInFormDemo ────────────────────────────────────────────
+      const ControlGroupInFormDemo = () => {
+        const hoursSignal = useSignal(2);
+        const minutesSignal = useSignal(15);
+        const hours = hoursSignal.value;
+        const minutes = minutesSignal.value;
+
+        const [entries, push, clear] = useCallLog();
+
+        return (
+          <div class="demo-section">
+            <h2>Duration inside ControlGroup inside Form</h2>
+            <p class="desc">
+              Le widget de durée est dans un{" "}
+              <code>ControlGroup name="duration"</code> lui-même dans un{" "}
+              <code>Form</code>. Le formulaire doit recevoir{" "}
+              <code>{"{ duration: { hours, minutes } }"}</code> au submit.
+            </p>
+            <Form
+              action={(values) => {
+                push("form action", values);
+              }}
+              uiAction={(values) => {
+                push("form uiAction", values);
+              }}
+            >
+              <Box flex="y" spacing="s" alignX="start">
+                <ControlGroup
+                  name="duration"
+                  uiAction={(v) => {
+                    push("duration uiAction", v);
+                  }}
+                >
+                  <DurationInputs
+                    hours={hours}
+                    minutes={minutes}
+                    onHours={(v) => {
+                      hoursSignal.value = v;
+                    }}
+                    onMinutes={(v) => {
+                      minutesSignal.value = v;
+                    }}
+                    onPushEntry={push}
+                  />
+                </ControlGroup>
+                <Button command="--navi-send">Submit</Button>
+                <CallLog entries={entries} onClear={clear} />
+              </Box>
+            </Form>
+          </div>
+        );
+      };
+
+      // ── PickerInFormDemo ──────────────────────────────────────────────────
+      const PickerInFormDemo = () => {
+        const [entries, push, clear] = useCallLog();
+        const pickerId = "duration-picker";
+        const hoursSignal = useSignal(null);
+        const minutesSignal = useSignal(null);
+
+        const DurationPickerUI = () => {
+          const h = hoursSignal.value;
+          const m = minutesSignal.value;
+          if (h === null && m === null) {
+            return <Time type="time" />;
+          }
+          const hh = String(h ?? 0).padStart(2, "0");
+          const mm = String(m ?? 0).padStart(2, "0");
+          return <Time type="time">{`${hh}:${mm}`}</Time>;
+        };
+
+        return (
+          <div class="demo-section">
+            <h2>Duration inside Picker inside Form</h2>
+            <p class="desc">
+              Le widget de durée est dans un{" "}
+              <code>Picker type="controlgroup" name="duration"</code> lui-même
+              dans un <code>Form</code>. Le formulaire doit recevoir{" "}
+              <code>{"{ duration: { hours, minutes } }"}</code> au submit.
+            </p>
+            <Form
+              action={(values) => {
+                push("form action", values);
+              }}
+              uiAction={(values) => {
+                push("form uiAction", values);
+              }}
+            >
+              <Box flex="y" spacing="s" alignX="start">
+                <Picker
+                  id={pickerId}
+                  name="duration"
+                  type="controlgroup"
+                  placeholder="Saisir une durée"
+                  ui={<DurationPickerUI />}
+                  uiAction={(v) => {
+                    push("picker uiAction", v);
+                  }}
+                >
+                  <ControlGroup>
+                    <Box flex="y" spacing="l" padding="s" alignX="center">
+                      <Text bold>Veuillez saisir une durée</Text>
+                      <DurationInputs
+                        hours={hoursSignal.value}
+                        minutes={minutesSignal.value}
+                        onHours={(v) => {
+                          hoursSignal.value = v;
+                        }}
+                        onMinutes={(v) => {
+                          minutesSignal.value = v;
+                        }}
+                        onPushEntry={push}
+                      />
+                      <Box flex="x" spacing="s" alignX="end" expandX>
+                        <Button command="--navi-cancel" variant="discrete">
+                          Annuler
+                        </Button>
+                        <Button command="--navi-define" variant="discrete">
+                          Définir
+                        </Button>
+                      </Box>
+                    </Box>
+                  </ControlGroup>
+                </Picker>
+                <Button command="--navi-send">Submit</Button>
+                <CallLog entries={entries} onClear={clear} />
+              </Box>
+            </Form>
           </div>
         );
       };

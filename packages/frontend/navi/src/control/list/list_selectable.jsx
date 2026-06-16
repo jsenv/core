@@ -21,10 +21,7 @@ import {
 import { Input } from "../input/input.jsx";
 import { useCheckableProps } from "../input/use_checkable_props.js";
 import { getUIStateControllerById } from "../ui_state_controller.js";
-import {
-  dispatchRequestAction,
-  dispatchRequestInteraction,
-} from "../validation/custom_constraint_validation.js";
+import { dispatchRequestInteraction } from "../validation/custom_constraint_validation.js";
 
 const css = /* css */ `
   @layer navi {
@@ -57,7 +54,7 @@ const css = /* css */ `
       --list-item-color-pointed: var(--list-item-color);
       /* Selected — vivid blue accent */
       --list-item-color-selected: white;
-      --list-item-background-color-selected: rgb(3, 30, 60);
+      --list-item-background-color-selected: var(--navi-accent-color);
       --list-item-border-color-selected: var(
         --list-item-background-color-selected
       );
@@ -206,7 +203,7 @@ const ListSelectable = (props) => {
     focusGroupDirection,
     focusGroupWrap,
   } = props;
-  const [listControlProps, remainingProps, childrenWrapperProps] =
+  const [listControlRootProps, listControlProps, childrenWrapperProps] =
     useControlgroupProps(props, {
       stateType: multiple ? "array" : "",
       controlType: multiple ? "checkbox_group" : "radio_group",
@@ -330,8 +327,8 @@ const ListSelectable = (props) => {
       navi-has-selected-background={
         selectedIndicator === "backgroundColor" ? "" : undefined
       }
+      {...listControlRootProps}
       {...listControlProps}
-      {...remainingProps}
       name={undefined}
       selectedIndicator={undefined}
       selectable={undefined}
@@ -363,9 +360,7 @@ const ListSelectable = (props) => {
           e.preventDefault();
           return;
         }
-        if (childController.setUIState(true, e)) {
-          dispatchRequestAction(list, { event: e });
-        }
+        childController.setUIState(true, e);
       }}
       onnavi_request_unselect={(e) => {
         const { id } = e.detail;
@@ -383,9 +378,7 @@ const ListSelectable = (props) => {
           e.preventDefault();
           return;
         }
-        if (childController.setUIState(false, e)) {
-          dispatchRequestAction(list, { event: e });
-        }
+        childController.setUIState(false, e);
       }}
       onnavi_request_nav={(e) => {
         const { goal } = e.detail;
@@ -492,7 +485,7 @@ const ListItemSelectable = (props) => {
   const inputType = multiple ? "checkbox" : "radio";
   const inputId = `${id}_input`;
   inputRef.nullCanHappen = true; // virtualization
-  const [checkableProps, remainingProps] = useCheckableProps({
+  const [checkableRootProps, checkableProps] = useCheckableProps({
     readOnlyMessage: naviI18n(`constraint.readonly.option`, props),
     ...rest,
     ref: inputRef,
@@ -500,12 +493,6 @@ const ListItemSelectable = (props) => {
     type: inputType,
     defaultChecked: defaultSelected,
     checked: selected,
-    action: (v, { event }) => {
-      const listContainerEl = event.currentTarget.closest(
-        ".navi_list_container",
-      );
-      dispatchRequestAction(listContainerEl, { event });
-    },
   });
   const { checked, value, basePseudoState, children } = checkableProps;
   const readOnly = basePseudoState[":read-only"];
@@ -535,7 +522,7 @@ const ListItemSelectable = (props) => {
       spacing="s"
       flex
       alignY="center"
-      {...remainingProps}
+      {...checkableRootProps}
       pseudoClasses={SELECTABLE_PSEUDO_CLASSES}
       basePseudoState={{
         ":-navi-selected": checked,

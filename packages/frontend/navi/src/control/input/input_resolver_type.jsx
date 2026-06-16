@@ -6,8 +6,7 @@ import { PhoneSvg } from "@jsenv/navi/src/graphic/icons/phone_svg.jsx";
 import { SearchSvg } from "@jsenv/navi/src/graphic/icons/search_svg.jsx";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
-import { triggerStringAction } from "../string_actions.js";
-import { dispatchRequestInteraction } from "../validation/custom_constraint_validation.js";
+import { Button } from "./button.jsx";
 import { InputIconSlot, InputRightSlot } from "./input_components.jsx";
 import { InputTextualContext } from "./input_textual_context.js";
 
@@ -40,7 +39,7 @@ const InputSearch = (props) => {
   return <Next ui={<InputSearchUI icon={props.icon} />} {...props} />;
 };
 const InputSearchUI = ({ icon }) => {
-  const { value } = useContext(InputTextualContext);
+  const { value, id } = useContext(InputTextualContext);
   const searchIcon = icon === undefined ? <SearchSvg /> : icon;
   const hasValue = Boolean(value);
 
@@ -50,28 +49,19 @@ const InputSearchUI = ({ icon }) => {
     }
     return <InputIconSlot>{searchIcon}</InputIconSlot>;
   }
-
   return (
-    <InputRightSlot
-      onClick={(e) => {
-        if (e.button !== 0) {
-          return;
-        }
-        const slot = e.currentTarget;
-        const label = slot.closest("label");
-        const input = document.getElementById(label.getAttribute("for"));
-        const allowed = dispatchRequestInteraction(input, e);
-        if (allowed) {
-          triggerStringAction("clear", e, {
-            actionTarget: input,
-            skipClose: true,
-          });
-        }
-      }}
-    >
-      <Icon>
-        <CloseSvg />
-      </Icon>
+    <InputRightSlot>
+      <Button
+        tabIndex="-1"
+        navi-focus-delegate={id}
+        variant="icon"
+        command="--navi-clear"
+        commandFor={id}
+      >
+        <Icon>
+          <CloseSvg />
+        </Icon>
+      </Button>
     </InputRightSlot>
   );
 };
@@ -92,6 +82,7 @@ const InputEmailUI = ({ icon }) => {
 };
 const InputTel = (props) => {
   const Next = useNextResolver();
+
   return <Next ui={<InputTelUI icon={props.icon} />} {...props} />;
 };
 const InputTelUI = ({ icon }) => {

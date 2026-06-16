@@ -135,6 +135,7 @@ const css = /* css */ `
     outline-style: solid;
     outline-color: var(--link-outline-color);
     cursor: var(--x-link-cursor);
+    -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
 
     .navi_current_indicator {
       position: absolute;

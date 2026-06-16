@@ -153,7 +153,56 @@ const css = /* css */ `
   }
 `;
 
-export const PickerCustom = (props) => {
+export const PickerCustomResolver = (props) => {
+  if (props.children === undefined) {
+    return <PickerNative {...props} />;
+  }
+  return <PickerCustom {...props} />;
+};
+
+const PickerNative = (props) => {
+  const Next = useNextResolver();
+  const { onClick } = props;
+
+  const onRequestOpen = (e) => {
+    const pickerButton = e.currentTarget;
+    const pickerInput = getPickerInput(pickerButton);
+    if (!pickerInput) {
+      return;
+    }
+    const allowed = dispatchRequestInteraction(
+      pickerInput,
+      e,
+      e.type === "click" ? "click to show picker" : "navi_request_open event",
+    );
+    if (allowed) {
+      try {
+        pickerInput.showPicker();
+      } catch {
+        pickerInput.click();
+      }
+    }
+  };
+
+  return (
+    <Next
+      {...props}
+      // Only wait for the native "change" event (dialog close) when the picker has its own
+      // action. Without an action, the change event would trigger a noop action cycle and
+      // cause spurious state updates (e.g. when closing the color dialog on form submit).
+      actionInteraction={props.action ? "change" : undefined}
+      onnavi_request_open={(e) => {
+        onRequestOpen(e);
+      }}
+      onClick={(e) => {
+        onClick?.(e);
+        onRequestOpen(e);
+      }}
+    />
+  );
+};
+
+const PickerCustom = (props) => {
   const { ref, mode: modeProp } = props;
   // Freeze the mode for the lifetime of an opening: compute it when closed,
   // keep it stable while open so a screen resize mid-session doesn't switch
@@ -190,37 +239,42 @@ export const PickerCustom = (props) => {
   open_close: {
     const debugFocus = useDebugFocus();
     const debugPopup = useDebugPopup();
-    const moveFocusToPicker = (e) => {
-      const pickerEl = ref.current;
-      const mousedownEvent = findEvent(e, "mousedown");
-      if (mousedownEvent) {
-        debugFocus(
-          e,
-          `move focus to picker (mousedown.preventDefault() + pickerEl.focus()`,
-        );
-        mousedownEvent.preventDefault();
-        pickerEl.focus({ preventScroll: true });
-        return;
-      }
-      const focusoutEvent = findEvent(e, "focusout");
-      if (focusoutEvent) {
-        // If the popover closed because focus left the select (focusout),
-        // don't steal focus back — let focus go where the user intended.
-        debugFocus(e, `let focus go away`);
-        return;
-      }
-      debugFocus(e, `move focus to picker`);
-      pickerEl.focus({ preventScroll: true });
-    };
-
     const [expanded, setExpanded] = useState(false);
     const expandedRef = useRef(expanded);
     expandedRef.current = expanded;
     const valueAtOpenRef = useRef(null);
-    const onOpen = () => {
+    const activeElementAtOpenRef = useRef(null);
+    const onOpen = (e) => {
+      activeElementAtOpenRef.current = e.detail.focusedBeforeOpen;
       expandedRef.current = true;
       setExpanded(true);
       valueAtOpenRef.current = getPickerInputUIState(ref.current);
+    };
+    const restoreFocus = (e) => {
+      const activeElementAtOpen = activeElementAtOpenRef.current;
+      activeElementAtOpenRef.current = null;
+
+      const focusoutEvent = findEvent(e, "focusout");
+      if (focusoutEvent) {
+        debugFocus(e, `closed by focusout -> let focus go away`);
+        return;
+      }
+
+      const mousedownEvent = findEvent(e, "mousedown");
+      if (mousedownEvent) {
+        debugFocus(
+          e,
+          "closed by mousedown -> prevent browser focus (mousedown.preventDefault())",
+        );
+        mousedownEvent.preventDefault();
+      }
+      debugFocus(
+        e,
+        `restore focus to previously focused element`,
+        activeElementAtOpen,
+      );
+      activeElementAtOpen.focus({ preventScroll: true });
+      return;
     };
     const onClose = (e) => {
       const cancelEvent = findEvent(
@@ -236,15 +290,13 @@ export const PickerCustom = (props) => {
       const pickerEl = ref.current;
       const inputEl = getPickerInput(pickerEl);
       if (!inputEl) {
-        moveFocusToPicker(e);
+        restoreFocus(e);
         return;
       }
       const valueAtOpen = valueAtOpenRef.current;
       if (isCancel) {
-        dispatchRequestSetUIState(inputEl, valueAtOpen, {
-          event: e,
-        });
-        moveFocusToPicker(e);
+        dispatchRequestSetUIState(inputEl, valueAtOpen, { event: e });
+        restoreFocus(e);
         return;
       }
       const valueAtClose = getPickerInputUIState(pickerEl);
@@ -256,9 +308,11 @@ export const PickerCustom = (props) => {
       } else {
         dispatchRequestAction(inputEl, { event: e, uiState: valueAtClose });
       }
-      moveFocusToPicker(e);
+      restoreFocus(e);
     };
-    const disableClickFor = useIgnoreClickForMousedown();
+    const disableClickFor = useIgnoreClickForMousedown(ref, (e) => {
+      debugPopup(e, `click ignored`);
+    });
     const requestOpen = (e) => {
       // scroll <button> of the picker into view when opening it
       const pickerEl = ref.current;
@@ -431,9 +485,12 @@ export const PickerCustom = (props) => {
           if (e.button !== 0) {
             return;
           }
-          // click inside popover should not bubble to the select (would re-open it if that click closes it)
-          debugPopup(e, `popover click stopPropagation`);
+          // click inside popover should not bubble to the picker (would re-open it if that click closes it)
+          // preventDefault also prevents a form submit that would otherwise be triggered when
+          // the picker is inside a <form> and the click lands on a non-button element
+          debugPopup(e, `popover click stopPropagation + preventDefault`);
           e.stopPropagation();
+          e.preventDefault();
         },
         onKeyDown: (e) => {
           // some keys pressed inside popover should not reach the picker button
@@ -473,7 +530,7 @@ const PickerContentInsidePopover = (props) => {
     popupProps,
     children,
     pointerTrap,
-    scrollTrap = true,
+    scrollTrap,
     focusTrap = true,
     popoverMode = "nearby",
     popoverSpacing = popoverMode === "nearby" ? 5 : 0,
@@ -541,13 +598,7 @@ const PickerContentInsidePopover = (props) => {
 const PickerContentInsideDialog = (props) => {
   const Next = useNextResolver();
   import.meta.css = css;
-  const {
-    popupProps,
-    children,
-    scrollTrap = true,
-    pointerTrap,
-    ...rest
-  } = props;
+  const { popupProps, children, scrollTrap, pointerTrap, ...rest } = props;
 
   return (
     <Next aria-haspopup="dialog" {...rest}>
@@ -565,28 +616,40 @@ const PickerContentInsideDialog = (props) => {
 };
 
 /**
- * Returns a `disableClickFor` function that suppresses the `click` event that
- * the browser fires after a `mousedown` which already handled an open/close action.
+ * Returns a `disableClickFor` function that suppresses the next `click` event
+ * that lands on a specific element after a `mousedown` already handled an
+ * open/close action.
  *
- * Problem: when the user clicks a dialog's backdrop to close it, the browser
- * fires `mousedown` on the backdrop (which closes the dialog), then fires
- * `click` on whatever element is underneath once the dialog is gone. If that
- * element is the trigger button that originally opened the dialog, the `click`
- * would immediately re-open it.
+ * Problem: when the popover backdrop closes on mousedown, the browser then
+ * dispatches a `click` on whatever element is under the pointer. If that element
+ * is the picker button, it would immediately re-open the picker.
  *
- * Calling `stopPropagation()` or `preventDefault()` on the backdrop `mousedown`
- * does not help: the browser dispatches the subsequent `click` regardless,
- * targeting whichever element ends up under the pointer after the dialog closes.
+ * We cannot call `stopPropagation()` or `preventDefault()` on the backdrop
+ * `mousedown` to prevent that click — the browser dispatches it regardless.
  *
  * Solution: register a self-removing capture-phase `click` listener on `document`
- * so the click is intercepted before it reaches any element handler.
+ * and suppress the click only if it lands inside the given element (the picker
+ * button). Clicks on any other element (e.g. a submit button) pass through
+ * normally.
+ *
+ * Note: the popover backdrop stays in the DOM (with pointer-events:none) so that
+ * the browser always finds a target for the mousedown → click sequence. If the
+ * backdrop were removed from the DOM between mousedown and mouseup, the browser
+ * would not dispatch a click at all, which would leave this listener armed
+ * forever and cause it to swallow the next unrelated user click.
  */
-const useIgnoreClickForMousedown = () => {
+const useIgnoreClickForMousedown = (elementRef, onIgnore) => {
   const disableClickFor = () => {
     const suppressClick = (clickEvent) => {
+      document.removeEventListener("click", suppressClick, { capture: true });
+      const el = elementRef.current;
+      if (!el || !el.contains(clickEvent.target)) {
+        // Click landed outside the element we are guarding — let it through.
+        return;
+      }
       clickEvent.stopPropagation();
       clickEvent.preventDefault();
-      document.removeEventListener("click", suppressClick, { capture: true });
+      onIgnore?.(clickEvent);
     };
     document.addEventListener("click", suppressClick, { capture: true });
   };

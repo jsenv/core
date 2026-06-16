@@ -34,10 +34,12 @@ export const Form = (props) => {
 
 const FormControl = (props) => {
   const { ref, method = "GET" } = props;
-  const [formProps, remainingProps, childrenWrapperProps] =
-    useControlgroupProps(props, {
-      stateType: "object",
+  const [formRootProps, formProps, childrenWrapperProps] = useControlgroupProps(
+    props,
+    {
+      wantRequesterButtonState: true,
       controlType: "form",
+      stateType: "object",
       aggregateChildStates: (childUIStateControllers) => {
         const formValues = {};
         for (const childUIStateController of childUIStateControllers) {
@@ -55,7 +57,8 @@ const FormControl = (props) => {
         }
         return formValues;
       },
-    });
+    },
+  );
   const { basePseudoState, children } = formProps;
   // const disabled = basePseudoState[":disabled"];
   // const readOnly = basePseudoState[":read-only"];
@@ -66,8 +69,8 @@ const FormControl = (props) => {
 
   return (
     <Box
+      {...formRootProps}
       {...formProps}
-      {...remainingProps}
       as="form"
       data-method={method}
       novalidate="" // make sure browser don't prevent "submit" when invalid, nor display messages
@@ -97,7 +100,12 @@ const FormControl = (props) => {
       }}
     >
       <FormContext.Provider value={formContextValue}>
-        <ControlgroupChildrenWrapper {...childrenWrapperProps}>
+        <ControlgroupChildrenWrapper
+          {...childrenWrapperProps}
+          // do not propagate name to children like radio group or checkbox group does
+          // (otherwise anonymous button end up using that name)
+          name={undefined}
+        >
           {children}
         </ControlgroupChildrenWrapper>
       </FormContext.Provider>
@@ -117,9 +125,13 @@ const FormPseudoClasses = [
 const getFormManagedControls = (form) => {
   const managedControls = [];
   for (const element of form.elements) {
-    // if (element.name) {
+    // Exclude inputs that are inside any control group (radio, checkbox, control_group…)
+    // — the group host is the managed control for the form, not its individual child inputs.
+    const controlGroupHost = element.closest("[navi-control-group]");
+    if (controlGroupHost && form.contains(controlGroupHost)) {
+      continue;
+    }
     managedControls.push(element);
-    // }
   }
   return managedControls;
 };

@@ -136,12 +136,25 @@ export const onRequestInteraction = (
       }
     }
     if (!skipConstraints) {
-      checkAndReportConstraints(requestStatus, {
+      const failingInterface = checkConstraints({
         event: requestInteractionCustomEvent,
         requester: event.target,
         fromRequestInteraction: true,
-        debug: debugInteraction,
       });
+      if (failingInterface) {
+        Object.assign(requestStatus, {
+          canProceed: false,
+          preventReason: failingInterface.failedConstraintInfo
+            ? `failing constraint "${failingInterface.failedConstraintInfo.name}"`
+            : "invalid (no constraint info)",
+        });
+        // Interaction constraints (disabled/readonly) — always show the callout.
+        failingInterface.reportValidity({
+          event: requestInteractionCustomEvent,
+          requester: event.target,
+          debug: debugInteraction,
+        });
+      }
     }
   }
   if (!requestStatus.canProceed) {
@@ -213,12 +226,12 @@ export const onRequestAction = (
   if (requester === elementHandlingAction) {
     debugAction(
       requestActionCustomEvent,
-      `${getElementSignature(elementHandlingAction)} action requested`,
+      `${getElementSignature(elementHandlingAction)} validates + action requested (origin: ${actionOrigin})`,
     );
   } else {
     debugAction(
       requestActionCustomEvent,
-      `${getElementSignature(elementHandlingAction)} action requested by ${getElementSignature(requester)}`,
+      `${getElementSignature(elementHandlingAction)} validates + action requested by ${getElementSignature(requester)} (origin: ${actionOrigin})`,
     );
   }
 
@@ -227,12 +240,29 @@ export const onRequestAction = (
     checkEvent(requestStatus, event);
   }
   if (requestStatus.canProceed) {
-    checkAndReportConstraints(requestStatus, {
+    const failingInterface = checkConstraints({
       event: requestActionCustomEvent,
       requester,
       fromRequestAction: true,
-      debug: debugAction,
     });
+    if (failingInterface) {
+      Object.assign(requestStatus, {
+        canProceed: false,
+        preventReason: failingInterface.failedConstraintInfo
+          ? `failing constraint "${failingInterface.failedConstraintInfo.name}"`
+          : "invalid (no constraint info)",
+      });
+      // Only show the callout if the element handling the action has its own
+      // action prop. If it belongs to a parent Form/ControlGroup, the callout
+      // will be shown when the parent tries to execute its own action.
+      if (elementHandlingAction.hasAttribute("data-action")) {
+        failingInterface.reportValidity({
+          event: requestActionCustomEvent,
+          requester,
+          debug: debugAction,
+        });
+      }
+    }
   }
   if (requestStatus.canProceed) {
     // NOTE for future: confirmation must move to to action execution (be part of it when set)
@@ -277,7 +307,7 @@ export const onRequestAction = (
   }
   debugAction(
     requestActionCustomEvent,
-    `${DEFAULT_CONSTRAINT_SET.size} constraints verified -> ${getElementSignature(elementHandlingAction)}.dispatchEvent("navi_action_allowed")`,
+    `${DEFAULT_CONSTRAINT_SET.size} constraints verified${elementHandlingAction.hasAttribute("data-action") ? ` -> execute action ${action.callSource}` : " -> no own action, nothing to execute"}`,
   );
   dispatchInternalCustomEvent(
     elementHandlingAction,
@@ -304,22 +334,14 @@ const checkEvent = (requestStatus, event) => {
   }
 };
 
-const checkAndReportConstraints = (
-  requestStatus,
-  { event, requester, fromRequestInteraction, fromRequestAction, debug } = {},
-) => {
-  const onInvalid = (failedValidationInterface) => {
-    Object.assign(requestStatus, {
-      canProceed: false,
-      preventReason: `failing constraint "${failedValidationInterface.failedConstraintInfo.name}"`,
-    });
-    failedValidationInterface.reportValidity({
-      event,
-      requester,
-      debug,
-    });
-  };
-
+// Returns the failing validation interface, or null if all constraints pass.
+// Never calls reportValidity — callers decide whether to show the callout.
+const checkConstraints = ({
+  event,
+  requester,
+  fromRequestInteraction,
+  fromRequestAction,
+} = {}) => {
   let elementToValidate = event.currentTarget;
   if (!elementToValidate.__validationInterface__) {
     const controlHost = findControlHost(requester);
@@ -328,7 +350,6 @@ const checkAndReportConstraints = (
     }
   }
 
-  // all manageds fields (if any) are checked inside checkValidity
   let validationInterface = elementToValidate.__validationInterface__;
   if (!validationInterface) {
     validationInterface = installCustomConstraintValidation(elementToValidate);
@@ -340,18 +361,22 @@ const checkAndReportConstraints = (
     fromRequestAction,
   });
   if (!isValid) {
-    // checkValidity delegates to the proxy target's VI when the element is a proxy.
-    // In that case validationInterface has no failedConstraintInfo — the target's VI does.
-    // Resolve the proxy target's VI so onInvalid reads failedConstraintInfo from the right place.
     const proxyTarget = findControlProxyTarget(elementToValidate);
     const resolvedValidationInterface = proxyTarget
       ? proxyTarget.__validationInterface__ || validationInterface
       : validationInterface;
-    const failingInterface =
+    let failingInterface =
       resolvedValidationInterface.failingManagedValidationInterface ||
       resolvedValidationInterface;
-    onInvalid(failingInterface);
+    while (
+      failingInterface.failedConstraintInfo === null &&
+      failingInterface.failingManagedValidationInterface
+    ) {
+      failingInterface = failingInterface.failingManagedValidationInterface;
+    }
+    return failingInterface;
   }
+  return null;
 };
 
 const INTERACTION_CONSTRAINTS = [DISABLED_CONSTRAINT, READONLY_CONSTRAINT];
@@ -492,6 +517,7 @@ export const installCustomConstraintValidation = (
   }
 
   let failedConstraintInfo = null;
+  let interactionFailedConstraintInfo = null;
   let failingManagedValidationInterface = null;
   const validityInfoMap = new Map();
   const hasTitleAttribute = element.hasAttribute("title");
@@ -515,6 +541,7 @@ export const installCustomConstraintValidation = (
     }
     validityInfoMap.clear();
     failedConstraintInfo = null;
+    interactionFailedConstraintInfo = null;
     failingManagedValidationInterface = null;
   };
   addTeardown(resetValidity);
@@ -568,8 +595,10 @@ export const installCustomConstraintValidation = (
     // When checking a subset of constraints (e.g. INTERACTION_CONSTRAINTS), we must NOT
     // reset the full validity state — other constraints (like PATTERN) may still be failing
     // and we must preserve their state (failedConstraintInfo, callout, etc.).
-    // We only do a scoped check and return its result without touching global state.
+    // We only do a scoped check and store the result in interactionFailedConstraintInfo,
+    // which reportValidity checks in addition to failedConstraintInfo.
     if (fromRequestInteraction) {
+      interactionFailedConstraintInfo = null;
       for (const constraint of INTERACTION_CONSTRAINTS) {
         const checkResult = constraint.check(element, {
           fromRequestAction,
@@ -578,6 +607,18 @@ export const installCustomConstraintValidation = (
           registerChange: () => {},
         });
         if (checkResult) {
+          const constraintValidityInfo =
+            typeof checkResult === "string"
+              ? { message: checkResult }
+              : checkResult;
+          interactionFailedConstraintInfo = {
+            name: constraint.name,
+            constraint,
+            status: "warning",
+            ...constraintValidityInfo,
+            cleanup: () => {},
+            reportStatus: "not_reported",
+          };
           return false;
         }
       }
@@ -684,11 +725,15 @@ export const installCustomConstraintValidation = (
 
   const [notifyCalloutOpen, onCalloutOpen] = createPubSub();
   const reportValidity = ({ event, requester, debug, skipFocus } = {}) => {
-    if (!failedConstraintInfo) {
+    // Interaction constraints (disabled/readonly) take precedence: they must be shown
+    // without touching or resetting the value-level failedConstraintInfo.
+    const activeConstraintInfo =
+      interactionFailedConstraintInfo || failedConstraintInfo;
+    if (!activeConstraintInfo) {
       closeElementValidationMessage(event, "is_valid");
       return;
     }
-    if (failedConstraintInfo.silent) {
+    if (activeConstraintInfo.silent) {
       closeElementValidationMessage(event, "invalid_silent");
       return;
     }
@@ -696,19 +741,19 @@ export const installCustomConstraintValidation = (
     // Always resolve the right message first (handles custom messages, attributes, fallback).
     const { message, origin } = getConstraintMessage(
       element,
-      failedConstraintInfo.constraint,
-      failedConstraintInfo.message,
+      activeConstraintInfo.constraint,
+      activeConstraintInfo.message,
       { requester },
     );
     if (debug) {
       debug(
         event,
-        `constraint message for "${failedConstraintInfo.constraint.name}": ${origin}`,
+        `constraint message for "${activeConstraintInfo.constraint.name}": ${origin}`,
       );
     }
 
     if (validationInterface.validationMessage) {
-      const { status, closeOnClickOutside } = failedConstraintInfo;
+      const { status, closeOnClickOutside } = activeConstraintInfo;
       validationInterface.validationMessage.update(message, {
         status,
         closeOnClickOutside,
@@ -716,7 +761,7 @@ export const installCustomConstraintValidation = (
       return;
     }
     const anchorElement =
-      failedConstraintInfo.target || elementReceivingValidationMessage;
+      activeConstraintInfo.target || elementReceivingValidationMessage;
     if (
       !skipFocus &&
       // skip focus on proxy (which uses aria-hidden and are not meant to be focused)
@@ -738,8 +783,8 @@ export const installCustomConstraintValidation = (
 
     validationInterface.validationMessage = openCallout(message, {
       anchorElement,
-      status: failedConstraintInfo.status,
-      closeOnClickOutside: failedConstraintInfo.closeOnClickOutside,
+      status: activeConstraintInfo.status,
+      closeOnClickOutside: activeConstraintInfo.closeOnClickOutside,
       openingEvent: event,
       debug,
       onClose: ({ event, focusWithinCallout }) => {
@@ -750,8 +795,8 @@ export const installCustomConstraintValidation = (
           }
         }
         validationInterface.validationMessage = null;
-        if (failedConstraintInfo) {
-          failedConstraintInfo.reportStatus = "closed";
+        if (activeConstraintInfo) {
+          activeConstraintInfo.reportStatus = "closed";
         }
         if (
           !skipFocus &&
@@ -774,13 +819,20 @@ export const installCustomConstraintValidation = (
       },
     });
     const results = notifyCalloutOpen(event);
-    failedConstraintInfo.reportStatus = "reported";
+    activeConstraintInfo.reportStatus = "reported";
   };
   validationInterface.checkValidity = checkValidity;
   validationInterface.reportValidity = reportValidity;
   Object.defineProperty(validationInterface, "failedConstraintInfo", {
     get: () => failedConstraintInfo,
   });
+  Object.defineProperty(
+    validationInterface,
+    "interactionFailedConstraintInfo",
+    {
+      get: () => interactionFailedConstraintInfo,
+    },
+  );
   Object.defineProperty(
     validationInterface,
     "failingManagedValidationInterface",
@@ -917,6 +969,12 @@ export const installCustomConstraintValidation = (
         if (failedConstraintInfo && failedConstraintInfo.status === "error") {
           return;
         }
+        if (
+          interactionFailedConstraintInfo &&
+          interactionFailedConstraintInfo.status === "error"
+        ) {
+          return;
+        }
         resetOnInteraction(e);
       };
 
@@ -998,11 +1056,12 @@ export const installCustomConstraintValidation = (
         return;
       }
       // if we have failed constraint, we cancel too
-      if (failedConstraintInfo) {
+      if (failedConstraintInfo || interactionFailedConstraintInfo) {
         dispatchCancelCustomEvent({
           event: e,
           reason: "blur_invalid",
-          failedConstraintInfo,
+          failedConstraintInfo:
+            failedConstraintInfo || interactionFailedConstraintInfo,
         });
         return;
       }

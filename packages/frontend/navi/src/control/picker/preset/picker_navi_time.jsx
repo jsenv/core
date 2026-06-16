@@ -27,7 +27,7 @@ export const PickerNaviTime = (props) => {
 
   return (
     <Next {...props} type="time">
-      <List selectable action="send">
+      <List selectable command="--navi-send">
         {slots.map((slot, i) => (
           <List.Item
             selectable

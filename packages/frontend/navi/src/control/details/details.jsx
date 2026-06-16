@@ -70,7 +70,7 @@ const DetailsField = (props) => {
     closeKeyShortcut = "ArrowLeft",
     onToggle,
   } = props;
-  const [detailsProps, remainingProps] = useControlProps(
+  const [detailsRootProps, detailsProps] = useControlProps(
     {
       resetOnCancel: true,
       resetOnAbort: true,
@@ -172,8 +172,8 @@ const DetailsField = (props) => {
   return (
     <Box
       as="details"
+      {...detailsRootProps}
       {...detailsProps}
-      {...remainingProps}
       baseClassName="navi_details"
       onToggle={(e) => {
         onToggle?.(e);

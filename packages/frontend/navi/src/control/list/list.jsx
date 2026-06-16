@@ -1355,7 +1355,21 @@ const LIST_ITEM_PSEUDO_ELEMENTS = ["::highlight"];
  * - Separator rendering between visible items
  *
  * Props:
- *   itemId    — stable string id for tracking (auto-generated if omitted)
+ *   id        — HTML element id AND the stable identifier used by external commands
+ *               (--navi-select, --navi-unselect, --navi-scroll, --navi-update).
+ *               Required when items need to be targeted programmatically from
+ *               outside the list. Auto-generated internally if omitted.
+ *   index     — 0-based position in the list. Required for virtualization to work
+ *               correctly. Pass the array map index.
+ *   selectable — when true, the item participates in selection (radio or checkbox
+ *               depending on whether the parent List has `multiple`). Requires
+ *               `value` and typically a <SelectableInput /> child.
+ *   value     — the JS value emitted by the list's action/uiAction when this item
+ *               is selected. Can be any type (string, number, object…).
+ *   selected  — controlled selected state. Pass `selected === value` (single) or
+ *               `selected.includes(value)` (multiple) from parent state.
+ *   itemId    — internal stable string id for tracker bookkeeping (auto-generated
+ *               if omitted; prefer `id` for external addressing).
  *   filtered  — when true, item is excluded from visible count and removed from DOM entirely
  *   hidden    — when true, item is excluded from visible count (no virtual scroll height)
  *               but stays in DOM with the native HTML hidden attribute

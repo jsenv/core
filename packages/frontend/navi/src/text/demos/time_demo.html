@@ -1,0 +1,363 @@
+<!doctype html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Time Demo</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import { Box, Title, Text, Time } from "@jsenv/navi";
+
+      const Section = ({ id, title, desc, children }) => (
+        <Box
+          as="section"
+          id={id}
+          style={{
+            marginBottom: "32px",
+            padding: "24px",
+            background: "white",
+            borderRadius: "8px",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+          }}
+        >
+          <Title as="h2" style={{ margin: "0 0 6px" }}>
+            {title}
+          </Title>
+          {desc && (
+            <Text
+              style={{
+                display: "block",
+                marginBottom: "16px",
+                color: "#555",
+                fontSize: "13px",
+              }}
+            >
+              {desc}
+            </Text>
+          )}
+          {children}
+        </Box>
+      );
+
+      const Row = ({ label, children }) => (
+        <Box
+          flex="x"
+          spacing="m"
+          style={{ alignItems: "center", marginBottom: "8px" }}
+        >
+          <Text style={{ minWidth: "280px", color: "#888", fontSize: "13px" }}>
+            {label}
+          </Text>
+          {children}
+        </Box>
+      );
+
+      const NOW = new Date();
+      const TODAY = new Date(
+        NOW.getFullYear(),
+        NOW.getMonth(),
+        NOW.getDate(),
+        14,
+        30,
+        0,
+      );
+      const YESTERDAY = new Date(TODAY);
+      YESTERDAY.setDate(YESTERDAY.getDate() - 1);
+      const TOMORROW = new Date(TODAY);
+      TOMORROW.setDate(TOMORROW.getDate() + 1);
+      const LAST_WEEK = new Date(TODAY);
+      LAST_WEEK.setDate(LAST_WEEK.getDate() - 7);
+      const NEXT_MONTH = new Date(TODAY);
+      NEXT_MONTH.setMonth(NEXT_MONTH.getMonth() + 1);
+
+      const Demo = () => {
+        const [lang, setLang] = useState("fr");
+
+        return (
+          <div
+            style={{
+              padding: "20px",
+              fontFamily: "system-ui, sans-serif",
+              maxWidth: "900px",
+            }}
+          >
+            <Title as="h1">Time Demo</Title>
+
+            <Box
+              flex="x"
+              spacing="m"
+              style={{ alignItems: "center", marginBottom: "24px" }}
+            >
+              <Text>Language:</Text>
+              {["fr", "en", "de", "ja"].map((l) => (
+                <button
+                  key={l}
+                  onClick={() => setLang(l)}
+                  style={{
+                    padding: "4px 12px",
+                    borderRadius: "4px",
+                    border: "1px solid #ccc",
+                    background: lang === l ? "#0070f3" : "white",
+                    color: lang === l ? "white" : "inherit",
+                    cursor: "pointer",
+                  }}
+                >
+                  {l}
+                </button>
+              ))}
+            </Box>
+
+            <Section
+              id="date"
+              title='1. type="date"'
+              desc="Affiche une date. Accepte un objet Date, un timestamp ms, ou une chaîne YYYY-MM-DD. Supporte les props long, numeric, dayLabel."
+            >
+              <Row label="Date (short)">
+                <Time type="date" locale={lang}>
+                  {TODAY}
+                </Time>
+              </Row>
+              <Row label="Date (long)">
+                <Time type="date" long locale={lang}>
+                  {TODAY}
+                </Time>
+              </Row>
+              <Row label="Date (numeric)">
+                <Time type="date" numeric locale={lang}>
+                  {TODAY}
+                </Time>
+              </Row>
+              <Row label="Date + dayLabel (hier)">
+                <Time type="date" dayLabel locale={lang}>
+                  {YESTERDAY}
+                </Time>
+              </Row>
+              <Row label="Date + dayLabel (aujourd'hui)">
+                <Time type="date" dayLabel locale={lang}>
+                  {TODAY}
+                </Time>
+              </Row>
+              <Row label="Date + dayLabel (demain)">
+                <Time type="date" dayLabel locale={lang}>
+                  {TOMORROW}
+                </Time>
+              </Row>
+              <Row label="Date (string YYYY-MM-DD)">
+                <Time type="date" locale={lang}>
+                  {"2025-12-25"}
+                </Time>
+              </Row>
+              <Row label="Date (undefined → placeholder)">
+                <Time type="date" locale={lang}>
+                  {undefined}
+                </Time>
+              </Row>
+            </Section>
+
+            <Section
+              id="month"
+              title='2. type="month"'
+              desc='Affiche un mois. Accepte une chaîne "YYYY-MM", un Date, ou un timestamp.'
+            >
+              <Row label="Month (string YYYY-MM)">
+                <Time type="month" locale={lang}>
+                  {"2025-12"}
+                </Time>
+              </Row>
+              <Row label="Month (Date)">
+                <Time type="month" locale={lang}>
+                  {TODAY}
+                </Time>
+              </Row>
+              <Row label="Month (undefined → placeholder)">
+                <Time type="month" locale={lang}>
+                  {undefined}
+                </Time>
+              </Row>
+            </Section>
+
+            <Section
+              id="time"
+              title='3. type="time"'
+              desc='Affiche une heure. Accepte "HH:MM", "HH:MM:SS", un Date ou un timestamp. Sans valeur affiche "--:--".'
+            >
+              <Row label='Time (string "14:30")'>
+                <Time type="time" locale={lang}>
+                  {"14:30"}
+                </Time>
+              </Row>
+              <Row label='Time (string "09:05:00")'>
+                <Time type="time" locale={lang}>
+                  {"09:05:00"}
+                </Time>
+              </Row>
+              <Row label="Time (Date)">
+                <Time type="time" locale={lang}>
+                  {TODAY}
+                </Time>
+              </Row>
+              <Row label='Time (durationFormat="short")'>
+                <Time type="time" durationFormat="short" locale={lang}>
+                  {"01:30"}
+                </Time>
+              </Row>
+              <Row label='Time (durationFormat="long")'>
+                <Time type="time" durationFormat="long" locale={lang}>
+                  {"01:30"}
+                </Time>
+              </Row>
+              <Row label="Time (undefined → --:--)">
+                <Time type="time" locale={lang}>
+                  {undefined}
+                </Time>
+              </Row>
+            </Section>
+
+            <Section
+              id="datetime"
+              title='4. type="datetime"'
+              desc="Affiche une date et une heure. Accepte un Date, un timestamp, ou une chaîne ISO."
+            >
+              <Row label="Datetime (Date)">
+                <Time type="datetime" locale={lang}>
+                  {TODAY}
+                </Time>
+              </Row>
+              <Row label="Datetime (timestamp)">
+                <Time type="datetime" locale={lang}>
+                  {TODAY.getTime()}
+                </Time>
+              </Row>
+              <Row label="Datetime (undefined → placeholder)">
+                <Time type="datetime" locale={lang}>
+                  {undefined}
+                </Time>
+              </Row>
+            </Section>
+
+            <Section
+              id="minute"
+              title='5. type="minute"'
+              desc="Affiche une durée en minutes. Accepte un nombre ou une chaîne numérique. Prop long pour la forme longue, timeString pour l'affichage HH:MM."
+            >
+              <Row label="90 minutes (short)">
+                <Time type="minute" locale={lang}>
+                  {90}
+                </Time>
+              </Row>
+              <Row label="90 minutes (long)">
+                <Time type="minute" long locale={lang}>
+                  {90}
+                </Time>
+              </Row>
+              <Row label="90 minutes (timeString)">
+                <Time type="minute" timeString locale={lang}>
+                  {90}
+                </Time>
+              </Row>
+              <Row label="5 minutes">
+                <Time type="minute" locale={lang}>
+                  {5}
+                </Time>
+              </Row>
+              <Row label="0 minutes">
+                <Time type="minute" locale={lang}>
+                  {0}
+                </Time>
+              </Row>
+              <Row label="undefined → --">
+                <Time type="minute" locale={lang}>
+                  {undefined}
+                </Time>
+              </Row>
+            </Section>
+
+            <Section
+              id="hour"
+              title='6. type="hour"'
+              desc="Affiche une durée en heures. Accepte un nombre ou une chaîne numérique. Prop long pour la forme longue."
+            >
+              <Row label="2 hours (short)">
+                <Time type="hour" locale={lang}>
+                  {2}
+                </Time>
+              </Row>
+              <Row label="2 hours (long)">
+                <Time type="hour" long locale={lang}>
+                  {2}
+                </Time>
+              </Row>
+              <Row label="1 hour">
+                <Time type="hour" locale={lang}>
+                  {1}
+                </Time>
+              </Row>
+              <Row label="0.5 hours">
+                <Time type="hour" locale={lang}>
+                  {0.5}
+                </Time>
+              </Row>
+              <Row label="undefined → --">
+                <Time type="hour" locale={lang}>
+                  {undefined}
+                </Time>
+              </Row>
+            </Section>
+
+            <Section
+              id="relative"
+              title='7. type="relative" (default)'
+              desc="Affiche une date/heure en format relatif (dans X min, il y a X heures…). eventDuration permet de définir une fenêtre «En cours»."
+            >
+              <Row label="1 hour ago">
+                <Time locale={lang}>
+                  {new Date(NOW.getTime() - 60 * 60 * 1000)}
+                </Time>
+              </Row>
+              <Row label="30 min ago">
+                <Time locale={lang}>
+                  {new Date(NOW.getTime() - 30 * 60 * 1000)}
+                </Time>
+              </Row>
+              <Row label="in 2 hours">
+                <Time locale={lang}>
+                  {new Date(NOW.getTime() + 2 * 60 * 60 * 1000)}
+                </Time>
+              </Row>
+              <Row label="in 15 min">
+                <Time locale={lang}>
+                  {new Date(NOW.getTime() + 15 * 60 * 1000)}
+                </Time>
+              </Row>
+              <Row label="yesterday (14:30)">
+                <Time locale={lang}>{YESTERDAY}</Time>
+              </Row>
+              <Row label="last week">
+                <Time locale={lang}>{LAST_WEEK}</Time>
+              </Row>
+              <Row label="bare (no «il y a»)">
+                <Time bare locale={lang}>
+                  {new Date(NOW.getTime() - 45 * 60 * 1000)}
+                </Time>
+              </Row>
+              <Row label="eventDuration=1h (En cours if within window)">
+                <Time eventDuration={60 * 60 * 1000} locale={lang}>
+                  {new Date(NOW.getTime() - 20 * 60 * 1000)}
+                </Time>
+              </Row>
+              <Row label="undefined → –">
+                <Time locale={lang}>{undefined}</Time>
+              </Row>
+            </Section>
+          </div>
+        );
+      };
+
+      render(<Demo />, document.getElementById("app"));
+    </script>
+  </body>
+</html>

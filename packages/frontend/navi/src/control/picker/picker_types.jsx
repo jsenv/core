@@ -1,23 +1,88 @@
 import { useContext } from "preact/hooks";
 
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
+import { Badge } from "@jsenv/navi/src/text/badge.jsx";
+import { BadgeList } from "@jsenv/navi/src/text/badge_list.jsx";
 import { Color } from "@jsenv/navi/src/text/color.jsx";
 import { Text } from "@jsenv/navi/src/text/text.jsx";
 import { Time } from "@jsenv/navi/src/text/time.jsx";
 import { PickerContext } from "./picker_context.jsx";
 
-export const PickerText = (props) => {
+export const PickerTypeResolver = (props) => {
+  const Next = useNextResolver();
+
+  if (props.type === "color") {
+    return <PickerColor {...props} />;
+  }
+  if (props.type === "date") {
+    return <PickerDate {...props} />;
+  }
+  if (props.type === "month") {
+    return <PickerMonth {...props} />;
+  }
+  if (props.type === "week") {
+    return <PickerWeek {...props} />;
+  }
+  if (props.type === "time") {
+    return <PickerTime {...props} />;
+  }
+  if (props.type === "datetime") {
+    return <PickerDatetime {...props} />;
+  }
+  if (props.type === "file") {
+    return <PickerFile {...props} />;
+  }
+  if (props.type === "text") {
+    return <PickerText {...props} />;
+  }
+  if (props.type === "array") {
+    return <PickerArray {...props} />;
+  }
+  if (props.type === "controlgroup") {
+    return <PickerControlGroup {...props} />;
+  }
+  return <Next {...props} />;
+};
+
+const PickerText = (props) => {
   const Next = useNextResolver();
 
   return <Next icon={<PencilSvg />} {...props} />;
 };
 
-export const PickerArray = (props) => {
+const PickerControlGroup = (props) => {
   const Next = useNextResolver();
 
+  return <Next ui={<PickerControlGroupUI />} {...props} type="navi_js" />;
+};
+export const PickerControlGroupUI = () => {
+  const { value, placeholder } = useContext(PickerContext);
+
+  if (!value || Object.keys(value).length === 0) {
+    if (!placeholder) {
+      return null;
+    }
+    return placeholder;
+  }
   return (
-    <Next maxLines="3" ui={<PickerArrayUI />} {...props} type="navi_picker" />
+    <BadgeList>
+      {Object.entries(value).map(([key, val]) => {
+        return (
+          <Badge key={key}>
+            <span style={{ opacity: 0.6 }}>{key}</span>
+            <span>:</span>
+            {String(val ?? "")}
+          </Badge>
+        );
+      })}
+    </BadgeList>
   );
+};
+
+const PickerArray = (props) => {
+  const Next = useNextResolver();
+
+  return <Next maxLines="3" ui={<PickerArrayUI />} {...props} type="navi_js" />;
 };
 export const PickerArrayUI = () => {
   const { value, placeholder, maxLines } = useContext(PickerContext);
@@ -37,7 +102,7 @@ export const PickerArrayUI = () => {
   );
 };
 
-export const PickerColor = (props) => {
+const PickerColor = (props) => {
   const Next = useNextResolver();
 
   return (
@@ -56,7 +121,7 @@ export const PickerColorUI = () => {
   return <Color>{value}</Color>;
 };
 
-export const PickerDate = (props) => {
+const PickerDate = (props) => {
   const Next = useNextResolver();
 
   return (
@@ -87,7 +152,7 @@ export const PickerDateUI = (props) => {
   );
 };
 
-export const PickerMonth = (props) => {
+const PickerMonth = (props) => {
   const Next = useNextResolver();
 
   return (
@@ -122,7 +187,7 @@ export const PickerMonthUI = (props) => {
   );
 };
 
-export const PickerWeek = (props) => {
+const PickerWeek = (props) => {
   const Next = useNextResolver();
 
   return (
@@ -152,7 +217,7 @@ export const PickerWeekUI = (props) => {
   );
 };
 
-export const PickerTime = (props) => {
+const PickerTime = (props) => {
   const Next = useNextResolver();
 
   return (
@@ -182,7 +247,7 @@ export const PickerTimeUI = (props) => {
   );
 };
 
-export const PickerDatetime = (props) => {
+const PickerDatetime = (props) => {
   const Next = useNextResolver();
 
   return (
@@ -217,7 +282,7 @@ export const PickerDatetimeUI = (props) => {
   );
 };
 
-export const PickerFile = (props) => {
+const PickerFile = (props) => {
   const Next = useNextResolver();
 
   return (

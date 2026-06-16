@@ -23,8 +23,8 @@ const css = /* css */ `
     &[data-icon-char] {
       aspect-ratio: 1/1;
       min-width: 0;
-      height: 1em;
-      max-height: 1em;
+      height: round(1em, 1px);
+      max-height: round(1em, 1px);
       flex-grow: 0 !important;
       align-items: center;
       justify-content: center;

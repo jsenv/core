@@ -118,7 +118,7 @@
 
       const App = () => {
         return (
-          <NaviDebug debugAction debugInteraction>
+          <NaviDebug debugUIState debugAction debugInteraction>
             <div>
               <TableOfContents />
               <SearchableDemo />
@@ -233,6 +233,10 @@
                 setSelected(v);
                 pushLog("action", v ?? "(none)");
               }}
+              uiAction={(v) => {
+                setSelected(v);
+                pushLog("uiAction", v ?? "(none)");
+              }}
               expandX
             >
               {matchingFruits.map((fruit, i) => {
@@ -273,6 +277,20 @@
         ]);
         const [singleLog, pushSingleLog] = useCallLog();
         const [multipleLog, pushMultipleLog] = useCallLog();
+        const commandTargetRef = useRef(null);
+        useLayoutEffect(() => {
+          const el = commandTargetRef.current;
+          if (!el) {
+            return undefined;
+          }
+          const onNaviCommand = (e) => {
+            pushSingleLog("command", e.detail.command);
+          };
+          el.addEventListener("navi_command", onNaviCommand);
+          return () => {
+            el.removeEventListener("navi_command", onNaviCommand);
+          };
+        }, []);
         return (
           <div id="basic" className="demo-section">
             <h2>Basic (with Selectable.Input)</h2>
@@ -281,14 +299,26 @@
               indicator appears inside the row. See the Customization section
               below for more advanced placements and appearances.
             </p>
+            {/* Hidden node that receives --navi-void commands from the single list */}
+            <div
+              ref={commandTargetRef}
+              id="basic-command-target"
+              style={{ display: "none" }}
+            />
             <div className="two-col">
               <div>
-                <div className="col-label">Single</div>
+                <div className="col-label">Single (command="--navi-void")</div>
                 <List
                   selectable
+                  id="basic-single-list"
+                  command="--navi-void"
+                  commandFor="basic-command-target"
                   action={(v) => {
                     setSelectedSingle(v);
                     pushSingleLog("action", v ?? "(none)");
+                  }}
+                  uiAction={(v) => {
+                    pushSingleLog("uiAction", v ?? "(none)");
                   }}
                   expandX
                 >
@@ -568,22 +598,22 @@
                   </select>
                   <div style={{ display: "flex", gap: 8 }}>
                     <Button
-                      action="select"
-                      action-target="external-control-list"
+                      command="--navi-select"
+                      commandFor="external-control-list"
                       value={targetId}
                     >
                       Select
                     </Button>
                     <Button
-                      action="unselect"
-                      action-target="external-control-list"
+                      command="--navi-unselect"
+                      commandFor="external-control-list"
                       value={targetId}
                     >
                       Unselect
                     </Button>
                     <Button
-                      action="scroll"
-                      action-target="external-control-list"
+                      command="--navi-scroll"
+                      commandFor="external-control-list"
                       value={targetId}
                     >
                       Scroll into view
@@ -1150,7 +1180,7 @@
                   selectable
                   multiple
                   action={(v) => {
-                    setSelectedMultiple(v ?? []);
+                    setSelectedMultiple(v);
                   }}
                 >
                   {FRUITS.map((fruit, i) => (

@@ -29,7 +29,7 @@ const ButtonInsideForm = (props) => {
   return (
     <Next
       // The default action for a button inside a form is to request form action
-      action="send"
+      command={props.action ? undefined : "--navi-send"}
       {...props}
     />
   );

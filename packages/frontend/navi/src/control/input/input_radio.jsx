@@ -8,7 +8,7 @@ import { useCheckableProps } from "./use_checkable_props.js";
 const css = /* css */ `
   @layer navi {
     .navi_radio {
-      --margin: 3px 3px 0 5px;
+      --margin: 3px 3px 3px 5px;
       --outline-offset: 1px;
       --outline-width: 2px;
       /* Rounding ensures outline is visually a nice circle */
@@ -139,6 +139,7 @@ const css = /* css */ `
       opacity: 0;
       appearance: none; /* This allows border-radius to have an effect */
       cursor: var(--x-cursor);
+      -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
     }
 
     /* Focus */
@@ -347,22 +348,23 @@ export const InputRadio = (props) => {
 };
 
 const InputRadioHeadless = (props) => {
-  const [radioProps, remainingProps] = useCheckableProps(props);
+  const [radioRootProps, radioHostProps] = useCheckableProps(props);
 
   return (
     <RealInputRadio
       pseudoClasses={RadioPseudoClasses}
-      {...remainingProps}
-      {...radioProps}
-      appearance={undefined}
       navi-visually-hidden=""
+      navi-focus-delegate=""
+      aria-hidden="true"
+      {...radioRootProps}
+      {...radioHostProps}
     />
   );
 };
 const APPEARANCE_SET = new Set(["icon", "button", "radio"]);
 const InputRadioFieldInterface = (props) => {
   import.meta.css = css;
-  const [radioProps, remainingProps] = useCheckableProps(props);
+  const [radioRootProps, radioHostProps] = useCheckableProps(props);
   const { icon, appearance } = props;
   let appearanceResolved = appearance || (icon ? "icon" : "radio");
   if (appearance && !APPEARANCE_SET.has(appearance)) {
@@ -371,7 +373,7 @@ const InputRadioFieldInterface = (props) => {
     );
     appearanceResolved = "radio";
   }
-  const { basePseudoState, checked } = radioProps;
+  const { basePseudoState, checked } = radioHostProps;
   const loading = basePseudoState[":-navi-loading"];
   const boxRef = useRef();
   useAccentColorAttributes(boxRef, props.accentColor, {
@@ -391,7 +393,7 @@ const InputRadioFieldInterface = (props) => {
       // Radio displayed as button are usually squarish
       // (passsing any custom width/height would auto disable aspectRatio forced by the square prop)
       square={appearanceResolved === "button" ? true : undefined}
-      {...remainingProps}
+      {...radioRootProps}
       ref={boxRef}
       icon={undefined}
       appearance={undefined}
@@ -414,7 +416,7 @@ const InputRadioFieldInterface = (props) => {
         color="var(--loader-color)"
       />
       {visualVNode}
-      <RealInputRadio {...radioProps} />
+      <RealInputRadio {...radioHostProps} />
     </Box>
   );
 };

@@ -175,16 +175,10 @@
             <TableOfContents />
             <BasicStatesDemo />
             <InteractivityDemo />
-            <SizeVariationsDemo />
-            <ColorVariationsDemo />
-            <FullWidthDemo />
-            <SpacingDemo />
-            <IconToggleDemo />
-            <CircleButtonDemo />
-            <DiscreteVariantDemo />
+            <CustomizationDemo />
+            <IconsDemo />
             <InteractiveDemo />
             <HrefDemo />
-            <PaddingDemo />
           </div>
         );
       };
@@ -221,34 +215,59 @@
                 </ol>
               </li>
               <li>
-                <a href="#sizes">Size Variations</a>
+                Customization
+                <ol style={{ paddingLeft: "20px" }}>
+                  <li>
+                    <a href="#customization-size">Size</a>
+                  </li>
+                  <li>
+                    <a href="#customization-color">Color</a>
+                  </li>
+                  <li>
+                    <a href="#customization-dimension">
+                      Dimension (padding &amp; width)
+                    </a>
+                  </li>
+                  <li>
+                    Variant
+                    <ol style={{ paddingLeft: "20px" }}>
+                      <li>
+                        <a href="#customization-variant-discrete">discrete</a>
+                      </li>
+                      <li>
+                        <a href="#customization-variant-discrete-border">
+                          discrete-border
+                        </a>
+                      </li>
+                      <li>
+                        <a href="#customization-variant-border">border</a>
+                      </li>
+                    </ol>
+                  </li>
+                  <li>
+                    <a href="#customization-cta">CTA</a>
+                  </li>
+                </ol>
               </li>
               <li>
-                <a href="#colors">Color Variations</a>
-              </li>
-              <li>
-                <a href="#full-width">Full Width</a>
-              </li>
-              <li>
-                <a href="#spacing">Button Spacing</a>
-              </li>
-              <li>
-                <a href="#icon-toggle">Icon Button Toggle</a>
-              </li>
-              <li>
-                <a href="#border-radius">Border Radius Inheritance</a>
-              </li>
-              <li>
-                <a href="#discrete">Discrete Variant</a>
+                Icons
+                <ol style={{ paddingLeft: "20px" }}>
+                  <li>
+                    <a href="#icons">Icon prop</a>
+                  </li>
+                  <li>
+                    <a href="#icons-circle">Circle icon button</a>
+                  </li>
+                  <li>
+                    <a href="#icons-border-radius">Border-radius inheritance</a>
+                  </li>
+                </ol>
               </li>
               <li>
                 <a href="#interactive-controls">Interactive Controls</a>
               </li>
               <li>
                 <a href="#href">Button as link</a>
-              </li>
-              <li>
-                <a href="#padding">Padding (advanced)</a>
               </li>
             </ol>
           </div>
@@ -1247,34 +1266,419 @@
         );
       };
 
-      const CircleButtonDemo = () => {
+      const DemoIconSvg = () => (
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 16 16"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <rect width="16" height="16" fill="currentColor" />
+        </svg>
+      );
+
+      const IconStates = ({ variant, icon, color }) => {
         return (
-          <div className="demo-section" id="border-radius">
-            <h2>Border Radius Inheritance</h2>
+          <Box flex spacing="s" wrap>
+            <fieldset>
+              <legend>default</legend>
+              <Button
+                variant={variant}
+                icon={icon}
+                color={color}
+                padding="s"
+                aria-label="Action"
+              >
+                <Icon>
+                  <DemoIconSvg />
+                </Icon>
+              </Button>
+            </fieldset>
+            <fieldset>
+              <legend>:hover</legend>
+              <Button
+                variant={variant}
+                icon={icon}
+                color={color}
+                padding="s"
+                aria-label="Action"
+                pseudoState={{ ":hover": true }}
+              >
+                <Icon>
+                  <DemoIconSvg />
+                </Icon>
+              </Button>
+            </fieldset>
+            <fieldset>
+              <legend>:focus-visible</legend>
+              <Button
+                variant={variant}
+                icon={icon}
+                color={color}
+                padding="s"
+                aria-label="Action"
+                pseudoState={{ ":focus-visible": true }}
+              >
+                <Icon>
+                  <DemoIconSvg />
+                </Icon>
+              </Button>
+            </fieldset>
+            <fieldset>
+              <legend>:read-only</legend>
+              <Button
+                variant={variant}
+                icon={icon}
+                color={color}
+                padding="s"
+                aria-label="Action"
+                readOnly
+              >
+                <Icon>
+                  <DemoIconSvg />
+                </Icon>
+              </Button>
+            </fieldset>
+            <fieldset>
+              <legend>:disabled</legend>
+              <Button
+                variant={variant}
+                icon={icon}
+                color={color}
+                padding="s"
+                aria-label="Action"
+                disabled
+              >
+                <Icon>
+                  <DemoIconSvg />
+                </Icon>
+              </Button>
+            </fieldset>
+            <fieldset>
+              <legend>:-navi-loading</legend>
+              <Button
+                variant={variant}
+                icon={icon}
+                color={color}
+                padding="s"
+                aria-label="Action"
+                loading
+              >
+                <Icon>
+                  <DemoIconSvg />
+                </Icon>
+              </Button>
+            </fieldset>
+          </Box>
+        );
+      };
+
+      const IconsDemo = () => {
+        return (
+          <div className="demo-section" id="icons">
+            <h2>Icons</h2>
 
             <fieldset>
-              <legend>Button inside a circle Box</legend>
+              <legend>The icon (16×16 square)</legend>
               <p
                 style={{
                   color: "#666",
                   fontSize: "0.85rem",
-                  margin: "0 0 12px",
+                  margin: "0 0 8px",
                 }}
               >
-                The outer <code>Box</code> has a background and padding. The
-                inner <code>Box circle</code> clips its content to a circle. The
-                button uses <code>borderRadius="inherit"</code> to adopt the
-                parent's radius.
+                Reference: a plain 16×16 square so you can compare exactly how
+                much space the button adds around it.
               </p>
-              <Box background="orange" padding="m" inline flex>
-                <Box circle width="30" inline flex background="white">
-                  <Button borderRadius="inherit" flex align="center">
+              <Icon>
+                <DemoIconSvg />
+              </Icon>
+            </fieldset>
+
+            <fieldset>
+              <legend>without icon prop vs with icon prop</legend>
+              <p
+                style={{
+                  color: "#666",
+                  fontSize: "0.85rem",
+                  margin: "0 0 8px",
+                }}
+              >
+                Without <code>icon</code>, the button keeps its default padding
+                around the icon. With <code>icon</code>, padding is reset to 0
+                so the button is exactly the icon's size — no extra space.
+              </p>
+              <div className="button-group">
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: "4px",
+                  }}
+                >
+                  <Button color="violet" aria-label="Action">
                     <Icon>
-                      <EyeSvg />
+                      <DemoIconSvg />
                     </Icon>
                   </Button>
+                  <span style={{ fontSize: "0.75rem", color: "#888" }}>
+                    default
+                  </span>
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: "4px",
+                  }}
+                >
+                  <Button icon color="violet" aria-label="Action">
+                    <Icon>
+                      <DemoIconSvg />
+                    </Icon>
+                  </Button>
+                  <span style={{ fontSize: "0.75rem", color: "#888" }}>
+                    icon (no padding)
+                  </span>
+                </div>
+              </div>
+              <p
+                style={{
+                  color: "#666",
+                  fontSize: "0.85rem",
+                  margin: "12px 0 8px",
+                }}
+              >
+                No padding at all is often too tight for interactive targets.
+                Pass <code>padding="s"</code> (or any size) to restore some
+                breathing room while still keeping the icon visually centered.
+              </p>
+              <div className="button-group">
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: "4px",
+                  }}
+                >
+                  <Button icon padding="s" color="violet" aria-label="Action">
+                    <Icon>
+                      <DemoIconSvg />
+                    </Icon>
+                  </Button>
+                  <span style={{ fontSize: "0.75rem", color: "#888" }}>
+                    icon + padding="s"
+                  </span>
+                </div>
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend>icon — states (default)</legend>
+              <IconStates icon color="violet" />
+            </fieldset>
+
+            <fieldset>
+              <legend>icon — states with variant="border"</legend>
+              <IconStates icon color="violet" variant="border" />
+            </fieldset>
+
+            <fieldset>
+              <legend>icon — states with variant="discrete"</legend>
+              <IconStates icon color="violet" variant="discrete" />
+            </fieldset>
+
+            <fieldset>
+              <legend>icon — states with variant="discrete-border"</legend>
+              <IconStates icon color="violet" variant="discrete-border" />
+            </fieldset>
+
+            <h3 id="icons-circle" style={{ margin: "24px 0 8px" }}>
+              Circle icon button
+            </h3>
+            <p
+              style={{
+                color: "#666",
+                fontSize: "0.85rem",
+                margin: "0 0 12px",
+              }}
+            >
+              Use the <code>circle</code> prop directly on the button to make it
+              round. The icon is a square so the circular clipping is clearly
+              visible.
+            </p>
+            <Box flex spacing="m" wrap>
+              <fieldset>
+                <legend>default</legend>
+                <Button
+                  icon
+                  padding="s"
+                  color="violet"
+                  circle
+                  aria-label="Action"
+                >
+                  <Icon>
+                    <DemoIconSvg />
+                  </Icon>
+                </Button>
+              </fieldset>
+              <fieldset>
+                <legend>:hover</legend>
+                <Button
+                  icon
+                  padding="s"
+                  color="violet"
+                  circle
+                  aria-label="Action"
+                  pseudoState={{ ":hover": true }}
+                >
+                  <Icon>
+                    <DemoIconSvg />
+                  </Icon>
+                </Button>
+              </fieldset>
+              <fieldset>
+                <legend>:focus-visible</legend>
+                <Button
+                  icon
+                  padding="s"
+                  color="violet"
+                  circle
+                  aria-label="Action"
+                  pseudoState={{ ":focus-visible": true }}
+                >
+                  <Icon>
+                    <DemoIconSvg />
+                  </Icon>
+                </Button>
+              </fieldset>
+              <fieldset>
+                <legend>:read-only</legend>
+                <Button
+                  icon
+                  padding="s"
+                  color="violet"
+                  circle
+                  aria-label="Action"
+                  readOnly
+                >
+                  <Icon>
+                    <DemoIconSvg />
+                  </Icon>
+                </Button>
+              </fieldset>
+              <fieldset>
+                <legend>:disabled</legend>
+                <Button
+                  icon
+                  padding="s"
+                  color="violet"
+                  circle
+                  aria-label="Action"
+                  disabled
+                >
+                  <Icon>
+                    <DemoIconSvg />
+                  </Icon>
+                </Button>
+              </fieldset>
+
+              <fieldset>
+                <legend>:-navi-loading</legend>
+                <Button
+                  icon
+                  padding="s"
+                  color="violet"
+                  circle
+                  aria-label="Action"
+                  loading
+                >
+                  <Icon>
+                    <DemoIconSvg />
+                  </Icon>
+                </Button>
+              </fieldset>
+            </Box>
+
+            <h3 id="icons-border-radius" style={{ margin: "24px 0 8px" }}>
+              Border-radius inheritance
+            </h3>
+            <p
+              style={{
+                color: "#666",
+                fontSize: "0.85rem",
+                margin: "0 0 12px",
+              }}
+            >
+              When the button lives inside a circular container (a{" "}
+              <code>Box circle</code>), pass <code>borderRadius="inherit"</code>{" "}
+              so its focus outline follows the container's circle shape.
+            </p>
+            <Box flex spacing="m" wrap>
+              <fieldset>
+                <legend>without borderRadius="inherit"</legend>
+                <Box background="orange" padding="m" inline flex>
+                  <Box
+                    circle
+                    width="35"
+                    inline
+                    flex
+                    background="violet"
+                    padding="5"
+                  >
+                    <Button icon flex align="center">
+                      <Icon>
+                        <EyeSvg />
+                      </Icon>
+                    </Button>
+                  </Box>
                 </Box>
-              </Box>
+              </fieldset>
+              <fieldset>
+                <legend>with borderRadius="inherit"</legend>
+                <Box background="orange" padding="m" inline flex>
+                  <Box
+                    circle
+                    width="35"
+                    inline
+                    flex
+                    background="violet"
+                    padding="5"
+                  >
+                    <Button icon borderRadius="inherit" flex align="center">
+                      <Icon>
+                        <EyeSvg />
+                      </Icon>
+                    </Button>
+                  </Box>
+                </Box>
+              </fieldset>
+            </Box>
+
+            <h3 style={{ margin: "24px 0 8px" }}>
+              Icon toggle — use a checkbox instead
+            </h3>
+            <p
+              style={{
+                color: "#666",
+                fontSize: "0.85rem",
+                margin: "0 0 12px",
+              }}
+            >
+              It's tempting to use an icon button to toggle between two states
+              (show/hide, play/pause…). But a <code>&lt;Checkbox&gt;</code> is
+              the right semantic element for that: it carries built-in checked
+              state, is announced correctly by screen readers, and works with
+              form submission out of the box. The example below shows what the
+              icon-button approach looks like — but prefer a checkbox whenever
+              the interaction is a toggle.
+            </p>
+            <fieldset>
+              <legend>icon button toggle (avoid this pattern)</legend>
+              <IconToggleSection />
             </fieldset>
           </div>
         );
@@ -1403,8 +1807,449 @@
         );
       };
 
+      const CustomizationDemo = () => {
+        return (
+          <div className="demo-section" id="customization">
+            <h2>Customization</h2>
+
+            {/* ── Size ─────────────────────────────────────────────────── */}
+            <h3 id="customization-size" style={{ margin: "24px 0 12px" }}>
+              Size
+            </h3>
+
+            <fieldset>
+              <legend>Intrinsic size</legend>
+              <div className="button-group">
+                <Button>OK</Button>
+                <Button>Save Changes</Button>
+                <Button>This is a very long button text</Button>
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend>Custom font size</legend>
+              <div className="button-group">
+                <Button style={{ fontSize: "11px" }}>Small text</Button>
+                <Button>Default</Button>
+                <Button style={{ fontSize: "18px" }}>Large text</Button>
+              </div>
+            </fieldset>
+
+            {/* ── Color ────────────────────────────────────────────────── */}
+            <h3 id="customization-color" style={{ margin: "24px 0 12px" }}>
+              Color
+            </h3>
+
+            <fieldset>
+              <legend>backgroundColor &amp; color</legend>
+              <div className="button-group">
+                <Button backgroundColor="#28a745" color="white">
+                  Success
+                </Button>
+                <Button backgroundColor="#dc3545" color="white">
+                  Danger
+                </Button>
+                <Button
+                  borderColor="#007bff"
+                  backgroundColor="transparent"
+                  color="#007bff"
+                >
+                  Outline
+                </Button>
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend>Dynamic color on hover</legend>
+              <div className="button-group">
+                <Button
+                  backgroundColor="lightgrey"
+                  color="#dc3545"
+                  style={{
+                    ":hover": {
+                      backgroundColor: "#dc3545",
+                      color: "white",
+                    },
+                  }}
+                >
+                  <Icon>
+                    <svg viewBox="0 0 10 10" xmlns="http://www.w3.org/2000/svg">
+                      <rect
+                        x="0"
+                        y="0"
+                        width="10"
+                        height="10"
+                        fill="currentColor"
+                      />
+                    </svg>
+                  </Icon>
+                  Add to Favorites
+                </Button>
+              </div>
+            </fieldset>
+
+            {/* ── Dimension ─────────────────────────────────────────────── */}
+            <h3 id="customization-dimension" style={{ margin: "24px 0 12px" }}>
+              Dimension (padding &amp; width)
+            </h3>
+
+            <fieldset>
+              <legend>padding props</legend>
+              <div className="button-group">
+                <Button>Default padding</Button>
+                <Button paddingX="xl" paddingY="md">
+                  paddingX="xl" paddingY="md"
+                </Button>
+                <Button padding="0">padding="0"</Button>
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend>width — full width</legend>
+              <Button
+                width="100%"
+                background="#1a1a2e"
+                borderColor="#4a90e2"
+                color="#ffffff"
+                align="center"
+              >
+                Full width dark button
+              </Button>
+            </fieldset>
+
+            <fieldset>
+              <legend>
+                width — full width with text alignment (left / center / end)
+              </legend>
+              <div
+                style={{ display: "flex", flexDirection: "column", gap: "8px" }}
+              >
+                <Button
+                  flex
+                  width="100%"
+                  backgroundColor="#e8f5e9"
+                  borderColor="#4caf50"
+                  color="#2e7d32"
+                >
+                  Success — left (default)
+                </Button>
+                <Button
+                  width="100%"
+                  backgroundColor="#fff3e0"
+                  borderColor="#ff9800"
+                  color="#e65100"
+                  alignX="center"
+                >
+                  Warning — center
+                </Button>
+                <Button
+                  width="100%"
+                  backgroundColor="#fce4ec"
+                  borderColor="#e91e63"
+                  color="#880e4f"
+                  alignX="end"
+                >
+                  Danger — end
+                </Button>
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend>spacing between icon and text — without flex</legend>
+              <div className="button-group">
+                <SpacingButton />
+                <SpacingButton spacing="0" />
+                <SpacingButton spacing="s" />
+                <SpacingButton spacing="m" />
+                <SpacingButton spacing="l" />
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend>spacing between icon and text — with flex</legend>
+              <div className="button-group">
+                <SpacingButton flex />
+                <SpacingButton flex spacing="0" />
+                <SpacingButton flex spacing="s" />
+                <SpacingButton flex spacing="m" />
+                <SpacingButton flex spacing="l" />
+              </div>
+            </fieldset>
+
+            {/* ── Variant ───────────────────────────────────────────────── */}
+            {/* ── Variant: border ──────────────────────────────────────────── */}
+            <h3
+              id="customization-variant-border"
+              style={{ margin: "24px 0 12px" }}
+            >
+              Variant — border
+            </h3>
+
+            <fieldset>
+              <legend>Regular vs border</legend>
+              <div className="button-group">
+                <Button>Text in button</Button>
+                <Button variant="border">Text in button</Button>
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend>border — states</legend>
+              <Box flex spacing="s">
+                <fieldset>
+                  <legend>:hover</legend>
+                  <Button variant="border" pseudoState={{ ":hover": true }}>
+                    Text in button
+                  </Button>
+                </fieldset>
+                <fieldset>
+                  <legend>:focus-visible</legend>
+                  <Button
+                    variant="border"
+                    pseudoState={{ ":focus-visible": true }}
+                  >
+                    Text in button
+                  </Button>
+                </fieldset>
+                <fieldset>
+                  <legend>:read-only</legend>
+                  <Button variant="border" readOnly>
+                    Text in button
+                  </Button>
+                </fieldset>
+                <fieldset>
+                  <legend>:disabled</legend>
+                  <Button variant="border" disabled>
+                    Text in button
+                  </Button>
+                </fieldset>
+                <fieldset>
+                  <legend>:-navi-loading</legend>
+                  <Button variant="border" loading>
+                    Text in button
+                  </Button>
+                </fieldset>
+              </Box>
+            </fieldset>
+
+            {/* ── Variant: text ─────────────────────────────────────────── */}
+            <h3
+              id="customization-variant-discrete"
+              style={{ margin: "24px 0 12px" }}
+            >
+              Variant — discrete
+            </h3>
+
+            <fieldset>
+              <legend>Regular vs discrete</legend>
+              <div className="button-group">
+                <Button>Text in button</Button>
+                <Button variant="discrete">Text in button</Button>
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend>text — states</legend>
+              <Box flex spacing="s">
+                <fieldset>
+                  <legend>:hover</legend>
+                  <Button variant="discrete" pseudoState={{ ":hover": true }}>
+                    Text in button
+                  </Button>
+                </fieldset>
+                <fieldset>
+                  <legend>:focus-visible</legend>
+                  <Button
+                    variant="discrete"
+                    pseudoState={{ ":focus-visible": true }}
+                  >
+                    Text in button
+                  </Button>
+                </fieldset>
+                <fieldset>
+                  <legend>:read-only</legend>
+                  <Button variant="discrete" readOnly>
+                    Text in button
+                  </Button>
+                </fieldset>
+                <fieldset>
+                  <legend>:disabled</legend>
+                  <Button variant="discrete" disabled>
+                    Text in button
+                  </Button>
+                </fieldset>
+                <fieldset>
+                  <legend>:-navi-loading</legend>
+                  <Button variant="discrete" loading>
+                    Text in button
+                  </Button>
+                </fieldset>
+              </Box>
+            </fieldset>
+
+            {/* ── Variant: discrete-border ────────────────────────────────────── */}
+            <h3
+              id="customization-variant-discrete-border"
+              style={{ margin: "24px 0 12px" }}
+            >
+              Variant — discrete-border
+            </h3>
+
+            <fieldset>
+              <legend>Regular vs discrete-border</legend>
+              <div className="button-group">
+                <Button>Text in button</Button>
+                <Button variant="discrete-border">Text in button</Button>
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend>discrete-border — states</legend>
+              <Box flex spacing="s">
+                <fieldset>
+                  <legend>:hover</legend>
+                  <Button
+                    variant="discrete-border"
+                    pseudoState={{ ":hover": true }}
+                  >
+                    Text in button
+                  </Button>
+                </fieldset>
+                <fieldset>
+                  <legend>:focus-visible</legend>
+                  <Button
+                    variant="discrete-border"
+                    pseudoState={{ ":focus-visible": true }}
+                  >
+                    Text in button
+                  </Button>
+                </fieldset>
+                <fieldset>
+                  <legend>:read-only</legend>
+                  <Button variant="discrete-border" readOnly>
+                    Text in button
+                  </Button>
+                </fieldset>
+                <fieldset>
+                  <legend>:disabled</legend>
+                  <Button variant="discrete-border" disabled>
+                    Text in button
+                  </Button>
+                </fieldset>
+                <fieldset>
+                  <legend>:-navi-loading</legend>
+                  <Button variant="discrete-border" loading>
+                    Text in button
+                  </Button>
+                </fieldset>
+              </Box>
+            </fieldset>
+
+            {/* ── CTA ───────────────────────────────────────────────────── */}
+            <h3 id="customization-cta" style={{ margin: "24px 0 12px" }}>
+              CTA (call to action)
+            </h3>
+
+            <fieldset>
+              <legend>Regular vs cta</legend>
+              <div className="button-group">
+                <Button>Text in button</Button>
+                <Button cta>Text in button</Button>
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend>cta — states</legend>
+              <Box flex spacing="s">
+                <fieldset>
+                  <legend>:hover</legend>
+                  <Button cta pseudoState={{ ":hover": true }}>
+                    Text in button
+                  </Button>
+                </fieldset>
+                <fieldset>
+                  <legend>:focus-visible</legend>
+                  <Button cta pseudoState={{ ":focus-visible": true }}>
+                    Text in button
+                  </Button>
+                </fieldset>
+                <fieldset>
+                  <legend>:read-only</legend>
+                  <Button cta readOnly>
+                    Text in button
+                  </Button>
+                </fieldset>
+                <fieldset>
+                  <legend>:disabled</legend>
+                  <Button cta disabled>
+                    Text in button
+                  </Button>
+                </fieldset>
+                <fieldset>
+                  <legend>:-navi-loading</legend>
+                  <Button cta loading>
+                    Text in button
+                  </Button>
+                </fieldset>
+              </Box>
+            </fieldset>
+          </div>
+        );
+      };
+
+      const IconToggleSection = () => {
+        const [isVisible, setIsVisible] = useState(false);
+        return (
+          <>
+            <div className="button-group">
+              <Button
+                icon
+                size="xxs"
+                onClick={() => setIsVisible(!isVisible)}
+                aria-label={isVisible ? "Hide content" : "Show content"}
+              >
+                <Icon>{isVisible ? <EyeSvg /> : <EyeClosedSvg />}</Icon>
+              </Button>
+              <Button
+                icon
+                onClick={() => setIsVisible(!isVisible)}
+                aria-label={isVisible ? "Hide content" : "Show content"}
+              >
+                <Icon>{isVisible ? <EyeSvg /> : <EyeClosedSvg />}</Icon>
+              </Button>
+              <Button
+                icon
+                size="xl"
+                onClick={() => setIsVisible(!isVisible)}
+                aria-label={isVisible ? "Hide content" : "Show content"}
+              >
+                <Icon>{isVisible ? <EyeSvg /> : <EyeClosedSvg />}</Icon>
+              </Button>
+              <span style={{ marginLeft: "10px", color: "#666" }}>
+                Content is {isVisible ? "visible" : "hidden"}
+              </span>
+            </div>
+            <div
+              style={{
+                marginTop: "12px",
+                padding: "10px 14px",
+                background: "#fff8e1",
+                border: "1px solid #ffe082",
+                borderRadius: "6px",
+                fontSize: "0.85rem",
+                color: "#795548",
+              }}
+            >
+              <strong>💡 Consider using a checkbox instead.</strong> When a
+              button toggles between two states (on/off, visible/hidden…), a{" "}
+              <code>&lt;Checkbox&gt;</code> is semantically more appropriate.
+            </div>
+          </>
+        );
+      };
+
       render(
-        <NaviDebug debugAction>
+        <NaviDebug debugCommand debugAction>
           <App />
         </NaviDebug>,
         document.querySelector("#root"),

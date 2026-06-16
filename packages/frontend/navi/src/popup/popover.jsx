@@ -7,30 +7,37 @@ import {
   trapScrollInside,
   visibleRectEffect,
 } from "@jsenv/dom";
-import { createPortal } from "preact/compat";
 import { useId, useRef, useState } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
 import { resolveSpacingSize } from "../box/box_style_util.js";
 import { useDebugFocus, useDebugPopup } from "../navi_debug.jsx";
 import {
-  focusFirstAutofocusOrFocusable,
+  getFocusedBeforeTransfer,
   markAutofocusRestoreOnClose,
-} from "../utils/focus/focus_first_autofocus_or_focusable.js";
+  transferFocus,
+} from "../utils/focus/focus_transfer.js";
 import { useCleanup } from "../utils/use_cleanup.js";
 
 const css = /* css */ `
-  .navi_popover_backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: 1000;
-    background: transparent;
-  }
-
   .navi_popover {
     &[data-anchor-hidden] {
       opacity: 0;
       pointer-events: none;
+    }
+
+    .navi_popover_backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      background: transparent;
+      pointer-events: none;
+    }
+
+    &:popover-open {
+      .navi_popover_backdrop {
+        pointer-events: auto;
+      }
     }
   }
 `;
@@ -65,8 +72,9 @@ export const Popover = (props) => {
   const open = (e, { anchor }) => {
     debugPopup(e, `openPopover()`);
     const popoverEl = ref.current;
+    const focusedBeforeOpen = getFocusedBeforeTransfer(e);
     popoverEl.showPopover();
-    focusFirstAutofocusOrFocusable(popoverEl, debugFocus, e);
+    transferFocus(popoverEl, debugFocus, e);
     const effectiveAnchor = anchor || document.documentElement;
     const positionPopover = (positionEvent) => {
       const { width, height } = effectiveAnchor.getBoundingClientRect();
@@ -153,6 +161,7 @@ export const Popover = (props) => {
     setOpened(true);
     dispatchCustomEvent(popoverEl, "navi_open", {
       event: e,
+      focusedBeforeOpen,
     });
   };
   const close = (e) => {
@@ -189,45 +198,77 @@ export const Popover = (props) => {
     close(e);
   };
   return (
-    <>
-      {opened &&
-        createPortal(
-          <div
-            className="navi_popover_backdrop"
-            aria-hidden="true"
-            onMouseDown={(e) => {
-              if (e.button !== 0) {
-                return;
-              }
-              if (pointerTrap) {
-                e.preventDefault();
-                return;
-              }
-              onRequestClose(e);
-            }}
-          />,
-          document.body,
-        )}
-      <Box
-        id={id}
-        popover="manual"
-        {...rest}
-        ref={ref}
-        baseClassName="navi_popover"
-        pseudoClasses={PopoverPseudoClasses}
-        onnavi_request_open={(e) => {
-          const { anchor } = e.detail;
-          onRequestOpen(e, { anchor });
-        }}
-        onnavi_request_close={(e) => {
+    <Box
+      id={id}
+      popover="manual"
+      {...rest}
+      ref={ref}
+      baseClassName="navi_popover"
+      pseudoClasses={PopoverPseudoClasses}
+      onnavi_request_open={(e) => {
+        const { anchor } = e.detail;
+        onRequestOpen(e, { anchor });
+      }}
+      onnavi_request_close={(e) => {
+        onRequestClose(e);
+      }}
+    >
+      {/*
+        The backdrop is placed inside the popover element rather than appended to
+        document.body (which would require createPortal).
+
+        Keeping it inside the popover avoids:
+        - Polluting the root DOM with one extra element per popover instance.
+        - The need for createPortal, which adds conceptual overhead.
+        - Any z-index juggling: because the popover is in the browser top layer,
+          all its children are automatically painted above normal page content.
+
+        "position: fixed; inset: 0" still covers the full visual viewport when the
+        element lives inside a top-layer popover, because the top layer establishes
+        its own stacking context that is not affected by ancestor transforms, clips,
+        or overflow. No known limitation prevents the backdrop from covering the
+        whole document in this configuration.
+
+        ---
+
+        The backdrop is kept in the DOM at all times and toggled via pointer-events
+        (CSS :popover-open) rather than mounted/unmounted.
+
+        Why this matters: when the popover closes on a mousedown (e.g. clicking
+        outside), the browser records the target element of that mousedown. If the
+        same element is still in the DOM at mouseup, the browser dispatches a
+        "click" event — targeting document.body because the backdrop has
+        pointer-events:none by then and is no longer "hittable".
+
+        If we removed the backdrop from the DOM between mousedown and mouseup,
+        the browser would see that the recorded target is gone and would NOT
+        dispatch a click at all.
+
+        That silent missing click is a problem: we use a "disableNextClick" guard
+        to prevent the picker from immediately re-opening after the backdrop
+        close. That guard arms itself on mousedown, then waits for the click to
+        disarm. If no click ever comes, the guard stays armed and swallows the
+        very next intentional user click instead.
+      */}
+      <div
+        className="navi_popover_backdrop"
+        aria-hidden="true"
+        onMouseDown={(e) => {
+          if (e.button !== 0) {
+            return;
+          }
+          if (pointerTrap) {
+            e.preventDefault();
+            return;
+          }
           onRequestClose(e);
         }}
-      >
-        {children}
-      </Box>
-    </>
+      />
+      {children}
+    </Box>
   );
 };
+
 const PopoverPseudoClasses = [
   ":hover",
   ":active",

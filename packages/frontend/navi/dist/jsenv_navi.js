@@ -3,7 +3,7 @@ import { isValidElement, createContext, h, toChildArray, render, Fragment, clone
 import { useErrorBoundary, useLayoutEffect, useEffect, useContext, useMemo, useRef, useState, useCallback, useId } from "preact/hooks";
 import { jsxs, jsx, Fragment as Fragment$1 } from "preact/jsx-runtime";
 import { signal, effect, computed, batch, useSignal } from "@preact/signals";
-import { createIterableWeakSet, createEventGroupLogger, mergeOneStyle, normalizeStyle, createPubSub, findEvent, dispatchInternalCustomEvent, mergeTwoStyles, normalizeStyles, createGroupTransitionController, getElementSignature, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, findBefore, findAfter, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, createStyleController, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, measureLongestVisualLineWidth, findFocusDelegateTarget, getKeyboardEventDefaultAction, resolveCSSSize, activeElementSignal, hasCSSSizeUnit, resolveOklchLightness, contrastColor, dispatchCustomEvent, initFocusGroup, elementIsFocusable, findFocusable, snapToPixel, trapScrollInside, trapFocusInside, scrollIntoViewScoped, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement, measureWidestChildRow } from "@jsenv/dom";
+import { createIterableWeakSet, createEventGroupLogger, mergeOneStyle, normalizeStyle, createPubSub, findEvent, dispatchInternalCustomEvent, mergeTwoStyles, normalizeStyles, createGroupTransitionController, getElementSignature, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, findBefore, findAfter, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, createStyleController, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, measureLongestVisualLineWidth, findFocusDelegateTarget, getKeyboardEventDefaultAction, resolveCSSSize, activeElementSignal, hasCSSSizeUnit, resolveOklchLightness, contrastColor, dispatchCustomEvent, chainEvent, initFocusGroup, elementIsFocusable, findFocusable, snapToPixel, trapScrollInside, trapFocusInside, scrollIntoViewScoped, measureWidestChildRow, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
 export { contrastColor, startDragToReorder } from "@jsenv/dom";
 import { prefixFirstAndIndentRemainingLines } from "@jsenv/humanize";
 import { createValidity, parseDurationToSeconds } from "@jsenv/validity";
@@ -2490,21 +2490,36 @@ const useRunOnMount = (action, Component) => {
   }, []);
 };
 
+const DebugCommandContext = createContext(false);
 const DebugInteractionContext = createContext(false);
+const DebugFocusContext = createContext(false);
+const DebugScrollContext = createContext(false);
 const DebugPopupContext = createContext(false);
 const DebugActionContext = createContext(false);
+const DebugUIStateContext = createContext(false);
 const debugNoop = () => {};
-const sharedEventGroupLogger = createEventGroupLogger();
+const eventGroupLogger = createEventGroupLogger();
+const debugCommandDefault = eventGroupLogger.createCategory("[command]", "#8e44ad");
+const debugInteractionDefault = eventGroupLogger.createCategory("[interaction]", "#2980b9");
+const debugActionDefault = eventGroupLogger.createCategory("[action]", "#e67e22");
+const debugPopupDefault = eventGroupLogger.createCategory("[popup]", "#27ae60");
+const debugUIStateDefault = eventGroupLogger.createCategory("[uistate]", "#7f8c8d");
+const debugFocusDefault = eventGroupLogger.createCategory("[focus]", "#2980b9");
+const debugScrollDefault = eventGroupLogger.createCategory("[scroll]", "#2980b9");
+const useDebugCommand = () => {
+  const debug = useContext(DebugCommandContext);
+  return debug || debugNoop;
+};
 const useDebugInteraction = () => {
   const debug = useContext(DebugInteractionContext);
   return debug || debugNoop;
 };
 const useDebugFocus = () => {
-  const debug = useContext(DebugInteractionContext);
+  const debug = useContext(DebugFocusContext);
   return debug || debugNoop;
 };
 const useDebugScroll = () => {
-  const debug = useContext(DebugInteractionContext);
+  const debug = useContext(DebugScrollContext);
   return debug || debugNoop;
 };
 const useDebugPopup = () => {
@@ -2513,6 +2528,10 @@ const useDebugPopup = () => {
 };
 const useDebugAction = () => {
   const debug = useContext(DebugActionContext);
+  return debug || debugNoop;
+};
+const useDebugUIState = () => {
+  const debug = useContext(DebugUIStateContext);
   return debug || debugNoop;
 };
 
@@ -2526,28 +2545,57 @@ const useDebugAction = () => {
  *
  * Pass a boolean `true` to use `console.debug`, or pass a custom function.
  */
+
 const NaviDebug = ({
+  debugCommand,
   debugInteraction,
+  debugFocus,
+  debugScroll,
   debugPopup,
   debugAction,
+  debugUIState,
   children
 }) => {
-  if (debugInteraction === true) {
-    debugInteraction = sharedEventGroupLogger;
+  if (debugCommand === true) {
+    debugCommand = debugCommandDefault;
   }
-  if (debugPopup === true) {
-    debugPopup = sharedEventGroupLogger;
+  if (debugInteraction === true) {
+    debugInteraction = debugInteractionDefault;
+  }
+  if (debugFocus === true || debugInteraction && debugFocus === undefined) {
+    debugFocus = debugFocusDefault;
+  }
+  if (debugScroll === true || debugInteraction && debugScroll === undefined) {
+    debugScroll = debugScrollDefault;
+  }
+  if (debugPopup === true || debugInteraction && debugPopup === undefined) {
+    debugPopup = debugPopupDefault;
   }
   if (debugAction === true) {
-    debugAction = sharedEventGroupLogger;
+    debugAction = debugActionDefault;
   }
-  return jsx(DebugInteractionContext.Provider, {
-    value: debugInteraction,
-    children: jsx(DebugPopupContext.Provider, {
-      value: debugPopup,
-      children: jsx(DebugActionContext.Provider, {
-        value: debugAction,
-        children: children
+  if (debugUIState === true) {
+    debugUIState = debugUIStateDefault;
+  }
+  return jsx(DebugCommandContext.Provider, {
+    value: debugCommand,
+    children: jsx(DebugInteractionContext.Provider, {
+      value: debugInteraction,
+      children: jsx(DebugFocusContext.Provider, {
+        value: debugFocus,
+        children: jsx(DebugScrollContext.Provider, {
+          value: debugScroll,
+          children: jsx(DebugPopupContext.Provider, {
+            value: debugPopup,
+            children: jsx(DebugActionContext.Provider, {
+              value: debugAction,
+              children: jsx(DebugUIStateContext.Provider, {
+                value: debugUIState,
+                children: children
+              })
+            })
+          })
+        })
       })
     })
   });
@@ -6715,6 +6763,7 @@ const TYPO_PROPS = {
       "-webkit-line-clamp": value,
     };
   },
+  textAlign: PASS_THROUGH,
 };
 const VISUAL_PROPS = {
   outline: PASS_THROUGH,
@@ -7184,31 +7233,49 @@ const findControlHost = (el) => {
   }
   return el.querySelector("[navi-control-host]");
 };
+const isControlRoot = (el) => {
+  return el.hasAttribute("navi-control");
+};
+const isControlHost = (el) => {
+  return el.hasAttribute("navi-control-host");
+};
 
 /**
  * Returns the nearest ancestor of `el` (exclusive of `el`'s own control) that
  * has a `[data-action]` attribute.
  *
- * `data-action` is set on both the control host and the control root/wrapper,
- * so we must first escape `el`'s own control boundary before searching — otherwise
- * `.closest("[data-action]")` would land on the wrapper of the same control.
+ * The search walks up `parentElement` manually (rather than using `.closest()`)
+ * so it can stop at hard boundaries.
+ *
+ * **`[navi-control="picker"]` boundary**: a picker is a hard stop. Elements inside a picker
+ * (including inside its popover content) can reach the picker itself, but nothing above it.
+ * This prevents an input inside a picker from accidentally submitting a parent form.
  *
  * ```html
- * <form data-action="something_else">                      ← found
- *   <span navi-control data-action="something">            ← own root, skipped
- *     <input navi-control-host data-action="something" />  ← el
- *   </span>
+ * <form data-action="outer">              ← NOT found (above picker boundary)
+ *   <button navi-control="picker" data-action="p">  ← found and search stops here
+ *     <input navi-control-host />         ← el (in picker button area)
+ *     <div popover>
+ *       <input navi-control-host />       ← el (in picker popover)
+ *     </div>
+ *   </button>
  * </form>
  * ```
  */
 const findClosestControlWithAction = (el) => {
-  // Walk up to the own control root first (same as getParentControl does),
-  // then look for [data-action] on an ancestor. This is needed because
-  // data-action is now set on both the host and the control root/wrapper,
-  // so starting from el.parentNode alone could hit the wrapper of the same
-  // control rather than a true ancestor control.
   const ownControlRoot = el.closest("[navi-control]") || el;
-  return ownControlRoot.parentNode.closest("[data-action]");
+  let current = ownControlRoot.parentElement;
+  while (current) {
+    if (current.hasAttribute("data-action")) {
+      return current;
+    }
+    // Stop at a picker boundary — nothing above the picker is reachable from within.
+    if (current.getAttribute("navi-control") === "picker") {
+      return undefined;
+    }
+    current = current.parentElement;
+  }
+  return undefined;
 };
 
 /**
@@ -7565,8 +7632,15 @@ const dispatchRequestSetUIState = (element, value, detail) => {
     value,
   });
 };
+const dispatchRequestClearUIState = (element, e) => {
+  const controlHost = findControlHost(element) || element;
+  return dispatchInternalCustomEvent(controlHost, "navi_clear_ui_state", {
+    event: e,
+  });
+};
 const dispatchRequestResetUIState = (element, e) => {
-  return dispatchInternalCustomEvent(element, "navi_request_reset_ui_state", {
+  const controlHost = findControlHost(element) || element;
+  return dispatchInternalCustomEvent(controlHost, "navi_reset_ui_state", {
     event: e,
   });
 };
@@ -7875,10 +7949,81 @@ definePseudoClass(":active", {
       }
     }
   };
+  // Tracks whether the user has pressed a keyboard navigation key (arrow keys,
+  // Escape, Enter, Ctrl, Alt, Shift, Space) since the last pointer interaction.
+  // Space is ignored when the target is an editable field.
+  // This flag is used to gate focus-visible inheritance via aria-controls:
+  // on mobile (or when the user hasn't used keyboard nav yet) an input that
+  // controls a radio should not cause the radio to show a focus ring.
+  let keyboardNavigationUsed = false;
+  const NAVIGATION_KEYS = new Set([
+    "ArrowUp",
+    "ArrowDown",
+    "ArrowLeft",
+    "ArrowRight",
+    "Escape",
+    "Enter",
+    "Control",
+    "Alt",
+    "Shift",
+    " ",
+  ]);
+  const isEditableTarget = (target) => {
+    if (!target) {
+      return false;
+    }
+    const tag = target.tagName;
+    if (tag === "TEXTAREA") {
+      return true;
+    }
+    if (tag === "INPUT") {
+      const type = target.type;
+      if (
+        !type ||
+        type === "text" ||
+        type === "search" ||
+        type === "url" ||
+        type === "email" ||
+        type === "password" ||
+        type === "tel" ||
+        type === "number"
+      ) {
+        return true;
+      }
+    }
+    if (target.isContentEditable) {
+      return true;
+    }
+    return false;
+  };
+  document.addEventListener(
+    "keydown",
+    (e) => {
+      if (!NAVIGATION_KEYS.has(e.key)) {
+        return;
+      }
+      if (e.key === " " && isEditableTarget(e.target)) {
+        return;
+      }
+      keyboardNavigationUsed = true;
+    },
+    { capture: true },
+  );
+  document.addEventListener(
+    "pointerdown",
+    () => {
+      keyboardNavigationUsed = false;
+    },
+    { capture: true },
+  );
+
   // Returns true when el holds focus indirectly — either because a controlling
   // element (aria-controls) has focus, or because el is a proxy whose target
   // is itself controlled by a focused element.
   const hasIndirectFocus = (el, { requireFocusVisible = false } = {}) => {
+    if (requireFocusVisible && !keyboardNavigationUsed) {
+      return false;
+    }
     const pseudoClass = requireFocusVisible ? ":focus-visible" : ":focus";
     const isControlledBy = (target) => {
       const id = target.id;
@@ -8077,7 +8222,7 @@ definePseudoClass(":-navi-has-value", {
     return addInputEffect(controlHost, callback);
   },
   test: (el) => {
-    if (el.hasAttribute("navi-ui-state")) {
+    if (isControlHost(el)) {
       const uiState = getUIStateFromElement(el);
       if (uiState === undefined || uiState === "") {
         return false;
@@ -18350,6 +18495,37 @@ const matchBestLang = (lang, languageMap) => {
  */
 const naviI18n = createI18n();
 
+naviI18n.addAll({
+  "button.clear": {
+    en: "Clear",
+    fr: "Effacer",
+  },
+  "button.reset": {
+    en: "Reset",
+    fr: "Réinitialiser",
+  },
+  "button.send": {
+    en: "Send",
+    fr: "Envoyer",
+  },
+  "button.open": {
+    en: "Open",
+    fr: "Ouvrir",
+  },
+  "button.close": {
+    en: "Close",
+    fr: "Fermer",
+  },
+  "button.cancel": {
+    en: "Cancel",
+    fr: "Annuler",
+  },
+  "button.define": {
+    en: "Define",
+    fr: "Définir",
+  },
+});
+
 // Default built-in translations — apps can override any key via add()
 naviI18n.addAll({
   "time.less_than_minute": {
@@ -19956,6 +20132,10 @@ const TYPE_NUMBER_CONSTRAINT = {
     if (!isNumber) {
       return null;
     }
+    if (field.value === "") {
+      // empty without required — nothing to validate
+      return null;
+    }
     if (field.validity.valueMissing) {
       // let required handle that
       return null;
@@ -20374,12 +20554,25 @@ const onRequestInteraction = (
       }
     }
     if (!skipConstraints) {
-      checkAndReportConstraints(requestStatus, {
+      const failingInterface = checkConstraints({
         event: requestInteractionCustomEvent,
         requester: event.target,
         fromRequestInteraction: true,
-        debug: debugInteraction,
       });
+      if (failingInterface) {
+        Object.assign(requestStatus, {
+          canProceed: false,
+          preventReason: failingInterface.failedConstraintInfo
+            ? `failing constraint "${failingInterface.failedConstraintInfo.name}"`
+            : "invalid (no constraint info)",
+        });
+        // Interaction constraints (disabled/readonly) — always show the callout.
+        failingInterface.reportValidity({
+          event: requestInteractionCustomEvent,
+          requester: event.target,
+          debug: debugInteraction,
+        });
+      }
     }
   }
   if (!requestStatus.canProceed) {
@@ -20451,12 +20644,12 @@ const onRequestAction = (
   if (requester === elementHandlingAction) {
     debugAction(
       requestActionCustomEvent,
-      `${getElementSignature(elementHandlingAction)} action requested`,
+      `${getElementSignature(elementHandlingAction)} validates + action requested (origin: ${actionOrigin})`,
     );
   } else {
     debugAction(
       requestActionCustomEvent,
-      `${getElementSignature(elementHandlingAction)} action requested by ${getElementSignature(requester)}`,
+      `${getElementSignature(elementHandlingAction)} validates + action requested by ${getElementSignature(requester)} (origin: ${actionOrigin})`,
     );
   }
 
@@ -20465,12 +20658,29 @@ const onRequestAction = (
     checkEvent(requestStatus, event);
   }
   if (requestStatus.canProceed) {
-    checkAndReportConstraints(requestStatus, {
+    const failingInterface = checkConstraints({
       event: requestActionCustomEvent,
       requester,
       fromRequestAction: true,
-      debug: debugAction,
     });
+    if (failingInterface) {
+      Object.assign(requestStatus, {
+        canProceed: false,
+        preventReason: failingInterface.failedConstraintInfo
+          ? `failing constraint "${failingInterface.failedConstraintInfo.name}"`
+          : "invalid (no constraint info)",
+      });
+      // Only show the callout if the element handling the action has its own
+      // action prop. If it belongs to a parent Form/ControlGroup, the callout
+      // will be shown when the parent tries to execute its own action.
+      if (elementHandlingAction.hasAttribute("data-action")) {
+        failingInterface.reportValidity({
+          event: requestActionCustomEvent,
+          requester,
+          debug: debugAction,
+        });
+      }
+    }
   }
   if (requestStatus.canProceed) {
     // NOTE for future: confirmation must move to to action execution (be part of it when set)
@@ -20515,7 +20725,7 @@ const onRequestAction = (
   }
   debugAction(
     requestActionCustomEvent,
-    `${DEFAULT_CONSTRAINT_SET.size} constraints verified -> ${getElementSignature(elementHandlingAction)}.dispatchEvent("navi_action_allowed")`,
+    `${DEFAULT_CONSTRAINT_SET.size} constraints verified${elementHandlingAction.hasAttribute("data-action") ? ` -> execute action ${action.callSource}` : " -> no own action, nothing to execute"}`,
   );
   dispatchInternalCustomEvent(
     elementHandlingAction,
@@ -20542,22 +20752,14 @@ const checkEvent = (requestStatus, event) => {
   }
 };
 
-const checkAndReportConstraints = (
-  requestStatus,
-  { event, requester, fromRequestInteraction, fromRequestAction, debug } = {},
-) => {
-  const onInvalid = (failedValidationInterface) => {
-    Object.assign(requestStatus, {
-      canProceed: false,
-      preventReason: `failing constraint "${failedValidationInterface.failedConstraintInfo.name}"`,
-    });
-    failedValidationInterface.reportValidity({
-      event,
-      requester,
-      debug,
-    });
-  };
-
+// Returns the failing validation interface, or null if all constraints pass.
+// Never calls reportValidity — callers decide whether to show the callout.
+const checkConstraints = ({
+  event,
+  requester,
+  fromRequestInteraction,
+  fromRequestAction,
+} = {}) => {
   let elementToValidate = event.currentTarget;
   if (!elementToValidate.__validationInterface__) {
     const controlHost = findControlHost(requester);
@@ -20566,7 +20768,6 @@ const checkAndReportConstraints = (
     }
   }
 
-  // all manageds fields (if any) are checked inside checkValidity
   let validationInterface = elementToValidate.__validationInterface__;
   if (!validationInterface) {
     validationInterface = installCustomConstraintValidation(elementToValidate);
@@ -20578,18 +20779,22 @@ const checkAndReportConstraints = (
     fromRequestAction,
   });
   if (!isValid) {
-    // checkValidity delegates to the proxy target's VI when the element is a proxy.
-    // In that case validationInterface has no failedConstraintInfo — the target's VI does.
-    // Resolve the proxy target's VI so onInvalid reads failedConstraintInfo from the right place.
     const proxyTarget = findControlProxyTarget(elementToValidate);
     const resolvedValidationInterface = proxyTarget
       ? proxyTarget.__validationInterface__ || validationInterface
       : validationInterface;
-    const failingInterface =
+    let failingInterface =
       resolvedValidationInterface.failingManagedValidationInterface ||
       resolvedValidationInterface;
-    onInvalid(failingInterface);
+    while (
+      failingInterface.failedConstraintInfo === null &&
+      failingInterface.failingManagedValidationInterface
+    ) {
+      failingInterface = failingInterface.failingManagedValidationInterface;
+    }
+    return failingInterface;
   }
+  return null;
 };
 
 const INTERACTION_CONSTRAINTS = [DISABLED_CONSTRAINT, READONLY_CONSTRAINT];
@@ -20722,6 +20927,7 @@ const installCustomConstraintValidation = (
   }
 
   let failedConstraintInfo = null;
+  let interactionFailedConstraintInfo = null;
   let failingManagedValidationInterface = null;
   const validityInfoMap = new Map();
   const hasTitleAttribute = element.hasAttribute("title");
@@ -20745,6 +20951,7 @@ const installCustomConstraintValidation = (
     }
     validityInfoMap.clear();
     failedConstraintInfo = null;
+    interactionFailedConstraintInfo = null;
     failingManagedValidationInterface = null;
   };
   addTeardown(resetValidity);
@@ -20798,8 +21005,10 @@ const installCustomConstraintValidation = (
     // When checking a subset of constraints (e.g. INTERACTION_CONSTRAINTS), we must NOT
     // reset the full validity state — other constraints (like PATTERN) may still be failing
     // and we must preserve their state (failedConstraintInfo, callout, etc.).
-    // We only do a scoped check and return its result without touching global state.
+    // We only do a scoped check and store the result in interactionFailedConstraintInfo,
+    // which reportValidity checks in addition to failedConstraintInfo.
     if (fromRequestInteraction) {
+      interactionFailedConstraintInfo = null;
       for (const constraint of INTERACTION_CONSTRAINTS) {
         const checkResult = constraint.check(element, {
           fromRequestAction,
@@ -20808,6 +21017,18 @@ const installCustomConstraintValidation = (
           registerChange: () => {},
         });
         if (checkResult) {
+          const constraintValidityInfo =
+            typeof checkResult === "string"
+              ? { message: checkResult }
+              : checkResult;
+          interactionFailedConstraintInfo = {
+            name: constraint.name,
+            constraint,
+            status: "warning",
+            ...constraintValidityInfo,
+            cleanup: () => {},
+            reportStatus: "not_reported",
+          };
           return false;
         }
       }
@@ -20912,11 +21133,15 @@ const installCustomConstraintValidation = (
 
   const [notifyCalloutOpen, onCalloutOpen] = createPubSub();
   const reportValidity = ({ event, requester, debug, skipFocus } = {}) => {
-    if (!failedConstraintInfo) {
+    // Interaction constraints (disabled/readonly) take precedence: they must be shown
+    // without touching or resetting the value-level failedConstraintInfo.
+    const activeConstraintInfo =
+      interactionFailedConstraintInfo || failedConstraintInfo;
+    if (!activeConstraintInfo) {
       closeElementValidationMessage(event, "is_valid");
       return;
     }
-    if (failedConstraintInfo.silent) {
+    if (activeConstraintInfo.silent) {
       closeElementValidationMessage(event, "invalid_silent");
       return;
     }
@@ -20924,19 +21149,19 @@ const installCustomConstraintValidation = (
     // Always resolve the right message first (handles custom messages, attributes, fallback).
     const { message, origin } = getConstraintMessage(
       element,
-      failedConstraintInfo.constraint,
-      failedConstraintInfo.message,
+      activeConstraintInfo.constraint,
+      activeConstraintInfo.message,
       { requester },
     );
     if (debug) {
       debug(
         event,
-        `constraint message for "${failedConstraintInfo.constraint.name}": ${origin}`,
+        `constraint message for "${activeConstraintInfo.constraint.name}": ${origin}`,
       );
     }
 
     if (validationInterface.validationMessage) {
-      const { status, closeOnClickOutside } = failedConstraintInfo;
+      const { status, closeOnClickOutside } = activeConstraintInfo;
       validationInterface.validationMessage.update(message, {
         status,
         closeOnClickOutside,
@@ -20944,7 +21169,7 @@ const installCustomConstraintValidation = (
       return;
     }
     const anchorElement =
-      failedConstraintInfo.target || elementReceivingValidationMessage;
+      activeConstraintInfo.target || elementReceivingValidationMessage;
     if (
       !skipFocus &&
       // skip focus on proxy (which uses aria-hidden and are not meant to be focused)
@@ -20966,8 +21191,8 @@ const installCustomConstraintValidation = (
 
     validationInterface.validationMessage = openCallout(message, {
       anchorElement,
-      status: failedConstraintInfo.status,
-      closeOnClickOutside: failedConstraintInfo.closeOnClickOutside,
+      status: activeConstraintInfo.status,
+      closeOnClickOutside: activeConstraintInfo.closeOnClickOutside,
       openingEvent: event,
       debug,
       onClose: ({ event, focusWithinCallout }) => {
@@ -20978,8 +21203,8 @@ const installCustomConstraintValidation = (
           }
         }
         validationInterface.validationMessage = null;
-        if (failedConstraintInfo) {
-          failedConstraintInfo.reportStatus = "closed";
+        if (activeConstraintInfo) {
+          activeConstraintInfo.reportStatus = "closed";
         }
         if (
           !skipFocus &&
@@ -21002,13 +21227,20 @@ const installCustomConstraintValidation = (
       },
     });
     const results = notifyCalloutOpen(event);
-    failedConstraintInfo.reportStatus = "reported";
+    activeConstraintInfo.reportStatus = "reported";
   };
   validationInterface.checkValidity = checkValidity;
   validationInterface.reportValidity = reportValidity;
   Object.defineProperty(validationInterface, "failedConstraintInfo", {
     get: () => failedConstraintInfo,
   });
+  Object.defineProperty(
+    validationInterface,
+    "interactionFailedConstraintInfo",
+    {
+      get: () => interactionFailedConstraintInfo,
+    },
+  );
   Object.defineProperty(
     validationInterface,
     "failingManagedValidationInterface",
@@ -21145,6 +21377,12 @@ const installCustomConstraintValidation = (
         if (failedConstraintInfo && failedConstraintInfo.status === "error") {
           return;
         }
+        if (
+          interactionFailedConstraintInfo &&
+          interactionFailedConstraintInfo.status === "error"
+        ) {
+          return;
+        }
         resetOnInteraction(e);
       };
 
@@ -21224,11 +21462,12 @@ const installCustomConstraintValidation = (
         return;
       }
       // if we have failed constraint, we cancel too
-      if (failedConstraintInfo) {
+      if (failedConstraintInfo || interactionFailedConstraintInfo) {
         dispatchCancelCustomEvent({
           event: e,
           reason: "blur_invalid",
-          failedConstraintInfo,
+          failedConstraintInfo:
+            failedConstraintInfo || interactionFailedConstraintInfo,
         });
         return;
       }
@@ -23721,8 +23960,8 @@ installImportMetaCssBuild(import.meta);const css$J = /* css */`
     &[data-icon-char] {
       aspect-ratio: 1/1;
       min-width: 0;
-      height: 1em;
-      max-height: 1em;
+      height: round(1em, 1px);
+      max-height: round(1em, 1px);
       flex-grow: 0 !important;
       align-items: center;
       justify-content: center;
@@ -23941,7 +24180,7 @@ const ButtonInsideForm = props => {
   return jsx(Next
   // The default action for a button inside a form is to request form action
   , {
-    action: "send",
+    command: props.action ? undefined : "--navi-send",
     ...props
   });
 };
@@ -24336,6 +24575,413 @@ document.body.addEventListener(
   { capture: true },
 );
 
+const dispatchNaviCommand = (
+  element,
+  command,
+  event,
+  { optional, value } = {},
+) => {
+  const naviCommand = NAVI_COMMANDS[command];
+  if (!naviCommand) {
+    console.warn(`Unknown command "${command}"`);
+    return false;
+  }
+  // Check for explicit HTML target overrides early so a misconfigured commandfor
+  // attribute (id not found) aborts immediately rather than silently falling back
+  // to DOM resolution. Handlers receive this info via resolveExplicitTarget().
+  const explicitTarget = resolveExplicitTarget(element);
+  if (explicitTarget === null) {
+    // attribute was present but target not found — already warned inside resolveExplicitTarget
+    return false;
+  }
+  const execute = naviCommand.commandHandler(element, event);
+  if (!execute) {
+    if (optional) {
+      return false;
+    }
+    console.warn(
+      `"${command}" triggered on element but no suitable target found`,
+      element,
+    );
+    return false;
+  }
+  const { target, implementation } = execute;
+  return dispatchCustomEvent(target, "navi_command", {
+    command,
+    event,
+    source: element,
+    implementation,
+    value,
+  });
+};
+// Returns the target explicitly declared via HTML attributes (commandfor / navi-command-target),
+// or undefined when no such attribute is present.
+// Returns null when the attribute is present but the target element was not found (already warned).
+// Handlers must check for null explicitly — null || fallback() would silently ignore the error.
+const resolveExplicitTarget = (element) => {
+  const commandFor = element.getAttribute("commandfor");
+  if (commandFor) {
+    const target = document.getElementById(commandFor);
+    if (!target) {
+      console.warn(
+        `command triggered on element with commandfor="${commandFor}" but no element with that id found`,
+        element,
+      );
+      return null;
+    }
+    return target;
+  }
+  const naviCommandTarget = element.getAttribute("navi-command-target");
+  if (naviCommandTarget === "parent-control") {
+    const target = resolveFirstParentControl(element);
+    return target;
+  }
+  if (naviCommandTarget === "child-control") {
+    const target = resolveFirstChildControl(element);
+
+    return target;
+  }
+  return undefined;
+};
+const resolvePickerInnerControl = (target) => {
+  if (!target.hasAttribute("navi-picker")) {
+    return null;
+  }
+  const content = target.querySelector(".navi_picker_content");
+  if (!content) {
+    return null;
+  }
+  return content.querySelector("[navi-control-host]") ?? null;
+};
+const resolveFirstParentControl = (el) => {
+  return getParentControl(el);
+};
+const resolveFirstChildControl = (el) => {
+  let startEl;
+  if (isControlRoot(el)) {
+    startEl = findControlHost(el);
+  } else {
+    startEl = el;
+  }
+  return startEl.querySelector("[navi-control-host]");
+};
+const resolveClosestExpandable = (el) => {
+  return el.closest("[aria-expanded]");
+};
+const resolveClosestControlWithAction = (el) => {
+  return findClosestControlWithAction(el);
+};
+
+const resolveCommandValue = (source, event) => {
+  if (Object.hasOwn(event.detail, "value")) {
+    return event.detail.value;
+  }
+  if (source.hasAttribute("command-value")) {
+    return source.getAttribute("command-value");
+  }
+  return getUIStateFromElement(source);
+};
+
+const onNaviCommand = (e, { debugCommand }) => {
+  const { command, event, source, implementation } = e.detail;
+  if (typeof command !== "string") {
+    console.warn(`navi_command event is missing detail.command`, e);
+    return false;
+  }
+  if (typeof implementation !== "function") {
+    console.warn(`navi_command event is missing detail.implementation`, e);
+    return false;
+  }
+  const commandTarget = e.currentTarget;
+  debugCommand(
+    event,
+    `"${command}" triggered on`,
+    source,
+    `targeting`,
+    commandTarget,
+  );
+  return implementation();
+};
+
+const NAVI_COMMANDS = {};
+// commandHandler(source, event) → { target, implementation } | undefined
+// - Each handler calls resolveExplicitTarget(source) first, then falls back to
+//   its own DOM resolution logic (closest expandable, parent control, etc.).
+// - Returns undefined when no target can be found — this is a normal outcome for
+//   some commands (e.g. --navi-send when the source is outside any navi context).
+// - Returns { target, implementation } so dispatchNaviCommand can dispatch navi_command.
+const registerNaviCommand = (command, commandHandler) => {
+  NAVI_COMMANDS[command] = {
+    name: command,
+    commandHandler,
+    toString: () => command,
+  };
+};
+
+registerNaviCommand("--navi-void", (source) => {
+  const target =
+    resolveExplicitTarget(source) || resolveFirstParentControl(source);
+  if (!target) {
+    return undefined;
+  }
+  return {
+    target,
+    implementation: () => {
+      // intentional no-op — useful to verify command dispatch in demos and tests
+      return true;
+    },
+  };
+});
+
+registerNaviCommand("--navi-update", (source, event) => {
+  const target =
+    resolveExplicitTarget(source) || resolveFirstParentControl(source);
+  if (!target) {
+    return undefined;
+  }
+  return {
+    target,
+    implementation: () => {
+      const allowed = dispatchRequestInteraction(
+        target,
+        event,
+        "--navi-update",
+      );
+      if (!allowed) {
+        event.preventDefault();
+        return false;
+      }
+      const commandValue = resolveCommandValue(source, event);
+      dispatchRequestSetUIState(target, commandValue, {
+        event,
+      });
+      return true;
+    },
+  };
+});
+registerNaviCommand("--navi-clear", (source, event) => {
+  const target =
+    resolveExplicitTarget(source) || resolveFirstParentControl(source);
+  if (!target) {
+    return undefined;
+  }
+  const fromInput = source.closest(`[navi-control="input"]`);
+
+  return {
+    target,
+    implementation: () => {
+      if (fromInput) ; else {
+        dispatchNaviCommand(source, "--navi-close", event, {
+          optional: true,
+        });
+      }
+      const allowed = dispatchRequestInteraction(target, event, "--navi-clear");
+      if (!allowed) {
+        event.preventDefault();
+        return false;
+      }
+      dispatchRequestClearUIState(target, event);
+      return true;
+    },
+  };
+});
+registerNaviCommand("--navi-reset", (source, event) => {
+  const target =
+    resolveExplicitTarget(source) || resolveFirstParentControl(source);
+  if (!target) {
+    return undefined;
+  }
+  return {
+    target,
+    implementation: () => {
+      const allowed = dispatchRequestInteraction(target, event, "--navi-reset");
+      if (!allowed) {
+        event.preventDefault();
+        return false;
+      }
+      return dispatchRequestResetUIState(target, event);
+    },
+  };
+});
+registerNaviCommand("--navi-send", (source, event) => {
+  const target =
+    resolveExplicitTarget(source) ||
+    resolveClosestExpandable(source) ||
+    resolveClosestControlWithAction(source);
+  if (!target) {
+    return undefined;
+  }
+
+  // send inside expandable
+  if (target.getAttribute("aria-expanded") === "true") {
+    return {
+      target,
+      implementation: () => executeNaviDefine(source, event, target),
+    };
+  }
+
+  // send inside a control with action
+  const submitSelector = `button[type="submit"], input[type="submit"], input[type="image"], [command="--navi-send"]`;
+  return {
+    target,
+    implementation: () => {
+      let requester = source;
+      if (!source.matches(submitSelector)) {
+        // When present, use the first submit button as the requester, not the input.
+        // This aligns with browser behavior where Enter in a text input triggers
+        // the first submit button of the form, not the input itself.
+        const firstButtonSubmitting = target.querySelector(submitSelector);
+        if (firstButtonSubmitting) {
+          requester = firstButtonSubmitting;
+        }
+      }
+      const allowed = dispatchRequestAction(target, { event, requester });
+      const initiator =
+        event.detail && typeof event.detail === "object"
+          ? event.detail.eventChain[0]
+          : event;
+      const { form } = target;
+      if (form) {
+        // prevent form submission when clicking buttons or pressing enter on inputs
+        initiator.preventDefault();
+      } else if (initiator.type === "keydown" && initiator.key === "Enter") {
+        // prevent triggering click on such button, they are already performing submit
+        // (this ensures enter inside a picker won't trigger picker button click)
+        initiator.preventDefault();
+      }
+      return allowed;
+    },
+  };
+});
+
+registerNaviCommand("--navi-open", (source, event) => {
+  const target =
+    resolveExplicitTarget(source) || resolveClosestExpandable(source);
+  if (!target) {
+    return undefined;
+  }
+  return {
+    target,
+    implementation: () => {
+      return dispatchCustomEvent(target, "navi_request_open", {
+        event,
+        source,
+      });
+    },
+  };
+});
+registerNaviCommand("--navi-close", (source, event) => {
+  const target =
+    resolveExplicitTarget(source) || resolveClosestExpandable(source);
+  if (!target) {
+    return undefined;
+  }
+  return {
+    target,
+    implementation: () => {
+      return dispatchCustomEvent(target, "navi_request_close", {
+        event,
+        source,
+      });
+    },
+  };
+});
+registerNaviCommand("--navi-cancel", (source, event) => {
+  const target =
+    resolveExplicitTarget(source) || resolveClosestExpandable(source);
+  if (!target) {
+    return undefined;
+  }
+  return {
+    target,
+    implementation: () => {
+      return dispatchCustomEvent(target, "navi_request_close", {
+        event,
+        source,
+        isCancel: true,
+      });
+    },
+  };
+});
+registerNaviCommand("--navi-define", (source, event) => {
+  const target =
+    resolveExplicitTarget(source) || resolveClosestExpandable(source);
+  if (!target) {
+    return undefined;
+  }
+  return {
+    target,
+    implementation: () => executeNaviDefine(source, event, target),
+  };
+});
+const executeNaviDefine = (source, event, target) => {
+  // Skip --navi-update when the picker already has an inner control that
+  // manages the picker's value autonomously:
+  // - A ControlGroup aggregates all child values and syncs them up via its
+  //   own command="--navi-update". Calling --navi-update from the send button
+  //   (which has no value) would override the aggregated value.
+  // - Any other inner control host (e.g. a plain Input inside the picker
+  //   popup) already propagates its value to the picker via its own
+  //   command="--navi-update" on every change. Calling it again from the
+  //   send button's undefined value would corrupt the picker state.
+  const skipUpdate = resolvePickerInnerControl(target) !== null;
+  if (!skipUpdate) {
+    dispatchNaviCommand(source, "--navi-update", event);
+  }
+  // The picker's onClose already dispatches the action with the final value.
+  // Dispatching again here would fire the action twice.
+  return dispatchNaviCommand(target, "--navi-close", event);
+};
+
+registerNaviCommand("--navi-scroll", (source, event) => {
+  const target =
+    resolveExplicitTarget(source) || resolveFirstParentControl(source);
+  if (!target) {
+    return undefined;
+  }
+  return {
+    target,
+    implementation: () => {
+      return dispatchCustomEvent(target, "navi_request_scroll", {
+        event,
+        id: resolveCommandValue(source, event),
+      });
+    },
+  };
+});
+registerNaviCommand("--navi-select", (source, event) => {
+  const target =
+    resolveExplicitTarget(source) || resolveFirstParentControl(source);
+  if (!target) {
+    return undefined;
+  }
+  return {
+    target,
+    implementation: () => {
+      return dispatchCustomEvent(target, "navi_request_select", {
+        event,
+        id: resolveCommandValue(source, event),
+      });
+    },
+  };
+});
+registerNaviCommand("--navi-unselect", (source, event) => {
+  const target =
+    resolveExplicitTarget(source) || resolveFirstParentControl(source);
+  if (!target) {
+    return undefined;
+  }
+  return {
+    target,
+    implementation: () => {
+      return dispatchCustomEvent(target, "navi_request_unselect", {
+        event,
+        id: resolveCommandValue(source, event),
+      });
+    },
+  };
+});
+
 // prop that we'll set on the control
 const CONTROL_ATTRIBUTE_SET = new Set([
   ...CONSTRAINT_ATTRIBUTE_SET,
@@ -24354,9 +25000,15 @@ const CONTROL_ATTRIBUTE_SET = new Set([
   "autoCorrect",
   "aria-controls",
   "tabIndex",
+  "command",
+  "commandFor",
+  "command-value", // not standard but make sense, allow to give param to the command in question
 
+  // "ui-action-target",
   "navi-input-type",
   "navi-control-proxy-for",
+  "navi-command-target",
+  "onnavi_command",
 
   "data-callout-arrow-x",
   "data-callout-point-to-border-box",
@@ -24443,7 +25095,7 @@ const asControlHostValue = (
   jsValue,
   { controlType, type, inputMode },
 ) => {
-  if (controlType === "input") {
+  if (controlType === "input" || controlType === "picker") {
     if (type === "datetime-local") {
       return asDatetimeLocalString(jsValue);
     }
@@ -24514,7 +25166,7 @@ const readControlValue = (controlHost) => {
     return readValueFromButton(controlHost);
   }
   if (controlHost.tagName === "INPUT") {
-    // important: input.type = "navi_picker" followed by input.type returns "text"
+    // important: input.type = "navi_js"; followed by input.type; returns "text"
     // so use getAttribute
     const type = controlHost.getAttribute("type");
 
@@ -24534,7 +25186,7 @@ const readControlValue = (controlHost) => {
     if (type === "datetime-local") {
       return readDatetimeLocalFromInput(controlHost);
     }
-    if (type === "navi_picker") {
+    if (type === "navi_js") {
       return getUIStateFromElement(controlHost);
     }
     return readValueFromInput(controlHost);
@@ -24604,442 +25256,43 @@ const readValueFromNaviCustomEvent = (field, fallback) => {
   return fallback;
 };
 
-/**
- * Creates a universal callback from an object declaring how it should behave
- * depending on how it is called.
- *
- * The shape of the handlers object defines the **intended usage**.
- * Navi warns at runtime when the callback is placed on the wrong prop.
- *
- * Supported call sites:
- * - **DOM event props** (`onClick`, `onInput`, ...): called as `fn(event)`
- * - **`uiAction` prop**: called as `fn(value, event)` — carries a value from the UI element
- *
- * ---
- *
- * **`{ event }`** — intended for DOM event props:
- * ```js
- * const cb = createUICallback({ event: (event) => { ... } });
- * <Button onClick={cb} />   // ✓
- * <Button onInput={cb} />   // ✓
- * <Button uiAction={cb} />  // ⚠ warns, still calls event(event) — value ignored
- * ```
- *
- * **`{ uiAction }`** — intended for the `uiAction` prop only:
- * ```js
- * const cb = createUICallback({ uiAction: (value, event) => { ... } });
- * <Button uiAction={cb} />  // ✓
- * <Button onClick={cb} />   // ✗ warns, no-op — no value available from DOM event
- * ```
- *
- * **`{ event, uiAction }`** — works from both; each call site gets its own handler:
- * ```js
- * const cb = createUICallback({
- *   event:    (event) => { ... },
- *   uiAction: (value, event) => { ... },
- * });
- * <Button onClick={cb} />   // ✓ → event(event)
- * <Button uiAction={cb} />  // ✓ → uiAction(value, event)
- * ```
- *
- * @param {{ event?: function(event: Event): any, uiAction?: function(value: any, event: Event): any }} handlers
- * @returns {function}
- */
-const createUICallback = ({ name = "ui callback", event, action }) => {
-  if (event && action) {
-    return (...args) => {
-      return routeArgs(args, {
-        event,
-        action,
-        other: () => {
-          console.warn(
-            `${name} unsupported call attempt. It is designed to be called by action.`,
-          );
-          return false;
-        },
-      });
-    };
-  }
-  if (action) {
-    return (...args) => {
-      return routeArgs(args, {
-        event: () => {
-          console.warn(
-            `${name} unsupported call attempt (by DOM event). It is designed to be called by action.`,
-          );
-          return false;
-        },
-        action,
-        other: () => {
-          console.warn(
-            `${name} unsupported call attempt. It is designed to be called by action.`,
-          );
-          return false;
-        },
-      });
-    };
-  }
-  // event only
-  return (...args) => {
-    return routeArgs(args, {
-      event,
-      action: (_, { event: eventFromArg }) => {
-        console.info(
-          `${name} got called by action. It works but is designed to be called by DOM`,
-        );
-        return event(eventFromArg);
-      },
-      other: () => {
-        console.warn(
-          `${name} unsupported call attempt. It is designed to be called by DOM.`,
-        );
-        return false;
-      },
-    });
-  };
-};
-
-/**
- * Detects the shape of the arguments and dispatches to the matching handler.
- * - DOM event prop (onClick, onInput, ...): fn(event)            → first arg has .currentTarget
- * - uiAction prop:                          fn(value, event)     → second arg has .currentTarget
- * - action prop:                            fn(value, { event }) → second arg is a plain object with .event
- * - other:                                  unknown shape
- *
- * @param {any[]} args
- * @param {{ event: function, uiAction: function, action: function, other: function }} handlers
- */
-const routeArgs = (args, { event, action, other }) => {
-  const [firstArg, secondArg] = args;
-  if (firstArg && firstArg.currentTarget) {
-    return event(...args);
-  }
-  if (secondArg && secondArg.event) {
-    return action(...args);
-  }
-  return other(...args);
-};
-
-const triggerStringAction = (actionName, ...args) => {
-  return resolveActionProp(actionName)(...args);
-};
-const resolveActionProp = (action) => {
-  if (typeof action === "string") {
-    const naviAction = STRING_ACTIONS[action];
-    if (!naviAction) {
-      throw new Error(`Unknown ui action "${action}"`);
-    }
-    return naviAction;
-  }
-  return action;
-};
-
-const scroll = createUICallback({
-  name: "scroll",
-  event: (e) => {
-    return requestScroll(e, () => getActionParam(e));
-  },
-  action: (value, { event }) => {
-    return requestScroll(event, () => value);
-  },
-});
-const requestScroll = (e, getScrollParam) => {
-  const scrollTarget = getActionTarget(e, "scroll");
-  if (!scrollTarget) {
-    return false;
-  }
-  const param = getScrollParam();
-  if (!param) {
-    console.warn(
-      `scroll action triggered but no action-param specified or returned by getScrollParam callback`,
-      e,
-    );
-    return false;
-  }
-  return dispatchCustomEvent(scrollTarget, "navi_request_scroll", {
-    event: e,
-    id: param,
-  });
-};
-
-const select = createUICallback({
-  name: "select",
-  event: (e) => {
-    return requestSelect(e, () => getActionParam(e));
-  },
-  action: (value, { event }) => {
-    return requestSelect(event, () => value);
-  },
-});
-const unselect = createUICallback({
-  name: "unselect",
-  event: (e) => {
-    return requestUnselect(e, () => getActionParam(e));
-  },
-  action: (value, { event }) => {
-    return requestUnselect(event, () => value);
-  },
-});
-const requestSelect = (e, getSelectParam) => {
-  const selectTarget = getActionTarget(e, "select");
-  if (!selectTarget) {
-    return false;
-  }
-  const param = getSelectParam();
-  if (!param) {
-    console.warn(
-      `select action triggered but no action-param specified or returned by getSelectParam callback`,
-      e,
-    );
-    return false;
-  }
-  return dispatchCustomEvent(selectTarget, "navi_request_select", {
-    event: e,
-    id: param,
-  });
-};
-const requestUnselect = (e, getUnselectParam) => {
-  const selectTarget = getActionTarget(e, "select");
-  if (!selectTarget) {
-    return false;
-  }
-  const param = getUnselectParam();
-  if (!param) {
-    console.warn(
-      `unselect action triggered but no action-param specified or returned by getSelectParam callback`,
-      e,
-    );
-    return false;
-  }
-  return dispatchCustomEvent(selectTarget, "navi_request_unselect", {
-    event: e,
-    id: param,
-  });
-};
-
-/**
- * Updates the UI state of the closest ancestor field with the current value.
- * Use inside a custom picker popup on an input so the parent picker reflects
- * what is being typed/selected before the popup closes.
- *
- * @example
- * <Input type="text" action="update" />
- */
-const update = createUICallback({
-  name: "update",
-  action: (value, { event, actionTarget }) => {
-    return requestUpdate(event, value, { actionTarget });
-  },
-});
-const requestUpdate = (event, value, { actionTarget, isClear } = {}) => {
-  if (!actionTarget) {
-    actionTarget = getActionTarget(event);
-  }
-  if (!actionTarget) {
-    return false;
-  }
-  return dispatchRequestSetUIState(actionTarget, value, { event, isClear });
-};
-
-/**
- * Submits the closest ancestor field's action.
- * When triggered inside a popup (an element with `[aria-expanded]`), behaves
- * like `send` instead: closes the popup and, if a value is available, updates
- * the parent field with that value before closing.
- *
- * @example
- * <Button action="send">Confirm</Button>
- */
-const send = createUICallback({
-  name: "send",
-  event: (e) => {
-    const expandableEl = e.currentTarget.closest("[aria-expanded]");
-    if (expandableEl) {
-      return requestClose(e);
-    }
-    return requestClosestAction(e);
-  },
-  action: (value, { event }) => {
-    const expandableEl = event.currentTarget.closest("[aria-expanded]");
-    if (expandableEl) {
-      if (value !== undefined) {
-        requestUpdate(event, value);
-      }
-      return requestClose(event);
-    }
-    return requestClosestAction(event);
-  },
-});
-const submitSelector = `button[type="submit"], input[type="submit"], input[type="image"], [data-action="submit"]`;
-const requestClosestAction = (event) => {
-  const currentTarget = event.currentTarget;
-  const target = event.target;
-  const controlWithAction = findClosestControlWithAction(currentTarget);
-  if (!controlWithAction) {
-    console.warn(
-      `submit event triggered but no control with [data-action] found in event path`,
-      event,
-    );
-    return false;
-  }
-  let requester = target;
-  if (currentTarget.matches(submitSelector)) {
-    requester = currentTarget;
-  } else {
-    // when present, we use first button submitting the form as the requester
-    // not the input, it aligns with browser behavior where
-    // hitting Enter in a text input triggers the first submit button of the form, not the input itself
-    const firstButtonSubmitting =
-      controlWithAction.querySelector(submitSelector);
-    if (firstButtonSubmitting) {
-      requester = firstButtonSubmitting;
-    }
-  }
-  const allowed = dispatchRequestAction(controlWithAction, {
-    event,
-    requester,
-  });
-  const initiator = event.detail ? event.detail.eventChain[0] : event;
-  const { form } = currentTarget;
-  if (form) {
-    // prevent form submission when cliking buttons or pressing enter on inputs
-    initiator.preventDefault();
-  } else if (initiator.type === "keydown" && initiator.key === "Enter") {
-    // prevent triggering click on such button, they are already performing submit
-    // (this ensure enter inside a picker won't trigger picker button click)
-    initiator.preventDefault();
-  }
-  return allowed;
-};
-
-/**
- * Clears the value of the closest ancestor field then closes the popup.
- * Combines `update('')` + `close` in one action.
- *
- * @example
- * <Button action="clear">Clear</Button>
- */
-const clear = createUICallback({
-  name: "clear",
-  event: (event, { actionTarget, skipClose } = {}) => {
-    requestUpdate(event, "", { actionTarget, isClear: true });
-    if (!skipClose) {
-      const expandableEl = event.currentTarget.closest("[aria-expanded]");
-      if (expandableEl) {
-        return requestClose(event);
-      }
-    }
-    return true;
-  },
-  action: (v, { event, actionTarget }) => {
-    requestUpdate(event, "", { actionTarget, isClear: true });
-    const expandableEl = event.currentTarget.closest("[aria-expanded]");
-    if (expandableEl) {
-      return requestClose(event);
-    }
-    return true;
-  },
-});
-/**
- * Closes the nearest expandable ancestor (the element with `[aria-expanded]`).
- * When used on a button inside a picker popup, closing also triggers the
- * picker's action if the value changed since the popup was opened.
- *
- * @example
- * <Button action="close">Close</Button>
- */
-const close = createUICallback({
-  name: "close",
-  event: (event) => {
-    return requestClose(event);
-  },
-  action: (value, { event }) => {
-    return requestClose(event);
-  },
-});
-/**
- * Cancels the current edit and closes the popup without triggering the
- * picker's action. The picker restores the value it had when the popup opened.
- *
- * @example
- * <Button action="cancel">Cancel</Button>
- */
-const cancel = createUICallback({
-  name: "cancel",
-  event: (event) => {
-    return requestClose(event, { isCancel: true });
-  },
-  action: (_, { event }) => {
-    return requestClose(event, { isCancel: true });
-  },
-});
-const requestClose = (event, { isCancel = false } = {}) => {
-  const currentTarget = event.currentTarget;
-  const expandableEl = currentTarget.closest("[aria-expanded]");
-  if (!expandableEl) {
-    console.warn(
-      "close action triggered but no element with [aria-expanded] found in event path",
-      event,
-    );
-    return false;
-  }
-  return dispatchCustomEvent(expandableEl, "navi_request_close", {
-    event,
-    isCancel,
-  });
-};
-
-const getActionTarget = (e, actionName) => {
-  const currentTarget = e.currentTarget;
-  const actionTargetAttribute = currentTarget.getAttribute("action-target");
-  if (actionTargetAttribute) {
-    const actionTarget = document.getElementById(actionTargetAttribute);
-    if (!actionTarget) {
-      console.warn(
-        `action-target="${actionTargetAttribute}" specified but no element with that id found in the document`,
-        e,
-      );
-      return null;
-    }
-    return actionTarget;
-  }
-  const parentControl = getParentControl(currentTarget);
-  if (!parentControl) {
-    console.warn(
-      `${actionName} triggered but no element with [navi-control] found in event path`,
-      e,
-    );
-    return null;
-  }
-  return parentControl;
-};
-const getActionParam = (e) => {
-  const currentTarget = e.currentTarget;
-  const actionParamAttribute = currentTarget.getAttribute("action-param");
-  if (actionParamAttribute) {
-    return actionParamAttribute;
-  }
-  return null;
-};
-
-const STRING_ACTIONS = {
-  scroll,
-  select,
-  unselect,
-  update,
-
-  send,
-
-  close,
-  clear,
-  cancel,
-};
-
 // In-memory registry of all mounted ui state controllers keyed by their id.
 // Allows direct controller access without dispatching DOM events — used by external
 // callers (e.g. selectable_list) to call setUIState by id instead of via the DOM.
 const controllersById = new Map();
 const getUIStateControllerById = (id) => controllersById.get(id);
+
+// Registry for non-serializable JS values that cannot be written to DOM attributes as-is.
+// When a value is an object/array, we store it here and write a reference string to the DOM
+// instead of "[object Object]". Console-inspectable via window.__navi_js('id').
+// The controller id is used as key — if the controller has no id, the value is not registered.
+const naviJsRegistry = new Map();
+window.__navi_js = (id) => naviJsRegistry.get(id);
+const isSerializableAsDomValue = (value) => {
+  if (value === null || value === undefined) {
+    return true;
+  }
+  const type = typeof value;
+  return type === "string" || type === "number" || type === "boolean";
+};
+const syncDomValue = (uiStateController, newUIState) => {
+  const el = uiStateController.elementRef.current;
+  if (!el) {
+    return;
+  }
+  const propName = uiStateController.statePropName;
+  const propValue = uiStateController.getPropFromState(newUIState);
+  const domValue = uiStateController.toControlHostValue(propValue);
+  if (isSerializableAsDomValue(domValue)) {
+    el[propName] = domValue;
+  } else {
+    const controllerId = uiStateController.id;
+    if (controllerId) {
+      naviJsRegistry.set(controllerId, domValue);
+      el[propName] = `window.__navi_js('${controllerId}')`;
+    }
+  }
+};
 
 // In-memory registry for radio controllers, keyed by input name.
 // Allows radio sibling unchecking without querying the DOM — necessary when
@@ -25047,62 +25300,93 @@ const getUIStateControllerById = (id) => controllersById.get(id);
 // Form scoping is reproduced by comparing parentUIStateController references.
 const radioControllersByName = new Map();
 
-const registerRadioController = (uiStateController) => {
-  const { name } = uiStateController;
-  if (!name) {
-    return;
+const onUIStateControllerCreated = (uiStateController) => {
+  const { id, name, controlType } = uiStateController;
+  if (id) {
+    controllersById.set(id, uiStateController);
   }
-  let set = radioControllersByName.get(name);
-  if (!set) {
-    set = new Set();
-    radioControllersByName.set(name, set);
+  if (
+    controlType === "input" &&
+    uiStateController.props.type === "radio" &&
+    name
+  ) {
+    let set = radioControllersByName.get(name);
+    if (!set) {
+      set = new Set();
+      radioControllersByName.set(name, set);
+    }
+    set.add(uiStateController);
   }
-  set.add(uiStateController);
 };
 
-const unregisterRadioController = (uiStateController) => {
-  const { name } = uiStateController;
-  if (!name) {
-    return;
+const onUIStateControllerDestroyed = (uiStateController) => {
+  const { id, name, controlType } = uiStateController;
+  if (id) {
+    controllersById.delete(id);
+    naviJsRegistry.delete(id);
   }
-  const set = radioControllersByName.get(name);
-  if (!set) {
-    return;
+  if (
+    controlType === "input" &&
+    uiStateController.props.type === "radio" &&
+    name
+  ) {
+    const set = radioControllersByName.get(name);
+    if (set) {
+      set.delete(uiStateController);
+      if (set.size === 0) {
+        radioControllersByName.delete(name);
+      }
+    }
   }
-  set.delete(uiStateController);
-  if (set.size === 0) {
-    radioControllersByName.delete(name);
-  }
-};
-const debugUIState = (...args) => {
-};
-const debugUIGroup = (...args) => {
 };
 
+/**
+ * Minimal interface that any object placed in `ParentUIStateControllerContext` must satisfy.
+ * Both `useUIGroupStateController` and `useUIFacadeStateController` implement this interface.
+ *
+ * ```ts
+ * interface UIStateController {
+ *   controlType: string;          // Used for debug logging
+ *   uiStateSignal: Signal;        // Accessed by button children to inherit parent value
+ *   registerChild(child): void;   // Called on child mount
+ *   onChildInteraction(child, e, { stateChanged: boolean }): void; // Called on user interaction
+ *   unregisterChild(child): void; // Called on child unmount
+ * }
+ * ```
+ */
 const ParentUIStateControllerContext = createContext();
 
 /**
- * UI State Controller Hook
+ * Manages the UI state of a single interactive leaf control (input, checkbox, radio, button…).
  *
- * Manages the relationship between external state (props) and UI state (what user sees).
- * Allows UI state to diverge temporarily for responsive interactions, with mechanisms
- * to sync back to external state when needed.
+ * **Leaf vs group**: a leaf control owns one atomic value (e.g. a string, a boolean).
+ * Use `useUIGroupStateController` when multiple children aggregate into one value.
  *
- * Key features:
- * - Immediate UI updates for responsive interactions
- * - State divergence with sync capabilities (resetUIState)
- * - Group integration for coordinated form inputs
- * - External control via DOM events (navi_set_ui_state / navi_request_reset_ui_state)
- * - Error recovery and form reset support
+ * **State vs UI state**:
+ * - `state` — the last value acknowledged by the action/form (the "truth" coming from outside).
+ * - `uiState` — what the user currently sees, which may diverge from `state` while an action
+ *   is in flight or the user is mid-edit. On reset, uiState snaps back to state.
  *
- * State change flow:
- * All state changes (interaction, action result, external reset) go through DOM events:
- * - `navi_set_ui_state` dispatched on the field's DOM element triggers setUIState
- * - `navi_request_reset_ui_state` dispatched on the field's DOM element resets to controller.state
- * This ensures any subscriber (e.g. useUIState) receives every state change regardless of origin.
+ * **setUIState flow** (all state changes go through this path):
+ * 1. Update DOM element value synchronously (avoids a re-render flash).
+ * 2. Update `uiState` and the reactive signal.
+ * 3. Uncheck radio siblings (radio-only).
+ * 4. Dispatch `navi_ui_state_change` on the element so external subscribers stay in sync.
+ * 5. Call `uiAction` + `uiActionInternal` + `command` (user-observable reactions).
+ * 6. Notify the parent group controller (if any) via `notifyParentAboutChildInteraction`.
+ * 7. Dispatch a synthetic `input` event so `addInputEffect` / `navi_change` listeners fire.
  *
- * The controller stores `elementRef` so parent group controllers can dispatch DOM events
- * directly on child DOM elements when performing group-level operations like resetUIState.
+ * When `stateIsTheSame` (value didn't change):
+ * - For **buttons**: still fires reactions (a click is always meaningful).
+ * - For **radios**: fires reactions + notifies the parent group so it can fire its own
+ *   `uiAction`/`command` (re-clicking an already-selected radio is a valid user gesture).
+ * - For everything else: no-op.
+ *
+ * **internalBehavior events** (e.g. radio_sibling_uncheck, state_prop re-sync):
+ * skip reactions and parent notification — they are programmatic, not user-initiated.
+ *
+ * The controller exposes `elementRef` so parent groups can dispatch DOM events on children
+ * (e.g. `resetUIState` cascading `navi_reset_ui_state`).
  */
 const useUIStateController = (
   props,
@@ -25117,13 +25401,13 @@ const useUIStateController = (
     uiActionInternal,
     persists,
     allowNameless = false,
-    debugInteraction,
   } = {},
 ) => {
+  const debugUIState = useDebugUIState();
   const uiStateControllerRef = useRef();
   const parentUIStateController = useContext(ParentUIStateControllerContext);
   const formContext = useContext(FormContext);
-  const { id, name, uiAction, action } = props;
+  const { id, name, uiAction, action, command } = props;
   const ref = props.ref;
   const isProxy = Boolean(props["navi-control-proxy-for"]);
   const hasStateProp = Object.hasOwn(props, statePropName);
@@ -25142,7 +25426,8 @@ const useUIStateController = (
     !action &&
     !formContext &&
     !parentUIStateController &&
-    !isProxy;
+    !isProxy &&
+    !command;
   const readOnly = uncontrolled && hasStateProp;
 
   if (persists === undefined && formContext) {
@@ -25175,28 +25460,21 @@ const useUIStateController = (
 
   const [
     notifyParentAboutChildMount,
-    notifyParentAboutChildUIStateChange,
+    notifyParentAboutChildInteraction,
     notifyParentAboutChildUnmount,
   ] = useParentControllerNotifiers(
     parentUIStateController,
-    uiStateControllerRef);
+    uiStateControllerRef,
+    controlType,
+    debugUIState,
+  );
   useLayoutEffect(() => {
     const controller = uiStateControllerRef.current;
-    if (id) {
-      controllersById.set(id, controller);
-    }
+    onUIStateControllerCreated(controller);
     notifyParentAboutChildMount();
-    if (isRadio) {
-      registerRadioController(controller);
-    }
     return () => {
-      if (id) {
-        controllersById.delete(id);
-      }
       notifyParentAboutChildUnmount();
-      if (isRadio) {
-        unregisterRadioController(controller);
-      }
+      onUIStateControllerDestroyed(controller);
     };
   }, []);
 
@@ -25256,9 +25534,7 @@ const useUIStateController = (
           uiStateController.state = stateFromProp;
           uiStateController.setUIState(
             uiStateController.getPropFromState(state),
-            new CustomEvent("state_prop", {
-              detail: { internalBehavior: true },
-            }),
+            new CustomEvent("state_prop_change"),
           );
         }
       } else if (uiStateController.hasStateProp) {
@@ -25293,6 +25569,21 @@ const useUIStateController = (
     },
     setUIState: (prop, e) => {
       const newUIState = uiStateController.getStateFromProp(prop);
+      const triggerCommand = () => {
+        const command = uiStateController.props.command;
+        if (command) {
+          const element = uiStateController.elementRef.current;
+          if (element) {
+            dispatchNaviCommand(element, command, e);
+          }
+        }
+      };
+      const onUIAction = () => {
+        uiActionInternal?.(newUIState, e);
+        uiAction?.(newUIState, e);
+        triggerCommand();
+      };
+
       const controllerSig = getElementSignature(e.currentTarget || ref.current);
       if (persists) {
         setNavState(prop);
@@ -25301,35 +25592,39 @@ const useUIStateController = (
       const stateIsTheSame = compareTwoJsValues(newUIState, currentUIState);
       if (stateIsTheSame) {
         if (controlType === "button") {
-          debugInteraction(
+          if (!shouldNotifyParent(e)) {
+            // Programmatic re-render with same value (e.g. state_prop from _checkForUpdates
+            // on a button with a new object reference but same content) — not a user action,
+            // do NOT fire the command or we get an infinite loop.
+            return true;
+          }
+          debugUIState(
             e,
             `${controllerSig}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> trigger button action`,
           );
-          uiActionInternal?.(newUIState, e);
-          uiAction?.(newUIState, e);
+          onUIAction();
           return true;
         }
-        debugInteraction(
+        debugUIState(
           e,
           `${controllerSig}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> state unchanged, no update needed`,
         );
+        if (
+          controlType === "input" &&
+          uiStateController.props.type === "radio" &&
+          shouldNotifyParent(e)
+        ) {
+          onUIAction();
+          notifyParentAboutChildInteraction(e, { stateChanged: false });
+        }
         return false;
       }
-      debugInteraction(
-        e,
-        `${controllerSig}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> updating from ${JSON.stringify(currentUIState)}`,
-      );
       const el = ref.current;
       if (el) {
         // set immediatly (don't wait for preact re-render) so ui is in the right state for:
         // - side effect
         // - any "input" event that might be dispatched below
-        const propValue = uiStateController.getPropFromState(newUIState);
-        debugInteraction(
-          e,
-          `[${statePropName}] = ${JSON.stringify(propValue)};`,
-        );
-        el[statePropName] = uiStateController.toControlHostValue(propValue);
+        syncDomValue(uiStateController, newUIState);
       }
       uiStateController.uiState = newUIState;
       ownUIStateSignal.value = newUIState;
@@ -25344,9 +25639,8 @@ const useUIStateController = (
       if (isRadio && newUIState && uiStateController.name && !controlProxyFor) {
         const siblings = radioControllersByName.get(uiStateController.name);
         if (siblings) {
-          const siblingUncheckEvent = new CustomEvent("radio_sibling_uncheck", {
-            detail: { event: e, internalBehavior: true },
-          });
+          const siblingUncheckEvent = new CustomEvent("radio_sibling_uncheck");
+          chainEvent(siblingUncheckEvent, e);
           for (const siblingController of siblings) {
             if (siblingController === uiStateController) {
               continue;
@@ -25361,7 +25655,7 @@ const useUIStateController = (
           }
         }
       }
-      debugInteraction(e, `publishUIState(${JSON.stringify(newUIState)})`);
+      debugUIState(e, `publishUIState(${JSON.stringify(newUIState)})`);
       publishUIState(newUIState, e);
       // Always notify the element that its UI state changed.
       // Listeners use this to stay in sync (e.g. input_effect.js tracks currentState,
@@ -25394,17 +25688,22 @@ const useUIStateController = (
           });
         }
       }
-      const internalBehavior = e.detail?.internalBehavior;
-      if (internalBehavior) {
+      if (!shouldNotifyParent(e)) {
+        // Still fire uiAction so external listeners (e.g. signals) stay in
+        // sync, but do NOT fire the command and do NOT notify the parent —
+        // both would cause an infinite loop when a parent cascades state
+        // down to its children (child command would re-trigger the cascade).
+        uiActionInternal?.(newUIState, e);
+        uiAction?.(newUIState, e);
         return true;
       }
-      notifyParentAboutChildUIStateChange(e);
+      notifyParentAboutChildInteraction(e, { stateChanged: true });
       if (controlProxyFor) {
         // Proxy: forward the state change to the real input
         // The real input will handle its own UIState update + synthetic input.
         const targetController = getUIStateControllerById(controlProxyFor);
         if (targetController) {
-          debugInteraction(
+          debugUIState(
             e,
             `forwarding set_ui_state "${prop}" to ${getElementSignature(targetController.elementRef.current)}`,
           );
@@ -25420,13 +25719,13 @@ const useUIStateController = (
         if (!existingInputEvent) {
           if (el.tagName === "INPUT") {
             if (el.type === "radio" || el.type === "checkbox") {
-              debugInteraction(
+              debugUIState(
                 e,
                 "dispatching synthetic input event without data for checkbox/radio",
               );
               el.dispatchEvent(new Event("input", { bubbles: true }));
             } else {
-              debugInteraction(
+              debugUIState(
                 e,
                 `dispatching synthetic input event with data "${newUIState}" for input`,
               );
@@ -25443,16 +25742,17 @@ const useUIStateController = (
           // TODO: select, textarea
         }
       }
-      uiActionInternal?.(newUIState, e);
-      uiAction?.(newUIState, e);
+      onUIAction();
       return true;
     },
+    clearUIState: (e) => {
+      uiStateController.setUIState("", e);
+    },
     resetUIState: (e) => {
-      dispatchRequestSetUIState(e.currentTarget, uiStateController.state, {
-        event: e,
-      });
+      uiStateController.setUIState(uiStateController.state, e);
     },
     actionEnd: () => {
+      debugUIState(`"${controlType}" actionEnd called`);
       if (persists) {
         setNavState(undefined);
       }
@@ -25473,31 +25773,41 @@ const useParentControllerNotifiers = (
   parentUIStateController,
   uiStateControllerRef,
   controlType,
+  debugUIState,
 ) => {
   return useMemo(() => {
     if (!parentUIStateController) {
       return NO_PARENT;
     }
 
-    parentUIStateController.controlType;
+    const parentControlType = parentUIStateController.controlType;
     const notifyParentAboutChildMount = () => {
       const uiStateController = uiStateControllerRef.current;
+      debugUIState(`"${controlType}" registering into "${parentControlType}"`);
       parentUIStateController.registerChild(uiStateController);
     };
 
-    const notifyParentAboutChildUIStateChange = (e) => {
+    const notifyParentAboutChildInteraction = (e, { stateChanged }) => {
       const uiStateController = uiStateControllerRef.current;
-      parentUIStateController.onChildUIStateChange(uiStateController, e);
+      debugUIState(
+        `"${controlType}" notifying "${parentControlType}" of child interaction (stateChanged: ${stateChanged})`,
+      );
+      parentUIStateController.onChildInteraction(uiStateController, e, {
+        stateChanged,
+      });
     };
 
     const notifyParentAboutChildUnmount = () => {
       const uiStateController = uiStateControllerRef.current;
+      debugUIState(
+        `"${controlType}" unregistering from "${parentControlType}"`,
+      );
       parentUIStateController.unregisterChild(uiStateController);
     };
 
     return [
       notifyParentAboutChildMount,
-      notifyParentAboutChildUIStateChange,
+      notifyParentAboutChildInteraction,
       notifyParentAboutChildUnmount,
     ];
   }, []);
@@ -25505,71 +25815,55 @@ const useParentControllerNotifiers = (
 
 /**
  * UI Group State Controller Hook
+/**
+ * Manages the aggregated UI state of a group of child controls (radio list, checkbox list, etc.).
  *
- * This hook manages a collection of child UI state controllers and aggregates their states
- * into a unified group state. It provides a way to coordinate multiple form inputs that
- * work together as a logical unit.
+ * Children register themselves automatically on mount and unregister on unmount.
+ * Whenever a child has a user interaction, the group re-aggregates all child states
+ * via `aggregateChildStates` and reacts accordingly.
  *
- * What it provides:
+ * **Three distinct methods — each with a clear responsibility**:
  *
- * 1. **Child State Aggregation**:
- *    - Collects state from multiple child UI controllers
- *    - Combines them into a single meaningful group state
- *    - Updates group state automatically when any child changes
+ * - `setUIState(newUIState, e)` — called when a child interaction **changes** the aggregated value.
+ *   Updates the group state, then calls `onInteraction(e)` for user-observable reactions
+ *   (uiAction, command), then dispatches `navi_ui_state_change` so `control_hooks.jsx`
+ *   can trigger the action pipeline (constraints → execute action).
  *
- * 2. **Child Filtering**:
- *    - Can filter which child controllers to include based on component type
- *    - Useful for mixed content where only specific inputs matter
- *    - Enables type-safe aggregation patterns
+ * - `syncInternalState(newUIState)` — called silently during mount/unmount/render-batch.
+ *   Updates state and signal with no external reactions whatsoever.
  *
- * 3. **Group Operations**:
- *    - Provides `resetUIState()` that cascades to all monitored children
- *    - Dispatches `navi_request_reset_ui_state` DOM events on each child's DOM element
- *    - Children handle the event independently, allowing nested groups to cascade further
- *    - Enables group-level operations like "clear all" or "reset form section"
+ * - `onInteraction(e)` — called when a child interaction does **not** change the aggregated
+ *   value (e.g. re-clicking an already-selected radio). Fires `uiAction` + `command` only;
+ *   does not touch state, does not trigger the action pipeline.
  *
- * 4. **External State Management**:
- *    - Notifies external code of group state changes via `onUIStateChange`
- *    - Allows external systems to react to group-level state changes
- *    - Supports complex form validation and submission logic
+ * **Child interaction flow**:
+ * 1. Child leaf fires `notifyParentAboutChildInteraction(e, { stateChanged })`.
+ * 2. Group's `onChildInteraction` receives it.
+ *    - If `stateChanged=true`: re-aggregates → `setUIState` → full reactions + action pipeline.
+ *    - If `stateChanged=false`: calls `onInteraction` → uiAction + command only.
  *
- * Why use it:
- * - When you have multiple related inputs that should be treated as one logical unit
- * - For implementing checkbox lists, radio groups, or form sections
- * - When you need to perform operations on multiple inputs simultaneously
- * - To aggregate input states for validation or submission
- *
- * How it works:
- * - Child controllers automatically register themselves when mounted
- * - Group controller listens for child state changes and re-aggregates
- * - Custom aggregation function determines how child states combine
- * - Group state updates trigger notifications to external code
- *
- * @param {Object} props - Component props containing onUIStateChange callback
- * @param {string} controlType - Type identifier for this group controller
- * @param {Object} config - Configuration object
- * @param {string} [config.childControlType] - Filter children by this type (e.g., "checkbox")
- * @param {Function} config.aggregateChildStates - Function to aggregate child states
- * @param {any} [config.emptyState] - State to use when no children have values
- * @returns {Object} UI group state controller
- *
- * Usage Examples:
- * - **Checkbox List**: Aggregates multiple checkboxes into array of checked values
- * - **Radio Group**: Manages radio buttons to ensure single selection
- * - **Form Section**: Groups related inputs for validation and reset operations
- * - **Dynamic Lists**: Handles variable number of repeated input groups
+ * **Filtering**: `childControlFilter` can exclude certain child types from aggregation
+ * (e.g. ignoring buttons inside a selectable list).
  */
 const useUIGroupStateController = (
   props,
   controlType,
-  { stateType, childControlFilter, aggregateChildStates, debugAction },
+  {
+    stateType,
+    childControlFilter,
+    aggregateChildStates,
+    wantRequesterButtonState,
+    uiActionInternal,
+  },
 ) => {
+  const debugUIGroup = useDebugUIState();
   if (typeof aggregateChildStates !== "function") {
     throw new TypeError("aggregateChildStates must be a function");
   }
   const parentUIStateController = useContext(ParentUIStateControllerContext);
-  const { id, name, value } = props;
+  const { id, name, value, uiAction, command } = props;
   const ref = props.ref;
+  const uiActionRef = useRef(uiAction);
   const fallbackState =
     stateType === "array"
       ? EMPTY_ARRAY
@@ -25587,11 +25881,14 @@ const useUIGroupStateController = (
 
   const [
     notifyParentAboutChildMount,
-    notifyParentAboutChildUIStateChange,
+    notifyParentAboutChildInteraction,
     notifyParentAboutChildUnmount,
   ] = useParentControllerNotifiers(
     parentUIStateController,
-    uiStateControllerRef);
+    uiStateControllerRef,
+    controlType,
+    debugUIGroup,
+  );
   useLayoutEffect(() => {
     if (id) {
       controllersById.set(id, uiStateControllerRef.current);
@@ -25605,7 +25902,7 @@ const useUIGroupStateController = (
     };
   }, []);
 
-  const onChange = (_, e, { notifyExternal = true } = {}) => {
+  const onChange = (e, { notifyExternal }) => {
     if (groupIsRenderingRef.current) {
       pendingChangeRef.current = true;
       return;
@@ -25616,23 +25913,57 @@ const useUIGroupStateController = (
     );
     const groupUIState =
       aggChildState === undefined ? fallbackState : aggChildState;
-    debugAction(
+    debugUIGroup(
       e,
       `${controlType}.getUIState -> ${JSON.stringify(groupUIState)}`,
     );
     const uiStateController = uiStateControllerRef.current;
-    uiStateController.setUIState(groupUIState, e, { notifyExternal });
+    if (notifyExternal) {
+      applyState(groupUIState, e);
+    } else {
+      uiStateController.syncInternalState(groupUIState, e);
+    }
+  };
+
+  // Applies the aggregated state: updates signal, fires uiAction/command/navi_ui_state_change,
+  // and notifies the parent. Called both from onChange (after child interaction) and from
+  // setUIState (after cascading to children).
+  const applyState = (newUIState, e, { internalBehavior = false } = {}) => {
+    const uiStateController = uiStateControllerRef.current;
+    const currentUIState = uiStateController.uiState;
+    uiStateController.uiState = newUIState;
+    uiStateSignal.value = newUIState;
+    debugUIGroup(
+      e,
+      `${controlType}.applyState(${JSON.stringify(newUIState)}, "${e.type}") -> updates from ${JSON.stringify(currentUIState)} to ${JSON.stringify(newUIState)}`,
+    );
+    publishUIState(newUIState);
+    if (internalBehavior) {
+      // Fire uiAction only — skip command to avoid re-triggering the same command
+      // that caused this setUIState call in the first place.
+      const uiAction = uiActionRef.current;
+      uiAction?.(newUIState, e);
+      uiActionInternal?.(newUIState, e);
+    } else {
+      uiStateController.onInteraction(e);
+    }
+    const el = ref.current;
+    if (el) {
+      dispatchInternalCustomEvent(el, "navi_ui_state_change", {
+        event: e,
+        value: newUIState,
+      });
+    }
+    notifyParentAboutChildInteraction(e, { stateChanged: true });
   };
 
   useLayoutEffect(() => {
     groupIsRenderingRef.current = false;
     if (pendingChangeRef.current) {
       pendingChangeRef.current = false;
-      onChange(
-        null,
-        new CustomEvent(`${controlType}_batched_ui_state_update`),
-        { notifyExternal: false },
-      );
+      onChange(new CustomEvent(`${controlType}_batched_ui_state_update`), {
+        notifyExternal: false,
+      });
     }
   });
 
@@ -25641,8 +25972,12 @@ const useUIGroupStateController = (
     existingUIStateController.id = id;
     existingUIStateController.name = name;
     existingUIStateController.value = value;
+    uiActionRef.current = uiAction;
     return existingUIStateController;
   }
+  debugUIGroup(
+    `Creating "${controlType}" ui state controller (monitoring some descendants ui state(s))"`,
+  );
 
   const [publishUIState, subscribeUIState] = createPubSub();
   const uiStateSignal = signal(fallbackState);
@@ -25662,21 +25997,98 @@ const useUIGroupStateController = (
     value,
     uiState: fallbackState,
     uiStateSignal,
+    wantRequesterButtonState,
     elementRef: ref,
     getPropFromState: (uiState) => uiState,
-    setUIState: (newUIState, e, { notifyExternal = true } = {}) => {
+    // Cascades the new value to each monitored child (fires each child's uiAction
+    // via internalBehavior), then re-aggregates and fires this group's own reactions.
+    // Cascade strategy depends on controlType:
+    //   - "radio_group": child gets true/false based on whether its value matches the scalar state.
+    //   - "checkbox_group": child gets true/false based on whether its value is in the state array.
+    //   - default (ControlGroup): child gets the value at its named key in the state object.
+    setUIState: (newUIState, e) => {
+      if (
+        stateType === "object" &&
+        (newUIState === null || typeof newUIState !== "object")
+      ) {
+        console.warn(
+          `[${controlType}] setUIState received a non-object value: ${JSON.stringify(newUIState)} (expected an object). Ignoring.`,
+          newUIState,
+        );
+        return;
+      }
+      if (stateType === "array" && !Array.isArray(newUIState)) {
+        console.warn(
+          `[${controlType}] setUIState received a non-array value: ${JSON.stringify(newUIState)} (expected an array). Ignoring.`,
+          newUIState,
+        );
+        return;
+      }
+      const propagateDownEvent = new CustomEvent("propagate_down_set_ui_state");
+      chainEvent(propagateDownEvent, e);
+      for (const childUIStateController of childUIStateControllerArray) {
+        if (!isMonitoringChild(childUIStateController)) {
+          continue;
+        }
+        if (childUIStateController.controlType === "button") {
+          continue;
+        }
+        if (controlType === "radio_group") {
+          const childChecked =
+            childUIStateController.props.value === newUIState;
+          childUIStateController.setUIState(childChecked, propagateDownEvent);
+        } else if (controlType === "checkbox_group") {
+          const childChecked =
+            Array.isArray(newUIState) &&
+            newUIState.includes(childUIStateController.props.value);
+          childUIStateController.setUIState(childChecked, propagateDownEvent);
+        } else {
+          const childName = childUIStateController.name;
+          if (
+            childName &&
+            newUIState !== null &&
+            typeof newUIState === "object" &&
+            Object.prototype.hasOwnProperty.call(newUIState, childName)
+          ) {
+            childUIStateController.setUIState(
+              newUIState[childName],
+              propagateDownEvent,
+            );
+          }
+        }
+      }
+      // Re-aggregate from children and apply — do NOT call onChange to avoid a loop
+      // (onChange would call setUIState again, which would cascade again).
+      const aggChildState = aggregateChildStates(
+        childUIStateControllerArray,
+        fallbackState,
+      );
+      const groupUIState =
+        aggChildState === undefined ? fallbackState : aggChildState;
+      applyState(groupUIState, e, { internalBehavior: true });
+    },
+    // Called on mount/unmount/render-batch: updates state silently with no external reactions.
+    syncInternalState: (newUIState) => {
       const currentUIState = uiStateController.uiState;
       if (newUIState === currentUIState) {
         return;
       }
       uiStateController.uiState = newUIState;
       uiStateSignal.value = newUIState;
-      debugUIGroup(
-        `${controlType}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> updates from ${JSON.stringify(currentUIState)} to ${JSON.stringify(newUIState)}`,
-      );
       publishUIState(newUIState);
-      if (notifyExternal) {
-        notifyParentAboutChildUIStateChange(e);
+    },
+    // Called when a child interaction does NOT change the aggregated value (e.g. radio re-clicked).
+    // Fires uiAction + command without touching state or the action pipeline.
+    onInteraction: (e) => {
+      const currentUIState = uiStateController.uiState;
+      const uiAction = uiActionRef.current;
+      uiAction?.(currentUIState, e);
+      uiActionInternal?.(currentUIState, e);
+      if (command) {
+        const el = ref.current;
+        if (el) {
+          dispatchNaviCommand(el, command, e);
+        }
       }
     },
     registerChild: (childUIStateController) => {
@@ -25688,23 +26100,28 @@ const useUIGroupStateController = (
       debugUIGroup(
         `${controlType}.registerChild("${childControlType}") -> registered (total: ${childUIStateControllerArray.length})`,
       );
-      onChange(
-        childUIStateController,
-        new CustomEvent(`${childControlType}_mount`),
-        { notifyExternal: false },
-      );
+      onChange(new CustomEvent(`${childControlType}_mount`), {
+        notifyExternal: false,
+        // childUIStateController,
+      });
     },
-    onChildUIStateChange: (childUIStateController, e) => {
+    onChildInteraction: (childUIStateController, e, { stateChanged }) => {
       if (!isMonitoringChild(childUIStateController)) {
         return;
       }
       const childControlType = childUIStateController.controlType;
       debugUIGroup(
-        `${controlType}.onChildUIStateChange("${childControlType}") to ${JSON.stringify(
+        `${controlType}.onChildInteraction("${childControlType}") stateChanged=${stateChanged} -> child state: ${JSON.stringify(
           childUIStateController.uiState,
         )}`,
       );
-      onChange(childUIStateController, e);
+      if (stateChanged) {
+        // Value changed: re-aggregate and fire all reactions (uiAction, command, action pipeline).
+        onChange(e, { notifyExternal: true });
+      } else {
+        // Value unchanged (e.g. radio re-clicked): fire uiAction + command only.
+        uiStateController.onInteraction(e);
+      }
     },
     unregisterChild: (childUIStateController) => {
       if (!isMonitoringChild(childUIStateController)) {
@@ -25713,28 +26130,51 @@ const useUIGroupStateController = (
       const childControlType = childUIStateController.controlType;
       const index = childUIStateControllerArray.indexOf(childUIStateController);
       if (index === -1) {
+        debugUIGroup(
+          `${controlType}.unregisterChild("${childControlType}") -> not found`,
+        );
         return;
       }
       childUIStateControllerArray.splice(index, 1);
       debugUIGroup(
         `${controlType}.unregisterChild("${childControlType}") -> unregisteed (remaining: ${childUIStateControllerArray.length})`,
       );
-      onChange(
-        childUIStateController,
-        new CustomEvent(`${childControlType}_unmount`),
-        { notifyExternal: false },
-      );
+      onChange(new CustomEvent(`${childControlType}_unmount`), {
+        notifyExternal: false,
+        // childUIStateController,
+      });
     },
     resetUIState: (e) => {
+      const propagateDownResetEvent = new CustomEvent(
+        "propagate_down_reset_ui_state",
+      );
+      chainEvent(propagateDownResetEvent, e);
       for (const childUIStateController of childUIStateControllerArray) {
         if (!isMonitoringChild(childUIStateController)) {
           continue;
         }
-        const el = childUIStateController.elementRef?.current;
-        if (el) {
-          dispatchRequestResetUIState(el, e);
+        if (childUIStateController.controlType === "button") {
+          continue;
         }
+        childUIStateController.resetUIState(propagateDownResetEvent);
       }
+      onChange(e, { notifyExternal: true });
+    },
+    clearUIState: (e) => {
+      const propagateDownClearEvent = new CustomEvent(
+        "propagate_down_clear_ui_state",
+      );
+      chainEvent(propagateDownClearEvent, e);
+      for (const childUIStateController of childUIStateControllerArray) {
+        if (!isMonitoringChild(childUIStateController)) {
+          continue;
+        }
+        if (childUIStateController.controlType === "button") {
+          continue;
+        }
+        childUIStateController.clearUIState(propagateDownClearEvent);
+      }
+      onChange(e, { notifyExternal: true });
     },
     actionEnd: (e) => {
       for (const childUIStateController of childUIStateControllerArray) {
@@ -25761,6 +26201,115 @@ const useUIGroupStateController = (
 // array (never undefined) and callers don't get a new reference each render.
 const EMPTY_ARRAY = [];
 const EMPTY_OBJECT = {};
+
+/**
+ * Facade UI state controller — establishes a transparent 1:1 sync between
+ * the picker's hidden input and the first child control inside the picker popup.
+ *
+ * **Relationship**: picker input ↔ first child (Input, ControlGroup, …)
+ *
+ * - Child → picker input: when the child's UI state changes (user interaction),
+ *   `onChildInteraction` forwards the new value to the picker input using
+ *   `dispatchRequestSetUIState` with `internalBehavior: true` so the picker input
+ *   updates without triggering another propagation cycle.
+ *
+ * - Picker input → child: we listen to `navi_ui_state_change` on the picker
+ *   input element. When the event fires AND we are not currently in a
+ *   child→picker propagation (`updatingRef`), we push the new value down to
+ *   the child with `internalBehavior: true`.
+ *
+ * The `updatingRef` flag breaks the potential loop:
+ *   child changes → we update picker input → navi_ui_state_change fires →
+ *   we see updatingRef=true → skip → no loop.
+ *
+ * This removes the need for `command="--navi-update"` on controls placed
+ * inside the picker popup. It also means `commands.js` no longer has to
+ * manually re-dispatch to inner controls.
+ */
+const useUIFacadeStateController = (uiStateController) => {
+  const firstChildControllerRef = useRef(null);
+  const updatingRef = useRef(false);
+
+  useLayoutEffect(() => {
+    return uiStateController.subscribe((newUIState, e) => {
+      if (updatingRef.current) {
+        return;
+      }
+      const child = firstChildControllerRef.current;
+      if (!child) {
+        return;
+      }
+      updatingRef.current = true;
+      const propagateDownEvent = new CustomEvent("propagate_down_set_ui_state");
+      chainEvent(propagateDownEvent, e);
+      child.setUIState(newUIState, propagateDownEvent);
+      updatingRef.current = false;
+    });
+  }, []);
+
+  return useMemo(
+    () => ({
+      controlType: "facade",
+      uiStateSignal: uiStateController.uiStateSignal,
+      registerChild: (child) => {
+        if (!firstChildControllerRef.current) {
+          firstChildControllerRef.current = child;
+        } else {
+          console.warn(
+            `[useUIFacadeStateController] A second child ("${child.controlType}"${child.name ? ` name="${child.name}"` : ""}) tried to register in the picker facade. ` +
+              `The facade only syncs with the first child — wrap multiple controls in a single ControlGroup.`,
+            child,
+          );
+        }
+      },
+      unregisterChild: (child) => {
+        if (firstChildControllerRef.current === child) {
+          firstChildControllerRef.current = null;
+        }
+      },
+      onChildInteraction: (child, e, { stateChanged }) => {
+        if (!stateChanged) {
+          return;
+        }
+        if (child !== firstChildControllerRef.current) {
+          return;
+        }
+        updatingRef.current = true;
+        const propagateUpEvent = new CustomEvent("facade_propagate_up", {
+          detail: {},
+        });
+        chainEvent(propagateUpEvent, e);
+        uiStateController.setUIState(child.uiState, propagateUpEvent);
+        updatingRef.current = false;
+      },
+    }),
+    [],
+  );
+};
+
+/**
+ * Returns true when `e` should trigger parent notification (child → parent bubbling).
+ *
+ * Events that originate from the parent (or from siblings) should NOT bubble back up
+ * to avoid infinite loops. The event type itself carries this information:
+ *
+ * - `"state_prop_change"` — re-syncing with the external `state` prop (`_checkForUpdates`).
+ * - `"radio_sibling_uncheck"` — a radio sibling is being unchecked programmatically.
+ * - `"propagate_down_set_ui_state"` / `"propagate_down_reset_ui_state"` / `"propagate_down_clear_ui_state"` —
+ *   parent (group or facade) is pushing state down to children.
+ *
+ * Anything else is a real user interaction and should bubble.
+ */
+const TYPES_WITHOUT_PARENT_NOTIFICATION = new Set([
+  "state_prop_change",
+  "radio_sibling_uncheck",
+  "propagate_down_set_ui_state",
+  "propagate_down_reset_ui_state",
+  "propagate_down_clear_ui_state",
+]);
+const shouldNotifyParent = (e) => {
+  return !TYPES_WITHOUT_PARENT_NOTIFICATION.has(e.type);
+};
 
 /**
  * Installs a navi_constraint_message event listener on the given element.
@@ -25821,6 +26370,15 @@ const useConstraintMessages = (elementRef, props) => {
  *    a debounced action. The request-action event chain handles the timing centrally
  *    rather than each component having to manage its own debounce logic.
  */
+const NO_ACTION_YET = Symbol("no_action_yet");
+
+// Resets field-specific contexts so nested fields inside this component
+// don't inherit the current field's id, message props, or interface reporting.
+// Also cuts the parent state controller chain: children of a regular (leaf)
+// field are custom UI — they should never register as form participants.
+// A controlgroup is always enough: when a group (SelectableList, etc.) is
+// present, the form gets the group's aggregated value; individual controls
+// inside the group register to the group, not the form.
 const ControlChildrenWrapper = ({
   children
 }) => jsx(ParentUIStateControllerContext.Provider, {
@@ -25887,7 +26445,7 @@ const ControlgroupChildrenWrapper = ({
  * Sets up the full field lifecycle:
  * - Creates a UI state controller that manages state divergence between props and user interactions
  * - Binds the field's action to its current UI state via a signal
- * - Wires up all DOM event handlers (navi_set_ui_state, navi_request_reset_ui_state,
+ * - Wires up all DOM event handlers (navi_set_ui_state, navi_reset_ui_state,
  *   navi_action_ready, navi_action_abort, navi_action_error, navi_cancel, etc.)
  * - Resolves inherited context (disabled, readOnly, required, loading, fieldName)
  * - Handles constraint validation and message props
@@ -25908,8 +26466,7 @@ const useControlProps = (props, {
   allowNameless,
   persists,
   uiActionInternal,
-  readOnlySupported,
-  picker
+  readOnlySupported
 }) => {
   const debugInteraction = useDebugInteraction();
   const controlName = useContext(ControlNameContext);
@@ -25932,11 +26489,10 @@ const useControlProps = (props, {
     getStateFromParent,
     allowNameless,
     persists,
-    debugInteraction,
     uiActionInternal
   });
-  const [boundAction] = useActionBoundToOneParam(resolveActionProp(props.action), uiStateController.uiStateSignal);
-  const [controlProps, remainingProps] = useInteractiveProps(props, {
+  const [boundAction] = useActionBoundToOneParam(props.action, uiStateController.uiStateSignal);
+  const [controlRootProps, controlHostProps] = useInteractiveProps(props, {
     uiStateController,
     boundAction,
     readOnlySupported
@@ -25955,6 +26511,7 @@ const useControlProps = (props, {
     // synthesizes a click so the browser's native checkbox/radio activation runs
     // (which then fires input -> goes through the action pipeline).
     let enterEffect;
+    let spaceEffect;
     const updateUIState = e => {
       const value = readControlValue(ref.current);
       uiStateController.setUIState(value, e);
@@ -25983,7 +26540,7 @@ const useControlProps = (props, {
       const control = ref.current;
       const allowed = dispatchRequestInteraction(control, e, interaction.name);
       if (!allowed) {
-        debugInteraction(e, `${e.type}.preventDefault()`);
+        debugInteraction(e, `interaction not allowed -> ${e.type}.preventDefault()`);
         e.preventDefault();
         return false;
       }
@@ -25994,19 +26551,28 @@ const useControlProps = (props, {
       return asInteraction(interaction, e);
     };
     const lastEventRequestingActionRef = useRef();
-    const lastActionValueRef = useRef();
+    const lastActionValueRef = useRef(NO_ACTION_YET);
+    const wasCheckedAtMousedownRef = useRef(false);
     // Keep lastActionValueRef in sync with state changes that happen outside of asAction
-    // (e.g. radio_sibling_uncheck when another radio in the group becomes checked).
+    // (e.g. radio_sibling_uncheck, or external programmatic set via navi_set_ui_state).
     // Otherwise the dedup below would wrongly skip a real user click that re-checks a radio
     // whose lastActionValueRef still matched a value from a previous interaction.
     //
-    // We only sync for these external sources — NOT for every UI state change.
-    // Syncing on every change would also capture our own updateUIState calls fired
-    // from the input event, which would then make asAction (triggered later via
-    // navi_change / debounce) think the value is unchanged and skip the action.
-    controlProps.onnavi_ui_state_change = e => {
+    // For checkables (radio/checkbox): sync on any external state change — not just
+    // radio_sibling_uncheck. When a programmatic set (e.g. --navi-unselect) unchecks a
+    // radio, setUIState dispatches a synthetic input event. Without syncing here, asAction
+    // would run again from that synthetic input and fire the action a second time.
+    //
+    // We do NOT sync when the change originated from the checkable's own user input event,
+    // because at that point asAction hasn't run yet and we must not pre-empt its dedup.
+    controlHostProps.onnavi_ui_state_change = e => {
       const originatingEvent = e.detail.event;
-      if (originatingEvent?.type === "radio_sibling_uncheck") {
+      if (isCheckable) {
+        const sourceIsOwnInput = originatingEvent?.type === "input" && originatingEvent?.target === ref.current;
+        if (!sourceIsOwnInput) {
+          lastActionValueRef.current = e.detail.value;
+        }
+      } else if (originatingEvent?.type === "radio_sibling_uncheck") {
         lastActionValueRef.current = e.detail.value;
       }
     };
@@ -26024,7 +26590,7 @@ const useControlProps = (props, {
         // that browsers fire with no UI change — e.g. range inputs fire several input
         // events around mouse release even though the value hasn't moved.
         const lastActionValue = lastActionValueRef.current;
-        const valueSameAsLastAction = lastActionValue !== undefined && compareTwoJsValues(currentValue, lastActionValue);
+        const valueSameAsLastAction = lastActionValue !== NO_ACTION_YET && compareTwoJsValues(currentValue, lastActionValue);
         if (valueSameAsLastAction) {
           e.preventDefault();
           return false;
@@ -26037,7 +26603,7 @@ const useControlProps = (props, {
         uiState: currentValue
       });
       if (!allowed) {
-        debugInteraction(e, `${e.type}.preventDefault()`);
+        debugInteraction(e, `action not allowed -> ${e.type}.preventDefault()`);
         e.preventDefault();
         return false;
       }
@@ -26068,12 +26634,14 @@ const useControlProps = (props, {
       mousedownInteraction = {
         name: "mousedown",
         callback: actionOnMouseDown ? asAction : asInteraction
+        // effect: updateUIState,
       };
       clickInteraction = {
         name: "click",
         callback: actionOnMouseDown ? asInteraction : asAction
+        // effect: updateUIState,
       };
-    } else if (controlType === "input") {
+    } else if (controlType === "input" || controlType === "picker") {
       isCheckable = props.type === "radio" || props.type === "checkbox";
       // On input, gate the interaction (readonly check) and update UI state to reflect the new value.
       inputInteraction = {
@@ -26085,8 +26653,11 @@ const useControlProps = (props, {
         name: "navi_change",
         callback: asAction
       };
-      enterEffect = e => triggerStringAction("send", e);
-      if (picker) {
+      enterEffect = e => {
+        const input = e.currentTarget;
+        dispatchNaviCommand(input, "--navi-send", e);
+      };
+      if (controlType === "picker") {
         mousedownInteraction = {
           name: "mousedown to open picker",
           callback: asInteraction
@@ -26097,6 +26668,10 @@ const useControlProps = (props, {
         };
       }
       if (isCheckable) {
+        inputInteraction = {
+          name: "input",
+          callback: asAction
+        };
         // For checkables, click does NOT update state — it only gates the
         // browser's native check/uncheck via interaction constraints (e.g.
         // readOnly). State actually changes via the "input" event that the
@@ -26105,14 +26680,53 @@ const useControlProps = (props, {
         // uncheck for radios…) runs in one place.
         clickInteraction = {
           name: "click",
-          callback: asBrowserAction
-        };
-        inputInteraction = {
-          name: "input",
-          callback: asAction
+          callback: asBrowserAction,
+          // When a radio is already checked and gets clicked, the browser does NOT
+          // fire an input event (state doesn't change), so asAction never runs.
+          // We still want uiAction + command to fire. We can tell whether the click
+          // is on an already-checked radio by looking at wasCheckedAtMousedownRef:
+          // if it was checked at mousedown, the input event won't come, so we do it here.
+          effect: e => {
+            const checkable = e.currentTarget;
+            if (checkable.type === "radio" && wasCheckedAtMousedownRef.current) {
+              updateUIState(e);
+            }
+          }
         };
         naviChangeInteraction = undefined;
-        enterEffect = e => e.currentTarget.click();
+        enterEffect = e => {
+          const checkable = ref.current;
+          const interactionAllowed = dispatchRequestInteraction(checkable, e, "enter");
+          if (!interactionAllowed) {
+            if (checkable.form) {
+              e.preventDefault();
+            }
+            return;
+          }
+          let newState;
+          if (checkable.type === "checkbox") {
+            // toggle: if checked → uncheck (undefined), if unchecked → check (value)
+            newState = checkable.checked ? undefined : checkable.value;
+          } else {
+            // radio: always check
+            newState = checkable.value;
+          }
+          dispatchRequestSetUIState(checkable, newState, {
+            event: e
+          });
+          if (checkable.form) {
+            e.preventDefault();
+          }
+        };
+        if (props.type === "radio") {
+          spaceEffect = e => {
+            const radio = e.currentTarget;
+            if (radio.checked) {
+              wasCheckedAtMousedownRef.current = true;
+              onClick(e);
+            }
+          };
+        }
       } else if (props.type === "range") {
         mousedownInteraction = {
           name: "mousedown",
@@ -26123,6 +26737,9 @@ const useControlProps = (props, {
     }
     const onMouseDown = e => {
       props.onMouseDown?.(e);
+      if (isCheckable && props.type === "radio") {
+        wasCheckedAtMousedownRef.current = e.currentTarget.checked;
+      }
       applyInteraction(mousedownInteraction, e);
       transferFocusToTarget(e);
     };
@@ -26130,15 +26747,27 @@ const useControlProps = (props, {
       props.onClick?.(e);
       applyInteraction(clickInteraction, e);
       transferFocusToTarget(e);
-      if (controlType === "button" && e.currentTarget.form) {
-        // prevent form submission
-        e.preventDefault();
+      const controlHost = e.currentTarget;
+      if (controlHost.form) {
+        if (controlType === "button") {
+          // prevent form submission
+          e.preventDefault();
+        } else if (controlHost.closest("button")) {
+          // prevent button form submission by click
+          // (When an input is inside a <button> like for a picker)
+          // any click in the picker could trigger form submission as browser see this as click on button inside form
+          e.preventDefault();
+        }
       }
     };
     const onKeyDown = e => {
       props.onKeyDown?.(e);
       if (e.key === "Enter" && enterEffect) {
         enterEffect(e);
+        return;
+      }
+      if (e.key === " " && spaceEffect) {
+        spaceEffect(e);
         return;
       }
       applyInteraction(keydownInteraction, e);
@@ -26172,7 +26801,7 @@ const useControlProps = (props, {
         e.preventDefault();
       }
     };
-    Object.assign(controlProps, {
+    Object.assign(controlHostProps, {
       ref: refComposed,
       onMouseDown,
       onClick,
@@ -26181,7 +26810,7 @@ const useControlProps = (props, {
       onInput
     });
   }
-  return [controlProps, remainingProps];
+  return [controlRootProps, controlHostProps, uiStateController];
 };
 
 /**
@@ -26190,42 +26819,41 @@ const useControlProps = (props, {
  * - Binds the group's action to the aggregated state signal
  * - Provides context to children: ParentUIStateController, FieldName, Disabled, ReadOnly,
  *   Required, Loading, Action, ActionRequester
- * - Overrides `onnavi_request_reset_ui_state` to cascade resets to all monitored children
- *   by dispatching `navi_request_reset_ui_state` DOM events on each child's DOM element
+ * - Overrides `onnavi_reset_ui_state` to cascade resets to all monitored children
+ *   by dispatching `navi_reset_ui_state` DOM events on each child's DOM element
  * - Overrides `onnavi_action_ready` to track the action requester
  *
  * @param {{ controlType: string, childControlType: string, aggregateChildStates: Function }} config
  * @returns {Object} Props to spread onto the group's root element
  */
 const useControlgroupProps = (props, {
-  stateType,
   controlType,
+  stateType,
   childControlFilter,
-  aggregateChildStates
+  aggregateChildStates,
+  wantRequesterButtonState,
+  uiActionInternal
 }) => {
   const {
-    action,
-    uiAction
+    ref,
+    action
   } = props;
-  const debugAction = useDebugAction();
   const uiGroupStateController = useUIGroupStateController(props, controlType, {
     stateType,
     childControlFilter,
     aggregateChildStates,
-    debugAction
+    wantRequesterButtonState,
+    uiActionInternal
   });
-  const uiActionRef = useRef(uiAction);
-  uiActionRef.current = uiAction;
-  useLayoutEffect(() => {
-    return uiGroupStateController.subscribe(newState => {
-      uiActionRef.current?.(newState);
-    });
-  }, [uiGroupStateController]);
-  const [boundAction] = useActionBoundToOneParam(resolveActionProp(action), uiGroupStateController.uiStateSignal);
+  const [boundAction] = useActionBoundToOneParam(action, uiGroupStateController.uiStateSignal);
   const [actionRequester, setActionRequester] = useState();
-  const [controlgroupProps, remainingProps] = useInteractiveProps(props, {
+  const [controlRootProps, controlgroupProps] = useInteractiveProps(props, {
     uiStateController: uiGroupStateController,
-    boundAction
+    boundAction,
+    // Group state is set before dispatching navi_ui_state_change → dispatchRequestAction,
+    // so onnavi_action_allowed must not call dispatchRequestSetUIState again (it would
+    // re-trigger uiAction + command a second time).
+    skipSetUIStateOnActionAllowed: true
   });
   const {
     basePseudoState
@@ -26243,41 +26871,122 @@ const useControlgroupProps = (props, {
     boundAction,
     actionRequester
   }), [uiGroupStateController, controlgroupProps.name, controlgroupProps.required, disabled, readOnly, loading, boundAction, actionRequester]);
-  return [{
+
+  // Auto-trigger the group action when a checkable child (radio/checkbox) changes.
+  // For other inputs (text, range…) the action must be triggered explicitly via
+  // a submit button or Enter — same as a regular form field.
+  if (action && (controlType === "radio_group" || controlType === "checkbox_group")) {
+    controlgroupProps.onnavi_ui_state_change = e => {
+      const el = ref.current;
+      if (el) {
+        dispatchRequestAction(el, {
+          event: e.detail.event,
+          uiState: e.detail.value
+        });
+      }
+    };
+  }
+  return [controlRootProps, {
     ...controlgroupProps,
-    name: undefined,
+    "name": undefined,
     // useful to children, not the the group itself
-    required: undefined,
+    "required": undefined,
     // useful to children, not the the group itself
-    onnavi_action_allowed: e => {
+    "onnavi_action_allowed": e => {
       setActionRequester(e.detail.requester);
       controlgroupProps.onnavi_action_allowed(e);
-    }
-  }, remainingProps, controlgroupChildrenWrapperProps];
+    },
+    "navi-control-group": ""
+  }, controlgroupChildrenWrapperProps];
 };
+
+/**
+ * Like `useControlProps` but also establishes a 1:1 facade sync between the
+ * picker's hidden input and the first child control inside the picker popup.
+ *
+ * Child → picker input: when the child's UI state changes, the picker input
+ * is updated automatically (no `command="--navi-update"` needed on the child).
+ *
+ * Picker input → child: when the picker input is updated externally (e.g.
+ * via `--navi-update` or `--navi-clear` from outside), the change is
+ * propagated down to the child automatically.
+ *
+ * Returns a 3-tuple `[controlRootProps, controlHostProps, facadeChildrenProps]`.
+ * Use `ControlFacadeChildrenWrapper` with the third element to wrap the popup
+ * children — it resets field contexts and injects the facade controller:
+ *
+ * ```jsx
+ * const [controlRootProps, controlHostProps, facadeChildrenProps] = useControlFacadeProps(props, options);
+ * // …
+ * <ControlFacadeChildrenWrapper {...facadeChildrenProps}>
+ *   {children}
+ * </ControlFacadeChildrenWrapper>
+ * ```
+ */
+const useControlFacadeProps = (props, options) => {
+  const [controlRootProps, controlHostProps, uiStateController] = useControlProps(props, options);
+  const facadeController = useUIFacadeStateController(uiStateController);
+  return [controlRootProps, controlHostProps, {
+    value: facadeController
+  }];
+};
+
+/**
+ * Wrapper for the popup children of a facade-backed picker.
+ *
+ * Resets all inherited field contexts (same as `ControlChildrenWrapper`) so
+ * that children don't accidentally register as form participants of the outer
+ * field. Additionally injects the facade controller as
+ * `ParentUIStateControllerContext` so the first child control automatically
+ * stays in sync with the picker input (bidirectional, without any explicit
+ * `command` prop).
+ *
+ * Receives `facadeChildrenProps` — the third element of the tuple returned by
+ * `useControlFacadeProps` — spread directly onto this component.
+ */
+const ControlFacadeChildrenWrapper = ({
+  children,
+  value
+}) => jsx(ParentUIStateControllerContext.Provider, {
+  value: value,
+  children: jsx(MessagePropsRefContext.Provider, {
+    value: undefined,
+    children: jsx(ControlToInterfaceContext.Provider, {
+      value: undefined,
+      children: jsx(RequiredContext.Provider, {
+        value: undefined,
+        children: jsx(ControlNameContext.Provider, {
+          value: undefined,
+          children: children
+        })
+      })
+    })
+  })
+});
 const useInteractiveProps = (props, {
   uiStateController,
   boundAction,
-  readOnlySupported
+  readOnlySupported,
+  skipSetUIStateOnActionAllowed
 }) => {
   const {
     ref
   } = props;
-  const controlProps = {
+  const controlHostProps = {
     ref,
     "navi-control-host": ""
   };
-  let remainingProps = {
+  let controlRootProps = {
     "navi-control": uiStateController.controlType
   };
   const propKeySet = new Set(Object.keys(props));
   for (const key of propKeySet) {
     if (CONTROL_PROP_SET.has(key)) {
       if (CONTROL_ATTRIBUTE_SET.has(key)) {
-        controlProps[key] = props[key];
+        controlHostProps[key] = props[key];
       }
     } else {
-      remainingProps[key] = props[key];
+      controlRootProps[key] = props[key];
     }
   }
   const actionStatus = useActionStatus(boundAction);
@@ -26287,6 +26996,7 @@ const useInteractiveProps = (props, {
   const controlRequired = useContext(RequiredContext);
   const controlLoading = useContext(LoadingContext);
   const parentActionRequester = useContext(ActionRequesterContext);
+  const debugCommand = useDebugCommand();
   const debugAction = useDebugAction();
   const debugInteraction = useDebugInteraction();
   const debugFocus = useDebugFocus();
@@ -26300,7 +27010,7 @@ const useInteractiveProps = (props, {
       focusVisible: autoFocusVisible,
       autoSelect
     });
-    Object.assign(controlProps, {
+    Object.assign(controlHostProps, {
       "navi-autofocus": autoFocus ? autoFocus === true ? "" : autoFocus : undefined,
       "navi-autofocus-select": autoFocus && autoSelect ? "" : undefined
     });
@@ -26321,7 +27031,7 @@ const useInteractiveProps = (props, {
     const requiredResolved = required || controlRequired;
     const loadingResolved = loading || actionStatus.loading || controlLoading && parentActionRequester === ref.current;
     const readOnlyResolved = readOnly || controlReadOnly || loadingResolved || uiStateController.readOnly;
-    Object.assign(controlProps, {
+    Object.assign(controlHostProps, {
       "id": idResolved,
       "navi-control-proxy-for": naviProxyFor,
       name,
@@ -26337,9 +27047,9 @@ const useInteractiveProps = (props, {
       }
     });
     if (readOnlySupported) {
-      controlProps.readOnly = readOnlyResolved;
+      controlHostProps.readOnly = readOnlyResolved;
     } else {
-      controlProps["aria-readonly"] = readOnlyResolved;
+      controlHostProps["aria-readonly"] = readOnlyResolved;
     }
     // infom any <Field> parent of our readOnly state + that we are interactive
     useLayoutEffect(() => {
@@ -26351,24 +27061,33 @@ const useInteractiveProps = (props, {
     }, [controlToInterfaceContext, disabledResolved, readOnlyResolved]);
     const {
       constraints
-    } = controlProps;
+    } = controlHostProps;
     useConstraints(ref, constraints);
-    remainingProps = useConstraintMessages(ref, remainingProps);
+    controlRootProps = useConstraintMessages(ref, controlRootProps);
   }
   {
     const uiState = uiStateController.uiStateSignal.value;
-    Object.assign(controlProps, {
-      // for some input navi-ui-state differs (like color where ui-state would be "" while value would be "#000000")
-      "navi-ui-state": uiState,
-      "onnavi_request_reset_ui_state": e => {
+    Object.assign(controlHostProps, {
+      onnavi_clear_ui_state: e => {
+        uiStateController.clearUIState(e);
+      },
+      onnavi_reset_ui_state: e => {
         uiStateController.resetUIState(e);
       },
-      "onnavi_get_ui_state": e => {
+      onnavi_get_ui_state: e => {
         e.detail.respondWith(uiStateController.uiStateSignal.peek());
       },
-      "onnavi_set_ui_state": e => {
+      onnavi_set_ui_state: e => {
         uiStateController.setUIState(e.detail.value, e);
       }
+    });
+    // Mirror ui state handlers on the root so events dispatched on the root element
+    // (e.g. from a commandfor targeting the picker button) reach the controller.
+    Object.assign(controlRootProps, {
+      onnavi_clear_ui_state: controlHostProps.onnavi_clear_ui_state,
+      onnavi_reset_ui_state: controlHostProps.onnavi_reset_ui_state,
+      onnavi_get_ui_state: controlHostProps.onnavi_get_ui_state,
+      onnavi_set_ui_state: controlHostProps.onnavi_set_ui_state
     });
     const {
       statePropName
@@ -26376,12 +27095,12 @@ const useInteractiveProps = (props, {
     if (statePropName) {
       const statePropValueRaw = uiStateController.getPropFromState(uiState);
       const statePropValueDom = uiStateController.toControlHostValue(statePropValueRaw);
-      controlProps[statePropName] = statePropValueDom;
+      controlHostProps[statePropName] = statePropValueDom;
       if (statePropName === "checked") {
         const {
           value
         } = props;
-        controlProps.value = value;
+        controlHostProps.value = value;
       }
     }
   }
@@ -26392,8 +27111,27 @@ const useInteractiveProps = (props, {
     // Children are returned raw so callers decide how to wrap them.
     // Use the returned ChildrenContextWrapper to reset field-specific contexts
     // (MessagePropsRef, ControlToInterface) around the content you render.
-    Object.assign(controlProps, {
+    Object.assign(controlHostProps, {
       children
+    });
+  }
+  {
+    Object.assign(controlHostProps, {
+      onnavi_command: e => {
+        props.onnavi_command?.(e);
+        onNaviCommand(e, {
+          debugCommand
+        });
+      }
+    });
+    // The control host (e.g. hidden input inside picker) listens for navi_command
+    // via controlHostProps above. But when commandfor targets the control root (e.g.
+    // the picker button), the event fires there instead. Putting onnavi_command on
+    // controlRootProps — which ends up on the root element — lets the root handle it.
+    // When root === host the spread order ensures
+    // controlHostProps.onnavi_command takes precedence.
+    Object.assign(controlRootProps, {
+      onnavi_command: controlHostProps.onnavi_command
     });
   }
   {
@@ -26406,11 +27144,11 @@ const useInteractiveProps = (props, {
       errorEffect: actionErrorEffect,
       errorMapping
     });
-    const dataAction = action === undefined ? undefined : typeof action === "string" ? action : boundAction.callSource;
-    Object.assign(controlProps, {
+    const dataAction = action === undefined ? undefined : boundAction.callSource;
+    Object.assign(controlHostProps, {
       "data-action": dataAction
     });
-    Object.assign(remainingProps, {
+    Object.assign(controlRootProps, {
       "data-action": dataAction
     });
     const {
@@ -26426,7 +27164,7 @@ const useInteractiveProps = (props, {
       resetOnAbort,
       resetOnError
     } = props;
-    Object.assign(controlProps, {
+    Object.assign(controlHostProps, {
       onFocus: e => {
         // Transfer programmatic focus to the delegate target (navi-focus-delegate or navi-control-proxy-for)
         const focusProxyTarget = findFocusDelegateTarget(e.currentTarget) || findControlProxyTarget(e.currentTarget);
@@ -26487,6 +27225,21 @@ const useInteractiveProps = (props, {
               uiState = v;
             }
           });
+          // If this is a form submit and the requester is a named button, ensure
+          // its value wins over any other button sharing the same name.
+          // Native browser behavior: only the clicked/activated submit button
+          // contributes its name+value to form data.
+          const {
+            requester
+          } = e.detail;
+          if (uiStateController.wantRequesterButtonState && requester.tagName === "BUTTON" && requester.name && requester !== e.currentTarget) {
+            const requesterUIState = getUIStateFromElement(requester);
+            const requesterValue = requesterUIState !== undefined ? requesterUIState : requester.value;
+            uiState = {
+              ...uiState,
+              [requester.name]: requesterValue
+            };
+          }
           e.detail.uiState = uiState;
         }
         const naviProxyTarget = findControlProxyTarget(e.currentTarget);
@@ -26519,9 +27272,15 @@ const useInteractiveProps = (props, {
         const {
           uiState
         } = e.detail;
-        dispatchRequestSetUIState(e.currentTarget, uiState, {
-          event: e
-        });
+        if (!skipSetUIStateOnActionAllowed) {
+          // For leaf controls: set the UI state optimistically before executing the action.
+          // For groups: state is already set by the group's setUIState (which ran before
+          // dispatching navi_ui_state_change → dispatchRequestAction), so we skip this
+          // to avoid calling uiAction + command a second time.
+          dispatchRequestSetUIState(e.currentTarget, uiState, {
+            event: e
+          });
+        }
         debugAction(e, `executing action ${e.detail.action.callSource}`);
         executeAction(e);
       },
@@ -26550,11 +27309,11 @@ const useInteractiveProps = (props, {
         uiStateController.actionEnd(e);
         debugAction(e, `action end with data: ${JSON.stringify(data)}`);
         onActionEnd?.(data, e);
-        remainingProps.onnavi_action_end?.(e);
+        controlRootProps.onnavi_action_end?.(e);
       }
     });
   }
-  return [controlProps, remainingProps];
+  return [controlRootProps, controlHostProps];
 };
 
 installImportMetaCssBuild(import.meta);const css$I = /* css */`
@@ -26562,6 +27321,7 @@ installImportMetaCssBuild(import.meta);const css$I = /* css */`
     .navi_button {
       --button-border-radius: var(--navi-control-border-radius);
       --button-border-width: var(--navi-control-border-width);
+      --button-cta-background-color: var(--navi-accent-color);
       /* Focus outline */
       --button-outline-width: var(--navi-focus-outline-width);
       --button-outline-offset: calc(-1 * var(--button-outline-width) / 2);
@@ -26637,6 +27397,7 @@ installImportMetaCssBuild(import.meta);const css$I = /* css */`
     box-sizing: border-box;
     aspect-ratio: inherit;
     padding: 0;
+    color: var(--x-button-color);
     background: none;
     border: none;
     border-radius: var(--button-border-radius);
@@ -26648,14 +27409,8 @@ installImportMetaCssBuild(import.meta);const css$I = /* css */`
     font-family: var(--button-font-family);
     touch-action: manipulation;
     user-select: none;
-
-    &[data-accent-needs-dark-fg] {
-      --button-color: black;
-    }
-
-    &[data-icon] {
-      --button-padding: 0;
-    }
+    -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
+    display: inline-flex;
 
     .navi_button_content {
       position: relative;
@@ -26694,7 +27449,7 @@ installImportMetaCssBuild(import.meta);const css$I = /* css */`
       );
       align-items: inherit;
       justify-content: inherit;
-      color: var(--x-button-color);
+      color: inherit;
       vertical-align: inherit;
       background: var(--x-button-background);
       background-color: var(
@@ -26724,21 +27479,11 @@ installImportMetaCssBuild(import.meta);const css$I = /* css */`
       }
     }
 
-    &[data-reveal-on-interaction] {
-      --x-button-background-color: transparent;
-      --x-button-border-color: transparent;
-    }
-
     /* Hover */
     &[data-hover] {
       --x-button-border-color: var(--button-border-color-hover);
       --x-button-background-color: var(--button-background-color-hover);
       --x-button-color: var(--button-color-hover);
-    }
-    &[data-nohover] {
-      --x-button-border-color: var(--button-border-color);
-      --x-button-background-color: var(--button-background-color);
-      --x-button-color: var(--button-color);
     }
     /* Pressed */
     &[data-pressed] {
@@ -26781,8 +27526,6 @@ installImportMetaCssBuild(import.meta);const css$I = /* css */`
       --x-button-color: var(--button-color-disabled);
       --x-button-cursor: default;
 
-      color: unset;
-
       /* Remove pressed effects */
       .navi_button_content {
         transform: none;
@@ -26792,16 +27535,40 @@ installImportMetaCssBuild(import.meta);const css$I = /* css */`
         }
       }
     }
-    /* Discrete variant */
-    &[data-discrete] {
+    /* Callout (info, warning, error) */
+    &[data-callout] {
+      --x-button-border-color: var(--callout-color);
+    }
+
+    /* discrete: background on hover */
+    &[data-variant="discrete"] {
+      --x-button-background-color: transparent;
+      --x-button-border-color: transparent;
+
+      &[data-hover] {
+        --x-button-border-color: transparent;
+        --x-button-background-color: color-mix(
+          in srgb,
+          currentColor 8%,
+          transparent
+        );
+      }
+      &[data-readonly] {
+        --x-button-border-color: transparent;
+        --x-button-background-color: transparent;
+      }
+      &[data-disabled] {
+        --x-button-border-color: transparent;
+        --x-button-background-color: transparent;
+      }
+    }
+    /* discrete-border: border on hover */
+    &[data-variant="discrete-border"] {
       --x-button-background-color: transparent;
       --x-button-border-color: transparent;
 
       &[data-hover] {
         --x-button-border-color: var(--button-border-color-hover);
-      }
-      &[data-nohover] {
-        --x-button-border-color: transparent;
       }
       &[data-readonly] {
         --x-button-border-color: transparent;
@@ -26810,9 +27577,70 @@ installImportMetaCssBuild(import.meta);const css$I = /* css */`
         --x-button-border-color: transparent;
       }
     }
-    /* Callout (info, warning, error) */
-    &[data-callout] {
-      --x-button-border-color: var(--callout-color);
+    /* border variant: no background, border only */
+    &[data-variant="border"] {
+      --x-button-background-color: transparent;
+
+      &[data-hover] {
+        --x-button-background-color: color-mix(
+          in srgb,
+          currentColor 8%,
+          transparent
+        );
+      }
+      &[data-readonly] {
+        --x-button-background-color: transparent;
+      }
+      &[data-disabled] {
+        --x-button-background-color: transparent;
+      }
+    }
+    &[data-icon] {
+      --button-padding: 0;
+    }
+    /* cta: call-to-action — special background, border matches background */
+    &[data-cta] {
+      --x-button-background-color: var(--button-cta-background-color);
+      --x-button-border-color: var(--button-cta-background-color);
+      --x-button-color: white;
+
+      &[data-hover] {
+        --x-button-background-color: color-mix(
+          in srgb,
+          var(--button-cta-background-color) 85%,
+          white
+        );
+        --x-button-border-color: color-mix(
+          in srgb,
+          var(--button-cta-background-color) 85%,
+          white
+        );
+      }
+      &[data-readonly] {
+        --x-button-background-color: color-mix(
+          in srgb,
+          var(--button-cta-background-color) 50%,
+          white
+        );
+        --x-button-border-color: color-mix(
+          in srgb,
+          var(--button-cta-background-color) 50%,
+          white
+        );
+      }
+      &[data-disabled] {
+        --x-button-background-color: color-mix(
+          in srgb,
+          var(--button-cta-background-color) 40%,
+          white
+        );
+        --x-button-border-color: color-mix(
+          in srgb,
+          var(--button-cta-background-color) 40%,
+          white
+        );
+        --x-button-color: color-mix(in srgb, white 60%, transparent);
+      }
     }
   }
 `;
@@ -26825,12 +27653,12 @@ const ButtonUI = props => {
     target,
     rel,
     // visual
+    variant,
     icon,
-    revealOnInteraction = icon,
-    discrete = icon && !revealOnInteraction,
+    cta,
     spacing
   } = props;
-  const [buttonProps, remainingProps] = useControlProps(props, {
+  const [buttonControlRootProps, buttonControlHostProps] = useControlProps(props, {
     controlType: "button",
     statePropName: "value",
     allowNameless: true
@@ -26838,7 +27666,7 @@ const ButtonUI = props => {
   const {
     basePseudoState,
     children
-  } = buttonProps;
+  } = buttonControlHostProps;
   const loading = basePseudoState[":-navi-loading"];
   const isLink = href !== undefined;
   let as = "button";
@@ -26857,8 +27685,8 @@ const ButtonUI = props => {
     elementSelector: visualSelector
   });
   return jsxs(Box, {
-    ...buttonProps,
-    ...remainingProps,
+    ...buttonControlRootProps,
+    ...buttonControlHostProps,
     // eslint-disable-next-line react/no-children-prop
     children: undefined,
     spacing: undefined,
@@ -26866,7 +27694,11 @@ const ButtonUI = props => {
     as: as,
     href: href,
     target: innerTarget,
-    rel: innerRel,
+    rel: innerRel
+    // Respond with the JS prop value directly so callers (e.g. resolveCommandValue)
+    // get the original type instead of the DOM-coerced string (e.g. "[object Object]").
+    ,
+
     onnavi_get_value: e => {
       e.detail.respondWith(props.value);
     },
@@ -26886,9 +27718,9 @@ const ButtonUI = props => {
       // the event, i.e. it was synthesized from a long-press gesture (right-click gives e.button === 2).
       e.preventDefault();
     },
+    "data-variant": variant,
     "data-icon": icon ? "" : undefined,
-    "data-reveal-on-interaction": revealOnInteraction ? "" : undefined,
-    "data-discrete": discrete ? "" : undefined,
+    "data-cta": cta ? "" : undefined,
     "data-callout-arrow-x": "center"
     // style management
     ,
@@ -26976,7 +27808,43 @@ const ButtonFirstResolver = props => {
     ...props
   });
 };
-const Button = createComponentResolver([ButtonFirstResolver, ButtonRouteResolver, ButtonInsideFormResolver, ButtonUI]);
+const ButtonCommandPropResolver = props => {
+  const Next = useNextResolver();
+  const command = props.command;
+  const commandDefaultProps = COMMAND_DEFAULT_PROPS[command];
+  if (commandDefaultProps) {
+    for (const key of Object.keys(commandDefaultProps)) {
+      if (props[key] === undefined) {
+        props[key] = commandDefaultProps[key];
+      }
+    }
+  }
+  return jsx(Next, {
+    ...props
+  });
+};
+const COMMAND_DEFAULT_PROPS = {
+  "--navi-clear": {
+    children: naviI18n("button.clear")
+  },
+  "--navi-reset": {
+    children: naviI18n("button.reset")
+  },
+  "--navi-send": {
+    children: naviI18n("button.send"),
+    cta: true
+  },
+  "--navi-cancel": {
+    children: naviI18n("button.cancel")
+  },
+  "--navi-close": {
+    children: naviI18n("button.close")
+  },
+  "--navi-open": {
+    children: naviI18n("button.open")
+  }
+};
+const Button = createComponentResolver([ButtonFirstResolver, ButtonRouteResolver, ButtonInsideFormResolver, ButtonCommandPropResolver, ButtonUI]);
 
 const CloseSvg = () => {
   return jsx("svg", {
@@ -27325,6 +28193,7 @@ installImportMetaCssBuild(import.meta);const css$F = /* css */`
     outline-style: solid;
     outline-color: var(--link-outline-color);
     cursor: var(--x-link-cursor);
+    -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
 
     .navi_current_indicator {
       position: absolute;
@@ -28247,7 +29116,7 @@ const DetailsField = props => {
     closeKeyShortcut = "ArrowLeft",
     onToggle
   } = props;
-  const [detailsProps, remainingProps] = useControlProps({
+  const [detailsRootProps, detailsProps] = useControlProps({
     resetOnCancel: true,
     resetOnAbort: true,
     resetOnError: true,
@@ -28339,8 +29208,8 @@ const DetailsField = props => {
   }, []);
   return jsxs(Box, {
     as: "details",
+    ...detailsRootProps,
     ...detailsProps,
-    ...remainingProps,
     baseClassName: "navi_details",
     onToggle: e => {
       onToggle?.(e);
@@ -28454,6 +29323,67 @@ const useConstraintValidityState = (ref) => {
   return constraintValidityState;
 };
 
+const ControlGroup = props => {
+  const defaultRef = useRef();
+  props.ref = props.ref || defaultRef;
+  const [controlgroupRootProps, controlgroupProps, childrenWrapperProps] = useControlgroupProps(props, {
+    wantRequesterButtonState: true,
+    controlType: props.type || "control_group",
+    stateType: "object",
+    aggregateChildStates: childUIStateControllers => {
+      const groupValues = {};
+      for (const childUIStateController of childUIStateControllers) {
+        const {
+          name,
+          uiState,
+          allowNameless
+        } = childUIStateController;
+        if (!name) {
+          if (!allowNameless) {
+            console.warn("A ControlGroup child is missing a name property, its state won't be included in the group state", childUIStateController);
+          }
+          continue;
+        }
+        groupValues[name] = uiState;
+      }
+      return groupValues;
+    }
+  });
+  const {
+    children
+  } = controlgroupProps;
+  return jsx(Box, {
+    ...controlgroupRootProps,
+    ...controlgroupProps,
+    type: undefined,
+    pseudoClasses: CONTROL_GROUP_PSEUDO_CLASSES,
+    onnavi_get_managed_controls: e => {
+      e.detail.respondWith(getControlGroupManagedControls(e.currentTarget));
+    },
+    children: jsx(ControlgroupChildrenWrapper, {
+      ...childrenWrapperProps,
+      // do not propagate name to children like radio group or checkbox group does
+      // (otherwise anonymous button end up using that name)
+      name: undefined,
+      children: children
+    })
+  });
+};
+const getControlGroupManagedControls = el => {
+  const managedControls = [];
+  for (const child of el.querySelectorAll("[navi-control-host]")) {
+    // Exclude controls that belong to a nested ControlGroup — that group is itself
+    // a managed control and will cascade validation to its own children.
+    const parentControlGroup = child.closest("[navi-control-group]");
+    if (parentControlGroup && parentControlGroup !== el) {
+      continue;
+    }
+    managedControls.push(child);
+  }
+  return managedControls;
+};
+const CONTROL_GROUP_PSEUDO_CLASSES = [":hover", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
+
 installImportMetaCssBuild(import.meta);const css$B = /* css */`
   @layer navi {
     .navi_checkbox {
@@ -28552,7 +29482,26 @@ const SwitchCSSVars = {
   padding: "--switch-padding"
 };
 
-const useCheckableProps = (props) => {
+const useCheckableProps = (props, options) => {
+  // If `checked` is a stateSignal, derive defaultChecked from the signal's
+  // default value so resetUIState restores to the original default.
+  const checkedProp = props.checked;
+  if (
+    isSignal(checkedProp) &&
+    checkedProp.options &&
+    !Object.hasOwn(props, "defaultChecked")
+  ) {
+    const defaultVal = checkedProp.options.getDefaultValue(false);
+    if (defaultVal !== undefined) {
+      const itemValue = props.value;
+      if (props.type === "radio") {
+        props.defaultChecked = defaultVal === itemValue;
+      } else if (props.type === "checkbox") {
+        props.defaultChecked =
+          Array.isArray(defaultVal) && defaultVal.includes(itemValue);
+      }
+    }
+  }
   const result = useControlProps(props, {
     controlType: "input",
     statePropName: "checked",
@@ -28560,8 +29509,9 @@ const useCheckableProps = (props) => {
     fallbackState: false,
     getStateFromProp: (checked) => (checked ? props.value : undefined),
     getPropFromState: Boolean,
+    ...options,
   });
-  result[0].onnavi_get_value = (e) => {
+  result[1].onnavi_get_value = (e) => {
     e.detail.respondWith(props.value);
   };
   return result;
@@ -28678,6 +29628,7 @@ installImportMetaCssBuild(import.meta);const css$A = /* css */`
       opacity: 0;
       appearance: none; /* This allows border-radius to have an effect */
       cursor: var(--x-cursor);
+      -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
     }
 
     .navi_checkbox_accent_probe {
@@ -28874,17 +29825,19 @@ const InputCheckbox = props => {
   });
 };
 const InputCheckboxHeadless = props => {
-  const [checkboxProps, remainingProps] = useCheckableProps(props);
+  const [checkboxRootProps, checkboxHostProps] = useCheckableProps(props);
   return jsx(RealInputCheckbox, {
     pseudoClasses: CheckboxPseudoClasses,
-    ...checkboxProps,
-    ...remainingProps,
-    "navi-visually-hidden": ""
+    "navi-visually-hidden": "",
+    "navi-focus-delegate": "",
+    "aria-hidden": "true",
+    ...checkboxRootProps,
+    ...checkboxHostProps
   });
 };
 const InputCheckboxFieldInterface = props => {
   import.meta.css = [css$A, "@jsenv/navi/src/control/input/input_checkbox.jsx"];
-  const [checkboxProps, remainingProps] = useCheckableProps(props);
+  const [checkboxRootProps, checkboxHostProps] = useCheckableProps(props);
   const {
     icon,
     switch: switchProp,
@@ -28895,7 +29848,7 @@ const InputCheckboxFieldInterface = props => {
   const {
     basePseudoState,
     checked
-  } = checkboxProps;
+  } = checkboxHostProps;
   const loading = basePseudoState[":-navi-loading"];
   const boxRef = useRef();
   useAccentColorAttributes(boxRef, accentColor, {
@@ -28930,7 +29883,7 @@ const InputCheckboxFieldInterface = props => {
     ,
 
     square: appearance === "button" ? true : undefined,
-    ...remainingProps,
+    ...checkboxRootProps,
     ref: boxRef,
     appearance: undefined,
     switch: undefined,
@@ -28950,7 +29903,7 @@ const InputCheckboxFieldInterface = props => {
       inset: -1,
       color: "var(--loader-color)"
     }), visualVnode, jsx(RealInputCheckbox, {
-      ...checkboxProps,
+      ...checkboxHostProps,
       switch: switchProp
     })]
   });
@@ -29271,8 +30224,6 @@ const InputUnitSlot = ({
 };
 const InputSlot = ({
   side,
-  onClick,
-  hideWhileEmpty,
   ...props
 }) => {
   const ctx = useContext(InputTextualContext);
@@ -29290,7 +30241,6 @@ const InputSlot = ({
     "data-disabled": disabled,
     "data-left": side === "left" ? "" : undefined,
     "data-right": side === "right" ? "" : undefined,
-    "data-hide-while-empty": hideWhileEmpty ? "" : undefined,
     inline: true,
     flex: true,
     align: "center",
@@ -29303,14 +30253,6 @@ const InputSlot = ({
         e.preventDefault();
       }
     },
-    onClick: e => {
-      onClick?.(e);
-      const input = document.getElementById(id);
-      const allowed = dispatchRequestInteraction(input, e);
-      if (!allowed) {
-        e.preventDefault();
-      }
-    },
     ...props
   });
 };
@@ -29318,7 +30260,7 @@ const InputSlot = ({
 installImportMetaCssBuild(import.meta);const css$y = /* css */`
   @layer navi {
     .navi_radio {
-      --margin: 3px 3px 0 5px;
+      --margin: 3px 3px 3px 5px;
       --outline-offset: 1px;
       --outline-width: 2px;
       /* Rounding ensures outline is visually a nice circle */
@@ -29449,6 +30391,7 @@ installImportMetaCssBuild(import.meta);const css$y = /* css */`
       opacity: 0;
       appearance: none; /* This allows border-radius to have an effect */
       cursor: var(--x-cursor);
+      -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
     }
 
     /* Focus */
@@ -29659,19 +30602,20 @@ const InputRadio = props => {
   });
 };
 const InputRadioHeadless = props => {
-  const [radioProps, remainingProps] = useCheckableProps(props);
+  const [radioRootProps, radioHostProps] = useCheckableProps(props);
   return jsx(RealInputRadio, {
     pseudoClasses: RadioPseudoClasses,
-    ...remainingProps,
-    ...radioProps,
-    appearance: undefined,
-    "navi-visually-hidden": ""
+    "navi-visually-hidden": "",
+    "navi-focus-delegate": "",
+    "aria-hidden": "true",
+    ...radioRootProps,
+    ...radioHostProps
   });
 };
 const APPEARANCE_SET = new Set(["icon", "button", "radio"]);
 const InputRadioFieldInterface = props => {
   import.meta.css = [css$y, "@jsenv/navi/src/control/input/input_radio.jsx"];
-  const [radioProps, remainingProps] = useCheckableProps(props);
+  const [radioRootProps, radioHostProps] = useCheckableProps(props);
   const {
     icon,
     appearance
@@ -29684,7 +30628,7 @@ const InputRadioFieldInterface = props => {
   const {
     basePseudoState,
     checked
-  } = radioProps;
+  } = radioHostProps;
   const loading = basePseudoState[":-navi-loading"];
   const boxRef = useRef();
   useAccentColorAttributes(boxRef, props.accentColor, {
@@ -29704,7 +30648,7 @@ const InputRadioFieldInterface = props => {
     ,
 
     square: appearanceResolved === "button" ? true : undefined,
-    ...remainingProps,
+    ...radioRootProps,
     ref: boxRef,
     icon: undefined,
     appearance: undefined,
@@ -29723,7 +30667,7 @@ const InputRadioFieldInterface = props => {
       inset: -1,
       color: "var(--loader-color)"
     }), visualVNode, jsx(RealInputRadio, {
-      ...radioProps
+      ...radioHostProps
     })]
   });
 };
@@ -30011,6 +30955,15 @@ const resolveInputProps = (props) => {
       props.type =
         VALIDITY_TYPE_TO_INPUT_TYPE[signalOptions.type] ?? signalOptions.type;
     }
+    // If no explicit defaultValue, snapshot the signal's current default
+    // so that resetUIState restores to the original default — not the
+    // value the signal had at the time of the last re-render.
+    if (!Object.hasOwn(props, "defaultValue")) {
+      const defaultVal = signalOptions.getDefaultValue(false);
+      if (defaultVal !== undefined) {
+        props.defaultValue = defaultVal;
+      }
+    }
   }
 
   const currentType = props.type;
@@ -30288,6 +31241,7 @@ installImportMetaCssBuild(import.meta);const css$x = /* css */`
       min-width: inherit;
       font-size: inherit;
       appearance: none;
+      -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
 
       &::-webkit-slider-thumb {
         width: var(--thumb-width);
@@ -30428,7 +31382,7 @@ const InputRangeFieldInterface = props => {
     input.parentNode.style.setProperty("--x-fill-ratio", ratio);
   };
   resolveInputProps(props);
-  const [rangeProps, remainingProps] = useControlProps(props, {
+  const [rangeRootProps, rangeHostProps] = useControlProps(props, {
     controlType: "input",
     statePropName: "value",
     defaultStatePropName: "defaultValue",
@@ -30436,7 +31390,7 @@ const InputRangeFieldInterface = props => {
   });
   const {
     basePseudoState
-  } = rangeProps;
+  } = rangeHostProps;
   const loading = basePseudoState[":-navi-loading"];
   const boxRef = useRef();
   useAccentColorAttributes(boxRef, props.accentColor, {
@@ -30453,7 +31407,7 @@ const InputRangeFieldInterface = props => {
     pseudoElements: RangePseudoElements,
     "data-callout-anchor": ".navi_input_range_thumb",
     hasChildUsingForwardedProps: true,
-    ...remainingProps,
+    ...rangeRootProps,
     basePseudoState: basePseudoState,
     ref: boxRef,
     children: [jsx("span", {
@@ -30473,7 +31427,7 @@ const InputRangeFieldInterface = props => {
       className: "navi_input_range_thumb",
       "data-callout-arrow-x": "center"
     }), jsx(RangeNativeInput, {
-      ...rangeProps,
+      ...rangeHostProps,
       updateFillRatio: updateFillRatio
     })]
   });
@@ -30660,6 +31614,8 @@ const InputModeNumeric = props => {
     }
   });
 };
+
+// hum il manque le faire de request interaction ici
 const performArrowUpDown = e => {
   const input = e.currentTarget;
   const currentValue = Number(input.value);
@@ -30683,9 +31639,13 @@ const performArrowUpDown = e => {
   if (max !== undefined && nextValue > max) {
     nextValue = max;
   }
-  triggerStringAction("update", nextValue, {
-    event: e,
-    actionTarget: e.currentTarget
+  const allowed = dispatchRequestInteraction(input, e, "--navi-arrow-up-down");
+  if (!allowed) {
+    e.preventDefault();
+    return;
+  }
+  dispatchRequestSetUIState(input, nextValue, {
+    event: e
   });
   e.preventDefault();
 };
@@ -30748,7 +31708,8 @@ const InputSearchUI = ({
   icon
 }) => {
   const {
-    value
+    value,
+    id
   } = useContext(InputTextualContext);
   const searchIcon = icon === undefined ? jsx(SearchSvg, {}) : icon;
   const hasValue = Boolean(value);
@@ -30761,23 +31722,15 @@ const InputSearchUI = ({
     });
   }
   return jsx(InputRightSlot, {
-    onClick: e => {
-      if (e.button !== 0) {
-        return;
-      }
-      const slot = e.currentTarget;
-      const label = slot.closest("label");
-      const input = document.getElementById(label.getAttribute("for"));
-      const allowed = dispatchRequestInteraction(input, e);
-      if (allowed) {
-        triggerStringAction("clear", e, {
-          actionTarget: input,
-          skipClose: true
-        });
-      }
-    },
-    children: jsx(Icon, {
-      children: jsx(CloseSvg, {})
+    children: jsx(Button, {
+      tabIndex: "-1",
+      "navi-focus-delegate": id,
+      variant: "icon",
+      command: "--navi-clear",
+      commandFor: id,
+      children: jsx(Icon, {
+        children: jsx(CloseSvg, {})
+      })
     })
   });
 };
@@ -31132,16 +32085,14 @@ const InputTextualWithSuggestions = props => {
     // },
     ,
     children: children || jsx(InputRightSlot, {
-      onClick: e => {
-        if (expanded) {
-          hideSuggestions(e);
-        } else {
-          showSuggestions(e);
-        }
-      },
-      children: jsx(Icon, {
-        color: "rgba(28, 43, 52, 0.5)",
-        children: jsx(ChevronDownSvg, {})
+      children: jsx(Button, {
+        variant: "icon",
+        command: "--navi-toggle",
+        commandFor: suggestions,
+        children: jsx(Icon, {
+          color: "rgba(28, 43, 52, 0.5)",
+          children: jsx(ChevronDownSvg, {})
+        })
       })
     })
   });
@@ -31245,9 +32196,7 @@ const css$w = /* css */`
     width: fit-content;
     height: fit-content;
     padding-top: var(--x-padding-top);
-    padding-right: var(--x-padding-right);
     padding-bottom: var(--x-padding-bottom);
-    padding-left: var(--x-padding-left);
     flex-direction: row;
     color: var(--x-color);
     font-size: var(--font-size);
@@ -31267,9 +32216,7 @@ const css$w = /* css */`
       box-sizing: content-box;
       min-width: 1ch;
       margin-top: calc(-1 * var(--x-padding-top));
-      margin-right: calc(-1 * var(--x-padding-right));
       margin-bottom: calc(-1 * var(--x-padding-bottom));
-      margin-left: calc(-1 * var(--x-padding-left));
       padding-top: var(--x-padding-top);
       padding-right: var(--x-padding-right);
       padding-bottom: var(--x-padding-bottom);
@@ -31277,10 +32224,12 @@ const css$w = /* css */`
       flex-grow: 1;
       color: inherit;
       font-size: inherit;
+      text-align: inherit;
       background: none;
       border: none;
       border-radius: inherit;
       outline: none;
+      -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
 
       &[type="search"] {
         -webkit-appearance: textfield;
@@ -31292,35 +32241,12 @@ const css$w = /* css */`
     }
 
     .navi_input_slot {
+      margin-inline: 0.2em;
       color: #5e4e4e;
 
       &[data-left] {
         margin-right: var(--x-padding-left);
         order: -1;
-      }
-
-      &[data-hide-while-empty] {
-        opacity: 0;
-        pointer-events: none;
-      }
-    }
-    &[data-has-value] {
-      .navi_input_slot[data-hide-while-empty] {
-        opacity: 1;
-        cursor: pointer;
-        pointer-events: auto;
-      }
-      &[data-readonly] {
-        .navi_input_slot[data-hide-while-empty] {
-          opacity: 0;
-          pointer-events: none;
-        }
-      }
-      &[data-disabled] {
-        .navi_input_slot[data-hide-while-empty] {
-          opacity: 0;
-          pointer-events: none;
-        }
       }
     }
 
@@ -31437,10 +32363,13 @@ const InputHeadlessResolver = props => {
   });
 };
 const InputTextualHeadless = props => {
-  const [inputProps, remainingProps] = useInputTextualProps(props);
+  const [inputRootProps, inputHostProps] = useInputTextualProps(props);
   return jsx(RealInput, {
-    ...inputProps,
-    ...remainingProps
+    "navi-visually-hidden": "",
+    "navi-focus-delegate": "",
+    "aria-hidden": "true",
+    ...inputRootProps,
+    ...inputHostProps
   });
 };
 const useInputTextualProps = props => {
@@ -31459,12 +32388,12 @@ const InputTextualUI = props => {
     variant,
     width = "maxLength"
   } = props;
-  const [inputProps, remainingProps] = useInputTextualProps(props);
+  const [inputControlRootProps, inputControlHostProps] = useInputTextualProps(props);
   const {
     id,
     basePseudoState,
     children
-  } = inputProps;
+  } = inputControlHostProps;
   const uiStateController = getUIStateControllerById(id);
   const value = uiStateController.uiState;
   const disabled = basePseudoState[":disabled"];
@@ -31485,25 +32414,26 @@ const InputTextualUI = props => {
   // meant to end on input
   // we have to use delete otherwise it could override width: undefined
   // when remainingProps contains expandX which would try to set width to 100%
-  delete remainingProps.width;
+  delete inputControlRootProps.width;
   if (width === "maxLength") {
     const {
       maxLength
-    } = inputProps;
+    } = inputControlHostProps;
     if (maxLength !== undefined) {
       const isNumeric = props.inputMode === "numeric";
-      inputProps.width = isNumeric ? `${maxLength}ch` : `calc(${maxLength} * 1.5ch)`;
+      inputControlHostProps.width = isNumeric ? `${maxLength}ch` : `calc(${maxLength} * 1.5ch)`;
     }
   } else if (width === "content") {
-    inputProps.fieldSizing = "content";
+    inputControlHostProps.fieldSizing = "content";
   } else {
-    inputProps.width = width;
+    inputControlHostProps.width = width;
   }
   return jsxs(Box, {
     as: "span",
+    inline: true,
     flex: true,
     baseClassName: "navi_input",
-    ...remainingProps,
+    ...inputControlRootProps,
     basePseudoState: basePseudoState,
     ui: undefined,
     "data-discrete": discrete ? "" : undefined,
@@ -31522,12 +32452,12 @@ const InputTextualUI = props => {
     }), variant === "underline" ? jsxs("span", {
       className: "navi_input_real_input_wrapper",
       children: [jsx(RealInput, {
-        ...inputProps
+        ...inputControlHostProps
       }), jsx("span", {
         className: "navi_input_underline"
       })]
     }) : jsx(RealInput, {
-      ...inputProps
+      ...inputControlHostProps
     }), childrenWithContext]
   });
 };
@@ -31856,9 +32786,10 @@ const FormControl = props => {
     ref,
     method = "GET"
   } = props;
-  const [formProps, remainingProps, childrenWrapperProps] = useControlgroupProps(props, {
-    stateType: "object",
+  const [formRootProps, formProps, childrenWrapperProps] = useControlgroupProps(props, {
+    wantRequesterButtonState: true,
     controlType: "form",
+    stateType: "object",
     aggregateChildStates: childUIStateControllers => {
       const formValues = {};
       for (const childUIStateController of childUIStateControllers) {
@@ -31891,8 +32822,8 @@ const FormControl = props => {
     };
   }, [loading]);
   return jsx(Box, {
+    ...formRootProps,
     ...formProps,
-    ...remainingProps,
     as: "form",
     "data-method": method,
     novalidate: "" // make sure browser don't prevent "submit" when invalid, nor display messages
@@ -31925,6 +32856,9 @@ const FormControl = props => {
       value: formContextValue,
       children: jsx(ControlgroupChildrenWrapper, {
         ...childrenWrapperProps,
+        // do not propagate name to children like radio group or checkbox group does
+        // (otherwise anonymous button end up using that name)
+        name: undefined,
         children: children
       })
     })
@@ -31934,9 +32868,13 @@ const FormPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":re
 const getFormManagedControls = form => {
   const managedControls = [];
   for (const element of form.elements) {
-    // if (element.name) {
+    // Exclude inputs that are inside any control group (radio, checkbox, control_group…)
+    // — the group host is the managed control for the form, not its individual child inputs.
+    const controlGroupHost = element.closest("[navi-control-group]");
+    if (controlGroupHost && form.contains(controlGroupHost)) {
+      continue;
+    }
     managedControls.push(element);
-    // }
   }
   return managedControls;
 };
@@ -31953,7 +32891,7 @@ const getFormManagedControls = form => {
 
 installImportMetaCssBuild(import.meta);const css$u = /* css */`
   .navi_group {
-    --border-width: 1px;
+    --group-border-width: 1px;
 
     > *:hover,
     > *[data-hover] {
@@ -32006,7 +32944,7 @@ installImportMetaCssBuild(import.meta);const css$u = /* css */`
     /* Vertical: Cumulative margin for border overlap */
     &[data-vertical] {
       > *:not(:first-child) {
-        margin-top: calc(var(--border-width) * -1);
+        margin-top: calc(var(--group-border-width) * -1);
       }
       > *:first-child:not(:only-child) {
         border-bottom-right-radius: 0 !important;
@@ -32043,25 +32981,16 @@ installImportMetaCssBuild(import.meta);const css$u = /* css */`
 `;
 const Group = ({
   children,
-  borderWidth = 1,
   row,
   vertical = row,
   ...props
 }) => {
   import.meta.css = [css$u, "@jsenv/navi/src/control/group.jsx"];
-  if (typeof borderWidth === "string") {
-    borderWidth = parseFloat(borderWidth);
-  }
-  const borderWidthCssValue = typeof borderWidth === "number" ? `${borderWidth}px` : borderWidth;
   return jsx(Box, {
     baseClassName: "navi_group",
     "data-vertical": vertical ? "" : undefined,
     row: row,
     ...props,
-    style: {
-      "--border-width": borderWidthCssValue,
-      ...props.style
-    },
     children: children
   });
 };
@@ -32357,7 +33286,25 @@ const markAutofocusRestoreOnClose = (containerEl) => {
   }
 };
 
-const focusFirstAutofocusOrFocusable = (containerEl, debugFocus, e) => {
+// Get the active element before we transfer focus in the popover/dialog
+// We don't just use document.activeElement because when dialog is opened by mousedown
+// we prevent default so browser don't steal focus back from the dialog
+// meaning the focus did not yet reach the element receiving the mousedown
+// as a result document.activeElement is not up-to-date (can be document.body for instance)
+const getFocusedBeforeTransfer = (e) => {
+  const initiator = e.detail.eventChain[0];
+  if (initiator.type === "mousedown" && initiator.defaultPrevented) {
+    // if we we had let browser give focus, the element would be the one that would be focused
+    return initiator.currentTarget;
+  }
+  if (initiator.type === "click") {
+    // label use case
+    return initiator.currentTarget;
+  }
+  return document.activeElement;
+};
+
+const transferFocus = (containerEl, debugFocus, e) => {
   let target;
   let reason;
   if (containerEl.hasAttribute("navi-autofocus-restore")) {
@@ -32478,8 +33425,9 @@ const Dialog = props => {
     } = effectiveAnchor.getBoundingClientRect();
     dialogEl.style.setProperty("--anchor-width", `${snapToPixel(width)}px`);
     dialogEl.style.setProperty("--anchor-height", `${snapToPixel(height)}px`);
+    const focusedBeforeOpen = getFocusedBeforeTransfer(e);
     dialogEl.showModal();
-    focusFirstAutofocusOrFocusable(dialogEl, debugFocus, e);
+    transferFocus(dialogEl, debugFocus, e);
     if (scrollTrap) {
       addCleanup(trapScrollInside(dialogEl));
     }
@@ -32503,7 +33451,8 @@ const Dialog = props => {
     }
     openedRef.current = true;
     dispatchCustomEvent(dialogEl, "navi_open", {
-      event: e
+      event: e,
+      focusedBeforeOpen
     });
   };
   const close = e => {
@@ -32576,17 +33525,24 @@ const Dialog = props => {
 };
 
 installImportMetaCssBuild(import.meta);const css$q = /* css */`
-  .navi_popover_backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: 1000;
-    background: transparent;
-  }
-
   .navi_popover {
     &[data-anchor-hidden] {
       opacity: 0;
       pointer-events: none;
+    }
+
+    .navi_popover_backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      background: transparent;
+      pointer-events: none;
+    }
+
+    &:popover-open {
+      .navi_popover_backdrop {
+        pointer-events: auto;
+      }
     }
   }
 `;
@@ -32620,8 +33576,9 @@ const Popover = props => {
   }) => {
     debugPopup(e, `openPopover()`);
     const popoverEl = ref.current;
+    const focusedBeforeOpen = getFocusedBeforeTransfer(e);
     popoverEl.showPopover();
-    focusFirstAutofocusOrFocusable(popoverEl, debugFocus, e);
+    transferFocus(popoverEl, debugFocus, e);
     const effectiveAnchor = anchor || document.documentElement;
     const positionPopover = positionEvent => {
       const {
@@ -32696,7 +33653,8 @@ const Popover = props => {
     openedRef.current = true;
     setOpened(true);
     dispatchCustomEvent(popoverEl, "navi_open", {
-      event: e
+      event: e,
+      focusedBeforeOpen
     });
   };
   const close = e => {
@@ -32735,8 +33693,25 @@ const Popover = props => {
     }
     close(e);
   };
-  return jsxs(Fragment$1, {
-    children: [opened && createPortal(jsx("div", {
+  return jsxs(Box, {
+    id: id,
+    popover: "manual",
+    ...rest,
+    ref: ref,
+    baseClassName: "navi_popover",
+    pseudoClasses: PopoverPseudoClasses,
+    onnavi_request_open: e => {
+      const {
+        anchor
+      } = e.detail;
+      onRequestOpen(e, {
+        anchor
+      });
+    },
+    onnavi_request_close: e => {
+      onRequestClose(e);
+    },
+    children: [jsx("div", {
       className: "navi_popover_backdrop",
       "aria-hidden": "true",
       onMouseDown: e => {
@@ -32749,26 +33724,7 @@ const Popover = props => {
         }
         onRequestClose(e);
       }
-    }), document.body), jsx(Box, {
-      id: id,
-      popover: "manual",
-      ...rest,
-      ref: ref,
-      baseClassName: "navi_popover",
-      pseudoClasses: PopoverPseudoClasses,
-      onnavi_request_open: e => {
-        const {
-          anchor
-        } = e.detail;
-        onRequestOpen(e, {
-          anchor
-        });
-      },
-      onnavi_request_close: e => {
-        onRequestClose(e);
-      },
-      children: children
-    })]
+    }), children]
   });
 };
 const PopoverPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":focus-within", ":read-only", ":disabled"];
@@ -32908,6 +33864,51 @@ installImportMetaCssBuild(import.meta);const css$p = /* css */`
     }
   }
 `;
+const PickerCustomResolver = props => {
+  if (props.children === undefined) {
+    return jsx(PickerNative, {
+      ...props
+    });
+  }
+  return jsx(PickerCustom, {
+    ...props
+  });
+};
+const PickerNative = props => {
+  const Next = useNextResolver();
+  const {
+    onClick
+  } = props;
+  const onRequestOpen = e => {
+    const pickerButton = e.currentTarget;
+    const pickerInput = getPickerInput(pickerButton);
+    if (!pickerInput) {
+      return;
+    }
+    const allowed = dispatchRequestInteraction(pickerInput, e, e.type === "click" ? "click to show picker" : "navi_request_open event");
+    if (allowed) {
+      try {
+        pickerInput.showPicker();
+      } catch {
+        pickerInput.click();
+      }
+    }
+  };
+  return jsx(Next, {
+    ...props,
+    // Only wait for the native "change" event (dialog close) when the picker has its own
+    // action. Without an action, the change event would trigger a noop action cycle and
+    // cause spurious state updates (e.g. when closing the color dialog on form submit).
+    actionInteraction: props.action ? "change" : undefined,
+    onnavi_request_open: e => {
+      onRequestOpen(e);
+    },
+    onClick: e => {
+      onClick?.(e);
+      onRequestOpen(e);
+    }
+  });
+};
 const PickerCustom = props => {
   const {
     ref,
@@ -32947,37 +33948,35 @@ const PickerCustom = props => {
   {
     const debugFocus = useDebugFocus();
     const debugPopup = useDebugPopup();
-    const moveFocusToPicker = e => {
-      const pickerEl = ref.current;
-      const mousedownEvent = findEvent(e, "mousedown");
-      if (mousedownEvent) {
-        debugFocus(e, `move focus to picker (mousedown.preventDefault() + pickerEl.focus()`);
-        mousedownEvent.preventDefault();
-        pickerEl.focus({
-          preventScroll: true
-        });
-        return;
-      }
-      const focusoutEvent = findEvent(e, "focusout");
-      if (focusoutEvent) {
-        // If the popover closed because focus left the select (focusout),
-        // don't steal focus back — let focus go where the user intended.
-        debugFocus(e, `let focus go away`);
-        return;
-      }
-      debugFocus(e, `move focus to picker`);
-      pickerEl.focus({
-        preventScroll: true
-      });
-    };
     const [expanded, setExpanded] = useState(false);
     const expandedRef = useRef(expanded);
     expandedRef.current = expanded;
     const valueAtOpenRef = useRef(null);
-    const onOpen = () => {
+    const activeElementAtOpenRef = useRef(null);
+    const onOpen = e => {
+      activeElementAtOpenRef.current = e.detail.focusedBeforeOpen;
       expandedRef.current = true;
       setExpanded(true);
       valueAtOpenRef.current = getPickerInputUIState(ref.current);
+    };
+    const restoreFocus = e => {
+      const activeElementAtOpen = activeElementAtOpenRef.current;
+      activeElementAtOpenRef.current = null;
+      const focusoutEvent = findEvent(e, "focusout");
+      if (focusoutEvent) {
+        debugFocus(e, `closed by focusout -> let focus go away`);
+        return;
+      }
+      const mousedownEvent = findEvent(e, "mousedown");
+      if (mousedownEvent) {
+        debugFocus(e, "closed by mousedown -> prevent browser focus (mousedown.preventDefault())");
+        mousedownEvent.preventDefault();
+      }
+      debugFocus(e, `restore focus to previously focused element`, activeElementAtOpen);
+      activeElementAtOpen.focus({
+        preventScroll: true
+      });
+      return;
     };
     const onClose = e => {
       const cancelEvent = findEvent(e, eInChain => eInChain.type === "navi_request_close" && eInChain.detail.isCancel);
@@ -32987,9 +33986,9 @@ const PickerCustom = props => {
       // Reset so the next opening re-evaluates screen size
       defaultModeRef.current = null;
       const pickerEl = ref.current;
-      const inputEl = getPickerInput$1(pickerEl);
+      const inputEl = getPickerInput(pickerEl);
       if (!inputEl) {
-        moveFocusToPicker(e);
+        restoreFocus(e);
         return;
       }
       const valueAtOpen = valueAtOpenRef.current;
@@ -32997,7 +33996,7 @@ const PickerCustom = props => {
         dispatchRequestSetUIState(inputEl, valueAtOpen, {
           event: e
         });
-        moveFocusToPicker(e);
+        restoreFocus(e);
         return;
       }
       const valueAtClose = getPickerInputUIState(pickerEl);
@@ -33009,9 +34008,11 @@ const PickerCustom = props => {
           uiState: valueAtClose
         });
       }
-      moveFocusToPicker(e);
+      restoreFocus(e);
     };
-    const disableClickFor = useIgnoreClickForMousedown();
+    const disableClickFor = useIgnoreClickForMousedown(ref, e => {
+      debugPopup(e, `click ignored`);
+    });
     const requestOpen = e => {
       // scroll <button> of the picker into view when opening it
       const pickerEl = ref.current;
@@ -33038,6 +34039,16 @@ const PickerCustom = props => {
         cancel
       });
     };
+    const onInteraction = (e, {
+      name,
+      effect
+    }) => {
+      const allowed = dispatchRequestInteraction(ref.current, e, name);
+      if (!allowed) {
+        return;
+      }
+      effect();
+    };
     const {
       onActionStart,
       children
@@ -33048,16 +34059,29 @@ const PickerCustom = props => {
         onActionStart?.(e);
         requestClose(e);
       },
-      "onnavi_request_close": e => {
-        if (dispatchRequestInteraction(ref.current, e)) {
-          requestClose(e);
+      "onnavi_request_open": e => {
+        if (expandedRef.current) {
+          return;
         }
+        onInteraction(e, {
+          name: "navi_request_open_event",
+          effect: () => {
+            requestOpen(e);
+          }
+        });
+      },
+      "onnavi_request_close": e => {
+        onInteraction(e, {
+          effect: () => {
+            requestClose(e);
+          }
+        });
       },
       children
     });
     Object.assign(popupProps, {
       onnavi_open: e => {
-        onOpen();
+        onOpen(e);
       },
       onnavi_close: e => {
         onClose(e);
@@ -33071,48 +34095,62 @@ const PickerCustom = props => {
       } = props;
       const onKeyDownShortcuts = createOnKeyDownForShortcuts({
         arrowdown: e => {
-          if (dispatchRequestInteraction(ref.current, e, "arrow_down_to_open")) {
-            e.preventDefault(); // prevent container scroll
-            requestOpen(e);
-          }
+          onInteraction(e, {
+            name: "arrow_down_to_open",
+            effect: () => {
+              e.preventDefault(); // prevent container scroll
+              requestOpen(e);
+            }
+          });
         },
         arrowup: e => {
-          if (dispatchRequestInteraction(ref.current, e, "arrow_up_to_open")) {
-            e.preventDefault(); // prevent container scroll
-            requestOpen(e);
-          }
+          onInteraction(e, {
+            name: "arrow_up_to_open",
+            effect: () => {
+              e.preventDefault(); // prevent container scroll
+              requestOpen(e);
+            }
+          });
         },
         space: e => {
-          if (dispatchRequestInteraction(ref.current, e, "space_to_open")) {
-            e.preventDefault(); // prevent scroll
-            requestOpen(e);
-          }
+          onInteraction(e, {
+            name: "space_to_open",
+            effect: () => {
+              e.preventDefault(); // prevent scroll
+              requestOpen(e);
+            }
+          });
         },
         escape: e => {
           if (!expandedRef.current) {
             return;
           }
-          if (dispatchRequestInteraction(ref.current, e, "escape_to_cancel")) {
-            e.preventDefault();
-            requestClose(e, {
-              cancel: true
-            });
-          }
+          onInteraction(e, {
+            name: "escape_to_cancel",
+            effect: () => {
+              e.preventDefault(); // prevent browser from closing the dialog (if any)
+              requestClose(e, {
+                cancel: true
+              });
+            }
+          });
         }
       });
       Object.assign(pickerProps, {
         onMouseDown: e => {
           onMouseDown?.(e);
-          const pickerEl = ref.current;
-          if (dispatchRequestInteraction(pickerEl, e, "mousedown to open picker")) {
-            if (expandedRef.current) {
-              requestClose(e);
-            } else {
-              e.preventDefault(); // prevent browser trying to give focus to the select (popover will take focus)
-              debugFocus(e, `prevent browser giving focus to button (mousedown.preventDefault())`);
-              requestOpen(e);
+          onInteraction(e, {
+            name: "mousedown to open picker",
+            effect: () => {
+              if (expandedRef.current) {
+                requestClose(e);
+              } else {
+                e.preventDefault(); // prevent browser trying to give focus to the select (popover will take focus)
+                debugFocus(e, `prevent browser giving focus to button (mousedown.preventDefault())`);
+                requestOpen(e);
+              }
             }
-          }
+          });
         },
         onClick: e => {
           // if (e.detail === 0) {
@@ -33122,12 +34160,15 @@ const PickerCustom = props => {
           //  return;
           // }
           onClick?.(e);
-          if (dispatchRequestInteraction(ref.current, e, e.detail === 0 ? "keyboard click to open picker" : "click to open picker")) {
-            // When a label is clicked it transfers focus to the select
-            // in that case we want to open it (otherwise we have already opened on mousedown interaction)
-            e.preventDefault();
-            requestOpen(e);
-          }
+          onInteraction(e, {
+            name: e.detail === 0 ? "keyboard click to open picker" : "click to open picker",
+            effect: () => {
+              // When a label is clicked it transfers focus to the select
+              // in that case we want to open it (otherwise we have already opened on mousedown interaction)
+              e.preventDefault();
+              requestOpen(e);
+            }
+          });
         },
         onKeyDown: e => {
           onKeyDown?.(e);
@@ -33147,9 +34188,12 @@ const PickerCustom = props => {
           if (e.button !== 0) {
             return;
           }
-          // click inside popover should not bubble to the select (would re-open it if that click closes it)
-          debugPopup(e, `popover click stopPropagation`);
+          // click inside popover should not bubble to the picker (would re-open it if that click closes it)
+          // preventDefault also prevents a form submit that would otherwise be triggered when
+          // the picker is inside a <form> and the click lands on a non-button element
+          debugPopup(e, `popover click stopPropagation + preventDefault`);
           e.stopPropagation();
+          e.preventDefault();
         },
         onKeyDown: e => {
           // some keys pressed inside popover should not reach the picker button
@@ -33176,11 +34220,11 @@ const PickerCustom = props => {
   }
   return null;
 };
-const getPickerInput$1 = pickerEl => {
+const getPickerInput = pickerEl => {
   return pickerEl.querySelector(".navi_picker_input");
 };
 const getPickerInputUIState = pickerEl => {
-  const pickerInput = getPickerInput$1(pickerEl);
+  const pickerInput = getPickerInput(pickerEl);
   return getUIStateFromElement(pickerInput);
 };
 const PickerContentInsidePopover = props => {
@@ -33190,7 +34234,7 @@ const PickerContentInsidePopover = props => {
     popupProps,
     children,
     pointerTrap,
-    scrollTrap = true,
+    scrollTrap,
     focusTrap = true,
     popoverMode = "nearby",
     popoverSpacing = popoverMode === "nearby" ? 5 : 0,
@@ -33250,7 +34294,7 @@ const PickerContentInsideDialog = props => {
   const {
     popupProps,
     children,
-    scrollTrap = true,
+    scrollTrap,
     pointerTrap,
     ...rest
   } = props;
@@ -33269,30 +34313,42 @@ const PickerContentInsideDialog = props => {
 };
 
 /**
- * Returns a `disableClickFor` function that suppresses the `click` event that
- * the browser fires after a `mousedown` which already handled an open/close action.
+ * Returns a `disableClickFor` function that suppresses the next `click` event
+ * that lands on a specific element after a `mousedown` already handled an
+ * open/close action.
  *
- * Problem: when the user clicks a dialog's backdrop to close it, the browser
- * fires `mousedown` on the backdrop (which closes the dialog), then fires
- * `click` on whatever element is underneath once the dialog is gone. If that
- * element is the trigger button that originally opened the dialog, the `click`
- * would immediately re-open it.
+ * Problem: when the popover backdrop closes on mousedown, the browser then
+ * dispatches a `click` on whatever element is under the pointer. If that element
+ * is the picker button, it would immediately re-open the picker.
  *
- * Calling `stopPropagation()` or `preventDefault()` on the backdrop `mousedown`
- * does not help: the browser dispatches the subsequent `click` regardless,
- * targeting whichever element ends up under the pointer after the dialog closes.
+ * We cannot call `stopPropagation()` or `preventDefault()` on the backdrop
+ * `mousedown` to prevent that click — the browser dispatches it regardless.
  *
  * Solution: register a self-removing capture-phase `click` listener on `document`
- * so the click is intercepted before it reaches any element handler.
+ * and suppress the click only if it lands inside the given element (the picker
+ * button). Clicks on any other element (e.g. a submit button) pass through
+ * normally.
+ *
+ * Note: the popover backdrop stays in the DOM (with pointer-events:none) so that
+ * the browser always finds a target for the mousedown → click sequence. If the
+ * backdrop were removed from the DOM between mousedown and mouseup, the browser
+ * would not dispatch a click at all, which would leave this listener armed
+ * forever and cause it to swallow the next unrelated user click.
  */
-const useIgnoreClickForMousedown = () => {
+const useIgnoreClickForMousedown = (elementRef, onIgnore) => {
   const disableClickFor = () => {
     const suppressClick = clickEvent => {
-      clickEvent.stopPropagation();
-      clickEvent.preventDefault();
       document.removeEventListener("click", suppressClick, {
         capture: true
       });
+      const el = elementRef.current;
+      if (!el || !el.contains(clickEvent.target)) {
+        // Click landed outside the element we are guarding — let it through.
+        return;
+      }
+      clickEvent.stopPropagation();
+      clickEvent.preventDefault();
+      onIgnore?.(clickEvent);
     };
     document.addEventListener("click", suppressClick, {
       capture: true
@@ -33301,89 +34357,45 @@ const useIgnoreClickForMousedown = () => {
   return disableClickFor;
 };
 
-const getPickerInputFromButtonEvent = e => {
-  const pickerButton = e.currentTarget;
-  const pickerInput = getPickerInput(pickerButton);
-  return pickerInput;
-};
-const getPickerInput = pickerButton => {
-  const pickerInput = pickerButton.querySelector(".navi_picker_input");
-  return pickerInput;
-};
-const PickerNative = props => {
+const PickerNaviMinute = props => {
   const Next = useNextResolver();
   const {
-    onClick
+    min,
+    max,
+    step,
+    value
   } = props;
   return jsx(Next, {
     ...props,
-    // Only wait for the native "change" event (dialog close) when the picker has its own
-    // action. Without an action, the change event would trigger a noop action cycle and
-    // cause spurious state updates (e.g. when closing the color dialog on form submit).
-    actionInteraction: props.action ? "change" : undefined,
-    onClick: e => {
-      onClick?.(e);
-      const pickerInput = getPickerInputFromButtonEvent(e);
-      const allowed = dispatchRequestInteraction(pickerInput, e, "click_to_show_picker");
-      if (allowed) {
-        try {
-          pickerInput.showPicker();
-        } catch {
-          pickerInput.click();
-        }
-      }
-    }
+    type: "minute",
+    children: jsxs(Box, {
+      flex: "y",
+      spacing: "s",
+      padding: "s",
+      children: [jsx(InputTextual, {
+        type: "number",
+        command: "--navi-update",
+        min: min,
+        max: max,
+        step: step,
+        value: value
+      }), jsxs(Box, {
+        flex: true,
+        spacing: "s",
+        children: [jsx(Button, {
+          command: "--navi-send",
+          children: "Confirmer"
+        }), jsx(Button, {
+          command: "--navi-clear",
+          children: "Vider"
+        }), jsx(Button, {
+          command: "--navi-cancel",
+          children: "Annuler"
+        })]
+      })]
+    })
   });
 };
-
-installImportMetaCssBuild(import.meta);const css$o = /* css */`
-  .navi_color {
-    display: block;
-    aspect-ratio: 1/1;
-    height: 1em;
-    height: 1lh;
-    background-color: currentColor;
-    border: 1px solid rgba(0, 0, 0, 0.2);
-    border-radius: 2px;
-
-    &[navi-color-empty] {
-      background-image:
-        linear-gradient(45deg, #ccc 25%, transparent 25%),
-        linear-gradient(-45deg, #ccc 25%, transparent 25%),
-        linear-gradient(45deg, transparent 75%, #ccc 75%),
-        linear-gradient(-45deg, transparent 75%, #ccc 75%);
-      background-position:
-        0 0,
-        0 3px,
-        3px -3px,
-        -3px 0;
-      background-size: 6px 6px;
-      /* Checkerboard pattern to convey "no color / transparent" */
-      background-color: white;
-    }
-  }
-`;
-const Color = ({
-  children,
-  ...rest
-}) => {
-  import.meta.css = [css$o, "@jsenv/navi/src/text/color.jsx"];
-  const color = children || undefined;
-  return jsx(Box, {
-    as: "span",
-    className: "navi_color",
-    "navi-color-empty": color ? undefined : ""
-    // propsCSSVars={COLOR_PROP_CSS_VAR}
-    ,
-
-    color: color,
-    title: color,
-    ...rest
-  });
-};
-// const COLOR_PROP_CSS_VAR = {
-//   color: "--color",
-// };
 
 const Time = props => {
   const {
@@ -33754,347 +34766,7 @@ const toDate = (value, parseString) => {
   return null;
 };
 
-const PickerText = props => {
-  const Next = useNextResolver();
-  return jsx(Next, {
-    icon: jsx(PencilSvg, {}),
-    ...props
-  });
-};
-const PickerArray = props => {
-  const Next = useNextResolver();
-  return jsx(Next, {
-    maxLines: "3",
-    ui: jsx(PickerArrayUI, {}),
-    ...props,
-    type: "navi_picker"
-  });
-};
-const PickerArrayUI = () => {
-  const {
-    value,
-    placeholder,
-    maxLines
-  } = useContext(PickerContext);
-  if (!value || value.length === 0) {
-    if (!placeholder) {
-      return null;
-    }
-    return placeholder;
-  }
-  return jsx(Text, {
-    spacing: ", ",
-    shrinkWrap: true,
-    maxLines: maxLines,
-    children: value.map(item => {
-      return jsx("span", {
-        children: item
-      }, item);
-    })
-  });
-};
-const PickerColor = props => {
-  const Next = useNextResolver();
-  return jsx(Next, {
-    ui: jsx(PickerColorUI, {}),
-    icon: jsx(ColorSvg, {}),
-    type: "color",
-    ...props
-  });
-};
-const PickerColorUI = () => {
-  const {
-    value,
-    placeholder
-  } = useContext(PickerContext);
-  if (!value) {
-    if (!placeholder) {
-      return jsx(Color, {});
-    }
-    return placeholder;
-  }
-  return jsx(Color, {
-    children: value
-  });
-};
-const PickerDate = props => {
-  const Next = useNextResolver();
-  return jsx(Next, {
-    ui: jsx(PickerDateUI, {}),
-    icon: jsx(CalendarSvg, {}),
-    ...props,
-    type: "date"
-  });
-};
-const PickerDateUI = props => {
-  const {
-    value,
-    placeholder
-  } = useContext(PickerContext);
-  if (!value) {
-    if (!placeholder) {
-      return jsx(Time, {
-        type: "date",
-        color: "var(--picker-placeholder-color",
-        capitalize: true,
-        maxLines: "1",
-        ...props
-      });
-    }
-    return placeholder;
-  }
-  return jsx(Time, {
-    type: "date",
-    capitalize: true,
-    maxLines: "1",
-    ...props,
-    children: value
-  });
-};
-const PickerMonth = props => {
-  const Next = useNextResolver();
-  return jsx(Next, {
-    ui: jsx(PickerMonthUI, {}),
-    icon: jsx(CalendarSvg, {}),
-    ...props,
-    type: "month"
-  });
-};
-const PickerMonthUI = props => {
-  const {
-    value,
-    placeholder
-  } = useContext(PickerContext);
-  if (!value) {
-    if (!placeholder) {
-      return jsx(Time, {
-        type: "month",
-        color: "var(--picker-placeholder-color",
-        maxLines: "1",
-        ...props
-      });
-    }
-    return placeholder;
-  }
-  return jsx(Time, {
-    type: "month",
-    maxLines: "1",
-    capitalize: true,
-    ...props,
-    children: value
-  });
-};
-const PickerWeek = props => {
-  const Next = useNextResolver();
-  return jsx(Next, {
-    ui: jsx(PickerWeekUI, {}),
-    icon: jsx(CalendarSvg, {}),
-    ...props,
-    type: "week"
-  });
-};
-const PickerWeekUI = props => {
-  const {
-    value,
-    placeholder
-  } = useContext(PickerContext);
-  if (!value) {
-    if (!placeholder) {
-      return jsx(Time, {
-        type: "week",
-        color: "var(--picker-placeholder-color",
-        maxLines: "1",
-        ...props
-      });
-    }
-    return placeholder;
-  }
-  return jsx(Time, {
-    type: "week",
-    capitalize: true,
-    maxLines: "1",
-    ...props,
-    children: value
-  });
-};
-const PickerTime = props => {
-  const Next = useNextResolver();
-  return jsx(Next, {
-    ui: jsx(PickerTimeUI, {}),
-    icon: jsx(ClockSvg, {}),
-    ...props,
-    type: "time"
-  });
-};
-const PickerTimeUI = props => {
-  const {
-    value,
-    placeholder
-  } = useContext(PickerContext);
-  if (!value) {
-    if (!placeholder) {
-      return jsx(Time, {
-        type: "time",
-        color: "var(--picker-placeholder-color",
-        maxLines: "1",
-        ...props
-      });
-    }
-    return placeholder;
-  }
-  return jsx(Time, {
-    type: "time",
-    maxLines: "1",
-    ...props,
-    children: value
-  });
-};
-const PickerDatetime = props => {
-  const Next = useNextResolver();
-  return jsx(Next, {
-    ui: jsx(PickerDatetimeUI, {}),
-    icon: jsx(CalendarSvg, {}),
-    ...props,
-    type: "datetime-local"
-  });
-};
-const PickerDatetimeUI = props => {
-  const {
-    value,
-    placeholder
-  } = useContext(PickerContext);
-  if (!value) {
-    if (!placeholder) {
-      return jsx(Time, {
-        type: "datetime",
-        color: "var(--picker-placeholder-color",
-        maxLines: "1",
-        ...props
-      });
-    }
-    return placeholder;
-  }
-  return jsx(Time, {
-    type: "datetime",
-    maxLines: "1",
-    children: value
-  });
-};
-const PickerFile = props => {
-  const Next = useNextResolver();
-  return jsx(Next, {
-    ui: jsx(PickerFileUI, {}),
-    icon: jsx(FileSvg, {}),
-    type: "file",
-    ...props
-  });
-};
-const PickerFileUI = () => {
-  const {
-    value,
-    placeholder
-  } = useContext(PickerContext);
-  if (!value) {
-    if (!placeholder) {
-      return null;
-    }
-    return placeholder;
-  }
-  // value is a FileList-like string from the input; display file names
-  return value;
-};
-const PencilSvg = () => {
-  return jsx("svg", {
-    xmlns: "http://www.w3.org/2000/svg",
-    viewBox: "0 0 24 24",
-    fill: "currentColor",
-    children: jsx("path", {
-      d: "M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"
-    })
-  });
-};
-const CalendarSvg = () => {
-  return jsx("svg", {
-    xmlns: "http://www.w3.org/2000/svg",
-    viewBox: "0 0 24 24",
-    fill: "currentColor",
-    children: jsx("path", {
-      d: "M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"
-    })
-  });
-};
-const ClockSvg = () => {
-  return jsx("svg", {
-    xmlns: "http://www.w3.org/2000/svg",
-    viewBox: "0 0 24 24",
-    fill: "currentColor",
-    children: jsx("path", {
-      d: "M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"
-    })
-  });
-};
-const ColorSvg = () => {
-  return jsx("svg", {
-    xmlns: "http://www.w3.org/2000/svg",
-    viewBox: "0 0 24 24",
-    fill: "currentColor",
-    children: jsx("path", {
-      d: "M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"
-    })
-  });
-};
-const FileSvg = () => {
-  return jsx("svg", {
-    xmlns: "http://www.w3.org/2000/svg",
-    viewBox: "0 0 24 24",
-    fill: "currentColor",
-    children: jsx("path", {
-      d: "M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z"
-    })
-  });
-};
-
-const PickerNaviMinute = props => {
-  const Next = useNextResolver();
-  const {
-    min,
-    max,
-    step,
-    value
-  } = props;
-  return jsx(Next, {
-    ...props,
-    type: "minute",
-    children: jsxs(Box, {
-      flex: "y",
-      spacing: "s",
-      padding: "s",
-      children: [jsx(InputTextual, {
-        type: "number",
-        action: "update",
-        min: min,
-        max: max,
-        step: step,
-        value: value
-      }), jsxs(Box, {
-        flex: true,
-        spacing: "s",
-        children: [jsx(Button, {
-          action: "send",
-          children: "Confirmer"
-        }), jsx(Button, {
-          action: "clear",
-          children: "Vider"
-        }), jsx(Button, {
-          action: "cancel",
-          children: "Annuler"
-        })]
-      })]
-    })
-  });
-};
-
-installImportMetaCssBuild(import.meta);const css$n = /* css */`
+installImportMetaCssBuild(import.meta);const css$o = /* css */`
   @layer navi {
     .navi_separator {
       --size: 1px;
@@ -34134,7 +34806,7 @@ const Separator = ({
   vertical,
   ...props
 }) => {
-  import.meta.css = [css$n, "@jsenv/navi/src/layout/separator.jsx"];
+  import.meta.css = [css$o, "@jsenv/navi/src/layout/separator.jsx"];
   return jsx(Box, {
     as: vertical ? "span" : "hr",
     ...props,
@@ -34554,7 +35226,7 @@ const ListItemFooter = props => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$m = /* css */`
+installImportMetaCssBuild(import.meta);const css$n = /* css */`
   @layer navi {
     .navi_list_item[navi-selectable] {
       /* Focus outline */
@@ -34585,7 +35257,7 @@ installImportMetaCssBuild(import.meta);const css$m = /* css */`
       --list-item-color-pointed: var(--list-item-color);
       /* Selected — vivid blue accent */
       --list-item-color-selected: white;
-      --list-item-background-color-selected: rgb(3, 30, 60);
+      --list-item-background-color-selected: var(--navi-accent-color);
       --list-item-border-color-selected: var(
         --list-item-background-color-selected
       );
@@ -34725,7 +35397,7 @@ const ListSelectableResolver = props => {
 };
 const ListSelectable = props => {
   const Next = useNextResolver();
-  import.meta.css = [css$m, "@jsenv/navi/src/control/list/list_selectable.jsx"];
+  import.meta.css = [css$n, "@jsenv/navi/src/control/list/list_selectable.jsx"];
   // we allow ourselves to auto-generate a name
   const defaultName = useId();
   props.name = props.name || `listbox_${defaultName}`;
@@ -34736,7 +35408,7 @@ const ListSelectable = props => {
     focusGroupDirection,
     focusGroupWrap
   } = props;
-  const [listControlProps, remainingProps, childrenWrapperProps] = useControlgroupProps(props, {
+  const [listControlRootProps, listControlProps, childrenWrapperProps] = useControlgroupProps(props, {
     stateType: multiple ? "array" : "",
     controlType: multiple ? "checkbox_group" : "radio_group",
     childControlFilter: multiple ? childUIStateController => {
@@ -34843,8 +35515,8 @@ const ListSelectable = props => {
     as: "fieldset",
     "navi-selectable": "",
     "navi-has-selected-background": selectedIndicator === "backgroundColor" ? "" : undefined,
+    ...listControlRootProps,
     ...listControlProps,
-    ...remainingProps,
     name: undefined,
     selectedIndicator: undefined,
     selectable: undefined,
@@ -34880,11 +35552,7 @@ const ListSelectable = props => {
         e.preventDefault();
         return;
       }
-      if (childController.setUIState(true, e)) {
-        dispatchRequestAction(list, {
-          event: e
-        });
-      }
+      childController.setUIState(true, e);
     },
     onnavi_request_unselect: e => {
       const {
@@ -34904,11 +35572,7 @@ const ListSelectable = props => {
         e.preventDefault();
         return;
       }
-      if (childController.setUIState(false, e)) {
-        dispatchRequestAction(list, {
-          event: e
-        });
-      }
+      childController.setUIState(false, e);
     },
     onnavi_request_nav: e => {
       const {
@@ -35016,22 +35680,14 @@ const ListItemSelectable = props => {
   const inputType = multiple ? "checkbox" : "radio";
   const inputId = `${id}_input`;
   inputRef.nullCanHappen = true; // virtualization
-  const [checkableProps, remainingProps] = useCheckableProps({
+  const [checkableRootProps, checkableProps] = useCheckableProps({
     readOnlyMessage: naviI18n(`constraint.readonly.option`, props),
     ...rest,
     ref: inputRef,
     id: inputId,
     type: inputType,
     defaultChecked: defaultSelected,
-    checked: selected,
-    action: (v, {
-      event
-    }) => {
-      const listContainerEl = event.currentTarget.closest(".navi_list_container");
-      dispatchRequestAction(listContainerEl, {
-        event
-      });
-    }
+    checked: selected
   });
   const {
     checked,
@@ -35064,7 +35720,7 @@ const ListItemSelectable = props => {
     spacing: "s",
     flex: true,
     alignY: "center",
-    ...remainingProps,
+    ...checkableRootProps,
     pseudoClasses: SELECTABLE_PSEUDO_CLASSES,
     basePseudoState: {
       ":-navi-selected": checked,
@@ -35275,7 +35931,7 @@ const RenderWindowContext = createContext(null);
 // Carries the separator element/function down to each ListItem so separators
 // are only rendered between items that actually mount (post-filter, post-window).
 const SeparatorContext = createContext(null);
-const css$l = /* css */`
+const css$m = /* css */`
   @layer navi {
     .navi_list_container {
       --list-outline-width: 1px;
@@ -35612,7 +36268,7 @@ const css$l = /* css */`
  *   ...rest              — forwarded to the outer scroll container <Box>
  */
 const ListUI = props => {
-  import.meta.css = [css$l, "@jsenv/navi/src/control/list/list.jsx"];
+  import.meta.css = [css$m, "@jsenv/navi/src/control/list/list.jsx"];
   const {
     ref,
     renderBudget = RENDER_BUDGET_DEFAULT,
@@ -36503,7 +37159,21 @@ const LIST_ITEM_PSEUDO_ELEMENTS = ["::highlight"];
  * - Separator rendering between visible items
  *
  * Props:
- *   itemId    — stable string id for tracking (auto-generated if omitted)
+ *   id        — HTML element id AND the stable identifier used by external commands
+ *               (--navi-select, --navi-unselect, --navi-scroll, --navi-update).
+ *               Required when items need to be targeted programmatically from
+ *               outside the list. Auto-generated internally if omitted.
+ *   index     — 0-based position in the list. Required for virtualization to work
+ *               correctly. Pass the array map index.
+ *   selectable — when true, the item participates in selection (radio or checkbox
+ *               depending on whether the parent List has `multiple`). Requires
+ *               `value` and typically a <SelectableInput /> child.
+ *   value     — the JS value emitted by the list's action/uiAction when this item
+ *               is selected. Can be any type (string, number, object…).
+ *   selected  — controlled selected state. Pass `selected === value` (single) or
+ *               `selected.includes(value)` (multiple) from parent state.
+ *   itemId    — internal stable string id for tracker bookkeeping (auto-generated
+ *               if omitted; prefer `id` for external addressing).
  *   filtered  — when true, item is excluded from visible count and removed from DOM entirely
  *   hidden    — when true, item is excluded from visible count (no virtual scroll height)
  *               but stays in DOM with the native HTML hidden attribute
@@ -36586,7 +37256,7 @@ const PickerNaviTime = props => {
     type: "time",
     children: jsx(List, {
       selectable: true,
-      action: "send",
+      command: "--navi-send",
       children: slots.map((slot, i) => jsx(List.Item, {
         selectable: true,
         id: slot,
@@ -36633,16 +37303,274 @@ const PickerPresetResolver = props => {
     ...props
   });
 };
-const PickerCustomResolver = props => {
-  if (props.children === undefined) {
-    return jsx(PickerNative, {
-      ...props
-    });
+
+installImportMetaCssBuild(import.meta);const css$l = /* css */`
+  @layer navi {
   }
-  return jsx(PickerCustom, {
-    ...props
+  .navi_badge {
+    --font-size: 0.7em;
+    --padding-x: 0.8em;
+    --padding-y: 0.4em;
+
+    --x-background: var(--background, light-dark(#e0e0e0, #3a3a3a));
+    --x-background-color: var(--background-color, var(--x-background));
+    /* Default: white text — works on colored backgrounds.
+       Overridden to dark when the bg is light enough (data-accent-needs-dark-fg)
+       or when no background prop is passed (data-badge-default-bg). */
+    --x-color: var(--color, white);
+
+    position: relative;
+    display: inline-flex;
+    max-width: 200px;
+    padding-top: var(--padding-y);
+    padding-right: var(--padding-x);
+    padding-bottom: var(--padding-y);
+    padding-left: var(--padding-x);
+    align-items: stretch;
+    color: var(--x-color);
+    font-size: var(--font-size);
+    line-height: normal;
+    background: var(--x-background);
+    background-color: var(--x-background-color);
+    border-radius: 1em;
+
+    /* Light colored background needs dark text */
+    &[data-accent-needs-dark-fg] {
+      --x-color: var(--color, #333);
+    }
+
+    &[data-text-overflow] .navi_text_overflow_wrapper {
+      /* Keep badge text and button together */
+      gap: 0;
+    }
+
+    [role="button"] {
+      display: inline-flex;
+      margin-top: calc(-1 * var(--padding-y));
+      margin-bottom: calc(-1 * var(--padding-y));
+      padding-right: calc(var(--padding-x) / 2);
+      padding-left: calc(var(--padding-x) / 2);
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+
+      &:first-child {
+        margin-left: calc(-1 * var(--padding-x));
+        border-top-left-radius: inherit;
+        border-bottom-left-radius: inherit;
+      }
+
+      &:last-child {
+        margin-right: calc(-1 * var(--padding-x));
+        border-top-right-radius: inherit;
+        border-bottom-right-radius: inherit;
+      }
+
+      &:hover {
+        background: rgba(0, 0, 0, 0.15);
+      }
+    }
+  }
+`;
+const Badge = ({
+  children,
+  className,
+  ...props
+}) => {
+  import.meta.css = [css$l, "@jsenv/navi/src/text/badge.jsx"];
+  const defaultRef = useRef();
+  props.ref = props.ref || defaultRef;
+  const {
+    ref
+  } = props;
+  useAccentColorAttributes(ref, null);
+  return jsx(Text, {
+    className: withPropsClassName("navi_badge", className),
+    bold: true,
+    maxLines: 1,
+    ...props,
+    styleCSSVars: BadgeStyleCSSVars$1,
+    spacing: jsx("span", {}),
+    children: children
   });
 };
+const BadgeStyleCSSVars$1 = {
+  borderWidth: "--border-width",
+  borderRadius: "--border-radius",
+  paddingRight: "--padding-right",
+  paddingLeft: "--padding-left",
+  backgroundColor: "--background-color",
+  background: "--background",
+  borderColor: "--border-color",
+  color: "--color",
+  fontSize: "--font-size"
+};
+const BadgeButton = props => {
+  const defaultRef = useRef();
+  props.ref = props.ref || defaultRef;
+  const [buttonRootProps, buttonHostProps] = useControlProps(props, {
+    controlType: "button",
+    statePropName: "value",
+    allowNameless: true
+  });
+  return jsx(Text, {
+    overflowPinned: true,
+    className: "navi_badge_button",
+    role: "button",
+    onnavi_get_value: e => {
+      e.detail.respondWith(props.value);
+    },
+    ...buttonRootProps,
+    ...buttonHostProps
+  });
+};
+Badge.Button = BadgeButton;
+
+installImportMetaCssBuild(import.meta);const css$k = /* css */`
+  @layer navi {
+  }
+  .navi_badge_list {
+    flex-wrap: wrap;
+
+    &[navi-badge-list-clone] {
+      position: absolute;
+      width: 100%;
+      visibility: hidden;
+      pointer-events: none;
+    }
+  }
+
+  .navi_badge.navi_badge_more {
+    white-space: nowrap;
+  }
+`;
+const BadgeList = ({
+  fallback,
+  children,
+  shrinkWrap = true,
+  max,
+  ...props
+}) => {
+  import.meta.css = [css$k, "@jsenv/navi/src/text/badge_list.jsx"];
+  const measureRef = useRef();
+  const visibleRef = useRef();
+  useLayoutEffect(() => {
+    const measureEl = measureRef.current;
+    const visibleEl = visibleRef.current;
+    if (!measureEl || !visibleEl) {
+      return undefined;
+    }
+    let observer;
+    let rafId;
+    const measure = () => {
+      visibleEl.style.width = "";
+      if (shrinkWrap) {
+        const optimalWidth = measureWidestChildRow(measureEl);
+        if (optimalWidth !== null) {
+          visibleEl.style.width = `${Math.ceil(optimalWidth)}px`;
+        }
+      }
+    };
+    measure();
+    const onResize = () => {
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(measure);
+    };
+    const outerParent = measureEl.parentElement?.parentElement;
+    if (outerParent) {
+      observer = new ResizeObserver(onResize);
+      observer.observe(outerParent);
+    }
+    window.addEventListener("resize", onResize);
+    return () => {
+      cancelAnimationFrame(rafId);
+      observer?.disconnect();
+      window.removeEventListener("resize", onResize);
+    };
+  }, [shrinkWrap, children]);
+  const childArray = toChildArray(children);
+  const hasMax = max !== undefined && childArray.length > max;
+  const visibleChildren = hasMax ? childArray.slice(0, max - 1) : childArray;
+  const hiddenCount = hasMax ? childArray.length - (max - 1) : 0;
+  const sharedProps = {
+    inline: true,
+    flex: "x",
+    alignY: "center",
+    spacing: "xs",
+    ...props
+  };
+  return jsxs(Box, {
+    relative: true,
+    children: [jsx(Box, {
+      baseClassName: "navi_badge_list",
+      ...sharedProps,
+      ref: measureRef,
+      "aria-hidden": "true",
+      "navi-badge-list-clone": "",
+      children: childArray
+    }), jsxs(Box, {
+      baseClassName: "navi_badge_list",
+      ...sharedProps,
+      ref: visibleRef,
+      children: [visibleChildren.length ? visibleChildren : fallback, hiddenCount > 0 && jsx(Badge, {
+        className: "navi_badge_more",
+        children: naviI18n("badge_list.more", {
+          count: hiddenCount
+        })
+      })]
+    })]
+  });
+};
+
+installImportMetaCssBuild(import.meta);const css$j = /* css */`
+  .navi_color {
+    display: block;
+    aspect-ratio: 1/1;
+    height: 1em;
+    height: 1lh;
+    background-color: currentColor;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    border-radius: 2px;
+
+    &[navi-color-empty] {
+      background-image:
+        linear-gradient(45deg, #ccc 25%, transparent 25%),
+        linear-gradient(-45deg, #ccc 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #ccc 75%),
+        linear-gradient(-45deg, transparent 75%, #ccc 75%);
+      background-position:
+        0 0,
+        0 3px,
+        3px -3px,
+        -3px 0;
+      background-size: 6px 6px;
+      /* Checkerboard pattern to convey "no color / transparent" */
+      background-color: white;
+    }
+  }
+`;
+const Color = ({
+  children,
+  ...rest
+}) => {
+  import.meta.css = [css$j, "@jsenv/navi/src/text/color.jsx"];
+  const color = children || undefined;
+  return jsx(Box, {
+    as: "span",
+    className: "navi_color",
+    "navi-color-empty": color ? undefined : ""
+    // propsCSSVars={COLOR_PROP_CSS_VAR}
+    ,
+
+    color: color,
+    title: color,
+    ...rest
+  });
+};
+// const COLOR_PROP_CSS_VAR = {
+//   color: "--color",
+// };
+
 const PickerTypeResolver = props => {
   const Next = useNextResolver();
   if (props.type === "color") {
@@ -36690,13 +37618,350 @@ const PickerTypeResolver = props => {
       ...props
     });
   }
+  if (props.type === "controlgroup") {
+    return jsx(PickerControlGroup, {
+      ...props
+    });
+  }
   return jsx(Next, {
     ...props
   });
 };
-const pickerResolvers = [PickerPresetResolver, PickerCustomResolver, PickerTypeResolver];
+const PickerText = props => {
+  const Next = useNextResolver();
+  return jsx(Next, {
+    icon: jsx(PencilSvg, {}),
+    ...props
+  });
+};
+const PickerControlGroup = props => {
+  const Next = useNextResolver();
+  return jsx(Next, {
+    ui: jsx(PickerControlGroupUI, {}),
+    ...props,
+    type: "navi_js"
+  });
+};
+const PickerControlGroupUI = () => {
+  const {
+    value,
+    placeholder
+  } = useContext(PickerContext);
+  if (!value || Object.keys(value).length === 0) {
+    if (!placeholder) {
+      return null;
+    }
+    return placeholder;
+  }
+  return jsx(BadgeList, {
+    children: Object.entries(value).map(([key, val]) => {
+      return jsxs(Badge, {
+        children: [jsx("span", {
+          style: {
+            opacity: 0.6
+          },
+          children: key
+        }), jsx("span", {
+          children: ":"
+        }), String(val ?? "")]
+      }, key);
+    })
+  });
+};
+const PickerArray = props => {
+  const Next = useNextResolver();
+  return jsx(Next, {
+    maxLines: "3",
+    ui: jsx(PickerArrayUI, {}),
+    ...props,
+    type: "navi_js"
+  });
+};
+const PickerArrayUI = () => {
+  const {
+    value,
+    placeholder,
+    maxLines
+  } = useContext(PickerContext);
+  if (!value || value.length === 0) {
+    if (!placeholder) {
+      return null;
+    }
+    return placeholder;
+  }
+  return jsx(Text, {
+    spacing: ", ",
+    shrinkWrap: true,
+    maxLines: maxLines,
+    children: value.map(item => {
+      return jsx("span", {
+        children: item
+      }, item);
+    })
+  });
+};
+const PickerColor = props => {
+  const Next = useNextResolver();
+  return jsx(Next, {
+    ui: jsx(PickerColorUI, {}),
+    icon: jsx(ColorSvg, {}),
+    type: "color",
+    ...props
+  });
+};
+const PickerColorUI = () => {
+  const {
+    value,
+    placeholder
+  } = useContext(PickerContext);
+  if (!value) {
+    if (!placeholder) {
+      return jsx(Color, {});
+    }
+    return placeholder;
+  }
+  return jsx(Color, {
+    children: value
+  });
+};
+const PickerDate = props => {
+  const Next = useNextResolver();
+  return jsx(Next, {
+    ui: jsx(PickerDateUI, {}),
+    icon: jsx(CalendarSvg, {}),
+    ...props,
+    type: "date"
+  });
+};
+const PickerDateUI = props => {
+  const {
+    value,
+    placeholder
+  } = useContext(PickerContext);
+  if (!value) {
+    if (!placeholder) {
+      return jsx(Time, {
+        type: "date",
+        color: "var(--picker-placeholder-color",
+        capitalize: true,
+        maxLines: "1",
+        ...props
+      });
+    }
+    return placeholder;
+  }
+  return jsx(Time, {
+    type: "date",
+    capitalize: true,
+    maxLines: "1",
+    ...props,
+    children: value
+  });
+};
+const PickerMonth = props => {
+  const Next = useNextResolver();
+  return jsx(Next, {
+    ui: jsx(PickerMonthUI, {}),
+    icon: jsx(CalendarSvg, {}),
+    ...props,
+    type: "month"
+  });
+};
+const PickerMonthUI = props => {
+  const {
+    value,
+    placeholder
+  } = useContext(PickerContext);
+  if (!value) {
+    if (!placeholder) {
+      return jsx(Time, {
+        type: "month",
+        color: "var(--picker-placeholder-color",
+        maxLines: "1",
+        ...props
+      });
+    }
+    return placeholder;
+  }
+  return jsx(Time, {
+    type: "month",
+    maxLines: "1",
+    capitalize: true,
+    ...props,
+    children: value
+  });
+};
+const PickerWeek = props => {
+  const Next = useNextResolver();
+  return jsx(Next, {
+    ui: jsx(PickerWeekUI, {}),
+    icon: jsx(CalendarSvg, {}),
+    ...props,
+    type: "week"
+  });
+};
+const PickerWeekUI = props => {
+  const {
+    value,
+    placeholder
+  } = useContext(PickerContext);
+  if (!value) {
+    if (!placeholder) {
+      return jsx(Time, {
+        type: "week",
+        color: "var(--picker-placeholder-color",
+        maxLines: "1",
+        ...props
+      });
+    }
+    return placeholder;
+  }
+  return jsx(Time, {
+    type: "week",
+    capitalize: true,
+    maxLines: "1",
+    ...props,
+    children: value
+  });
+};
+const PickerTime = props => {
+  const Next = useNextResolver();
+  return jsx(Next, {
+    ui: jsx(PickerTimeUI, {}),
+    icon: jsx(ClockSvg, {}),
+    ...props,
+    type: "time"
+  });
+};
+const PickerTimeUI = props => {
+  const {
+    value,
+    placeholder
+  } = useContext(PickerContext);
+  if (!value) {
+    if (!placeholder) {
+      return jsx(Time, {
+        type: "time",
+        color: "var(--picker-placeholder-color",
+        maxLines: "1",
+        ...props
+      });
+    }
+    return placeholder;
+  }
+  return jsx(Time, {
+    type: "time",
+    maxLines: "1",
+    ...props,
+    children: value
+  });
+};
+const PickerDatetime = props => {
+  const Next = useNextResolver();
+  return jsx(Next, {
+    ui: jsx(PickerDatetimeUI, {}),
+    icon: jsx(CalendarSvg, {}),
+    ...props,
+    type: "datetime-local"
+  });
+};
+const PickerDatetimeUI = props => {
+  const {
+    value,
+    placeholder
+  } = useContext(PickerContext);
+  if (!value) {
+    if (!placeholder) {
+      return jsx(Time, {
+        type: "datetime",
+        color: "var(--picker-placeholder-color",
+        maxLines: "1",
+        ...props
+      });
+    }
+    return placeholder;
+  }
+  return jsx(Time, {
+    type: "datetime",
+    maxLines: "1",
+    children: value
+  });
+};
+const PickerFile = props => {
+  const Next = useNextResolver();
+  return jsx(Next, {
+    ui: jsx(PickerFileUI, {}),
+    icon: jsx(FileSvg, {}),
+    type: "file",
+    ...props
+  });
+};
+const PickerFileUI = () => {
+  const {
+    value,
+    placeholder
+  } = useContext(PickerContext);
+  if (!value) {
+    if (!placeholder) {
+      return null;
+    }
+    return placeholder;
+  }
+  // value is a FileList-like string from the input; display file names
+  return value;
+};
+const PencilSvg = () => {
+  return jsx("svg", {
+    xmlns: "http://www.w3.org/2000/svg",
+    viewBox: "0 0 24 24",
+    fill: "currentColor",
+    children: jsx("path", {
+      d: "M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"
+    })
+  });
+};
+const CalendarSvg = () => {
+  return jsx("svg", {
+    xmlns: "http://www.w3.org/2000/svg",
+    viewBox: "0 0 24 24",
+    fill: "currentColor",
+    children: jsx("path", {
+      d: "M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"
+    })
+  });
+};
+const ClockSvg = () => {
+  return jsx("svg", {
+    xmlns: "http://www.w3.org/2000/svg",
+    viewBox: "0 0 24 24",
+    fill: "currentColor",
+    children: jsx("path", {
+      d: "M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"
+    })
+  });
+};
+const ColorSvg = () => {
+  return jsx("svg", {
+    xmlns: "http://www.w3.org/2000/svg",
+    viewBox: "0 0 24 24",
+    fill: "currentColor",
+    children: jsx("path", {
+      d: "M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"
+    })
+  });
+};
+const FileSvg = () => {
+  return jsx("svg", {
+    xmlns: "http://www.w3.org/2000/svg",
+    viewBox: "0 0 24 24",
+    fill: "currentColor",
+    children: jsx("path", {
+      d: "M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z"
+    })
+  });
+};
 
-installImportMetaCssBuild(import.meta);const css$k = /* css */`
+installImportMetaCssBuild(import.meta);const css$i = /* css */`
   @layer navi {
     .navi_picker {
       --picker-border-radius: var(--navi-control-border-radius);
@@ -36800,9 +38065,9 @@ installImportMetaCssBuild(import.meta);const css$k = /* css */`
       1lh + var(--x-picker-padding-top) + var(--x-picker-padding-bottom)
     );
     padding-top: var(--x-picker-padding-top);
-    padding-right: var(--x-picker-padding-right);
+    padding-right: 0;
     padding-bottom: var(--x-picker-padding-bottom);
-    padding-left: var(--x-picker-padding-left);
+    padding-left: 0;
     flex-direction: row;
     align-items: center;
     gap: var(--navi-xs);
@@ -36824,11 +38089,19 @@ installImportMetaCssBuild(import.meta);const css$k = /* css */`
     pointer-events: auto;
     user-select: none;
     overflow: hidden;
+    -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
 
     .navi_picker_value {
       display: inline-block;
       min-width: 0;
       max-width: 100%;
+      margin-inline: 0.2em;
+      margin-top: calc(-1 * var(--x-picker-padding-top));
+      margin-bottom: calc(-1 * var(--x-picker-padding-bottom));
+      padding-top: var(--x-picker-padding-top);
+      padding-right: var(--x-picker-padding-right);
+      padding-bottom: var(--x-picker-padding-bottom);
+      padding-left: var(--x-picker-padding-left);
       flex-grow: 1;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -36847,6 +38120,11 @@ installImportMetaCssBuild(import.meta);const css$k = /* css */`
       align-self: flex-start;
       justify-content: center;
       color: var(--x-picker-icon-color);
+
+      .navi_icon {
+        height: 100%;
+        max-height: 100%;
+      }
     }
     .navi_picker_input {
       position: absolute;
@@ -36953,7 +38231,7 @@ installImportMetaCssBuild(import.meta);const css$k = /* css */`
  *   mode        — "popover" or "dialog"; auto-detected from screen size when omitted
  */
 const PickerButton = props => {
-  import.meta.css = [css$k, "@jsenv/navi/src/control/picker/picker.jsx"];
+  import.meta.css = [css$i, "@jsenv/navi/src/control/picker/picker.jsx"];
   if (typeof props.maxLines === "string") {
     props.maxLines = parseInt(props.maxLines);
   }
@@ -36963,18 +38241,18 @@ const PickerButton = props => {
     icon,
     placeholder,
     ui,
-    maxLines
+    maxLines,
+    headless
   } = props;
   const inputRef = useRef(null);
-  const [inputProps, pickerRemainingProps] = useControlProps({
+  const [pickerRemainingProps, inputProps, facadeChildrenProps] = useControlFacadeProps({
     ...props,
     ref: inputRef
   }, {
-    controlType: "input",
+    controlType: "picker",
     statePropName: "value",
     defaultStatePropName: "defaultValue",
-    readOnlySupported: true,
-    picker: true
+    readOnlySupported: true
   });
   const uiStateController = getUIStateControllerById(inputProps.id);
   const value = uiStateController.uiState;
@@ -36987,11 +38265,9 @@ const PickerButton = props => {
   const loading = basePseudoState[":-navi-loading"];
   const hasLineClamp = maxLines && maxLines > 1;
   return jsxs(Box, {
-    as: "button",
+    as: headless ? "div" : "button",
     ref: ref,
-    type: "button",
     baseClassName: "navi_picker",
-    "navi-has-placeholder": placeholder ? "" : undefined,
     pseudoClasses: PICKER_BUTTON_PSEUDO_CLASSES,
     disabled: disabled,
     "data-line-clamp": hasLineClamp ? "" : undefined,
@@ -36999,6 +38275,8 @@ const PickerButton = props => {
     style: {
       "--picker-max-lines": maxLines
     },
+    "navi-visually-hidden": headless ? "" : undefined,
+    "navi-picker": "",
     ...pickerRemainingProps,
     basePseudoState: basePseudoState,
     styleCSSVars: PickerStyleCSSVars
@@ -37011,7 +38289,8 @@ const PickerButton = props => {
     icon: undefined,
     ui: undefined,
     maxLines: undefined,
-    dayLabel: undefined
+    dayLabel: undefined,
+    headless: undefined
     // The button is handling the pointer interactions
     ,
 
@@ -37027,6 +38306,11 @@ const PickerButton = props => {
       // but neevr the input
       inputProps.onKeyDown(e);
     },
+    onFocus: e => {
+      if (headless) {
+        inputProps.onFocus(e);
+      }
+    },
     children: [jsx(LoadingOutline, {
       loading: loading,
       color: "var(--picker-loader-color)",
@@ -37041,7 +38325,7 @@ const PickerButton = props => {
       onMouseDown: undefined,
       onClick: undefined,
       onKeyDown: undefined
-    }), variant === "icon" ? null : jsx(Text, {
+    }), variant === "icon" || headless ? null : jsx(Text, {
       className: "navi_picker_value",
       "navi-placeholder": value === undefined || value === "" ? "" : undefined,
       children: jsx(PickerContext.Provider, {
@@ -37052,13 +38336,14 @@ const PickerButton = props => {
         },
         children: ui === undefined ? jsx(PickerDefaultUI, {}) : ui
       })
-    }), jsx("span", {
+    }), headless ? null : jsx("span", {
       className: "navi_picker_right_slot",
       children: jsx(Icon, {
         size: "m",
         children: icon === undefined ? jsx(ChevronDownSvg, {}) : icon
       })
-    }), jsx(ControlChildrenWrapper, {
+    }), jsx(ControlFacadeChildrenWrapper, {
+      ...facadeChildrenProps,
       children: jsx("div", {
         className: "navi_picker_content",
         children: children
@@ -37133,7 +38418,7 @@ const PickerFirstResolver = props => {
     ...props
   });
 };
-const Picker = createComponentResolver([PickerFirstResolver, ...pickerResolvers, PickerButton]);
+const Picker = createComponentResolver([PickerFirstResolver, PickerPresetResolver, PickerCustomResolver, PickerTypeResolver, PickerButton]);
 Picker.UI = PickerDefaultUI;
 Picker.UI.Date = PickerDateUI;
 Picker.UI.Time = PickerTimeUI;
@@ -37141,6 +38426,7 @@ Picker.UI.Week = PickerWeekUI;
 Picker.UI.Datetime = PickerDatetimeUI;
 Picker.UI.File = PickerFileUI;
 Picker.UI.Color = PickerColorUI;
+Picker.UI.ControlGroup = PickerControlGroupUI;
 Picker.UI.Multiple = PickerArrayUI;
 Picker.UI.PencilSvg = PencilSvg;
 Picker.UI.ChevronDownSvg = ChevronDownSvg;
@@ -37801,7 +39087,7 @@ const Z_INDEX_DROP_PREVIEW = Z_INDEX_STICKY_CORNER + 1;
 
 const Z_INDEX_TABLE_UI = Z_INDEX_STICKY_CORNER + 1;
 
-installImportMetaCssBuild(import.meta);const css$j = /* css */`
+installImportMetaCssBuild(import.meta);const css$h = /* css */`
   .navi_table_drag_clone_container {
     position: absolute;
     top: var(--table-visual-top);
@@ -37956,7 +39242,7 @@ const useTableDragContextValue = ({
   }, [grabTarget, canChangeColumnOrder]);
 };
 const TableDragCloneContainer = forwardRef((props, ref) => {
-  import.meta.css = [css$j, "@jsenv/navi/src/control/table/drag/table_drag.jsx"];
+  import.meta.css = [css$h, "@jsenv/navi/src/control/table/drag/table_drag.jsx"];
   const {
     tableId
   } = props;
@@ -38254,7 +39540,7 @@ installImportMetaCssBuild(import.meta);const ROW_MIN_HEIGHT = 30;
 const ROW_MAX_HEIGHT = 100;
 const COLUMN_MIN_WIDTH = 50;
 const COLUMN_MAX_WIDTH = 500;
-const css$i = /* css */`
+const css$g = /* css */`
   @layer navi {
     .navi_table {
       --table-resizer-handle-color: #063b7c;
@@ -38414,7 +39700,7 @@ const css$i = /* css */`
 
 // Column resize components
 const TableColumnResizer = props => {
-  import.meta.css = [css$i, "@jsenv/navi/src/control/table/resize/table_resize.jsx"];
+  import.meta.css = [css$g, "@jsenv/navi/src/control/table/resize/table_resize.jsx"];
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
   return jsxs("div", {
@@ -38881,7 +40167,7 @@ const findPreviousTableRow = currentRow => {
   return currentIndex > 0 ? allRows[currentIndex - 1] : null;
 };
 
-installImportMetaCssBuild(import.meta);const css$h = /* css */`
+installImportMetaCssBuild(import.meta);const css$f = /* css */`
   @layer navi {
     .navi_table {
       --selection-border-color: var(--navi-selection-border-color, #0078d4);
@@ -38983,7 +40269,7 @@ const useTableSelectionController = ({
   onSelectionChange,
   selectionColor
 }) => {
-  import.meta.css = [css$h, "@jsenv/navi/src/control/table/selection/table_selection.jsx"];
+  import.meta.css = [css$f, "@jsenv/navi/src/control/table/selection/table_selection.jsx"];
   const selectionController = useSelectionController({
     elementRef: tableRef,
     layout: "grid",
@@ -39454,7 +40740,7 @@ const useTableStickyContextValue = ({
 };
 
 installImportMetaCssBuild(import.meta);// TODO: sticky left/top frontier should likely use "followPosition"
-const css$g = /* css */`
+const css$e = /* css */`
   @layer navi {
     .navi_table {
       --sticky-frontier-color: #c0c0c0;
@@ -39697,7 +40983,7 @@ const css$g = /* css */`
 const TableStickyFrontier = ({
   tableRef
 }) => {
-  import.meta.css = [css$g, "@jsenv/navi/src/control/table/sticky/table_sticky.jsx"];
+  import.meta.css = [css$e, "@jsenv/navi/src/control/table/sticky/table_sticky.jsx"];
   const stickyLeftFrontierGhostRef = useRef();
   const stickyLeftFrontierPreviewRef = useRef();
   const stickyTopFrontierGhostRef = useRef();
@@ -39926,7 +41212,7 @@ const initMoveStickyFrontierViaPointer = (pointerdownEvent, {
  *   inset 0 -1px 0 0 color;   // Bottom border
  */
 
-const css$f = /* css */ `
+const css$d = /* css */ `
   .navi_table_root {
     position: relative;
     max-width: var(--table-max-width, none);
@@ -40129,7 +41415,7 @@ const css$f = /* css */ `
   }
 `;
 
-installImportMetaCssBuild(import.meta);const css$e = /* css */`
+installImportMetaCssBuild(import.meta);const css$c = /* css */`
   .navi_table_ui {
     position: fixed;
     inset: 0;
@@ -40140,7 +41426,7 @@ installImportMetaCssBuild(import.meta);const css$e = /* css */`
   }
 `;
 const TableUI = forwardRef((props, ref) => {
-  import.meta.css = [css$e, "@jsenv/navi/src/control/table/table_ui.jsx"];
+  import.meta.css = [css$c, "@jsenv/navi/src/control/table/table_ui.jsx"];
   const {
     tableRef,
     tableId,
@@ -40246,7 +41532,7 @@ const RowIndexContext = createContext();
 const TableSectionContext = createContext();
 const useIsInTableHead = () => useContext(TableSectionContext) === "head";
 const Table = props => {
-  import.meta.css = [css$f, "@jsenv/navi/src/control/table/table.jsx"];
+  import.meta.css = [css$d, "@jsenv/navi/src/control/table/table.jsx"];
   const tableDefaultRef = useRef();
   const tableDefaultId = `table-${useId()}`;
   const {
@@ -41067,7 +42353,7 @@ const normalizeKey = (key) => {
   return key;
 };
 
-installImportMetaCssBuild(import.meta);const css$d = /* css */`
+installImportMetaCssBuild(import.meta);const css$b = /* css */`
   .navi_shortcut_container[data-visually-hidden] {
     /* Visually hidden container - doesn't affect layout */
     position: absolute;
@@ -41105,7 +42391,7 @@ installImportMetaCssBuild(import.meta);const css$d = /* css */`
 const ActiveKeyboardShortcuts = ({
   visible
 }) => {
-  import.meta.css = [css$d, "@jsenv/navi/src/keyboard/active_keyboard_shortcuts.jsx"];
+  import.meta.css = [css$b, "@jsenv/navi/src/keyboard/active_keyboard_shortcuts.jsx"];
   const activeShortcuts = activeShortcutsSignal.value;
   return jsx("div", {
     className: "navi_shortcut_container",
@@ -41144,7 +42430,7 @@ const KeyboardShortcutAriaElement = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$c = /* css */`
+installImportMetaCssBuild(import.meta);const css$a = /* css */`
   @layer navi {
     .navi_clipboard_container {
       --height: 1.5em;
@@ -41176,7 +42462,7 @@ const ButtonCopyToClipboard = ({
   children,
   ...props
 }) => {
-  import.meta.css = [css$c, "@jsenv/navi/src/control/input/button_copy_to_clipboard.jsx"];
+  import.meta.css = [css$a, "@jsenv/navi/src/control/input/button_copy_to_clipboard.jsx"];
   const [copied, setCopied] = useState(false);
   const renderedRef = useRef();
   useEffect(() => {
@@ -41257,128 +42543,6 @@ const Address = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$b = /* css */`
-  @layer navi {
-  }
-  .navi_badge {
-    --font-size: 0.7em;
-    --padding-x: 0.8em;
-    --padding-y: 0.4em;
-
-    --x-background: var(--background, light-dark(#e0e0e0, #3a3a3a));
-    --x-background-color: var(--background-color, var(--x-background));
-    /* Default: white text — works on colored backgrounds.
-       Overridden to dark when the bg is light enough (data-accent-needs-dark-fg)
-       or when no background prop is passed (data-badge-default-bg). */
-    --x-color: var(--color, white);
-
-    position: relative;
-    display: inline-flex;
-    max-width: 200px;
-    padding-top: var(--padding-y);
-    padding-right: var(--padding-x);
-    padding-bottom: var(--padding-y);
-    padding-left: var(--padding-x);
-    align-items: stretch;
-    color: var(--x-color);
-    font-size: var(--font-size);
-    line-height: normal;
-    background: var(--x-background);
-    background-color: var(--x-background-color);
-    border-radius: 1em;
-
-    /* Light colored background needs dark text */
-    &[data-accent-needs-dark-fg] {
-      --x-color: var(--color, #333);
-    }
-
-    &[data-text-overflow] .navi_text_overflow_wrapper {
-      /* Keep badge text and button together */
-      gap: 0;
-    }
-
-    [role="button"] {
-      display: inline-flex;
-      margin-top: calc(-1 * var(--padding-y));
-      margin-bottom: calc(-1 * var(--padding-y));
-      padding-right: calc(var(--padding-x) / 2);
-      padding-left: calc(var(--padding-x) / 2);
-      align-items: center;
-      cursor: pointer;
-      user-select: none;
-
-      &:first-child {
-        margin-left: calc(-1 * var(--padding-x));
-        border-top-left-radius: inherit;
-        border-bottom-left-radius: inherit;
-      }
-
-      &:last-child {
-        margin-right: calc(-1 * var(--padding-x));
-        border-top-right-radius: inherit;
-        border-bottom-right-radius: inherit;
-      }
-
-      &:hover {
-        background: rgba(0, 0, 0, 0.15);
-      }
-    }
-  }
-`;
-const Badge = ({
-  children,
-  className,
-  ...props
-}) => {
-  import.meta.css = [css$b, "@jsenv/navi/src/text/badge.jsx"];
-  const defaultRef = useRef();
-  props.ref = props.ref || defaultRef;
-  const {
-    ref
-  } = props;
-  useAccentColorAttributes(ref, null);
-  return jsx(Text, {
-    className: withPropsClassName("navi_badge", className),
-    bold: true,
-    maxLines: 1,
-    ...props,
-    styleCSSVars: BadgeStyleCSSVars$1,
-    spacing: jsx("span", {}),
-    children: children
-  });
-};
-const BadgeStyleCSSVars$1 = {
-  borderWidth: "--border-width",
-  borderRadius: "--border-radius",
-  paddingRight: "--padding-right",
-  paddingLeft: "--padding-left",
-  backgroundColor: "--background-color",
-  background: "--background",
-  borderColor: "--border-color",
-  color: "--color",
-  fontSize: "--font-size"
-};
-const BadgeButton = props => {
-  const defaultRef = useRef();
-  props.ref = props.ref || defaultRef;
-  const [buttonProps, remainingProps] = useControlProps(props, {
-    controlType: "button",
-    statePropName: "value",
-    allowNameless: true
-  });
-  return jsx(Text, {
-    overflowPinned: true,
-    className: "navi_badge_button",
-    role: "button",
-    onnavi_get_value: e => {
-      e.detail.respondWith(props.value);
-    },
-    ...buttonProps,
-    ...remainingProps
-  });
-};
-Badge.Button = BadgeButton;
-
 const LoadingDotsSvg = () => {
   return jsxs("svg", {
     viewBox: "0 0 200 200",
@@ -41444,7 +42608,7 @@ const formatNumber = (value, { lang } = {}) => {
   return new Intl.NumberFormat(lang).format(value);
 };
 
-installImportMetaCssBuild(import.meta);const css$a = /* css */`
+installImportMetaCssBuild(import.meta);const css$9 = /* css */`
   @layer navi {
   }
   .navi_text.navi_badge_count {
@@ -41557,7 +42721,7 @@ const BadgeCount = ({
   lineLayout,
   ...props
 }) => {
-  import.meta.css = [css$a, "@jsenv/navi/src/text/badge_count.jsx"];
+  import.meta.css = [css$9, "@jsenv/navi/src/text/badge_count.jsx"];
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
   const {
@@ -41691,102 +42855,6 @@ const BadgeCountCircle = ({
       className: "navi_badge_count_text",
       children: children
     })
-  });
-};
-
-installImportMetaCssBuild(import.meta);const css$9 = /* css */`
-  @layer navi {
-  }
-  .navi_badge_list {
-    flex-wrap: wrap;
-
-    &[navi-badge-list-clone] {
-      position: absolute;
-      width: 100%;
-      visibility: hidden;
-      pointer-events: none;
-    }
-  }
-
-  .navi_badge.navi_badge_more {
-    white-space: nowrap;
-  }
-`;
-const BadgeList = ({
-  fallback,
-  children,
-  shrinkWrap = true,
-  max,
-  ...props
-}) => {
-  import.meta.css = [css$9, "@jsenv/navi/src/text/badge_list.jsx"];
-  const measureRef = useRef();
-  const visibleRef = useRef();
-  useLayoutEffect(() => {
-    const measureEl = measureRef.current;
-    const visibleEl = visibleRef.current;
-    if (!measureEl || !visibleEl) {
-      return undefined;
-    }
-    let observer;
-    let rafId;
-    const measure = () => {
-      visibleEl.style.width = "";
-      if (shrinkWrap) {
-        const optimalWidth = measureWidestChildRow(measureEl);
-        if (optimalWidth !== null) {
-          visibleEl.style.width = `${Math.ceil(optimalWidth)}px`;
-        }
-      }
-    };
-    measure();
-    const onResize = () => {
-      cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(measure);
-    };
-    const outerParent = measureEl.parentElement?.parentElement;
-    if (outerParent) {
-      observer = new ResizeObserver(onResize);
-      observer.observe(outerParent);
-    }
-    window.addEventListener("resize", onResize);
-    return () => {
-      cancelAnimationFrame(rafId);
-      observer?.disconnect();
-      window.removeEventListener("resize", onResize);
-    };
-  }, [shrinkWrap, children]);
-  const childArray = toChildArray(children);
-  const hasMax = max !== undefined && childArray.length > max;
-  const visibleChildren = hasMax ? childArray.slice(0, max - 1) : childArray;
-  const hiddenCount = hasMax ? childArray.length - (max - 1) : 0;
-  const sharedProps = {
-    inline: true,
-    flex: "x",
-    alignY: "center",
-    spacing: "xs",
-    ...props
-  };
-  return jsxs(Box, {
-    relative: true,
-    children: [jsx(Box, {
-      baseClassName: "navi_badge_list",
-      ...sharedProps,
-      ref: measureRef,
-      "aria-hidden": "true",
-      "navi-badge-list-clone": "",
-      children: childArray
-    }), jsxs(Box, {
-      baseClassName: "navi_badge_list",
-      ...sharedProps,
-      ref: visibleRef,
-      children: [visibleChildren.length ? visibleChildren : fallback, hiddenCount > 0 && jsx(Badge, {
-        className: "navi_badge_more",
-        children: naviI18n("badge_list.more", {
-          count: hiddenCount
-        })
-      })]
-    })]
   });
 };
 
@@ -43397,5 +44465,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, Details, Dialog, DialogLayout, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Field, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, InputGroup, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, Paragraph, Picker, Popover, Quantity, RadioGroup, Route, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Thead, Time, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, actionIntegratedVia, actionRunEffect, addCustomMessage, anyMatchingRouteSignal, applySearch, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, installCustomConstraintValidation, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isToday, langSignal, localStorageSignal, moveArrayItemByIndex, navBack, navForward, navTo, naviI18n, openCallout, rawUrlPart, reload, removeCustomMessage, rerunActions, resource, route, routeAction, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSidePanelClose, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage, windowWidthSignal };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, Details, Dialog, DialogLayout, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Field, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, InputGroup, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, Paragraph, Picker, Popover, Quantity, RadioGroup, Route, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Thead, Time, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, actionIntegratedVia, actionRunEffect, addCustomMessage, anyMatchingRouteSignal, applySearch, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, installCustomConstraintValidation, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isToday, langSignal, localStorageSignal, moveArrayItemByIndex, navBack, navForward, navTo, naviI18n, openCallout, rawUrlPart, reload, removeCustomMessage, rerunActions, resource, route, routeAction, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSidePanelClose, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi.js.map

@@ -397,6 +397,7 @@ const TYPO_PROPS = {
       "-webkit-line-clamp": value,
     };
   },
+  textAlign: PASS_THROUGH,
 };
 const VISUAL_PROPS = {
   outline: PASS_THROUGH,

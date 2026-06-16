@@ -116,9 +116,7 @@ const css = /* css */ `
     width: fit-content;
     height: fit-content;
     padding-top: var(--x-padding-top);
-    padding-right: var(--x-padding-right);
     padding-bottom: var(--x-padding-bottom);
-    padding-left: var(--x-padding-left);
     flex-direction: row;
     color: var(--x-color);
     font-size: var(--font-size);
@@ -138,9 +136,7 @@ const css = /* css */ `
       box-sizing: content-box;
       min-width: 1ch;
       margin-top: calc(-1 * var(--x-padding-top));
-      margin-right: calc(-1 * var(--x-padding-right));
       margin-bottom: calc(-1 * var(--x-padding-bottom));
-      margin-left: calc(-1 * var(--x-padding-left));
       padding-top: var(--x-padding-top);
       padding-right: var(--x-padding-right);
       padding-bottom: var(--x-padding-bottom);
@@ -148,10 +144,12 @@ const css = /* css */ `
       flex-grow: 1;
       color: inherit;
       font-size: inherit;
+      text-align: inherit;
       background: none;
       border: none;
       border-radius: inherit;
       outline: none;
+      -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
 
       &[type="search"] {
         -webkit-appearance: textfield;
@@ -163,35 +161,12 @@ const css = /* css */ `
     }
 
     .navi_input_slot {
+      margin-inline: 0.2em;
       color: #5e4e4e;
 
       &[data-left] {
         margin-right: var(--x-padding-left);
         order: -1;
-      }
-
-      &[data-hide-while-empty] {
-        opacity: 0;
-        pointer-events: none;
-      }
-    }
-    &[data-has-value] {
-      .navi_input_slot[data-hide-while-empty] {
-        opacity: 1;
-        cursor: pointer;
-        pointer-events: auto;
-      }
-      &[data-readonly] {
-        .navi_input_slot[data-hide-while-empty] {
-          opacity: 0;
-          pointer-events: none;
-        }
-      }
-      &[data-disabled] {
-        .navi_input_slot[data-hide-while-empty] {
-          opacity: 0;
-          pointer-events: none;
-        }
       }
     }
 
@@ -306,9 +281,17 @@ const InputHeadlessResolver = (props) => {
   return <Next {...props} />;
 };
 const InputTextualHeadless = (props) => {
-  const [inputProps, remainingProps] = useInputTextualProps(props);
+  const [inputRootProps, inputHostProps] = useInputTextualProps(props);
 
-  return <RealInput {...inputProps} {...remainingProps} />;
+  return (
+    <RealInput
+      navi-visually-hidden=""
+      navi-focus-delegate=""
+      aria-hidden="true"
+      {...inputRootProps}
+      {...inputHostProps}
+    />
+  );
 };
 const useInputTextualProps = (props) => {
   return useControlProps(props, {
@@ -321,8 +304,9 @@ const useInputTextualProps = (props) => {
 const InputTextualUI = (props) => {
   import.meta.css = css;
   const { ui, discrete, variant, width = "maxLength" } = props;
-  const [inputProps, remainingProps] = useInputTextualProps(props);
-  const { id, basePseudoState, children } = inputProps;
+  const [inputControlRootProps, inputControlHostProps] =
+    useInputTextualProps(props);
+  const { id, basePseudoState, children } = inputControlHostProps;
   const uiStateController = getUIStateControllerById(id);
   const value = uiStateController.uiState;
   const disabled = basePseudoState[":disabled"];
@@ -339,27 +323,28 @@ const InputTextualUI = (props) => {
   // meant to end on input
   // we have to use delete otherwise it could override width: undefined
   // when remainingProps contains expandX which would try to set width to 100%
-  delete remainingProps.width;
+  delete inputControlRootProps.width;
   if (width === "maxLength") {
-    const { maxLength } = inputProps;
+    const { maxLength } = inputControlHostProps;
     if (maxLength !== undefined) {
       const isNumeric = props.inputMode === "numeric";
-      inputProps.width = isNumeric
+      inputControlHostProps.width = isNumeric
         ? `${maxLength}ch`
         : `calc(${maxLength} * 1.5ch)`;
     }
   } else if (width === "content") {
-    inputProps.fieldSizing = "content";
+    inputControlHostProps.fieldSizing = "content";
   } else {
-    inputProps.width = width;
+    inputControlHostProps.width = width;
   }
 
   return (
     <Box
       as="span"
+      inline
       flex
       baseClassName="navi_input"
-      {...remainingProps}
+      {...inputControlRootProps}
       basePseudoState={basePseudoState}
       ui={undefined}
       data-discrete={discrete ? "" : undefined}
@@ -377,11 +362,11 @@ const InputTextualUI = (props) => {
       />
       {variant === "underline" ? (
         <span className="navi_input_real_input_wrapper">
-          <RealInput {...inputProps} />
+          <RealInput {...inputControlHostProps} />
           <span className="navi_input_underline" />
         </span>
       ) : (
-        <RealInput {...inputProps} />
+        <RealInput {...inputControlHostProps} />
       )}
       {childrenWithContext}
     </Box>

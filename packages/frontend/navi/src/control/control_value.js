@@ -23,7 +23,7 @@ export const asControlHostValue = (
   jsValue,
   { controlType, type, inputMode },
 ) => {
-  if (controlType === "input") {
+  if (controlType === "input" || controlType === "picker") {
     if (type === "datetime-local") {
       return asDatetimeLocalString(jsValue);
     }
@@ -94,7 +94,7 @@ export const readControlValue = (controlHost) => {
     return readValueFromButton(controlHost);
   }
   if (controlHost.tagName === "INPUT") {
-    // important: input.type = "navi_picker" followed by input.type returns "text"
+    // important: input.type = "navi_js"; followed by input.type; returns "text"
     // so use getAttribute
     const type = controlHost.getAttribute("type");
 
@@ -114,7 +114,7 @@ export const readControlValue = (controlHost) => {
     if (type === "datetime-local") {
       return readDatetimeLocalFromInput(controlHost);
     }
-    if (type === "navi_picker") {
+    if (type === "navi_js") {
       return getUIStateFromElement(controlHost);
     }
     return readValueFromInput(controlHost);

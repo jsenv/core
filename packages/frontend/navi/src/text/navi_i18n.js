@@ -33,6 +33,37 @@ import { createI18n } from "./i18n.js";
  */
 export const naviI18n = createI18n();
 
+naviI18n.addAll({
+  "button.clear": {
+    en: "Clear",
+    fr: "Effacer",
+  },
+  "button.reset": {
+    en: "Reset",
+    fr: "Réinitialiser",
+  },
+  "button.send": {
+    en: "Send",
+    fr: "Envoyer",
+  },
+  "button.open": {
+    en: "Open",
+    fr: "Ouvrir",
+  },
+  "button.close": {
+    en: "Close",
+    fr: "Fermer",
+  },
+  "button.cancel": {
+    en: "Cancel",
+    fr: "Annuler",
+  },
+  "button.define": {
+    en: "Define",
+    fr: "Définir",
+  },
+});
+
 // Default built-in translations — apps can override any key via add()
 naviI18n.addAll({
   "time.less_than_minute": {

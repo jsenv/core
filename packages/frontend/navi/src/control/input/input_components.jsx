@@ -2,7 +2,6 @@ import { useContext } from "preact/hooks";
 
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
 import { Label } from "../field.jsx";
-import { dispatchRequestInteraction } from "../validation/custom_constraint_validation.js";
 import { InputTextualContext } from "./input_textual_context.js";
 
 export const InputLeftSlot = (props) => {
@@ -26,7 +25,7 @@ export const InputUnitSlot = ({ children, side = "right", ...props }) => {
   );
 };
 
-const InputSlot = ({ side, onClick, hideWhileEmpty, ...props }) => {
+const InputSlot = ({ side, ...props }) => {
   const ctx = useContext(InputTextualContext);
   const { id, readOnly, disabled } = ctx || {};
 
@@ -40,7 +39,6 @@ const InputSlot = ({ side, onClick, hideWhileEmpty, ...props }) => {
       data-disabled={disabled}
       data-left={side === "left" ? "" : undefined}
       data-right={side === "right" ? "" : undefined}
-      data-hide-while-empty={hideWhileEmpty ? "" : undefined}
       inline
       flex
       align="center"
@@ -50,14 +48,6 @@ const InputSlot = ({ side, onClick, hideWhileEmpty, ...props }) => {
         // the slot element (e.g. a clear button) can receive focus itself.
         const inputEl = document.getElementById(id);
         if (inputEl && inputEl === document.activeElement) {
-          e.preventDefault();
-        }
-      }}
-      onClick={(e) => {
-        onClick?.(e);
-        const input = document.getElementById(id);
-        const allowed = dispatchRequestInteraction(input, e);
-        if (!allowed) {
           e.preventDefault();
         }
       }}

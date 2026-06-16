@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Picker ControlGroup Demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 40px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      #container {
+        max-width: 900px;
+        margin: 0 auto;
+      }
+      h1 {
+        margin: 0 0 32px;
+        font-size: 1.4rem;
+      }
+      h2 {
+        margin: 0 0 4px;
+        font-size: 1.1rem;
+      }
+      .demo-section {
+        margin-bottom: 24px;
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      p.desc {
+        margin: 0 0 16px;
+        color: #555;
+        font-size: 13px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <h1>Picker ControlGroup Demo</h1>
+      <div id="app"></div>
+    </div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { signal } from "@preact/signals";
+      import { CallLog, useCallLog } from "../utils/call_log.jsx";
+      import {
+        NaviDebug,
+        Box,
+        Field,
+        Label,
+        Picker,
+        Input,
+        Form,
+        Button,
+        Time,
+        ControlGroup,
+      } from "@jsenv/navi";
+
+      const App = () => (
+        <NaviDebug debugCommand debugInteraction debugAction debugPopup>
+          <Box flex="y" spacing="l">
+            <OutsideFormDemo />
+            <InFormDemo />
+            <DurationOutsideFormDemo />
+            <DurationInFormDemo />
+          </Box>
+        </NaviDebug>
+      );
+
+      // ── 1. Outside a form ────────────────────────────────────────────────
+
+      const OutsideFormDemo = () => {
+        const [entries, push, clear] = useCallLog();
+
+        return (
+          <div class="demo-section" id="outside-form">
+            <h2>1. Outside a form</h2>
+            <p class="desc">
+              Le picker agrège les valeurs de ses enfants en un objet. uiAction
+              est appelé à chaque changement d'un champ enfant, action quand le
+              picker se ferme avec une valeur différente.
+            </p>
+            <Box flex="y" spacing="m">
+              <Field vertical>
+                <Label>Adresse</Label>
+                <Picker
+                  name="address"
+                  type="controlgroup"
+                  placeholder="Saisir une adresse"
+                  uiAction={(v) => {
+                    push("uiAction", v);
+                  }}
+                  action={(v) => {
+                    push("action", v);
+                  }}
+                >
+                  <ControlGroup flex="y" spacing="s" padding="s" alignX="start">
+                    <Field vertical>
+                      <Label>Rue</Label>
+                      <Input name="street" placeholder="12 rue de la Paix" />
+                    </Field>
+                    <Field vertical>
+                      <Label>Ville</Label>
+                      <Input name="city" placeholder="Paris" />
+                    </Field>
+                    <Field vertical>
+                      <Label>Code postal</Label>
+                      <Input name="zip" placeholder="75001" />
+                    </Field>
+                  </ControlGroup>
+                </Picker>
+              </Field>
+            </Box>
+            <CallLog entries={entries} onClear={clear} />
+          </div>
+        );
+      };
+
+      // ── 2. Inside a form ─────────────────────────────────────────────────
+
+      const InFormDemo = () => {
+        const [entries, push, clear] = useCallLog();
+
+        return (
+          <div class="demo-section" id="inside-form">
+            <h2>2. Inside a form</h2>
+            <p class="desc">
+              Le picker controlgroup s'utilise aussi à l'intérieur d'un Form. Sa
+              valeur est incluse sous sa clé name dans l'objet soumis.
+            </p>
+            <Form
+              action={(v) => {
+                push("Form action", v);
+              }}
+            >
+              <Box flex="y" spacing="m" alignX="start">
+                <Field vertical>
+                  <Label>Email</Label>
+                  <Input
+                    name="email"
+                    type="email"
+                    placeholder="you@example.com"
+                  />
+                </Field>
+                <Field vertical>
+                  <Label>Adresse</Label>
+                  <Picker
+                    name="address"
+                    type="controlgroup"
+                    placeholder="Saisir une adresse"
+                    uiAction={(v) => {
+                      push("Picker uiAction", v);
+                    }}
+                  >
+                    <ControlGroup
+                      flex="y"
+                      spacing="s"
+                      padding="m"
+                      alignX="start"
+                    >
+                      <Field vertical>
+                        <Label>Rue</Label>
+                        <Input name="street" placeholder="12 rue de la Paix" />
+                      </Field>
+                      <Field vertical>
+                        <Label>Ville</Label>
+                        <Input name="city" placeholder="Paris" />
+                      </Field>
+                      <Field vertical>
+                        <Label>Code postal</Label>
+                        <Input name="zip" placeholder="75001" />
+                      </Field>
+                    </ControlGroup>
+                  </Picker>
+                </Field>
+                <Button command="--navi-send" />
+              </Box>
+            </Form>
+            <CallLog entries={entries} onClear={clear} />
+          </div>
+        );
+      };
+
+      // ── 3. Duration (hours + minutes) ────────────────────────────────────
+
+      const hoursSignal = signal(0);
+      const minutesSignal = signal(0);
+
+      const DurationPickerUI = () => {
+        const hh = String(hoursSignal.value).padStart(2, "0");
+        const mm = String(minutesSignal.value).padStart(2, "0");
+        return <Time type="time">{`${hh}:${mm}`}</Time>;
+      };
+
+      const DurationPickerChildren = () => (
+        <ControlGroup flex="y" spacing="s" padding="s" alignX="start">
+          <Field vertical>
+            <Label>Heures</Label>
+            <Input
+              name="hours"
+              type="number"
+              min="0"
+              max="23"
+              placeholder="0"
+              value={hoursSignal.value}
+              uiAction={(v) => {
+                hoursSignal.value = v;
+              }}
+            />
+          </Field>
+          <Field vertical>
+            <Label>Minutes</Label>
+            <Input
+              name="minutes"
+              type="number"
+              min="0"
+              max="59"
+              placeholder="0"
+              value={minutesSignal.value}
+              uiAction={(v) => {
+                minutesSignal.value = v;
+              }}
+            />
+          </Field>
+          <Box flex="x" spacing="s">
+            <Button command="--navi-cancel" variant="discrete" />
+            <Button command="--navi-define" variant="discrete" />
+          </Box>
+        </ControlGroup>
+      );
+
+      const DurationOutsideFormDemo = () => {
+        const [entries, push, clear] = useCallLog();
+
+        return (
+          <div class="demo-section" id="duration-outside-form">
+            <h2>3a. Duration — outside a form</h2>
+            <p class="desc">
+              Le picker agrège heures et minutes. Les signaux{" "}
+              <code>hoursSignal</code> / <code>minutesSignal</code> sont mis à
+              jour via <code>uiAction</code>. L'UI du trigger affiche la durée
+              avec <code>&lt;Time&gt;</code>.
+            </p>
+            <Box flex="y" spacing="m" alignX="start">
+              <Field vertical>
+                <Label>Durée</Label>
+                <Picker
+                  name="duration"
+                  type="controlgroup"
+                  placeholder="Saisir une durée"
+                  ui={<DurationPickerUI />}
+                  uiAction={(v) => {
+                    push("uiAction", v);
+                  }}
+                  action={(v) => {
+                    push("action", v);
+                  }}
+                >
+                  <DurationPickerChildren />
+                </Picker>
+              </Field>
+            </Box>
+            <CallLog entries={entries} onClear={clear} />
+          </div>
+        );
+      };
+
+      const DurationInFormDemo = () => {
+        const [entries, push, clear] = useCallLog();
+
+        return (
+          <div class="demo-section" id="duration-inside-form">
+            <h2>3b. Duration — inside a form</h2>
+            <p class="desc">
+              Même picker dans un <code>Form</code>. La valeur est soumise sous
+              la clé <code>duration</code>.
+            </p>
+            <Form
+              action={(v) => {
+                push("Form action", v);
+              }}
+            >
+              <Box flex="y" spacing="m" alignX="start">
+                <Field vertical>
+                  <Label>Durée</Label>
+                  <Picker
+                    name="duration"
+                    type="controlgroup"
+                    placeholder="Saisir une durée"
+                    ui={<DurationPickerUI />}
+                    uiAction={(v) => {
+                      push("Picker uiAction", v);
+                    }}
+                  >
+                    <DurationPickerChildren />
+                  </Picker>
+                </Field>
+                <Button command="--navi-send" />
+              </Box>
+            </Form>
+            <CallLog entries={entries} onClear={clear} />
+          </div>
+        );
+      };
+
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>

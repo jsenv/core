@@ -101,6 +101,7 @@ export {
   useSelectionController,
 } from "./src/control/selection/selection.jsx";
 // Form/Components
+export { ControlGroup } from "./src/control/control_group.jsx";
 export {
   Editable,
   useEditionController,

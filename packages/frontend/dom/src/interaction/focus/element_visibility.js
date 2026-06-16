@@ -65,6 +65,19 @@ export const getFocusVisibilityInfo = (node, { excludeAriaHidden } = {}) => {
     ) {
       return { visible: false, reason: "inside closed popover element" };
     }
+    // Open popovers and open dialogs render in the top layer: they escape
+    // the normal layout/stacking context of their DOM ancestors.
+    // No need to check further up the tree.
+    if (elementIsDialog(nodeOrAncestor) && nodeOrAncestor.open) {
+      break;
+    }
+    if (
+      nodeOrAncestor.popover !== null &&
+      nodeOrAncestor.popover !== undefined &&
+      nodeOrAncestor.matches(":popover-open")
+    ) {
+      break;
+    }
     nodeOrAncestor = nodeOrAncestor.parentNode;
   }
   return { visible: true, reason: "no reason to be hidden" };

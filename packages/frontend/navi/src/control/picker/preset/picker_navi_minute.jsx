@@ -21,16 +21,16 @@ export const PickerNaviMinute = (props) => {
       <Box flex="y" spacing="s" padding="s">
         <InputTextual
           type="number"
-          action="update"
+          command="--navi-update"
           min={min}
           max={max}
           step={step}
           value={value}
         />
         <Box flex spacing="s">
-          <Button action="send">Confirmer</Button>
-          <Button action="clear">Vider</Button>
-          <Button action="cancel">Annuler</Button>
+          <Button command="--navi-send">Confirmer</Button>
+          <Button command="--navi-clear">Vider</Button>
+          <Button command="--navi-cancel">Annuler</Button>
         </Box>
       </Box>
     </Next>

@@ -36,31 +36,52 @@ export const findControlHost = (el) => {
   }
   return el.querySelector("[navi-control-host]");
 };
+export const isControlRoot = (el) => {
+  return el.hasAttribute("navi-control");
+};
+export const isControlHost = (el) => {
+  return el.hasAttribute("navi-control-host");
+};
+export const isControl = (el) => {
+  return isControlRoot(el) || isControlHost(el);
+};
 
 /**
  * Returns the nearest ancestor of `el` (exclusive of `el`'s own control) that
  * has a `[data-action]` attribute.
  *
- * `data-action` is set on both the control host and the control root/wrapper,
- * so we must first escape `el`'s own control boundary before searching — otherwise
- * `.closest("[data-action]")` would land on the wrapper of the same control.
+ * The search walks up `parentElement` manually (rather than using `.closest()`)
+ * so it can stop at hard boundaries.
+ *
+ * **`[navi-control="picker"]` boundary**: a picker is a hard stop. Elements inside a picker
+ * (including inside its popover content) can reach the picker itself, but nothing above it.
+ * This prevents an input inside a picker from accidentally submitting a parent form.
  *
  * ```html
- * <form data-action="something_else">                      ← found
- *   <span navi-control data-action="something">            ← own root, skipped
- *     <input navi-control-host data-action="something" />  ← el
- *   </span>
+ * <form data-action="outer">              ← NOT found (above picker boundary)
+ *   <button navi-control="picker" data-action="p">  ← found and search stops here
+ *     <input navi-control-host />         ← el (in picker button area)
+ *     <div popover>
+ *       <input navi-control-host />       ← el (in picker popover)
+ *     </div>
+ *   </button>
  * </form>
  * ```
  */
 export const findClosestControlWithAction = (el) => {
-  // Walk up to the own control root first (same as getParentControl does),
-  // then look for [data-action] on an ancestor. This is needed because
-  // data-action is now set on both the host and the control root/wrapper,
-  // so starting from el.parentNode alone could hit the wrapper of the same
-  // control rather than a true ancestor control.
   const ownControlRoot = el.closest("[navi-control]") || el;
-  return ownControlRoot.parentNode.closest("[data-action]");
+  let current = ownControlRoot.parentElement;
+  while (current) {
+    if (current.hasAttribute("data-action")) {
+      return current;
+    }
+    // Stop at a picker boundary — nothing above the picker is reachable from within.
+    if (current.getAttribute("navi-control") === "picker") {
+      return undefined;
+    }
+    current = current.parentElement;
+  }
+  return undefined;
 };
 
 /**
