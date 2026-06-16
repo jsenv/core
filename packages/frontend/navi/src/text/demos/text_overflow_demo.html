@@ -693,10 +693,9 @@
       const TextAlignSection = () => {
         const shortText = "Short text";
         return (
-          <Box row spacing="16px" style={{ flexWrap: "wrap" }}>
-            {["start", "center", "end"].map((align) => (
+          <Box flex="y" spacing="16px">
+            <Box row spacing="16px" style={{ flexWrap: "wrap" }}>
               <div
-                key={align}
                 style={{
                   width: "220px",
                   border: "1px solid #ccc",
@@ -710,13 +709,55 @@
                     marginBottom: "4px",
                   }}
                 >
-                  {`alignX="${align}"`}
+                  {'alignX="center"'}
                 </div>
-                <Text maxLines={1} alignX={align}>
+                <Text maxLines={1} alignX="center">
                   {shortText}
                 </Text>
               </div>
-            ))}
+              <div
+                style={{
+                  width: "220px",
+                  border: "1px solid #ccc",
+                  padding: "8px",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "12px",
+                    color: "#666",
+                    marginBottom: "4px",
+                  }}
+                >
+                  {'alignX="end"'}
+                </div>
+                <Text maxLines={1} alignX="end">
+                  {shortText}
+                </Text>
+              </div>
+            </Box>
+            <div>
+              <div
+                style={{
+                  fontSize: "12px",
+                  color: "#666",
+                  marginBottom: "4px",
+                }}
+              >
+                parent avec <code>{'style={{ textAlign: "center" }}'}</code>{" "}
+                (pas de alignX sur le Text)
+              </div>
+              <div
+                style={{
+                  width: "220px",
+                  border: "1px solid #ccc",
+                  padding: "8px",
+                  textAlign: "center",
+                }}
+              >
+                <Text maxLines={1}>{shortText}</Text>
+              </div>
+            </div>
           </Box>
         );
       };
