@@ -169,7 +169,6 @@ const css = /* css */ `
       display: inline-block;
       min-width: 0;
       max-width: 100%;
-      margin-inline: 0.2em;
       margin-top: calc(-1 * var(--x-picker-padding-top));
       margin-bottom: calc(-1 * var(--x-picker-padding-bottom));
       padding-top: var(--x-picker-padding-top);
@@ -189,6 +188,7 @@ const css = /* css */ `
       display: inline-flex;
       height: 1em;
       height: 1lh;
+      margin-inline: 0.2em;
       flex-shrink: 0;
       align-items: center;
       align-self: flex-start;

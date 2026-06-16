@@ -77,6 +77,10 @@ const css = /* css */ `
         --button-background-color-readonly
       );
       --button-color-disabled: var(--button-color-readonly);
+
+      /* Here to be easy to override */
+      font-size: var(--button-font-size);
+      font-family: var(--button-font-family);
     }
   }
 
@@ -104,8 +108,6 @@ const css = /* css */ `
     cursor: var(--x-button-cursor);
     -webkit-tap-highlight-color: transparent;
     position: relative;
-    font-size: var(--button-font-size);
-    font-family: var(--button-font-family);
     touch-action: manipulation;
     user-select: none;
     -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
