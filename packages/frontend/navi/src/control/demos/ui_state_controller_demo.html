@@ -48,14 +48,6 @@
                       <a href="#group-reset">Button.Reset</a>
                     </li>
                     <li>
-                      <a href="#group-clear-signal">
-                        Button.Clear + uiAction + signal
-                      </a>
-                    </li>
-                    <li>
-                      <a href="#group-number">Number — sans valeur</a>
-                    </li>
-                    <li>
                       <a href="#group-required">Required / validation</a>
                     </li>
                     <li>
@@ -119,16 +111,6 @@
               <section id="group-reset">
                 <h3>Button.Reset</h3>
                 <StandaloneResetDemo />
-              </section>
-
-              <section id="group-clear-signal">
-                <h3>Button.Clear + uiAction input + signal</h3>
-                <ClearSignalDemo />
-              </section>
-
-              <section id="group-number">
-                <h3>Number — sans valeur</h3>
-                <NumberEmptyDemo />
               </section>
 
               <section id="group-required">
@@ -659,58 +641,6 @@
         );
       };
 
-      const ClearSignalDemo = () => {
-        const [entries, pushEntry, clearEntries] = useCallLog();
-
-        return (
-          <Box flex="y" spacing="m" alignX="start">
-            <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
-              Le <code>uiAction</code> est sur l'input (pas sur le
-              ControlGroup). Cliquer <code>Button.Clear</code> doit vider
-              l'input et déclencher le <code>uiAction</code> de l'input — ce qui
-              remet le signal à <code>""</code>.
-            </p>
-            <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
-              Signal courant :{" "}
-              <strong>
-                {inputSignal.value === "" ? "(vide)" : inputSignal.value}
-              </strong>
-            </p>
-            <fieldset>
-              <legend>info</legend>
-              <ControlGroup
-                name="info"
-                action={(value) => {
-                  pushEntry("action", value);
-                }}
-                uiAction={(value) => {
-                  pushEntry("uiAction", value);
-                }}
-              >
-                <Box flex="y" spacing="s" alignX="start">
-                  <fieldset>
-                    <legend>label</legend>
-                    <Input
-                      type="text"
-                      name="label"
-                      uiAction={(v) => {
-                        inputSignal.value = v;
-                        pushEntry("uiAction (input)", v);
-                      }}
-                    />
-                  </fieldset>
-                  <Box flex="x" spacing="s">
-                    <Button.Clear />
-                    <Button.Send />
-                  </Box>
-                </Box>
-              </ControlGroup>
-            </fieldset>
-            <CallLog entries={entries} onClear={clearEntries} />
-          </Box>
-        );
-      };
-
       const StandaloneClearDemo = () => {
         const [entries, pushEntry, clearEntries] = useCallLog();
 
@@ -719,7 +649,15 @@
             <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
               <code>Button.Clear</code> réinitialise tous les champs à vide
               (chaîne vide). C'est le bouton à privilégier pour permettre à
-              l'utilisateur de repartir de zéro.
+              l'utilisateur de repartir de zéro. Le <code>uiAction</code> de
+              l'input met à jour un signal — vérifier qu'il repasse à{" "}
+              <code>""</code> après un Clear.
+            </p>
+            <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+              inputSignal :{" "}
+              <strong>
+                {inputSignal.value === "" ? "(vide)" : inputSignal.value}
+              </strong>
             </p>
             <fieldset>
               <legend>address</legend>
@@ -735,7 +673,15 @@
                 <Box flex="y" spacing="s" alignX="start">
                   <fieldset>
                     <legend>firstName</legend>
-                    <Input type="text" name="firstName" defaultValue="Jean" />
+                    <Input
+                      type="text"
+                      name="firstName"
+                      defaultValue="Jean"
+                      uiAction={(v) => {
+                        inputSignal.value = v;
+                        pushEntry("uiAction (firstName)", v);
+                      }}
+                    />
                   </fieldset>
                   <fieldset>
                     <legend>lastName</legend>
@@ -764,6 +710,10 @@
               <code>defaultValue</code>, il revient à vide. À utiliser quand on
               veut annuler les modifications sans effacer les valeurs initiales.
             </p>
+            <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+              firstNameStateSignal :{" "}
+              <strong>{firstNameStateSignal.value}</strong>
+            </p>
             <fieldset>
               <legend>address</legend>
               <ControlGroup
@@ -790,46 +740,16 @@
                       type="text"
                       name="nickName"
                       value={firstNameStateSignal.value}
+                      uiAction={(v) => {
+                        firstNameStateSignal.value = v;
+                        pushEntry("uiAction (nickName)", v);
+                      }}
                     />
                   </fieldset>
                   <Box flex="x" spacing="s">
                     <Button.Reset />
                     <Button.Send />
                   </Box>
-                </Box>
-              </ControlGroup>
-            </fieldset>
-            <CallLog entries={entries} onClear={clearEntries} />
-          </Box>
-        );
-      };
-
-      const NumberEmptyDemo = () => {
-        const [entries, pushEntry, clearEntries] = useCallLog();
-
-        return (
-          <Box flex="y" spacing="m" alignX="start">
-            <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
-              Un <code>Input type="number"</code> sans valeur — est-ce qu'on
-              peut soumettre ?
-            </p>
-            <fieldset>
-              <legend>qty</legend>
-              <ControlGroup
-                name="qty"
-                action={(value) => {
-                  pushEntry("action", value);
-                }}
-                uiAction={(value) => {
-                  pushEntry("uiAction", value);
-                }}
-              >
-                <Box flex="y" spacing="s" alignX="start">
-                  <fieldset>
-                    <legend>quantity</legend>
-                    <Input type="number" name="quantity" />
-                  </fieldset>
-                  <Button.Send />
                 </Box>
               </ControlGroup>
             </fieldset>
