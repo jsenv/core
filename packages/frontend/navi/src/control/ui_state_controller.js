@@ -27,30 +27,26 @@ export const getUIStateControllerById = (id) => controllersById.get(id);
 // Registry for non-serializable JS values that cannot be written to DOM attributes as-is.
 // When a value is an object/array, we store it here and write a reference string to the DOM
 // instead of "[object Object]". Console-inspectable via window.__navi_js('id').
-let naviJsIdCounter = 0;
+// The controller id is used as key — if the controller has no id, the value is not registered.
 const naviJsRegistry = new Map();
 window.__navi_js = (id) => naviJsRegistry.get(id);
-const setNonSerializableDomValue = (el, propName, jsValue) => {
-  let id = el.dataset.naviJsId;
-  if (!id) {
-    id = `navi_js_${++naviJsIdCounter}`;
-    el.dataset.naviJsId = id;
-  }
-  naviJsRegistry.set(id, jsValue);
-  el[propName] = `window.__navi_js('${id}')`;
-};
-const deleteNonSerializableDomValue = (el) => {
-  const id = el.dataset && el.dataset.naviJsId;
-  if (id) {
-    naviJsRegistry.delete(id);
-  }
-};
 const isSerializableAsDomValue = (value) => {
   if (value === null || value === undefined) {
     return true;
   }
   const type = typeof value;
   return type === "string" || type === "number" || type === "boolean";
+};
+const setDomValue = (el, propName, domValue, uiStateController) => {
+  if (isSerializableAsDomValue(domValue)) {
+    el[propName] = domValue;
+  } else {
+    const controllerId = uiStateController.id;
+    if (controllerId) {
+      naviJsRegistry.set(controllerId, domValue);
+      el[propName] = `window.__navi_js('${controllerId}')`;
+    }
+  }
 };
 
 // In-memory registry for radio controllers, keyed by input name.
@@ -59,31 +55,43 @@ const isSerializableAsDomValue = (value) => {
 // Form scoping is reproduced by comparing parentUIStateController references.
 const radioControllersByName = new Map();
 
-const registerRadioController = (uiStateController) => {
-  const { name } = uiStateController;
-  if (!name) {
-    return;
+const onUIStateControllerCreated = (uiStateController) => {
+  const { id, name, controlType } = uiStateController;
+  if (id) {
+    controllersById.set(id, uiStateController);
   }
-  let set = radioControllersByName.get(name);
-  if (!set) {
-    set = new Set();
-    radioControllersByName.set(name, set);
+  if (
+    controlType === "input" &&
+    uiStateController.props.type === "radio" &&
+    name
+  ) {
+    let set = radioControllersByName.get(name);
+    if (!set) {
+      set = new Set();
+      radioControllersByName.set(name, set);
+    }
+    set.add(uiStateController);
   }
-  set.add(uiStateController);
 };
 
-const unregisterRadioController = (uiStateController) => {
-  const { name } = uiStateController;
-  if (!name) {
-    return;
+const onUIStateControllerDestroyed = (uiStateController) => {
+  const { id, name, controlType } = uiStateController;
+  if (id) {
+    controllersById.delete(id);
+    naviJsRegistry.delete(id);
   }
-  const set = radioControllersByName.get(name);
-  if (!set) {
-    return;
-  }
-  set.delete(uiStateController);
-  if (set.size === 0) {
-    radioControllersByName.delete(name);
+  if (
+    controlType === "input" &&
+    uiStateController.props.type === "radio" &&
+    name
+  ) {
+    const set = radioControllersByName.get(name);
+    if (set) {
+      set.delete(uiStateController);
+      if (set.size === 0) {
+        radioControllersByName.delete(name);
+      }
+    }
   }
 };
 
@@ -223,25 +231,11 @@ export const useUIStateController = (
   );
   useLayoutEffect(() => {
     const controller = uiStateControllerRef.current;
-    if (id) {
-      controllersById.set(id, controller);
-    }
+    onUIStateControllerCreated(controller);
     notifyParentAboutChildMount();
-    if (isRadio) {
-      registerRadioController(controller);
-    }
     return () => {
-      if (id) {
-        controllersById.delete(id);
-      }
       notifyParentAboutChildUnmount();
-      const el = ref.current;
-      if (el) {
-        deleteNonSerializableDomValue(el);
-      }
-      if (isRadio) {
-        unregisterRadioController(controller);
-      }
+      onUIStateControllerDestroyed(controller);
     };
   }, []);
 
@@ -394,11 +388,7 @@ export const useUIStateController = (
         const propValue = uiStateController.getPropFromState(newUIState);
         debugUIState(e, `[${statePropName}] = ${JSON.stringify(propValue)};`);
         const domValue = uiStateController.toControlHostValue(propValue);
-        if (isSerializableAsDomValue(domValue)) {
-          el[statePropName] = domValue;
-        } else {
-          setNonSerializableDomValue(el, statePropName, domValue);
-        }
+        setDomValue(el, statePropName, domValue, uiStateController);
       }
       uiStateController.uiState = newUIState;
       ownUIStateSignal.value = newUIState;
