@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <link rel="icon" href="data:," />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ControlGroup Demo</title>
+    <title>UI State Controller Demo</title>
   </head>
   <body>
     <div id="root"></div>
@@ -31,146 +31,158 @@
       const App = () => {
         return (
           <Box flex="y" spacing="xl" alignX="start" padding="m" maxWidth="640">
-            <h1>ControlGroup</h1>
+            <h1>UI State Controller</h1>
 
             <nav>
               <ol>
                 <li>
-                  <a href="#external-control">
-                    Contrôle externe (--navi-update)
-                  </a>
+                  <a href="#group">Group (ControlGroup)</a>
                   <ol>
                     <li>
-                      <a href="#external-control-object">
-                        ControlGroup (objet nommé)
+                      <a href="#group-basic">Basique</a>
+                    </li>
+                    <li>
+                      <a href="#group-clear">Button.Clear</a>
+                    </li>
+                    <li>
+                      <a href="#group-reset">Button.Reset</a>
+                    </li>
+                    <li>
+                      <a href="#group-clear-signal">
+                        Button.Clear + uiAction + signal
                       </a>
                     </li>
                     <li>
-                      <a href="#external-control-single">
-                        SelectableList (valeur unique)
+                      <a href="#group-number">Number — sans valeur</a>
+                    </li>
+                    <li>
+                      <a href="#group-required">Required / validation</a>
+                    </li>
+                    <li>
+                      <a href="#group-inside-form">Inside a Form</a>
+                    </li>
+                    <li>
+                      <a href="#group-external">
+                        Contrôle externe (--navi-update)
                       </a>
                     </li>
                     <li>
-                      <a href="#external-control-multiple">
-                        SelectableList (valeurs multiples)
-                      </a>
-                    </li>
-                    <li>
-                      <a href="#picker-text-external">Picker texte simple</a>
-                    </li>
-                    <li>
-                      <a href="#picker-controlgroup-external">
-                        Picker ControlGroup
-                      </a>
-                    </li>
-                    <li>
-                      <a href="#external-control-mixed">
-                        ControlGroup (texte + liste)
-                      </a>
+                      <a href="#group-mixed">Texte + liste sélectable</a>
                     </li>
                   </ol>
                 </li>
                 <li>
-                  <a href="#standalone-basic">Standalone — basique</a>
+                  <a href="#radio-group">Radio group (List selectable)</a>
+                  <ol>
+                    <li>
+                      <a href="#radio-group-external">Contrôle externe</a>
+                    </li>
+                  </ol>
                 </li>
                 <li>
-                  <a href="#standalone-clear">Standalone — Button.Clear</a>
-                </li>
-                <li>
-                  <a href="#clear-signal">
-                    Button.Clear + uiAction input + signal
+                  <a href="#checkbox-group">
+                    Checkbox group (List selectable multiple)
                   </a>
+                  <ol>
+                    <li>
+                      <a href="#checkbox-group-external">Contrôle externe</a>
+                    </li>
+                  </ol>
                 </li>
                 <li>
-                  <a href="#standalone-reset">Standalone — Button.Reset</a>
-                </li>
-                <li>
-                  <a href="#number-empty">Number — sans valeur</a>
-                </li>
-                <li>
-                  <a href="#text-required">Text — required</a>
-                </li>
-                <li>
-                  <a href="#validation">Validation</a>
-                </li>
-                <li>
-                  <a href="#inside-form">Inside a Form</a>
+                  <a href="#facade">Facade (Picker)</a>
+                  <ol>
+                    <li>
+                      <a href="#facade-text">Input texte</a>
+                    </li>
+                    <li>
+                      <a href="#facade-controlgroup">ControlGroup interne</a>
+                    </li>
+                  </ol>
                 </li>
               </ol>
             </nav>
 
-            <section id="external-control">
-              <h2>Contrôle externe (--navi-update)</h2>
+            <section id="group">
+              <h2>Group (ControlGroup)</h2>
 
-              <section id="external-control-object">
-                <h3>ControlGroup (objet nommé)</h3>
+              <section id="group-basic">
+                <h3>Basique</h3>
+                <StandaloneDemo />
+              </section>
+
+              <section id="group-clear">
+                <h3>Button.Clear</h3>
+                <StandaloneClearDemo />
+              </section>
+
+              <section id="group-reset">
+                <h3>Button.Reset</h3>
+                <StandaloneResetDemo />
+              </section>
+
+              <section id="group-clear-signal">
+                <h3>Button.Clear + uiAction input + signal</h3>
+                <ClearSignalDemo />
+              </section>
+
+              <section id="group-number">
+                <h3>Number — sans valeur</h3>
+                <NumberEmptyDemo />
+              </section>
+
+              <section id="group-required">
+                <h3>Required / validation</h3>
+                <TextRequiredDemo />
+                <StandaloneRequiredDemo />
+              </section>
+
+              <section id="group-inside-form">
+                <h3>Inside a Form</h3>
+                <InsideFormDemo />
+              </section>
+
+              <section id="group-external">
+                <h3>Contrôle externe (--navi-update)</h3>
                 <ExternalControlDemo />
               </section>
 
-              <section id="external-control-single">
-                <h3>SelectableList (valeur unique)</h3>
-                <ExternalSelectableDemo />
-              </section>
-
-              <section id="external-control-multiple">
-                <h3>SelectableList (valeurs multiples)</h3>
-                <ExternalSelectableMultipleDemo />
-              </section>
-
-              <section id="picker-text-external">
-                <h3>Picker texte simple</h3>
-                <PickerTextExternalDemo />
-              </section>
-
-              <section id="picker-controlgroup-external">
-                <h3>Picker ControlGroup</h3>
-                <PickerControlGroupExternalDemo />
-              </section>
-
-              <section id="external-control-mixed">
-                <h3>ControlGroup (texte + liste)</h3>
+              <section id="group-mixed">
+                <h3>Texte + liste sélectable</h3>
                 <ExternalMixedDemo />
               </section>
             </section>
 
-            <section id="standalone-basic">
-              <h2>Standalone — basique</h2>
-              <StandaloneDemo />
+            <section id="radio-group">
+              <h2>Radio group (List selectable)</h2>
+
+              <section id="radio-group-external">
+                <h3>Contrôle externe</h3>
+                <ExternalSelectableDemo />
+              </section>
             </section>
 
-            <section id="standalone-clear">
-              <h2>Standalone — Button.Clear</h2>
-              <StandaloneClearDemo />
+            <section id="checkbox-group">
+              <h2>Checkbox group (List selectable multiple)</h2>
+
+              <section id="checkbox-group-external">
+                <h3>Contrôle externe</h3>
+                <ExternalSelectableMultipleDemo />
+              </section>
             </section>
 
-            <section id="clear-signal">
-              <h2>Button.Clear + uiAction input + signal</h2>
-              <ClearSignalDemo />
-            </section>
+            <section id="facade">
+              <h2>Facade (Picker)</h2>
 
-            <section id="standalone-reset">
-              <h2>Standalone — Button.Reset</h2>
-              <StandaloneResetDemo />
-            </section>
+              <section id="facade-text">
+                <h3>Input texte</h3>
+                <PickerTextExternalDemo />
+              </section>
 
-            <section id="number-empty">
-              <h2>Number — sans valeur</h2>
-              <NumberEmptyDemo />
-            </section>
-
-            <section id="text-required">
-              <h2>Text — required</h2>
-              <TextRequiredDemo />
-            </section>
-
-            <section id="validation">
-              <h2>Validation</h2>
-              <StandaloneRequiredDemo />
-            </section>
-
-            <section id="inside-form">
-              <h2>Inside a Form</h2>
-              <InsideFormDemo />
+              <section id="facade-controlgroup">
+                <h3>ControlGroup interne</h3>
+                <PickerControlGroupExternalDemo />
+              </section>
             </section>
           </Box>
         );
