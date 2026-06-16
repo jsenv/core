@@ -575,6 +575,7 @@ const TextOverflow = ({ noWrap, spacing, capitalize, children, ...rest }) => {
 
   return (
     <TextDispatcher
+      inline
       flex
       block
       as="div"

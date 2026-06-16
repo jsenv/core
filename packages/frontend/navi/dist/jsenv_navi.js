@@ -23742,6 +23742,7 @@ const TextOverflow = ({
 }) => {
   const [overflowPinned, setOverflowPinned] = useState(null);
   return jsx(TextDispatcher, {
+    inline: true,
     flex: true,
     block: true,
     as: "div",

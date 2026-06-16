@@ -1028,6 +1028,21 @@
                   />
                 </Picker>
               </Field>
+              <Field vertical>
+                <Label>Short value + width fixe + alignX center</Label>
+                <Picker
+                  name="dim_align_center"
+                  value={SHORT_VALUE}
+                  action={() => {}}
+                  width="200px"
+                  textAlign="center"
+                >
+                  <DimensionPickerItems
+                    id="dim_align_center"
+                    values={[SHORT_VALUE, MEDIUM_VALUE, LONG_SENTENCE]}
+                  />
+                </Picker>
+              </Field>
             </Box>
 
             <h3 id="dim-maxrows" style={{ marginTop: "24px" }}>
