@@ -650,20 +650,26 @@ export const useControlgroupProps = (
 };
 
 /**
- * Like `useControlProps` but also establishes a facade that keeps the picker's
- * hidden input in sync with the first child control inside the picker popup.
+ * Like `useControlProps` but also establishes a 1:1 facade sync between the
+ * picker's hidden input and the first child control inside the picker popup.
  *
- * Returns a 3-tuple: `[inputProps, pickerRemainingProps, facadeChildrenProps]`
- * where `facadeChildrenProps` is meant to be spread onto `ParentUIStateControllerContext.Provider`:
+ * Child → picker input: when the child's UI state changes, the picker input
+ * is updated automatically (no `command="--navi-update"` needed on the child).
+ *
+ * Picker input → child: when the picker input is updated externally (e.g.
+ * via `--navi-update` or `--navi-clear` from outside), the change is
+ * propagated down to the child automatically.
+ *
+ * Returns a 3-tuple `[inputProps, remainingProps, facadeChildrenProps]`.
+ * Use `ControlFacadeChildrenWrapper` with the third element to wrap the popup
+ * children — it resets field contexts and injects the facade controller:
  *
  * ```jsx
- * const [inputProps, pickerRemainingProps, facadeChildrenProps] = useControlFacadeProps(props, options);
+ * const [inputProps, remainingProps, facadeChildrenProps] = useControlFacadeProps(props, options);
  * // …
- * <ControlChildrenWrapper>
- *   <ParentUIStateControllerContext.Provider {...facadeChildrenProps}>
- *     {children}
- *   </ParentUIStateControllerContext.Provider>
- * </ControlChildrenWrapper>
+ * <ControlFacadeChildrenWrapper {...facadeChildrenProps}>
+ *   {children}
+ * </ControlFacadeChildrenWrapper>
  * ```
  */
 export const useControlFacadeProps = (props, options) => {
@@ -673,6 +679,19 @@ export const useControlFacadeProps = (props, options) => {
   return [controlProps, remainingProps, { value: facadeController }];
 };
 
+/**
+ * Wrapper for the popup children of a facade-backed picker.
+ *
+ * Resets all inherited field contexts (same as `ControlChildrenWrapper`) so
+ * that children don't accidentally register as form participants of the outer
+ * field. Additionally injects the facade controller as
+ * `ParentUIStateControllerContext` so the first child control automatically
+ * stays in sync with the picker input (bidirectional, without any explicit
+ * `command` prop).
+ *
+ * Receives `facadeChildrenProps` — the third element of the tuple returned by
+ * `useControlFacadeProps` — spread directly onto this component.
+ */
 export const ControlFacadeChildrenWrapper = ({ children, value }) => (
   <ParentUIStateControllerContext.Provider value={value}>
     <MessagePropsRefContext.Provider value={undefined}>
