@@ -23230,6 +23230,7 @@ const css$L = /* css */`
         display: flex;
         width: 100%;
         flex-grow: 1;
+        justify-content: inherit;
         gap: 0.3em;
 
         .navi_text_overflow_text {
@@ -25639,7 +25640,9 @@ const useUIStateController = (
       if (isRadio && newUIState && uiStateController.name && !controlProxyFor) {
         const siblings = radioControllersByName.get(uiStateController.name);
         if (siblings) {
-          const siblingUncheckEvent = new CustomEvent("radio_sibling_uncheck");
+          const siblingUncheckEvent = new CustomEvent("radio_sibling_uncheck", {
+            detail: {},
+          });
           chainEvent(siblingUncheckEvent, e);
           for (const siblingController of siblings) {
             if (siblingController === uiStateController) {
@@ -26024,7 +26027,10 @@ const useUIGroupStateController = (
         );
         return;
       }
-      const propagateDownEvent = new CustomEvent("propagate_down_set_ui_state");
+      const propagateDownEvent = new CustomEvent(
+        "propagate_down_set_ui_state",
+        { detail: {} },
+      );
       chainEvent(propagateDownEvent, e);
       for (const childUIStateController of childUIStateControllerArray) {
         if (!isMonitoringChild(childUIStateController)) {
@@ -26147,6 +26153,7 @@ const useUIGroupStateController = (
     resetUIState: (e) => {
       const propagateDownResetEvent = new CustomEvent(
         "propagate_down_reset_ui_state",
+        { detail: {} },
       );
       chainEvent(propagateDownResetEvent, e);
       for (const childUIStateController of childUIStateControllerArray) {
@@ -26163,6 +26170,7 @@ const useUIGroupStateController = (
     clearUIState: (e) => {
       const propagateDownClearEvent = new CustomEvent(
         "propagate_down_clear_ui_state",
+        { detail: {} },
       );
       chainEvent(propagateDownClearEvent, e);
       for (const childUIStateController of childUIStateControllerArray) {
@@ -26240,7 +26248,10 @@ const useUIFacadeStateController = (uiStateController) => {
         return;
       }
       updatingRef.current = true;
-      const propagateDownEvent = new CustomEvent("propagate_down_set_ui_state");
+      const propagateDownEvent = new CustomEvent(
+        "propagate_down_set_ui_state",
+        { detail: {} },
+      );
       chainEvent(propagateDownEvent, e);
       child.setUIState(newUIState, propagateDownEvent);
       updatingRef.current = false;
@@ -27542,6 +27553,7 @@ installImportMetaCssBuild(import.meta);const css$I = /* css */`
 
     /* discrete: background on hover */
     &[data-variant="discrete"] {
+      --button-border-width: 0;
       --x-button-background-color: transparent;
       --x-button-border-color: transparent;
 
@@ -31726,11 +31738,12 @@ const InputSearchUI = ({
   }
   return jsx(InputRightSlot, {
     children: jsx(Button, {
-      tabIndex: "-1",
-      "navi-focus-delegate": id,
-      variant: "icon",
       command: "--navi-clear",
       commandFor: id,
+      tabIndex: "-1",
+      "navi-focus-delegate": id,
+      icon: true,
+      variant: "discrete",
       children: jsx(Icon, {
         children: jsx(CloseSvg, {})
       })
@@ -32244,12 +32257,16 @@ const css$w = /* css */`
     }
 
     .navi_input_slot {
-      margin-inline: 0.2em;
+      --slot-spacing: calc(2px + 0.1em);
+
+      margin-right: var(--slot-spacing);
+      margin-left: var(--slot-spacing);
       color: #5e4e4e;
 
       &[data-left] {
-        margin-right: var(--x-padding-left);
         order: -1;
+      }
+      &[data-right] {
       }
     }
 
@@ -38073,7 +38090,6 @@ installImportMetaCssBuild(import.meta);const css$i = /* css */`
     padding-left: 0;
     flex-direction: row;
     align-items: center;
-    gap: var(--navi-xs);
     color: var(--x-picker-color);
     font-size: var(--picker-font-size);
     font-family: var(--picker-font-family);
@@ -38114,10 +38130,13 @@ installImportMetaCssBuild(import.meta);const css$i = /* css */`
       }
     }
     .navi_picker_right_slot {
+      --slot-spacing: calc(0.1em);
+
       display: inline-flex;
       height: 1em;
       height: 1lh;
-      margin-inline: 0.1em;
+      margin-right: var(--slot-spacing);
+      margin-left: var(--slot-spacing);
       flex-shrink: 0;
       align-items: center;
       align-self: flex-start;
