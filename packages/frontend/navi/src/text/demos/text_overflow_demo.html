@@ -22,6 +22,26 @@
             }}
           >
             <h1>Text Overflow Demo</h1>
+            <p
+              style={{
+                background: "#fff8e1",
+                border: "1px solid #ffe082",
+                borderRadius: "6px",
+                padding: "10px 14px",
+                fontSize: "14px",
+                marginBottom: "16px",
+              }}
+            >
+              <strong>Which to use?</strong>
+              <br />→ <code>{"maxLines={1}"}</code> — single-line: text is
+              forced onto one line and truncated with <code>…</code> (
+              <code>white-space: nowrap</code> +{" "}
+              <code>text-overflow: ellipsis</code>
+              ).
+              <br />→ <code>{"maxLines={N}"}</code> where N &gt; 1 — multi-line
+              clamp: up to N lines are shown, the rest is truncated with{" "}
+              <code>…</code> via <code>-webkit-line-clamp</code>.
+            </p>
             <Toc />
             <section>
               <h2 id="s-two-col-flex">Two-column flex layout</h2>
@@ -68,7 +88,7 @@
               <MultilineSection />
             </section>
             <section>
-              <h2 id="s-line-clamp">Line Clamp</h2>
+              <h2 id="s-line-clamp">Line Clamp (maxLines &gt; 1)</h2>
               <MaxLinesSection />
             </section>
             <section>
@@ -134,7 +154,7 @@
                 <a href="#s-multiline">Multiline Behavior</a>
               </li>
               <li>
-                <a href="#s-line-clamp">Line Clamp</a>
+                <a href="#s-line-clamp">Line Clamp (maxLines &gt; 1)</a>
               </li>
               <li>
                 <a href="#s-text-align">Text Align</a>
@@ -638,29 +658,10 @@
 
       const MaxLinesSection = () => {
         return (
-          <>
-            <p
-              style={{
-                background: "#fff8e1",
-                border: "1px solid #ffe082",
-                borderRadius: "6px",
-                padding: "10px 14px",
-                fontSize: "14px",
-                marginBottom: "16px",
-              }}
-            >
-              <strong>Which to use?</strong>
-              <br />→ <code>maxLines={"{1}"}</code> — single-line: text is
-              forced onto one line and truncated with <code>…</code> (
-              <code>white-space: nowrap</code> +{" "}
-              <code>text-overflow: ellipsis</code>
-              ).
-              <br />→ <code>maxLines={"{N}"}</code> where N &gt; 1 — multi-line
-              clamp: up to N lines are shown, the rest is truncated with{" "}
-              <code>…</code> via <code>-webkit-line-clamp</code>.
-            </p>
-            <Box row spacing="16px" style={{ flexWrap: "wrap" }}>
+          <Box row spacing="16px" style={{ flexWrap: "wrap" }}>
+            {[2, 3, 5].map((n) => (
               <div
+                key={n}
                 style={{
                   width: "260px",
                   border: "1px solid #ccc",
@@ -674,82 +675,18 @@
                     marginBottom: "4px",
                   }}
                 >
-                  No clamp (natural flow)
+                  maxLines={n}
                 </div>
-                <div>
+                <Text maxLines={n}>
                   Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed
                   do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-                  Ut enim ad minim veniam, quis nostrud exercitation ullamco.
-                </div>
-              </div>
-              <div
-                style={{
-                  width: "260px",
-                  border: "1px solid #ccc",
-                  padding: "8px",
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: "12px",
-                    color: "#666",
-                    marginBottom: "4px",
-                  }}
-                >
-                  maxLines={"{1}"} — single-line
-                </div>
-                <Text maxLines={1}>
-                  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed
-                  do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-                  Ut enim ad minim veniam, quis nostrud exercitation ullamco.
+                  Ut enim ad minim veniam, quis nostrud exercitation ullamco
+                  laboris nisi ut aliquip ex ea commodo consequat. Duis aute
+                  irure dolor in reprehenderit in voluptate velit esse cillum.
                 </Text>
               </div>
-              <div
-                style={{
-                  width: "260px",
-                  border: "1px solid #ccc",
-                  padding: "8px",
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: "12px",
-                    color: "#666",
-                    marginBottom: "4px",
-                  }}
-                >
-                  maxLines={"{2}"} — 2-line clamp
-                </div>
-                <Text maxLines={2}>
-                  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed
-                  do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-                  Ut enim ad minim veniam, quis nostrud exercitation ullamco.
-                </Text>
-              </div>
-              <div
-                style={{
-                  width: "260px",
-                  border: "1px solid #ccc",
-                  padding: "8px",
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: "12px",
-                    color: "#666",
-                    marginBottom: "4px",
-                  }}
-                >
-                  maxLines={"{3}"} — 3-line clamp
-                </div>
-                <Text maxLines={3}>
-                  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed
-                  do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-                  Ut enim ad minim veniam, quis nostrud exercitation ullamco.
-                </Text>
-              </div>
-            </Box>
-          </>
+            ))}
+          </Box>
         );
       };
 

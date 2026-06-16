@@ -75,6 +75,7 @@ const css = /* css */ `
         display: flex;
         width: 100%;
         flex-grow: 1;
+        justify-content: inherit;
         gap: 0.3em;
 
         .navi_text_overflow_text {
