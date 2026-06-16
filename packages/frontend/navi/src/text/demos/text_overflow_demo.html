@@ -71,6 +71,10 @@
               <h2 id="s-line-clamp">Line Clamp</h2>
               <MaxLinesSection />
             </section>
+            <section>
+              <h2 id="s-text-align">Text Align</h2>
+              <TextAlignSection />
+            </section>
           </div>
         );
       };
@@ -131,6 +135,9 @@
               </li>
               <li>
                 <a href="#s-line-clamp">Line Clamp</a>
+              </li>
+              <li>
+                <a href="#s-text-align">Text Align</a>
               </li>
             </ol>
           </nav>
@@ -743,6 +750,37 @@
               </div>
             </Box>
           </>
+        );
+      };
+
+      const TextAlignSection = () => {
+        const shortText = "Short text";
+        return (
+          <Box row spacing="16px" style={{ flexWrap: "wrap" }}>
+            {["start", "center", "end"].map((align) => (
+              <div
+                key={align}
+                style={{
+                  width: "220px",
+                  border: "1px solid #ccc",
+                  padding: "8px",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "12px",
+                    color: "#666",
+                    marginBottom: "4px",
+                  }}
+                >
+                  {`alignX="${align}"`}
+                </div>
+                <Text maxLines={1} alignX={align}>
+                  {shortText}
+                </Text>
+              </div>
+            ))}
+          </Box>
         );
       };
 
