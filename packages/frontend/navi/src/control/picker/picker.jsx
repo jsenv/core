@@ -374,17 +374,6 @@ const PickerButton = (props) => {
           inputProps.onFocus(e);
         }
       }}
-      // Normally navi_command is handled by the control host (the hidden input).
-      // But the picker's id is on the button (so <label> focuses the button, not
-      // the input), which means external commandfor="picker-id" dispatches the
-      // navi_command event on the button. We therefore forward it to the input's
-      // handler here.
-      // dispatchRequestSetUIState internally re-resolves to the control host, so
-      // forwarding to inputProps.onnavi_command is enough — the input state will
-      // be updated correctly even though the event originates on the button.
-      onnavi_command={(e) => {
-        inputProps.onnavi_command(e);
-      }}
     >
       <LoadingOutline
         loading={loading}

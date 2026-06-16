@@ -859,6 +859,18 @@ const useInteractiveProps = (
         onNaviCommand(e, { debugCommand });
       },
     });
+    // The control host (e.g. hidden input inside picker) listens for navi_command
+    // via controlProps above. But when commandfor targets the control root (e.g.
+    // the picker button), the event fires there instead. Putting onnavi_command on
+    // remainingProps — which ends up on the root element — lets the root forward
+    // to the host automatically. When root === host the spread order ensures
+    // controlProps.onnavi_command takes precedence.
+    Object.assign(remainingProps, {
+      onnavi_command: (e) => {
+        props.onnavi_command?.(e);
+        onNaviCommand(e, { debugCommand });
+      },
+    });
   }
   action_props: {
     const { action, actionErrorEffect, errorMapping } = props;
