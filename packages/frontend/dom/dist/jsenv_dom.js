@@ -208,9 +208,10 @@ const dispatchInternalCustomEvent = (
   customEventDetail,
 ) => {
   const customEvent = new CustomEvent(customEventName, {
-    detail: resolveEventDetail(customEventDetail),
+    detail: customEventDetail,
     cancelable: true,
   });
+  chainEvent(customEvent, customEventDetail?.event);
   return el.dispatchEvent(customEvent);
 };
 
@@ -224,10 +225,11 @@ const dispatchPublicCustomEvent = (
   customEventDetail,
 ) => {
   const customEvent = new CustomEvent(customEventName, {
-    detail: resolveEventDetail(customEventDetail),
+    detail: customEventDetail,
     bubbles: true,
     cancelable: true,
   });
+  chainEvent(customEvent, customEventDetail?.event);
   return el.dispatchEvent(customEvent);
 };
 
@@ -239,26 +241,28 @@ const dispatchPublicCustomEvent = (
  */
 const dispatchCustomEvent = (el, customEventName, customEventDetail) => {
   const customEvent = new CustomEvent(customEventName, {
-    detail: resolveEventDetail(customEventDetail),
+    detail: customEventDetail,
     cancelable: true,
   });
+  chainEvent(customEvent, customEventDetail?.event);
   const result = el.dispatchEvent(customEvent);
   return result;
 };
 
-const resolveEventDetail = (customEventDetail) => {
-  const { event, ...rest } = customEventDetail ?? {};
-  const isWrappedCustomEvent = event?.detail?.event !== undefined;
-  if (!isWrappedCustomEvent) {
-    return { ...rest, event };
+const chainEvent = (customEvent, parentEvent) => {
+  if (!parentEvent) {
+    return customEvent;
   }
-  // Keep `event` as the direct parent so callers see the immediate facade.
-  // Build eventChain as [root, ...grandparents] — oldest first, excluding `event`.
-  const previousChain = event.detail.eventChain;
+  // Always build eventChain from the first wrapping so callers can rely on it
+  // being present whenever `parentEvent` is set.
+  // eventChain = [oldest, ..., parentEvent] — the full ancestor list including the direct parent.
+  const previousChain = parentEvent.detail?.eventChain;
   const eventChain = previousChain
-    ? [...previousChain, event.detail.event]
-    : [event.detail.event];
-  return { ...rest, event, eventChain };
+    ? [...previousChain, parentEvent]
+    : [parentEvent];
+  customEvent.detail.event = parentEvent;
+  customEvent.detail.eventChain = eventChain;
+  return customEvent;
 };
 
 /**
@@ -288,12 +292,6 @@ const findEvent = (event, predicate) => {
       }
     }
   }
-  const initiator = event.detail?.event;
-  if (initiator) {
-    if (match(initiator)) {
-      return initiator;
-    }
-  }
   return undefined;
 };
 
@@ -314,17 +312,15 @@ const resolveEventPredicate = (predicate) => {
  */
 const formatEventSideEffect = (e, sideEffect) => {
   const parts = [];
-  if (e.detail?.event !== undefined) {
+  if (e.detail?.eventChain) {
     const chain = e.detail.eventChain;
-    const initiator = chain ? chain[0] : e.detail.event;
+    const initiator = chain[0];
     parts.push(
       `"${initiator.type}" on ${getElementSignature(initiator.target)}`,
     );
-    if (chain) {
-      for (const chainedEvent of chain.slice(1)) {
-        parts.push(chainedEvent.type);
-      }
-      parts.push(e.detail.event.type);
+    // chain[0] is shown as initiator above; chain includes event as last element
+    for (const chainedEvent of chain.slice(1)) {
+      parts.push(chainedEvent.type);
     }
     parts.push(e.type);
   } else {
@@ -335,11 +331,12 @@ const formatEventSideEffect = (e, sideEffect) => {
 
 /**
  * Creates a stateful debug logger that groups side effects by their native initiator event.
+ * Use createCategory(name, color) to get a typed logger function for each concern.
  *
  * Usage:
- *   const log = createEventGroupLogger();
- *   log(e, "navi_action_requested");  // opens/reuses a group for the initiator event
- *   log("plain message");             // logs inside the current group (or standalone)
+ *   const logger = createEventGroupLogger();
+ *   const logAction = logger.createCategory("[action]", "#e67e22");
+ *   logAction(e, "action started");  // opens/reuses a group for the initiator event
  *
  * The group closes automatically after the current JS task completes (setTimeout 0).
  */
@@ -358,14 +355,18 @@ const createEventGroupLogger = () => {
     }, 0);
   };
 
-  return (eOrMessage, sideEffect, ...args) => {
-    if (!(eOrMessage instanceof Event)) {
-      console.debug(eOrMessage);
+  const log = (category, color, e, ...args) => {
+    if (!(e instanceof Event)) {
+      console.debug(
+        `%c${category}`,
+        `color:${color};font-weight:bold`,
+        e,
+        ...args,
+      );
       return;
     }
-    const e = eOrMessage;
     const chain = e.detail?.eventChain;
-    const initiator = chain ? chain[0] : (e.detail?.event ?? e);
+    const initiator = chain ? chain[0] : e;
     if (initiator !== currentInitiator) {
       if (currentInitiator !== null) {
         clearTimeout(closeGroupTimeout);
@@ -378,25 +379,30 @@ const createEventGroupLogger = () => {
       console.group(label);
       currentInitiator = initiator;
     }
-    const line = formatSideEffectLine(e, sideEffect);
-    console.debug(line, ...args);
+    const line = formatSideEffectLine(e, category);
+    console.debug(`%c${line}`, `color:${color};font-weight:bold`, ...args);
     scheduleGroupEnd();
+  };
+
+  return {
+    createCategory: (name, color = "inherit") => {
+      return (e, ...args) => {
+        log(name, color, e, ...args);
+      };
+    },
   };
 };
 
-const formatSideEffectLine = (e, sideEffect) => {
-  const parts = [];
+const formatSideEffectLine = (e, prefix) => {
+  const parts = [prefix];
   const chain = e.detail?.eventChain;
   if (chain) {
-    // chain[0] is the root event, already shown as the group label — skip it
+    // chain[0] is the root event, already shown as the group label — skip it.
+    // chain includes the direct parent (e.detail.event) as its last element.
     for (const chainedEvent of chain.slice(1)) {
       parts.push(chainedEvent.type);
     }
-    if (e.detail?.event) {
-      parts.push(e.detail.event.type);
-    }
   }
-  parts.push(sideEffect);
   return parts.join(" -> ");
 };
 
@@ -4197,6 +4203,19 @@ const getFocusVisibilityInfo = (node, { excludeAriaHidden } = {}) => {
     ) {
       return { visible: false, reason: "inside closed popover element" };
     }
+    // Open popovers and open dialogs render in the top layer: they escape
+    // the normal layout/stacking context of their DOM ancestors.
+    // No need to check further up the tree.
+    if (elementIsDialog(nodeOrAncestor) && nodeOrAncestor.open) {
+      break;
+    }
+    if (
+      nodeOrAncestor.popover !== null &&
+      nodeOrAncestor.popover !== undefined &&
+      nodeOrAncestor.matches(":popover-open")
+    ) {
+      break;
+    }
     nodeOrAncestor = nodeOrAncestor.parentNode;
   }
   return { visible: true, reason: "no reason to be hidden" };
@@ -4364,8 +4383,15 @@ const canInteract = (element) => {
  * @returns {Element|null}
  */
 const findFocusDelegateTarget = (el) => {
-  if (!el.hasAttribute("navi-focus-delegate")) {
+  const naviFocusDelegate = el.getAttribute("navi-focus-delegate");
+  if (naviFocusDelegate === null || naviFocusDelegate === undefined) {
     return null;
+  }
+  if (naviFocusDelegate) {
+    const delegateTarget = document.getElementById(naviFocusDelegate);
+    if (delegateTarget && elementIsFocusable(delegateTarget)) {
+      return delegateTarget;
+    }
   }
   let ancestor = el.parentElement;
   while (ancestor) {
@@ -15081,4 +15107,4 @@ const useResizeStatus = (elementRef, { as = "number" } = {}) => {
   };
 };
 
-export { EASING, activeElementSignal, addActiveElementEffect, addAttributeEffect, allowWheelThrough, appendStyles, captureScrollState, contrastColor, createBackgroundColorTransition, createBackgroundTransition, createBorderRadiusTransition, createBorderTransition, createDragGestureController, createDragToMoveGestureController, createEventGroupLogger, createGroupTransitionController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createValueEffect, createWidthTransition, cubicBezier, dispatchCustomEvent, dispatchInternalCustomEvent, dispatchPublicCustomEvent, dragAfterThreshold, elementIsFocusable, elementIsVisibleForFocus, elementIsVisuallyVisible, findAfter, findAncestor, findBefore, findDescendant, findEvent, findFocusDelegateTarget, findFocusable, formatEventSideEffect, getAvailableHeight, getAvailableWidth, getBackground, getBackgroundColor, getBorder, getBorderRadius, getBorderSizes, getContrastRatio, getDefaultStyles, getDragCoordinates, getDropTargetInfo, getElementSignature, getFirstVisuallyVisibleAncestor, getFocusVisibilityInfo, getHeight, getHeightWithoutTransition, getInnerHeight, getInnerWidth, getKeyboardEventDefaultAction, getLuminance, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getOpacity, getOpacityWithoutTransition, getPaddingSizes, getPositionedParent, getPreferedColorScheme, getScrollBox, getScrollContainer, getScrollContainerSet, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getTranslateX, getTranslateXWithoutTransition, getTranslateY, getVisuallyVisibleInfo, getWidth, getWidthWithoutTransition, hasCSSSizeUnit, initFlexDetailsSet, initFocusGroup, initPositionSticky, isSameColor, isScrollable, measureLongestVisualLineWidth, measureScrollbar, measureWidestChildRow, mergeOneStyle, mergeTwoStyles, normalizeKeyboardKey, normalizeStyle, normalizeStyles, parseStyle, pickPositionRelativeTo, prefersDarkColors, prefersLightColors, preventFocusNav, preventFocusNavViaKeyboard, preventIntermediateScrollbar, resolveCSSColor, resolveCSSSize, resolveColorLuminance, resolveOklchLightness, scrollIntoViewScoped, scrollIntoViewWithStickyAwareness, setAttribute, setAttributes, setStyles, snapToPixel, startDragToReorder, startDragToResizeGesture, stickyAsRelativeCoords, stringifyStyle, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect };
+export { EASING, activeElementSignal, addActiveElementEffect, addAttributeEffect, allowWheelThrough, appendStyles, captureScrollState, chainEvent, contrastColor, createBackgroundColorTransition, createBackgroundTransition, createBorderRadiusTransition, createBorderTransition, createDragGestureController, createDragToMoveGestureController, createEventGroupLogger, createGroupTransitionController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createValueEffect, createWidthTransition, cubicBezier, dispatchCustomEvent, dispatchInternalCustomEvent, dispatchPublicCustomEvent, dragAfterThreshold, elementIsFocusable, elementIsVisibleForFocus, elementIsVisuallyVisible, findAfter, findAncestor, findBefore, findDescendant, findEvent, findFocusDelegateTarget, findFocusable, formatEventSideEffect, getAvailableHeight, getAvailableWidth, getBackground, getBackgroundColor, getBorder, getBorderRadius, getBorderSizes, getContrastRatio, getDefaultStyles, getDragCoordinates, getDropTargetInfo, getElementSignature, getFirstVisuallyVisibleAncestor, getFocusVisibilityInfo, getHeight, getHeightWithoutTransition, getInnerHeight, getInnerWidth, getKeyboardEventDefaultAction, getLuminance, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getOpacity, getOpacityWithoutTransition, getPaddingSizes, getPositionedParent, getPreferedColorScheme, getScrollBox, getScrollContainer, getScrollContainerSet, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getTranslateX, getTranslateXWithoutTransition, getTranslateY, getVisuallyVisibleInfo, getWidth, getWidthWithoutTransition, hasCSSSizeUnit, initFlexDetailsSet, initFocusGroup, initPositionSticky, isSameColor, isScrollable, measureLongestVisualLineWidth, measureScrollbar, measureWidestChildRow, mergeOneStyle, mergeTwoStyles, normalizeKeyboardKey, normalizeStyle, normalizeStyles, parseStyle, pickPositionRelativeTo, prefersDarkColors, prefersLightColors, preventFocusNav, preventFocusNavViaKeyboard, preventIntermediateScrollbar, resolveCSSColor, resolveCSSSize, resolveColorLuminance, resolveOklchLightness, scrollIntoViewScoped, scrollIntoViewWithStickyAwareness, setAttribute, setAttributes, setStyles, snapToPixel, startDragToReorder, startDragToResizeGesture, stickyAsRelativeCoords, stringifyStyle, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect };

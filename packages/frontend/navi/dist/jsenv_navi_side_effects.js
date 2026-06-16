@@ -65,6 +65,7 @@ const css = /* css */`
       --navi-focus-outline-width: 2px;
       --navi-focus-outline-color: light-dark(#4476ff, #3b82f6);
       --navi-loader-color: light-dark(#355fcc, #3b82f6);
+      --navi-control-tap-highlight-color: transparent;
 
       --navi-control-font-family: ${controlDefaultFontFamily};
       --navi-control-font-size: ${controlDefaultFontSize};
@@ -78,11 +79,15 @@ const css = /* css */`
       --navi-button-padding-x-default: 6px;
       --navi-button-padding-y-default: 1px;
       /* default */
-      --navi-picker-padding-x-default: var(--navi-button-padding-x-default);
-      --navi-picker-padding-y-default: var(--navi-button-padding-y-default);
+      --navi-picker-padding-x-default: var(--navi-control-padding-x-default);
+      --navi-picker-padding-y-default: var(--navi-control-padding-y-default);
 
       --navi-selection-border-color: #0078d4;
       --navi-selection-background-color: #eaf1fd;
+      /* Accent color — used for call-to-action buttons and selected list items.
+         Override this single variable to apply a consistent brand color across
+         all components that need to stand out. */
+      --navi-accent-color: rgb(3, 30, 60);
       --navi-color-white: white;
       --navi-color-dark: rgb(55, 60, 69);
 
@@ -124,7 +129,9 @@ const css = /* css */`
   }
 
   /* Hidden appearance */
-  input[navi-visually-hidden] {
+  input[navi-visually-hidden],
+  button[navi-visually-hidden],
+  div[navi-visually-hidden] {
     position: absolute;
     top: 0;
     left: 0;
