@@ -144,7 +144,6 @@ const css = /* css */ `
     padding-left: 0;
     flex-direction: row;
     align-items: center;
-    gap: var(--navi-xs);
     color: var(--x-picker-color);
     font-size: var(--picker-font-size);
     font-family: var(--picker-font-family);
