@@ -42,10 +42,10 @@
                       <a href="#group-basic">Basique</a>
                     </li>
                     <li>
-                      <a href="#group-clear">Button.Clear</a>
+                      <a href="#group-clear">Clear (--navi-clear)</a>
                     </li>
                     <li>
-                      <a href="#group-reset">Button.Reset</a>
+                      <a href="#group-reset">Reset (--navi-reset)</a>
                     </li>
                     <li>
                       <a href="#group-required">Required / validation</a>
@@ -104,12 +104,12 @@
               </section>
 
               <section id="group-clear">
-                <h3>Button.Clear</h3>
+                <h3>Clear (--navi-clear)</h3>
                 <StandaloneClearDemo />
               </section>
 
               <section id="group-reset">
-                <h3>Button.Reset</h3>
+                <h3>Reset (--navi-reset)</h3>
                 <StandaloneResetDemo />
               </section>
 
@@ -392,8 +392,8 @@
                   >
                     Forêt verte
                   </Button>
-                  <Button.Clear />
-                  <Button.Send />
+                  <Button command="--navi-clear" />
+                  <Button command="--navi-send" />
                 </Box>
               </ControlGroup>
             </fieldset>
@@ -461,8 +461,8 @@
                   >
                     Set Marie Curie
                   </Button>
-                  <Button.Clear />
-                  <Button.Send />
+                  <Button command="--navi-clear" />
+                  <Button command="--navi-send" />
                 </Box>
               </ControlGroup>
             </fieldset>
@@ -645,11 +645,11 @@
         return (
           <Box flex="y" spacing="m" alignX="start">
             <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
-              <code>Button.Clear</code> réinitialise tous les champs à vide
-              (chaîne vide). C'est le bouton à privilégier pour permettre à
-              l'utilisateur de repartir de zéro. Le <code>uiAction</code> de
-              l'input met à jour un signal — vérifier qu'il repasse à{" "}
-              <code>""</code> après un Clear.
+              <code>Button command="--navi-clear"</code> réinitialise tous les
+              champs à vide (chaîne vide). C'est le bouton à privilégier pour
+              permettre à l'utilisateur de repartir de zéro. Le{" "}
+              <code>uiAction</code> de l'input met à jour un signal — vérifier
+              qu'il repasse à <code>""</code> après un Clear.
             </p>
             <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
               nickNameSignalA :{" "}
@@ -686,8 +686,8 @@
                     />
                   </fieldset>
                   <Box flex="x" spacing="s">
-                    <Button.Clear />
-                    <Button.Send />
+                    <Button command="--navi-clear" />
+                    <Button command="--navi-send" />
                   </Box>
                 </Box>
               </ControlGroup>
@@ -703,7 +703,7 @@
         return (
           <Box flex="y" spacing="m" alignX="start">
             <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
-              <code>Button.Reset</code> remet les champs à leur{" "}
+              <code>Button command="--navi-reset"</code> remet les champs à leur{" "}
               <code>defaultValue</code>. Si un champ n'a pas de{" "}
               <code>defaultValue</code>, il revient à vide. À utiliser quand on
               veut annuler les modifications sans effacer les valeurs initiales.
@@ -745,8 +745,8 @@
                     />
                   </fieldset>
                   <Box flex="x" spacing="s">
-                    <Button.Reset />
-                    <Button.Send />
+                    <Button command="--navi-reset" />
+                    <Button command="--navi-send" />
                   </Box>
                 </Box>
               </ControlGroup>
@@ -781,7 +781,7 @@
                     <legend>label</legend>
                     <Input type="text" name="label" required />
                   </fieldset>
-                  <Button.Send />
+                  <Button command="--navi-send" />
                 </Box>
               </ControlGroup>
             </fieldset>
@@ -819,7 +819,7 @@
                     <legend>lastName</legend>
                     <Input type="text" name="lastName" />
                   </fieldset>
-                  <Button.Send />
+                  <Button command="--navi-send" />
                 </Box>
               </ControlGroup>
             </fieldset>
@@ -872,7 +872,7 @@
                     </Box>
                   </ControlGroup>
                 </fieldset>
-                <Button.Send />
+                <Button command="--navi-send" />
               </Box>
             </Form>
             <p style={{ margin: 0, fontSize: "0.85rem", color: "#777" }}>
