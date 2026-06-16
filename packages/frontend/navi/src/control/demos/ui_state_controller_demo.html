@@ -25,8 +25,8 @@
       import { signal } from "@preact/signals";
       import { CallLog, useCallLog } from "./utils/call_log.jsx";
 
-      const firstNameStateSignal = signal("Jean");
-      const inputSignal = signal("");
+      const nickNameSignalA = signal("");
+      const nickNameSignalB = signal("Jean");
 
       const App = () => {
         return (
@@ -654,8 +654,8 @@
               <code>""</code> après un Clear.
             </p>
             <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
-              nickNameSignal value :{" "}
-              <strong>{String(inputSignal.value)}</strong>
+              nickNameSignalA :{" "}
+              <strong>{JSON.stringify(nickNameSignalA.value)}</strong>
             </p>
             <fieldset>
               <legend>address</legend>
@@ -683,8 +683,7 @@
                       type="text"
                       name="nickName"
                       uiAction={(v) => {
-                        inputSignal.value = v;
-                        pushEntry("uiAction (nickName)", v);
+                        nickNameSignalA.value = v;
                       }}
                     />
                   </fieldset>
@@ -712,8 +711,8 @@
               veut annuler les modifications sans effacer les valeurs initiales.
             </p>
             <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
-              firstNameStateSignal :{" "}
-              <strong>{firstNameStateSignal.value}</strong>
+              nickNameSignalB :{" "}
+              <strong>{JSON.stringify(nickNameSignalB.value)}</strong>
             </p>
             <fieldset>
               <legend>address</legend>
@@ -740,9 +739,9 @@
                     <Input
                       type="text"
                       name="nickName"
-                      value={firstNameStateSignal.value}
+                      value={nickNameSignalB.value}
                       uiAction={(v) => {
-                        firstNameStateSignal.value = v;
+                        nickNameSignalB.value = v;
                         pushEntry("uiAction (nickName)", v);
                       }}
                     />
