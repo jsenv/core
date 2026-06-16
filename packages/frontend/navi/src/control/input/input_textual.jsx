@@ -161,12 +161,16 @@ const css = /* css */ `
     }
 
     .navi_input_slot {
-      margin-inline: 0.2em;
+      --slot-spacing: calc(2px + 0.1em);
+
+      margin-right: var(--slot-spacing);
+      margin-left: var(--slot-spacing);
       color: #5e4e4e;
 
       &[data-left] {
-        margin-right: var(--x-padding-left);
         order: -1;
+      }
+      &[data-right] {
       }
     }
 

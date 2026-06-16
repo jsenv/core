@@ -184,10 +184,13 @@ const css = /* css */ `
       }
     }
     .navi_picker_right_slot {
+      --slot-spacing: calc(0.1em);
+
       display: inline-flex;
       height: 1em;
       height: 1lh;
-      margin-inline: 0.1em;
+      margin-right: var(--slot-spacing);
+      margin-left: var(--slot-spacing);
       flex-shrink: 0;
       align-items: center;
       align-self: flex-start;
