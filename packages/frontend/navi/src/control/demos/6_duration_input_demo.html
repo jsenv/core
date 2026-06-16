@@ -67,13 +67,77 @@
         </Box>
       );
 
-      const DurationInputWidget = ({
+      const DurationInputs = ({
         hours,
         minutes,
         onHours,
         onMinutes,
         unitHour,
         unitMinute,
+        onPushEntry,
+      }) => (
+        <Box border="1px dotted #aaa" width="fit-content">
+          <InputGroup flex spacing="xxs" width="fit-content">
+            <Label flex="y" textAlign="right">
+              <Input
+                type="navi_hour"
+                name="hours"
+                unit={false}
+                variant="underline"
+                size="l"
+                expandX
+                value={hours}
+                uiAction={(v) => {
+                  onPushEntry?.("hour uiAction", v);
+                }}
+                action={(v) => {
+                  onPushEntry?.("hour action", v);
+                  onHours?.(v);
+                }}
+              >
+                <Input.UI.UnitSlot>:</Input.UI.UnitSlot>
+              </Input>
+              {unitHour}
+            </Label>
+            <Label flex="y">
+              <Input
+                type="navi_minute"
+                name="minutes"
+                size="l"
+                unit={false}
+                variant="underline"
+                expandX
+                value={minutes}
+                uiAction={(v) => {
+                  onPushEntry?.("minute uiAction", v);
+                }}
+                action={(v) => {
+                  onPushEntry?.("minute action", v);
+                  onMinutes?.(v);
+                }}
+              />
+              {unitMinute}
+            </Label>
+          </InputGroup>
+        </Box>
+      );
+
+      const DurationInputWidget = ({
+        hours,
+        minutes,
+        onHours,
+        onMinutes,
+        unitHour = (
+          <Unit
+            unit="hour"
+            plural
+            color="secondary"
+            // We need this because ":" is inside the first input so
+            // in case unit pushes to the right it should account for the space of ":
+            marginRight="1ch"
+          />
+        ),
+        unitMinute = <Unit unit="minute" plural color="secondary" />,
       }) => {
         const [entries, push, clear] = useCallLog();
 
@@ -84,50 +148,15 @@
             }}
           >
             <Box flex="y" spacing="s" alignX="start">
-              <Box border="1px dotted #aaa" width="fit-content">
-                <InputGroup flex spacing="xxs" width="fit-content">
-                  <Label flex="y" textAlign="right">
-                    <Input
-                      type="navi_hour"
-                      name="hours"
-                      unit={false}
-                      variant="underline"
-                      size="l"
-                      expandX
-                      value={hours}
-                      uiAction={(v) => {
-                        push("hour uiAction", v);
-                      }}
-                      action={(v) => {
-                        push("hour action", v);
-                        onHours(v);
-                      }}
-                    >
-                      <Input.UI.UnitSlot>:</Input.UI.UnitSlot>
-                    </Input>
-                    {unitHour}
-                  </Label>
-                  <Label flex="y">
-                    <Input
-                      type="navi_minute"
-                      name="minutes"
-                      size="l"
-                      unit={false}
-                      variant="underline"
-                      expandX
-                      value={minutes}
-                      uiAction={(v) => {
-                        push("minute uiAction", v);
-                      }}
-                      action={(v) => {
-                        push("minute action", v);
-                        onMinutes(v);
-                      }}
-                    />
-                    {unitMinute}
-                  </Label>
-                </InputGroup>
-              </Box>
+              <DurationInputs
+                hours={hours}
+                minutes={minutes}
+                onHours={onHours}
+                onMinutes={onMinutes}
+                unitHour={unitHour}
+                unitMinute={unitMinute}
+                onPushEntry={push}
+              />
               <Button type="submit">Submit</Button>
               <CallLog entries={entries} onClear={clear} />
             </Box>
@@ -159,17 +188,6 @@
               onMinutes={(v) => {
                 minutesSignal.value = v;
               }}
-              unitHour={
-                <Unit
-                  unit="hour"
-                  plural
-                  color="secondary"
-                  // We need this because ":" is inside the first input so
-                  // in case unit pushes to the right it should account for the space of ":
-                  marginRight="1ch"
-                />
-              }
-              unitMinute={<Unit unit="minute" plural color="secondary" />}
             />
           </div>
         );
@@ -204,7 +222,6 @@
                   This is way longer
                 </Text>
               }
-              unitMinute={<Unit unit="minute" plural size="xs" />}
             />
           </div>
         );
@@ -238,48 +255,7 @@
                     push("duration uiAction", v);
                   }}
                 >
-                  <Box border="1px dotted #aaa" width="fit-content">
-                    <InputGroup flex spacing="xxs" width="fit-content">
-                      <Box flex="y">
-                        <Input
-                          type="navi_hour"
-                          name="hours"
-                          unit={false}
-                          variant="underline"
-                          size="l"
-                          expandX
-                          textAlign="right"
-                          defaultValue={2}
-                          uiAction={(v) => {
-                            push("hour uiAction", v);
-                          }}
-                        >
-                          <Input.UI.UnitSlot>:</Input.UI.UnitSlot>
-                        </Input>
-                        <Unit
-                          unit="hour"
-                          plural
-                          color="secondary"
-                          marginRight="1ch"
-                        />
-                      </Box>
-                      <Box flex="y">
-                        <Input
-                          type="navi_minute"
-                          name="minutes"
-                          size="l"
-                          unit={false}
-                          variant="underline"
-                          expandX
-                          defaultValue={30}
-                          uiAction={(v) => {
-                            push("minute uiAction", v);
-                          }}
-                        />
-                        <Unit unit="minute" plural color="secondary" />
-                      </Box>
-                    </InputGroup>
-                  </Box>
+                  <DurationInputs onPushEntry={push} />
                 </ControlGroup>
                 <Button command="--navi-send">Submit</Button>
                 <CallLog entries={entries} onClear={clear} />
