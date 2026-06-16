@@ -741,6 +741,7 @@
                       name="nickName"
                       defaultValue={nickNameSignalB.value}
                       uiAction={(v) => {
+                        nickNameSignalB.value = v;
                         pushEntry("uiAction (nickName)", v);
                       }}
                     />
