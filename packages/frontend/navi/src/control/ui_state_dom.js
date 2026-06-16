@@ -10,12 +10,14 @@ export const dispatchRequestSetUIState = (element, value, detail) => {
   });
 };
 export const dispatchRequestClearUIState = (element, e) => {
-  return dispatchInternalCustomEvent(element, "navi_clear_ui_state", {
+  const controlHost = findControlHost(element) || element;
+  return dispatchInternalCustomEvent(controlHost, "navi_clear_ui_state", {
     event: e,
   });
 };
 export const dispatchRequestResetUIState = (element, e) => {
-  return dispatchInternalCustomEvent(element, "navi_reset_ui_state", {
+  const controlHost = findControlHost(element) || element;
+  return dispatchInternalCustomEvent(controlHost, "navi_reset_ui_state", {
     event: e,
   });
 };
