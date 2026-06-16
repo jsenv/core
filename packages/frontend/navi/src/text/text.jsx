@@ -84,6 +84,13 @@ const css = /* css */ `
           overflow: hidden;
         }
       }
+
+      .navi_text:not(.navi_text_overflow_text) {
+        display: block;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        overflow: hidden;
+      }
     }
 
     &[data-skeleton] {
@@ -575,7 +582,6 @@ const TextOverflow = ({ noWrap, spacing, capitalize, children, ...rest }) => {
 
   return (
     <TextDispatcher
-      inline
       flex
       block
       as="div"

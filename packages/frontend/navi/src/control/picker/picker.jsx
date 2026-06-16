@@ -175,9 +175,7 @@ const css = /* css */ `
       padding-bottom: var(--x-picker-padding-bottom);
       padding-left: var(--x-picker-padding-left);
       flex-grow: 1;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      overflow: hidden;
+      justify-content: inherit;
 
       &[navi-placeholder] {
         color: var(--picker-placeholder-color);
@@ -220,16 +218,6 @@ const css = /* css */ `
     .navi_picker_content {
       display: contents;
       text-align: initial; /* Don't inherit picker text align */
-    }
-
-    &[data-line-clamp] {
-      overflow-wrap: anywhere;
-      .navi_picker_value {
-        display: -webkit-box;
-        white-space: normal;
-        -webkit-box-orient: vertical;
-        -webkit-line-clamp: var(--picker-max-lines);
-      }
     }
 
     /* Hover */
@@ -312,7 +300,7 @@ const PickerButton = (props) => {
   if (typeof props.maxLines === "string") {
     props.maxLines = parseInt(props.maxLines);
   }
-  const { ref, variant, icon, placeholder, ui, maxLines, headless } = props;
+  const { ref, variant, icon, placeholder, ui, maxLines = 1, headless } = props;
   const inputRef = useRef(null);
   const [pickerRemainingProps, inputProps, facadeChildrenProps] =
     useControlFacadeProps(
@@ -331,7 +319,6 @@ const PickerButton = (props) => {
   const value = uiStateController.uiState;
   const { id, basePseudoState, disabled, children } = inputProps;
   const loading = basePseudoState[":-navi-loading"];
-  const hasLineClamp = maxLines && maxLines > 1;
 
   return (
     <Box
@@ -340,11 +327,7 @@ const PickerButton = (props) => {
       baseClassName="navi_picker"
       pseudoClasses={PICKER_BUTTON_PSEUDO_CLASSES}
       disabled={disabled}
-      data-line-clamp={hasLineClamp ? "" : undefined}
       data-variant={variant}
-      style={{
-        "--picker-max-lines": maxLines,
-      }}
       navi-visually-hidden={headless ? "" : undefined}
       navi-picker=""
       {...pickerRemainingProps}
@@ -398,6 +381,7 @@ const PickerButton = (props) => {
           navi-placeholder={
             value === undefined || value === "" ? "" : undefined
           }
+          maxLines={maxLines}
         >
           <PickerContext.Provider value={{ value, placeholder, maxLines }}>
             {ui === undefined ? <PickerDefaultUI /> : ui}

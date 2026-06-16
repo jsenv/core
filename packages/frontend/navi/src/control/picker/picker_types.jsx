@@ -138,7 +138,6 @@ export const PickerDateUI = (props) => {
           type="date"
           color="var(--picker-placeholder-color"
           capitalize
-          maxLines="1"
           {...props}
         />
       );
@@ -146,7 +145,7 @@ export const PickerDateUI = (props) => {
     return placeholder;
   }
   return (
-    <Time type="date" capitalize maxLines="1" {...props}>
+    <Time type="date" capitalize {...props}>
       {value}
     </Time>
   );
@@ -170,18 +169,13 @@ export const PickerMonthUI = (props) => {
   if (!value) {
     if (!placeholder) {
       return (
-        <Time
-          type="month"
-          color="var(--picker-placeholder-color"
-          maxLines="1"
-          {...props}
-        />
+        <Time type="month" color="var(--picker-placeholder-color" {...props} />
       );
     }
     return placeholder;
   }
   return (
-    <Time type="month" maxLines="1" capitalize {...props}>
+    <Time type="month" capitalize {...props}>
       {value}
     </Time>
   );
@@ -200,18 +194,13 @@ export const PickerWeekUI = (props) => {
   if (!value) {
     if (!placeholder) {
       return (
-        <Time
-          type="week"
-          color="var(--picker-placeholder-color"
-          maxLines="1"
-          {...props}
-        />
+        <Time type="week" color="var(--picker-placeholder-color" {...props} />
       );
     }
     return placeholder;
   }
   return (
-    <Time type="week" capitalize maxLines="1" {...props}>
+    <Time type="week" capitalize {...props}>
       {value}
     </Time>
   );
@@ -230,18 +219,13 @@ export const PickerTimeUI = (props) => {
   if (!value) {
     if (!placeholder) {
       return (
-        <Time
-          type="time"
-          color="var(--picker-placeholder-color"
-          maxLines="1"
-          {...props}
-        />
+        <Time type="time" color="var(--picker-placeholder-color" {...props} />
       );
     }
     return placeholder;
   }
   return (
-    <Time type="time" maxLines="1" {...props}>
+    <Time type="time" {...props}>
       {value}
     </Time>
   );
@@ -268,18 +252,13 @@ export const PickerDatetimeUI = (props) => {
         <Time
           type="datetime"
           color="var(--picker-placeholder-color"
-          maxLines="1"
           {...props}
         />
       );
     }
     return placeholder;
   }
-  return (
-    <Time type="datetime" maxLines="1">
-      {value}
-    </Time>
-  );
+  return <Time type="datetime">{value}</Time>;
 };
 
 const PickerFile = (props) => {
