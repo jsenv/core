@@ -107,6 +107,15 @@ export const resolveInputProps = (props) => {
       props.type =
         VALIDITY_TYPE_TO_INPUT_TYPE[signalOptions.type] ?? signalOptions.type;
     }
+    // If no explicit defaultValue, snapshot the signal's current default
+    // so that resetUIState restores to the original default — not the
+    // value the signal had at the time of the last re-render.
+    if (!Object.hasOwn(props, "defaultValue")) {
+      const defaultVal = signalOptions.getDefaultValue(false);
+      if (defaultVal !== undefined) {
+        props.defaultValue = defaultVal;
+      }
+    }
   }
 
   const currentType = props.type;
