@@ -217,6 +217,7 @@ const css = /* css */ `
 
     .navi_picker_content {
       display: contents;
+      text-align: initial; /* Don't inherit picker text align */
     }
 
     &[data-line-clamp] {
