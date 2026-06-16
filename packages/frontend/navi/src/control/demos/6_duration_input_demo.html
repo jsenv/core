@@ -330,7 +330,8 @@
                   }}
                 >
                   <ControlGroup>
-                    <Box flex="y" spacing="s" padding="s" alignX="start">
+                    <Box flex="y" spacing="l" padding="s" alignX="center">
+                      <Text bold>Veuillez saisir une durée</Text>
                       <DurationInputs
                         hours={hoursSignal.value}
                         minutes={minutesSignal.value}
@@ -342,9 +343,13 @@
                         }}
                         onPushEntry={push}
                       />
-                      <Box flex="x" spacing="s">
-                        <Button command="--navi-send">Confirmer</Button>
-                        <Button command="--navi-cancel">Annuler</Button>
+                      <Box flex="x" spacing="s" alignX="end" expandX>
+                        <Button command="--navi-cancel" variant="discrete">
+                          Annuler
+                        </Button>
+                        <Button command="--navi-define" variant="discrete">
+                          Définir
+                        </Button>
                       </Box>
                     </Box>
                   </ControlGroup>
