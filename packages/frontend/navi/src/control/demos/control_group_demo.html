@@ -15,7 +15,6 @@
         Box,
         Button,
         ControlGroup,
-        Field,
         Form,
         Input,
         List,
@@ -180,8 +179,8 @@
               extérieurs envoient <code>--navi-update</code> — l'input interne
               doit être mis à jour et son <code>uiAction</code> déclenché.
             </p>
-            <Field>
-              Label
+            <fieldset>
+              <legend>label</legend>
               <Picker
                 id={pickerId}
                 name="label"
@@ -194,20 +193,23 @@
                 }}
               >
                 <Box flex="y" spacing="s" padding="s" alignX="start">
-                  <Input
-                    name="label"
-                    placeholder="Texte libre"
-                    uiAction={(v) => {
-                      pushEntry("uiAction (input)", v);
-                    }}
-                  />
+                  <fieldset>
+                    <legend>label</legend>
+                    <Input
+                      name="label"
+                      placeholder="Texte libre"
+                      uiAction={(v) => {
+                        pushEntry("uiAction (input)", v);
+                      }}
+                    />
+                  </fieldset>
                   <Box flex="x" spacing="s">
                     <Button command="--navi-send">Confirmer</Button>
                     <Button command="--navi-cancel">Annuler</Button>
                   </Box>
                 </Box>
               </Picker>
-            </Field>
+            </fieldset>
             <Box flex="x" spacing="s">
               {LABELS.map((label) => (
                 <Button
@@ -240,8 +242,8 @@
               Les champs internes doivent se mettre à jour et le{" "}
               <code>uiAction</code> doit être appelé.
             </p>
-            <Field>
-              Adresse
+            <fieldset>
+              <legend>address</legend>
               <Picker
                 id={pickerId}
                 name="address"
@@ -256,8 +258,8 @@
               >
                 <ControlGroup>
                   <Box flex="y" spacing="s" padding="s" alignX="start">
-                    <Field>
-                      Rue
+                    <fieldset>
+                      <legend>street</legend>
                       <Input
                         name="street"
                         placeholder="Street"
@@ -265,9 +267,9 @@
                           pushEntry("uiAction (street)", v);
                         }}
                       />
-                    </Field>
-                    <Field>
-                      Ville
+                    </fieldset>
+                    <fieldset>
+                      <legend>city</legend>
                       <Input
                         name="city"
                         placeholder="City"
@@ -275,11 +277,11 @@
                           pushEntry("uiAction (city)", v);
                         }}
                       />
-                    </Field>
+                    </fieldset>
                   </Box>
                 </ControlGroup>
               </Picker>
-            </Field>
+            </fieldset>
             <Box flex="x" spacing="s">
               <Button
                 command="--navi-update"
@@ -319,40 +321,43 @@
               à jour et les <code>uiAction</code> des inputs doivent être
               appelés (pour syncer les signaux).
             </p>
-            <ControlGroup
-              id={cgId}
-              name="contact"
-              action={(v) => {
-                pushEntry("action (group)", v);
-              }}
-              uiAction={(v) => {
-                pushEntry("uiAction (group)", v);
-              }}
-            >
-              <Box flex="y" spacing="s" alignX="start">
-                <Field>
-                  First name
-                  <Input
-                    type="text"
-                    name="firstName"
-                    uiAction={(v) => {
-                      pushEntry("uiAction (firstName)", v);
-                    }}
-                  />
-                </Field>
-                <Field>
-                  Last name
-                  <Input
-                    type="text"
-                    name="lastName"
-                    uiAction={(v) => {
-                      pushEntry("uiAction (lastName)", v);
-                    }}
-                  />
-                </Field>
-                <Button.Send />
-              </Box>
-            </ControlGroup>
+            <fieldset>
+              <legend>contact</legend>
+              <ControlGroup
+                id={cgId}
+                name="contact"
+                action={(v) => {
+                  pushEntry("action (group)", v);
+                }}
+                uiAction={(v) => {
+                  pushEntry("uiAction (group)", v);
+                }}
+              >
+                <Box flex="y" spacing="s" alignX="start">
+                  <fieldset>
+                    <legend>firstName</legend>
+                    <Input
+                      type="text"
+                      name="firstName"
+                      uiAction={(v) => {
+                        pushEntry("uiAction (firstName)", v);
+                      }}
+                    />
+                  </fieldset>
+                  <fieldset>
+                    <legend>lastName</legend>
+                    <Input
+                      type="text"
+                      name="lastName"
+                      uiAction={(v) => {
+                        pushEntry("uiAction (lastName)", v);
+                      }}
+                    />
+                  </fieldset>
+                  <Button.Send />
+                </Box>
+              </ControlGroup>
+            </fieldset>
             <Box flex="x" spacing="s">
               <Button
                 command="--navi-update"
@@ -394,95 +399,52 @@
               group). La sélection doit se mettre à jour et le{" "}
               <code>uiAction</code> de la liste doit être appelé.
             </p>
-            {/* Contour du groupe */}
-            <Box
-              flex="y"
-              spacing="m"
-              alignX="start"
-              padding="m"
-              border="2px solid #6366f1"
-              borderRadius="6px"
-            >
-              <span
-                style={{
-                  fontSize: "0.75rem",
-                  color: "#6366f1",
-                  fontWeight: "bold",
-                  marginTop: "-4px",
+            <fieldset>
+              <legend>external-control-single-list</legend>
+              <List
+                id={listId}
+                selectable
+                uiAction={(v) => {
+                  pushEntry("uiAction", v);
                 }}
+                action={(v) => {
+                  pushEntry("action", v);
+                }}
+                expandX
               >
-                Groupe
-              </span>
-              {/* Contour des champs */}
-              <Box border="1px solid #a5b4fc" borderRadius="4px" padding="s">
-                <span style={{ fontSize: "0.7rem", color: "#a5b4fc" }}>
-                  Champs
-                </span>
-                <List
-                  id={listId}
-                  selectable
-                  uiAction={(v) => {
-                    pushEntry("uiAction", v);
-                  }}
-                  action={(v) => {
-                    pushEntry("action", v);
-                  }}
-                  expandX
-                >
-                  {FRUITS.map((fruit, i) => (
-                    <List.Item
-                      selectable
-                      key={fruit}
-                      id={`external-single-${fruit.toLowerCase()}`}
-                      index={i}
-                      value={fruit}
-                      flex
-                      spacing="s"
-                    >
-                      <SelectableInput />
-                      {fruit}
-                    </List.Item>
-                  ))}
-                </List>
-              </Box>
-              {/* Contour des commandes */}
-              <Box
-                flex="x"
-                spacing="s"
-                border="1px solid #f9a8d4"
-                borderRadius="4px"
-                padding="s"
-              >
-                <span
-                  style={{
-                    fontSize: "0.7rem",
-                    color: "#f9a8d4",
-                    alignSelf: "center",
-                  }}
-                >
-                  Cmds
-                </span>
-                {FRUITS.map((fruit) => (
-                  <Button
+                {FRUITS.map((fruit, i) => (
+                  <List.Item
+                    selectable
                     key={fruit}
-                    command="--navi-update"
-                    commandfor={listId}
+                    id={`external-single-${fruit.toLowerCase()}`}
+                    index={i}
                     value={fruit}
+                    flex
+                    spacing="s"
                   >
+                    <SelectableInput />
                     {fruit}
-                  </Button>
+                  </List.Item>
                 ))}
+              </List>
+            </fieldset>
+            <Box flex="x" spacing="s">
+              {FRUITS.map((fruit) => (
                 <Button
+                  key={fruit}
                   command="--navi-update"
                   commandfor={listId}
-                  value={null}
+                  value={fruit}
                 >
-                  Désélectionner
+                  {fruit}
                 </Button>
-                <Button command="--navi-send" commandfor={listId}>
-                  Envoyer
-                </Button>
-              </Box>
+              ))}
+              <Button command="--navi-update" commandfor={listId} value={null}>
+                Désélectionner
+              </Button>
+              <Button command="--navi-send" commandfor={listId}>
+                Envoyer
+              </Button>
             </Box>
             <CallLog entries={entries} onClear={clearEntries} />
           </Box>
@@ -502,96 +464,57 @@
               (checkbox group). La sélection doit se mettre à jour et le{" "}
               <code>uiAction</code> de la liste doit être appelé.
             </p>
-            {/* Contour du groupe */}
-            <Box
-              flex="y"
-              spacing="m"
-              alignX="start"
-              padding="m"
-              border="2px solid #6366f1"
-              borderRadius="6px"
-            >
-              <span
-                style={{
-                  fontSize: "0.75rem",
-                  color: "#6366f1",
-                  fontWeight: "bold",
-                  marginTop: "-4px",
+            <fieldset>
+              <legend>external-control-multiple-list</legend>
+              <List
+                id={listId}
+                selectable
+                multiple
+                uiAction={(v) => {
+                  pushEntry("uiAction", JSON.stringify(v));
                 }}
+                action={(v) => {
+                  pushEntry("action", JSON.stringify(v));
+                }}
+                expandX
               >
-                Groupe
-              </span>
-              {/* Contour des champs */}
-              <Box border="1px solid #a5b4fc" borderRadius="4px" padding="s">
-                <span style={{ fontSize: "0.7rem", color: "#a5b4fc" }}>
-                  Champs
-                </span>
-                <List
-                  id={listId}
-                  selectable
-                  multiple
-                  uiAction={(v) => {
-                    pushEntry("uiAction", JSON.stringify(v));
-                  }}
-                  action={(v) => {
-                    pushEntry("action", JSON.stringify(v));
-                  }}
-                  expandX
-                >
-                  {FRUITS.map((fruit, i) => (
-                    <List.Item
-                      selectable
-                      key={fruit}
-                      id={`external-multiple-${fruit.toLowerCase()}`}
-                      index={i}
-                      value={fruit}
-                      flex
-                      spacing="s"
-                    >
-                      <SelectableInput />
-                      {fruit}
-                    </List.Item>
-                  ))}
-                </List>
-              </Box>
-              {/* Contour des commandes */}
-              <Box
-                flex="x"
-                spacing="s"
-                border="1px solid #f9a8d4"
-                borderRadius="4px"
-                padding="s"
+                {FRUITS.map((fruit, i) => (
+                  <List.Item
+                    selectable
+                    key={fruit}
+                    id={`external-multiple-${fruit.toLowerCase()}`}
+                    index={i}
+                    value={fruit}
+                    flex
+                    spacing="s"
+                  >
+                    <SelectableInput />
+                    {fruit}
+                  </List.Item>
+                ))}
+              </List>
+            </fieldset>
+            <Box flex="x" spacing="s">
+              <Button
+                command="--navi-update"
+                commandfor={listId}
+                value={["Apple", "Cherry"]}
               >
-                <span
-                  style={{
-                    fontSize: "0.7rem",
-                    color: "#f9a8d4",
-                    alignSelf: "center",
-                  }}
-                >
-                  Cmds
-                </span>
-                <Button
-                  command="--navi-update"
-                  commandfor={listId}
-                  value={["Apple", "Cherry"]}
-                >
-                  Apple + Cherry
-                </Button>
-                <Button
-                  command="--navi-update"
-                  commandfor={listId}
-                  value={["Banana", "Date", "Elderberry"]}
-                >
-                  Banana + Date + Elderberry
-                </Button>
-                <Button command="--navi-update" commandfor={listId} value={[]}>
-                  Tout désélectionner
-                </Button>
-                <Button command="--navi-send" commandfor={listId}>
-                  Envoyer
-                </Button>
-              </Box>
+                Apple + Cherry
+              </Button>
+              <Button
+                command="--navi-update"
+                commandfor={listId}
+                value={["Banana", "Date", "Elderberry"]}
+              >
+                Banana + Date + Elderberry
+              </Button>
+              <Button command="--navi-update" commandfor={listId} value={[]}>
+                Tout désélectionner
+              </Button>
+              <Button command="--navi-send" commandfor={listId}>
+                Envoyer
+              </Button>
             </Box>
             <CallLog entries={entries} onClear={clearEntries} />
           </Box>
@@ -606,27 +529,30 @@
             <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
               ControlGroup sans parent — agit comme un mini-formulaire.
             </p>
-            <ControlGroup
-              name="address"
-              action={(value) => {
-                pushEntry("action", value);
-              }}
-              uiAction={(value) => {
-                pushEntry("uiAction", value);
-              }}
-            >
-              <Box flex="y" spacing="s" alignX="start">
-                <Field>
-                  First name
-                  <Input type="text" name="firstName" />
-                </Field>
-                <Field>
-                  Last name
-                  <Input type="text" name="lastName" />
-                </Field>
-                <Button.Send />
-              </Box>
-            </ControlGroup>
+            <fieldset>
+              <legend>address</legend>
+              <ControlGroup
+                name="address"
+                action={(value) => {
+                  pushEntry("action", value);
+                }}
+                uiAction={(value) => {
+                  pushEntry("uiAction", value);
+                }}
+              >
+                <Box flex="y" spacing="s" alignX="start">
+                  <fieldset>
+                    <legend>firstName</legend>
+                    <Input type="text" name="firstName" />
+                  </fieldset>
+                  <fieldset>
+                    <legend>lastName</legend>
+                    <Input type="text" name="lastName" />
+                  </fieldset>
+                  <Button.Send />
+                </Box>
+              </ControlGroup>
+            </fieldset>
             <CallLog entries={entries} onClear={clearEntries} />
           </Box>
         );
@@ -649,33 +575,36 @@
                 {inputSignal.value === "" ? "(vide)" : inputSignal.value}
               </strong>
             </p>
-            <ControlGroup
-              name="info"
-              action={(value) => {
-                pushEntry("action", value);
-              }}
-              uiAction={(value) => {
-                pushEntry("uiAction", value);
-              }}
-            >
-              <Box flex="y" spacing="s" alignX="start">
-                <Field>
-                  Label
-                  <Input
-                    type="text"
-                    name="label"
-                    uiAction={(v) => {
-                      inputSignal.value = v;
-                      pushEntry("uiAction (input)", v);
-                    }}
-                  />
-                </Field>
-                <Box flex="x" spacing="s">
-                  <Button.Clear />
-                  <Button.Send />
+            <fieldset>
+              <legend>info</legend>
+              <ControlGroup
+                name="info"
+                action={(value) => {
+                  pushEntry("action", value);
+                }}
+                uiAction={(value) => {
+                  pushEntry("uiAction", value);
+                }}
+              >
+                <Box flex="y" spacing="s" alignX="start">
+                  <fieldset>
+                    <legend>label</legend>
+                    <Input
+                      type="text"
+                      name="label"
+                      uiAction={(v) => {
+                        inputSignal.value = v;
+                        pushEntry("uiAction (input)", v);
+                      }}
+                    />
+                  </fieldset>
+                  <Box flex="x" spacing="s">
+                    <Button.Clear />
+                    <Button.Send />
+                  </Box>
                 </Box>
-              </Box>
-            </ControlGroup>
+              </ControlGroup>
+            </fieldset>
             <CallLog entries={entries} onClear={clearEntries} />
           </Box>
         );
@@ -691,30 +620,33 @@
               (chaîne vide). C'est le bouton à privilégier pour permettre à
               l'utilisateur de repartir de zéro.
             </p>
-            <ControlGroup
-              name="address"
-              action={(value) => {
-                pushEntry("action", value);
-              }}
-              uiAction={(value) => {
-                pushEntry("uiAction", value);
-              }}
-            >
-              <Box flex="y" spacing="s" alignX="start">
-                <Field>
-                  First name
-                  <Input type="text" name="firstName" defaultValue="Jean" />
-                </Field>
-                <Field>
-                  Last name
-                  <Input type="text" name="lastName" defaultValue="Dupont" />
-                </Field>
-                <Box flex="x" spacing="s">
-                  <Button.Clear />
-                  <Button.Send />
+            <fieldset>
+              <legend>address</legend>
+              <ControlGroup
+                name="address"
+                action={(value) => {
+                  pushEntry("action", value);
+                }}
+                uiAction={(value) => {
+                  pushEntry("uiAction", value);
+                }}
+              >
+                <Box flex="y" spacing="s" alignX="start">
+                  <fieldset>
+                    <legend>firstName</legend>
+                    <Input type="text" name="firstName" defaultValue="Jean" />
+                  </fieldset>
+                  <fieldset>
+                    <legend>lastName</legend>
+                    <Input type="text" name="lastName" defaultValue="Dupont" />
+                  </fieldset>
+                  <Box flex="x" spacing="s">
+                    <Button.Clear />
+                    <Button.Send />
+                  </Box>
                 </Box>
-              </Box>
-            </ControlGroup>
+              </ControlGroup>
+            </fieldset>
             <CallLog entries={entries} onClear={clearEntries} />
           </Box>
         );
@@ -731,38 +663,41 @@
               <code>defaultValue</code>, il revient à vide. À utiliser quand on
               veut annuler les modifications sans effacer les valeurs initiales.
             </p>
-            <ControlGroup
-              name="address"
-              action={(value) => {
-                pushEntry("action", value);
-              }}
-              uiAction={(value) => {
-                pushEntry("uiAction", value);
-              }}
-            >
-              <Box flex="y" spacing="s" alignX="start">
-                <Field>
-                  First name (defaultValue="Jean")
-                  <Input type="text" name="firstName" defaultValue="Jean" />
-                </Field>
-                <Field>
-                  Last name (no defaultValue)
-                  <Input type="text" name="lastName" />
-                </Field>
-                <Field>
-                  Nick name (value=signal "Jean")
-                  <Input
-                    type="text"
-                    name="nickName"
-                    value={firstNameStateSignal.value}
-                  />
-                </Field>
-                <Box flex="x" spacing="s">
-                  <Button.Reset />
-                  <Button.Send />
+            <fieldset>
+              <legend>address</legend>
+              <ControlGroup
+                name="address"
+                action={(value) => {
+                  pushEntry("action", value);
+                }}
+                uiAction={(value) => {
+                  pushEntry("uiAction", value);
+                }}
+              >
+                <Box flex="y" spacing="s" alignX="start">
+                  <fieldset>
+                    <legend>firstName (defaultValue="Jean")</legend>
+                    <Input type="text" name="firstName" defaultValue="Jean" />
+                  </fieldset>
+                  <fieldset>
+                    <legend>lastName (no defaultValue)</legend>
+                    <Input type="text" name="lastName" />
+                  </fieldset>
+                  <fieldset>
+                    <legend>nickName (value=signal "Jean")</legend>
+                    <Input
+                      type="text"
+                      name="nickName"
+                      value={firstNameStateSignal.value}
+                    />
+                  </fieldset>
+                  <Box flex="x" spacing="s">
+                    <Button.Reset />
+                    <Button.Send />
+                  </Box>
                 </Box>
-              </Box>
-            </ControlGroup>
+              </ControlGroup>
+            </fieldset>
             <CallLog entries={entries} onClear={clearEntries} />
           </Box>
         );
@@ -777,23 +712,26 @@
               Un <code>Input type="number"</code> sans valeur — est-ce qu'on
               peut soumettre ?
             </p>
-            <ControlGroup
-              name="qty"
-              action={(value) => {
-                pushEntry("action", value);
-              }}
-              uiAction={(value) => {
-                pushEntry("uiAction", value);
-              }}
-            >
-              <Box flex="y" spacing="s" alignX="start">
-                <Field>
-                  Quantity
-                  <Input type="number" name="quantity" />
-                </Field>
-                <Button.Send />
-              </Box>
-            </ControlGroup>
+            <fieldset>
+              <legend>qty</legend>
+              <ControlGroup
+                name="qty"
+                action={(value) => {
+                  pushEntry("action", value);
+                }}
+                uiAction={(value) => {
+                  pushEntry("uiAction", value);
+                }}
+              >
+                <Box flex="y" spacing="s" alignX="start">
+                  <fieldset>
+                    <legend>quantity</legend>
+                    <Input type="number" name="quantity" />
+                  </fieldset>
+                  <Button.Send />
+                </Box>
+              </ControlGroup>
+            </fieldset>
             <CallLog entries={entries} onClear={clearEntries} />
           </Box>
         );
@@ -808,23 +746,26 @@
               Un <code>Input type="text" required</code> — soumettre sans le
               remplir doit bloquer l'action.
             </p>
-            <ControlGroup
-              name="info"
-              action={(value) => {
-                pushEntry("action", value);
-              }}
-              uiAction={(value) => {
-                pushEntry("uiAction", value);
-              }}
-            >
-              <Box flex="y" spacing="s" alignX="start">
-                <Field>
-                  Label
-                  <Input type="text" name="label" required />
-                </Field>
-                <Button.Send />
-              </Box>
-            </ControlGroup>
+            <fieldset>
+              <legend>info</legend>
+              <ControlGroup
+                name="info"
+                action={(value) => {
+                  pushEntry("action", value);
+                }}
+                uiAction={(value) => {
+                  pushEntry("uiAction", value);
+                }}
+              >
+                <Box flex="y" spacing="s" alignX="start">
+                  <fieldset>
+                    <legend>label</legend>
+                    <Input type="text" name="label" required />
+                  </fieldset>
+                  <Button.Send />
+                </Box>
+              </ControlGroup>
+            </fieldset>
             <CallLog entries={entries} onClear={clearEntries} />
           </Box>
         );
@@ -839,27 +780,30 @@
               Même chose avec <code>firstName</code> requis — soumettre sans le
               remplir doit bloquer l'action.
             </p>
-            <ControlGroup
-              name="address"
-              action={(value) => {
-                pushEntry("action", value);
-              }}
-              uiAction={(value) => {
-                pushEntry("uiAction", value);
-              }}
-            >
-              <Box flex="y" spacing="s" alignX="start">
-                <Field>
-                  First name
-                  <Input type="text" name="firstName" required />
-                </Field>
-                <Field>
-                  Last name
-                  <Input type="text" name="lastName" />
-                </Field>
-                <Button.Send />
-              </Box>
-            </ControlGroup>
+            <fieldset>
+              <legend>address</legend>
+              <ControlGroup
+                name="address"
+                action={(value) => {
+                  pushEntry("action", value);
+                }}
+                uiAction={(value) => {
+                  pushEntry("uiAction", value);
+                }}
+              >
+                <Box flex="y" spacing="s" alignX="start">
+                  <fieldset>
+                    <legend>firstName</legend>
+                    <Input type="text" name="firstName" required />
+                  </fieldset>
+                  <fieldset>
+                    <legend>lastName</legend>
+                    <Input type="text" name="lastName" />
+                  </fieldset>
+                  <Button.Send />
+                </Box>
+              </ControlGroup>
+            </fieldset>
             <CallLog entries={entries} onClear={clearEntries} />
           </Box>
         );
@@ -884,12 +828,12 @@
               }}
             >
               <Box flex="y" spacing="s" alignX="start">
-                <Field>
-                  Name
-                  <Input type="text" name="name" />
-                </Field>
                 <fieldset>
-                  <legend>Address</legend>
+                  <legend>name</legend>
+                  <Input type="text" name="name" />
+                </fieldset>
+                <fieldset>
+                  <legend>address</legend>
                   <ControlGroup
                     name="address"
                     uiAction={(value) => {
@@ -898,14 +842,14 @@
                     required
                   >
                     <Box flex="y" spacing="s" alignX="start">
-                      <Field>
-                        Street
+                      <fieldset>
+                        <legend>street</legend>
                         <Input type="text" name="street" />
-                      </Field>
-                      <Field>
-                        City
+                      </fieldset>
+                      <fieldset>
+                        <legend>city</legend>
                         <Input type="text" name="city" />
-                      </Field>
+                      </fieldset>
                     </Box>
                   </ControlGroup>
                 </fieldset>
