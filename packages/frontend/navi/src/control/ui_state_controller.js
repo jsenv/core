@@ -1082,13 +1082,13 @@ export const useUIFacadeStateController = (props) => {
         if (child !== firstChildControllerRef.current) {
           return;
         }
-        const pickerInputEl = getPickerInputEl();
-        if (!pickerInputEl) {
+        const facadeControlEl = ref.current;
+        if (!facadeControlEl) {
           return;
         }
         updatingRef.current = true;
         uiStateSignal.value = child.uiState;
-        dispatchRequestSetUIState(pickerInputEl, child.uiState, {
+        dispatchRequestSetUIState(facadeControlEl, child.uiState, {
           event: e,
           internalBehavior: true,
         });
