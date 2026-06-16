@@ -37,7 +37,14 @@ const isSerializableAsDomValue = (value) => {
   const type = typeof value;
   return type === "string" || type === "number" || type === "boolean";
 };
-const setDomValue = (el, propName, domValue, uiStateController) => {
+const syncDomValue = (uiStateController, newUIState) => {
+  const el = uiStateController.elementRef.current;
+  if (!el) {
+    return;
+  }
+  const propName = uiStateController.statePropName;
+  const propValue = uiStateController.getPropFromState(newUIState);
+  const domValue = uiStateController.toControlHostValue(propValue);
   if (isSerializableAsDomValue(domValue)) {
     el[propName] = domValue;
   } else {
@@ -385,10 +392,7 @@ export const useUIStateController = (
         // set immediatly (don't wait for preact re-render) so ui is in the right state for:
         // - side effect
         // - any "input" event that might be dispatched below
-        const propValue = uiStateController.getPropFromState(newUIState);
-        debugUIState(e, `[${statePropName}] = ${JSON.stringify(propValue)};`);
-        const domValue = uiStateController.toControlHostValue(propValue);
-        setDomValue(el, statePropName, domValue, uiStateController);
+        syncDomValue(uiStateController, newUIState);
       }
       uiStateController.uiState = newUIState;
       ownUIStateSignal.value = newUIState;
