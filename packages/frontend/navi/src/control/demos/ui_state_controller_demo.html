@@ -26,7 +26,7 @@
       import { CallLog, useCallLog } from "./utils/call_log.jsx";
 
       const nickNameSignalA = stateSignal("");
-      const nickNameSignalB = stateSignal("Jean");
+      const nickNameSignalB = stateSignal("Nick");
 
       const App = () => {
         return (
@@ -739,9 +739,8 @@
                     <Input
                       type="text"
                       name="nickName"
-                      value={nickNameSignalB.value}
+                      defaultValue={nickNameSignalB.value}
                       uiAction={(v) => {
-                        nickNameSignalB.value = v;
                         pushEntry("uiAction (nickName)", v);
                       }}
                     />
