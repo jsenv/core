@@ -81,8 +81,6 @@ const css = /* css */ `
   }
 
   a.navi_button {
-    display: inline-block;
-    color: inherit;
     text-align: center;
     text-decoration: none;
   }
@@ -397,11 +395,14 @@ export const ButtonUI = (props) => {
 
   return (
     <Box
+      inline
+      flex
       {...buttonControlRootProps}
       {...buttonControlHostProps}
       // eslint-disable-next-line react/no-children-prop
       children={undefined}
       spacing={undefined}
+      cta={undefined}
       ref={ref}
       as={as}
       href={href}
