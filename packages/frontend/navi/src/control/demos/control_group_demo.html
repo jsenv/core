@@ -394,46 +394,95 @@
               group). La sélection doit se mettre à jour et le{" "}
               <code>uiAction</code> de la liste doit être appelé.
             </p>
-            <List
-              id={listId}
-              selectable
-              uiAction={(v) => {
-                pushEntry("uiAction", v);
-              }}
-              action={(v) => {
-                pushEntry("action", v);
-              }}
-              expandX
+            {/* Contour du groupe */}
+            <Box
+              flex="y"
+              spacing="m"
+              alignX="start"
+              padding="m"
+              border="2px solid #6366f1"
+              borderRadius="6px"
             >
-              {FRUITS.map((fruit, i) => (
-                <List.Item
+              <span
+                style={{
+                  fontSize: "0.75rem",
+                  color: "#6366f1",
+                  fontWeight: "bold",
+                  marginTop: "-4px",
+                }}
+              >
+                Groupe
+              </span>
+              {/* Contour des champs */}
+              <Box border="1px solid #a5b4fc" borderRadius="4px" padding="s">
+                <span style={{ fontSize: "0.7rem", color: "#a5b4fc" }}>
+                  Champs
+                </span>
+                <List
+                  id={listId}
                   selectable
-                  key={fruit}
-                  id={`external-single-${fruit.toLowerCase()}`}
-                  index={i}
-                  value={fruit}
-                  flex
-                  spacing="s"
+                  uiAction={(v) => {
+                    pushEntry("uiAction", v);
+                  }}
+                  action={(v) => {
+                    pushEntry("action", v);
+                  }}
+                  expandX
                 >
-                  <SelectableInput />
-                  {fruit}
-                </List.Item>
-              ))}
-            </List>
-            <Box flex="x" spacing="s">
-              {FRUITS.map((fruit) => (
+                  {FRUITS.map((fruit, i) => (
+                    <List.Item
+                      selectable
+                      key={fruit}
+                      id={`external-single-${fruit.toLowerCase()}`}
+                      index={i}
+                      value={fruit}
+                      flex
+                      spacing="s"
+                    >
+                      <SelectableInput />
+                      {fruit}
+                    </List.Item>
+                  ))}
+                </List>
+              </Box>
+              {/* Contour des commandes */}
+              <Box
+                flex="x"
+                spacing="s"
+                border="1px solid #f9a8d4"
+                borderRadius="4px"
+                padding="s"
+              >
+                <span
+                  style={{
+                    fontSize: "0.7rem",
+                    color: "#f9a8d4",
+                    alignSelf: "center",
+                  }}
+                >
+                  Cmds
+                </span>
+                {FRUITS.map((fruit) => (
+                  <Button
+                    key={fruit}
+                    command="--navi-update"
+                    commandfor={listId}
+                    value={fruit}
+                  >
+                    {fruit}
+                  </Button>
+                ))}
                 <Button
-                  key={fruit}
                   command="--navi-update"
                   commandfor={listId}
-                  value={fruit}
+                  value={null}
                 >
-                  {fruit}
+                  Désélectionner
                 </Button>
-              ))}
-              <Button command="--navi-update" commandfor={listId} value={null}>
-                Désélectionner
-              </Button>
+                <Button command="--navi-send" commandfor={listId}>
+                  Envoyer
+                </Button>
+              </Box>
             </Box>
             <CallLog entries={entries} onClear={clearEntries} />
           </Box>
@@ -453,51 +502,96 @@
               (checkbox group). La sélection doit se mettre à jour et le{" "}
               <code>uiAction</code> de la liste doit être appelé.
             </p>
-            <List
-              id={listId}
-              selectable
-              multiple
-              uiAction={(v) => {
-                pushEntry("uiAction", JSON.stringify(v));
-              }}
-              action={(v) => {
-                pushEntry("action", JSON.stringify(v));
-              }}
-              expandX
+            {/* Contour du groupe */}
+            <Box
+              flex="y"
+              spacing="m"
+              alignX="start"
+              padding="m"
+              border="2px solid #6366f1"
+              borderRadius="6px"
             >
-              {FRUITS.map((fruit, i) => (
-                <List.Item
+              <span
+                style={{
+                  fontSize: "0.75rem",
+                  color: "#6366f1",
+                  fontWeight: "bold",
+                  marginTop: "-4px",
+                }}
+              >
+                Groupe
+              </span>
+              {/* Contour des champs */}
+              <Box border="1px solid #a5b4fc" borderRadius="4px" padding="s">
+                <span style={{ fontSize: "0.7rem", color: "#a5b4fc" }}>
+                  Champs
+                </span>
+                <List
+                  id={listId}
                   selectable
-                  key={fruit}
-                  id={`external-multiple-${fruit.toLowerCase()}`}
-                  index={i}
-                  value={fruit}
-                  flex
-                  spacing="s"
+                  multiple
+                  uiAction={(v) => {
+                    pushEntry("uiAction", JSON.stringify(v));
+                  }}
+                  action={(v) => {
+                    pushEntry("action", JSON.stringify(v));
+                  }}
+                  expandX
                 >
-                  <SelectableInput />
-                  {fruit}
-                </List.Item>
-              ))}
-            </List>
-            <Box flex="x" spacing="s">
-              <Button
-                command="--navi-update"
-                commandfor={listId}
-                value={["Apple", "Cherry"]}
+                  {FRUITS.map((fruit, i) => (
+                    <List.Item
+                      selectable
+                      key={fruit}
+                      id={`external-multiple-${fruit.toLowerCase()}`}
+                      index={i}
+                      value={fruit}
+                      flex
+                      spacing="s"
+                    >
+                      <SelectableInput />
+                      {fruit}
+                    </List.Item>
+                  ))}
+                </List>
+              </Box>
+              {/* Contour des commandes */}
+              <Box
+                flex="x"
+                spacing="s"
+                border="1px solid #f9a8d4"
+                borderRadius="4px"
+                padding="s"
               >
-                Apple + Cherry
-              </Button>
-              <Button
-                command="--navi-update"
-                commandfor={listId}
-                value={["Banana", "Date", "Elderberry"]}
-              >
-                Banana + Date + Elderberry
-              </Button>
-              <Button command="--navi-update" commandfor={listId} value={[]}>
-                Tout désélectionner
-              </Button>
+                <span
+                  style={{
+                    fontSize: "0.7rem",
+                    color: "#f9a8d4",
+                    alignSelf: "center",
+                  }}
+                >
+                  Cmds
+                </span>
+                <Button
+                  command="--navi-update"
+                  commandfor={listId}
+                  value={["Apple", "Cherry"]}
+                >
+                  Apple + Cherry
+                </Button>
+                <Button
+                  command="--navi-update"
+                  commandfor={listId}
+                  value={["Banana", "Date", "Elderberry"]}
+                >
+                  Banana + Date + Elderberry
+                </Button>
+                <Button command="--navi-update" commandfor={listId} value={[]}>
+                  Tout désélectionner
+                </Button>
+                <Button command="--navi-send" commandfor={listId}>
+                  Envoyer
+                </Button>
+              </Box>
             </Box>
             <CallLog entries={entries} onClear={clearEntries} />
           </Box>
