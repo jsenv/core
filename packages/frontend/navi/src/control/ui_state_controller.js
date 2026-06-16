@@ -798,8 +798,8 @@ export const useUIGroupStateController = (
         );
         return;
       }
-      const silentEvent = new CustomEvent("navi_set_ui_state_external");
-      chainEvent(silentEvent, e);
+      const propagateDownEvent = new CustomEvent("propagate_down_set_ui_state");
+      chainEvent(propagateDownEvent, e);
       for (const childUIStateController of childUIStateControllerArray) {
         if (!isMonitoringChild(childUIStateController)) {
           continue;
@@ -810,12 +810,12 @@ export const useUIGroupStateController = (
         if (controlType === "radio_group") {
           const childChecked =
             childUIStateController.props.value === newUIState;
-          childUIStateController.setUIState(childChecked, silentEvent);
+          childUIStateController.setUIState(childChecked, propagateDownEvent);
         } else if (controlType === "checkbox_group") {
           const childChecked =
             Array.isArray(newUIState) &&
             newUIState.includes(childUIStateController.props.value);
-          childUIStateController.setUIState(childChecked, silentEvent);
+          childUIStateController.setUIState(childChecked, propagateDownEvent);
         } else {
           const childName = childUIStateController.name;
           if (
@@ -826,7 +826,7 @@ export const useUIGroupStateController = (
           ) {
             childUIStateController.setUIState(
               newUIState[childName],
-              silentEvent,
+              propagateDownEvent,
             );
           }
         }
@@ -919,8 +919,10 @@ export const useUIGroupStateController = (
       });
     },
     resetUIState: (e) => {
-      const silentEvent = new CustomEvent("navi_reset_ui_state");
-      chainEvent(silentEvent, e);
+      const propagateDownResetEvent = new CustomEvent(
+        "propagate_down_reset_ui_state",
+      );
+      chainEvent(propagateDownResetEvent, e);
       for (const childUIStateController of childUIStateControllerArray) {
         if (!isMonitoringChild(childUIStateController)) {
           continue;
@@ -928,13 +930,15 @@ export const useUIGroupStateController = (
         if (childUIStateController.controlType === "button") {
           continue;
         }
-        childUIStateController.resetUIState(silentEvent);
+        childUIStateController.resetUIState(propagateDownResetEvent);
       }
       onChange(e, { notifyExternal: true });
     },
     clearUIState: (e) => {
-      const silentEvent = new CustomEvent("navi_clear_ui_state");
-      chainEvent(silentEvent, e);
+      const propagateDownClearEvent = new CustomEvent(
+        "propagate_down_clear_ui_state",
+      );
+      chainEvent(propagateDownClearEvent, e);
       for (const childUIStateController of childUIStateControllerArray) {
         if (!isMonitoringChild(childUIStateController)) {
           continue;
@@ -942,7 +946,7 @@ export const useUIGroupStateController = (
         if (childUIStateController.controlType === "button") {
           continue;
         }
-        childUIStateController.clearUIState(silentEvent);
+        childUIStateController.clearUIState(propagateDownClearEvent);
       }
       onChange(e, { notifyExternal: true });
     },
@@ -1010,9 +1014,9 @@ export const useUIFacadeStateController = (uiStateController) => {
         return;
       }
       updatingRef.current = true;
-      const silentEvent = new CustomEvent("facade_propagate_down");
-      chainEvent(silentEvent, e);
-      child.setUIState(newUIState, silentEvent);
+      const propagateDownEvent = new CustomEvent("propagate_down_set_ui_state");
+      chainEvent(propagateDownEvent, e);
+      child.setUIState(newUIState, propagateDownEvent);
       updatingRef.current = false;
     });
   }, []);
@@ -1065,19 +1069,17 @@ export const useUIFacadeStateController = (uiStateController) => {
  *
  * - `"state_prop_change"` — re-syncing with the external `state` prop (`_checkForUpdates`).
  * - `"radio_sibling_uncheck"` — a radio sibling is being unchecked programmatically.
- * - `"navi_set_ui_state_external"` / `"navi_reset_ui_state"` / `"navi_clear_ui_state"` —
- *   parent is pushing state down to children.
- * - `"facade_propagate_down"` — picker facade is pushing state down to its child.
+ * - `"propagate_down_set_ui_state"` / `"propagate_down_reset_ui_state"` / `"propagate_down_clear_ui_state"` —
+ *   parent (group or facade) is pushing state down to children.
  *
  * Anything else is a real user interaction and should bubble.
  */
 const TYPES_WITHOUT_PARENT_NOTIFICATION = new Set([
   "state_prop_change",
   "radio_sibling_uncheck",
-  "navi_set_ui_state_external",
-  "navi_reset_ui_state",
-  "navi_clear_ui_state",
-  "facade_propagate_down",
+  "propagate_down_set_ui_state",
+  "propagate_down_reset_ui_state",
+  "propagate_down_clear_ui_state",
 ]);
 const shouldNotifyParent = (e) => {
   return !TYPES_WITHOUT_PARENT_NOTIFICATION.has(e.type);
