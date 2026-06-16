@@ -53,6 +53,7 @@
         Input,
         Label,
         InputGroup,
+        Picker,
         Unit,
         Text,
         NaviDebug,
@@ -64,6 +65,7 @@
           <BasicDemo />
           <LongUnitDemo />
           <ControlGroupInFormDemo />
+          <PickerInFormDemo />
         </Box>
       );
 
@@ -272,6 +274,56 @@
                     onPushEntry={push}
                   />
                 </ControlGroup>
+                <Button command="--navi-send">Submit</Button>
+                <CallLog entries={entries} onClear={clear} />
+              </Box>
+            </Form>
+          </div>
+        );
+      };
+
+      // ── PickerInFormDemo ──────────────────────────────────────────────────
+      const PickerInFormDemo = () => {
+        const [entries, push, clear] = useCallLog();
+        const pickerId = "duration-picker";
+
+        return (
+          <div class="demo-section">
+            <h2>Duration inside Picker inside Form</h2>
+            <p class="desc">
+              Le widget de durée est dans un{" "}
+              <code>Picker type="controlgroup" name="duration"</code> lui-même
+              dans un <code>Form</code>. Le formulaire doit recevoir{" "}
+              <code>{"{ duration: { hours, minutes } }"}</code> au submit.
+            </p>
+            <Form
+              action={(values) => {
+                push("form action", values);
+              }}
+              uiAction={(values) => {
+                push("form uiAction", values);
+              }}
+            >
+              <Box flex="y" spacing="s" alignX="start">
+                <Picker
+                  id={pickerId}
+                  name="duration"
+                  type="controlgroup"
+                  placeholder="Saisir une durée"
+                  uiAction={(v) => {
+                    push("picker uiAction", v);
+                  }}
+                >
+                  <ControlGroup>
+                    <Box flex="y" spacing="s" padding="s" alignX="start">
+                      <DurationInputs onPushEntry={push} />
+                      <Box flex="x" spacing="s">
+                        <Button command="--navi-send">Confirmer</Button>
+                        <Button command="--navi-cancel">Annuler</Button>
+                      </Box>
+                    </Box>
+                  </ControlGroup>
+                </Picker>
                 <Button command="--navi-send">Submit</Button>
                 <CallLog entries={entries} onClear={clear} />
               </Box>
