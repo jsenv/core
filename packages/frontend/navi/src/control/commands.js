@@ -17,7 +17,7 @@ import {
   dispatchRequestInteraction,
 } from "./validation/custom_constraint_validation.js";
 
-export const dispatchNaviCommand = (
+export const triggerNaviCommand = (
   element,
   command,
   event,
@@ -56,6 +56,7 @@ export const dispatchNaviCommand = (
     value,
   });
 };
+
 // Returns the target explicitly declared via HTML attributes (commandfor / navi-command-target),
 // or undefined when no such attribute is present.
 // Returns null when the attribute is present but the target element was not found (already warned).
@@ -215,7 +216,7 @@ registerNaviCommand("--navi-clear", (source, event) => {
       if (fromInput) {
         // clearing input search should not close a popover/dialog
       } else {
-        dispatchNaviCommand(source, "--navi-close", event, {
+        triggerNaviCommand(source, "--navi-close", event, {
           optional: true,
         });
       }
@@ -370,11 +371,11 @@ const executeNaviDefine = (source, event, target) => {
   //   send button's undefined value would corrupt the picker state.
   const skipUpdate = resolvePickerInnerControl(target) !== null;
   if (!skipUpdate) {
-    dispatchNaviCommand(source, "--navi-update", event);
+    triggerNaviCommand(source, "--navi-update", event);
   }
   // The picker's onClose already dispatches the action with the final value.
   // Dispatching again here would fire the action twice.
-  return dispatchNaviCommand(target, "--navi-close", event);
+  return triggerNaviCommand(target, "--navi-close", event);
 };
 
 registerNaviCommand("--navi-scroll", (source, event) => {
@@ -404,7 +405,6 @@ registerNaviCommand("--navi-check", (source, event) => {
     implementation: () => {
       return dispatchCustomEvent(target, "navi_request_check", {
         event,
-        id: resolveCommandValue(source, event),
       });
     },
   };
@@ -420,7 +420,6 @@ registerNaviCommand("--navi-uncheck", (source, event) => {
     implementation: () => {
       return dispatchCustomEvent(target, "navi_request_uncheck", {
         event,
-        id: resolveCommandValue(source, event),
       });
     },
   };

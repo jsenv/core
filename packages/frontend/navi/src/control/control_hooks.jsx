@@ -46,7 +46,7 @@ import {
 import { compareTwoJsValues } from "@jsenv/navi/src/utils/compare_two_js_values.js";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import { isSignal } from "@jsenv/navi/src/utils/is_signal.js";
-import { dispatchNaviCommand, onNaviCommand } from "./commands.js";
+import { onNaviCommand, triggerNaviCommand } from "./commands.js";
 import {
   ActionContext,
   ActionRequesterContext,
@@ -213,12 +213,6 @@ export const useControlProps = (
       actionDebounce,
     } = props;
     let isCheckable = false;
-    // Effect to run when the Enter key is pressed.
-    // For most inputs Enter submits the surrounding form; for checkables Enter
-    // synthesizes a click so the browser's native checkbox/radio activation runs
-    // (which then fires input -> goes through the action pipeline).
-    let enterEffect;
-    let spaceEffect;
 
     const updateUIState = (e) => {
       const value = readControlValue(ref.current);
@@ -258,9 +252,6 @@ export const useControlProps = (
       }
       interaction.effect?.(e);
       return true;
-    };
-    const asBrowserAction = (interaction, e) => {
-      return asInteraction(interaction, e);
     };
     const lastEventRequestingActionRef = useRef();
     const lastActionValueRef = useRef(NO_ACTION_YET);
@@ -324,135 +315,212 @@ export const useControlProps = (
       interaction.effect?.(e);
       return true;
     };
+
+    let mouseDownInteraction;
+    let clickInteraction;
+    let inputInteraction;
+    let keyDownInteraction;
+    // a custom concept being combination of "input", "change" and may other events
+    // this even if trigerred when value changes and can be controlled by actionDebounce and actionAfterChange
+    let naviChangeInteraction;
+    const preventFormSubmissionForClickInsidePicker = (e) => {
+      const el = e.currentTarget;
+      if (el.closest("button")) {
+        // prevent button form submission by click
+        // (When an input is inside a <button> like for a picker)
+        // any click in the picker could trigger form submission as browser see this as click on button inside form
+        e.preventDefault();
+      }
+    };
+
+    const getDefaultInteractions = () => {
+      const keyDownDefault = () => {
+        return {
+          name: "keydown",
+          type: "interaction",
+        };
+      };
+
+      if (controlType === "button") {
+        return {
+          keyDown: keyDownDefault,
+          mouseDown: () => {
+            return {
+              name: "mousedown",
+              type: actionOnMouseDown ? "action" : "interaction",
+            };
+          },
+          click: () => {
+            return {
+              name: "click",
+              type: actionOnMouseDown ? "interaction" : "action",
+              always: (e) => {
+                const button = e.currentTarget;
+                if (button.form) {
+                  e.preventDefault(); // prevent form submission
+                }
+              },
+            };
+          },
+        };
+      }
+
+      if (controlType === "input") {
+        if (props.type === "radio" || props.type === "checkbox") {
+          const isRadio = props.type === "radio";
+
+          return {
+            keyDown: (e) => {
+              if (e.key === "Enter") {
+                const inputEl = ref.current;
+                const isRadio = props.type === "radio";
+                const always = () => {
+                  if (inputEl.form) {
+                    e.preventDefault();
+                  }
+                };
+
+                if (isRadio) {
+                  return {
+                    name: "enter to check radio",
+                    effect: (e) => {
+                      dispatchRequestSetUIState(inputEl, true, {
+                        event: e,
+                      });
+                    },
+                    always,
+                  };
+                }
+                const checked = inputEl.checked;
+                if (checked) {
+                  return {
+                    name: "enter to uncheck checkbox",
+                    effect: (e) => {
+                      dispatchRequestSetUIState(inputEl, undefined, {
+                        event: e,
+                      });
+                    },
+                    always,
+                  };
+                }
+                return {
+                  name: "enter to check",
+                  effect: (e) => {
+                    dispatchRequestSetUIState(inputEl, true, {
+                      event: e,
+                    });
+                  },
+                  always,
+                };
+              }
+              if (isRadio && e.key === " ") {
+                const inputEl = e.currentTarget;
+                if (inputEl.checked) {
+                  wasCheckedAtMousedownRef.current = true;
+                  onClick(e);
+                }
+              }
+              return keyDownDefault();
+            },
+            mouseDown: (e) => {
+              if (isRadio) {
+                wasCheckedAtMousedownRef.current = e.currentTarget.checked;
+              }
+            },
+            // For checkables, click does NOT update state — it only gates the
+            // browser's native check/uncheck via interaction constraints (e.g.
+            // readOnly). State actually changes via the "input" event that the
+            // browser fires right after, which routes through asAction so the
+            // full action pipeline (constraints, navi_action_allowed, sibling
+            // uncheck for radios…) runs in one place.
+            click: () => {
+              return {
+                name: "click",
+                type: "interaction",
+                // When a radio is already checked and gets clicked, the browser does NOT
+                // fire an input event (state doesn't change), so asAction never runs.
+                // We still want uiAction + command to fire. We can tell whether the click
+                // is on an already-checked radio by looking at wasCheckedAtMousedownRef:
+                // if it was checked at mousedown, the input event won't come, so we do it here.
+                effect: isRadio
+                  ? (e) => {
+                      if (wasCheckedAtMousedownRef.current) {
+                        updateUIState(e);
+                      }
+                    }
+                  : undefined,
+              };
+            },
+            input: () => {
+              return {
+                name: "input",
+                type: "action",
+              };
+            },
+          };
+        }
+
+        const keyDownDefaultOnInput = (e) => {
+          if (e.key === "Enter") {
+            const input = e.currentTarget;
+            return {
+              name: "enter to --navi-send",
+              effect: () => {
+                triggerNaviCommand(input, "--navi-send", e);
+              },
+            };
+          }
+          return keyDownDefault();
+        };
+
+        if (props.type === "range") {
+          return {
+            keyDown: keyDownDefaultOnInput,
+            mouseDown: () => {
+              return {
+                name: "mousedown",
+                type: "interaction",
+                effect: updateUIState,
+              };
+            },
+            input: {
+              name: "input",
+              type: "interaction",
+              effect: updateUIState,
+            },
+            naviChange: () => {
+              return {
+                name: "navi_change",
+                type: "action",
+              };
+            },
+          };
+        }
+
+        return {
+          input: () => {
+            return {
+              name: "input",
+              type: "interaction",
+              effect: updateUIState,
+            };
+          },
+          naviChange: () => {
+            return {
+              name: "navi_change",
+              type: "action",
+            };
+          },
+        };
+      }
+      return null;
+    };
+
     const applyInteraction = (interaction, e, { ifValueModified } = {}) => {
       if (!interaction) {
         return false;
       }
-      return interaction.callback(interaction, e, { ifValueModified });
-    };
-
-    let mousedownInteraction;
-    let clickInteraction;
-    let inputInteraction;
-    let keydownInteraction = {
-      name: "keydown",
-      callback: asBrowserAction,
-    };
-    // a custom concept being combination of "input", "change" and may other events
-    // this even if trigerred when value changes and can be controlled by actionDebounce and actionAfterChange
-    let naviChangeInteraction;
-    if (controlType === "button") {
-      mousedownInteraction = {
-        name: "mousedown",
-        callback: actionOnMouseDown ? asAction : asInteraction,
-        // effect: updateUIState,
-      };
-      clickInteraction = {
-        name: "click",
-        callback: actionOnMouseDown ? asInteraction : asAction,
-        // effect: updateUIState,
-      };
-    } else if (controlType === "input" || controlType === "picker") {
-      isCheckable = props.type === "radio" || props.type === "checkbox";
-      // On input, gate the interaction (readonly check) and update UI state to reflect the new value.
-      inputInteraction = {
-        name: "input",
-        callback: asInteraction,
-        effect: updateUIState,
-      };
-      naviChangeInteraction = {
-        name: "navi_change",
-        callback: asAction,
-      };
-      enterEffect = (e) => {
-        const input = e.currentTarget;
-        dispatchNaviCommand(input, "--navi-send", e);
-      };
-
-      if (isCheckable) {
-        inputInteraction = {
-          name: "input",
-          callback: asAction,
-        };
-        // For checkables, click does NOT update state — it only gates the
-        // browser's native check/uncheck via interaction constraints (e.g.
-        // readOnly). State actually changes via the "input" event that the
-        // browser fires right after, which routes through asAction so the
-        // full action pipeline (constraints, navi_action_allowed, sibling
-        // uncheck for radios…) runs in one place.
-        clickInteraction = {
-          name: "click",
-          callback: asBrowserAction,
-          // When a radio is already checked and gets clicked, the browser does NOT
-          // fire an input event (state doesn't change), so asAction never runs.
-          // We still want uiAction + command to fire. We can tell whether the click
-          // is on an already-checked radio by looking at wasCheckedAtMousedownRef:
-          // if it was checked at mousedown, the input event won't come, so we do it here.
-          effect: (e) => {
-            const checkable = e.currentTarget;
-            if (
-              checkable.type === "radio" &&
-              wasCheckedAtMousedownRef.current
-            ) {
-              updateUIState(e);
-            }
-          },
-        };
-        naviChangeInteraction = undefined;
-        enterEffect = (e) => {
-          const checkable = ref.current;
-          const interactionAllowed = dispatchRequestInteraction(
-            checkable,
-            e,
-            "enter",
-          );
-          if (!interactionAllowed) {
-            if (checkable.form) {
-              e.preventDefault();
-            }
-            return;
-          }
-          let newState;
-          if (checkable.type === "checkbox") {
-            // toggle: if checked → uncheck (undefined), if unchecked → check (value)
-            newState = checkable.checked ? undefined : checkable.value;
-          } else {
-            // radio: always check
-            newState = checkable.value;
-          }
-          dispatchRequestSetUIState(checkable, newState, { event: e });
-          if (checkable.form) {
-            e.preventDefault();
-          }
-        };
-        if (props.type === "radio") {
-          spaceEffect = (e) => {
-            const radio = e.currentTarget;
-            if (radio.checked) {
-              wasCheckedAtMousedownRef.current = true;
-              onClick(e);
-            }
-          };
-        }
-      } else if (props.type === "range") {
-        mousedownInteraction = {
-          name: "mousedown",
-          callback: asBrowserAction,
-          effect: updateUIState,
-        };
-      } else if (props.type === "color") {
-      }
-    }
-
-    const applyPropInteraction = (
-      propInteraction,
-      e,
-      { ifValueModified } = {},
-    ) => {
-      if (!propInteraction) {
-        return false;
-      }
-      const result = propInteraction(e);
+      const result = interaction(e);
       if (!result) {
         return false;
       }
@@ -462,53 +530,18 @@ export const useControlProps = (
     };
     const onMouseDown = (e) => {
       props.onMouseDown?.(e);
-      if (isCheckable && props.type === "radio") {
-        wasCheckedAtMousedownRef.current = e.currentTarget.checked;
-      }
-      if (props.mouseDownInteraction) {
-        applyPropInteraction(props.mouseDownInteraction, e);
-      } else {
-        applyInteraction(mousedownInteraction, e);
-      }
+      applyInteraction(mouseDownInteraction, e);
       transferFocusToTarget(e);
     };
     const onClick = (e) => {
       props.onClick?.(e);
-      if (props.clickInteraction) {
-        applyPropInteraction(props.clickInteraction, e);
-      } else {
-        applyInteraction(clickInteraction, e);
-      }
+      applyInteraction(clickInteraction, e);
       transferFocusToTarget(e);
-
-      const controlHost = e.currentTarget;
-      if (controlHost.form) {
-        if (controlType === "button") {
-          // prevent form submission
-          e.preventDefault();
-        } else if (controlHost.closest("button")) {
-          // prevent button form submission by click
-          // (When an input is inside a <button> like for a picker)
-          // any click in the picker could trigger form submission as browser see this as click on button inside form
-          e.preventDefault();
-        }
-      }
+      preventFormSubmissionForClickInsidePicker(e);
     };
     const onKeyDown = (e) => {
       props.onKeyDown?.(e);
-      if (e.key === "Enter" && enterEffect) {
-        enterEffect(e);
-        return;
-      }
-      if (e.key === " " && spaceEffect) {
-        spaceEffect(e);
-        return;
-      }
-      if (props.keyDownInteraction) {
-        applyPropInteraction(props.keyDownInteraction, e);
-      } else {
-        applyInteraction(keydownInteraction, e);
-      }
+      applyInteraction(keyDownInteraction, e);
     };
     const onInput = (e) => {
       props.onInput?.(e);

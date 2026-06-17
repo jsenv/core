@@ -13,7 +13,7 @@ import { useNavState } from "../nav/browser_integration/browser_integration.js";
 import { useDebugUIState } from "../navi_debug.jsx";
 import { useInitialValue } from "../state/use_initial_value.js";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
-import { dispatchNaviCommand } from "./commands.js";
+import { triggerNaviCommand } from "./commands.js";
 import { findControlProxy } from "./control_proxy.js";
 import { asControlHostValue } from "./control_value.js";
 import { FormContext } from "./form_context.js";
@@ -342,7 +342,7 @@ export const useUIStateController = (
         if (command) {
           const element = uiStateController.elementRef.current;
           if (element) {
-            dispatchNaviCommand(element, command, e);
+            triggerNaviCommand(element, command, e);
           }
         }
       };
@@ -863,7 +863,7 @@ export const useUIGroupStateController = (
       if (command) {
         const el = ref.current;
         if (el) {
-          dispatchNaviCommand(el, command, e);
+          triggerNaviCommand(el, command, e);
         }
       }
     },
