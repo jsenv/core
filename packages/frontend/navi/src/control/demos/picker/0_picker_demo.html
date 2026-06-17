@@ -116,7 +116,10 @@
               <a href="#section-4">4. Custom UI via prop ui</a>
             </li>
             <li>
-              <a href="#section-5">5. Popover vs Dialog mode</a>
+              <a href="#section-5">5. Picker icon</a>
+            </li>
+            <li>
+              <a href="#section-6">6. Popover vs Dialog mode</a>
             </li>
           </ol>
         </div>
@@ -136,6 +139,7 @@
             <TextAlignDemo />
             <DefaultValueDemo />
             <CustomUIDemo />
+            <PickerIconDemo />
             <PopoverDialogDemo />
           </Box>
         </NaviDebug>
@@ -182,6 +186,24 @@
             You can put any content here — text, buttons, forms, images,
             whatever you need.
           </p>
+        </div>
+      );
+
+      const VioletSquareIcon = () => (
+        <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+          <rect x="1" y="1" width="16" height="16" rx="2" fill="#7c3aed" />
+        </svg>
+      );
+
+      const TallPickerUI = ({ label }) => (
+        <div
+          style={{
+            minHeight: "64px",
+            display: "flex",
+            alignItems: "center",
+          }}
+        >
+          {label}
         </div>
       );
 
@@ -647,12 +669,91 @@
         );
       };
 
+      const PickerIconDemo = () => {
+        return (
+          <div id="section-5" class="demo-section">
+            <h2>5. Picker icon</h2>
+            <p>
+              The picker shows a dropdown icon by default. You can replace it
+              with your own icon through the <code>icon</code> prop.
+            </p>
+            <Box flex="y" spacing="m">
+              <Field vertical>
+                <Label>
+                  Default icon{" "}
+                  <code style={{ fontWeight: "normal" }}>(dropdown)</code>
+                </Label>
+                <Picker
+                  name="icon_default"
+                  value="Hello world"
+                  action={() => {}}
+                  width="220px"
+                >
+                  <BasicPickerContent />
+                </Picker>
+              </Field>
+              <Field vertical>
+                <Label>
+                  Custom icon{" "}
+                  <code style={{ fontWeight: "normal" }}>(icon prop)</code>
+                </Label>
+                <Picker
+                  name="icon_custom"
+                  value="Hello world"
+                  action={() => {}}
+                  width="220px"
+                  icon={<VioletSquareIcon />}
+                >
+                  <BasicPickerContent />
+                </Picker>
+              </Field>
+              <Field vertical>
+                <Label>
+                  Single-line tall UI{" "}
+                  <code style={{ fontWeight: "normal" }}>
+                    (icon stays vertically centered)
+                  </code>
+                </Label>
+                <Picker
+                  name="icon_tall_ui"
+                  value=""
+                  action={() => {}}
+                  width="260px"
+                  ui={<TallPickerUI label="Custom UI with bigger height" />}
+                  icon={<VioletSquareIcon />}
+                >
+                  <BasicPickerContent />
+                </Picker>
+              </Field>
+              <Field vertical>
+                <Label>
+                  Multi-line value{" "}
+                  <code style={{ fontWeight: "normal" }}>
+                    (maxLines=3, icon stays on top)
+                  </code>
+                </Label>
+                <Picker
+                  name="icon_multiline"
+                  value={VERY_LONG_TEXT}
+                  action={() => {}}
+                  width="260px"
+                  maxLines={3}
+                  icon={<VioletSquareIcon />}
+                >
+                  <BasicPickerContent />
+                </Picker>
+              </Field>
+            </Box>
+          </div>
+        );
+      };
+
       const PopoverDialogDemo = () => {
         const modeSignal = { popover: "Grape", dialog: "Banana" };
 
         return (
-          <div id="section-5" class="demo-section">
-            <h2>5. Popover vs Dialog mode</h2>
+          <div id="section-6" class="demo-section">
+            <h2>6. Popover vs Dialog mode</h2>
             <p>
               The <code>mode</code> prop controls where the picker's popup
               appears. <code>"popover"</code> positions it next to the trigger
