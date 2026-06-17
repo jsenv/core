@@ -316,13 +316,8 @@ export const useControlProps = (
       return true;
     };
 
-    let mouseDownInteraction;
-    let clickInteraction;
-    let inputInteraction;
-    let keyDownInteraction;
     // a custom concept being combination of "input", "change" and may other events
     // this even if trigerred when value changes and can be controlled by actionDebounce and actionAfterChange
-    let naviChangeInteraction;
     const preventFormSubmissionForClickInsidePicker = (e) => {
       const el = e.currentTarget;
       if (el.closest("button")) {
@@ -333,7 +328,7 @@ export const useControlProps = (
       }
     };
 
-    const getDefaultInteractions = () => {
+    const getDefaultInteractionDefinitions = () => {
       const keyDownDefault = () => {
         return {
           name: "keydown",
@@ -516,47 +511,59 @@ export const useControlProps = (
       return null;
     };
 
-    const applyInteraction = (interaction, e, { ifValueModified } = {}) => {
+    const defaultInteractionDefinitions = getDefaultInteractionDefinitions();
+    const { interactionDefinitions } = props;
+    const applyInteraction = (interactionName, e, { ifValueModified } = {}) => {
+      const defaultInteractionDefinition =
+        defaultInteractionDefinitions[interactionName];
+      const customInteractionDefinition =
+        interactionDefinitions?.[interactionName];
+      const interaction =
+        customInteractionDefinition?.(e) ?? defaultInteractionDefinition?.(e);
       if (!interaction) {
         return false;
       }
-      const result = interaction(e);
-      if (!result) {
-        return false;
-      }
-      const { name, effect, type = "interaction" } = result;
+      const { name, effect, type = "interaction", always } = interaction;
       const dispatchFn = type === "action" ? asAction : asInteraction;
-      return dispatchFn({ name, effect }, e, { ifValueModified });
+      const applied = dispatchFn({ name, effect }, e, { ifValueModified });
+      always?.(e);
+      return applied;
     };
     const onMouseDown = (e) => {
       props.onMouseDown?.(e);
-      applyInteraction(mouseDownInteraction, e);
+      applyInteraction("mouseDown", e);
       transferFocusToTarget(e);
     };
     const onClick = (e) => {
       props.onClick?.(e);
-      applyInteraction(clickInteraction, e);
+      applyInteraction("click", e);
       transferFocusToTarget(e);
       preventFormSubmissionForClickInsidePicker(e);
     };
     const onKeyDown = (e) => {
       props.onKeyDown?.(e);
-      applyInteraction(keyDownInteraction, e);
+      applyInteraction("keyDown", e);
     };
     const onInput = (e) => {
       props.onInput?.(e);
-      applyInteraction(inputInteraction, e, { ifValueModified: true });
+      applyInteraction("input", e, { ifValueModified: true });
     };
-    const hasNaviChangeInteraction = Boolean(naviChangeInteraction);
+    const hasNaviChangeInteractionDefinition = Boolean(
+      interactionDefinitions.naviChange ||
+      defaultInteractionDefinitions.naviChange,
+    );
     const refCallback = useCallback(
       (field) => {
-        if (!hasNaviChangeInteraction || actionInteraction === "custom") {
+        if (
+          !hasNaviChangeInteractionDefinition ||
+          actionInteraction === "custom"
+        ) {
           return undefined;
         }
         return addInputEffect(
           field,
           (e) => {
-            applyInteraction(naviChangeInteraction, e, {
+            applyInteraction("naviChange", e, {
               ifValueModified: true,
             });
           },
@@ -571,7 +578,7 @@ export const useControlProps = (
         actionInteraction,
         actionAfterChange,
         actionDebounce,
-        hasNaviChangeInteraction,
+        hasNaviChangeInteractionDefinition,
       ],
     );
     const refComposed = useComposeElementRef(refCallback, ref);

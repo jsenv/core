@@ -437,38 +437,40 @@ const PickerCustom = (props) => {
       });
 
       Object.assign(pickerProps, {
-        mouseDownInteraction: (e) => {
-          if (expandedRef.current) {
+        interactionDefinitions: {
+          mouseDown: (e) => {
+            if (expandedRef.current) {
+              return {
+                name: "mousedown to close picker",
+                effect: () => requestClose(e),
+              };
+            }
             return {
-              name: "mousedown to close picker",
-              effect: () => requestClose(e),
+              name: "mousedown to open picker",
+              effect: () => {
+                debugFocus(
+                  e,
+                  `prevent browser giving focus to button (mousedown.preventDefault())`,
+                );
+                requestOpen(e);
+                e.preventDefault(); // prevent browser trying to give focus to the select (popover will take focus)
+              },
             };
-          }
-          return {
-            name: "mousedown to open picker",
-            effect: () => {
-              debugFocus(
-                e,
-                `prevent browser giving focus to button (mousedown.preventDefault())`,
-              );
-              requestOpen(e);
-              e.preventDefault(); // prevent browser trying to give focus to the select (popover will take focus)
-            },
-          };
-        },
-        clickInteraction: (e) => {
-          // When a label is clicked it transfers focus to the select
-          // in that case we want to open it (otherwise we have already opened on mousedown interaction)
-          return {
-            name: "click to open picker",
-            effect: () => {
-              requestOpen(e);
-              e.preventDefault();
-            },
-          };
-        },
-        keyDownInteraction: (e) => {
-          return onKeyDownShortcuts(e);
+          },
+          click: (e) => {
+            // When a label is clicked it transfers focus to the select
+            // in that case we want to open it (otherwise we have already opened on mousedown interaction)
+            return {
+              name: "click to open picker",
+              effect: () => {
+                requestOpen(e);
+                e.preventDefault();
+              },
+            };
+          },
+          keyDown: (e) => {
+            return onKeyDownShortcuts(e);
+          },
         },
       });
       Object.assign(popupProps, {
