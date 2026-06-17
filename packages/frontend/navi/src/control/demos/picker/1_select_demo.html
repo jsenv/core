@@ -718,7 +718,9 @@
                         padding="m"
                       >
                         <SelectableInput marginLeft="-xs" />
-                        <PlaceItem maxLines={i === 0 ? 1 : undefined} />
+                        <PlaceItem
+                          maxLines={i === 0 ? undefined : i === 1 ? 2 : 1}
+                        />
                       </List.Item>
                     );
                   })}
