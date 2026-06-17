@@ -76,6 +76,10 @@
               <HtmlSection />
             </section>
             <section>
+              <h2 id="s-nested">Nested Text (overflow propagation)</h2>
+              <NestedTextSection />
+            </section>
+            <section>
               <h2 id="s-interactive">Interactive Width</h2>
               <InteractiveWidthSection />
             </section>
@@ -139,6 +143,9 @@
               </li>
               <li>
                 <a href="#s-html">HTML Elements</a>
+              </li>
+              <li>
+                <a href="#s-nested">Nested Text (overflow propagation)</a>
               </li>
               <li>
                 <a href="#s-interactive">Interactive Width</a>
@@ -442,6 +449,78 @@
                 </Text>
               </div>
             ))}
+          </Box>
+        );
+      };
+
+      const NestedTextSection = () => {
+        return (
+          <Box row spacing="16px" style={{ flexWrap: "wrap" }}>
+            <div
+              style={{
+                width: "260px",
+                border: "1px solid #ccc",
+                padding: "8px",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "12px",
+                  color: "#666",
+                  marginBottom: "4px",
+                }}
+              >
+                Parent without maxLines
+              </div>
+              <Text>
+                <Text>Long nested text that should wrap normally</Text>
+              </Text>
+            </div>
+            <div
+              style={{
+                width: "260px",
+                border: "1px solid #ccc",
+                padding: "8px",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "12px",
+                  color: "#666",
+                  marginBottom: "4px",
+                }}
+              >
+                Parent with maxLines={1}
+              </div>
+              <Text maxLines={1}>
+                <Text>
+                  This is a very long nested text that should be truncated with
+                  an ellipsis
+                </Text>
+              </Text>
+            </div>
+            <div
+              style={{
+                width: "260px",
+                border: "1px solid #ccc",
+                padding: "8px",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "12px",
+                  color: "#666",
+                  marginBottom: "4px",
+                }}
+              >
+                Both with maxLines={1}
+              </div>
+              <Text maxLines={1}>
+                <Text maxLines={1}>
+                  This is a very long nested text with both levels constrained
+                </Text>
+              </Text>
+            </div>
           </Box>
         );
       };
