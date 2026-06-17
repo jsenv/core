@@ -200,6 +200,11 @@ const css = /* css */ `
         max-height: 100%;
       }
     }
+    &[navi-single-line] {
+      .navi_picker_right_slot {
+        align-self: center;
+      }
+    }
     .navi_picker_input {
       position: absolute;
       inset: 0;
@@ -301,6 +306,7 @@ const PickerButton = (props) => {
     props.maxLines = parseInt(props.maxLines);
   }
   const { ref, variant, icon, placeholder, ui, maxLines = 1, headless } = props;
+  const isSingleLine = maxLines === 1;
   const inputRef = useRef(null);
   const [pickerRemainingProps, inputProps, facadeChildrenProps] =
     useControlFacadeProps(
@@ -330,6 +336,7 @@ const PickerButton = (props) => {
       data-variant={variant}
       navi-visually-hidden={headless ? "" : undefined}
       navi-picker=""
+      navi-single-line={isSingleLine ? "" : undefined}
       {...pickerRemainingProps}
       basePseudoState={basePseudoState}
       styleCSSVars={PickerStyleCSSVars}
