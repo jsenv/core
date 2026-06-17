@@ -18,8 +18,15 @@ const css = /* css */ `
       &[data-skeleton] {
         border-radius: 0.2em;
       }
+
       &[data-capitalize] {
-        display: inline-block; /* We need inline-block to match the pseudo element */
+        text-transform: capitalize;
+
+        .navi_text_sizer {
+          .navi_text {
+            display: inline-block; /* We need inline-block to match the pseudo element */
+          }
+        }
       }
       &[data-shrinkwrap] {
         display: inline-block;
