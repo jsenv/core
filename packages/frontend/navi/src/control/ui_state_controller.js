@@ -708,6 +708,10 @@ export const useUIGroupStateController = (
       `${controlType}.applyState(${JSON.stringify(newUIState)}, "${e.type}") -> updates from ${JSON.stringify(currentUIState)} to ${JSON.stringify(newUIState)}`,
     );
     publishUIState(newUIState);
+    // Notify the parent (facade) BEFORE firing the command so that when a
+    // command like --navi-send closes the picker, the picker input already
+    // holds the new value.
+    notifyParentAboutChildInteraction(e, { stateChanged: true });
     if (internalBehavior) {
       // Fire uiAction only — skip command to avoid re-triggering the same command
       // that caused this setUIState call in the first place.
@@ -724,7 +728,6 @@ export const useUIGroupStateController = (
         value: newUIState,
       });
     }
-    notifyParentAboutChildInteraction(e, { stateChanged: true });
   };
 
   useLayoutEffect(() => {
