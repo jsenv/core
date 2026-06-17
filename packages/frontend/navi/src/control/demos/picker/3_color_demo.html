@@ -127,8 +127,8 @@
               <div>
                 <div class="states-col-header">Navi Picker</div>
                 <Box flex="y" spacing="s">
-                  <Field vertical>
-                    <Label>Vide</Label>
+                  <Field ownLabel vertical>
+                    <Label border="1px dotted grey">Vide</Label>
                     <Picker name="color_empty" type="color" />
                   </Field>
                   <Field vertical>
@@ -139,15 +139,15 @@
                       placeholder="Choisir une couleur"
                     />
                   </Field>
-                  <Field vertical>
-                    <Label>Avec valeur</Label>
+                  <Field ownLabel vertical>
+                    <Label border="1px dotted grey">Avec valeur</Label>
                     <Picker
                       name="color_with_value"
                       type="color"
                       defaultValue={DEFAULT_COLOR}
                     />
                   </Field>
-                  <Field vertical>
+                  <Field ownLabel vertical>
                     <Label>Readonly</Label>
                     <Picker
                       name="color_readonly"
@@ -156,7 +156,7 @@
                       readOnly
                     />
                   </Field>
-                  <Field vertical>
+                  <Field ownLabel vertical>
                     <Label>Disabled</Label>
                     <Picker
                       name="color_disabled"
@@ -165,7 +165,7 @@
                       disabled
                     />
                   </Field>
-                  <Field vertical>
+                  <Field ownLabel vertical>
                     <Label>Loading</Label>
                     <Picker
                       name="color_loading"
