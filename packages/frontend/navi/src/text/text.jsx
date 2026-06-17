@@ -315,10 +315,6 @@ const shouldInjectSpacingBetween = (left, right) => {
  *   `maxLines={1}` truncates after one line (single-line ellipsis).
  *   `maxLines={n}` (n > 1) truncates after n lines (multi-line clamp).
  *
- * @param {boolean} [props.overflowPinned]
- *   Must be used inside a `<Text maxLines>` parent.
- *   Pins this element outside the truncated text flow (e.g. a badge or icon).
- *
  * @param {string} [props.spacing]
  *   Controls the separator injected between child nodes.
  *   Accepts a size/spacing scale key, a CSS length, or `"pre"` / `0` to disable.

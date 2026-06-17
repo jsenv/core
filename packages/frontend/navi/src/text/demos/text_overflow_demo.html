@@ -9,7 +9,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import { BadgeCount, Box, Icon, Text } from "@jsenv/navi";
+      import { Box, Icon, Text } from "@jsenv/navi";
 
       const App = () => {
         return (
@@ -60,7 +60,7 @@
               <BasicSection />
             </section>
             <section>
-              <h2 id="s-pinned">Pinned Content</h2>
+              <h2 id="s-pinned">Trailing Content (right of ellipsis)</h2>
               <PinnedSection />
             </section>
             <section>
@@ -76,7 +76,7 @@
               <HtmlSection />
             </section>
             <section>
-              <h2 id="s-complex-pinned">Complex Pinned Content</h2>
+              <h2 id="s-complex-pinned">Complex trailing content</h2>
               <ComplexPinnedSection />
             </section>
             <section>
@@ -133,7 +133,7 @@
                 <a href="#s-basic">Basic</a>
               </li>
               <li>
-                <a href="#s-pinned">Pinned Content</a>
+                <a href="#s-pinned">Trailing Content (right of ellipsis)</a>
               </li>
               <li>
                 <a href="#s-icons-styled">Icons &amp; Styled Text</a>
@@ -145,7 +145,7 @@
                 <a href="#s-html">HTML Elements</a>
               </li>
               <li>
-                <a href="#s-complex-pinned">Complex Pinned Content</a>
+                <a href="#s-complex-pinned">Complex trailing content</a>
               </li>
               <li>
                 <a href="#s-interactive">Interactive Width</a>
@@ -335,18 +335,18 @@
           <Box row spacing="16px">
             <Box flex width="260" border="1px solid #ccc" padding="s">
               <Text maxLines={1}>
-                This text has extra info that stays visible
+                This text has extra info while keeping a trailing label visible
               </Text>
-              <Text color="#666">(modified)</Text>
+              <Text color="#666" shrink={false}>
+                (modified)
+              </Text>
             </Box>
             <Box flex width="260" border="1px solid #ccc" padding="s">
               <Text maxLines={1}>
                 Text with a dynamic count that is long and will overflow
               </Text>
-              <Text color="#4caf50">
-                <BadgeCount background="violet" color="white">
-                  10
-                </BadgeCount>
+              <Text color="#4caf50" shrink={false}>
+                (10)
               </Text>
             </Box>
           </Box>
@@ -358,7 +358,7 @@
           <>
             <p style={{ color: "#555", fontSize: "14px" }}>
               Inline icons and styled fragments inside an overflow ellipsis will
-              auto-space correctly while the pinned part stays visible.
+              auto-space correctly across mixed inline elements.
             </p>
             <Box row spacing="16px">
               <Box flex width="300" border="1px solid #ccc" padding="s">
@@ -525,8 +525,8 @@
                 <Text maxLines={1}>
                   Important message that might be too long to display fully
                 </Text>
-                <Text color="#f44336" size="s">
-                  ⚠️
+                <Text color="#f44336" size="s" shrink={false}>
+                  ⚠
                 </Text>
               </Box>
             </div>
@@ -544,25 +544,17 @@
                   marginBottom: "4px",
                 }}
               >
-                With multiple elements after
+                With multiple trailing elements
               </div>
               <Box flex>
                 <Text maxLines={1}>
                   Document title with attachment count and icon that
                   demonstrates overflow
                 </Text>
-                <Text>
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: "4px",
-                      alignItems: "center",
-                    }}
-                  >
-                    <span style={{ fontSize: "12px", color: "#666" }}>(3)</span>
-                    <span style={{ fontSize: "14px" }}>📎</span>
-                  </div>
-                </Text>
+                <Box flex spacing="4px" alignY="center" shrink={false}>
+                  <span style={{ fontSize: "12px", color: "#666" }}>(3)</span>
+                  <span style={{ fontSize: "14px" }}>@</span>
+                </Box>
               </Box>
             </div>
           </Box>
