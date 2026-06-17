@@ -100,6 +100,7 @@
         NaviDebug,
         Badge,
         BadgeList,
+        Text,
       } from "@jsenv/navi";
 
       const FRUIT_OPTIONS = [
@@ -463,8 +464,8 @@
           return (
             <BadgeList>
               {selectedArray.map((opt) => (
-                <Badge key={opt} data-has-button="">
-                  {opt}
+                <Badge key={opt} inline flex>
+                  <Text>{opt}</Text>
                   <Badge.Button
                     command="--navi-unselect"
                     commandFor="skills_list_delete"
@@ -556,8 +557,8 @@
                   ui={
                     <BadgeList>
                       {selectedArrayMr1.map((opt) => (
-                        <Badge key={opt} data-has-button="">
-                          {opt}
+                        <Badge key={opt} inline flex>
+                          <Text>{opt}</Text>
                           <Badge.Button
                             command="--navi-unselect"
                             commandFor="skills_list_delete_mr1"
