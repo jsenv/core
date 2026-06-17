@@ -549,8 +549,8 @@ export const useControlProps = (
       applyInteraction("input", e, { ifValueModified: true });
     };
     const hasNaviChangeInteractionDefinition = Boolean(
-      interactionDefinitions.naviChange ||
-      defaultInteractionDefinitions.naviChange,
+      interactionDefinitions?.naviChange ||
+      defaultInteractionDefinitions?.naviChange,
     );
     const refCallback = useCallback(
       (field) => {
