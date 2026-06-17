@@ -57,7 +57,7 @@ export const Dialog = (props) => {
     dialogEl.style.setProperty("--anchor-height", `${snapToPixel(height)}px`);
     const focusedBeforeOpen = getFocusedBeforeTransfer(e);
     dialogEl.showModal();
-    transferFocus(dialogEl, debugFocus, e);
+    transferFocus(dialogEl, debugFocus, e, focusedBeforeOpen);
     if (scrollTrap) {
       addCleanup(trapScrollInside(dialogEl));
     }

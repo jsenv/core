@@ -74,7 +74,7 @@ export const Popover = (props) => {
     const popoverEl = ref.current;
     const focusedBeforeOpen = getFocusedBeforeTransfer(e);
     popoverEl.showPopover();
-    transferFocus(popoverEl, debugFocus, e);
+    transferFocus(popoverEl, debugFocus, e, focusedBeforeOpen);
     const effectiveAnchor = anchor || document.documentElement;
     const positionPopover = (positionEvent) => {
       const { width, height } = effectiveAnchor.getBoundingClientRect();

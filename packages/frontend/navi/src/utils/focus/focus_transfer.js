@@ -38,7 +38,7 @@ export const getFocusedBeforeTransfer = (e) => {
   return document.activeElement;
 };
 
-export const transferFocus = (containerEl, debugFocus, e) => {
+export const transferFocus = (containerEl, debugFocus, e, fallback) => {
   let target;
   let reason;
   if (containerEl.hasAttribute("navi-autofocus-restore")) {
@@ -76,6 +76,11 @@ export const transferFocus = (containerEl, debugFocus, e) => {
     if (naviAutoFocusFallback) {
       reason = "navi-autofocus fallback";
       target = naviAutoFocusFallback;
+    }
+  }
+  if (!target) {
+    if (fallback) {
+      target = fallback;
     }
   }
   if (!target) {

@@ -32,10 +32,7 @@ export const elementIsFocusable = (node, { excludeAriaHidden } = {}) => {
     }
     return canFocus(node);
   }
-  if (
-    ["button", "select", "datalist", "iframe", "textarea"].indexOf(nodeName) >
-    -1
-  ) {
+  if (FOCUSABLE_NODE_NAME_SET.has(nodeName)) {
     return canFocus(node);
   }
   if (["a", "area"].indexOf(nodeName) > -1) {
@@ -61,6 +58,14 @@ export const elementIsFocusable = (node, { excludeAriaHidden } = {}) => {
   }
   return false;
 };
+const FOCUSABLE_NODE_NAME_SET = new Set([
+  "button",
+  "select",
+  "datalist",
+  "dialog",
+  "iframe",
+  "textarea",
+]);
 
 const canInteract = (element) => {
   if (element.disabled) {
