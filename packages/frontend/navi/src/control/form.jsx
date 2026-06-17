@@ -13,7 +13,6 @@
  *    right now it's just logged to the console I need to see how we can achieve this
  */
 
-import { dispatchInternalCustomEvent } from "@jsenv/dom";
 import { useMemo, useRef } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
@@ -23,6 +22,7 @@ import {
 } from "./control_hooks.jsx";
 import { FormContext } from "./form_context.js";
 import { dispatchRequestResetUIState } from "./ui_state_dom.js";
+import { dispatchRequestAction } from "./validation/custom_constraint_validation.js";
 
 export const Form = (props) => {
   const defaultRef = useRef();
@@ -78,14 +78,11 @@ const FormControl = (props) => {
       onSubmit={(e) => {
         const form = e.currentTarget;
         e.preventDefault();
-        dispatchInternalCustomEvent(form, "navi_action_allowed", {
+        dispatchRequestAction(form, {
           event: e,
-          action: "auto",
-          method: "rerun",
-          requester: form,
-          meta: {
-            isSubmit: true,
-          },
+          requester: e.submitter || form,
+          actionOrigin: "form_submit",
+          meta: { isSubmit: true },
         });
       }}
       onnavi_get_managed_controls={(e) => {
