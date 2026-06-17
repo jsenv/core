@@ -327,6 +327,7 @@ const PickerButton = (props) => {
   return (
     <Box
       as={headless ? "div" : "button"}
+      type="button" /* ensure click inside the picker cannot submit ancestor form if any */
       ref={ref}
       baseClassName="navi_picker"
       pseudoClasses={PICKER_BUTTON_PSEUDO_CLASSES}

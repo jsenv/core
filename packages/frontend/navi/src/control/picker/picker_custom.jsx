@@ -464,7 +464,7 @@ const PickerCustom = (props) => {
               name:
                 e.detail === 0
                   ? "click (keyboard or progammatic) to open picker"
-                  : "click to open picker ",
+                  : "click to open picker",
               effect: () => {
                 requestOpen(e);
                 e.preventDefault();
@@ -492,9 +492,12 @@ const PickerCustom = (props) => {
           // click inside popover should not bubble to the picker (would re-open it if that click closes it)
           // preventDefault also prevents a form submit that would otherwise be triggered when
           // the picker is inside a <form> and the click lands on a non-button element
-          debugPopup(e, `popover click stopPropagation + preventDefault`);
+          debugPopup(e, `popover click stopPropagation`);
           e.stopPropagation();
-          e.preventDefault();
+
+          // Here we can't preventDefault because the click might be needed to check a radio for instance.
+          // As a result we have to let it go trhough which means it could trigger form submission
+          // e.preventDefault();
         },
         onKeyDown: (e) => {
           // some keys pressed inside popover should not reach the picker button
