@@ -335,7 +335,7 @@ const PickerCustom = (props) => {
     };
     const requestClose = (
       e = new CustomEvent("programmatic"),
-      { cancel = false } = {},
+      { isCancel = false } = {},
     ) => {
       const mousedownEvent = findEvent(e, "mousedown");
       if (mousedownEvent) {
@@ -345,7 +345,7 @@ const PickerCustom = (props) => {
       const popupEl = popupRef.current;
       return dispatchCustomEvent(popupEl, "navi_request_close", {
         event: e,
-        cancel,
+        isCancel,
       });
     };
 
@@ -429,7 +429,7 @@ const PickerCustom = (props) => {
           return {
             name: "escape_to_cancel",
             effect: () => {
-              requestClose(e, { cancel: true });
+              requestClose(e, { isCancel: true });
               e.preventDefault(); // prevent browser from closing the dialog (if any)
             },
           };
