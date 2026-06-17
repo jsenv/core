@@ -252,10 +252,15 @@ const PickerCustom = (props) => {
     expandedRef.current = expanded;
     const valueAtOpenRef = useRef(null);
     const activeElementAtOpenRef = useRef(null);
+
     const onOpen = (e) => {
-      activeElementAtOpenRef.current = e.detail.focusedBeforeOpen;
       expandedRef.current = true;
       setExpanded(true);
+
+      const focusedBeforeOpen = e.detail.focusedBeforeOpen;
+      activeElementAtOpenRef.current = focusedBeforeOpen;
+      debugFocus(e, "picked opened, store element focused", focusedBeforeOpen);
+
       const valueAtOpen = getPickerInputUIState(ref.current);
       valueAtOpenRef.current = valueAtOpen;
       debugPopup(e, `picker opened, store value at open (${valueAtOpen})`);
