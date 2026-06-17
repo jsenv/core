@@ -400,7 +400,23 @@ const PickerCustom = (props) => {
 
     interactions: {
       const onKeyDownShortcuts = createOnKeyDownForShortcuts({
-        arrowdown: (e) => {
+        "a-z": (e) => {
+          return {
+            name: "letter key to open",
+            effect: () => {
+              requestOpen(e);
+            },
+          };
+        },
+        "0-9": (e) => {
+          return {
+            name: "numeric key to open",
+            effect: () => {
+              requestOpen(e);
+            },
+          };
+        },
+        "arrowdown": (e) => {
           return {
             name: "arrow_down_to_open",
             effect: () => {
@@ -409,7 +425,7 @@ const PickerCustom = (props) => {
             },
           };
         },
-        arrowup: (e) => {
+        "arrowup": (e) => {
           return {
             name: "arrow_up_to_open",
             effect: () => {
@@ -418,7 +434,7 @@ const PickerCustom = (props) => {
             },
           };
         },
-        space: (e) => {
+        "space": (e) => {
           return {
             name: "space_to_open",
             effect: () => {
@@ -427,7 +443,7 @@ const PickerCustom = (props) => {
             },
           };
         },
-        escape: (e) => {
+        "escape": (e) => {
           if (!expandedRef.current) {
             return null;
           }
