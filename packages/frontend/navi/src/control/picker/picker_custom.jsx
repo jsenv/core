@@ -344,7 +344,7 @@ const PickerCustom = (props) => {
     ) => {
       const mousedownEvent = findEvent(e, "mousedown");
       if (mousedownEvent) {
-        debugPopup(e, `disable click`);
+        debugPopup(e, `closed by mousedown -> disable next click`);
         disableClickFor();
       }
       const popupEl = popupRef.current;
