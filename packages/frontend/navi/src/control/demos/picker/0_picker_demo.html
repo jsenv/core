@@ -565,6 +565,7 @@
 
       const CustomUIDemo = () => {
         const customValueSignal = { value: "Cherry" };
+        const value = customValueSignal.value;
 
         return (
           <div id="section-4" class="demo-section">
@@ -586,7 +587,7 @@
                   action={(v) => {
                     customValueSignal.value = v;
                   }}
-                  ui={({ value, popupState }) => (
+                  ui={
                     <button
                       style={{
                         padding: "8px 12px",
@@ -603,11 +604,8 @@
                       }}
                     >
                       🍎 {value || "Pick a fruit"}
-                      <span style={{ marginLeft: "4px" }}>
-                        {popupState.open ? "▲" : "▼"}
-                      </span>
                     </button>
-                  )}
+                  }
                 >
                   <BasicPickerContent />
                 </Picker>
@@ -623,7 +621,7 @@
                   action={(v) => {
                     customValueSignal.value = v;
                   }}
-                  ui={({ value }) => (
+                  ui={
                     <div
                       style={{
                         display: "inline-block",
@@ -639,7 +637,7 @@
                     >
                       {value || "No selection"}
                     </div>
-                  )}
+                  }
                 >
                   <BasicPickerContent />
                 </Picker>
