@@ -169,28 +169,19 @@ export const useControlProps = (
     readOnlySupported,
   },
 ) => {
-  const idDefault = useId(); // needed by ui state controller and slot labels
-  props.id = props.id || idDefault;
-
+  const idDefault = useId();
   const debugInteraction = useDebugInteraction();
   const controlName = useContext(ControlNameContext);
   const controlToInterface = useContext(ControlToInterfaceContext);
   const state = props[statePropName];
+
+  props.name = props.name || controlName;
+  props.id = props.id || controlToInterface?.id || idDefault;
   if (isSignal(state)) {
     props = {
       ...props,
       [statePropName]: state.value,
     };
-  }
-  if (!props.name && controlName) {
-    props.name = controlName;
-  }
-  if (!props.id) {
-    if (controlToInterface?.id) {
-      props.id = controlToInterface.id;
-    } else {
-      props.id = idDefault;
-    }
   }
   const uiStateController = useUIStateController(props, controlType, {
     statePropName,

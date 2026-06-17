@@ -93,19 +93,16 @@ export const Field = (props) => {
   import.meta.css = css;
   const refDefault = useRef();
   props.ref = props.ref || refDefault;
-  const { as, vertical } = props;
-  if (as === undefined && !vertical) {
-    props.as = "label";
+  const { ownLabel } = props;
+
+  if (ownLabel) {
+    return <FieldAsContainer {...props} />;
   }
-  if (props.as === "label") {
-    return <FieldAsLabel {...props} />;
-  }
-  return <FieldAsContainer {...props} />;
+  return <FieldAsLabel {...props} />;
 };
 const FieldAsLabel = (props) => {
   return <FieldUI {...props} />;
 };
-
 const FieldAsContainer = (props) => {
   const idDefault = useId();
   const fieldId = `field_${idDefault}`;
