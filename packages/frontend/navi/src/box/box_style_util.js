@@ -397,21 +397,7 @@ const TYPO_PROPS = {
       "-webkit-line-clamp": value,
     };
   },
-  textAlign: (value, { boxFlow }) => {
-    const props = { textAlign: value };
-
-    // In case the box is a flex container we also set the alignItems/justifyContent to match the textAlign value
-    if (boxFlow === "flex-y" || boxFlow === "inline-flex-y") {
-      if (value === "stretch") {
-        // this is the default
-      } else {
-        props.alignItems = value;
-      }
-    } else {
-      props.justifyContent = value;
-    }
-    return props;
-  },
+  textAlign: PASS_THROUGH,
 };
 const VISUAL_PROPS = {
   outline: PASS_THROUGH,

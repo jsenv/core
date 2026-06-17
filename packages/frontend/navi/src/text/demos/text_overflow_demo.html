@@ -682,32 +682,8 @@
                   marginBottom: "4px",
                 }}
               >
-                parent <code>Box</code> avec <code>{'textAlign="center"'}</code>{" "}
-                — fonctionne car <code>box_style_util</code> génère{" "}
-                <code>justifyContent</code> en plus de <code>textAlign</code>
-              </div>
-              <Box
-                style={{
-                  width: "220px",
-                  border: "1px solid #ccc",
-                  padding: "8px",
-                }}
-                textAlign="center"
-              >
-                <Text maxLines={1}>{shortText}</Text>
-              </Box>
-            </div>
-            <div>
-              <div
-                style={{
-                  fontSize: "12px",
-                  color: "#666",
-                  marginBottom: "4px",
-                }}
-              >
                 parent <code>div</code> avec{" "}
-                <code>{'style={{ textAlign: "center" }}'}</code> brut — ne
-                fonctionne pas si le parent est flex
+                <code>{'style={{ textAlign: "center" }}'}</code>
               </div>
               <div
                 style={{
@@ -728,7 +704,7 @@
                   marginBottom: "4px",
                 }}
               >
-                parent flex avec{" "}
+                parent flex avec
                 <code>{'style={{ justifyContent: "center" }}'}</code> (pas de
                 alignX sur le Text)
               </div>
