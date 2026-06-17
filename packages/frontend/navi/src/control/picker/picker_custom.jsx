@@ -396,75 +396,79 @@ const PickerCustom = (props) => {
     interactions: {
       const onKeyDownShortcuts = createOnKeyDownForShortcuts({
         arrowdown: (e) => {
-          onInteraction(e, {
+          return {
             name: "arrow_down_to_open",
             effect: () => {
-              e.preventDefault(); // prevent container scroll
               requestOpen(e);
+              e.preventDefault(); // prevent container scroll
             },
-          });
+          };
         },
         arrowup: (e) => {
-          onInteraction(e, {
+          return {
             name: "arrow_up_to_open",
             effect: () => {
-              e.preventDefault(); // prevent container scroll
               requestOpen(e);
+              e.preventDefault(); // prevent container scroll
             },
-          });
+          };
         },
         space: (e) => {
-          onInteraction(e, {
+          return {
             name: "space_to_open",
             effect: () => {
-              e.preventDefault(); // prevent scroll
               requestOpen(e);
+              e.preventDefault(); // prevent scroll
             },
-          });
+          };
         },
         escape: (e) => {
           if (!expandedRef.current) {
-            return;
+            return null;
           }
-          onInteraction(e, {
+          return {
             name: "escape_to_cancel",
             effect: () => {
-              e.preventDefault(); // prevent browser from closing the dialog (if any)
               requestClose(e, { cancel: true });
+              e.preventDefault(); // prevent browser from closing the dialog (if any)
             },
-          });
+          };
         },
       });
 
       Object.assign(pickerProps, {
-        mouseDownInteraction: {
-          name: "mousedown to open picker",
-          effect: (e) => {
-            if (expandedRef.current) {
-              requestClose(e);
-            } else {
-              e.preventDefault(); // prevent browser trying to give focus to the select (popover will take focus)
+        mouseDownInteraction: (e) => {
+          if (expandedRef.current) {
+            return {
+              name: "mousedown to close picker",
+              effect: () => requestClose(e),
+            };
+          }
+          return {
+            name: "mousedown to open picker",
+            effect: () => {
               debugFocus(
                 e,
                 `prevent browser giving focus to button (mousedown.preventDefault())`,
               );
               requestOpen(e);
-            }
-          },
+              e.preventDefault(); // prevent browser trying to give focus to the select (popover will take focus)
+            },
+          };
         },
-        clickInteraction: {
-          name: "click to open picker",
-          effect: (e) => {
-            // When a label is clicked it transfers focus to the select
-            // in that case we want to open it (otherwise we have already opened on mousedown interaction)
-            e.preventDefault();
-            requestOpen(e);
-          },
+        clickInteraction: (e) => {
+          // When a label is clicked it transfers focus to the select
+          // in that case we want to open it (otherwise we have already opened on mousedown interaction)
+          return {
+            name: "click to open picker",
+            effect: () => {
+              requestOpen(e);
+              e.preventDefault();
+            },
+          };
         },
-        keyDownInteraction: {
-          effect: (e) => {
-            onKeyDownShortcuts(e);
-          },
+        keyDownInteraction: (e) => {
+          return onKeyDownShortcuts(e);
         },
       });
       Object.assign(popupProps, {

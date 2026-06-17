@@ -202,7 +202,7 @@ const createOnKeyDownForShortcutArray = (shortcuts, busyRef) => {
   }
 
   return (keyboardEvent) => {
-    applyKeyboardShortcuts(shortcutsCopy, keyboardEvent);
+    return applyKeyboardShortcuts(shortcutsCopy, keyboardEvent);
   };
 };
 export const createOnKeyDownForShortcuts = (shortcuts) => {
@@ -287,7 +287,7 @@ const applyKeyboardShortcuts = (shortcuts, keyboardEvent) => {
     if (returnValue === false) {
       keyboardEvent.preventDefault();
     }
-    return shortcutCandidate;
+    return returnValue;
   }
   return null;
 };

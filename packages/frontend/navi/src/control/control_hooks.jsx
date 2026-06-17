@@ -368,16 +368,7 @@ export const useControlProps = (
         const input = e.currentTarget;
         dispatchNaviCommand(input, "--navi-send", e);
       };
-      if (controlType === "picker") {
-        mousedownInteraction = {
-          name: "mousedown to open picker",
-          callback: asInteraction,
-        };
-        clickInteraction = {
-          name: "click to open picker",
-          callback: asInteraction,
-        };
-      }
+
       if (isCheckable) {
         inputInteraction = {
           name: "input",
@@ -453,17 +444,41 @@ export const useControlProps = (
       }
     }
 
+    const applyPropInteraction = (
+      propInteraction,
+      e,
+      { ifValueModified } = {},
+    ) => {
+      if (!propInteraction) {
+        return false;
+      }
+      const result = propInteraction(e);
+      if (!result) {
+        return false;
+      }
+      const { name, effect, type = "interaction" } = result;
+      const dispatchFn = type === "action" ? asAction : asInteraction;
+      return dispatchFn({ name, effect }, e, { ifValueModified });
+    };
     const onMouseDown = (e) => {
       props.onMouseDown?.(e);
       if (isCheckable && props.type === "radio") {
         wasCheckedAtMousedownRef.current = e.currentTarget.checked;
       }
-      applyInteraction(mousedownInteraction, e);
+      if (props.mouseDownInteraction) {
+        applyPropInteraction(props.mouseDownInteraction, e);
+      } else {
+        applyInteraction(mousedownInteraction, e);
+      }
       transferFocusToTarget(e);
     };
     const onClick = (e) => {
       props.onClick?.(e);
-      applyInteraction(clickInteraction, e);
+      if (props.clickInteraction) {
+        applyPropInteraction(props.clickInteraction, e);
+      } else {
+        applyInteraction(clickInteraction, e);
+      }
       transferFocusToTarget(e);
 
       const controlHost = e.currentTarget;
@@ -489,7 +504,11 @@ export const useControlProps = (
         spaceEffect(e);
         return;
       }
-      applyInteraction(keydownInteraction, e);
+      if (props.keyDownInteraction) {
+        applyPropInteraction(props.keyDownInteraction, e);
+      } else {
+        applyInteraction(keydownInteraction, e);
+      }
     };
     const onInput = (e) => {
       props.onInput?.(e);
