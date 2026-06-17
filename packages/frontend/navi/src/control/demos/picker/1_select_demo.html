@@ -202,7 +202,7 @@
           <ol class="toc-list">
             <li>
               <a href="#section-1">
-                1. <code>command="--navi-update"</code> — default behavior
+                1. Default behavior — stays open until closed
               </a>
             </li>
             <li>
@@ -302,9 +302,7 @@
 
         return (
           <div id="section-1" class="demo-section">
-            <h2>
-              1. <code>command="--navi-update"</code> — default behavior
-            </h2>
+            <h2>1. Default behavior — stays open until closed</h2>
             <p>
               Clicking an item highlights it but keeps the popover open. The
               value is committed only when the popover closes (click outside,
@@ -328,7 +326,7 @@
                 }}
                 minWidth="200"
               >
-                <List selectable command="--navi-update">
+                <List selectable>
                   {FRUIT_OPTIONS.map((opt, i) => (
                     <List.Item
                       selectable
