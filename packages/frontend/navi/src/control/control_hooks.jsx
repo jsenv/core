@@ -430,7 +430,7 @@ export const useControlProps = (
             // uncheck for radios…) runs in one place.
             click: () => {
               return {
-                name: "click",
+                name: `click on ${props.type}`,
                 type: "interaction",
                 // When a radio is already checked and gets clicked, the browser does NOT
                 // fire an input event (state doesn't change), so asAction never runs.
@@ -515,7 +515,7 @@ export const useControlProps = (
     const { interactionDefinitions } = props;
     const applyInteraction = (interactionName, e, { ifValueModified } = {}) => {
       const defaultInteractionDefinition =
-        defaultInteractionDefinitions[interactionName];
+        defaultInteractionDefinitions?.[interactionName];
       const customInteractionDefinition =
         interactionDefinitions?.[interactionName];
       const interaction =

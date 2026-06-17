@@ -6,6 +6,7 @@ import {
 } from "@jsenv/dom";
 import { useRef } from "preact/hooks";
 
+import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import { Box } from "../box/box.jsx";
 import { useDebugFocus, useDebugPopup } from "../navi_debug.jsx";
 import {
@@ -46,6 +47,8 @@ export const Dialog = (props) => {
   const ref = rest.ref || defaultRef;
   const debugPopup = useDebugPopup();
   const debugFocus = useDebugFocus();
+  const autoFocusProps = useAutoFocus(ref, props.autoFocus);
+
   const openedRef = useRef(false);
   const [addCleanup, cleanup] = useCleanup();
   const open = (e, { anchor }) => {
@@ -135,6 +138,7 @@ export const Dialog = (props) => {
   return (
     <Box
       {...rest}
+      {...autoFocusProps}
       as="dialog"
       ref={ref}
       baseClassName="navi_dialog"

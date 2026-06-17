@@ -461,7 +461,10 @@ const PickerCustom = (props) => {
             // When a label is clicked it transfers focus to the select
             // in that case we want to open it (otherwise we have already opened on mousedown interaction)
             return {
-              name: "click to open picker",
+              name:
+                e.detail === 0
+                  ? "click (keyboard or progammatic) to open picker"
+                  : "click to open picker ",
               effect: () => {
                 requestOpen(e);
                 e.preventDefault();
@@ -612,6 +615,7 @@ const PickerContentInsideDialog = (props) => {
         scrollTrap={scrollTrap}
         pointerTrap={pointerTrap}
         centerInVisualViewport
+        autoFocus="fallback"
       >
         {children}
       </Dialog>
