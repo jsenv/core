@@ -333,22 +333,20 @@
       const PinnedSection = () => {
         return (
           <Box row spacing="16px">
-            <Box width="260" border="1px solid #ccc" padding="sm">
+            <Box flex width="260" border="1px solid #ccc" padding="s">
               <Text maxLines={1}>
                 This text has extra info that stays visible
-                <Text overflowPinned color="#666">
-                  (modified)
-                </Text>
               </Text>
+              <Text color="#666">(modified)</Text>
             </Box>
-            <Box width="260" border="1px solid #ccc" padding="sm">
+            <Box flex width="260" border="1px solid #ccc" padding="s">
               <Text maxLines={1}>
                 Text with a dynamic count that is long and will overflow
-                <Text overflowPinned color="#4caf50">
-                  <BadgeCount background="violet" color="white">
-                    10
-                  </BadgeCount>
-                </Text>
+              </Text>
+              <Text color="#4caf50">
+                <BadgeCount background="violet" color="white">
+                  10
+                </BadgeCount>
               </Text>
             </Box>
           </Box>
@@ -363,7 +361,7 @@
               auto-space correctly while the pinned part stays visible.
             </p>
             <Box row spacing="16px">
-              <Box width="300" border="1px solid #ccc" padding="sm">
+              <Box flex width="300" border="1px solid #ccc" padding="s">
                 <Text maxLines={1}>
                   <Icon color="orange">
                     <StarSvg />
@@ -374,12 +372,10 @@
                     <StarSvg />
                   </Icon>
                   <Text textItalic>active</Text>
-                  <Text overflowPinned color="#666">
-                    (live)
-                  </Text>
                 </Text>
+                <Text color="#666">(live)</Text>
               </Box>
-              <Box width="300" border="1px solid #ccc" padding="sm">
+              <Box flex width="300" border="1px solid #ccc" padding="sm">
                 <Text maxLines={1} spacing="l">
                   <Icon color="orange">
                     <StarSvg />
@@ -390,22 +386,18 @@
                     <StarSvg />
                   </Icon>
                   <Text textItalic>active</Text>
-                  <Text overflowPinned color="#666">
-                    (live)
-                  </Text>
                 </Text>
+                <Text color="#666">(live)</Text>
               </Box>
-              <Box width="180" border="1px solid #ccc" padding="sm">
+              <Box flex width="180" border="1px solid #ccc" padding="sm">
                 <Text maxLines={1}>
                   <Icon>
                     <StarSvg />
                   </Icon>
                   <Text textUnderline>Truncated</Text> sequence showcasing icon
                   spacing with styled parts
-                  <Text overflowPinned color="#666">
-                    (ok)
-                  </Text>
                 </Text>
+                <Text color="#666">(ok)</Text>
               </Box>
             </Box>
           </>
@@ -529,12 +521,14 @@
               >
                 With icon after
               </div>
-              <Text maxLines={1}>
-                Important message that might be too long to display fully
-                <Text overflowPinned color="#f44336" size="sm">
+              <Box flex>
+                <Text maxLines={1}>
+                  Important message that might be too long to display fully
+                </Text>
+                <Text color="#f44336" size="s">
                   ⚠️
                 </Text>
-              </Text>
+              </Box>
             </div>
             <div
               style={{
@@ -552,10 +546,12 @@
               >
                 With multiple elements after
               </div>
-              <Text maxLines={1}>
-                Document title with attachment count and icon that demonstrates
-                overflow
-                <Text overflowPinned>
+              <Box flex>
+                <Text maxLines={1}>
+                  Document title with attachment count and icon that
+                  demonstrates overflow
+                </Text>
+                <Text>
                   <div
                     style={{
                       display: "flex",
@@ -567,7 +563,7 @@
                     <span style={{ fontSize: "14px" }}>📎</span>
                   </div>
                 </Text>
-              </Text>
+              </Box>
             </div>
           </Box>
         );
@@ -589,14 +585,12 @@
                 style={{ width: "200px" }}
               />
             </Box>
-            <Box width={width} border="2px solid #2196f3" padding="s">
+            <Box flex width={width} border="2px solid #2196f3" padding="s">
               <Text maxLines={1} textBold>
                 Resize me to see how the text overflow behavior adapts to
                 different container widths
-                <Text overflowPinned textColor="#666">
-                  ✓
-                </Text>
               </Text>
+              <Text textColor="#666">✓</Text>
             </Box>
           </Box>
         );
