@@ -393,6 +393,38 @@ registerNaviCommand("--navi-scroll", (source, event) => {
     },
   };
 });
+registerNaviCommand("--navi-check", (source, event) => {
+  const target =
+    resolveExplicitTarget(source) || resolveFirstParentControl(source);
+  if (!target) {
+    return undefined;
+  }
+  return {
+    target,
+    implementation: () => {
+      return dispatchCustomEvent(target, "navi_request_check", {
+        event,
+        id: resolveCommandValue(source, event),
+      });
+    },
+  };
+});
+registerNaviCommand("--navi-uncheck", (source, event) => {
+  const target =
+    resolveExplicitTarget(source) || resolveFirstParentControl(source);
+  if (!target) {
+    return undefined;
+  }
+  return {
+    target,
+    implementation: () => {
+      return dispatchCustomEvent(target, "navi_request_uncheck", {
+        event,
+        id: resolveCommandValue(source, event),
+      });
+    },
+  };
+});
 registerNaviCommand("--navi-select", (source, event) => {
   const target =
     resolveExplicitTarget(source) || resolveFirstParentControl(source);

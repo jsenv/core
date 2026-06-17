@@ -101,7 +101,7 @@ export const Field = (props) => {
   return <FieldAsLabel {...props} />;
 };
 const FieldAsLabel = (props) => {
-  return <FieldUI {...props} />;
+  return <FieldUI as="label" {...props} />;
 };
 const FieldAsContainer = (props) => {
   const idDefault = useId();

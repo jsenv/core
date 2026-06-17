@@ -820,6 +820,9 @@ const useInteractiveProps = (
   }
   ui_state_and_value: {
     const uiState = uiStateController.uiStateSignal.value;
+    const isCheckable =
+      uiStateController.controlType === "input" &&
+      (props.type === "radio" || props.type === "checkbox");
     Object.assign(controlHostProps, {
       onnavi_clear_ui_state: (e) => {
         uiStateController.clearUIState(e);
@@ -833,6 +836,16 @@ const useInteractiveProps = (
       onnavi_set_ui_state: (e) => {
         uiStateController.setUIState(e.detail.value, e);
       },
+      onnavi_request_check: (e) => {
+        if (isCheckable) {
+          uiStateController.setUIState(true, e);
+        }
+      },
+      onnavi_request_uncheck: (e) => {
+        if (isCheckable) {
+          uiStateController.setUIState(false, e);
+        }
+      },
     });
     // Mirror ui state handlers on the root so events dispatched on the root element
     // (e.g. from a commandfor targeting the picker button) reach the controller.
@@ -841,6 +854,8 @@ const useInteractiveProps = (
       onnavi_reset_ui_state: controlHostProps.onnavi_reset_ui_state,
       onnavi_get_ui_state: controlHostProps.onnavi_get_ui_state,
       onnavi_set_ui_state: controlHostProps.onnavi_set_ui_state,
+      onnavi_request_check: controlHostProps.onnavi_request_check,
+      onnavi_request_uncheck: controlHostProps.onnavi_request_uncheck,
     });
 
     const { statePropName } = uiStateController;
