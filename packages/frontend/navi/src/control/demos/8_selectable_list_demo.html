@@ -111,8 +111,15 @@
         id: "search_fruit",
         type: "string",
       });
+      const fruitSignal = stateSignal("", {
+        id: "fruit",
+        type: "string",
+      });
       const DEMO_ROUTE = route("", {
-        searchParams: { search_fruit: searchFruitSignal },
+        searchParams: {
+          search_fruit: searchFruitSignal,
+          fruit: fruitSignal,
+        },
       });
       setupRoutes([DEMO_ROUTE]);
 
@@ -199,11 +206,11 @@
 
       const SearchableDemo = () => {
         const searchText = searchFruitSignal.value;
+        const selected = fruitSignal.value;
         const [matchingFruits, getMatchInfo] = useSearchText(
           searchText,
           FRUITS,
         );
-        const [selected, setSelected] = useState("");
         const [log, pushLog] = useCallLog();
         return (
           <div id="searchable" className="demo-section">
@@ -230,11 +237,10 @@
               selectable
               id="searchable-list"
               action={(v) => {
-                setSelected(v);
+                fruitSignal.value = v;
                 pushLog("action", v ?? "(none)");
               }}
               uiAction={(v) => {
-                setSelected(v);
                 pushLog("uiAction", v ?? "(none)");
               }}
               expandX
