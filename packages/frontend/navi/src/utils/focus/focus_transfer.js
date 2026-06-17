@@ -27,7 +27,7 @@ export const markAutofocusRestoreOnClose = (containerEl) => {
 // as a result document.activeElement is not up-to-date (can be document.body for instance)
 export const getFocusedBeforeTransfer = (e) => {
   const initiator = e.detail.eventChain[0];
-  if (initiator.type === "mousedown" && initiator.defaultPrevented) {
+  if (initiator.type === "mousedown") {
     // if we we had let browser give focus, the element would be the one that would be focused
     return initiator.currentTarget;
   }
