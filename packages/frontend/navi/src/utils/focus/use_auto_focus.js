@@ -145,7 +145,15 @@ export const useAutoFocus = (
   //   }
   // }, []);
 
-  return triggerAutofocus;
+  return {
+    "autoFocus": undefined,
+    "navi-autofocus": autoFocus
+      ? autoFocus === true
+        ? ""
+        : autoFocus
+      : undefined,
+    "navi-autofocus-select": autoFocus && autoSelect ? "" : undefined,
+  };
 };
 
 let blurEvent = null;

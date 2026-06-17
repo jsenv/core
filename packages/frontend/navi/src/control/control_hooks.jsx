@@ -750,18 +750,11 @@ const useInteractiveProps = (
 
   autofocus: {
     const { autoFocus, autoFocusVisible, autoSelect } = props;
-    useAutoFocus(ref, autoFocus, {
+    const autoFocusProps = useAutoFocus(ref, autoFocus, {
       focusVisible: autoFocusVisible,
       autoSelect,
     });
-    Object.assign(controlHostProps, {
-      "navi-autofocus": autoFocus
-        ? autoFocus === true
-          ? ""
-          : autoFocus
-        : undefined,
-      "navi-autofocus-select": autoFocus && autoSelect ? "" : undefined,
-    });
+    Object.assign(controlHostProps, autoFocusProps);
   }
   form_props: {
     const {

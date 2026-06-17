@@ -581,6 +581,7 @@ const PickerContentInsidePopover = (props) => {
         focusTrap={focusTrap}
         /* make popover focusable so it can be the first focus target when opening */
         tabIndex={-1}
+        autoFocus="fallback"
       >
         {/* In "attached" mode clone the trigger visually so the popover wraps both the trigger
             and the list with a unified border/shadow. The clone is not

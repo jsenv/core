@@ -9,6 +9,7 @@ import {
 } from "@jsenv/dom";
 import { useId, useRef, useState } from "preact/hooks";
 
+import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import { Box } from "../box/box.jsx";
 import { resolveSpacingSize } from "../box/box_style_util.js";
 import { useDebugFocus, useDebugPopup } from "../navi_debug.jsx";
@@ -64,6 +65,7 @@ export const Popover = (props) => {
   const id = rest.id || defaultId;
   const debugPopup = useDebugPopup();
   const debugFocus = useDebugFocus();
+  const autoFocusProps = useAutoFocus(ref, props.autoFocus);
 
   const [opened, setOpened] = useState(false);
   const openedRef = useRef(opened);
@@ -202,6 +204,7 @@ export const Popover = (props) => {
       id={id}
       popover="manual"
       {...rest}
+      {...autoFocusProps}
       ref={ref}
       baseClassName="navi_popover"
       pseudoClasses={POPOVER_PSEUDO_CLASSES}
