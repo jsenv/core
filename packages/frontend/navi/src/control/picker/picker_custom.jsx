@@ -298,6 +298,13 @@ const PickerCustom = (props) => {
           eInChain.type === "navi_request_close" && eInChain.detail.isCancel,
       );
       const isCancel = Boolean(cancelEvent);
+
+      const mousedownEvent = findEvent(e, "mousedown");
+      if (mousedownEvent) {
+        debugPopup(e, `closed by mousedown -> disable next click`);
+        disableClickFor();
+      }
+
       expandedRef.current = false;
       setExpanded(false);
       // Reset so the next opening re-evaluates screen size
@@ -342,11 +349,6 @@ const PickerCustom = (props) => {
       e = new CustomEvent("programmatic"),
       { isCancel = false } = {},
     ) => {
-      const mousedownEvent = findEvent(e, "mousedown");
-      if (mousedownEvent) {
-        debugPopup(e, `closed by mousedown -> disable next click`);
-        disableClickFor();
-      }
       const popupEl = popupRef.current;
       return dispatchCustomEvent(popupEl, "navi_request_close", {
         event: e,
