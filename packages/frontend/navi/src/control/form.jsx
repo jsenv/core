@@ -125,7 +125,11 @@ const getFormManagedControls = (form) => {
     // Exclude inputs that are inside any control group (radio, checkbox, control_group…)
     // — the group host is the managed control for the form, not its individual child inputs.
     const controlGroupHost = element.closest("[navi-control-group]");
-    if (controlGroupHost && form.contains(controlGroupHost)) {
+    if (
+      controlGroupHost &&
+      controlGroupHost !== form &&
+      form.contains(controlGroupHost)
+    ) {
       continue;
     }
     managedControls.push(element);
