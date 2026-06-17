@@ -682,25 +682,6 @@
             <Box flex="y" spacing="m">
               <Field vertical>
                 <Label>
-                  Font size impacts icon too{" "}
-                  <code style={{ fontWeight: "normal" }}>(size prop)</code>
-                </Label>
-                <Box flex="x" spacing="m" alignY="end" flexWrap>
-                  {["xs", "m", "xl", "xxl"].map((size) => (
-                    <Picker
-                      key={size}
-                      name={`icon_size_${size}`}
-                      value="Hello world"
-                      action={() => {}}
-                      size={size}
-                    >
-                      <BasicPickerContent />
-                    </Picker>
-                  ))}
-                </Box>
-              </Field>
-              <Field vertical>
-                <Label>
                   Default icon{" "}
                   <code style={{ fontWeight: "normal" }}>(dropdown)</code>
                 </Label>
@@ -725,6 +706,41 @@
                 >
                   <BasicPickerContent />
                 </Picker>
+              </Field>
+              <Field vertical>
+                <Label>
+                  Font size impacts icon{" "}
+                  <code style={{ fontWeight: "normal" }}>(size prop)</code>
+                </Label>
+                <Box flex="y" spacing="s">
+                  <Box flex="x" spacing="m" alignY="end" flexWrap>
+                    {["xs", "m", "xl", "xxl"].map((size) => (
+                      <Picker
+                        key={`icon_size_default_${size}`}
+                        name={`icon_size_default_${size}`}
+                        value="Hello world"
+                        action={() => {}}
+                        size={size}
+                      >
+                        <BasicPickerContent />
+                      </Picker>
+                    ))}
+                  </Box>
+                  <Box flex="x" spacing="m" alignY="end" flexWrap>
+                    {["xs", "m", "xl", "xxl"].map((size) => (
+                      <Picker
+                        key={`icon_size_custom_${size}`}
+                        name={`icon_size_custom_${size}`}
+                        value="Hello world"
+                        action={() => {}}
+                        size={size}
+                        icon={<VioletSquareIcon />}
+                      >
+                        <BasicPickerContent />
+                      </Picker>
+                    ))}
+                  </Box>
+                </Box>
               </Field>
               <Field vertical>
                 <Label>
