@@ -202,13 +202,12 @@
           <ol class="toc-list">
             <li>
               <a href="#section-1">
-                1. <code>command="--navi-send"</code> — closes on click
+                1. <code>command="--navi-update"</code> — default behavior
               </a>
             </li>
             <li>
               <a href="#section-2">
-                2. <code>command="--navi-update"</code> — stays open until
-                closed
+                2. <code>command="--navi-send"</code> — closes on click
               </a>
             </li>
             <li>
@@ -240,8 +239,8 @@
         >
           <Box flex="y" spacing="l">
             <TableOfContents />
-            <SelectWithSend />
             <SelectWithUpdate />
+            <SelectWithSend />
             <SearchableSelectEmpty />
             <SearchableSelectNormal />
             <SearchableSelectFewResults />
@@ -278,72 +277,20 @@
         );
       };
 
-      // ── 1. command="--navi-send" — closes on click ────────────────────────────────
-      // Required for single-select: each click sends the value immediately and
-      // closes the popover. Without it the picker stays open and the user must
-      // close it manually, which makes no sense for a single-value selection.
-
-      const SelectWithSend = () => {
-        const selected = sendFruitSignal.value;
-        const logSignal = useSignal([]);
-
-        const pushLog = (type, value) => {
-          logSignal.value = [...logSignal.value, { type, value }];
-        };
-
-        return (
-          <div id="section-1" class="demo-section">
-            <h2>
-              1. <code>command="--navi-send"</code> — closes on click
-            </h2>
-            <p>
-              Each click immediately commits the value and closes the picker.
-              This is the correct behavior for single-select: once a value is
-              chosen, there is nothing left to do in the popover.
-            </p>
-            <Field ownLabel vertical>
-              <Label>Fruit</Label>
-              <Picker
-                name="select_send"
-                placeholder="Select a fruit…"
-                value={selected}
-                uiAction={(v) => {
-                  pushLog("uiAction", v);
-                }}
-                action={(v) => {
-                  pushLog("action", v);
-                  sendFruitSignal.value = v;
-                }}
-                minWidth="200"
-              >
-                <List selectable command="--navi-send">
-                  {FRUIT_OPTIONS.map((opt, i) => (
-                    <List.Item
-                      selectable
-                      key={opt}
-                      id={`send_${opt}`}
-                      index={i}
-                      value={opt}
-                      selected={selected === opt}
-                      padding="s"
-                      spacing="s"
-                    >
-                      {opt}
-                    </List.Item>
-                  ))}
-                </List>
-              </Picker>
-            </Field>
-            <CallLog entries={logSignal.value} />
-          </div>
-        );
-      };
-
-      // ── 2. command="--navi-update" — stays open until closed ──────────────────────
-      // Clicking an item updates the picker's pending value but keeps the
-      // popover open. The value is committed only when the popover closes
-      // (e.g. clicking outside or pressing Escape). Rarely useful for
-      // single-select, but shown here for comparison.
+      // ── 1. command="--navi-update" — default behavior ───────────────────────────
+      // This is the default command for single-select pickers. The selected item is
+      // highlighted immediately but the popover stays open, giving the user a chance
+      // to review the choice or press Escape to cancel.
+      //
+      // Why it is the default:
+      // - Consistent with multi-select: in a checkbox list the popover must stay open
+      //   to allow selecting several items. Using the same behavior for single-select
+      //   keeps the mental model uniform.
+      // - Cancellable: pressing Escape restores the value that was active when the
+      //   picker opened, analogous to releasing the mouse outside a button to abort
+      //   a click.
+      // - Side-effect friendly: when selecting an option triggers a visible preview
+      //   (e.g. a color swatch, a map marker), the user can browse without committing.
 
       const SelectWithUpdate = () => {
         const selected = updateFruitSignal.value;
@@ -354,18 +301,17 @@
         };
 
         return (
-          <div id="section-2" class="demo-section">
+          <div id="section-1" class="demo-section">
             <h2>
-              2. <code>command="--navi-update"</code> — stays open until closed
+              1. <code>command="--navi-update"</code> — default behavior
             </h2>
             <p>
               Clicking an item highlights it but keeps the popover open. The
               value is committed only when the popover closes (click outside,
-              Enter, …). Pressing Escape cancels and restores the previous value
-              — analogous to releasing the mouse outside a button to cancel a
-              click. This is useful when selecting an option has visible side
-              effects (e.g. a color preview): the user can browse options and
-              decide to confirm or bail out before committing.
+              Enter, …). Pressing Escape cancels and restores the previous
+              value. This is the default because it works for both single- and
+              multi-select, allows cancellation, and lets side effects (e.g. a
+              preview) be browsed before committing.
             </p>
             <Field vertical>
               <Label>Fruit</Label>
@@ -388,6 +334,67 @@
                       selectable
                       key={opt}
                       id={`update_${opt}`}
+                      index={i}
+                      value={opt}
+                      selected={selected === opt}
+                      padding="s"
+                      spacing="s"
+                    >
+                      {opt}
+                    </List.Item>
+                  ))}
+                </List>
+              </Picker>
+            </Field>
+            <CallLog entries={logSignal.value} />
+          </div>
+        );
+      };
+
+      // ── 2. command="--navi-send" — closes on click ────────────────────────────────
+      // Each click immediately commits the value and closes the picker.
+      // Use this when the single-select UX is a priority and you don't need
+      // cancellation or side-effect previews.
+
+      const SelectWithSend = () => {
+        const selected = sendFruitSignal.value;
+        const logSignal = useSignal([]);
+
+        const pushLog = (type, value) => {
+          logSignal.value = [...logSignal.value, { type, value }];
+        };
+
+        return (
+          <div id="section-2" class="demo-section">
+            <h2>
+              2. <code>command="--navi-send"</code> — closes on click
+            </h2>
+            <p>
+              Each click immediately commits the value and closes the picker.
+              Useful for simple single-select where the choice is final and no
+              preview or cancellation is needed.
+            </p>
+            <Field ownLabel vertical>
+              <Label>Fruit</Label>
+              <Picker
+                name="select_send"
+                placeholder="Select a fruit…"
+                value={selected}
+                uiAction={(v) => {
+                  pushLog("uiAction", v);
+                }}
+                action={(v) => {
+                  pushLog("action", v);
+                  sendFruitSignal.value = v;
+                }}
+                minWidth="200"
+              >
+                <List selectable command="--navi-send">
+                  {FRUIT_OPTIONS.map((opt, i) => (
+                    <List.Item
+                      selectable
+                      key={opt}
+                      id={`send_${opt}`}
                       index={i}
                       value={opt}
                       selected={selected === opt}
