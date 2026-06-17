@@ -20,6 +20,7 @@ import {
 import {
   useCallback,
   useContext,
+  useId,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -168,8 +169,12 @@ export const useControlProps = (
     readOnlySupported,
   },
 ) => {
+  const idDefault = useId(); // needed by ui state controller and slot labels
+  props.id = props.id || idDefault;
+
   const debugInteraction = useDebugInteraction();
   const controlName = useContext(ControlNameContext);
+  const controlToInterface = useContext(ControlToInterfaceContext);
   const state = props[statePropName];
   if (isSignal(state)) {
     props = {
@@ -179,6 +184,13 @@ export const useControlProps = (
   }
   if (!props.name && controlName) {
     props.name = controlName;
+  }
+  if (!props.id) {
+    if (controlToInterface?.id) {
+      props.id = controlToInterface.id;
+    } else {
+      props.id = idDefault;
+    }
   }
   const uiStateController = useUIStateController(props, controlType, {
     statePropName,
@@ -771,7 +783,6 @@ const useInteractiveProps = (
       readOnly,
       loading,
     } = props;
-    const idResolved = id || controlToInterfaceContext?.id;
     const disabledResolved = disabled || controlDisabled;
     const requiredResolved = required || controlRequired;
     const loadingResolved =
@@ -784,7 +795,7 @@ const useInteractiveProps = (
       loadingResolved ||
       uiStateController.readOnly;
     Object.assign(controlHostProps, {
-      "id": idResolved,
+      id,
       "navi-control-proxy-for": naviProxyFor,
       name,
       type,

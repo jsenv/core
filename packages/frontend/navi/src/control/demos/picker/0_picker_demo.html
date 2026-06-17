@@ -107,16 +107,16 @@
               </ol>
             </li>
             <li>
-              <a href="#section-2">2. Text alignment — center &amp; right</a>
+              <a href="#section-2">2. Picker icon</a>
             </li>
             <li>
-              <a href="#section-3">3. Default value &amp; placeholder</a>
+              <a href="#section-3">3. Text alignment — center &amp; right</a>
             </li>
             <li>
-              <a href="#section-4">4. Custom UI via prop ui</a>
+              <a href="#section-4">4. Default value &amp; placeholder</a>
             </li>
             <li>
-              <a href="#section-5">5. Picker icon</a>
+              <a href="#section-5">5. Custom UI via prop ui</a>
             </li>
             <li>
               <a href="#section-6">6. Popover vs Dialog mode</a>
@@ -136,10 +136,10 @@
           <Box flex="y" spacing="l">
             <TableOfContents />
             <DimensionsDemo />
+            <PickerIconDemo />
             <TextAlignDemo />
             <DefaultValueDemo />
             <CustomUIDemo />
-            <PickerIconDemo />
             <PopoverDialogDemo />
           </Box>
         </NaviDebug>
@@ -470,8 +470,8 @@
 
       const TextAlignDemo = () => {
         return (
-          <div id="section-2" class="demo-section">
-            <h2>2. Text alignment — center &amp; right</h2>
+          <div id="section-3" class="demo-section">
+            <h2>3. Text alignment — center &amp; right</h2>
             <p>
               The <code>textAlign</code> prop controls how text is positioned
               inside the picker trigger button.
@@ -538,8 +538,8 @@
         const withValueSignal = { value: "Grape" };
 
         return (
-          <div id="section-3" class="demo-section">
-            <h2>3. Default value &amp; placeholder</h2>
+          <div id="section-4" class="demo-section">
+            <h2>4. Default value &amp; placeholder</h2>
             <p>
               When no value is selected, the picker shows a faded placeholder
               text. The color appears muted to indicate that it's not an actual
@@ -590,8 +590,8 @@
         const value = customValueSignal.value;
 
         return (
-          <div id="section-4" class="demo-section">
-            <h2>4. Custom UI via prop ui</h2>
+          <div id="section-5" class="demo-section">
+            <h2>5. Custom UI via prop ui</h2>
             <p>
               Instead of using the default trigger button UI, you can provide
               your own custom UI through the <code>ui</code> prop. This lets you
@@ -671,13 +671,34 @@
 
       const PickerIconDemo = () => {
         return (
-          <div id="section-5" class="demo-section">
-            <h2>5. Picker icon</h2>
+          <div id="section-2" class="demo-section">
+            <h2>2. Picker icon</h2>
             <p>
               The picker shows a dropdown icon by default. You can replace it
-              with your own icon through the <code>icon</code> prop.
+              with your own icon through the <code>icon</code> prop. The icon
+              size follows the control size, stays centered on single-line
+              pickers, and moves to the top when the value spans multiple lines.
             </p>
             <Box flex="y" spacing="m">
+              <Field vertical>
+                <Label>
+                  Font size impacts icon too{" "}
+                  <code style={{ fontWeight: "normal" }}>(size prop)</code>
+                </Label>
+                <Box flex="x" spacing="m" alignY="end" flexWrap>
+                  {["xs", "m", "xl", "xxl"].map((size) => (
+                    <Picker
+                      key={size}
+                      name={`icon_size_${size}`}
+                      value="Hello world"
+                      action={() => {}}
+                      size={size}
+                    >
+                      <BasicPickerContent />
+                    </Picker>
+                  ))}
+                </Box>
+              </Field>
               <Field vertical>
                 <Label>
                   Default icon{" "}
@@ -687,7 +708,6 @@
                   name="icon_default"
                   value="Hello world"
                   action={() => {}}
-                  width="220px"
                 >
                   <BasicPickerContent />
                 </Picker>
@@ -701,7 +721,6 @@
                   name="icon_custom"
                   value="Hello world"
                   action={() => {}}
-                  width="220px"
                   icon={<VioletSquareIcon />}
                 >
                   <BasicPickerContent />
@@ -718,7 +737,6 @@
                   name="icon_tall_ui"
                   value=""
                   action={() => {}}
-                  width="260px"
                   ui={<TallPickerUI label="Custom UI with bigger height" />}
                   icon={<VioletSquareIcon />}
                 >
