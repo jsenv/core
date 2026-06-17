@@ -316,18 +316,6 @@ export const useControlProps = (
       return true;
     };
 
-    // a custom concept being combination of "input", "change" and may other events
-    // this even if trigerred when value changes and can be controlled by actionDebounce and actionAfterChange
-    const preventFormSubmissionForClickInsidePicker = (e) => {
-      const el = e.currentTarget;
-      if (el.closest("button")) {
-        // prevent button form submission by click
-        // (When an input is inside a <button> like for a picker)
-        // any click in the picker could trigger form submission as browser see this as click on button inside form
-        e.preventDefault();
-      }
-    };
-
     const getDefaultInteractionDefinitions = () => {
       const keyDownDefault = () => {
         return {
@@ -538,7 +526,6 @@ export const useControlProps = (
       props.onClick?.(e);
       applyInteraction("click", e);
       transferFocusToTarget(e);
-      preventFormSubmissionForClickInsidePicker(e);
     };
     const onKeyDown = (e) => {
       props.onKeyDown?.(e);
@@ -548,6 +535,8 @@ export const useControlProps = (
       props.onInput?.(e);
       applyInteraction("input", e, { ifValueModified: true });
     };
+    // a custom concept being combination of "input", "change" and may other events
+    // this even if trigerred when value changes and can be controlled by actionDebounce and actionAfterChange
     const hasNaviChangeInteractionDefinition = Boolean(
       interactionDefinitions?.naviChange ||
       defaultInteractionDefinitions?.naviChange,
