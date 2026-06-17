@@ -64,6 +64,14 @@
                   </ol>
                 </li>
                 <li>
+                  <a href="#checkbox">Checkbox</a>
+                  <ol>
+                    <li>
+                      <a href="#checkbox-basic">Basique</a>
+                    </li>
+                  </ol>
+                </li>
+                <li>
                   <a href="#radio-group">Radio group (List selectable)</a>
                   <ol>
                     <li>
@@ -132,6 +140,15 @@
               <section id="group-mixed">
                 <h3>Texte + liste sélectable</h3>
                 <ExternalMixedDemo />
+              </section>
+            </section>
+
+            <section id="checkbox">
+              <h2>Checkbox</h2>
+
+              <section id="checkbox-basic">
+                <h3>Basique</h3>
+                <CheckboxBasicDemo />
               </section>
             </section>
 
@@ -316,6 +333,43 @@
         );
       };
 
+      const CheckboxBasicDemo = () => {
+        const [entries, pushEntry, clearEntries] = useCallLog();
+        const checkboxId = "checkbox-basic-input";
+
+        return (
+          <Box flex="y" spacing="m" alignX="start">
+            <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+              Un <code>Input type="checkbox"</code> avec des boutons{" "}
+              <code>--navi-check</code> et <code>--navi-uncheck</code> externes.
+            </p>
+            <fieldset>
+              <legend>agrément</legend>
+              <Input
+                id={checkboxId}
+                type="checkbox"
+                name="agreed"
+                uiAction={(v) => {
+                  pushEntry("uiAction", v);
+                }}
+                action={(v) => {
+                  pushEntry("action", v);
+                }}
+              />
+            </fieldset>
+            <Box flex="x" spacing="s">
+              <Button command="--navi-check" commandfor={checkboxId}>
+                Check
+              </Button>
+              <Button command="--navi-uncheck" commandfor={checkboxId}>
+                Uncheck
+              </Button>
+            </Box>
+            <CallLog entries={entries} onClear={clearEntries} />
+          </Box>
+        );
+      };
+
       const COLORS = ["Red", "Green", "Blue", "Yellow", "Purple"];
 
       const ExternalMixedDemo = () => {
@@ -478,6 +532,7 @@
         const [entries, pushEntry, clearEntries] = useCallLog();
         const listId = "external-control-single-list";
         const FRUITS = ["Apple", "Banana", "Cherry", "Date", "Elderberry"];
+        const FRUIT_VALUES = [1, 2, 3, 4, 5];
 
         return (
           <Box flex="y" spacing="m" alignX="start">
@@ -486,6 +541,11 @@
               une valeur scalaire sur une <code>List selectable</code> (radio
               group). La sélection doit se mettre à jour et le{" "}
               <code>uiAction</code> de la liste doit être appelé.
+            </p>
+            <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+              Les items ont des <code>value</code> numériques (1–5) — vérifier
+              dans les logs que <code>uiAction</code>/<code>action</code> reçoit
+              bien un nombre et non une chaîne.
             </p>
             <fieldset>
               <legend>external-control-single-list</legend>
@@ -506,22 +566,22 @@
                     key={fruit}
                     id={`external-single-${fruit.toLowerCase()}`}
                     index={i}
-                    value={fruit}
+                    value={FRUIT_VALUES[i]}
                     flex
                     spacing="s"
                   >
                     <SelectableInput />
-                    {fruit}
+                    {fruit} (value={FRUIT_VALUES[i]})
                   </List.Item>
                 ))}
               </List>
               <Box flex="x" spacing="s" marginTop="s">
-                {FRUITS.map((fruit) => (
+                {FRUITS.map((fruit, i) => (
                   <Button
                     key={fruit}
                     command="--navi-update"
                     commandfor={listId}
-                    value={fruit}
+                    value={FRUIT_VALUES[i]}
                   >
                     {fruit}
                   </Button>
@@ -541,6 +601,7 @@
         const [entries, pushEntry, clearEntries] = useCallLog();
         const listId = "external-control-multiple-list";
         const FRUITS = ["Apple", "Banana", "Cherry", "Date", "Elderberry"];
+        const FRUIT_VALUES = [1, 2, 3, 4, 5];
 
         return (
           <Box flex="y" spacing="m" alignX="start">
@@ -549,6 +610,11 @@
               une valeur tableau sur une <code>List selectable multiple</code>{" "}
               (checkbox group). La sélection doit se mettre à jour et le{" "}
               <code>uiAction</code> de la liste doit être appelé.
+            </p>
+            <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+              Les items ont des <code>value</code> numériques (1–5) — vérifier
+              dans les logs que <code>uiAction</code>/<code>action</code> reçoit
+              bien un tableau de nombres.
             </p>
             <fieldset>
               <legend>external-control-multiple-list</legend>
@@ -570,12 +636,12 @@
                     key={fruit}
                     id={`external-multiple-${fruit.toLowerCase()}`}
                     index={i}
-                    value={fruit}
+                    value={FRUIT_VALUES[i]}
                     flex
                     spacing="s"
                   >
                     <SelectableInput />
-                    {fruit}
+                    {fruit} (value={FRUIT_VALUES[i]})
                   </List.Item>
                 ))}
               </List>
@@ -583,14 +649,14 @@
                 <Button
                   command="--navi-update"
                   commandfor={listId}
-                  value={["Apple", "Cherry"]}
+                  value={[1, 3]}
                 >
                   Apple + Cherry
                 </Button>
                 <Button
                   command="--navi-update"
                   commandfor={listId}
-                  value={["Banana", "Date", "Elderberry"]}
+                  value={[2, 4, 5]}
                 >
                   Banana + Date + Elderberry
                 </Button>
