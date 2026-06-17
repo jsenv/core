@@ -256,7 +256,9 @@ const PickerCustom = (props) => {
       activeElementAtOpenRef.current = e.detail.focusedBeforeOpen;
       expandedRef.current = true;
       setExpanded(true);
-      valueAtOpenRef.current = getPickerInputUIState(ref.current);
+      const valueAtOpen = getPickerInputUIState(ref.current);
+      valueAtOpenRef.current = valueAtOpen;
+      debugPopup(e, `picker opened, store value at open (${valueAtOpen})`);
     };
     const restoreFocus = (e) => {
       const activeElementAtOpen = activeElementAtOpenRef.current;
@@ -498,7 +500,7 @@ const PickerCustom = (props) => {
           // the picker is inside a <form> and the click lands on a non-button element
           debugPopup(e, `popover click stopPropagation + preventDefault`);
           e.stopPropagation();
-          e.preventDefault();
+          // e.preventDefault();
         },
         onKeyDown: (e) => {
           // some keys pressed inside popover should not reach the picker button

@@ -382,8 +382,8 @@ export const useUIStateController = (
           uiStateController.props.type === "radio" &&
           shouldNotifyParent(e)
         ) {
-          onUIAction();
           notifyParentAboutChildInteraction(e, { stateChanged: false });
+          onUIAction();
         }
         return false;
       }
