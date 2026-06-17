@@ -395,7 +395,10 @@ const InputCheckboxFieldInterface = (props) => {
         color="var(--loader-color)"
       />
       {visualVnode}
-      <RealInputCheckbox {...checkboxHostProps} switch={switchProp} />
+      <RealInputCheckbox
+        {...checkboxHostProps}
+        switch={switchProp ? "" : undefined}
+      />
     </Box>
   );
 };
