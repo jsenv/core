@@ -73,36 +73,15 @@
         Field,
         Label,
         Picker,
-        Icon,
-        List,
         NaviDebug,
-        Text,
         route,
         setupRoutes,
-        stateSignal,
       } from "@jsenv/navi";
-
-      const FRUIT_OPTIONS = [
-        "Apple",
-        "Banana",
-        "Cherry",
-        "Date",
-        "Elderberry",
-        "Fig",
-        "Grape",
-      ];
 
       // ── State signals (persisted in URL search params) ────────────────────
 
-      const selectedFruitSignal = stateSignal("Grape", {
-        id: "selected_fruit",
-        type: "string",
-      });
-
       const DEMO_ROUTE = route("", {
-        searchParams: {
-          selected_fruit: selectedFruitSignal,
-        },
+        searchParams: {},
       });
       setupRoutes([DEMO_ROUTE]);
 
@@ -187,22 +166,23 @@
       const VERY_LONG_TEXT =
         "This value is intentionally so long that it spans more than three lines inside the constrained picker width, so the line-clamp kicks in and an ellipsis appears at the end";
 
-      const DimensionPickerItems = ({ id, values }) => (
-        <List selectable command="--navi-send">
-          {values.map((v, i) => (
-            <List.Item
-              selectable
-              key={v}
-              id={`${id}_${i}`}
-              index={i}
-              value={v}
-              padding="s"
-              spacing="s"
-            >
-              {v}
-            </List.Item>
-          ))}
-        </List>
+      const BasicPickerContent = () => (
+        <div style={{ padding: "16px" }}>
+          <p style={{ margin: "0 0 12px 0", fontSize: "14px" }}>
+            Hello world! This is the picker content.
+          </p>
+          <p
+            style={{
+              margin: "0",
+              fontSize: "12px",
+              color: "#666",
+              lineHeight: "1.5",
+            }}
+          >
+            You can put any content here — text, buttons, forms, images,
+            whatever you need.
+          </p>
+        </div>
       );
 
       const DimensionsDemo = () => {
@@ -226,28 +206,11 @@
                   <Picker
                     name={`dim_font_${size}`}
                     placeholder="Fruit…"
-                    value={selectedFruitSignal.value}
-                    action={(v) => {
-                      selectedFruitSignal.value = v;
-                    }}
+                    value=""
+                    action={() => {}}
                     size={size}
                   >
-                    <List selectable command="--navi-send">
-                      {FRUIT_OPTIONS.map((opt, i) => (
-                        <List.Item
-                          selectable
-                          key={opt}
-                          id={`dim_font_${size}_${opt}`}
-                          index={i}
-                          value={opt}
-                          selected={selectedFruitSignal.value === opt}
-                          padding="s"
-                          spacing="s"
-                        >
-                          {opt}
-                        </List.Item>
-                      ))}
-                    </List>
+                    <BasicPickerContent />
                   </Picker>
                 </Field>
               ))}
@@ -279,10 +242,7 @@
                     value={SHORT_VALUE}
                     action={() => {}}
                   >
-                    <DimensionPickerItems
-                      id="dim_width_short"
-                      values={[SHORT_VALUE, MEDIUM_VALUE]}
-                    />
+                    <BasicPickerContent />
                   </Picker>
                   <AdjacentElement />
                 </Box>
@@ -298,10 +258,7 @@
                     value={MEDIUM_VALUE}
                     action={() => {}}
                   >
-                    <DimensionPickerItems
-                      id="dim_width_medium"
-                      values={[SHORT_VALUE, MEDIUM_VALUE]}
-                    />
+                    <BasicPickerContent />
                   </Picker>
                   <AdjacentElement />
                 </Box>
@@ -332,10 +289,7 @@
                     action={() => {}}
                     minWidth="140"
                   >
-                    <DimensionPickerItems
-                      id="dim_minwidth_short"
-                      values={[SHORT_VALUE, MEDIUM_VALUE]}
-                    />
+                    <BasicPickerContent />
                   </Picker>
                   <AdjacentElement />
                 </Box>
@@ -352,10 +306,7 @@
                     action={() => {}}
                     minWidth="140"
                   >
-                    <DimensionPickerItems
-                      id="dim_minwidth_medium"
-                      values={[SHORT_VALUE, MEDIUM_VALUE]}
-                    />
+                    <BasicPickerContent />
                   </Picker>
                   <AdjacentElement />
                 </Box>
@@ -379,10 +330,7 @@
                     action={() => {}}
                     expandX
                   >
-                    <DimensionPickerItems
-                      id="dim_expandx_short"
-                      values={[SHORT_VALUE, MEDIUM_VALUE]}
-                    />
+                    <BasicPickerContent />
                   </Picker>
                   <AdjacentElement />
                 </Box>
@@ -399,10 +347,7 @@
                     action={() => {}}
                     expandX
                   >
-                    <DimensionPickerItems
-                      id="dim_expandx_medium"
-                      values={[SHORT_VALUE, MEDIUM_VALUE]}
-                    />
+                    <BasicPickerContent />
                   </Picker>
                   <AdjacentElement />
                 </Box>
@@ -426,10 +371,7 @@
                   action={() => {}}
                   maxWidth="200"
                 >
-                  <DimensionPickerItems
-                    id="dim_sentence"
-                    values={[SHORT_VALUE, LONG_SENTENCE]}
-                  />
+                  <BasicPickerContent />
                 </Picker>
               </Field>
               <Field vertical>
@@ -440,10 +382,7 @@
                   action={() => {}}
                   maxWidth="200"
                 >
-                  <DimensionPickerItems
-                    id="dim_word"
-                    values={[SHORT_VALUE, LONG_WORD]}
-                  />
+                  <BasicPickerContent />
                 </Picker>
               </Field>
             </Box>
@@ -469,10 +408,7 @@
                   maxWidth="200"
                   maxLines={3}
                 >
-                  <DimensionPickerItems
-                    id="dim_sentence_maxrows"
-                    values={[SHORT_VALUE, LONG_SENTENCE]}
-                  />
+                  <BasicPickerContent />
                 </Picker>
               </Field>
               <Field vertical>
@@ -487,10 +423,7 @@
                   maxWidth="200"
                   maxLines={3}
                 >
-                  <DimensionPickerItems
-                    id="dim_word_maxrows"
-                    values={[SHORT_VALUE, LONG_WORD]}
-                  />
+                  <BasicPickerContent />
                 </Picker>
               </Field>
               <Field vertical>
@@ -505,10 +438,7 @@
                   maxWidth="200"
                   maxLines={3}
                 >
-                  <DimensionPickerItems
-                    id="dim_clamp_maxrows"
-                    values={[SHORT_VALUE, VERY_LONG_TEXT]}
-                  />
+                  <BasicPickerContent />
                 </Picker>
               </Field>
             </Box>
@@ -537,10 +467,7 @@
                   action={() => {}}
                   width="200px"
                 >
-                  <DimensionPickerItems
-                    id="align_left"
-                    values={[SHORT_VALUE, MEDIUM_VALUE]}
-                  />
+                  <BasicPickerContent />
                 </Picker>
               </Field>
               <Field vertical>
@@ -558,10 +485,7 @@
                   width="200px"
                   textAlign="center"
                 >
-                  <DimensionPickerItems
-                    id="align_center"
-                    values={[SHORT_VALUE, MEDIUM_VALUE]}
-                  />
+                  <BasicPickerContent />
                 </Picker>
               </Field>
               <Field vertical>
@@ -579,10 +503,7 @@
                   width="200px"
                   textAlign="right"
                 >
-                  <DimensionPickerItems
-                    id="align_right"
-                    values={[SHORT_VALUE, MEDIUM_VALUE]}
-                  />
+                  <BasicPickerContent />
                 </Picker>
               </Field>
             </Box>
@@ -592,6 +513,7 @@
 
       const DefaultValueDemo = () => {
         const noValueSignal = { value: "" };
+        const withValueSignal = { value: "Grape" };
 
         return (
           <div id="section-3" class="demo-section">
@@ -617,54 +539,23 @@
                     noValueSignal.value = v;
                   }}
                 >
-                  <List selectable command="--navi-send">
-                    {FRUIT_OPTIONS.map((opt, i) => (
-                      <List.Item
-                        selectable
-                        key={opt}
-                        id={`no_value_${opt}`}
-                        index={i}
-                        value={opt}
-                        padding="s"
-                        spacing="s"
-                      >
-                        {opt}
-                      </List.Item>
-                    ))}
-                  </List>
+                  <BasicPickerContent />
                 </Picker>
               </Field>
               <Field vertical>
                 <Label>
                   With value selected{" "}
-                  <code style={{ fontWeight: "normal" }}>
-                    (value="Grape")
-                  </code>
+                  <code style={{ fontWeight: "normal" }}>(value="Grape")</code>
                 </Label>
                 <Picker
                   name="with_value"
                   placeholder="Select a fruit…"
-                  value={selectedFruitSignal.value}
+                  value={withValueSignal.value}
                   action={(v) => {
-                    selectedFruitSignal.value = v;
+                    withValueSignal.value = v;
                   }}
                 >
-                  <List selectable command="--navi-send">
-                    {FRUIT_OPTIONS.map((opt, i) => (
-                      <List.Item
-                        selectable
-                        key={opt}
-                        id={`with_value_${opt}`}
-                        index={i}
-                        value={opt}
-                        selected={selectedFruitSignal.value === opt}
-                        padding="s"
-                        spacing="s"
-                      >
-                        {opt}
-                      </List.Item>
-                    ))}
-                  </List>
+                  <BasicPickerContent />
                 </Picker>
               </Field>
             </Box>
@@ -718,22 +609,7 @@
                     </button>
                   )}
                 >
-                  <List selectable command="--navi-send">
-                    {FRUIT_OPTIONS.map((opt, i) => (
-                      <List.Item
-                        selectable
-                        key={opt}
-                        id={`custom_${opt}`}
-                        index={i}
-                        value={opt}
-                        selected={customValueSignal.value === opt}
-                        padding="s"
-                        spacing="s"
-                      >
-                        {opt}
-                      </List.Item>
-                    ))}
-                  </List>
+                  <BasicPickerContent />
                 </Picker>
               </Field>
               <Field vertical>
@@ -765,22 +641,7 @@
                     </div>
                   )}
                 >
-                  <List selectable command="--navi-send">
-                    {FRUIT_OPTIONS.map((opt, i) => (
-                      <List.Item
-                        selectable
-                        key={opt}
-                        id={`pill_${opt}`}
-                        index={i}
-                        value={opt}
-                        selected={customValueSignal.value === opt}
-                        padding="s"
-                        spacing="s"
-                      >
-                        {opt}
-                      </List.Item>
-                    ))}
-                  </List>
+                  <BasicPickerContent />
                 </Picker>
               </Field>
             </Box>
@@ -817,22 +678,7 @@
                   }}
                   mode="popover"
                 >
-                  <List selectable command="--navi-send">
-                    {FRUIT_OPTIONS.map((opt, i) => (
-                      <List.Item
-                        selectable
-                        key={opt}
-                        id={`popover_${opt}`}
-                        index={i}
-                        value={opt}
-                        selected={modeSignal.popover === opt}
-                        padding="s"
-                        spacing="s"
-                      >
-                        {opt}
-                      </List.Item>
-                    ))}
-                  </List>
+                  <BasicPickerContent />
                 </Picker>
                 <p
                   style={{
@@ -849,9 +695,7 @@
               <Field vertical>
                 <Label>
                   Dialog mode{" "}
-                  <code style={{ fontWeight: "normal" }}>
-                    (mode="dialog")
-                  </code>
+                  <code style={{ fontWeight: "normal" }}>(mode="dialog")</code>
                 </Label>
                 <Picker
                   name="mode_dialog"
@@ -862,22 +706,7 @@
                   }}
                   mode="dialog"
                 >
-                  <List selectable command="--navi-send">
-                    {FRUIT_OPTIONS.map((opt, i) => (
-                      <List.Item
-                        selectable
-                        key={opt}
-                        id={`dialog_${opt}`}
-                        index={i}
-                        value={opt}
-                        selected={modeSignal.dialog === opt}
-                        padding="s"
-                        spacing="s"
-                      >
-                        {opt}
-                      </List.Item>
-                    ))}
-                  </List>
+                  <BasicPickerContent />
                 </Picker>
                 <p
                   style={{
