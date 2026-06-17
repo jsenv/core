@@ -37,7 +37,7 @@ const css = /* css */ `
         border-radius: var(--picker-border-radius);
         outline-width: var(--picker-outline-width);
         outline-color: var(--picker-outline-color);
-        outline-offset: var(--picker-outline-offset);
+        outline-offset: 0px;
         box-shadow:
           0 4px 8px rgba(0, 0, 0, 0.08),
           0 12px 40px rgba(0, 0, 0, 0.22);
@@ -95,6 +95,10 @@ const css = /* css */ `
           overflow: auto;
           overscroll-behavior: none;
         }
+
+        &[data-focus-visible] {
+          outline-style: solid;
+        }
       }
 
       &[aria-expanded="true"] {
@@ -123,7 +127,7 @@ const css = /* css */ `
         border-radius: var(--picker-border-radius);
         outline-width: var(--picker-outline-width);
         outline-color: var(--picker-outline-color);
-        outline-offset: var(--picker-outline-offset);
+        outline-offset: 0;
         box-shadow:
           0 4px 8px rgba(0, 0, 0, 0.08),
           0 12px 40px rgba(0, 0, 0, 0.22);
@@ -133,6 +137,10 @@ const css = /* css */ `
         &[open] {
           display: flex;
           flex-direction: column;
+        }
+
+        &[data-focus-visible] {
+          outline-style: solid;
         }
 
         &::backdrop {
@@ -571,6 +579,8 @@ const PickerContentInsidePopover = (props) => {
         scrollTrap={scrollTrap}
         pointerTrap={pointerTrap}
         focusTrap={focusTrap}
+        /* make popover focusable so it can be the first focus target when opening */
+        tabIndex={-1}
       >
         {/* In "attached" mode clone the trigger visually so the popover wraps both the trigger
             and the list with a unified border/shadow. The clone is not

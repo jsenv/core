@@ -204,7 +204,7 @@ export const Popover = (props) => {
       {...rest}
       ref={ref}
       baseClassName="navi_popover"
-      pseudoClasses={PopoverPseudoClasses}
+      pseudoClasses={POPOVER_PSEUDO_CLASSES}
       onnavi_request_open={(e) => {
         const { anchor } = e.detail;
         onRequestOpen(e, { anchor });
@@ -269,12 +269,10 @@ export const Popover = (props) => {
   );
 };
 
-const PopoverPseudoClasses = [
+const POPOVER_PSEUDO_CLASSES = [
   ":hover",
   ":active",
   ":focus",
   ":focus-visible",
   ":focus-within",
-  ":read-only",
-  ":disabled",
 ];

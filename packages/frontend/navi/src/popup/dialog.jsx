@@ -138,6 +138,7 @@ export const Dialog = (props) => {
       as="dialog"
       ref={ref}
       baseClassName="navi_dialog"
+      pseudoClasses={DIALOG_PSEUDO_CLASSES}
       onMouseDown={(e) => {
         rest.onMouseDown?.(e);
         // The <dialog> element covers the full viewport; clicking the backdrop
@@ -164,3 +165,11 @@ export const Dialog = (props) => {
     </Box>
   );
 };
+
+const DIALOG_PSEUDO_CLASSES = [
+  ":hover",
+  ":active",
+  ":focus",
+  ":focus-visible",
+  ":focus-within",
+];
