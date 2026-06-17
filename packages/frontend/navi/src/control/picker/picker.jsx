@@ -148,7 +148,6 @@ const css = /* css */ `
     font-size: var(--picker-font-size);
     font-family: var(--picker-font-family);
     text-align: inherit;
-    text-overflow: ellipsis;
     background-color: var(--x-picker-background-color);
     border-width: var(--picker-border-width);
     border-style: solid;
@@ -161,7 +160,6 @@ const css = /* css */ `
     cursor: var(--x-picker-cursor, pointer);
     pointer-events: auto;
     user-select: none;
-    overflow: hidden;
     -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
 
     .navi_picker_value {
@@ -371,7 +369,7 @@ const PickerButton = (props) => {
       <LoadingOutline
         loading={loading}
         color="var(--picker-loader-color)"
-        inset={-1}
+        inset={-2}
       />
       <PickerInput
         {...inputProps}
