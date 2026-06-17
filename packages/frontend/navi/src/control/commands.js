@@ -6,6 +6,7 @@ import {
   getParentControl,
   isControlRoot,
 } from "./control_dom.js";
+import { readControlValue } from "./control_value.js";
 import {
   dispatchRequestClearUIState,
   dispatchRequestResetUIState,
@@ -121,6 +122,13 @@ const resolveCommandValue = (source, event) => {
   }
   if (source.hasAttribute("command-value")) {
     return source.getAttribute("command-value");
+  }
+  if (source.type === "radio" || source.type === "checkbox") {
+    // Use readControlValue so that radio/checkbox sources return their `value`
+    // attribute (e.g. "Cherry") rather than the boolean checked state (true).
+    // getUIStateFromElement would return true for a checked radio, which is
+    // wrong when the command needs to propagate the selected item's identity.
+    return readControlValue(source);
   }
   return getUIStateFromElement(source);
 };
