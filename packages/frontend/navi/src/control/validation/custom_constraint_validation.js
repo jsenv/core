@@ -343,7 +343,7 @@ const checkConstraints = ({
   fromRequestAction,
 } = {}) => {
   let elementToValidate = event.currentTarget;
-  const controlHost = findControlHost(requester);
+  const controlHost = findControlHost(elementToValidate);
   if (controlHost) {
     elementToValidate = controlHost;
   }
