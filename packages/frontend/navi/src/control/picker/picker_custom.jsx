@@ -482,7 +482,10 @@ const PickerCustom = (props) => {
             return;
           }
           // mousedown inside popover should not bubble to the select (would re-open it if that mousedown closes it)
-          debugPopup(e, `popover mouseDown stopPropagation`);
+          debugPopup(
+            e,
+            `prevent "mousedown" bubbling to picker e.stopPropagation()`,
+          );
           e.stopPropagation();
         },
         onClick: (e) => {
@@ -490,21 +493,27 @@ const PickerCustom = (props) => {
             return;
           }
           // click inside popover should not bubble to the picker (would re-open it if that click closes it)
-          // preventDefault also prevents a form submit that would otherwise be triggered when
-          // the picker is inside a <form> and the click lands on a non-button element
-          debugPopup(e, `popover click stopPropagation`);
+          debugPopup(
+            e,
+            `prevent "click" bubbling to picker e.stopPropagation()`,
+          );
           e.stopPropagation();
-
           // Here we can't preventDefault because the click might be needed to check a radio for instance.
-          // As a result we have to let it go trhough which means it could trigger form submission
+          // As a result we have to let it go through which means it could trigger form submission
+          // but we've put type="button" on the picker to ensure it can't submit the form
+          // so browser won't submit eventual form for clicks inside the popover/dialog
           // e.preventDefault();
         },
         onKeyDown: (e) => {
           // some keys pressed inside popover should not reach the picker button
           // (like enter that would try to request action of closest form otherwise for instance)
           if (e.key === "Enter") {
+            debugPopup(
+              e,
+              `prevent "enter" bubbling to picker e.stopPropagation()`,
+            );
             e.stopPropagation();
-            // preventDefault prevents the browser from synthesising a click on the
+            // preventDefault prevents the browser from dispatching a "click" on the
             // picker button when focus moves to it synchronously during enterEffect
             e.preventDefault();
           }
