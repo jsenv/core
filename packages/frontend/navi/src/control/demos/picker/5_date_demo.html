@@ -147,20 +147,20 @@
             <div>
               <div class="states-col-header">Navi Picker</div>
               <Box flex="y" spacing="s">
-                <Field vertical>
-                  <Label>Vide</Label>
+                <Field ownLabel vertical>
+                  <Label border="1px dotted grey">Vide</Label>
                   <Picker name="date_empty" type="date" />
                 </Field>
-                <Field vertical>
-                  <Label>Avec valeur</Label>
+                <Field ownLabel vertical>
+                  <Label border="1px dotted grey">Avec valeur</Label>
                   <Picker
                     name="date_with_value"
                     type="date"
                     defaultValue={DEFAULT_DATE}
                   />
                 </Field>
-                <Field vertical>
-                  <Label>Readonly</Label>
+                <Field ownLabel vertical>
+                  <Label border="1px dotted grey">Readonly</Label>
                   <Picker
                     name="date_readonly"
                     type="date"
@@ -168,8 +168,8 @@
                     readOnly
                   />
                 </Field>
-                <Field vertical>
-                  <Label>Disabled</Label>
+                <Field ownLabel vertical>
+                  <Label border="1px dotted grey">Disabled</Label>
                   <Picker
                     name="date_disabled"
                     type="date"
@@ -177,8 +177,10 @@
                     disabled
                   />
                 </Field>
-                <Field vertical>
-                  <Label>Overflow (width contrainte)</Label>
+                <Field ownLabel vertical>
+                  <Label border="1px dotted grey">
+                    Overflow (width contrainte)
+                  </Label>
                   <Picker
                     name="date_overflow"
                     type="date"
@@ -187,8 +189,10 @@
                     style={{ width: "120px" }}
                   />
                 </Field>
-                <Field vertical>
-                  <Label>Width 200px + alignX center</Label>
+                <Field ownLabel vertical>
+                  <Label border="1px dotted grey">
+                    Width 200px + alignX center
+                  </Label>
                   <Picker
                     name="date_align_center"
                     type="date"
@@ -202,20 +206,20 @@
             <div>
               <div class="states-col-header">User agent</div>
               <Box flex="y" spacing="s">
-                <Field vertical>
-                  <Label>Vide</Label>
+                <Field ownLabel vertical>
+                  <Label border="1px dotted grey">Vide</Label>
                   <input type="date" />
                 </Field>
-                <Field vertical>
-                  <Label>Avec valeur</Label>
+                <Field ownLabel vertical>
+                  <Label border="1px dotted grey">Avec valeur</Label>
                   <input type="date" defaultValue={DEFAULT_DATE} />
                 </Field>
-                <Field vertical>
-                  <Label>Readonly</Label>
+                <Field ownLabel vertical>
+                  <Label border="1px dotted grey">Readonly</Label>
                   <input type="date" defaultValue={DEFAULT_DATE} readOnly />
                 </Field>
-                <Field vertical>
-                  <Label>Disabled</Label>
+                <Field ownLabel vertical>
+                  <Label border="1px dotted grey">Disabled</Label>
                   <input type="date" defaultValue={DEFAULT_DATE} disabled />
                 </Field>
               </Box>

@@ -170,7 +170,6 @@ export const PickerCustomResolver = (props) => {
 
 const PickerNative = (props) => {
   const Next = useNextResolver();
-  const { onClick } = props;
 
   const onRequestOpen = (e) => {
     const pickerButton = e.currentTarget;
@@ -202,9 +201,15 @@ const PickerNative = (props) => {
       onnavi_request_open={(e) => {
         onRequestOpen(e);
       }}
-      onClick={(e) => {
-        onClick?.(e);
-        onRequestOpen(e);
+      interactionDefinitions={{
+        click: (e) => {
+          return {
+            name: "click to open native picker",
+            effect: () => {
+              onRequestOpen(e);
+            },
+          };
+        },
       }}
     />
   );
