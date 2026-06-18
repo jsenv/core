@@ -558,13 +558,17 @@ const useParentControllerNotifiers = (
       parentUIStateController.registerChild(uiStateController);
     };
 
-    const notifyParentAboutChildInteraction = (e, { stateChanged }) => {
+    const notifyParentAboutChildInteraction = (
+      e,
+      { stateChanged, silent = false },
+    ) => {
       const uiStateController = uiStateControllerRef.current;
       debugUIState(
         `"${controlType}" notifying "${parentControlType}" of child interaction (stateChanged: ${stateChanged})`,
       );
       parentUIStateController.onChildInteraction(uiStateController, e, {
         stateChanged,
+        silent,
       });
     };
 
@@ -689,8 +693,16 @@ export const useUIGroupStateController = (
       `${controlType}.getUIState -> ${JSON.stringify(groupUIState)}`,
     );
     const uiStateController = uiStateControllerRef.current;
-    if (notifyExternal) {
+    if (notifyExternal === true) {
       applyState(groupUIState, e);
+    } else if (notifyExternal === "silent") {
+      // Silent mount/unmount sync: update state without triggering uiAction/command,
+      // but still notify parent (e.g. facade) so it can track the current child state.
+      uiStateController.syncInternalState(groupUIState, e);
+      notifyParentAboutChildInteraction(e, {
+        stateChanged: true,
+        silent: true,
+      });
     } else {
       uiStateController.syncInternalState(groupUIState, e);
     }
@@ -736,7 +748,7 @@ export const useUIGroupStateController = (
     if (pendingChangeRef.current) {
       pendingChangeRef.current = false;
       onChange(new CustomEvent(`${controlType}_batched_ui_state_update`), {
-        notifyExternal: false,
+        notifyExternal: "silent",
       });
     }
   });
@@ -880,7 +892,7 @@ export const useUIGroupStateController = (
         `${controlType}.registerChild("${childControlType}") -> registered (total: ${childUIStateControllerArray.length})`,
       );
       onChange(new CustomEvent(`${childControlType}_mount`), {
-        notifyExternal: false,
+        notifyExternal: "silent",
         // childUIStateController,
       });
     },
@@ -919,7 +931,7 @@ export const useUIGroupStateController = (
         `${controlType}.unregisterChild("${childControlType}") -> unregisteed (remaining: ${childUIStateControllerArray.length})`,
       );
       onChange(new CustomEvent(`${childControlType}_unmount`), {
-        notifyExternal: false,
+        notifyExternal: "silent",
         // childUIStateController,
       });
     },
@@ -1086,7 +1098,7 @@ export const useUIFacadeStateController = (props, uiStateController) => {
           firstChildControllerRef.current = null;
         }
       },
-      onChildInteraction: (child, e, { stateChanged }) => {
+      onChildInteraction: (child, e, { stateChanged, silent = false }) => {
         if (!stateChanged) {
           return;
         }
@@ -1094,7 +1106,12 @@ export const useUIFacadeStateController = (props, uiStateController) => {
           return;
         }
         updatingRef.current = true;
-        const propagateUpEvent = new CustomEvent("facade_propagate_up", {
+        // Use a different event type for silent (mount/unmount) syncs so that
+        // the picker's setUIState does not fire navi_change or action pipelines.
+        const eventType = silent
+          ? "facade_child_mount_sync"
+          : "facade_propagate_up";
+        const propagateUpEvent = new CustomEvent(eventType, {
           detail: {},
         });
         chainEvent(propagateUpEvent, e);
@@ -1125,6 +1142,9 @@ const TYPES_WITHOUT_PARENT_NOTIFICATION = new Set([
   "propagate_down_set_ui_state",
   "propagate_down_reset_ui_state",
   "propagate_down_clear_ui_state",
+  // Silent sync from child mount/unmount via facade — updates picker state
+  // without triggering navi_change or the action pipeline.
+  "facade_child_mount_sync",
 ]);
 const shouldNotifyParent = (e) => {
   return !TYPES_WITHOUT_PARENT_NOTIFICATION.has(e.type);
