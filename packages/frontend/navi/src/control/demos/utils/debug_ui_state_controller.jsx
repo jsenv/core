@@ -1,4 +1,4 @@
-import { useEffect, useReducer } from "preact/hooks";
+import { useLayoutEffect, useReducer } from "preact/hooks";
 
 import { getUIStateControllerById } from "../../ui_state_controller.js";
 
@@ -95,10 +95,14 @@ export const DebugUIStateController = ({ id }) => {
 
   const controller = getUIStateControllerById(id);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!controller) {
       return undefined;
     }
+    // Force a re-render immediately: by the time this layout effect runs,
+    // all children have already registered (their layout effects run first),
+    // so getChildControllers() now returns the complete tree.
+    forceUpdate();
     return controller.subscribe(() => {
       forceUpdate();
     });
