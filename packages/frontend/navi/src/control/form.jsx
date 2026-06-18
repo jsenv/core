@@ -37,6 +37,7 @@ const FormControl = (props) => {
   const [formRootProps, formProps, childrenWrapperProps] = useControlgroupProps(
     props,
     {
+      allowCapture: true,
       wantRequesterButtonState: true,
       controlType: "form",
       stateType: "object",

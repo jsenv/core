@@ -70,25 +70,26 @@ const DetailsField = (props) => {
     closeKeyShortcut = "ArrowLeft",
     onToggle,
   } = props;
-  const [detailsRootProps, detailsProps] = useControlProps(
-    {
-      resetOnCancel: true,
-      resetOnAbort: true,
-      resetOnError: true,
-      // errors are shown by ActionRenderer inside <details>, not as validation messages
-      actionErrorEffect: "none",
-      ...props,
-    },
-    {
-      controlType: "details",
-      statePropName: "open",
-      defaultStatePropName: "defaultOpen",
-      fallbackState: false,
-      getStateFromProp: (open) => (open ? props.value : undefined),
-      getPropFromState: Boolean,
-      persists,
-    },
-  );
+  const [detailsRootProps, detailsProps, controlChildrenWrapperProps] =
+    useControlProps(
+      {
+        resetOnCancel: true,
+        resetOnAbort: true,
+        resetOnError: true,
+        // errors are shown by ActionRenderer inside <details>, not as validation messages
+        actionErrorEffect: "none",
+        ...props,
+      },
+      {
+        controlType: "details",
+        statePropName: "open",
+        defaultStatePropName: "defaultOpen",
+        fallbackState: false,
+        getStateFromProp: (open) => (open ? props.value : undefined),
+        getPropFromState: Boolean,
+        persists,
+      },
+    );
   const { value, children } = detailsProps;
   const open = Boolean(value);
 
@@ -194,7 +195,9 @@ const DetailsField = (props) => {
         </div>
       </summary>
       <DetailsFieldContent>
-        <ControlChildrenWrapper>{children}</ControlChildrenWrapper>
+        <ControlChildrenWrapper {...controlChildrenWrapperProps}>
+          {children}
+        </ControlChildrenWrapper>
       </DetailsFieldContent>
     </Box>
   );

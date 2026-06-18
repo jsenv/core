@@ -111,6 +111,26 @@
                     </li>
                   </ol>
                 </li>
+                <li>
+                  <a href="#bubble-up">Bubble-up (enregistrement cross-leaf)</a>
+                  <ol>
+                    <li>
+                      <a href="#bubble-up-basic">
+                        Input dans un List.Item bubble vers ControlGroup
+                      </a>
+                    </li>
+                    <li>
+                      <a href="#bubble-up-boundary">
+                        ControlGroup (allowCapture) stoppe le bubble
+                      </a>
+                    </li>
+                    <li>
+                      <a href="#bubble-up-picker">
+                        Picker dans un List.Item bubble vers ControlGroup
+                      </a>
+                    </li>
+                  </ol>
+                </li>
               </ol>
             </nav>
 
@@ -202,6 +222,37 @@
               <section id="facade-controlgroup-in-form">
                 <h3>ControlGroup interne — inside a form</h3>
                 <PickerControlGroupInFormDemo />
+              </section>
+            </section>
+
+            <section id="bubble-up">
+              <h2>Bubble-up (enregistrement cross-leaf)</h2>
+              <p
+                style={{
+                  margin: "0 0 16px",
+                  color: "#555",
+                  fontSize: "0.9rem",
+                }}
+              >
+                Un control rejeté par son parent direct (radio_group, etc.)
+                remonte automatiquement jusqu'au premier ancêtre qui l'accepte.
+                Un <code>ControlGroup allowCapture</code> arrête la propagation
+                et capture le child.
+              </p>
+
+              <section id="bubble-up-basic">
+                <h3>Input dans un List.Item bubble vers ControlGroup</h3>
+                <BubbleUpBasicDemo />
+              </section>
+
+              <section id="bubble-up-boundary">
+                <h3>ControlGroup (allowCapture) stoppe le bubble</h3>
+                <BubbleUpBoundaryDemo />
+              </section>
+
+              <section id="bubble-up-picker">
+                <h3>Picker dans un List.Item bubble vers ControlGroup</h3>
+                <BubbleUpPickerDemo />
               </section>
             </section>
           </Box>
@@ -1107,6 +1158,183 @@
               Form
             </p>
             <CallLog entries={formEntries} onClear={clearFormEntries} />
+          </Box>
+        );
+      };
+
+      // ── Bubble-up demos ──────────────────────────────────────────────────
+
+      const BubbleUpBasicDemo = () => {
+        const [entries, push, clear] = useCallLog();
+        return (
+          <Box flex="y" spacing="m" alignX="start">
+            <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+              Un <code>Input</code> est placé à l'intérieur d'un{" "}
+              <code>List.Item</code> (leaf control). Le radio_group le rejette,
+              il remonte et se fait capturer par le{" "}
+              <code>ControlGroup allowCapture</code> extérieur. Le{" "}
+              <code>uiAction</code> du ControlGroup doit inclure{" "}
+              <code>choice</code> (radio) et <code>extra</code> (input).
+            </p>
+            <ControlGroup
+              name="data"
+              uiAction={(v) => {
+                push("uiAction (ControlGroup)", v);
+              }}
+            >
+              <List
+                selectable
+                name="choice"
+                uiAction={(v) => {
+                  push("uiAction (radio_group)", v);
+                }}
+              >
+                <List.Item selectable index={0} value="a" padding="s">
+                  Option A
+                  <Input
+                    name="extra"
+                    placeholder="extra info"
+                    uiAction={(v) => {
+                      push("uiAction (input)", v);
+                    }}
+                  />
+                </List.Item>
+                <List.Item selectable index={1} value="b" padding="s">
+                  Option B
+                </List.Item>
+              </List>
+            </ControlGroup>
+            <CallLog entries={entries} onClear={clear} />
+          </Box>
+        );
+      };
+
+      // Deux ControlGroup allowCapture imbriqués. L'input dans le List.Item doit
+      // être capturé par le ControlGroup interne (frontière la plus proche).
+      const BubbleUpBoundaryDemo = () => {
+        const [entries, push, clear] = useCallLog();
+        return (
+          <Box flex="y" spacing="m" alignX="start">
+            <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+              Deux <code>ControlGroup allowCapture</code> imbriqués. L'input
+              dans le List.Item doit être capté par le ControlGroup{" "}
+              <em>interne</em> (frontière la plus proche), pas l'externe.
+            </p>
+            <ControlGroup
+              name="outer"
+              uiAction={(v) => {
+                push("uiAction (outer ControlGroup)", v);
+              }}
+            >
+              <ControlGroup
+                name="inner"
+                uiAction={(v) => {
+                  push("uiAction (inner ControlGroup)", v);
+                }}
+              >
+                <List
+                  selectable
+                  name="choice"
+                  uiAction={(v) => {
+                    push("uiAction (radio_group)", v);
+                  }}
+                >
+                  <List.Item selectable index={0} value="x" padding="s">
+                    Option X
+                    <Input
+                      name="extra"
+                      placeholder="extra"
+                      uiAction={(v) => {
+                        push("uiAction (input)", v);
+                      }}
+                    />
+                  </List.Item>
+                  <List.Item selectable index={1} value="y" padding="s">
+                    Option Y
+                  </List.Item>
+                </List>
+              </ControlGroup>
+            </ControlGroup>
+            <CallLog entries={entries} onClear={clear} />
+          </Box>
+        );
+      };
+
+      // Un Picker dans un List.Item. Le radio_group le rejette, il remonte et
+      // se fait capturer par le ControlGroup allowCapture extérieur.
+      const BubbleUpPickerDemo = () => {
+        const [entries, push, clear] = useCallLog();
+        return (
+          <Box flex="y" spacing="m" alignX="start">
+            <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+              Un <code>Picker type="controlgroup"</code> placé dans un{" "}
+              <code>List.Item</code>. Le radio_group le rejette, il remonte et
+              se fait capturer par le <code>ControlGroup allowCapture</code>.
+            </p>
+            <ControlGroup
+              name="schedule"
+              uiAction={(v) => {
+                push("uiAction (ControlGroup)", v);
+              }}
+            >
+              <List
+                selectable
+                name="duration"
+                uiAction={(v) => {
+                  push("uiAction (radio_group)", v);
+                }}
+              >
+                <List.Item selectable index={0} value="30min" padding="s">
+                  30 min
+                </List.Item>
+                <List.Item selectable index={1} value="1h" padding="s">
+                  1 h
+                </List.Item>
+                <List.Item selectable index={2} value="custom" padding="s">
+                  Personnalisé
+                  <Picker
+                    name="custom"
+                    type="controlgroup"
+                    placeholder="hh:mm"
+                    uiAction={(v) => {
+                      push("uiAction (picker)", v);
+                    }}
+                  >
+                    <ControlGroup>
+                      <Box flex="x" spacing="s" padding="s">
+                        <fieldset>
+                          <legend>h</legend>
+                          <Input
+                            name="hour"
+                            type="number"
+                            placeholder="0"
+                            uiAction={(v) => {
+                              push("uiAction (hour)", v);
+                            }}
+                          />
+                        </fieldset>
+                        <fieldset>
+                          <legend>min</legend>
+                          <Input
+                            name="minute"
+                            type="number"
+                            placeholder="0"
+                            uiAction={(v) => {
+                              push("uiAction (minute)", v);
+                            }}
+                          />
+                        </fieldset>
+                      </Box>
+                    </ControlGroup>
+                    <Box flex spacing="s">
+                      <Button command="--navi-cancel">Annuler</Button>
+                      <Button command="--navi-define">Définir</Button>
+                    </Box>
+                  </Picker>
+                </List.Item>
+              </List>
+            </ControlGroup>
+            <CallLog entries={entries} onClear={clear} />
           </Box>
         );
       };

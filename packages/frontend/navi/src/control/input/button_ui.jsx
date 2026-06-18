@@ -363,14 +363,15 @@ export const ButtonUI = (props) => {
     cta,
     spacing,
   } = props;
-  const [buttonControlRootProps, buttonControlHostProps] = useControlProps(
-    props,
-    {
-      controlType: "button",
-      statePropName: "value",
-      allowNameless: true,
-    },
-  );
+  const [
+    buttonControlRootProps,
+    buttonControlHostProps,
+    controlChildrenWrapperProps,
+  ] = useControlProps(props, {
+    controlType: "button",
+    statePropName: "value",
+    allowNameless: true,
+  });
   const { basePseudoState, children } = buttonControlHostProps;
   const loading = basePseudoState[":-navi-loading"];
 
@@ -449,7 +450,7 @@ export const ButtonUI = (props) => {
         inset={-1}
         color="var(--button-loader-color)"
       />
-      <ControlChildrenWrapper>
+      <ControlChildrenWrapper {...controlChildrenWrapperProps}>
         <ButtonContent spacing={spacing}>{children}</ButtonContent>
       </ControlChildrenWrapper>
     </Box>

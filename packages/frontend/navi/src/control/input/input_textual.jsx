@@ -28,7 +28,6 @@ import {
   useNextResolver,
 } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { ControlChildrenWrapper, useControlProps } from "../control_hooks.jsx";
-import { getUIStateControllerById } from "../ui_state_controller.js";
 import { InputNaviHourResolver } from "./input_navi_hour.jsx";
 import { InputNaviMinuteResolver } from "./input_navi_minute.jsx";
 import { InputModeResolver } from "./input_resolver_mode.jsx";
@@ -312,16 +311,19 @@ const useInputTextualProps = (props) => {
 const InputTextualUI = (props) => {
   import.meta.css = css;
   const { ui, discrete, variant, width = "maxLength" } = props;
-  const [inputControlRootProps, inputControlHostProps] =
-    useInputTextualProps(props);
+  const [
+    inputControlRootProps,
+    inputControlHostProps,
+    controlChildrenWrapperProps,
+  ] = useInputTextualProps(props);
   const { id, basePseudoState, children } = inputControlHostProps;
-  const uiStateController = getUIStateControllerById(id);
+  const { uiStateController } = controlChildrenWrapperProps;
   const value = uiStateController.uiState;
   const disabled = basePseudoState[":disabled"];
   const readOnly = basePseudoState[":read-only"];
   const loading = basePseudoState[":-navi-loading"];
   const childrenWithContext = (
-    <ControlChildrenWrapper>
+    <ControlChildrenWrapper {...controlChildrenWrapperProps}>
       <InputTextualContext.Provider value={{ id, readOnly, disabled, value }}>
         {children || ui}
       </InputTextualContext.Provider>

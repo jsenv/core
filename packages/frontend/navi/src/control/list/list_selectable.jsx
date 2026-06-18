@@ -485,15 +485,16 @@ const ListItemSelectable = (props) => {
   const inputType = multiple ? "checkbox" : "radio";
   const inputId = `${id}_input`;
   inputRef.nullCanHappen = true; // virtualization
-  const [checkableRootProps, checkableProps] = useCheckableProps({
-    readOnlyMessage: naviI18n(`constraint.readonly.option`, props),
-    ...rest,
-    ref: inputRef,
-    id: inputId,
-    type: inputType,
-    defaultChecked: defaultSelected,
-    checked: selected,
-  });
+  const [checkableRootProps, checkableProps, controlChildrenWrapperProps] =
+    useCheckableProps({
+      readOnlyMessage: naviI18n(`constraint.readonly.option`, props),
+      ...rest,
+      ref: inputRef,
+      id: inputId,
+      type: inputType,
+      defaultChecked: defaultSelected,
+      checked: selected,
+    });
   const { checked, value, basePseudoState, children } = checkableProps;
   const readOnly = basePseudoState[":read-only"];
   // const disabled = basePseudoState[":disabled"];
@@ -539,7 +540,9 @@ const ListItemSelectable = (props) => {
         children={undefined}
       />
       <SelectableRealInputContext.Provider value={realInputContextValue}>
-        <ControlChildrenWrapper>{children}</ControlChildrenWrapper>
+        <ControlChildrenWrapper {...controlChildrenWrapperProps}>
+          {children}
+        </ControlChildrenWrapper>
       </SelectableRealInputContext.Provider>
     </Next>
   );

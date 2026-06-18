@@ -32,6 +32,7 @@ export const ControlGroup = (props) => {
 
   const [controlgroupRootProps, controlgroupProps, childrenWrapperProps] =
     useControlgroupProps(props, {
+      allowCapture: true,
       wantRequesterButtonState: true,
       controlType: props.type || "control_group",
       stateType: "object",

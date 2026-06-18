@@ -84,13 +84,11 @@ const NO_ACTION_YET = Symbol("no_action_yet");
 
 // Resets field-specific contexts so nested fields inside this component
 // don't inherit the current field's id, message props, or interface reporting.
-// Also cuts the parent state controller chain: children of a regular (leaf)
-// field are custom UI — they should never register as form participants.
-// A controlgroup is always enough: when a group (SelectableList, etc.) is
-// present, the form gets the group's aggregated value; individual controls
-// inside the group register to the group, not the form.
-export const ControlChildrenWrapper = ({ children }) => (
-  <ParentUIStateControllerContext.Provider value={null}>
+// Sets ParentUIStateControllerContext to the leaf's own uiStateController so
+// that a nested control sees its direct parent (the leaf) and can bubble up
+// through it if the leaf rejects it.
+export const ControlChildrenWrapper = ({ children, uiStateController }) => (
+  <ParentUIStateControllerContext.Provider value={uiStateController}>
     <MessagePropsRefContext.Provider value={undefined}>
       <ControlIdContext.Provider value={undefined}>
         <RequiredContext.Provider value={undefined}>
@@ -608,7 +606,7 @@ export const useControlProps = (
     });
   }
 
-  return [controlRootProps, controlHostProps, uiStateController];
+  return [controlRootProps, controlHostProps, { uiStateController }];
 };
 
 /**
@@ -633,6 +631,7 @@ export const useControlgroupProps = (
     aggregateChildStates,
     wantRequesterButtonState,
     uiActionInternal,
+    allowCapture = false,
   },
 ) => {
   const { ref, action } = props;
@@ -642,6 +641,7 @@ export const useControlgroupProps = (
     aggregateChildStates,
     wantRequesterButtonState,
     uiActionInternal,
+    allowCapture,
   });
 
   const [boundAction] = useActionBoundToOneParam(
@@ -744,10 +744,10 @@ export const useControlgroupProps = (
  * ```
  */
 export const useControlFacadeProps = (props, options) => {
-  const [controlRootProps, controlHostProps, uiStateController] =
+  const [controlRootProps, controlHostProps, { uiStateController }] =
     useControlProps(props, options);
   const facadeController = useUIFacadeStateController(props, uiStateController);
-  return [controlRootProps, controlHostProps, { value: facadeController }];
+  return [controlRootProps, controlHostProps, { facadeController }];
 };
 
 /**
@@ -763,8 +763,11 @@ export const useControlFacadeProps = (props, options) => {
  * Receives `facadeChildrenProps` — the third element of the tuple returned by
  * `useControlFacadeProps` — spread directly onto this component.
  */
-export const ControlFacadeChildrenWrapper = ({ children, value }) => (
-  <ParentUIStateControllerContext.Provider value={value}>
+export const ControlFacadeChildrenWrapper = ({
+  children,
+  facadeController,
+}) => (
+  <ParentUIStateControllerContext.Provider value={facadeController}>
     <MessagePropsRefContext.Provider value={undefined}>
       <ControlIdContext.Provider value={undefined}>
         <RequiredContext.Provider value={undefined}>

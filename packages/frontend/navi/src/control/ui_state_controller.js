@@ -104,7 +104,9 @@ const onUIStateControllerDestroyed = (uiStateController) => {
 
 /**
  * Minimal interface that any object placed in `ParentUIStateControllerContext` must satisfy.
- * Both `useUIGroupStateController` and `useUIFacadeStateController` implement this interface.
+ * Implemented by `useUIGroupStateController`, `useUIFacadeStateController`, and
+ * `useUIStateController` (leaf controls act as transparent pass-throughs: they forward
+ * registerChild/onChildInteraction/unregisterChild to their own parent).
  *
  * ```ts
  * interface UIStateController {
@@ -529,6 +531,28 @@ export const useUIStateController = (
       }
     },
     subscribe: subscribeUIState,
+    // Leaf controls don't aggregate children, but they act as a transparent
+    // pass-through so that controls nested inside them (e.g. an Input inside
+    // a List.Item) can bubble up registration to the nearest group ancestor.
+    registerChild: (childUIStateController, options) => {
+      if (parentUIStateController) {
+        parentUIStateController.registerChild(childUIStateController, options);
+      }
+    },
+    unregisterChild: (childUIStateController) => {
+      if (parentUIStateController) {
+        parentUIStateController.unregisterChild(childUIStateController);
+      }
+    },
+    onChildInteraction: (childUIStateController, e, options) => {
+      if (parentUIStateController) {
+        parentUIStateController.onChildInteraction(
+          childUIStateController,
+          e,
+          options,
+        );
+      }
+    },
   };
   uiStateControllerRef.current = uiStateController;
   // Register synchronously during render so getUIStateControllerById works
@@ -629,6 +653,7 @@ export const useUIGroupStateController = (
     aggregateChildStates,
     wantRequesterButtonState,
     uiActionInternal,
+    allowCapture = false,
   },
 ) => {
   const debugUIGroup = useDebugUIState();
@@ -648,6 +673,9 @@ export const useUIGroupStateController = (
   const childUIStateControllerArrayRef = useRef([]);
   const childUIStateControllerArray = childUIStateControllerArrayRef.current;
   const uiStateControllerRef = useRef();
+  // Tracks children this controller rejected and delegated upward (bubble-up
+  // registration). Used to forward onChildInteraction and unregisterChild.
+  const delegatedChildrenRef = useRef(new Map());
 
   const groupIsRenderingRef = useRef(false);
   const pendingChangeRef = useRef(false);
@@ -882,8 +910,22 @@ export const useUIGroupStateController = (
         }
       }
     },
-    registerChild: (childUIStateController) => {
+    registerChild: (
+      childUIStateController,
+      // { bubbled = false } = {}
+    ) => {
       if (!isMonitoringChild(childUIStateController)) {
+        // Filter rejected this child.
+        if (!allowCapture && parentUIStateController) {
+          // Not a boundary — bubble the child up to the nearest ancestor.
+          delegatedChildrenRef.current.set(
+            childUIStateController,
+            parentUIStateController,
+          );
+          parentUIStateController.registerChild(childUIStateController);
+        }
+        // allowCapture=true: hard boundary, stop bubbling and drop silently.
+        // No parent: end of chain, drop silently.
         return;
       }
       const childControlType = childUIStateController.controlType;
@@ -897,6 +939,17 @@ export const useUIGroupStateController = (
       });
     },
     onChildInteraction: (childUIStateController, e, { stateChanged }) => {
+      const delegatedTo = delegatedChildrenRef.current.get(
+        childUIStateController,
+      );
+      if (delegatedTo) {
+        // Forward interaction for delegated children — we don't aggregate them,
+        // but their parent (who adopted them) needs to know about the change.
+        delegatedTo.onChildInteraction(childUIStateController, e, {
+          stateChanged,
+        });
+        return;
+      }
       if (!isMonitoringChild(childUIStateController)) {
         return;
       }
@@ -915,6 +968,14 @@ export const useUIGroupStateController = (
       }
     },
     unregisterChild: (childUIStateController) => {
+      const delegatedTo = delegatedChildrenRef.current.get(
+        childUIStateController,
+      );
+      if (delegatedTo) {
+        delegatedChildrenRef.current.delete(childUIStateController);
+        delegatedTo.unregisterChild(childUIStateController);
+        return;
+      }
       if (!isMonitoringChild(childUIStateController)) {
         return;
       }
