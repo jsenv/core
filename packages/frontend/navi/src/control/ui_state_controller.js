@@ -1010,6 +1010,7 @@ const EMPTY_OBJECT = {};
 export const useUIFacadeStateController = (props, uiStateController) => {
   const firstChildControllerRef = useRef(null);
   const updatingRef = useRef(false);
+  const debugUIState = useDebugUIState();
 
   useLayoutEffect(() => {
     return uiStateController.subscribe((newUIState, e) => {
@@ -1032,9 +1033,26 @@ export const useUIFacadeStateController = (props, uiStateController) => {
   }, []);
 
   const includeChildController = (childController) => {
+    if (childController.controlType === "button") {
+      return false;
+    }
     if (childController.props["navi-list"]) {
       // Controls with navi-list act as standalone list navigators and should
       // not be treated as the picker's synced child.
+      return false;
+    }
+    if (
+      props.type === "controlgroup" &&
+      childController.controlType !== "control_group"
+    ) {
+      // ignore non control group registration (input outside the control group for instance)
+      return false;
+    }
+    if (
+      props.type === "array" &&
+      childController.controlType !== "checkbox_group"
+    ) {
+      // only selectable list expose array, ignore others
       return false;
     }
     return true;
@@ -1049,14 +1067,18 @@ export const useUIFacadeStateController = (props, uiStateController) => {
         if (!includeChildController(child)) {
           return;
         }
-        if (!firstChildControllerRef.current) {
-          firstChildControllerRef.current = child;
-        } else {
+        const childType = child.controlType;
+        if (firstChildControllerRef.current) {
           console.warn(
-            `[useUIFacadeStateController] A second child ("${child.controlType}"${child.name ? ` name="${child.name}"` : ""}) tried to register in the picker facade. ` +
+            `[useUIFacadeStateController] A second child ("${childType}"${child.name ? ` name="${child.name}"` : ""}) tried to register in the picker facade. ` +
               `The facade only syncs with the first child — wrap multiple controls in a single ControlGroup.`,
             child,
           );
+        } else {
+          debugUIState(
+            `[useUIFacadeStateController] "${childType}"${child.name ? ` name="${child.name}"` : ""} registered as the first child in the picker facade.`,
+          );
+          firstChildControllerRef.current = child;
         }
       },
       unregisterChild: (child) => {
