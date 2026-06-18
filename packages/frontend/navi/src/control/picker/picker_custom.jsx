@@ -268,7 +268,7 @@ const PickerCustom = (props) => {
 
       const valueAtOpen = getPickerInputUIState(ref.current);
       valueAtOpenRef.current = valueAtOpen;
-      debugPopup(e, `picker opened, store value at open (${valueAtOpen})`);
+      debugPopup(e, `picker opened, store value at open`, valueAtOpen);
     };
     const restoreFocus = (e) => {
       const activeElementAtOpen = activeElementAtOpenRef.current;

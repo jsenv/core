@@ -326,7 +326,8 @@ const PickerButton = (props) => {
 
   return (
     <Box
-      as={headless ? "div" : "button"}
+      as={headless ? "div" : "button"} // keep it a <div> in headless mode so it stays non focusable
+      role={headless ? "button" : undefined}
       type="button" /* ensure click inside the picker cannot submit ancestor form if any */
       ref={ref}
       baseClassName="navi_picker"
