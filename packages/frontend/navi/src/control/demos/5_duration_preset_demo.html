@@ -68,6 +68,7 @@
         Form,
         Text,
         Unit,
+        ControlGroup,
         Button,
         Time,
         Icon,
@@ -397,46 +398,51 @@
             </Icon>
             <Picker
               id="custom_duration_picker2"
-              name="custom_duration_picker2"
+              name="custom_duration"
               headless
               mode="dialog"
               borderRadius="s"
+              type="controlgroup"
             >
               <Box flex="y" alignX="center" padding="m" spacing="m">
                 <Text bold>Veuillez saisir une durée</Text>
-                <InputGroup flex spacing="xxs">
-                  <Box flex="y">
-                    <Input
-                      type="navi_hour"
-                      unit={false}
-                      variant="underline"
-                      size="l"
-                      expandX
-                      value={hours}
-                      action={(v) => {
-                        customDurationHourSignal2.value = v;
-                      }}
-                      textAlign="right"
-                    >
-                      <Input.UI.UnitSlot>:</Input.UI.UnitSlot>
-                    </Input>
-                    <Unit unit="hour" plural marginRight="1ch" />
-                  </Box>
-                  <Box flex="y">
-                    <Input
-                      type="navi_minute"
-                      unit={false}
-                      variant="underline"
-                      size="l"
-                      expandX
-                      value={minutes}
-                      action={(v) => {
-                        customDurationMinuteSignal2.value = v;
-                      }}
-                    />
-                    <Unit unit="minute" plural />
-                  </Box>
-                </InputGroup>
+                <ControlGroup>
+                  <InputGroup flex spacing="xxs">
+                    <Box flex="y">
+                      <Input
+                        type="navi_hour"
+                        name="hour"
+                        unit={false}
+                        variant="underline"
+                        size="l"
+                        expandX
+                        value={hours}
+                        uiAction={(v) => {
+                          customDurationHourSignal2.value = v;
+                        }}
+                        textAlign="right"
+                      >
+                        <Input.UI.UnitSlot>:</Input.UI.UnitSlot>
+                      </Input>
+                      <Unit unit="hour" plural marginRight="1ch" />
+                    </Box>
+                    <Box flex="y">
+                      <Input
+                        type="navi_minute"
+                        name="minute"
+                        unit={false}
+                        variant="underline"
+                        size="l"
+                        expandX
+                        value={minutes}
+                        uiAction={(v) => {
+                          customDurationMinuteSignal2.value = v;
+                        }}
+                      />
+                      <Unit unit="minute" plural />
+                    </Box>
+                  </InputGroup>
+                </ControlGroup>
                 <Box flex spacing="s" expandX alignX="end">
                   <Button command="--navi-cancel" variant="discrete" />
                   <Button command="--navi-define" variant="discrete" />
@@ -450,7 +456,7 @@
       // ── App ───────────────────────────────────────────────────────────────
 
       render(
-        <NaviDebug debugCommand debugAction debugInteraction>
+        <NaviDebug debugCommand debugUIState debugAction debugInteraction>
           <App />
         </NaviDebug>,
         document.getElementById("app"),
