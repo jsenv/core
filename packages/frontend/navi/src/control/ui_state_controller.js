@@ -1031,7 +1031,7 @@ export const useUIFacadeStateController = (props, uiStateController) => {
     });
   }, []);
 
-  const filterChildController = (childController) => {
+  const includeChildController = (childController) => {
     if (childController.props["navi-list"]) {
       // Controls with navi-list act as standalone list navigators and should
       // not be treated as the picker's synced child.
@@ -1046,7 +1046,7 @@ export const useUIFacadeStateController = (props, uiStateController) => {
       props,
       uiStateSignal: uiStateController.uiStateSignal,
       registerChild: (child) => {
-        if (filterChildController(child)) {
+        if (!includeChildController(child)) {
           return;
         }
         if (!firstChildControllerRef.current) {

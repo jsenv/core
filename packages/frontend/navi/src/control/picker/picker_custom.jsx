@@ -507,7 +507,7 @@ const PickerCustom = (props) => {
           // mousedown inside popover should not bubble to the select (would re-open it if that mousedown closes it)
           debugPopup(
             e,
-            `prevent "mousedown" bubbling to picker e.stopPropagation()`,
+            `"mousedown" received on popup -> prevent bubbling to picker (e.stopPropagation())`,
           );
           e.stopPropagation();
         },
@@ -518,7 +518,7 @@ const PickerCustom = (props) => {
           // click inside popover should not bubble to the picker (would re-open it if that click closes it)
           debugPopup(
             e,
-            `prevent "click" bubbling to picker e.stopPropagation()`,
+            `"click" received on popup -> prevent bubbling to picker (e.stopPropagation())`,
           );
           e.stopPropagation();
           // Here we can't preventDefault because the click might be needed to check a radio for instance.
@@ -533,7 +533,7 @@ const PickerCustom = (props) => {
           if (e.key === "Enter") {
             debugPopup(
               e,
-              `prevent "enter" bubbling to picker e.stopPropagation()`,
+              `"enter" received on popup -> prevent bubbling to picker (e.stopPropagation())`,
             );
             e.stopPropagation();
             // preventDefault prevents the browser from dispatching a "click" on the
