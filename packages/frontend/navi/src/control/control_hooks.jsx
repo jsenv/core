@@ -865,9 +865,9 @@ const useInteractiveProps = (
     } else {
       controlHostProps["aria-readonly"] = readOnlyResolved;
     }
-    // inform any associated label of our state (interactive, disabled, readOnly)
-    // works for controls nested inside a <Field as label> and for disconnected
-    // label[for=id] labels elsewhere in the DOM
+    // inform any associated label of our state (connected, disabled, readOnly)
+    // dispatched directly on the label — works whether the label wraps the control
+    // (Field as label) or is a separate element linked via htmlFor (Label component)
     useLayoutEffect(() => {
       const element = ref.current;
       if (!element) {
@@ -875,17 +875,14 @@ const useInteractiveProps = (
       }
       const labels = getAssociatedLabels(element);
       for (const label of labels) {
-        const fieldContainer = label.closest("[data-navi-field-container]");
-        if (fieldContainer) {
-          fieldContainer.dispatchEvent(
-            new CustomEvent("navi_control_state", {
-              detail: {
-                disabled: disabledResolved,
-                readOnly: readOnlyResolved,
-              },
-            }),
-          );
-        }
+        label.dispatchEvent(
+          new CustomEvent("navi_control_state", {
+            detail: {
+              disabled: disabledResolved,
+              readOnly: readOnlyResolved,
+            },
+          }),
+        );
       }
     }, [disabledResolved, readOnlyResolved]);
     useLayoutEffect(() => {
@@ -896,12 +893,7 @@ const useInteractiveProps = (
         }
         const labels = getAssociatedLabels(element);
         for (const label of labels) {
-          const fieldContainer = label.closest("[data-navi-field-container]");
-          if (fieldContainer) {
-            fieldContainer.dispatchEvent(
-              new CustomEvent("navi_control_disconnected"),
-            );
-          }
+          label.dispatchEvent(new CustomEvent("navi_control_disconnected"));
         }
       };
     }, []);

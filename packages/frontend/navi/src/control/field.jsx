@@ -1,29 +1,12 @@
 import { useContext, useId, useRef, useState } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
-import {
-  ControlIdContext,
-  ControlNameContext,
-  DisabledContext,
-  LoadingContext,
-  MessagePropsRefContext,
-  ReadOnlyContext,
-  RequiredContext,
-} from "./control_context.js";
+import { ControlIdContext, MessagePropsRefContext } from "./control_context.js";
 import { extractMessageAndRemainingProps } from "./validation/constraint_message.js";
 
 const css = /* css */ `
   @layer navi {
-    [data-navi-field] {
-      .navi_checkbox {
-        --margin: 0;
-      }
-      .navi_radio {
-        --margin: 0;
-      }
-    }
-
-    label[data-navi-field] {
+    .navi_label {
       &[data-control-connected] {
         cursor: pointer;
         user-select: none;
@@ -35,7 +18,7 @@ const css = /* css */ `
       }
     }
 
-    [data-navi-field-container] {
+    [navi-field] {
       --field-spacing: var(--navi-xs);
 
       > * + .navi_label {
@@ -44,23 +27,22 @@ const css = /* css */ `
       > .navi_label:first-child {
         padding-right: var(--field-spacing);
       }
-      &[data-vertical] > .navi_label:first-child {
-        padding-bottom: var(--field-spacing);
+      &[data-vertical] {
+        & > .navi_label:first-child {
+          padding-right: 0;
+          padding-bottom: var(--field-spacing);
+        }
+        & > * + .navi_label {
+          padding-top: var(--field-spacing);
+          padding-left: 0;
+        }
       }
 
-      &[data-control-connected] {
-        .navi_label {
-          cursor: pointer;
-          /* When label is interactive ability to select text oftens conflicts with other click interactions */
-          user-select: none;
-        }
+      .navi_checkbox {
+        --margin: 0;
       }
-      &[data-readonly],
-      &[data-disabled] {
-        .navi_label {
-          color: rgba(0, 0, 0, 0.5);
-          cursor: default;
-        }
+      .navi_radio {
+        --margin: 0;
       }
     }
   }
@@ -93,129 +75,72 @@ export const Field = (props) => {
   import.meta.css = css;
   const refDefault = useRef();
   props.ref = props.ref || refDefault;
-  const { ownLabel } = props;
+  const { as } = props;
 
-  if (ownLabel) {
-    return <FieldAsContainer {...props} ownLabel={undefined} />;
+  if (as === "label") {
+    return <FieldAsLabel {...props} />;
   }
-  return <FieldAsLabel {...props} />;
+  return <FieldAsContainer {...props} />;
 };
+
 const FieldAsLabel = (props) => {
-  return <FieldUI as="label" {...props} />;
-};
-const FieldAsContainer = (props) => {
-  const idDefault = useId();
-  const fieldId = `field_${idDefault}`;
-  props.fieldId = props.fieldId || props.id ? `${props.id}_field` : fieldId;
+  const { vertical, children } = props;
+  const [messageProps, remainingProps] = extractMessageAndRemainingProps(props);
+  const messagePropsRef = useRef();
+  messagePropsRef.current = messageProps;
 
   return (
-    <FieldUI
-      {...props}
-      data-navi-field-container=""
+    <Label
+      navi-field=""
       styleCSSVars={FieldCSSVars}
-    />
+      flex={vertical ? "y" : undefined}
+      alignX={vertical ? "start" : undefined}
+      data-vertical={vertical ? "" : undefined}
+      {...remainingProps}
+      vertical={undefined}
+      fieldId={undefined}
+    >
+      <MessagePropsRefContext.Provider value={messagePropsRef}>
+        <ControlIdContext.Provider value={props.fieldId}>
+          {children}
+        </ControlIdContext.Provider>
+      </MessagePropsRefContext.Provider>
+    </Label>
   );
 };
 const FieldCSSVars = {
   spacing: "--field-spacing",
 };
-const FieldUI = (props) => {
+const FieldAsContainer = (props) => {
   import.meta.css = css;
-  const { vertical } = props;
-  const {
-    fieldId,
-    name,
-    disabled,
-    readOnly,
-    required,
-    loading,
-    connected,
-    ...rest
-  } = props;
-
-  const [messageProps, remainingProps] = extractMessageAndRemainingProps(rest);
+  const { vertical, children } = props;
+  const [messageProps, remainingProps] = extractMessageAndRemainingProps(props);
   const messagePropsRef = useRef();
   messagePropsRef.current = messageProps;
-
-  const [disabledByChild, setDisabledByChild] = useState(false);
-  const [readOnlyFromChild, setReadOnlyFromChild] = useState(false);
-  const [connectedFromChild, setConnectedFromChild] = useState(false);
-
-  const parentControlName = useContext(ControlNameContext);
-  const parentControlDisabled = useContext(DisabledContext);
-  const parentControlReadOnly = useContext(ReadOnlyContext);
-  const parentControlRequired = useContext(RequiredContext);
-  const parentControlLoading = useContext(LoadingContext);
-  const nameResolved = name || parentControlName;
-  const disabledResolved = disabled || parentControlDisabled;
-  const readOnlyResolved = readOnly || parentControlReadOnly;
-  const requiredResolved = required || parentControlRequired;
-  const loadingResolved = loading || parentControlLoading;
-
-  let childrenWithContext;
-  if (props.children === undefined) {
-  } else {
-    childrenWithContext = (
-      <MessagePropsRefContext.Provider value={messagePropsRef}>
-        <ControlIdContext.Provider value={fieldId}>
-          <ControlNameContext.Provider value={nameResolved}>
-            <DisabledContext.Provider value={disabledResolved}>
-              <ReadOnlyContext.Provider value={readOnlyResolved}>
-                <RequiredContext.Provider value={requiredResolved}>
-                  <LoadingContext.Provider value={loadingResolved}>
-                    {props.children}
-                  </LoadingContext.Provider>
-                </RequiredContext.Provider>
-              </ReadOnlyContext.Provider>
-            </DisabledContext.Provider>
-          </ControlNameContext.Provider>
-        </ControlIdContext.Provider>
-      </MessagePropsRefContext.Provider>
-    );
-  }
-
-  // a control updates the field via navi_control_state / navi_control_disconnected events
-  // dispatched on associated labels. this is the only bottom up communication there is
-  const disabledOrByChild = disabledResolved || disabledByChild;
-  const readOnlyOrByChild = readOnlyResolved || readOnlyFromChild;
-  const connectedOrByChild = connected || connectedFromChild;
-  const fieldProps = {
-    "data-navi-field": "",
-    "data-control-connected": connectedOrByChild ? "" : undefined,
-    ...remainingProps,
-    "children": childrenWithContext,
-    "pseudoClasses": FieldPseudoClasses,
-    "basePseudoState": {
-      ":disabled": disabledOrByChild,
-      ":read-only": readOnlyOrByChild,
-      ...remainingProps.basePseudoState,
-    },
-  };
+  const idDefault = useId();
+  props.fieldId = props.fieldId || `field_${idDefault}`;
 
   return (
     <Box
+      navi-field=""
+      styleCSSVars={FieldCSSVars}
       flex={vertical ? "y" : undefined}
       alignX={vertical ? "start" : undefined}
       data-vertical={vertical ? "" : undefined}
-      {...fieldProps}
+      {...remainingProps}
       vertical={undefined}
-      connected={undefined}
-      onnavi_control_state={(e) => {
-        const { readOnly, disabled } = e.detail;
-        setConnectedFromChild(true);
-        setReadOnlyFromChild(readOnly);
-        setDisabledByChild(disabled);
-      }}
-      onnavi_control_disconnected={() => {
-        setConnectedFromChild(false);
-        setDisabledByChild(false);
-        setReadOnlyFromChild(false);
-      }}
-    />
+      fieldId={undefined}
+    >
+      <MessagePropsRefContext.Provider value={messagePropsRef}>
+        <ControlIdContext.Provider value={props.fieldId}>
+          {children}
+        </ControlIdContext.Provider>
+      </MessagePropsRefContext.Provider>
+    </Box>
   );
 };
 
-const FieldPseudoClasses = [
+const FIELD_PSEUDO_CLASSES = [
   ":hover",
   ":active",
   ":focus",
@@ -226,27 +151,37 @@ const FieldPseudoClasses = [
 ];
 
 export const Label = (props) => {
+  import.meta.css = css;
   const { children, htmlFor, ...rest } = props;
   const controlId = useContext(ControlIdContext);
+  const [disabled, setDisabled] = useState(false);
+  const [readOnly, setReadOnly] = useState(false);
+  const [connected, setConnected] = useState(false);
 
   return (
     <Box
       as="label"
       htmlFor={htmlFor || controlId}
       baseClassName="navi_label"
-      pseudoClasses={LabelPseudoClasses}
+      pseudoClasses={FIELD_PSEUDO_CLASSES}
+      data-control-connected={connected ? "" : undefined}
+      basePseudoState={{
+        ":disabled": disabled,
+        ":read-only": readOnly,
+      }}
       {...rest}
+      onnavi_control_state={(e) => {
+        setConnected(true);
+        setDisabled(e.detail.disabled);
+        setReadOnly(e.detail.readOnly);
+      }}
+      onnavi_control_disconnected={() => {
+        setConnected(false);
+        setDisabled(false);
+        setReadOnly(false);
+      }}
     >
       {children}
     </Box>
   );
 };
-const LabelPseudoClasses = [
-  ":hover",
-  ":active",
-  ":focus",
-  ":focus-visible",
-  ":read-only",
-  ":disabled",
-  ":-navi-loading",
-];
