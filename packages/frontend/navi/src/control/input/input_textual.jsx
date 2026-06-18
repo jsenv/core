@@ -172,6 +172,10 @@ const css = /* css */ `
       }
       &[data-right] {
       }
+
+      .navi_button {
+        font-size: inherit;
+      }
     }
 
     /* Hover */
