@@ -220,7 +220,8 @@
               l'heure et les minutes.
             </p>
             <Form
-              action={({ duration, durationCustom }) => {
+              action={(values) => {
+                const { duration, durationCustom } = values;
                 const minutes =
                   duration === "custom"
                     ? durationCustom.hour * 60 + durationCustom.minute
