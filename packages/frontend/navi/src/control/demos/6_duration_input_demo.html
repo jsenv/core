@@ -102,6 +102,7 @@
                 required
                 uiAction={(v) => {
                   onPushEntry?.("hour uiAction", v);
+                  onHours?.(v);
                 }}
               >
                 <Input.UI.UnitSlot>:</Input.UI.UnitSlot>
@@ -120,6 +121,7 @@
                 required
                 uiAction={(v) => {
                   onPushEntry?.("minute uiAction", v);
+                  onMinutes?.(v);
                 }}
               />
               {unitMinute}
