@@ -726,7 +726,7 @@ export const useControlgroupProps = (
 export const useControlFacadeProps = (props, options) => {
   const [controlRootProps, controlHostProps, uiStateController] =
     useControlProps(props, options);
-  const facadeController = useUIFacadeStateController(uiStateController);
+  const facadeController = useUIFacadeStateController(props, uiStateController);
   return [controlRootProps, controlHostProps, { value: facadeController }];
 };
 

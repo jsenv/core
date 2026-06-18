@@ -113,6 +113,7 @@ const onUIStateControllerDestroyed = (uiStateController) => {
  *   registerChild(child): void;   // Called on child mount
  *   onChildInteraction(child, e, { stateChanged: boolean }): void; // Called on user interaction
  *   unregisterChild(child): void; // Called on child unmount
+ *   props: Object;
  * }
  * ```
  */
@@ -745,6 +746,7 @@ export const useUIGroupStateController = (
     existingUIStateController.id = id;
     existingUIStateController.name = name;
     existingUIStateController.value = value;
+    existingUIStateController.props = props;
     uiActionRef.current = uiAction;
     return existingUIStateController;
   }
@@ -768,6 +770,7 @@ export const useUIGroupStateController = (
     id,
     name,
     value,
+    props,
     uiState: fallbackState,
     uiStateSignal,
     wantRequesterButtonState,
@@ -1004,7 +1007,7 @@ const EMPTY_OBJECT = {};
  * inside the picker popup. It also means `commands.js` no longer has to
  * manually re-dispatch to inner controls.
  */
-export const useUIFacadeStateController = (uiStateController) => {
+export const useUIFacadeStateController = (props, uiStateController) => {
   const firstChildControllerRef = useRef(null);
   const updatingRef = useRef(false);
 
@@ -1028,11 +1031,24 @@ export const useUIFacadeStateController = (uiStateController) => {
     });
   }, []);
 
+  const filterChildController = (childController) => {
+    if (childController.props["navi-list"]) {
+      // Controls with navi-list act as standalone list navigators and should
+      // not be treated as the picker's synced child.
+      return false;
+    }
+    return true;
+  };
+
   return useMemo(
     () => ({
       controlType: "facade",
+      props,
       uiStateSignal: uiStateController.uiStateSignal,
       registerChild: (child) => {
+        if (filterChildController(child)) {
+          return;
+        }
         if (!firstChildControllerRef.current) {
           firstChildControllerRef.current = child;
         } else {
