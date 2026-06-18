@@ -80,6 +80,9 @@
               <li><a href="#outside-form">Outside form</a></li>
               <li><a href="#inside-form">Inside form</a></li>
               <li><a href="#inside-control-group">Inside control group</a></li>
+              <li>
+                <a href="#inside-picker-in-form">Inside picker (in form)</a>
+              </li>
             </ul>
           </li>
         </ul>
@@ -98,6 +101,9 @@
         Label,
         InputGroup,
         Unit,
+        Picker,
+        Text,
+        Time,
         NaviDebug,
       } from "@jsenv/navi";
       import { CallLog, useCallLog } from "./utils/call_log.jsx";
@@ -114,6 +120,7 @@
             <OutsideFormDemo />
             <InsideFormDemo />
             <InsideControlGroupDemo />
+            <InsidePickerInFormDemo />
           </div>
         </Box>
       );
@@ -331,24 +338,109 @@
             <Box flex="y" spacing="s" alignX="start">
               <ControlGroup
                 name="duration"
+                action={(values) => {
+                  push("group action", values);
+                }}
                 uiAction={(v) => {
                   push("group uiAction", v);
                 }}
               >
-                <DurationInputs
-                  hours={hoursSignal.value}
-                  minutes={minutesSignal.value}
-                  onHours={(v) => {
-                    hoursSignal.value = v;
-                  }}
-                  onMinutes={(v) => {
-                    minutesSignal.value = v;
-                  }}
-                  onPushEntry={push}
-                />
+                <Box flex="y" spacing="s" alignX="start">
+                  <DurationInputs
+                    hours={hoursSignal.value}
+                    minutes={minutesSignal.value}
+                    onHours={(v) => {
+                      hoursSignal.value = v;
+                    }}
+                    onMinutes={(v) => {
+                      minutesSignal.value = v;
+                    }}
+                    onPushEntry={push}
+                  />
+                  <Button command="--navi-send">Submit</Button>
+                </Box>
               </ControlGroup>
               <CallLog entries={entries} onClear={clear} />
             </Box>
+          </div>
+        );
+      };
+
+      // ── InsidePickerInFormDemo ──────────────────────────────────────────
+      const InsidePickerInFormDemo = () => {
+        const [entries, push, clear] = useCallLog();
+        const pickerId = "duration-picker";
+        const hoursSignal = useSignal(null);
+        const minutesSignal = useSignal(null);
+
+        const DurationPickerUI = () => {
+          const h = hoursSignal.value;
+          const m = minutesSignal.value;
+          if (h === null && m === null) {
+            return <Time type="time" />;
+          }
+          const hh = String(h ?? 0).padStart(2, "0");
+          const mm = String(m ?? 0).padStart(2, "0");
+          return <Time type="time">{`${hh}:${mm}`}</Time>;
+        };
+
+        return (
+          <div class="demo-section" id="inside-picker-in-form">
+            <h2>Inside picker (in form)</h2>
+            <p class="desc">
+              The duration inputs live inside a{" "}
+              <code>Picker type="controlgroup" name="duration"</code> which is
+              itself inside a <code>Form</code>. The form receives{" "}
+              <code>{"{ duration: { hours, minutes } }"}</code> on submit.
+            </p>
+            <Form
+              action={(values) => {
+                push("form action", values);
+              }}
+              uiAction={(values) => {
+                push("form uiAction", values);
+              }}
+            >
+              <Box flex="y" spacing="s" alignX="start">
+                <Picker
+                  id={pickerId}
+                  name="duration"
+                  type="controlgroup"
+                  placeholder="Enter a duration"
+                  ui={<DurationPickerUI />}
+                  uiAction={(v) => {
+                    push("picker uiAction", v);
+                  }}
+                >
+                  <ControlGroup>
+                    <Box flex="y" spacing="l" padding="s" alignX="center">
+                      <Text bold>Enter a duration</Text>
+                      <DurationInputs
+                        hours={hoursSignal.value}
+                        minutes={minutesSignal.value}
+                        onHours={(v) => {
+                          hoursSignal.value = v;
+                        }}
+                        onMinutes={(v) => {
+                          minutesSignal.value = v;
+                        }}
+                        onPushEntry={push}
+                      />
+                      <Box flex="x" spacing="s" alignX="end" expandX>
+                        <Button command="--navi-cancel" variant="discrete">
+                          Cancel
+                        </Button>
+                        <Button command="--navi-define" variant="discrete">
+                          Confirm
+                        </Button>
+                      </Box>
+                    </Box>
+                  </ControlGroup>
+                </Picker>
+                <Button command="--navi-send">Submit</Button>
+                <CallLog entries={entries} onClear={clear} />
+              </Box>
+            </Form>
           </div>
         );
       };
