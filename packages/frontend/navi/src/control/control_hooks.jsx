@@ -497,6 +497,25 @@ export const useControlProps = (
           },
         };
       }
+
+      if (controlType === "picker") {
+        return {
+          input: () => {
+            return {
+              name: "input",
+              type: "interaction",
+              effect: updateUIState,
+            };
+          },
+          naviChange: () => {
+            return {
+              name: "navi_change",
+              type: "action",
+            };
+          },
+        };
+      }
+
       return null;
     };
 
