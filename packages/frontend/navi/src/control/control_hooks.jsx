@@ -1155,14 +1155,21 @@ const getAssociatedLabels = (element) => {
   if (!element) {
     return [];
   }
-  if (element.labels) {
-    return Array.from(element.labels);
+  const closestPicker = element.closest('[navi-control="picker"]');
+  const insidePicker = closestPicker && element !== closestPicker;
+  const formElement = insidePicker ? closestPicker : element;
+  // Native form elements expose .labels directly
+  if (formElement.labels && formElement.labels.length > 0) {
+    return Array.from(formElement.labels);
   }
-  const id = element.id;
+  const id = formElement.id;
   if (id) {
-    return Array.from(
+    const byId = Array.from(
       document.querySelectorAll(`label[for="${CSS.escape(id)}"]`),
     );
+    if (byId.length > 0) {
+      return byId;
+    }
   }
   return [];
 };

@@ -96,7 +96,7 @@ export const Field = (props) => {
   const { ownLabel } = props;
 
   if (ownLabel) {
-    return <FieldAsContainer {...props} />;
+    return <FieldAsContainer {...props} ownLabel={undefined} />;
   }
   return <FieldAsLabel {...props} />;
 };
@@ -198,6 +198,7 @@ const FieldUI = (props) => {
       alignX={vertical ? "start" : undefined}
       data-vertical={vertical ? "" : undefined}
       {...fieldProps}
+      vertical={undefined}
       onnavi_control_state={(e) => {
         const { readOnly, disabled } = e.detail;
         setReadOnlyFromChild(readOnly);
