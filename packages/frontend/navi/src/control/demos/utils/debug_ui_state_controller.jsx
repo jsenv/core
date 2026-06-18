@@ -58,12 +58,28 @@ const css = /* css */ `
   }
 `;
 
+const serializeState = (value) => {
+  if (value === undefined) {
+    return "undefined";
+  }
+  if (value === null) {
+    return "null";
+  }
+  if (typeof value === "object") {
+    const entries = Object.entries(value).map(
+      ([k, v]) => `"${k}": ${serializeState(v)}`,
+    );
+    return `{ ${entries.join(", ")} }`;
+  }
+  return JSON.stringify(value);
+};
+
 const ControllerNode = ({ controller, depth = 0 }) => {
   import.meta.css = css;
   const { controlType, name, uiState } = controller;
   const children = controller.getChildControllers?.();
   const isGroup = Boolean(children);
-  const stateStr = JSON.stringify(uiState);
+  const stateStr = serializeState(uiState);
 
   return (
     <div>
