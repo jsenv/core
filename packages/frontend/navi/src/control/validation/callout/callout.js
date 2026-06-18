@@ -491,7 +491,12 @@ export const openCallout = (
     }
     const controlRoot = findControlRoot(anchorElement);
     if (controlRoot) {
-      anchorElement = controlRoot;
+      if (controlRoot.matches('[navi-control="input"]')) {
+        // input may have left/right icons and we want the anchor to target the input element
+        // which is where the interaction can happen
+      } else {
+        anchorElement = controlRoot;
+      }
     }
     const anchorVisuallyVisibleInfo = getVisuallyVisibleInfo(anchorElement, {
       countOffscreenAsVisible: true,
@@ -944,24 +949,39 @@ const stickCalloutToAnchor = (
 
       // Calculate arrow position to point at anchorElement element
       let arrowLeftPosOnCallout;
-      // Determine arrow target position based on attribute
+      // Determine arrow target position: explicit attribute wins, otherwise
+      // fall back to the computed text-align of the anchor element so the
+      // arrow naturally follows where the text starts.
       const arrowPositionAttribute = getAnchorAttribute("data-callout-arrow-x");
+      const arrowPosition =
+        arrowPositionAttribute ||
+        (() => {
+          const textAlign = getComputedStyle(anchorElement).textAlign;
+          if (textAlign === "center") {
+            return "center";
+          }
+          if (textAlign === "right" || textAlign === "end") {
+            return "end";
+          }
+          return "start";
+        })();
       let arrowAnchorLeft;
-      if (arrowPositionAttribute === "center") {
-        // Target the center of the anchorElement element
+      if (arrowPosition === "start") {
+        const anchorBorderSizes = getBorderSizes(anchorElement);
+        const anchorPaddingSizes = getPaddingSizes(anchorElement);
+        // Target the left edge of the anchorElement text content (after borders + padding)
+        arrowAnchorLeft =
+          anchorLeft + anchorBorderSizes.left + anchorPaddingSizes.left;
+      }
+      if (arrowPosition === "center") {
         arrowAnchorLeft = (anchorLeft + anchorRight) / 2;
-      } else if (arrowPositionAttribute === "end") {
+      } else {
+        // "end"
         const anchorBorderSizes = getBorderSizes(anchorElement);
         const anchorPaddingSizes = getPaddingSizes(anchorElement);
         // Target the right edge of the anchorElement text content (before borders + padding)
         arrowAnchorLeft =
           anchorRight - anchorBorderSizes.right - anchorPaddingSizes.right;
-      } else {
-        const anchorBorderSizes = getBorderSizes(anchorElement);
-        const anchorPaddingSizes = getPaddingSizes(anchorElement);
-        // Default behavior: target the left edge of the anchorElement text content (after borders + padding)
-        arrowAnchorLeft =
-          anchorLeft + anchorBorderSizes.left + anchorPaddingSizes.left;
       }
 
       // arrowAnchorLeft is viewport-relative (from visibleRectEffect).
