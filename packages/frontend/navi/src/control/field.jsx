@@ -129,7 +129,7 @@ const FieldUI = (props) => {
     readOnly,
     required,
     loading,
-    interactive,
+    connected,
     ...rest
   } = props;
 
@@ -139,7 +139,7 @@ const FieldUI = (props) => {
 
   const [disabledByChild, setDisabledByChild] = useState(false);
   const [readOnlyFromChild, setReadOnlyFromChild] = useState(false);
-  const [interactiveFromChild, setInteractiveFromChild] = useState(false);
+  const [connectedFromChild, setConnectedFromChild] = useState(false);
 
   const parentControlName = useContext(ControlNameContext);
   const parentControlDisabled = useContext(DisabledContext);
@@ -178,10 +178,10 @@ const FieldUI = (props) => {
   // dispatched on associated labels. this is the only bottom up communication there is
   const disabledOrByChild = disabledResolved || disabledByChild;
   const readOnlyOrByChild = readOnlyResolved || readOnlyFromChild;
-  const interactiveOrByChild = interactive || interactiveFromChild;
+  const connectedOrByChild = connected || connectedFromChild;
   const fieldProps = {
     "data-navi-field": "",
-    "data-control-connected": interactiveOrByChild ? "" : undefined,
+    "data-control-connected": connectedOrByChild ? "" : undefined,
     ...remainingProps,
     "children": childrenWithContext,
     "pseudoClasses": FieldPseudoClasses,
@@ -199,13 +199,15 @@ const FieldUI = (props) => {
       data-vertical={vertical ? "" : undefined}
       {...fieldProps}
       vertical={undefined}
+      connected={undefined}
       onnavi_control_state={(e) => {
         const { readOnly, disabled } = e.detail;
+        setConnectedFromChild(true);
         setReadOnlyFromChild(readOnly);
         setDisabledByChild(disabled);
       }}
       onnavi_control_disconnected={() => {
-        setInteractiveFromChild(false);
+        setConnectedFromChild(false);
         setDisabledByChild(false);
         setReadOnlyFromChild(false);
       }}
