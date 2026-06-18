@@ -95,12 +95,19 @@
                   <ol>
                     <li>
                       <a href="#facade-text">Input texte</a>
-                </li>
-                <li>
-                  <a href="#facade-text-in-form">Input texte — inside a form</a>
+                    </li>
+                    <li>
+                      <a href="#facade-text-in-form">
+                        Input texte — inside a form
+                      </a>
                     </li>
                     <li>
                       <a href="#facade-controlgroup">ControlGroup interne</a>
+                    </li>
+                    <li>
+                      <a href="#facade-controlgroup-in-form">
+                        ControlGroup interne — inside a form
+                      </a>
                     </li>
                   </ol>
                 </li>
@@ -190,6 +197,11 @@
               <section id="facade-controlgroup">
                 <h3>ControlGroup interne</h3>
                 <PickerControlGroupExternalDemo />
+              </section>
+
+              <section id="facade-controlgroup-in-form">
+                <h3>ControlGroup interne — inside a form</h3>
+                <PickerControlGroupInFormDemo />
               </section>
             </section>
           </Box>
@@ -401,6 +413,75 @@
                 Envoyer
               </Button>
             </Box>
+            <CallLog entries={entries} onClear={clearEntries} />
+          </Box>
+        );
+      };
+
+      const PickerControlGroupInFormDemo = () => {
+        const [entries, pushEntry, clearEntries] = useCallLog();
+
+        return (
+          <Box flex="y" spacing="m" alignX="start">
+            <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+              Le <code>Picker type="controlgroup"</code> est dans un{" "}
+              <code>Form</code>. On vérifie que le formulaire récupère bien la
+              valeur objet du picker sous son <code>name</code> lors du submit.
+            </p>
+            <Form
+              action={(values) => {
+                pushEntry("Form action", values);
+              }}
+              flex="y"
+              spacing="m"
+              alignX="start"
+            >
+              <fieldset>
+                <legend>address</legend>
+                <Picker
+                  name="address"
+                  type="controlgroup"
+                  placeholder="Saisir une adresse"
+                  uiAction={(v) => {
+                    pushEntry("uiAction", v);
+                  }}
+                  action={(v) => {
+                    pushEntry("action", v);
+                  }}
+                >
+                  <ControlGroup>
+                    <Box flex="y" spacing="s" padding="s" alignX="start">
+                      <fieldset>
+                        <legend>street</legend>
+                        <Input
+                          name="street"
+                          placeholder="Street"
+                          defaultValue="Rue de la paix"
+                          uiAction={(v) => {
+                            pushEntry("uiAction (street)", v);
+                          }}
+                        />
+                      </fieldset>
+                      <fieldset>
+                        <legend>city</legend>
+                        <Input
+                          name="city"
+                          placeholder="City"
+                          uiAction={(v) => {
+                            pushEntry("uiAction (city)", v);
+                          }}
+                        />
+                      </fieldset>
+                    </Box>
+                  </ControlGroup>
+                  <Box flex spacing="s">
+                    <Button command="--navi-cancel">Annuler</Button>
+                    <Button command="--navi-define">Définir</Button>
+                  </Box>
+                </Picker>
+              </fieldset>
+              <Button type="submit">Submit</Button>
+            </Form>
             <CallLog entries={entries} onClear={clearEntries} />
           </Box>
         );
