@@ -101,6 +101,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useSignal } from "@preact/signals";
+      import { CallLog, useCallLog } from "../utils/call_log.jsx";
       import {
         Box,
         Field,
@@ -112,6 +113,8 @@
         SelectableInput,
         NaviDebug,
         Text,
+        Form,
+        Button,
         route,
         setupRoutes,
         stateSignal,
@@ -211,19 +214,22 @@
               </a>
             </li>
             <li>
-              <a href="#section-3">3. Searchable select — empty list</a>
+              <a href="#section-3">3. Inside a form</a>
             </li>
             <li>
-              <a href="#section-4">4. Searchable select — full list</a>
+              <a href="#section-4">4. Searchable select — empty list</a>
             </li>
             <li>
-              <a href="#section-5">5. Searchable select — few results</a>
+              <a href="#section-5">5. Searchable select — full list</a>
             </li>
             <li>
-              <a href="#section-6">6. Searchable select — no results</a>
+              <a href="#section-6">6. Searchable select — few results</a>
             </li>
             <li>
-              <a href="#section-7">7. Place picker — rich items with search</a>
+              <a href="#section-7">7. Searchable select — no results</a>
+            </li>
+            <li>
+              <a href="#section-8">8. Place picker — rich items with search</a>
             </li>
           </ol>
         </div>
@@ -241,6 +247,7 @@
             <TableOfContents />
             <SelectWithUpdate />
             <SelectWithSend />
+            <SelectInForm />
             <SearchableSelectEmpty />
             <SearchableSelectNormal />
             <SearchableSelectFewResults />
@@ -249,33 +256,6 @@
           </Box>
         </NaviDebug>
       );
-
-      const CallLog = ({ entries }) => {
-        if (entries.length === 0) {
-          return (
-            <div class="call-log" style="color: #aaa">
-              No calls yet…
-            </div>
-          );
-        }
-        return (
-          <div class="call-log">
-            {entries.map((entry, i) => (
-              <div key={i} class="call-log-entry">
-                <span class="count">#{i + 1}</span>
-                <span
-                  class={
-                    entry.type === "uiAction" ? "label-ui" : "label-action"
-                  }
-                >
-                  {entry.type}
-                </span>
-                <span class="value">← {JSON.stringify(entry.value)}</span>
-              </div>
-            ))}
-          </div>
-        );
-      };
 
       // ── 1. command="--navi-update" — default behavior ───────────────────────────
       // This is the default command for single-select pickers. The selected item is
@@ -294,11 +274,7 @@
 
       const SelectWithUpdate = () => {
         const selected = updateFruitSignal.value;
-        const logSignal = useSignal([]);
-
-        const pushLog = (type, value) => {
-          logSignal.value = [...logSignal.value, { type, value }];
-        };
+        const [entries, push, clear] = useCallLog();
 
         return (
           <div id="section-1" class="demo-section">
@@ -318,10 +294,10 @@
                 placeholder="Select a fruit…"
                 value={selected}
                 uiAction={(v) => {
-                  pushLog("uiAction", v);
+                  push("uiAction", v);
                 }}
                 action={(v) => {
-                  pushLog("action", v);
+                  push("action", v);
                   updateFruitSignal.value = v;
                 }}
                 minWidth="200"
@@ -344,7 +320,7 @@
                 </List>
               </Picker>
             </Field>
-            <CallLog entries={logSignal.value} />
+            <CallLog entries={entries} onClear={clear} />
           </div>
         );
       };
@@ -356,11 +332,7 @@
 
       const SelectWithSend = () => {
         const selected = sendFruitSignal.value;
-        const logSignal = useSignal([]);
-
-        const pushLog = (type, value) => {
-          logSignal.value = [...logSignal.value, { type, value }];
-        };
+        const [entries, push, clear] = useCallLog();
 
         return (
           <div id="section-2" class="demo-section">
@@ -379,10 +351,10 @@
                 placeholder="Select a fruit…"
                 value={selected}
                 uiAction={(v) => {
-                  pushLog("uiAction", v);
+                  push("uiAction", v);
                 }}
                 action={(v) => {
-                  pushLog("action", v);
+                  push("action", v);
                   sendFruitSignal.value = v;
                 }}
                 minWidth="200"
@@ -405,12 +377,64 @@
                 </List>
               </Picker>
             </Field>
-            <CallLog entries={logSignal.value} />
+            <CallLog entries={entries} onClear={clear} />
           </div>
         );
       };
 
-      // ── 3–6. Searchable select ────────────────────────────────────────────
+      // ── 3. Inside a form ──────────────────────────────────────────────────
+
+      const SelectInForm = () => {
+        const [entries, push, clear] = useCallLog();
+
+        return (
+          <div id="section-3" class="demo-section">
+            <h2>3. Inside a form</h2>
+            <p>
+              The picker participates in the form under its <code>name</code>.
+              Submit to see the collected values.
+            </p>
+            <Form
+              action={(values) => {
+                push("Form action", values);
+              }}
+              flex="y"
+              spacing="m"
+              alignX="start"
+            >
+              <Field vertical>
+                <Label>Fruit (required)</Label>
+                <Picker
+                  name="fruit"
+                  placeholder="Select a fruit…"
+                  required
+                  minWidth="200"
+                >
+                  <List selectable command="--navi-send">
+                    {FRUIT_OPTIONS.map((opt, i) => (
+                      <List.Item
+                        selectable
+                        key={opt}
+                        id={`form_${opt}`}
+                        index={i}
+                        value={opt}
+                        padding="s"
+                        spacing="s"
+                      >
+                        {opt}
+                      </List.Item>
+                    ))}
+                  </List>
+                </Picker>
+              </Field>
+              <Button type="submit">Submit</Button>
+            </Form>
+            <CallLog entries={entries} onClear={clear} />
+          </div>
+        );
+      };
+
+      // ── 4–7. Searchable select ────────────────────────────────────────────
 
       const SearchableSelectInner = ({
         id,
@@ -419,12 +443,9 @@
         items,
         searchText,
         onSearch,
-        logSignal,
+        onLog,
       }) => {
         const [matchingItems, getMatchInfo] = useSearchText(searchText, items);
-        const pushLog = (type, value) => {
-          logSignal.value = [...logSignal.value, { type, value }];
-        };
 
         return (
           <Picker
@@ -432,10 +453,10 @@
             placeholder="Select a fruit…"
             value={selected}
             uiAction={(v) => {
-              pushLog("uiAction", v);
+              onLog("uiAction", v);
             }}
             action={(v) => {
-              pushLog("action", v);
+              onLog("action", v);
               onSelect(v);
             }}
             minWidth="240"
@@ -497,10 +518,10 @@
       const SearchableSelectEmpty = () => {
         const selected = searchFruitSelectedSignal.value;
         const searchText = useSignal("").value;
-        const logSignal = useSignal([]);
+        const [entries, push, clear] = useCallLog();
         return (
-          <div id="section-3" class="demo-section">
-            <h2>3. Searchable select — empty list</h2>
+          <div id="section-4" class="demo-section">
+            <h2>4. Searchable select — empty list</h2>
             <p>The list has no items at all.</p>
             <Field vertical>
               <Label>Fruit</Label>
@@ -513,10 +534,10 @@
                 items={[]}
                 searchText={searchText}
                 onSearch={() => {}}
-                logSignal={logSignal}
+                onLog={push}
               />
             </Field>
-            <CallLog entries={logSignal.value} />
+            <CallLog entries={entries} onClear={clear} />
           </div>
         );
       };
@@ -525,10 +546,10 @@
         const selected = searchFruitSelectedSignal.value;
         const searchTextSignal = useSignal("");
         const searchText = searchTextSignal.value;
-        const logSignal = useSignal([]);
+        const [entries, push, clear] = useCallLog();
         return (
-          <div id="section-4" class="demo-section">
-            <h2>4. Searchable select — full list</h2>
+          <div id="section-5" class="demo-section">
+            <h2>5. Searchable select — full list</h2>
             <p>All items shown, search is empty.</p>
             <Field vertical>
               <Label>Fruit</Label>
@@ -543,10 +564,10 @@
                 onSearch={(v) => {
                   searchTextSignal.value = v;
                 }}
-                logSignal={logSignal}
+                onLog={push}
               />
             </Field>
-            <CallLog entries={logSignal.value} />
+            <CallLog entries={entries} onClear={clear} />
           </div>
         );
       };
@@ -555,10 +576,10 @@
         const selected = searchFruitSelectedSignal.value;
         const searchTextSignal = useSignal("rr");
         const searchText = searchTextSignal.value;
-        const logSignal = useSignal([]);
+        const [entries, push, clear] = useCallLog();
         return (
-          <div id="section-5" class="demo-section">
-            <h2>5. Searchable select — few results</h2>
+          <div id="section-6" class="demo-section">
+            <h2>6. Searchable select — few results</h2>
             <p>
               Search pre-filled with <code>"rr"</code> — matches Cherry and
               Elderberry.
@@ -576,10 +597,10 @@
                 onSearch={(v) => {
                   searchTextSignal.value = v;
                 }}
-                logSignal={logSignal}
+                onLog={push}
               />
             </Field>
-            <CallLog entries={logSignal.value} />
+            <CallLog entries={entries} onClear={clear} />
           </div>
         );
       };
@@ -588,10 +609,10 @@
         const selected = searchFruitSelectedSignal.value;
         const searchTextSignal = useSignal("appp");
         const searchText = searchTextSignal.value;
-        const logSignal = useSignal([]);
+        const [entries, push, clear] = useCallLog();
         return (
-          <div id="section-6" class="demo-section">
-            <h2>6. Searchable select — no results</h2>
+          <div id="section-7" class="demo-section">
+            <h2>7. Searchable select — no results</h2>
             <p>
               Search pre-filled with <code>"zzz"</code> — matches nothing.
             </p>
@@ -608,24 +629,21 @@
                 onSearch={(v) => {
                   searchTextSignal.value = v;
                 }}
-                logSignal={logSignal}
+                onLog={push}
               />
             </Field>
-            <CallLog entries={logSignal.value} />
+            <CallLog entries={entries} onClear={clear} />
           </div>
         );
       };
 
-      // ── 7. Place picker — rich items with search ──────────────────────────
+      // ── 8. Place picker — rich items with search ────────────────────────────
 
       const PlacePickerDemo = () => {
         const placeSlug = placeSlugSignal.value;
         const searchTextSignal = useSignal("");
         const searchText = searchTextSignal.value;
-        const logSignal = useSignal([]);
-        const pushLog = (type, value) => {
-          logSignal.value = [...logSignal.value, { type, value }];
-        };
+        const [entries, push, clear] = useCallLog();
 
         const selectedPlace = PLACES.find((p) => p.slug === placeSlug);
         const [matchingPlaces, getPlaceMatchInfo] = useSearchText(
@@ -662,8 +680,8 @@
         );
 
         return (
-          <div id="section-7" class="demo-section">
-            <h2>7. Place picker — rich items with search</h2>
+          <div id="section-8" class="demo-section">
+            <h2>8. Place picker — rich items with search</h2>
             <p>
               Each item shows a name and an address. The search filters across
               all fields. The trigger displays the selected place label (or a
@@ -674,9 +692,9 @@
               <Picker
                 name="place_picker"
                 value={placeSlug}
-                uiAction={(v) => pushLog("uiAction", v)}
+                uiAction={(v) => push("uiAction", v)}
                 action={(v) => {
-                  pushLog("action", v);
+                  push("action", v);
                   placeSlugSignal.value = v;
                 }}
                 borderRadius="s"
@@ -727,7 +745,7 @@
                 </List>
               </Picker>
             </Field>
-            <CallLog entries={logSignal.value} />
+            <CallLog entries={entries} onClear={clear} />
           </div>
         );
       };
