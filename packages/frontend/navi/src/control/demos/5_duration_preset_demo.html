@@ -263,11 +263,10 @@
               clic.
             </p>
             <Form
-              action={({ duration3, hour, minute }) => {
-                if (duration3 === "custom") {
-                  duration3 = (hour || 0) * 60 + (minute || 0);
-                }
-                formResultSignal.value = { duration: duration3 };
+              action={({ duration, hour, minute }) => {
+                const minutes =
+                  duration === "custom" ? hour * 60 + minute : duration;
+                formResultSignal.value = { minutes };
               }}
               flex="y"
               spacing="m"
@@ -531,7 +530,7 @@
               horizontal
               spacing="s"
               id="duration3"
-              name="duration3"
+              name="duration"
               required
               value={duration}
               uiAction={(v) => {
@@ -588,7 +587,7 @@
             </Icon>
             <Picker
               id="custom_duration_picker3"
-              name="custom_duration"
+              name="durationCustom"
               headless
               mode="dialog"
               borderRadius="s"
