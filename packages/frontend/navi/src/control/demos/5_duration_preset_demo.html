@@ -109,14 +109,32 @@
         id: "duration2",
         oneOf: [...PRESET_DURATIONS, "custom"],
       });
-      const customDurationHourSignal2 = stateSignal(2, {
+      const customDurationHourSignal2 = stateSignal(undefined, {
         id: "custom_hour2",
         type: "hour",
         min: 0,
         max: 4,
       });
-      const customDurationMinuteSignal2 = stateSignal(15, {
+      const customDurationMinuteSignal2 = stateSignal(undefined, {
         id: "custom_minute2",
+        type: "minute",
+        min: 0,
+        max: 59,
+        step: 5,
+      });
+
+      const durationSignal3 = stateSignal(90, {
+        id: "duration3",
+        oneOf: [...PRESET_DURATIONS, "custom"],
+      });
+      const customDurationHourSignal3 = stateSignal(2, {
+        id: "custom_hour3",
+        type: "hour",
+        min: 0,
+        max: 4,
+      });
+      const customDurationMinuteSignal3 = stateSignal(15, {
+        id: "custom_minute3",
         type: "minute",
         min: 0,
         max: 59,
@@ -132,6 +150,9 @@
           duration2: durationSignal2,
           custom_hour2: customDurationHourSignal2,
           custom_minute2: customDurationMinuteSignal2,
+          duration3: durationSignal3,
+          custom_hour3: customDurationHourSignal3,
+          custom_minute3: customDurationMinuteSignal3,
         },
       });
       setupRoutes([DEMO_ROUTE]);
@@ -139,7 +160,8 @@
       const App = () => (
         <Box flex="y" spacing="l">
           <PresetsWithInlineCustomDemo />
-          <PresetsWithPickerCustomDemo />
+          <PresetsWithPickerCustomNoDefaultDemo />
+          <PresetsWithPickerCustomWithDefaultDemo />
         </Box>
       );
 
@@ -186,18 +208,16 @@
         );
       };
 
-      // ── PresetsWithPickerCustomDemo ───────────────────────────────────────
-      const PresetsWithPickerCustomDemo = () => {
+      // ── PresetsWithPickerCustomNoDefaultDemo ─────────────────────────────
+      const PresetsWithPickerCustomNoDefaultDemo = () => {
         const formResultSignal = useSignal(null);
 
         return (
           <div class="demo-section">
-            <h2>Duration selector — custom via Picker popup</h2>
+            <h2>Duration selector — custom via Picker (no default)</h2>
             <p class="desc">
-              Variante : l'option "Autre" contient un Picker. Cliquer dessus
-              ouvre une popup avec un input heures et un input minutes. La
-              sélection de l'option et l'ouverture du Picker se font en un seul
-              clic.
+              Même variante que ci-dessous, mais sans valeur par défaut pour
+              l'heure et les minutes.
             </p>
             <Form
               action={({ duration2, hour, minute }) => {
@@ -210,7 +230,58 @@
               spacing="m"
               alignX="start"
             >
-              <DurationControl2 />
+              <DurationControl2
+                durationSignal={durationSignal2}
+                hourSignal={customDurationHourSignal2}
+                minuteSignal={customDurationMinuteSignal2}
+                pickerId="custom_duration_picker2"
+              />
+              <Button type="submit">Submit</Button>
+            </Form>
+            {formResultSignal.value !== null ? (
+              <div class="form-result">
+                Form submitted:{" "}
+                {JSON.stringify(formResultSignal.value, null, 2)}
+              </div>
+            ) : (
+              <div class="form-result" style="color:#aaa">
+                Submit the form to see values…
+              </div>
+            )}
+          </div>
+        );
+      };
+
+      // ── PresetsWithPickerCustomWithDefaultDemo ────────────────────────────
+      const PresetsWithPickerCustomWithDefaultDemo = () => {
+        const formResultSignal = useSignal(null);
+
+        return (
+          <div class="demo-section">
+            <h2>Duration selector — custom via Picker (2h15 par défaut)</h2>
+            <p class="desc">
+              Variante : l'option "Autre" contient un Picker. Cliquer dessus
+              ouvre une popup avec un input heures et un input minutes. La
+              sélection de l'option et l'ouverture du Picker se font en un seul
+              clic.
+            </p>
+            <Form
+              action={({ duration3, hour, minute }) => {
+                if (duration3 === "custom") {
+                  duration3 = hour * 60 + minute;
+                }
+                formResultSignal.value = { duration: duration3 };
+              }}
+              flex="y"
+              spacing="m"
+              alignX="start"
+            >
+              <DurationControl2
+                durationSignal={durationSignal3}
+                hourSignal={customDurationHourSignal3}
+                minuteSignal={customDurationMinuteSignal3}
+                pickerId="custom_duration_picker3"
+              />
               <Button type="submit">Submit</Button>
             </Form>
             {formResultSignal.value !== null ? (
@@ -327,9 +398,14 @@
         );
       };
 
-      // ── DurationControl2 (custom via Picker popup) ───────────────────────
-      const DurationControl2 = () => {
-        const duration = durationSignal2.value;
+      // ── DurationControl2 (custom via Picker popup) ─────────────────────────
+      const DurationControl2 = ({
+        durationSignal,
+        hourSignal,
+        minuteSignal,
+        pickerId,
+      }) => {
+        const duration = durationSignal.value;
 
         return (
           <Field ownLabel vertical>
@@ -338,12 +414,12 @@
               selectable
               horizontal
               spacing="s"
-              id="duration2"
-              name="duration2"
+              id={durationSignal.id}
+              name={durationSignal.id}
               required
               value={duration}
               uiAction={(v) => {
-                durationSignal2.value = v;
+                durationSignal.value = v;
               }}
               border="none"
             >
@@ -360,18 +436,26 @@
               ))}
               <CustomDurationOptionWithPicker
                 index={PRESET_DURATIONS.length}
-                id="custom2"
+                id={`custom_${durationSignal.id}`}
                 value="custom"
                 selected={duration === "custom"}
+                hourSignal={hourSignal}
+                minuteSignal={minuteSignal}
+                pickerId={pickerId}
               />
             </List>
           </Field>
         );
       };
 
-      const CustomDurationOptionWithPicker = (props) => {
-        const hours = customDurationHourSignal2.value;
-        const minutes = customDurationMinuteSignal2.value;
+      const CustomDurationOptionWithPicker = ({
+        hourSignal,
+        minuteSignal,
+        pickerId,
+        ...props
+      }) => {
+        const hours = hourSignal.value;
+        const minutes = minuteSignal.value;
 
         return (
           <List.Item
@@ -386,16 +470,20 @@
             flex
             spacing="xs"
             command="--navi-open"
-            commandFor="custom_duration_picker2"
+            commandFor={pickerId}
             // navi-command-target="child-control"
             {...props}
           >
-            <Time type="minute">{hours * 60 + minutes}</Time>
+            {!hours && !minutes ? (
+              <Text>Personnalisé</Text>
+            ) : (
+              <Time type="minute">{(hours || 0) * 60 + (minutes || 0)}</Time>
+            )}
             <Icon marginRight="-1ch">
               <Picker.UI.PencilSvg />
             </Icon>
             <Picker
-              id="custom_duration_picker2"
+              id={pickerId}
               name="custom_duration"
               headless
               mode="dialog"
@@ -416,7 +504,7 @@
                         expandX
                         value={hours}
                         uiAction={(v) => {
-                          customDurationHourSignal2.value = v;
+                          hourSignal.value = v;
                         }}
                         textAlign="right"
                       >
@@ -434,7 +522,7 @@
                         expandX
                         value={minutes}
                         uiAction={(v) => {
-                          customDurationMinuteSignal2.value = v;
+                          minuteSignal.value = v;
                         }}
                       />
                       <Unit unit="minute" plural />
