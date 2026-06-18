@@ -220,22 +220,18 @@
               l'heure et les minutes.
             </p>
             <Form
-              action={({ duration2, hour, minute }) => {
-                if (duration2 === "custom") {
-                  duration2 = hour * 60 + minute;
-                }
-                formResultSignal.value = { duration: duration2 };
+              action={({ duration, durationCustom }) => {
+                const minutes =
+                  duration === "custom"
+                    ? durationCustom.hour * 60 + durationCustom.minute
+                    : duration;
+                formResultSignal.value = { minutes };
               }}
               flex="y"
               spacing="m"
               alignX="start"
             >
-              <DurationControl2
-                durationSignal={durationSignal2}
-                hourSignal={customDurationHourSignal2}
-                minuteSignal={customDurationMinuteSignal2}
-                pickerId="custom_duration_picker2"
-              />
+              <DurationControl2 />
               <Button type="submit">Submit</Button>
             </Form>
             {formResultSignal.value !== null ? (
@@ -268,7 +264,7 @@
             <Form
               action={({ duration3, hour, minute }) => {
                 if (duration3 === "custom") {
-                  duration3 = hour * 60 + minute;
+                  duration3 = (hour || 0) * 60 + (minute || 0);
                 }
                 formResultSignal.value = { duration: duration3 };
               }}
@@ -276,12 +272,7 @@
               spacing="m"
               alignX="start"
             >
-              <DurationControl2
-                durationSignal={durationSignal3}
-                hourSignal={customDurationHourSignal3}
-                minuteSignal={customDurationMinuteSignal3}
-                pickerId="custom_duration_picker3"
-              />
+              <DurationControl3 />
               <Button type="submit">Submit</Button>
             </Form>
             {formResultSignal.value !== null ? (
@@ -398,28 +389,23 @@
         );
       };
 
-      // ── DurationControl2 (custom via Picker popup) ─────────────────────────
-      const DurationControl2 = ({
-        durationSignal,
-        hourSignal,
-        minuteSignal,
-        pickerId,
-      }) => {
-        const duration = durationSignal.value;
+      // ── DurationControl2 (custom via Picker, no default) ──────────────────
+      const DurationControl2 = () => {
+        const duration = durationSignal2.value;
 
         return (
-          <Field ownLabel vertical>
+          <Field vertical>
             <Label bold>Durée</Label>
             <List
               selectable
               horizontal
               spacing="s"
-              id={durationSignal.id}
-              name={durationSignal.id}
+              id="duration2"
+              name="duration"
               required
               value={duration}
               uiAction={(v) => {
-                durationSignal.value = v;
+                durationSignal2.value = v;
               }}
               border="none"
             >
@@ -434,28 +420,19 @@
                   {minutes}
                 </DurationPreset>
               ))}
-              <CustomDurationOptionWithPicker
+              <CustomDurationOptionWithPicker2
                 index={PRESET_DURATIONS.length}
-                id={`custom_${durationSignal.id}`}
                 value="custom"
                 selected={duration === "custom"}
-                hourSignal={hourSignal}
-                minuteSignal={minuteSignal}
-                pickerId={pickerId}
               />
             </List>
           </Field>
         );
       };
 
-      const CustomDurationOptionWithPicker = ({
-        hourSignal,
-        minuteSignal,
-        pickerId,
-        ...props
-      }) => {
-        const hours = hourSignal.value;
-        const minutes = minuteSignal.value;
+      const CustomDurationOptionWithPicker2 = (props) => {
+        const hours = customDurationHourSignal2.value;
+        const minutes = customDurationMinuteSignal2.value;
 
         return (
           <List.Item
@@ -470,7 +447,7 @@
             flex
             spacing="xs"
             command="--navi-open"
-            commandFor={pickerId}
+            commandFor="custom_duration_picker2"
             // navi-command-target="child-control"
             {...props}
           >
@@ -483,7 +460,133 @@
               <Picker.UI.PencilSvg />
             </Icon>
             <Picker
-              id={pickerId}
+              id="custom_duration_picker2"
+              name="durationCustom"
+              headless
+              mode="dialog"
+              borderRadius="s"
+              type="controlgroup"
+            >
+              <Box flex="y" alignX="center" padding="m" spacing="m">
+                <Text bold>Veuillez saisir une durée</Text>
+                <ControlGroup>
+                  <InputGroup flex spacing="xxs">
+                    <Box flex="y">
+                      <Input
+                        type="navi_hour"
+                        name="hour"
+                        unit={false}
+                        variant="underline"
+                        size="l"
+                        expandX
+                        value={hours}
+                        uiAction={(v) => {
+                          customDurationHourSignal2.value = v;
+                        }}
+                        textAlign="right"
+                        required
+                      >
+                        <Input.UI.UnitSlot>:</Input.UI.UnitSlot>
+                      </Input>
+                      <Unit unit="hour" plural marginRight="1ch" />
+                    </Box>
+                    <Box flex="y">
+                      <Input
+                        type="navi_minute"
+                        name="minute"
+                        unit={false}
+                        variant="underline"
+                        size="l"
+                        expandX
+                        value={minutes}
+                        uiAction={(v) => {
+                          customDurationMinuteSignal2.value = v;
+                        }}
+                        required
+                      />
+                      <Unit unit="minute" plural />
+                    </Box>
+                  </InputGroup>
+                </ControlGroup>
+                <Box flex spacing="s" expandX alignX="end">
+                  <Button command="--navi-cancel" variant="discrete" />
+                  <Button command="--navi-define" variant="discrete" />
+                </Box>
+              </Box>
+            </Picker>
+          </List.Item>
+        );
+      };
+
+      // ── DurationControl3 (custom via Picker, 2h15 default) ────────────────
+      const DurationControl3 = () => {
+        const duration = durationSignal3.value;
+
+        return (
+          <Field ownLabel vertical>
+            <Label bold>Durée</Label>
+            <List
+              selectable
+              horizontal
+              spacing="s"
+              id="duration3"
+              name="duration3"
+              required
+              value={duration}
+              uiAction={(v) => {
+                durationSignal3.value = v;
+              }}
+              border="none"
+            >
+              {PRESET_DURATIONS.map((minutes, i) => (
+                <DurationPreset
+                  key={minutes}
+                  index={i}
+                  id={minutes}
+                  value={minutes}
+                  selected={duration === String(minutes)}
+                >
+                  {minutes}
+                </DurationPreset>
+              ))}
+              <CustomDurationOptionWithPicker3
+                index={PRESET_DURATIONS.length}
+                id="custom_duration3"
+                value="custom"
+                selected={duration === "custom"}
+              />
+            </List>
+          </Field>
+        );
+      };
+
+      const CustomDurationOptionWithPicker3 = (props) => {
+        const hours = customDurationHourSignal3.value;
+        const minutes = customDurationMinuteSignal3.value;
+
+        return (
+          <List.Item
+            selectable
+            borderRadius="s"
+            borderWidth="1"
+            minWidth="64"
+            paddingX="m"
+            paddingY="s"
+            alignX="center"
+            noWrap
+            flex
+            spacing="xs"
+            command="--navi-open"
+            commandFor="custom_duration_picker3"
+            // navi-command-target="child-control"
+            {...props}
+          >
+            <Time type="minute">{hours * 60 + minutes}</Time>
+            <Icon marginRight="-1ch">
+              <Picker.UI.PencilSvg />
+            </Icon>
+            <Picker
+              id="custom_duration_picker3"
               name="custom_duration"
               headless
               mode="dialog"
@@ -504,10 +607,9 @@
                         expandX
                         value={hours}
                         uiAction={(v) => {
-                          hourSignal.value = v;
+                          customDurationHourSignal3.value = v;
                         }}
                         textAlign="right"
-                        required
                       >
                         <Input.UI.UnitSlot>:</Input.UI.UnitSlot>
                       </Input>
@@ -523,9 +625,8 @@
                         expandX
                         value={minutes}
                         uiAction={(v) => {
-                          minuteSignal.value = v;
+                          customDurationMinuteSignal3.value = v;
                         }}
-                        required
                       />
                       <Unit unit="minute" plural />
                     </Box>
