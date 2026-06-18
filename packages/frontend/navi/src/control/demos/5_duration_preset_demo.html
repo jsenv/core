@@ -200,11 +200,9 @@
               clic.
             </p>
             <Form
-              action={({ duration2 }) => {
+              action={({ duration2, hour, minute }) => {
                 if (duration2 === "custom") {
-                  const hours = customDurationHourSignal2.value || 0;
-                  const minutes = customDurationMinuteSignal2.value || 0;
-                  duration2 = hours * 60 + minutes;
+                  duration2 = hour * 60 + minute;
                 }
                 formResultSignal.value = { duration: duration2 };
               }}
