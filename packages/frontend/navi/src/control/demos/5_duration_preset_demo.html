@@ -233,7 +233,7 @@
         const duration = durationSignal.value;
 
         return (
-          <Field vertical>
+          <Field ownLabel vertical>
             <Label bold>Durée</Label>
             <List
               selectable
@@ -333,7 +333,7 @@
         const duration = durationSignal2.value;
 
         return (
-          <Field vertical>
+          <Field ownLabel vertical>
             <Label bold>Durée</Label>
             <List
               selectable
@@ -438,8 +438,8 @@
                   </Box>
                 </InputGroup>
 
-                <Button.Cancel />
-                <Button.Ok />
+                <Button command="--navi-cancel" />
+                <Button command="--navi-define" />
               </Box>
             </Picker>
           </List.Item>
