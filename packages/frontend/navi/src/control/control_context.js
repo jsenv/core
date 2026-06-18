@@ -82,9 +82,9 @@ export const CONTROL_PROP_SET = new Set([
   "resetOnError",
 ]);
 
-export const ControlToInterfaceContext = createContext(null);
 export const MessagePropsRefContext = createContext();
 
+export const ControlIdContext = createContext();
 export const ControlNameContext = createContext();
 export const DisabledContext = createContext();
 export const ReadOnlyContext = createContext();

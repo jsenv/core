@@ -1,9 +1,9 @@
-import { useContext, useId, useMemo, useRef, useState } from "preact/hooks";
+import { useContext, useId, useRef, useState } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
 import {
+  ControlIdContext,
   ControlNameContext,
-  ControlToInterfaceContext,
   DisabledContext,
   LoadingContext,
   MessagePropsRefContext,
@@ -24,7 +24,7 @@ const css = /* css */ `
     }
 
     label[data-navi-field] {
-      &[data-interactive] {
+      &[data-control-connected] {
         cursor: pointer;
         user-select: none;
       }
@@ -48,7 +48,7 @@ const css = /* css */ `
         padding-bottom: var(--field-spacing);
       }
 
-      &[data-interactive] {
+      &[data-control-connected] {
         .navi_label {
           cursor: pointer;
           /* When label is interactive ability to select text oftens conflicts with other click interactions */
@@ -151,23 +151,13 @@ const FieldUI = (props) => {
   const readOnlyResolved = readOnly || parentControlReadOnly;
   const requiredResolved = required || parentControlRequired;
   const loadingResolved = loading || parentControlLoading;
-  const controlToInterfaceContextValue = useMemo(
-    () => ({
-      id: fieldId,
-      setReadOnly: setReadOnlyFromChild,
-      setDisabled: setDisabledByChild,
-      setInteractive: setInteractiveFromChild,
-    }),
-    [fieldId],
-  );
+
   let childrenWithContext;
   if (props.children === undefined) {
   } else {
     childrenWithContext = (
       <MessagePropsRefContext.Provider value={messagePropsRef}>
-        <ControlToInterfaceContext.Provider
-          value={controlToInterfaceContextValue}
-        >
+        <ControlIdContext.Provider value={fieldId}>
           <ControlNameContext.Provider value={nameResolved}>
             <DisabledContext.Provider value={disabledResolved}>
               <ReadOnlyContext.Provider value={readOnlyResolved}>
@@ -179,21 +169,19 @@ const FieldUI = (props) => {
               </ReadOnlyContext.Provider>
             </DisabledContext.Provider>
           </ControlNameContext.Provider>
-        </ControlToInterfaceContext.Provider>
+        </ControlIdContext.Provider>
       </MessagePropsRefContext.Provider>
     );
   }
 
-  // a field inteface can make the field component
-  // disabled/readonly when that field interface is disabled/readonly
-  // this is the only bottom up communication there is
-  // (apart from action requested by child which cause ancestor action to execute)
+  // a control updates the field via navi_control_state / navi_control_disconnected events
+  // dispatched on associated labels. this is the only bottom up communication there is
   const disabledOrByChild = disabledResolved || disabledByChild;
   const readOnlyOrByChild = readOnlyResolved || readOnlyFromChild;
   const interactiveOrByChild = interactive || interactiveFromChild;
   const fieldProps = {
     "data-navi-field": "",
-    "data-interactive": interactiveOrByChild ? "" : undefined,
+    "data-control-connected": interactiveOrByChild ? "" : undefined,
     ...remainingProps,
     "children": childrenWithContext,
     "pseudoClasses": FieldPseudoClasses,
@@ -210,6 +198,16 @@ const FieldUI = (props) => {
       alignX={vertical ? "start" : undefined}
       data-vertical={vertical ? "" : undefined}
       {...fieldProps}
+      onnavi_control_state={(e) => {
+        const { readOnly, disabled } = e.detail;
+        setReadOnlyFromChild(readOnly);
+        setDisabledByChild(disabled);
+      }}
+      onnavi_control_disconnected={() => {
+        setInteractiveFromChild(false);
+        setDisabledByChild(false);
+        setReadOnlyFromChild(false);
+      }}
     />
   );
 };
@@ -226,13 +224,12 @@ const FieldPseudoClasses = [
 
 export const Label = (props) => {
   const { children, htmlFor, ...rest } = props;
-  const controlToInterface = useContext(ControlToInterfaceContext);
-  const fieldId = controlToInterface?.id;
+  const controlId = useContext(ControlIdContext);
 
   return (
     <Box
       as="label"
-      htmlFor={htmlFor || fieldId}
+      htmlFor={htmlFor || controlId}
       baseClassName="navi_label"
       pseudoClasses={LabelPseudoClasses}
       {...rest}

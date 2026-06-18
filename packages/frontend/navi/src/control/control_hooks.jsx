@@ -52,8 +52,8 @@ import {
   ActionRequesterContext,
   CONTROL_ATTRIBUTE_SET,
   CONTROL_PROP_SET,
+  ControlIdContext,
   ControlNameContext,
-  ControlToInterfaceContext,
   DisabledContext,
   LoadingContext,
   MessagePropsRefContext,
@@ -92,13 +92,13 @@ const NO_ACTION_YET = Symbol("no_action_yet");
 export const ControlChildrenWrapper = ({ children }) => (
   <ParentUIStateControllerContext.Provider value={null}>
     <MessagePropsRefContext.Provider value={undefined}>
-      <ControlToInterfaceContext.Provider value={undefined}>
+      <ControlIdContext.Provider value={undefined}>
         <RequiredContext.Provider value={undefined}>
           <ControlNameContext.Provider value={undefined}>
             {children}
           </ControlNameContext.Provider>
         </RequiredContext.Provider>
-      </ControlToInterfaceContext.Provider>
+      </ControlIdContext.Provider>
     </MessagePropsRefContext.Provider>
   </ParentUIStateControllerContext.Provider>
 );
@@ -114,7 +114,7 @@ export const ControlgroupChildrenWrapper = ({
   actionRequester,
 }) => (
   <MessagePropsRefContext.Provider value={undefined}>
-    <ControlToInterfaceContext.Provider value={undefined}>
+    <ControlIdContext.Provider value={undefined}>
       <ParentUIStateControllerContext.Provider value={uiGroupStateController}>
         <ControlNameContext.Provider value={name}>
           <DisabledContext.Provider value={disabled}>
@@ -132,7 +132,7 @@ export const ControlgroupChildrenWrapper = ({
           </DisabledContext.Provider>
         </ControlNameContext.Provider>
       </ParentUIStateControllerContext.Provider>
-    </ControlToInterfaceContext.Provider>
+    </ControlIdContext.Provider>
   </MessagePropsRefContext.Provider>
 );
 
@@ -172,11 +172,11 @@ export const useControlProps = (
   const idDefault = useId();
   const debugInteraction = useDebugInteraction();
   const controlName = useContext(ControlNameContext);
-  const controlToInterface = useContext(ControlToInterfaceContext);
+  const controlId = useContext(ControlIdContext);
   const state = props[statePropName];
 
   props.name = props.name || controlName;
-  props.id = props.id || controlToInterface?.id || idDefault;
+  props.id = props.id || controlId || idDefault;
   if (isSignal(state)) {
     props = {
       ...props,
@@ -747,13 +747,13 @@ export const useControlFacadeProps = (props, options) => {
 export const ControlFacadeChildrenWrapper = ({ children, value }) => (
   <ParentUIStateControllerContext.Provider value={value}>
     <MessagePropsRefContext.Provider value={undefined}>
-      <ControlToInterfaceContext.Provider value={undefined}>
+      <ControlIdContext.Provider value={undefined}>
         <RequiredContext.Provider value={undefined}>
           <ControlNameContext.Provider value={undefined}>
             {children}
           </ControlNameContext.Provider>
         </RequiredContext.Provider>
-      </ControlToInterfaceContext.Provider>
+      </ControlIdContext.Provider>
     </MessagePropsRefContext.Provider>
   </ParentUIStateControllerContext.Provider>
 );
@@ -786,7 +786,6 @@ const useInteractiveProps = (
     }
   }
   const actionStatus = useActionStatus(boundAction);
-  const controlToInterfaceContext = useContext(ControlToInterfaceContext);
   const controlDisabled = useContext(DisabledContext);
   const controlReadOnly = useContext(ReadOnlyContext);
   const controlRequired = useContext(RequiredContext);
@@ -847,14 +846,46 @@ const useInteractiveProps = (
     } else {
       controlHostProps["aria-readonly"] = readOnlyResolved;
     }
-    // infom any <Field> parent of our readOnly state + that we are interactive
+    // inform any associated label of our state (interactive, disabled, readOnly)
+    // works for controls nested inside a <Field as label> and for disconnected
+    // label[for=id] labels elsewhere in the DOM
     useLayoutEffect(() => {
-      if (controlToInterfaceContext) {
-        controlToInterfaceContext.setInteractive(true);
-        controlToInterfaceContext.setDisabled(disabledResolved);
-        controlToInterfaceContext.setReadOnly(readOnlyResolved);
+      const element = ref.current;
+      if (!element) {
+        return;
       }
-    }, [controlToInterfaceContext, disabledResolved, readOnlyResolved]);
+      const labels = getAssociatedLabels(element);
+      for (const label of labels) {
+        const fieldContainer = label.closest("[data-navi-field-container]");
+        if (fieldContainer) {
+          fieldContainer.dispatchEvent(
+            new CustomEvent("navi_control_state", {
+              detail: {
+                disabled: disabledResolved,
+                readOnly: readOnlyResolved,
+              },
+            }),
+          );
+        }
+      }
+    }, [disabledResolved, readOnlyResolved]);
+    useLayoutEffect(() => {
+      return () => {
+        const element = ref.current;
+        if (!element) {
+          return;
+        }
+        const labels = getAssociatedLabels(element);
+        for (const label of labels) {
+          const fieldContainer = label.closest("[data-navi-field-container]");
+          if (fieldContainer) {
+            fieldContainer.dispatchEvent(
+              new CustomEvent("navi_control_disconnected"),
+            );
+          }
+        }
+      };
+    }, []);
 
     const { constraints } = controlHostProps;
     useConstraints(ref, constraints);
@@ -1118,4 +1149,20 @@ const useInteractiveProps = (
   }
 
   return [controlRootProps, controlHostProps];
+};
+
+const getAssociatedLabels = (element) => {
+  if (!element) {
+    return [];
+  }
+  if (element.labels) {
+    return Array.from(element.labels);
+  }
+  const id = element.id;
+  if (id) {
+    return Array.from(
+      document.querySelectorAll(`label[for="${CSS.escape(id)}"]`),
+    );
+  }
+  return [];
 };

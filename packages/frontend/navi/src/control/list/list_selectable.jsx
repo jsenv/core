@@ -12,7 +12,7 @@ import { Box } from "@jsenv/navi/src/box/box.jsx";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { useFocusGroup } from "@jsenv/navi/src/utils/focus/use_focus_group.js";
-import { ControlToInterfaceContext } from "../control_context.js";
+import { ControlIdContext } from "../control_context.js";
 import {
   ControlChildrenWrapper,
   ControlgroupChildrenWrapper,
@@ -595,7 +595,7 @@ const SelectableInputProxy = (props) => {
   // Reset FieldToInterfaceContext to ensure we don't read id or report our
   // states (real input should take id and report)
   return (
-    <ControlToInterfaceContext.Provider value={undefined}>
+    <ControlIdContext.Provider value={undefined}>
       <Input
         {...props}
         {...selectableRealInputProps}
@@ -607,7 +607,7 @@ const SelectableInputProxy = (props) => {
         aria-hidden="true"
         tabIndex={-1}
       />
-    </ControlToInterfaceContext.Provider>
+    </ControlIdContext.Provider>
   );
 };
 export const SelectableInput = SelectableInputProxy;
