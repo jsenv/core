@@ -35,11 +35,55 @@
         color: #555;
         font-size: 13px;
       }
+      #toc {
+        margin-bottom: 32px;
+        padding: 16px 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      #toc ul {
+        margin: 0;
+        padding: 0 0 0 16px;
+      }
+      #toc li {
+        margin: 4px 0;
+        font-size: 14px;
+      }
+      #toc > ul {
+        padding: 0;
+        list-style: none;
+      }
+      #toc > ul > li > ul {
+        list-style: disc;
+      }
+      .demo-section-group {
+        margin-bottom: 32px;
+      }
+      .demo-section-group > h2 {
+        margin: 0 0 12px;
+        padding-bottom: 6px;
+        font-size: 1.2rem;
+        border-bottom: 2px solid #ddd;
+      }
     </style>
   </head>
   <body>
     <div id="container">
       <h1>Duration Input Demo</h1>
+      <nav id="toc">
+        <ul>
+          <li><a href="#unit-customization">Unit customization</a></li>
+          <li>
+            <a href="#interactivity">Interactivity</a>
+            <ul>
+              <li><a href="#outside-form">Outside form</a></li>
+              <li><a href="#inside-form">Inside form</a></li>
+              <li><a href="#inside-control-group">Inside control group</a></li>
+            </ul>
+          </li>
+        </ul>
+      </nav>
       <div id="app"></div>
     </div>
     <script type="module" jsenv-type="module/jsx">
@@ -53,20 +97,24 @@
         Input,
         Label,
         InputGroup,
-        Picker,
         Unit,
-        Text,
-        Time,
         NaviDebug,
       } from "@jsenv/navi";
       import { CallLog, useCallLog } from "./utils/call_log.jsx";
 
       const App = () => (
         <Box flex="y" spacing="l">
-          <BasicDemo />
-          <LongUnitDemo />
-          <ControlGroupInFormDemo />
-          <PickerInFormDemo />
+          <div class="demo-section-group" id="unit-customization">
+            <h2>Unit customization</h2>
+            <BasicDemo />
+            <LongUnitDemo />
+          </div>
+          <div class="demo-section-group" id="interactivity">
+            <h2>Interactivity</h2>
+            <OutsideFormDemo />
+            <InsideFormDemo />
+            <InsideControlGroupDemo />
+          </div>
         </Box>
       );
 
@@ -130,57 +178,21 @@
         </Box>
       );
 
-      const DurationInputWidget = ({
-        hours,
-        minutes,
-        onHours,
-        onMinutes,
-        unitHour,
-        unitMinute,
-      }) => {
-        const [entries, push, clear] = useCallLog();
-
-        return (
-          <Form
-            action={(values) => {
-              push("submit", values);
-            }}
-          >
-            <Box flex="y" spacing="s" alignX="start">
-              <DurationInputs
-                hours={hours}
-                minutes={minutes}
-                onHours={onHours}
-                onMinutes={onMinutes}
-                unitHour={unitHour}
-                unitMinute={unitMinute}
-                onPushEntry={push}
-              />
-              <Button type="submit">Submit</Button>
-              <CallLog entries={entries} onClear={clear} />
-            </Box>
-          </Form>
-        );
-      };
-
       // ── BasicDemo ─────────────────────────────────────────────────────────
       const BasicDemo = () => {
         const hoursSignal = useSignal(2);
         const minutesSignal = useSignal(15);
-        const hours = hoursSignal.value;
-        const minutes = minutesSignal.value;
 
         return (
           <div class="demo-section">
-            <h2>Hours + minutes inputs with unit label</h2>
+            <h2>Default units</h2>
             <p class="desc">
-              Deux inputs <code>unit={"{false}"}</code> côte à côte, chacun
-              accompagné de son label d'unité (<code>&lt;Unit&gt;</code>)
-              affiché en dessous.
+              Two <code>unit={"{false}"}</code> inputs side by side, each paired
+              with its <code>&lt;Unit&gt;</code> label displayed below.
             </p>
-            <DurationInputWidget
-              hours={hours}
-              minutes={minutes}
+            <DurationInputs
+              hours={hoursSignal.value}
+              minutes={minutesSignal.value}
               onHours={(v) => {
                 hoursSignal.value = v;
               }}
@@ -196,20 +208,17 @@
       const LongUnitDemo = () => {
         const hoursSignal = useSignal(1);
         const minutesSignal = useSignal(30);
-        const hours = hoursSignal.value;
-        const minutes = minutesSignal.value;
 
         return (
           <div class="demo-section">
             <h2>Long unit labels → input stretches</h2>
             <p class="desc">
-              Quand le label d'unité est plus large que l'input, c'est le label
-              qui dicte la largeur de la colonne et l'input s'étire pour remplir
-              cet espace.
+              When the unit label is wider than the input, the label dictates
+              the column width and the input stretches to fill it.
             </p>
-            <DurationInputWidget
-              hours={hours}
-              minutes={minutes}
+            <DurationInputs
+              hours={hoursSignal.value}
+              minutes={minutesSignal.value}
               onHours={(v) => {
                 hoursSignal.value = v;
               }}
@@ -217,32 +226,63 @@
                 minutesSignal.value = v;
               }}
               unitHour={
-                <Text size="xs" marginRight="1ch" color="secondary">
-                  This is way longer
-                </Text>
+                <Unit
+                  unit="hour"
+                  plural
+                  color="secondary"
+                  marginRight="1ch"
+                  label="This is way longer"
+                />
               }
             />
           </div>
         );
       };
 
-      // ── ControlGroupInFormDemo ────────────────────────────────────────────
-      const ControlGroupInFormDemo = () => {
+      // ── OutsideFormDemo ───────────────────────────────────────────────────
+      const OutsideFormDemo = () => {
         const hoursSignal = useSignal(2);
         const minutesSignal = useSignal(15);
-        const hours = hoursSignal.value;
-        const minutes = minutesSignal.value;
-
         const [entries, push, clear] = useCallLog();
 
         return (
-          <div class="demo-section">
-            <h2>Duration inside ControlGroup inside Form</h2>
+          <div class="demo-section" id="outside-form">
+            <h2>Outside form</h2>
             <p class="desc">
-              Le widget de durée est dans un{" "}
-              <code>ControlGroup name="duration"</code> lui-même dans un{" "}
-              <code>Form</code>. Le formulaire doit recevoir{" "}
-              <code>{"{ duration: { hours, minutes } }"}</code> au submit.
+              The duration inputs are used standalone, outside any{" "}
+              <code>Form</code> or <code>ControlGroup</code>. Values are managed
+              directly via signals and <code>uiAction</code> callbacks.
+            </p>
+            <Box flex="y" spacing="s" alignX="start">
+              <DurationInputs
+                hours={hoursSignal.value}
+                minutes={minutesSignal.value}
+                onHours={(v) => {
+                  hoursSignal.value = v;
+                }}
+                onMinutes={(v) => {
+                  minutesSignal.value = v;
+                }}
+                onPushEntry={push}
+              />
+              <CallLog entries={entries} onClear={clear} />
+            </Box>
+          </div>
+        );
+      };
+
+      // ── InsideFormDemo ────────────────────────────────────────────────────
+      const InsideFormDemo = () => {
+        const hoursSignal = useSignal(2);
+        const minutesSignal = useSignal(15);
+        const [entries, push, clear] = useCallLog();
+
+        return (
+          <div class="demo-section" id="inside-form">
+            <h2>Inside form</h2>
+            <p class="desc">
+              The duration inputs are wrapped in a <code>Form</code>. Submitting
+              collects <code>{"{ hours, minutes }"}</code> from the form values.
             </p>
             <Form
               action={(values) => {
@@ -253,25 +293,18 @@
               }}
             >
               <Box flex="y" spacing="s" alignX="start">
-                <ControlGroup
-                  name="duration"
-                  uiAction={(v) => {
-                    push("duration uiAction", v);
+                <DurationInputs
+                  hours={hoursSignal.value}
+                  minutes={minutesSignal.value}
+                  onHours={(v) => {
+                    hoursSignal.value = v;
                   }}
-                >
-                  <DurationInputs
-                    hours={hours}
-                    minutes={minutes}
-                    onHours={(v) => {
-                      hoursSignal.value = v;
-                    }}
-                    onMinutes={(v) => {
-                      minutesSignal.value = v;
-                    }}
-                    onPushEntry={push}
-                  />
-                </ControlGroup>
-                <Button command="--navi-send">Submit</Button>
+                  onMinutes={(v) => {
+                    minutesSignal.value = v;
+                  }}
+                  onPushEntry={push}
+                />
+                <Button type="submit">Submit</Button>
                 <CallLog entries={entries} onClear={clear} />
               </Box>
             </Form>
@@ -279,81 +312,43 @@
         );
       };
 
-      // ── PickerInFormDemo ──────────────────────────────────────────────────
-      const PickerInFormDemo = () => {
+      // ── InsideControlGroupDemo ────────────────────────────────────────────
+      const InsideControlGroupDemo = () => {
+        const hoursSignal = useSignal(2);
+        const minutesSignal = useSignal(15);
         const [entries, push, clear] = useCallLog();
-        const pickerId = "duration-picker";
-        const hoursSignal = useSignal(null);
-        const minutesSignal = useSignal(null);
-
-        const DurationPickerUI = () => {
-          const h = hoursSignal.value;
-          const m = minutesSignal.value;
-          if (h === null && m === null) {
-            return <Time type="time" />;
-          }
-          const hh = String(h ?? 0).padStart(2, "0");
-          const mm = String(m ?? 0).padStart(2, "0");
-          return <Time type="time">{`${hh}:${mm}`}</Time>;
-        };
 
         return (
-          <div class="demo-section">
-            <h2>Duration inside Picker inside Form</h2>
+          <div class="demo-section" id="inside-control-group">
+            <h2>Inside control group</h2>
             <p class="desc">
-              Le widget de durée est dans un{" "}
-              <code>Picker type="controlgroup" name="duration"</code> lui-même
-              dans un <code>Form</code>. Le formulaire doit recevoir{" "}
-              <code>{"{ duration: { hours, minutes } }"}</code> au submit.
+              The duration inputs are grouped inside a{" "}
+              <code>ControlGroup name="duration"</code> (no surrounding{" "}
+              <code>Form</code>). The group aggregates child state and fires{" "}
+              <code>uiAction</code> with <code>{"{ hours, minutes }"}</code> as
+              the group value.
             </p>
-            <Form
-              action={(values) => {
-                push("form action", values);
-              }}
-              uiAction={(values) => {
-                push("form uiAction", values);
-              }}
-            >
-              <Box flex="y" spacing="s" alignX="start">
-                <Picker
-                  id={pickerId}
-                  name="duration"
-                  type="controlgroup"
-                  placeholder="Saisir une durée"
-                  ui={<DurationPickerUI />}
-                  uiAction={(v) => {
-                    push("picker uiAction", v);
+            <Box flex="y" spacing="s" alignX="start">
+              <ControlGroup
+                name="duration"
+                uiAction={(v) => {
+                  push("group uiAction", v);
+                }}
+              >
+                <DurationInputs
+                  hours={hoursSignal.value}
+                  minutes={minutesSignal.value}
+                  onHours={(v) => {
+                    hoursSignal.value = v;
                   }}
-                >
-                  <ControlGroup>
-                    <Box flex="y" spacing="l" padding="s" alignX="center">
-                      <Text bold>Veuillez saisir une durée</Text>
-                      <DurationInputs
-                        hours={hoursSignal.value}
-                        minutes={minutesSignal.value}
-                        onHours={(v) => {
-                          hoursSignal.value = v;
-                        }}
-                        onMinutes={(v) => {
-                          minutesSignal.value = v;
-                        }}
-                        onPushEntry={push}
-                      />
-                      <Box flex="x" spacing="s" alignX="end" expandX>
-                        <Button command="--navi-cancel" variant="discrete">
-                          Annuler
-                        </Button>
-                        <Button command="--navi-define" variant="discrete">
-                          Définir
-                        </Button>
-                      </Box>
-                    </Box>
-                  </ControlGroup>
-                </Picker>
-                <Button command="--navi-send">Submit</Button>
-                <CallLog entries={entries} onClear={clear} />
-              </Box>
-            </Form>
+                  onMinutes={(v) => {
+                    minutesSignal.value = v;
+                  }}
+                  onPushEntry={push}
+                />
+              </ControlGroup>
+              <CallLog entries={entries} onClear={clear} />
+            </Box>
           </div>
         );
       };
