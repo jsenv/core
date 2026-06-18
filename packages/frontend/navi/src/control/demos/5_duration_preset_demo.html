@@ -437,9 +437,10 @@
                     <Unit unit="minute" plural />
                   </Box>
                 </InputGroup>
-
-                <Button command="--navi-cancel" />
-                <Button command="--navi-define" />
+                <Box flex spacing="s" expandX alignX="end">
+                  <Button command="--navi-cancel" variant="discrete" />
+                  <Button command="--navi-define" variant="discrete" />
+                </Box>
               </Box>
             </Picker>
           </List.Item>

@@ -40,6 +40,9 @@ const COMMAND_DEFAULT_PROPS = {
   "--navi-reset": {
     children: naviI18n("button.reset"),
   },
+  "--navi-define": {
+    children: naviI18n("button.define"),
+  },
   "--navi-send": {
     children: naviI18n("button.send"),
     cta: true,
