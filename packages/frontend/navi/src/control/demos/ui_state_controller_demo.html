@@ -25,6 +25,7 @@
       } from "@jsenv/navi";
       import { NaviDebug } from "@jsenv/navi";
       import { CallLog, useCallLog } from "./utils/call_log.jsx";
+      import { DebugUIStateController } from "./utils/debug_ui_state_controller.jsx";
 
       const nickNameSignalA = stateSignal("");
       const nickNameSignalB = stateSignal("Nick");
@@ -235,9 +236,9 @@
                 }}
               >
                 Un control rejeté par son parent direct (radio_group, etc.)
-                remonte automatiquement jusqu'au premier ancêtre qui l'accepte.
-                Un <code>ControlGroup allowCapture</code> arrête la propagation
-                et capture le child.
+                remonte automatiquement jusqu'au premier ancêtre qui l'accepte
+                (ControlGroup ou Form). La structure ci-dessous chaque démo
+                montre en temps réel qui est enregistré où.
               </p>
 
               <section id="bubble-up-basic">
@@ -1165,89 +1166,46 @@
       // ── Bubble-up demos ──────────────────────────────────────────────────
 
       const BubbleUpBasicDemo = () => {
-        const [entries, push, clear] = useCallLog();
         return (
           <Box flex="y" spacing="m" alignX="start">
             <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
-              Un <code>Input</code> est placé à l'intérieur d'un{" "}
-              <code>List.Item</code> (leaf control). Le radio_group le rejette,
-              il remonte et se fait capturer par le{" "}
-              <code>ControlGroup allowCapture</code> extérieur. Le{" "}
-              <code>uiAction</code> du ControlGroup doit inclure{" "}
-              <code>choice</code> (radio) et <code>extra</code> (input).
+              Un <code>Input name="extra"</code> est placé dans un{" "}
+              <code>List.Item</code>. Le radio_group le rejette (ce n'est pas un
+              radio), il remonte et se fait enregistrer par le{" "}
+              <code>ControlGroup</code> extérieur. La structure ci-dessous
+              montre qui voit quoi.
             </p>
-            <ControlGroup
-              name="data"
-              uiAction={(v) => {
-                push("uiAction (ControlGroup)", v);
-              }}
-            >
-              <List
-                selectable
-                name="choice"
-                uiAction={(v) => {
-                  push("uiAction (radio_group)", v);
-                }}
-              >
+            <ControlGroup id="bubble-up-basic-cg" name="data">
+              <List selectable name="choice">
                 <List.Item selectable index={0} value="a" padding="s">
                   Option A
-                  <Input
-                    name="extra"
-                    placeholder="extra info"
-                    uiAction={(v) => {
-                      push("uiAction (input)", v);
-                    }}
-                  />
+                  <Input name="extra" placeholder="extra info" />
                 </List.Item>
                 <List.Item selectable index={1} value="b" padding="s">
                   Option B
                 </List.Item>
               </List>
             </ControlGroup>
-            <CallLog entries={entries} onClear={clear} />
+            <DebugUIStateController id="bubble-up-basic-cg" />
           </Box>
         );
       };
 
-      // Deux ControlGroup allowCapture imbriqués. L'input dans le List.Item doit
-      // être capturé par le ControlGroup interne (frontière la plus proche).
       const BubbleUpBoundaryDemo = () => {
-        const [entries, push, clear] = useCallLog();
         return (
           <Box flex="y" spacing="m" alignX="start">
             <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
-              Deux <code>ControlGroup allowCapture</code> imbriqués. L'input
-              dans le List.Item doit être capté par le ControlGroup{" "}
-              <em>interne</em> (frontière la plus proche), pas l'externe.
+              Deux <code>ControlGroup</code> imbriqués. L'input dans le
+              List.Item remonte jusqu'au ControlGroup <em>interne</em>{" "}
+              (frontière la plus proche) et s'arrête là. Le ControlGroup externe
+              ne le voit pas.
             </p>
-            <ControlGroup
-              name="outer"
-              uiAction={(v) => {
-                push("uiAction (outer ControlGroup)", v);
-              }}
-            >
-              <ControlGroup
-                name="inner"
-                uiAction={(v) => {
-                  push("uiAction (inner ControlGroup)", v);
-                }}
-              >
-                <List
-                  selectable
-                  name="choice"
-                  uiAction={(v) => {
-                    push("uiAction (radio_group)", v);
-                  }}
-                >
+            <ControlGroup id="bubble-up-boundary-outer" name="outer">
+              <ControlGroup id="bubble-up-boundary-inner" name="inner">
+                <List selectable name="choice">
                   <List.Item selectable index={0} value="x" padding="s">
                     Option X
-                    <Input
-                      name="extra"
-                      placeholder="extra"
-                      uiAction={(v) => {
-                        push("uiAction (input)", v);
-                      }}
-                    />
+                    <Input name="extra" placeholder="extra" />
                   </List.Item>
                   <List.Item selectable index={1} value="y" padding="s">
                     Option Y
@@ -1255,35 +1213,32 @@
                 </List>
               </ControlGroup>
             </ControlGroup>
-            <CallLog entries={entries} onClear={clear} />
+            <p
+              style={{ margin: "8px 0 0", fontSize: "0.85rem", color: "#777" }}
+            >
+              outer ControlGroup :
+            </p>
+            <DebugUIStateController id="bubble-up-boundary-outer" />
+            <p
+              style={{ margin: "4px 0 0", fontSize: "0.85rem", color: "#777" }}
+            >
+              inner ControlGroup :
+            </p>
+            <DebugUIStateController id="bubble-up-boundary-inner" />
           </Box>
         );
       };
 
-      // Un Picker dans un List.Item. Le radio_group le rejette, il remonte et
-      // se fait capturer par le ControlGroup allowCapture extérieur.
       const BubbleUpPickerDemo = () => {
-        const [entries, push, clear] = useCallLog();
         return (
           <Box flex="y" spacing="m" alignX="start">
             <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
-              Un <code>Picker type="controlgroup"</code> placé dans un{" "}
-              <code>List.Item</code>. Le radio_group le rejette, il remonte et
-              se fait capturer par le <code>ControlGroup allowCapture</code>.
+              Un <code>Picker</code> placé dans un <code>List.Item</code>. Le
+              radio_group le rejette, il remonte et se fait enregistrer par le{" "}
+              <code>ControlGroup</code> extérieur.
             </p>
-            <ControlGroup
-              name="schedule"
-              uiAction={(v) => {
-                push("uiAction (ControlGroup)", v);
-              }}
-            >
-              <List
-                selectable
-                name="duration"
-                uiAction={(v) => {
-                  push("uiAction (radio_group)", v);
-                }}
-              >
+            <ControlGroup id="bubble-up-picker-cg" name="schedule">
+              <List selectable name="duration">
                 <List.Item selectable index={0} value="30min" padding="s">
                   30 min
                 </List.Item>
@@ -1292,37 +1247,16 @@
                 </List.Item>
                 <List.Item selectable index={2} value="custom" padding="s">
                   Personnalisé
-                  <Picker
-                    name="custom"
-                    type="controlgroup"
-                    placeholder="hh:mm"
-                    uiAction={(v) => {
-                      push("uiAction (picker)", v);
-                    }}
-                  >
+                  <Picker name="custom" type="controlgroup" placeholder="hh:mm">
                     <ControlGroup>
                       <Box flex="x" spacing="s" padding="s">
                         <fieldset>
                           <legend>h</legend>
-                          <Input
-                            name="hour"
-                            type="number"
-                            placeholder="0"
-                            uiAction={(v) => {
-                              push("uiAction (hour)", v);
-                            }}
-                          />
+                          <Input name="hour" type="number" placeholder="0" />
                         </fieldset>
                         <fieldset>
                           <legend>min</legend>
-                          <Input
-                            name="minute"
-                            type="number"
-                            placeholder="0"
-                            uiAction={(v) => {
-                              push("uiAction (minute)", v);
-                            }}
-                          />
+                          <Input name="minute" type="number" placeholder="0" />
                         </fieldset>
                       </Box>
                     </ControlGroup>
@@ -1334,7 +1268,7 @@
                 </List.Item>
               </List>
             </ControlGroup>
-            <CallLog entries={entries} onClear={clear} />
+            <DebugUIStateController id="bubble-up-picker-cg" />
           </Box>
         );
       };

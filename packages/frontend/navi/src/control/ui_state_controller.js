@@ -1043,6 +1043,7 @@ export const useUIGroupStateController = (
       }
       return null;
     },
+    getChildControllers: () => childUIStateControllerArray,
     subscribe: subscribeUIState,
   };
   uiStateControllerRef.current = uiStateController;
