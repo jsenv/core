@@ -750,24 +750,6 @@
         );
       };
 
-      // ── Position marker used in the width-adapts demo ───────────────────
-      const AdjacentElement = () => (
-        <div
-          style={{
-            flexShrink: 0,
-            padding: "4px 10px",
-            fontSize: "11px",
-            color: "#7a5c00",
-            background: "#fff8e1",
-            border: "1.5px dashed #f0c040",
-            borderRadius: "4px",
-            whiteSpace: "nowrap",
-          }}
-        >
-          adjacent element
-        </div>
-      );
-
       const SHORT_VALUE = "Apple";
       const MEDIUM_VALUE = "Elderberry";
       const LONG_SENTENCE =
@@ -776,31 +758,9 @@
       const VERY_LONG_TEXT =
         "This value is intentionally so long that it spans more than three lines inside the constrained picker width, so the line-clamp kicks in and an ellipsis appears at the end";
 
-      const DimensionPickerItems = ({ id, values }) => (
-        <List selectable command="--navi-send">
-          {values.map((v, i) => (
-            <List.Item
-              selectable
-              key={v}
-              id={`${id}_${i}`}
-              index={i}
-              value={v}
-              padding="s"
-              spacing="s"
-            >
-              {v}
-            </List.Item>
-          ))}
-        </List>
-      );
-
       // ── Renumbered sections ──────────────────────────────────────────
 
-      render(
-        <App />,
-
-        document.getElementById("app"),
-      );
+      render(<App />, document.getElementById("app"));
     </script>
   </body>
 </html>
