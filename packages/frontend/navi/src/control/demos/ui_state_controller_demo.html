@@ -292,6 +292,7 @@
                       <Input
                         name="street"
                         placeholder="Street"
+                        defaultValue="Rue de la paix"
                         uiAction={(v) => {
                           pushEntry("uiAction (street)", v);
                         }}
@@ -309,6 +310,10 @@
                     </fieldset>
                   </Box>
                 </ControlGroup>
+                <Box flex spacing="s">
+                  <Button command="--navi-cancel">Annuler</Button>
+                  <Button command="--navi-define">Définir</Button>
+                </Box>
               </Picker>
             </fieldset>
             <Box flex="x" spacing="s">
