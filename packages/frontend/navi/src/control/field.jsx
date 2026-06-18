@@ -1,6 +1,7 @@
 import { useContext, useId, useRef, useState } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
+import { resolveSpacingSize } from "../box/box_style_util.js";
 import { ControlIdContext, MessagePropsRefContext } from "./control_context.js";
 import { extractMessageAndRemainingProps } from "./validation/constraint_message.js";
 
@@ -19,21 +20,21 @@ const css = /* css */ `
     }
 
     [navi-field] {
-      --field-spacing: var(--navi-xs);
+      --padding-with-control: var(--navi-xs);
 
-      > * + .navi_label {
-        padding-left: var(--field-spacing);
+      > [navi-control] + .navi_label {
+        padding-left: var(--padding-with-control);
       }
       > .navi_label:first-child {
-        padding-right: var(--field-spacing);
+        padding-right: var(--padding-with-control);
       }
       &[data-vertical] {
-        & > .navi_label:first-child {
+        > .navi_label:first-child {
           padding-right: 0;
-          padding-bottom: var(--field-spacing);
+          padding-bottom: var(--padding-with-control);
         }
-        & > * + .navi_label {
-          padding-top: var(--field-spacing);
+        > [navi-control] + .navi_label {
+          padding-top: var(--padding-with-control);
           padding-left: 0;
         }
       }
@@ -66,7 +67,7 @@ const css = /* css */ `
  *   ...rest   — forwarded to the wrapping `<div>` (className, style, flex, spacing, …)
  *
  * @example
- * <Field flex spacing="s">
+ * <Field flex paddingWithControl="s">
  *   Date de début
  *   <Input name="start_date" required />
  * </Field>
@@ -85,6 +86,7 @@ export const Field = (props) => {
 
 const FieldAsLabel = (props) => {
   const { vertical, children } = props;
+  props.paddingWithControl = resolveSpacingSize(props.paddingWithControl, "s");
   const [messageProps, remainingProps] = extractMessageAndRemainingProps(props);
   const messagePropsRef = useRef();
   messagePropsRef.current = messageProps;
@@ -109,11 +111,12 @@ const FieldAsLabel = (props) => {
   );
 };
 const FieldCSSVars = {
-  spacing: "--field-spacing",
+  paddingWithControl: "--padding-with-control",
 };
 const FieldAsContainer = (props) => {
   import.meta.css = css;
   const { vertical, children } = props;
+  props.paddingWithControl = resolveSpacingSize(props.paddingWithControl, "s");
   const [messageProps, remainingProps] = extractMessageAndRemainingProps(props);
   const messagePropsRef = useRef();
   messagePropsRef.current = messageProps;
