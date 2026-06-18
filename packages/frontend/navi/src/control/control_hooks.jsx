@@ -481,6 +481,7 @@ export const useControlProps = (
         }
 
         return {
+          keyDown: keyDownDefaultOnInput,
           input: () => {
             return {
               name: "input",
