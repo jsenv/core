@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Route Action Picker Demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 40px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      #container {
+        max-width: 600px;
+        margin: 0 auto;
+      }
+      .demo-section {
+        margin-bottom: 24px;
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      .demo-section h2 {
+        margin: 0 0 8px;
+        padding-bottom: 10px;
+        color: #333;
+        font-size: 1.1rem;
+        border-bottom: 2px solid #eee;
+      }
+      .demo-section p {
+        margin: 0 0 16px;
+        color: #555;
+        font-size: 0.9rem;
+        line-height: 1.5;
+      }
+      h1 {
+        margin-bottom: 32px;
+        color: #333;
+        font-size: 1.8rem;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <h1>Route Action Picker Demo</h1>
+      <div id="app"></div>
+    </div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import {
+        Box,
+        Field,
+        Label,
+        Input,
+        Picker,
+        List,
+        SelectableInput,
+        NaviDebug,
+        Text,
+        route,
+        routeAction,
+        Loading,
+        setupRoutes,
+        stateSignal,
+        useSearchText,
+        useAsyncData,
+        createAction,
+      } from "@jsenv/navi";
+
+      // ── Data & action ─────────────────────────────────────────────────────
+      // Simulates a backend call: async, returns after a short delay.
+      // In a real app this would be something like:
+      //   export const FRUIT = resource("fruit", { GET_MANY: async () => fetchFruits() });
+      //   export const PAGE_GET_MANY_FRUIT_ACTION = routeAction(PAGE, FRUIT.GET_MANY, () => true);
+
+      const ALL_FRUITS = [
+        { id: "1", slug: "apple", label: "Apple", family: "Rosaceae" },
+        { id: "2", slug: "banana", label: "Banana", family: "Musaceae" },
+        { id: "3", slug: "cherry", label: "Cherry", family: "Rosaceae" },
+        { id: "4", slug: "date", label: "Date", family: "Arecaceae" },
+        {
+          id: "5",
+          slug: "elderberry",
+          label: "Elderberry",
+          family: "Adoxaceae",
+        },
+        { id: "6", slug: "fig", label: "Fig", family: "Moraceae" },
+        { id: "7", slug: "grape", label: "Grape", family: "Vitaceae" },
+      ];
+
+      const GET_MANY_FRUIT = createAction(async () => {
+        // Simulate a 600 ms network delay
+        await new Promise((resolve) => setTimeout(resolve, 600));
+        return ALL_FRUITS;
+      });
+
+      // ── URL state signals ─────────────────────────────────────────────────
+      // NOTE: searchFruitSignal is both stored in the URL *and* passed as a
+      // dependency to routeAction (via paramsEffect below).
+      // This causes the cycle that this demo is designed to reproduce:
+      //   user types → searchFruitSignal.value changes → URL search param
+      //   changes → route params change → routeAction re-evaluates paramsEffect
+      //   → action reruns → fruits reload while the user is still typing.
+
+      const fruitSlugSignal = stateSignal("", {
+        id: "fruit_slug",
+        type: "string",
+      });
+      const searchFruitSignal = stateSignal("", {
+        id: "search_fruit",
+        type: "string",
+      });
+
+      const PAGE = route("", {
+        searchParams: {
+          fruit_slug: fruitSlugSignal,
+          search_fruit: searchFruitSignal,
+        },
+      });
+
+      // routeAction: runs GET_MANY_FRUIT whenever PAGE matches.
+      // paramsEffect reads searchFruitSignal.value — this is the cycle:
+      // the action re-fires on every keystroke because the search text is
+      // a URL param and URL param changes count as route param changes.
+      const PAGE_GET_MANY_FRUIT_ACTION = routeAction(
+        PAGE,
+        GET_MANY_FRUIT,
+        () => {
+          // In the real use case, this would return params like:
+          //   { search: searchFruitSignal.value }
+          // That already causes the cycle. Here we just return true so the
+          // action fires on every route match (no extra params needed since
+          // the data is hardcoded).
+          return true;
+        },
+      );
+
+      setupRoutes([PAGE]);
+
+      // ── App ───────────────────────────────────────────────────────────────
+
+      const App = () => (
+        <NaviDebug debugUIState debugCommand debugAction debugInteraction>
+          <Box flex="y" spacing="l">
+            <Loading>
+              <FruitPickerSection />
+            </Loading>
+          </Box>
+        </NaviDebug>
+      );
+
+      // ── FruitPickerSection ────────────────────────────────────────────────
+
+      const FruitPickerSection = () => {
+        const fruitSlug = fruitSlugSignal.value;
+
+        return (
+          <div class="demo-section">
+            <h2>Picker with data from routeAction</h2>
+            <p>
+              The list of fruits comes from{" "}
+              <code>PAGE_GET_MANY_FRUIT_ACTION</code>, a{" "}
+              <code>routeAction</code> that fires when the page is active.
+              <br />
+              The search text is persisted in the URL (
+              <code>?search_fruit=…</code>). Because the search signal is a URL
+              param dependency of the route, changing it reruns the action on
+              every keystroke — this is the cycle to reproduce and fix.
+            </p>
+            <Field vertical>
+              <Label>Fruit</Label>
+              <FruitControl
+                fruitSlug={fruitSlug}
+                onChange={(slug) => {
+                  fruitSlugSignal.value = slug;
+                }}
+              />
+            </Field>
+            <Box
+              marginTop="m"
+              style={{
+                fontFamily: "monospace",
+                fontSize: "0.85rem",
+                color: "#555",
+              }}
+            >
+              Selected slug: <strong>{fruitSlug || "(none)"}</strong>
+            </Box>
+          </div>
+        );
+      };
+
+      // ── FruitControl ──────────────────────────────────────────────────────
+
+      const FruitControl = ({ fruitSlug, onChange }) => {
+        const [fruits, loading] = useAsyncData(PAGE_GET_MANY_FRUIT_ACTION, {
+          loading: true,
+        });
+
+        const searchText = searchFruitSignal.value;
+        const [matchingFruits, getMatchInfo] = useSearchText(
+          searchText,
+          fruits ?? [],
+        );
+
+        if (loading && !fruits) {
+          return <Text color="#888">Chargement…</Text>;
+        }
+
+        const selectedFruit = fruits
+          ? fruits.find((f) => f.slug === fruitSlug)
+          : null;
+
+        return (
+          <Picker
+            id="fruit-picker"
+            value={fruitSlug}
+            action={(slug) => {
+              onChange(slug);
+            }}
+            ui={
+              selectedFruit ? (
+                selectedFruit.label
+              ) : (
+                <Text color="#999">Choisir un fruit</Text>
+              )
+            }
+            minWidth="240"
+            loading={loading && Boolean(fruits)}
+          >
+            <Box flex="y" spacing="s" padding="m">
+              <Input
+                type="search"
+                placeholder="Rechercher un fruit…"
+                navi-list="fruit-list"
+                value={searchText}
+                uiAction={(v) => {
+                  searchFruitSignal.value = v;
+                }}
+                autoComplete="off"
+                borderRadius="s"
+                expandX
+                paddingX="s"
+                paddingY="s"
+                autoFocus="fallback"
+              />
+              <List
+                selectable
+                command="--navi-send"
+                id="fruit-list"
+                maxHeight="200"
+                searchText={searchText}
+                separator
+                noMatchFallback={
+                  <Box padding="s">
+                    <Text>Aucun fruit ne correspond à votre recherche.</Text>
+                  </Box>
+                }
+              >
+                {matchingFruits.map((fruit, i) => {
+                  const { match, score, ranges } = getMatchInfo(fruit);
+                  return (
+                    <List.Item
+                      selectable
+                      key={fruit.id}
+                      id={fruit.id}
+                      index={i}
+                      value={fruit.slug}
+                      highlight={ranges}
+                      matchScore={score}
+                      filtered={!match}
+                      selected={fruit.slug === fruitSlug}
+                      flex
+                      alignY="center"
+                      spacing="m"
+                      paddingX="m"
+                      paddingY="s"
+                    >
+                      <SelectableInput marginLeft="-xs" />
+                      <Box flex="y" expandX spacing="xxs" minWidth="0">
+                        <Text bold className="fruit-label">
+                          {fruit.label}
+                        </Text>
+                        <Text size="xs" color="secondary">
+                          {fruit.family}
+                        </Text>
+                      </Box>
+                    </List.Item>
+                  );
+                })}
+              </List>
+            </Box>
+          </Picker>
+        );
+      };
+
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>
