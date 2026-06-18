@@ -20761,11 +20761,9 @@ const checkConstraints = ({
   fromRequestAction,
 } = {}) => {
   let elementToValidate = event.currentTarget;
-  if (!elementToValidate.__validationInterface__) {
-    const controlHost = findControlHost(requester);
-    if (controlHost) {
-      elementToValidate = controlHost;
-    }
+  const controlHost = findControlHost(elementToValidate);
+  if (controlHost) {
+    elementToValidate = controlHost;
   }
 
   let validationInterface = elementToValidate.__validationInterface__;
@@ -22858,7 +22856,7 @@ const createOnKeyDownForShortcutArray = (shortcuts, busyRef) => {
   }
 
   return (keyboardEvent) => {
-    applyKeyboardShortcuts(shortcutsCopy, keyboardEvent);
+    return applyKeyboardShortcuts(shortcutsCopy, keyboardEvent);
   };
 };
 const createOnKeyDownForShortcuts = (shortcuts) => {
@@ -22943,7 +22941,7 @@ const applyKeyboardShortcuts = (shortcuts, keyboardEvent) => {
     if (returnValue === false) {
       keyboardEvent.preventDefault();
     }
-    return shortcutCandidate;
+    return returnValue;
   }
   return null;
 };
@@ -23173,8 +23171,15 @@ const css$L = /* css */`
       &[data-skeleton] {
         border-radius: 0.2em;
       }
+
       &[data-capitalize] {
-        display: inline-block; /* We need inline-block to match the pseudo element */
+        text-transform: capitalize;
+
+        .navi_text_sizer {
+          .navi_text {
+            display: inline-block; /* We need inline-block to match the pseudo element */
+          }
+        }
       }
       &[data-shrinkwrap] {
         display: inline-block;
@@ -23220,25 +23225,11 @@ const css$L = /* css */`
     }
 
     &[data-text-overflow] {
+      display: block;
       min-width: 0;
-      flex-wrap: wrap;
       text-overflow: ellipsis;
       overflow: hidden;
       overflow-wrap: normal;
-
-      .navi_text_overflow_wrapper {
-        display: flex;
-        width: 100%;
-        flex-grow: 1;
-        justify-content: inherit;
-        gap: 0.3em;
-
-        .navi_text_overflow_text {
-          max-width: 100%;
-          text-overflow: ellipsis;
-          overflow: hidden;
-        }
-      }
     }
 
     &[data-skeleton] {
@@ -23469,9 +23460,6 @@ const shouldInjectSpacingBetween = (left, right) => {
   if (rightIsNode && isMarkedAsOutsideTextFlow(right)) {
     return false;
   }
-  if (rightIsNode && right.props && right.props.overflowPinned) {
-    return false;
-  }
   if (typeof left === "string" && /\s$/.test(left)) {
     return false;
   }
@@ -23480,7 +23468,7 @@ const shouldInjectSpacingBetween = (left, right) => {
   }
   return true;
 };
-const OverflowPinnedContext = createContext(null);
+
 /**
  * Text component for rendering inline or block text with layout-stable style changes.
  *
@@ -23493,10 +23481,6 @@ const OverflowPinnedContext = createContext(null);
  *   Truncates overflowing text with an ellipsis after at most N lines.
  *   `maxLines={1}` truncates after one line (single-line ellipsis).
  *   `maxLines={n}` (n > 1) truncates after n lines (multi-line clamp).
- *
- * @param {boolean} [props.overflowPinned]
- *   Must be used inside a `<Text maxLines>` parent.
- *   Pins this element outside the truncated text flow (e.g. a badge or icon).
  *
  * @param {string} [props.spacing]
  *   Controls the separator injected between child nodes.
@@ -23559,11 +23543,6 @@ const TextDispatcher = props => {
   }
   if (props.maxLines === 1 || props.maxLines === "1") {
     return jsx(TextOverflow, {
-      ...props
-    });
-  }
-  if (props.overflowPinned) {
-    return jsx(TextOverflowPinned, {
       ...props
     });
   }
@@ -23740,10 +23719,7 @@ const TextOverflow = ({
   children,
   ...rest
 }) => {
-  const [overflowPinned, setOverflowPinned] = useState(null);
   return jsx(TextDispatcher, {
-    inline: true,
-    flex: true,
     block: true,
     as: "div",
     pre: noWrap === undefined ? true : undefined
@@ -23755,44 +23731,10 @@ const TextOverflow = ({
     ...rest,
     maxLines: undefined,
     "data-text-overflow": "",
-    spacing: "pre",
-    children: jsxs("span", {
-      className: "navi_text_overflow_wrapper",
-      children: [overflowPinned && overflowPinned.position === "start" ? overflowPinned.vnode : null, jsx(OverflowPinnedContext.Provider, {
-        value: setOverflowPinned,
-        children: jsx(Text, {
-          className: "navi_text_overflow_text",
-          spacing: spacing,
-          capitalize: capitalize,
-          children: children
-        })
-      }), overflowPinned && overflowPinned.position === "end" ? overflowPinned.vnode : null]
-    })
+    spacing: spacing,
+    capitalize: capitalize,
+    children: children
   });
-};
-const TextOverflowPinned = props => {
-  const {
-    overflowPinned
-  } = props;
-  const setOverflowPinned = useContext(OverflowPinnedContext);
-  const text = jsx(Text, {
-    ...props,
-    "data-overflow-pinned": "",
-    overflowPinned: undefined
-  });
-  if (!setOverflowPinned) {
-    console.warn(`<Text overflowPinned> declared outside a <Text maxLines="1">`);
-    return text;
-  }
-  if (overflowPinned) {
-    setOverflowPinned({
-      vnode: text,
-      position: overflowPinned === true ? "end" : overflowPinned
-    });
-    return null;
-  }
-  setOverflowPinned(null);
-  return text;
 };
 const TextWithSelectRange = ({
   ref,
@@ -24553,7 +24495,15 @@ const useAutoFocus = (
   //   }
   // }, []);
 
-  return triggerAutofocus;
+  return {
+    "autoFocus": undefined,
+    "navi-autofocus": autoFocus
+      ? autoFocus === true
+        ? ""
+        : autoFocus
+      : undefined,
+    "navi-autofocus-select": autoFocus && autoSelect ? "" : undefined,
+  };
 };
 
 let blurEvent = null;
@@ -24576,505 +24526,6 @@ document.body.addEventListener(
   },
   { capture: true },
 );
-
-const dispatchNaviCommand = (
-  element,
-  command,
-  event,
-  { optional, value } = {},
-) => {
-  const naviCommand = NAVI_COMMANDS[command];
-  if (!naviCommand) {
-    console.warn(`Unknown command "${command}"`);
-    return false;
-  }
-  // Check for explicit HTML target overrides early so a misconfigured commandfor
-  // attribute (id not found) aborts immediately rather than silently falling back
-  // to DOM resolution. Handlers receive this info via resolveExplicitTarget().
-  const explicitTarget = resolveExplicitTarget(element);
-  if (explicitTarget === null) {
-    // attribute was present but target not found — already warned inside resolveExplicitTarget
-    return false;
-  }
-  const execute = naviCommand.commandHandler(element, event);
-  if (!execute) {
-    if (optional) {
-      return false;
-    }
-    console.warn(
-      `"${command}" triggered on element but no suitable target found`,
-      element,
-    );
-    return false;
-  }
-  const { target, implementation } = execute;
-  return dispatchCustomEvent(target, "navi_command", {
-    command,
-    event,
-    source: element,
-    implementation,
-    value,
-  });
-};
-// Returns the target explicitly declared via HTML attributes (commandfor / navi-command-target),
-// or undefined when no such attribute is present.
-// Returns null when the attribute is present but the target element was not found (already warned).
-// Handlers must check for null explicitly — null || fallback() would silently ignore the error.
-const resolveExplicitTarget = (element) => {
-  const commandFor = element.getAttribute("commandfor");
-  if (commandFor) {
-    const target = document.getElementById(commandFor);
-    if (!target) {
-      console.warn(
-        `command triggered on element with commandfor="${commandFor}" but no element with that id found`,
-        element,
-      );
-      return null;
-    }
-    return target;
-  }
-  const naviCommandTarget = element.getAttribute("navi-command-target");
-  if (naviCommandTarget === "parent-control") {
-    const target = resolveFirstParentControl(element);
-    return target;
-  }
-  if (naviCommandTarget === "child-control") {
-    const target = resolveFirstChildControl(element);
-
-    return target;
-  }
-  return undefined;
-};
-const resolvePickerInnerControl = (target) => {
-  if (!target.hasAttribute("navi-picker")) {
-    return null;
-  }
-  const content = target.querySelector(".navi_picker_content");
-  if (!content) {
-    return null;
-  }
-  return content.querySelector("[navi-control-host]") ?? null;
-};
-const resolveFirstParentControl = (el) => {
-  return getParentControl(el);
-};
-const resolveFirstChildControl = (el) => {
-  let startEl;
-  if (isControlRoot(el)) {
-    startEl = findControlHost(el);
-  } else {
-    startEl = el;
-  }
-  return startEl.querySelector("[navi-control-host]");
-};
-const resolveClosestExpandable = (el) => {
-  return el.closest("[aria-expanded]");
-};
-const resolveClosestControlWithAction = (el) => {
-  return findClosestControlWithAction(el);
-};
-
-const resolveCommandValue = (source, event) => {
-  if (Object.hasOwn(event.detail, "value")) {
-    return event.detail.value;
-  }
-  if (source.hasAttribute("command-value")) {
-    return source.getAttribute("command-value");
-  }
-  return getUIStateFromElement(source);
-};
-
-const onNaviCommand = (e, { debugCommand }) => {
-  const { command, event, source, implementation } = e.detail;
-  if (typeof command !== "string") {
-    console.warn(`navi_command event is missing detail.command`, e);
-    return false;
-  }
-  if (typeof implementation !== "function") {
-    console.warn(`navi_command event is missing detail.implementation`, e);
-    return false;
-  }
-  const commandTarget = e.currentTarget;
-  debugCommand(
-    event,
-    `"${command}" triggered on`,
-    source,
-    `targeting`,
-    commandTarget,
-  );
-  return implementation();
-};
-
-const NAVI_COMMANDS = {};
-// commandHandler(source, event) → { target, implementation } | undefined
-// - Each handler calls resolveExplicitTarget(source) first, then falls back to
-//   its own DOM resolution logic (closest expandable, parent control, etc.).
-// - Returns undefined when no target can be found — this is a normal outcome for
-//   some commands (e.g. --navi-send when the source is outside any navi context).
-// - Returns { target, implementation } so dispatchNaviCommand can dispatch navi_command.
-const registerNaviCommand = (command, commandHandler) => {
-  NAVI_COMMANDS[command] = {
-    name: command,
-    commandHandler,
-    toString: () => command,
-  };
-};
-
-registerNaviCommand("--navi-void", (source) => {
-  const target =
-    resolveExplicitTarget(source) || resolveFirstParentControl(source);
-  if (!target) {
-    return undefined;
-  }
-  return {
-    target,
-    implementation: () => {
-      // intentional no-op — useful to verify command dispatch in demos and tests
-      return true;
-    },
-  };
-});
-
-registerNaviCommand("--navi-update", (source, event) => {
-  const target =
-    resolveExplicitTarget(source) || resolveFirstParentControl(source);
-  if (!target) {
-    return undefined;
-  }
-  return {
-    target,
-    implementation: () => {
-      const allowed = dispatchRequestInteraction(
-        target,
-        event,
-        "--navi-update",
-      );
-      if (!allowed) {
-        event.preventDefault();
-        return false;
-      }
-      const commandValue = resolveCommandValue(source, event);
-      dispatchRequestSetUIState(target, commandValue, {
-        event,
-      });
-      return true;
-    },
-  };
-});
-registerNaviCommand("--navi-clear", (source, event) => {
-  const target =
-    resolveExplicitTarget(source) || resolveFirstParentControl(source);
-  if (!target) {
-    return undefined;
-  }
-  const fromInput = source.closest(`[navi-control="input"]`);
-
-  return {
-    target,
-    implementation: () => {
-      if (fromInput) ; else {
-        dispatchNaviCommand(source, "--navi-close", event, {
-          optional: true,
-        });
-      }
-      const allowed = dispatchRequestInteraction(target, event, "--navi-clear");
-      if (!allowed) {
-        event.preventDefault();
-        return false;
-      }
-      dispatchRequestClearUIState(target, event);
-      return true;
-    },
-  };
-});
-registerNaviCommand("--navi-reset", (source, event) => {
-  const target =
-    resolveExplicitTarget(source) || resolveFirstParentControl(source);
-  if (!target) {
-    return undefined;
-  }
-  return {
-    target,
-    implementation: () => {
-      const allowed = dispatchRequestInteraction(target, event, "--navi-reset");
-      if (!allowed) {
-        event.preventDefault();
-        return false;
-      }
-      return dispatchRequestResetUIState(target, event);
-    },
-  };
-});
-registerNaviCommand("--navi-send", (source, event) => {
-  const target =
-    resolveExplicitTarget(source) ||
-    resolveClosestExpandable(source) ||
-    resolveClosestControlWithAction(source);
-  if (!target) {
-    return undefined;
-  }
-
-  // send inside expandable
-  if (target.getAttribute("aria-expanded") === "true") {
-    return {
-      target,
-      implementation: () => executeNaviDefine(source, event, target),
-    };
-  }
-
-  // send inside a control with action
-  const submitSelector = `button[type="submit"], input[type="submit"], input[type="image"], [command="--navi-send"]`;
-  return {
-    target,
-    implementation: () => {
-      let requester = source;
-      if (!source.matches(submitSelector)) {
-        // When present, use the first submit button as the requester, not the input.
-        // This aligns with browser behavior where Enter in a text input triggers
-        // the first submit button of the form, not the input itself.
-        const firstButtonSubmitting = target.querySelector(submitSelector);
-        if (firstButtonSubmitting) {
-          requester = firstButtonSubmitting;
-        }
-      }
-      const allowed = dispatchRequestAction(target, { event, requester });
-      const initiator =
-        event.detail && typeof event.detail === "object"
-          ? event.detail.eventChain[0]
-          : event;
-      const { form } = target;
-      if (form) {
-        // prevent form submission when clicking buttons or pressing enter on inputs
-        initiator.preventDefault();
-      } else if (initiator.type === "keydown" && initiator.key === "Enter") {
-        // prevent triggering click on such button, they are already performing submit
-        // (this ensures enter inside a picker won't trigger picker button click)
-        initiator.preventDefault();
-      }
-      return allowed;
-    },
-  };
-});
-
-registerNaviCommand("--navi-open", (source, event) => {
-  const target =
-    resolveExplicitTarget(source) || resolveClosestExpandable(source);
-  if (!target) {
-    return undefined;
-  }
-  return {
-    target,
-    implementation: () => {
-      return dispatchCustomEvent(target, "navi_request_open", {
-        event,
-        source,
-      });
-    },
-  };
-});
-registerNaviCommand("--navi-close", (source, event) => {
-  const target =
-    resolveExplicitTarget(source) || resolveClosestExpandable(source);
-  if (!target) {
-    return undefined;
-  }
-  return {
-    target,
-    implementation: () => {
-      return dispatchCustomEvent(target, "navi_request_close", {
-        event,
-        source,
-      });
-    },
-  };
-});
-registerNaviCommand("--navi-cancel", (source, event) => {
-  const target =
-    resolveExplicitTarget(source) || resolveClosestExpandable(source);
-  if (!target) {
-    return undefined;
-  }
-  return {
-    target,
-    implementation: () => {
-      return dispatchCustomEvent(target, "navi_request_close", {
-        event,
-        source,
-        isCancel: true,
-      });
-    },
-  };
-});
-registerNaviCommand("--navi-define", (source, event) => {
-  const target =
-    resolveExplicitTarget(source) || resolveClosestExpandable(source);
-  if (!target) {
-    return undefined;
-  }
-  return {
-    target,
-    implementation: () => executeNaviDefine(source, event, target),
-  };
-});
-const executeNaviDefine = (source, event, target) => {
-  // Skip --navi-update when the picker already has an inner control that
-  // manages the picker's value autonomously:
-  // - A ControlGroup aggregates all child values and syncs them up via its
-  //   own command="--navi-update". Calling --navi-update from the send button
-  //   (which has no value) would override the aggregated value.
-  // - Any other inner control host (e.g. a plain Input inside the picker
-  //   popup) already propagates its value to the picker via its own
-  //   command="--navi-update" on every change. Calling it again from the
-  //   send button's undefined value would corrupt the picker state.
-  const skipUpdate = resolvePickerInnerControl(target) !== null;
-  if (!skipUpdate) {
-    dispatchNaviCommand(source, "--navi-update", event);
-  }
-  // The picker's onClose already dispatches the action with the final value.
-  // Dispatching again here would fire the action twice.
-  return dispatchNaviCommand(target, "--navi-close", event);
-};
-
-registerNaviCommand("--navi-scroll", (source, event) => {
-  const target =
-    resolveExplicitTarget(source) || resolveFirstParentControl(source);
-  if (!target) {
-    return undefined;
-  }
-  return {
-    target,
-    implementation: () => {
-      return dispatchCustomEvent(target, "navi_request_scroll", {
-        event,
-        id: resolveCommandValue(source, event),
-      });
-    },
-  };
-});
-registerNaviCommand("--navi-select", (source, event) => {
-  const target =
-    resolveExplicitTarget(source) || resolveFirstParentControl(source);
-  if (!target) {
-    return undefined;
-  }
-  return {
-    target,
-    implementation: () => {
-      return dispatchCustomEvent(target, "navi_request_select", {
-        event,
-        id: resolveCommandValue(source, event),
-      });
-    },
-  };
-});
-registerNaviCommand("--navi-unselect", (source, event) => {
-  const target =
-    resolveExplicitTarget(source) || resolveFirstParentControl(source);
-  if (!target) {
-    return undefined;
-  }
-  return {
-    target,
-    implementation: () => {
-      return dispatchCustomEvent(target, "navi_request_unselect", {
-        event,
-        id: resolveCommandValue(source, event),
-      });
-    },
-  };
-});
-
-// prop that we'll set on the control
-const CONTROL_ATTRIBUTE_SET = new Set([
-  ...CONSTRAINT_ATTRIBUTE_SET,
-
-  "ref",
-  "children",
-  "id",
-  "name",
-  "type",
-  "value",
-  "checked",
-  "placeholder",
-  "inputMode",
-  "autoComplete",
-  "spellcheck",
-  "autoCorrect",
-  "aria-controls",
-  "tabIndex",
-  "command",
-  "commandFor",
-  "command-value", // not standard but make sense, allow to give param to the command in question
-
-  // "ui-action-target",
-  "navi-input-type",
-  "navi-control-proxy-for",
-  "navi-command-target",
-  "onnavi_command",
-
-  "data-callout-arrow-x",
-  "data-callout-point-to-border-box",
-  "data-callout-point-to-content-box",
-  "data-callout-viewport-spacing",
-  "data-callout-position",
-  "data-callout-position-fixed",
-
-  "data-testid", // playwright, cypress
-]);
-// prop concerning control but that won't end up in the DOM if not inside CONTROL_ATTRIBUTE_SET
-const CONTROL_PROP_SET = new Set([
-  ...CONTROL_ATTRIBUTE_SET,
-
-  "action",
-  "actionInteraction",
-  "actionAfterChange",
-  "actionOnMouseDown",
-  "actionDebounce",
-  "defaultValue",
-  "defaultChecked",
-
-  "loading",
-  "basePseudoState",
-  "constraints",
-
-  "autoFocus",
-  "autoFocusVisible",
-  "autoSelect",
-
-  "onMouseDown",
-  "onClick",
-  "onKeyDown",
-  "onPaste",
-  "onInput",
-
-  "onCancel",
-  "cancelOnBlurInvalid",
-  "cancelOnEscape",
-  "onActionPrevented",
-  "onActionStart",
-  "onActionAborted",
-  "onActionError",
-  "actionErrorEffect",
-  "errorMapping",
-  "onActionEnd",
-
-  "resetOnCancel",
-  "resetOnAbort",
-  "resetOnError",
-]);
-
-const ControlToInterfaceContext = createContext(null);
-const MessagePropsRefContext = createContext();
-
-const ControlNameContext = createContext();
-const DisabledContext = createContext();
-const ReadOnlyContext = createContext();
-const RequiredContext = createContext();
-const LoadingContext = createContext();
-createContext();
-
-const ActionContext = createContext();
-const ActionRequesterContext = createContext();
 
 /**
  * Converts a JS value into the form expected by the browser DOM property for a
@@ -25258,6 +24709,544 @@ const readValueFromNaviCustomEvent = (field, fallback) => {
   return fallback;
 };
 
+const triggerNaviCommand = (
+  element,
+  command,
+  event,
+  { optional, value } = {},
+) => {
+  const naviCommand = NAVI_COMMANDS[command];
+  if (!naviCommand) {
+    console.warn(`Unknown command "${command}"`);
+    return false;
+  }
+  // Check for explicit HTML target overrides early so a misconfigured commandfor
+  // attribute (id not found) aborts immediately rather than silently falling back
+  // to DOM resolution. Handlers receive this info via resolveExplicitTarget().
+  const explicitTarget = resolveExplicitTarget(element);
+  if (explicitTarget === null) {
+    // attribute was present but target not found — already warned inside resolveExplicitTarget
+    return false;
+  }
+  const execute = naviCommand.commandHandler(element, event);
+  if (!execute) {
+    if (optional) {
+      return false;
+    }
+    console.warn(
+      `"${command}" triggered on element but no suitable target found`,
+      element,
+    );
+    return false;
+  }
+  const { target, implementation } = execute;
+  return dispatchCustomEvent(target, "navi_command", {
+    command,
+    event,
+    source: element,
+    implementation,
+    value,
+  });
+};
+
+// Returns the target explicitly declared via HTML attributes (commandfor / navi-command-target),
+// or undefined when no such attribute is present.
+// Returns null when the attribute is present but the target element was not found (already warned).
+// Handlers must check for null explicitly — null || fallback() would silently ignore the error.
+const resolveExplicitTarget = (element) => {
+  const commandFor = element.getAttribute("commandfor");
+  if (commandFor) {
+    const target = document.getElementById(commandFor);
+    if (!target) {
+      console.warn(
+        `command triggered on element with commandfor="${commandFor}" but no element with that id found`,
+        element,
+      );
+      return null;
+    }
+    return target;
+  }
+  const naviCommandTarget = element.getAttribute("navi-command-target");
+  if (naviCommandTarget === "parent-control") {
+    const target = resolveFirstParentControl(element);
+    return target;
+  }
+  if (naviCommandTarget === "child-control") {
+    const target = resolveFirstChildControl(element);
+
+    return target;
+  }
+  return undefined;
+};
+const resolvePickerInnerControl = (target) => {
+  if (!target.hasAttribute("navi-picker")) {
+    return null;
+  }
+  const content = target.querySelector(".navi_picker_content");
+  if (!content) {
+    return null;
+  }
+  return content.querySelector("[navi-control-host]") ?? null;
+};
+const resolveFirstParentControl = (el) => {
+  return getParentControl(el);
+};
+const resolveFirstChildControl = (el) => {
+  let startEl;
+  if (isControlRoot(el)) {
+    startEl = findControlHost(el);
+  } else {
+    startEl = el;
+  }
+  return startEl.querySelector("[navi-control-host]");
+};
+const resolveClosestExpandable = (el) => {
+  return el.closest("[aria-expanded]");
+};
+const resolveClosestControlWithAction = (el) => {
+  return findClosestControlWithAction(el);
+};
+
+const resolveCommandValue = (source, event) => {
+  if (Object.hasOwn(event.detail, "value")) {
+    return event.detail.value;
+  }
+  if (source.hasAttribute("command-value")) {
+    return source.getAttribute("command-value");
+  }
+  if (source.type === "radio" || source.type === "checkbox") {
+    // Use readControlValue so that radio/checkbox sources return their `value`
+    // attribute (e.g. "Cherry") rather than the boolean checked state (true).
+    // getUIStateFromElement would return true for a checked radio, which is
+    // wrong when the command needs to propagate the selected item's identity.
+    return readControlValue(source);
+  }
+  return getUIStateFromElement(source);
+};
+
+const onNaviCommand = (e, { debugCommand }) => {
+  const { command, event, source, implementation } = e.detail;
+  if (typeof command !== "string") {
+    console.warn(`navi_command event is missing detail.command`, e);
+    return false;
+  }
+  if (typeof implementation !== "function") {
+    console.warn(`navi_command event is missing detail.implementation`, e);
+    return false;
+  }
+  const commandTarget = e.currentTarget;
+  debugCommand(
+    event,
+    `"${command}" triggered on`,
+    source,
+    `targeting`,
+    commandTarget,
+  );
+  return implementation();
+};
+
+const NAVI_COMMANDS = {};
+// commandHandler(source, event) → { target, implementation } | undefined
+// - Each handler calls resolveExplicitTarget(source) first, then falls back to
+//   its own DOM resolution logic (closest expandable, parent control, etc.).
+// - Returns undefined when no target can be found — this is a normal outcome for
+//   some commands (e.g. --navi-send when the source is outside any navi context).
+// - Returns { target, implementation } so dispatchNaviCommand can dispatch navi_command.
+const registerNaviCommand = (command, commandHandler) => {
+  NAVI_COMMANDS[command] = {
+    name: command,
+    commandHandler,
+    toString: () => command,
+  };
+};
+
+registerNaviCommand("--navi-void", (source) => {
+  const target =
+    resolveExplicitTarget(source) || resolveFirstParentControl(source);
+  if (!target) {
+    return undefined;
+  }
+  return {
+    target,
+    implementation: () => {
+      // intentional no-op — useful to verify command dispatch in demos and tests
+      return true;
+    },
+  };
+});
+
+registerNaviCommand("--navi-update", (source, event) => {
+  const target =
+    resolveExplicitTarget(source) || resolveFirstParentControl(source);
+  if (!target) {
+    return undefined;
+  }
+  return {
+    target,
+    implementation: () => {
+      const allowed = dispatchRequestInteraction(
+        target,
+        event,
+        "--navi-update",
+      );
+      if (!allowed) {
+        event.preventDefault();
+        return false;
+      }
+      const commandValue = resolveCommandValue(source, event);
+      dispatchRequestSetUIState(target, commandValue, {
+        event,
+      });
+      return true;
+    },
+  };
+});
+registerNaviCommand("--navi-clear", (source, event) => {
+  const target =
+    resolveExplicitTarget(source) || resolveFirstParentControl(source);
+  if (!target) {
+    return undefined;
+  }
+  const fromInput = source.closest(`[navi-control="input"]`);
+
+  return {
+    target,
+    implementation: () => {
+      if (fromInput) ; else {
+        triggerNaviCommand(source, "--navi-close", event, {
+          optional: true,
+        });
+      }
+      const allowed = dispatchRequestInteraction(target, event, "--navi-clear");
+      if (!allowed) {
+        event.preventDefault();
+        return false;
+      }
+      dispatchRequestClearUIState(target, event);
+      return true;
+    },
+  };
+});
+registerNaviCommand("--navi-reset", (source, event) => {
+  const target =
+    resolveExplicitTarget(source) || resolveFirstParentControl(source);
+  if (!target) {
+    return undefined;
+  }
+  return {
+    target,
+    implementation: () => {
+      const allowed = dispatchRequestInteraction(target, event, "--navi-reset");
+      if (!allowed) {
+        event.preventDefault();
+        return false;
+      }
+      return dispatchRequestResetUIState(target, event);
+    },
+  };
+});
+registerNaviCommand("--navi-send", (source, event) => {
+  const target =
+    resolveExplicitTarget(source) ||
+    resolveClosestExpandable(source) ||
+    resolveClosestControlWithAction(source);
+  if (!target) {
+    return undefined;
+  }
+
+  // send inside expandable
+  if (target.getAttribute("aria-expanded") === "true") {
+    return {
+      target,
+      implementation: () => executeNaviDefine(source, event, target),
+    };
+  }
+
+  // send inside a control with action
+  const submitSelector = `button[type="submit"], input[type="submit"], input[type="image"], [command="--navi-send"]`;
+  return {
+    target,
+    implementation: () => {
+      let requester = source;
+      if (!source.matches(submitSelector)) {
+        // When present, use the first submit button as the requester, not the input.
+        // This aligns with browser behavior where Enter in a text input triggers
+        // the first submit button of the form, not the input itself.
+        const firstButtonSubmitting = target.querySelector(submitSelector);
+        if (firstButtonSubmitting) {
+          requester = firstButtonSubmitting;
+        }
+      }
+      const allowed = dispatchRequestAction(target, { event, requester });
+      const initiator =
+        event.detail && typeof event.detail === "object"
+          ? event.detail.eventChain[0]
+          : event;
+      const { form } = target;
+      if (form) {
+        // prevent form submission when clicking buttons or pressing enter on inputs
+        initiator.preventDefault();
+      } else if (initiator.type === "keydown" && initiator.key === "Enter") {
+        // prevent triggering click on such button, they are already performing submit
+        // (this ensures enter inside a picker won't trigger picker button click)
+        initiator.preventDefault();
+      }
+      return allowed;
+    },
+  };
+});
+
+registerNaviCommand("--navi-open", (source, event) => {
+  const target =
+    resolveExplicitTarget(source) || resolveClosestExpandable(source);
+  if (!target) {
+    return undefined;
+  }
+  return {
+    target,
+    implementation: () => {
+      return dispatchCustomEvent(target, "navi_request_open", {
+        event,
+        source,
+      });
+    },
+  };
+});
+registerNaviCommand("--navi-close", (source, event) => {
+  const target =
+    resolveExplicitTarget(source) || resolveClosestExpandable(source);
+  if (!target) {
+    return undefined;
+  }
+  return {
+    target,
+    implementation: () => {
+      return dispatchCustomEvent(target, "navi_request_close", {
+        event,
+        source,
+      });
+    },
+  };
+});
+registerNaviCommand("--navi-cancel", (source, event) => {
+  const target =
+    resolveExplicitTarget(source) || resolveClosestExpandable(source);
+  if (!target) {
+    return undefined;
+  }
+  return {
+    target,
+    implementation: () => {
+      return dispatchCustomEvent(target, "navi_request_close", {
+        event,
+        source,
+        isCancel: true,
+      });
+    },
+  };
+});
+registerNaviCommand("--navi-define", (source, event) => {
+  const target =
+    resolveExplicitTarget(source) || resolveClosestExpandable(source);
+  if (!target) {
+    return undefined;
+  }
+  return {
+    target,
+    implementation: () => executeNaviDefine(source, event, target),
+  };
+});
+const executeNaviDefine = (source, event, target) => {
+  // Skip --navi-update when the picker already has an inner control that
+  // manages the picker's value autonomously:
+  // - A ControlGroup aggregates all child values and syncs them up via its
+  //   own command="--navi-update". Calling --navi-update from the send button
+  //   (which has no value) would override the aggregated value.
+  // - Any other inner control host (e.g. a plain Input inside the picker
+  //   popup) already propagates its value to the picker via its own
+  //   command="--navi-update" on every change. Calling it again from the
+  //   send button's undefined value would corrupt the picker state.
+  const skipUpdate = resolvePickerInnerControl(target) !== null;
+  if (!skipUpdate) {
+    triggerNaviCommand(source, "--navi-update", event);
+  }
+  // The picker's onClose already dispatches the action with the final value.
+  // Dispatching again here would fire the action twice.
+  return triggerNaviCommand(target, "--navi-close", event);
+};
+
+registerNaviCommand("--navi-scroll", (source, event) => {
+  const target =
+    resolveExplicitTarget(source) || resolveFirstParentControl(source);
+  if (!target) {
+    return undefined;
+  }
+  return {
+    target,
+    implementation: () => {
+      return dispatchCustomEvent(target, "navi_request_scroll", {
+        event,
+        id: resolveCommandValue(source, event),
+      });
+    },
+  };
+});
+registerNaviCommand("--navi-check", (source, event) => {
+  const target =
+    resolveExplicitTarget(source) || resolveFirstParentControl(source);
+  if (!target) {
+    return undefined;
+  }
+  return {
+    target,
+    implementation: () => {
+      return dispatchCustomEvent(target, "navi_request_check", {
+        event,
+      });
+    },
+  };
+});
+registerNaviCommand("--navi-uncheck", (source, event) => {
+  const target =
+    resolveExplicitTarget(source) || resolveFirstParentControl(source);
+  if (!target) {
+    return undefined;
+  }
+  return {
+    target,
+    implementation: () => {
+      return dispatchCustomEvent(target, "navi_request_uncheck", {
+        event,
+      });
+    },
+  };
+});
+registerNaviCommand("--navi-select", (source, event) => {
+  const target =
+    resolveExplicitTarget(source) || resolveFirstParentControl(source);
+  if (!target) {
+    return undefined;
+  }
+  return {
+    target,
+    implementation: () => {
+      return dispatchCustomEvent(target, "navi_request_select", {
+        event,
+        id: resolveCommandValue(source, event),
+      });
+    },
+  };
+});
+registerNaviCommand("--navi-unselect", (source, event) => {
+  const target =
+    resolveExplicitTarget(source) || resolveFirstParentControl(source);
+  if (!target) {
+    return undefined;
+  }
+  return {
+    target,
+    implementation: () => {
+      return dispatchCustomEvent(target, "navi_request_unselect", {
+        event,
+        id: resolveCommandValue(source, event),
+      });
+    },
+  };
+});
+
+// prop that we'll set on the control
+const CONTROL_ATTRIBUTE_SET = new Set([
+  ...CONSTRAINT_ATTRIBUTE_SET,
+
+  "ref",
+  "children",
+  "id",
+  "name",
+  "type",
+  "value",
+  "checked",
+  "placeholder",
+  "inputMode",
+  "autoComplete",
+  "spellcheck",
+  "autoCorrect",
+  "aria-controls",
+  "tabIndex",
+  "command",
+  "commandFor",
+  "command-value", // not standard but make sense, allow to give param to the command in question
+
+  // "ui-action-target",
+  "navi-input-type",
+  "navi-control-proxy-for",
+  "navi-command-target",
+  "onnavi_command",
+
+  "data-callout-arrow-x",
+  "data-callout-point-to-border-box",
+  "data-callout-point-to-content-box",
+  "data-callout-viewport-spacing",
+  "data-callout-position",
+  "data-callout-position-fixed",
+
+  "data-testid", // playwright, cypress
+]);
+// prop concerning control but that won't end up in the DOM if not inside CONTROL_ATTRIBUTE_SET
+const CONTROL_PROP_SET = new Set([
+  ...CONTROL_ATTRIBUTE_SET,
+
+  "action",
+  "actionInteraction",
+  "actionAfterChange",
+  "actionOnMouseDown",
+  "actionDebounce",
+  "defaultValue",
+  "defaultChecked",
+
+  "loading",
+  "basePseudoState",
+  "constraints",
+
+  "autoFocus",
+  "autoFocusVisible",
+  "autoSelect",
+
+  "onMouseDown",
+  "onClick",
+  "onKeyDown",
+  "onPaste",
+  "onInput",
+  "interactionDefinitions",
+
+  "onCancel",
+  "cancelOnBlurInvalid",
+  "cancelOnEscape",
+  "onActionPrevented",
+  "onActionStart",
+  "onActionAborted",
+  "onActionError",
+  "actionErrorEffect",
+  "errorMapping",
+  "onActionEnd",
+
+  "resetOnCancel",
+  "resetOnAbort",
+  "resetOnError",
+]);
+
+const ControlToInterfaceContext = createContext(null);
+const MessagePropsRefContext = createContext();
+
+const ControlNameContext = createContext();
+const DisabledContext = createContext();
+const ReadOnlyContext = createContext();
+const RequiredContext = createContext();
+const LoadingContext = createContext();
+createContext();
+
+const ActionContext = createContext();
+const ActionRequesterContext = createContext();
+
 // In-memory registry of all mounted ui state controllers keyed by their id.
 // Allows direct controller access without dispatching DOM events — used by external
 // callers (e.g. selectable_list) to call setUIState by id instead of via the DOM.
@@ -25353,6 +25342,7 @@ const onUIStateControllerDestroyed = (uiStateController) => {
  *   registerChild(child): void;   // Called on child mount
  *   onChildInteraction(child, e, { stateChanged: boolean }): void; // Called on user interaction
  *   unregisterChild(child): void; // Called on child unmount
+ *   props: Object;
  * }
  * ```
  */
@@ -25576,7 +25566,7 @@ const useUIStateController = (
         if (command) {
           const element = uiStateController.elementRef.current;
           if (element) {
-            dispatchNaviCommand(element, command, e);
+            triggerNaviCommand(element, command, e);
           }
         }
       };
@@ -25616,8 +25606,8 @@ const useUIStateController = (
           uiStateController.props.type === "radio" &&
           shouldNotifyParent(e)
         ) {
-          onUIAction();
           notifyParentAboutChildInteraction(e, { stateChanged: false });
+          onUIAction();
         }
         return false;
       }
@@ -25942,6 +25932,10 @@ const useUIGroupStateController = (
       `${controlType}.applyState(${JSON.stringify(newUIState)}, "${e.type}") -> updates from ${JSON.stringify(currentUIState)} to ${JSON.stringify(newUIState)}`,
     );
     publishUIState(newUIState);
+    // Notify the parent (facade) BEFORE firing the command so that when a
+    // command like --navi-send closes the picker, the picker input already
+    // holds the new value.
+    notifyParentAboutChildInteraction(e, { stateChanged: true });
     if (internalBehavior) {
       // Fire uiAction only — skip command to avoid re-triggering the same command
       // that caused this setUIState call in the first place.
@@ -25958,7 +25952,6 @@ const useUIGroupStateController = (
         value: newUIState,
       });
     }
-    notifyParentAboutChildInteraction(e, { stateChanged: true });
   };
 
   useLayoutEffect(() => {
@@ -25976,6 +25969,7 @@ const useUIGroupStateController = (
     existingUIStateController.id = id;
     existingUIStateController.name = name;
     existingUIStateController.value = value;
+    existingUIStateController.props = props;
     uiActionRef.current = uiAction;
     return existingUIStateController;
   }
@@ -25999,6 +25993,7 @@ const useUIGroupStateController = (
     id,
     name,
     value,
+    props,
     uiState: fallbackState,
     uiStateSignal,
     wantRequesterButtonState,
@@ -26094,7 +26089,7 @@ const useUIGroupStateController = (
       if (command) {
         const el = ref.current;
         if (el) {
-          dispatchNaviCommand(el, command, e);
+          triggerNaviCommand(el, command, e);
         }
       }
     },
@@ -26235,7 +26230,7 @@ const EMPTY_OBJECT = {};
  * inside the picker popup. It also means `commands.js` no longer has to
  * manually re-dispatch to inner controls.
  */
-const useUIFacadeStateController = (uiStateController) => {
+const useUIFacadeStateController = (props, uiStateController) => {
   const firstChildControllerRef = useRef(null);
   const updatingRef = useRef(false);
 
@@ -26259,11 +26254,24 @@ const useUIFacadeStateController = (uiStateController) => {
     });
   }, []);
 
+  const includeChildController = (childController) => {
+    if (childController.props["navi-list"]) {
+      // Controls with navi-list act as standalone list navigators and should
+      // not be treated as the picker's synced child.
+      return false;
+    }
+    return true;
+  };
+
   return useMemo(
     () => ({
       controlType: "facade",
+      props,
       uiStateSignal: uiStateController.uiStateSignal,
       registerChild: (child) => {
+        if (!includeChildController(child)) {
+          return;
+        }
         if (!firstChildControllerRef.current) {
           firstChildControllerRef.current = child;
         } else {
@@ -26480,17 +26488,18 @@ const useControlProps = (props, {
   uiActionInternal,
   readOnlySupported
 }) => {
+  const idDefault = useId();
   const debugInteraction = useDebugInteraction();
   const controlName = useContext(ControlNameContext);
+  const controlToInterface = useContext(ControlToInterfaceContext);
   const state = props[statePropName];
+  props.name = props.name || controlName;
+  props.id = props.id || controlToInterface?.id || idDefault;
   if (isSignal(state)) {
     props = {
       ...props,
       [statePropName]: state.value
     };
-  }
-  if (!props.name && controlName) {
-    props.name = controlName;
   }
   const uiStateController = useUIStateController(props, controlType, {
     statePropName,
@@ -26517,13 +26526,6 @@ const useControlProps = (props, {
       actionAfterChange = actionInteraction === "change",
       actionDebounce
     } = props;
-    let isCheckable = false;
-    // Effect to run when the Enter key is pressed.
-    // For most inputs Enter submits the surrounding form; for checkables Enter
-    // synthesizes a click so the browser's native checkbox/radio activation runs
-    // (which then fires input -> goes through the action pipeline).
-    let enterEffect;
-    let spaceEffect;
     const updateUIState = e => {
       const value = readControlValue(ref.current);
       uiStateController.setUIState(value, e);
@@ -26559,9 +26561,6 @@ const useControlProps = (props, {
       interaction.effect?.(e);
       return true;
     };
-    const asBrowserAction = (interaction, e) => {
-      return asInteraction(interaction, e);
-    };
     const lastEventRequestingActionRef = useRef();
     const lastActionValueRef = useRef(NO_ACTION_YET);
     const wasCheckedAtMousedownRef = useRef(false);
@@ -26579,12 +26578,7 @@ const useControlProps = (props, {
     // because at that point asAction hasn't run yet and we must not pre-empt its dedup.
     controlHostProps.onnavi_ui_state_change = e => {
       const originatingEvent = e.detail.event;
-      if (isCheckable) {
-        const sourceIsOwnInput = originatingEvent?.type === "input" && originatingEvent?.target === ref.current;
-        if (!sourceIsOwnInput) {
-          lastActionValueRef.current = e.detail.value;
-        }
-      } else if (originatingEvent?.type === "radio_sibling_uncheck") {
+      if (originatingEvent?.type === "radio_sibling_uncheck") {
         lastActionValueRef.current = e.detail.value;
       }
     };
@@ -26622,181 +26616,238 @@ const useControlProps = (props, {
       interaction.effect?.(e);
       return true;
     };
-    const applyInteraction = (interaction, e, {
-      ifValueModified
-    } = {}) => {
-      if (!interaction) {
-        return false;
-      }
-      return interaction.callback(interaction, e, {
-        ifValueModified
-      });
-    };
-    let mousedownInteraction;
-    let clickInteraction;
-    let inputInteraction;
-    let keydownInteraction = {
-      name: "keydown",
-      callback: asBrowserAction
-    };
-    // a custom concept being combination of "input", "change" and may other events
-    // this even if trigerred when value changes and can be controlled by actionDebounce and actionAfterChange
-    let naviChangeInteraction;
-    if (controlType === "button") {
-      mousedownInteraction = {
-        name: "mousedown",
-        callback: actionOnMouseDown ? asAction : asInteraction
-        // effect: updateUIState,
-      };
-      clickInteraction = {
-        name: "click",
-        callback: actionOnMouseDown ? asInteraction : asAction
-        // effect: updateUIState,
-      };
-    } else if (controlType === "input" || controlType === "picker") {
-      isCheckable = props.type === "radio" || props.type === "checkbox";
-      // On input, gate the interaction (readonly check) and update UI state to reflect the new value.
-      inputInteraction = {
-        name: "input",
-        callback: asInteraction,
-        effect: updateUIState
-      };
-      naviChangeInteraction = {
-        name: "navi_change",
-        callback: asAction
-      };
-      enterEffect = e => {
-        const input = e.currentTarget;
-        dispatchNaviCommand(input, "--navi-send", e);
-      };
-      if (controlType === "picker") {
-        mousedownInteraction = {
-          name: "mousedown to open picker",
-          callback: asInteraction
+    const getDefaultInteractionDefinitions = () => {
+      const keyDownDefault = () => {
+        return {
+          name: "keydown",
+          type: "interaction"
         };
-        clickInteraction = {
-          name: "click to open picker",
-          callback: asInteraction
+      };
+      if (controlType === "button") {
+        return {
+          keyDown: keyDownDefault,
+          mouseDown: () => {
+            return {
+              name: "mousedown",
+              type: actionOnMouseDown ? "action" : "interaction"
+            };
+          },
+          click: () => {
+            return {
+              name: "click",
+              type: actionOnMouseDown ? "interaction" : "action",
+              always: e => {
+                const button = e.currentTarget;
+                if (button.form) {
+                  e.preventDefault(); // prevent form submission
+                }
+              }
+            };
+          }
         };
       }
-      if (isCheckable) {
-        inputInteraction = {
-          name: "input",
-          callback: asAction
-        };
-        // For checkables, click does NOT update state — it only gates the
-        // browser's native check/uncheck via interaction constraints (e.g.
-        // readOnly). State actually changes via the "input" event that the
-        // browser fires right after, which routes through asAction so the
-        // full action pipeline (constraints, navi_action_allowed, sibling
-        // uncheck for radios…) runs in one place.
-        clickInteraction = {
-          name: "click",
-          callback: asBrowserAction,
-          // When a radio is already checked and gets clicked, the browser does NOT
-          // fire an input event (state doesn't change), so asAction never runs.
-          // We still want uiAction + command to fire. We can tell whether the click
-          // is on an already-checked radio by looking at wasCheckedAtMousedownRef:
-          // if it was checked at mousedown, the input event won't come, so we do it here.
-          effect: e => {
-            const checkable = e.currentTarget;
-            if (checkable.type === "radio" && wasCheckedAtMousedownRef.current) {
-              updateUIState(e);
-            }
-          }
-        };
-        naviChangeInteraction = undefined;
-        enterEffect = e => {
-          const checkable = ref.current;
-          const interactionAllowed = dispatchRequestInteraction(checkable, e, "enter");
-          if (!interactionAllowed) {
-            if (checkable.form) {
-              e.preventDefault();
-            }
-            return;
-          }
-          let newState;
-          if (checkable.type === "checkbox") {
-            // toggle: if checked → uncheck (undefined), if unchecked → check (value)
-            newState = checkable.checked ? undefined : checkable.value;
-          } else {
-            // radio: always check
-            newState = checkable.value;
-          }
-          dispatchRequestSetUIState(checkable, newState, {
-            event: e
-          });
-          if (checkable.form) {
-            e.preventDefault();
-          }
-        };
-        if (props.type === "radio") {
-          spaceEffect = e => {
-            const radio = e.currentTarget;
-            if (radio.checked) {
-              wasCheckedAtMousedownRef.current = true;
-              onClick(e);
+      if (controlType === "input") {
+        if (props.type === "radio" || props.type === "checkbox") {
+          const isRadio = props.type === "radio";
+          return {
+            keyDown: e => {
+              if (e.key === "Enter") {
+                const inputEl = ref.current;
+                const isRadio = props.type === "radio";
+                const always = () => {
+                  if (inputEl.form) {
+                    e.preventDefault();
+                  }
+                };
+                if (isRadio) {
+                  return {
+                    name: "enter to check radio",
+                    effect: e => {
+                      dispatchRequestSetUIState(inputEl, true, {
+                        event: e
+                      });
+                    },
+                    always
+                  };
+                }
+                const checked = inputEl.checked;
+                if (checked) {
+                  return {
+                    name: "enter to uncheck checkbox",
+                    effect: e => {
+                      dispatchRequestSetUIState(inputEl, undefined, {
+                        event: e
+                      });
+                    },
+                    always
+                  };
+                }
+                return {
+                  name: "enter to check",
+                  effect: e => {
+                    dispatchRequestSetUIState(inputEl, true, {
+                      event: e
+                    });
+                  },
+                  always
+                };
+              }
+              if (isRadio && e.key === " ") {
+                const inputEl = e.currentTarget;
+                if (inputEl.checked) {
+                  wasCheckedAtMousedownRef.current = true;
+                  onClick(e);
+                }
+              }
+              return keyDownDefault();
+            },
+            mouseDown: e => {
+              if (isRadio) {
+                wasCheckedAtMousedownRef.current = e.currentTarget.checked;
+              }
+            },
+            // For checkables, click does NOT update state — it only gates the
+            // browser's native check/uncheck via interaction constraints (e.g.
+            // readOnly). State actually changes via the "input" event that the
+            // browser fires right after, which routes through asAction so the
+            // full action pipeline (constraints, navi_action_allowed, sibling
+            // uncheck for radios…) runs in one place.
+            click: () => {
+              return {
+                name: `click on ${props.type}`,
+                type: "interaction",
+                // When a radio is already checked and gets clicked, the browser does NOT
+                // fire an input event (state doesn't change), so asAction never runs.
+                // We still want uiAction + command to fire. We can tell whether the click
+                // is on an already-checked radio by looking at wasCheckedAtMousedownRef:
+                // if it was checked at mousedown, the input event won't come, so we do it here.
+                effect: isRadio ? e => {
+                  if (wasCheckedAtMousedownRef.current) {
+                    updateUIState(e);
+                  }
+                } : undefined
+              };
+            },
+            input: () => {
+              return {
+                name: "input",
+                type: "action"
+              };
             }
           };
         }
-      } else if (props.type === "range") {
-        mousedownInteraction = {
-          name: "mousedown",
-          callback: asBrowserAction,
-          effect: updateUIState
+        const keyDownDefaultOnInput = e => {
+          if (e.key === "Enter") {
+            const input = e.currentTarget;
+            return {
+              name: "enter to --navi-send",
+              effect: () => {
+                triggerNaviCommand(input, "--navi-send", e);
+              }
+            };
+          }
+          return keyDownDefault();
         };
-      } else if (props.type === "color") ;
-    }
+        if (props.type === "range") {
+          return {
+            keyDown: keyDownDefaultOnInput,
+            mouseDown: () => {
+              return {
+                name: "mousedown",
+                type: "interaction",
+                effect: updateUIState
+              };
+            },
+            input: {
+              name: "input",
+              type: "interaction",
+              effect: updateUIState
+            },
+            naviChange: () => {
+              return {
+                name: "navi_change",
+                type: "action"
+              };
+            }
+          };
+        }
+        return {
+          keyDown: keyDownDefaultOnInput,
+          input: () => {
+            return {
+              name: "input",
+              type: "interaction",
+              effect: updateUIState
+            };
+          },
+          naviChange: () => {
+            return {
+              name: "navi_change",
+              type: "action"
+            };
+          }
+        };
+      }
+      return null;
+    };
+    const defaultInteractionDefinitions = getDefaultInteractionDefinitions();
+    const {
+      interactionDefinitions
+    } = props;
+    const applyInteraction = (interactionName, e, {
+      ifValueModified
+    } = {}) => {
+      const defaultInteractionDefinition = defaultInteractionDefinitions?.[interactionName];
+      const customInteractionDefinition = interactionDefinitions?.[interactionName];
+      const interaction = customInteractionDefinition?.(e) ?? defaultInteractionDefinition?.(e);
+      if (!interaction) {
+        return false;
+      }
+      const {
+        name,
+        effect,
+        type = "interaction",
+        always
+      } = interaction;
+      const dispatchFn = type === "action" ? asAction : asInteraction;
+      const applied = dispatchFn({
+        name,
+        effect
+      }, e, {
+        ifValueModified
+      });
+      always?.(e);
+      return applied;
+    };
     const onMouseDown = e => {
       props.onMouseDown?.(e);
-      if (isCheckable && props.type === "radio") {
-        wasCheckedAtMousedownRef.current = e.currentTarget.checked;
-      }
-      applyInteraction(mousedownInteraction, e);
+      applyInteraction("mouseDown", e);
       transferFocusToTarget(e);
     };
     const onClick = e => {
       props.onClick?.(e);
-      applyInteraction(clickInteraction, e);
+      applyInteraction("click", e);
       transferFocusToTarget(e);
-      const controlHost = e.currentTarget;
-      if (controlHost.form) {
-        if (controlType === "button") {
-          // prevent form submission
-          e.preventDefault();
-        } else if (controlHost.closest("button")) {
-          // prevent button form submission by click
-          // (When an input is inside a <button> like for a picker)
-          // any click in the picker could trigger form submission as browser see this as click on button inside form
-          e.preventDefault();
-        }
-      }
     };
     const onKeyDown = e => {
       props.onKeyDown?.(e);
-      if (e.key === "Enter" && enterEffect) {
-        enterEffect(e);
-        return;
-      }
-      if (e.key === " " && spaceEffect) {
-        spaceEffect(e);
-        return;
-      }
-      applyInteraction(keydownInteraction, e);
+      applyInteraction("keyDown", e);
     };
     const onInput = e => {
       props.onInput?.(e);
-      applyInteraction(inputInteraction, e, {
+      applyInteraction("input", e, {
         ifValueModified: true
       });
     };
-    const hasNaviChangeInteraction = Boolean(naviChangeInteraction);
+    // a custom concept being combination of "input", "change" and may other events
+    // this even if trigerred when value changes and can be controlled by actionDebounce and actionAfterChange
+    const hasNaviChangeInteractionDefinition = Boolean(interactionDefinitions?.naviChange || defaultInteractionDefinitions?.naviChange);
     const refCallback = useCallback(field => {
-      if (!hasNaviChangeInteraction || actionInteraction === "custom") {
+      if (!hasNaviChangeInteractionDefinition || actionInteraction === "custom") {
         return undefined;
       }
       return addInputEffect(field, e => {
-        applyInteraction(naviChangeInteraction, e, {
+        applyInteraction("naviChange", e, {
           ifValueModified: true
         });
       }, {
@@ -26804,7 +26855,7 @@ const useControlProps = (props, {
         debounce: actionDebounce,
         debugInteraction
       });
-    }, [actionInteraction, actionAfterChange, actionDebounce, hasNaviChangeInteraction]);
+    }, [actionInteraction, actionAfterChange, actionDebounce, hasNaviChangeInteractionDefinition]);
     const refComposed = useComposeElementRef(refCallback, ref);
     const onPaste = e => {
       props.onPaste?.(e);
@@ -26937,7 +26988,7 @@ const useControlgroupProps = (props, {
  */
 const useControlFacadeProps = (props, options) => {
   const [controlRootProps, controlHostProps, uiStateController] = useControlProps(props, options);
-  const facadeController = useUIFacadeStateController(uiStateController);
+  const facadeController = useUIFacadeStateController(props, uiStateController);
   return [controlRootProps, controlHostProps, {
     value: facadeController
   }];
@@ -27018,14 +27069,11 @@ const useInteractiveProps = (props, {
       autoFocusVisible,
       autoSelect
     } = props;
-    useAutoFocus(ref, autoFocus, {
+    const autoFocusProps = useAutoFocus(ref, autoFocus, {
       focusVisible: autoFocusVisible,
       autoSelect
     });
-    Object.assign(controlHostProps, {
-      "navi-autofocus": autoFocus ? autoFocus === true ? "" : autoFocus : undefined,
-      "navi-autofocus-select": autoFocus && autoSelect ? "" : undefined
-    });
+    Object.assign(controlHostProps, autoFocusProps);
   }
   {
     const {
@@ -27038,13 +27086,12 @@ const useInteractiveProps = (props, {
       readOnly,
       loading
     } = props;
-    const idResolved = id || controlToInterfaceContext?.id;
     const disabledResolved = disabled || controlDisabled;
     const requiredResolved = required || controlRequired;
     const loadingResolved = loading || actionStatus.loading || controlLoading && parentActionRequester === ref.current;
     const readOnlyResolved = readOnly || controlReadOnly || loadingResolved || uiStateController.readOnly;
     Object.assign(controlHostProps, {
-      "id": idResolved,
+      id,
       "navi-control-proxy-for": naviProxyFor,
       name,
       type,
@@ -27079,6 +27126,7 @@ const useInteractiveProps = (props, {
   }
   {
     const uiState = uiStateController.uiStateSignal.value;
+    const isCheckable = uiStateController.controlType === "input" && (props.type === "radio" || props.type === "checkbox");
     Object.assign(controlHostProps, {
       onnavi_clear_ui_state: e => {
         uiStateController.clearUIState(e);
@@ -27091,6 +27139,16 @@ const useInteractiveProps = (props, {
       },
       onnavi_set_ui_state: e => {
         uiStateController.setUIState(e.detail.value, e);
+      },
+      onnavi_request_check: e => {
+        if (isCheckable) {
+          uiStateController.setUIState(true, e);
+        }
+      },
+      onnavi_request_uncheck: e => {
+        if (isCheckable) {
+          uiStateController.setUIState(false, e);
+        }
       }
     });
     // Mirror ui state handlers on the root so events dispatched on the root element
@@ -27099,7 +27157,9 @@ const useInteractiveProps = (props, {
       onnavi_clear_ui_state: controlHostProps.onnavi_clear_ui_state,
       onnavi_reset_ui_state: controlHostProps.onnavi_reset_ui_state,
       onnavi_get_ui_state: controlHostProps.onnavi_get_ui_state,
-      onnavi_set_ui_state: controlHostProps.onnavi_set_ui_state
+      onnavi_set_ui_state: controlHostProps.onnavi_set_ui_state,
+      onnavi_request_check: controlHostProps.onnavi_request_check,
+      onnavi_request_uncheck: controlHostProps.onnavi_request_uncheck
     });
     const {
       statePropName
@@ -28553,7 +28613,7 @@ const LinkPlain = props => {
     selection,
     selectionController
   });
-  useAutoFocus(ref, autoFocus);
+  const autoFocusProps = useAutoFocus(ref, autoFocus);
   useConstraints(ref, constraints);
   const shouldDimColor = readOnly || disabled;
   useDimColorWhen(ref, shouldDimColor);
@@ -28605,10 +28665,7 @@ const LinkPlain = props => {
     color: anchor && !innerChildren ? "inherit" : undefined,
     id: anchor ? href.slice(1) : undefined,
     ...remainingProps,
-    autoFocus: undefined // See use_auto_focus.js
-    ,
-
-    "navi-autofocus": autoFocus ? "" : undefined,
+    ...autoFocusProps,
     ref: ref,
     href: href,
     rel: innerRel,
@@ -29920,7 +29977,7 @@ const InputCheckboxFieldInterface = props => {
       color: "var(--loader-color)"
     }), visualVnode, jsx(RealInputCheckbox, {
       ...checkboxHostProps,
-      switch: switchProp
+      switch: switchProp ? "" : undefined
     })]
   });
 };
@@ -30056,23 +30113,20 @@ const Field = props => {
   const refDefault = useRef();
   props.ref = props.ref || refDefault;
   const {
-    as,
-    vertical
+    ownLabel
   } = props;
-  if (as === undefined && !vertical) {
-    props.as = "label";
-  }
-  if (props.as === "label") {
-    return jsx(FieldAsLabel, {
+  if (ownLabel) {
+    return jsx(FieldAsContainer, {
       ...props
     });
   }
-  return jsx(FieldAsContainer, {
+  return jsx(FieldAsLabel, {
     ...props
   });
 };
 const FieldAsLabel = props => {
   return jsx(FieldUI, {
+    as: "label",
     ...props
   });
 };
@@ -32486,8 +32540,6 @@ const InputTextualFirstResolver = props => {
   const Next = useNextResolver();
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
-  const idDefault = useId(); // needed by ui state controller and slot labels
-  props.id = props.id || idDefault;
   resolveInputProps(props);
   return jsx(Next, {
     ...props
@@ -32853,11 +32905,10 @@ const FormControl = props => {
     onSubmit: e => {
       const form = e.currentTarget;
       e.preventDefault();
-      dispatchInternalCustomEvent(form, "navi_action_allowed", {
+      dispatchRequestAction(form, {
         event: e,
-        action: "auto",
-        method: "rerun",
-        requester: form,
+        requester: e.submitter || form,
+        actionOrigin: "form_submit",
         meta: {
           isSubmit: true
         }
@@ -32892,7 +32943,7 @@ const getFormManagedControls = form => {
     // Exclude inputs that are inside any control group (radio, checkbox, control_group…)
     // — the group host is the managed control for the form, not its individual child inputs.
     const controlGroupHost = element.closest("[navi-control-group]");
-    if (controlGroupHost && form.contains(controlGroupHost)) {
+    if (controlGroupHost && controlGroupHost !== form && form.contains(controlGroupHost)) {
       continue;
     }
     managedControls.push(element);
@@ -33314,7 +33365,7 @@ const markAutofocusRestoreOnClose = (containerEl) => {
 // as a result document.activeElement is not up-to-date (can be document.body for instance)
 const getFocusedBeforeTransfer = (e) => {
   const initiator = e.detail.eventChain[0];
-  if (initiator.type === "mousedown" && initiator.defaultPrevented) {
+  if (initiator.type === "mousedown") {
     // if we we had let browser give focus, the element would be the one that would be focused
     return initiator.currentTarget;
   }
@@ -33325,7 +33376,7 @@ const getFocusedBeforeTransfer = (e) => {
   return document.activeElement;
 };
 
-const transferFocus = (containerEl, debugFocus, e) => {
+const transferFocus = (containerEl, debugFocus, e, fallback) => {
   let target;
   let reason;
   if (containerEl.hasAttribute("navi-autofocus-restore")) {
@@ -33363,6 +33414,11 @@ const transferFocus = (containerEl, debugFocus, e) => {
     if (naviAutoFocusFallback) {
       reason = "navi-autofocus fallback";
       target = naviAutoFocusFallback;
+    }
+  }
+  if (!target) {
+    if (fallback) {
+      target = fallback;
     }
   }
   if (!target) {
@@ -33432,6 +33488,7 @@ const Dialog = props => {
   const ref = rest.ref || defaultRef;
   const debugPopup = useDebugPopup();
   const debugFocus = useDebugFocus();
+  const autoFocusProps = useAutoFocus(ref, props.autoFocus);
   const openedRef = useRef(false);
   const [addCleanup, cleanup] = useCleanup();
   const open = (e, {
@@ -33448,7 +33505,7 @@ const Dialog = props => {
     dialogEl.style.setProperty("--anchor-height", `${snapToPixel(height)}px`);
     const focusedBeforeOpen = getFocusedBeforeTransfer(e);
     dialogEl.showModal();
-    transferFocus(dialogEl, debugFocus, e);
+    transferFocus(dialogEl, debugFocus, e, focusedBeforeOpen);
     if (scrollTrap) {
       addCleanup(trapScrollInside(dialogEl));
     }
@@ -33513,9 +33570,11 @@ const Dialog = props => {
   };
   return jsx(Box, {
     ...rest,
+    ...autoFocusProps,
     as: "dialog",
     ref: ref,
     baseClassName: "navi_dialog",
+    pseudoClasses: DIALOG_PSEUDO_CLASSES,
     onMouseDown: e => {
       rest.onMouseDown?.(e);
       // The <dialog> element covers the full viewport; clicking the backdrop
@@ -33544,6 +33603,7 @@ const Dialog = props => {
     children: children
   });
 };
+const DIALOG_PSEUDO_CLASSES = [":hover", ":active", ":focus", ":focus-visible", ":focus-within"];
 
 installImportMetaCssBuild(import.meta);const css$q = /* css */`
   .navi_popover {
@@ -33588,6 +33648,7 @@ const Popover = props => {
   const id = rest.id || defaultId;
   const debugPopup = useDebugPopup();
   const debugFocus = useDebugFocus();
+  const autoFocusProps = useAutoFocus(ref, props.autoFocus);
   const [opened, setOpened] = useState(false);
   const openedRef = useRef(opened);
   openedRef.current = opened;
@@ -33599,7 +33660,7 @@ const Popover = props => {
     const popoverEl = ref.current;
     const focusedBeforeOpen = getFocusedBeforeTransfer(e);
     popoverEl.showPopover();
-    transferFocus(popoverEl, debugFocus, e);
+    transferFocus(popoverEl, debugFocus, e, focusedBeforeOpen);
     const effectiveAnchor = anchor || document.documentElement;
     const positionPopover = positionEvent => {
       const {
@@ -33718,9 +33779,10 @@ const Popover = props => {
     id: id,
     popover: "manual",
     ...rest,
+    ...autoFocusProps,
     ref: ref,
     baseClassName: "navi_popover",
-    pseudoClasses: PopoverPseudoClasses,
+    pseudoClasses: POPOVER_PSEUDO_CLASSES,
     onnavi_request_open: e => {
       const {
         anchor
@@ -33748,7 +33810,7 @@ const Popover = props => {
     }), children]
   });
 };
-const PopoverPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":focus-within", ":read-only", ":disabled"];
+const POPOVER_PSEUDO_CLASSES = [":hover", ":active", ":focus", ":focus-visible", ":focus-within"];
 
 installImportMetaCssBuild(import.meta);const css$p = /* css */`
   .navi_picker {
@@ -33770,7 +33832,7 @@ installImportMetaCssBuild(import.meta);const css$p = /* css */`
         border-radius: var(--picker-border-radius);
         outline-width: var(--picker-outline-width);
         outline-color: var(--picker-outline-color);
-        outline-offset: var(--picker-outline-offset);
+        outline-offset: 0px;
         box-shadow:
           0 4px 8px rgba(0, 0, 0, 0.08),
           0 12px 40px rgba(0, 0, 0, 0.22);
@@ -33828,6 +33890,10 @@ installImportMetaCssBuild(import.meta);const css$p = /* css */`
           overflow: auto;
           overscroll-behavior: none;
         }
+
+        &[data-focus-visible] {
+          outline-style: solid;
+        }
       }
 
       &[aria-expanded="true"] {
@@ -33856,7 +33922,7 @@ installImportMetaCssBuild(import.meta);const css$p = /* css */`
         border-radius: var(--picker-border-radius);
         outline-width: var(--picker-outline-width);
         outline-color: var(--picker-outline-color);
-        outline-offset: var(--picker-outline-offset);
+        outline-offset: 0;
         box-shadow:
           0 4px 8px rgba(0, 0, 0, 0.08),
           0 12px 40px rgba(0, 0, 0, 0.22);
@@ -33866,6 +33932,10 @@ installImportMetaCssBuild(import.meta);const css$p = /* css */`
         &[open] {
           display: flex;
           flex-direction: column;
+        }
+
+        &[data-focus-visible] {
+          outline-style: solid;
         }
 
         &::backdrop {
@@ -33975,10 +34045,14 @@ const PickerCustom = props => {
     const valueAtOpenRef = useRef(null);
     const activeElementAtOpenRef = useRef(null);
     const onOpen = e => {
-      activeElementAtOpenRef.current = e.detail.focusedBeforeOpen;
       expandedRef.current = true;
       setExpanded(true);
-      valueAtOpenRef.current = getPickerInputUIState(ref.current);
+      const focusedBeforeOpen = e.detail.focusedBeforeOpen;
+      activeElementAtOpenRef.current = focusedBeforeOpen;
+      debugFocus(e, "picked opened, store element focused", focusedBeforeOpen);
+      const valueAtOpen = getPickerInputUIState(ref.current);
+      valueAtOpenRef.current = valueAtOpen;
+      debugPopup(e, `picker opened, store value at open (${valueAtOpen})`);
     };
     const restoreFocus = e => {
       const activeElementAtOpen = activeElementAtOpenRef.current;
@@ -34002,6 +34076,11 @@ const PickerCustom = props => {
     const onClose = e => {
       const cancelEvent = findEvent(e, eInChain => eInChain.type === "navi_request_close" && eInChain.detail.isCancel);
       const isCancel = Boolean(cancelEvent);
+      const mousedownEvent = findEvent(e, "mousedown");
+      if (mousedownEvent) {
+        debugPopup(e, `closed by mousedown -> disable next click`);
+        disableClickFor();
+      }
       expandedRef.current = false;
       setExpanded(false);
       // Reset so the next opening re-evaluates screen size
@@ -34047,17 +34126,12 @@ const PickerCustom = props => {
       });
     };
     const requestClose = (e = new CustomEvent("programmatic"), {
-      cancel = false
+      isCancel = false
     } = {}) => {
-      const mousedownEvent = findEvent(e, "mousedown");
-      if (mousedownEvent) {
-        debugPopup(e, `disable click`);
-        disableClickFor();
-      }
       const popupEl = popupRef.current;
       return dispatchCustomEvent(popupEl, "navi_request_close", {
         event: e,
-        cancel
+        isCancel
       });
     };
     const onInteraction = (e, {
@@ -34109,91 +34183,97 @@ const PickerCustom = props => {
       }
     });
     {
-      const {
-        onMouseDown,
-        onClick,
-        onKeyDown
-      } = props;
       const onKeyDownShortcuts = createOnKeyDownForShortcuts({
-        arrowdown: e => {
-          onInteraction(e, {
+        "a-z": e => {
+          return {
+            name: "letter key to open",
+            effect: () => {
+              requestOpen(e);
+            }
+          };
+        },
+        "0-9": e => {
+          return {
+            name: "numeric key to open",
+            effect: () => {
+              requestOpen(e);
+            }
+          };
+        },
+        "arrowdown": e => {
+          return {
             name: "arrow_down_to_open",
             effect: () => {
-              e.preventDefault(); // prevent container scroll
               requestOpen(e);
+              e.preventDefault(); // prevent container scroll
             }
-          });
+          };
         },
-        arrowup: e => {
-          onInteraction(e, {
+        "arrowup": e => {
+          return {
             name: "arrow_up_to_open",
             effect: () => {
-              e.preventDefault(); // prevent container scroll
               requestOpen(e);
+              e.preventDefault(); // prevent container scroll
             }
-          });
+          };
         },
-        space: e => {
-          onInteraction(e, {
+        "space": e => {
+          return {
             name: "space_to_open",
             effect: () => {
-              e.preventDefault(); // prevent scroll
               requestOpen(e);
+              e.preventDefault(); // prevent scroll
             }
-          });
+          };
         },
-        escape: e => {
+        "escape": e => {
           if (!expandedRef.current) {
-            return;
+            return null;
           }
-          onInteraction(e, {
+          return {
             name: "escape_to_cancel",
             effect: () => {
-              e.preventDefault(); // prevent browser from closing the dialog (if any)
               requestClose(e, {
-                cancel: true
+                isCancel: true
               });
+              e.preventDefault(); // prevent browser from closing the dialog (if any)
             }
-          });
+          };
         }
       });
       Object.assign(pickerProps, {
-        onMouseDown: e => {
-          onMouseDown?.(e);
-          onInteraction(e, {
-            name: "mousedown to open picker",
-            effect: () => {
-              if (expandedRef.current) {
-                requestClose(e);
-              } else {
-                e.preventDefault(); // prevent browser trying to give focus to the select (popover will take focus)
+        interactionDefinitions: {
+          mouseDown: e => {
+            if (expandedRef.current) {
+              return {
+                name: "mousedown to close picker",
+                effect: () => requestClose(e)
+              };
+            }
+            return {
+              name: "mousedown to open picker",
+              effect: () => {
                 debugFocus(e, `prevent browser giving focus to button (mousedown.preventDefault())`);
                 requestOpen(e);
+                e.preventDefault(); // prevent browser trying to give focus to the select (popover will take focus)
               }
-            }
-          });
-        },
-        onClick: e => {
-          // if (e.detail === 0) {
-          // disable enter to open that would happen because it's a <button>
-          // but we want to keep the input behavior here
-          // (space to open, enter to submit)
-          //  return;
-          // }
-          onClick?.(e);
-          onInteraction(e, {
-            name: e.detail === 0 ? "keyboard click to open picker" : "click to open picker",
-            effect: () => {
-              // When a label is clicked it transfers focus to the select
-              // in that case we want to open it (otherwise we have already opened on mousedown interaction)
-              e.preventDefault();
-              requestOpen(e);
-            }
-          });
-        },
-        onKeyDown: e => {
-          onKeyDown?.(e);
-          onKeyDownShortcuts(e);
+            };
+          },
+          click: e => {
+            // When a label is clicked it transfers focus to the select
+            // in that case we want to open it (otherwise we have already opened on mousedown interaction)
+            return {
+              name: e.detail === 0 ? "click (keyboard or progammatic) to open picker" : "click to open picker",
+              effect: () => {
+                requestOpen(e);
+                e.preventDefault();
+              }
+            };
+          },
+          keyDown: e => {
+            return onKeyDownShortcuts(e);
+          }
         }
       });
       Object.assign(popupProps, {
@@ -34202,7 +34282,7 @@ const PickerCustom = props => {
             return;
           }
           // mousedown inside popover should not bubble to the select (would re-open it if that mousedown closes it)
-          debugPopup(e, `popover mouseDown stopPropagation`);
+          debugPopup(e, `"mousedown" received on popup -> prevent bubbling to picker (e.stopPropagation())`);
           e.stopPropagation();
         },
         onClick: e => {
@@ -34210,18 +34290,21 @@ const PickerCustom = props => {
             return;
           }
           // click inside popover should not bubble to the picker (would re-open it if that click closes it)
-          // preventDefault also prevents a form submit that would otherwise be triggered when
-          // the picker is inside a <form> and the click lands on a non-button element
-          debugPopup(e, `popover click stopPropagation + preventDefault`);
+          debugPopup(e, `"click" received on popup -> prevent bubbling to picker (e.stopPropagation())`);
           e.stopPropagation();
-          e.preventDefault();
+          // Here we can't preventDefault because the click might be needed to check a radio for instance.
+          // As a result we have to let it go through which means it could trigger form submission
+          // but we've put type="button" on the picker to ensure it can't submit the form
+          // so browser won't submit eventual form for clicks inside the popover/dialog
+          // e.preventDefault();
         },
         onKeyDown: e => {
           // some keys pressed inside popover should not reach the picker button
           // (like enter that would try to request action of closest form otherwise for instance)
           if (e.key === "Enter") {
+            debugPopup(e, `"enter" received on popup -> prevent bubbling to picker (e.stopPropagation())`);
             e.stopPropagation();
-            // preventDefault prevents the browser from synthesising a click on the
+            // preventDefault prevents the browser from dispatching a "click" on the
             // picker button when focus moves to it synchronously during enterEffect
             e.preventDefault();
           }
@@ -34292,7 +34375,10 @@ const PickerContentInsidePopover = props => {
       viewportSpacing: viewportSpacing,
       scrollTrap: scrollTrap,
       pointerTrap: pointerTrap,
-      focusTrap: focusTrap,
+      focusTrap: focusTrap
+      /* make popover focusable so it can be the first focus target when opening */,
+      tabIndex: -1,
+      autoFocus: "fallback",
       children: [popoverMode === "attached" ? jsx("div", {
         className: "navi_picker_anchor_clone",
         onMouseDown: e => {
@@ -34328,6 +34414,7 @@ const PickerContentInsideDialog = props => {
       scrollTrap: scrollTrap,
       pointerTrap: pointerTrap,
       centerInVisualViewport: true,
+      autoFocus: "fallback",
       children: children
     })
   });
@@ -34474,6 +34561,7 @@ const TimeDate = ({
   if (children === undefined) {
     return jsx(TimeText, {
       ...props,
+      capitalize: false,
       children: formatDatePlaceholder(lang)
     });
   }
@@ -34580,6 +34668,7 @@ const TimeDatetime = ({
   if (children === undefined) {
     return jsx(TimeText, {
       ...props,
+      capitalize: false,
       children: formatDatetimePlaceholder(lang)
     });
   }
@@ -37765,7 +37854,6 @@ const PickerDateUI = props => {
         type: "date",
         color: "var(--picker-placeholder-color",
         capitalize: true,
-        maxLines: "1",
         ...props
       });
     }
@@ -37774,7 +37862,6 @@ const PickerDateUI = props => {
   return jsx(Time, {
     type: "date",
     capitalize: true,
-    maxLines: "1",
     ...props,
     children: value
   });
@@ -37798,7 +37885,6 @@ const PickerMonthUI = props => {
       return jsx(Time, {
         type: "month",
         color: "var(--picker-placeholder-color",
-        maxLines: "1",
         ...props
       });
     }
@@ -37806,7 +37892,6 @@ const PickerMonthUI = props => {
   }
   return jsx(Time, {
     type: "month",
-    maxLines: "1",
     capitalize: true,
     ...props,
     children: value
@@ -37831,7 +37916,6 @@ const PickerWeekUI = props => {
       return jsx(Time, {
         type: "week",
         color: "var(--picker-placeholder-color",
-        maxLines: "1",
         ...props
       });
     }
@@ -37840,7 +37924,6 @@ const PickerWeekUI = props => {
   return jsx(Time, {
     type: "week",
     capitalize: true,
-    maxLines: "1",
     ...props,
     children: value
   });
@@ -37864,7 +37947,6 @@ const PickerTimeUI = props => {
       return jsx(Time, {
         type: "time",
         color: "var(--picker-placeholder-color",
-        maxLines: "1",
         ...props
       });
     }
@@ -37872,7 +37954,6 @@ const PickerTimeUI = props => {
   }
   return jsx(Time, {
     type: "time",
-    maxLines: "1",
     ...props,
     children: value
   });
@@ -37896,7 +37977,6 @@ const PickerDatetimeUI = props => {
       return jsx(Time, {
         type: "datetime",
         color: "var(--picker-placeholder-color",
-        maxLines: "1",
         ...props
       });
     }
@@ -37904,7 +37984,6 @@ const PickerDatetimeUI = props => {
   }
   return jsx(Time, {
     type: "datetime",
-    maxLines: "1",
     children: value
   });
 };
@@ -38095,7 +38174,6 @@ installImportMetaCssBuild(import.meta);const css$i = /* css */`
     font-size: var(--picker-font-size);
     font-family: var(--picker-font-family);
     text-align: inherit;
-    text-overflow: ellipsis;
     background-color: var(--x-picker-background-color);
     border-width: var(--picker-border-width);
     border-style: solid;
@@ -38108,7 +38186,6 @@ installImportMetaCssBuild(import.meta);const css$i = /* css */`
     cursor: var(--x-picker-cursor, pointer);
     pointer-events: auto;
     user-select: none;
-    overflow: hidden;
     -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
 
     .navi_picker_value {
@@ -38122,9 +38199,7 @@ installImportMetaCssBuild(import.meta);const css$i = /* css */`
       padding-bottom: var(--x-picker-padding-bottom);
       padding-left: var(--x-picker-padding-left);
       flex-grow: 1;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      overflow: hidden;
+      justify-content: inherit;
 
       &[navi-placeholder] {
         color: var(--picker-placeholder-color);
@@ -38149,6 +38224,11 @@ installImportMetaCssBuild(import.meta);const css$i = /* css */`
         max-height: 100%;
       }
     }
+    &[navi-single-line] {
+      .navi_picker_right_slot {
+        align-self: center;
+      }
+    }
     .navi_picker_input {
       position: absolute;
       inset: 0;
@@ -38167,16 +38247,6 @@ installImportMetaCssBuild(import.meta);const css$i = /* css */`
     .navi_picker_content {
       display: contents;
       text-align: initial; /* Don't inherit picker text align */
-    }
-
-    &[data-line-clamp] {
-      overflow-wrap: anywhere;
-      .navi_picker_value {
-        display: -webkit-box;
-        white-space: normal;
-        -webkit-box-orient: vertical;
-        -webkit-line-clamp: var(--picker-max-lines);
-      }
     }
 
     /* Hover */
@@ -38265,9 +38335,10 @@ const PickerButton = props => {
     icon,
     placeholder,
     ui,
-    maxLines,
+    maxLines = 1,
     headless
   } = props;
+  const isSingleLine = maxLines === 1;
   const inputRef = useRef(null);
   const [pickerRemainingProps, inputProps, facadeChildrenProps] = useControlFacadeProps({
     ...props,
@@ -38287,20 +38358,17 @@ const PickerButton = props => {
     children
   } = inputProps;
   const loading = basePseudoState[":-navi-loading"];
-  const hasLineClamp = maxLines && maxLines > 1;
   return jsxs(Box, {
     as: headless ? "div" : "button",
+    type: "button" /* ensure click inside the picker cannot submit ancestor form if any */,
     ref: ref,
     baseClassName: "navi_picker",
     pseudoClasses: PICKER_BUTTON_PSEUDO_CLASSES,
     disabled: disabled,
-    "data-line-clamp": hasLineClamp ? "" : undefined,
     "data-variant": variant,
-    style: {
-      "--picker-max-lines": maxLines
-    },
     "navi-visually-hidden": headless ? "" : undefined,
     "navi-picker": "",
+    "navi-single-line": isSingleLine ? "" : undefined,
     ...pickerRemainingProps,
     basePseudoState: basePseudoState,
     styleCSSVars: PickerStyleCSSVars
@@ -38338,7 +38406,7 @@ const PickerButton = props => {
     children: [jsx(LoadingOutline, {
       loading: loading,
       color: "var(--picker-loader-color)",
-      inset: -1
+      inset: -2
     }), jsx(PickerInput, {
       ...inputProps,
       // eslint-disable-next-line react/no-children-prop
@@ -38352,6 +38420,7 @@ const PickerButton = props => {
     }), variant === "icon" || headless ? null : jsx(Text, {
       className: "navi_picker_value",
       "navi-placeholder": value === undefined || value === "" ? "" : undefined,
+      maxLines: maxLines,
       children: jsx(PickerContext.Provider, {
         value: {
           value,
@@ -38435,8 +38504,6 @@ const PickerFirstResolver = props => {
   const Next = useNextResolver();
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
-  const idDefault = useId(); // needed by ui state controller
-  props.id = props.id || idDefault;
   resolveInputProps(props);
   return jsx(Next, {
     ...props
