@@ -361,7 +361,7 @@ export const useUIStateController = (
       const stateIsTheSame = compareTwoJsValues(newUIState, currentUIState);
       if (stateIsTheSame) {
         if (controlType === "button") {
-          if (!shouldNotifyParent(e)) {
+          if (!isInteractionEvent(e)) {
             // Programmatic re-render with same value (e.g. state_prop from _checkForUpdates
             // on a button with a new object reference but same content) — not a user action,
             // do NOT fire the command or we get an infinite loop.
@@ -381,7 +381,7 @@ export const useUIStateController = (
         if (
           controlType === "input" &&
           uiStateController.props.type === "radio" &&
-          shouldNotifyParent(e)
+          isInteractionEvent(e)
         ) {
           notifyParentAboutChildInteraction(e, { stateChanged: false });
           onUIAction();
@@ -459,7 +459,7 @@ export const useUIStateController = (
           });
         }
       }
-      if (!shouldNotifyParent(e)) {
+      if (!isInteractionEvent(e)) {
         // Still fire uiAction so external listeners (e.g. signals) stay in
         // sync, but do NOT fire the command and do NOT notify the parent —
         // both would cause an infinite loop when a parent cascades state
@@ -1134,18 +1134,24 @@ export const useUIFacadeStateController = (props, uiStateController) => {
  * - `"propagate_down_set_ui_state"` / `"propagate_down_reset_ui_state"` / `"propagate_down_clear_ui_state"` —
  *   parent (group or facade) is pushing state down to children.
  *
- * Anything else is a real user interaction and should bubble.
+ * State IS propagated by these events (e.g. `facade_child_mount_sync` travels from
+ * group → facade → picker input to sync the picker's displayed value). What is suppressed
+ * is the **interaction side effects**: action pipeline, commands, synthetic input events,
+ * and further parent notification chains.
+ *
+ * Anything not in this set is treated as a real user interaction and triggers the full pipeline.
  */
-const TYPES_WITHOUT_PARENT_NOTIFICATION = new Set([
+const EVENT_TYPES_WITHOUT_INTERACTION_SIDE_EFFECTS = new Set([
   "state_prop_change",
   "radio_sibling_uncheck",
   "propagate_down_set_ui_state",
   "propagate_down_reset_ui_state",
   "propagate_down_clear_ui_state",
-  // Silent sync from child mount/unmount via facade — updates picker state
-  // without triggering navi_change or the action pipeline.
+  // Silent mount/unmount sync: state is propagated from child group → facade → picker input
+  // so the picker knows the child's current value (e.g. for "store value at open"),
+  // but no action pipeline, command, or synthetic input event should fire.
   "facade_child_mount_sync",
 ]);
-const shouldNotifyParent = (e) => {
-  return !TYPES_WITHOUT_PARENT_NOTIFICATION.has(e.type);
+const isInteractionEvent = (e) => {
+  return !EVENT_TYPES_WITHOUT_INTERACTION_SIDE_EFFECTS.has(e.type);
 };
