@@ -9,6 +9,7 @@ import {
 } from "@jsenv/dom";
 import { useId, useRef, useState } from "preact/hooks";
 
+import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import { Box } from "../box/box.jsx";
 import { resolveSpacingSize } from "../box/box_style_util.js";
 import { useDebugFocus, useDebugPopup } from "../navi_debug.jsx";
@@ -64,6 +65,7 @@ export const Popover = (props) => {
   const id = rest.id || defaultId;
   const debugPopup = useDebugPopup();
   const debugFocus = useDebugFocus();
+  const autoFocusProps = useAutoFocus(ref, props.autoFocus);
 
   const [opened, setOpened] = useState(false);
   const openedRef = useRef(opened);
@@ -74,7 +76,7 @@ export const Popover = (props) => {
     const popoverEl = ref.current;
     const focusedBeforeOpen = getFocusedBeforeTransfer(e);
     popoverEl.showPopover();
-    transferFocus(popoverEl, debugFocus, e);
+    transferFocus(popoverEl, debugFocus, e, focusedBeforeOpen);
     const effectiveAnchor = anchor || document.documentElement;
     const positionPopover = (positionEvent) => {
       const { width, height } = effectiveAnchor.getBoundingClientRect();
@@ -202,9 +204,10 @@ export const Popover = (props) => {
       id={id}
       popover="manual"
       {...rest}
+      {...autoFocusProps}
       ref={ref}
       baseClassName="navi_popover"
-      pseudoClasses={PopoverPseudoClasses}
+      pseudoClasses={POPOVER_PSEUDO_CLASSES}
       onnavi_request_open={(e) => {
         const { anchor } = e.detail;
         onRequestOpen(e, { anchor });
@@ -269,12 +272,10 @@ export const Popover = (props) => {
   );
 };
 
-const PopoverPseudoClasses = [
+const POPOVER_PSEUDO_CLASSES = [
   ":hover",
   ":active",
   ":focus",
   ":focus-visible",
   ":focus-within",
-  ":read-only",
-  ":disabled",
 ];

@@ -19,7 +19,7 @@
  * - <InputRadio /> for type="radio"
  */
 
-import { useId, useRef } from "preact/hooks";
+import { useRef } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
 import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.jsx";
@@ -380,8 +380,6 @@ const InputTextualFirstResolver = (props) => {
   const Next = useNextResolver();
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
-  const idDefault = useId(); // needed by ui state controller and slot labels
-  props.id = props.id || idDefault;
   resolveInputProps(props);
 
   return <Next {...props} />;

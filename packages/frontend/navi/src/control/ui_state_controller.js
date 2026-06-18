@@ -13,7 +13,7 @@ import { useNavState } from "../nav/browser_integration/browser_integration.js";
 import { useDebugUIState } from "../navi_debug.jsx";
 import { useInitialValue } from "../state/use_initial_value.js";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
-import { dispatchNaviCommand } from "./commands.js";
+import { triggerNaviCommand } from "./commands.js";
 import { findControlProxy } from "./control_proxy.js";
 import { asControlHostValue } from "./control_value.js";
 import { FormContext } from "./form_context.js";
@@ -113,6 +113,7 @@ const onUIStateControllerDestroyed = (uiStateController) => {
  *   registerChild(child): void;   // Called on child mount
  *   onChildInteraction(child, e, { stateChanged: boolean }): void; // Called on user interaction
  *   unregisterChild(child): void; // Called on child unmount
+ *   props: Object;
  * }
  * ```
  */
@@ -342,7 +343,7 @@ export const useUIStateController = (
         if (command) {
           const element = uiStateController.elementRef.current;
           if (element) {
-            dispatchNaviCommand(element, command, e);
+            triggerNaviCommand(element, command, e);
           }
         }
       };
@@ -382,8 +383,8 @@ export const useUIStateController = (
           uiStateController.props.type === "radio" &&
           shouldNotifyParent(e)
         ) {
-          onUIAction();
           notifyParentAboutChildInteraction(e, { stateChanged: false });
+          onUIAction();
         }
         return false;
       }
@@ -708,6 +709,10 @@ export const useUIGroupStateController = (
       `${controlType}.applyState(${JSON.stringify(newUIState)}, "${e.type}") -> updates from ${JSON.stringify(currentUIState)} to ${JSON.stringify(newUIState)}`,
     );
     publishUIState(newUIState);
+    // Notify the parent (facade) BEFORE firing the command so that when a
+    // command like --navi-send closes the picker, the picker input already
+    // holds the new value.
+    notifyParentAboutChildInteraction(e, { stateChanged: true });
     if (internalBehavior) {
       // Fire uiAction only — skip command to avoid re-triggering the same command
       // that caused this setUIState call in the first place.
@@ -724,7 +729,6 @@ export const useUIGroupStateController = (
         value: newUIState,
       });
     }
-    notifyParentAboutChildInteraction(e, { stateChanged: true });
   };
 
   useLayoutEffect(() => {
@@ -742,6 +746,7 @@ export const useUIGroupStateController = (
     existingUIStateController.id = id;
     existingUIStateController.name = name;
     existingUIStateController.value = value;
+    existingUIStateController.props = props;
     uiActionRef.current = uiAction;
     return existingUIStateController;
   }
@@ -765,6 +770,7 @@ export const useUIGroupStateController = (
     id,
     name,
     value,
+    props,
     uiState: fallbackState,
     uiStateSignal,
     wantRequesterButtonState,
@@ -860,7 +866,7 @@ export const useUIGroupStateController = (
       if (command) {
         const el = ref.current;
         if (el) {
-          dispatchNaviCommand(el, command, e);
+          triggerNaviCommand(el, command, e);
         }
       }
     },
@@ -1001,7 +1007,7 @@ const EMPTY_OBJECT = {};
  * inside the picker popup. It also means `commands.js` no longer has to
  * manually re-dispatch to inner controls.
  */
-export const useUIFacadeStateController = (uiStateController) => {
+export const useUIFacadeStateController = (props, uiStateController) => {
   const firstChildControllerRef = useRef(null);
   const updatingRef = useRef(false);
 
@@ -1025,11 +1031,24 @@ export const useUIFacadeStateController = (uiStateController) => {
     });
   }, []);
 
+  const includeChildController = (childController) => {
+    if (childController.props["navi-list"]) {
+      // Controls with navi-list act as standalone list navigators and should
+      // not be treated as the picker's synced child.
+      return false;
+    }
+    return true;
+  };
+
   return useMemo(
     () => ({
       controlType: "facade",
+      props,
       uiStateSignal: uiStateController.uiStateSignal,
       registerChild: (child) => {
+        if (!includeChildController(child)) {
+          return;
+        }
         if (!firstChildControllerRef.current) {
           firstChildControllerRef.current = child;
         } else {

@@ -20,6 +20,7 @@ import {
 import {
   useCallback,
   useContext,
+  useId,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -45,7 +46,7 @@ import {
 import { compareTwoJsValues } from "@jsenv/navi/src/utils/compare_two_js_values.js";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import { isSignal } from "@jsenv/navi/src/utils/is_signal.js";
-import { dispatchNaviCommand, onNaviCommand } from "./commands.js";
+import { onNaviCommand, triggerNaviCommand } from "./commands.js";
 import {
   ActionContext,
   ActionRequesterContext,
@@ -168,17 +169,19 @@ export const useControlProps = (
     readOnlySupported,
   },
 ) => {
+  const idDefault = useId();
   const debugInteraction = useDebugInteraction();
   const controlName = useContext(ControlNameContext);
+  const controlToInterface = useContext(ControlToInterfaceContext);
   const state = props[statePropName];
+
+  props.name = props.name || controlName;
+  props.id = props.id || controlToInterface?.id || idDefault;
   if (isSignal(state)) {
     props = {
       ...props,
       [statePropName]: state.value,
     };
-  }
-  if (!props.name && controlName) {
-    props.name = controlName;
   }
   const uiStateController = useUIStateController(props, controlType, {
     statePropName,
@@ -210,12 +213,6 @@ export const useControlProps = (
       actionDebounce,
     } = props;
     let isCheckable = false;
-    // Effect to run when the Enter key is pressed.
-    // For most inputs Enter submits the surrounding form; for checkables Enter
-    // synthesizes a click so the browser's native checkbox/radio activation runs
-    // (which then fires input -> goes through the action pipeline).
-    let enterEffect;
-    let spaceEffect;
 
     const updateUIState = (e) => {
       const value = readControlValue(ref.current);
@@ -255,9 +252,6 @@ export const useControlProps = (
       }
       interaction.effect?.(e);
       return true;
-    };
-    const asBrowserAction = (interaction, e) => {
-      return asInteraction(interaction, e);
     };
     const lastEventRequestingActionRef = useRef();
     const lastActionValueRef = useRef(NO_ACTION_YET);
@@ -321,187 +315,245 @@ export const useControlProps = (
       interaction.effect?.(e);
       return true;
     };
-    const applyInteraction = (interaction, e, { ifValueModified } = {}) => {
+
+    const getDefaultInteractionDefinitions = () => {
+      const keyDownDefault = () => {
+        return {
+          name: "keydown",
+          type: "interaction",
+        };
+      };
+
+      if (controlType === "button") {
+        return {
+          keyDown: keyDownDefault,
+          mouseDown: () => {
+            return {
+              name: "mousedown",
+              type: actionOnMouseDown ? "action" : "interaction",
+            };
+          },
+          click: () => {
+            return {
+              name: "click",
+              type: actionOnMouseDown ? "interaction" : "action",
+              always: (e) => {
+                const button = e.currentTarget;
+                if (button.form) {
+                  e.preventDefault(); // prevent form submission
+                }
+              },
+            };
+          },
+        };
+      }
+
+      if (controlType === "input") {
+        if (props.type === "radio" || props.type === "checkbox") {
+          const isRadio = props.type === "radio";
+
+          return {
+            keyDown: (e) => {
+              if (e.key === "Enter") {
+                const inputEl = ref.current;
+                const isRadio = props.type === "radio";
+                const always = () => {
+                  if (inputEl.form) {
+                    e.preventDefault();
+                  }
+                };
+
+                if (isRadio) {
+                  return {
+                    name: "enter to check radio",
+                    effect: (e) => {
+                      dispatchRequestSetUIState(inputEl, true, {
+                        event: e,
+                      });
+                    },
+                    always,
+                  };
+                }
+                const checked = inputEl.checked;
+                if (checked) {
+                  return {
+                    name: "enter to uncheck checkbox",
+                    effect: (e) => {
+                      dispatchRequestSetUIState(inputEl, undefined, {
+                        event: e,
+                      });
+                    },
+                    always,
+                  };
+                }
+                return {
+                  name: "enter to check",
+                  effect: (e) => {
+                    dispatchRequestSetUIState(inputEl, true, {
+                      event: e,
+                    });
+                  },
+                  always,
+                };
+              }
+              if (isRadio && e.key === " ") {
+                const inputEl = e.currentTarget;
+                if (inputEl.checked) {
+                  wasCheckedAtMousedownRef.current = true;
+                  onClick(e);
+                }
+              }
+              return keyDownDefault();
+            },
+            mouseDown: (e) => {
+              if (isRadio) {
+                wasCheckedAtMousedownRef.current = e.currentTarget.checked;
+              }
+            },
+            // For checkables, click does NOT update state — it only gates the
+            // browser's native check/uncheck via interaction constraints (e.g.
+            // readOnly). State actually changes via the "input" event that the
+            // browser fires right after, which routes through asAction so the
+            // full action pipeline (constraints, navi_action_allowed, sibling
+            // uncheck for radios…) runs in one place.
+            click: () => {
+              return {
+                name: `click on ${props.type}`,
+                type: "interaction",
+                // When a radio is already checked and gets clicked, the browser does NOT
+                // fire an input event (state doesn't change), so asAction never runs.
+                // We still want uiAction + command to fire. We can tell whether the click
+                // is on an already-checked radio by looking at wasCheckedAtMousedownRef:
+                // if it was checked at mousedown, the input event won't come, so we do it here.
+                effect: isRadio
+                  ? (e) => {
+                      if (wasCheckedAtMousedownRef.current) {
+                        updateUIState(e);
+                      }
+                    }
+                  : undefined,
+              };
+            },
+            input: () => {
+              return {
+                name: "input",
+                type: "action",
+              };
+            },
+          };
+        }
+
+        const keyDownDefaultOnInput = (e) => {
+          if (e.key === "Enter") {
+            const input = e.currentTarget;
+            return {
+              name: "enter to --navi-send",
+              effect: () => {
+                triggerNaviCommand(input, "--navi-send", e);
+              },
+            };
+          }
+          return keyDownDefault();
+        };
+
+        if (props.type === "range") {
+          return {
+            keyDown: keyDownDefaultOnInput,
+            mouseDown: () => {
+              return {
+                name: "mousedown",
+                type: "interaction",
+                effect: updateUIState,
+              };
+            },
+            input: {
+              name: "input",
+              type: "interaction",
+              effect: updateUIState,
+            },
+            naviChange: () => {
+              return {
+                name: "navi_change",
+                type: "action",
+              };
+            },
+          };
+        }
+
+        return {
+          keyDown: keyDownDefaultOnInput,
+          input: () => {
+            return {
+              name: "input",
+              type: "interaction",
+              effect: updateUIState,
+            };
+          },
+          naviChange: () => {
+            return {
+              name: "navi_change",
+              type: "action",
+            };
+          },
+        };
+      }
+      return null;
+    };
+
+    const defaultInteractionDefinitions = getDefaultInteractionDefinitions();
+    const { interactionDefinitions } = props;
+    const applyInteraction = (interactionName, e, { ifValueModified } = {}) => {
+      const defaultInteractionDefinition =
+        defaultInteractionDefinitions?.[interactionName];
+      const customInteractionDefinition =
+        interactionDefinitions?.[interactionName];
+      const interaction =
+        customInteractionDefinition?.(e) ?? defaultInteractionDefinition?.(e);
       if (!interaction) {
         return false;
       }
-      return interaction.callback(interaction, e, { ifValueModified });
+      const { name, effect, type = "interaction", always } = interaction;
+      const dispatchFn = type === "action" ? asAction : asInteraction;
+      const applied = dispatchFn({ name, effect }, e, { ifValueModified });
+      always?.(e);
+      return applied;
     };
-
-    let mousedownInteraction;
-    let clickInteraction;
-    let inputInteraction;
-    let keydownInteraction = {
-      name: "keydown",
-      callback: asBrowserAction,
-    };
-    // a custom concept being combination of "input", "change" and may other events
-    // this even if trigerred when value changes and can be controlled by actionDebounce and actionAfterChange
-    let naviChangeInteraction;
-    if (controlType === "button") {
-      mousedownInteraction = {
-        name: "mousedown",
-        callback: actionOnMouseDown ? asAction : asInteraction,
-        // effect: updateUIState,
-      };
-      clickInteraction = {
-        name: "click",
-        callback: actionOnMouseDown ? asInteraction : asAction,
-        // effect: updateUIState,
-      };
-    } else if (controlType === "input" || controlType === "picker") {
-      isCheckable = props.type === "radio" || props.type === "checkbox";
-      // On input, gate the interaction (readonly check) and update UI state to reflect the new value.
-      inputInteraction = {
-        name: "input",
-        callback: asInteraction,
-        effect: updateUIState,
-      };
-      naviChangeInteraction = {
-        name: "navi_change",
-        callback: asAction,
-      };
-      enterEffect = (e) => {
-        const input = e.currentTarget;
-        dispatchNaviCommand(input, "--navi-send", e);
-      };
-      if (controlType === "picker") {
-        mousedownInteraction = {
-          name: "mousedown to open picker",
-          callback: asInteraction,
-        };
-        clickInteraction = {
-          name: "click to open picker",
-          callback: asInteraction,
-        };
-      }
-      if (isCheckable) {
-        inputInteraction = {
-          name: "input",
-          callback: asAction,
-        };
-        // For checkables, click does NOT update state — it only gates the
-        // browser's native check/uncheck via interaction constraints (e.g.
-        // readOnly). State actually changes via the "input" event that the
-        // browser fires right after, which routes through asAction so the
-        // full action pipeline (constraints, navi_action_allowed, sibling
-        // uncheck for radios…) runs in one place.
-        clickInteraction = {
-          name: "click",
-          callback: asBrowserAction,
-          // When a radio is already checked and gets clicked, the browser does NOT
-          // fire an input event (state doesn't change), so asAction never runs.
-          // We still want uiAction + command to fire. We can tell whether the click
-          // is on an already-checked radio by looking at wasCheckedAtMousedownRef:
-          // if it was checked at mousedown, the input event won't come, so we do it here.
-          effect: (e) => {
-            const checkable = e.currentTarget;
-            if (
-              checkable.type === "radio" &&
-              wasCheckedAtMousedownRef.current
-            ) {
-              updateUIState(e);
-            }
-          },
-        };
-        naviChangeInteraction = undefined;
-        enterEffect = (e) => {
-          const checkable = ref.current;
-          const interactionAllowed = dispatchRequestInteraction(
-            checkable,
-            e,
-            "enter",
-          );
-          if (!interactionAllowed) {
-            if (checkable.form) {
-              e.preventDefault();
-            }
-            return;
-          }
-          let newState;
-          if (checkable.type === "checkbox") {
-            // toggle: if checked → uncheck (undefined), if unchecked → check (value)
-            newState = checkable.checked ? undefined : checkable.value;
-          } else {
-            // radio: always check
-            newState = checkable.value;
-          }
-          dispatchRequestSetUIState(checkable, newState, { event: e });
-          if (checkable.form) {
-            e.preventDefault();
-          }
-        };
-        if (props.type === "radio") {
-          spaceEffect = (e) => {
-            const radio = e.currentTarget;
-            if (radio.checked) {
-              wasCheckedAtMousedownRef.current = true;
-              onClick(e);
-            }
-          };
-        }
-      } else if (props.type === "range") {
-        mousedownInteraction = {
-          name: "mousedown",
-          callback: asBrowserAction,
-          effect: updateUIState,
-        };
-      } else if (props.type === "color") {
-      }
-    }
-
     const onMouseDown = (e) => {
       props.onMouseDown?.(e);
-      if (isCheckable && props.type === "radio") {
-        wasCheckedAtMousedownRef.current = e.currentTarget.checked;
-      }
-      applyInteraction(mousedownInteraction, e);
+      applyInteraction("mouseDown", e);
       transferFocusToTarget(e);
     };
     const onClick = (e) => {
       props.onClick?.(e);
-      applyInteraction(clickInteraction, e);
+      applyInteraction("click", e);
       transferFocusToTarget(e);
-
-      const controlHost = e.currentTarget;
-      if (controlHost.form) {
-        if (controlType === "button") {
-          // prevent form submission
-          e.preventDefault();
-        } else if (controlHost.closest("button")) {
-          // prevent button form submission by click
-          // (When an input is inside a <button> like for a picker)
-          // any click in the picker could trigger form submission as browser see this as click on button inside form
-          e.preventDefault();
-        }
-      }
     };
     const onKeyDown = (e) => {
       props.onKeyDown?.(e);
-      if (e.key === "Enter" && enterEffect) {
-        enterEffect(e);
-        return;
-      }
-      if (e.key === " " && spaceEffect) {
-        spaceEffect(e);
-        return;
-      }
-      applyInteraction(keydownInteraction, e);
+      applyInteraction("keyDown", e);
     };
     const onInput = (e) => {
       props.onInput?.(e);
-      applyInteraction(inputInteraction, e, { ifValueModified: true });
+      applyInteraction("input", e, { ifValueModified: true });
     };
-    const hasNaviChangeInteraction = Boolean(naviChangeInteraction);
+    // a custom concept being combination of "input", "change" and may other events
+    // this even if trigerred when value changes and can be controlled by actionDebounce and actionAfterChange
+    const hasNaviChangeInteractionDefinition = Boolean(
+      interactionDefinitions?.naviChange ||
+      defaultInteractionDefinitions?.naviChange,
+    );
     const refCallback = useCallback(
       (field) => {
-        if (!hasNaviChangeInteraction || actionInteraction === "custom") {
+        if (
+          !hasNaviChangeInteractionDefinition ||
+          actionInteraction === "custom"
+        ) {
           return undefined;
         }
         return addInputEffect(
           field,
           (e) => {
-            applyInteraction(naviChangeInteraction, e, {
+            applyInteraction("naviChange", e, {
               ifValueModified: true,
             });
           },
@@ -516,7 +568,7 @@ export const useControlProps = (
         actionInteraction,
         actionAfterChange,
         actionDebounce,
-        hasNaviChangeInteraction,
+        hasNaviChangeInteractionDefinition,
       ],
     );
     const refComposed = useComposeElementRef(refCallback, ref);
@@ -675,7 +727,7 @@ export const useControlgroupProps = (
 export const useControlFacadeProps = (props, options) => {
   const [controlRootProps, controlHostProps, uiStateController] =
     useControlProps(props, options);
-  const facadeController = useUIFacadeStateController(uiStateController);
+  const facadeController = useUIFacadeStateController(props, uiStateController);
   return [controlRootProps, controlHostProps, { value: facadeController }];
 };
 
@@ -747,18 +799,11 @@ const useInteractiveProps = (
 
   autofocus: {
     const { autoFocus, autoFocusVisible, autoSelect } = props;
-    useAutoFocus(ref, autoFocus, {
+    const autoFocusProps = useAutoFocus(ref, autoFocus, {
       focusVisible: autoFocusVisible,
       autoSelect,
     });
-    Object.assign(controlHostProps, {
-      "navi-autofocus": autoFocus
-        ? autoFocus === true
-          ? ""
-          : autoFocus
-        : undefined,
-      "navi-autofocus-select": autoFocus && autoSelect ? "" : undefined,
-    });
+    Object.assign(controlHostProps, autoFocusProps);
   }
   form_props: {
     const {
@@ -771,7 +816,6 @@ const useInteractiveProps = (
       readOnly,
       loading,
     } = props;
-    const idResolved = id || controlToInterfaceContext?.id;
     const disabledResolved = disabled || controlDisabled;
     const requiredResolved = required || controlRequired;
     const loadingResolved =
@@ -784,7 +828,7 @@ const useInteractiveProps = (
       loadingResolved ||
       uiStateController.readOnly;
     Object.assign(controlHostProps, {
-      "id": idResolved,
+      id,
       "navi-control-proxy-for": naviProxyFor,
       name,
       type,
@@ -818,6 +862,9 @@ const useInteractiveProps = (
   }
   ui_state_and_value: {
     const uiState = uiStateController.uiStateSignal.value;
+    const isCheckable =
+      uiStateController.controlType === "input" &&
+      (props.type === "radio" || props.type === "checkbox");
     Object.assign(controlHostProps, {
       onnavi_clear_ui_state: (e) => {
         uiStateController.clearUIState(e);
@@ -831,6 +878,16 @@ const useInteractiveProps = (
       onnavi_set_ui_state: (e) => {
         uiStateController.setUIState(e.detail.value, e);
       },
+      onnavi_request_check: (e) => {
+        if (isCheckable) {
+          uiStateController.setUIState(true, e);
+        }
+      },
+      onnavi_request_uncheck: (e) => {
+        if (isCheckable) {
+          uiStateController.setUIState(false, e);
+        }
+      },
     });
     // Mirror ui state handlers on the root so events dispatched on the root element
     // (e.g. from a commandfor targeting the picker button) reach the controller.
@@ -839,6 +896,8 @@ const useInteractiveProps = (
       onnavi_reset_ui_state: controlHostProps.onnavi_reset_ui_state,
       onnavi_get_ui_state: controlHostProps.onnavi_get_ui_state,
       onnavi_set_ui_state: controlHostProps.onnavi_set_ui_state,
+      onnavi_request_check: controlHostProps.onnavi_request_check,
+      onnavi_request_uncheck: controlHostProps.onnavi_request_uncheck,
     });
 
     const { statePropName } = uiStateController;

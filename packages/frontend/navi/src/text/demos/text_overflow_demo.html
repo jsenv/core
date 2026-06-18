@@ -9,7 +9,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import { BadgeCount, Box, Icon, Text } from "@jsenv/navi";
+      import { Box, Icon, Text } from "@jsenv/navi";
 
       const App = () => {
         return (
@@ -60,7 +60,7 @@
               <BasicSection />
             </section>
             <section>
-              <h2 id="s-pinned">Pinned Content</h2>
+              <h2 id="s-pinned">Trailing Content (right of ellipsis)</h2>
               <PinnedSection />
             </section>
             <section>
@@ -76,8 +76,8 @@
               <HtmlSection />
             </section>
             <section>
-              <h2 id="s-complex-pinned">Complex Pinned Content</h2>
-              <ComplexPinnedSection />
+              <h2 id="s-nested">Nested Text (overflow propagation)</h2>
+              <NestedTextSection />
             </section>
             <section>
               <h2 id="s-interactive">Interactive Width</h2>
@@ -133,7 +133,7 @@
                 <a href="#s-basic">Basic</a>
               </li>
               <li>
-                <a href="#s-pinned">Pinned Content</a>
+                <a href="#s-pinned">Trailing Content (right of ellipsis)</a>
               </li>
               <li>
                 <a href="#s-icons-styled">Icons &amp; Styled Text</a>
@@ -145,7 +145,7 @@
                 <a href="#s-html">HTML Elements</a>
               </li>
               <li>
-                <a href="#s-complex-pinned">Complex Pinned Content</a>
+                <a href="#s-nested">Nested Text (overflow propagation)</a>
               </li>
               <li>
                 <a href="#s-interactive">Interactive Width</a>
@@ -332,24 +332,40 @@
 
       const PinnedSection = () => {
         return (
-          <Box row spacing="16px">
-            <Box width="260" border="1px solid #ccc" padding="sm">
+          <Box row spacing="16px" style={{ flexWrap: "wrap" }}>
+            <Box flex width="260" border="1px solid #ccc" padding="s">
               <Text maxLines={1}>
-                This text has extra info that stays visible
-                <Text overflowPinned color="#666">
-                  (modified)
-                </Text>
+                This text has extra info while keeping a trailing label visible
+              </Text>
+              <Text color="#666" shrink={false}>
+                (modified)
               </Text>
             </Box>
-            <Box width="260" border="1px solid #ccc" padding="sm">
+            <Box flex width="260" border="1px solid #ccc" padding="s">
               <Text maxLines={1}>
                 Text with a dynamic count that is long and will overflow
-                <Text overflowPinned color="#4caf50">
-                  <BadgeCount background="violet" color="white">
-                    10
-                  </BadgeCount>
-                </Text>
               </Text>
+              <Text color="#4caf50" shrink={false}>
+                (10)
+              </Text>
+            </Box>
+            <Box flex width="280" border="1px solid #ccc" padding="s">
+              <Text maxLines={1}>
+                Important message that might be too long to display fully
+              </Text>
+              <Text color="#f44336" size="s" shrink={false}>
+                ⚠
+              </Text>
+            </Box>
+            <Box flex width="300" border="1px solid #ccc" padding="s">
+              <Text maxLines={1}>
+                Document title with attachment count and icon that demonstrates
+                overflow
+              </Text>
+              <Box flex spacing="4px" alignY="center" shrink={false}>
+                <span style={{ fontSize: "12px", color: "#666" }}>(3)</span>
+                <span style={{ fontSize: "14px" }}>@</span>
+              </Box>
             </Box>
           </Box>
         );
@@ -360,10 +376,10 @@
           <>
             <p style={{ color: "#555", fontSize: "14px" }}>
               Inline icons and styled fragments inside an overflow ellipsis will
-              auto-space correctly while the pinned part stays visible.
+              auto-space correctly across mixed inline elements.
             </p>
             <Box row spacing="16px">
-              <Box width="300" border="1px solid #ccc" padding="sm">
+              <Box flex width="300" border="1px solid #ccc" padding="s">
                 <Text maxLines={1}>
                   <Icon color="orange">
                     <StarSvg />
@@ -374,12 +390,10 @@
                     <StarSvg />
                   </Icon>
                   <Text textItalic>active</Text>
-                  <Text overflowPinned color="#666">
-                    (live)
-                  </Text>
                 </Text>
+                <Text color="#666">(live)</Text>
               </Box>
-              <Box width="300" border="1px solid #ccc" padding="sm">
+              <Box flex width="300" border="1px solid #ccc" padding="sm">
                 <Text maxLines={1} spacing="l">
                   <Icon color="orange">
                     <StarSvg />
@@ -390,22 +404,18 @@
                     <StarSvg />
                   </Icon>
                   <Text textItalic>active</Text>
-                  <Text overflowPinned color="#666">
-                    (live)
-                  </Text>
                 </Text>
+                <Text color="#666">(live)</Text>
               </Box>
-              <Box width="180" border="1px solid #ccc" padding="sm">
+              <Box flex width="180" border="1px solid #ccc" padding="sm">
                 <Text maxLines={1}>
                   <Icon>
                     <StarSvg />
                   </Icon>
                   <Text textUnderline>Truncated</Text> sequence showcasing icon
                   spacing with styled parts
-                  <Text overflowPinned color="#666">
-                    (ok)
-                  </Text>
                 </Text>
+                <Text color="#666">(ok)</Text>
               </Box>
             </Box>
           </>
@@ -439,6 +449,78 @@
                 </Text>
               </div>
             ))}
+          </Box>
+        );
+      };
+
+      const NestedTextSection = () => {
+        return (
+          <Box row spacing="16px" style={{ flexWrap: "wrap" }}>
+            <div
+              style={{
+                width: "260px",
+                border: "1px solid #ccc",
+                padding: "8px",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "12px",
+                  color: "#666",
+                  marginBottom: "4px",
+                }}
+              >
+                Parent without maxLines
+              </div>
+              <Text>
+                <Text>Long nested text that should wrap normally</Text>
+              </Text>
+            </div>
+            <div
+              style={{
+                width: "260px",
+                border: "1px solid #ccc",
+                padding: "8px",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "12px",
+                  color: "#666",
+                  marginBottom: "4px",
+                }}
+              >
+                Parent with maxLines={1}
+              </div>
+              <Text maxLines={1}>
+                <Text>
+                  This is a very long nested text that should be truncated with
+                  an ellipsis
+                </Text>
+              </Text>
+            </div>
+            <div
+              style={{
+                width: "260px",
+                border: "1px solid #ccc",
+                padding: "8px",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "12px",
+                  color: "#666",
+                  marginBottom: "4px",
+                }}
+              >
+                Both with maxLines={1}
+              </div>
+              <Text maxLines={1}>
+                <Text maxLines={1}>
+                  This is a very long nested text with both levels constrained
+                </Text>
+              </Text>
+            </div>
           </Box>
         );
       };
@@ -510,69 +592,6 @@
         );
       };
 
-      const ComplexPinnedSection = () => {
-        return (
-          <Box row spacing="12px">
-            <div
-              style={{
-                width: "280px",
-                border: "1px solid #ccc",
-                padding: "8px",
-              }}
-            >
-              <div
-                style={{
-                  fontSize: "12px",
-                  color: "#666",
-                  marginBottom: "4px",
-                }}
-              >
-                With icon after
-              </div>
-              <Text maxLines={1}>
-                Important message that might be too long to display fully
-                <Text overflowPinned color="#f44336" size="sm">
-                  ⚠️
-                </Text>
-              </Text>
-            </div>
-            <div
-              style={{
-                width: "300px",
-                border: "1px solid #ccc",
-                padding: "8px",
-              }}
-            >
-              <div
-                style={{
-                  fontSize: "12px",
-                  color: "#666",
-                  marginBottom: "4px",
-                }}
-              >
-                With multiple elements after
-              </div>
-              <Text maxLines={1}>
-                Document title with attachment count and icon that demonstrates
-                overflow
-                <Text overflowPinned>
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: "4px",
-                      alignItems: "center",
-                    }}
-                  >
-                    <span style={{ fontSize: "12px", color: "#666" }}>(3)</span>
-                    <span style={{ fontSize: "14px" }}>📎</span>
-                  </div>
-                </Text>
-              </Text>
-            </div>
-          </Box>
-        );
-      };
-
       const InteractiveWidthSection = () => {
         const [width, setWidth] = useState(200);
         return (
@@ -589,14 +608,12 @@
                 style={{ width: "200px" }}
               />
             </Box>
-            <Box width={width} border="2px solid #2196f3" padding="s">
+            <Box flex width={width} border="2px solid #2196f3" padding="s">
               <Text maxLines={1} textBold>
                 Resize me to see how the text overflow behavior adapts to
                 different container widths
-                <Text overflowPinned textColor="#666">
-                  ✓
-                </Text>
               </Text>
+              <Text textColor="#666">✓</Text>
             </Box>
           </Box>
         );
@@ -744,32 +761,8 @@
                   marginBottom: "4px",
                 }}
               >
-                parent <code>Box</code> avec <code>{'textAlign="center"'}</code>{" "}
-                — fonctionne car <code>box_style_util</code> génère{" "}
-                <code>justifyContent</code> en plus de <code>textAlign</code>
-              </div>
-              <Box
-                style={{
-                  width: "220px",
-                  border: "1px solid #ccc",
-                  padding: "8px",
-                }}
-                textAlign="center"
-              >
-                <Text maxLines={1}>{shortText}</Text>
-              </Box>
-            </div>
-            <div>
-              <div
-                style={{
-                  fontSize: "12px",
-                  color: "#666",
-                  marginBottom: "4px",
-                }}
-              >
                 parent <code>div</code> avec{" "}
-                <code>{'style={{ textAlign: "center" }}'}</code> brut — ne
-                fonctionne pas si le parent est flex
+                <code>{'style={{ textAlign: "center" }}'}</code>
               </div>
               <div
                 style={{
@@ -790,7 +783,7 @@
                   marginBottom: "4px",
                 }}
               >
-                parent flex avec{" "}
+                parent flex avec
                 <code>{'style={{ justifyContent: "center" }}'}</code> (pas de
                 alignX sur le Text)
               </div>

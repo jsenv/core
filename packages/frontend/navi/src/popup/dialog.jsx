@@ -6,6 +6,7 @@ import {
 } from "@jsenv/dom";
 import { useRef } from "preact/hooks";
 
+import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import { Box } from "../box/box.jsx";
 import { useDebugFocus, useDebugPopup } from "../navi_debug.jsx";
 import {
@@ -46,6 +47,8 @@ export const Dialog = (props) => {
   const ref = rest.ref || defaultRef;
   const debugPopup = useDebugPopup();
   const debugFocus = useDebugFocus();
+  const autoFocusProps = useAutoFocus(ref, props.autoFocus);
+
   const openedRef = useRef(false);
   const [addCleanup, cleanup] = useCleanup();
   const open = (e, { anchor }) => {
@@ -57,7 +60,7 @@ export const Dialog = (props) => {
     dialogEl.style.setProperty("--anchor-height", `${snapToPixel(height)}px`);
     const focusedBeforeOpen = getFocusedBeforeTransfer(e);
     dialogEl.showModal();
-    transferFocus(dialogEl, debugFocus, e);
+    transferFocus(dialogEl, debugFocus, e, focusedBeforeOpen);
     if (scrollTrap) {
       addCleanup(trapScrollInside(dialogEl));
     }
@@ -135,9 +138,11 @@ export const Dialog = (props) => {
   return (
     <Box
       {...rest}
+      {...autoFocusProps}
       as="dialog"
       ref={ref}
       baseClassName="navi_dialog"
+      pseudoClasses={DIALOG_PSEUDO_CLASSES}
       onMouseDown={(e) => {
         rest.onMouseDown?.(e);
         // The <dialog> element covers the full viewport; clicking the backdrop
@@ -164,3 +169,11 @@ export const Dialog = (props) => {
     </Box>
   );
 };
+
+const DIALOG_PSEUDO_CLASSES = [
+  ":hover",
+  ":active",
+  ":focus",
+  ":focus-visible",
+  ":focus-within",
+];

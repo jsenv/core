@@ -92,7 +92,11 @@ const TimeDate = ({
   const lang = locale || langSignal.value;
 
   if (children === undefined) {
-    return <TimeText {...props}>{formatDatePlaceholder(lang)}</TimeText>;
+    return (
+      <TimeText {...props} capitalize={false}>
+        {formatDatePlaceholder(lang)}
+      </TimeText>
+    );
   }
 
   const date = toDate(children, (value) => {
@@ -177,7 +181,11 @@ const TimeDatetime = ({ children, locale, ...props }) => {
   const lang = locale || langSignal.value;
 
   if (children === undefined) {
-    return <TimeText {...props}>{formatDatetimePlaceholder(lang)}</TimeText>;
+    return (
+      <TimeText {...props} capitalize={false}>
+        {formatDatetimePlaceholder(lang)}
+      </TimeText>
+    );
   }
 
   const date = toDate(children);

@@ -1,4 +1,4 @@
-import { useContext, useId, useRef } from "preact/hooks";
+import { useContext, useRef } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
 import { ChevronDownSvg } from "@jsenv/navi/src/graphic/icons/chevron_updown_svg.jsx";
@@ -148,7 +148,6 @@ const css = /* css */ `
     font-size: var(--picker-font-size);
     font-family: var(--picker-font-family);
     text-align: inherit;
-    text-overflow: ellipsis;
     background-color: var(--x-picker-background-color);
     border-width: var(--picker-border-width);
     border-style: solid;
@@ -161,7 +160,6 @@ const css = /* css */ `
     cursor: var(--x-picker-cursor, pointer);
     pointer-events: auto;
     user-select: none;
-    overflow: hidden;
     -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
 
     .navi_picker_value {
@@ -198,6 +196,11 @@ const css = /* css */ `
       .navi_icon {
         height: 100%;
         max-height: 100%;
+      }
+    }
+    &[navi-single-line] {
+      .navi_picker_right_slot {
+        align-self: center;
       }
     }
     .navi_picker_input {
@@ -301,6 +304,7 @@ const PickerButton = (props) => {
     props.maxLines = parseInt(props.maxLines);
   }
   const { ref, variant, icon, placeholder, ui, maxLines = 1, headless } = props;
+  const isSingleLine = maxLines === 1;
   const inputRef = useRef(null);
   const [pickerRemainingProps, inputProps, facadeChildrenProps] =
     useControlFacadeProps(
@@ -323,6 +327,7 @@ const PickerButton = (props) => {
   return (
     <Box
       as={headless ? "div" : "button"}
+      type="button" /* ensure click inside the picker cannot submit ancestor form if any */
       ref={ref}
       baseClassName="navi_picker"
       pseudoClasses={PICKER_BUTTON_PSEUDO_CLASSES}
@@ -330,6 +335,7 @@ const PickerButton = (props) => {
       data-variant={variant}
       navi-visually-hidden={headless ? "" : undefined}
       navi-picker=""
+      navi-single-line={isSingleLine ? "" : undefined}
       {...pickerRemainingProps}
       basePseudoState={basePseudoState}
       styleCSSVars={PickerStyleCSSVars}
@@ -364,7 +370,7 @@ const PickerButton = (props) => {
       <LoadingOutline
         loading={loading}
         color="var(--picker-loader-color)"
-        inset={-1}
+        inset={-2}
       />
       <PickerInput
         {...inputProps}
@@ -476,9 +482,6 @@ const PickerFirstResolver = (props) => {
   const Next = useNextResolver();
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
-  const idDefault = useId(); // needed by ui state controller
-  props.id = props.id || idDefault;
-
   resolveInputProps(props);
 
   return <Next {...props} />;

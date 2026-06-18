@@ -169,7 +169,7 @@
 
       const App = () => {
         return (
-          <NaviDebug debugAction debugInteraction>
+          <NaviDebug debugCommand debugAction debugInteraction>
             <div>
               <TableOfContents />
               <BasicStatesDemo />
@@ -636,42 +636,30 @@
               }
             >
               <Box flex="y" spacing="s" alignX="start">
-                <Box flex spacing="s" alignX="start" alignY="center">
-                  <Field>
-                    <Input
-                      ref={ref}
-                      type="checkbox"
-                      name="terms"
-                      checked={checked}
-                    />
-                    <Label>I agree to the terms and conditions</Label>
-                  </Field>
-                  <Button
-                    type="button"
-                    action={() => {
-                      ref.current.dispatchEvent(
-                        new CustomEvent("navi_set_ui_state", {
-                          detail: { value: true },
-                        }),
-                      );
-                    }}
-                  >
+                <Field
+                  flex
+                  spacing="s"
+                  alignY="center"
+                  border="1px dotted grey"
+                >
+                  <Input
+                    ref={ref}
+                    type="checkbox"
+                    id="terms_in_form"
+                    name="terms"
+                    checked={checked}
+                  />
+                  I agree to the terms and conditions
+                </Field>
+                <Box flex spacing="s">
+                  <Button command="--navi-check" commandFor="terms_in_form">
                     Accept
                   </Button>
-                  <Button
-                    type="button"
-                    action={() => {
-                      ref.current.dispatchEvent(
-                        new CustomEvent("navi_set_ui_state", {
-                          detail: { value: false },
-                        }),
-                      );
-                    }}
-                  >
+                  <Button command="--navi-uncheck" commandFor="terms_in_form">
                     Decline
                   </Button>
+                  <Button type="submit">Submit</Button>
                 </Box>
-                <Button type="submit">Submit</Button>
               </Box>
             </Form>
             {result && (
@@ -712,9 +700,14 @@
               }
             >
               <Box flex="y" spacing="s" alignX="start">
-                <Field>
-                  <Input type="checkbox" name="terms" required />
-                  <Label>I agree to the terms and conditions</Label>
+                <Field
+                  flex
+                  spacing="s"
+                  border="1px dotted grey"
+                  alignY="center"
+                >
+                  <Input type="checkbox" name="terms" required />I agree to the
+                  terms and conditions
                 </Field>
                 <Button type="submit">Submit</Button>
               </Box>

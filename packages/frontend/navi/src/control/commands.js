@@ -6,6 +6,7 @@ import {
   getParentControl,
   isControlRoot,
 } from "./control_dom.js";
+import { readControlValue } from "./control_value.js";
 import {
   dispatchRequestClearUIState,
   dispatchRequestResetUIState,
@@ -17,7 +18,7 @@ import {
   dispatchRequestInteraction,
 } from "./validation/custom_constraint_validation.js";
 
-export const dispatchNaviCommand = (
+export const triggerNaviCommand = (
   element,
   command,
   event,
@@ -56,6 +57,7 @@ export const dispatchNaviCommand = (
     value,
   });
 };
+
 // Returns the target explicitly declared via HTML attributes (commandfor / navi-command-target),
 // or undefined when no such attribute is present.
 // Returns null when the attribute is present but the target element was not found (already warned).
@@ -120,6 +122,13 @@ const resolveCommandValue = (source, event) => {
   }
   if (source.hasAttribute("command-value")) {
     return source.getAttribute("command-value");
+  }
+  if (source.type === "radio" || source.type === "checkbox") {
+    // Use readControlValue so that radio/checkbox sources return their `value`
+    // attribute (e.g. "Cherry") rather than the boolean checked state (true).
+    // getUIStateFromElement would return true for a checked radio, which is
+    // wrong when the command needs to propagate the selected item's identity.
+    return readControlValue(source);
   }
   return getUIStateFromElement(source);
 };
@@ -215,7 +224,7 @@ registerNaviCommand("--navi-clear", (source, event) => {
       if (fromInput) {
         // clearing input search should not close a popover/dialog
       } else {
-        dispatchNaviCommand(source, "--navi-close", event, {
+        triggerNaviCommand(source, "--navi-close", event, {
           optional: true,
         });
       }
@@ -370,11 +379,11 @@ const executeNaviDefine = (source, event, target) => {
   //   send button's undefined value would corrupt the picker state.
   const skipUpdate = resolvePickerInnerControl(target) !== null;
   if (!skipUpdate) {
-    dispatchNaviCommand(source, "--navi-update", event);
+    triggerNaviCommand(source, "--navi-update", event);
   }
   // The picker's onClose already dispatches the action with the final value.
   // Dispatching again here would fire the action twice.
-  return dispatchNaviCommand(target, "--navi-close", event);
+  return triggerNaviCommand(target, "--navi-close", event);
 };
 
 registerNaviCommand("--navi-scroll", (source, event) => {
@@ -389,6 +398,36 @@ registerNaviCommand("--navi-scroll", (source, event) => {
       return dispatchCustomEvent(target, "navi_request_scroll", {
         event,
         id: resolveCommandValue(source, event),
+      });
+    },
+  };
+});
+registerNaviCommand("--navi-check", (source, event) => {
+  const target =
+    resolveExplicitTarget(source) || resolveFirstParentControl(source);
+  if (!target) {
+    return undefined;
+  }
+  return {
+    target,
+    implementation: () => {
+      return dispatchCustomEvent(target, "navi_request_check", {
+        event,
+      });
+    },
+  };
+});
+registerNaviCommand("--navi-uncheck", (source, event) => {
+  const target =
+    resolveExplicitTarget(source) || resolveFirstParentControl(source);
+  if (!target) {
+    return undefined;
+  }
+  return {
+    target,
+    implementation: () => {
+      return dispatchCustomEvent(target, "navi_request_uncheck", {
+        event,
       });
     },
   };

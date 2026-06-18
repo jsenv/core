@@ -37,7 +37,7 @@ const css = /* css */ `
         border-radius: var(--picker-border-radius);
         outline-width: var(--picker-outline-width);
         outline-color: var(--picker-outline-color);
-        outline-offset: var(--picker-outline-offset);
+        outline-offset: 0px;
         box-shadow:
           0 4px 8px rgba(0, 0, 0, 0.08),
           0 12px 40px rgba(0, 0, 0, 0.22);
@@ -95,6 +95,10 @@ const css = /* css */ `
           overflow: auto;
           overscroll-behavior: none;
         }
+
+        &[data-focus-visible] {
+          outline-style: solid;
+        }
       }
 
       &[aria-expanded="true"] {
@@ -123,7 +127,7 @@ const css = /* css */ `
         border-radius: var(--picker-border-radius);
         outline-width: var(--picker-outline-width);
         outline-color: var(--picker-outline-color);
-        outline-offset: var(--picker-outline-offset);
+        outline-offset: 0;
         box-shadow:
           0 4px 8px rgba(0, 0, 0, 0.08),
           0 12px 40px rgba(0, 0, 0, 0.22);
@@ -133,6 +137,10 @@ const css = /* css */ `
         &[open] {
           display: flex;
           flex-direction: column;
+        }
+
+        &[data-focus-visible] {
+          outline-style: solid;
         }
 
         &::backdrop {
@@ -244,11 +252,18 @@ const PickerCustom = (props) => {
     expandedRef.current = expanded;
     const valueAtOpenRef = useRef(null);
     const activeElementAtOpenRef = useRef(null);
+
     const onOpen = (e) => {
-      activeElementAtOpenRef.current = e.detail.focusedBeforeOpen;
       expandedRef.current = true;
       setExpanded(true);
-      valueAtOpenRef.current = getPickerInputUIState(ref.current);
+
+      const focusedBeforeOpen = e.detail.focusedBeforeOpen;
+      activeElementAtOpenRef.current = focusedBeforeOpen;
+      debugFocus(e, "picked opened, store element focused", focusedBeforeOpen);
+
+      const valueAtOpen = getPickerInputUIState(ref.current);
+      valueAtOpenRef.current = valueAtOpen;
+      debugPopup(e, `picker opened, store value at open (${valueAtOpen})`);
     };
     const restoreFocus = (e) => {
       const activeElementAtOpen = activeElementAtOpenRef.current;
@@ -283,6 +298,13 @@ const PickerCustom = (props) => {
           eInChain.type === "navi_request_close" && eInChain.detail.isCancel,
       );
       const isCancel = Boolean(cancelEvent);
+
+      const mousedownEvent = findEvent(e, "mousedown");
+      if (mousedownEvent) {
+        debugPopup(e, `closed by mousedown -> disable next click`);
+        disableClickFor();
+      }
+
       expandedRef.current = false;
       setExpanded(false);
       // Reset so the next opening re-evaluates screen size
@@ -325,17 +347,12 @@ const PickerCustom = (props) => {
     };
     const requestClose = (
       e = new CustomEvent("programmatic"),
-      { cancel = false } = {},
+      { isCancel = false } = {},
     ) => {
-      const mousedownEvent = findEvent(e, "mousedown");
-      if (mousedownEvent) {
-        debugPopup(e, `disable click`);
-        disableClickFor();
-      }
       const popupEl = popupRef.current;
       return dispatchCustomEvent(popupEl, "navi_request_close", {
         event: e,
-        cancel,
+        isCancel,
       });
     };
 
@@ -384,92 +401,102 @@ const PickerCustom = (props) => {
     });
 
     interactions: {
-      const { onMouseDown, onClick, onKeyDown } = props;
       const onKeyDownShortcuts = createOnKeyDownForShortcuts({
-        arrowdown: (e) => {
-          onInteraction(e, {
+        "a-z": (e) => {
+          return {
+            name: "letter key to open",
+            effect: () => {
+              requestOpen(e);
+            },
+          };
+        },
+        "0-9": (e) => {
+          return {
+            name: "numeric key to open",
+            effect: () => {
+              requestOpen(e);
+            },
+          };
+        },
+        "arrowdown": (e) => {
+          return {
             name: "arrow_down_to_open",
             effect: () => {
-              e.preventDefault(); // prevent container scroll
               requestOpen(e);
+              e.preventDefault(); // prevent container scroll
             },
-          });
+          };
         },
-        arrowup: (e) => {
-          onInteraction(e, {
+        "arrowup": (e) => {
+          return {
             name: "arrow_up_to_open",
             effect: () => {
-              e.preventDefault(); // prevent container scroll
               requestOpen(e);
+              e.preventDefault(); // prevent container scroll
             },
-          });
+          };
         },
-        space: (e) => {
-          onInteraction(e, {
+        "space": (e) => {
+          return {
             name: "space_to_open",
             effect: () => {
-              e.preventDefault(); // prevent scroll
               requestOpen(e);
+              e.preventDefault(); // prevent scroll
             },
-          });
+          };
         },
-        escape: (e) => {
+        "escape": (e) => {
           if (!expandedRef.current) {
-            return;
+            return null;
           }
-          onInteraction(e, {
+          return {
             name: "escape_to_cancel",
             effect: () => {
+              requestClose(e, { isCancel: true });
               e.preventDefault(); // prevent browser from closing the dialog (if any)
-              requestClose(e, { cancel: true });
             },
-          });
+          };
         },
       });
 
       Object.assign(pickerProps, {
-        onMouseDown: (e) => {
-          onMouseDown?.(e);
-          onInteraction(e, {
-            name: "mousedown to open picker",
-            effect: () => {
-              if (expandedRef.current) {
-                requestClose(e);
-              } else {
-                e.preventDefault(); // prevent browser trying to give focus to the select (popover will take focus)
+        interactionDefinitions: {
+          mouseDown: (e) => {
+            if (expandedRef.current) {
+              return {
+                name: "mousedown to close picker",
+                effect: () => requestClose(e),
+              };
+            }
+            return {
+              name: "mousedown to open picker",
+              effect: () => {
                 debugFocus(
                   e,
                   `prevent browser giving focus to button (mousedown.preventDefault())`,
                 );
                 requestOpen(e);
-              }
-            },
-          });
-        },
-        onClick: (e) => {
-          // if (e.detail === 0) {
-          // disable enter to open that would happen because it's a <button>
-          // but we want to keep the input behavior here
-          // (space to open, enter to submit)
-          //  return;
-          // }
-          onClick?.(e);
-          onInteraction(e, {
-            name:
-              e.detail === 0
-                ? "keyboard click to open picker"
-                : "click to open picker",
-            effect: () => {
-              // When a label is clicked it transfers focus to the select
-              // in that case we want to open it (otherwise we have already opened on mousedown interaction)
-              e.preventDefault();
-              requestOpen(e);
-            },
-          });
-        },
-        onKeyDown: (e) => {
-          onKeyDown?.(e);
-          onKeyDownShortcuts(e);
+                e.preventDefault(); // prevent browser trying to give focus to the select (popover will take focus)
+              },
+            };
+          },
+          click: (e) => {
+            // When a label is clicked it transfers focus to the select
+            // in that case we want to open it (otherwise we have already opened on mousedown interaction)
+            return {
+              name:
+                e.detail === 0
+                  ? "click (keyboard or progammatic) to open picker"
+                  : "click to open picker",
+              effect: () => {
+                requestOpen(e);
+                e.preventDefault();
+              },
+            };
+          },
+          keyDown: (e) => {
+            return onKeyDownShortcuts(e);
+          },
         },
       });
       Object.assign(popupProps, {
@@ -478,7 +505,10 @@ const PickerCustom = (props) => {
             return;
           }
           // mousedown inside popover should not bubble to the select (would re-open it if that mousedown closes it)
-          debugPopup(e, `popover mouseDown stopPropagation`);
+          debugPopup(
+            e,
+            `"mousedown" received on popup -> prevent bubbling to picker (e.stopPropagation())`,
+          );
           e.stopPropagation();
         },
         onClick: (e) => {
@@ -486,18 +516,27 @@ const PickerCustom = (props) => {
             return;
           }
           // click inside popover should not bubble to the picker (would re-open it if that click closes it)
-          // preventDefault also prevents a form submit that would otherwise be triggered when
-          // the picker is inside a <form> and the click lands on a non-button element
-          debugPopup(e, `popover click stopPropagation + preventDefault`);
+          debugPopup(
+            e,
+            `"click" received on popup -> prevent bubbling to picker (e.stopPropagation())`,
+          );
           e.stopPropagation();
-          e.preventDefault();
+          // Here we can't preventDefault because the click might be needed to check a radio for instance.
+          // As a result we have to let it go through which means it could trigger form submission
+          // but we've put type="button" on the picker to ensure it can't submit the form
+          // so browser won't submit eventual form for clicks inside the popover/dialog
+          // e.preventDefault();
         },
         onKeyDown: (e) => {
           // some keys pressed inside popover should not reach the picker button
           // (like enter that would try to request action of closest form otherwise for instance)
           if (e.key === "Enter") {
+            debugPopup(
+              e,
+              `"enter" received on popup -> prevent bubbling to picker (e.stopPropagation())`,
+            );
             e.stopPropagation();
-            // preventDefault prevents the browser from synthesising a click on the
+            // preventDefault prevents the browser from dispatching a "click" on the
             // picker button when focus moves to it synchronously during enterEffect
             e.preventDefault();
           }
@@ -571,6 +610,9 @@ const PickerContentInsidePopover = (props) => {
         scrollTrap={scrollTrap}
         pointerTrap={pointerTrap}
         focusTrap={focusTrap}
+        /* make popover focusable so it can be the first focus target when opening */
+        tabIndex={-1}
+        autoFocus="fallback"
       >
         {/* In "attached" mode clone the trigger visually so the popover wraps both the trigger
             and the list with a unified border/shadow. The clone is not
@@ -608,6 +650,7 @@ const PickerContentInsideDialog = (props) => {
         scrollTrap={scrollTrap}
         pointerTrap={pointerTrap}
         centerInVisualViewport
+        autoFocus="fallback"
       >
         {children}
       </Dialog>

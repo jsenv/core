@@ -490,7 +490,7 @@ const LinkPlain = (props) => {
     selectionController,
   });
 
-  useAutoFocus(ref, autoFocus);
+  const autoFocusProps = useAutoFocus(ref, autoFocus);
   useConstraints(ref, constraints);
   const shouldDimColor = readOnly || disabled;
   useDimColorWhen(ref, shouldDimColor);
@@ -558,8 +558,7 @@ const LinkPlain = (props) => {
       color={anchor && !innerChildren ? "inherit" : undefined}
       id={anchor ? href.slice(1) : undefined}
       {...remainingProps}
-      autoFocus={undefined} // See use_auto_focus.js
-      navi-autofocus={autoFocus ? "" : undefined}
+      {...autoFocusProps}
       ref={ref}
       href={href}
       rel={innerRel}

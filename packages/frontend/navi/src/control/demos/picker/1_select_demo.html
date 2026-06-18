@@ -201,21 +201,9 @@
           <h2>Table of contents</h2>
           <ol class="toc-list">
             <li>
-              <a href="#section-1">1. Dimensions — size &amp; overflow</a>
-              <ol class="toc-list" style={{ marginTop: 0 }}>
-                <li>
-                  <a href="#dim-font-size">Font size</a>
-                </li>
-                <li>
-                  <a href="#dim-width">Width adapts to value</a>
-                </li>
-                <li>
-                  <a href="#dim-overflow">Single-line overflow</a>
-                </li>
-                <li>
-                  <a href="#dim-maxrows">Multi-line with maxLines</a>
-                </li>
-              </ol>
+              <a href="#section-1">
+                1. Default behavior — stays open until closed
+              </a>
             </li>
             <li>
               <a href="#section-2">
@@ -223,25 +211,19 @@
               </a>
             </li>
             <li>
-              <a href="#section-3">
-                3. <code>command="--navi-update"</code> — stays open until
-                closed
-              </a>
+              <a href="#section-3">3. Searchable select — empty list</a>
             </li>
             <li>
-              <a href="#section-4">4. Searchable select — empty list</a>
+              <a href="#section-4">4. Searchable select — full list</a>
             </li>
             <li>
-              <a href="#section-5">5. Searchable select — full list</a>
+              <a href="#section-5">5. Searchable select — few results</a>
             </li>
             <li>
-              <a href="#section-6">6. Searchable select — few results</a>
+              <a href="#section-6">6. Searchable select — no results</a>
             </li>
             <li>
-              <a href="#section-7">7. Searchable select — no results</a>
-            </li>
-            <li>
-              <a href="#section-8">8. Place picker — rich items with search</a>
+              <a href="#section-7">7. Place picker — rich items with search</a>
             </li>
           </ol>
         </div>
@@ -257,9 +239,8 @@
         >
           <Box flex="y" spacing="l">
             <TableOfContents />
-            <DimensionsDemo />
-            <SelectWithSend />
             <SelectWithUpdate />
+            <SelectWithSend />
             <SearchableSelectEmpty />
             <SearchableSelectNormal />
             <SearchableSelectFewResults />
@@ -296,10 +277,82 @@
         );
       };
 
-      // ── 1. command="--navi-send" — closes on click ────────────────────────────────
-      // Required for single-select: each click sends the value immediately and
-      // closes the popover. Without it the picker stays open and the user must
-      // close it manually, which makes no sense for a single-value selection.
+      // ── 1. command="--navi-update" — default behavior ───────────────────────────
+      // This is the default command for single-select pickers. The selected item is
+      // highlighted immediately but the popover stays open, giving the user a chance
+      // to review the choice or press Escape to cancel.
+      //
+      // Why it is the default:
+      // - Consistent with multi-select: in a checkbox list the popover must stay open
+      //   to allow selecting several items. Using the same behavior for single-select
+      //   keeps the mental model uniform.
+      // - Cancellable: pressing Escape restores the value that was active when the
+      //   picker opened, analogous to releasing the mouse outside a button to abort
+      //   a click.
+      // - Side-effect friendly: when selecting an option triggers a visible preview
+      //   (e.g. a color swatch, a map marker), the user can browse without committing.
+
+      const SelectWithUpdate = () => {
+        const selected = updateFruitSignal.value;
+        const logSignal = useSignal([]);
+
+        const pushLog = (type, value) => {
+          logSignal.value = [...logSignal.value, { type, value }];
+        };
+
+        return (
+          <div id="section-1" class="demo-section">
+            <h2>1. Default behavior — stays open until closed</h2>
+            <p>
+              Clicking an item highlights it but keeps the popover open. The
+              value is committed only when the popover closes (click outside,
+              Enter, …). Pressing Escape cancels and restores the previous
+              value. This is the default because it works for both single- and
+              multi-select, allows cancellation, and lets side effects (e.g. a
+              preview) be browsed before committing.
+            </p>
+            <Field vertical>
+              <Label>Fruit</Label>
+              <Picker
+                name="select_update"
+                placeholder="Select a fruit…"
+                value={selected}
+                uiAction={(v) => {
+                  pushLog("uiAction", v);
+                }}
+                action={(v) => {
+                  pushLog("action", v);
+                  updateFruitSignal.value = v;
+                }}
+                minWidth="200"
+              >
+                <List selectable>
+                  {FRUIT_OPTIONS.map((opt, i) => (
+                    <List.Item
+                      selectable
+                      key={opt}
+                      id={`update_${opt}`}
+                      index={i}
+                      value={opt}
+                      selected={selected === opt}
+                      padding="s"
+                      spacing="s"
+                    >
+                      {opt}
+                    </List.Item>
+                  ))}
+                </List>
+              </Picker>
+            </Field>
+            <CallLog entries={logSignal.value} />
+          </div>
+        );
+      };
+
+      // ── 2. command="--navi-send" — closes on click ────────────────────────────────
+      // Each click immediately commits the value and closes the picker.
+      // Use this when the single-select UX is a priority and you don't need
+      // cancellation or side-effect previews.
 
       const SelectWithSend = () => {
         const selected = sendFruitSignal.value;
@@ -316,10 +369,10 @@
             </h2>
             <p>
               Each click immediately commits the value and closes the picker.
-              This is the correct behavior for single-select: once a value is
-              chosen, there is nothing left to do in the popover.
+              Useful for simple single-select where the choice is final and no
+              preview or cancellation is needed.
             </p>
-            <Field vertical>
+            <Field ownLabel vertical>
               <Label>Fruit</Label>
               <Picker
                 name="select_send"
@@ -340,72 +393,6 @@
                       selectable
                       key={opt}
                       id={`send_${opt}`}
-                      index={i}
-                      value={opt}
-                      selected={selected === opt}
-                      padding="s"
-                      spacing="s"
-                    >
-                      {opt}
-                    </List.Item>
-                  ))}
-                </List>
-              </Picker>
-            </Field>
-            <CallLog entries={logSignal.value} />
-          </div>
-        );
-      };
-
-      // ── 2. command="--navi-update" — stays open until closed ──────────────────────
-      // Clicking an item updates the picker's pending value but keeps the
-      // popover open. The value is committed only when the popover closes
-      // (e.g. clicking outside or pressing Escape). Rarely useful for
-      // single-select, but shown here for comparison.
-
-      const SelectWithUpdate = () => {
-        const selected = updateFruitSignal.value;
-        const logSignal = useSignal([]);
-
-        const pushLog = (type, value) => {
-          logSignal.value = [...logSignal.value, { type, value }];
-        };
-
-        return (
-          <div id="section-3" class="demo-section">
-            <h2>
-              3. <code>command="--navi-update"</code> — stays open until closed
-            </h2>
-            <p>
-              Clicking an item highlights it but keeps the popover open. The
-              value is committed only when the popover closes (click outside,
-              Enter, …). Pressing Escape cancels and restores the previous value
-              — analogous to releasing the mouse outside a button to cancel a
-              click. This is useful when selecting an option has visible side
-              effects (e.g. a color preview): the user can browse options and
-              decide to confirm or bail out before committing.
-            </p>
-            <Field vertical>
-              <Label>Fruit</Label>
-              <Picker
-                name="select_update"
-                placeholder="Select a fruit…"
-                value={selected}
-                uiAction={(v) => {
-                  pushLog("uiAction", v);
-                }}
-                action={(v) => {
-                  pushLog("action", v);
-                  updateFruitSignal.value = v;
-                }}
-                minWidth="200"
-              >
-                <List selectable command="--navi-update">
-                  {FRUIT_OPTIONS.map((opt, i) => (
-                    <List.Item
-                      selectable
-                      key={opt}
-                      id={`update_${opt}`}
                       index={i}
                       value={opt}
                       selected={selected === opt}
@@ -512,8 +499,8 @@
         const searchText = useSignal("").value;
         const logSignal = useSignal([]);
         return (
-          <div id="section-4" class="demo-section">
-            <h2>4. Searchable select — empty list</h2>
+          <div id="section-3" class="demo-section">
+            <h2>3. Searchable select — empty list</h2>
             <p>The list has no items at all.</p>
             <Field vertical>
               <Label>Fruit</Label>
@@ -540,8 +527,8 @@
         const searchText = searchTextSignal.value;
         const logSignal = useSignal([]);
         return (
-          <div id="section-5" class="demo-section">
-            <h2>5. Searchable select — full list</h2>
+          <div id="section-4" class="demo-section">
+            <h2>4. Searchable select — full list</h2>
             <p>All items shown, search is empty.</p>
             <Field vertical>
               <Label>Fruit</Label>
@@ -570,8 +557,8 @@
         const searchText = searchTextSignal.value;
         const logSignal = useSignal([]);
         return (
-          <div id="section-6" class="demo-section">
-            <h2>6. Searchable select — few results</h2>
+          <div id="section-5" class="demo-section">
+            <h2>5. Searchable select — few results</h2>
             <p>
               Search pre-filled with <code>"rr"</code> — matches Cherry and
               Elderberry.
@@ -603,8 +590,8 @@
         const searchText = searchTextSignal.value;
         const logSignal = useSignal([]);
         return (
-          <div id="section-7" class="demo-section">
-            <h2>7. Searchable select — no results</h2>
+          <div id="section-6" class="demo-section">
+            <h2>6. Searchable select — no results</h2>
             <p>
               Search pre-filled with <code>"zzz"</code> — matches nothing.
             </p>
@@ -675,8 +662,8 @@
         );
 
         return (
-          <div id="section-8" class="demo-section">
-            <h2>8. Place picker — rich items with search</h2>
+          <div id="section-7" class="demo-section">
+            <h2>7. Place picker — rich items with search</h2>
             <p>
               Each item shows a name and an address. The search filters across
               all fields. The trigger displays the selected place label (or a
@@ -731,7 +718,9 @@
                         padding="m"
                       >
                         <SelectableInput marginLeft="-xs" />
-                        <PlaceItem maxLines={i === 0 ? 1 : undefined} />
+                        <PlaceItem
+                          maxLines={i === 0 ? undefined : i === 1 ? 2 : 1}
+                        />
                       </List.Item>
                     );
                   })}
@@ -787,333 +776,7 @@
         </List>
       );
 
-      const DimensionsDemo = () => {
-        return (
-          <div id="section-1" class="demo-section">
-            <h2>1. Dimensions — size &amp; overflow</h2>
-
-            <h3 id="dim-font-size" style={{ marginTop: "24px" }}>
-              Font size
-            </h3>
-            <p>
-              The picker inherits font size from its container, which drives its
-              overall size.
-            </p>
-            <Box flex="x" spacing="m" alignY="end" flexWrap>
-              {["xs", "m", "xl", "xxl"].map((size) => (
-                <Field key={size} vertical>
-                  <Label>
-                    <code style={{ fontWeight: "normal" }}>size={size}</code>
-                  </Label>
-                  <Picker
-                    name={`dim_font_${size}`}
-                    placeholder="Fruit…"
-                    value={sendFruitSignal.value}
-                    action={(v) => {
-                      sendFruitSignal.value = v;
-                    }}
-                    size={size}
-                  >
-                    <List selectable command="--navi-send">
-                      {FRUIT_OPTIONS.map((opt, i) => (
-                        <List.Item
-                          selectable
-                          key={opt}
-                          id={`dim_font_${size}_${opt}`}
-                          index={i}
-                          value={opt}
-                          selected={sendFruitSignal.value === opt}
-                          padding="s"
-                          spacing="s"
-                        >
-                          {opt}
-                        </List.Item>
-                      ))}
-                    </List>
-                  </Picker>
-                </Field>
-              ))}
-            </Box>
-
-            <h3 id="dim-width" style={{ marginTop: "24px" }}>
-              Width adapts to value
-            </h3>
-            <Box
-              flex="x"
-              spacing="s"
-              alignY="center"
-              style={{ marginBottom: "12px" }}
-            >
-              <AdjacentElement />
-              <span style={{ fontSize: "12px", color: "#555" }}>
-                ← this represents an element sitting next to the picker
-              </span>
-            </Box>
-            <Box flex="y" spacing="m">
-              <Field vertical>
-                <Label>
-                  Short value{" "}
-                  <code style={{ fontWeight: "normal" }}>(default)</code>
-                </Label>
-                <Box flex="x" spacing="s" alignY="center">
-                  <Picker
-                    name="dim_width_short"
-                    value={SHORT_VALUE}
-                    action={() => {}}
-                  >
-                    <DimensionPickerItems
-                      id="dim_width_short"
-                      values={[SHORT_VALUE, MEDIUM_VALUE]}
-                    />
-                  </Picker>
-                  <AdjacentElement />
-                </Box>
-              </Field>
-              <Field vertical>
-                <Label>
-                  Medium value{" "}
-                  <code style={{ fontWeight: "normal" }}>(default)</code>
-                </Label>
-                <Box flex="x" spacing="s" alignY="center">
-                  <Picker
-                    name="dim_width_medium"
-                    value={MEDIUM_VALUE}
-                    action={() => {}}
-                  >
-                    <DimensionPickerItems
-                      id="dim_width_medium"
-                      values={[SHORT_VALUE, MEDIUM_VALUE]}
-                    />
-                  </Picker>
-                  <AdjacentElement />
-                </Box>
-              </Field>
-            </Box>
-
-            <p
-              style={{ marginTop: "12px", color: "#666", fontStyle: "italic" }}
-            >
-              The adjacent element shifts as the picker grows. Even without
-              anything next to it, an unstable width feels unpolished.
-            </p>
-
-            <p style={{ marginTop: "16px" }}>
-              Set <code>minWidth</code> to a fixed value to prevent layout shift
-              while still allowing the picker to grow for longer values.
-            </p>
-            <Box flex="y" spacing="m">
-              <Field vertical>
-                <Label>
-                  Short value{" "}
-                  <code style={{ fontWeight: "normal" }}>(minWidth="140")</code>
-                </Label>
-                <Box flex="x" spacing="s" alignY="center">
-                  <Picker
-                    name="dim_minwidth_short"
-                    value={SHORT_VALUE}
-                    action={() => {}}
-                    minWidth="140"
-                  >
-                    <DimensionPickerItems
-                      id="dim_minwidth_short"
-                      values={[SHORT_VALUE, MEDIUM_VALUE]}
-                    />
-                  </Picker>
-                  <AdjacentElement />
-                </Box>
-              </Field>
-              <Field vertical>
-                <Label>
-                  Medium value{" "}
-                  <code style={{ fontWeight: "normal" }}>(minWidth="140")</code>
-                </Label>
-                <Box flex="x" spacing="s" alignY="center">
-                  <Picker
-                    name="dim_minwidth_medium"
-                    value={MEDIUM_VALUE}
-                    action={() => {}}
-                    minWidth="140"
-                  >
-                    <DimensionPickerItems
-                      id="dim_minwidth_medium"
-                      values={[SHORT_VALUE, MEDIUM_VALUE]}
-                    />
-                  </Picker>
-                  <AdjacentElement />
-                </Box>
-              </Field>
-            </Box>
-
-            <p style={{ marginTop: "16px" }}>
-              Use <code>expandX</code> to make the picker fill its container
-              width entirely, also preventing layout shift.
-            </p>
-            <Box flex="y" spacing="m">
-              <Field vertical>
-                <Label>
-                  Short value{" "}
-                  <code style={{ fontWeight: "normal" }}>(expandX)</code>
-                </Label>
-                <Box flex="x" spacing="s" alignY="center" expandX>
-                  <Picker
-                    name="dim_expandx_short"
-                    value={SHORT_VALUE}
-                    action={() => {}}
-                    expandX
-                  >
-                    <DimensionPickerItems
-                      id="dim_expandx_short"
-                      values={[SHORT_VALUE, MEDIUM_VALUE]}
-                    />
-                  </Picker>
-                  <AdjacentElement />
-                </Box>
-              </Field>
-              <Field vertical>
-                <Label>
-                  Medium value{" "}
-                  <code style={{ fontWeight: "normal" }}>(expandX)</code>
-                </Label>
-                <Box flex="x" spacing="s" alignY="center" expandX>
-                  <Picker
-                    name="dim_expandx_medium"
-                    value={MEDIUM_VALUE}
-                    action={() => {}}
-                    expandX
-                  >
-                    <DimensionPickerItems
-                      id="dim_expandx_medium"
-                      values={[SHORT_VALUE, MEDIUM_VALUE]}
-                    />
-                  </Picker>
-                  <AdjacentElement />
-                </Box>
-              </Field>
-            </Box>
-
-            <h3 id="dim-overflow" style={{ marginTop: "24px" }}>
-              Single-line overflow
-            </h3>
-            <p>
-              When the value is wider than the picker (here constrained to{" "}
-              <code>maxWidth="200"</code>), the text is clipped with an ellipsis
-              on a single line.
-            </p>
-            <Box flex="y" spacing="m">
-              <Field vertical>
-                <Label>Long sentence</Label>
-                <Picker
-                  name="dim_sentence"
-                  value={LONG_SENTENCE}
-                  action={() => {}}
-                  maxWidth="200"
-                >
-                  <DimensionPickerItems
-                    id="dim_sentence"
-                    values={[SHORT_VALUE, LONG_SENTENCE]}
-                  />
-                </Picker>
-              </Field>
-              <Field vertical>
-                <Label>Long word</Label>
-                <Picker
-                  name="dim_word"
-                  value={LONG_WORD}
-                  action={() => {}}
-                  maxWidth="200"
-                >
-                  <DimensionPickerItems
-                    id="dim_word"
-                    values={[SHORT_VALUE, LONG_WORD]}
-                  />
-                </Picker>
-              </Field>
-              <Field vertical>
-                <Label>Short value + width fixe + alignX center</Label>
-                <Picker
-                  name="dim_align_center"
-                  value={SHORT_VALUE}
-                  action={() => {}}
-                  width="200px"
-                  textAlign="center"
-                >
-                  <DimensionPickerItems
-                    id="dim_align_center"
-                    values={[SHORT_VALUE, MEDIUM_VALUE, LONG_SENTENCE]}
-                  />
-                </Picker>
-              </Field>
-            </Box>
-
-            <h3 id="dim-maxrows" style={{ marginTop: "24px" }}>
-              Multi-line with maxLines
-            </h3>
-            <p>
-              <code>maxLines</code> lets the text flow onto multiple lines
-              before truncating. At <code>maxLines=3</code> the text wraps up to
-              three rows then clips with an ellipsis.
-            </p>
-            <Box flex="y" spacing="m">
-              <Field vertical>
-                <Label>
-                  Long sentence{" "}
-                  <code style={{ fontWeight: "normal" }}>(maxLines=3)</code>
-                </Label>
-                <Picker
-                  name="dim_sentence_maxrows"
-                  value={LONG_SENTENCE}
-                  action={() => {}}
-                  maxWidth="200"
-                  maxLines={3}
-                >
-                  <DimensionPickerItems
-                    id="dim_sentence_maxrows"
-                    values={[SHORT_VALUE, LONG_SENTENCE]}
-                  />
-                </Picker>
-              </Field>
-              <Field vertical>
-                <Label>
-                  Long word{" "}
-                  <code style={{ fontWeight: "normal" }}>(maxLines=3)</code>
-                </Label>
-                <Picker
-                  name="dim_word_maxrows"
-                  value={LONG_WORD}
-                  action={() => {}}
-                  maxWidth="200"
-                  maxLines={3}
-                >
-                  <DimensionPickerItems
-                    id="dim_word_maxrows"
-                    values={[SHORT_VALUE, LONG_WORD]}
-                  />
-                </Picker>
-              </Field>
-              <Field vertical>
-                <Label>
-                  Exceeds maxLines{" "}
-                  <code style={{ fontWeight: "normal" }}>(ellipsis)</code>
-                </Label>
-                <Picker
-                  name="dim_clamp_maxrows"
-                  value={VERY_LONG_TEXT}
-                  action={() => {}}
-                  maxWidth="200"
-                  maxLines={3}
-                >
-                  <DimensionPickerItems
-                    id="dim_clamp_maxrows"
-                    values={[SHORT_VALUE, VERY_LONG_TEXT]}
-                  />
-                </Picker>
-              </Field>
-            </Box>
-          </div>
-        );
-      };
-
-      // ── 3–9. Renumbered sections ──────────────────────────────────────────
+      // ── Renumbered sections ──────────────────────────────────────────
 
       render(
         <App />,

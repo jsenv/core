@@ -1,8 +1,8 @@
 // https://jsfiddle.net/v5xzJ/4/
 
 import { hasCSSSizeUnit, measureLongestVisualLineWidth } from "@jsenv/dom";
-import { createContext, isValidElement, toChildArray } from "preact";
-import { useContext, useLayoutEffect, useRef, useState } from "preact/hooks";
+import { isValidElement, toChildArray } from "preact";
+import { useLayoutEffect, useRef } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
 import {
@@ -18,8 +18,15 @@ const css = /* css */ `
       &[data-skeleton] {
         border-radius: 0.2em;
       }
+
       &[data-capitalize] {
-        display: inline-block; /* We need inline-block to match the pseudo element */
+        text-transform: capitalize;
+
+        .navi_text_sizer {
+          .navi_text {
+            display: inline-block; /* We need inline-block to match the pseudo element */
+          }
+        }
       }
       &[data-shrinkwrap] {
         display: inline-block;
@@ -65,33 +72,11 @@ const css = /* css */ `
     }
 
     &[data-text-overflow] {
+      display: block;
       min-width: 0;
-      flex-wrap: wrap;
-      justify-content: inherit;
       text-overflow: ellipsis;
       overflow: hidden;
       overflow-wrap: normal;
-
-      .navi_text_overflow_wrapper {
-        display: flex;
-        width: 100%;
-        flex-grow: 1;
-        justify-content: inherit;
-        gap: 0.3em;
-
-        .navi_text_overflow_text {
-          max-width: 100%;
-          text-overflow: ellipsis;
-          overflow: hidden;
-        }
-      }
-
-      .navi_text:not(.navi_text_overflow_text) {
-        display: block;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        overflow: hidden;
-      }
     }
 
     &[data-skeleton] {
@@ -315,9 +300,6 @@ const shouldInjectSpacingBetween = (left, right) => {
   if (rightIsNode && isMarkedAsOutsideTextFlow(right)) {
     return false;
   }
-  if (rightIsNode && right.props && right.props.overflowPinned) {
-    return false;
-  }
   if (typeof left === "string" && /\s$/.test(left)) {
     return false;
   }
@@ -327,7 +309,6 @@ const shouldInjectSpacingBetween = (left, right) => {
   return true;
 };
 
-const OverflowPinnedContext = createContext(null);
 /**
  * Text component for rendering inline or block text with layout-stable style changes.
  *
@@ -340,10 +321,6 @@ const OverflowPinnedContext = createContext(null);
  *   Truncates overflowing text with an ellipsis after at most N lines.
  *   `maxLines={1}` truncates after one line (single-line ellipsis).
  *   `maxLines={n}` (n > 1) truncates after n lines (multi-line clamp).
- *
- * @param {boolean} [props.overflowPinned]
- *   Must be used inside a `<Text maxLines>` parent.
- *   Pins this element outside the truncated text flow (e.g. a badge or icon).
  *
  * @param {string} [props.spacing]
  *   Controls the separator injected between child nodes.
@@ -401,9 +378,6 @@ const TextDispatcher = (props) => {
   }
   if (props.maxLines === 1 || props.maxLines === "1") {
     return <TextOverflow {...props} />;
-  }
-  if (props.overflowPinned) {
-    return <TextOverflowPinned {...props} />;
   }
   if (props.selectRange) {
     return <TextWithSelectRange {...props} />;
@@ -579,11 +553,8 @@ const TextSkeleton = ({ loading, children, ...props }) => {
   );
 };
 const TextOverflow = ({ noWrap, spacing, capitalize, children, ...rest }) => {
-  const [overflowPinned, setOverflowPinned] = useState(null);
-
   return (
     <TextDispatcher
-      flex
       block
       as="div"
       pre={noWrap === undefined ? true : undefined}
@@ -593,49 +564,12 @@ const TextOverflow = ({ noWrap, spacing, capitalize, children, ...rest }) => {
       {...rest}
       maxLines={undefined}
       data-text-overflow=""
-      spacing="pre"
+      spacing={spacing}
+      capitalize={capitalize}
     >
-      <span className="navi_text_overflow_wrapper">
-        {overflowPinned && overflowPinned.position === "start"
-          ? overflowPinned.vnode
-          : null}
-        <OverflowPinnedContext.Provider value={setOverflowPinned}>
-          <Text
-            className="navi_text_overflow_text"
-            spacing={spacing}
-            capitalize={capitalize}
-          >
-            {children}
-          </Text>
-        </OverflowPinnedContext.Provider>
-        {overflowPinned && overflowPinned.position === "end"
-          ? overflowPinned.vnode
-          : null}
-      </span>
+      {children}
     </TextDispatcher>
   );
-};
-const TextOverflowPinned = (props) => {
-  const { overflowPinned } = props;
-  const setOverflowPinned = useContext(OverflowPinnedContext);
-  const text = (
-    <Text {...props} data-overflow-pinned="" overflowPinned={undefined} />
-  );
-  if (!setOverflowPinned) {
-    console.warn(
-      `<Text overflowPinned> declared outside a <Text maxLines="1">`,
-    );
-    return text;
-  }
-  if (overflowPinned) {
-    setOverflowPinned({
-      vnode: text,
-      position: overflowPinned === true ? "end" : overflowPinned,
-    });
-    return null;
-  }
-  setOverflowPinned(null);
-  return text;
 };
 const TextWithSelectRange = ({ ref, selectRange, ...props }) => {
   useInitialTextSelection(ref, selectRange);

@@ -142,15 +142,15 @@ export const formatEventSideEffect = (e, sideEffect) => {
     const chain = e.detail.eventChain;
     const initiator = chain[0];
     parts.push(
-      `"${initiator.type}" on ${getElementSignature(initiator.target)}`,
+      `"${getEventLabel(initiator)}" on ${getElementSignature(initiator.target)}`,
     );
     // chain[0] is shown as initiator above; chain includes event as last element
     for (const chainedEvent of chain.slice(1)) {
-      parts.push(chainedEvent.type);
+      parts.push(getEventLabel(chainedEvent));
     }
-    parts.push(e.type);
+    parts.push(getEventLabel(e));
   } else {
-    parts.push(`"${e.type}" on ${getElementSignature(e.target)}`);
+    parts.push(`"${getEventLabel(e)}" on ${getElementSignature(e.target)}`);
   }
   return `${parts.join(" -> ")} -> ${sideEffect}`;
 };
@@ -200,8 +200,8 @@ export const createEventGroupLogger = () => {
         console.groupEnd();
       }
       const label = initiator.target
-        ? `"${initiator.type}" on ${getElementSignature(initiator.target)}`
-        : `"${initiator.type}"`;
+        ? `"${getEventLabel(initiator)}" on ${getElementSignature(initiator.target)}`
+        : `"${getEventLabel(initiator)}"`;
       console.group(label);
       currentInitiator = initiator;
     }
@@ -226,8 +226,36 @@ const formatSideEffectLine = (e, prefix) => {
     // chain[0] is the root event, already shown as the group label — skip it.
     // chain includes the direct parent (e.detail.event) as its last element.
     for (const chainedEvent of chain.slice(1)) {
-      parts.push(chainedEvent.type);
+      parts.push(getEventLabel(chainedEvent));
     }
   }
   return parts.join(" -> ");
+};
+
+const getEventLabel = (e) => {
+  if (e.type === "mousedown" || e.type === "click") {
+    if (e.button !== 0) {
+      return `${e.type}:right_button`;
+    }
+    return e.type;
+  }
+  if (e.type === "keydown") {
+    const key = e.key === " " ? "space" : e.key.toLowerCase();
+    const modifiers = [];
+    if (e.ctrlKey) {
+      modifiers.push("ctrl");
+    }
+    if (e.metaKey) {
+      modifiers.push("meta");
+    }
+    if (e.altKey) {
+      modifiers.push("alt");
+    }
+    if (e.shiftKey) {
+      modifiers.push("shift");
+    }
+    modifiers.push(key);
+    return `keydown:${modifiers.join("+")}`;
+  }
+  return e.type;
 };

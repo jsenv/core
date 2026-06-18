@@ -27,7 +27,7 @@ export const markAutofocusRestoreOnClose = (containerEl) => {
 // as a result document.activeElement is not up-to-date (can be document.body for instance)
 export const getFocusedBeforeTransfer = (e) => {
   const initiator = e.detail.eventChain[0];
-  if (initiator.type === "mousedown" && initiator.defaultPrevented) {
+  if (initiator.type === "mousedown") {
     // if we we had let browser give focus, the element would be the one that would be focused
     return initiator.currentTarget;
   }
@@ -38,7 +38,7 @@ export const getFocusedBeforeTransfer = (e) => {
   return document.activeElement;
 };
 
-export const transferFocus = (containerEl, debugFocus, e) => {
+export const transferFocus = (containerEl, debugFocus, e, fallback) => {
   let target;
   let reason;
   if (containerEl.hasAttribute("navi-autofocus-restore")) {
@@ -76,6 +76,11 @@ export const transferFocus = (containerEl, debugFocus, e) => {
     if (naviAutoFocusFallback) {
       reason = "navi-autofocus fallback";
       target = naviAutoFocusFallback;
+    }
+  }
+  if (!target) {
+    if (fallback) {
+      target = fallback;
     }
   }
   if (!target) {

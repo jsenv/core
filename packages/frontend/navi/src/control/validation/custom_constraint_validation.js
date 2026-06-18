@@ -343,11 +343,9 @@ const checkConstraints = ({
   fromRequestAction,
 } = {}) => {
   let elementToValidate = event.currentTarget;
-  if (!elementToValidate.__validationInterface__) {
-    const controlHost = findControlHost(requester);
-    if (controlHost) {
-      elementToValidate = controlHost;
-    }
+  const controlHost = findControlHost(elementToValidate);
+  if (controlHost) {
+    elementToValidate = controlHost;
   }
 
   let validationInterface = elementToValidate.__validationInterface__;

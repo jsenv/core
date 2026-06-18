@@ -69,7 +69,7 @@
             Email
             <Input type="email" name="email" placeholder="Enter email" />
           </Field>
-          <Field flex alignY="center">
+          <Field ownLabel flex alignY="center">
             <Label style={labelDotted}>Username</Label>
             <Input type="text" name="username" placeholder="Enter username" />
           </Field>
@@ -79,11 +79,11 @@
       const VerticalDemo = () => (
         <Box flex="y" spacing="s" id="vertical">
           <h2 style={{ margin: 0 }}>Vertical (label above)</h2>
-          <Field vertical>
+          <Field ownLabel vertical>
             <Label style={labelDotted}>Username</Label>
             <Input type="text" name="username_v" placeholder="Enter username" />
           </Field>
-          <Field vertical>
+          <Field ownLabel vertical>
             <Label style={labelDotted}>Email</Label>
             <Input type="email" name="email_v" placeholder="Enter email" />
           </Field>
@@ -96,7 +96,7 @@
           <p style={{ margin: 0, fontSize: "0.85em", color: "#555" }}>
             The label dims automatically when the input is disabled.
           </p>
-          <Field flex alignY="center">
+          <Field ownLabel flex alignY="center">
             <Label style={labelDotted}>Username</Label>
             <Input
               type="text"
@@ -114,7 +114,7 @@
           <p style={{ margin: 0, fontSize: "0.85em", color: "#555" }}>
             The label dims automatically when the input is read-only.
           </p>
-          <Field flex alignY="center" spacing="s">
+          <Field ownLabel flex alignY="center" spacing="s">
             <Label style={labelDotted}>Username</Label>
             <Input
               type="text"
@@ -202,16 +202,11 @@
       );
 
       const FieldRow = ({ children, ...props }) => (
-        <Field flex alignY="center" {...props}>
+        <Field ownLabel flex alignY="center" {...props}>
           <Label expandX style={labelDotted} maxLines={1} noWrap>
             {children}
           </Label>
-          <Input
-            type="checkbox"
-            appearance="toggle"
-            selfAlignX="end"
-            size="xs"
-          />
+          <Input type="checkbox" switch selfAlignX="end" size="xs" />
         </Field>
       );
 
