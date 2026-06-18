@@ -11,6 +11,7 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
+      import { useState } from "preact/hooks";
       import {
         Box,
         Button,
@@ -192,6 +193,7 @@
       const PickerTextExternalDemo = () => {
         const [entries, pushEntry, clearEntries] = useCallLog();
         const pickerId = "picker-text-external-picker";
+        const [label, setLabel] = useState("a name");
 
         return (
           <Box flex="y" spacing="m" alignX="start">
@@ -206,6 +208,7 @@
                 id={pickerId}
                 name="label"
                 placeholder="Saisir un label"
+                value={label}
                 uiAction={(v) => {
                   pushEntry("uiAction (picker)", v);
                 }}
@@ -219,14 +222,16 @@
                     <Input
                       name="label"
                       placeholder="Texte libre"
+                      value={label}
                       uiAction={(v) => {
+                        setLabel(v);
                         pushEntry("uiAction (input)", v);
                       }}
                     />
                   </fieldset>
                   <Box flex="x" spacing="s">
-                    <Button command="--navi-send">Confirmer</Button>
                     <Button command="--navi-cancel">Annuler</Button>
+                    <Button command="--navi-send">Confirmer</Button>
                   </Box>
                 </Box>
               </Picker>
@@ -694,7 +699,7 @@
                 <Box flex="y" spacing="s" alignX="start">
                   <fieldset>
                     <legend>firstName</legend>
-                    <Input type="text" name="firstName" />
+                    <Input type="text" name="firstName" defaultValue="dam" />
                   </fieldset>
                   <fieldset>
                     <legend>lastName</legend>
