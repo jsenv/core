@@ -199,7 +199,7 @@ export const dispatchRequestAction = (element, detail) => {
   );
   return allowed;
 };
-expo rt const onRequestAction = (
+export const onRequestAction = (
   requestActionCustomEvent,
   {
     method = "rerun", // not used for now
