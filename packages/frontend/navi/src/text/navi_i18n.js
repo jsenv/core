@@ -473,67 +473,67 @@ naviI18n.addAll({
     fr: "Ce champ ne doit pas contenir plusieurs espaces consécutifs.",
     en: "This field must not contain consecutive spaces.",
   },
-  "constraint.min_lower_letter.singular.password": {
+  "constraint.min_lower_letter.password.singular": {
     fr: "Ce mot de passe doit contenir au moins une lettre minuscule.",
     en: "This password must contain at least one lowercase letter.",
   },
-  "constraint.min_lower_letter.singular.default": {
-    fr: "Ce champ doit contenir au moins une lettre minuscule.",
-    en: "This field must contain at least one lowercase letter.",
-  },
-  "constraint.min_lower_letter.plural.password": {
+  "constraint.min_lower_letter.password.plural": {
     fr: "Ce mot de passe doit contenir au moins [min] lettres minuscules.",
     en: "This password must contain at least [min] lowercase letters.",
   },
-  "constraint.min_lower_letter.plural.default": {
+  "constraint.min_lower_letter.default.singular": {
+    fr: "Ce champ doit contenir au moins une lettre minuscule.",
+    en: "This field must contain at least one lowercase letter.",
+  },
+  "constraint.min_lower_letter.default.plural": {
     fr: "Ce champ doit contenir au moins [min] lettres minuscules.",
     en: "This field must contain at least [min] lowercase letters.",
   },
-  "constraint.min_upper_letter.singular.password": {
+  "constraint.min_upper_letter.password.singular": {
     fr: "Ce mot de passe doit contenir au moins une lettre majuscule.",
     en: "This password must contain at least one uppercase letter.",
   },
-  "constraint.min_upper_letter.singular.default": {
-    fr: "Ce champ doit contenir au moins une lettre majuscule.",
-    en: "This field must contain at least one uppercase letter.",
-  },
-  "constraint.min_upper_letter.plural.password": {
+  "constraint.min_upper_letter.password.plural": {
     fr: "Ce mot de passe doit contenir au moins [min] lettres majuscules.",
     en: "This password must contain at least [min] uppercase letters.",
   },
-  "constraint.min_upper_letter.plural.default": {
+  "constraint.min_upper_letter.default.singular": {
+    fr: "Ce champ doit contenir au moins une lettre majuscule.",
+    en: "This field must contain at least one uppercase letter.",
+  },
+  "constraint.min_upper_letter.default.plural": {
     fr: "Ce champ doit contenir au moins [min] lettres majuscules.",
     en: "This field must contain at least [min] uppercase letters.",
   },
-  "constraint.min_digit.singular.password": {
+  "constraint.min_digit.password.singular": {
     fr: "Ce mot de passe doit contenir au moins un chiffre.",
     en: "This password must contain at least one digit.",
   },
-  "constraint.min_digit.singular.default": {
-    fr: "Ce champ doit contenir au moins un chiffre.",
-    en: "This field must contain at least one digit.",
-  },
-  "constraint.min_digit.plural.password": {
+  "constraint.min_digit.password.plural": {
     fr: "Ce mot de passe doit contenir au moins [min] chiffres.",
     en: "This password must contain at least [min] digits.",
   },
-  "constraint.min_digit.plural.default": {
+  "constraint.min_digit.default.singular": {
+    fr: "Ce champ doit contenir au moins un chiffre.",
+    en: "This field must contain at least one digit.",
+  },
+  "constraint.min_digit.default.plural": {
     fr: "Ce champ doit contenir au moins [min] chiffres.",
     en: "This field must contain at least [min] digits.",
   },
-  "constraint.min_special_char.singular.password": {
+  "constraint.min_special_char.password.singular": {
     fr: "Ce mot de passe doit contenir au moins un caractère spécial. ([charset])",
     en: "This password must contain at least one special character. ([charset])",
   },
-  "constraint.min_special_char.singular.default": {
-    fr: "Ce champ doit contenir au moins un caractère spécial. ([charset])",
-    en: "This field must contain at least one special character. ([charset])",
-  },
-  "constraint.min_special_char.plural.password": {
+  "constraint.min_special_char.password.plural": {
     fr: "Ce mot de passe doit contenir au moins [min] caractères spéciaux. ([charset])",
     en: "This password must contain at least [min] special characters. ([charset])",
   },
-  "constraint.min_special_char.plural.default": {
+  "constraint.min_special_char.default.singular": {
+    fr: "Ce champ doit contenir au moins un caractère spécial. ([charset])",
+    en: "This field must contain at least one special character. ([charset])",
+  },
+  "constraint.min_special_char.default.plural": {
     fr: "Ce champ doit contenir au moins [min] caractères spéciaux. ([charset])",
     en: "This field must contain at least [min] special characters. ([charset])",
   },

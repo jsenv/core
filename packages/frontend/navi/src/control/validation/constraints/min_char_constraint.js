@@ -29,16 +29,16 @@ export const MIN_LOWER_LETTER_CONSTRAINT = {
     if (min === 1) {
       const type = field.props.type;
       if (type === "password") {
-        return naviI18n("constraint.min_lower_letter.singular.password");
+        return naviI18n("constraint.min_lower_letter.password.singular");
       }
-      return naviI18n(`constraint.min_lower_letter.singular.default`);
+      return naviI18n("constraint.min_lower_letter.default.singular");
     }
     const key = (() => {
       const type = field.props.type;
       if (type === "password") {
-        return "constraint.min_lower_letter.plural.password";
+        return "constraint.min_lower_letter.password.plural";
       }
-      return "constraint.min_lower_letter.plural.default";
+      return "constraint.min_lower_letter.default.plural";
     })();
     return naviI18n(key, {
       min: String(min),
@@ -72,17 +72,14 @@ export const MIN_UPPER_LETTER_CONSTRAINT = {
       return null;
     }
 
+    const type = field.props.type;
+    const context = type === "password" ? "password" : "default";
     if (min === 1) {
-      return naviI18n(
-        `constraint.min_upper_letter.singular.${fieldTypeSuffix(field)}`,
-      );
+      return naviI18n(`constraint.min_upper_letter.${context}.singular`);
     }
-    return naviI18n(
-      `constraint.min_upper_letter.plural.${fieldTypeSuffix(field)}`,
-      {
-        min: String(min),
-      },
-    );
+    return naviI18n(`constraint.min_upper_letter.${context}.plural`, {
+      min: String(min),
+    });
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("data-min-upper-letter");
@@ -112,12 +109,12 @@ export const MIN_DIGIT_CONSTRAINT = {
       return null;
     }
 
+    const type = field.props.type;
+    const context = type === "password" ? "password" : "default";
     if (min === 1) {
-      return naviI18n(
-        `constraint.min_digit.singular.${fieldTypeSuffix(field)}`,
-      );
+      return naviI18n(`constraint.min_digit.${context}.singular`);
     }
-    return naviI18n(`constraint.min_digit.plural.${fieldTypeSuffix(field)}`, {
+    return naviI18n(`constraint.min_digit.${context}.plural`, {
       min: String(min),
     });
   },
@@ -154,16 +151,17 @@ export const MIN_SPECIAL_CHAR_CONSTRAINT = {
       return null;
     }
 
+    const type = field.props.type;
+    const context = type === "password" ? "password" : "default";
     if (min === 1) {
-      return naviI18n(
-        `constraint.min_special_char.singular.${fieldTypeSuffix(field)}`,
-        { charset: specialCharset },
-      );
+      return naviI18n(`constraint.min_special_char.${context}.singular`, {
+        charset: specialCharset,
+      });
     }
-    return naviI18n(
-      `constraint.min_special_char.plural.${fieldTypeSuffix(field)}`,
-      { min: String(min), charset: specialCharset },
-    );
+    return naviI18n(`constraint.min_special_char.${context}.plural`, {
+      min: String(min),
+      charset: specialCharset,
+    });
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("data-special-charset");
