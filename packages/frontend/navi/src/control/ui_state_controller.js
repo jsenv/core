@@ -703,7 +703,7 @@ export const useUIGroupStateController = (
         : undefined;
   const childUIStateControllerArrayRef = useRef([]);
   const childUIStateControllerArray = childUIStateControllerArrayRef.current;
-  const uiStateControllerRef = useRef();
+  const controllerRef = useRef();
   // Tracks children this controller rejected and delegated upward (bubble-up
   // registration). Used to forward onChildInteraction and unregisterChild.
   const delegatedChildrenRef = useRef(new Map());
@@ -719,12 +719,12 @@ export const useUIGroupStateController = (
     notifyParentAboutChildUnmount,
   ] = useParentControllerNotifiers(
     parentUIStateController,
-    uiStateControllerRef,
+    controllerRef,
     controlType,
     debugUIGroup,
   );
   useLayoutEffect(() => {
-    const controller = uiStateControllerRef.current;
+    const controller = controllerRef.current;
     if (id) {
       controllersById.set(id, controller);
     }
@@ -759,19 +759,19 @@ export const useUIGroupStateController = (
       e,
       `${controlType}.getUIState -> ${JSON.stringify(groupUIState)}`,
     );
-    const uiStateController = uiStateControllerRef.current;
+    const groupUIStateController = controllerRef.current;
     if (notifyExternal === true) {
       applyState(groupUIState, e);
     } else if (notifyExternal === "silent") {
       // Silent mount/unmount sync: update state without triggering uiAction/command,
       // but still notify parent (e.g. facade) so it can track the current child state.
-      uiStateController.syncInternalState(groupUIState, e);
+      groupUIStateController.syncInternalState(groupUIState, e);
       notifyParentAboutChildInteraction(e, {
         stateChanged: true,
         silent: true,
       });
     } else {
-      uiStateController.syncInternalState(groupUIState, e);
+      groupUIStateController.syncInternalState(groupUIState, e);
     }
   };
 
@@ -779,9 +779,9 @@ export const useUIGroupStateController = (
   // and notifies the parent. Called both from onChange (after child interaction) and from
   // setUIState (after cascading to children).
   const applyState = (newUIState, e, { internalBehavior = false } = {}) => {
-    const uiStateController = uiStateControllerRef.current;
-    const currentUIState = uiStateController.uiState;
-    uiStateController.uiState = newUIState;
+    const groupUIStateController = controllerRef.current;
+    const currentUIState = groupUIStateController.uiState;
+    groupUIStateController.uiState = newUIState;
     uiStateSignal.value = newUIState;
     debugUIGroup(
       e,
@@ -792,7 +792,7 @@ export const useUIGroupStateController = (
     // command like --navi-send closes the picker, the picker input already
     // holds the new value.
     notifyParentAboutChildInteraction(e, { stateChanged: true });
-    uiStateController.onInteraction(e, {
+    groupUIStateController.onInteraction(e, {
       skipCommand: internalBehavior,
     });
     const el = ref.current;
@@ -814,14 +814,14 @@ export const useUIGroupStateController = (
     }
   });
 
-  const existingUIStateController = uiStateControllerRef.current;
-  if (existingUIStateController) {
-    existingUIStateController.id = id;
-    existingUIStateController.name = name;
-    existingUIStateController.value = value;
-    existingUIStateController.props = props;
+  const existingController = controllerRef.current;
+  if (existingController) {
+    existingController.id = id;
+    existingController.name = name;
+    existingController.value = value;
+    existingController.props = props;
     uiActionRef.current = uiAction;
-    return existingUIStateController;
+    return existingController;
   }
   debugUIGroup(
     `Creating "${controlType}" ui state controller (monitoring some descendants ui state(s))"`,
@@ -838,7 +838,7 @@ export const useUIGroupStateController = (
     }
     return true;
   };
-  const uiStateController = {
+  const groupUIStateController = {
     controlType,
     id,
     name,
@@ -921,18 +921,18 @@ export const useUIGroupStateController = (
     },
     // Called on mount/unmount/render-batch: updates state silently with no external reactions.
     syncInternalState: (newUIState) => {
-      const currentUIState = uiStateController.uiState;
+      const currentUIState = groupUIStateController.uiState;
       if (newUIState === currentUIState) {
         return;
       }
-      uiStateController.uiState = newUIState;
+      groupUIStateController.uiState = newUIState;
       uiStateSignal.value = newUIState;
       publishUIState(newUIState);
     },
     // Called when a child interaction does NOT change the aggregated value (e.g. radio re-clicked).
     // Fires uiAction + command without touching state or the action pipeline.
     onInteraction: (e, { skipCommand } = {}) => {
-      const currentUIState = uiStateController.uiState;
+      const currentUIState = groupUIStateController.uiState;
       const uiAction = uiActionRef.current;
       uiAction?.(currentUIState, e);
       uiActionInternal?.(currentUIState, e);
@@ -1000,7 +1000,7 @@ export const useUIGroupStateController = (
         onChange(e, { notifyExternal: true });
       } else {
         // Value unchanged (e.g. radio re-clicked): fire uiAction + command only.
-        uiStateController.onInteraction(e);
+        groupUIStateController.onInteraction(e);
       }
     },
     unregisterChild: (childUIStateController) => {
@@ -1088,13 +1088,13 @@ export const useUIGroupStateController = (
     },
     subscribe: subscribeUIState,
   };
-  uiStateControllerRef.current = uiStateController;
+  controllerRef.current = groupUIStateController;
   if (id) {
-    controllersById.set(id, uiStateController);
+    controllersById.set(id, groupUIStateController);
   }
-  const controlValidity = createControlValidity(uiStateController);
-  uiStateController.controlValidity = controlValidity;
-  return uiStateController;
+  const controlValidity = createControlValidity(groupUIStateController);
+  groupUIStateController.controlValidity = controlValidity;
+  return groupUIStateController;
 };
 // Stable reference for an empty selection so the action always receives an
 // array (never undefined) and callers don't get a new reference each render.
