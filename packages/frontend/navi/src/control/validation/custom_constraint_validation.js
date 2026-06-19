@@ -66,7 +66,6 @@ import {
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 import { findControlHost, findControlRoot } from "../control_dom.js";
 import { findControlProxyTarget } from "../control_proxy.js";
-import { dispatchRequestSetUIState } from "../ui_state_dom.js";
 import { openCallout } from "./callout/callout.js";
 import { getConstraintMessage } from "./constraint_message.js";
 import {
@@ -170,61 +169,6 @@ export const onRequestInteraction = (
   return true;
 };
 
-export const dispatchRequestCommit = (element, detail) => {
-  if (!detail.event) {
-    throw new TypeError("dispatchRequestCommit requires an event");
-  }
-  const controlHost = findControlHost(element) || element;
-  detail = {
-    requester: element,
-    ...detail,
-  };
-  const allowed = dispatchInternalCustomEvent(
-    controlHost,
-    "navi_request_commit",
-    detail,
-  );
-  return allowed;
-};
-export const onRequestCommit = (
-  requestCommitEvent,
-  { debugUIState = () => {} } = {},
-) => {
-  const { event, requester = event.target } = requestCommitEvent.detail;
-  const elementHandlingCommit = requestCommitEvent.currentTarget;
-  // Update: set current UI state before validating.
-  // Callers of dispatchRequestCommit are responsible for calling
-  // dispatchRequestSetUIState first (e.g. --navi-update before --navi-define).
-  // If uiState is not yet in detail, resolve and persist it now.
-  if (!Object.hasOwn(requestCommitEvent.detail, "uiState")) {
-    const commitTarget =
-      findControlProxyTarget(elementHandlingCommit) || elementHandlingCommit;
-    let resolvedUIState;
-    dispatchInternalCustomEvent(commitTarget, "navi_get_ui_state", {
-      requester,
-      respondWith: (v) => {
-        resolvedUIState = v;
-      },
-    });
-    dispatchRequestSetUIState(commitTarget, resolvedUIState, {
-      event: requestCommitEvent,
-    });
-    requestCommitEvent.detail.uiState = resolvedUIState;
-  }
-  const { committed } = _attemptCommit(elementHandlingCommit, {
-    requestCustomEvent: requestCommitEvent,
-    originalEvent: event,
-    requester,
-    showCallout: true,
-    debugUIState,
-  });
-
-  if (!committed) {
-    requestCommitEvent.preventDefault();
-    return false;
-  }
-  return true;
-};
 export const dispatchRequestAction = (element, detail) => {
   if (!detail.event) {
     throw new TypeError("dispatchRequestAction requires an event");
@@ -255,7 +199,7 @@ export const dispatchRequestAction = (element, detail) => {
   );
   return allowed;
 };
-export const onRequestAction = (
+expo rt const onRequestAction = (
   requestActionCustomEvent,
   {
     method = "rerun", // not used for now
@@ -291,9 +235,11 @@ export const onRequestAction = (
     );
   }
 
-  // Phase 1: update — resolve current uiState and persist it before validating.
+  // Phase 1: resolve uiState.
   // Groups already set their state before dispatching the action (via navi_ui_state_change),
-  // so uiState is already in detail. For leaf inputs we resolve and set it now.
+  // so uiState is already in detail. For leaf inputs, callers must call
+  // dispatchRequestSetUIState before dispatchRequestAction. Here we only read the
+  // current value if it was not explicitly provided.
   if (!Object.hasOwn(requestActionCustomEvent.detail, "uiState")) {
     const commitTarget =
       findControlProxyTarget(elementHandlingAction) || elementHandlingAction;
@@ -307,9 +253,6 @@ export const onRequestAction = (
         );
         resolvedUIState = v;
       },
-    });
-    dispatchRequestSetUIState(commitTarget, resolvedUIState, {
-      event: requestActionCustomEvent,
     });
     requestActionCustomEvent.detail.uiState = resolvedUIState;
   }
@@ -383,7 +326,6 @@ export const onRequestAction = (
 // Validates commit: checks constraints and returns whether the commit is allowed.
 // uiState must already be resolved and set in requestCustomEvent.detail.uiState
 // by the caller before calling _attemptCommit.
-// Used by both onRequestCommit and onRequestAction so the commit phase is shared.
 // Returns { committed: boolean, uiState }.
 const _attemptCommit = (
   handlingElement,

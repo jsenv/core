@@ -31,7 +31,6 @@ import {
   dispatchRequestAction,
   dispatchRequestInteraction,
   onRequestAction,
-  onRequestCommit,
   onRequestInteraction,
 } from "@jsenv/navi/src/control/validation/custom_constraint_validation.js";
 import {
@@ -960,7 +959,6 @@ const useInteractiveProps = (
       onnavi_set_ui_state: controlHostProps.onnavi_set_ui_state,
       onnavi_request_check: controlHostProps.onnavi_request_check,
       onnavi_request_uncheck: controlHostProps.onnavi_request_uncheck,
-      onnavi_request_commit: controlHostProps.onnavi_request_commit,
     });
 
     const { statePropName } = uiStateController;
@@ -1075,9 +1073,6 @@ const useInteractiveProps = (
           }
         }
         onCancel?.(e, reason);
-      },
-      onnavi_request_commit: (e) => {
-        onRequestCommit(e, { debugUIState });
       },
       onnavi_request_action: (e) => {
         if (!e.detail.action) {
