@@ -66,7 +66,10 @@ import {
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 import { findControlHost, findControlRoot } from "../control_dom.js";
 import { findControlProxyTarget } from "../control_proxy.js";
-import { dispatchRequestSetUIState } from "../ui_state_dom.js";
+import {
+  dispatchRequestSetUIState,
+  getUIStateFromElement,
+} from "../ui_state_dom.js";
 import { openCallout } from "./callout/callout.js";
 import { getConstraintMessage } from "./constraint_message.js";
 import {
@@ -197,45 +200,19 @@ export const onRequestCommit = (
   } = requestCommitEvent.detail;
   const elementHandlingCommit = requestCommitEvent.currentTarget;
 
-  const requestStatus = { canProceed: true, preventReason: undefined };
-  if (requestStatus.canProceed) {
-    checkEvent(requestStatus, event);
-  }
-  if (requestStatus.canProceed) {
-    const failingInterface = checkConstraints({
-      event: requestCommitEvent,
-      requester,
-      fromRequestAction: true,
-    });
-    if (failingInterface) {
-      Object.assign(requestStatus, {
-        canProceed: false,
-        preventReason: failingInterface.failedConstraintInfo
-          ? `failing constraint "${failingInterface.failedConstraintInfo.name}"`
-          : "invalid (no constraint info)",
-      });
-      failingInterface.reportValidity({
-        event: requestCommitEvent,
-        requester,
-        debug: debugAction,
-      });
-    }
-  }
-  if (!requestStatus.canProceed) {
+  const committed = _attemptCommit(elementHandlingCommit, {
+    requestCustomEvent: requestCommitEvent,
+    originalEvent: event,
+    uiState,
+    requester,
+    skipSetUIState: false,
+    showCallout: true,
+    debugAction,
+  });
+  if (!committed) {
     requestCommitEvent.preventDefault();
-    debugAction(
-      requestCommitEvent,
-      `commit prevented (reason: ${requestStatus.preventReason})`,
-    );
     return false;
   }
-  dispatchRequestSetUIState(elementHandlingCommit, uiState, {
-    event: requestCommitEvent,
-  });
-  debugAction(
-    requestCommitEvent,
-    "commit allowed -> dispatchRequestSetUIState",
-  );
   return true;
 };
 export const dispatchRequestAction = (element, detail) => {
@@ -272,9 +249,69 @@ export const onRequestAction = (
   requestActionCustomEvent,
   {
     method = "rerun", // not used for now
+    wantRequesterButtonState = false,
     debugAction = () => {},
   } = {},
 ) => {
+  // Resolve uiState from the element if not already provided (e.g. forwarded by proxy).
+  // This is the "what value are we committing?" question — it belongs here, at the
+  // start of the action pipeline, before validation and execution.
+  if (!Object.hasOwn(requestActionCustomEvent.detail, "uiState")) {
+    let resolvedUIState;
+    dispatchInternalCustomEvent(
+      requestActionCustomEvent.currentTarget,
+      "navi_get_ui_state",
+      {
+        respondWith: (v) => {
+          debugAction(
+            requestActionCustomEvent,
+            `navi_get_ui_state.respondWith(${JSON.stringify(v)})`,
+          );
+          resolvedUIState = v;
+        },
+      },
+    );
+    // If this is a form submit and the requester is a named button, ensure
+    // its value wins over any other button sharing the same name.
+    // Native browser behavior: only the clicked/activated submit button
+    // contributes its name+value to form data.
+    if (wantRequesterButtonState) {
+      const { requester } = requestActionCustomEvent.detail;
+      if (
+        requester &&
+        requester.tagName === "BUTTON" &&
+        requester.name &&
+        requester !== requestActionCustomEvent.currentTarget
+      ) {
+        const requesterUIState = getUIStateFromElement(requester);
+        const requesterValue =
+          requesterUIState !== undefined ? requesterUIState : requester.value;
+        resolvedUIState = {
+          ...resolvedUIState,
+          [requester.name]: requesterValue,
+        };
+      }
+    }
+    requestActionCustomEvent.detail.uiState = resolvedUIState;
+  }
+
+  // If this element is a proxy, forward the action to the underlying control.
+  // The uiState is already resolved above so the target sees the correct value.
+  const naviProxyTarget = findControlProxyTarget(
+    requestActionCustomEvent.currentTarget,
+  );
+  if (naviProxyTarget) {
+    const { uiState: forwardedUIState } = requestActionCustomEvent.detail;
+    debugAction(
+      requestActionCustomEvent,
+      `${getElementSignature(naviProxyTarget)}.dispatchEvent("navi_set_ui_state", ${JSON.stringify(forwardedUIState)})`,
+    );
+    dispatchRequestSetUIState(naviProxyTarget, forwardedUIState, {
+      event: requestActionCustomEvent,
+    });
+    return true;
+  }
+
   const {
     event,
     actionOrigin,
@@ -304,13 +341,101 @@ export const onRequestAction = (
     );
   }
 
+  const customEventDetail = {
+    event: requestActionCustomEvent,
+    requester,
+    uiState,
+    actionOrigin,
+    action,
+    method,
+    meta,
+  };
+
+  // Phase 1: commit — validate constraints and set UI state optimistically.
+  // Only show the callout if this element owns the action. When a leaf control
+  // bubbles up to a parent Form/ControlGroup, the callout will be shown later
+  // when the parent processes its own action.
+  const committed = _attemptCommit(elementHandlingAction, {
+    requestCustomEvent: requestActionCustomEvent,
+    originalEvent: event,
+    uiState,
+    requester,
+    skipSetUIState: requestActionCustomEvent.detail.skipSetUIState,
+    showCallout: elementHandlingAction.hasAttribute("data-action"),
+    debugAction,
+  });
+  if (!committed) {
+    requestActionCustomEvent.preventDefault();
+    debugAction(
+      requestActionCustomEvent,
+      `action prevented (commit failed) -> dispatch navi_action_prevented`,
+    );
+    dispatchInternalCustomEvent(
+      elementHandlingAction,
+      "navi_action_prevented",
+      customEventDetail,
+    );
+    return false;
+  }
+
+  // Phase 2: confirm (optional — future: will become async inside action execution)
+  // NOTE: confirmation must eventually move into action execution because it's
+  // conceptually part of it and will need async support for custom confirm UIs.
+  const effectiveConfirmMessage =
+    confirmMessage ||
+    elementHandlingAction.getAttribute("data-confirm-message");
+  if (effectiveConfirmMessage) {
+    // eslint-disable-next-line no-alert
+    if (!window.confirm(effectiveConfirmMessage)) {
+      requestActionCustomEvent.preventDefault();
+      debugAction(
+        requestActionCustomEvent,
+        `action prevented (user cancelled on confirm message) -> dispatch navi_action_prevented`,
+      );
+      dispatchInternalCustomEvent(
+        elementHandlingAction,
+        "navi_action_prevented",
+        customEventDetail,
+      );
+      return false;
+    }
+  }
+
+  // Phase 3: execute
+  debugAction(
+    requestActionCustomEvent,
+    `${DEFAULT_CONSTRAINT_SET.size} constraints verified${elementHandlingAction.hasAttribute("data-action") ? ` -> execute action ${action.callSource}` : " -> no own action, nothing to execute"}`,
+  );
+  dispatchInternalCustomEvent(
+    elementHandlingAction,
+    "navi_action_allowed",
+    customEventDetail,
+  );
+  return true;
+};
+
+// Validates constraints and, if valid, optimistically sets the UI state.
+// Used by both onRequestCommit and onRequestAction so the commit phase is shared.
+// Returns true if commit succeeded, false if validation failed.
+const _attemptCommit = (
+  handlingElement,
+  {
+    requestCustomEvent,
+    originalEvent,
+    uiState,
+    requester,
+    skipSetUIState,
+    showCallout,
+    debugAction,
+  },
+) => {
   const requestStatus = { canProceed: true, preventReason: undefined };
   if (requestStatus.canProceed) {
-    checkEvent(requestStatus, event);
+    checkEvent(requestStatus, originalEvent);
   }
   if (requestStatus.canProceed) {
     const failingInterface = checkConstraints({
-      event: requestActionCustomEvent,
+      event: requestCustomEvent,
       requester,
       fromRequestAction: true,
     });
@@ -321,72 +446,30 @@ export const onRequestAction = (
           ? `failing constraint "${failingInterface.failedConstraintInfo.name}"`
           : "invalid (no constraint info)",
       });
-      // Only show the callout if the element handling the action has its own
-      // action prop. If it belongs to a parent Form/ControlGroup, the callout
-      // will be shown when the parent tries to execute its own action.
-      if (elementHandlingAction.hasAttribute("data-action")) {
+      if (showCallout) {
         failingInterface.reportValidity({
-          event: requestActionCustomEvent,
+          event: requestCustomEvent,
           requester,
           debug: debugAction,
         });
       }
     }
   }
-  if (requestStatus.canProceed) {
-    // NOTE for future: confirmation must move to to action execution (be part of it when set)
-    // because it's actually once everything is valid that we perform this so it's conceptually part of the action execution
-    // also because in order to allow people to put their own ui it will becomes async
-    // so must be inside action execution code path
-    const effectiveConfirmMessage =
-      confirmMessage ||
-      elementHandlingAction.getAttribute("data-confirm-message");
-    if (effectiveConfirmMessage) {
-      // eslint-disable-next-line no-alert
-      if (!window.confirm(effectiveConfirmMessage)) {
-        Object.assign(requestStatus, {
-          canProceed: false,
-          preventReason: "user cancelled on confirm message",
-        });
-      }
-    }
-  }
-
-  const customEventDetail = {
-    event: requestActionCustomEvent,
-    requester,
-    uiState,
-    actionOrigin,
-    action,
-    method,
-    meta,
-  };
   if (!requestStatus.canProceed) {
-    requestActionCustomEvent.preventDefault();
     debugAction(
-      requestActionCustomEvent,
-      `action prevented (reason: ${requestStatus.preventReason}) -> dispatch navi_action_prevented`,
-    );
-    dispatchInternalCustomEvent(
-      elementHandlingAction,
-      "navi_action_prevented",
-      customEventDetail,
+      requestCustomEvent,
+      `commit prevented (reason: ${requestStatus.preventReason})`,
     );
     return false;
   }
-  debugAction(
-    requestActionCustomEvent,
-    `${DEFAULT_CONSTRAINT_SET.size} constraints verified${elementHandlingAction.hasAttribute("data-action") ? ` -> execute action ${action.callSource}` : " -> no own action, nothing to execute"}`,
-  );
-  if (!requestActionCustomEvent.detail.skipSetUIState) {
-    dispatchRequestSetUIState(elementHandlingAction, uiState, {
-      event: requestActionCustomEvent,
+  if (!skipSetUIState) {
+    dispatchRequestSetUIState(handlingElement, uiState, {
+      event: requestCustomEvent,
     });
   }
-  dispatchInternalCustomEvent(
-    elementHandlingAction,
-    "navi_action_allowed",
-    customEventDetail,
+  debugAction(
+    requestCustomEvent,
+    "commit allowed -> dispatchRequestSetUIState",
   );
   return true;
 };

@@ -12,11 +12,7 @@
  *    a debounced action. The request-action event chain handles the timing centrally
  *    rather than each component having to manage its own debounce logic.
  */
-import {
-  dispatchInternalCustomEvent,
-  findFocusDelegateTarget,
-  getElementSignature,
-} from "@jsenv/dom";
+import { findFocusDelegateTarget, getElementSignature } from "@jsenv/dom";
 import {
   useCallback,
   useContext,
@@ -73,7 +69,6 @@ import {
 import {
   dispatchRequestResetUIState,
   dispatchRequestSetUIState,
-  getUIStateFromElement,
 } from "./ui_state_dom.js";
 import { useConstraintMessages } from "./validation/hooks/use_constraint_messages.js";
 import { useConstraints } from "./validation/hooks/use_constraints.js";
@@ -1055,69 +1050,21 @@ const useInteractiveProps = (
         }
         onCancel?.(e, reason);
       },
-      onnavi_request_action: (e) => {
-        let uiState;
-        if (Object.hasOwn(e.detail, "uiState")) {
-          // uiState was forwarded by a proxy — use it directly to avoid
-          // re-computing from the element's own state (which may already reflect
-          // the optimistic update and return undefined for radio)
-          uiState = e.detail.uiState;
-        } else {
-          dispatchInternalCustomEvent(e.currentTarget, "navi_get_ui_state", {
-            respondWith: (v) => {
-              debugAction(
-                e,
-                `navi_get_ui_state.respondWith(${JSON.stringify(v)})`,
-              );
-              uiState = v;
-            },
-          });
-          // If this is a form submit and the requester is a named button, ensure
-          // its value wins over any other button sharing the same name.
-          // Native browser behavior: only the clicked/activated submit button
-          // contributes its name+value to form data.
-          const { requester } = e.detail;
-          if (
-            uiStateController.wantRequesterButtonState &&
-            requester.tagName === "BUTTON" &&
-            requester.name &&
-            requester !== e.currentTarget
-          ) {
-            const requesterUIState = getUIStateFromElement(requester);
-            const requesterValue =
-              requesterUIState !== undefined
-                ? requesterUIState
-                : requester.value;
-            uiState = { ...uiState, [requester.name]: requesterValue };
-          }
-          e.detail.uiState = uiState;
-        }
-        const naviProxyTarget = findControlProxyTarget(e.currentTarget);
-        if (naviProxyTarget) {
-          // Apply the proxy's desired uiState optimistically before dispatching so
-          // the target's UI updates immediately, then forward the action.
-          // uiState is included explicitly so the target's onnavi_request_action
-          // can detect it via Object.hasOwn and skip re-computing from its own
-          // navi_request_ui_state (which would return undefined for an already-set radio).
-          debugAction(
-            e,
-            `${getElementSignature(naviProxyTarget)}.dispatchEvent("navi_set_ui_state", ${JSON.stringify(uiState)})`,
-          );
-          dispatchRequestSetUIState(naviProxyTarget, uiState, { event: e });
-          return;
-        }
-        if (e.detail.action) {
-          // keyboard shortcut give the action and action is irrelevant here, the kayboard shortcut must win
-        } else {
-          e.detail.actionOrigin = "action_prop";
-          e.detail.action = boundAction;
-        }
-        onRequestAction(e, { debugAction });
-      },
-      onnavi_action_prevented: onActionPrevented,
       onnavi_request_commit: (e) => {
         onRequestCommit(e, { debugAction });
       },
+      onnavi_request_action: (e) => {
+        if (!e.detail.action) {
+          // keyboard shortcut may already provide an action — let it win
+          e.detail.actionOrigin = "action_prop";
+          e.detail.action = boundAction;
+        }
+        onRequestAction(e, {
+          wantRequesterButtonState: uiStateController.wantRequesterButtonState,
+          debugAction,
+        });
+      },
+      onnavi_action_prevented: onActionPrevented,
       onnavi_action_allowed: (e) => {
         if (e.detail.action === "auto") {
           // special case for the use case where form.submit is called
