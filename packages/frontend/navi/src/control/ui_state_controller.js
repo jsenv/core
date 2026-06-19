@@ -257,9 +257,16 @@ export const useUIStateController = (
   );
   useLayoutEffect(() => {
     const controller = uiStateControllerRef.current;
+    const el = ref.current;
+    if (el) {
+      el.__uiStateController__ = controller;
+    }
     onUIStateControllerCreated(controller);
     notifyParentAboutChildMount();
     return () => {
+      if (el && el.__uiStateController__ === controller) {
+        delete el.__uiStateController__;
+      }
       notifyParentAboutChildUnmount();
       onUIStateControllerDestroyed(controller);
     };
@@ -700,13 +707,21 @@ export const useUIGroupStateController = (
     debugUIGroup,
   );
   useLayoutEffect(() => {
+    const controller = uiStateControllerRef.current;
     if (id) {
-      controllersById.set(id, uiStateControllerRef.current);
+      controllersById.set(id, controller);
+    }
+    const el = ref.current;
+    if (el) {
+      el.__uiStateController__ = controller;
     }
     notifyParentAboutChildMount();
     return () => {
       if (id) {
         controllersById.delete(id);
+      }
+      if (el && el.__uiStateController__ === controller) {
+        delete el.__uiStateController__;
       }
       notifyParentAboutChildUnmount();
     };
@@ -1157,11 +1172,13 @@ export const useUIFacadeStateController = (props, uiStateController) => {
             `[useUIFacadeStateController] "${childType}"${child.name ? ` name="${child.name}"` : ""} registered as the first child in the picker facade.`,
           );
           firstChildControllerRef.current = child;
+          uiStateController.facadeChild = child;
         }
       },
       unregisterChild: (child) => {
         if (firstChildControllerRef.current === child) {
           firstChildControllerRef.current = null;
+          uiStateController.facadeChild = null;
         }
       },
       onChildInteraction: (child, e, { stateChanged, silent = false }) => {

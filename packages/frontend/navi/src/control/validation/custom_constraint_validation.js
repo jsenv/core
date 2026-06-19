@@ -477,7 +477,37 @@ const DEFAULT_CONSTRAINT_SET = new Set([
   ...NAVI_CONSTRAINT_SET,
 ]);
 
+const collectManagedFromControllerTree = (controller) => {
+  // Picker leaf: linked to its facade's first child via facadeChild.
+  // Traverse to that child's own children (or the child itself for single-input pickers).
+  if (controller.facadeChild) {
+    const child = controller.facadeChild;
+    const groupChildren = child.getChildControllers?.();
+    if (groupChildren && groupChildren.length > 0) {
+      return groupChildren.map((c) => c.elementRef?.current).filter(Boolean);
+    }
+    const el = child.elementRef?.current;
+    return el ? [el] : [];
+  }
+  // Group controller (ControlGroup, Form, radio_group…): return direct child elements.
+  const children = controller.getChildControllers?.();
+  if (children && children.length > 0) {
+    return children.map((c) => c.elementRef?.current).filter(Boolean);
+  }
+  return [];
+};
+
 const getManagedControls = (element) => {
+  // Prefer the controller tree — it already has the right parent/child
+  // relationships established, no DOM event needed.
+  const controller = element.__uiStateController__;
+  if (controller) {
+    const managedFromTree = collectManagedFromControllerTree(controller);
+    if (managedFromTree.length > 0) {
+      return managedFromTree;
+    }
+  }
+  // Fallback: DOM event for elements outside the navi controller system.
   let managedControls;
   dispatchInternalCustomEvent(element, "navi_get_managed_controls", {
     respondWith: (fieldOrFields) => {
