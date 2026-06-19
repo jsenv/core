@@ -429,7 +429,10 @@ export const useControlProps = (
                   : undefined,
               };
             },
-            input: () => {
+            input: (e) => {
+              const value = readControlValue(e.currentTarget);
+              uiStateController.setUIState(value, e);
+
               return {
                 name: "input",
                 type: "requestAction",
