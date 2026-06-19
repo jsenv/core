@@ -354,23 +354,23 @@ export const useUIStateController = (
         inputMode: uiStateController.props.inputMode,
       });
     },
+    onInteraction: (e) => {
+      // Trigger side effects of a user interaction without changing UI state.
+      // Used by controls like buttons whose state doesn't change on interaction
+      // but still need to fire their command and uiAction callbacks.
+      const currentUIState = uiStateController.uiState;
+      uiActionInternal?.(currentUIState, e);
+      uiAction?.(currentUIState, e);
+      const command = uiStateController.props.command;
+      if (command) {
+        const element = uiStateController.elementRef.current;
+        if (element) {
+          triggerNaviCommand(element, command, e);
+        }
+      }
+    },
     setUIState: (prop, e) => {
       const newUIState = uiStateController.getStateFromProp(prop);
-      const triggerCommand = () => {
-        const command = uiStateController.props.command;
-        if (command) {
-          const element = uiStateController.elementRef.current;
-          if (element) {
-            triggerNaviCommand(element, command, e);
-          }
-        }
-      };
-      const onUIAction = () => {
-        uiActionInternal?.(newUIState, e);
-        uiAction?.(newUIState, e);
-        triggerCommand();
-      };
-
       const controllerSig = getElementSignature(e.currentTarget || ref.current);
       if (persists) {
         setNavState(prop);
@@ -379,17 +379,8 @@ export const useUIStateController = (
       const stateIsTheSame = compareTwoJsValues(newUIState, currentUIState);
       if (stateIsTheSame) {
         if (controlType === "button") {
-          if (!isInteractionEvent(e)) {
-            // Programmatic re-render with same value (e.g. state_prop from _checkForUpdates
-            // on a button with a new object reference but same content) — not a user action,
-            // do NOT fire the command or we get an infinite loop.
-            return true;
-          }
-          debugUIState(
-            e,
-            `${controllerSig}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> trigger button action`,
-          );
-          onUIAction();
+          // Button state is fixed — setUIState is a no-op.
+          // Side effects (command, uiAction) are triggered via onInteraction() instead.
           return true;
         }
         debugUIState(
@@ -402,7 +393,7 @@ export const useUIStateController = (
           isInteractionEvent(e)
         ) {
           notifyParentAboutChildInteraction(e, { stateChanged: false });
-          onUIAction();
+          uiStateController.onInteraction(e);
         }
         return false;
       }
@@ -524,7 +515,7 @@ export const useUIStateController = (
           // TODO: select, textarea
         }
       }
-      onUIAction();
+      uiStateController.onInteraction(e);
       return true;
     },
     clearUIState: (e) => {

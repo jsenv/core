@@ -1092,10 +1092,10 @@ const useInteractiveProps = (
           e.detail.action = boundAction;
         }
         if (uiStateController.controlType === "button") {
-          // Persist the button's value so that setUIState triggers the button's command
-          // (e.g. --navi-send) and notifies parent controllers (e.g. ControlGroup).
-          const currentValue = readControlValue(ref.current);
-          dispatchRequestSetUIState(ref.current, currentValue, { event: e });
+          // Trigger the button's command (e.g. --navi-send) and uiAction callbacks.
+          // Buttons don't have mutable UI state, so we call onInteraction directly
+          // instead of going through dispatchRequestSetUIState.
+          uiStateController.onInteraction(e);
         }
         debugAction(e, `executing action ${e.detail.action.callSource}`);
         executeAction(e);
