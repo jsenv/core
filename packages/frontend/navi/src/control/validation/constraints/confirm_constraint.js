@@ -4,15 +4,12 @@ export const CONFIRM_CONSTRAINT = {
   name: "confirm",
   // messageAttribute: "data-confirm-message",
   check: (field) => {
-    const messageAttribute =
-      field.props !== undefined
-        ? field.props["data-confirm"]
-        : field.getAttribute("data-confirm");
-    if (!messageAttribute) {
+    const confirmAttribute = field.props["data-confirm"];
+    if (!confirmAttribute) {
       return "";
     }
     // eslint-disable-next-line no-alert
-    if (window.confirm(messageAttribute)) {
+    if (window.confirm(confirmAttribute)) {
       return "";
     }
     return "";

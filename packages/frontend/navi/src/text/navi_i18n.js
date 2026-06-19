@@ -197,14 +197,6 @@ naviI18n.addAll({
     fr: "Veuillez sélectionner au moins un fichier.",
     en: "Please select at least one file.",
   },
-  "constraint.disabled.password": {
-    fr: "Ce mot de passe est désactivé.",
-    en: "This password is disabled.",
-  },
-  "constraint.disabled.email": {
-    fr: "Cette adresse e-mail est désactivée.",
-    en: "This email address is disabled.",
-  },
   "constraint.disabled.checkbox": {
     fr: "Cette case est désactivée.",
     en: "This checkbox is disabled.",

@@ -6,11 +6,8 @@ export const SAME_AS_CONSTRAINT = {
   name: "same_as",
   messageAttribute: "data-same-as-message",
   check: (field) => {
-    const sameAs =
-      field.props !== undefined
-        ? field.props["data-same-as"]
-        : field.getAttribute("data-same-as");
-    if (!sameAs) {
+    const sameAs = field.props["data-same-as"];
+    if (sameAs === undefined) {
       return null;
     }
     const otherField = document.querySelector(sameAs);
@@ -21,7 +18,7 @@ export const SAME_AS_CONSTRAINT = {
       return null;
     }
     const fieldValue = getConstraintValue(field);
-    const required = field.props?.required ?? field.required;
+    const required = field.props.required;
     if (!fieldValue && !required) {
       return null;
     }
@@ -33,7 +30,8 @@ export const SAME_AS_CONSTRAINT = {
     if (fieldValue === otherFieldValue) {
       return null;
     }
-    const type = field.props?.type ?? field.type ?? "";
+
+    const type = field.props.type;
     if (type === "password") {
       return naviI18n("constraint.same_as.password");
     }

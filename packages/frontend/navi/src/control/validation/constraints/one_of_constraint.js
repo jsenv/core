@@ -6,10 +6,7 @@ export const ONE_OF_CONSTRAINT = {
   name: "one_of",
   messageAttribute: "data-one-of-message",
   check: (field) => {
-    const oneOf =
-      field.props !== undefined
-        ? field.props["data-one-of"]
-        : field.getAttribute("data-one-of");
+    const oneOf = field.props["data-one-of"];
     if (!oneOf) {
       return null;
     }
@@ -35,12 +32,8 @@ export const ONE_OF_CONSTRAINT = {
       "[role='option']:not([hidden])",
     );
     const isNoMatch = visibleOptions.length === 0;
-    const message =
-      field.props?.["data-one-of-message"] ??
-      field.getAttribute?.("data-one-of-message");
-    const noMatchMessage =
-      field.props?.["data-one-of-no-match-message"] ??
-      field.getAttribute?.("data-one-of-no-match-message");
+    const message = field.props["data-one-of-message"];
+    const noMatchMessage = field.props["data-one-of-no-match-message"];
     if (isNoMatch) {
       return noMatchMessage || naviI18n("constraint.one_of.no_match");
     }

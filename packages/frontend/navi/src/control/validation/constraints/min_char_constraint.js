@@ -10,13 +10,11 @@ export const MIN_LOWER_LETTER_CONSTRAINT = {
   messageAttribute: "data-min-lower-letter-message",
   check: (field) => {
     const fieldValue = getConstraintValue(field);
-    const required = field.props?.required ?? field.required;
+    const required = field.props.required;
     if (!fieldValue && !required) {
       return "";
     }
-    const minAttribute =
-      field.props?.["data-min-lower-letter"] ??
-      field.getAttribute?.("data-min-lower-letter");
+    const minAttribute = field.props["data-min-lower-letter"];
     if (!minAttribute) {
       return "";
     }
@@ -50,13 +48,11 @@ export const MIN_UPPER_LETTER_CONSTRAINT = {
   messageAttribute: "data-min-upper-letter-message",
   check: (field) => {
     const fieldValue = getConstraintValue(field);
-    const required = field.props?.required ?? field.required;
+    const required = field.props.required;
     if (!fieldValue && !required) {
       return "";
     }
-    const minAttribute =
-      field.props?.["data-min-upper-letter"] ??
-      field.getAttribute?.("data-min-upper-letter");
+    const minAttribute = field.props["data-min-upper-letter"];
     if (!minAttribute) {
       return "";
     }
@@ -90,12 +86,11 @@ export const MIN_DIGIT_CONSTRAINT = {
   messageAttribute: "data-min-digit-message",
   check: (field) => {
     const fieldValue = getConstraintValue(field);
-    const required = field.props?.required ?? field.required;
+    const required = field.props.required;
     if (!fieldValue && !required) {
       return "";
     }
-    const minAttribute =
-      field.props?.["data-min-digit"] ?? field.getAttribute?.("data-min-digit");
+    const minAttribute = field.props["data-min-digit"];
     if (!minAttribute) {
       return "";
     }
@@ -126,20 +121,16 @@ export const MIN_SPECIAL_CHAR_CONSTRAINT = {
   messageAttribute: "data-min-special-char-message",
   check: (field) => {
     const fieldValue = getConstraintValue(field);
-    const required = field.props?.required ?? field.required;
+    const required = field.props.required;
     if (!fieldValue && !required) {
       return "";
     }
-    const minSpecialChars =
-      field.props?.["data-min-special-char"] ??
-      field.getAttribute?.("data-min-special-char");
+    const minSpecialChars = field.props["data-min-special-char"];
     if (!minSpecialChars) {
       return "";
     }
     const min = parseInt(minSpecialChars, 10);
-    const specialCharset =
-      field.props?.["data-special-charset"] ??
-      field.getAttribute?.("data-special-charset");
+    const specialCharset = field.props["data-special-charset"];
     if (!specialCharset) {
       return "L'attribut data-special-charset doit être défini pour utiliser data-min-special-char.";
     }
