@@ -44,7 +44,7 @@ export const CONTROL_PROP_SET = new Set([
   ...CONTROL_ATTRIBUTE_SET,
 
   "action",
-  "actionInteraction",
+  "actionEvent",
   "actionAfterChange",
   "actionOnMouseDown",
   "actionDebounce",

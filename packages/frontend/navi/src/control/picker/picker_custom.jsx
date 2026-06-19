@@ -197,7 +197,7 @@ const PickerNative = (props) => {
       // Only wait for the native "change" event (dialog close) when the picker has its own
       // action. Without an action, the change event would trigger a noop action cycle and
       // cause spurious state updates (e.g. when closing the color dialog on form submit).
-      actionInteraction={props.action ? "change" : undefined}
+      actionEvent={props.action ? "change" : undefined}
       onnavi_request_open={(e) => {
         onRequestOpen(e);
       }}
@@ -233,7 +233,7 @@ const PickerCustom = (props) => {
   const popupProps = {};
   Object.assign(pickerProps, {
     popupProps,
-    actionInteraction: "custom",
+    actionEvent: "custom",
   });
   // ref
   const popupRef = useRef(null);
