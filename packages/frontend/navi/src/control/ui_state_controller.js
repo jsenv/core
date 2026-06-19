@@ -14,7 +14,6 @@ import { useDebugUIState } from "../navi_debug.jsx";
 import { useInitialValue } from "../state/use_initial_value.js";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import { triggerNaviCommand } from "./commands.js";
-import { findControlProxy } from "./control_proxy.js";
 import { asControlHostValue } from "./control_value.js";
 import { FormContext } from "./form_context.js";
 
@@ -23,6 +22,18 @@ import { FormContext } from "./form_context.js";
 // callers (e.g. selectable_list) to call setUIState by id instead of via the DOM.
 const controllersById = new Map();
 export const getUIStateControllerById = (id) => controllersById.get(id);
+// Find any mounted controller that declared itself as a proxy for the given real-input id.
+const findProxyController = (realInputId) => {
+  if (!realInputId) {
+    return null;
+  }
+  for (const controller of controllersById.values()) {
+    if (controller.props["navi-control-proxy-for"] === realInputId) {
+      return controller;
+    }
+  }
+  return null;
+};
 
 // Registry for non-serializable JS values that cannot be written to DOM attributes as-is.
 // When a value is an object/array, we store it here and write a reference string to the DOM
@@ -446,19 +457,12 @@ export const useUIStateController = (
       // later through a React re-render — visible as e.g. two radios
       // appearing checked at once between the real input update and the
       // next render (radio_sibling_uncheck case).
-      if (el && !controlProxyFor) {
-        const proxyEl = findControlProxy(el);
-        if (proxyEl) {
-          const propValue = uiStateController.getPropFromState(newUIState);
-          proxyEl[statePropName] = propValue;
-          // Also notify the proxy's controller so it can stay in sync with
-          // state changes that originate from the real input (e.g. radio_sibling_uncheck).
-          // Without this the proxy only learns about deselection later via state_prop
-          // (Preact re-render), too late for lastActionValueRef to be updated.
-          dispatchInternalCustomEvent(proxyEl, "navi_ui_state_change", {
-            event: e,
-            value: newUIState,
-          });
+      if (!controlProxyFor) {
+        // Find any mounted controller that declared itself as a proxy for this one.
+        // Communicates directly to the proxy controller — no DOM query needed.
+        const proxyController = findProxyController(id);
+        if (proxyController) {
+          proxyController.setUIState(prop, e);
         }
       }
       if (!isInteractionEvent(e)) {
