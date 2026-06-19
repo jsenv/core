@@ -6,7 +6,7 @@ import {
   SelectionContext,
   useSelectableElement,
 } from "../../control/selection/selection.jsx";
-import { requestCloseValidationMessage } from "../../control/validation/custom_constraint_validation.js";
+import { requestCloseValidityCallout } from "../../control/validation/custom_constraint_validation.js";
 import { EmailSvg } from "../../graphic/icons/email_svg.jsx";
 import {
   LinkAnchorSvg,
@@ -598,7 +598,7 @@ const LinkPlain = (props) => {
         if (preventDefault) {
           e.preventDefault();
         }
-        requestCloseValidationMessage(e.target, e, "click");
+        requestCloseValidityCallout(e.target, e, "click");
         if (readOnly) {
           e.preventDefault();
           return;

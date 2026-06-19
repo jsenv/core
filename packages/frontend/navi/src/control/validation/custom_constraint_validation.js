@@ -438,7 +438,7 @@ export const createControlValidity = (controller) => {
     removeCustomMessage: undefined,
     checkValidity: undefined,
     reportValidity: undefined,
-    validationMessage: null,
+    callout: null,
   };
 
   const [teardown, addTeardown] = createPubSub();
@@ -449,12 +449,12 @@ export const createControlValidity = (controller) => {
     controlValidity.uninstall = uninstall;
   }
 
-  const innerRequestCloseValidationMessage = (event, reason) => {
-    const { validationMessage } = controlValidity;
-    if (!validationMessage) {
+  const innerRequestCloseCallout = (event, reason) => {
+    const { callout } = controlValidity;
+    if (!callout) {
       return false;
     }
-    return validationMessage.requestClose(event, reason);
+    return callout.requestClose(event, reason);
   };
 
   const dynamicConstraintSet = new Set();
@@ -637,7 +637,7 @@ export const createControlValidity = (controller) => {
       }
       const checkValidityCallEvent =
         event || new CustomEvent("checkValidity called with no event");
-      innerRequestCloseValidationMessage(
+      innerRequestCloseCallout(
         checkValidityCallEvent,
         `now_valid (after ${checkValidityCallEvent.type})`,
       );
@@ -662,11 +662,11 @@ export const createControlValidity = (controller) => {
     const activeConstraintInfo =
       interactionFailedConstraintInfo || failedConstraintInfo;
     if (!activeConstraintInfo) {
-      innerRequestCloseValidationMessage(event, "is_valid");
+      innerRequestCloseCallout(event, "is_valid");
       return;
     }
     if (activeConstraintInfo.silent) {
-      innerRequestCloseValidationMessage(event, "invalid_silent");
+      innerRequestCloseCallout(event, "invalid_silent");
       return;
     }
 
@@ -684,9 +684,9 @@ export const createControlValidity = (controller) => {
       );
     }
 
-    if (controlValidity.validationMessage) {
+    if (controlValidity.callout) {
       const { status, closeOnClickOutside } = activeConstraintInfo;
-      controlValidity.validationMessage.update(message, {
+      controlValidity.callout.update(message, {
         status,
         closeOnClickOutside,
       });
@@ -710,10 +710,10 @@ export const createControlValidity = (controller) => {
       focusTarget.focus();
     }
     const removeCloseOnCleanup = addTeardown(() => {
-      innerRequestCloseValidationMessage(new CustomEvent("cleanup"), "cleanup");
+      innerRequestCloseCallout(new CustomEvent("cleanup"), "cleanup");
     });
 
-    controlValidity.validationMessage = openCallout(message, {
+    controlValidity.callout = openCallout(message, {
       anchorElement,
       status: activeConstraintInfo.status,
       closeOnClickOutside: activeConstraintInfo.closeOnClickOutside,
@@ -726,7 +726,7 @@ export const createControlValidity = (controller) => {
             result();
           }
         }
-        controlValidity.validationMessage = null;
+        controlValidity.callout = null;
         if (activeConstraintInfo) {
           activeConstraintInfo.reportStatus = "closed";
         }
@@ -810,7 +810,7 @@ export const createControlValidity = (controller) => {
 
   const resetOnInteraction = (e) => {
     customMessageMap.clear();
-    innerRequestCloseValidationMessage(e, e.type);
+    innerRequestCloseCallout(e, e.type);
     console.log("resetOnInteraction", e.type, e);
     checkValidity({ event: e });
   };
@@ -935,7 +935,7 @@ export const createControlValidity = (controller) => {
   return controlValidity;
 };
 
-export const requestCloseValidationMessage = (
+export const requestCloseValidityCallout = (
   element,
   event = new CustomEvent("programmatic_call"),
   reason,
@@ -945,11 +945,11 @@ export const requestCloseValidationMessage = (
     return false;
   }
   const controlValidity = controller.controlValidity;
-  const { validationMessage } = controlValidity;
-  if (!validationMessage) {
+  const { callout } = controlValidity;
+  if (!callout) {
     return false;
   }
-  return validationMessage.requestClose(event, reason);
+  return callout.requestClose(event, reason);
 };
 
 const pickConstraint = (a, b) => {
