@@ -467,9 +467,10 @@ export const ListItemSelectableResolver = (props) => {
 };
 const ListItemSelectable = (props) => {
   const Next = useNextResolver();
+  const defaultId = useId();
   const {
     index,
-    id,
+    id = defaultId,
     highlight,
     hidden,
     filtered,
