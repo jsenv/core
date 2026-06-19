@@ -277,6 +277,18 @@ export const useUIStateController = (
       return toDomValue(uiStateController, uiState);
     },
     onInteraction: (e, { skipCommand } = {}) => {
+      if (controlType === "button" && uiStateController.props.name) {
+        const buttonName = uiStateController.props.name;
+        const parentController = uiStateController.parentUIStateController;
+        if (parentController && parentController.wantRequesterButtonState) {
+          const currentState = parentController.uiState;
+          const mergedState = {
+            ...currentState,
+            [buttonName]: uiStateController.uiState,
+          };
+          parentController.syncInternalState(mergedState);
+        }
+      }
       // Trigger side effects of a user interaction without changing UI state.
       const currentUIState = uiStateController.uiState;
       uiActionInternal?.(currentUIState, e);

@@ -69,7 +69,6 @@ import {
 import {
   dispatchRequestResetUIState,
   dispatchRequestSetUIState,
-  getUIStateFromElement,
 } from "./ui_state_dom.js";
 
 // Sentinel used as the initial value of lastActionValueRef.
@@ -888,30 +887,7 @@ const useInteractiveProps = (
         uiStateController.resetUIState(e);
       },
       onnavi_get_ui_state: (e) => {
-        let uiState = uiStateController.uiStateSignal.peek();
-        // If this is a form submit and the requester is a named button, ensure
-        // its value wins over any other button sharing the same name.
-        // Native browser behavior: only the clicked/activated submit button
-        // contributes its name+value to form data.
-        if (uiStateController.wantRequesterButtonState && e.detail.requester) {
-          const { requester } = e.detail;
-          if (
-            requester &&
-            requester.tagName === "BUTTON" &&
-            requester.name &&
-            requester !== e.currentTarget
-          ) {
-            const requesterUIState = getUIStateFromElement(requester);
-            const requesterValue =
-              requesterUIState !== undefined
-                ? requesterUIState
-                : requester.value;
-            uiState = {
-              ...uiState,
-              [requester.name]: requesterValue,
-            };
-          }
-        }
+        const uiState = uiStateController.uiStateSignal.peek();
         e.detail.respondWith(uiState);
       },
       onnavi_set_ui_state: (e) => {
