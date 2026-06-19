@@ -83,6 +83,7 @@
             <MessageBoxWithIconDemo />
             <MessageBoxWithTitleDemo />
             <MessageBoxDismissibleDemo />
+            <EmojiLineHeightDemo />
           </div>
         );
       };
@@ -282,6 +283,57 @@
                     </Button>
                   </div>
                 )}
+              </Box>
+            </Box>
+          </div>
+        );
+      };
+
+      const EmojiLineHeightDemo = () => {
+        return (
+          <div className="demo-section">
+            <h2>Emoji inflate first-line height issue</h2>
+            <p style={{ marginTop: 0, color: "#666", fontSize: "0.9rem" }}>
+              An emoji in the message text increases the rendered line-height of
+              the first line. Since the icon and close button use{" "}
+              <code>height: 1lh</code> computed from the element's own
+              line-height (without emoji), they end up shorter than the actual
+              first line — causing a visible misalignment.
+            </p>
+
+            <Box row>
+              <Box row>
+                <Caption>Without emoji — aligned correctly</Caption>
+                <MessageBox status="warning" icon>
+                  At least <strong>5 characters</strong> required — currently
+                  only <strong>2</strong>
+                </MessageBox>
+              </Box>
+
+              <Box row>
+                <Caption>
+                  With emoji 🙈 — emoji inflates first line height
+                </Caption>
+                <MessageBox status="warning" icon>
+                  At least <strong>5 characters</strong> required — currently
+                  only <strong>2</strong> 🙈
+                </MessageBox>
+              </Box>
+
+              <Box row>
+                <Caption>Multi-line without emoji</Caption>
+                <MessageBox status="warning" icon style={{ maxWidth: "220px" }}>
+                  At least <strong>5 characters</strong> required — currently
+                  only <strong>2</strong>
+                </MessageBox>
+              </Box>
+
+              <Box row>
+                <Caption>Multi-line with emoji 🙈 on first line</Caption>
+                <MessageBox status="warning" icon style={{ maxWidth: "220px" }}>
+                  At least <strong>5 characters</strong> required — currently
+                  only <strong>2</strong> 🙈
+                </MessageBox>
               </Box>
             </Box>
           </div>
