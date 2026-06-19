@@ -71,7 +71,6 @@ import {
   dispatchRequestSetUIState,
   getUIStateFromElement,
 } from "./ui_state_dom.js";
-import { extractMessageAndRemainingProps } from "./validation/constraint_message.js";
 
 // Sentinel used as the initial value of lastActionValueRef.
 // Distinct from undefined so that undefined (e.g. unchecked radio) can itself
@@ -178,8 +177,7 @@ export const useControlProps = (
     };
   }
 
-  const [messageProps, remainingProps] = extractMessageAndRemainingProps(props);
-  const uiStateController = useUIStateController(remainingProps, controlType, {
+  const uiStateController = useUIStateController(props, controlType, {
     statePropName,
     defaultStatePropName,
     fallbackState,
@@ -189,21 +187,16 @@ export const useControlProps = (
     allowNameless,
     persists,
     uiActionInternal,
-
-    messageProps,
   });
   const [boundAction] = useActionBoundToOneParam(
     props.action,
     uiStateController.uiStateSignal,
   );
-  const [controlRootProps, controlHostProps] = useInteractiveProps(
-    remainingProps,
-    {
-      uiStateController,
-      boundAction,
-      readOnlySupported,
-    },
-  );
+  const [controlRootProps, controlHostProps] = useInteractiveProps(props, {
+    uiStateController,
+    boundAction,
+    readOnlySupported,
+  });
 
   reactions: {
     const {
@@ -642,35 +635,25 @@ export const useControlgroupProps = (
   },
 ) => {
   const { action } = props;
-  const [messageProps, remainingProps] = extractMessageAndRemainingProps(props);
-  const uiGroupStateController = useUIGroupStateController(
-    remainingProps,
-    controlType,
-    {
-      stateType,
-      childControlFilter,
-      aggregateChildStates,
-      wantRequesterButtonState,
-      uiActionInternal,
-      allowCapture,
-      cascadeValidationToChildren,
-
-      messageProps,
-    },
-  );
+  const uiGroupStateController = useUIGroupStateController(props, controlType, {
+    stateType,
+    childControlFilter,
+    aggregateChildStates,
+    wantRequesterButtonState,
+    uiActionInternal,
+    allowCapture,
+    cascadeValidationToChildren,
+  });
 
   const [boundAction] = useActionBoundToOneParam(
     action,
     uiGroupStateController.uiStateSignal,
   );
   const [actionRequester, setActionRequester] = useState();
-  const [controlRootProps, controlgroupProps] = useInteractiveProps(
-    remainingProps,
-    {
-      uiStateController: uiGroupStateController,
-      boundAction,
-    },
-  );
+  const [controlRootProps, controlgroupProps] = useInteractiveProps(props, {
+    uiStateController: uiGroupStateController,
+    boundAction,
+  });
 
   const { basePseudoState } = controlgroupProps;
   const disabled = basePseudoState[":disabled"];

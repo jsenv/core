@@ -19,7 +19,7 @@ export const CONSTRAINT_NAME_TO_PROP = {
   available: "availableMessage",
 };
 
-const CONSTRAINT_MESSAGE_PROP_NAME_SET = new Set(
+export const CONSTRAINT_MESSAGE_PROP_NAME_SET = new Set(
   Object.values(CONSTRAINT_NAME_TO_PROP),
 );
 
@@ -44,13 +44,13 @@ export const getConstraintMessage = (
   { requester },
 ) => {
   const { name: constraintName } = constraint;
+  const propName = CONSTRAINT_NAME_TO_PROP[constraintName];
 
   // 1. Search first on the requester (e.g. the <li> that was clicked),
   //    then fall back to element (e.g. the hidden <input>).
   const requesterController = requester.__uiStateController__;
   if (requesterController && requesterController !== controller) {
-    const requesterControllerMessage =
-      requesterController.messageProps[constraintName];
+    const requesterControllerMessage = requesterController.props[propName];
     if (requesterControllerMessage) {
       return {
         message: requesterControllerMessage,
@@ -59,7 +59,7 @@ export const getConstraintMessage = (
     }
   }
 
-  const controllerMessage = controller.messageProps[constraintName];
+  const controllerMessage = controller.props[propName];
   if (controllerMessage) {
     return {
       message: controllerMessage,
