@@ -1081,7 +1081,6 @@ const useInteractiveProps = (
           e.detail.action = boundAction;
         }
         onRequestAction(e, {
-          wantRequesterButtonState: uiStateController.wantRequesterButtonState,
           debugUIState,
           debugAction,
         });
