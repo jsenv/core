@@ -367,8 +367,8 @@
       .exp-row {
         display: flex;
         flex-wrap: wrap;
-        gap: 24px;
         align-items: flex-start;
+        gap: 24px;
       }
       .exp-case {
         display: flex;
@@ -425,46 +425,86 @@
       }
 
       /* ── The problem (baseline) ──────────────────────────────────── */
-      .problem .box  { align-items: center; }
-      .problem .icon { height: 1lh; align-self: flex-start; }
-      .problem .close{ height: 1lh; align-self: flex-start; }
+      .problem .box {
+        align-items: center;
+      }
+      .problem .icon {
+        height: 1lh;
+        align-self: flex-start;
+      }
+      .problem .close {
+        height: 1lh;
+        align-self: flex-start;
+      }
 
       /* ── Option A : explicit line-height ─────────────────────────── */
-      .opt-a .box    { align-items: center; }
-      .opt-a .icon   { height: 1lh; align-self: flex-start; }
-      .opt-a .close  { height: 1lh; align-self: flex-start; }
-      .opt-a .msg    { line-height: 1.5; }
+      .opt-a .box {
+        align-items: center;
+      }
+      .opt-a .icon {
+        height: 1lh;
+        align-self: flex-start;
+      }
+      .opt-a .close {
+        height: 1lh;
+        align-self: flex-start;
+      }
+      .opt-a .msg {
+        line-height: 1.5;
+      }
 
       /* ── Option B : phantom text + baseline ──────────────────────── */
-      .opt-b .box    { align-items: baseline; }
-      .opt-b .icon   { height: 1cap; align-self: baseline; }
+      .opt-b .box {
+        align-items: baseline;
+      }
+      .opt-b .icon {
+        height: 1cap;
+        align-self: baseline;
+      }
       .opt-b .icon .phantom {
         width: 0;
-        overflow: hidden;
         color: transparent;
         pointer-events: none;
         user-select: none;
+        overflow: hidden;
       }
-      .opt-b .close  { height: 1cap; align-self: baseline; }
+      .opt-b .close {
+        height: 1cap;
+        align-self: baseline;
+      }
       .opt-b .close .phantom {
         width: 0;
-        overflow: hidden;
         color: transparent;
         pointer-events: none;
         user-select: none;
+        overflow: hidden;
       }
 
       /* ── Option C : text-box trim ────────────────────────────────── */
-      .opt-c .box    { align-items: center; }
-      .opt-c .icon   { height: 1lh; align-self: flex-start; }
-      .opt-c .close  { height: 1lh; align-self: flex-start; }
-      .opt-c .msg    { text-box: trim-both cap alphabetic; line-height: 1.5; }
+      .opt-c .box {
+        align-items: center;
+      }
+      .opt-c .icon {
+        height: 1lh;
+        align-self: flex-start;
+      }
+      .opt-c .close {
+        height: 1lh;
+        align-self: flex-start;
+      }
+      .opt-c .msg {
+        text-box: trim-both cap alphabetic;
+        line-height: 1.5;
+      }
     </style>
 
     <!-- SVG icon reusable snippet -->
-    <svg style="display:none">
+    <svg style="display: none">
       <symbol id="exp-icon" viewBox="0 0 125 300">
-        <path fill="currentColor" d="m25,1 8,196h59l8-196zm37,224a37,37 0 1,0 2,0z"/>
+        <path
+          fill="currentColor"
+          d="m25,1 8,196h59l8-196zm37,224a37,37 0 1,0 2,0z"
+        />
       </symbol>
     </svg>
 
@@ -480,20 +520,78 @@
         element: notice how it grows with the emoji, while the icon/close button
         stay the same size and appear misaligned.
       </p>
+      <p
+        style="
+          margin: 0 0 8px;
+          font-size: 0.8rem;
+          font-weight: 600;
+          color: #555;
+        "
+      >
+        Single line
+      </p>
       <div class="exp-row problem">
         <div class="exp-case">
-          <label>no emoji — icon and × aligned ✓</label>
+          <label>no emoji — aligned ✓</label>
           <div class="box">
-            <div class="icon"><svg><use href="#exp-icon"/></svg></div>
-            <div class="msg">At least <strong>5 chars</strong> required — only <strong>2</strong></div>
+            <div class="icon">
+              <svg><use href="#exp-icon" /></svg>
+            </div>
+            <div class="msg">
+              At least <strong>5 chars</strong> required — only
+              <strong>2</strong>
+            </div>
             <button class="close">×</button>
           </div>
         </div>
         <div class="exp-case">
-          <label>with emoji — icon and × too short ✗</label>
+          <label>with emoji — too short ✗</label>
           <div class="box">
-            <div class="icon"><svg><use href="#exp-icon"/></svg></div>
-            <div class="msg">At least <strong>5 chars</strong> required — only <strong>2</strong> 🙈</div>
+            <div class="icon">
+              <svg><use href="#exp-icon" /></svg>
+            </div>
+            <div class="msg">
+              At least <strong>5 chars</strong> required — only
+              <strong>2</strong> 🙈
+            </div>
+            <button class="close">×</button>
+          </div>
+        </div>
+      </div>
+      <p
+        style="
+          margin: 16px 0 8px;
+          font-size: 0.8rem;
+          font-weight: 600;
+          color: #555;
+        "
+      >
+        Multi-line
+      </p>
+      <div class="exp-row problem">
+        <div class="exp-case">
+          <label>no emoji — aligned ✓</label>
+          <div class="box">
+            <div class="icon">
+              <svg><use href="#exp-icon" /></svg>
+            </div>
+            <div class="msg" style="max-width: 160px">
+              At least <strong>5 chars</strong> required — only
+              <strong>2</strong>. Please fix and try again.
+            </div>
+            <button class="close">×</button>
+          </div>
+        </div>
+        <div class="exp-case">
+          <label>with emoji — too short ✗</label>
+          <div class="box">
+            <div class="icon">
+              <svg><use href="#exp-icon" /></svg>
+            </div>
+            <div class="msg" style="max-width: 160px">
+              At least <strong>5 chars</strong> required — only
+              <strong>2</strong> 🙈. Please fix and try again.
+            </div>
             <button class="close">×</button>
           </div>
         </div>
@@ -510,20 +608,78 @@
         now be the same height with or without the emoji, matching
         <code>1lh</code> on the icon/close button.
       </p>
+      <p
+        style="
+          margin: 0 0 8px;
+          font-size: 0.8rem;
+          font-weight: 600;
+          color: #555;
+        "
+      >
+        Single line
+      </p>
       <div class="exp-row opt-a">
         <div class="exp-case">
           <label>no emoji</label>
           <div class="box">
-            <div class="icon"><svg><use href="#exp-icon"/></svg></div>
-            <div class="msg">At least <strong>5 chars</strong> required — only <strong>2</strong></div>
+            <div class="icon">
+              <svg><use href="#exp-icon" /></svg>
+            </div>
+            <div class="msg">
+              At least <strong>5 chars</strong> required — only
+              <strong>2</strong>
+            </div>
             <button class="close">×</button>
           </div>
         </div>
         <div class="exp-case">
           <label>with emoji</label>
           <div class="box">
-            <div class="icon"><svg><use href="#exp-icon"/></svg></div>
-            <div class="msg">At least <strong>5 chars</strong> required — only <strong>2</strong> 🙈</div>
+            <div class="icon">
+              <svg><use href="#exp-icon" /></svg>
+            </div>
+            <div class="msg">
+              At least <strong>5 chars</strong> required — only
+              <strong>2</strong> 🙈
+            </div>
+            <button class="close">×</button>
+          </div>
+        </div>
+      </div>
+      <p
+        style="
+          margin: 16px 0 8px;
+          font-size: 0.8rem;
+          font-weight: 600;
+          color: #555;
+        "
+      >
+        Multi-line
+      </p>
+      <div class="exp-row opt-a">
+        <div class="exp-case">
+          <label>no emoji</label>
+          <div class="box">
+            <div class="icon">
+              <svg><use href="#exp-icon" /></svg>
+            </div>
+            <div class="msg" style="max-width: 160px">
+              At least <strong>5 chars</strong> required — only
+              <strong>2</strong>. Please fix and try again.
+            </div>
+            <button class="close">×</button>
+          </div>
+        </div>
+        <div class="exp-case">
+          <label>with emoji</label>
+          <div class="box">
+            <div class="icon">
+              <svg><use href="#exp-icon" /></svg>
+            </div>
+            <div class="msg" style="max-width: 160px">
+              At least <strong>5 chars</strong> required — only
+              <strong>2</strong> 🙈. Please fix and try again.
+            </div>
             <button class="close">×</button>
           </div>
         </div>
@@ -534,28 +690,86 @@
     <div class="exp-section">
       <h2>Option B — phantom text + <code>align-items: baseline</code></h2>
       <p class="desc">
-        An invisible <code>&lt;span&gt;A&lt;/span&gt;</code> inside the icon
-        and the close button gives each a real text baseline. With
+        An invisible <code>&lt;span&gt;A&lt;/span&gt;</code> inside the icon and
+        the close button gives each a real text baseline. With
         <code>align-items: baseline</code> on the row, all items align on that
         shared baseline. Crucially, emoji does <em>not</em> change the text
         baseline (only the leading above it), so alignment stays correct. The
         icon height is <code>1cap</code> (cap-height) so it appears visually
         centered on the text line.
       </p>
+      <p
+        style="
+          margin: 0 0 8px;
+          font-size: 0.8rem;
+          font-weight: 600;
+          color: #555;
+        "
+      >
+        Single line
+      </p>
       <div class="exp-row opt-b">
         <div class="exp-case">
           <label>no emoji</label>
           <div class="box">
-            <div class="icon"><svg><use href="#exp-icon"/></svg><span class="phantom">A</span></div>
-            <div class="msg">At least <strong>5 chars</strong> required — only <strong>2</strong></div>
+            <div class="icon">
+              <svg><use href="#exp-icon" /></svg><span class="phantom">A</span>
+            </div>
+            <div class="msg">
+              At least <strong>5 chars</strong> required — only
+              <strong>2</strong>
+            </div>
             <button class="close">×<span class="phantom">A</span></button>
           </div>
         </div>
         <div class="exp-case">
           <label>with emoji</label>
           <div class="box">
-            <div class="icon"><svg><use href="#exp-icon"/></svg><span class="phantom">A</span></div>
-            <div class="msg">At least <strong>5 chars</strong> required — only <strong>2</strong> 🙈</div>
+            <div class="icon">
+              <svg><use href="#exp-icon" /></svg><span class="phantom">A</span>
+            </div>
+            <div class="msg">
+              At least <strong>5 chars</strong> required — only
+              <strong>2</strong> 🙈
+            </div>
+            <button class="close">×<span class="phantom">A</span></button>
+          </div>
+        </div>
+      </div>
+      <p
+        style="
+          margin: 16px 0 8px;
+          font-size: 0.8rem;
+          font-weight: 600;
+          color: #555;
+        "
+      >
+        Multi-line
+      </p>
+      <div class="exp-row opt-b">
+        <div class="exp-case">
+          <label>no emoji</label>
+          <div class="box">
+            <div class="icon">
+              <svg><use href="#exp-icon" /></svg><span class="phantom">A</span>
+            </div>
+            <div class="msg" style="max-width: 160px">
+              At least <strong>5 chars</strong> required — only
+              <strong>2</strong>. Please fix and try again.
+            </div>
+            <button class="close">×<span class="phantom">A</span></button>
+          </div>
+        </div>
+        <div class="exp-case">
+          <label>with emoji</label>
+          <div class="box">
+            <div class="icon">
+              <svg><use href="#exp-icon" /></svg><span class="phantom">A</span>
+            </div>
+            <div class="msg" style="max-width: 160px">
+              At least <strong>5 chars</strong> required — only
+              <strong>2</strong> 🙈. Please fix and try again.
+            </div>
             <button class="close">×<span class="phantom">A</span></button>
           </div>
         </div>
@@ -572,20 +786,78 @@
         glyphs. The dotted border should be identical with and without the
         emoji. <strong>Chrome 123+ only</strong>, not yet in Firefox / Safari.
       </p>
+      <p
+        style="
+          margin: 0 0 8px;
+          font-size: 0.8rem;
+          font-weight: 600;
+          color: #555;
+        "
+      >
+        Single line
+      </p>
       <div class="exp-row opt-c">
         <div class="exp-case">
           <label>no emoji</label>
           <div class="box">
-            <div class="icon"><svg><use href="#exp-icon"/></svg></div>
-            <div class="msg">At least <strong>5 chars</strong> required — only <strong>2</strong></div>
+            <div class="icon">
+              <svg><use href="#exp-icon" /></svg>
+            </div>
+            <div class="msg">
+              At least <strong>5 chars</strong> required — only
+              <strong>2</strong>
+            </div>
             <button class="close">×</button>
           </div>
         </div>
         <div class="exp-case">
           <label>with emoji</label>
           <div class="box">
-            <div class="icon"><svg><use href="#exp-icon"/></svg></div>
-            <div class="msg">At least <strong>5 chars</strong> required — only <strong>2</strong> 🙈</div>
+            <div class="icon">
+              <svg><use href="#exp-icon" /></svg>
+            </div>
+            <div class="msg">
+              At least <strong>5 chars</strong> required — only
+              <strong>2</strong> 🙈
+            </div>
+            <button class="close">×</button>
+          </div>
+        </div>
+      </div>
+      <p
+        style="
+          margin: 16px 0 8px;
+          font-size: 0.8rem;
+          font-weight: 600;
+          color: #555;
+        "
+      >
+        Multi-line
+      </p>
+      <div class="exp-row opt-c">
+        <div class="exp-case">
+          <label>no emoji</label>
+          <div class="box">
+            <div class="icon">
+              <svg><use href="#exp-icon" /></svg>
+            </div>
+            <div class="msg" style="max-width: 160px">
+              At least <strong>5 chars</strong> required — only
+              <strong>2</strong>. Please fix and try again.
+            </div>
+            <button class="close">×</button>
+          </div>
+        </div>
+        <div class="exp-case">
+          <label>with emoji</label>
+          <div class="box">
+            <div class="icon">
+              <svg><use href="#exp-icon" /></svg>
+            </div>
+            <div class="msg" style="max-width: 160px">
+              At least <strong>5 chars</strong> required — only
+              <strong>2</strong> 🙈. Please fix and try again.
+            </div>
             <button class="close">×</button>
           </div>
         </div>
