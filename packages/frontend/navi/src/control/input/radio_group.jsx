@@ -6,7 +6,6 @@ import {
   ControlgroupChildrenWrapper,
   useControlgroupProps,
 } from "../control_hooks.jsx";
-import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
 
 const css = /* css */ `
   .navi_radio_group {
@@ -30,7 +29,7 @@ export const RadioGroup = (props) => {
 
 const RadioGroupInterface = (props) => {
   import.meta.css = css;
-  const { ref, name } = props;
+  const { ref } = props;
   const [radioGroupProps, remainingProps, childrenWrapperProps] =
     useControlgroupProps(
       {
@@ -69,21 +68,6 @@ const RadioGroupInterface = (props) => {
       name={undefined}
       baseClassName="navi_radio_group"
       data-callout-point-to-border-box=""
-      onInput={(e) => {
-        // we rely on change event bubbling but we want to catch only the relevant radio change events
-        const target = e.target;
-        if (target.tagName !== "INPUT" || target.type !== "radio") {
-          return;
-        }
-        if (target.name !== name) {
-          return;
-        }
-        const radioGroup = ref.current;
-        dispatchRequestAction(radioGroup, {
-          event: e,
-          requester: target,
-        });
-      }}
     >
       <ControlgroupChildrenWrapper {...childrenWrapperProps}>
         {props.children}
