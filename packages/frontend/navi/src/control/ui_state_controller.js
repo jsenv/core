@@ -33,12 +33,14 @@ import { createControlValidity } from "./validation/control_validity.js";
  *
  * ```ts
  * interface UIStateController {
+ *   id: string;
  *   controlType: string;          // Used for debug logging
  *   uiStateSignal: Signal;        // Accessed by button children to inherit parent value
  *   registerChild(child): void;   // Called on child mount
  *   onChildInteraction(child, e, { stateChanged: boolean }): void; // Called on user interaction
  *   unregisterChild(child): void; // Called on child unmount
  *   props: Object;
+ *   elementRef: Ref; // Used to dispatch DOM events
  * }
  * ```
  */
@@ -1104,6 +1106,7 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
   const facadeUIStateController = {
     controlType: "facade",
     props,
+    elementRef: realUIStateController.elementRef,
     uiStateSignal: realUIStateController.uiStateSignal,
     registerChild: (child) => {
       if (!includeChildController(child)) {
