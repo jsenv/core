@@ -22,17 +22,14 @@ import { FormContext } from "./form_context.js";
 // callers (e.g. selectable_list) to call setUIState by id instead of via the DOM.
 const controllersById = new Map();
 export const getUIStateControllerById = (id) => controllersById.get(id);
-// Find any mounted controller that declared itself as a proxy for the given real-input id.
+// Reverse-lookup map: real-input id → proxy controller that references it via
+// `navi-control-proxy-for`. Maintained on create/destroy so lookup is O(1).
+const proxyControllerByRealInputId = new Map();
 const findProxyController = (realInputId) => {
   if (!realInputId) {
     return null;
   }
-  for (const controller of controllersById.values()) {
-    if (controller.props["navi-control-proxy-for"] === realInputId) {
-      return controller;
-    }
-  }
-  return null;
+  return proxyControllerByRealInputId.get(realInputId) ?? null;
 };
 
 // Registry for non-serializable JS values that cannot be written to DOM attributes as-is.
@@ -78,6 +75,10 @@ const onUIStateControllerCreated = (uiStateController) => {
   if (id) {
     controllersById.set(id, uiStateController);
   }
+  const proxyFor = uiStateController.props["navi-control-proxy-for"];
+  if (proxyFor) {
+    proxyControllerByRealInputId.set(proxyFor, uiStateController);
+  }
   if (
     controlType === "input" &&
     uiStateController.props.type === "radio" &&
@@ -97,6 +98,10 @@ const onUIStateControllerDestroyed = (uiStateController) => {
   if (id) {
     controllersById.delete(id);
     naviJsRegistry.delete(id);
+  }
+  const proxyFor = uiStateController.props["navi-control-proxy-for"];
+  if (proxyFor) {
+    proxyControllerByRealInputId.delete(proxyFor);
   }
   if (
     controlType === "input" &&
