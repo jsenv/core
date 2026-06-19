@@ -866,6 +866,10 @@ export const createControlValidity = (
         ) {
           return;
         }
+        const calloutElement = controlValidity.callout?.element;
+        if (calloutElement && calloutElement.contains(e.target)) {
+          return;
+        }
         resetOnInteraction(e);
       };
 
