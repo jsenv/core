@@ -427,9 +427,9 @@ const DEFAULT_CONSTRAINT_SET = new Set([
   ...STANDARD_CONSTRAINT_SET,
   ...NAVI_CONSTRAINT_SET,
 ]);
-
 export const registerGlobalConstraint = (customConstraint) => {
   NAVI_CONSTRAINT_SET.add(customConstraint);
+  DEFAULT_CONSTRAINT_SET.add(customConstraint);
 };
 
 export const createControlValidity = (
@@ -544,6 +544,9 @@ export const createControlValidity = (
       ...DEFAULT_CONSTRAINT_SET,
       ...dynamicConstraintSet,
     ]);
+    debugUIState(
+      `${constraintSet.size} constraints to check, reseting validity`,
+    );
     resetValidity();
     for (const constraint of constraintSet) {
       const fieldForConstraint = controller;
@@ -579,7 +582,9 @@ export const createControlValidity = (
           ? { message: checkResult }
           : checkResult;
       constraintValidityInfo.messageString = constraintValidityInfo.message;
-
+      debugUIState(
+        `constraint "${constraint.name}" failed -> ${constraintValidityInfo.message}`,
+      );
       const thisConstraintFailureInfo = {
         name: constraint.name,
         constraint,
