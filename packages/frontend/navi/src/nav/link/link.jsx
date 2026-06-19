@@ -7,7 +7,6 @@ import {
   useSelectableElement,
 } from "../../control/selection/selection.jsx";
 import { closeValidationMessage } from "../../control/validation/custom_constraint_validation.js";
-import { useConstraints } from "../../control/validation/hooks/use_constraints.js";
 import { EmailSvg } from "../../graphic/icons/email_svg.jsx";
 import {
   LinkAnchorSvg,
@@ -476,7 +475,6 @@ const LinkPlain = (props) => {
     maxLines,
 
     children,
-    constraints,
 
     ...remainingProps
   } = props;
@@ -491,7 +489,6 @@ const LinkPlain = (props) => {
   });
 
   const autoFocusProps = useAutoFocus(ref, autoFocus);
-  useConstraints(ref, constraints);
   const shouldDimColor = readOnly || disabled;
   useDimColorWhen(ref, shouldDimColor);
   // subscribe to document url to re-render and re-compute getHrefTargetInfo

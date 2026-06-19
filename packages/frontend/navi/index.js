@@ -87,7 +87,6 @@ export { SummaryMarker } from "./src/control/details/summary_marker.jsx";
 export { openCallout } from "./src/control/validation/callout/callout.js";
 export { useCalloutRequestClose } from "./src/control/validation/callout/callout.jsx";
 export { createAvailableConstraint } from "./src/control/validation/constraints/create_available_constraint.js";
-export { installCustomConstraintValidation } from "./src/control/validation/custom_constraint_validation.js";
 export {
   addCustomMessage,
   removeCustomMessage,
