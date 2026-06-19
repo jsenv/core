@@ -139,16 +139,15 @@ export const onRequestInteraction = (
       const failingInterface = checkConstraints({
         event: requestInteractionCustomEvent,
         requester: event.target,
-        fromRequestInteraction: true,
       });
-      if (failingInterface) {
+      if (
+        failingInterface &&
+        failingInterface.interactionFailedConstraintInfo
+      ) {
         Object.assign(requestStatus, {
           canProceed: false,
-          preventReason: failingInterface.failedConstraintInfo
-            ? `failing constraint "${failingInterface.failedConstraintInfo.name}"`
-            : "invalid (no constraint info)",
+          preventReason: `failing constraint "${failingInterface.interactionFailedConstraintInfo.name}"`,
         });
-        // Interaction constraints (disabled/readonly) — always show the callout.
         failingInterface.reportValidity({
           event: requestInteractionCustomEvent,
           requester: event.target,
@@ -357,13 +356,17 @@ const _attemptCommit = (
       fromRequestAction: true,
     });
     if (failingInterface) {
+      const interactionInfo = failingInterface.interactionFailedConstraintInfo;
+      const valueInfo = failingInterface.failedConstraintInfo;
       Object.assign(requestStatus, {
         canProceed: false,
-        preventReason: failingInterface.failedConstraintInfo
-          ? `failing constraint "${failingInterface.failedConstraintInfo.name}"`
-          : "invalid (no constraint info)",
+        preventReason: interactionInfo
+          ? `failing constraint "${interactionInfo.name}"`
+          : valueInfo
+            ? `failing constraint "${valueInfo.name}"`
+            : "invalid (no constraint info)",
       });
-      if (showCallout) {
+      if (interactionInfo || showCallout) {
         failingInterface.reportValidity({
           event: requestCustomEvent,
           requester,
@@ -403,12 +406,7 @@ const checkEvent = (requestStatus, event) => {
 
 // Returns the failing validation interface, or null if all constraints pass.
 // Never calls reportValidity — callers decide whether to show the callout.
-const checkConstraints = ({
-  event,
-  requester,
-  fromRequestInteraction,
-  fromRequestAction,
-} = {}) => {
+const checkConstraints = ({ event, requester, fromRequestAction } = {}) => {
   let elementToValidate = event.currentTarget;
   const controlHost = findControlHost(elementToValidate);
   if (controlHost) {
@@ -425,7 +423,6 @@ const checkConstraints = ({
   const isValid = validationInterface.checkValidity({
     event,
     requester,
-    fromRequestInteraction,
     fromRequestAction,
   });
   if (!isValid) {
@@ -438,6 +435,7 @@ const checkConstraints = ({
       resolvedValidationInterface;
     while (
       failingInterface.failedConstraintInfo === null &&
+      failingInterface.interactionFailedConstraintInfo === null &&
       failingInterface.failingManagedValidationInterface
     ) {
       failingInterface = failingInterface.failingManagedValidationInterface;
@@ -448,6 +446,7 @@ const checkConstraints = ({
 };
 
 const INTERACTION_CONSTRAINTS = [DISABLED_CONSTRAINT, READONLY_CONSTRAINT];
+const INTERACTION_CONSTRAINT_SET = new Set(INTERACTION_CONSTRAINTS);
 const pointerEventTypeSet = new Set(["pointerdown", "mousedown", "click"]);
 
 const STANDARD_CONSTRAINT_SET = new Set([
@@ -634,7 +633,6 @@ export const installCustomConstraintValidation = (
   const checkValidity = ({
     event,
     requester = element,
-    fromRequestInteraction,
     fromRequestAction,
     skipReadonly,
   } = {}) => {
@@ -650,7 +648,6 @@ export const installCustomConstraintValidation = (
       }
       return targetVI.checkValidity({
         event,
-        fromRequestInteraction,
         fromRequestAction,
         requester,
         skipReadonly,
@@ -676,7 +673,6 @@ export const installCustomConstraintValidation = (
       const managedIsValid = managedVI.checkValidity({
         event,
         requester,
-        fromRequestInteraction,
         fromRequestAction,
         skipReadonly:
           (managedController.controlType === "button" ||
@@ -689,38 +685,6 @@ export const installCustomConstraintValidation = (
       }
     }
 
-    // When checking a subset of constraints (e.g. INTERACTION_CONSTRAINTS), we must NOT
-    // reset the full validity state — other constraints (like PATTERN) may still be failing
-    // and we must preserve their state (failedConstraintInfo, callout, etc.).
-    // We only do a scoped check and store the result in interactionFailedConstraintInfo,
-    // which reportValidity checks in addition to failedConstraintInfo.
-    if (fromRequestInteraction) {
-      interactionFailedConstraintInfo = null;
-      for (const constraint of INTERACTION_CONSTRAINTS) {
-        const checkResult = constraint.check(controller ?? element, {
-          fromRequestAction,
-          skipReadonly,
-          skipRequired: element === requester,
-          registerChange: () => {},
-        });
-        if (checkResult) {
-          const constraintValidityInfo =
-            typeof checkResult === "string"
-              ? { message: checkResult }
-              : checkResult;
-          interactionFailedConstraintInfo = {
-            name: constraint.name,
-            constraint,
-            status: "warning",
-            ...constraintValidityInfo,
-            cleanup: () => {},
-            reportStatus: "not_reported",
-          };
-          return false;
-        }
-      }
-      return true;
-    }
     let newConstraintValidityState = { valid: true };
     const constraintSet = new Set([
       ...DEFAULT_CONSTRAINT_SET,
@@ -776,8 +740,12 @@ export const installCustomConstraintValidation = (
 
       // Constraint evaluation: evaluate all constraints when required is set,
       // otherwise follow native behavior (skip constraints on empty values)
-      if (failedConstraintInfo) {
-        // there is already a failing constraint, which one to we pick?
+      if (INTERACTION_CONSTRAINT_SET.has(constraint)) {
+        if (!interactionFailedConstraintInfo) {
+          interactionFailedConstraintInfo = thisConstraintFailureInfo;
+        }
+      } else if (failedConstraintInfo) {
+        // there is already a failing value constraint, which one do we pick?
         const constraintPicked = pickConstraint(
           failedConstraintInfo.constraint,
           constraint,
@@ -788,16 +756,21 @@ export const installCustomConstraintValidation = (
           // keep the current failedConstraintInfo, this one fails but it's considered secondary
         }
       } else {
-        // first failing constraint
+        // first failing value constraint
         failedConstraintInfo = thisConstraintFailureInfo;
       }
     }
 
-    if (failedConstraintInfo && !failedConstraintInfo.silent) {
+    const activeFailedConstraintInfo =
+      interactionFailedConstraintInfo || failedConstraintInfo;
+    if (activeFailedConstraintInfo && !activeFailedConstraintInfo.silent) {
       const hasTitleAttribute =
         controller?.props?.title != null || element?.hasAttribute("title");
       if (!hasTitleAttribute) {
-        element?.setAttribute("title", failedConstraintInfo.messageString);
+        element?.setAttribute(
+          "title",
+          activeFailedConstraintInfo.messageString,
+        );
       }
     } else {
       const hasTitleAttribute =
