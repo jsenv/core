@@ -354,18 +354,19 @@ export const useUIStateController = (
         inputMode: uiStateController.props.inputMode,
       });
     },
-    onInteraction: (e) => {
+    onInteraction: (e, { skipCommand } = {}) => {
       // Trigger side effects of a user interaction without changing UI state.
-      // Used by controls like buttons whose state doesn't change on interaction
-      // but still need to fire their command and uiAction callbacks.
       const currentUIState = uiStateController.uiState;
       uiActionInternal?.(currentUIState, e);
       uiAction?.(currentUIState, e);
-      const command = uiStateController.props.command;
-      if (command) {
-        const element = uiStateController.elementRef.current;
-        if (element) {
-          triggerNaviCommand(element, command, e);
+      if (skipCommand) {
+      } else {
+        const command = uiStateController.props.command;
+        if (command) {
+          const element = uiStateController.elementRef.current;
+          if (element) {
+            triggerNaviCommand(element, command, e);
+          }
         }
       }
     },
@@ -466,8 +467,9 @@ export const useUIStateController = (
         // sync, but do NOT fire the command and do NOT notify the parent —
         // both would cause an infinite loop when a parent cascades state
         // down to its children (child command would re-trigger the cascade).
-        uiActionInternal?.(newUIState, e);
-        uiAction?.(newUIState, e);
+        uiStateController.onInteraction(e, {
+          skipCommand: true,
+        });
         return true;
       }
       notifyParentAboutChildInteraction(e, { stateChanged: true });
@@ -515,7 +517,12 @@ export const useUIStateController = (
           // TODO: select, textarea
         }
       }
-      uiStateController.onInteraction(e);
+      uiStateController.onInteraction(e, {
+        // Buttons never trigger their command via setUIState — only via onInteraction()
+        // called explicitly in onnavi_action_allowed. This prevents a value prop change
+        // from accidentally firing the command.
+        skipCommand: controlType === "button",
+      });
       return true;
     },
     clearUIState: (e) => {
@@ -753,15 +760,9 @@ export const useUIGroupStateController = (
     // command like --navi-send closes the picker, the picker input already
     // holds the new value.
     notifyParentAboutChildInteraction(e, { stateChanged: true });
-    if (internalBehavior) {
-      // Fire uiAction only — skip command to avoid re-triggering the same command
-      // that caused this setUIState call in the first place.
-      const uiAction = uiActionRef.current;
-      uiAction?.(newUIState, e);
-      uiActionInternal?.(newUIState, e);
-    } else {
-      uiStateController.onInteraction(e);
-    }
+    uiStateController.onInteraction(e, {
+      skipCommand: internalBehavior,
+    });
     const el = ref.current;
     if (el) {
       dispatchInternalCustomEvent(el, "navi_ui_state_change", {
@@ -898,12 +899,15 @@ export const useUIGroupStateController = (
     },
     // Called when a child interaction does NOT change the aggregated value (e.g. radio re-clicked).
     // Fires uiAction + command without touching state or the action pipeline.
-    onInteraction: (e) => {
+    onInteraction: (e, { skipCommand } = {}) => {
       const currentUIState = uiStateController.uiState;
       const uiAction = uiActionRef.current;
       uiAction?.(currentUIState, e);
       uiActionInternal?.(currentUIState, e);
-      if (command) {
+      if (skipCommand) {
+        // Fire uiAction only — skip command to avoid re-triggering the same command
+        // that caused this setUIState call in the first place.
+      } else if (command) {
         const el = ref.current;
         if (el) {
           triggerNaviCommand(el, command, e);
