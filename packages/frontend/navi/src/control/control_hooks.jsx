@@ -634,7 +634,7 @@ export const useControlgroupProps = (
     allowCapture = false,
   },
 ) => {
-  const { ref, action } = props;
+  const { action } = props;
   const uiGroupStateController = useUIGroupStateController(props, controlType, {
     stateType,
     childControlFilter,
@@ -681,27 +681,6 @@ export const useControlgroupProps = (
       actionRequester,
     ],
   );
-
-  // Auto-trigger the group action when a checkable child (radio/checkbox) changes.
-  // For other inputs (text, range…) the action must be triggered explicitly via
-  // a submit button or Enter — same as a regular form field.
-  if (
-    action &&
-    (controlType === "radio_group" || controlType === "checkbox_group")
-  ) {
-    controlgroupProps.onnavi_ui_state_change = (e) => {
-      const el = ref.current;
-      if (el) {
-        dispatchRequestAction(el, {
-          event: e.detail.event,
-          // Group state is already set by setUIState before dispatchRequestAction is
-          // called. uiState is passed explicitly so onRequestAction skips the
-          // get+set step (Object.hasOwn check in onRequestAction).
-          uiState: e.detail.value,
-        });
-      }
-    };
-  }
 
   return [
     controlRootProps,
@@ -1125,6 +1104,25 @@ const useInteractiveProps = (
         debugAction(e, `action end with data: ${JSON.stringify(data)}`);
         onActionEnd?.(data, e);
         controlRootProps.onnavi_action_end?.(e);
+
+        // For radio/checkbox: auto-trigger the parent group's action after the
+        // leaf action completes. The parent (radio_group/checkbox_group) has
+        // already aggregated the new state by now, so uiStateSignal is correct.
+        const parentController = uiStateController.parentUIStateController;
+        if (
+          parentController &&
+          (parentController.controlType === "radio_group" ||
+            parentController.controlType === "checkbox_group")
+        ) {
+          debugger;
+          const parentEl = parentController.elementRef.current;
+          if (parentEl) {
+            const originalEvent = e.detail.eventChain[0];
+            dispatchRequestAction(parentEl, {
+              event: originalEvent,
+            });
+          }
+        }
       },
     });
   }
