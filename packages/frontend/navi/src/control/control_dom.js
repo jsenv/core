@@ -69,8 +69,7 @@ export const isControl = (el) => {
  * ```
  */
 export const findClosestControlWithAction = (el) => {
-  const ownControlRoot = el.closest("[navi-control]") || el;
-  let current = ownControlRoot.parentElement;
+  let current = el;
   while (current) {
     if (current.hasAttribute("data-action")) {
       return current;

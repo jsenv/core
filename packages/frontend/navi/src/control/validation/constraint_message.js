@@ -48,14 +48,16 @@ export const getConstraintMessage = (
 
   // 1. Search first on the requester (e.g. the <li> that was clicked),
   //    then fall back to element (e.g. the hidden <input>).
-  const requesterController = requester.__uiStateController__;
-  if (requesterController && requesterController !== controller) {
-    const requesterControllerMessage = requesterController.props[propName];
-    if (requesterControllerMessage) {
-      return {
-        message: requesterControllerMessage,
-        origin: "requester controller",
-      };
+  if (requester) {
+    const requesterController = requester.__uiStateController__;
+    if (requesterController && requesterController !== controller) {
+      const requesterControllerMessage = requesterController.props[propName];
+      if (requesterControllerMessage) {
+        return {
+          message: requesterControllerMessage,
+          origin: "requester controller",
+        };
+      }
     }
   }
 
