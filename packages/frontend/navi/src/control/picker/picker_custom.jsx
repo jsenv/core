@@ -368,7 +368,7 @@ const PickerCustom = (props) => {
       children,
     });
     Object.assign(popupProps, {
-      closeRequestHandler: (closePermission, requestCloseEvent) => {
+      closeRequestHandler: (requestCloseEvent, closePermission) => {
         const cancelEvent = findEvent(
           requestCloseEvent,
           (eInChain) =>

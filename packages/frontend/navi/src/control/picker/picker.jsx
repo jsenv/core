@@ -470,6 +470,7 @@ const PickerStyleCSSVars = {
 
 const PickerDefaultUI = () => {
   const { value, placeholder } = useContext(PickerContext);
+
   if (!value) {
     if (!placeholder) {
       return null;
