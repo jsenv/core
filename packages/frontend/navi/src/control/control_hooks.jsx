@@ -632,6 +632,7 @@ export const useControlgroupProps = (
     wantRequesterButtonState,
     uiActionInternal,
     allowCapture = false,
+    cascadeValidationToChildren = false,
   },
 ) => {
   const { action } = props;
@@ -642,6 +643,7 @@ export const useControlgroupProps = (
     wantRequesterButtonState,
     uiActionInternal,
     allowCapture,
+    cascadeValidationToChildren,
   });
 
   const [boundAction] = useActionBoundToOneParam(

@@ -36,6 +36,7 @@ export const ControlGroup = (props) => {
       wantRequesterButtonState: true,
       controlType: props.type || "control_group",
       stateType: "object",
+      cascadeValidationToChildren: true,
       aggregateChildStates: (childUIStateControllers) => {
         const groupValues = {};
         for (const childUIStateController of childUIStateControllers) {
@@ -62,9 +63,6 @@ export const ControlGroup = (props) => {
       {...controlgroupProps}
       type={undefined}
       pseudoClasses={CONTROL_GROUP_PSEUDO_CLASSES}
-      onnavi_get_managed_controls={(e) => {
-        e.detail.respondWith(getControlGroupManagedControls(e.currentTarget));
-      }}
     >
       <ControlgroupChildrenWrapper
         {...childrenWrapperProps}
@@ -76,20 +74,6 @@ export const ControlGroup = (props) => {
       </ControlgroupChildrenWrapper>
     </Box>
   );
-};
-
-const getControlGroupManagedControls = (el) => {
-  const managedControls = [];
-  for (const child of el.querySelectorAll("[navi-control-host]")) {
-    // Exclude controls that belong to a nested ControlGroup — that group is itself
-    // a managed control and will cascade validation to its own children.
-    const parentControlGroup = child.closest("[navi-control-group]");
-    if (parentControlGroup && parentControlGroup !== el) {
-      continue;
-    }
-    managedControls.push(child);
-  }
-  return managedControls;
 };
 
 const CONTROL_GROUP_PSEUDO_CLASSES = [

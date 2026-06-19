@@ -41,6 +41,7 @@ const FormControl = (props) => {
       wantRequesterButtonState: true,
       controlType: "form",
       stateType: "object",
+      cascadeValidationToChildren: true,
       aggregateChildStates: (childUIStateControllers) => {
         const formValues = {};
         for (const childUIStateController of childUIStateControllers) {
@@ -86,9 +87,6 @@ const FormControl = (props) => {
           meta: { isSubmit: true },
         });
       }}
-      onnavi_get_managed_controls={(e) => {
-        e.detail.respondWith(getFormManagedControls(e.currentTarget));
-      }}
       onReset={(e) => {
         const form = ref.current;
         dispatchRequestResetUIState(form, e);
@@ -119,24 +117,6 @@ const FormPseudoClasses = [
   ":disabled",
   ":-navi-loading",
 ];
-
-const getFormManagedControls = (form) => {
-  const managedControls = [];
-  for (const element of form.elements) {
-    // Exclude inputs that are inside any control group (radio, checkbox, control_group…)
-    // — the group host is the managed control for the form, not its individual child inputs.
-    const controlGroupHost = element.closest("[navi-control-group]");
-    if (
-      controlGroupHost &&
-      controlGroupHost !== form &&
-      form.contains(controlGroupHost)
-    ) {
-      continue;
-    }
-    managedControls.push(element);
-  }
-  return managedControls;
-};
 
 // const dispatchCustomEventOnFormAndFormElements = (type, options) => {
 //   const form = innerRef.current;

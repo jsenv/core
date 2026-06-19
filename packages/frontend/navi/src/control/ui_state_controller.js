@@ -352,6 +352,19 @@ export const useUIStateController = (
     uiState: stateInitial,
     uiStateSignal,
     elementRef: ref,
+    facadeChild: null,
+    getManagedControls: () => {
+      if (uiStateController.facadeChild) {
+        const child = uiStateController.facadeChild;
+        const childManaged = child.getManagedControls();
+        if (childManaged.length > 0) {
+          return childManaged;
+        }
+        const el = child.elementRef?.current;
+        return el ? [el] : [];
+      }
+      return [];
+    },
     getPropFromState,
     getStateFromProp,
     toControlHostValue: (jsValue) => {
@@ -668,6 +681,7 @@ export const useUIGroupStateController = (
     wantRequesterButtonState,
     uiActionInternal,
     allowCapture = false,
+    cascadeValidationToChildren = false,
   },
 ) => {
   const debugUIGroup = useDebugUIState();
@@ -1063,6 +1077,14 @@ export const useUIGroupStateController = (
       return null;
     },
     getChildControllers: () => childUIStateControllerArray,
+    getManagedControls: () => {
+      if (!cascadeValidationToChildren) {
+        return [];
+      }
+      return childUIStateControllerArray
+        .map((c) => c.elementRef?.current)
+        .filter(Boolean);
+    },
     subscribe: subscribeUIState,
   };
   uiStateControllerRef.current = uiStateController;
