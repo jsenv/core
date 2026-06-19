@@ -252,11 +252,15 @@ export const openCallout = (
       debug(event, `callout close (reason: ${reason})`);
     }
     if (event.type === "mousedown") {
-      debug(
-        event,
-        "preventing mousedown default to avoid focus change on callout close",
-      );
-      event.preventDefault(); // prevent focus change to the callout, let it on the input
+      const isInsideCallout =
+        callout.element && callout.element.contains(event.target);
+      if (isInsideCallout) {
+        debug(
+          event,
+          "preventing mousedown default to avoid focus change on callout close",
+        );
+        event.preventDefault(); // prevent focus change to the callout, let it on the input
+      }
     }
     callout.opened = false;
     teardown({ event, reason });
