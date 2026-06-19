@@ -479,7 +479,7 @@ const DEFAULT_CONSTRAINT_SET = new Set([
   ...NAVI_CONSTRAINT_SET,
 ]);
 
-export const closeValidationMessage = (
+export const requestCloseValidationMessage = (
   element,
   event = new CustomEvent("programmatic_call"),
   reason,
@@ -523,12 +523,12 @@ export const createControlValidity = (controller) => {
     controlValidity.uninstall = uninstall;
   }
 
-  const closeElementValidationMessage = (event, reason) => {
-    if (controlValidity.validationMessage) {
-      controlValidity.validationMessage.requestClose(event, reason);
-      return true;
+  const innerRequestCloseValidationMessage = (event, reason) => {
+    const { validationMessage } = controlValidity;
+    if (!validationMessage) {
+      return false;
     }
-    return false;
+    return validationMessage.requestClose(event, reason);
   };
 
   const dynamicConstraintSet = new Set();
@@ -712,7 +712,7 @@ export const createControlValidity = (controller) => {
       }
       const checkValidityCallEvent =
         event || new CustomEvent("checkValidity called with no event");
-      closeElementValidationMessage(
+      innerRequestCloseValidationMessage(
         checkValidityCallEvent,
         `now_valid (after ${checkValidityCallEvent.type})`,
       );
@@ -737,11 +737,11 @@ export const createControlValidity = (controller) => {
     const activeConstraintInfo =
       interactionFailedConstraintInfo || failedConstraintInfo;
     if (!activeConstraintInfo) {
-      closeElementValidationMessage(event, "is_valid");
+      innerRequestCloseValidationMessage(event, "is_valid");
       return;
     }
     if (activeConstraintInfo.silent) {
-      closeElementValidationMessage(event, "invalid_silent");
+      innerRequestCloseValidationMessage(event, "invalid_silent");
       return;
     }
 
@@ -785,7 +785,7 @@ export const createControlValidity = (controller) => {
       focusTarget.focus();
     }
     const removeCloseOnCleanup = addTeardown(() => {
-      closeElementValidationMessage(new CustomEvent("cleanup"), "cleanup");
+      innerRequestCloseValidationMessage(new CustomEvent("cleanup"), "cleanup");
     });
 
     controlValidity.validationMessage = openCallout(message, {
@@ -885,7 +885,7 @@ export const createControlValidity = (controller) => {
 
   const resetOnInteraction = (e) => {
     customMessageMap.clear();
-    closeElementValidationMessage(e, e.type);
+    innerRequestCloseValidationMessage(e, e.type);
     console.log("resetOnInteraction", e.type, e);
     checkValidity({ event: e });
   };
