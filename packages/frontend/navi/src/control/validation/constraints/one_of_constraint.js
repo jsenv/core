@@ -1,6 +1,5 @@
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
-import { getConstraintValue } from "./constraint_message_util.js";
 
 export const ONE_OF_CONSTRAINT = {
   name: "one_of",
@@ -10,8 +9,8 @@ export const ONE_OF_CONSTRAINT = {
     if (!oneOf) {
       return null;
     }
-    const fieldValue = getConstraintValue(field);
-    if (!fieldValue) {
+    const value = field.uiState;
+    if (value === undefined || value === "") {
       return null;
     }
     const listEl = document.querySelector(oneOf);
@@ -25,7 +24,7 @@ export const ONE_OF_CONSTRAINT = {
     if (allowedValues.size === 0) {
       return null;
     }
-    if (allowedValues.has(fieldValue)) {
+    if (allowedValues.has(value)) {
       return null;
     }
     const visibleOptions = listEl.querySelectorAll(

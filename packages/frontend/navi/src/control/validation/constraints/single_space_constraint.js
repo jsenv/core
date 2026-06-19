@@ -1,6 +1,5 @@
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
-import { getConstraintValue } from "./constraint_message_util.js";
 
 export const SINGLE_SPACE_CONSTRAINT = {
   name: "single_space",
@@ -10,10 +9,12 @@ export const SINGLE_SPACE_CONSTRAINT = {
     if (singleSpace === undefined) {
       return null;
     }
-    const fieldValue = getConstraintValue(field);
-    const hasLeadingSpace = fieldValue.startsWith(" ");
-    const hasTrailingSpace = fieldValue.endsWith(" ");
-    const hasDoubleSpace = fieldValue.includes("  ");
+
+    const valueAsString =
+      field.uiState === undefined ? "" : String(field.uiState);
+    const hasLeadingSpace = valueAsString.startsWith(" ");
+    const hasTrailingSpace = valueAsString.endsWith(" ");
+    const hasDoubleSpace = valueAsString.includes("  ");
     if (hasLeadingSpace || hasDoubleSpace || hasTrailingSpace) {
       if (hasLeadingSpace) {
         return naviI18n("constraint.single_space.start.default");

@@ -20,13 +20,13 @@ export const READONLY_CONSTRAINT = {
     if (type === "hidden") {
       return null;
     }
+
     const isButton = field.controlType === "button";
     const isBusy = field.props["aria-busy"] === "true";
     const readonlySilent = field.props["data-readonly-silent"] === "";
     if (readonlySilent) {
       return { silent: true };
     }
-
     const message = (() => {
       if (isBusy) {
         if (isButton) {
@@ -39,7 +39,6 @@ export const READONLY_CONSTRAINT = {
       }
       return naviI18n("constraint.readonly.default");
     })();
-
     return {
       message,
       status: "info",

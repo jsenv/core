@@ -1,6 +1,5 @@
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
-import { getConstraintValue } from "./constraint_message_util.js";
 
 export const SAME_AS_CONSTRAINT = {
   name: "same_as",
@@ -10,6 +9,7 @@ export const SAME_AS_CONSTRAINT = {
     if (sameAs === undefined) {
       return null;
     }
+    // Ideally we should get the sameAs using the state controller id to avoid relying on DOM here too
     const otherField = document.querySelector(sameAs);
     if (!otherField) {
       console.warn(
@@ -17,9 +17,10 @@ export const SAME_AS_CONSTRAINT = {
       );
       return null;
     }
-    const fieldValue = getConstraintValue(field);
+    const valueAsString =
+      field.uiState === undefined ? "" : String(field.uiState);
     const required = field.props.required;
-    if (!fieldValue && !required) {
+    if (!valueAsString && !required) {
       return null;
     }
     const otherFieldValue = otherField.value;
@@ -27,7 +28,7 @@ export const SAME_AS_CONSTRAINT = {
       // don't validate if one of the two values is empty
       return null;
     }
-    if (fieldValue === otherFieldValue) {
+    if (valueAsString === otherFieldValue) {
       return null;
     }
 
