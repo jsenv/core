@@ -504,7 +504,7 @@ export const createControlValidity = (
 
   const checkValidity = ({
     event,
-    requester = controller,
+    requester = controller.elementRef.current,
     fromRequestAction,
     skipReadonly,
   } = {}) => {
@@ -529,9 +529,6 @@ export const createControlValidity = (
         event,
         requester,
         fromRequestAction,
-        skipReadonly:
-          managedController.controlType === "button" &&
-          managedController !== requester,
       });
       if (!managedIsValid) {
         failingManagedControlValidity = managedCV;
@@ -566,7 +563,7 @@ export const createControlValidity = (
       const checkResult = constraint.check(fieldForConstraint, {
         fromRequestAction,
         skipReadonly,
-        skipRequired: requester === controller,
+        skipRequired: requester === controller.elementRef.current,
         registerChange,
       });
       if (!checkResult) {
