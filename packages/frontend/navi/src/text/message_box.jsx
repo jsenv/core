@@ -33,6 +33,10 @@ const css = /* css */ `
     --x-message-color: var(--color-info);
     /* color: var(--x-color); */
     background-color: var(--x-message-background-color);
+
+    > .navi_icon {
+      flex-shrink: 0;
+    }
   }
 
   .navi_message_box[data-status-info] {
