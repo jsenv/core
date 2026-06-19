@@ -598,7 +598,7 @@ const LinkPlain = (props) => {
         if (preventDefault) {
           e.preventDefault();
         }
-        closeValidationMessage(e.target.__uiStateController__, e, "click");
+        closeValidationMessage(e.target, e, "click");
         if (readOnly) {
           e.preventDefault();
           return;

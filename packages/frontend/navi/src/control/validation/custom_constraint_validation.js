@@ -65,7 +65,7 @@ import {
 
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 import { findControlHost, findControlRoot } from "../control_dom.js";
-import { findControlProxyTarget } from "../control_proxy.js";
+import { findControlProxyTargetController } from "../controller_registry.js";
 import { openCallout } from "./callout/callout.js";
 import { getConstraintMessage } from "./constraint_message.js";
 import {
@@ -311,9 +311,12 @@ const _attemptCommit = (
 ) => {
   // If this element is a proxy, resolve to the underlying target so commit
   // always operates on the real control. The proxy has no UI state of its own.
-  const proxyTarget = findControlProxyTarget(handlingElement);
-  if (proxyTarget) {
-    handlingElement = proxyTarget;
+  const handlingController = handlingElement.__uiStateController__;
+  const proxyTargetController = handlingController
+    ? findControlProxyTargetController(handlingController)
+    : null;
+  if (proxyTargetController) {
+    handlingElement = proxyTargetController.elementRef.current;
   }
 
   let uiState;
@@ -425,9 +428,9 @@ const checkConstraints = ({ event, requester, fromRequestAction } = {}) => {
     fromRequestAction,
   });
   if (!isValid) {
-    const proxyTarget = findControlProxyTarget(elementToValidate);
-    const resolvedCV = proxyTarget
-      ? proxyTarget.__uiStateController__.controlValidity
+    const proxyTargetController = findControlProxyTargetController(controller);
+    const resolvedCV = proxyTargetController
+      ? proxyTargetController.controlValidity
       : controlValidity;
     let failingCV = resolvedCV.failingManagedControlValidity || resolvedCV;
     while (
@@ -477,10 +480,14 @@ const DEFAULT_CONSTRAINT_SET = new Set([
 ]);
 
 export const closeValidationMessage = (
-  controller,
+  element,
   event = new CustomEvent("programmatic_call"),
   reason,
 ) => {
+  const controller = element.__uiStateController__;
+  if (!controller) {
+    return false;
+  }
   const controlValidity = controller.controlValidity;
   const { validationMessage } = controlValidity;
   if (!validationMessage) {
@@ -580,12 +587,9 @@ export const createControlValidity = (controller) => {
     skipReadonly,
   } = {}) => {
     // Never validate a proxy — always delegate to the underlying element
-    const proxyTarget = findControlProxyTarget(element);
-    if (proxyTarget) {
-      const proxyController = proxyTarget.__uiStateController__;
-      const targetCV = proxyController.controlValidity;
-
-      return targetCV.checkValidity({
+    const proxyTargetController = findControlProxyTargetController(controller);
+    if (proxyTargetController) {
+      return proxyTargetController.controlValidity.checkValidity({
         event,
         fromRequestAction,
         requester,

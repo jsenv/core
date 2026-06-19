@@ -15,108 +15,16 @@ import { useInitialValue } from "../state/use_initial_value.js";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import { triggerNaviCommand } from "./commands.js";
 import { asControlHostValue } from "./control_value.js";
+import {
+  findProxyController,
+  getRadioSiblings,
+  getUIStateControllerById,
+  onUIStateControllerCreated,
+  onUIStateControllerDestroyed,
+  syncDomValue,
+} from "./controller_registry.js";
 import { FormContext } from "./form_context.js";
 import { createControlValidity } from "./validation/custom_constraint_validation.js";
-
-// In-memory registry of all mounted ui state controllers keyed by their id.
-// Allows direct controller access without dispatching DOM events — used by external
-// callers (e.g. selectable_list) to call setUIState by id instead of via the DOM.
-const controllersById = new Map();
-export const getUIStateControllerById = (id) => controllersById.get(id);
-// Reverse-lookup map: real-input id → proxy controller that references it via
-// `navi-control-proxy-for`. Maintained on create/destroy so lookup is O(1).
-const proxyControllerByRealInputId = new Map();
-const findProxyController = (realInputId) => {
-  if (!realInputId) {
-    return null;
-  }
-  return proxyControllerByRealInputId.get(realInputId) ?? null;
-};
-
-// Registry for non-serializable JS values that cannot be written to DOM attributes as-is.
-// When a value is an object/array, we store it here and write a reference string to the DOM
-// instead of "[object Object]". Console-inspectable via window.__navi_js('id').
-// The controller id is used as key — if the controller has no id, the value is not registered.
-const naviJsRegistry = new Map();
-window.__navi_js = (id) => naviJsRegistry.get(id);
-const isSerializableAsDomValue = (value) => {
-  if (value === null || value === undefined) {
-    return true;
-  }
-  const type = typeof value;
-  return type === "string" || type === "number" || type === "boolean";
-};
-const syncDomValue = (uiStateController, newUIState) => {
-  const el = uiStateController.elementRef.current;
-  if (!el) {
-    return;
-  }
-  const propName = uiStateController.statePropName;
-  const propValue = uiStateController.getPropFromState(newUIState);
-  const domValue = uiStateController.toControlHostValue(propValue);
-  if (isSerializableAsDomValue(domValue)) {
-    el[propName] = domValue;
-  } else {
-    const controllerId = uiStateController.id;
-    if (controllerId) {
-      naviJsRegistry.set(controllerId, domValue);
-      el[propName] = `window.__navi_js('${controllerId}')`;
-    }
-  }
-};
-
-// In-memory registry for radio controllers, keyed by input name.
-// Allows radio sibling unchecking without querying the DOM — necessary when
-// items are virtualized and their DOM element may not exist at the time.
-// Form scoping is reproduced by comparing parentUIStateController references.
-const radioControllersByName = new Map();
-
-const onUIStateControllerCreated = (uiStateController) => {
-  const { id, name, controlType } = uiStateController;
-  if (id) {
-    controllersById.set(id, uiStateController);
-  }
-  const proxyFor = uiStateController.props["navi-control-proxy-for"];
-  if (proxyFor) {
-    proxyControllerByRealInputId.set(proxyFor, uiStateController);
-  }
-  if (
-    controlType === "input" &&
-    uiStateController.props.type === "radio" &&
-    name
-  ) {
-    let set = radioControllersByName.get(name);
-    if (!set) {
-      set = new Set();
-      radioControllersByName.set(name, set);
-    }
-    set.add(uiStateController);
-  }
-};
-const onUIStateControllerDestroyed = (uiStateController) => {
-  const { id, name, controlType } = uiStateController;
-  if (id) {
-    controllersById.delete(id);
-    naviJsRegistry.delete(id);
-  }
-  const proxyFor = uiStateController.props["navi-control-proxy-for"];
-  if (proxyFor) {
-    proxyControllerByRealInputId.delete(proxyFor);
-  }
-  if (
-    controlType === "input" &&
-    uiStateController.props.type === "radio" &&
-    name
-  ) {
-    const set = radioControllersByName.get(name);
-    if (set) {
-      set.delete(uiStateController);
-      if (set.size === 0) {
-        radioControllersByName.delete(name);
-      }
-    }
-  }
-};
 
 /**
  * Minimal interface that any object placed in `ParentUIStateControllerContext` must satisfy.
@@ -262,7 +170,6 @@ export const useUIStateController = (
     if (el) {
       el.__uiStateController__ = controller;
     }
-    onUIStateControllerCreated(controller);
     notifyParentAboutChildMount();
     return () => {
       if (el && el.__uiStateController__ === controller) {
@@ -436,7 +343,7 @@ export const useUIStateController = (
       // Form scoping is preserved by comparing parentUIStateController references.
       const controlProxyFor = uiStateController.props["navi-control-proxy-for"];
       if (isRadio && newUIState && uiStateController.name && !controlProxyFor) {
-        const siblings = radioControllersByName.get(uiStateController.name);
+        const siblings = getRadioSiblings(uiStateController);
         if (siblings) {
           const siblingUncheckEvent = new CustomEvent("radio_sibling_uncheck", {
             detail: {},
@@ -582,14 +489,11 @@ export const useUIStateController = (
     },
   };
   uiStateControllerRef.current = uiStateController;
-  // Register synchronously during render so getUIStateControllerById works
-  // immediately in the same render cycle (e.g. InputTextualUI reading uiState).
-  if (id) {
-    controllersById.set(id, uiStateController);
-  }
-
   const controlValidity = createControlValidity(uiStateController);
   uiStateController.controlValidity = controlValidity;
+  // Register synchronously during render so getUIStateControllerById works
+  // immediately in the same render cycle (e.g. InputTextualUI reading uiState).
+  onUIStateControllerCreated(uiStateController);
   return uiStateController;
 };
 
@@ -725,22 +629,14 @@ export const useUIGroupStateController = (
   );
   useLayoutEffect(() => {
     const controller = controllerRef.current;
-    if (id) {
-      controllersById.set(id, controller);
-    }
     const el = ref.current;
     if (el) {
       el.__uiStateController__ = controller;
     }
     notifyParentAboutChildMount();
     return () => {
-      if (id) {
-        controllersById.delete(id);
-      }
-      if (el && el.__uiStateController__ === controller) {
-        delete el.__uiStateController__;
-      }
       notifyParentAboutChildUnmount();
+      onUIStateControllerDestroyed(controller);
     };
   }, []);
 
@@ -1089,11 +985,9 @@ export const useUIGroupStateController = (
     subscribe: subscribeUIState,
   };
   controllerRef.current = groupUIStateController;
-  if (id) {
-    controllersById.set(id, groupUIStateController);
-  }
   const controlValidity = createControlValidity(groupUIStateController);
   groupUIStateController.controlValidity = controlValidity;
+  onUIStateControllerCreated(groupUIStateController);
   return groupUIStateController;
 };
 // Stable reference for an empty selection so the action always receives an
