@@ -132,7 +132,6 @@ export const onRequestInteraction = (
       failingInterface.reportValidity({
         event: requestInteractionCustomEvent,
         requester: event.target,
-        debug: debugInteraction,
       });
     }
   }
@@ -324,7 +323,6 @@ const _attemptCommit = (
         failingInterface.reportValidity({
           event: requestCustomEvent,
           requester,
-          debug: debugUIState,
         });
       }
     }
@@ -430,7 +428,10 @@ const DEFAULT_CONSTRAINT_SET = new Set([
   ...NAVI_CONSTRAINT_SET,
 ]);
 
-export const createControlValidity = (controller) => {
+export const createControlValidity = (
+  controller,
+  { debugUIState, debugFocus },
+) => {
   const controlValidity = {
     uninstall: undefined,
     registerConstraint: undefined,
@@ -649,6 +650,10 @@ export const createControlValidity = (controller) => {
       constraintValidityState = newConstraintValidityState;
       const element = controller.elementRef.current;
       if (element) {
+        debugUIState(
+          event,
+          `constraint validity changed -> dispatch ${NAVI_VALIDITY_CHANGE_CUSTOM_EVENT}`,
+        );
         dispatchPublicCustomEvent(element, NAVI_VALIDITY_CHANGE_CUSTOM_EVENT);
       }
     }
@@ -656,7 +661,7 @@ export const createControlValidity = (controller) => {
   };
 
   const [notifyCalloutOpen, onCalloutOpen] = createPubSub();
-  const reportValidity = ({ event, requester, debug, skipFocus } = {}) => {
+  const reportValidity = ({ event, requester, skipFocus } = {}) => {
     // Interaction constraints (disabled/readonly) take precedence: they must be shown
     // without touching or resetting the value-level failedConstraintInfo.
     const activeConstraintInfo =
@@ -677,12 +682,10 @@ export const createControlValidity = (controller) => {
       activeConstraintInfo.message,
       { requester },
     );
-    if (debug) {
-      debug(
-        event,
-        `constraint message for "${activeConstraintInfo.constraint.name}": ${origin}`,
-      );
-    }
+    debugUIState(
+      event,
+      `constraint message for "${activeConstraintInfo.constraint.name}": ${origin}`,
+    );
 
     if (controlValidity.callout) {
       const { status, closeOnClickOutside } = activeConstraintInfo;
@@ -701,12 +704,10 @@ export const createControlValidity = (controller) => {
     ) {
       const focusTarget =
         findFocusDelegateTarget(anchorElement) || anchorElement;
-      if (debug) {
-        debug(
-          event,
-          `opening callout, give focus to anchor -> ${getElementSignature(focusTarget)}.focus()`,
-        );
-      }
+      debugFocus(
+        event,
+        `opening callout, give focus to anchor -> ${getElementSignature(focusTarget)}.focus()`,
+      );
       focusTarget.focus();
     }
     const removeCloseOnCleanup = addTeardown(() => {
@@ -718,7 +719,7 @@ export const createControlValidity = (controller) => {
       status: activeConstraintInfo.status,
       closeOnClickOutside: activeConstraintInfo.closeOnClickOutside,
       openingEvent: event,
-      debug,
+      debug: debugUIState,
       onClose: ({ event, focusWithinCallout }) => {
         removeCloseOnCleanup();
         for (const result of results) {
@@ -739,12 +740,10 @@ export const createControlValidity = (controller) => {
         ) {
           const focusTarget =
             findFocusDelegateTarget(anchorElement) || anchorElement;
-          if (debug) {
-            debug(
-              event,
-              `callout is closing with focus, give focus back to the control ${getElementSignature(focusTarget)}.focus()`,
-            );
-          }
+          debugFocus(
+            event,
+            `callout is closing with focus, give focus back to the control ${getElementSignature(focusTarget)}.focus()`,
+          );
           // focus is withing callout and we are closing it
           // if we don't do anything browser will move focus to the body
           // it's better to have it back to the field
@@ -805,8 +804,6 @@ export const createControlValidity = (controller) => {
       removeCustomMessage,
     });
   }
-
-  checkValidity();
 
   const resetOnInteraction = (e) => {
     customMessageMap.clear();

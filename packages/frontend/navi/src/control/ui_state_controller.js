@@ -10,7 +10,7 @@ import { createContext } from "preact";
 import { useContext, useLayoutEffect, useMemo, useRef } from "preact/hooks";
 
 import { useNavState } from "../nav/browser_integration/browser_integration.js";
-import { useDebugUIState } from "../navi_debug.jsx";
+import { useDebugFocus, useDebugUIState } from "../navi_debug.jsx";
 import { useInitialValue } from "../state/use_initial_value.js";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import { triggerNaviCommand } from "./commands.js";
@@ -92,6 +92,8 @@ export const useUIStateController = (
   } = {},
 ) => {
   const debugUIState = useDebugUIState();
+  const debugFocus = useDebugFocus();
+
   const uiStateControllerRef = useRef();
   const parentUIStateController = useContext(ParentUIStateControllerContext);
   const formContext = useContext(FormContext);
@@ -502,8 +504,12 @@ export const useUIStateController = (
     },
   };
   uiStateControllerRef.current = uiStateController;
-  const controlValidity = createControlValidity(uiStateController);
+  const controlValidity = createControlValidity(uiStateController, {
+    debugUIState,
+    debugFocus,
+  });
   uiStateController.controlValidity = controlValidity;
+  controlValidity.checkValidity();
   // Register synchronously during render so getUIStateControllerById works
   // immediately in the same render cycle (e.g. InputTextualUI reading uiState).
   onUIStateControllerCreated(uiStateController);
@@ -605,6 +611,8 @@ export const useUIGroupStateController = (
   },
 ) => {
   const debugUIGroup = useDebugUIState();
+  const debugFocus = useDebugFocus();
+
   if (typeof aggregateChildStates !== "function") {
     throw new TypeError("aggregateChildStates must be a function");
   }
@@ -998,8 +1006,12 @@ export const useUIGroupStateController = (
     subscribe: subscribeUIState,
   };
   controllerRef.current = groupUIStateController;
-  const controlValidity = createControlValidity(groupUIStateController);
+  const controlValidity = createControlValidity(groupUIStateController, {
+    debugUIState: debugUIGroup,
+    debugFocus,
+  });
   groupUIStateController.controlValidity = controlValidity;
+  controlValidity.checkValidity();
   onUIStateControllerCreated(groupUIStateController);
   return groupUIStateController;
 };
@@ -1036,6 +1048,7 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
   const firstChildControllerRef = useRef(null);
   const updatingRef = useRef(false);
   const debugUIState = useDebugUIState();
+  const debugFocus = useDebugFocus();
 
   useLayoutEffect(() => {
     return realUIStateController.subscribe((newUIState, e) => {
@@ -1139,8 +1152,12 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
     },
   };
   controllerRef.current = facadeUIStateController;
-  const controlValidity = createControlValidity(facadeUIStateController);
+  const controlValidity = createControlValidity(facadeUIStateController, {
+    debugUIState,
+    debugFocus,
+  });
   facadeUIStateController.controlValidity = controlValidity;
+  controlValidity.checkValidity();
   return facadeUIStateController;
 };
 
