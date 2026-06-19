@@ -192,11 +192,29 @@ export const onRequestCommit = (
 ) => {
   const { event, requester = event.target } = requestCommitEvent.detail;
   const elementHandlingCommit = requestCommitEvent.currentTarget;
+  // Update: set current UI state before validating.
+  // Callers of dispatchRequestCommit are responsible for calling
+  // dispatchRequestSetUIState first (e.g. --navi-update before --navi-define).
+  // If uiState is not yet in detail, resolve and persist it now.
+  if (!Object.hasOwn(requestCommitEvent.detail, "uiState")) {
+    const commitTarget =
+      findControlProxyTarget(elementHandlingCommit) || elementHandlingCommit;
+    let resolvedUIState;
+    dispatchInternalCustomEvent(commitTarget, "navi_get_ui_state", {
+      requester,
+      respondWith: (v) => {
+        resolvedUIState = v;
+      },
+    });
+    dispatchRequestSetUIState(commitTarget, resolvedUIState, {
+      event: requestCommitEvent,
+    });
+    requestCommitEvent.detail.uiState = resolvedUIState;
+  }
   const { committed } = _attemptCommit(elementHandlingCommit, {
     requestCustomEvent: requestCommitEvent,
     originalEvent: event,
     requester,
-    skipSetUIState: false,
     showCallout: true,
     debugUIState,
   });
@@ -273,13 +291,33 @@ export const onRequestAction = (
     );
   }
 
-  // Phase 1: commit — resolve current uiState, validate constraints,
-  // and set UI state optimistically.
+  // Phase 1: update — resolve current uiState and persist it before validating.
+  // Groups already set their state before dispatching the action (via navi_ui_state_change),
+  // so uiState is already in detail. For leaf inputs we resolve and set it now.
+  if (!Object.hasOwn(requestActionCustomEvent.detail, "uiState")) {
+    const commitTarget =
+      findControlProxyTarget(elementHandlingAction) || elementHandlingAction;
+    let resolvedUIState;
+    dispatchInternalCustomEvent(commitTarget, "navi_get_ui_state", {
+      requester,
+      respondWith: (v) => {
+        debugUIState(
+          requestActionCustomEvent,
+          `navi_get_ui_state.respondWith(${JSON.stringify(v)})`,
+        );
+        resolvedUIState = v;
+      },
+    });
+    dispatchRequestSetUIState(commitTarget, resolvedUIState, {
+      event: requestActionCustomEvent,
+    });
+    requestActionCustomEvent.detail.uiState = resolvedUIState;
+  }
+  // Phase 2: commit — validate constraints.
   const { committed, uiState } = _attemptCommit(elementHandlingAction, {
     requestCustomEvent: requestActionCustomEvent,
     originalEvent: event,
     requester,
-    skipSetUIState: requestActionCustomEvent.detail.skipSetUIState,
     showCallout: elementHandlingAction.hasAttribute("data-action"),
     debugUIState,
   });
@@ -342,20 +380,14 @@ export const onRequestAction = (
   return true;
 };
 
-// Resolves the current uiState, handles proxy forwarding, validates constraints,
-// and sets UI state optimistically if all checks pass.
+// Validates commit: checks constraints and returns whether the commit is allowed.
+// uiState must already be resolved and set in requestCustomEvent.detail.uiState
+// by the caller before calling _attemptCommit.
 // Used by both onRequestCommit and onRequestAction so the commit phase is shared.
-// Returns { committed: boolean, isProxy: boolean }.
+// Returns { committed: boolean, uiState }.
 const _attemptCommit = (
   handlingElement,
-  {
-    requestCustomEvent,
-    originalEvent,
-    requester,
-    skipSetUIState,
-    showCallout,
-    debugUIState,
-  },
+  { requestCustomEvent, originalEvent, requester, showCallout, debugUIState },
 ) => {
   // If this element is a proxy, resolve to the underlying target so commit
   // always operates on the real control. The proxy has no UI state of its own.
@@ -364,24 +396,7 @@ const _attemptCommit = (
     handlingElement = proxyTarget;
   }
 
-  // Resolve uiState from the element if not already provided (e.g. forwarded by proxy).
-  let uiState;
-  if (Object.hasOwn(requestCustomEvent.detail, "uiState")) {
-    uiState = requestCustomEvent.detail.uiState;
-  } else {
-    let resolvedUIState;
-    dispatchInternalCustomEvent(handlingElement, "navi_get_ui_state", {
-      requester,
-      respondWith: (v) => {
-        debugUIState(
-          requestCustomEvent,
-          `navi_get_ui_state.respondWith(${JSON.stringify(v)})`,
-        );
-        resolvedUIState = v;
-      },
-    });
-    uiState = resolvedUIState;
-  }
+  const uiState = requestCustomEvent.detail.uiState;
 
   const requestStatus = {
     uiState,
@@ -422,15 +437,7 @@ const _attemptCommit = (
     );
     return requestStatus;
   }
-  if (!skipSetUIState) {
-    dispatchRequestSetUIState(handlingElement, uiState, {
-      event: requestCustomEvent,
-    });
-  }
-  debugUIState(
-    requestCustomEvent,
-    "commit allowed -> dispatchRequestSetUIState",
-  );
+  debugUIState(requestCustomEvent, "commit allowed");
   requestStatus.commited = true;
   return requestStatus;
 };

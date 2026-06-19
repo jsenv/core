@@ -692,11 +692,10 @@ export const useControlgroupProps = (
       if (el) {
         dispatchRequestAction(el, {
           event: e.detail.event,
-          uiState: e.detail.value,
           // Group state is already set by setUIState before dispatchRequestAction is
-          // called, so onRequestAction must not call dispatchRequestSetUIState again
-          // (it would re-trigger uiAction + command a second time).
-          skipSetUIState: true,
+          // called. uiState is passed explicitly so onRequestAction skips the
+          // get+set step (Object.hasOwn check in onRequestAction).
+          uiState: e.detail.value,
         });
       }
     };
