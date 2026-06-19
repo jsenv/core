@@ -966,14 +966,14 @@ const stickCalloutToAnchor = (
           return "start";
         })();
       let arrowAnchorLeft;
+      calloutElement.setAttribute("data-arrow-x", arrowPosition);
       if (arrowPosition === "start") {
         const anchorBorderSizes = getBorderSizes(anchorElement);
         const anchorPaddingSizes = getPaddingSizes(anchorElement);
         // Target the left edge of the anchorElement text content (after borders + padding)
         arrowAnchorLeft =
           anchorLeft + anchorBorderSizes.left + anchorPaddingSizes.left;
-      }
-      if (arrowPosition === "center") {
+      } else if (arrowPosition === "center") {
         arrowAnchorLeft = (anchorLeft + anchorRight) / 2;
       } else {
         // "end"
