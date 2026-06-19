@@ -600,11 +600,11 @@ export const createControlValidity = (
         }
       } else if (failedConstraintInfo) {
         // there is already a failing value constraint, which one do we pick?
-        const constraintPicked = pickConstraint(
-          failedConstraintInfo.constraint,
-          constraint,
+        const constraintPicked = pickConstraintFailureInfo(
+          failedConstraintInfo,
+          thisConstraintFailureInfo,
         );
-        if (constraintPicked === constraint) {
+        if (constraintPicked === thisConstraintFailureInfo) {
           failedConstraintInfo = thisConstraintFailureInfo;
         } else {
           // keep the current failedConstraintInfo, this one fails but it's considered secondary
@@ -909,15 +909,19 @@ export const requestCloseValidityCallout = (
   return callout.requestClose(event, reason);
 };
 
-const pickConstraint = (a, b) => {
-  const aPrio = getConstraintPriority(a);
-  const bPrio = getConstraintPriority(b);
+const pickConstraintFailureInfo = (a, b) => {
+  const aPrio = getConstraintFailureInfoPriority(a);
+  const bPrio = getConstraintFailureInfoPriority(b);
   if (aPrio > bPrio) {
     return a;
   }
   return b;
 };
-const getConstraintPriority = (constraint) => {
+const getConstraintFailureInfoPriority = (failureInfo) => {
+  if (failureInfo.status === "error") {
+    return 1000;
+  }
+  const { constraint } = failureInfo;
   if (constraint.name === "required") {
     return 100;
   }
