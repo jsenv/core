@@ -385,8 +385,7 @@ const executeNaviDefine = (source, event, target) => {
   // Run full constraint validation before committing the picker value.
   // If any constraint fails (e.g. required, pattern) the callout is shown
   // and the picker stays open.
-  const uiState = getUIStateFromElement(target);
-  const committed = dispatchRequestCommit(target, { event, uiState });
+  const committed = dispatchRequestCommit(target, { event });
   if (!committed) {
     return false;
   }

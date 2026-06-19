@@ -193,12 +193,20 @@ export const onRequestCommit = (
   requestCommitEvent,
   { debugAction = () => {} } = {},
 ) => {
-  const {
-    event,
-    uiState,
-    requester = event.target,
-  } = requestCommitEvent.detail;
+  const { event, requester = event.target } = requestCommitEvent.detail;
   const elementHandlingCommit = requestCommitEvent.currentTarget;
+
+  // Resolve uiState from the element if not already provided.
+  if (!Object.hasOwn(requestCommitEvent.detail, "uiState")) {
+    let resolvedUIState;
+    dispatchInternalCustomEvent(elementHandlingCommit, "navi_get_ui_state", {
+      respondWith: (v) => {
+        resolvedUIState = v;
+      },
+    });
+    requestCommitEvent.detail.uiState = resolvedUIState;
+  }
+  const { uiState } = requestCommitEvent.detail;
 
   const committed = _attemptCommit(elementHandlingCommit, {
     requestCustomEvent: requestCommitEvent,
