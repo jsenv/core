@@ -39,6 +39,7 @@ import {
   useDebugCommand,
   useDebugFocus,
   useDebugInteraction,
+  useDebugUIState,
 } from "@jsenv/navi/src/navi_debug.jsx";
 import { compareTwoJsValues } from "@jsenv/navi/src/utils/compare_two_js_values.js";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
@@ -806,6 +807,7 @@ const useInteractiveProps = (
   const parentActionRequester = useContext(ActionRequesterContext);
   const debugCommand = useDebugCommand();
   const debugAction = useDebugAction();
+  const debugUIState = useDebugUIState();
   const debugInteraction = useDebugInteraction();
   const debugFocus = useDebugFocus();
 
@@ -1051,7 +1053,7 @@ const useInteractiveProps = (
         onCancel?.(e, reason);
       },
       onnavi_request_commit: (e) => {
-        onRequestCommit(e, { debugAction });
+        onRequestCommit(e, { debugUIState });
       },
       onnavi_request_action: (e) => {
         if (!e.detail.action) {
@@ -1061,6 +1063,7 @@ const useInteractiveProps = (
         }
         onRequestAction(e, {
           wantRequesterButtonState: uiStateController.wantRequesterButtonState,
+          debugUIState,
           debugAction,
         });
       },

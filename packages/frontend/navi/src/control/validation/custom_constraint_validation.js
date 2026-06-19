@@ -191,7 +191,7 @@ export const dispatchRequestCommit = (element, detail) => {
 };
 export const onRequestCommit = (
   requestCommitEvent,
-  { debugAction = () => {} } = {},
+  { debugUIState = () => {} } = {},
 ) => {
   const { event, requester = event.target } = requestCommitEvent.detail;
   const elementHandlingCommit = requestCommitEvent.currentTarget;
@@ -201,7 +201,7 @@ export const onRequestCommit = (
     requester,
     skipSetUIState: false,
     showCallout: true,
-    debugAction,
+    debugUIState,
   });
 
   if (!committed) {
@@ -245,6 +245,7 @@ export const onRequestAction = (
   {
     method = "rerun", // not used for now
     wantRequesterButtonState = false,
+    debugUIState = () => {},
     debugAction = () => {},
   } = {},
 ) => {
@@ -287,7 +288,7 @@ export const onRequestAction = (
       skipSetUIState: requestActionCustomEvent.detail.skipSetUIState,
       showCallout: elementHandlingAction.hasAttribute("data-action"),
       wantRequesterButtonState,
-      debugAction,
+      debugUIState,
     },
   );
   const customEventDetail = {
@@ -366,7 +367,7 @@ const _attemptCommit = (
     skipSetUIState,
     showCallout,
     wantRequesterButtonState = false,
-    debugAction,
+    debugUIState,
   },
 ) => {
   // Resolve uiState from the element if not already provided (e.g. forwarded by proxy).
@@ -377,7 +378,7 @@ const _attemptCommit = (
     let resolvedUIState;
     dispatchInternalCustomEvent(handlingElement, "navi_get_ui_state", {
       respondWith: (v) => {
-        debugAction(
+        debugUIState(
           requestCustomEvent,
           `navi_get_ui_state.respondWith(${JSON.stringify(v)})`,
         );
@@ -418,7 +419,7 @@ const _attemptCommit = (
   // If this element is a proxy, forward the commit to the underlying control.
   const naviProxyTarget = findControlProxyTarget(handlingElement);
   if (naviProxyTarget) {
-    debugAction(
+    debugUIState(
       requestCustomEvent,
       `${getElementSignature(naviProxyTarget)}.dispatchEvent("navi_set_ui_state", ${JSON.stringify(uiState)})`,
     );
@@ -449,13 +450,13 @@ const _attemptCommit = (
         failingInterface.reportValidity({
           event: requestCustomEvent,
           requester,
-          debug: debugAction,
+          debug: debugUIState,
         });
       }
     }
   }
   if (!requestStatus.canProceed) {
-    debugAction(
+    debugUIState(
       requestCustomEvent,
       `commit prevented (reason: ${requestStatus.preventReason})`,
     );
@@ -466,7 +467,7 @@ const _attemptCommit = (
       event: requestCustomEvent,
     });
   }
-  debugAction(
+  debugUIState(
     requestCustomEvent,
     "commit allowed -> dispatchRequestSetUIState",
   );
