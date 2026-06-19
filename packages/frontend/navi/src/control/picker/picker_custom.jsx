@@ -201,7 +201,7 @@ const PickerNative = (props) => {
       onnavi_request_open={(e) => {
         onRequestOpen(e);
       }}
-      interactionDefinitions={{
+      eventReactionDefinitions={{
         click: (e) => {
           return {
             name: "click to open native picker",
@@ -465,7 +465,7 @@ const PickerCustom = (props) => {
       });
 
       Object.assign(pickerProps, {
-        interactionDefinitions: {
+        eventReactionDefinitions: {
           mouseDown: (e) => {
             if (expandedRef.current) {
               return {

@@ -66,6 +66,7 @@ import {
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 import { findControlHost, findControlRoot } from "../control_dom.js";
 import { findControlProxyTarget } from "../control_proxy.js";
+import { dispatchRequestSetUIState } from "../ui_state_dom.js";
 import { openCallout } from "./callout/callout.js";
 import { getConstraintMessage } from "./constraint_message.js";
 import {
@@ -169,6 +170,74 @@ export const onRequestInteraction = (
   return true;
 };
 
+export const dispatchRequestCommit = (element, detail) => {
+  if (!detail.event) {
+    throw new TypeError("dispatchRequestCommit requires an event");
+  }
+  const controlHost = findControlHost(element) || element;
+  detail = {
+    requester: element,
+    ...detail,
+  };
+  const allowed = dispatchInternalCustomEvent(
+    controlHost,
+    "navi_request_commit",
+    detail,
+  );
+  return allowed;
+};
+export const onRequestCommit = (
+  requestCommitEvent,
+  { debugAction = () => {} } = {},
+) => {
+  const {
+    event,
+    uiState,
+    requester = event.target,
+  } = requestCommitEvent.detail;
+  const elementHandlingCommit = requestCommitEvent.currentTarget;
+
+  const requestStatus = { canProceed: true, preventReason: undefined };
+  if (requestStatus.canProceed) {
+    checkEvent(requestStatus, event);
+  }
+  if (requestStatus.canProceed) {
+    const failingInterface = checkConstraints({
+      event: requestCommitEvent,
+      requester,
+      fromRequestAction: true,
+    });
+    if (failingInterface) {
+      Object.assign(requestStatus, {
+        canProceed: false,
+        preventReason: failingInterface.failedConstraintInfo
+          ? `failing constraint "${failingInterface.failedConstraintInfo.name}"`
+          : "invalid (no constraint info)",
+      });
+      failingInterface.reportValidity({
+        event: requestCommitEvent,
+        requester,
+        debug: debugAction,
+      });
+    }
+  }
+  if (!requestStatus.canProceed) {
+    requestCommitEvent.preventDefault();
+    debugAction(
+      requestCommitEvent,
+      `commit prevented (reason: ${requestStatus.preventReason})`,
+    );
+    return false;
+  }
+  dispatchRequestSetUIState(elementHandlingCommit, uiState, {
+    event: requestCommitEvent,
+  });
+  debugAction(
+    requestCommitEvent,
+    "commit allowed -> dispatchRequestSetUIState",
+  );
+  return true;
+};
 export const dispatchRequestAction = (element, detail) => {
   if (!detail.event) {
     throw new TypeError("dispatchRequestAction requires an event");
@@ -309,6 +378,11 @@ export const onRequestAction = (
     requestActionCustomEvent,
     `${DEFAULT_CONSTRAINT_SET.size} constraints verified${elementHandlingAction.hasAttribute("data-action") ? ` -> execute action ${action.callSource}` : " -> no own action, nothing to execute"}`,
   );
+  if (!requestActionCustomEvent.detail.skipSetUIState) {
+    dispatchRequestSetUIState(elementHandlingAction, uiState, {
+      event: requestActionCustomEvent,
+    });
+  }
   dispatchInternalCustomEvent(
     elementHandlingAction,
     "navi_action_allowed",

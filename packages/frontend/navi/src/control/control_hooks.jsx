@@ -35,6 +35,7 @@ import {
   dispatchRequestAction,
   dispatchRequestInteraction,
   onRequestAction,
+  onRequestCommit,
   onRequestInteraction,
 } from "@jsenv/navi/src/control/validation/custom_constraint_validation.js";
 import {
@@ -202,12 +203,12 @@ export const useControlProps = (
     readOnlySupported,
   });
 
-  interactions: {
+  reactions: {
     const {
       ref,
-      actionInteraction,
-      actionOnMouseDown = actionInteraction === "mousedown",
-      actionAfterChange = actionInteraction === "change",
+      actionEvent,
+      actionOnMouseDown = actionEvent === "mousedown",
+      actionAfterChange = actionEvent === "change",
       actionDebounce,
     } = props;
     let isCheckable = false;
@@ -237,9 +238,9 @@ export const useControlProps = (
       naviProxyTarget.focus({ focusVisible: false });
       return true;
     };
-    const asInteraction = (interaction, e) => {
+    const asRequestingInteraction = (reaction, e) => {
       const control = ref.current;
-      const allowed = dispatchRequestInteraction(control, e, interaction.name);
+      const allowed = dispatchRequestInteraction(control, e, reaction.name);
       if (!allowed) {
         debugInteraction(
           e,
@@ -248,7 +249,7 @@ export const useControlProps = (
         e.preventDefault();
         return false;
       }
-      interaction.effect?.(e);
+      reaction.effect?.(e);
       return true;
     };
     const lastEventRequestingActionRef = useRef();
@@ -279,8 +280,8 @@ export const useControlProps = (
         lastActionValueRef.current = e.detail.value;
       }
     };
-    const asAction = (interaction, e, { ifValueModified }) => {
-      if (actionInteraction === "custom") {
+    const asRequestingAction = (reaction, e, { ifValueModified }) => {
+      if (actionEvent === "custom") {
         return false;
       }
       const control = ref.current;
@@ -310,15 +311,15 @@ export const useControlProps = (
         e.preventDefault();
         return false;
       }
-      interaction.effect?.(e);
+      reaction.effect?.(e);
       return true;
     };
 
-    const getDefaultInteractionDefinitions = () => {
+    const getDefaultEventReactionDefinitions = () => {
       const keyDownDefault = () => {
         return {
           name: "keydown",
-          type: "interaction",
+          type: "requestInteraction",
         };
       };
 
@@ -328,13 +329,13 @@ export const useControlProps = (
           mouseDown: () => {
             return {
               name: "mousedown",
-              type: actionOnMouseDown ? "action" : "interaction",
+              type: actionOnMouseDown ? "requestAction" : "requestInteraction",
             };
           },
           click: () => {
             return {
               name: "click",
-              type: actionOnMouseDown ? "interaction" : "action",
+              type: actionOnMouseDown ? "requestInteraction" : "requestAction",
               always: (e) => {
                 const button = e.currentTarget;
                 if (button.form) {
@@ -417,7 +418,7 @@ export const useControlProps = (
             click: () => {
               return {
                 name: `click on ${props.type}`,
-                type: "interaction",
+                type: "requestInteraction",
                 // When a radio is already checked and gets clicked, the browser does NOT
                 // fire an input event (state doesn't change), so asAction never runs.
                 // We still want uiAction + command to fire. We can tell whether the click
@@ -435,7 +436,7 @@ export const useControlProps = (
             input: () => {
               return {
                 name: "input",
-                type: "action",
+                type: "requestAction",
               };
             },
           };
@@ -460,19 +461,19 @@ export const useControlProps = (
             mouseDown: () => {
               return {
                 name: "mousedown",
-                type: "interaction",
+                type: "requestInteraction",
                 effect: updateUIState,
               };
             },
             input: {
               name: "input",
-              type: "interaction",
+              type: "requestInteraction",
               effect: updateUIState,
             },
             naviChange: () => {
               return {
                 name: "navi_change",
-                type: "action",
+                type: "requestAction",
               };
             },
           };
@@ -483,14 +484,14 @@ export const useControlProps = (
           input: () => {
             return {
               name: "input",
-              type: "interaction",
+              type: "requestInteraction",
               effect: updateUIState,
             };
           },
           naviChange: () => {
             return {
               name: "navi_change",
-              type: "action",
+              type: "requestAction",
             };
           },
         };
@@ -501,14 +502,14 @@ export const useControlProps = (
           input: () => {
             return {
               name: "input",
-              type: "interaction",
+              type: "requestInteraction",
               effect: updateUIState,
             };
           },
           naviChange: () => {
             return {
               name: "navi_change",
-              type: "action",
+              type: "requestAction",
             };
           },
         };
@@ -517,60 +518,60 @@ export const useControlProps = (
       return null;
     };
 
-    const defaultInteractionDefinitions = getDefaultInteractionDefinitions();
-    const { interactionDefinitions } = props;
-    const applyInteraction = (interactionName, e, { ifValueModified } = {}) => {
-      const defaultInteractionDefinition =
-        defaultInteractionDefinitions?.[interactionName];
-      const customInteractionDefinition =
-        interactionDefinitions?.[interactionName];
-      const interaction =
-        customInteractionDefinition?.(e) ?? defaultInteractionDefinition?.(e);
-      if (!interaction) {
+    const defaultEventReactionDefinitions =
+      getDefaultEventReactionDefinitions();
+    const { eventReactionDefinitions } = props;
+    const applyEventReaction = (eventName, e, { ifValueModified } = {}) => {
+      const defaultEventReactionDefinition =
+        defaultEventReactionDefinitions?.[eventName];
+      const customEventReactionDefinition =
+        eventReactionDefinitions?.[eventName];
+      const reaction =
+        customEventReactionDefinition?.(e) ??
+        defaultEventReactionDefinition?.(e);
+      if (!reaction) {
         return false;
       }
-      const { name, effect, type = "interaction", always } = interaction;
-      const dispatchFn = type === "action" ? asAction : asInteraction;
+      const { name, effect, type = "requestInteraction", always } = reaction;
+      const dispatchFn =
+        type === "requestAction" ? asRequestingAction : asRequestingInteraction;
       const applied = dispatchFn({ name, effect }, e, { ifValueModified });
       always?.(e);
       return applied;
     };
     const onMouseDown = (e) => {
       props.onMouseDown?.(e);
-      applyInteraction("mouseDown", e);
+      applyEventReaction("mouseDown", e);
       transferFocusToTarget(e);
     };
     const onClick = (e) => {
       props.onClick?.(e);
-      applyInteraction("click", e);
+      applyEventReaction("click", e);
       transferFocusToTarget(e);
     };
     const onKeyDown = (e) => {
       props.onKeyDown?.(e);
-      applyInteraction("keyDown", e);
+      applyEventReaction("keyDown", e);
     };
     const onInput = (e) => {
       props.onInput?.(e);
-      applyInteraction("input", e, { ifValueModified: true });
+      applyEventReaction("input", e, { ifValueModified: true });
     };
     // a custom concept being combination of "input", "change" and may other events
     // this even if trigerred when value changes and can be controlled by actionDebounce and actionAfterChange
-    const hasNaviChangeInteractionDefinition = Boolean(
-      interactionDefinitions?.naviChange ||
-      defaultInteractionDefinitions?.naviChange,
+    const hasNaviChangeEventReaction = Boolean(
+      eventReactionDefinitions?.naviChange ||
+      defaultEventReactionDefinitions?.naviChange,
     );
     const refCallback = useCallback(
       (field) => {
-        if (
-          !hasNaviChangeInteractionDefinition ||
-          actionInteraction === "custom"
-        ) {
+        if (!hasNaviChangeEventReaction || actionEvent === "custom") {
           return undefined;
         }
         return addInputEffect(
           field,
           (e) => {
-            applyInteraction("naviChange", e, {
+            applyEventReaction("naviChange", e, {
               ifValueModified: true,
             });
           },
@@ -582,10 +583,10 @@ export const useControlProps = (
         );
       },
       [
-        actionInteraction,
+        actionEvent,
         actionAfterChange,
         actionDebounce,
-        hasNaviChangeInteractionDefinition,
+        hasNaviChangeEventReaction,
       ],
     );
     const refComposed = useComposeElementRef(refCallback, ref);
@@ -652,10 +653,6 @@ export const useControlgroupProps = (
   const [controlRootProps, controlgroupProps] = useInteractiveProps(props, {
     uiStateController: uiGroupStateController,
     boundAction,
-    // Group state is set before dispatching navi_ui_state_change → dispatchRequestAction,
-    // so onnavi_action_allowed must not call dispatchRequestSetUIState again (it would
-    // re-trigger uiAction + command a second time).
-    skipSetUIStateOnActionAllowed: true,
   });
 
   const { basePseudoState } = controlgroupProps;
@@ -699,6 +696,10 @@ export const useControlgroupProps = (
         dispatchRequestAction(el, {
           event: e.detail.event,
           uiState: e.detail.value,
+          // Group state is already set by setUIState before dispatchRequestAction is
+          // called, so onRequestAction must not call dispatchRequestSetUIState again
+          // (it would re-trigger uiAction + command a second time).
+          skipSetUIState: true,
         });
       }
     };
@@ -782,12 +783,7 @@ export const ControlFacadeChildrenWrapper = ({
 
 const useInteractiveProps = (
   props,
-  {
-    uiStateController,
-    boundAction,
-    readOnlySupported,
-    skipSetUIStateOnActionAllowed,
-  },
+  { uiStateController, boundAction, readOnlySupported },
 ) => {
   const { ref } = props;
   const controlHostProps = {
@@ -943,6 +939,7 @@ const useInteractiveProps = (
       onnavi_set_ui_state: controlHostProps.onnavi_set_ui_state,
       onnavi_request_check: controlHostProps.onnavi_request_check,
       onnavi_request_uncheck: controlHostProps.onnavi_request_uncheck,
+      onnavi_request_commit: controlHostProps.onnavi_request_commit,
     });
 
     const { statePropName } = uiStateController;
@@ -1118,20 +1115,13 @@ const useInteractiveProps = (
         onRequestAction(e, { debugAction });
       },
       onnavi_action_prevented: onActionPrevented,
+      onnavi_request_commit: (e) => {
+        onRequestCommit(e, { debugAction });
+      },
       onnavi_action_allowed: (e) => {
         if (e.detail.action === "auto") {
           // special case for the use case where form.submit is called
           e.detail.action = boundAction;
-        }
-        const { uiState } = e.detail;
-        if (!skipSetUIStateOnActionAllowed) {
-          // For leaf controls: set the UI state optimistically before executing the action.
-          // For groups: state is already set by the group's setUIState (which ran before
-          // dispatching navi_ui_state_change → dispatchRequestAction), so we skip this
-          // to avoid calling uiAction + command a second time.
-          dispatchRequestSetUIState(e.currentTarget, uiState, {
-            event: e,
-          });
         }
         debugAction(e, `executing action ${e.detail.action.callSource}`);
         executeAction(e);

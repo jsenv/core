@@ -15,6 +15,7 @@ import {
 } from "./ui_state_dom.js";
 import {
   dispatchRequestAction,
+  dispatchRequestCommit,
   dispatchRequestInteraction,
 } from "./validation/custom_constraint_validation.js";
 
@@ -380,6 +381,14 @@ const executeNaviDefine = (source, event, target) => {
   const skipUpdate = resolvePickerInnerControl(target) !== null;
   if (!skipUpdate) {
     triggerNaviCommand(source, "--navi-update", event);
+  }
+  // Run full constraint validation before committing the picker value.
+  // If any constraint fails (e.g. required, pattern) the callout is shown
+  // and the picker stays open.
+  const uiState = getUIStateFromElement(target);
+  const committed = dispatchRequestCommit(target, { event, uiState });
+  if (!committed) {
+    return false;
   }
   // The picker's onClose already dispatches the action with the final value.
   // Dispatching again here would fire the action twice.

@@ -64,7 +64,7 @@ export const CONTROL_PROP_SET = new Set([
   "onKeyDown",
   "onPaste",
   "onInput",
-  "interactionDefinitions",
+  "eventReactionDefinitions",
 
   "onCancel",
   "cancelOnBlurInvalid",
