@@ -5,8 +5,71 @@
     <link rel="icon" href="data:," />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>UI State Controller Demo</title>
+    <style>
+      body {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 20px;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: #f5f5f5;
+      }
+
+      h1 {
+        margin-bottom: 30px;
+        color: #333;
+        font-size: 2rem;
+        text-align: center;
+      }
+
+      .demo-category {
+        margin: 40px 0 0;
+        padding: 6px 16px;
+        color: white;
+        font-weight: 600;
+        font-size: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        background: #555;
+        border-radius: 6px 6px 0 0;
+      }
+
+      .demo-section {
+        margin-bottom: 20px;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .demo-category + .demo-section {
+        border-radius: 0 8px 8px 8px;
+      }
+
+      .demo-section h2 {
+        margin: 0 0 16px;
+        padding-bottom: 10px;
+        color: #333;
+        font-size: 1.2rem;
+        border-bottom: 2px solid #ddd;
+      }
+
+      fieldset {
+        margin: 10px 0;
+        padding: 12px 15px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+      }
+
+      legend {
+        padding: 0 8px;
+        color: #555;
+        font-weight: 500;
+      }
+    </style>
   </head>
   <body>
+    <h1>UI State Controller</h1>
     <div id="root"></div>
 
     <script type="module" jsenv-type="module/jsx">
@@ -32,61 +95,61 @@
 
       const App = () => {
         return (
-          <Box flex="y" spacing="xl" alignX="start" padding="m" maxWidth="640">
-            <h1>UI State Controller</h1>
+          <div>
             <TableOfContents />
 
-            <section id="group">
-              <h2>Group (ControlGroup)</h2>
-              <StandaloneDemo />
-              <StandaloneClearDemo />
-              <StandaloneResetDemo />
-              <TextRequiredDemo />
-              <StandaloneRequiredDemo />
-              <InsideFormDemo />
-              <ExternalControlDemo />
-              <ExternalMixedDemo />
-            </section>
+            <div class="demo-category" id="group">
+              Group (ControlGroup)
+            </div>
+            <StandaloneDemo />
+            <StandaloneClearDemo />
+            <StandaloneResetDemo />
+            <TextRequiredDemo />
+            <StandaloneRequiredDemo />
+            <InsideFormDemo />
+            <ExternalControlDemo />
+            <ExternalMixedDemo />
 
-            <section id="checkbox">
-              <h2>Checkbox</h2>
-              <CheckboxBasicDemo />
-            </section>
+            <div class="demo-category" id="checkbox">
+              Checkbox
+            </div>
+            <CheckboxBasicDemo />
 
-            <section id="radio-group">
-              <h2>Radio group (List selectable)</h2>
-              <ExternalSelectableDemo />
-            </section>
+            <div class="demo-category" id="radio-group">
+              Radio group (List selectable)
+            </div>
+            <ExternalSelectableDemo />
 
-            <section id="checkbox-group">
-              <h2>Checkbox group (List selectable multiple)</h2>
-              <ExternalSelectableMultipleDemo />
-            </section>
+            <div class="demo-category" id="checkbox-group">
+              Checkbox group (List selectable multiple)
+            </div>
+            <ExternalSelectableMultipleDemo />
 
-            <section id="facade">
-              <h2>Facade (Picker)</h2>
-              <PickerTextExternalDemo />
-              <PickerTextInFormDemo />
-              <PickerControlGroupExternalDemo />
-              <PickerControlGroupInFormDemo />
-            </section>
+            <div class="demo-category" id="facade">
+              Facade (Picker)
+            </div>
+            <PickerTextExternalDemo />
+            <PickerTextInFormDemo />
+            <PickerControlGroupExternalDemo />
+            <PickerControlGroupInFormDemo />
 
-            <section id="bubble-up">
-              <h2>Bubble-up (enregistrement cross-leaf)</h2>
-              <BubbleUpBasicDemo />
-              <BubbleUpBoundaryDemo />
-              <BubbleUpPickerDemo />
-            </section>
-          </Box>
+            <div class="demo-category" id="bubble-up">
+              Bubble-up (enregistrement cross-leaf)
+            </div>
+            <BubbleUpBasicDemo />
+            <BubbleUpBoundaryDemo />
+            <BubbleUpPickerDemo />
+          </div>
         );
       };
 
       const TableOfContents = () => (
-        <nav>
-          <ol>
+        <div class="demo-section">
+          <h2>Table of contents</h2>
+          <ol style={{ margin: 0, paddingLeft: "20px", lineHeight: "2" }}>
             <li>
               <a href="#group">Group (ControlGroup)</a>
-              <ol>
+              <ol style={{ paddingLeft: "20px" }}>
                 <li>
                   <a href="#group-basic">Basique</a>
                 </li>
@@ -115,7 +178,7 @@
             </li>
             <li>
               <a href="#checkbox">Checkbox</a>
-              <ol>
+              <ol style={{ paddingLeft: "20px" }}>
                 <li>
                   <a href="#checkbox-basic">Basique</a>
                 </li>
@@ -123,7 +186,7 @@
             </li>
             <li>
               <a href="#radio-group">Radio group (List selectable)</a>
-              <ol>
+              <ol style={{ paddingLeft: "20px" }}>
                 <li>
                   <a href="#radio-group-external">Contrôle externe</a>
                 </li>
@@ -133,7 +196,7 @@
               <a href="#checkbox-group">
                 Checkbox group (List selectable multiple)
               </a>
-              <ol>
+              <ol style={{ paddingLeft: "20px" }}>
                 <li>
                   <a href="#checkbox-group-external">Contrôle externe</a>
                 </li>
@@ -141,7 +204,7 @@
             </li>
             <li>
               <a href="#facade">Facade (Picker)</a>
-              <ol>
+              <ol style={{ paddingLeft: "20px" }}>
                 <li>
                   <a href="#facade-text">Input texte</a>
                 </li>
@@ -160,7 +223,7 @@
             </li>
             <li>
               <a href="#bubble-up">Bubble-up (enregistrement cross-leaf)</a>
-              <ol>
+              <ol style={{ paddingLeft: "20px" }}>
                 <li>
                   <a href="#bubble-up-basic">
                     Input dans un List.Item bubble vers ControlGroup
@@ -179,7 +242,7 @@
               </ol>
             </li>
           </ol>
-        </nav>
+        </div>
       );
 
       const LABELS = ["Alpha", "Beta", "Gamma"];
@@ -190,8 +253,8 @@
         const [label, setLabel] = useState("a name");
 
         return (
-          <section id="facade-text">
-            <h3>Input texte</h3>
+          <div class="demo-section" id="facade-text">
+            <h2>Input texte</h2>
             <Box flex="y" spacing="m" alignX="start">
               <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
                 Un <code>Input</code> texte à l'intérieur du picker. Les boutons
@@ -252,7 +315,7 @@
               </Box>
               <CallLog entries={entries} onClear={clearEntries} />
             </Box>
-          </section>
+          </div>
         );
       };
 
@@ -260,8 +323,8 @@
         const [entries, pushEntry, clearEntries] = useCallLog();
 
         return (
-          <section id="facade-text-in-form">
-            <h3>Input texte — inside a form</h3>
+          <div class="demo-section" id="facade-text-in-form">
+            <h2>Input texte — inside a form</h2>
             <Box flex="y" spacing="m" alignX="start">
               <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
                 Le <code>Picker</code> est dans un <code>Form</code>. On vérifie
@@ -310,7 +373,7 @@
               </Form>
               <CallLog entries={entries} onClear={clearEntries} />
             </Box>
-          </section>
+          </div>
         );
       };
 
@@ -319,8 +382,8 @@
         const pickerId = "picker-controlgroup-external-picker";
 
         return (
-          <section id="facade-controlgroup">
-            <h3>ControlGroup interne</h3>
+          <div class="demo-section" id="facade-controlgroup">
+            <h2>ControlGroup interne</h2>
             <Box flex="y" spacing="m" alignX="start">
               <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
                 Des boutons extérieurs envoient <code>--navi-update</code> avec
@@ -397,7 +460,7 @@
               </Box>
               <CallLog entries={entries} onClear={clearEntries} />
             </Box>
-          </section>
+          </div>
         );
       };
 
@@ -405,8 +468,8 @@
         const [entries, pushEntry, clearEntries] = useCallLog();
 
         return (
-          <section id="facade-controlgroup-in-form">
-            <h3>ControlGroup interne — inside a form</h3>
+          <div class="demo-section" id="facade-controlgroup-in-form">
+            <h2>ControlGroup interne — inside a form</h2>
             <Box flex="y" spacing="m" alignX="start">
               <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
                 Le <code>Picker type="controlgroup"</code> est dans un{" "}
@@ -470,7 +533,7 @@
               </Form>
               <CallLog entries={entries} onClear={clearEntries} />
             </Box>
-          </section>
+          </div>
         );
       };
 
@@ -479,8 +542,8 @@
         const checkboxId = "checkbox-basic-input";
 
         return (
-          <section id="checkbox-basic">
-            <h3>Basique</h3>
+          <div class="demo-section" id="checkbox-basic">
+            <h2>Basique</h2>
             <Box flex="y" spacing="m" alignX="start">
               <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
                 Un <code>Input type="checkbox"</code> avec des boutons{" "}
@@ -512,7 +575,7 @@
               </Box>
               <CallLog entries={entries} onClear={clearEntries} />
             </Box>
-          </section>
+          </div>
         );
       };
 
@@ -523,8 +586,8 @@
         const cgId = "external-control-mixed-cg";
 
         return (
-          <section id="group-mixed">
-            <h3>Texte + liste sélectable</h3>
+          <div class="demo-section" id="group-mixed">
+            <h2>Texte + liste sélectable</h2>
             <Box flex="y" spacing="m" alignX="start">
               <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
                 Un <code>ControlGroup</code> qui contient un champ texte{" "}
@@ -604,7 +667,7 @@
               </fieldset>
               <CallLog entries={entries} onClear={clearEntries} />
             </Box>
-          </section>
+          </div>
         );
       };
 
@@ -613,8 +676,8 @@
         const cgId = "external-control-object-cg";
 
         return (
-          <section id="group-external">
-            <h3>Contrôle externe (--navi-update)</h3>
+          <div class="demo-section" id="group-external">
+            <h2>Contrôle externe (--navi-update)</h2>
             <Box flex="y" spacing="m" alignX="start">
               <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
                 Des boutons extérieurs envoient <code>--navi-update</code> avec
@@ -676,7 +739,7 @@
               </fieldset>
               <CallLog entries={entries} onClear={clearEntries} />
             </Box>
-          </section>
+          </div>
         );
       };
 
@@ -687,8 +750,8 @@
         const FRUIT_VALUES = [1, 2, 3, 4, 5];
 
         return (
-          <section id="radio-group-external">
-            <h3>Contrôle externe</h3>
+          <div class="demo-section" id="radio-group-external">
+            <h2>Contrôle externe</h2>
             <Box flex="y" spacing="m" alignX="start">
               <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
                 Des boutons extérieurs envoient <code>--navi-update</code> avec
@@ -748,7 +811,7 @@
               </fieldset>
               <CallLog entries={entries} onClear={clearEntries} />
             </Box>
-          </section>
+          </div>
         );
       };
 
@@ -759,8 +822,8 @@
         const FRUIT_VALUES = [1, 2, 3, 4, 5];
 
         return (
-          <section id="checkbox-group-external">
-            <h3>Contrôle externe</h3>
+          <div class="demo-section" id="checkbox-group-external">
+            <h2>Contrôle externe</h2>
             <Box flex="y" spacing="m" alignX="start">
               <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
                 Des boutons extérieurs envoient <code>--navi-update</code> avec
@@ -825,7 +888,7 @@
               </fieldset>
               <CallLog entries={entries} onClear={clearEntries} />
             </Box>
-          </section>
+          </div>
         );
       };
 
@@ -833,8 +896,8 @@
         const [entries, pushEntry, clearEntries] = useCallLog();
 
         return (
-          <section id="group-basic">
-            <h3>Basique</h3>
+          <div class="demo-section" id="group-basic">
+            <h2>Basique</h2>
             <Box flex="y" spacing="m" alignX="start">
               <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
                 ControlGroup sans parent — agit comme un mini-formulaire.
@@ -865,7 +928,7 @@
               </fieldset>
               <CallLog entries={entries} onClear={clearEntries} />
             </Box>
-          </section>
+          </div>
         );
       };
 
@@ -873,8 +936,8 @@
         const [entries, pushEntry, clearEntries] = useCallLog();
 
         return (
-          <section id="group-clear">
-            <h3>Clear (--navi-clear)</h3>
+          <div class="demo-section" id="group-clear">
+            <h2>Clear (--navi-clear)</h2>
             <Box flex="y" spacing="m" alignX="start">
               <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
                 <code>Button command="--navi-clear"</code> réinitialise tous les
@@ -930,7 +993,7 @@
               </fieldset>
               <CallLog entries={entries} onClear={clearEntries} />
             </Box>
-          </section>
+          </div>
         );
       };
 
@@ -938,8 +1001,8 @@
         const [entries, pushEntry, clearEntries] = useCallLog();
 
         return (
-          <section id="group-reset">
-            <h3>Reset (--navi-reset)</h3>
+          <div class="demo-section" id="group-reset">
+            <h2>Reset (--navi-reset)</h2>
             <Box flex="y" spacing="m" alignX="start">
               <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
                 <code>Button command="--navi-reset"</code> remet les champs à
@@ -993,7 +1056,7 @@
               </fieldset>
               <CallLog entries={entries} onClear={clearEntries} />
             </Box>
-          </section>
+          </div>
         );
       };
 
@@ -1001,8 +1064,8 @@
         const [entries, pushEntry, clearEntries] = useCallLog();
 
         return (
-          <section id="group-required">
-            <h3>Required / validation</h3>
+          <div class="demo-section" id="group-required">
+            <h2>Required / validation</h2>
             <Box flex="y" spacing="m" alignX="start">
               <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
                 Un <code>Input type="text" required</code> — soumettre sans le
@@ -1030,7 +1093,7 @@
               </fieldset>
               <CallLog entries={entries} onClear={clearEntries} />
             </Box>
-          </section>
+          </div>
         );
       };
 
@@ -1038,8 +1101,8 @@
         const [entries, pushEntry, clearEntries] = useCallLog();
 
         return (
-          <section id="group-required-2">
-            <h3>Required (standalone)</h3>
+          <div class="demo-section" id="group-required-2">
+            <h2>Required (standalone)</h2>
             <Box flex="y" spacing="m" alignX="start">
               <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
                 Même chose avec <code>firstName</code> requis — soumettre sans
@@ -1071,7 +1134,7 @@
               </fieldset>
               <CallLog entries={entries} onClear={clearEntries} />
             </Box>
-          </section>
+          </div>
         );
       };
 
@@ -1080,8 +1143,8 @@
         const [groupEntries, pushGroupEntry, clearGroupEntries] = useCallLog();
 
         return (
-          <section id="group-inside-form">
-            <h3>Inside a Form</h3>
+          <div class="demo-section" id="group-inside-form">
+            <h2>Inside a Form</h2>
             <Box flex="y" spacing="m">
               <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
                 Le ControlGroup (<code>name="address"</code>) produit une clé{" "}
@@ -1133,7 +1196,7 @@
               </p>
               <CallLog entries={formEntries} onClear={clearFormEntries} />
             </Box>
-          </section>
+          </div>
         );
       };
 
@@ -1141,8 +1204,8 @@
 
       const BubbleUpBasicDemo = () => {
         return (
-          <section id="bubble-up-basic">
-            <h3>Input dans un List.Item bubble vers ControlGroup</h3>
+          <div class="demo-section" id="bubble-up-basic">
+            <h2>Input dans un List.Item bubble vers ControlGroup</h2>
             <Box flex="y" spacing="m" alignX="start">
               <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
                 Un <code>Input name="extra"</code> est placé dans un{" "}
@@ -1164,14 +1227,14 @@
               </ControlGroup>
               <DebugUIStateController id="bubble-up-basic-cg" />
             </Box>
-          </section>
+          </div>
         );
       };
 
       const BubbleUpBoundaryDemo = () => {
         return (
-          <section id="bubble-up-boundary">
-            <h3>ControlGroup stoppe le bubble</h3>
+          <div class="demo-section" id="bubble-up-boundary">
+            <h2>ControlGroup stoppe le bubble</h2>
             <Box flex="y" spacing="m" alignX="start">
               <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
                 Deux <code>ControlGroup</code> imbriqués. L'input dans le
@@ -1203,14 +1266,14 @@
               </p>
               <DebugUIStateController id="bubble-up-boundary-outer" />
             </Box>
-          </section>
+          </div>
         );
       };
 
       const BubbleUpPickerDemo = () => {
         return (
-          <section id="bubble-up-picker">
-            <h3>Picker dans un List.Item bubble vers ControlGroup</h3>
+          <div class="demo-section" id="bubble-up-picker">
+            <h2>Picker dans un List.Item bubble vers ControlGroup</h2>
             <Box flex="y" spacing="m" alignX="start">
               <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
                 Un <code>Picker</code> placé dans un <code>List.Item</code>. Le
@@ -1258,7 +1321,7 @@
               </ControlGroup>
               <DebugUIStateController id="bubble-up-picker-cg" />
             </Box>
-          </section>
+          </div>
         );
       };
 

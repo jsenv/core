@@ -9,6 +9,7 @@ import {
 } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
 import { Text } from "@jsenv/navi/src/text/text.jsx";
+import { renderSafe } from "@jsenv/navi/src/utils/render_safe.js";
 import {
   ControlFacadeChildrenWrapper,
   useControlFacadeProps,
@@ -475,9 +476,9 @@ const PickerDefaultUI = () => {
     if (!placeholder) {
       return null;
     }
-    return placeholder;
+    return renderSafe(placeholder);
   }
-  return value;
+  return renderSafe(value);
 };
 
 const PickerFirstResolver = (props) => {
