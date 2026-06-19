@@ -132,6 +132,7 @@
             <PickerTextInFormDemo />
             <PickerControlGroupExternalDemo />
             <PickerControlGroupInFormDemo />
+            <PickerControlGroupRequiredDemo />
 
             <div class="demo-category" id="bubble-up">
               Bubble-up (enregistrement cross-leaf)
@@ -217,6 +218,11 @@
                 <li>
                   <a href="#facade-controlgroup-in-form">
                     ControlGroup interne — inside a form
+                  </a>
+                </li>
+                <li>
+                  <a href="#facade-controlgroup-required">
+                    ControlGroup interne — champ requis
                   </a>
                 </li>
               </ol>
@@ -531,6 +537,70 @@
                 </fieldset>
                 <Button type="submit">Submit</Button>
               </Form>
+              <CallLog entries={entries} onClear={clearEntries} />
+            </Box>
+          </div>
+        );
+      };
+
+      const PickerControlGroupRequiredDemo = () => {
+        const [entries, pushEntry, clearEntries] = useCallLog();
+
+        return (
+          <div class="demo-section" id="facade-controlgroup-required">
+            <h2>ControlGroup interne — champ requis</h2>
+            <Box flex="y" spacing="m" alignX="start">
+              <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+                Un champ <code>required</code> à l'intérieur du picker. Cliquer
+                sur <em>Définir</em> sans remplir le champ doit bloquer la
+                fermeture et afficher une erreur de validation. Cliquer sur{" "}
+                <em>Annuler</em> doit toujours fermer le picker (pas de
+                validation au cancel).
+              </p>
+              <fieldset>
+                <legend>contact</legend>
+                <Picker
+                  name="contact"
+                  type="controlgroup"
+                  placeholder="Renseigner le contact"
+                  uiAction={(v) => {
+                    pushEntry("uiAction", v);
+                  }}
+                  action={(v) => {
+                    pushEntry("action", v);
+                  }}
+                >
+                  <ControlGroup>
+                    <Box flex="y" spacing="s" padding="s" alignX="start">
+                      <fieldset>
+                        <legend>firstName (required)</legend>
+                        <Input
+                          name="firstName"
+                          placeholder="Prénom"
+                          required
+                          uiAction={(v) => {
+                            pushEntry("uiAction (firstName)", v);
+                          }}
+                        />
+                      </fieldset>
+                      <fieldset>
+                        <legend>lastName</legend>
+                        <Input
+                          name="lastName"
+                          placeholder="Nom"
+                          uiAction={(v) => {
+                            pushEntry("uiAction (lastName)", v);
+                          }}
+                        />
+                      </fieldset>
+                    </Box>
+                  </ControlGroup>
+                  <Box flex spacing="s">
+                    <Button command="--navi-cancel">Annuler</Button>
+                    <Button command="--navi-define">Définir</Button>
+                  </Box>
+                </Picker>
+              </fieldset>
               <CallLog entries={entries} onClear={clearEntries} />
             </Box>
           </div>
