@@ -139,7 +139,9 @@ export const Dialog = (props) => {
         deny: () => {
           denied = true;
         },
-        allow: () => {},
+        allow: () => {
+          denied = false;
+        },
       };
       closeRequestHandler(e, closePermission);
       if (denied) {
