@@ -497,7 +497,6 @@ export const checkValidity = (controller, options) => {
   return controlValidity.checkValidity(options);
 };
 
-const formInstrumentedWeakSet = new WeakSet();
 export const createControlValidity = (controller) => {
   const element = controller.elementRef.current;
   const controlValidity = {
@@ -516,14 +515,6 @@ export const createControlValidity = (controller) => {
       teardown();
     };
     controlValidity.uninstall = uninstall;
-  }
-
-  const isForm = controller.controlType === "form";
-  if (isForm) {
-    formInstrumentedWeakSet.add(element);
-    addTeardown(() => {
-      formInstrumentedWeakSet.delete(element);
-    });
   }
 
   const dispatchCancelCustomEvent = (detail) => {
@@ -1098,12 +1089,12 @@ const getConstraintPriority = (constraint) => {
 const requestSubmit = HTMLFormElement.prototype.requestSubmit;
 HTMLFormElement.prototype.requestSubmit = function (submitter) {
   const form = this;
-  const isInstrumented = formInstrumentedWeakSet.has(form);
-  if (!isInstrumented) {
+  const controller = form.__uiStateController__;
+  if (!controller) {
     requestSubmit.call(form, submitter);
     return;
   }
-  const programmaticEvent = new CustomEvent("programmatic_requestsubmit", {
+  const programmaticEvent = new CustomEvent("programmatic_request_submit", {
     cancelable: true,
     detail: {
       submitter,
