@@ -41,6 +41,7 @@ import { createControlValidity } from "./validation/control_validity.js";
  *   unregisterChild(child): void; // Called on child unmount
  *   props: Object;
  *   elementRef: Ref; // Used to dispatch DOM events
+ *   getManagedControls(): UIStateController[]; // Returns controls whose validity is managed by this controller
  * }
  * ```
  */
@@ -1132,6 +1133,13 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
         firstChildControllerRef.current = null;
         realUIStateController.facadeChild = null;
       }
+    },
+    getManagedControls: () => {
+      const child = firstChildControllerRef.current;
+      if (!child) {
+        return [];
+      }
+      return child.getManagedControls();
     },
     onChildInteraction: (child, e, { stateChanged, silent = false }) => {
       if (!stateChanged) {
