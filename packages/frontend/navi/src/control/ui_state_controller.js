@@ -21,7 +21,7 @@ import {
   getUIStateControllerById,
   onUIStateControllerCreated,
   onUIStateControllerDestroyed,
-  syncDomValue,
+  toDomValue,
 } from "./controller_registry.js";
 import { FormContext } from "./form_context.js";
 import { createControlValidity } from "./validation/custom_constraint_validation.js";
@@ -275,11 +275,12 @@ export const useUIStateController = (
     getPropFromState,
     getStateFromProp,
     toControlHostValue: (jsValue) => {
-      return asControlHostValue(jsValue, {
+      const controlHostValue = asControlHostValue(jsValue, {
         controlType,
         type: uiStateController.props.type,
         inputMode: uiStateController.props.inputMode,
       });
+      return toDomValue(uiStateController, controlHostValue);
     },
     onInteraction: (e, { skipCommand } = {}) => {
       // Trigger side effects of a user interaction without changing UI state.
@@ -326,11 +327,13 @@ export const useUIStateController = (
         return false;
       }
       const el = ref.current;
+      const domValue = toDomValue(uiStateController, newUIState);
       if (el) {
         // set immediatly (don't wait for preact re-render) so ui is in the right state for:
         // - side effect
         // - any "input" event that might be dispatched below
-        syncDomValue(uiStateController, newUIState);
+        const propName = uiStateController.statePropName;
+        el[propName] = domValue;
       }
       uiStateController.uiState = newUIState;
       ownUIStateSignal.value = newUIState;

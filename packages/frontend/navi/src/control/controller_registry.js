@@ -20,23 +20,15 @@ export const getRadioSiblings = (radioUIStateController) => {
   const siblings = radioControllersByName.get(radioUIStateController.name);
   return siblings;
 };
-export const syncDomValue = (uiStateController, newUIState) => {
-  const el = uiStateController.elementRef.current;
-  if (!el) {
-    return;
-  }
-  const propName = uiStateController.statePropName;
+export const toDomValue = (uiStateController, newUIState) => {
   const propValue = uiStateController.getPropFromState(newUIState);
   const domValue = uiStateController.toControlHostValue(propValue);
   if (isSerializableAsDomValue(domValue)) {
-    el[propName] = domValue;
-  } else {
-    const controllerId = uiStateController.id;
-    if (controllerId) {
-      naviJsRegistry.set(controllerId, domValue);
-      el[propName] = `window.__navi_js('${controllerId}')`;
-    }
+    return domValue;
   }
+  const controllerId = uiStateController.id;
+  naviJsRegistry.set(controllerId, domValue);
+  return `window.__navi_js('${controllerId}')`;
 };
 window.__navi_js = (id) => naviJsRegistry.get(id);
 const isSerializableAsDomValue = (value) => {
