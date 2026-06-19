@@ -1091,6 +1091,12 @@ const useInteractiveProps = (
           // special case for the use case where form.submit is called
           e.detail.action = boundAction;
         }
+        if (uiStateController.controlType === "button") {
+          // Persist the button's value so that setUIState triggers the button's command
+          // (e.g. --navi-send) and notifies parent controllers (e.g. ControlGroup).
+          const currentValue = readControlValue(ref.current);
+          dispatchRequestSetUIState(ref.current, currentValue, { event: e });
+        }
         debugAction(e, `executing action ${e.detail.action.callSource}`);
         executeAction(e);
       },
