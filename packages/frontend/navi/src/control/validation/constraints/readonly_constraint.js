@@ -8,25 +8,40 @@ export const READONLY_CONSTRAINT = {
     if (skipReadonly) {
       return null;
     }
-    if (
-      !field.readOnly &&
-      !field.hasAttribute("data-readonly") &&
-      field.getAttribute("aria-readonly") !== "true"
-    ) {
+    const readOnly =
+      field.props !== undefined
+        ? Boolean(
+            field.props.readOnly ||
+            field.props["data-readonly"] != null ||
+            field.props["aria-readonly"] === "true",
+          )
+        : field.readOnly ||
+          field.hasAttribute("data-readonly") ||
+          field.getAttribute("aria-readonly") === "true";
+    if (!readOnly) {
       return null;
     }
-    if (field.type === "hidden") {
+    const type = field.props?.type ?? field.type ?? "";
+    if (type === "hidden") {
       return null;
     }
-    const isButton = field.tagName === "BUTTON";
-    const isBusy = field.getAttribute("aria-busy") === "true";
-    const readonlySilent = field.hasAttribute("data-readonly-silent");
+    const isButton =
+      field.controlType === "button" || field.tagName === "BUTTON";
+    const isBusy =
+      field.props !== undefined
+        ? field.props["aria-busy"] === "true"
+        : field.getAttribute("aria-busy") === "true";
+    const readonlySilent =
+      field.props !== undefined
+        ? field.props["data-readonly-silent"] != null
+        : field.hasAttribute("data-readonly-silent");
     if (readonlySilent) {
       return { silent: true };
     }
+    const target = field.elementRef?.current ?? field;
     if (isBusy) {
       return {
-        target: field,
+        target,
         message: isButton
           ? naviI18n("constraint.readonly.button_busy")
           : naviI18n("constraint.readonly.busy"),
@@ -34,7 +49,7 @@ export const READONLY_CONSTRAINT = {
       };
     }
     return {
-      target: field,
+      target,
       message: isButton
         ? naviI18n("constraint.readonly.button")
         : naviI18n("constraint.readonly.default"),

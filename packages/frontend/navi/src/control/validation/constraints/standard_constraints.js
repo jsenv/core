@@ -5,9 +5,11 @@
 import { formatDay, formatMonth } from "@jsenv/navi/src/text/format_time.js";
 import { langSignal } from "@jsenv/navi/src/text/lang_signal.js";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
-import { getUIStateFromElement } from "../../ui_state_dom.js";
 import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
-import { fieldTypeSuffix } from "./constraint_message_util.js";
+import {
+  fieldTypeSuffix,
+  getConstraintValue,
+} from "./constraint_message_util.js";
 
 // this constraint is not really a native constraint and browser just not let this happen at all
 // in our case it's just here in case some code is wrongly calling "requestAction" or "checkValidity" on a disabled element
@@ -15,7 +17,8 @@ export const DISABLED_CONSTRAINT = {
   name: "disabled",
   messageAttribute: "data-disabled-message",
   check: (field) => {
-    if (field.disabled) {
+    const disabled = field.props?.disabled ?? field.disabled;
+    if (disabled) {
       return naviI18n(`constraint.disabled.${fieldTypeSuffix(field)}`);
     }
     return null;
@@ -27,27 +30,50 @@ CONSTRAINT_ATTRIBUTE_SET.add("data-disabled");
 export const REQUIRED_CONSTRAINT = {
   name: "required",
   messageAttribute: "data-required-message",
-  check: (field, { skipRequired, registerChange }) => {
-    if (!field.required) {
+  check: (field, { skipRequired }) => {
+    const required = field.props?.required ?? field.required;
+    if (!required) {
       return null;
     }
     if (skipRequired) {
       return null;
     }
-    if (field.type === "checkbox") {
+    const controlType = field.controlType;
+    const type = field.props?.type ?? field.type ?? "";
+
+    // radio_group controller: check aggregate uiState
+    if (controlType === "radio_group") {
+      if (field.uiState == null) {
+        return {
+          message: naviI18n("constraint.required.radio"),
+          target: field.elementRef?.current,
+        };
+      }
+      return null;
+    }
+    // checkbox_group controller: check aggregate uiState array
+    if (controlType === "checkbox_group") {
+      const uiState = field.uiState;
+      if (!uiState || uiState.length === 0) {
+        return {
+          message: naviI18n("constraint.required.checkbox_group"),
+          target: field.elementRef?.current,
+        };
+      }
+      return null;
+    }
+
+    if (type === "checkbox") {
+      // Individual checkbox controller
+      if (field.props !== undefined) {
+        if (!field.uiState) {
+          return naviI18n("constraint.required.checkbox");
+        }
+        return null;
+      }
+      // Legacy DOM element
       const name = field.name;
       if (name) {
-        const groupContainer = field.closest('[navi-control="checkbox_group"]');
-        if (groupContainer) {
-          const groupUIState = getUIStateFromElement(groupContainer);
-          if (groupUIState.length === 0) {
-            return {
-              message: naviI18n("constraint.required.checkbox_group"),
-              target: groupContainer,
-            };
-          }
-          return null;
-        }
         const checkboxGroupContainer = field.form || document;
         const checkboxSelector = `input[type="checkbox"][name="${CSS.escape(name)}"]`;
         const checkboxArray =
@@ -57,12 +83,6 @@ export const REQUIRED_CONSTRAINT = {
             if (checkbox.checked) {
               return null;
             }
-            registerChange((onChange) => {
-              checkbox.addEventListener("input", onChange);
-              return () => {
-                checkbox.removeEventListener("input", onChange);
-              };
-            });
           }
           return {
             message: naviI18n("constraint.required.checkbox_group"),
@@ -70,100 +90,108 @@ export const REQUIRED_CONSTRAINT = {
           };
         }
       }
-      // no name or single checkbox with that name
       if (!field.checked) {
         return naviI18n("constraint.required.checkbox");
       }
       return null;
     }
-    if (field.type === "radio") {
-      // For radio buttons, check if any radio with the same name is selected
+
+    if (type === "radio") {
+      // Individual radio controller
+      if (field.props !== undefined) {
+        const parent = field.parentUIStateController;
+        if (parent) {
+          const siblings = parent.getChildControllers?.() ?? [];
+          const radiosWithSameName = siblings.filter(
+            (c) =>
+              c.controlType === "input" &&
+              c.props?.type === "radio" &&
+              c.name === field.name,
+          );
+          if (radiosWithSameName.some((c) => c.uiState === true)) {
+            return null;
+          }
+        } else if (!field.uiState) {
+          return naviI18n("constraint.required.radio");
+        }
+        return {
+          message: naviI18n("constraint.required.radio"),
+          target: field.elementRef?.current,
+        };
+      }
+      // Legacy DOM element
       const name = field.name;
       if (name) {
-        const groupContainer = field.closest('[navi-control="radio_group"]');
-        if (groupContainer) {
-          const groupUIState = getUIStateFromElement(groupContainer);
-          if (groupUIState === undefined) {
-            return {
-              message: naviI18n("constraint.required.radio"),
-              target: groupContainer,
-            };
-          }
-          return null;
-        }
         const radioGroupContainer = field.form || document;
-        // Check if any radio with the same name is checked
         const radioSelector = `input[type="radio"][name="${CSS.escape(name)}"]`;
         const radiosWithSameName =
           radioGroupContainer.querySelectorAll(radioSelector);
         for (const radio of radiosWithSameName) {
           if (radio.checked) {
-            return null; // At least one radio is selected
+            return null;
           }
-          registerChange((onChange) => {
-            radio.addEventListener("change", onChange);
-            return () => {
-              radio.removeEventListener("change", onChange);
-            };
-          });
         }
         return {
           message: naviI18n("constraint.required.radio"),
           target: field.closest("fieldset") || undefined,
         };
       }
-      // If no name, check just this radio
       if (!field.checked) {
         return naviI18n("constraint.required.radio");
       }
       return null;
     }
-    if (field.type === "color") {
-      const uiState = getUIStateFromElement(field);
-      // The color input always has a value (#000000 when empty) so we rely on
-      // uiState to know the user hasn't actually chosen a color
-      if (uiState === undefined || uiState === "") {
+
+    if (type === "color") {
+      const uiState = field.props !== undefined ? field.uiState : field.value;
+      if (uiState == null || uiState === "") {
         return naviI18n("constraint.required.color");
       }
       return null;
     }
-    if (field.value) {
+
+    const value = getConstraintValue(field);
+    if (value) {
       return null;
     }
-    if (field.type === "password") {
-      return field.hasAttribute("data-same-as")
+    const sameAs =
+      field.props?.["data-same-as"] ?? field.getAttribute?.("data-same-as");
+    if (type === "password") {
+      return sameAs
         ? naviI18n("constraint.required.password.confirm")
         : naviI18n("constraint.required.password");
     }
-    if (field.type === "email") {
-      return field.hasAttribute("data-same-as")
+    if (type === "email") {
+      return sameAs
         ? naviI18n("constraint.required.email.confirm")
         : naviI18n("constraint.required.email");
     }
-    if (field.type === "date") {
+    if (type === "date") {
       return naviI18n("constraint.required.date");
     }
-    if (field.type === "month") {
+    if (type === "month") {
       return naviI18n("constraint.required.month");
     }
-    if (field.type === "week") {
+    if (type === "week") {
       return naviI18n("constraint.required.week");
     }
-    if (field.type === "time") {
+    if (type === "time") {
       return naviI18n("constraint.required.time");
     }
-    if (field.type === "number" || field.inputMode === "numeric") {
+    const inputMode = field.props?.inputMode ?? field.inputMode ?? "";
+    if (type === "number" || inputMode === "numeric") {
       return naviI18n("constraint.required.number");
     }
-    if (field.type === "datetime-local") {
+    if (type === "datetime-local") {
       return naviI18n("constraint.required.datetime");
     }
-    if (field.type === "file") {
-      return field.multiple
+    if (type === "file") {
+      const multiple = field.props?.multiple ?? field.multiple;
+      return multiple
         ? naviI18n("constraint.required.file.multiple")
         : naviI18n("constraint.required.file");
     }
-    if (field.hasAttribute("data-same-as")) {
+    if (sameAs) {
       return naviI18n("constraint.required.confirm");
     }
     return naviI18n("constraint.required.default");
@@ -175,19 +203,20 @@ export const PATTERN_CONSTRAINT = {
   name: "pattern",
   messageAttribute: "data-pattern-message",
   check: (field) => {
-    const pattern = field.pattern;
+    const pattern = field.props?.pattern ?? field.pattern ?? "";
     if (!pattern) {
       return null;
     }
-    const value = field.value;
-    if (!value && !field.required) {
+    const value = getConstraintValue(field);
+    const required = field.props?.required ?? field.required;
+    if (!value && !required) {
       return null;
     }
     const regex = new RegExp(`^(?:${pattern})$`);
     if (regex.test(value)) {
       return null;
     }
-    const type = field.type;
+    const type = field.props?.type ?? field.type ?? "";
     if (type === "email") {
       return naviI18n("constraint.pattern.email");
     }
@@ -206,10 +235,11 @@ export const TYPE_EMAIL_CONSTRAINT = {
   name: "type_email",
   messageAttribute: "data-type-message",
   check: (field) => {
-    if (field.type !== "email") {
+    const type = field.props?.type ?? field.type ?? "";
+    if (type !== "email") {
       return null;
     }
-    const value = field.value;
+    const value = getConstraintValue(field);
     if (!value) {
       return null;
     }
@@ -227,18 +257,25 @@ export const MIN_LENGTH_CONSTRAINT = {
   name: "min_length",
   messageAttribute: "data-min-length-message",
   check: (field) => {
-    if (field.tagName === "INPUT") {
-      if (!INPUT_TYPE_SUPPORTING_MIN_LENGTH_SET.has(field.type)) {
+    const controlType = field.controlType ?? "";
+    const type = field.props?.type ?? field.type ?? "text";
+    const isInput = controlType === "input" || field.tagName === "INPUT";
+    const isTextarea =
+      field.props?.as === "textarea" ||
+      controlType === "textarea" ||
+      field.tagName === "TEXTAREA";
+    if (isInput) {
+      if (!INPUT_TYPE_SUPPORTING_MIN_LENGTH_SET.has(type)) {
         return null;
       }
-    } else if (field.tagName !== "TEXTAREA") {
+    } else if (!isTextarea) {
       return null;
     }
-    const minLength = field.minLength;
-    if (minLength === -1) {
+    const minLength = field.props?.minLength ?? field.minLength;
+    if (minLength == null || minLength === -1) {
       return null;
     }
-    const value = field.value;
+    const value = getConstraintValue(field);
     if (!value) {
       return null;
     }
@@ -274,18 +311,25 @@ export const MAX_LENGTH_CONSTRAINT = {
   name: "max_length",
   messageAttribute: "data-max-length-message",
   check: (field) => {
-    if (field.tagName === "INPUT") {
-      if (!INPUT_TYPE_SUPPORTING_MAX_LENGTH_SET.has(field.type)) {
+    const controlType = field.controlType ?? "";
+    const type = field.props?.type ?? field.type ?? "text";
+    const isInput = controlType === "input" || field.tagName === "INPUT";
+    const isTextarea =
+      field.props?.as === "textarea" ||
+      controlType === "textarea" ||
+      field.tagName === "TEXTAREA";
+    if (isInput) {
+      if (!INPUT_TYPE_SUPPORTING_MAX_LENGTH_SET.has(type)) {
         return null;
       }
-    } else if (field.tagName !== "TEXTAREA") {
+    } else if (!isTextarea) {
       return null;
     }
-    const maxLength = field.maxLength;
-    if (maxLength === -1) {
+    const maxLength = field.props?.maxLength ?? field.maxLength;
+    if (maxLength == null || maxLength === -1) {
       return null;
     }
-    const value = field.value;
+    const value = getConstraintValue(field);
     const valueLength = value.length;
     if (valueLength <= maxLength) {
       return null;
@@ -305,30 +349,27 @@ export const TYPE_NUMBER_CONSTRAINT = {
   name: "type_number",
   messageAttribute: "data-type-message",
   check: (field) => {
-    if (field.tagName !== "INPUT") {
+    const isInput = field.controlType === "input" || field.tagName === "INPUT";
+    if (!isInput) {
       return null;
     }
-    const isNumber = field.type === "number" || field.inputMode === "numeric";
+    const type = field.props?.type ?? field.type ?? "";
+    const inputMode = field.props?.inputMode ?? field.inputMode ?? "";
+    const isNumber = type === "number" || inputMode === "numeric";
     if (!isNumber) {
       return null;
     }
-    if (field.value === "") {
-      // empty without required — nothing to validate
+    const value = getConstraintValue(field);
+    if (!value) {
       return null;
     }
-    if (field.validity.valueMissing) {
-      // let required handle that
+    const numericValue = Number(value);
+    if (!isNaN(numericValue)) {
       return null;
     }
-    // valueAsNumber only works for type="number"; for inputMode="numeric"
-    // (which is type="text" under the hood) we must parse field.value manually.
-    const numericValue =
-      field.type === "number" ? field.valueAsNumber : Number(field.value);
-    const valueAsNumberIsNaN = isNaN(numericValue);
-    if (!valueAsNumberIsNaN) {
-      return null;
-    }
-    const naviInputType = field.getAttribute("navi-input-type");
+    const naviInputType =
+      field.props?.["navi-input-type"] ??
+      field.getAttribute?.("navi-input-type");
     return naviI18n(`constraint.type.${naviInputType || "number"}.default`);
   },
 };
@@ -347,35 +388,39 @@ export const MIN_CONSTRAINT = {
   name: "min",
   messageAttribute: "data-min-message",
   check: (field) => {
-    if (field.tagName !== "INPUT") {
+    const isInput = field.controlType === "input" || field.tagName === "INPUT";
+    if (!isInput) {
       return null;
     }
-    const minString = field.min;
-    if (minString === "") {
+    const minString = field.props?.min ?? field.min ?? "";
+    if (!minString) {
       return null;
     }
-    const isNumber = field.type === "number" || field.inputMode === "numeric";
+    const type = field.props?.type ?? field.type ?? "";
+    const inputMode = field.props?.inputMode ?? field.inputMode ?? "";
+    const value = getConstraintValue(field);
+    const isNumber = type === "number" || inputMode === "numeric";
     if (isNumber) {
       const minNumber = parseFloat(minString);
       if (isNaN(minNumber)) {
         return null;
       }
-      const valueAsNumber =
-        field.type === "number" ? field.valueAsNumber : Number(field.value);
-      if (isNaN(valueAsNumber)) {
+      const numericValue = Number(value);
+      if (isNaN(numericValue)) {
         return null;
       }
-      if (valueAsNumber < minNumber) {
-        const naviInputType = field.getAttribute("navi-input-type");
+      if (numericValue < minNumber) {
+        const naviInputType =
+          field.props?.["navi-input-type"] ??
+          field.getAttribute?.("navi-input-type");
         return naviI18n(`constraint.min.${naviInputType || "number"}.default`, {
           min: minString,
         });
       }
       return null;
     }
-    if (field.type === "time") {
-      const value = field.value;
-      if (value === "") {
+    if (type === "time") {
+      if (!value) {
         return null;
       }
       const [minHours, minMinutes] = minString.split(":").map(Number);
@@ -389,18 +434,17 @@ export const MIN_CONSTRAINT = {
     }
     // range inputs enforce boundaries via their UI and browser clamping for programmatic updates
     // so they never need a min/max validation message.
-    if (DATE_INPUT_TYPE_SET.has(field.type)) {
-      const value = field.value;
+    if (DATE_INPUT_TYPE_SET.has(type)) {
       if (!value) {
         return null;
       }
       if (value < minString) {
-        const todayIso = getTodayIso(field.type);
+        const todayIso = getTodayIso(type);
         if (minString === todayIso) {
           return naviI18n("constraint.min.date.today.default");
         }
         return naviI18n("constraint.min.date.default", {
-          min: formatDateIso(minString, field.type),
+          min: formatDateIso(minString, type),
         });
       }
       return null;
@@ -414,35 +458,39 @@ export const MAX_CONSTRAINT = {
   name: "max",
   messageAttribute: "data-max-message",
   check: (field) => {
-    if (field.tagName !== "INPUT") {
+    const isInput = field.controlType === "input" || field.tagName === "INPUT";
+    if (!isInput) {
       return null;
     }
-    const maxString = field.max;
-    if (maxString === "") {
+    const maxString = field.props?.max ?? field.max ?? "";
+    if (!maxString) {
       return null;
     }
-    const isNumber = field.type === "number" || field.inputMode === "numeric";
+    const type = field.props?.type ?? field.type ?? "";
+    const inputMode = field.props?.inputMode ?? field.inputMode ?? "";
+    const value = getConstraintValue(field);
+    const isNumber = type === "number" || inputMode === "numeric";
     if (isNumber) {
       const maxNumber = parseFloat(maxString);
       if (isNaN(maxNumber)) {
         return null;
       }
-      const valueAsNumber =
-        field.type === "number" ? field.valueAsNumber : Number(field.value);
-      if (isNaN(valueAsNumber)) {
+      const numericValue = Number(value);
+      if (isNaN(numericValue)) {
         return null;
       }
-      if (valueAsNumber > maxNumber) {
-        const naviInputType = field.getAttribute("navi-input-type");
+      if (numericValue > maxNumber) {
+        const naviInputType =
+          field.props?.["navi-input-type"] ??
+          field.getAttribute?.("navi-input-type");
         return naviI18n(`constraint.max.${naviInputType || "number"}.default`, {
           max: maxString,
         });
       }
       return null;
     }
-    if (field.type === "time") {
-      const value = field.value;
-      if (value === "") {
+    if (type === "time") {
+      if (!value) {
         return null;
       }
       const [maxHours, maxMinutes] = maxString.split(":").map(Number);
@@ -454,18 +502,17 @@ export const MAX_CONSTRAINT = {
       }
       return null;
     }
-    if (DATE_INPUT_TYPE_SET.has(field.type)) {
-      const value = field.value;
+    if (DATE_INPUT_TYPE_SET.has(type)) {
       if (!value) {
         return null;
       }
       if (value > maxString) {
-        const todayIso = getTodayIso(field.type);
+        const todayIso = getTodayIso(type);
         if (maxString === todayIso) {
           return naviI18n("constraint.max.date.today.default");
         }
         return naviI18n("constraint.max.date.default", {
-          max: formatDateIso(maxString, field.type),
+          max: formatDateIso(maxString, type),
         });
       }
       return null;
@@ -488,52 +535,55 @@ export const STEP_CONSTRAINT = {
   name: "step",
   messageAttribute: "data-step-message",
   check: (field) => {
-    if (field.tagName !== "INPUT") {
+    const isInput = field.controlType === "input" || field.tagName === "INPUT";
+    if (!isInput) {
       return null;
     }
-    const isNumericText =
-      field.type === "text" && field.inputMode === "numeric";
-    if (!isNumericText && !STEP_SUPPORTED_TYPE_SET.has(field.type)) {
+    const type = field.props?.type ?? field.type ?? "";
+    const inputMode = field.props?.inputMode ?? field.inputMode ?? "";
+    const isNumericText = type === "text" && inputMode === "numeric";
+    if (!isNumericText && !STEP_SUPPORTED_TYPE_SET.has(type)) {
       return null;
     }
-    const stepString = field.step;
-    if (stepString === "" || stepString === "any") {
+    const stepString = field.props?.step ?? field.step ?? "";
+    if (!stepString || stepString === "any") {
       return null;
     }
-    const isNumber = field.type === "number" || isNumericText;
+    const value = getConstraintValue(field);
+    const minString = field.props?.min ?? field.min ?? "";
+    const isNumber = type === "number" || isNumericText;
     if (isNumber) {
       const step = parseFloat(stepString);
-      const minString = field.min;
-      const base = minString !== "" ? parseFloat(minString) : 0;
-      const valueAsNumber =
-        field.type === "number" ? field.valueAsNumber : Number(field.value);
-      if (isNaN(valueAsNumber)) {
+      const base = minString ? parseFloat(minString) : 0;
+      const numericValue = Number(value);
+      if (isNaN(numericValue)) {
         return null;
       }
-      const remainder = (((valueAsNumber - base) % step) + step) % step;
+      const remainder = (((numericValue - base) % step) + step) % step;
       // Use a small epsilon to handle floating-point imprecision
       const epsilon = step * 1e-9;
       const hasMismatch = remainder > epsilon && remainder < step - epsilon;
       if (!hasMismatch) {
         return null;
       }
-      const before = base + Math.floor((valueAsNumber - base) / step) * step;
+      const before = base + Math.floor((numericValue - base) / step) * step;
       const after = before + step;
       const decimals = (stepString.split(".")[1] || "").length;
-      const naviInputType = field.getAttribute("navi-input-type");
+      const naviInputType =
+        field.props?.["navi-input-type"] ??
+        field.getAttribute?.("navi-input-type");
       return naviI18n(`constraint.step.${naviInputType || "number"}.default`, {
         step: stepString,
         before: before.toFixed(decimals),
         after: after.toFixed(decimals),
       });
     }
-    if (field.type === "time") {
+    if (type === "time") {
       const stepSeconds = parseFloat(stepString);
       if (!isNaN(stepSeconds)) {
         const stepMs = stepSeconds * 1000;
-        const valueMs = field.valueAsNumber;
-        const minString = field.min;
-        const baseMs = minString !== "" ? timeStringToMs(minString) : 0;
+        const valueMs = timeStringToMs(value);
+        const baseMs = minString ? timeStringToMs(minString) : 0;
         const remainder = (((valueMs - baseMs) % stepMs) + stepMs) % stepMs;
         if (remainder === 0) {
           return null;
@@ -566,8 +616,6 @@ export const STEP_CONSTRAINT = {
     }
     {
       const step = parseInt(stepString, 10);
-      const value = field.value;
-      const minString = field.min;
       const baseDate = minString
         ? new Date(`${minString}T00:00:00`)
         : new Date(0);
@@ -584,11 +632,8 @@ export const STEP_CONSTRAINT = {
       afterDate.setDate(afterDate.getDate() + afterDays);
       return naviI18n("constraint.step.date.default", {
         step: stepString,
-        before: formatDateIso(
-          beforeDate.toISOString().slice(0, 10),
-          field.type,
-        ),
-        after: formatDateIso(afterDate.toISOString().slice(0, 10), field.type),
+        before: formatDateIso(beforeDate.toISOString().slice(0, 10), type),
+        after: formatDateIso(afterDate.toISOString().slice(0, 10), type),
       });
     }
   },

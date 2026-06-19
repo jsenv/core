@@ -1,4 +1,5 @@
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
+import { getConstraintValue } from "./constraint_message_util.js";
 
 export const createAvailableConstraint = (
   // the set might be incomplete (the front usually don't have the full copy of all the items from the backend)
@@ -14,7 +15,7 @@ export const createAvailableConstraint = (
     name: "available",
     messageAttribute: "data-available-message",
     check: (field) => {
-      const fieldValue = field.value;
+      const fieldValue = getConstraintValue(field);
       const hasConflict = existingValueSet.has(fieldValue);
       if (hasConflict) {
         return naviI18n(message, { value: fieldValue });

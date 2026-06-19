@@ -38,17 +38,24 @@ export const extractMessageAndRemainingProps = (props) => {
 };
 
 export const getConstraintMessage = (
-  element,
+  controllerOrElement,
   constraint,
   generatedMessage,
   { requester },
 ) => {
   const { messageAttribute, name: constraintName } = constraint;
+  // Resolve the DOM element for event dispatching (works for both controllers and elements)
+  const element = controllerOrElement.elementRef
+    ? controllerOrElement.elementRef.current
+    : controllerOrElement;
 
   // 1. Dispatch navi_constraint_message event — JSX handlers respond synchronously.
   //    Dispatch on the requester first (e.g. the <li> that was clicked),
   //    then fall back to element (e.g. the hidden <input>).
   const dispatchOn = (target) => {
+    if (!target) {
+      return null;
+    }
     let responded = null;
     const event = new CustomEvent("navi_constraint_message", {
       bubbles: false,
@@ -80,9 +87,18 @@ export const getConstraintMessage = (
     };
   }
 
-  // 2. Fall back to plain string attribute
-  if (messageAttribute) {
-    const messageAttribute_value = element.getAttribute(messageAttribute);
+  // 2. Fall back to message prop (controller) or plain attribute (legacy element)
+  const propName = CONSTRAINT_NAME_TO_PROP[constraintName];
+  if (propName && controllerOrElement.props !== undefined) {
+    const messageFromProp = controllerOrElement.props[propName];
+    if (messageFromProp) {
+      return {
+        message: messageFromProp,
+        origin: `prop ${propName}`,
+      };
+    }
+  } else if (messageAttribute) {
+    const messageAttribute_value = element?.getAttribute(messageAttribute);
     if (messageAttribute_value) {
       return {
         message: messageAttribute_value,

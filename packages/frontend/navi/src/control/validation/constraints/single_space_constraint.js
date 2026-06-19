@@ -1,15 +1,19 @@
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
+import { getConstraintValue } from "./constraint_message_util.js";
 
 export const SINGLE_SPACE_CONSTRAINT = {
   name: "single_space",
   messageAttribute: "data-single-space-message",
   check: (field) => {
-    const singleSpace = field.hasAttribute("data-single-space");
+    const singleSpace =
+      field.props !== undefined
+        ? field.props["data-single-space"] != null
+        : field.hasAttribute("data-single-space");
     if (!singleSpace) {
       return null;
     }
-    const fieldValue = field.value;
+    const fieldValue = getConstraintValue(field);
     const hasLeadingSpace = fieldValue.startsWith(" ");
     const hasTrailingSpace = fieldValue.endsWith(" ");
     const hasDoubleSpace = fieldValue.includes("  ");

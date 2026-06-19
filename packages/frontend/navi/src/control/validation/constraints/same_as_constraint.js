@@ -1,11 +1,15 @@
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
+import { getConstraintValue } from "./constraint_message_util.js";
 
 export const SAME_AS_CONSTRAINT = {
   name: "same_as",
   messageAttribute: "data-same-as-message",
   check: (field) => {
-    const sameAs = field.getAttribute("data-same-as");
+    const sameAs =
+      field.props !== undefined
+        ? field.props["data-same-as"]
+        : field.getAttribute("data-same-as");
     if (!sameAs) {
       return null;
     }
@@ -16,8 +20,9 @@ export const SAME_AS_CONSTRAINT = {
       );
       return null;
     }
-    const fieldValue = field.value;
-    if (!fieldValue && !field.required) {
+    const fieldValue = getConstraintValue(field);
+    const required = field.props?.required ?? field.required;
+    if (!fieldValue && !required) {
       return null;
     }
     const otherFieldValue = otherField.value;
@@ -28,7 +33,7 @@ export const SAME_AS_CONSTRAINT = {
     if (fieldValue === otherFieldValue) {
       return null;
     }
-    const type = field.type;
+    const type = field.props?.type ?? field.type ?? "";
     if (type === "password") {
       return naviI18n("constraint.same_as.password");
     }

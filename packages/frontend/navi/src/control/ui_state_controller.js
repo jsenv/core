@@ -360,8 +360,7 @@ export const useUIStateController = (
         if (childManaged.length > 0) {
           return childManaged;
         }
-        const el = child.elementRef?.current;
-        return el ? [el] : [];
+        return [child];
       }
       return [];
     },
@@ -1081,9 +1080,7 @@ export const useUIGroupStateController = (
       if (!cascadeValidationToChildren) {
         return [];
       }
-      return childUIStateControllerArray
-        .map((c) => c.elementRef?.current)
-        .filter(Boolean);
+      return childUIStateControllerArray.slice();
     },
     subscribe: subscribeUIState,
   };

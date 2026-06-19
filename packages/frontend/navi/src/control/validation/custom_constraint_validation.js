@@ -417,7 +417,10 @@ const checkConstraints = ({
 
   let validationInterface = elementToValidate.__validationInterface__;
   if (!validationInterface) {
-    validationInterface = installCustomConstraintValidation(elementToValidate);
+    const controller = elementToValidate.__uiStateController__;
+    validationInterface = installCustomConstraintValidation(
+      controller ?? elementToValidate,
+    );
   }
   const isValid = validationInterface.checkValidity({
     event,
@@ -490,7 +493,9 @@ export const closeValidationMessage = (
   event = new CustomEvent("programmatic_call"),
   reason,
 ) => {
-  const validationInterface = element.__validationInterface__;
+  const controller = element.__uiStateController__;
+  const validationInterface =
+    controller?.validationInterface ?? element.__validationInterface__;
   if (!validationInterface) {
     return false;
   }
@@ -502,7 +507,9 @@ export const closeValidationMessage = (
 };
 
 export const checkValidity = (element, options) => {
-  const validationInterface = element.__validationInterface__;
+  const controller = element.__uiStateController__;
+  const validationInterface =
+    controller?.validationInterface ?? element.__validationInterface__;
   if (!validationInterface) {
     return false;
   }
@@ -511,9 +518,23 @@ export const checkValidity = (element, options) => {
 
 const formInstrumentedWeakSet = new WeakSet();
 export const installCustomConstraintValidation = (
-  element,
-  elementReceivingValidationMessage = element,
+  controllerOrElement,
+  elementReceivingValidationMessage,
 ) => {
+  // Accept either a uiStateController or a legacy DOM element.
+  let controller, element;
+  if (controllerOrElement.elementRef !== undefined) {
+    // It is a uiStateController
+    controller = controllerOrElement;
+    element = controller.elementRef.current;
+  } else {
+    // It is a DOM element (backward compat)
+    element = controllerOrElement;
+    controller = element.__uiStateController__ ?? null;
+  }
+  if (!elementReceivingValidationMessage) {
+    elementReceivingValidationMessage = element;
+  }
   const validationInterface = {
     uninstall: undefined,
     registerConstraint: undefined,
@@ -532,7 +553,8 @@ export const installCustomConstraintValidation = (
     validationInterface.uninstall = uninstall;
   }
 
-  const isForm = element.tagName === "FORM";
+  const isForm =
+    controller?.controlType === "form" || element?.tagName === "FORM";
   if (isForm) {
     formInstrumentedWeakSet.add(element);
     addTeardown(() => {
@@ -542,8 +564,14 @@ export const installCustomConstraintValidation = (
 
   expose_as_node_property: {
     element.__validationInterface__ = validationInterface;
+    if (controller) {
+      controller.validationInterface = validationInterface;
+    }
     addTeardown(() => {
       delete element.__validationInterface__;
+      if (controller) {
+        delete controller.validationInterface;
+      }
     });
   }
 
@@ -579,8 +607,6 @@ export const installCustomConstraintValidation = (
   let interactionFailedConstraintInfo = null;
   let failingManagedValidationInterface = null;
   const validityInfoMap = new Map();
-  const hasTitleAttribute = element.hasAttribute("title");
-
   let constraintValidityState = { valid: true };
   const getConstraintValidityState = () => constraintValidityState;
   validationInterface.getConstraintValidityState = getConstraintValidityState;
@@ -617,7 +643,10 @@ export const installCustomConstraintValidation = (
     if (proxyTarget) {
       let targetVI = proxyTarget.__validationInterface__;
       if (!targetVI) {
-        targetVI = installCustomConstraintValidation(proxyTarget);
+        const proxyController = proxyTarget.__uiStateController__;
+        targetVI = installCustomConstraintValidation(
+          proxyController ?? proxyTarget,
+        );
       }
       return targetVI.checkValidity({
         event,
@@ -631,11 +660,18 @@ export const installCustomConstraintValidation = (
     // Always check managed fields first. If any fails, stop immediately and
     // expose the failing interface so the caller can reportValidity on the right element.
     failingManagedValidationInterface = null;
-    const managedControls = getManagedControls(element);
-    for (const managedControl of managedControls) {
-      const managedVI = managedControl.__validationInterface__;
+    const managedControllers = controller
+      ? controller.getManagedControls()
+      : getManagedControls(element);
+    for (const managedController of managedControllers) {
+      const managedElement = managedController.elementRef
+        ? managedController.elementRef.current
+        : managedController; // legacy: element passed directly
+      let managedVI =
+        managedController.validationInterface ??
+        managedElement?.__validationInterface__;
       if (!managedVI) {
-        continue;
+        managedVI = installCustomConstraintValidation(managedController);
       }
       const managedIsValid = managedVI.checkValidity({
         event,
@@ -643,7 +679,9 @@ export const installCustomConstraintValidation = (
         fromRequestInteraction,
         fromRequestAction,
         skipReadonly:
-          managedControl.tagName === "BUTTON" && managedControl !== requester,
+          (managedController.controlType === "button" ||
+            managedElement?.tagName === "BUTTON") &&
+          managedElement !== requester,
       });
       if (!managedIsValid) {
         failingManagedValidationInterface = managedVI;
@@ -659,7 +697,7 @@ export const installCustomConstraintValidation = (
     if (fromRequestInteraction) {
       interactionFailedConstraintInfo = null;
       for (const constraint of INTERACTION_CONSTRAINTS) {
-        const checkResult = constraint.check(element, {
+        const checkResult = constraint.check(controller ?? element, {
           fromRequestAction,
           skipReadonly,
           skipRequired: element === requester,
@@ -690,7 +728,7 @@ export const installCustomConstraintValidation = (
     ]);
     resetValidity({ fromRequestAction });
     for (const constraint of constraintSet) {
-      const fieldForConstraint = element;
+      const fieldForConstraint = controller ?? element;
       const constraintCleanupSet = new Set();
       const registerChange = (register) => {
         const registerResult = register((options) => {
@@ -756,14 +794,16 @@ export const installCustomConstraintValidation = (
     }
 
     if (failedConstraintInfo && !failedConstraintInfo.silent) {
+      const hasTitleAttribute =
+        controller?.props?.title != null || element?.hasAttribute("title");
       if (!hasTitleAttribute) {
-        // when a constraint is failing browser displays that constraint message if the element has no title attribute.
-        // We want to do the same with our message (overriding the browser in the process to get better messages)
-        element.setAttribute("title", failedConstraintInfo.messageString);
+        element?.setAttribute("title", failedConstraintInfo.messageString);
       }
     } else {
+      const hasTitleAttribute =
+        controller?.props?.title != null || element?.hasAttribute("title");
       if (!hasTitleAttribute) {
-        element.removeAttribute("title");
+        element?.removeAttribute("title");
       }
       const checkValidityCallEvent =
         event || new CustomEvent("checkValidity called with no event");
@@ -777,7 +817,9 @@ export const installCustomConstraintValidation = (
       !compareTwoJsValues(constraintValidityState, newConstraintValidityState)
     ) {
       constraintValidityState = newConstraintValidityState;
-      dispatchPublicCustomEvent(element, NAVI_VALIDITY_CHANGE_CUSTOM_EVENT);
+      if (element) {
+        dispatchPublicCustomEvent(element, NAVI_VALIDITY_CHANGE_CUSTOM_EVENT);
+      }
     }
     return newConstraintValidityState.valid;
   };
@@ -799,7 +841,7 @@ export const installCustomConstraintValidation = (
 
     // Always resolve the right message first (handles custom messages, attributes, fallback).
     const { message, origin } = getConstraintMessage(
-      element,
+      controller ?? element,
       activeConstraintInfo.constraint,
       activeConstraintInfo.message,
       { requester },
