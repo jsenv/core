@@ -174,10 +174,6 @@ export const dispatchRequestAction = (element, detail) => {
     throw new TypeError("dispatchRequestAction requires an event");
   }
   const controlHost = findControlHost(element) || element;
-  // Spread caller's detail last so explicit fields (e.g. uiState forwarded by a proxy)
-  // survive into the dispatched event. Fields absent from the caller's object are
-  // intentionally absent — Object.hasOwn checks on the receiving side rely on this
-  // to distinguish "caller provided a value" from "no value was given".
   detail = {
     requester: element,
     actionOrigin: "action_prop",
