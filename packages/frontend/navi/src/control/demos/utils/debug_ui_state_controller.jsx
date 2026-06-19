@@ -1,6 +1,6 @@
 import { useLayoutEffect, useReducer } from "preact/hooks";
 
-import { getUIStateControllerById } from "../../ui_state_controller.js";
+import { getUIStateControllerById } from "../../controller_registry.js";
 
 const css = /* css */ `
   .debug-controller {

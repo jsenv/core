@@ -14,8 +14,8 @@ import {
   ControlFacadeChildrenWrapper,
   useControlFacadeProps,
 } from "../control_hooks.jsx";
+import { getUIStateControllerById } from "../controller_registry.js";
 import { resolveInputProps } from "../input/resolve_input_props.js";
-import { getUIStateControllerById } from "../ui_state_controller.js";
 import { PickerContext } from "./picker_context.jsx";
 import { PickerCustomResolver } from "./picker_custom.jsx";
 import { PickerPresetResolver } from "./picker_preset.jsx";
