@@ -400,10 +400,22 @@
         background: orange;
         border-radius: 2px;
       }
-      .icon svg {
+      .icon svg,
+      .icon_col svg {
         width: 12px;
         height: 10px;
         color: white;
+      }
+      .icon_bg {
+        display: flex;
+        aspect-ratio: 1;
+        aspect-ratio: 1/1;
+        height: 100%;
+        flex-shrink: 0;
+        align-items: center;
+        justify-content: center;
+        background: orange;
+        border-radius: 2px;
       }
       .msg {
         max-width: 300px;
@@ -411,7 +423,8 @@
         /* dotted border to visualise the actual rendered line-box height */
         outline: 1.5px dotted #888;
       }
-      .close {
+      .close,
+      .close_col button {
         display: flex;
         padding: 0 3px;
         flex-shrink: 0;
@@ -482,19 +495,20 @@
 
       /* ── Option C : text-box trim ────────────────────────────────── */
       .opt-c .box {
-        align-items: center;
+        align-items: start;
       }
-      .opt-c .icon {
-        height: 1lh;
+      .opt-c .icon_col {
+        height: 1.5em;
         align-self: flex-start;
       }
-      .opt-c .close {
-        height: 1lh;
-        align-self: flex-start;
-      }
-      .opt-c .msg {
+      .opt-c .msg_col {
         text-box: trim-both cap alphabetic;
-        line-height: 1.5;
+        border: 1px dotted grey;
+      }
+      .opt-c .close_col {
+        display: flex;
+        height: 1.5em;
+        align-items: center;
       }
     </style>
 
@@ -606,11 +620,52 @@
         message element forces every line box to that height regardless of
         content. Emoji can no longer inflate the line. The dotted border should
         now be the same height with or without the emoji, matching
-        <code>1lh</code> on the icon/close button.
+        <code>1lh</code> on the icon/close button.<br /><br />
+        <strong>Trade-off:</strong> the fixed line-height is applied
+        <em>even when there is no emoji</em>, so every line is slightly taller
+        than the browser default. The comparison row below shows this cost.
       </p>
       <p
         style="
           margin: 0 0 8px;
+          font-size: 0.8rem;
+          font-weight: 600;
+          color: #555;
+        "
+      >
+        Line-height cost (no emoji)
+      </p>
+      <div class="exp-row">
+        <div class="exp-case">
+          <label>baseline — default line-height</label>
+          <div class="box problem">
+            <div class="icon">
+              <svg><use href="#exp-icon" /></svg>
+            </div>
+            <div class="msg">
+              At least <strong>5 chars</strong> required — only
+              <strong>2</strong>
+            </div>
+            <button class="close">×</button>
+          </div>
+        </div>
+        <div class="exp-case">
+          <label>Option A — forced line-height: 1.5</label>
+          <div class="box opt-a">
+            <div class="icon">
+              <svg><use href="#exp-icon" /></svg>
+            </div>
+            <div class="msg">
+              At least <strong>5 chars</strong> required — only
+              <strong>2</strong>
+            </div>
+            <button class="close">×</button>
+          </div>
+        </div>
+      </div>
+      <p
+        style="
+          margin: 16px 0 8px;
           font-size: 0.8rem;
           font-weight: 600;
           color: #555;
@@ -800,27 +855,35 @@
         <div class="exp-case">
           <label>no emoji</label>
           <div class="box">
-            <div class="icon">
-              <svg><use href="#exp-icon" /></svg>
+            <div class="icon_col">
+              <div class="icon_bg">
+                <svg><use href="#exp-icon" /></svg>
+              </div>
             </div>
-            <div class="msg">
+            <div class="msg_col">
               At least <strong>5 chars</strong> required — only
               <strong>2</strong>
             </div>
-            <button class="close">×</button>
+            <div class="close_col">
+              <button>×</button>
+            </div>
           </div>
         </div>
         <div class="exp-case">
           <label>with emoji</label>
           <div class="box">
-            <div class="icon">
-              <svg><use href="#exp-icon" /></svg>
+            <div class="icon_col">
+              <div class="icon_bg">
+                <svg><use href="#exp-icon" /></svg>
+              </div>
             </div>
-            <div class="msg">
+            <div class="msg_col">
               At least <strong>5 chars</strong> required — only
               <strong>2</strong> 🙈
             </div>
-            <button class="close">×</button>
+            <div class="close_col">
+              <button>×</button>
+            </div>
           </div>
         </div>
       </div>
@@ -838,27 +901,35 @@
         <div class="exp-case">
           <label>no emoji</label>
           <div class="box">
-            <div class="icon">
-              <svg><use href="#exp-icon" /></svg>
+            <div class="icon_col">
+              <div class="icon_bg">
+                <svg><use href="#exp-icon" /></svg>
+              </div>
             </div>
-            <div class="msg" style="max-width: 282px">
+            <div class="msg_col" style="max-width: 282px">
               At least <strong>5 chars</strong> required — only
               <strong>2</strong>. Please fix and try again.
             </div>
-            <button class="close">×</button>
+            <div class="close_col">
+              <button>×</button>
+            </div>
           </div>
         </div>
         <div class="exp-case">
           <label>with emoji</label>
           <div class="box">
-            <div class="icon">
-              <svg><use href="#exp-icon" /></svg>
+            <div class="icon_col">
+              <div class="icon_bg">
+                <svg><use href="#exp-icon" /></svg>
+              </div>
             </div>
-            <div class="msg" style="max-width: 282px">
+            <div class="msg_col" style="max-width: 282px">
               At least <strong>5 chars</strong> required — only
               <strong>2</strong> 🙈. Please fix and try again.
             </div>
-            <button class="close">×</button>
+            <div class="close_col">
+              <button>×</button>
+            </div>
           </div>
         </div>
       </div>

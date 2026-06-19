@@ -159,7 +159,8 @@ const css = /* css */ `
 
     .navi_callout_close_button_column {
       display: flex;
-      height: 22px;
+      height: 1lh;
+      align-self: flex-start;
 
       .navi_callout_close_button {
         width: 1em;
