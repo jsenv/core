@@ -38,75 +38,37 @@ export const extractMessageAndRemainingProps = (props) => {
 };
 
 export const getConstraintMessage = (
-  controllerOrElement,
+  controller,
   constraint,
   generatedMessage,
   { requester },
 ) => {
-  const { messageAttribute, name: constraintName } = constraint;
-  // Resolve the DOM element for event dispatching (works for both controllers and elements)
-  const element = controllerOrElement.elementRef
-    ? controllerOrElement.elementRef.current
-    : controllerOrElement;
+  const { name: constraintName } = constraint;
 
-  // 1. Dispatch navi_constraint_message event — JSX handlers respond synchronously.
-  //    Dispatch on the requester first (e.g. the <li> that was clicked),
+  // 1. Search first on the requester (e.g. the <li> that was clicked),
   //    then fall back to element (e.g. the hidden <input>).
-  const dispatchOn = (target) => {
-    if (!target) {
-      return null;
-    }
-    let responded = null;
-    const event = new CustomEvent("navi_constraint_message", {
-      bubbles: false,
-      detail: {
-        constraintName,
-        respondMessage: (message) => {
-          responded = message;
-        },
-      },
-    });
-    target.dispatchEvent(event);
-    return responded;
-  };
-
-  if (requester && requester !== element) {
-    const fromRequester = dispatchOn(requester);
-    if (fromRequester !== null) {
+  const requesterController = requester.__uiStateController__;
+  if (requesterController && requesterController !== controller) {
+    const requesterControllerMessage =
+      requesterController.messageProps[constraintName];
+    if (requesterControllerMessage) {
       return {
-        message: fromRequester,
-        origin: "onnavi_constraint_message handler on requester",
+        message: requesterControllerMessage,
+        origin: "requester controller",
       };
     }
   }
-  const fromElement = dispatchOn(element);
-  if (fromElement !== null) {
+
+  const controllerMessage = controller.messageProps[constraintName];
+  if (controllerMessage) {
     return {
-      message: fromElement,
-      origin: "onnavi_constraint_message handler",
+      message: controllerMessage,
+      origin: "controller",
     };
   }
 
-  // 2. Fall back to message prop (controller) or plain attribute (legacy element)
-  const propName = CONSTRAINT_NAME_TO_PROP[constraintName];
-  if (propName && controllerOrElement.props !== undefined) {
-    const messageFromProp = controllerOrElement.props[propName];
-    if (messageFromProp) {
-      return {
-        message: messageFromProp,
-        origin: `prop ${propName}`,
-      };
-    }
-  } else if (messageAttribute) {
-    const messageAttribute_value = element?.getAttribute(messageAttribute);
-    if (messageAttribute_value) {
-      return {
-        message: messageAttribute_value,
-        origin: `attribute ${messageAttribute}="${messageAttribute_value}"`,
-      };
-    }
-  }
-
-  // 3. Fall back to generated message
-  return { message: generatedMessage, origin: "generated message" };
+  return {
+    message: generatedMessage,
+    origin: "generated message",
+  };
 };

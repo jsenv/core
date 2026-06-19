@@ -750,7 +750,7 @@ export const createControlValidity = (controller) => {
 
     // Always resolve the right message first (handles custom messages, attributes, fallback).
     const { message, origin } = getConstraintMessage(
-      controller ?? element,
+      controller,
       activeConstraintInfo.constraint,
       activeConstraintInfo.message,
       { requester },
