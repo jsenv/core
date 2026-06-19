@@ -6,12 +6,43 @@ import {
 import { isValidElement } from "preact";
 import { useCallback, useLayoutEffect, useRef, useState } from "preact/hooks";
 
-import {
-  addCustomMessage,
-  removeCustomMessage,
-} from "../control/validation/custom_message.js";
+import { registerGlobalConstraint } from "../control/validation/control_validity.js";
 import { useResetErrorBoundary } from "../error_boundary_context.js";
 import { useDebugAction } from "../navi_debug.jsx";
+
+const actionErrorWeakMap = new WeakMap();
+const NAVI_ACTION_ERROR_CONSTRAINT = {
+  name: "navi_action_error",
+  check: (controller) => {
+    const errorInfo = actionErrorWeakMap.get(controller);
+    if (!errorInfo) {
+      return null;
+    }
+    return {
+      status: "error",
+      ...errorInfo,
+    };
+  },
+  // This should not prevent <form> submission
+  // so whenever user tries to submit the form again the error is cleared
+  // (Hitting enter key, clicking on submit button, etc. would allow to re-submit the form in error state)
+  autoReset: true,
+  onAutoReset: (controller) => {
+    actionErrorWeakMap.delete(controller);
+  },
+};
+registerGlobalConstraint(NAVI_ACTION_ERROR_CONSTRAINT);
+const setActionError = (controller, message, { event, target } = {}) => {
+  actionErrorWeakMap.set(controller, { message, target });
+  controller.controlValidity.checkValidity({ event });
+  controller.controlValidity.reportValidity({ event });
+};
+const clearActionError = (controller) => {
+  if (actionErrorWeakMap.has(controller)) {
+    actionErrorWeakMap.delete(controller);
+    controller.controlValidity.checkValidity();
+  }
+};
 
 export const useExecuteAction = (
   elementRef,
@@ -35,7 +66,7 @@ export const useExecuteAction = (
 
   const validationMessageTargetRef = useRef(null);
   const addErrorMessage = (error, { event } = {}) => {
-    let calloutAnchor = validationMessageTargetRef.current;
+    let target = validationMessageTargetRef.current;
     let message;
     if (errorMapping) {
       const errorMappingResult = errorMapping(error);
@@ -50,24 +81,26 @@ export const useExecuteAction = (
         errorMappingResult !== null
       ) {
         message = errorMappingResult.message || error.message;
-        calloutAnchor = errorMappingResult.target || calloutAnchor;
+        target = errorMappingResult.target || target;
       }
     } else {
       message = error;
     }
-    addCustomMessage(calloutAnchor, "action_error", message, {
-      event,
-      status: "error",
-      // This error should not prevent <form> submission
-      // so whenever user tries to submit the form the error is cleared
-      // (Hitting enter key, clicking on submit button, etc. would allow to re-submit the form in error state)
-      removeOnRequestAction: true,
-    });
+    const controller =
+      validationMessageTargetRef.current?.__uiStateController__;
+    if (controller) {
+      setActionError(controller, message, {
+        event,
+        target:
+          target === validationMessageTargetRef.current ? undefined : target,
+      });
+    }
   };
   const removeErrorMessage = () => {
-    const validationMessageTarget = validationMessageTargetRef.current;
-    if (validationMessageTarget) {
-      removeCustomMessage(validationMessageTarget, "action_error");
+    const element = validationMessageTargetRef.current;
+    const controller = element?.__uiStateController__;
+    if (controller) {
+      clearActionError(controller);
     }
   };
 

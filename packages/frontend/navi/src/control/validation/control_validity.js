@@ -428,6 +428,10 @@ const DEFAULT_CONSTRAINT_SET = new Set([
   ...NAVI_CONSTRAINT_SET,
 ]);
 
+export const registerGlobalConstraint = (customConstraint) => {
+  NAVI_CONSTRAINT_SET.add(customConstraint);
+};
+
 export const createControlValidity = (
   controller,
   { debugUIState, debugFocus },
@@ -435,8 +439,6 @@ export const createControlValidity = (
   const controlValidity = {
     uninstall: undefined,
     registerConstraint: undefined,
-    addCustomMessage: undefined,
-    removeCustomMessage: undefined,
     checkValidity: undefined,
     reportValidity: undefined,
     callout: null,
@@ -482,14 +484,7 @@ export const createControlValidity = (
   const getConstraintValidityState = () => constraintValidityState;
   controlValidity.getConstraintValidityState = getConstraintValidityState;
 
-  const resetValidity = ({ fromRequestAction } = {}) => {
-    if (fromRequestAction) {
-      for (const [key, customMessage] of customMessageMap) {
-        if (customMessage.removeOnRequestAction) {
-          customMessageMap.delete(key);
-        }
-      }
-    }
+  const resetValidity = () => {
     for (const [, validityInfo] of validityInfoMap) {
       if (validityInfo.cleanup) {
         validityInfo.cleanup();
@@ -508,6 +503,12 @@ export const createControlValidity = (
     fromRequestAction,
     skipReadonly,
   } = {}) => {
+    for (const [, validityInfo] of validityInfoMap) {
+      if (validityInfo.autoReset) {
+        validityInfo.onAutoReset(controller);
+      }
+    }
+
     // Never validate a proxy — always delegate to the underlying element
     const proxyTargetController = findControlProxyTargetController(controller);
     if (proxyTargetController) {
@@ -541,7 +542,7 @@ export const createControlValidity = (
       ...DEFAULT_CONSTRAINT_SET,
       ...dynamicConstraintSet,
     ]);
-    resetValidity({ fromRequestAction });
+    resetValidity();
     for (const constraint of constraintSet) {
       const fieldForConstraint = controller;
       const constraintCleanupSet = new Set();
@@ -763,47 +764,7 @@ export const createControlValidity = (
     get: () => failingManagedControlValidity,
   });
 
-  const customMessageMap = new Map();
-  custom_message: {
-    dynamicConstraintSet.add({
-      name: "custom_message",
-      check: () => {
-        for (const [, { message, status }] of customMessageMap) {
-          return { message, status };
-        }
-        return null;
-      },
-    });
-    const addCustomMessage = (
-      key,
-      message,
-      { event, status = "info", removeOnRequestAction = false } = {},
-    ) => {
-      customMessageMap.set(key, { message, status, removeOnRequestAction });
-      checkValidity({ event });
-      reportValidity({ event });
-      return () => {
-        removeCustomMessage(key);
-      };
-    };
-    const removeCustomMessage = (key) => {
-      if (customMessageMap.has(key)) {
-        customMessageMap.delete(key);
-        checkValidity();
-        reportValidity();
-      }
-    };
-    addTeardown(() => {
-      customMessageMap.clear();
-    });
-    Object.assign(controlValidity, {
-      addCustomMessage,
-      removeCustomMessage,
-    });
-  }
-
   const resetOnInteraction = (e) => {
-    customMessageMap.clear();
     innerRequestCloseCallout(e, e.type);
     console.log("resetOnInteraction", e.type, e);
     checkValidity({ event: e });
