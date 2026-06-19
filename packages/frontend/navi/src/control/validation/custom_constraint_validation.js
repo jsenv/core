@@ -41,7 +41,7 @@
  */
 
 /**
- * To enable this API one have to call installCustomConstraintValidation(element)
+ * To enable this API one have to call createControlValidity(controller)
  * on the <form> and every element within the <form> (<input>, <button>, etc.)
  * (In practice this is done automatically by jsx components in navi package)
  *
@@ -404,7 +404,7 @@ const checkEvent = (requestStatus, event) => {
   }
 };
 
-// Returns the failing validation interface, or null if all constraints pass.
+// Returns the failing controlValidity, or null if all constraints pass.
 // Never calls reportValidity — callers decide whether to show the callout.
 const checkConstraints = ({ event, requester, fromRequestAction } = {}) => {
   let elementToValidate = event.currentTarget;
@@ -413,34 +413,31 @@ const checkConstraints = ({ event, requester, fromRequestAction } = {}) => {
     elementToValidate = controlHost;
   }
 
-  let validationInterface = elementToValidate.__validationInterface__;
-  if (!validationInterface) {
-    const controller = elementToValidate.__uiStateController__;
-    validationInterface = installCustomConstraintValidation(
-      controller ?? elementToValidate,
-    );
+  const controller = elementToValidate.__uiStateController__;
+  if (!controller) {
+    throw new Error(`element has no __uiStateController__`);
   }
-  const isValid = validationInterface.checkValidity({
+
+  const controlValidity = controller.controlValidity;
+  const isValid = controlValidity.checkValidity({
     event,
     requester,
     fromRequestAction,
   });
   if (!isValid) {
     const proxyTarget = findControlProxyTarget(elementToValidate);
-    const resolvedValidationInterface = proxyTarget
-      ? proxyTarget.__validationInterface__ || validationInterface
-      : validationInterface;
-    let failingInterface =
-      resolvedValidationInterface.failingManagedValidationInterface ||
-      resolvedValidationInterface;
+    const resolvedCV = proxyTarget
+      ? proxyTarget.__uiStateController__.controlValidity
+      : controlValidity;
+    let failingCV = resolvedCV.failingManagedControlValidity || resolvedCV;
     while (
-      failingInterface.failedConstraintInfo === null &&
-      failingInterface.interactionFailedConstraintInfo === null &&
-      failingInterface.failingManagedValidationInterface
+      failingCV.failedConstraintInfo === null &&
+      failingCV.interactionFailedConstraintInfo === null &&
+      failingCV.failingManagedControlValidity
     ) {
-      failingInterface = failingInterface.failingManagedValidationInterface;
+      failingCV = failingCV.failingManagedControlValidity;
     }
-    return failingInterface;
+    return failingCV;
   }
   return null;
 };
@@ -479,62 +476,37 @@ const DEFAULT_CONSTRAINT_SET = new Set([
   ...NAVI_CONSTRAINT_SET,
 ]);
 
-const getManagedControls = (element) => {
-  const controller = element.__uiStateController__;
-  if (controller) {
-    return controller.getManagedControls();
-  }
-  return [];
-};
-
 export const closeValidationMessage = (
-  element,
+  controller,
   event = new CustomEvent("programmatic_call"),
   reason,
 ) => {
-  const controller = element.__uiStateController__;
-  const validationInterface =
-    controller?.validationInterface ?? element.__validationInterface__;
-  if (!validationInterface) {
-    return false;
-  }
-  const { validationMessage } = validationInterface;
+  const controlValidity = controller.controlValidity;
+  const { validationMessage } = controlValidity;
   if (!validationMessage) {
     return false;
   }
   return validationMessage.requestClose(event, reason);
 };
 
-export const checkValidity = (element, options) => {
-  const controller = element.__uiStateController__;
-  const validationInterface =
-    controller?.validationInterface ?? element.__validationInterface__;
-  if (!validationInterface) {
+export const checkValidity = (controller, options) => {
+  const controlValidity = controller.controlValidity;
+  if (!controlValidity) {
     return false;
   }
-  return validationInterface.checkValidity(options);
+  return controlValidity.checkValidity(options);
 };
 
 const formInstrumentedWeakSet = new WeakSet();
-export const installCustomConstraintValidation = (
-  controllerOrElement,
+export const createControlValidity = (
+  controller,
   elementReceivingValidationMessage,
 ) => {
-  // Accept either a uiStateController or a legacy DOM element.
-  let controller, element;
-  if (controllerOrElement.elementRef !== undefined) {
-    // It is a uiStateController
-    controller = controllerOrElement;
-    element = controller.elementRef.current;
-  } else {
-    // It is a DOM element (backward compat)
-    element = controllerOrElement;
-    controller = element.__uiStateController__ ?? null;
-  }
+  const element = controller.elementRef.current;
   if (!elementReceivingValidationMessage) {
     elementReceivingValidationMessage = element;
   }
-  const validationInterface = {
+  const controlValidity = {
     uninstall: undefined,
     registerConstraint: undefined,
     addCustomMessage: undefined,
@@ -549,11 +521,10 @@ export const installCustomConstraintValidation = (
     const uninstall = () => {
       teardown();
     };
-    validationInterface.uninstall = uninstall;
+    controlValidity.uninstall = uninstall;
   }
 
-  const isForm =
-    controller?.controlType === "form" || element?.tagName === "FORM";
+  const isForm = controller.controlType === "form";
   if (isForm) {
     formInstrumentedWeakSet.add(element);
     addTeardown(() => {
@@ -561,25 +532,12 @@ export const installCustomConstraintValidation = (
     });
   }
 
-  expose_as_node_property: {
-    element.__validationInterface__ = validationInterface;
-    if (controller) {
-      controller.validationInterface = validationInterface;
-    }
-    addTeardown(() => {
-      delete element.__validationInterface__;
-      if (controller) {
-        delete controller.validationInterface;
-      }
-    });
-  }
-
   const dispatchCancelCustomEvent = (detail) => {
     return dispatchInternalCustomEvent(element, "navi_cancel", detail);
   };
   const closeElementValidationMessage = (event, reason) => {
-    if (validationInterface.validationMessage) {
-      validationInterface.validationMessage.requestClose(event, reason);
+    if (controlValidity.validationMessage) {
+      controlValidity.validationMessage.requestClose(event, reason);
       return true;
     }
     return false;
@@ -588,7 +546,7 @@ export const installCustomConstraintValidation = (
   const dynamicConstraintSet = new Set();
 
   register_constraint: {
-    validationInterface.registerConstraint = (constraint) => {
+    controlValidity.registerConstraint = (constraint) => {
       if (typeof constraint === "function") {
         constraint = {
           name: constraint.name || "custom_function",
@@ -604,11 +562,11 @@ export const installCustomConstraintValidation = (
 
   let failedConstraintInfo = null;
   let interactionFailedConstraintInfo = null;
-  let failingManagedValidationInterface = null;
+  let failingManagedControlValidity = null;
   const validityInfoMap = new Map();
   let constraintValidityState = { valid: true };
   const getConstraintValidityState = () => constraintValidityState;
-  validationInterface.getConstraintValidityState = getConstraintValidityState;
+  controlValidity.getConstraintValidityState = getConstraintValidityState;
 
   const resetValidity = ({ fromRequestAction } = {}) => {
     if (fromRequestAction) {
@@ -626,7 +584,7 @@ export const installCustomConstraintValidation = (
     validityInfoMap.clear();
     failedConstraintInfo = null;
     interactionFailedConstraintInfo = null;
-    failingManagedValidationInterface = null;
+    failingManagedControlValidity = null;
   };
   addTeardown(resetValidity);
 
@@ -639,14 +597,10 @@ export const installCustomConstraintValidation = (
     // Never validate a proxy — always delegate to the underlying element
     const proxyTarget = findControlProxyTarget(element);
     if (proxyTarget) {
-      let targetVI = proxyTarget.__validationInterface__;
-      if (!targetVI) {
-        const proxyController = proxyTarget.__uiStateController__;
-        targetVI = installCustomConstraintValidation(
-          proxyController ?? proxyTarget,
-        );
-      }
-      return targetVI.checkValidity({
+      const proxyController = proxyTarget.__uiStateController__;
+      const targetCV = proxyController.controlValidity;
+
+      return targetCV.checkValidity({
         event,
         fromRequestAction,
         requester,
@@ -655,32 +609,22 @@ export const installCustomConstraintValidation = (
     }
 
     // Always check managed fields first. If any fails, stop immediately and
-    // expose the failing interface so the caller can reportValidity on the right element.
-    failingManagedValidationInterface = null;
-    const managedControllers = controller
-      ? controller.getManagedControls()
-      : getManagedControls(element);
+    // expose the failing controlValidity so the caller can reportValidity on the right element.
+    failingManagedControlValidity = null;
+    const managedControllers = controller.getManagedControls();
     for (const managedController of managedControllers) {
-      const managedElement = managedController.elementRef
-        ? managedController.elementRef.current
-        : managedController; // legacy: element passed directly
-      let managedVI =
-        managedController.validationInterface ??
-        managedElement?.__validationInterface__;
-      if (!managedVI) {
-        managedVI = installCustomConstraintValidation(managedController);
-      }
-      const managedIsValid = managedVI.checkValidity({
+      const managedElement = managedController.elementRef.current;
+      const managedCV = managedController.controlValidity;
+      const managedIsValid = managedCV.checkValidity({
         event,
         requester,
         fromRequestAction,
         skipReadonly:
-          (managedController.controlType === "button" ||
-            managedElement?.tagName === "BUTTON") &&
+          managedController.controlType === "button" &&
           managedElement !== requester,
       });
       if (!managedIsValid) {
-        failingManagedValidationInterface = managedVI;
+        failingManagedControlValidity = managedCV;
         return false;
       }
     }
@@ -764,18 +708,16 @@ export const installCustomConstraintValidation = (
     const activeFailedConstraintInfo =
       interactionFailedConstraintInfo || failedConstraintInfo;
     if (activeFailedConstraintInfo && !activeFailedConstraintInfo.silent) {
-      const hasTitleAttribute =
-        controller?.props?.title != null || element?.hasAttribute("title");
-      if (!hasTitleAttribute) {
+      const titleLess = controller.props.title === undefined;
+      if (titleLess) {
         element?.setAttribute(
           "title",
           activeFailedConstraintInfo.messageString,
         );
       }
     } else {
-      const hasTitleAttribute =
-        controller?.props?.title != null || element?.hasAttribute("title");
-      if (!hasTitleAttribute) {
+      const titleLess = controller.props.title === undefined;
+      if (titleLess) {
         element?.removeAttribute("title");
       }
       const checkValidityCallEvent =
@@ -826,9 +768,9 @@ export const installCustomConstraintValidation = (
       );
     }
 
-    if (validationInterface.validationMessage) {
+    if (controlValidity.validationMessage) {
       const { status, closeOnClickOutside } = activeConstraintInfo;
-      validationInterface.validationMessage.update(message, {
+      controlValidity.validationMessage.update(message, {
         status,
         closeOnClickOutside,
       });
@@ -855,7 +797,7 @@ export const installCustomConstraintValidation = (
       closeElementValidationMessage(new CustomEvent("cleanup"), "cleanup");
     });
 
-    validationInterface.validationMessage = openCallout(message, {
+    controlValidity.validationMessage = openCallout(message, {
       anchorElement,
       status: activeConstraintInfo.status,
       closeOnClickOutside: activeConstraintInfo.closeOnClickOutside,
@@ -868,7 +810,7 @@ export const installCustomConstraintValidation = (
             result();
           }
         }
-        validationInterface.validationMessage = null;
+        controlValidity.validationMessage = null;
         if (activeConstraintInfo) {
           activeConstraintInfo.reportStatus = "closed";
         }
@@ -895,25 +837,17 @@ export const installCustomConstraintValidation = (
     const results = notifyCalloutOpen(event);
     activeConstraintInfo.reportStatus = "reported";
   };
-  validationInterface.checkValidity = checkValidity;
-  validationInterface.reportValidity = reportValidity;
-  Object.defineProperty(validationInterface, "failedConstraintInfo", {
+  controlValidity.checkValidity = checkValidity;
+  controlValidity.reportValidity = reportValidity;
+  Object.defineProperty(controlValidity, "failedConstraintInfo", {
     get: () => failedConstraintInfo,
   });
-  Object.defineProperty(
-    validationInterface,
-    "interactionFailedConstraintInfo",
-    {
-      get: () => interactionFailedConstraintInfo,
-    },
-  );
-  Object.defineProperty(
-    validationInterface,
-    "failingManagedValidationInterface",
-    {
-      get: () => failingManagedValidationInterface,
-    },
-  );
+  Object.defineProperty(controlValidity, "interactionFailedConstraintInfo", {
+    get: () => interactionFailedConstraintInfo,
+  });
+  Object.defineProperty(controlValidity, "failingManagedControlValidity", {
+    get: () => failingManagedControlValidity,
+  });
 
   const customMessageMap = new Map();
   custom_message: {
@@ -948,7 +882,7 @@ export const installCustomConstraintValidation = (
     addTeardown(() => {
       customMessageMap.clear();
     });
-    Object.assign(validationInterface, {
+    Object.assign(controlValidity, {
       addCustomMessage,
       removeCustomMessage,
     });
@@ -1104,7 +1038,7 @@ export const installCustomConstraintValidation = (
   close_on_escape: {
     const onkeydown = (e) => {
       if (e.key === "Escape") {
-        if (validationInterface.validationMessage) {
+        if (controlValidity.validationMessage) {
           // When a callout is open, callout.js handles Escape on the anchor element
         } else {
           dispatchCancelCustomEvent({
@@ -1146,7 +1080,7 @@ export const installCustomConstraintValidation = (
     });
   }
 
-  return validationInterface;
+  return controlValidity;
 };
 
 const pickConstraint = (a, b) => {

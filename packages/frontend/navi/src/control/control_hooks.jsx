@@ -71,8 +71,7 @@ import {
   dispatchRequestSetUIState,
   getUIStateFromElement,
 } from "./ui_state_dom.js";
-import { useConstraintMessages } from "./validation/hooks/use_constraint_messages.js";
-import { useConstraints } from "./validation/hooks/use_constraints.js";
+import { extractMessageAndRemainingProps } from "./validation/constraint_message.js";
 
 // Sentinel used as the initial value of lastActionValueRef.
 // Distinct from undefined so that undefined (e.g. unchecked radio) can itself
@@ -178,7 +177,9 @@ export const useControlProps = (
       [statePropName]: state.value,
     };
   }
-  const uiStateController = useUIStateController(props, controlType, {
+
+  const [messageProps, remainingProps] = extractMessageAndRemainingProps(props);
+  const uiStateController = useUIStateController(remainingProps, controlType, {
     statePropName,
     defaultStatePropName,
     fallbackState,
@@ -188,16 +189,21 @@ export const useControlProps = (
     allowNameless,
     persists,
     uiActionInternal,
+
+    messageProps,
   });
   const [boundAction] = useActionBoundToOneParam(
     props.action,
     uiStateController.uiStateSignal,
   );
-  const [controlRootProps, controlHostProps] = useInteractiveProps(props, {
-    uiStateController,
-    boundAction,
-    readOnlySupported,
-  });
+  const [controlRootProps, controlHostProps] = useInteractiveProps(
+    remainingProps,
+    {
+      uiStateController,
+      boundAction,
+      readOnlySupported,
+    },
+  );
 
   reactions: {
     const {
@@ -876,10 +882,6 @@ const useInteractiveProps = (
         }
       };
     }, []);
-
-    const { constraints } = controlHostProps;
-    useConstraints(ref, constraints);
-    controlRootProps = useConstraintMessages(ref, controlRootProps);
   }
   ui_state_and_value: {
     const uiState = uiStateController.uiStateSignal.value;

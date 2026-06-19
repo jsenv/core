@@ -1,18 +1,17 @@
-import { installCustomConstraintValidation } from "./custom_constraint_validation.js";
-
 export const addCustomMessage = (element, key, message, options) => {
-  const customConstraintValidation =
-    element.__validationInterface__ ||
-    (element.__validationInterface__ =
-      installCustomConstraintValidation(element));
-
-  return customConstraintValidation.addCustomMessage(key, message, options);
+  const controller = element.__uiStateController__;
+  if (!controller) {
+    throw new Error("element has no __uiStateController__");
+  }
+  const controlValidity = controller.controlValidity;
+  return controlValidity.addCustomMessage(key, message, options);
 };
 
 export const removeCustomMessage = (element, key) => {
-  const customConstraintValidation = element.__validationInterface__;
-  if (!customConstraintValidation) {
-    return;
+  const controller = element.__uiStateController__;
+  if (!controller) {
+    throw new Error("element has no __uiStateController__");
   }
-  customConstraintValidation.removeCustomMessage(key);
+  const controlValidity = controller.controlValidity;
+  return controlValidity.removeCustomMessage(key);
 };

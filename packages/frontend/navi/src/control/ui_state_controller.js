@@ -16,6 +16,7 @@ import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import { triggerNaviCommand } from "./commands.js";
 import { asControlHostValue } from "./control_value.js";
 import { FormContext } from "./form_context.js";
+import { createControlValidity } from "./validation/custom_constraint_validation.js";
 
 // In-memory registry of all mounted ui state controllers keyed by their id.
 // Allows direct controller access without dispatching DOM events — used by external
@@ -192,6 +193,7 @@ export const useUIStateController = (
   const ref = props.ref;
   const isProxy = Boolean(props["navi-control-proxy-for"]);
   const hasStateProp = Object.hasOwn(props, statePropName);
+
   /**
    * This check is needed only for basic field because
    * When using action/form we consider the action/form code
@@ -580,6 +582,10 @@ export const useUIStateController = (
       }
     },
   };
+
+  const controlValidity = createControlValidity(uiStateController);
+  uiStateController.controlValidity = controlValidity;
+
   uiStateControllerRef.current = uiStateController;
   // Register synchronously during render so getUIStateControllerById works
   // immediately in the same render cycle (e.g. InputTextualUI reading uiState).

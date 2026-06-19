@@ -9,11 +9,12 @@ export const useConstraintValidityState = (ref) => {
     if (!element) {
       return DEFAULT_VALIDITY_STATE;
     }
-    const { __validationInterface__ } = element;
-    if (!__validationInterface__) {
+    const controller = element.__uiStateController__;
+    if (!controller) {
       return DEFAULT_VALIDITY_STATE;
     }
-    const value = __validationInterface__.getConstraintValidityState();
+    const controlValidity = controller.controlValidity;
+    const value = controlValidity.getConstraintValidityState();
     return value;
   };
 
