@@ -1,4 +1,8 @@
-import { dispatchInternalCustomEvent, getElementSignature } from "@jsenv/dom";
+import {
+  createPubSub,
+  dispatchInternalCustomEvent,
+  getElementSignature,
+} from "@jsenv/dom";
 import { isValidElement } from "preact";
 import { useCallback, useLayoutEffect, useRef, useState } from "preact/hooks";
 
@@ -126,16 +130,16 @@ export const useExecuteAction = (
       const validationMessageTarget = requester || element;
       validationMessageTargetRef.current = validationMessageTarget;
 
-      dispatchInternalCustomEvent(
-        element,
-        "navi_action_start",
-        sharedActionEventDetail,
-      );
-
-      return action[method]({
-        event: actionEvent,
-        reason: `"${firstEvent.type}" event on ${getElementSignature(firstEvent.target)}`,
-        onAbort: (reason) => {
+      const [triggerAbort, addAbortCallback] = createPubSub();
+      const [triggerError, addErrorCallback] = createPubSub();
+      const [triggerComplete, addCompleteCallback] = createPubSub();
+      const addSideEffect = ({ abort, error, complete }) => {
+        addAbortCallback(abort);
+        addErrorCallback(error);
+        addCompleteCallback(complete);
+      };
+      addSideEffect({
+        abort: (reason) => {
           const element = elementRef.current;
           if (
             // at this stage the action side effect might have removed the <element> from the DOM
@@ -149,7 +153,7 @@ export const useExecuteAction = (
             });
           }
         },
-        onError: (error, { event }) => {
+        error: (error, { event }) => {
           const element = elementRef.current;
           if (
             // at this stage the action side effect might have removed the <element> from the DOM
@@ -168,7 +172,7 @@ export const useExecuteAction = (
             setError(error);
           }
         },
-        onComplete: (data) => {
+        complete: (data) => {
           const element = elementRef.current;
           if (
             // at this stage the action side effect might have removed the <element> from the DOM
@@ -182,6 +186,23 @@ export const useExecuteAction = (
             });
           }
         },
+      });
+
+      const actionStartEventDetail = {
+        ...sharedActionEventDetail,
+        addSideEffect,
+      };
+      dispatchInternalCustomEvent(
+        element,
+        "navi_action_start",
+        actionStartEventDetail,
+      );
+      return action[method]({
+        event: actionEvent,
+        reason: `"${firstEvent.type}" event on ${getElementSignature(firstEvent.target)}`,
+        onAbort: triggerAbort,
+        onError: triggerError,
+        onComplete: triggerComplete,
       });
     },
     [elementRef, errorEffect],

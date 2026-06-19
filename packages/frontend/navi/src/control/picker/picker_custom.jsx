@@ -297,44 +297,15 @@ const PickerCustom = (props) => {
       return;
     };
     const onClose = (e) => {
-      const cancelEvent = findEvent(
-        e,
-        (eInChain) =>
-          eInChain.type === "navi_request_close" && eInChain.detail.isCancel,
-      );
-      const isCancel = Boolean(cancelEvent);
-
       const mousedownEvent = findEvent(e, "mousedown");
       if (mousedownEvent) {
         debugPopup(e, `closed by mousedown -> disable next click`);
         disableClickFor();
       }
-
       expandedRef.current = false;
       setExpanded(false);
       // Reset so the next opening re-evaluates screen size
       defaultModeRef.current = null;
-      const pickerEl = ref.current;
-      const inputEl = getPickerInput(pickerEl);
-      if (!inputEl) {
-        restoreFocus(e);
-        return;
-      }
-      const valueAtOpen = valueAtOpenRef.current;
-      if (isCancel) {
-        dispatchRequestSetUIState(inputEl, valueAtOpen, { event: e });
-        restoreFocus(e);
-        return;
-      }
-      const valueAtClose = getPickerInputUIState(pickerEl);
-      if (compareTwoJsValues(valueAtClose, valueAtOpen)) {
-        debugPopup(
-          e,
-          `picker closed with same value as when it opened (${JSON.stringify(valueAtClose)}), no action dispatched`,
-        );
-      } else {
-        dispatchRequestAction(inputEl, { event: e, uiState: valueAtClose });
-      }
       restoreFocus(e);
     };
     const disableClickFor = useIgnoreClickForMousedown(ref, (e) => {
@@ -374,7 +345,7 @@ const PickerCustom = (props) => {
       "aria-expanded": expanded,
       "onActionStart": (e) => {
         onActionStart?.(e);
-        requestClose(e);
+        // requestClose(e);
       },
       "onnavi_request_open": (e) => {
         if (expandedRef.current) {
@@ -397,6 +368,65 @@ const PickerCustom = (props) => {
       children,
     });
     Object.assign(popupProps, {
+      closeRequestHandler: (closePermission, requestCloseEvent) => {
+        const cancelEvent = findEvent(
+          requestCloseEvent,
+          (eInChain) =>
+            eInChain.type === "navi_request_close" && eInChain.detail.isCancel,
+        );
+        const isCancel = Boolean(cancelEvent);
+        const pickerEl = ref.current;
+        const inputEl = getPickerInput(pickerEl);
+        const valueAtOpen = valueAtOpenRef.current;
+
+        if (isCancel) {
+          dispatchRequestSetUIState(inputEl, valueAtOpen, {
+            event: requestCloseEvent,
+          });
+          return;
+        }
+        const valueAtClose = getPickerInputUIState(pickerEl);
+        if (compareTwoJsValues(valueAtClose, valueAtOpen)) {
+          debugPopup(
+            requestCloseEvent,
+            `picker closed with same value as when it opened (${JSON.stringify(valueAtClose)}), no action dispatched`,
+          );
+          return;
+        }
+
+        const onActionPrevented = () => {
+          inputEl.removeEventListener(
+            "navi_action_prevented",
+            onActionPrevented,
+          );
+          inputEl.removeEventListener("navi_action_start", onActionStart);
+        };
+        const onActionStart = (actionStartEvent) => {
+          inputEl.removeEventListener(
+            "navi_action_prevented",
+            onActionPrevented,
+          );
+          inputEl.removeEventListener("navi_action_start", onActionStart);
+          actionStartEvent.detail.addSideEffect({
+            abort: () => {
+              // keep it opened, must be explicitely re-attempted
+            },
+            error: () => {
+              // keep it opened to see error
+            },
+            complete: () => {
+              closePermission.allow();
+            },
+          });
+        };
+        closePermission.deny();
+        inputEl.addEventListener("navi_action_prevented", onActionPrevented);
+        inputEl.addEventListener("navi_action_start", onActionStart);
+        dispatchRequestAction(inputEl, {
+          event: requestCloseEvent,
+          uiState: valueAtClose,
+        });
+      },
       onnavi_open: (e) => {
         onOpen(e);
       },
