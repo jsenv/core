@@ -235,27 +235,6 @@ export const onRequestAction = (
     );
   }
 
-  // Phase 1: resolve uiState.
-  // Groups already set their state before dispatching the action (via navi_ui_state_change),
-  // so uiState is already in detail. For leaf inputs, callers must call
-  // dispatchRequestSetUIState before dispatchRequestAction. Here we only read the
-  // current value if it was not explicitly provided.
-  if (!Object.hasOwn(requestActionCustomEvent.detail, "uiState")) {
-    const commitTarget =
-      findControlProxyTarget(elementHandlingAction) || elementHandlingAction;
-    let resolvedUIState;
-    dispatchInternalCustomEvent(commitTarget, "navi_get_ui_state", {
-      requester,
-      respondWith: (v) => {
-        debugUIState(
-          requestActionCustomEvent,
-          `navi_get_ui_state.respondWith(${JSON.stringify(v)})`,
-        );
-        resolvedUIState = v;
-      },
-    });
-    requestActionCustomEvent.detail.uiState = resolvedUIState;
-  }
   // Phase 2: commit — validate constraints.
   const { committed, uiState } = _attemptCommit(elementHandlingAction, {
     requestCustomEvent: requestActionCustomEvent,
@@ -338,13 +317,34 @@ const _attemptCommit = (
     handlingElement = proxyTarget;
   }
 
-  const uiState = requestCustomEvent.detail.uiState;
+  let uiState;
+  // Phase 1: resolve uiState.
+  // Groups already set their state before dispatching the action (via navi_ui_state_change),
+  // so uiState is already in detail. For leaf inputs, callers must call
+  // dispatchRequestSetUIState before dispatchRequestAction. Here we only read the
+  // current value if it was not explicitly provided.
+  if (Object.hasOwn(requestCustomEvent.detail, "uiState")) {
+    uiState = requestCustomEvent.detail.uiState;
+  } else {
+    let resolvedUIState;
+    dispatchInternalCustomEvent(handlingElement, "navi_get_ui_state", {
+      requester,
+      respondWith: (v) => {
+        debugUIState(
+          requestCustomEvent,
+          `navi_get_ui_state.respondWith(${JSON.stringify(v)})`,
+        );
+        resolvedUIState = v;
+      },
+    });
+    uiState = resolvedUIState;
+  }
 
   const requestStatus = {
+    committed: false,
     uiState,
     canProceed: true,
     preventReason: undefined,
-    commited: false,
   };
 
   if (requestStatus.canProceed) {
@@ -380,7 +380,7 @@ const _attemptCommit = (
     return requestStatus;
   }
   debugUIState(requestCustomEvent, "commit allowed");
-  requestStatus.commited = true;
+  requestStatus.committed = true;
   return requestStatus;
 };
 
