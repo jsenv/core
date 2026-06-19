@@ -505,7 +505,6 @@ export const checkValidity = (controller, options) => {
 };
 
 export const createControlValidity = (controller) => {
-  const element = controller.elementRef.current;
   const controlValidity = {
     uninstall: undefined,
     registerConstraint: undefined,
@@ -524,9 +523,6 @@ export const createControlValidity = (controller) => {
     controlValidity.uninstall = uninstall;
   }
 
-  const dispatchCancelCustomEvent = (detail) => {
-    return dispatchInternalCustomEvent(element, "navi_cancel", detail);
-  };
   const closeElementValidationMessage = (event, reason) => {
     if (controlValidity.validationMessage) {
       controlValidity.validationMessage.requestClose(event, reason);
@@ -582,7 +578,7 @@ export const createControlValidity = (controller) => {
 
   const checkValidity = ({
     event,
-    requester = element,
+    requester = controller,
     fromRequestAction,
     skipReadonly,
   } = {}) => {
@@ -602,7 +598,6 @@ export const createControlValidity = (controller) => {
     failingManagedControlValidity = null;
     const managedControllers = controller.getManagedControls();
     for (const managedController of managedControllers) {
-      const managedElement = managedController.elementRef.current;
       const managedCV = managedController.controlValidity;
       const managedIsValid = managedCV.checkValidity({
         event,
@@ -610,7 +605,7 @@ export const createControlValidity = (controller) => {
         fromRequestAction,
         skipReadonly:
           managedController.controlType === "button" &&
-          managedElement !== requester,
+          managedController !== requester,
       });
       if (!managedIsValid) {
         failingManagedControlValidity = managedCV;
@@ -625,7 +620,7 @@ export const createControlValidity = (controller) => {
     ]);
     resetValidity({ fromRequestAction });
     for (const constraint of constraintSet) {
-      const fieldForConstraint = controller ?? element;
+      const fieldForConstraint = controller;
       const constraintCleanupSet = new Set();
       const registerChange = (register) => {
         const registerResult = register((options) => {
@@ -645,7 +640,7 @@ export const createControlValidity = (controller) => {
       const checkResult = constraint.check(fieldForConstraint, {
         fromRequestAction,
         skipReadonly,
-        skipRequired: element === requester,
+        skipRequired: requester === controller,
         registerChange,
       });
       if (!checkResult) {
@@ -699,15 +694,21 @@ export const createControlValidity = (controller) => {
     if (activeFailedConstraintInfo && !activeFailedConstraintInfo.silent) {
       const titleLess = controller.props.title === undefined;
       if (titleLess) {
-        element?.setAttribute(
-          "title",
-          activeFailedConstraintInfo.messageString,
-        );
+        const element = controller.elementRef.current;
+        if (element) {
+          element.setAttribute(
+            "title",
+            activeFailedConstraintInfo.messageString,
+          );
+        }
       }
     } else {
       const titleLess = controller.props.title === undefined;
       if (titleLess) {
-        element?.removeAttribute("title");
+        const element = controller.elementRef.current;
+        if (element) {
+          element.removeAttribute("title");
+        }
       }
       const checkValidityCallEvent =
         event || new CustomEvent("checkValidity called with no event");
@@ -721,6 +722,7 @@ export const createControlValidity = (controller) => {
       !compareTwoJsValues(constraintValidityState, newConstraintValidityState)
     ) {
       constraintValidityState = newConstraintValidityState;
+      const element = controller.elementRef.current;
       if (element) {
         dispatchPublicCustomEvent(element, NAVI_VALIDITY_CHANGE_CUSTOM_EVENT);
       }
@@ -765,7 +767,8 @@ export const createControlValidity = (controller) => {
       });
       return;
     }
-    const anchorElement = activeConstraintInfo.target || element;
+    const anchorElement =
+      activeConstraintInfo.target || controller.elementRef.current;
     if (
       !skipFocus &&
       // skip focus on proxy (which uses aria-hidden and are not meant to be focused)
@@ -802,9 +805,11 @@ export const createControlValidity = (controller) => {
         if (activeConstraintInfo) {
           activeConstraintInfo.reportStatus = "closed";
         }
+        const element = controller.elementRef.current;
         if (
           !skipFocus &&
           focusWithinCallout &&
+          element &&
           !element.closest('[aria-hidden="true"]') // do not focus invalid proxy
         ) {
           const focusTarget =
@@ -886,13 +891,14 @@ export const createControlValidity = (controller) => {
   };
 
   close_and_check_on_input: {
-    if (element.type === "range") {
+    if (controller.controlType === "input" && controller.type === "range") {
       break close_and_check_on_input; // range inputs have a special behavior where "input" is triggered on pointer release, so we don't need to wait for it
     }
 
     onCalloutOpen((openingEvent) => {
       const openedByMousedown = findEvent(openingEvent, "mousedown");
       const [cleanup, addCleanup] = createPubSub();
+      const element = controller.elementRef.current;
 
       const setupResetOnInput = () => {
         const oninput = (e) => {
@@ -945,13 +951,15 @@ export const createControlValidity = (controller) => {
   }
 
   close_callout_on_mousedown: {
-    // When the user clicks the field (or the interactive element rendered in place of it,
-    // e.g. the .navi_select button for a hidden input), treat it as intent to fix the issue
-    // and dismiss the callout — unless the status is "error", which requires explicit action.
-    // The listener is registered when the callout opens and removed when it closes,
-    // so it can never accidentally close the next callout.
-    const interactionTarget = findControlRoot(element) || element;
     onCalloutOpen((openingEvent) => {
+      const element = controller.elementRef.current;
+      // When the user clicks the field (or the interactive element rendered in place of it,
+      // e.g. the .navi_select button for a hidden input), treat it as intent to fix the issue
+      // and dismiss the callout — unless the status is "error", which requires explicit action.
+      // The listener is registered when the callout opens and removed when it closes,
+      // so it can never accidentally close the next callout.
+      const interactionTarget = findControlRoot(element) || element;
+
       const openingMousedownEvent =
         openingEvent && findEvent(openingEvent, "mousedown");
       const onmousedown = (e) => {
@@ -996,75 +1004,6 @@ export const createControlValidity = (controller) => {
         interactionTarget.removeEventListener("mousedown", onmousedown);
         removeLabelListener?.();
       };
-    });
-  }
-
-  check_on_navi_action_end: {
-    // this ensure we re-check validity (and remove message no longer relevant)
-    // once the action ends (used to remove the NOT_BUSY_CONSTRAINT message)
-    const onNaviActionEnd = async (e) => {
-      // wait a tick for preact to have time to remove attrs (like data-readonly) as "navi_action_end" side effects are executed
-      await new Promise((r) => requestAnimationFrame(r));
-      checkValidity({ event: e });
-    };
-    element.addEventListener("navi_action_end", onNaviActionEnd);
-    addTeardown(() => {
-      element.removeEventListener("navi_action_end", onNaviActionEnd);
-    });
-  }
-
-  report_on_report_validity_call: {
-    const nativeReportValidity = element.reportValidity;
-    element.reportValidity = () => {
-      reportValidity();
-    };
-    addTeardown(() => {
-      element.reportValidity = nativeReportValidity;
-    });
-  }
-
-  close_on_escape: {
-    const onkeydown = (e) => {
-      if (e.key === "Escape") {
-        if (controlValidity.validationMessage) {
-          // When a callout is open, callout.js handles Escape on the anchor element
-        } else {
-          dispatchCancelCustomEvent({
-            event: e,
-            reason: "escape_key",
-          });
-        }
-      }
-    };
-    element.addEventListener("keydown", onkeydown);
-    addTeardown(() => {
-      element.removeEventListener("keydown", onkeydown);
-    });
-  }
-
-  cancel_on_blur: {
-    const onblur = (e) => {
-      if (element.value === "") {
-        dispatchCancelCustomEvent({
-          event: e,
-          reason: "blur_empty",
-        });
-        return;
-      }
-      // if we have failed constraint, we cancel too
-      if (failedConstraintInfo || interactionFailedConstraintInfo) {
-        dispatchCancelCustomEvent({
-          event: e,
-          reason: "blur_invalid",
-          failedConstraintInfo:
-            failedConstraintInfo || interactionFailedConstraintInfo,
-        });
-        return;
-      }
-    };
-    element.addEventListener("blur", onblur);
-    addTeardown(() => {
-      element.removeEventListener("blur", onblur);
     });
   }
 

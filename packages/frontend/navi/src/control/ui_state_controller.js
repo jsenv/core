@@ -461,11 +461,15 @@ export const useUIStateController = (
     resetUIState: (e) => {
       uiStateController.setUIState(uiStateController.state, e);
     },
-    actionEnd: () => {
+    actionEnd: async (e) => {
       debugUIState(`"${controlType}" actionEnd called`);
       if (persists) {
         setNavState(undefined);
       }
+
+      // wait a tick for preact to have time to remove attrs (like data-readonly) as "navi_action_end" side effects are executed
+      await new Promise((r) => requestAnimationFrame(r));
+      controlValidity.checkValidity({ event: e });
     },
     subscribe: subscribeUIState,
     // Leaf controls don't aggregate children, but they act as a transparent
