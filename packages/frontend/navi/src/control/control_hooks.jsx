@@ -1114,7 +1114,6 @@ const useInteractiveProps = (
           (parentController.controlType === "radio_group" ||
             parentController.controlType === "checkbox_group")
         ) {
-          debugger;
           const parentEl = parentController.elementRef.current;
           if (parentEl) {
             const originalEvent = e.detail.eventChain[0];
