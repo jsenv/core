@@ -21,7 +21,7 @@ import {
 import { getUIStateControllerById } from "../controller_registry.js";
 import { Input } from "../input/input.jsx";
 import { useCheckableProps } from "../input/use_checkable_props.js";
-import { dispatchRequestInteraction } from "../validation/custom_constraint_validation.js";
+import { dispatchRequestInteraction } from "../validation/control_validity.js";
 
 const css = /* css */ `
   @layer navi {

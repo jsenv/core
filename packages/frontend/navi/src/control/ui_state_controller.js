@@ -23,7 +23,7 @@ import {
   toDomValue,
 } from "./controller_registry.js";
 import { FormContext } from "./form_context.js";
-import { createControlValidity } from "./validation/custom_constraint_validation.js";
+import { createControlValidity } from "./validation/control_validity.js";
 
 /**
  * Minimal interface that any object placed in `ParentUIStateControllerContext` must satisfy.

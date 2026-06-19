@@ -1,6 +1,6 @@
 import { useLayoutEffect, useState } from "preact/hooks";
 
-import { NAVI_VALIDITY_CHANGE_CUSTOM_EVENT } from "../custom_constraint_validation.js";
+import { NAVI_VALIDITY_CHANGE_CUSTOM_EVENT } from "../control_validity.js";
 
 const DEFAULT_VALIDITY_STATE = { valid: true };
 export const useConstraintValidityState = (ref) => {

@@ -15,7 +15,7 @@ import {
 import {
   dispatchRequestAction,
   dispatchRequestInteraction,
-} from "../validation/custom_constraint_validation.js";
+} from "../validation/control_validity.js";
 
 const css = /* css */ `
   .navi_picker {

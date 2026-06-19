@@ -32,7 +32,7 @@ import {
   dispatchRequestInteraction,
   onRequestAction,
   onRequestInteraction,
-} from "@jsenv/navi/src/control/validation/custom_constraint_validation.js";
+} from "@jsenv/navi/src/control/validation/control_validity.js";
 import {
   useDebugAction,
   useDebugCommand,

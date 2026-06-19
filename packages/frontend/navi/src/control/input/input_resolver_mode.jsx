@@ -1,6 +1,6 @@
 import { dispatchPublicCustomEvent } from "@jsenv/dom";
 import { dispatchRequestSetUIState } from "@jsenv/navi/src/control/ui_state_dom.js";
-import { dispatchRequestInteraction } from "@jsenv/navi/src/control/validation/custom_constraint_validation.js";
+import { dispatchRequestInteraction } from "@jsenv/navi/src/control/validation/control_validity.js";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 
 export const InputModeResolver = (props) => {

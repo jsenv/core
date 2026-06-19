@@ -6,7 +6,7 @@ import {
   SelectionContext,
   useSelectableElement,
 } from "../../control/selection/selection.jsx";
-import { requestCloseValidityCallout } from "../../control/validation/custom_constraint_validation.js";
+import { requestCloseValidityCallout } from "../../control/validation/control_validity.js";
 import { EmailSvg } from "../../graphic/icons/email_svg.jsx";
 import {
   LinkAnchorSvg,

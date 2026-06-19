@@ -7,7 +7,7 @@ import { useKeyboardShortcuts } from "../../keyboard/keyboard_shortcuts.js";
 import { useFocusGroup } from "../../utils/focus/use_focus_group.js";
 import { ActionContext } from "../control_context.js";
 import { ControlChildrenWrapper, useControlProps } from "../control_hooks.jsx";
-import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
+import { dispatchRequestAction } from "../validation/control_validity.js";
 import { SummaryMarker } from "./summary_marker.jsx";
 
 const css = /* css */ `
