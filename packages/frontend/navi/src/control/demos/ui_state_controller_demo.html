@@ -30,6 +30,69 @@
       const nickNameSignalA = stateSignal("");
       const nickNameSignalB = stateSignal("Nick");
 
+      const App = () => {
+        return (
+          <Box flex="y" spacing="xl" alignX="start" padding="m" maxWidth="640">
+            <h1>UI State Controller</h1>
+            <TableOfContents />
+
+            <section id="group">
+              <h2>Group (ControlGroup)</h2>
+              <StandaloneDemo />
+              <StandaloneClearDemo />
+              <StandaloneResetDemo />
+              <TextRequiredDemo />
+              <StandaloneRequiredDemo />
+              <InsideFormDemo />
+              <ExternalControlDemo />
+              <ExternalMixedDemo />
+            </section>
+
+            <section id="checkbox">
+              <h2>Checkbox</h2>
+              <CheckboxBasicDemo />
+            </section>
+
+            <section id="radio-group">
+              <h2>Radio group (List selectable)</h2>
+              <ExternalSelectableDemo />
+            </section>
+
+            <section id="checkbox-group">
+              <h2>Checkbox group (List selectable multiple)</h2>
+              <ExternalSelectableMultipleDemo />
+            </section>
+
+            <section id="facade">
+              <h2>Facade (Picker)</h2>
+              <PickerTextExternalDemo />
+              <PickerTextInFormDemo />
+              <PickerControlGroupExternalDemo />
+              <PickerControlGroupInFormDemo />
+            </section>
+
+            <section id="bubble-up">
+              <h2>Bubble-up (enregistrement cross-leaf)</h2>
+              <p
+                style={{
+                  margin: "0 0 16px",
+                  color: "#555",
+                  fontSize: "0.9rem",
+                }}
+              >
+                Un control rejeté par son parent direct (radio_group, etc.)
+                remonte automatiquement jusqu'au premier ancêtre qui l'accepte
+                (ControlGroup ou Form). La structure ci-dessous chaque démo
+                montre en temps réel qui est enregistré où.
+              </p>
+              <BubbleUpBasicDemo />
+              <BubbleUpBoundaryDemo />
+              <BubbleUpPickerDemo />
+            </section>
+          </Box>
+        );
+      };
+
       const TableOfContents = () => (
         <nav>
           <ol>
@@ -127,69 +190,6 @@
           </ol>
         </nav>
       );
-
-      const App = () => {
-        return (
-          <Box flex="y" spacing="xl" alignX="start" padding="m" maxWidth="640">
-            <h1>UI State Controller</h1>
-            <TableOfContents />
-
-            <section id="group">
-              <h2>Group (ControlGroup)</h2>
-              <StandaloneDemo />
-              <StandaloneClearDemo />
-              <StandaloneResetDemo />
-              <TextRequiredDemo />
-              <StandaloneRequiredDemo />
-              <InsideFormDemo />
-              <ExternalControlDemo />
-              <ExternalMixedDemo />
-            </section>
-
-            <section id="checkbox">
-              <h2>Checkbox</h2>
-              <CheckboxBasicDemo />
-            </section>
-
-            <section id="radio-group">
-              <h2>Radio group (List selectable)</h2>
-              <ExternalSelectableDemo />
-            </section>
-
-            <section id="checkbox-group">
-              <h2>Checkbox group (List selectable multiple)</h2>
-              <ExternalSelectableMultipleDemo />
-            </section>
-
-            <section id="facade">
-              <h2>Facade (Picker)</h2>
-              <PickerTextExternalDemo />
-              <PickerTextInFormDemo />
-              <PickerControlGroupExternalDemo />
-              <PickerControlGroupInFormDemo />
-            </section>
-
-            <section id="bubble-up">
-              <h2>Bubble-up (enregistrement cross-leaf)</h2>
-              <p
-                style={{
-                  margin: "0 0 16px",
-                  color: "#555",
-                  fontSize: "0.9rem",
-                }}
-              >
-                Un control rejeté par son parent direct (radio_group, etc.)
-                remonte automatiquement jusqu'au premier ancêtre qui l'accepte
-                (ControlGroup ou Form). La structure ci-dessous chaque démo
-                montre en temps réel qui est enregistré où.
-              </p>
-              <BubbleUpBasicDemo />
-              <BubbleUpBoundaryDemo />
-              <BubbleUpPickerDemo />
-            </section>
-          </Box>
-        );
-      };
 
       const LABELS = ["Alpha", "Beta", "Gamma"];
 
