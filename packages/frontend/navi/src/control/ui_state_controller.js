@@ -14,7 +14,6 @@ import { useDebugUIState } from "../navi_debug.jsx";
 import { useInitialValue } from "../state/use_initial_value.js";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import { triggerNaviCommand } from "./commands.js";
-import { asControlHostValue } from "./control_value.js";
 import {
   findProxyController,
   getRadioSiblings,
@@ -274,13 +273,8 @@ export const useUIStateController = (
     },
     getPropFromState,
     getStateFromProp,
-    toControlHostValue: (jsValue) => {
-      const controlHostValue = asControlHostValue(jsValue, {
-        controlType,
-        type: uiStateController.props.type,
-        inputMode: uiStateController.props.inputMode,
-      });
-      return toDomValue(uiStateController, controlHostValue);
+    toControlHostValue: (uiState) => {
+      return toDomValue(uiStateController, uiState);
     },
     onInteraction: (e, { skipCommand } = {}) => {
       // Trigger side effects of a user interaction without changing UI state.

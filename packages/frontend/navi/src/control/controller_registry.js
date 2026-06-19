@@ -1,3 +1,5 @@
+import { asControlHostValue } from "./control_value.js";
+
 // In-memory registry of all mounted ui state controllers keyed by their id.
 // Allows direct controller access without dispatching DOM events — used by external
 // callers (e.g. selectable_list) to call setUIState by id instead of via the DOM.
@@ -20,9 +22,13 @@ export const getRadioSiblings = (radioUIStateController) => {
   const siblings = radioControllersByName.get(radioUIStateController.name);
   return siblings;
 };
-export const toDomValue = (uiStateController, newUIState) => {
-  const propValue = uiStateController.getPropFromState(newUIState);
-  const domValue = uiStateController.toControlHostValue(propValue);
+export const toDomValue = (uiStateController, uiState) => {
+  const propValue = uiStateController.getPropFromState(uiState);
+  const domValue = asControlHostValue(propValue, {
+    controlType: uiStateController.controlType,
+    type: uiStateController.props.type,
+    inputMode: uiStateController.props.inputMode,
+  });
   if (isSerializableAsDomValue(domValue)) {
     return domValue;
   }

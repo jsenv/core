@@ -942,9 +942,7 @@ const useInteractiveProps = (
 
     const { statePropName } = uiStateController;
     if (statePropName) {
-      const statePropValueRaw = uiStateController.getPropFromState(uiState);
-      const statePropValueDom =
-        uiStateController.toControlHostValue(statePropValueRaw);
+      const statePropValueDom = uiStateController.toControlHostValue(uiState);
       controlHostProps[statePropName] = statePropValueDom;
       if (statePropName === "checked") {
         const { value } = props;
