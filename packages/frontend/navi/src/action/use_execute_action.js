@@ -11,8 +11,7 @@ import {
   removeCustomMessage,
 } from "../control/validation/custom_message.js";
 import { useResetErrorBoundary } from "../error_boundary_context.js";
-
-let debug = false;
+import { useDebugAction } from "../navi_debug.jsx";
 
 export const useExecuteAction = (
   elementRef,
@@ -21,6 +20,8 @@ export const useExecuteAction = (
     errorMapping,
   } = {},
 ) => {
+  const debugAction = useDebugAction();
+
   // see https://medium.com/trabe/catching-asynchronous-errors-in-react-using-error-boundaries-5e8a5fd7b971
   // and https://codepen.io/dmail/pen/XJJqeGp?editors=0010
   // To change if https://github.com/preactjs/preact/issues/4754 lands
@@ -92,13 +93,8 @@ export const useExecuteAction = (
   // errorEffectRef.current = errorEffect;
   const executeAction = useCallback(
     (actionEvent) => {
-      const {
-        action,
-        actionOrigin,
-        requester,
-        event: firstEvent,
-        method,
-      } = actionEvent.detail;
+      const { action, actionOrigin, requester, event, method, confirmMessage } =
+        actionEvent.detail;
       const sharedActionEventDetail = {
         action,
         actionOrigin,
@@ -106,14 +102,7 @@ export const useExecuteAction = (
         event: actionEvent,
         method,
       };
-
-      if (debug) {
-        console.debug(
-          "executing action, requested by",
-          requester,
-          `(event: ${firstEvent?.type})`,
-        );
-      }
+      debugAction(event, "executing action, requested by", requester);
 
       if (resetErrorBoundary) {
         resetErrorBoundary();
@@ -197,9 +186,21 @@ export const useExecuteAction = (
         "navi_action_start",
         actionStartEventDetail,
       );
+
+      if (confirmMessage) {
+        // eslint-disable-next-line no-alert
+        if (!window.confirm(confirmMessage)) {
+          debugAction(event, `action aborted (via confirm dialog)`);
+          triggerAbort(
+            `user cancelled on confirm message: "${confirmMessage}"`,
+          );
+          return Promise.resolve();
+        }
+      }
+
       return action[method]({
         event: actionEvent,
-        reason: `"${firstEvent.type}" event on ${getElementSignature(firstEvent.target)}`,
+        reason: `"${event.type}" event on ${getElementSignature(event.target)}`,
         onAbort: triggerAbort,
         onError: triggerError,
         onComplete: triggerComplete,

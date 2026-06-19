@@ -209,7 +209,6 @@ export const onRequestAction = (
     action,
     requester = event.target,
     meta = {},
-    confirmMessage,
   } = requestActionCustomEvent.detail;
 
   if (!action || !action.isAction) {
@@ -262,29 +261,6 @@ export const onRequestAction = (
     return false;
   }
 
-  // Phase 2: confirm (optional — future: will become async inside action execution)
-  // NOTE: confirmation must eventually move into action execution because it's
-  // conceptually part of it and will need async support for custom confirm UIs.
-  const effectiveConfirmMessage =
-    confirmMessage ||
-    elementHandlingAction.getAttribute("data-confirm-message");
-  if (effectiveConfirmMessage) {
-    // eslint-disable-next-line no-alert
-    if (!window.confirm(effectiveConfirmMessage)) {
-      requestActionCustomEvent.preventDefault();
-      debugAction(
-        requestActionCustomEvent,
-        `action prevented (user cancelled on confirm message) -> dispatch navi_action_prevented`,
-      );
-      dispatchInternalCustomEvent(
-        elementHandlingAction,
-        "navi_action_prevented",
-        customEventDetail,
-      );
-      return false;
-    }
-  }
-
   // Phase 3: execute
   debugAction(
     requestActionCustomEvent,
@@ -299,8 +275,6 @@ export const onRequestAction = (
 };
 
 // Validates commit: checks constraints and returns whether the commit is allowed.
-// uiState must already be resolved and set in requestCustomEvent.detail.uiState
-// by the caller before calling _attemptCommit.
 // Returns { committed: boolean, uiState }.
 const _attemptCommit = (
   handlingElement,
@@ -316,28 +290,8 @@ const _attemptCommit = (
     handlingElement = proxyTargetController.elementRef.current;
   }
 
-  let uiState;
-  // Phase 1: resolve uiState.
-  // Groups already set their state before dispatching the action (via navi_ui_state_change),
-  // so uiState is already in detail. For leaf inputs, callers must call
-  // dispatchRequestSetUIState before dispatchRequestAction. Here we only read the
-  // current value if it was not explicitly provided.
-  if (Object.hasOwn(requestCustomEvent.detail, "uiState")) {
-    uiState = requestCustomEvent.detail.uiState;
-  } else {
-    let resolvedUIState;
-    dispatchInternalCustomEvent(handlingElement, "navi_get_ui_state", {
-      requester,
-      respondWith: (v) => {
-        debugUIState(
-          requestCustomEvent,
-          `navi_get_ui_state.respondWith(${JSON.stringify(v)})`,
-        );
-        resolvedUIState = v;
-      },
-    });
-    uiState = resolvedUIState;
-  }
+  const activeController = proxyTargetController ?? handlingController;
+  const uiState = activeController?.uiState;
 
   const requestStatus = {
     committed: false,

@@ -299,7 +299,6 @@ export const useControlProps = (
       lastActionValueRef.current = currentValue;
       const allowed = dispatchRequestAction(control, {
         event: e,
-        uiState: currentValue,
       });
       if (!allowed) {
         debugInteraction(e, `action not allowed -> ${e.type}.preventDefault()`);
