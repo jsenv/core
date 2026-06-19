@@ -70,6 +70,7 @@ import {
 import {
   dispatchRequestResetUIState,
   dispatchRequestSetUIState,
+  getUIStateFromElement,
 } from "./ui_state_dom.js";
 import { useConstraintMessages } from "./validation/hooks/use_constraint_messages.js";
 import { useConstraints } from "./validation/hooks/use_constraints.js";
@@ -911,7 +912,31 @@ const useInteractiveProps = (
         uiStateController.resetUIState(e);
       },
       onnavi_get_ui_state: (e) => {
-        e.detail.respondWith(uiStateController.uiStateSignal.peek());
+        let uiState = uiStateController.uiStateSignal.peek();
+        // If this is a form submit and the requester is a named button, ensure
+        // its value wins over any other button sharing the same name.
+        // Native browser behavior: only the clicked/activated submit button
+        // contributes its name+value to form data.
+        if (uiStateController.wantRequesterButtonState && e.detail.requester) {
+          const { requester } = e.detail;
+          if (
+            requester &&
+            requester.tagName === "BUTTON" &&
+            requester.name &&
+            requester !== e.currentTarget
+          ) {
+            const requesterUIState = getUIStateFromElement(requester);
+            const requesterValue =
+              requesterUIState !== undefined
+                ? requesterUIState
+                : requester.value;
+            uiState = {
+              ...uiState,
+              [requester.name]: requesterValue,
+            };
+          }
+        }
+        e.detail.respondWith(uiState);
       },
       onnavi_set_ui_state: (e) => {
         uiStateController.setUIState(e.detail.value, e);

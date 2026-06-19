@@ -66,10 +66,7 @@ import {
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 import { findControlHost, findControlRoot } from "../control_dom.js";
 import { findControlProxyTarget } from "../control_proxy.js";
-import {
-  dispatchRequestSetUIState,
-  getUIStateFromElement,
-} from "../ui_state_dom.js";
+import { dispatchRequestSetUIState } from "../ui_state_dom.js";
 import { openCallout } from "./callout/callout.js";
 import { getConstraintMessage } from "./constraint_message.js";
 import {
@@ -244,7 +241,6 @@ export const onRequestAction = (
   requestActionCustomEvent,
   {
     method = "rerun", // not used for now
-    wantRequesterButtonState = false,
     debugUIState = () => {},
     debugAction = () => {},
   } = {},
@@ -285,7 +281,6 @@ export const onRequestAction = (
     requester,
     skipSetUIState: requestActionCustomEvent.detail.skipSetUIState,
     showCallout: elementHandlingAction.hasAttribute("data-action"),
-    wantRequesterButtonState,
     debugUIState,
   });
   const customEventDetail = {
@@ -359,7 +354,6 @@ const _attemptCommit = (
     requester,
     skipSetUIState,
     showCallout,
-    wantRequesterButtonState = false,
     debugUIState,
   },
 ) => {
@@ -377,6 +371,7 @@ const _attemptCommit = (
   } else {
     let resolvedUIState;
     dispatchInternalCustomEvent(handlingElement, "navi_get_ui_state", {
+      requester,
       respondWith: (v) => {
         debugUIState(
           requestCustomEvent,
@@ -385,26 +380,6 @@ const _attemptCommit = (
         resolvedUIState = v;
       },
     });
-    // If this is a form submit and the requester is a named button, ensure
-    // its value wins over any other button sharing the same name.
-    // Native browser behavior: only the clicked/activated submit button
-    // contributes its name+value to form data.
-    if (wantRequesterButtonState) {
-      if (
-        requester &&
-        requester.tagName === "BUTTON" &&
-        requester.name &&
-        requester !== handlingElement
-      ) {
-        const requesterUIState = getUIStateFromElement(requester);
-        const requesterValue =
-          requesterUIState !== undefined ? requesterUIState : requester.value;
-        resolvedUIState = {
-          ...resolvedUIState,
-          [requester.name]: requesterValue,
-        };
-      }
-    }
     uiState = resolvedUIState;
   }
 
