@@ -93,7 +93,6 @@ const onUIStateControllerCreated = (uiStateController) => {
     set.add(uiStateController);
   }
 };
-
 const onUIStateControllerDestroyed = (uiStateController) => {
   const { id, name, controlType } = uiStateController;
   if (id) {
@@ -582,16 +581,15 @@ export const useUIStateController = (
       }
     },
   };
-
-  const controlValidity = createControlValidity(uiStateController);
-  uiStateController.controlValidity = controlValidity;
-
   uiStateControllerRef.current = uiStateController;
   // Register synchronously during render so getUIStateControllerById works
   // immediately in the same render cycle (e.g. InputTextualUI reading uiState).
   if (id) {
     controllersById.set(id, uiStateController);
   }
+
+  const controlValidity = createControlValidity(uiStateController);
+  uiStateController.controlValidity = controlValidity;
   return uiStateController;
 };
 
@@ -1094,6 +1092,8 @@ export const useUIGroupStateController = (
   if (id) {
     controllersById.set(id, uiStateController);
   }
+  const controlValidity = createControlValidity(uiStateController);
+  uiStateController.controlValidity = controlValidity;
   return uiStateController;
 };
 // Stable reference for an empty selection so the action always receives an
@@ -1125,13 +1125,13 @@ const EMPTY_OBJECT = {};
  * inside the picker popup. It also means `commands.js` no longer has to
  * manually re-dispatch to inner controls.
  */
-export const useUIFacadeStateController = (props, uiStateController) => {
+export const useUIFacadeStateController = (props, realUIStateController) => {
   const firstChildControllerRef = useRef(null);
   const updatingRef = useRef(false);
   const debugUIState = useDebugUIState();
 
   useLayoutEffect(() => {
-    return uiStateController.subscribe((newUIState, e) => {
+    return realUIStateController.subscribe((newUIState, e) => {
       if (updatingRef.current) {
         return;
       }
@@ -1176,59 +1176,65 @@ export const useUIFacadeStateController = (props, uiStateController) => {
     return true;
   };
 
-  return useMemo(
-    () => ({
-      controlType: "facade",
-      props,
-      uiStateSignal: uiStateController.uiStateSignal,
-      registerChild: (child) => {
-        if (!includeChildController(child)) {
-          return;
-        }
-        const childType = child.controlType;
-        if (firstChildControllerRef.current) {
-          console.warn(
-            `[useUIFacadeStateController] A second child ("${childType}"${child.name ? ` name="${child.name}"` : ""}) tried to register in the picker facade. ` +
-              `The facade only syncs with the first child — wrap multiple controls in a single ControlGroup.`,
-            child,
-          );
-        } else {
-          debugUIState(
-            `[useUIFacadeStateController] "${childType}"${child.name ? ` name="${child.name}"` : ""} registered as the first child in the picker facade.`,
-          );
-          firstChildControllerRef.current = child;
-          uiStateController.facadeChild = child;
-        }
-      },
-      unregisterChild: (child) => {
-        if (firstChildControllerRef.current === child) {
-          firstChildControllerRef.current = null;
-          uiStateController.facadeChild = null;
-        }
-      },
-      onChildInteraction: (child, e, { stateChanged, silent = false }) => {
-        if (!stateChanged) {
-          return;
-        }
-        if (child !== firstChildControllerRef.current) {
-          return;
-        }
-        updatingRef.current = true;
-        // Use a different event type for silent (mount/unmount) syncs so that
-        // the picker's setUIState does not fire navi_change or action pipelines.
-        const eventType = silent
-          ? "facade_child_mount_sync"
-          : "facade_propagate_up";
-        const propagateUpEvent = new CustomEvent(eventType, {
-          detail: {},
-        });
-        chainEvent(propagateUpEvent, e);
-        uiStateController.setUIState(child.uiState, propagateUpEvent);
-        updatingRef.current = false;
-      },
-    }),
-    [],
-  );
+  const controllerRef = useRef();
+  if (controllerRef.current) {
+    return controllerRef.current;
+  }
+
+  const facadeUIStateController = {
+    controlType: "facade",
+    props,
+    uiStateSignal: realUIStateController.uiStateSignal,
+    registerChild: (child) => {
+      if (!includeChildController(child)) {
+        return;
+      }
+      const childType = child.controlType;
+      if (firstChildControllerRef.current) {
+        console.warn(
+          `[useUIFacadeStateController] A second child ("${childType}"${child.name ? ` name="${child.name}"` : ""}) tried to register in the picker facade. ` +
+            `The facade only syncs with the first child — wrap multiple controls in a single ControlGroup.`,
+          child,
+        );
+      } else {
+        debugUIState(
+          `[useUIFacadeStateController] "${childType}"${child.name ? ` name="${child.name}"` : ""} registered as the first child in the picker facade.`,
+        );
+        firstChildControllerRef.current = child;
+        realUIStateController.facadeChild = child;
+      }
+    },
+    unregisterChild: (child) => {
+      if (firstChildControllerRef.current === child) {
+        firstChildControllerRef.current = null;
+        realUIStateController.facadeChild = null;
+      }
+    },
+    onChildInteraction: (child, e, { stateChanged, silent = false }) => {
+      if (!stateChanged) {
+        return;
+      }
+      if (child !== firstChildControllerRef.current) {
+        return;
+      }
+      updatingRef.current = true;
+      // Use a different event type for silent (mount/unmount) syncs so that
+      // the picker's setUIState does not fire navi_change or action pipelines.
+      const eventType = silent
+        ? "facade_child_mount_sync"
+        : "facade_propagate_up";
+      const propagateUpEvent = new CustomEvent(eventType, {
+        detail: {},
+      });
+      chainEvent(propagateUpEvent, e);
+      realUIStateController.setUIState(child.uiState, propagateUpEvent);
+      updatingRef.current = false;
+    },
+  };
+  controllerRef.current = facadeUIStateController;
+  const controlValidity = createControlValidity(facadeUIStateController);
+  facadeUIStateController.controlValidity = controlValidity;
+  return facadeUIStateController;
 };
 
 /**

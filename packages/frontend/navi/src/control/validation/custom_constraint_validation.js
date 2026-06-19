@@ -498,14 +498,8 @@ export const checkValidity = (controller, options) => {
 };
 
 const formInstrumentedWeakSet = new WeakSet();
-export const createControlValidity = (
-  controller,
-  elementReceivingValidationMessage,
-) => {
+export const createControlValidity = (controller) => {
   const element = controller.elementRef.current;
-  if (!elementReceivingValidationMessage) {
-    elementReceivingValidationMessage = element;
-  }
   const controlValidity = {
     uninstall: undefined,
     registerConstraint: undefined,
@@ -776,8 +770,7 @@ export const createControlValidity = (
       });
       return;
     }
-    const anchorElement =
-      activeConstraintInfo.target || elementReceivingValidationMessage;
+    const anchorElement = activeConstraintInfo.target || element;
     if (
       !skipFocus &&
       // skip focus on proxy (which uses aria-hidden and are not meant to be focused)

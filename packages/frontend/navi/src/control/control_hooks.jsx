@@ -642,25 +642,35 @@ export const useControlgroupProps = (
   },
 ) => {
   const { action } = props;
-  const uiGroupStateController = useUIGroupStateController(props, controlType, {
-    stateType,
-    childControlFilter,
-    aggregateChildStates,
-    wantRequesterButtonState,
-    uiActionInternal,
-    allowCapture,
-    cascadeValidationToChildren,
-  });
+  const [messageProps, remainingProps] = extractMessageAndRemainingProps(props);
+  const uiGroupStateController = useUIGroupStateController(
+    remainingProps,
+    controlType,
+    {
+      stateType,
+      childControlFilter,
+      aggregateChildStates,
+      wantRequesterButtonState,
+      uiActionInternal,
+      allowCapture,
+      cascadeValidationToChildren,
+
+      messageProps,
+    },
+  );
 
   const [boundAction] = useActionBoundToOneParam(
     action,
     uiGroupStateController.uiStateSignal,
   );
   const [actionRequester, setActionRequester] = useState();
-  const [controlRootProps, controlgroupProps] = useInteractiveProps(props, {
-    uiStateController: uiGroupStateController,
-    boundAction,
-  });
+  const [controlRootProps, controlgroupProps] = useInteractiveProps(
+    remainingProps,
+    {
+      uiStateController: uiGroupStateController,
+      boundAction,
+    },
+  );
 
   const { basePseudoState } = controlgroupProps;
   const disabled = basePseudoState[":disabled"];
