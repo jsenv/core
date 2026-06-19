@@ -32,15 +32,12 @@ const NAVI_ACTION_ERROR_CONSTRAINT = {
   },
 };
 registerGlobalConstraint(NAVI_ACTION_ERROR_CONSTRAINT);
-const setActionError = (controller, message, { event, target } = {}) => {
+const setActionError = (controller, message, { target } = {}) => {
   actionErrorWeakMap.set(controller, { message, target });
-  controller.controlValidity.checkValidity({ event });
-  controller.controlValidity.reportValidity({ event });
 };
 const clearActionError = (controller) => {
   if (actionErrorWeakMap.has(controller)) {
     actionErrorWeakMap.delete(controller);
-    controller.controlValidity.checkValidity();
   }
 };
 
@@ -86,14 +83,14 @@ export const useExecuteAction = (
     } else {
       message = error;
     }
-    const controller =
-      validationMessageTargetRef.current?.__uiStateController__;
+    const controller = target.__uiStateController__;
     if (controller) {
       setActionError(controller, message, {
-        event,
         target:
           target === validationMessageTargetRef.current ? undefined : target,
       });
+      controller.controlValidity.checkValidity({ event });
+      controller.controlValidity.reportValidity({ event });
     }
   };
   const removeErrorMessage = () => {
@@ -101,6 +98,7 @@ export const useExecuteAction = (
     const controller = element?.__uiStateController__;
     if (controller) {
       clearActionError(controller);
+      controller.controlValidity.checkValidity();
     }
   };
 
