@@ -120,7 +120,7 @@ export const useUIStateController = (
     !isProxy &&
     !command;
   const readOnly = uncontrolled && hasStateProp;
-  if (readOnly && import.meta.dev) {
+  if (readOnly && import.meta.dev && !props.readOnly) {
     console.warn(
       `"${controlType}" is controlled by "${statePropName}" prop. Replace it by "${defaultStatePropName}" or pass "uiAction"/"action" to make field interactive.`,
     );
