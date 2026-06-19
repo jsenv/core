@@ -329,7 +329,7 @@
               </Box>
 
               <Box row>
-                <Caption>Multi-line with emoji 🙈 on first line</Caption>
+                <Caption>Multi-line with emoji on first line</Caption>
                 <MessageBox status="warning" icon style={{ maxWidth: "220px" }}>
                   At least <strong>5 characters</strong> required — currently
                   only <strong>2</strong> 🙈
@@ -490,7 +490,7 @@
           </div>
         </div>
         <div class="exp-case">
-          <label>with emoji 🙈 — icon and × too short ✗</label>
+          <label>with emoji — icon and × too short ✗</label>
           <div class="box">
             <div class="icon"><svg><use href="#exp-icon"/></svg></div>
             <div class="msg">At least <strong>5 chars</strong> required — only <strong>2</strong> 🙈</div>
@@ -520,7 +520,7 @@
           </div>
         </div>
         <div class="exp-case">
-          <label>with emoji 🙈</label>
+          <label>with emoji</label>
           <div class="box">
             <div class="icon"><svg><use href="#exp-icon"/></svg></div>
             <div class="msg">At least <strong>5 chars</strong> required — only <strong>2</strong> 🙈</div>
@@ -552,7 +552,7 @@
           </div>
         </div>
         <div class="exp-case">
-          <label>with emoji 🙈</label>
+          <label>with emoji</label>
           <div class="box">
             <div class="icon"><svg><use href="#exp-icon"/></svg><span class="phantom">A</span></div>
             <div class="msg">At least <strong>5 chars</strong> required — only <strong>2</strong> 🙈</div>
@@ -582,282 +582,10 @@
           </div>
         </div>
         <div class="exp-case">
-          <label>with emoji 🙈</label>
+          <label>with emoji</label>
           <div class="box">
             <div class="icon"><svg><use href="#exp-icon"/></svg></div>
             <div class="msg">At least <strong>5 chars</strong> required — only <strong>2</strong> 🙈</div>
-            <button class="close">×</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </body>
-</html>
-      }
-      .exp-section h2 {
-        margin: 0 0 6px;
-        color: #333;
-        font-size: 1.2rem;
-      }
-      .exp-section p.desc {
-        margin: 0 0 16px;
-        color: #666;
-        font-size: 0.85rem;
-      }
-      .exp-row {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 24px;
-      }
-      .exp-case {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-      }
-      .exp-case label {
-        color: #888;
-        font-size: 0.75rem;
-      }
-      /* shared box shell */
-      .box {
-        display: inline-flex;
-        padding: 8px;
-        flex-direction: row;
-        gap: 8px;
-        font-size: 14px;
-        font-family: sans-serif;
-        background: white;
-        border: 2px solid orange;
-        border-radius: 4px;
-      }
-      .icon {
-        display: flex;
-        aspect-ratio: 1;
-        flex-shrink: 0;
-        align-items: center;
-        justify-content: center;
-        background: orange;
-        border-radius: 2px;
-      }
-      .icon svg {
-        width: 12px;
-        height: 10px;
-        color: white;
-      }
-      .msg {
-        max-width: 300px;
-        word-break: break-word;
-      }
-      .close {
-        display: flex;
-        padding: 0 3px;
-        flex-shrink: 0;
-        align-items: center;
-        justify-content: center;
-        font-size: inherit;
-        background: none;
-        border: 1px solid #ccc;
-        border-radius: 2px;
-        cursor: pointer;
-      }
-
-      /* ── Option A : line-height fixe ─────────────────────────────── */
-      .opt-a .box {
-        align-items: center;
-      }
-      .opt-a .icon {
-        height: 1lh;
-        align-self: flex-start;
-      }
-      .opt-a .close {
-        height: 1lh;
-        align-self: flex-start;
-      }
-      .opt-a .msg {
-        line-height: 1.5;
-      } /* cap emoji inflation */
-
-      /* ── Option B : phantom text + baseline ──────────────────────── */
-      .opt-b .box {
-        align-items: baseline;
-      }
-      .opt-b .icon {
-        /* height sized to cap-height so it looks centered on the line */
-        height: 1cap;
-        /* shift down half the difference between cap and full line so it
-           appears centered: (1lh - 1cap)/2 below baseline isn't trivial,
-           use flexbox centering with an explicit line-height reference */
-        align-self: baseline;
-        /* The phantom span inside gives the icon a text baseline */
-      }
-      .opt-b .icon .phantom {
-        width: 0;
-        color: transparent;
-        pointer-events: none;
-        user-select: none;
-        overflow: hidden;
-        /* NOT visibility:hidden — must participate in layout/baseline */
-      }
-      .opt-b .close {
-        height: 1cap;
-        align-self: baseline;
-      }
-
-      /* ── Option C : text-box trim ────────────────────────────────── */
-      .opt-c .box {
-        align-items: center;
-      }
-      .opt-c .icon {
-        height: 1lh;
-        align-self: flex-start;
-      }
-      .opt-c .close {
-        height: 1lh;
-        align-self: flex-start;
-      }
-      .opt-c .msg {
-        text-box: trim-both cap alphabetic;
-        line-height: 1.5;
-      }
-    </style>
-
-    <div class="exp-section">
-      <h2>Option A — explicit <code>line-height</code> on message</h2>
-      <p class="desc">
-        Forces line boxes to a fixed height so emoji cannot inflate them.
-        <code>1lh</code> on icon/close = the same fixed height → always matches.
-      </p>
-      <div class="exp-row">
-        <div class="exp-case opt-a">
-          <label>no emoji</label>
-          <div class="box">
-            <div class="icon">
-              <svg viewBox="0 0 125 300">
-                <path
-                  fill="currentColor"
-                  d="m25,1 8,196h59l8-196zm37,224a37,37 0 1,0 2,0z"
-                />
-              </svg>
-            </div>
-            <div class="msg">
-              At least <strong>5 chars</strong> required — only
-              <strong>2</strong>
-            </div>
-            <button class="close">×</button>
-          </div>
-        </div>
-        <div class="exp-case opt-a">
-          <label>with emoji</label>
-          <div class="box">
-            <div class="icon">
-              <svg viewBox="0 0 125 300">
-                <path
-                  fill="currentColor"
-                  d="m25,1 8,196h59l8-196zm37,224a37,37 0 1,0 2,0z"
-                />
-              </svg>
-            </div>
-            <div class="msg">
-              At least <strong>5 chars</strong> required — only
-              <strong>2</strong> 🙈
-            </div>
-            <button class="close">×</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="exp-section">
-      <h2>Option B — phantom text + <code>align-items: baseline</code></h2>
-      <p class="desc">
-        A zero-width invisible span inside the icon gives it a text baseline.
-        <code>align-items: baseline</code> on the row aligns all baselines
-        together. Emoji doesn't change the text baseline — only the leading — so
-        alignment is unaffected.
-      </p>
-      <div class="exp-row">
-        <div class="exp-case opt-b">
-          <label>no emoji</label>
-          <div class="box">
-            <div class="icon">
-              <svg viewBox="0 0 125 300">
-                <path
-                  fill="currentColor"
-                  d="m25,1 8,196h59l8-196zm37,224a37,37 0 1,0 2,0z"
-                />
-              </svg>
-              <span class="phantom">A</span>
-            </div>
-            <div class="msg">
-              At least <strong>5 chars</strong> required — only
-              <strong>2</strong>
-            </div>
-            <button class="close">×<span class="phantom">A</span></button>
-          </div>
-        </div>
-        <div class="exp-case opt-b">
-          <label>with emoji</label>
-          <div class="box">
-            <div class="icon">
-              <svg viewBox="0 0 125 300">
-                <path
-                  fill="currentColor"
-                  d="m25,1 8,196h59l8-196zm37,224a37,37 0 1,0 2,0z"
-                />
-              </svg>
-              <span class="phantom">A</span>
-            </div>
-            <div class="msg">
-              At least <strong>5 chars</strong> required — only
-              <strong>2</strong> 🙈
-            </div>
-            <button class="close">×<span class="phantom">A</span></button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="exp-section">
-      <h2>Option C — <code>text-box: trim-both cap alphabetic</code></h2>
-      <p class="desc">
-        Trims leading space above/below text to cap-height and alphabetic
-        baseline. The emoji's extra height falls outside the trimmed line box
-        and has no layout effect. Chrome 123+ only.
-      </p>
-      <div class="exp-row">
-        <div class="exp-case opt-c">
-          <label>no emoji</label>
-          <div class="box">
-            <div class="icon">
-              <svg viewBox="0 0 125 300">
-                <path
-                  fill="currentColor"
-                  d="m25,1 8,196h59l8-196zm37,224a37,37 0 1,0 2,0z"
-                />
-              </svg>
-            </div>
-            <div class="msg">
-              At least <strong>5 chars</strong> required — only
-              <strong>2</strong>
-            </div>
-            <button class="close">×</button>
-          </div>
-        </div>
-        <div class="exp-case opt-c">
-          <label>with emoji</label>
-          <div class="box">
-            <div class="icon">
-              <svg viewBox="0 0 125 300">
-                <path
-                  fill="currentColor"
-                  d="m25,1 8,196h59l8-196zm37,224a37,37 0 1,0 2,0z"
-                />
-              </svg>
-            </div>
-            <div class="msg">
-              At least <strong>5 chars</strong> required — only
-              <strong>2</strong> 🙈
-            </div>
             <button class="close">×</button>
           </div>
         </div>
