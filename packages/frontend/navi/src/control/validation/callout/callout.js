@@ -119,8 +119,8 @@ const css = /* css */ `
 
         .navi_callout_icon {
           display: flex;
-          width: 22px;
-          height: 22px;
+          aspect-ratio: 1/1;
+          height: round(1.5em, 1px);
           flex-shrink: 0;
           align-items: center;
           align-self: flex-start;
@@ -696,7 +696,8 @@ const calloutTemplate = /* html */ `
             />
           </svg>
         </div>
-        <div class="navi_callout_message">Default message</div>
+        <!-- Keep .navi_callout_message so preact controls it -->
+        <div class="navi_callout_message"></div>
         <div class="navi_callout_close_button_column">
           <button class="navi_callout_close_button">
             <svg
