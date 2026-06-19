@@ -503,9 +503,11 @@ export const createControlValidity = (
     fromRequestAction,
     skipReadonly,
   } = {}) => {
-    for (const [, validityInfo] of validityInfoMap) {
-      if (validityInfo.autoReset) {
-        validityInfo.onAutoReset(controller);
+    if (fromRequestAction) {
+      for (const [, validityInfo] of validityInfoMap) {
+        if (validityInfo.constraint.autoReset) {
+          validityInfo.constraint.onAutoReset(controller);
+        }
       }
     }
 
