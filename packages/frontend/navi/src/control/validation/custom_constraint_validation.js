@@ -195,28 +195,15 @@ export const onRequestCommit = (
 ) => {
   const { event, requester = event.target } = requestCommitEvent.detail;
   const elementHandlingCommit = requestCommitEvent.currentTarget;
-
-  // Resolve uiState from the element if not already provided.
-  if (!Object.hasOwn(requestCommitEvent.detail, "uiState")) {
-    let resolvedUIState;
-    dispatchInternalCustomEvent(elementHandlingCommit, "navi_get_ui_state", {
-      respondWith: (v) => {
-        resolvedUIState = v;
-      },
-    });
-    requestCommitEvent.detail.uiState = resolvedUIState;
-  }
-  const { uiState } = requestCommitEvent.detail;
-
-  const committed = _attemptCommit(elementHandlingCommit, {
+  const { committed } = _attemptCommit(elementHandlingCommit, {
     requestCustomEvent: requestCommitEvent,
     originalEvent: event,
-    uiState,
     requester,
     skipSetUIState: false,
     showCallout: true,
     debugAction,
   });
+
   if (!committed) {
     requestCommitEvent.preventDefault();
     return false;
@@ -261,71 +248,11 @@ export const onRequestAction = (
     debugAction = () => {},
   } = {},
 ) => {
-  // Resolve uiState from the element if not already provided (e.g. forwarded by proxy).
-  // This is the "what value are we committing?" question — it belongs here, at the
-  // start of the action pipeline, before validation and execution.
-  if (!Object.hasOwn(requestActionCustomEvent.detail, "uiState")) {
-    let resolvedUIState;
-    dispatchInternalCustomEvent(
-      requestActionCustomEvent.currentTarget,
-      "navi_get_ui_state",
-      {
-        respondWith: (v) => {
-          debugAction(
-            requestActionCustomEvent,
-            `navi_get_ui_state.respondWith(${JSON.stringify(v)})`,
-          );
-          resolvedUIState = v;
-        },
-      },
-    );
-    // If this is a form submit and the requester is a named button, ensure
-    // its value wins over any other button sharing the same name.
-    // Native browser behavior: only the clicked/activated submit button
-    // contributes its name+value to form data.
-    if (wantRequesterButtonState) {
-      const { requester } = requestActionCustomEvent.detail;
-      if (
-        requester &&
-        requester.tagName === "BUTTON" &&
-        requester.name &&
-        requester !== requestActionCustomEvent.currentTarget
-      ) {
-        const requesterUIState = getUIStateFromElement(requester);
-        const requesterValue =
-          requesterUIState !== undefined ? requesterUIState : requester.value;
-        resolvedUIState = {
-          ...resolvedUIState,
-          [requester.name]: requesterValue,
-        };
-      }
-    }
-    requestActionCustomEvent.detail.uiState = resolvedUIState;
-  }
-
-  // If this element is a proxy, forward the action to the underlying control.
-  // The uiState is already resolved above so the target sees the correct value.
-  const naviProxyTarget = findControlProxyTarget(
-    requestActionCustomEvent.currentTarget,
-  );
-  if (naviProxyTarget) {
-    const { uiState: forwardedUIState } = requestActionCustomEvent.detail;
-    debugAction(
-      requestActionCustomEvent,
-      `${getElementSignature(naviProxyTarget)}.dispatchEvent("navi_set_ui_state", ${JSON.stringify(forwardedUIState)})`,
-    );
-    dispatchRequestSetUIState(naviProxyTarget, forwardedUIState, {
-      event: requestActionCustomEvent,
-    });
-    return true;
-  }
-
   const {
     event,
     actionOrigin,
     action,
     requester = event.target,
-    uiState,
     meta = {},
     confirmMessage,
   } = requestActionCustomEvent.detail;
@@ -349,6 +276,19 @@ export const onRequestAction = (
     );
   }
 
+  // Phase 1: commit — resolve current uiState, handle proxy forwarding,
+  // validate constraints, and set UI state optimistically.
+  const { committed, isProxy } = _attemptCommit(elementHandlingAction, {
+    requestCustomEvent: requestActionCustomEvent,
+    originalEvent: event,
+    requester,
+    skipSetUIState: requestActionCustomEvent.detail.skipSetUIState,
+    showCallout: elementHandlingAction.hasAttribute("data-action"),
+    wantRequesterButtonState,
+    debugAction,
+  });
+  // uiState was resolved inside _attemptCommit and written back to the event detail.
+  const { uiState } = requestActionCustomEvent.detail;
   const customEventDetail = {
     event: requestActionCustomEvent,
     requester,
@@ -358,20 +298,6 @@ export const onRequestAction = (
     method,
     meta,
   };
-
-  // Phase 1: commit — validate constraints and set UI state optimistically.
-  // Only show the callout if this element owns the action. When a leaf control
-  // bubbles up to a parent Form/ControlGroup, the callout will be shown later
-  // when the parent processes its own action.
-  const committed = _attemptCommit(elementHandlingAction, {
-    requestCustomEvent: requestActionCustomEvent,
-    originalEvent: event,
-    uiState,
-    requester,
-    skipSetUIState: requestActionCustomEvent.detail.skipSetUIState,
-    showCallout: elementHandlingAction.hasAttribute("data-action"),
-    debugAction,
-  });
   if (!committed) {
     requestActionCustomEvent.preventDefault();
     debugAction(
@@ -384,6 +310,10 @@ export const onRequestAction = (
       customEventDetail,
     );
     return false;
+  }
+  if (isProxy) {
+    // Proxy forwarding already handled inside _attemptCommit — no action to execute here.
+    return true;
   }
 
   // Phase 2: confirm (optional — future: will become async inside action execution)
@@ -422,21 +352,71 @@ export const onRequestAction = (
   return true;
 };
 
-// Validates constraints and, if valid, optimistically sets the UI state.
+// Resolves the current uiState, handles proxy forwarding, validates constraints,
+// and sets UI state optimistically if all checks pass.
 // Used by both onRequestCommit and onRequestAction so the commit phase is shared.
-// Returns true if commit succeeded, false if validation failed.
+// Returns { committed: boolean, isProxy: boolean }.
 const _attemptCommit = (
   handlingElement,
   {
     requestCustomEvent,
     originalEvent,
-    uiState,
     requester,
     skipSetUIState,
     showCallout,
+    wantRequesterButtonState = false,
     debugAction,
   },
 ) => {
+  // Resolve uiState from the element if not already provided (e.g. forwarded by proxy).
+  if (!Object.hasOwn(requestCustomEvent.detail, "uiState")) {
+    let resolvedUIState;
+    dispatchInternalCustomEvent(handlingElement, "navi_get_ui_state", {
+      respondWith: (v) => {
+        debugAction(
+          requestCustomEvent,
+          `navi_get_ui_state.respondWith(${JSON.stringify(v)})`,
+        );
+        resolvedUIState = v;
+      },
+    });
+    // If this is a form submit and the requester is a named button, ensure
+    // its value wins over any other button sharing the same name.
+    // Native browser behavior: only the clicked/activated submit button
+    // contributes its name+value to form data.
+    if (wantRequesterButtonState) {
+      if (
+        requester &&
+        requester.tagName === "BUTTON" &&
+        requester.name &&
+        requester !== handlingElement
+      ) {
+        const requesterUIState = getUIStateFromElement(requester);
+        const requesterValue =
+          requesterUIState !== undefined ? requesterUIState : requester.value;
+        resolvedUIState = {
+          ...resolvedUIState,
+          [requester.name]: requesterValue,
+        };
+      }
+    }
+    requestCustomEvent.detail.uiState = resolvedUIState;
+  }
+  const { uiState } = requestCustomEvent.detail;
+
+  // If this element is a proxy, forward the commit to the underlying control.
+  const naviProxyTarget = findControlProxyTarget(handlingElement);
+  if (naviProxyTarget) {
+    debugAction(
+      requestCustomEvent,
+      `${getElementSignature(naviProxyTarget)}.dispatchEvent("navi_set_ui_state", ${JSON.stringify(uiState)})`,
+    );
+    dispatchRequestSetUIState(naviProxyTarget, uiState, {
+      event: requestCustomEvent,
+    });
+    return { committed: true, isProxy: true };
+  }
+
   const requestStatus = { canProceed: true, preventReason: undefined };
   if (requestStatus.canProceed) {
     checkEvent(requestStatus, originalEvent);
@@ -468,7 +448,7 @@ const _attemptCommit = (
       requestCustomEvent,
       `commit prevented (reason: ${requestStatus.preventReason})`,
     );
-    return false;
+    return { committed: false, isProxy: false };
   }
   if (!skipSetUIState) {
     dispatchRequestSetUIState(handlingElement, uiState, {
@@ -479,7 +459,7 @@ const _attemptCommit = (
     requestCustomEvent,
     "commit allowed -> dispatchRequestSetUIState",
   );
-  return true;
+  return { committed: true, isProxy: false };
 };
 
 const checkEvent = (requestStatus, event) => {
