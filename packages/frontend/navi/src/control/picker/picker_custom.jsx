@@ -400,6 +400,10 @@ const PickerCustom = (props) => {
             onActionPrevented,
           );
           inputEl.removeEventListener("navi_action_start", onActionStart);
+          debugPopup(
+            requestCloseEvent,
+            "picker action prevented -> keep picker opened (let user fix issues)",
+          );
         };
         const onActionStart = (actionStartEvent) => {
           inputEl.removeEventListener(
@@ -419,12 +423,16 @@ const PickerCustom = (props) => {
             },
           });
         };
+        debugPopup(
+          requestCloseEvent,
+          `picker attempt to close with value (${JSON.stringify(valueAtClose)}) wait for picker action to close picker`,
+        );
         closePermission.deny();
         inputEl.addEventListener("navi_action_prevented", onActionPrevented);
         inputEl.addEventListener("navi_action_start", onActionStart);
         dispatchRequestAction(inputEl, {
           event: requestCloseEvent,
-          uiState: valueAtClose,
+          uiState: valueAtClose, // just to avoid re-reading it
         });
       },
       onnavi_open: (e) => {
