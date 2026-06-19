@@ -430,31 +430,6 @@ const DEFAULT_CONSTRAINT_SET = new Set([
   ...NAVI_CONSTRAINT_SET,
 ]);
 
-export const requestCloseValidationMessage = (
-  element,
-  event = new CustomEvent("programmatic_call"),
-  reason,
-) => {
-  const controller = element.__uiStateController__;
-  if (!controller) {
-    return false;
-  }
-  const controlValidity = controller.controlValidity;
-  const { validationMessage } = controlValidity;
-  if (!validationMessage) {
-    return false;
-  }
-  return validationMessage.requestClose(event, reason);
-};
-
-export const checkValidity = (controller, options) => {
-  const controlValidity = controller.controlValidity;
-  if (!controlValidity) {
-    return false;
-  }
-  return controlValidity.checkValidity(options);
-};
-
 export const createControlValidity = (controller) => {
   const controlValidity = {
     uninstall: undefined,
@@ -483,7 +458,6 @@ export const createControlValidity = (controller) => {
   };
 
   const dynamicConstraintSet = new Set();
-
   register_constraint: {
     controlValidity.registerConstraint = (constraint) => {
       if (typeof constraint === "function") {
@@ -959,6 +933,23 @@ export const createControlValidity = (controller) => {
   }
 
   return controlValidity;
+};
+
+export const requestCloseValidationMessage = (
+  element,
+  event = new CustomEvent("programmatic_call"),
+  reason,
+) => {
+  const controller = element.__uiStateController__;
+  if (!controller) {
+    return false;
+  }
+  const controlValidity = controller.controlValidity;
+  const { validationMessage } = controlValidity;
+  if (!validationMessage) {
+    return false;
+  }
+  return validationMessage.requestClose(event, reason);
 };
 
 const pickConstraint = (a, b) => {
