@@ -97,11 +97,11 @@
 
         return (
           <div className="demo-section">
-            <h2>Form — le cas nominal</h2>
+            <h2>Form with action</h2>
             <p>
-              L'<code>action</code> est sur le <code>{"<Form>"}</code>, pas sur
-              l'input. La validation n'est reportée qu'au submit — blur ne
-              montre rien.
+              The <code>action</code> lives on the <code>{"<Form>"}</code>, not
+              the input. Validation is only reported on submit — blur does
+              nothing.
             </p>
             <Box flex="y" spacing="s">
               <Form
@@ -145,22 +145,19 @@
         );
       };
 
-      // ─── Section 2: Action sur l'input — in-place / live editing ────────────────
-      // Quand l'input a sa propre prop `action`, il agit de façon autonome :
-      // l'action se déclenche au blur ou Enter (pas à chaque frappe).
-      // La validation est reportée immédiatement car l'action a besoin d'une
-      // valeur valide pour se déclencher.
+      // ─── Section 2: Input with action ───────────────────────────────────
+      // action is on the input itself; validation is reported immediately.
       const InPlaceEditingDemo = () => {
         const inputRef = useRef();
         const [committed, setCommitted] = useState(null);
 
         return (
           <div className="demo-section">
-            <h2>Action sur l'input — in-place / live editing</h2>
+            <h2>Input with action</h2>
             <p>
-              L'<code>action</code> est sur l'input directement — pas de
-              <code>{"<Form>"}</code>. La validation est reportée immédiatement
-              : blur ou Enter sur une valeur invalide bloque l'action.
+              The <code>action</code> is on the input itself — no{" "}
+              <code>{"<Form>"}</code> needed. Validation is reported
+              immediately: blur or Enter on an invalid value blocks the action.
             </p>
             <Box flex="y" spacing="s">
               <Field vertical>
@@ -183,7 +180,7 @@
                 style={{ fontSize: "0.85rem", color: "#555" }}
               >
                 <span>
-                  💾 input action received:{" "}
+                  💾 action received:{" "}
                   <strong>
                     {committed === null ? "—" : JSON.stringify(committed)}
                   </strong>
@@ -198,23 +195,22 @@
         );
       };
 
-      // ─── Section 4: Readonly ─────────────────────────────────────────────────────
-      // readonly est une contrainte d'interaction (empêche les modifications)
-      // mais la validité de la valeur est quand même évaluée et reportée.
+      // ─── Section 3: Input readonly ─────────────────────────────────────────────────────────
+      // readonly blocks editing but validity is still evaluated.
       const ReadonlyDemo = () => {
         const readonlyRef = useRef();
 
         return (
           <div className="demo-section">
-            <h2>Readonly — interaction state vs validity state</h2>
+            <h2>Input readonly</h2>
             <p>
-              <code>readonly</code> bloque l'édition mais ne court-circuite pas
-              la validation — une valeur invalide reste invalide. Tenter
-              d'éditer affiche le callout readonly.
+              <code>readonly</code> blocks editing but does not bypass
+              validation — an invalid value stays invalid. Trying to edit shows
+              the readonly callout.
             </p>
             <Box flex="y" spacing="s">
               <Field vertical>
-                <Label>Readonly (minLength 6, value "hi")</Label>
+                <Label>Readonly (minLength 6, value “hi”)</Label>
                 <Input
                   ref={readonlyRef}
                   name="readonly_field"
@@ -229,19 +225,18 @@
         );
       };
 
-      // ─── Section 5: --navi-update ─────────────────────────────────────────────────
-      // --navi-update permet de mettre à jour un input via un bouton.
-      // Il respecte la validation (valeur invalide → erreur) et le readonly (bloqué).
+      // ─── Section 4: External updates ────────────────────────────────────────────────────────
+      // --navi-update respects both validation and readonly.
       const NaviUpdateDemo = () => {
         const validationRef = useRef();
         const readonlyRef = useRef();
 
         return (
           <div className="demo-section">
-            <h2>--navi-update — mise à jour programmatique</h2>
+            <h2>External updates on input</h2>
 
             <h3 style={{ margin: "0 0 8px", fontSize: "1rem", color: "#444" }}>
-              Respecte la validation
+              Respects validation
             </h3>
             <Box flex="y" spacing="s" style={{ marginBottom: "24px" }}>
               <Field vertical>
@@ -266,11 +261,11 @@
             </Box>
 
             <h3 style={{ margin: "0 0 8px", fontSize: "1rem", color: "#444" }}>
-              Respecte le readonly
+              Respects readonly
             </h3>
             <Box flex="y" spacing="s">
               <Field vertical>
-                <Label>Config value (readonly)</Label>
+                <Label>Config (readonly)</Label>
                 <Input
                   ref={readonlyRef}
                   name="config"
@@ -304,18 +299,18 @@
 
         return (
           <div className="demo-section">
-            <h2>navi_number — input numérique</h2>
+            <h2>Numeric input</h2>
             <p>
-              Input numérique basé sur un champ texte. Utiliser les flèches du
-              clavier pour incrémenter/décrémenter.
+              Text-based numeric input. Use the arrow keys to
+              increment/decrement.
             </p>
 
             <h3 style={{ margin: "0 0 8px", fontSize: "1rem", color: "#444" }}>
-              Éditable — avec validation
+              Editable
             </h3>
             <Box flex="y" spacing="s" style={{ marginBottom: "24px" }}>
               <Field vertical>
-                <Label>Quantité (min 1, max 10)</Label>
+                <Label>Quantity (min 1, max 10)</Label>
                 <Input
                   ref={editableRef}
                   name="quantity"
@@ -323,7 +318,7 @@
                   min={1}
                   max={10}
                   required
-                  placeholder="entrez un nombre…"
+                  placeholder="enter a number…"
                   action={(value) => {
                     setCommitted(value);
                   }}
@@ -353,11 +348,11 @@
             <p
               style={{ margin: "0 0 16px", color: "#555", fontSize: "0.9rem" }}
             >
-              Les flèches du clavier affichent le callout readonly.
+              Arrow keys show the readonly callout.
             </p>
             <Box flex="y" spacing="s">
               <Field vertical>
-                <Label>Valeur hors limites (max 10, value 42)</Label>
+                <Label>Out of range (max 10, value 42)</Label>
                 <Input
                   ref={readonlyRef}
                   name="quantity_readonly"
@@ -384,14 +379,14 @@
 
         return (
           <div className="demo-section">
-            <h2>Range — slider</h2>
+            <h2>Range input</h2>
 
             <h3 style={{ margin: "0 0 8px", fontSize: "1rem", color: "#444" }}>
-              Éditable — avec action
+              Editable
             </h3>
             <Box flex="y" spacing="s" style={{ marginBottom: "24px" }}>
               <Field vertical>
-                <Label>Volume (0–100, step 10)</Label>
+                <Label>Volume (0–100, step 10)</Label>
                 <Input
                   ref={editableRef}
                   name="volume"
@@ -429,12 +424,11 @@
             <p
               style={{ margin: "0 0 16px", color: "#555", fontSize: "0.9rem" }}
             >
-              Le slider est figé — l'utilisateur ne peut pas le déplacer. Tenter
-              de l'interagir affiche le callout readonly.
+              The slider is frozen — dragging it shows the readonly callout.
             </p>
             <Box flex="y" spacing="s">
               <Field vertical>
-                <Label>Volume fixé (readonly, value 70)</Label>
+                <Label>Volume (readonly, value 70)</Label>
                 <Input
                   ref={readonlyRef}
                   name="volume_readonly"
@@ -457,35 +451,34 @@
         <div>
           <h1>Control Validity Demo</h1>
           <p className="page-description">
-            Comment la validation fonctionne : quand les contraintes sont
-            évaluées, comment l'action pilote le reporting, et comment readonly
-            et <code>--navi-update</code> interagissent avec le système.
+            When constraints are evaluated, how <code>action</code> controls
+            validation reporting, and how readonly and{" "}
+            <code>--navi-update</code> interact with the system.
           </p>
           <nav style={{ marginBottom: "32px" }}>
             <ol>
               <li>
-                <a href="#form-nominal">Form — le cas nominal</a>
+                <a href="#form-nominal">Form with action</a>
               </li>
               <li>
-                <a href="#in-place">
-                  Action sur l'input — in-place / live editing
-                </a>
+                <a href="#in-place">Input with action</a>
               </li>
               <li>
-                <a href="#readonly">
-                  Readonly — interaction state vs validity state
-                </a>
+                <a href="#readonly">Input readonly</a>
               </li>
               <li>
-                <a href="#navi-update">
-                  --navi-update — mise à jour programmatique
-                </a>
+                <a href="#navi-update">External updates on input</a>
               </li>
               <li>
-                <a href="#navi-number">navi_number — input numérique</a>
-              </li>
-              <li>
-                <a href="#range">Range — slider</a>
+                Other inputs
+                <ol>
+                  <li>
+                    <a href="#navi-number">Numeric</a>
+                  </li>
+                  <li>
+                    <a href="#range">Range</a>
+                  </li>
+                </ol>
               </li>
             </ol>
           </nav>
