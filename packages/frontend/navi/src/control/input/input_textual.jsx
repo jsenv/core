@@ -120,6 +120,7 @@ const css = /* css */ `
     color: var(--x-color);
     font-size: var(--font-size);
     font-family: var(--font-family);
+    text-align: initial;
     background-color: var(--x-background-color);
     border-width: var(--border-width);
     border-style: solid;
