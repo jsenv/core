@@ -458,6 +458,23 @@ export const useUIStateController = (
           // TODO: select, textarea
         }
       }
+      // Check validity after the state update and report if needed.
+      // Controls with their own action (data-action): validate and show the constraint
+      // message immediately — the action will be gated on this validity state.
+      // Controls without own action: close any open callout — an interaction happened
+      // and we defer reporting to the parent group or form submit.
+      {
+        const { controlValidity } = uiStateController;
+        if (el && el.hasAttribute("data-action")) {
+          const isValid = controlValidity.checkValidity({ event: e });
+          if (!isValid) {
+            controlValidity.reportValidity({ event: e });
+          }
+        } else {
+          controlValidity.closeCallout(e, "set_ui_state");
+          controlValidity.checkValidity({ event: e });
+        }
+      }
       uiStateController.onInteraction(e, {
         // Buttons never trigger their command via setUIState — only via onInteraction()
         // called explicitly in onnavi_action_allowed. This prevents a value prop change
