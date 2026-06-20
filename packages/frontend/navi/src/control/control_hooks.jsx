@@ -257,7 +257,8 @@ export const useControlProps = (
       }
     };
     const syncStateFromControl = (e) => {
-      const value = readControlValue(e.currentTarget);
+      const controlEl = e.currentTarget || uiStateController.elementRef.current;
+      const value = readControlValue(controlEl);
       uiStateController.setUIState(value, e);
     };
     // trigger a no-op state update to ensure that any listeners (e.g. commands) are notified of the interaction

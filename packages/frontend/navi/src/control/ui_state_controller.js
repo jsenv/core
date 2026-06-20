@@ -292,6 +292,10 @@ export const useUIStateController = (
             [buttonName]: uiStateController.uiState,
           };
           parentController.syncInternalState(mergedState);
+          debugUIState(
+            `merging button state into parent control group:`,
+            mergedState,
+          );
         }
       }
       // Trigger side effects of a user interaction without changing UI state.
@@ -304,6 +308,7 @@ export const useUIStateController = (
         uiStateController.controlValidity.syncValidity(e);
       }
       uiActionInternal?.(currentUIState, e);
+      debugUIState(`"${controlType}" onInteraction called`);
       uiAction?.(currentUIState, e);
       if (skipCommand) {
       } else {
@@ -311,6 +316,9 @@ export const useUIStateController = (
         if (command) {
           const element = uiStateController.elementRef.current;
           if (element) {
+            debugUIState(
+              `triggering command "${command}" for "${controlType}"`,
+            );
             triggerNaviCommand(element, command, e);
           }
         }
