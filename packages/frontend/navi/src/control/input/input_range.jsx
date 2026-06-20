@@ -116,7 +116,7 @@ const css = /* css */ `
     width: fit-content;
     height: var(--height);
     margin: 2px;
-    flex-direction: inherit;
+    flex-direction: row;
     align-items: center;
     /* Just for the outline, the real border radius of the range is fixed */
     font-size: var(--font-size);
