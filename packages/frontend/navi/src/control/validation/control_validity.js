@@ -93,8 +93,13 @@ export const NAVI_VALIDITY_CHANGE_CUSTOM_EVENT = "navi_validity_change";
 
 export const dispatchRequestInteraction = (
   element,
-  event,
-  interactionName = "interaction",
+  {
+    event,
+    name = "",
+    wantAction = false,
+    effectType = "none",
+    ...detailRest
+  } = {},
 ) => {
   const controlHost = findControlHost(element) || element;
   const allowed = dispatchInternalCustomEvent(
@@ -102,7 +107,10 @@ export const dispatchRequestInteraction = (
     "navi_request_interaction",
     {
       event,
-      interactionName,
+      name,
+      wantAction,
+      effectType,
+      ...detailRest,
     },
   );
   return allowed;
@@ -111,7 +119,16 @@ export const onRequestInteraction = (
   requestInteractionCustomEvent,
   { debugInteraction },
 ) => {
-  const { event, interactionName } = requestInteractionCustomEvent.detail;
+  const {
+    event,
+    interactionName,
+    wantAction = false,
+    action,
+    actionOrigin = "action_prop",
+    requester = event.target,
+    meta = {},
+    method = "rerun",
+  } = requestInteractionCustomEvent.detail;
 
   if (event.defaultPrevented) {
     debugInteraction(
@@ -119,148 +136,88 @@ export const onRequestInteraction = (
       `"${interactionName}" prevented (event.defaultPrevented)`,
     );
     requestInteractionCustomEvent.preventDefault();
+    if (wantAction) {
+      dispatchInternalCustomEvent(
+        requestInteractionCustomEvent.currentTarget,
+        "navi_action_prevented",
+        {
+          event: requestInteractionCustomEvent,
+          requester,
+          actionOrigin,
+          action,
+          method,
+          meta,
+        },
+      );
+    }
     return false;
   }
+
+  // For wantAction: resolve proxy so navi_action_* fires on the real control element.
+  let elementForAction = requestInteractionCustomEvent.currentTarget;
+  let uiState;
+  if (wantAction) {
+    const handlingController = elementForAction.__uiStateController__;
+    const proxyTargetController = handlingController
+      ? findControlProxyTargetController(handlingController)
+      : null;
+    if (proxyTargetController) {
+      elementForAction = proxyTargetController.elementRef.current;
+    }
+    const activeController = proxyTargetController ?? handlingController;
+    uiState = activeController?.uiState;
+  }
+
   const cv = getControlValidityFromElement(
     requestInteractionCustomEvent.currentTarget,
   );
   if (cv) {
-    cv.syncValidity(event);
-    if (cv.interactionFailedConstraintInfo) {
-      debugInteraction(
-        event,
-        `"${interactionName}" prevented (failing constraint "${cv.interactionFailedConstraintInfo.name}")`,
-      );
+    const isValid = cv.syncValidity(event, { fromRequestAction: wantAction });
+    if (!isValid && (cv.interactionFailedConstraintInfo || wantAction)) {
+      const failedInfo =
+        cv.interactionFailedConstraintInfo ??
+        cv.failingManagedControlValidity?.failedConstraintInfo ??
+        cv.failedConstraintInfo;
+      const reason = failedInfo
+        ? `failing constraint "${failedInfo.name}"`
+        : "invalid";
+      debugInteraction(event, `"${interactionName}" prevented (${reason})`);
       requestInteractionCustomEvent.preventDefault();
+      if (wantAction) {
+        dispatchInternalCustomEvent(elementForAction, "navi_action_prevented", {
+          event: requestInteractionCustomEvent,
+          requester,
+          uiState,
+          actionOrigin,
+          action,
+          method,
+          meta,
+        });
+      }
       return false;
     }
   }
+
   debugInteraction(event, `"${interactionName}" allowed`);
-  return true;
-};
-
-export const dispatchRequestAction = (element, detail) => {
-  if (!detail.event) {
-    throw new TypeError("dispatchRequestAction requires an event");
-  }
-  const controlHost = findControlHost(element) || element;
-  detail = {
-    requester: element,
-    actionOrigin: "action_prop",
-    ...detail,
-    /*
-    event,
-    requester,
-    actionOrigin,
-    action,
-    confirmMessage,
-    meta,
-    uiState,
-    */
-  };
-  const allowed = dispatchInternalCustomEvent(
-    controlHost,
-    "navi_request_action",
-    detail,
-  );
-  return allowed;
-};
-export const onRequestAction = (
-  requestActionCustomEvent,
-  {
-    method = "rerun", // not used for now
-    debugAction = () => {},
-  } = {},
-) => {
-  const {
-    event,
-    actionOrigin,
-    action,
-    requester = event.target,
-    meta = {},
-  } = requestActionCustomEvent.detail;
-
-  if (!action || !action.isAction) {
-    throw new TypeError("First argument of onRequestAction must be an action");
-  }
-  if (!actionOrigin) {
-    console.warn("requestAction: actionOrigin is required");
-  }
-
-  // Resolve proxy: commit always operates on the real control.
-  let elementHandlingAction = requestActionCustomEvent.currentTarget;
-  const handlingController = elementHandlingAction.__uiStateController__;
-  const proxyTargetController = handlingController
-    ? findControlProxyTargetController(handlingController)
-    : null;
-  if (proxyTargetController) {
-    elementHandlingAction = proxyTargetController.elementRef.current;
-  }
-  const activeController = proxyTargetController ?? handlingController;
-  const uiState = activeController?.uiState;
-
-  if (requester === requestActionCustomEvent.currentTarget) {
-    debugAction(
-      requestActionCustomEvent,
-      `${getElementSignature(elementHandlingAction)} validates + action requested (origin: ${actionOrigin})`,
+  if (wantAction && action?.isAction) {
+    debugInteraction(
+      requestInteractionCustomEvent,
+      `${DEFAULT_CONSTRAINT_SET.size} constraints verified${
+        elementForAction.hasAttribute("data-action")
+          ? ` -> execute action ${action.callSource}`
+          : " -> no own action, nothing to execute"
+      }`,
     );
-  } else {
-    debugAction(
-      requestActionCustomEvent,
-      `${getElementSignature(elementHandlingAction)} validates + action requested by ${getElementSignature(requester)} (origin: ${actionOrigin})`,
-    );
+    dispatchInternalCustomEvent(elementForAction, "navi_action_allowed", {
+      event: requestInteractionCustomEvent,
+      requester,
+      uiState,
+      actionOrigin,
+      action,
+      method,
+      meta,
+    });
   }
-
-  const customEventDetail = {
-    event: requestActionCustomEvent,
-    requester,
-    uiState,
-    actionOrigin,
-    action,
-    method,
-    meta,
-  };
-
-  if (event.defaultPrevented) {
-    debugAction(
-      requestActionCustomEvent,
-      `action prevented (event.defaultPrevented)`,
-    );
-    requestActionCustomEvent.preventDefault();
-    dispatchInternalCustomEvent(
-      elementHandlingAction,
-      "navi_action_prevented",
-      customEventDetail,
-    );
-    return false;
-  }
-
-  const isValid = activeController.controlValidity.syncValidity(event, {
-    fromRequestAction: true,
-  });
-  if (!isValid) {
-    debugAction(
-      requestActionCustomEvent,
-      `action prevented (invalid) -> dispatch navi_action_prevented`,
-    );
-    requestActionCustomEvent.preventDefault();
-    dispatchInternalCustomEvent(
-      elementHandlingAction,
-      "navi_action_prevented",
-      customEventDetail,
-    );
-    return false;
-  }
-
-  debugAction(
-    requestActionCustomEvent,
-    `${DEFAULT_CONSTRAINT_SET.size} constraints verified${elementHandlingAction.hasAttribute("data-action") ? ` -> execute action ${action.callSource}` : " -> no own action, nothing to execute"}`,
-  );
-  dispatchInternalCustomEvent(
-    elementHandlingAction,
-    "navi_action_allowed",
-    customEventDetail,
-  );
   return true;
 };
 
@@ -752,8 +709,10 @@ HTMLFormElement.prototype.requestSubmit = function (submitter) {
       submitter,
     },
   });
-  dispatchRequestAction(form, {
+  dispatchRequestInteraction(form, {
     event: programmaticEvent,
+    name: "requestSubmit",
+    wantAction: true,
     requester: submitter,
   });
 

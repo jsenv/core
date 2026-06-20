@@ -32,9 +32,7 @@ import { useActionStatus } from "@jsenv/navi/src/action/use_action_status.js";
 import { useExecuteAction } from "@jsenv/navi/src/action/use_execute_action.js";
 import { useComposeElementRef } from "@jsenv/navi/src/box/ref_composition/use_element_ref.js";
 import {
-  dispatchRequestAction,
   dispatchRequestInteraction,
-  onRequestAction,
   onRequestInteraction,
 } from "@jsenv/navi/src/control/validation/control_validity.js";
 import {
@@ -42,7 +40,6 @@ import {
   useDebugCommand,
   useDebugFocus,
   useDebugInteraction,
-  useDebugUIState,
 } from "@jsenv/navi/src/navi_debug.jsx";
 import { compareTwoJsValues } from "@jsenv/navi/src/utils/compare_two_js_values.js";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
@@ -211,11 +208,6 @@ export const useControlProps = (
     } = props;
     let isCheckable = false;
 
-    const updateUIState = (e) => {
-      const value = readControlValue(ref.current);
-      uiStateController.setUIState(value, e);
-    };
-
     const transferFocusToTarget = (pointerEvent) => {
       const naviProxyTarget =
         findFocusDelegateTarget(pointerEvent.currentTarget) ||
@@ -234,20 +226,6 @@ export const useControlProps = (
         pointerEvent.preventDefault();
       }
       naviProxyTarget.focus({ focusVisible: false });
-      return true;
-    };
-    const asRequestingInteraction = (reaction, e) => {
-      const control = ref.current;
-      const allowed = dispatchRequestInteraction(control, e, reaction.name);
-      if (!allowed) {
-        debugInteraction(
-          e,
-          `interaction not allowed -> ${e.type}.preventDefault()`,
-        );
-        e.preventDefault();
-        return false;
-      }
-      reaction.effect?.(e);
       return true;
     };
     const lastEventRequestingActionRef = useRef();
@@ -278,54 +256,30 @@ export const useControlProps = (
         lastActionValueRef.current = e.detail.value;
       }
     };
-    const asRequestingAction = (reaction, e, { ifValueModified }) => {
-      if (actionEvent === "custom") {
-        return false;
-      }
-      const control = ref.current;
-      const currentValue = readControlValue(control);
-      if (ifValueModified) {
-        // Ignore input events that carry the same value as the last action we dispatched.
-        // This avoids showing a spurious "read-only" callout for redundant input events
-        // that browsers fire with no UI change — e.g. range inputs fire several input
-        // events around mouse release even though the value hasn't moved.
-        const lastActionValue = lastActionValueRef.current;
-        const valueSameAsLastAction =
-          lastActionValue !== NO_ACTION_YET &&
-          compareTwoJsValues(currentValue, lastActionValue);
-        if (valueSameAsLastAction) {
-          e.preventDefault();
-          return false;
-        }
-      }
-      lastEventRequestingActionRef.current = e;
-      lastActionValueRef.current = currentValue;
-      const allowed = dispatchRequestAction(control, {
-        event: e,
-      });
-      if (!allowed) {
-        debugInteraction(e, `action not allowed -> ${e.type}.preventDefault()`);
-        e.preventDefault();
-        return false;
-      }
-      reaction.effect?.(e);
-      return true;
+
+    const syncStateFromControl = (e) => {
+      const value = readControlValue(e.currentTarget);
+      uiStateController.setUIState(value, e);
     };
 
     const getDefaultEventReactionDefinitions = () => {
       const keyDownDefault = (e) => {
         const defaultAction = getKeyboardEventDefaultAction(e);
-        if (
-          defaultAction === "type" ||
-          defaultAction === "value_change" ||
-          defaultAction === "activate" ||
-          defaultAction === "scroll" || // ici c'est pour empecher space to scroll sur readonly
-          defaultAction === "cursor_move" // ici c'est pour empecher arrow keys to scroll sur readonly
-        ) {
+        if (defaultAction === "type" || defaultAction === "value_change") {
           // interactions that change the value of a control (typing, activating, etc.) should be validated
           return {
             name: `keydown to ${defaultAction}`,
-            type: "requestInteraction",
+            effectType: "request_update",
+          };
+        }
+        if (
+          defaultAction === "activate" ||
+          defaultAction === "scroll" || // ici c'est pour empecher space to scroll sur readonly
+          defaultAction === "cursor_move" // ici c'est pour empecher arrow keys to scroll sur readonly)
+        ) {
+          return {
+            name: `keydown to ${defaultAction}`,
+            effectType: "interaction",
           };
         }
         // "focus_nav", "form_submit", "dismiss"
@@ -340,19 +294,21 @@ export const useControlProps = (
           mouseDown: () => {
             return {
               name: "mousedown",
-              type: actionOnMouseDown ? "requestAction" : "requestInteraction",
+              wantAction: actionOnMouseDown,
+              effectType: "interaction",
             };
           },
           click: () => {
             return {
               name: "click",
-              type: actionOnMouseDown ? "requestInteraction" : "requestAction",
+              wantAction: !actionOnMouseDown,
               always: (e) => {
                 const button = e.currentTarget;
                 if (button.form) {
                   e.preventDefault(); // prevent form submission
                 }
               },
+              effectType: "interaction",
             };
           },
         };
@@ -367,6 +323,7 @@ export const useControlProps = (
               if (e.key === "Enter") {
                 const inputEl = ref.current;
                 const isRadio = props.type === "radio";
+                const checked = inputEl.checked;
                 const always = () => {
                   if (inputEl.form) {
                     e.preventDefault();
@@ -374,36 +331,42 @@ export const useControlProps = (
                 };
 
                 if (isRadio) {
+                  if (checked) {
+                    return {
+                      name: "enter on checked radio",
+                      always,
+                      effectType: "interaction",
+                    };
+                  }
                   return {
                     name: "enter to check radio",
-                    effect: (e) => {
+                    always,
+                    effectType: "request_update",
+                    effect: () =>
                       dispatchRequestSetUIState(inputEl, true, {
                         event: e,
-                      });
-                    },
-                    always,
+                      }),
                   };
                 }
-                const checked = inputEl.checked;
                 if (checked) {
                   return {
                     name: "enter to uncheck checkbox",
-                    effect: (e) => {
+                    always,
+                    effectType: "request_update",
+                    effect: () =>
                       dispatchRequestSetUIState(inputEl, undefined, {
                         event: e,
-                      });
-                    },
-                    always,
+                      }),
                   };
                 }
                 return {
                   name: "enter to check checkbox",
-                  effect: (e) => {
+                  always,
+                  effectType: "request_update",
+                  effect: () =>
                     dispatchRequestSetUIState(inputEl, true, {
                       event: e,
-                    });
-                  },
-                  always,
+                    }),
                 };
               }
               if (isRadio && e.key === " ") {
@@ -413,7 +376,7 @@ export const useControlProps = (
                   // on checked radios (won't update the ui state but will notify of interaction)
                   return {
                     name: "space to activate checked radio",
-                    effect: updateUIState,
+                    effectType: "interaction",
                   };
                 }
                 // let browser perform "space to check radio"
@@ -425,37 +388,29 @@ export const useControlProps = (
                 wasCheckedAtMousedownRef.current = e.currentTarget.checked;
               }
             },
-            // For checkables, click does NOT update state — it only gates the
-            // browser's native check/uncheck via interaction constraints (e.g.
-            // readOnly). State actually changes via the "input" event that the
-            // browser fires right after, which routes through asAction so the
-            // full action pipeline (constraints, navi_action_allowed, sibling
-            // uncheck for radios…) runs in one place.
             click: () => {
-              return {
-                name: `click on ${props.type}`,
-                type: "requestInteraction",
+              if (isRadio && wasCheckedAtMousedownRef.current) {
                 // When a radio is already checked and gets clicked, the browser does NOT
                 // fire an input event (state doesn't change), so asAction never runs.
                 // We still want uiAction + command to fire. We can tell whether the click
                 // is on an already-checked radio by looking at wasCheckedAtMousedownRef:
                 // if it was checked at mousedown, the input event won't come, so we do it here.
-                effect: isRadio
-                  ? (e) => {
-                      if (wasCheckedAtMousedownRef.current) {
-                        updateUIState(e);
-                      }
-                    }
-                  : undefined,
+                return {
+                  name: `click on checked radio`,
+                  effectType: "interaction",
+                };
+              }
+              return {
+                name: `click on ${props.type}`,
+                effectType: "interaction",
               };
             },
             input: (e) => {
-              const value = readControlValue(e.currentTarget);
-              uiStateController.setUIState(value, e);
-
               return {
                 name: "input",
-                type: "requestAction",
+                wantAction: true,
+                effectType: "update",
+                effect: () => syncStateFromControl(e),
               };
             },
           };
@@ -466,6 +421,7 @@ export const useControlProps = (
             const input = e.currentTarget;
             return {
               name: "enter to --navi-send",
+              effectType: "interaction",
               effect: () => {
                 triggerNaviCommand(input, "--navi-send", e);
               },
@@ -477,24 +433,28 @@ export const useControlProps = (
         if (props.type === "range") {
           return {
             keyDown: keyDownDefaultOnInput,
-            mouseDown: () => {
+            mouseDown: (e) => {
               return {
                 name: "mousedown",
-                type: "requestInteraction",
-                effect: updateUIState,
+                effectType: "request_update",
+                effect: () => syncStateFromControl(e),
               };
             },
             // Range fires "input" on pointer release, not during drag.
             // The dismissal behavior for ranges is handled differently and is excluded here.
-            input: {
-              name: "input",
-              type: "requestInteraction",
-              effect: updateUIState,
+            input: (e) => {
+              return {
+                name: "input",
+                effectType: "update",
+                effect: () => syncStateFromControl(e),
+              };
             },
-            naviChange: () => {
+            naviChange: (e) => {
               return {
                 name: "navi_change",
-                type: "requestAction",
+                wantAction: true,
+                effectType: "update",
+                effect: () => syncStateFromControl(e),
               };
             },
           };
@@ -502,17 +462,19 @@ export const useControlProps = (
 
         return {
           keyDown: keyDownDefaultOnInput,
-          input: () => {
+          input: (e) => {
             return {
               name: "input",
-              type: "requestInteraction",
-              effect: updateUIState,
+              effectType: "update",
+              effect: () => syncStateFromControl(e),
             };
           },
-          naviChange: () => {
+          naviChange: (e) => {
             return {
               name: "navi_change",
-              type: "requestAction",
+              wantAction: true,
+              effectType: "update",
+              effect: () => syncStateFromControl(e),
             };
           },
         };
@@ -520,17 +482,19 @@ export const useControlProps = (
 
       if (controlType === "picker") {
         return {
-          input: () => {
+          input: (e) => {
             return {
               name: "input",
-              type: "requestInteraction",
-              effect: updateUIState,
+              effectType: "update",
+              effect: () => syncStateFromControl(e),
             };
           },
-          naviChange: () => {
+          naviChange: (e) => {
             return {
               name: "navi_change",
-              type: "requestAction",
+              wantAction: true,
+              effectType: "update",
+              effect: () => syncStateFromControl(e),
             };
           },
         };
@@ -553,10 +517,55 @@ export const useControlProps = (
       if (!reaction) {
         return false;
       }
-      const { name, effect, type = "requestInteraction", always } = reaction;
-      const dispatchFn =
-        type === "requestAction" ? asRequestingAction : asRequestingInteraction;
-      const applied = dispatchFn({ name, effect }, e, { ifValueModified });
+      const { name, always, wantAction = false, effectType, effect } = reaction;
+      const applied = (() => {
+        if (wantAction && actionEvent === "custom") {
+          return false;
+        }
+        const control = ref.current;
+        if (ifValueModified || wantAction) {
+          const currentValue = readControlValue(control);
+          if (ifValueModified) {
+            // Ignore input events that carry the same value as the last action we dispatched.
+            // This avoids showing a spurious "read-only" callout for redundant input events
+            // that browsers fire with no UI change — e.g. range inputs fire several input
+            // events around mouse release even though the value hasn't moved.
+            const lastActionValue = lastActionValueRef.current;
+            const valueSameAsLastAction =
+              lastActionValue !== NO_ACTION_YET &&
+              compareTwoJsValues(currentValue, lastActionValue);
+            if (valueSameAsLastAction) {
+              e.preventDefault();
+              return false;
+            }
+          }
+          if (wantAction) {
+            lastEventRequestingActionRef.current = e;
+            lastActionValueRef.current = currentValue;
+          }
+        }
+        const allowed = dispatchRequestInteraction(control, {
+          event: e,
+          name,
+          effectType,
+          wantAction,
+        });
+        if (!allowed) {
+          debugInteraction(
+            e,
+            `interaction not allowed -> ${e.type}.preventDefault()`,
+          );
+          e.preventDefault();
+          return false;
+        }
+        if (effect) {
+          effect();
+        } else if (effectType === "interaction") {
+          // trigger a no-op state update to ensure that any listeners (e.g. commands) are notified of the interaction
+          syncStateFromControl(e);
+        }
+        return true;
+      })();
       always?.(e);
       return applied;
     };
@@ -613,7 +622,11 @@ export const useControlProps = (
     const refComposed = useComposeElementRef(refCallback, ref);
     const onPaste = (e) => {
       props.onPaste?.(e);
-      const allowed = dispatchRequestInteraction(ref.current, e);
+      const allowed = dispatchRequestInteraction(ref.current, {
+        event: e,
+        name: "paste",
+        effectType: "request_update",
+      });
       if (!allowed) {
         e.preventDefault();
       }
@@ -812,7 +825,6 @@ const useInteractiveProps = (
   const parentActionRequester = useContext(ActionRequesterContext);
   const debugCommand = useDebugCommand();
   const debugAction = useDebugAction();
-  const debugUIState = useDebugUIState();
   const debugInteraction = useDebugInteraction();
   const debugFocus = useDebugFocus();
 
@@ -1018,6 +1030,10 @@ const useInteractiveProps = (
         }
       },
       onnavi_request_interaction: (e) => {
+        if (e.detail.wantAction && !e.detail.action) {
+          e.detail.action = boundAction;
+          e.detail.actionOrigin = "action_prop";
+        }
         onRequestInteraction(e, { debugInteraction });
       },
       onnavi_cancel: (e) => {
@@ -1050,17 +1066,6 @@ const useInteractiveProps = (
           }
         }
         onCancel?.(e, reason);
-      },
-      onnavi_request_action: (e) => {
-        if (!e.detail.action) {
-          // keyboard shortcut may already provide an action — let it win
-          e.detail.actionOrigin = "action_prop";
-          e.detail.action = boundAction;
-        }
-        onRequestAction(e, {
-          debugUIState,
-          debugAction,
-        });
       },
       onnavi_action_prevented: onActionPrevented,
       onnavi_action_allowed: (e) => {
@@ -1112,9 +1117,14 @@ const useInteractiveProps = (
           const parentEl = parentController.elementRef.current;
           if (parentEl) {
             const originalEvent = e.detail.eventChain[0];
-            dispatchRequestAction(parentEl, {
-              event: originalEvent,
-            });
+            dispatchRequestInteraction(
+              parentEl,
+              originalEvent,
+              "auto_group_action",
+              {
+                wantAction: true,
+              },
+            );
           }
         }
       },
