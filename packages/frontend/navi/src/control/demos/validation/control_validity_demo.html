@@ -207,7 +207,7 @@
       // ─── Section 4: Form — action fires on submit ────────────────────────────────
       const FormActionDemo = () => {
         const inputRef = useRef();
-        const [committed, setCommitted] = useState("—");
+        const [committed, setCommitted] = useState(null);
 
         return (
           <div className="demo-section">
@@ -232,16 +232,17 @@
               </li>
               <li>
                 <strong>Form experience</strong> (this example) — the input has
-                no <code>action</code> of its own; it relies on the surrounding{" "}
-                <code>{"<Form>"}</code> to commit. Validity reporting is
-                deferred: blur does not trigger a commit, and errors are only
-                shown when the form is submitted with invalid fields.
+                no <code>action</code> of its own; the <code>{"<Form>"}</code>{" "}
+                carries the <code>action</code> and collects all fields.
+                Validity reporting is deferred: blur does not trigger a commit,
+                and errors are only shown when the form is submitted with
+                invalid fields.
               </li>
             </ul>
             <Box flex="y" spacing="s">
               <Form
-                action={({ username }) => {
-                  setCommitted(username ?? "");
+                action={(formData) => {
+                  setCommitted(formData);
                 }}
               >
                 <Field vertical>
@@ -265,13 +266,15 @@
                 style={{ fontSize: "0.85rem", color: "#555" }}
               >
                 <span>
-                  💾 committed (action):{" "}
-                  <strong>{JSON.stringify(committed)}</strong>
+                  💾 form action received:{" "}
+                  <strong>
+                    {committed === null ? "—" : JSON.stringify(committed)}
+                  </strong>
                 </span>
               </Box>
               <ControlValidityDebug
                 inputRef={inputRef}
-                committedValue={committed}
+                committedValue={committed?.username}
               />
             </Box>
           </div>
