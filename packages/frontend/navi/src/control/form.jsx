@@ -82,9 +82,10 @@ const FormControl = (props) => {
         e.preventDefault();
         dispatchRequestInteraction(form, {
           event: e,
+          wantAction: true,
+          name: "form_submit",
           requester: e.submitter || form,
           actionOrigin: "form_submit",
-          wantAction: true,
         });
       }}
       onReset={(e) => {

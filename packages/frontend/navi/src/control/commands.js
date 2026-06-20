@@ -190,20 +190,18 @@ registerNaviCommand("--navi-update", (source, event) => {
   return {
     target,
     implementation: () => {
-      const allowed = dispatchRequestInteraction(target, {
+      dispatchRequestInteraction(target, {
         event,
-        effectType: "request_update",
         name: "--navi-update",
+        category: "request_update",
+        prevented: () => event.preventDefault(),
+        allowed: () => {
+          const commandValue = resolveCommandValue(source, event);
+          dispatchRequestSetUIState(target, commandValue, {
+            event,
+          });
+        },
       });
-      if (!allowed) {
-        event.preventDefault();
-        return false;
-      }
-      const commandValue = resolveCommandValue(source, event);
-      dispatchRequestSetUIState(target, commandValue, {
-        event,
-      });
-      return true;
     },
   };
 });
@@ -225,17 +223,15 @@ registerNaviCommand("--navi-clear", (source, event) => {
           optional: true,
         });
       }
-      const allowed = dispatchRequestInteraction(target, {
+      dispatchRequestInteraction(target, {
         event,
-        effectType: "request_update",
         name: "--navi-clear",
+        category: "request_update",
+        prevented: () => event.preventDefault(),
+        allowed: () => {
+          dispatchRequestClearUIState(target, event);
+        },
       });
-      if (!allowed) {
-        event.preventDefault();
-        return false;
-      }
-      dispatchRequestClearUIState(target, event);
-      return true;
     },
   };
 });
@@ -248,16 +244,13 @@ registerNaviCommand("--navi-reset", (source, event) => {
   return {
     target,
     implementation: () => {
-      const allowed = dispatchRequestInteraction(target, {
+      dispatchRequestInteraction(target, {
         event,
-        effectType: "request_update",
         name: "--navi-reset",
+        category: "request_update",
+        prevented: () => event.preventDefault(),
+        allowed: () => dispatchRequestResetUIState(target, event),
       });
-      if (!allowed) {
-        event.preventDefault();
-        return false;
-      }
-      return dispatchRequestResetUIState(target, event);
     },
   };
 });

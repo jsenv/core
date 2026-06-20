@@ -184,8 +184,8 @@ const DetailsField = (props) => {
         const details = ref.current;
         dispatchRequestInteraction(details, {
           event: e,
-          name: "toggle",
           wantAction: true,
+          name: "toggle",
         });
       }}
       open={open}

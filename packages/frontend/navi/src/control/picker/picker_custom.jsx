@@ -174,18 +174,18 @@ const PickerNative = (props) => {
     if (!pickerInput) {
       return;
     }
-    const allowed = dispatchRequestInteraction(pickerInput, {
+    dispatchRequestInteraction(pickerInput, {
       event: e,
       name:
         e.type === "click" ? "click to show picker" : "navi_request_open event",
+      allowed: () => {
+        try {
+          pickerInput.showPicker();
+        } catch {
+          pickerInput.click();
+        }
+      },
     });
-    if (allowed) {
-      try {
-        pickerInput.showPicker();
-      } catch {
-        pickerInput.click();
-      }
-    }
   };
 
   return (
@@ -330,14 +330,13 @@ const PickerCustom = (props) => {
     };
 
     const onInteraction = (e, { name, effect }) => {
-      const allowed = dispatchRequestInteraction(ref.current, {
+      dispatchRequestInteraction(ref.current, {
         event: e,
         name,
+        allowed: () => {
+          effect();
+        },
       });
-      if (!allowed) {
-        return;
-      }
-      effect();
     };
 
     const { onActionStart, children } = props;
@@ -432,8 +431,9 @@ const PickerCustom = (props) => {
         inputEl.addEventListener("navi_action_start", onActionStart);
         dispatchRequestInteraction(inputEl, {
           event: requestCloseEvent,
-          name: "picker close",
           wantAction: true,
+          name: "picker close",
+          category: "request_update",
           uiState: valueAtClose,
         });
       },
@@ -640,15 +640,17 @@ const PickerContentInsidePopover = (props) => {
         const focusStaysInside =
           (pickerEl && pickerEl.contains(relatedTarget)) ||
           (popoverEl && popoverEl.contains(relatedTarget));
-        if (
-          !focusStaysInside &&
-          dispatchRequestInteraction(pickerEl, {
-            event: e,
-            name: "blur",
-          })
-        ) {
-          dispatchCustomEvent(popoverEl, "navi_request_close", { event: e });
+        if (focusStaysInside) {
+          return;
         }
+        dispatchRequestInteraction(pickerEl, {
+          event: e,
+          name: "blur",
+          category: "interaction",
+          allowed: () => {
+            dispatchCustomEvent(popoverEl, "navi_request_close", { event: e });
+          },
+        });
       }}
     >
       <Popover

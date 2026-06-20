@@ -355,16 +355,13 @@ const ListSelectable = (props) => {
           return;
         }
         const list = ref.current;
-        const allowed = dispatchRequestInteraction(list, {
+        dispatchRequestInteraction(list, {
           event: e,
-          effectType: "request_update",
           name: "select",
+          category: "request_update",
+          prevented: () => e.preventDefault(), // tell the requester that we don't want to select this item
+          allowed: () => childController.setUIState(true, e),
         });
-        if (!allowed) {
-          e.preventDefault();
-          return;
-        }
-        childController.setUIState(true, e);
       }}
       onnavi_request_unselect={(e) => {
         const { id } = e.detail;
@@ -377,16 +374,13 @@ const ListSelectable = (props) => {
           return;
         }
         const list = ref.current;
-        const allowed = dispatchRequestInteraction(list, {
+        dispatchRequestInteraction(list, {
           event: e,
-          effectType: "request_update",
           name: "unselect",
+          category: "request_update",
+          prevented: () => e.preventDefault(), // tell the requester that we don't want to unselect this item
+          allowed: () => childController.setUIState(false, e),
         });
-        if (!allowed) {
-          e.preventDefault();
-          return;
-        }
-        childController.setUIState(false, e);
       }}
       onnavi_request_nav={(e) => {
         const { goal } = e.detail;

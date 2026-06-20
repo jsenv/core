@@ -705,9 +705,10 @@ HTMLFormElement.prototype.requestSubmit = function (submitter) {
   });
   dispatchRequestInteraction(form, {
     event: programmaticEvent,
-    name: "requestSubmit",
-    wantAction: true,
     requester: submitter,
+    wantAction: true,
+    name: "requestSubmit",
+    category: "interaction",
   });
 
   // When all fields are valid calling the native requestSubmit would let browser go through the

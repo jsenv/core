@@ -269,14 +269,27 @@ export const useControlProps = (
           // interactions that change the value of a control (typing, activating, etc.) should be validated
           return {
             name: `keydown to ${defaultAction}`,
-            effectType: "request_update",
+            category: "request_update",
+            prevented: () => e.preventDefault(),
           };
         }
         if (defaultAction === "activate") {
           // activating the control (e.g. space on a button/range) — validate readonly/disabled
           return {
             name: `keydown to ${defaultAction}`,
-            effectType: "interaction",
+            category: "interaction",
+            prevented: () => e.preventDefault(),
+          };
+        }
+        if (defaultAction === "scroll") {
+          // on a readonly input arrow keys would scroll the page
+          // which could be fine to let as is but I found disturbing that an interaction
+          // the is usually caught by the control becomes a page scroll when readonly
+          // I prefer input to keep eating this interaction while readonly
+          return {
+            name: `keydown to ${defaultAction}`,
+            category: "interaction",
+            prevented: () => e.preventDefault(),
           };
         }
         // cursor_move (arrow keys on text), scroll (space to scroll), focus_nav (tab),
@@ -334,39 +347,39 @@ export const useControlProps = (
                   if (checked) {
                     return {
                       name: "enter on checked radio",
+                      category: "interaction",
                       always,
-                      effectType: "interaction",
                     };
                   }
                   return {
                     name: "enter to check radio",
-                    always,
-                    effectType: "request_update",
-                    effect: () =>
+                    category: "request_update",
+                    allowed: () =>
                       dispatchRequestSetUIState(inputEl, true, {
                         event: e,
                       }),
+                    always,
                   };
                 }
                 if (checked) {
                   return {
                     name: "enter to uncheck checkbox",
-                    always,
-                    effectType: "request_update",
-                    effect: () =>
+                    category: "request_update",
+                    allowed: () =>
                       dispatchRequestSetUIState(inputEl, undefined, {
                         event: e,
                       }),
+                    always,
                   };
                 }
                 return {
                   name: "enter to check checkbox",
-                  always,
-                  effectType: "request_update",
-                  effect: () =>
+                  category: "request_update",
+                  allowed: () =>
                     dispatchRequestSetUIState(inputEl, true, {
                       event: e,
                     }),
+                  always,
                 };
               }
               if (isRadio && e.key === " ") {
@@ -434,8 +447,8 @@ export const useControlProps = (
             mouseDown: (e) => {
               return {
                 name: "mousedown",
-                effectType: "request_update",
-                effect: () => syncStateFromControl(e),
+                category: "request_update",
+                allowed: () => syncStateFromControl(e),
               };
             },
             // Range fires "input" on pointer release, not during drag.
@@ -443,16 +456,16 @@ export const useControlProps = (
             input: (e) => {
               return {
                 name: "input",
-                effectType: "update",
-                effect: () => syncStateFromControl(e),
+                category: "update",
+                allowed: () => syncStateFromControl(e),
               };
             },
             naviChange: (e) => {
               return {
-                name: "navi_change",
                 wantAction: true,
-                effectType: "update",
-                effect: () => syncStateFromControl(e),
+                name: "navi_change",
+                category: "update",
+                allowed: () => syncStateFromControl(e),
               };
             },
           };
@@ -463,16 +476,16 @@ export const useControlProps = (
           input: (e) => {
             return {
               name: "input",
-              effectType: "update",
-              effect: () => syncStateFromControl(e),
+              category: "update",
+              allowed: () => syncStateFromControl(e),
             };
           },
           naviChange: (e) => {
             return {
-              name: "navi_change",
               wantAction: true,
-              effectType: "update",
-              effect: () => syncStateFromControl(e),
+              name: "navi_change",
+              category: "update",
+              allowed: () => syncStateFromControl(e),
             };
           },
         };
@@ -483,16 +496,16 @@ export const useControlProps = (
           input: (e) => {
             return {
               name: "input",
-              effectType: "update",
-              effect: () => syncStateFromControl(e),
+              category: "update",
+              allowed: () => syncStateFromControl(e),
             };
           },
           naviChange: (e) => {
             return {
-              name: "navi_change",
               wantAction: true,
-              effectType: "update",
-              effect: () => syncStateFromControl(e),
+              name: "navi_change",
+              category: "update",
+              allowed: () => syncStateFromControl(e),
             };
           },
         };
@@ -515,7 +528,14 @@ export const useControlProps = (
       if (!reaction) {
         return false;
       }
-      const { name, always, wantAction = false, effectType, effect } = reaction;
+      const {
+        wantAction = false,
+        name,
+        category,
+        allowed,
+        prevented,
+        always,
+      } = reaction;
       const applied = (() => {
         if (wantAction && actionEvent === "custom") {
           return false;
@@ -542,27 +562,20 @@ export const useControlProps = (
             lastActionValueRef.current = currentValue;
           }
         }
-        const allowed = dispatchRequestInteraction(control, {
+        const can = dispatchRequestInteraction(control, {
           event: e,
-          name,
-          effectType,
           wantAction,
+          name,
+          category,
         });
-        if (!allowed) {
-          if (effectType === "request_update") {
-            debugInteraction(
-              e,
-              `interaction not allowed -> ${e.type}.preventDefault()`,
-            );
-            e.preventDefault();
-          } else {
-            debugInteraction(e, `interaction not allowed`);
-          }
+        if (!can) {
+          debugInteraction(e, `interaction not allowed`);
+          prevented?.(e);
           return false;
         }
-        if (effect) {
-          effect();
-        } else if (effectType === "interaction") {
+        if (allowed) {
+          allowed();
+        } else if (category === "interaction") {
           // trigger a no-op state update to ensure that any listeners (e.g. commands) are notified of the interaction
           syncStateFromControl(e);
         }
@@ -624,14 +637,12 @@ export const useControlProps = (
     const refComposed = useComposeElementRef(refCallback, ref);
     const onPaste = (e) => {
       props.onPaste?.(e);
-      const allowed = dispatchRequestInteraction(ref.current, {
+      dispatchRequestInteraction(ref.current, {
         event: e,
         name: "paste",
-        effectType: "request_update",
+        category: "request_update",
+        prevented: () => e.preventDefault(),
       });
-      if (!allowed) {
-        e.preventDefault();
-      }
     };
     Object.assign(controlHostProps, {
       ref: refComposed,
@@ -1121,8 +1132,8 @@ const useInteractiveProps = (
             const originalEvent = e.detail.eventChain[0];
             dispatchRequestInteraction(parentEl, {
               event: originalEvent,
-              name: "auto_group_action",
               wantAction: true,
+              name: "auto_group_action",
             });
           }
         }

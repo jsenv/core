@@ -102,11 +102,14 @@ const performArrowUpDown = (e) => {
   if (max !== undefined && nextValue > max) {
     nextValue = max;
   }
-  const allowed = dispatchRequestInteraction(input, e, "--navi-arrow-up-down");
-  if (!allowed) {
-    e.preventDefault();
-    return;
-  }
-  dispatchRequestSetUIState(input, nextValue, { event: e });
-  e.preventDefault();
+  dispatchRequestInteraction(input, {
+    event: e,
+    name: "--navi-arrow-up-down",
+    category: "request_update",
+    prevented: () => e.preventDefault(),
+    allowed: () => {
+      dispatchRequestSetUIState(input, nextValue, { event: e });
+      e.preventDefault();
+    },
+  });
 };

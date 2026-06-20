@@ -188,8 +188,9 @@ const createOnKeyDownForShortcutArray = (shortcuts, busyRef) => {
         const element = keyboardEvent.currentTarget;
         return dispatchRequestInteraction(element, {
           event: keyboardEvent,
-          name: "keyboard_shortcut",
           wantAction: true,
+          name: "keyboard_shortcut",
+          category: "interaction",
           requester: document.activeElement,
           action: actionWithEvent,
           actionOrigin: "keyboard_shortcut",
