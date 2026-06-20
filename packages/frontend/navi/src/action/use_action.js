@@ -59,6 +59,12 @@ const useBoundAction = (action, actionParamsSignal) => {
     actionRef.current = noopActionBound;
     return noopActionBound;
   }
+  const isFunction = typeof action === "function";
+  if (!isFunction) {
+    throw new TypeError(
+      `useBoundAction expects an action function or an action object, got: ${action}`,
+    );
+  }
   if (isFunctionButNotAnActionFunction(action)) {
     actionCallbackRef.current = action;
     const existingAction = actionRef.current;
