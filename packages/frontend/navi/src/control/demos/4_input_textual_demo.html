@@ -565,8 +565,8 @@
                 <Input
                   defaultValue="Hello World!"
                   placeholder="Enter text..."
-                  uiAction={(v) => {
-                    push("uiAction", v);
+                  uiAction={(v, e) => {
+                    push("uiAction", v, e);
                   }}
                 />
               </div>
@@ -576,11 +576,11 @@
                 </label>
                 <Input
                   value={controlledValue}
-                  uiAction={(v) => {
-                    push("uiAction", v);
+                  uiAction={(v, e) => {
+                    push("uiAction", v, e);
                   }}
-                  action={(v) => {
-                    push("action", v);
+                  action={(v, e) => {
+                    push("action", v, e);
                     setControlledValue(v);
                   }}
                   placeholder="Controlled input"
@@ -605,11 +605,11 @@
             <Box flex="y" spacing="s">
               <Input
                 placeholder="Type something..."
-                uiAction={(v) => {
-                  push("uiAction", v);
+                uiAction={(v, e) => {
+                  push("uiAction", v, e);
                 }}
-                action={(v) => {
-                  push("action", v);
+                action={(v, e) => {
+                  push("action", v, e);
                 }}
               />
               <CallLog entries={entries} onClear={clear} />
@@ -634,11 +634,11 @@
               <Input
                 placeholder="Type something..."
                 autoComplete="off"
-                uiAction={(v) => {
-                  push("uiAction", v);
+                uiAction={(v, e) => {
+                  push("uiAction", v, e);
                 }}
-                action={async (value) => {
-                  push("action", value);
+                action={async (value, e) => {
+                  push("action", value, e);
                   await delay(1000);
                 }}
               />
@@ -662,11 +662,11 @@
             <Box flex="y" spacing="s">
               <Input
                 placeholder="Type something (debounced 600ms)..."
-                uiAction={(v) => {
-                  push("uiAction", v);
+                uiAction={(v, e) => {
+                  push("uiAction", v, e);
                 }}
-                action={async (value) => {
-                  push("action", value);
+                action={async (value, e) => {
+                  push("action", value, e);
                   await new Promise((resolve) => setTimeout(resolve, 1500));
                 }}
                 actionDebounce={600}
@@ -692,11 +692,11 @@
               <Input
                 placeholder="Type something (debounced 600ms)..."
                 value={searchValueSignal}
-                uiAction={(v) => {
-                  push("uiAction", v);
+                uiAction={(v, e) => {
+                  push("uiAction", v, e);
                 }}
-                action={async (value) => {
-                  push("action", value);
+                action={async (value, e) => {
+                  push("action", value, e);
                   await new Promise((resolve) => setTimeout(resolve, 1500));
                   searchValueSignal.value = value;
                 }}
@@ -722,11 +722,11 @@
             <Box flex="y" spacing="s">
               <Input
                 placeholder="Type and press Enter or blur..."
-                uiAction={(v) => {
-                  push("uiAction", v);
+                uiAction={(v, e) => {
+                  push("uiAction", v, e);
                 }}
-                action={async (value) => {
-                  push("action", value);
+                action={async (value, e) => {
+                  push("action", value, e);
                   await new Promise((resolve) => setTimeout(resolve, 1500));
                 }}
                 actionAfterChange
@@ -760,12 +760,12 @@
             <Box flex="y" spacing="s">
               <Input
                 placeholder="Type something (with abort)..."
-                uiAction={(v) => {
-                  push("uiAction", v);
+                uiAction={(v, e) => {
+                  push("uiAction", v, e);
                 }}
-                action={(value) => {
+                action={(value, e) => {
                   const abortSignal = cancelPrevious();
-                  push("action", value);
+                  push("action", value, e);
                   setTimeout(() => {
                     if (!abortSignal.aborted) {
                       push("action resolved", value);
@@ -798,11 +798,11 @@
                   <Input
                     name="username"
                     value={username}
-                    uiAction={(v) => {
-                      push("uiAction", v);
+                    uiAction={(v, e) => {
+                      push("uiAction", v, e);
                     }}
-                    action={(v) => {
-                      push("action", v);
+                    action={(v, e) => {
+                      push("action", v, e);
                       setUsername(v);
                     }}
                     placeholder="Enter username"
@@ -851,11 +851,11 @@
                   <Input
                     name="search"
                     defaultValue="cats"
-                    uiAction={(v) => {
-                      push("uiAction", v);
+                    uiAction={(v, e) => {
+                      push("uiAction", v, e);
                     }}
-                    action={async (value) => {
-                      push("action", value);
+                    action={async (value, e) => {
+                      push("action", value, e);
                       await delay(600);
                     }}
                     actionAfterChange

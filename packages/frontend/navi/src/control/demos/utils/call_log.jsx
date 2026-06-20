@@ -157,6 +157,7 @@ export const CallLog = ({ entries, onClear }) => {
               }
             >
               {entry.type}
+              {entry.eventType ? ` (${entry.eventType})` : ""}
             </span>
             <span className="value">← {formatValue(entry.value)}</span>
           </div>
@@ -174,8 +175,9 @@ const formatValue = (value) => {
 
 export const useCallLog = () => {
   const [entries, setEntries] = useState([]);
-  const push = (type, value) => {
-    setEntries((prev) => [...prev, { type, value }]);
+  const push = (type, value, event) => {
+    const eventType = event?.type;
+    setEntries((prev) => [...prev, { type, value, eventType }]);
   };
   const clear = () => {
     setEntries([]);
