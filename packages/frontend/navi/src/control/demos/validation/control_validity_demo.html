@@ -78,8 +78,8 @@
       // (blur / Enter for standalone input, form submit for form input).
       const UiActionVsActionDemo = () => {
         const inputRef = useRef();
-        const [liveValue, setLiveValue] = useState("—");
-        const [committedValue, setCommittedValue] = useState("—");
+        const [liveValue, setLiveValue] = useState("");
+        const [committedValue, setCommittedValue] = useState("");
 
         return (
           <div className="demo-section">
@@ -91,43 +91,42 @@
               notice how the constraint is re-evaluated on every key press, but
               the committed value only changes on blur/Enter.
             </p>
-            <div className="row">
-              <div className="col">
-                <Field vertical>
-                  <Label>Username (min 4 chars)</Label>
-                  <Input
-                    ref={inputRef}
-                    name="username"
-                    minLength="4"
-                    placeholder="type something…"
-                    uiAction={({ username }) => {
-                      setLiveValue(username ?? "");
-                    }}
-                    action={({ username }) => {
-                      setCommittedValue(username ?? "");
-                    }}
-                  />
-                </Field>
-                <Box
-                  flex="y"
-                  spacing="xs"
-                  style={{ fontSize: "0.85rem", color: "#555" }}
-                >
-                  <span>
-                    🖊 live (uiAction):{" "}
-                    <strong>{JSON.stringify(liveValue)}</strong>
-                  </span>
-                  <span>
-                    💾 committed (action):{" "}
-                    <strong>{JSON.stringify(committedValue)}</strong>
-                  </span>
-                </Box>
-              </div>
+            <Box flex="y" spacing="s">
+              <Field vertical>
+                <Label>Username (min 4 chars)</Label>
+                <Input
+                  ref={inputRef}
+                  name="username"
+                  minLength="4"
+                  placeholder="type something…"
+                  data-callout-position="above"
+                  uiAction={(username) => {
+                    setLiveValue(username);
+                  }}
+                  action={(username) => {
+                    setCommittedValue(username);
+                  }}
+                />
+              </Field>
+              <Box
+                flex="y"
+                spacing="xs"
+                style={{ fontSize: "0.85rem", color: "#555" }}
+              >
+                <span>
+                  🖊 live (uiAction):{" "}
+                  <strong>{JSON.stringify(liveValue)}</strong>
+                </span>
+                <span>
+                  💾 committed (action):{" "}
+                  <strong>{JSON.stringify(committedValue)}</strong>
+                </span>
+              </Box>
               <ControlValidityDebug
                 inputRef={inputRef}
                 committedValue={committedValue}
               />
-            </div>
+            </Box>
           </div>
         );
       };
