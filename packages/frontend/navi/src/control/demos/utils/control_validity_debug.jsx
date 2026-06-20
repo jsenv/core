@@ -11,7 +11,7 @@ export const ControlValidityDebug = ({ inputRef, committedValue }) => {
   return (
     <Box
       flex="y"
-      spacing="s"
+      spacing="xs"
       style={{
         padding: "10px 12px",
         background: "#f8f9fa",
@@ -22,27 +22,26 @@ export const ControlValidityDebug = ({ inputRef, committedValue }) => {
         minWidth: "220px",
       }}
     >
-      <Box
-        flex
-        spacing="s"
+      {/* valid / invalid badge */}
+      <span
         style={{
           fontWeight: "bold",
-          color: state.valid ? "#155724" : "#721c24",
+          color: state.valid ? "#155724" : "#c0392b",
         }}
       >
-        <span>{state.valid ? "✅" : "❌"}</span>
-        <span>validity: {state.valid ? "valid" : "invalid"}</span>
-      </Box>
+        valid: {String(state.valid)}
+      </span>
 
+      {/* committed value (when provided) */}
       {committedValue !== undefined && (
-        <Box flex spacing="s" style={{ color: "#007bff" }}>
-          <span>💾</span>
-          <span>committed: {JSON.stringify(committedValue)}</span>
-        </Box>
+        <span style={{ color: "#555" }}>
+          committed: {JSON.stringify(committedValue)}
+        </span>
       )}
 
+      {/* failing constraints — always visible */}
       {failingEntries.map(([name, info]) => (
-        <Box key={name} flex spacing="s" style={{ color: "#721c24" }}>
+        <Box key={name} flex spacing="s" style={{ color: "#c0392b" }}>
           <span>✗</span>
           <span>
             {name}
@@ -51,12 +50,25 @@ export const ControlValidityDebug = ({ inputRef, committedValue }) => {
         </Box>
       ))}
 
-      {passingEntries.map(([name]) => (
-        <Box key={name} flex spacing="s" style={{ color: "#155724" }}>
-          <span>✓</span>
-          <span>{name}</span>
-        </Box>
-      ))}
+      {/* passing constraints — collapsed */}
+      {passingEntries.length > 0 && (
+        <details style={{ marginTop: "2px" }}>
+          <summary
+            style={{ cursor: "pointer", color: "#155724", userSelect: "none" }}
+          >
+            valid: {passingEntries.length} constraint
+            {passingEntries.length !== 1 ? "s" : ""}
+          </summary>
+          <Box flex="y" spacing="xs" style={{ marginTop: "4px" }}>
+            {passingEntries.map(([name]) => (
+              <Box key={name} flex spacing="s" style={{ color: "#155724" }}>
+                <span>✓</span>
+                <span>{name}</span>
+              </Box>
+            ))}
+          </Box>
+        </details>
+      )}
     </Box>
   );
 };
