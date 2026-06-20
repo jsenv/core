@@ -112,32 +112,28 @@ export const onRequestInteraction = (
   { debugInteraction },
 ) => {
   const { event, interactionName } = requestInteractionCustomEvent.detail;
-  const requestStatus = { canProceed: true, preventReason: undefined };
 
-  if (requestStatus.canProceed) {
-    checkEvent(requestStatus, event);
-  }
-  if (requestStatus.canProceed) {
-    const controlValidity = getControlValidityFromElement(
-      requestInteractionCustomEvent.currentTarget,
-    );
-    if (controlValidity) {
-      controlValidity.syncValidity(event);
-      if (controlValidity.interactionFailedConstraintInfo) {
-        Object.assign(requestStatus, {
-          canProceed: false,
-          preventReason: `failing constraint "${controlValidity.interactionFailedConstraintInfo.name}"`,
-        });
-      }
-    }
-  }
-  if (!requestStatus.canProceed) {
+  if (event.defaultPrevented) {
     debugInteraction(
       event,
-      `"${interactionName}" prevented (${requestStatus.preventReason})`,
+      `"${interactionName}" prevented (event.defaultPrevented)`,
     );
     requestInteractionCustomEvent.preventDefault();
     return false;
+  }
+  const cv = getControlValidityFromElement(
+    requestInteractionCustomEvent.currentTarget,
+  );
+  if (cv) {
+    cv.syncValidity(event);
+    if (cv.interactionFailedConstraintInfo) {
+      debugInteraction(
+        event,
+        `"${interactionName}" prevented (failing constraint "${cv.interactionFailedConstraintInfo.name}")`,
+      );
+      requestInteractionCustomEvent.preventDefault();
+      return false;
+    }
   }
   debugInteraction(event, `"${interactionName}" allowed`);
   return true;
@@ -173,7 +169,6 @@ export const onRequestAction = (
   requestActionCustomEvent,
   {
     method = "rerun", // not used for now
-    debugUIState = () => {},
     debugAction = () => {},
   } = {},
 ) => {
@@ -191,8 +186,20 @@ export const onRequestAction = (
   if (!actionOrigin) {
     console.warn("requestAction: actionOrigin is required");
   }
-  const elementHandlingAction = requestActionCustomEvent.currentTarget;
-  if (requester === elementHandlingAction) {
+
+  // Resolve proxy: commit always operates on the real control.
+  let elementHandlingAction = requestActionCustomEvent.currentTarget;
+  const handlingController = elementHandlingAction.__uiStateController__;
+  const proxyTargetController = handlingController
+    ? findControlProxyTargetController(handlingController)
+    : null;
+  if (proxyTargetController) {
+    elementHandlingAction = proxyTargetController.elementRef.current;
+  }
+  const activeController = proxyTargetController ?? handlingController;
+  const uiState = activeController?.uiState;
+
+  if (requester === requestActionCustomEvent.currentTarget) {
     debugAction(
       requestActionCustomEvent,
       `${getElementSignature(elementHandlingAction)} validates + action requested (origin: ${actionOrigin})`,
@@ -204,12 +211,6 @@ export const onRequestAction = (
     );
   }
 
-  // Phase 2: commit — validate constraints.
-  const { committed, uiState } = _attemptCommit(elementHandlingAction, {
-    requestCustomEvent: requestActionCustomEvent,
-    originalEvent: event,
-    debugUIState,
-  });
   const customEventDetail = {
     event: requestActionCustomEvent,
     requester,
@@ -219,12 +220,13 @@ export const onRequestAction = (
     method,
     meta,
   };
-  if (!committed) {
-    requestActionCustomEvent.preventDefault();
+
+  if (event.defaultPrevented) {
     debugAction(
       requestActionCustomEvent,
-      `action prevented (commit failed) -> dispatch navi_action_prevented`,
+      `action prevented (event.defaultPrevented)`,
     );
+    requestActionCustomEvent.preventDefault();
     dispatchInternalCustomEvent(
       elementHandlingAction,
       "navi_action_prevented",
@@ -233,7 +235,23 @@ export const onRequestAction = (
     return false;
   }
 
-  // Phase 3: execute
+  const isValid = activeController.controlValidity.syncValidity(event, {
+    fromRequestAction: true,
+  });
+  if (!isValid) {
+    debugAction(
+      requestActionCustomEvent,
+      `action prevented (invalid) -> dispatch navi_action_prevented`,
+    );
+    requestActionCustomEvent.preventDefault();
+    dispatchInternalCustomEvent(
+      elementHandlingAction,
+      "navi_action_prevented",
+      customEventDetail,
+    );
+    return false;
+  }
+
   debugAction(
     requestActionCustomEvent,
     `${DEFAULT_CONSTRAINT_SET.size} constraints verified${elementHandlingAction.hasAttribute("data-action") ? ` -> execute action ${action.callSource}` : " -> no own action, nothing to execute"}`,
@@ -246,89 +264,6 @@ export const onRequestAction = (
   return true;
 };
 
-// Validates commit: checks constraints and returns whether the commit is allowed.
-// Returns { committed: boolean, uiState }.
-const _attemptCommit = (
-  handlingElement,
-  { requestCustomEvent, originalEvent, debugUIState },
-) => {
-  // If this element is a proxy, resolve to the underlying target so commit
-  // always operates on the real control. The proxy has no UI state of its own.
-  const handlingController = handlingElement.__uiStateController__;
-  const proxyTargetController = handlingController
-    ? findControlProxyTargetController(handlingController)
-    : null;
-  if (proxyTargetController) {
-    handlingElement = proxyTargetController.elementRef.current;
-  }
-
-  const activeController = proxyTargetController ?? handlingController;
-  const uiState = activeController?.uiState;
-
-  const requestStatus = {
-    committed: false,
-    uiState,
-    canProceed: true,
-    preventReason: undefined,
-  };
-
-  if (requestStatus.canProceed) {
-    checkEvent(requestStatus, originalEvent);
-  }
-  if (requestStatus.canProceed && activeController?.controlValidity) {
-    const isValid = activeController.controlValidity.syncValidity(
-      originalEvent,
-      {
-        fromRequestAction: true,
-      },
-    );
-    if (!isValid) {
-      const cv = activeController.controlValidity;
-      const interactionInfo =
-        cv.failingManagedControlValidity?.interactionFailedConstraintInfo ??
-        cv.interactionFailedConstraintInfo;
-      const valueInfo =
-        cv.failingManagedControlValidity?.failedConstraintInfo ??
-        cv.failedConstraintInfo;
-      Object.assign(requestStatus, {
-        canProceed: false,
-        preventReason: interactionInfo
-          ? `failing constraint "${interactionInfo.name}"`
-          : valueInfo
-            ? `failing constraint "${valueInfo.name}"`
-            : "invalid (no constraint info)",
-      });
-    }
-  }
-  if (!requestStatus.canProceed) {
-    debugUIState(
-      requestCustomEvent,
-      `commit prevented (reason: ${requestStatus.preventReason})`,
-    );
-    return requestStatus;
-  }
-  debugUIState(requestCustomEvent, "commit allowed");
-  requestStatus.committed = true;
-  return requestStatus;
-};
-
-const checkEvent = (requestStatus, event) => {
-  if (event.defaultPrevented) {
-    Object.assign(requestStatus, {
-      canProceed: false,
-      preventReason: "event.defaultPrevented is true",
-    });
-    return;
-  }
-  if (pointerEventTypeSet.has(event.type) && event.button !== 0) {
-    Object.assign(requestStatus, {
-      canProceed: false,
-      preventReason: `non-primary pointer button (button ${event.button})`,
-    });
-    return;
-  }
-};
-
 const getControlValidityFromElement = (element) => {
   const controlHost = findControlHost(element);
   const elementToCheck = controlHost || element;
@@ -337,7 +272,6 @@ const getControlValidityFromElement = (element) => {
 
 const INTERACTION_CONSTRAINTS = [DISABLED_CONSTRAINT, READONLY_CONSTRAINT];
 const INTERACTION_CONSTRAINT_SET = new Set(INTERACTION_CONSTRAINTS);
-const pointerEventTypeSet = new Set(["pointerdown", "mousedown", "click"]);
 
 const STANDARD_CONSTRAINT_SET = new Set([
   DISABLED_CONSTRAINT,
@@ -744,12 +678,10 @@ export const createControlValidity = (
       reportValidity({ event });
       return isValid;
     }
-    if (isValueModifyingInteraction(event)) {
-      if (failedConstraintInfo && hasOwnAction) {
-        reportValidity({ event });
-      }
+    if (failedConstraintInfo && hasOwnAction) {
+      reportValidity({ event });
     } else {
-      innerRequestCloseCallout(event, event.type);
+      innerRequestCloseCallout(event, event?.type);
     }
     // Propagate a silent validity update up the controller chain.
     // Parent controllers (group, facade) don't report — the leaf's callout is enough.
@@ -764,21 +696,6 @@ export const createControlValidity = (
   controlValidity.syncValidity = syncValidity;
 
   return controlValidity;
-};
-
-// A "pure interaction" event is one that signals intent to interact but does not
-// itself change the field's value — e.g. mousedown focuses/activates the field
-// without modifying its content. Contrast with "input" or "keydown" which directly
-// produce value changes. For pure interaction events, we close any open invalid-value
-// callout (user intends to edit) instead of re-reporting the error.
-const isValueModifyingInteraction = (event) => {
-  if (!event) {
-    return true;
-  }
-  if (event.type === "mousedown") {
-    return false;
-  }
-  return true;
 };
 
 export const requestCloseValidityCallout = (
