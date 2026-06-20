@@ -97,23 +97,25 @@ export const dispatchRequestInteraction = (
     event,
     name = "",
     wantAction = false,
-    effectType = "none",
+    category = "none",
+    prevented,
+    allowed,
+    always,
     ...detailRest
   } = {},
 ) => {
   const controlHost = findControlHost(element) || element;
-  const allowed = dispatchInternalCustomEvent(
-    controlHost,
-    "navi_request_interaction",
-    {
-      event,
-      name,
-      wantAction,
-      effectType,
-      ...detailRest,
-    },
-  );
-  return allowed;
+
+  return dispatchInternalCustomEvent(controlHost, "navi_request_interaction", {
+    event,
+    wantAction,
+    name,
+    category,
+    prevented,
+    allowed,
+    always,
+    ...detailRest,
+  });
 };
 export const onRequestInteraction = (
   requestInteractionCustomEvent,
@@ -121,20 +123,20 @@ export const onRequestInteraction = (
 ) => {
   const {
     event,
-    interactionName,
+    name,
     wantAction = false,
     action,
     actionOrigin = "action_prop",
     requester = event.target,
     meta = {},
     method = "rerun",
+    prevented,
+    allowed,
+    always,
   } = requestInteractionCustomEvent.detail;
 
-  if (event.defaultPrevented) {
-    debugInteraction(
-      event,
-      `"${interactionName}" prevented (event.defaultPrevented)`,
-    );
+  const onPrevented = (reason) => {
+    debugInteraction(event, `"${name}" prevented (${reason})`);
     requestInteractionCustomEvent.preventDefault();
     if (wantAction) {
       dispatchInternalCustomEvent(
@@ -150,6 +152,36 @@ export const onRequestInteraction = (
         },
       );
     }
+    prevented?.();
+    always?.();
+  };
+  const onAllowed = () => {
+    debugInteraction(event, `"${name}" allowed`);
+    if (wantAction && action?.isAction) {
+      debugInteraction(
+        requestInteractionCustomEvent,
+        `${DEFAULT_CONSTRAINT_SET.size} constraints verified${
+          elementForAction.hasAttribute("data-action")
+            ? ` -> execute action ${action.callSource}`
+            : " -> no own action, nothing to execute"
+        }`,
+      );
+      dispatchInternalCustomEvent(elementForAction, "navi_action_allowed", {
+        event: requestInteractionCustomEvent,
+        requester,
+        uiState,
+        actionOrigin,
+        action,
+        method,
+        meta,
+      });
+    }
+    allowed?.();
+    always?.();
+  };
+
+  if (event.defaultPrevented) {
+    onPrevented("event.defaultPrevented");
     return false;
   }
 
@@ -167,7 +199,6 @@ export const onRequestInteraction = (
     const activeController = proxyTargetController ?? handlingController;
     uiState = activeController?.uiState;
   }
-
   const cv = getControlValidityFromElement(
     requestInteractionCustomEvent.currentTarget,
   );
@@ -181,43 +212,11 @@ export const onRequestInteraction = (
       const reason = failedInfo
         ? `failing constraint "${failedInfo.name}"`
         : "invalid";
-      debugInteraction(event, `"${interactionName}" prevented (${reason})`);
-      requestInteractionCustomEvent.preventDefault();
-      if (wantAction) {
-        dispatchInternalCustomEvent(elementForAction, "navi_action_prevented", {
-          event: requestInteractionCustomEvent,
-          requester,
-          uiState,
-          actionOrigin,
-          action,
-          method,
-          meta,
-        });
-      }
+      onPrevented(reason);
       return false;
     }
   }
-
-  debugInteraction(event, `"${interactionName}" allowed`);
-  if (wantAction && action?.isAction) {
-    debugInteraction(
-      requestInteractionCustomEvent,
-      `${DEFAULT_CONSTRAINT_SET.size} constraints verified${
-        elementForAction.hasAttribute("data-action")
-          ? ` -> execute action ${action.callSource}`
-          : " -> no own action, nothing to execute"
-      }`,
-    );
-    dispatchInternalCustomEvent(elementForAction, "navi_action_allowed", {
-      event: requestInteractionCustomEvent,
-      requester,
-      uiState,
-      actionOrigin,
-      action,
-      method,
-      meta,
-    });
-  }
+  onAllowed();
   return true;
 };
 
