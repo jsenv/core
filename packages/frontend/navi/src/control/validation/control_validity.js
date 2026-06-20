@@ -45,8 +45,8 @@
  * on the <form> and every element within the <form> (<input>, <button>, etc.)
  * (In practice this is done automatically by jsx components in navi package)
  *
- * Once installed code must now listen to specific action events on the <form>
- * (not "submit" but "actionrequested" most notably)
+ * Once installed, interactions dispatch a "navi_request_interaction" event which
+ * runs all constraints before deciding whether to allow or prevent the action.
  *
  * There is one way to fully bypass validation which is to call form.submit()
  * just like you could do with the native validation API to bypass validation.

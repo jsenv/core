@@ -100,35 +100,10 @@ export const useUIStateController = (
   const uiStateControllerRef = useRef();
   const parentUIStateController = useContext(ParentUIStateControllerContext);
   const formContext = useContext(FormContext);
-  const { id, name, uiAction, action, command } = props;
+  const { id, name, uiAction } = props;
   const ref = props.ref;
   const isProxy = Boolean(props["navi-control-proxy-for"]);
   const hasStateProp = Object.hasOwn(props, statePropName);
-
-  /**
-   * This check is needed only for basic field because
-   * When using action/form we consider the action/form code
-   * will have a side effect that will re-render the component with the up-to-date state
-   *
-   * In practice we set the checked from the backend state
-   * We use action to fetch the new state and update the local state
-   * The component re-renders so it's the action/form that is considered as responsible
-   * to update the state and as a result allowed to have "checked"/"value" prop without "onUIStateChange"
-   */
-  const uncontrolled =
-    !uiAction &&
-    !action &&
-    !formContext &&
-    !parentUIStateController &&
-    !isProxy &&
-    !command;
-  const readOnly = uncontrolled && hasStateProp;
-  if (readOnly && import.meta.dev && !props.readOnly) {
-    console.warn(
-      `"${controlType}" is controlled by "${statePropName}" prop. Replace it by "${defaultStatePropName}" or pass "uiAction"/"action" to make field interactive.`,
-    );
-    console.log(props);
-  }
 
   if (persists === undefined && formContext) {
     persists = true;
@@ -187,7 +162,6 @@ export const useUIStateController = (
   const existingUIStateController = uiStateControllerRef.current;
   if (existingUIStateController) {
     existingUIStateController._checkForUpdates({
-      readOnly,
       name,
       getPropFromState,
       getStateFromProp,
@@ -216,7 +190,6 @@ export const useUIStateController = (
 
   const uiStateController = {
     _checkForUpdates: ({
-      readOnly,
       name,
       getPropFromState,
       getStateFromProp,
@@ -225,7 +198,6 @@ export const useUIStateController = (
       state,
       props,
     }) => {
-      uiStateController.readOnly = readOnly;
       uiStateController.name = name;
       uiStateController.getPropFromState = getPropFromState;
       uiStateController.getStateFromProp = getStateFromProp;
@@ -254,7 +226,6 @@ export const useUIStateController = (
     parentUIStateController,
     isProxy,
     allowNameless,
-    readOnly,
     name,
     props,
     statePropName,
@@ -597,8 +568,6 @@ const useParentControllerNotifiers = (
   }, []);
 };
 
-/**
- * UI Group State Controller Hook
 /**
  * Manages the aggregated UI state of a group of child controls (radio list, checkbox list, etc.).
  *

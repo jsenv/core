@@ -60,6 +60,7 @@ import {
 } from "./control_context.js";
 import { findControlProxyTarget } from "./control_proxy.js";
 import { readControlValue } from "./control_value.js";
+import { FormContext } from "./form_context.js";
 import { addInputEffect } from "./input_effect.js";
 import {
   ParentUIStateControllerContext,
@@ -136,14 +137,14 @@ export const ControlgroupChildrenWrapper = ({
  * - Creates a UI state controller that manages state divergence between props and user interactions
  * - Binds the field's action to its current UI state via a signal
  * - Wires up all DOM event handlers (navi_set_ui_state, navi_reset_ui_state,
- *   navi_action_ready, navi_action_abort, navi_action_error, navi_cancel, etc.)
- * - Resolves inherited context (disabled, readOnly, required, loading, fieldName)
+ *   navi_action_allowed, navi_action_abort, navi_action_error, navi_action_end, navi_cancel, etc.)
+ * - Resolves inherited context (disabled, readOnly, required, loading) including action loading state
  * - Handles constraint validation and message props
  *
  * All state changes route through DOM events on the field element so that
  * external subscribers (e.g. useUIState, Selectable) receive every update.
  *
- * @returns {Object} Props to spread onto the field's root/input element
+ * @returns {[controlRootProps, controlHostProps, { uiStateController }]}
  */
 export const useControlProps = (
   props,
@@ -674,10 +675,9 @@ export const useControlProps = (
  *   Required, Loading, Action, ActionRequester
  * - Overrides `onnavi_reset_ui_state` to cascade resets to all monitored children
  *   by dispatching `navi_reset_ui_state` DOM events on each child's DOM element
- * - Overrides `onnavi_action_ready` to track the action requester
+ * - Overrides `onnavi_action_allowed` to track the action requester
  *
- * @param {{ controlType: string, childControlType: string, aggregateChildStates: Function }} config
- * @returns {Object} Props to spread onto the group's root element
+ * @returns {[controlRootProps, controlgroupProps, controlgroupChildrenWrapperProps]}
  */
 export const useControlgroupProps = (
   props,
@@ -702,7 +702,6 @@ export const useControlgroupProps = (
     allowCapture,
     cascadeValidationToChildren,
   });
-
   const [boundAction] = useActionBoundToOneParam(
     action,
     uiGroupStateController.uiStateSignal,
@@ -822,29 +821,13 @@ const useInteractiveProps = (
   { uiStateController, boundAction, readOnlySupported },
 ) => {
   const { ref } = props;
-  const controlHostProps = {
-    ref,
-    "navi-control-host": "",
-  };
-  let controlRootProps = {
-    "navi-control": uiStateController.controlType,
-  };
-  const propKeySet = new Set(Object.keys(props));
-  for (const key of propKeySet) {
-    if (CONTROL_PROP_SET.has(key)) {
-      if (CONTROL_ATTRIBUTE_SET.has(key)) {
-        controlHostProps[key] = props[key];
-      }
-    } else {
-      controlRootProps[key] = props[key];
-    }
-  }
-  const actionStatus = useActionStatus(boundAction);
-  const controlDisabled = useContext(DisabledContext);
-  const controlReadOnly = useContext(ReadOnlyContext);
-  const controlRequired = useContext(RequiredContext);
-  const controlLoading = useContext(LoadingContext);
-  const parentActionRequester = useContext(ActionRequesterContext);
+  const [controlRootProps, controlHostProps] = splitControlProps(props);
+  controlRootProps["navi-control"] = uiStateController.controlType;
+
+  const { "navi-control-proxy-for": naviProxyFor } = props;
+  const isProxy = Boolean(naviProxyFor);
+  controlHostProps["navi-control-proxy-for"] = naviProxyFor;
+
   const debugCommand = useDebugCommand();
   const debugAction = useDebugAction();
   const debugInteraction = useDebugInteraction();
@@ -858,33 +841,53 @@ const useInteractiveProps = (
     });
     Object.assign(controlHostProps, autoFocusProps);
   }
-  form_props: {
-    const {
-      id,
-      "navi-control-proxy-for": naviProxyFor,
-      name,
-      type,
-      disabled,
-      required,
-      readOnly,
-      loading,
-    } = props;
-    const disabledResolved = disabled || controlDisabled;
-    const requiredResolved = required || controlRequired;
-    const loadingResolved =
-      loading ||
-      actionStatus.loading ||
-      (controlLoading && parentActionRequester === ref.current);
-    const readOnlyResolved =
-      readOnly ||
-      controlReadOnly ||
-      loadingResolved ||
-      uiStateController.readOnly;
+  main_props: {
+    const { id, name, type } = props;
     Object.assign(controlHostProps, {
       id,
-      "navi-control-proxy-for": naviProxyFor,
       name,
       type,
+    });
+  }
+  control_state_props: {
+    const formContext = useContext(FormContext);
+    const parentUIStateController = useContext(ParentUIStateControllerContext);
+    const controlDisabled = useContext(DisabledContext);
+    const controlReadOnly = useContext(ReadOnlyContext);
+    const controlRequired = useContext(RequiredContext);
+    const controlLoading = useContext(LoadingContext);
+    const parentActionRequester = useContext(ActionRequesterContext);
+    const actionStatus = useActionStatus(boundAction);
+    const { disabled, required, readOnly, loading } = props;
+    const { statePropName, controlType, defaultStatePropName } =
+      uiStateController;
+    const hasStateProp = statePropName
+      ? Object.hasOwn(props, statePropName)
+      : false;
+    const uncontrolled =
+      !props.uiAction &&
+      !props.action &&
+      !formContext &&
+      !parentUIStateController &&
+      !isProxy &&
+      !props.command;
+    const readOnlyUncontrolled = uncontrolled && hasStateProp;
+    if (readOnlyUncontrolled && import.meta.dev && !readOnly) {
+      console.warn(
+        `"${controlType}" is controlled by "${statePropName}" prop. Replace it by "${defaultStatePropName}" or pass "uiAction"/"action" to make field interactive.`,
+      );
+      console.log(props);
+    }
+    const disabledResolved = disabled || controlDisabled;
+    const requiredResolved = required || controlRequired;
+    const loadingBase =
+      loading || (controlLoading && parentActionRequester === ref.current);
+    const readOnlyBase =
+      readOnly || controlReadOnly || loadingBase || readOnlyUncontrolled;
+    const loadingResolved = loadingBase || actionStatus.loading;
+    const readOnlyResolved = readOnlyBase || actionStatus.loading;
+
+    Object.assign(controlHostProps, {
       "required": requiredResolved,
       "disabled": disabledResolved,
       "aria-busy": loadingResolved,
@@ -1150,7 +1153,32 @@ const useInteractiveProps = (
       },
     });
   }
+  // controlHostProps is a curated subset of props with resolved values applied
+  // (e.g. readOnly resolved from context + action loading). The interaction system
+  // reads off uiStateController.props at runtime (e.g. READONLY_CONSTRAINT checks
+  // props.readOnly), so pointing the controller at controlHostProps keeps those
+  // reads current without any extra bookkeeping.
+  uiStateController.props = controlHostProps;
 
+  return [controlRootProps, controlHostProps];
+};
+const splitControlProps = (props) => {
+  const { ref } = props;
+  const controlHostProps = {
+    ref,
+    "navi-control-host": "",
+  };
+  const controlRootProps = {};
+  const propKeySet = new Set(Object.keys(props));
+  for (const key of propKeySet) {
+    if (CONTROL_PROP_SET.has(key)) {
+      if (CONTROL_ATTRIBUTE_SET.has(key)) {
+        controlHostProps[key] = props[key];
+      }
+    } else {
+      controlRootProps[key] = props[key];
+    }
+  }
   return [controlRootProps, controlHostProps];
 };
 
