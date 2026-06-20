@@ -219,36 +219,42 @@
               invalid value and blur — no commit. Submit with a valid value —
               commit happens.
             </p>
-            <div className="row">
-              <div className="col">
-                <Form
-                  action={({ email }) => {
-                    setCommitted(email ?? "");
-                  }}
-                >
-                  <Field vertical>
-                    <Label>Email</Label>
-                    <Input
-                      ref={inputRef}
-                      name="email"
-                      type="email"
-                      required
-                      placeholder="user@example.com"
-                    />
-                  </Field>
-                  <Button type="submit" style={{ marginTop: "8px" }}>
-                    Submit
-                  </Button>
-                </Form>
-                <span style={{ fontSize: "0.85rem", color: "#555" }}>
-                  💾 committed: <strong>{JSON.stringify(committed)}</strong>
+            <Box flex="y" spacing="s">
+              <Form
+                action={({ username }) => {
+                  setCommitted(username ?? "");
+                }}
+              >
+                <Field vertical>
+                  <Label>Username (min 4 chars)</Label>
+                  <Input
+                    ref={inputRef}
+                    name="username"
+                    required
+                    minLength="4"
+                    placeholder="type something…"
+                    autoComplete="off"
+                  />
+                </Field>
+                <Button type="submit" style={{ marginTop: "8px" }}>
+                  Submit
+                </Button>
+              </Form>
+              <Box
+                flex="y"
+                spacing="xs"
+                style={{ fontSize: "0.85rem", color: "#555" }}
+              >
+                <span>
+                  💾 committed (action):{" "}
+                  <strong>{JSON.stringify(committed)}</strong>
                 </span>
-              </div>
+              </Box>
               <ControlValidityDebug
                 inputRef={inputRef}
                 committedValue={committed}
               />
-            </div>
+            </Box>
           </div>
         );
       };
