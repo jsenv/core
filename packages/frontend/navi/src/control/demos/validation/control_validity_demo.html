@@ -99,11 +99,9 @@
           <div className="demo-section">
             <h2>Form — le cas nominal</h2>
             <p>
-              L'input n'a pas de prop <code>action</code>. C'est le{" "}
-              <code>{"<Form>"}</code> qui porte l'action et collecte tous les
-              champs à la soumission. La validation n'est reportée qu'au moment
-              du submit — taper une valeur invalide puis blur ne montre rien ;
-              l'erreur n'apparaît que si on soumet avec un champ invalide.
+              L'<code>action</code> est sur le <code>{"<Form>"}</code>, pas sur
+              l'input. La validation n'est reportée qu'au submit — blur ne
+              montre rien.
             </p>
             <Box flex="y" spacing="s">
               <Form
@@ -160,15 +158,9 @@
           <div className="demo-section">
             <h2>Action sur l'input — in-place / live editing</h2>
             <p>
-              Quand l'input porte sa propre prop <code>action</code>, il n'a pas
-              besoin d'un <code>{"<Form>"}</code> parent — il agit comme un
-              mini-formulaire autonome. Cas typique : un champ en édition sur
-              place qui appelle directement un endpoint serveur dédié.
-            </p>
-            <p>
-              La validation est reportée <strong>immédiatement</strong> : blur
-              ou Enter sur un champ invalide affiche l'erreur et bloque
-              l'action. L'action ne se déclenche qu'une fois la valeur valide.
+              L'<code>action</code> est sur l'input directement — pas de
+              <code>{"<Form>"}</code>. La validation est reportée immédiatement
+              : blur ou Enter sur une valeur invalide bloque l'action.
             </p>
             <Box flex="y" spacing="s">
               <Field vertical>
@@ -216,18 +208,9 @@
           <div className="demo-section">
             <h2>Readonly — interaction state vs validity state</h2>
             <p>
-              <code>readonly</code> est une contrainte d'
-              <em>interaction</em> : elle empêche l'utilisateur de modifier la
-              valeur, mais elle ne court-circuite pas la validation. Les
-              contraintes comme <code>minLength</code> ou <code>required</code>{" "}
-              sont toujours évaluées — un input readonly avec une valeur
-              invalide reste invalide.
-            </p>
-            <p>
-              Tenter d'éditer un champ readonly affiche un callout explicatif.
-              La valeur actuelle ne peut pas être modifiée par l'utilisateur,
-              mais elle peut l'être programmatiquement (voir{" "}
-              <code>--navi-update</code> ci-dessous).
+              <code>readonly</code> bloque l'édition mais ne court-circuite pas
+              la validation — une valeur invalide reste invalide. Tenter
+              d'éditer affiche le callout readonly.
             </p>
             <Box flex="y" spacing="s">
               <Field vertical>
@@ -256,22 +239,10 @@
         return (
           <div className="demo-section">
             <h2>--navi-update — mise à jour programmatique</h2>
-            <p>
-              Un bouton avec <code>command="--navi-update"</code> demande une
-              mise à jour de valeur sur l'input cible. Il passe par le même
-              pipeline que les interactions utilisateur : les contraintes de
-              validation et d'interaction sont respectées.
-            </p>
 
             <h3 style={{ margin: "0 0 8px", fontSize: "1rem", color: "#444" }}>
               Respecte la validation
             </h3>
-            <p
-              style={{ margin: "0 0 16px", color: "#555", fontSize: "0.9rem" }}
-            >
-              Mettre une valeur invalide (trop courte) affiche l'erreur ; mettre
-              une valeur valide la supprime.
-            </p>
             <Box flex="y" spacing="s" style={{ marginBottom: "24px" }}>
               <Field vertical>
                 <Label>Code (min 5 chars)</Label>
@@ -297,13 +268,6 @@
             <h3 style={{ margin: "0 0 8px", fontSize: "1rem", color: "#444" }}>
               Respecte le readonly
             </h3>
-            <p
-              style={{ margin: "0 0 16px", color: "#555", fontSize: "0.9rem" }}
-            >
-              Un input <code>readonly</code> ne peut pas être mis à jour via{" "}
-              <code>--navi-update</code> — la commande est bloquée comme
-              n'importe quelle interaction utilisateur.
-            </p>
             <Box flex="y" spacing="s">
               <Field vertical>
                 <Label>Config value (readonly)</Label>
@@ -342,11 +306,8 @@
           <div className="demo-section">
             <h2>navi_number — input numérique</h2>
             <p>
-              <code>type="navi_number"</code> est rendu comme un{" "}
-              <code>{'<input type="text" inputMode="numeric">'}</code>. Les
-              contraintes <code>min</code>, <code>max</code> et{" "}
-              <code>step</code> sont évaluées côté navi. Le readonly et la
-              validation fonctionnent de la même façon que pour un input texte.
+              Input numérique basé sur un champ texte. Utiliser les flèches du
+              clavier pour incrémenter/décrémenter.
             </p>
 
             <h3 style={{ margin: "0 0 8px", fontSize: "1rem", color: "#444" }}>
@@ -392,8 +353,7 @@
             <p
               style={{ margin: "0 0 16px", color: "#555", fontSize: "0.9rem" }}
             >
-              Même comportement que pour un input texte : readonly bloque
-              l'édition mais la validité de la valeur est toujours évaluée.
+              Les flèches du clavier affichent le callout readonly.
             </p>
             <Box flex="y" spacing="s">
               <Field vertical>
@@ -425,13 +385,6 @@
         return (
           <div className="demo-section">
             <h2>Range — slider</h2>
-            <p>
-              <code>type="range"</code> est rendu comme un slider. Les
-              contraintes <code>min</code>, <code>max</code> et{" "}
-              <code>step</code> sont évaluées. Le readonly bloque le slider
-              (l'utilisateur ne peut pas le déplacer) et la valeur est toujours
-              soumise à la validation.
-            </p>
 
             <h3 style={{ margin: "0 0 8px", fontSize: "1rem", color: "#444" }}>
               Éditable — avec action
