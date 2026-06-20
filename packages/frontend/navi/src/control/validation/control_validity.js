@@ -773,7 +773,46 @@ export const createControlValidity = (
     innerRequestCloseCallout(event, reason);
   };
 
+  // Centralized validity sync: decides what to show/close based on the event type
+  // and the current constraint state.
+  //
+  // - Interaction constraints (readonly/disabled) violated → always report them.
+  // - Value-modifying event (input, keydown...) + own action + value invalid → report.
+  // - Pure interaction event (mousedown on editable field) → close the callout:
+  //   user intends to edit, we clear the message so it doesn't block them.
+  const syncValidity = (event) => {
+    const hasOwnAction = Boolean(controller.props.action);
+    checkValidity({ event });
+    if (interactionFailedConstraintInfo) {
+      reportValidity({ event });
+      return;
+    }
+    if (isValueModifyingInteraction(event)) {
+      if (failedConstraintInfo && hasOwnAction) {
+        reportValidity({ event });
+      }
+    } else {
+      innerRequestCloseCallout(event, event.type);
+    }
+  };
+  controlValidity.syncValidity = syncValidity;
+
   return controlValidity;
+};
+
+// A "pure interaction" event is one that signals intent to interact but does not
+// itself change the field's value — e.g. mousedown focuses/activates the field
+// without modifying its content. Contrast with "input" or "keydown" which directly
+// produce value changes. For pure interaction events, we close any open invalid-value
+// callout (user intends to edit) instead of re-reporting the error.
+const isValueModifyingInteraction = (event) => {
+  if (!event) {
+    return true;
+  }
+  if (event.type === "mousedown") {
+    return false;
+  }
+  return true;
 };
 
 export const requestCloseValidityCallout = (

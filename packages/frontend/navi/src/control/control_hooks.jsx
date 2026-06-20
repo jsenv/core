@@ -391,9 +391,14 @@ export const useControlProps = (
               if (isRadio && e.key === " ") {
                 const inputEl = e.currentTarget;
                 if (inputEl.checked) {
-                  wasCheckedAtMousedownRef.current = true;
-                  onClick(e);
+                  // allow space to still trigger uiState and commands
+                  // on checked radios (won't update the ui state but will notify of interaction)
+                  return {
+                    name: "space to activate checked radio",
+                    effect: updateUIState,
+                  };
                 }
+                // let browser perform "space to check radio"
               }
               return keyDownDefault();
             },
