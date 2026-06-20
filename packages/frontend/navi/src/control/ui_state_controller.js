@@ -308,8 +308,10 @@ export const useUIStateController = (
         uiStateController.controlValidity.syncValidity(e);
       }
       uiActionInternal?.(currentUIState, e);
-      debugUIState(`"${controlType}" onInteraction called`);
-      uiAction?.(currentUIState, e);
+      if (uiAction) {
+        debugUIState(`calling uiAction for ${controlType}`, currentUIState);
+        uiAction(currentUIState, e);
+      }
       if (skipCommand) {
       } else {
         const command = uiStateController.props.command;
