@@ -88,157 +88,23 @@
       } from "@jsenv/navi";
       import { ControlValidityDebug } from "../utils/control_validity_debug.jsx";
 
-      // ─── Section 1: uiAction vs action ──────────────────────────────────────────
-      // uiAction fires on every keystroke; action fires only when value is committed
-      // (blur / Enter for standalone input, form submit for form input).
-      const UiActionVsActionDemo = () => {
-        const inputRef = useRef();
-        const [liveValue, setLiveValue] = useState("");
-        const [committedValue, setCommittedValue] = useState("");
-
-        return (
-          <div className="demo-section">
-            <h2>uiAction vs action — when does validation trigger?</h2>
-            <p>
-              <code>uiAction</code> is called on every keystroke (live).{" "}
-              <code>action</code> is called only when the value is committed
-              (blur or Enter). The validity debug panel updates in real time:
-              notice how the constraint is re-evaluated on every key press, but
-              the committed value only changes on blur/Enter.
-            </p>
-            <Box flex="y" spacing="s">
-              <Field vertical>
-                <Label>Username (min 4 chars)</Label>
-                <Input
-                  ref={inputRef}
-                  name="username"
-                  minLength="4"
-                  placeholder="type something…"
-                  autoComplete="off"
-                  data-callout-position="above"
-                  uiAction={(username) => {
-                    setLiveValue(username);
-                  }}
-                  action={(username) => {
-                    setCommittedValue(username);
-                  }}
-                />
-              </Field>
-              <Box
-                flex="y"
-                spacing="xs"
-                style={{ fontSize: "0.85rem", color: "#555" }}
-              >
-                <span>
-                  🖊 live (uiAction):{" "}
-                  <strong>{JSON.stringify(liveValue)}</strong>
-                </span>
-                <span>
-                  💾 committed (action):{" "}
-                  <strong>{JSON.stringify(committedValue)}</strong>
-                </span>
-              </Box>
-              <ControlValidityDebug
-                inputRef={inputRef}
-                committedValue={committedValue}
-              />
-            </Box>
-          </div>
-        );
-      };
-
-      // ─── Section 3: required ─────────────────────────────────────────────────────
-      // required makes an empty value invalid.
-      const RequiredDemo = () => {
-        const inputRef = useRef();
-        const [liveValue, setLiveValue] = useState("");
-        const [committedValue, setCommittedValue] = useState("");
-
-        return (
-          <div className="demo-section">
-            <h2>required — empty value is invalid</h2>
-            <p>
-              Without <code>required</code>, an empty input is valid even when{" "}
-              <code>minLength</code> is set — length constraints only apply once
-              the user starts typing. Adding <code>required</code> makes the
-              empty value invalid on its own.
-            </p>
-            <Box flex="y" spacing="s">
-              <Field vertical>
-                <Label>Required field (minLength 4)</Label>
-                <Input
-                  ref={inputRef}
-                  name="required_field"
-                  required
-                  minLength="4"
-                  placeholder="type something…"
-                  autoComplete="off"
-                  uiAction={(value) => {
-                    setLiveValue(value);
-                  }}
-                  action={(value) => {
-                    setCommittedValue(value);
-                  }}
-                />
-              </Field>
-              <Box
-                flex="y"
-                spacing="xs"
-                style={{ fontSize: "0.85rem", color: "#555" }}
-              >
-                <span>
-                  🖊 live (uiAction):{" "}
-                  <strong>{JSON.stringify(liveValue)}</strong>
-                </span>
-                <span>
-                  💾 committed (action):{" "}
-                  <strong>{JSON.stringify(committedValue)}</strong>
-                </span>
-              </Box>
-              <ControlValidityDebug
-                inputRef={inputRef}
-                committedValue={committedValue}
-              />
-            </Box>
-          </div>
-        );
-      };
-
-      // ─── Section 4: Form — action fires on submit ────────────────────────────────
-      const FormActionDemo = () => {
+      // ─── Section 1: Form — le cas nominal ───────────────────────────────────────
+      // L'input n'a pas d'action propre. C'est le <Form> qui collecte les champs
+      // et déclenche l'action à la soumission. La validation n'est reportée qu'au submit.
+      const FormNominalDemo = () => {
         const inputRef = useRef();
         const [committed, setCommitted] = useState(null);
 
         return (
           <div className="demo-section">
-            <h2>Form — action fires on submit only</h2>
+            <h2>Form — le cas nominal</h2>
             <p>
-              Two validation reporting strategies depending on whether the input
-              has its own <code>action</code>:
+              L'input n'a pas de prop <code>action</code>. C'est le{" "}
+              <code>{"<Form>"}</code> qui porte l'action et collecte tous les
+              champs à la soumission. La validation n'est reportée qu'au moment
+              du submit — taper une valeur invalide puis blur ne montre rien ;
+              l'erreur n'apparaît que si on soumet avec un champ invalide.
             </p>
-            <ul
-              style={{
-                margin: "0 0 16px",
-                paddingLeft: "20px",
-                color: "#555",
-                fontSize: "0.9rem",
-              }}
-            >
-              <li>
-                <strong>Live / in-place editing</strong> (previous example) —
-                the input has its own <code>action</code> (e.g. a dedicated
-                server endpoint for a single field). Validation feedback is
-                immediate because the action needs a valid value to fire.
-              </li>
-              <li>
-                <strong>Form experience</strong> (this example) — the input has
-                no <code>action</code> of its own; the <code>{"<Form>"}</code>{" "}
-                carries the <code>action</code> and collects all fields.
-                Validity reporting is deferred: blur does not trigger a commit,
-                and errors are only shown when the form is submitted with
-                invalid fields.
-              </li>
-            </ul>
             <Box flex="y" spacing="s">
               <Form
                 action={(formData) => {
@@ -246,7 +112,7 @@
                 }}
               >
                 <Field vertical>
-                  <Label>Username (min 4 chars)</Label>
+                  <Label>Username (min 4 chars, required)</Label>
                   <Input
                     ref={inputRef}
                     name="username"
@@ -281,20 +147,87 @@
         );
       };
 
-      // ─── Section 2: Readonly — interaction state vs validity state ───────────────
-      // "readonly" is an interaction constraint (prevents edits), but the value's
-      // validity is still evaluated and reported — it is NOT always valid.
-      const ReadonlyVsValidityDemo = () => {
+      // ─── Section 2: Action sur l'input — in-place / live editing ────────────────
+      // Quand l'input a sa propre prop `action`, il agit de façon autonome :
+      // l'action se déclenche au blur ou Enter (pas à chaque frappe).
+      // La validation est reportée immédiatement car l'action a besoin d'une
+      // valeur valide pour se déclencher.
+      const InPlaceEditingDemo = () => {
+        const inputRef = useRef();
+        const [committed, setCommitted] = useState(null);
+
+        return (
+          <div className="demo-section">
+            <h2>Action sur l'input — in-place / live editing</h2>
+            <p>
+              Quand l'input porte sa propre prop <code>action</code>, il n'a pas
+              besoin d'un <code>{"<Form>"}</code> parent — il agit comme un
+              mini-formulaire autonome. Cas typique : un champ en édition sur
+              place qui appelle directement un endpoint serveur dédié.
+            </p>
+            <p>
+              La validation est reportée <strong>immédiatement</strong> : blur
+              ou Enter sur un champ invalide affiche l'erreur et bloque
+              l'action. L'action ne se déclenche qu'une fois la valeur valide.
+            </p>
+            <Box flex="y" spacing="s">
+              <Field vertical>
+                <Label>Username (min 4 chars, required)</Label>
+                <Input
+                  ref={inputRef}
+                  name="username"
+                  required
+                  minLength="4"
+                  placeholder="type something…"
+                  autoComplete="off"
+                  action={(username) => {
+                    setCommitted(username);
+                  }}
+                />
+              </Field>
+              <Box
+                flex="y"
+                spacing="xs"
+                style={{ fontSize: "0.85rem", color: "#555" }}
+              >
+                <span>
+                  💾 input action received:{" "}
+                  <strong>
+                    {committed === null ? "—" : JSON.stringify(committed)}
+                  </strong>
+                </span>
+              </Box>
+              <ControlValidityDebug
+                inputRef={inputRef}
+                committedValue={committed}
+              />
+            </Box>
+          </div>
+        );
+      };
+
+      // ─── Section 4: Readonly ─────────────────────────────────────────────────────
+      // readonly est une contrainte d'interaction (empêche les modifications)
+      // mais la validité de la valeur est quand même évaluée et reportée.
+      const ReadonlyDemo = () => {
         const readonlyRef = useRef();
 
         return (
           <div className="demo-section">
             <h2>Readonly — interaction state vs validity state</h2>
             <p>
-              <code>readonly</code> prevents the user from editing the value,
-              but it does <em>not</em> bypass validity. Constraints such as{" "}
-              <code>minLength</code> are still evaluated and reported — a
-              readonly input with an invalid value is still invalid.
+              <code>readonly</code> est une contrainte d'
+              <em>interaction</em> : elle empêche l'utilisateur de modifier la
+              valeur, mais elle ne court-circuite pas la validation. Les
+              contraintes comme <code>minLength</code> ou <code>required</code>{" "}
+              sont toujours évaluées — un input readonly avec une valeur
+              invalide reste invalide.
+            </p>
+            <p>
+              Tenter d'éditer un champ readonly affiche un callout explicatif.
+              La valeur actuelle ne peut pas être modifiée par l'utilisateur,
+              mais elle peut l'être programmatiquement (voir{" "}
+              <code>--navi-update</code> ci-dessous).
             </p>
             <Box flex="y" spacing="s">
               <Field vertical>
@@ -313,89 +246,255 @@
         );
       };
 
-      // ─── Section 4: --navi-update command ────────────────────────────────────────
-      // --navi-update is blocked by readonly — it does NOT bypass interaction
-      // constraints. Only a validatable (non-readonly) input can be updated.
+      // ─── Section 5: --navi-update ─────────────────────────────────────────────────
+      // --navi-update permet de mettre à jour un input via un bouton.
+      // Il respecte la validation (valeur invalide → erreur) et le readonly (bloqué).
       const NaviUpdateDemo = () => {
+        const validationRef = useRef();
         const readonlyRef = useRef();
-        const validatableRef = useRef();
 
         return (
           <div className="demo-section">
-            <h2>--navi-update command — set a value via button</h2>
+            <h2>--navi-update — mise à jour programmatique</h2>
             <p>
-              A button with <code>command="--navi-update"</code> requests a
-              value change on the target input.{" "}
-              <strong>It does not bypass readonly</strong> — the command is
-              blocked just like a user edit would be.
+              Un bouton avec <code>command="--navi-update"</code> demande une
+              mise à jour de valeur sur l'input cible. Il passe par le même
+              pipeline que les interactions utilisateur : les contraintes de
+              validation et d'interaction sont respectées.
             </p>
 
-            <div className="row" style={{ marginBottom: "24px" }}>
-              <div className="col">
-                <h2 style={{ fontSize: "0.9rem", color: "#555" }}>
-                  Readonly input
-                </h2>
-                <p style={{ margin: 0, fontSize: "0.85rem", color: "#888" }}>
-                  --navi-update is blocked — the readonly constraint prevents
-                  any value change, programmatic or not.
-                </p>
-                <Field vertical>
-                  <Label>Config value (readonly)</Label>
-                  <Input
-                    ref={readonlyRef}
-                    name="config"
-                    id="config"
-                    value="initial"
-                    readOnly
-                  />
-                </Field>
-                <Box flex spacing="s" style={{ flexWrap: "wrap" }}>
-                  <Button
-                    command="--navi-update"
-                    commandFor="config"
-                    value="updated"
-                  >
-                    Set "updated" (blocked)
-                  </Button>
-                </Box>
-              </div>
-              <ControlValidityDebug inputRef={readonlyRef} />
-            </div>
+            <h3 style={{ margin: "0 0 8px", fontSize: "1rem", color: "#444" }}>
+              Respecte la validation
+            </h3>
+            <p
+              style={{ margin: "0 0 16px", color: "#555", fontSize: "0.9rem" }}
+            >
+              Mettre une valeur invalide (trop courte) affiche l'erreur ; mettre
+              une valeur valide la supprime.
+            </p>
+            <Box flex="y" spacing="s" style={{ marginBottom: "24px" }}>
+              <Field vertical>
+                <Label>Code (min 5 chars)</Label>
+                <Input
+                  ref={validationRef}
+                  name="code"
+                  id="code"
+                  defaultValue="hello"
+                  minLength="5"
+                />
+              </Field>
+              <Box flex spacing="s" style={{ flexWrap: "wrap" }}>
+                <Button command="--navi-update" commandFor="code" value="ab">
+                  Set "ab" (invalid)
+                </Button>
+                <Button command="--navi-update" commandFor="code" value="hello">
+                  Set "hello" (valid)
+                </Button>
+              </Box>
+              <ControlValidityDebug inputRef={validationRef} />
+            </Box>
 
-            <div className="row">
-              <div className="col">
-                <h2 style={{ fontSize: "0.9rem", color: "#555" }}>
-                  Validatable input (minLength 5)
-                </h2>
-                <p style={{ margin: 0, fontSize: "0.85rem", color: "#888" }}>
-                  Not readonly — the update goes through. Setting an invalid
-                  value shows the violation; a valid value clears it.
-                </p>
-                <Field vertical>
-                  <Label>Code (min 5 chars)</Label>
-                  <Input
-                    ref={validatableRef}
-                    name="code"
-                    id="code"
-                    defaultValue="hello"
-                    minLength="5"
-                  />
-                </Field>
-                <Box flex spacing="s" style={{ flexWrap: "wrap" }}>
-                  <Button command="--navi-update" commandFor="code" value="ab">
-                    Set "ab" (invalid)
-                  </Button>
-                  <Button
-                    command="--navi-update"
-                    commandFor="code"
-                    defaultValue="hello"
-                  >
-                    Set "hello" (valid)
-                  </Button>
-                </Box>
-              </div>
-              <ControlValidityDebug inputRef={validatableRef} />
-            </div>
+            <h3 style={{ margin: "0 0 8px", fontSize: "1rem", color: "#444" }}>
+              Respecte le readonly
+            </h3>
+            <p
+              style={{ margin: "0 0 16px", color: "#555", fontSize: "0.9rem" }}
+            >
+              Un input <code>readonly</code> ne peut pas être mis à jour via{" "}
+              <code>--navi-update</code> — la commande est bloquée comme
+              n'importe quelle interaction utilisateur.
+            </p>
+            <Box flex="y" spacing="s">
+              <Field vertical>
+                <Label>Config value (readonly)</Label>
+                <Input
+                  ref={readonlyRef}
+                  name="config"
+                  id="config"
+                  value="initial"
+                  readOnly
+                />
+              </Field>
+              <Box flex spacing="s" style={{ flexWrap: "wrap" }}>
+                <Button
+                  command="--navi-update"
+                  commandFor="config"
+                  value="updated"
+                >
+                  Set "updated" (blocked)
+                </Button>
+              </Box>
+              <ControlValidityDebug inputRef={readonlyRef} />
+            </Box>
+          </div>
+        );
+      };
+
+      // ─── Section 6: navi_number ──────────────────────────────────────────────────
+      // type="navi_number" est un input texte avec inputMode="numeric".
+      // Il a ses propres contraintes (min, max, step) et son propre readonly.
+      const NaviNumberDemo = () => {
+        const editableRef = useRef();
+        const readonlyRef = useRef();
+        const [committed, setCommitted] = useState(null);
+
+        return (
+          <div className="demo-section">
+            <h2>navi_number — input numérique</h2>
+            <p>
+              <code>type="navi_number"</code> est rendu comme un{" "}
+              <code>{'<input type="text" inputMode="numeric">'}</code>. Les
+              contraintes <code>min</code>, <code>max</code> et{" "}
+              <code>step</code> sont évaluées côté navi. Le readonly et la
+              validation fonctionnent de la même façon que pour un input texte.
+            </p>
+
+            <h3 style={{ margin: "0 0 8px", fontSize: "1rem", color: "#444" }}>
+              Éditable — avec validation
+            </h3>
+            <Box flex="y" spacing="s" style={{ marginBottom: "24px" }}>
+              <Field vertical>
+                <Label>Quantité (min 1, max 10)</Label>
+                <Input
+                  ref={editableRef}
+                  name="quantity"
+                  type="navi_number"
+                  min={1}
+                  max={10}
+                  required
+                  placeholder="entrez un nombre…"
+                  action={(value) => {
+                    setCommitted(value);
+                  }}
+                />
+              </Field>
+              <Box
+                flex="y"
+                spacing="xs"
+                style={{ fontSize: "0.85rem", color: "#555" }}
+              >
+                <span>
+                  💾 committed:{" "}
+                  <strong>
+                    {committed === null ? "—" : JSON.stringify(committed)}
+                  </strong>
+                </span>
+              </Box>
+              <ControlValidityDebug
+                inputRef={editableRef}
+                committedValue={committed}
+              />
+            </Box>
+
+            <h3 style={{ margin: "0 0 8px", fontSize: "1rem", color: "#444" }}>
+              Readonly
+            </h3>
+            <p
+              style={{ margin: "0 0 16px", color: "#555", fontSize: "0.9rem" }}
+            >
+              Même comportement que pour un input texte : readonly bloque
+              l'édition mais la validité de la valeur est toujours évaluée.
+            </p>
+            <Box flex="y" spacing="s">
+              <Field vertical>
+                <Label>Valeur hors limites (max 10, value 42)</Label>
+                <Input
+                  ref={readonlyRef}
+                  name="quantity_readonly"
+                  type="navi_number"
+                  min={1}
+                  max={10}
+                  value={42}
+                  readOnly
+                />
+              </Field>
+              <ControlValidityDebug inputRef={readonlyRef} />
+            </Box>
+          </div>
+        );
+      };
+
+      // ─── Section 7: Range ────────────────────────────────────────────────────────
+      // type="range" est un slider. Il a ses propres contraintes (min, max, step).
+      // Le readonly et la validation fonctionnent de la même façon.
+      const RangeDemo = () => {
+        const editableRef = useRef();
+        const readonlyRef = useRef();
+        const [committed, setCommitted] = useState(null);
+
+        return (
+          <div className="demo-section">
+            <h2>Range — slider</h2>
+            <p>
+              <code>type="range"</code> est rendu comme un slider. Les
+              contraintes <code>min</code>, <code>max</code> et{" "}
+              <code>step</code> sont évaluées. Le readonly bloque le slider
+              (l'utilisateur ne peut pas le déplacer) et la valeur est toujours
+              soumise à la validation.
+            </p>
+
+            <h3 style={{ margin: "0 0 8px", fontSize: "1rem", color: "#444" }}>
+              Éditable — avec action
+            </h3>
+            <Box flex="y" spacing="s" style={{ marginBottom: "24px" }}>
+              <Field vertical>
+                <Label>Volume (0–100, step 10)</Label>
+                <Input
+                  ref={editableRef}
+                  name="volume"
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={10}
+                  defaultValue={50}
+                  action={(value) => {
+                    setCommitted(value);
+                  }}
+                />
+              </Field>
+              <Box
+                flex="y"
+                spacing="xs"
+                style={{ fontSize: "0.85rem", color: "#555" }}
+              >
+                <span>
+                  💾 committed:{" "}
+                  <strong>
+                    {committed === null ? "—" : JSON.stringify(committed)}
+                  </strong>
+                </span>
+              </Box>
+              <ControlValidityDebug
+                inputRef={editableRef}
+                committedValue={committed}
+              />
+            </Box>
+
+            <h3 style={{ margin: "0 0 8px", fontSize: "1rem", color: "#444" }}>
+              Readonly
+            </h3>
+            <p
+              style={{ margin: "0 0 16px", color: "#555", fontSize: "0.9rem" }}
+            >
+              Le slider est figé — l'utilisateur ne peut pas le déplacer. Tenter
+              de l'interagir affiche le callout readonly.
+            </p>
+            <Box flex="y" spacing="s">
+              <Field vertical>
+                <Label>Volume fixé (readonly, value 70)</Label>
+                <Input
+                  ref={readonlyRef}
+                  name="volume_readonly"
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={10}
+                  value={70}
+                  readOnly
+                />
+              </Field>
+              <ControlValidityDebug inputRef={readonlyRef} />
+            </Box>
           </div>
         );
       };
@@ -405,16 +504,18 @@
         <div>
           <h1>Control Validity Demo</h1>
           <p className="page-description">
-            Explore how validity state works: when constraints are evaluated,
-            the difference between interaction state (readonly) and validity
-            state, and how <code>--navi-update</code> is blocked by readonly
-            just like a user edit would be.
+            Comment la validation fonctionne : quand les contraintes sont
+            évaluées, comment l'action pilote le reporting, et comment readonly
+            et <code>--navi-update</code> interagissent avec le système.
           </p>
           <nav style={{ marginBottom: "32px" }}>
             <ol>
               <li>
-                <a href="#uiaction-vs-action">
-                  uiAction vs action — when does validation trigger?
+                <a href="#form-nominal">Form — le cas nominal</a>
+              </li>
+              <li>
+                <a href="#in-place">
+                  Action sur l'input — in-place / live editing
                 </a>
               </li>
               <li>
@@ -423,32 +524,35 @@
                 </a>
               </li>
               <li>
-                <a href="#required">required — empty value is invalid</a>
-              </li>
-              <li>
-                <a href="#form">Form — action fires on submit only</a>
-              </li>
-              <li>
                 <a href="#navi-update">
-                  --navi-update command — set a value via button
+                  --navi-update — mise à jour programmatique
                 </a>
+              </li>
+              <li>
+                <a href="#navi-number">navi_number — input numérique</a>
+              </li>
+              <li>
+                <a href="#range">Range — slider</a>
               </li>
             </ol>
           </nav>
-          <div id="uiaction-vs-action">
-            <UiActionVsActionDemo />
+          <div id="form-nominal">
+            <FormNominalDemo />
+          </div>
+          <div id="in-place">
+            <InPlaceEditingDemo />
           </div>
           <div id="readonly">
-            <ReadonlyVsValidityDemo />
-          </div>
-          <div id="required">
-            <RequiredDemo />
-          </div>
-          <div id="form">
-            <FormActionDemo />
+            <ReadonlyDemo />
           </div>
           <div id="navi-update">
             <NaviUpdateDemo />
+          </div>
+          <div id="navi-number">
+            <NaviNumberDemo />
+          </div>
+          <div id="range">
+            <RangeDemo />
           </div>
         </div>
       );
