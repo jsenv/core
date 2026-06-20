@@ -272,19 +272,16 @@ export const useControlProps = (
             effectType: "request_update",
           };
         }
-        if (
-          defaultAction === "activate" ||
-          defaultAction === "scroll" || // ici c'est pour empecher space to scroll sur readonly
-          defaultAction === "cursor_move" // ici c'est pour empecher arrow keys to scroll sur readonly)
-        ) {
+        if (defaultAction === "activate") {
+          // activating the control (e.g. space on a button/range) — validate readonly/disabled
           return {
             name: `keydown to ${defaultAction}`,
             effectType: "interaction",
           };
         }
-        // "focus_nav", "form_submit", "dismiss"
-        // -> control not concerned by this keyboard interaction -> no need to validate ability to interact with it
-        // - tab navigation, enter to submit form, ...
+        // cursor_move (arrow keys on text), scroll (space to scroll), focus_nav (tab),
+        // form_submit, dismiss, copy (ctrl+c), etc.
+        // These don't interact with the field's value or activation → no validation needed.
         return null;
       };
 
