@@ -351,6 +351,18 @@ export const useUIStateController = (
         ) {
           notifyParentAboutChildInteraction(e, { stateChanged: false });
         }
+        // A stale/reused event (currentTarget is null) means this is a debounced
+        // callback firing the original input event after a timeout. The state hasn't
+        // changed and this is not a live user gesture — skip uiAction and command.
+        if (e.currentTarget === null) {
+          return false;
+        }
+        // state_prop_change with the same uiState means the state prop was updated
+        // to match what the user already has in the UI (e.g. action completed and
+        // synced state back). No real user gesture — skip uiAction and command.
+        if (e.type === "state_prop_change") {
+          return false;
+        }
         uiStateController.onInteraction(e);
         return false;
       }
