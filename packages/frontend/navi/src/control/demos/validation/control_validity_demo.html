@@ -222,8 +222,8 @@
       };
 
       // ─── Section 4: --navi-update command ────────────────────────────────────────
-      // Buttons can update a sibling/parent input using command="--navi-update"
-      // and value="…". Works even on readonly inputs.
+      // --navi-update is blocked by readonly — it does NOT bypass interaction
+      // constraints. Only a validatable (non-readonly) input can be updated.
       const NaviUpdateDemo = () => {
         const readonlyRef = useRef();
         const validatableRef = useRef();
@@ -232,9 +232,10 @@
           <div className="demo-section">
             <h2>--navi-update command — set a value via button</h2>
             <p>
-              A button with <code>command="--navi-update"</code> can set the
-              value of a target input. The validity debug panel updates
-              immediately when the value changes.
+              A button with <code>command="--navi-update"</code> requests a
+              value change on the target input.{" "}
+              <strong>It does not bypass readonly</strong> — the command is
+              blocked just like a user edit would be.
             </p>
 
             <div className="row" style={{ marginBottom: "24px" }}>
@@ -243,8 +244,8 @@
                   Readonly input
                 </h2>
                 <p style={{ margin: 0, fontSize: "0.85rem", color: "#888" }}>
-                  --navi-update bypasses readonly — the value is set
-                  programmatically.
+                  --navi-update is blocked — the readonly constraint prevents
+                  any value change, programmatic or not.
                 </p>
                 <Field vertical>
                   <Label>Config value (readonly)</Label>
@@ -261,14 +262,7 @@
                     value="updated"
                     navi-target="[name=config]"
                   >
-                    Set "updated"
-                  </Button>
-                  <Button
-                    command="--navi-update"
-                    value="initial"
-                    navi-target="[name=config]"
-                  >
-                    Reset
+                    Set "updated" (blocked)
                   </Button>
                 </Box>
               </div>
@@ -281,8 +275,8 @@
                   Validatable input (minLength 5)
                 </h2>
                 <p style={{ margin: 0, fontSize: "0.85rem", color: "#888" }}>
-                  Setting an invalid value shows the violation immediately in
-                  the validity panel. Setting a valid value clears it.
+                  Not readonly — the update goes through. Setting an invalid
+                  value shows the violation; a valid value clears it.
                 </p>
                 <Field vertical>
                   <Label>Code (min 5 chars)</Label>
@@ -323,8 +317,8 @@
           <p className="page-description">
             Explore how validity state works: when constraints are evaluated,
             the difference between interaction state (readonly) and validity
-            state, and how <code>--navi-update</code> can update a control from
-            a button.
+            state, and how <code>--navi-update</code> is blocked by readonly
+            just like a user edit would be.
           </p>
           <UiActionVsActionDemo />
           <ReadonlyVsValidityDemo />
