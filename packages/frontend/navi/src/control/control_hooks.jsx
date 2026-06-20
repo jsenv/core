@@ -260,6 +260,12 @@ export const useControlProps = (
       const value = readControlValue(e.currentTarget);
       uiStateController.setUIState(value, e);
     };
+    // trigger a no-op state update to ensure that any listeners (e.g. commands) are notified of the interaction
+    // not every interaction is a uiAction
+    // (arrow keys inside an input, tab etc -> not a ui action for instance)
+    const triggerUIAction = (e) => {
+      syncStateFromControl(e);
+    };
     const getDefaultEventReactionDefinitions = () => {
       const keyDownDefault = (e) => {
         const defaultAction = getKeyboardEventDefaultAction(e);
@@ -269,6 +275,8 @@ export const useControlProps = (
             name: `keydown to ${defaultAction}`,
             category: "request_update",
             prevented: () => e.preventDefault(),
+            // no need for triggerUIAction here because the input event will follow and do what we need
+            // here we just want to eventually prevent
           };
         }
         if (defaultAction === "activate") {
@@ -277,6 +285,7 @@ export const useControlProps = (
             name: `keydown to ${defaultAction}`,
             category: "interaction",
             prevented: () => e.preventDefault(),
+            allowed: () => triggerUIAction(e),
           };
         }
         if (defaultAction === "scroll") {
@@ -288,6 +297,7 @@ export const useControlProps = (
             name: `keydown to ${defaultAction}`,
             category: "interaction",
             prevented: () => e.preventDefault(),
+            // scrolling does not concern the value of the control so no need to trigger a uiAction
           };
         }
         // cursor_move (arrow keys on text), scroll (space to scroll), focus_nav (tab),
@@ -299,27 +309,26 @@ export const useControlProps = (
       if (controlType === "button") {
         return {
           keyDown: keyDownDefault,
-          mouseDown: () => {
+          mouseDown: (e) => {
             if (actionOnMouseDown) {
               return {
                 name: "mousedown",
                 wantAction: true,
-                effectType: "interaction",
+                category: "interaction",
+                allowed: () => triggerUIAction(e),
               };
             }
             return null;
           },
-          click: () => {
+          click: (e) => {
+            if (actionOnMouseDown) {
+              return null;
+            }
             return {
               name: "click",
-              wantAction: !actionOnMouseDown,
-              always: (e) => {
-                const button = e.currentTarget;
-                if (button.form) {
-                  e.preventDefault(); // prevent form submission
-                }
-              },
-              effectType: "interaction",
+              wantAction: true,
+              category: "interaction",
+              allowed: () => triggerUIAction(e),
             };
           },
         };
@@ -346,6 +355,7 @@ export const useControlProps = (
                     return {
                       name: "enter on checked radio",
                       category: "interaction",
+                      allowed: () => triggerUIAction(e),
                       always,
                     };
                   }
@@ -387,7 +397,8 @@ export const useControlProps = (
                   // on checked radios (won't update the ui state but will notify of interaction)
                   return {
                     name: "space to activate checked radio",
-                    effectType: "interaction",
+                    category: "interaction",
+                    allowed: () => triggerUIAction(e),
                   };
                 }
                 // let browser perform "space to check radio"
@@ -408,20 +419,22 @@ export const useControlProps = (
                 // if it was checked at mousedown, the input event won't come, so we do it here.
                 return {
                   name: `click on checked radio`,
-                  effectType: "interaction",
+                  category: "interaction",
+                  allowed: (e) => triggerUIAction(e),
                 };
               }
               return {
                 name: `click on ${props.type}`,
-                effectType: "interaction",
+                category: "interaction",
+                allowed: (e) => triggerUIAction(e),
               };
             },
             input: (e) => {
               return {
                 name: "input",
                 wantAction: true,
-                effectType: "update",
-                effect: () => syncStateFromControl(e),
+                category: "update",
+                allowed: () => syncStateFromControl(e),
               };
             },
           };
@@ -431,9 +444,9 @@ export const useControlProps = (
           if (e.key === "Enter") {
             const input = e.currentTarget;
             return {
-              name: "enter to --navi-send",
-              effectType: "interaction",
-              effect: () => triggerNaviCommand(input, "--navi-send", e),
+              name: "enter on input to send closest control group",
+              category: "interaction",
+              allowed: () => triggerNaviCommand(input, "--navi-send", e),
             };
           }
           return keyDownDefault(e);
