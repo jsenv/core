@@ -316,6 +316,7 @@
                   <Input
                     ref={readonlyRef}
                     name="config"
+                    id="config"
                     value="initial"
                     readOnly
                   />
@@ -323,8 +324,8 @@
                 <Box flex spacing="s" style={{ flexWrap: "wrap" }}>
                   <Button
                     command="--navi-update"
+                    commandFor="config"
                     value="updated"
-                    navi-target="[name=config]"
                   >
                     Set "updated" (blocked)
                   </Button>
@@ -347,22 +348,19 @@
                   <Input
                     ref={validatableRef}
                     name="code"
-                    value="hello"
+                    id="code"
+                    defaultValue="hello"
                     minLength="5"
                   />
                 </Field>
                 <Box flex spacing="s" style={{ flexWrap: "wrap" }}>
-                  <Button
-                    command="--navi-update"
-                    value="ab"
-                    navi-target="[name=code]"
-                  >
+                  <Button command="--navi-update" commandFor="code" value="ab">
                     Set "ab" (invalid)
                   </Button>
                   <Button
                     command="--navi-update"
-                    value="hello"
-                    navi-target="[name=code]"
+                    commandFor="code"
+                    defaultValue="hello"
                   >
                     Set "hello" (valid)
                   </Button>
