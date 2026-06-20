@@ -256,12 +256,10 @@ export const useControlProps = (
         lastActionValueRef.current = e.detail.value;
       }
     };
-
     const syncStateFromControl = (e) => {
       const value = readControlValue(e.currentTarget);
       uiStateController.setUIState(value, e);
     };
-
     const getDefaultEventReactionDefinitions = () => {
       const keyDownDefault = (e) => {
         const defaultAction = getKeyboardEventDefaultAction(e);
@@ -513,7 +511,6 @@ export const useControlProps = (
 
       return null;
     };
-
     const defaultEventReactionDefinitions =
       getDefaultEventReactionDefinitions();
     const { eventReactionDefinitions } = props;
@@ -536,53 +533,45 @@ export const useControlProps = (
         prevented,
         always,
       } = reaction;
-      const applied = (() => {
-        if (wantAction && actionEvent === "custom") {
-          return false;
-        }
-        const control = ref.current;
-        if (ifValueModified || wantAction) {
-          const currentValue = readControlValue(control);
-          if (ifValueModified) {
-            // Ignore input events that carry the same value as the last action we dispatched.
-            // This avoids showing a spurious "read-only" callout for redundant input events
-            // that browsers fire with no UI change — e.g. range inputs fire several input
-            // events around mouse release even though the value hasn't moved.
-            const lastActionValue = lastActionValueRef.current;
-            const valueSameAsLastAction =
-              lastActionValue !== NO_ACTION_YET &&
-              compareTwoJsValues(currentValue, lastActionValue);
-            if (valueSameAsLastAction) {
-              e.preventDefault();
-              return false;
-            }
-          }
-          if (wantAction) {
-            lastEventRequestingActionRef.current = e;
-            lastActionValueRef.current = currentValue;
+      if (wantAction && actionEvent === "custom") {
+        return false;
+      }
+      const control = ref.current;
+      if (ifValueModified || wantAction) {
+        const currentValue = readControlValue(control);
+        if (ifValueModified) {
+          // Ignore input events that carry the same value as the last action we dispatched.
+          // This avoids showing a spurious "read-only" callout for redundant input events
+          // that browsers fire with no UI change — e.g. range inputs fire several input
+          // events around mouse release even though the value hasn't moved.
+          const lastActionValue = lastActionValueRef.current;
+          const valueSameAsLastAction =
+            lastActionValue !== NO_ACTION_YET &&
+            compareTwoJsValues(currentValue, lastActionValue);
+          if (valueSameAsLastAction) {
+            e.preventDefault();
+            return false;
           }
         }
-        const can = dispatchRequestInteraction(control, {
-          event: e,
-          wantAction,
-          name,
-          category,
-        });
-        if (!can) {
+        if (wantAction) {
+          lastEventRequestingActionRef.current = e;
+          lastActionValueRef.current = currentValue;
+        }
+      }
+      return dispatchRequestInteraction(control, {
+        event: e,
+        wantAction,
+        name,
+        category,
+        prevented: () => {
           debugInteraction(e, `interaction not allowed`);
-          prevented?.(e);
-          return false;
-        }
-        if (allowed) {
-          allowed();
-        } else if (category === "interaction") {
-          // trigger a no-op state update to ensure that any listeners (e.g. commands) are notified of the interaction
-          syncStateFromControl(e);
-        }
-        return true;
-      })();
-      always?.(e);
-      return applied;
+          prevented?.();
+        },
+        allowed: () => {
+          allowed?.();
+        },
+        always,
+      });
     };
     const onMouseDown = (e) => {
       props.onMouseDown?.(e);
@@ -1134,6 +1123,7 @@ const useInteractiveProps = (
               event: originalEvent,
               wantAction: true,
               name: "auto_group_action",
+              category: "interaction",
             });
           }
         }
