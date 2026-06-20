@@ -280,7 +280,7 @@ export const useControlProps = (
           };
         }
         if (defaultAction === "activate") {
-          // activating the control (e.g. space on a button/range) — validate readonly/disabled
+          // activating the control (e.g. space on a button/range)
           return {
             name: `keydown to ${defaultAction}`,
             category: "interaction",
