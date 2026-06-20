@@ -124,17 +124,20 @@ const DEFAULT_BEHAVIORS = [
     keys: {
       escape: (e) => {
         if (e.target.type === "search") {
+          if (e.target.readOnly) {
+            return "";
+          }
           return e.target.value ? "clear" : "";
         }
         return "";
       },
       enter: (e) => (e.target.form ? "form_submit" : ""),
-      arrowleft: "cursor_move",
-      arrowright: "cursor_move",
-      arrowup: "cursor_move",
-      arrowdown: "cursor_move",
-      home: "cursor_move",
-      end: "cursor_move",
+      arrowleft: (e) => (e.target.readOnly ? "scroll" : "cursor_move"),
+      arrowright: (e) => (e.target.readOnly ? "scroll" : "cursor_move"),
+      arrowup: (e) => (e.target.readOnly ? "scroll" : "cursor_move"),
+      arrowdown: (e) => (e.target.readOnly ? "scroll" : "cursor_move"),
+      home: (e) => (e.target.readOnly ? "scroll" : "cursor_move"),
+      end: (e) => (e.target.readOnly ? "scroll" : "cursor_move"),
     },
     fallback: (e) => (isTypingIntent(e) ? "type" : undefined),
   },
