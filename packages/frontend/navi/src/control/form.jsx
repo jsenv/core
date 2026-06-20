@@ -22,7 +22,7 @@ import {
 } from "./control_hooks.jsx";
 import { FormContext } from "./form_context.js";
 import { dispatchRequestResetUIState } from "./ui_state_dom.js";
-import { dispatchRequestAction } from "./validation/control_validity.js";
+import { dispatchRequestInteraction } from "./validation/control_validity.js";
 
 export const Form = (props) => {
   const defaultRef = useRef();
@@ -80,11 +80,11 @@ const FormControl = (props) => {
       onSubmit={(e) => {
         const form = e.currentTarget;
         e.preventDefault();
-        dispatchRequestAction(form, {
+        dispatchRequestInteraction(form, {
           event: e,
           requester: e.submitter || form,
           actionOrigin: "form_submit",
-          meta: { isSubmit: true },
+          wantAction: true,
         });
       }}
       onReset={(e) => {

@@ -384,7 +384,7 @@ export const useControlProps = (
                 }
                 // let browser perform "space to check radio"
               }
-              return keyDownDefault();
+              return keyDownDefault(e);
             },
             mouseDown: (e) => {
               if (isRadio) {
@@ -428,7 +428,7 @@ export const useControlProps = (
               effect: () => triggerNaviCommand(input, "--navi-send", e),
             };
           }
-          return keyDownDefault();
+          return keyDownDefault(e);
         };
 
         if (props.type === "range") {

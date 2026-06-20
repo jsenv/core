@@ -513,17 +513,12 @@ export const createControlValidity = (
     }
 
     // Always resolve the right message first (handles custom messages, attributes, fallback).
-    const { message, origin } = getConstraintMessage(
+    const { message } = getConstraintMessage(
       controller,
       activeConstraintInfo.constraint,
       activeConstraintInfo.message,
       { requester },
     );
-    debugUIState(
-      event,
-      `constraint message for "${activeConstraintInfo.constraint.name}": ${origin}`,
-    );
-
     if (controlValidity.callout) {
       const { status, closeOnClickOutside } = activeConstraintInfo;
       controlValidity.callout.update(message, {
