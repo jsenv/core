@@ -102,7 +102,13 @@ const DEFAULT_BEHAVIORS = [
   {
     test: (el) => el.matches("input[type='radio'], input[type='checkbox']"),
     keys: {
-      space: "activate",
+      space: (e) => {
+        if (e.target.type === "radio" && e.target.checked) {
+          // space on checked radio does nothing
+          return "";
+        }
+        return "activate";
+      },
       enter: (e) => (e.target.form ? "form_submit" : ""),
       arrowleft: "focus_nav",
       arrowright: "focus_nav",
@@ -167,7 +173,7 @@ const DEFAULT_BEHAVIORS = [
       ),
     keys: {
       space: "activate",
-      enter: (e) => (e.target.form ? "form_submit" : ""),
+      enter: "activate",
       arrowleft: "value_change",
       arrowright: "value_change",
       arrowup: "value_change",
@@ -175,19 +181,19 @@ const DEFAULT_BEHAVIORS = [
     },
   },
   {
-    // Color input: Space opens the color picker, Enter submits the form
+    // Color input: Space opens the color picker, Enter  too
     test: (el) => el.matches("input[type='color']"),
     keys: {
       space: "activate",
-      enter: (e) => (e.target.form ? "form_submit" : ""),
+      enter: "activate",
     },
   },
   {
-    // File input: Space opens the picker, Enter submits the form
+    // File input: Space opens the picker, Enter too
     test: (el) => el.matches("input[type='file']"),
     keys: {
       space: "activate",
-      enter: (e) => (e.target.form ? "form_submit" : ""),
+      enter: "activate",
     },
   },
   {
@@ -234,7 +240,10 @@ const DEFAULT_BEHAVIORS = [
   {
     // SELECT: don't intercept anything while the dropdown may be open
     test: (el) => el.tagName === "SELECT",
-    keys: {},
+    keys: {
+      space: "activate",
+      enter: "activate",
+    },
   },
   {
     // Non-interactive elements: browser scrolls on Space and arrow keys
