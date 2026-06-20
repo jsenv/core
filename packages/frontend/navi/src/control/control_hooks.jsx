@@ -461,6 +461,8 @@ export const useControlProps = (
                 effect: updateUIState,
               };
             },
+            // Range fires "input" on pointer release, not during drag.
+            // The dismissal behavior for ranges is handled differently and is excluded here.
             input: {
               name: "input",
               type: "requestInteraction",
