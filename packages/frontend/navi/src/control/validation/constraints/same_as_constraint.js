@@ -17,22 +17,27 @@ export const SAME_AS_CONSTRAINT = {
       );
       return null;
     }
+    const otherFieldValue = otherField.value;
+    if (!otherFieldValue) {
+      // Reference field is empty — nothing to compare against yet.
+      return null;
+    }
     const valueAsString =
       field.uiState === undefined ? "" : String(field.uiState);
-    const required = field.props.required;
-    if (!valueAsString && !required) {
-      return null;
-    }
-    const otherFieldValue = otherField.value;
-    if (!otherFieldValue && !otherField.required) {
-      // don't validate if one of the two values is empty
-      return null;
-    }
     if (valueAsString === otherFieldValue) {
       return null;
     }
-
     const type = field.props.type;
+    // sameAs implies the field must be filled — no need for required on a confirm field.
+    if (!valueAsString) {
+      if (type === "password") {
+        return naviI18n("constraint.same_as.missing.password");
+      }
+      if (type === "email") {
+        return naviI18n("constraint.same_as.missing.email");
+      }
+      return naviI18n("constraint.same_as.missing.default");
+    }
     if (type === "password") {
       return naviI18n("constraint.same_as.password");
     }

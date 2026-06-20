@@ -99,16 +99,11 @@ export const REQUIRED_CONSTRAINT = {
       return null;
     }
 
-    const sameAs = field.props["data-same-as"];
     if (type === "password") {
-      return sameAs
-        ? naviI18n("constraint.required.password.confirm")
-        : naviI18n("constraint.required.password");
+      return naviI18n("constraint.required.password");
     }
     if (type === "email") {
-      return sameAs
-        ? naviI18n("constraint.required.email.confirm")
-        : naviI18n("constraint.required.email");
+      return naviI18n("constraint.required.email");
     }
     if (type === "color") {
       return naviI18n("constraint.required.color");
@@ -138,9 +133,7 @@ export const REQUIRED_CONSTRAINT = {
         ? naviI18n("constraint.required.file.multiple")
         : naviI18n("constraint.required.file");
     }
-    return sameAs
-      ? naviI18n("constraint.required.confirm")
-      : naviI18n("constraint.required.default");
+    return naviI18n("constraint.required.default");
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("required");
