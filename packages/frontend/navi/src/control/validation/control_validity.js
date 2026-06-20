@@ -401,7 +401,6 @@ export const createControlValidity = (
       const checkResult = constraint.check(fieldForConstraint, {
         fromRequestAction,
         skipReadonly,
-        skipRequired: requester === controller.elementRef.current,
         registerChange,
       });
       if (!checkResult) {
