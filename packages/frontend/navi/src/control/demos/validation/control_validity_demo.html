@@ -70,7 +70,15 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useRef, useState } from "preact/hooks";
-      import { Input, Button, Label, Field, Form, Box } from "@jsenv/navi";
+      import {
+        Input,
+        Button,
+        Label,
+        Field,
+        Form,
+        Box,
+        NaviDebug,
+      } from "@jsenv/navi";
       import { ControlValidityDebug } from "../utils/control_validity_debug.jsx";
 
       // ─── Section 1: uiAction vs action ──────────────────────────────────────────
@@ -99,6 +107,7 @@
                   name="username"
                   minLength="4"
                   placeholder="type something…"
+                  autoComplete="off"
                   data-callout-position="above"
                   uiAction={(username) => {
                     setLiveValue(username);
@@ -341,7 +350,12 @@
         </div>
       );
 
-      render(<App />, document.getElementById("root"));
+      render(
+        <NaviDebug debugUIState>
+          <App />
+        </NaviDebug>,
+        document.getElementById("root"),
+      );
     </script>
   </body>
 </html>

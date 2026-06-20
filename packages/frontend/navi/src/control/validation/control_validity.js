@@ -773,7 +773,7 @@ export const createControlValidity = (
 
   const resetOnInteraction = (e) => {
     innerRequestCloseCallout(e, e.type);
-    console.log("resetOnInteraction", e.type, e);
+    debugUIState(e, `reset validity on interaction -> checkValidity`);
     checkValidity({ event: e });
   };
 
