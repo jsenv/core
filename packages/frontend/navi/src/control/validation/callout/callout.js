@@ -303,9 +303,13 @@ export const openCallout = (
   calloutElement.id = calloutId;
   calloutStyleController.set(calloutElement, { opacity: 0 });
   const update = (newMessage, options = {}) => {
+    const prevStatus = callout.status;
     // Connect callout with target element for accessibility
     if (options.status && options.status !== callout.status) {
       callout.status = options.status;
+      debug(
+        `callout update status: ${prevStatus ?? "(none)"} -> ${options.status}`,
+      );
       updateStatus(options.status);
     }
 
@@ -314,14 +318,17 @@ export const openCallout = (
     }
 
     if (isValidElement(newMessage)) {
+      debug(`callout update message (jsx)`);
       renderIntoCallout(newMessage, calloutMessageElement, {
         requestClose,
       });
     } else if (newMessage instanceof Node) {
       // Handle DOM node (cloned from CSS selector)
+      debug(`callout update message (node)`);
       calloutMessageElement.innerHTML = "";
       calloutMessageElement.appendChild(newMessage);
     } else if (typeof newMessage === "function") {
+      debug(`callout update message (function)`);
       calloutMessageElement.innerHTML = "";
       newMessage({
         renderIntoCallout: (jsx) =>
@@ -346,12 +353,22 @@ export const openCallout = (
         iframe.style.backgroundColor = "white";
         iframe.srcdoc = newMessage;
 
+        debug(`callout update message (html document iframe)`);
         // Clear existing content and add iframe
         calloutMessageElement.innerHTML = "";
         calloutMessageElement.appendChild(iframe);
       } else {
+        debug(
+          `callout update message: ${typeof newMessage === "string" ? newMessage.slice(0, 80) : String(newMessage)}`,
+        );
         calloutMessageElement.innerHTML = newMessage;
       }
+    }
+    // After updating content the callout size likely changed — re-position immediately
+    // while the resize observer is still settled, to avoid a ResizeObserver loop where
+    // the observer fires, triggers a check, which changes the SVG frame, which fires again.
+    if (callout.updatePosition) {
+      callout.updatePosition();
     }
   };
   close_on_click_outside: {
