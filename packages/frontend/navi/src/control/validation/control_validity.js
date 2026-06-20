@@ -118,7 +118,7 @@ export const onRequestInteraction = (
   if (requestStatus.canProceed) {
     checkEvent(requestStatus, event);
   }
-  if (requestStatus.canProceed && isControlInteraction(event)) {
+  if (requestStatus.canProceed) {
     const failingInterface = checkConstraints({
       event: requestInteractionCustomEvent,
       requester: event.target,
@@ -143,27 +143,6 @@ export const onRequestInteraction = (
     return false;
   }
   debugInteraction(event, `"${interactionName}" allowed`);
-  return true;
-};
-const isControlInteraction = (e) => {
-  if (e.type === "keydown") {
-    const defaultAction = getKeyboardEventDefaultAction(e);
-    if (
-      defaultAction === "type" ||
-      defaultAction === "value_change" ||
-      defaultAction === "activate" ||
-      defaultAction === "scroll" || // ici c'est pour empecher space to scroll sur readonly
-      defaultAction === "cursor_move" // ici c'est pour empecher arrow keys to scroll sur readonly
-    ) {
-      // interactions that change the value of a control (typing, activating, etc.) should be validated
-      return true;
-    }
-    // "focus_nav", "form_submit", "dismiss"
-    // -> no need to validate ability to interact with control
-    // those interactions are not about changing the value of a control
-    return false;
-  }
-  // "mousedown", "click", "input"
   return true;
 };
 

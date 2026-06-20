@@ -12,7 +12,11 @@
  *    a debounced action. The request-action event chain handles the timing centrally
  *    rather than each component having to manage its own debounce logic.
  */
-import { findFocusDelegateTarget, getElementSignature } from "@jsenv/dom";
+import {
+  findFocusDelegateTarget,
+  getElementSignature,
+  getKeyboardEventDefaultAction,
+} from "@jsenv/dom";
 import {
   useCallback,
   useContext,
@@ -309,11 +313,25 @@ export const useControlProps = (
     };
 
     const getDefaultEventReactionDefinitions = () => {
-      const keyDownDefault = () => {
-        return {
-          name: "keydown",
-          type: "requestInteraction",
-        };
+      const keyDownDefault = (e) => {
+        const defaultAction = getKeyboardEventDefaultAction(e);
+        if (
+          defaultAction === "type" ||
+          defaultAction === "value_change" ||
+          defaultAction === "activate" ||
+          defaultAction === "scroll" || // ici c'est pour empecher space to scroll sur readonly
+          defaultAction === "cursor_move" // ici c'est pour empecher arrow keys to scroll sur readonly
+        ) {
+          // interactions that change the value of a control (typing, activating, etc.) should be validated
+          return {
+            name: `keydown to ${defaultAction}`,
+            type: "requestInteraction",
+          };
+        }
+        // "focus_nav", "form_submit", "dismiss"
+        // -> control not concerned by this keyboard interaction -> no need to validate ability to interact with it
+        // - tab navigation, enter to submit form, ...
+        return null;
       };
 
       if (controlType === "button") {
