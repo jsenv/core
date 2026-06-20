@@ -292,11 +292,14 @@ export const useControlProps = (
         return {
           keyDown: keyDownDefault,
           mouseDown: () => {
-            return {
-              name: "mousedown",
-              wantAction: actionOnMouseDown,
-              effectType: "interaction",
-            };
+            if (actionOnMouseDown) {
+              return {
+                name: "mousedown",
+                wantAction: true,
+                effectType: "interaction",
+              };
+            }
+            return null;
           },
           click: () => {
             return {
@@ -422,9 +425,7 @@ export const useControlProps = (
             return {
               name: "enter to --navi-send",
               effectType: "interaction",
-              effect: () => {
-                triggerNaviCommand(input, "--navi-send", e);
-              },
+              effect: () => triggerNaviCommand(input, "--navi-send", e),
             };
           }
           return keyDownDefault();
@@ -551,11 +552,15 @@ export const useControlProps = (
           wantAction,
         });
         if (!allowed) {
-          debugInteraction(
-            e,
-            `interaction not allowed -> ${e.type}.preventDefault()`,
-          );
-          e.preventDefault();
+          if (effectType === "request_update") {
+            debugInteraction(
+              e,
+              `interaction not allowed -> ${e.type}.preventDefault()`,
+            );
+            e.preventDefault();
+          } else {
+            debugInteraction(e, `interaction not allowed`);
+          }
           return false;
         }
         if (effect) {
