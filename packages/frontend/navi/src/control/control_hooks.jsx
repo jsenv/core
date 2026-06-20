@@ -443,6 +443,12 @@ export const useControlProps = (
 
         const keyDownDefaultOnInput = (e) => {
           if (e.key === "Enter") {
+            if (actionDebounce) {
+              // The input has its own debounced action; Enter fires it directly
+              // (input_effect.js cancels the debounce and triggers the action via the change event).
+              // Don't propagate to --navi-send, which would cause a double action call.
+              return null;
+            }
             const input = e.currentTarget;
             return {
               name: "enter on input to send closest control group",
