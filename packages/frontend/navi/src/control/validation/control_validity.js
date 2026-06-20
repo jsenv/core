@@ -59,7 +59,6 @@ import {
   dispatchPublicCustomEvent,
   findFocusDelegateTarget,
   getElementSignature,
-  getKeyboardEventDefaultAction,
 } from "@jsenv/dom";
 
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
@@ -119,19 +118,17 @@ export const onRequestInteraction = (
     checkEvent(requestStatus, event);
   }
   if (requestStatus.canProceed) {
-    const failingInterface = checkConstraints({
-      event: requestInteractionCustomEvent,
-      requester: event.target,
-    });
-    if (failingInterface && failingInterface.interactionFailedConstraintInfo) {
-      Object.assign(requestStatus, {
-        canProceed: false,
-        preventReason: `failing constraint "${failingInterface.interactionFailedConstraintInfo.name}"`,
-      });
-      failingInterface.reportValidity({
-        event: requestInteractionCustomEvent,
-        requester: event.target,
-      });
+    const controlValidity = getControlValidityFromElement(
+      requestInteractionCustomEvent.currentTarget,
+    );
+    if (controlValidity) {
+      controlValidity.syncValidity(event);
+      if (controlValidity.interactionFailedConstraintInfo) {
+        Object.assign(requestStatus, {
+          canProceed: false,
+          preventReason: `failing constraint "${controlValidity.interactionFailedConstraintInfo.name}"`,
+        });
+      }
     }
   }
   if (!requestStatus.canProceed) {
@@ -211,7 +208,6 @@ export const onRequestAction = (
   const { committed, uiState } = _attemptCommit(elementHandlingAction, {
     requestCustomEvent: requestActionCustomEvent,
     originalEvent: event,
-    requester,
     debugUIState,
   });
   const customEventDetail = {
@@ -254,7 +250,7 @@ export const onRequestAction = (
 // Returns { committed: boolean, uiState }.
 const _attemptCommit = (
   handlingElement,
-  { requestCustomEvent, originalEvent, requester, debugUIState },
+  { requestCustomEvent, originalEvent, debugUIState },
 ) => {
   // If this element is a proxy, resolve to the underlying target so commit
   // always operates on the real control. The proxy has no UI state of its own.
@@ -279,15 +275,21 @@ const _attemptCommit = (
   if (requestStatus.canProceed) {
     checkEvent(requestStatus, originalEvent);
   }
-  if (requestStatus.canProceed) {
-    const failingInterface = checkConstraints({
-      event: requestCustomEvent,
-      requester,
-      fromRequestAction: true,
-    });
-    if (failingInterface) {
-      const interactionInfo = failingInterface.interactionFailedConstraintInfo;
-      const valueInfo = failingInterface.failedConstraintInfo;
+  if (requestStatus.canProceed && activeController?.controlValidity) {
+    const isValid = activeController.controlValidity.syncValidity(
+      originalEvent,
+      {
+        fromRequestAction: true,
+      },
+    );
+    if (!isValid) {
+      const cv = activeController.controlValidity;
+      const interactionInfo =
+        cv.failingManagedControlValidity?.interactionFailedConstraintInfo ??
+        cv.interactionFailedConstraintInfo;
+      const valueInfo =
+        cv.failingManagedControlValidity?.failedConstraintInfo ??
+        cv.failedConstraintInfo;
       Object.assign(requestStatus, {
         canProceed: false,
         preventReason: interactionInfo
@@ -296,12 +298,6 @@ const _attemptCommit = (
             ? `failing constraint "${valueInfo.name}"`
             : "invalid (no constraint info)",
       });
-      if (interactionInfo || handlingElement.hasAttribute("data-action")) {
-        failingInterface.reportValidity({
-          event: requestCustomEvent,
-          requester,
-        });
-      }
     }
   }
   if (!requestStatus.canProceed) {
@@ -333,42 +329,10 @@ const checkEvent = (requestStatus, event) => {
   }
 };
 
-// Returns the failing controlValidity, or null if all constraints pass.
-// Never calls reportValidity — callers decide whether to show the callout.
-const checkConstraints = ({ event, requester, fromRequestAction } = {}) => {
-  let elementToValidate = event.currentTarget;
-  const controlHost = findControlHost(elementToValidate);
-  if (controlHost) {
-    elementToValidate = controlHost;
-  }
-
-  const controller = elementToValidate.__uiStateController__;
-  if (!controller) {
-    throw new Error(`element has no __uiStateController__`);
-  }
-
-  const controlValidity = controller.controlValidity;
-  const isValid = controlValidity.checkValidity({
-    event,
-    requester,
-    fromRequestAction,
-  });
-  if (!isValid) {
-    const proxyTargetController = findControlProxyTargetController(controller);
-    const resolvedCV = proxyTargetController
-      ? proxyTargetController.controlValidity
-      : controlValidity;
-    let failingCV = resolvedCV.failingManagedControlValidity || resolvedCV;
-    while (
-      failingCV.failedConstraintInfo === null &&
-      failingCV.interactionFailedConstraintInfo === null &&
-      failingCV.failingManagedControlValidity
-    ) {
-      failingCV = failingCV.failingManagedControlValidity;
-    }
-    return failingCV;
-  }
-  return null;
+const getControlValidityFromElement = (element) => {
+  const controlHost = findControlHost(element);
+  const elementToCheck = controlHost || element;
+  return elementToCheck.__uiStateController__?.controlValidity;
 };
 
 const INTERACTION_CONSTRAINTS = [DISABLED_CONSTRAINT, READONLY_CONSTRAINT];
@@ -759,12 +723,26 @@ export const createControlValidity = (
   // - Value-modifying event (input, keydown...) + own action + value invalid → report.
   // - Pure interaction event (mousedown on editable field) → close the callout:
   //   user intends to edit, we clear the message so it doesn't block them.
-  const syncValidity = (event) => {
+  const syncValidity = (event, { fromRequestAction = false } = {}) => {
     const hasOwnAction = Boolean(controller.props.action);
-    checkValidity({ event });
+    const isValid = checkValidity({ event, fromRequestAction });
+    if (failingManagedControlValidity) {
+      // Group/form case: find the actual failing leaf and report on it.
+      // The leaf's callout is sufficient — no need to report at the group level.
+      let leafCV = failingManagedControlValidity;
+      while (
+        leafCV.failingManagedControlValidity &&
+        !leafCV.failedConstraintInfo &&
+        !leafCV.interactionFailedConstraintInfo
+      ) {
+        leafCV = leafCV.failingManagedControlValidity;
+      }
+      leafCV.reportValidity({ event });
+      return isValid;
+    }
     if (interactionFailedConstraintInfo) {
       reportValidity({ event });
-      return;
+      return isValid;
     }
     if (isValueModifyingInteraction(event)) {
       if (failedConstraintInfo && hasOwnAction) {
@@ -781,6 +759,7 @@ export const createControlValidity = (
       parentController.controlValidity.checkValidity({ event });
       parentController = parentController.parentUIStateController;
     }
+    return isValid;
   };
   controlValidity.syncValidity = syncValidity;
 
