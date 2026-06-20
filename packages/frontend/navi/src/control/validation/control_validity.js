@@ -57,14 +57,13 @@ import {
   createPubSub,
   dispatchInternalCustomEvent,
   dispatchPublicCustomEvent,
-  findEvent,
   findFocusDelegateTarget,
   getElementSignature,
   getKeyboardEventDefaultAction,
 } from "@jsenv/dom";
 
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
-import { findControlHost, findControlRoot } from "../control_dom.js";
+import { findControlHost } from "../control_dom.js";
 import { findControlProxyTargetController } from "../controller_registry.js";
 import { openCallout } from "./callout/callout.js";
 import { getConstraintMessage } from "./constraint_message.js";
@@ -234,7 +233,6 @@ export const onRequestAction = (
     requestCustomEvent: requestActionCustomEvent,
     originalEvent: event,
     requester,
-    showCallout: elementHandlingAction.hasAttribute("data-action"),
     debugUIState,
   });
   const customEventDetail = {
@@ -277,7 +275,7 @@ export const onRequestAction = (
 // Returns { committed: boolean, uiState }.
 const _attemptCommit = (
   handlingElement,
-  { requestCustomEvent, originalEvent, requester, showCallout, debugUIState },
+  { requestCustomEvent, originalEvent, requester, debugUIState },
 ) => {
   // If this element is a proxy, resolve to the underlying target so commit
   // always operates on the real control. The proxy has no UI state of its own.
@@ -319,7 +317,7 @@ const _attemptCommit = (
             ? `failing constraint "${valueInfo.name}"`
             : "invalid (no constraint info)",
       });
-      if (interactionInfo || showCallout) {
+      if (interactionInfo || handlingElement.hasAttribute("data-action")) {
         failingInterface.reportValidity({
           event: requestCustomEvent,
           requester,
@@ -770,133 +768,10 @@ export const createControlValidity = (
   Object.defineProperty(controlValidity, "failingManagedControlValidity", {
     get: () => failingManagedControlValidity,
   });
-
-  const resetOnInteraction = (e) => {
-    innerRequestCloseCallout(e, e.type);
-    debugUIState(e, `reset validity on interaction -> checkValidity`);
-    checkValidity({ event: e });
+  controlValidity.onCalloutOpen = onCalloutOpen;
+  controlValidity.closeCallout = (event, reason) => {
+    innerRequestCloseCallout(event, reason);
   };
-
-  close_and_check_on_input: {
-    if (controller.controlType === "input" && controller.type === "range") {
-      break close_and_check_on_input; // range inputs have a special behavior where "input" is triggered on pointer release, so we don't need to wait for it
-    }
-
-    onCalloutOpen((openingEvent) => {
-      const openedByMousedown = findEvent(openingEvent, "mousedown");
-      const [cleanup, addCleanup] = createPubSub();
-      const element = controller.elementRef.current;
-
-      const setupResetOnInput = () => {
-        const oninput = (e) => {
-          resetOnInteraction(e);
-        };
-        element.addEventListener("input", oninput, { once: true });
-        addCleanup(() => {
-          element.removeEventListener("input", oninput, { once: true });
-        });
-      };
-
-      if (openedByMousedown) {
-        const onMouseUp = () => {
-          const timeout = setTimeout(setupResetOnInput);
-          addCleanup(() => clearTimeout(timeout));
-        };
-        document.addEventListener("mouseup", onMouseUp, {
-          once: true,
-          capture: true,
-        });
-        addCleanup(() => {
-          document.removeEventListener("mouseup", onMouseUp, {
-            once: true,
-            capture: true,
-          });
-        });
-        return cleanup;
-      }
-
-      // "change" can happen after an input looses focus
-      // and if loose focus as the result of typing (navi_input_full going to next input)
-      // the browser will fire an input event shortly after
-      // causing the callout to immediatly close
-      // an other way to express this could be that an "input" event should be allowed
-      // to close callout only if at least event loop or 1ms occurs
-      let closed = false;
-      addCleanup(() => {
-        closed = true;
-      });
-      queueMicrotask(() => {
-        if (closed) {
-          console.log("closed before");
-          return;
-        }
-        console.log("listen input");
-        setupResetOnInput();
-      });
-      return cleanup;
-    });
-  }
-
-  close_callout_on_mousedown: {
-    onCalloutOpen((openingEvent) => {
-      const element = controller.elementRef.current;
-      // When the user clicks the field (or the interactive element rendered in place of it,
-      // e.g. the .navi_select button for a hidden input), treat it as intent to fix the issue
-      // and dismiss the callout — unless the status is "error", which requires explicit action.
-      // The listener is registered when the callout opens and removed when it closes,
-      // so it can never accidentally close the next callout.
-      const interactionTarget = findControlRoot(element) || element;
-
-      const openingMousedownEvent =
-        openingEvent && findEvent(openingEvent, "mousedown");
-      const onmousedown = (e) => {
-        if (e.button !== 0) {
-          return;
-        }
-        if (e === openingMousedownEvent) {
-          // The callout was opened during this same mousedown — don't close it immediately.
-          return;
-        }
-        if (failedConstraintInfo && failedConstraintInfo.status === "error") {
-          return;
-        }
-        if (
-          interactionFailedConstraintInfo &&
-          interactionFailedConstraintInfo.status === "error"
-        ) {
-          return;
-        }
-        const calloutElement = controlValidity.callout?.element;
-        if (calloutElement && calloutElement.contains(e.target)) {
-          return;
-        }
-        resetOnInteraction(e);
-      };
-
-      let label;
-      const closestLabel = element.closest("label");
-      if (closestLabel && closestLabel !== element) {
-        label = closestLabel;
-      } else {
-        const id = element.id;
-        if (id) {
-          label = document.querySelector(`label[for="${CSS.escape(id)}"]`);
-        }
-      }
-      let removeLabelListener;
-      if (label) {
-        label.addEventListener("mousedown", onmousedown);
-        removeLabelListener = () => {
-          label.removeEventListener("mousedown", onmousedown);
-        };
-      }
-      interactionTarget.addEventListener("mousedown", onmousedown);
-      return () => {
-        interactionTarget.removeEventListener("mousedown", onmousedown);
-        removeLabelListener?.();
-      };
-    });
-  }
 
   return controlValidity;
 };
