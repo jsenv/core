@@ -379,7 +379,7 @@ export const useControlProps = (
                   };
                 }
                 return {
-                  name: "enter to check",
+                  name: "enter to check checkbox",
                   effect: (e) => {
                     dispatchRequestSetUIState(inputEl, true, {
                       event: e,
