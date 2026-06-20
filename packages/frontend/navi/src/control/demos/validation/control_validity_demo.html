@@ -140,7 +140,39 @@
         );
       };
 
-      // ─── Section 2: Form — action fires on submit ────────────────────────────────
+      // ─── Section 3: required ─────────────────────────────────────────────────────
+      // required makes an empty value invalid.
+      const RequiredDemo = () => {
+        const inputRef = useRef();
+
+        return (
+          <div className="demo-section">
+            <h2>required — empty value is invalid</h2>
+            <p>
+              Without <code>required</code>, an empty input is valid even when{" "}
+              <code>minLength</code> is set — length constraints only apply once
+              the user starts typing. Adding <code>required</code> makes the
+              empty value invalid on its own.
+            </p>
+            <Box flex="y" spacing="s">
+              <Field vertical>
+                <Label>Required field (minLength 4)</Label>
+                <Input
+                  ref={inputRef}
+                  name="required_field"
+                  required
+                  minLength="4"
+                  placeholder="type something…"
+                  autoComplete="off"
+                />
+              </Field>
+              <ControlValidityDebug inputRef={inputRef} />
+            </Box>
+          </div>
+        );
+      };
+
+      // ─── Section 4: Form — action fires on submit ────────────────────────────────
       const FormActionDemo = () => {
         const inputRef = useRef();
         const [committed, setCommitted] = useState("—");
@@ -320,10 +352,46 @@
             state, and how <code>--navi-update</code> is blocked by readonly
             just like a user edit would be.
           </p>
-          <UiActionVsActionDemo />
-          <ReadonlyVsValidityDemo />
-          <FormActionDemo />
-          <NaviUpdateDemo />
+          <nav style={{ marginBottom: "32px", fontSize: "0.9rem" }}>
+            <ol style={{ margin: 0, paddingLeft: "20px", lineHeight: "2" }}>
+              <li>
+                <a href="#uiaction-vs-action">
+                  uiAction vs action — when does validation trigger?
+                </a>
+              </li>
+              <li>
+                <a href="#readonly">
+                  Readonly — interaction state vs validity state
+                </a>
+              </li>
+              <li>
+                <a href="#required">required — empty value is invalid</a>
+              </li>
+              <li>
+                <a href="#form">Form — action fires on submit only</a>
+              </li>
+              <li>
+                <a href="#navi-update">
+                  --navi-update command — set a value via button
+                </a>
+              </li>
+            </ol>
+          </nav>
+          <div id="uiaction-vs-action">
+            <UiActionVsActionDemo />
+          </div>
+          <div id="readonly">
+            <ReadonlyVsValidityDemo />
+          </div>
+          <div id="required">
+            <RequiredDemo />
+          </div>
+          <div id="form">
+            <FormActionDemo />
+          </div>
+          <div id="navi-update">
+            <NaviUpdateDemo />
+          </div>
         </div>
       );
 

@@ -223,6 +223,11 @@ export const MIN_LENGTH_CONSTRAINT = {
     const valueAsString =
       field.uiState === undefined ? "" : String(field.uiState);
     const valueLength = valueAsString.length;
+    // Empty value is only invalid when required — minLength does not apply to
+    // an empty optional field (mirrors native browser behaviour).
+    if (valueLength === 0) {
+      return null;
+    }
     if (valueLength >= minLength) {
       return null;
     }
