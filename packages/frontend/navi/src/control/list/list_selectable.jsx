@@ -355,7 +355,11 @@ const ListSelectable = (props) => {
           return;
         }
         const list = ref.current;
-        const allowed = dispatchRequestInteraction(list, e, "select");
+        const allowed = dispatchRequestInteraction(list, {
+          event: e,
+          effectType: "request_update",
+          name: "select",
+        });
         if (!allowed) {
           e.preventDefault();
           return;
@@ -373,7 +377,11 @@ const ListSelectable = (props) => {
           return;
         }
         const list = ref.current;
-        const allowed = dispatchRequestInteraction(list, e, "unselect");
+        const allowed = dispatchRequestInteraction(list, {
+          event: e,
+          effectType: "request_update",
+          name: "unselect",
+        });
         if (!allowed) {
           e.preventDefault();
           return;

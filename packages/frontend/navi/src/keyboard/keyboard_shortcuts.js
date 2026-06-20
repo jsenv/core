@@ -4,7 +4,7 @@ import { useEffect, useRef } from "preact/hooks";
 
 import { useAction } from "../action/use_action.js";
 import { useExecuteAction } from "../action/use_execute_action.js";
-import { dispatchRequestAction } from "../control/validation/control_validity.js";
+import { dispatchRequestInteraction } from "../control/validation/control_validity.js";
 import { keyMapping } from "./keyboard_key_meta.js";
 import { isMac } from "./os.js";
 import { useActionEvents } from "./use_action_events.js";
@@ -186,10 +186,11 @@ const createOnKeyDownForShortcutArray = (shortcuts, busyRef) => {
         const { action } = shortcutCandidate;
         const actionWithEvent = action.bindParams(keyboardEvent);
         const element = keyboardEvent.currentTarget;
-        return dispatchRequestAction(element, {
+        return dispatchRequestInteraction(element, {
           event: keyboardEvent,
+          name: "keyboard_shortcut",
+          wantAction: true,
           requester: document.activeElement,
-
           action: actionWithEvent,
           actionOrigin: "keyboard_shortcut",
           confirmMessage: shortcutCandidate.confirmMessage,

@@ -13,10 +13,7 @@ import {
   dispatchRequestSetUIState,
   getUIStateFromElement,
 } from "./ui_state_dom.js";
-import {
-  dispatchRequestAction,
-  dispatchRequestInteraction,
-} from "./validation/control_validity.js";
+import { dispatchRequestInteraction } from "./validation/control_validity.js";
 
 export const triggerNaviCommand = (
   element,
@@ -193,11 +190,11 @@ registerNaviCommand("--navi-update", (source, event) => {
   return {
     target,
     implementation: () => {
-      const allowed = dispatchRequestInteraction(
-        target,
+      const allowed = dispatchRequestInteraction(target, {
         event,
-        "--navi-update",
-      );
+        effectType: "request_update",
+        name: "--navi-update",
+      });
       if (!allowed) {
         event.preventDefault();
         return false;
@@ -228,7 +225,11 @@ registerNaviCommand("--navi-clear", (source, event) => {
           optional: true,
         });
       }
-      const allowed = dispatchRequestInteraction(target, event, "--navi-clear");
+      const allowed = dispatchRequestInteraction(target, {
+        event,
+        effectType: "request_update",
+        name: "--navi-clear",
+      });
       if (!allowed) {
         event.preventDefault();
         return false;
@@ -247,7 +248,11 @@ registerNaviCommand("--navi-reset", (source, event) => {
   return {
     target,
     implementation: () => {
-      const allowed = dispatchRequestInteraction(target, event, "--navi-reset");
+      const allowed = dispatchRequestInteraction(target, {
+        event,
+        effectType: "request_update",
+        name: "--navi-reset",
+      });
       if (!allowed) {
         event.preventDefault();
         return false;
@@ -288,7 +293,12 @@ registerNaviCommand("--navi-send", (source, event) => {
           requester = firstButtonSubmitting;
         }
       }
-      const allowed = dispatchRequestAction(target, { event, requester });
+      const allowed = dispatchRequestInteraction(target, {
+        event,
+        requester,
+        wantAction: true,
+        name: "--navi-send",
+      });
       const initiator =
         event.detail && typeof event.detail === "object"
           ? event.detail.eventChain[0]

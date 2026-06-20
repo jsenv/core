@@ -12,10 +12,7 @@ import {
   dispatchRequestSetUIState,
   getUIStateFromElement,
 } from "../ui_state_dom.js";
-import {
-  dispatchRequestAction,
-  dispatchRequestInteraction,
-} from "../validation/control_validity.js";
+import { dispatchRequestInteraction } from "../validation/control_validity.js";
 
 const css = /* css */ `
   .navi_picker {
@@ -177,11 +174,11 @@ const PickerNative = (props) => {
     if (!pickerInput) {
       return;
     }
-    const allowed = dispatchRequestInteraction(
-      pickerInput,
-      e,
-      e.type === "click" ? "click to show picker" : "navi_request_open event",
-    );
+    const allowed = dispatchRequestInteraction(pickerInput, {
+      event: e,
+      name:
+        e.type === "click" ? "click to show picker" : "navi_request_open event",
+    });
     if (allowed) {
       try {
         pickerInput.showPicker();
@@ -333,7 +330,10 @@ const PickerCustom = (props) => {
     };
 
     const onInteraction = (e, { name, effect }) => {
-      const allowed = dispatchRequestInteraction(ref.current, e, name);
+      const allowed = dispatchRequestInteraction(ref.current, {
+        event: e,
+        name,
+      });
       if (!allowed) {
         return;
       }
@@ -430,9 +430,11 @@ const PickerCustom = (props) => {
         closePermission.deny();
         inputEl.addEventListener("navi_action_prevented", onActionPrevented);
         inputEl.addEventListener("navi_action_start", onActionStart);
-        dispatchRequestAction(inputEl, {
+        dispatchRequestInteraction(inputEl, {
           event: requestCloseEvent,
-          uiState: valueAtClose, // just to avoid re-reading it
+          name: "picker close",
+          wantAction: true,
+          uiState: valueAtClose,
         });
       },
       onnavi_open: (e) => {
@@ -638,7 +640,13 @@ const PickerContentInsidePopover = (props) => {
         const focusStaysInside =
           (pickerEl && pickerEl.contains(relatedTarget)) ||
           (popoverEl && popoverEl.contains(relatedTarget));
-        if (!focusStaysInside && dispatchRequestInteraction(pickerEl, e)) {
+        if (
+          !focusStaysInside &&
+          dispatchRequestInteraction(pickerEl, {
+            event: e,
+            name: "blur",
+          })
+        ) {
           dispatchCustomEvent(popoverEl, "navi_request_close", { event: e });
         }
       }}

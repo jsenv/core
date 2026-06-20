@@ -1117,14 +1117,11 @@ const useInteractiveProps = (
           const parentEl = parentController.elementRef.current;
           if (parentEl) {
             const originalEvent = e.detail.eventChain[0];
-            dispatchRequestInteraction(
-              parentEl,
-              originalEvent,
-              "auto_group_action",
-              {
-                wantAction: true,
-              },
-            );
+            dispatchRequestInteraction(parentEl, {
+              event: originalEvent,
+              name: "auto_group_action",
+              wantAction: true,
+            });
           }
         }
       },
