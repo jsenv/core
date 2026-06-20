@@ -213,12 +213,31 @@
           <div className="demo-section">
             <h2>Form — action fires on submit only</h2>
             <p>
-              Inside a <code>{"<Form>"}</code> the input's own{" "}
-              <code>action</code> is not triggered on blur. It fires only when
-              the form is submitted (and all fields pass validation). Type an
-              invalid value and blur — no commit. Submit with a valid value —
-              commit happens.
+              Two validation reporting strategies depending on whether the input
+              has its own <code>action</code>:
             </p>
+            <ul
+              style={{
+                margin: "0 0 16px",
+                paddingLeft: "20px",
+                color: "#555",
+                fontSize: "0.9rem",
+              }}
+            >
+              <li>
+                <strong>Live / in-place editing</strong> (previous example) —
+                the input has its own <code>action</code> (e.g. a dedicated
+                server endpoint for a single field). Validation feedback is
+                immediate because the action needs a valid value to fire.
+              </li>
+              <li>
+                <strong>Form experience</strong> (this example) — the input has
+                no <code>action</code> of its own; it relies on the surrounding{" "}
+                <code>{"<Form>"}</code> to commit. Validity reporting is
+                deferred: blur does not trigger a commit, and errors are only
+                shown when the form is submitted with invalid fields.
+              </li>
+            </ul>
             <Box flex="y" spacing="s">
               <Form
                 action={({ username }) => {
