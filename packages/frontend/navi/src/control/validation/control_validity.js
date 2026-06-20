@@ -794,6 +794,14 @@ export const createControlValidity = (
     } else {
       innerRequestCloseCallout(event, event.type);
     }
+    // Propagate a silent validity update up the controller chain.
+    // Parent controllers (group, facade) don't report — the leaf's callout is enough.
+    // They just need their validity state kept current so _attemptCommit can read it.
+    let parentController = controller.parentUIStateController;
+    while (parentController) {
+      parentController.controlValidity.checkValidity({ event });
+      parentController = parentController.parentUIStateController;
+    }
   };
   controlValidity.syncValidity = syncValidity;
 

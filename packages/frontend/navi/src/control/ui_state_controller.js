@@ -296,8 +296,13 @@ export const useUIStateController = (
       }
       // Trigger side effects of a user interaction without changing UI state.
       const currentUIState = uiStateController.uiState;
-      // Sync validity state with the new value and show/close the callout accordingly.
-      uiStateController.controlValidity.syncValidity(e);
+      // Sync validity: for user interactions, decide what to show/close based on the
+      // event type and constraint state. For programmatic events, just re-check silently.
+      if (isInternalEvent(e)) {
+        uiStateController.controlValidity.checkValidity({ event: e });
+      } else {
+        uiStateController.controlValidity.syncValidity(e);
+      }
       uiActionInternal?.(currentUIState, e);
       uiAction?.(currentUIState, e);
       if (skipCommand) {
@@ -332,7 +337,7 @@ export const useUIStateController = (
         if (
           controlType === "input" &&
           uiStateController.props.type === "radio" &&
-          isInteractionEvent(e)
+          !isInternalEvent(e)
         ) {
           notifyParentAboutChildInteraction(e, { stateChanged: false });
         }
@@ -405,7 +410,7 @@ export const useUIStateController = (
           proxyController.setUIState(prop, e);
         }
       }
-      if (!isInteractionEvent(e)) {
+      if (isInternalEvent(e)) {
         // Still fire uiAction so external listeners (e.g. signals) stay in
         // sync, but do NOT fire the command and do NOT notify the parent —
         // both would cause an infinite loop when a parent cascades state
@@ -482,7 +487,7 @@ export const useUIStateController = (
 
       // wait a tick for preact to have time to remove attrs (like data-readonly) as "navi_action_end" side effects are executed
       await new Promise((r) => requestAnimationFrame(r));
-      controlValidity.checkValidity({ event: e });
+      controlValidity.syncValidity(e);
     },
     subscribe: subscribeUIState,
     // Leaf controls don't aggregate children, but they act as a transparent
@@ -1192,7 +1197,7 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
  *
  * Anything not in this set is treated as a real user interaction and triggers the full pipeline.
  */
-const EVENT_TYPES_WITHOUT_INTERACTION_SIDE_EFFECTS = new Set([
+const INTERNAL_EVENT_SET = new Set([
   "state_prop_change",
   "radio_sibling_uncheck",
   "propagate_down_set_ui_state",
@@ -1203,6 +1208,6 @@ const EVENT_TYPES_WITHOUT_INTERACTION_SIDE_EFFECTS = new Set([
   // but no action pipeline, command, or synthetic input event should fire.
   "facade_child_mount_sync",
 ]);
-const isInteractionEvent = (e) => {
-  return !EVENT_TYPES_WITHOUT_INTERACTION_SIDE_EFFECTS.has(e.type);
+const isInternalEvent = (e) => {
+  return INTERNAL_EVENT_SET.has(e.type);
 };
