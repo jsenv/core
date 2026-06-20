@@ -189,51 +189,34 @@
         );
       };
 
-      // ─── Section 3: Readonly — interaction state vs validity state ───────────────
-      // "readonly" is an interaction constraint (prevents edits) NOT a validity one.
-      // A readonly input is always valid from the constraint perspective.
+      // ─── Section 2: Readonly — interaction state vs validity state ───────────────
+      // "readonly" is an interaction constraint (prevents edits), but the value's
+      // validity is still evaluated and reported — it is NOT always valid.
       const ReadonlyVsValidityDemo = () => {
-        const editableRef = useRef();
         const readonlyRef = useRef();
 
         return (
           <div className="demo-section">
             <h2>Readonly — interaction state vs validity state</h2>
             <p>
-              <code>readonly</code> is an <em>interaction</em> constraint: it
-              prevents the user from editing the value. It is NOT a validity
-              constraint — a readonly input is always valid. Compare the two
-              validity panels: the readonly one stays valid even though the
-              value would be "too short" if editable.
+              <code>readonly</code> prevents the user from editing the value,
+              but it does <em>not</em> bypass validity. Constraints such as{" "}
+              <code>minLength</code> are still evaluated and reported — a
+              readonly input with an invalid value is still invalid.
             </p>
-            <div className="row">
-              <div className="col">
-                <Field vertical>
-                  <Label>Editable (minLength 6)</Label>
-                  <Input
-                    ref={editableRef}
-                    name="editable"
-                    minLength="6"
-                    value="hi"
-                    placeholder="edit me"
-                  />
-                </Field>
-                <ControlValidityDebug inputRef={editableRef} />
-              </div>
-              <div className="col">
-                <Field vertical>
-                  <Label>Readonly (minLength 6)</Label>
-                  <Input
-                    ref={readonlyRef}
-                    name="readonly_field"
-                    minLength="6"
-                    value="hi"
-                    readOnly
-                  />
-                </Field>
-                <ControlValidityDebug inputRef={readonlyRef} />
-              </div>
-            </div>
+            <Box flex="y" spacing="s">
+              <Field vertical>
+                <Label>Readonly (minLength 6, value "hi")</Label>
+                <Input
+                  ref={readonlyRef}
+                  name="readonly_field"
+                  minLength="6"
+                  value="hi"
+                  readOnly
+                />
+              </Field>
+              <ControlValidityDebug inputRef={readonlyRef} />
+            </Box>
           </div>
         );
       };
@@ -344,8 +327,8 @@
             a button.
           </p>
           <UiActionVsActionDemo />
-          <FormActionDemo />
           <ReadonlyVsValidityDemo />
+          <FormActionDemo />
           <NaviUpdateDemo />
         </div>
       );
