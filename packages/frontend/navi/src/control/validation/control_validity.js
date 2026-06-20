@@ -152,8 +152,8 @@ const isControlInteraction = (e) => {
       defaultAction === "type" ||
       defaultAction === "value_change" ||
       defaultAction === "activate" ||
-      defaultAction === "scroll" ||
-      defaultAction === "cursor_move"
+      defaultAction === "scroll" || // ici c'est pour empecher space to scroll sur readonly
+      defaultAction === "cursor_move" // ici c'est pour empecher arrow keys to scroll sur readonly
     ) {
       // interactions that change the value of a control (typing, activating, etc.) should be validated
       return true;
