@@ -628,9 +628,7 @@ export const useControlProps = (
         }
         return addInputEffect(
           field,
-          (e) => {
-            applyEventReaction("naviChange", e);
-          },
+          (e) => applyEventReaction("naviChange", e),
           {
             waitForChange: actionAfterChange,
             debounce: actionDebounce,

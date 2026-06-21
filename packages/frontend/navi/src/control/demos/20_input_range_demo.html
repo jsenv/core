@@ -624,7 +624,7 @@
           useCallLog();
 
         const slowAction = async (value, setter) => {
-          await new Promise((resolve) => setTimeout(resolve, 15000));
+          await new Promise((resolve) => setTimeout(resolve, 1500));
           setter(value);
         };
 

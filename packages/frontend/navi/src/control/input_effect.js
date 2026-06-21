@@ -34,8 +34,9 @@ export const addInputEffect = (
 
       if (skipDebounce) {
         debugInteraction(e, `skip debounce, callback called with "${state}"`);
-        currentState = state;
-        callback(e);
+        if (callback(e) !== false) {
+          currentState = state;
+        }
       } else {
         debugInteraction(
           e,
@@ -46,8 +47,9 @@ export const addInputEffect = (
             e,
             `debounce elapsed, callback called with "${state}"`,
           );
-          currentState = state;
-          callback(e);
+          if (callback(e) !== false) {
+            currentState = state;
+          }
         }, debounce);
       }
     };
@@ -75,8 +77,9 @@ export const addInputEffect = (
         return;
       }
       debugInteraction(e, `callback called with "${state}"`);
-      currentState = state;
-      callback(e);
+      if (callback(e) !== false) {
+        currentState = state;
+      }
     };
     // Autocomplete, programmatic changes, form restoration
     input.addEventListener("change", onEvent);
