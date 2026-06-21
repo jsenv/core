@@ -515,7 +515,6 @@ export const useControlProps = (
     const defaultEventReactionDefinitions =
       getDefaultEventReactionDefinitions();
     const { eventReactionDefinitions } = props;
-    const lastEventRequestingActionRef = useRef();
     const lastActionValueRef = useRef(NO_ACTION_YET);
     // Keep lastActionValueRef in sync with state changes that happen outside of asAction
     // (e.g. radio_sibling_uncheck, or external programmatic set via navi_set_ui_state).
@@ -542,7 +541,7 @@ export const useControlProps = (
         lastActionValueRef.current = e.detail.value;
       }
     };
-    const applyEventReaction = (eventName, e, { ifValueModified } = {}) => {
+    const applyEventReaction = (eventName, e) => {
       const defaultEventReactionDefinition =
         defaultEventReactionDefinitions?.[eventName];
       const customEventReactionDefinition =
@@ -565,25 +564,19 @@ export const useControlProps = (
         return false;
       }
       const control = ref.current;
-      if (ifValueModified || wantAction) {
-        const currentValue = readControlValue(control);
-        if (ifValueModified) {
-          // Ignore input events that carry the same value as the last action we dispatched.
-          // This avoids showing a spurious "read-only" callout for redundant input events
-          // that browsers fire with no UI change — e.g. range inputs fire several input
-          // events around mouse release even though the value hasn't moved.
-          const lastActionValue = lastActionValueRef.current;
-          const valueSameAsLastAction =
-            lastActionValue !== NO_ACTION_YET &&
-            compareTwoJsValues(currentValue, lastActionValue);
-          if (valueSameAsLastAction) {
-            e.preventDefault();
-            return false;
-          }
-        }
-        if (wantAction) {
-          lastEventRequestingActionRef.current = e;
-          lastActionValueRef.current = currentValue;
+      let currentValue;
+      if (wantAction) {
+        currentValue = readControlValue(control);
+        // Skip if requesting the same value as the last *successful* action.
+        // lastActionValueRef is updated only inside the allowed callback, so a
+        // blocked attempt (e.g. readonly during loading) never poisons this check.
+        const lastActionValue = lastActionValueRef.current;
+        const valueSameAsLastAction =
+          lastActionValue !== NO_ACTION_YET &&
+          compareTwoJsValues(currentValue, lastActionValue);
+        if (valueSameAsLastAction) {
+          e.preventDefault();
+          return false;
         }
       }
       return dispatchRequestInteraction(control, {
@@ -596,6 +589,9 @@ export const useControlProps = (
           prevented?.();
         },
         allowed: () => {
+          if (wantAction) {
+            lastActionValueRef.current = currentValue;
+          }
           allowed?.();
         },
         always,
@@ -617,7 +613,7 @@ export const useControlProps = (
     };
     const onInput = (e) => {
       props.onInput?.(e);
-      applyEventReaction("input", e, { ifValueModified: true });
+      applyEventReaction("input", e);
     };
     // a custom concept being combination of "input", "change" and may other events
     // this even if trigerred when value changes and can be controlled by actionDebounce and actionAfterChange
@@ -633,9 +629,7 @@ export const useControlProps = (
         return addInputEffect(
           field,
           (e) => {
-            applyEventReaction("naviChange", e, {
-              ifValueModified: true,
-            });
+            applyEventReaction("naviChange", e);
           },
           {
             waitForChange: actionAfterChange,
