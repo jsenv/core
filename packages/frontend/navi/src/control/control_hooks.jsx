@@ -242,6 +242,7 @@ export const useControlProps = (
     const triggerUIAction = (e) => {
       syncStateFromControl(e);
     };
+    const wasCheckedAtMousedownRef = useRef(false);
     const getDefaultEventReactionDefinitions = () => {
       const keyDownDefault = (e) => {
         const defaultAction = getKeyboardEventDefaultAction(e);
@@ -516,7 +517,6 @@ export const useControlProps = (
     const { eventReactionDefinitions } = props;
     const lastEventRequestingActionRef = useRef();
     const lastActionValueRef = useRef(NO_ACTION_YET);
-    const wasCheckedAtMousedownRef = useRef(false);
     // Keep lastActionValueRef in sync with state changes that happen outside of asAction
     // (e.g. radio_sibling_uncheck, or external programmatic set via navi_set_ui_state).
     // Otherwise the dedup below would wrongly skip a real user click that re-checks a radio
