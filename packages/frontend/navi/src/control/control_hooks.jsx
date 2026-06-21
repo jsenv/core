@@ -198,7 +198,8 @@ export const useControlProps = (
   const controlInfo = createControlInfo(props, { controlType });
   const readOnlyUncontrolled = useReadOnlyUncontrolled(props, controlInfo);
   controlInfo.readOnlyUncontrolled = readOnlyUncontrolled;
-  const uiStateController = useUIStateController(props, controlType, {
+  const uiStateController = useUIStateController(props, {
+    controlInfo,
     syncDomState,
     allowNameless,
     persists,
