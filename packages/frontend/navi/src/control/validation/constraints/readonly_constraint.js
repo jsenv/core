@@ -4,10 +4,7 @@ import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
 export const READONLY_CONSTRAINT = {
   name: "readonly",
   messageAttribute: "data-readonly-message",
-  check: (field, { skipReadonly }) => {
-    if (skipReadonly) {
-      return null;
-    }
+  check: (field) => {
     const readOnly = Boolean(
       field.props.readOnly ||
       field.props["data-readonly"] === "" ||

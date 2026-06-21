@@ -332,7 +332,6 @@ export const createControlValidity = (
     event,
     requester = controller.elementRef.current,
     fromRequestAction,
-    skipReadonly,
   } = {}) => {
     if (fromRequestAction) {
       for (const [, validityInfo] of validityInfoMap) {
@@ -349,7 +348,6 @@ export const createControlValidity = (
         event,
         fromRequestAction,
         requester,
-        skipReadonly,
       });
     }
 
@@ -399,7 +397,6 @@ export const createControlValidity = (
 
       const checkResult = constraint.check(fieldForConstraint, {
         fromRequestAction,
-        skipReadonly,
         registerChange,
       });
       if (!checkResult) {
