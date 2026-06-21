@@ -157,6 +157,8 @@ export const onRequestInteraction = (
   };
   const onAllowed = () => {
     debugInteraction(event, `"${name}" allowed`);
+    allowed?.();
+    always?.();
     if (wantAction && action?.isAction) {
       debugInteraction(
         requestInteractionCustomEvent,
@@ -176,8 +178,6 @@ export const onRequestInteraction = (
         meta,
       });
     }
-    allowed?.();
-    always?.();
   };
 
   if (event.defaultPrevented) {
