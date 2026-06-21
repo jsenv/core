@@ -420,12 +420,14 @@ export const useControlProps = (
                 name: `click on checked radio`,
                 category: "interaction",
                 allowed: () => triggerUIAction(e),
+                prevented: () => e.preventDefault(),
               };
             }
             return {
               name: `click on ${props.type}`,
               category: "interaction",
               allowed: () => triggerUIAction(e),
+              prevented: () => e.preventDefault(),
             };
           },
           input: (e) => {
@@ -526,15 +528,18 @@ export const useControlProps = (
     // radio, setUIState dispatches a synthetic input event. Without syncing here, asAction
     // would run again from that synthetic input and fire the action a second time.
     //
-    // We do NOT sync when the change originated from the checkable's own user input event,
-    // because at that point asAction hasn't run yet and we must not pre-empt its dedup.
+    // We do NOT sync when the change originated from the checkable's own click or input event:
+    // - click: triggerUIAction fires setUIState before the browser's input event, so we must
+    //   not pre-empt the dedup that the subsequent input event relies on.
+    // - input: asAction hasn't run yet at the time of dispatch.
     controlHostProps.onnavi_ui_state_change = (e) => {
       const originatingEvent = e.detail.event;
       if (isCheckable) {
-        const sourceIsOwnInput =
-          originatingEvent?.type === "input" &&
+        const sourceIsOwnInteraction =
+          (originatingEvent?.type === "input" ||
+            originatingEvent?.type === "click") &&
           originatingEvent?.target === ref.current;
-        if (!sourceIsOwnInput) {
+        if (!sourceIsOwnInteraction) {
           lastActionValueRef.current = e.detail.value;
         }
       } else if (originatingEvent?.type === "radio_sibling_uncheck") {
