@@ -142,7 +142,7 @@ export const useUIStateController = (
   const ownUIStateSignal = signal(stateInitial);
   const inherit =
     controlType === "button" &&
-    !controlInfo.hasState &&
+    !controlInfo.hasStateProp &&
     parentUIStateController;
   const uiStateSignal = inherit
     ? computed(() => {
@@ -161,10 +161,10 @@ export const useUIStateController = (
       uiStateController.id = props.id; // never suppoed to changed, not supported for now
       uiStateController.name = props.name;
 
-      const { value, hasState, state } = controlInfo;
+      const { value, hasStateProp, state } = controlInfo;
       uiStateController.value = value;
-      if (hasState) {
-        uiStateController.hasState = true;
+      if (hasStateProp) {
+        uiStateController.hasStateProp = true;
         const currentState = uiStateController.state;
         if (compareTwoJsValues(state, currentState)) {
           // state is the same, nothing to do
@@ -175,8 +175,8 @@ export const useUIStateController = (
             new CustomEvent("state_prop_change"),
           );
         }
-      } else if (uiStateController.hasState) {
-        uiStateController.hasState = false;
+      } else if (uiStateController.hasStateProp) {
+        uiStateController.hasStateProp = false;
         uiStateController.state = stateInitial;
       }
     },

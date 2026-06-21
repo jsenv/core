@@ -775,6 +775,7 @@ const createControlInfo = (props, { controlType }) => {
     defaultStatePropName,
     hasStateProp,
     stateInitial,
+    state: stateInitial,
     value,
 
     readOnlySupported,
