@@ -26,8 +26,8 @@ export const toDomValue = (uiStateController, uiState) => {
   const propValue = uiStateController.getPropFromState(uiState);
   const domValue = asControlHostValue(propValue, {
     controlType: uiStateController.controlType,
-    type: uiStateController.props.type,
-    inputMode: uiStateController.props.inputMode,
+    type: uiStateController.controlHostProps.type,
+    inputMode: uiStateController.controlHostProps.inputMode,
   });
   if (isSerializableAsDomValue(domValue)) {
     return domValue;
@@ -79,7 +79,7 @@ export const onUIStateControllerDestroyed = (uiStateController) => {
   }
   if (
     controlType === "input" &&
-    uiStateController.props.type === "radio" &&
+    uiStateController.controlHostProps.type === "radio" &&
     name
   ) {
     const set = radioControllersByName.get(name);
@@ -99,7 +99,7 @@ export const onUIStateControllerDestroyed = (uiStateController) => {
  * Returns `null` when the controller is not a proxy or the target is not found.
  */
 export const findControlProxyTargetController = (controller) => {
-  const proxyFor = controller.props["navi-control-proxy-for"];
+  const proxyFor = controller.controlHostProps["navi-control-proxy-for"];
   if (!proxyFor) {
     return null;
   }

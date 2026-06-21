@@ -5,7 +5,7 @@ export const SINGLE_SPACE_CONSTRAINT = {
   name: "single_space",
   messageAttribute: "data-single-space-message",
   check: (field) => {
-    const singleSpace = field.props["data-single-space"];
+    const singleSpace = field.controlHostProps["data-single-space"];
     if (singleSpace === undefined) {
       return null;
     }

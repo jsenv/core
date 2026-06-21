@@ -202,6 +202,9 @@ export const useUIStateController = (
       uiStateController.getPropFromState = getPropFromState;
       uiStateController.getStateFromProp = getStateFromProp;
       uiStateController.stateInitial = stateInitial;
+      // Raw Preact props from the current render. These are the component's input props,
+      // not the resolved/curated host props. useInteractiveProps overwrites
+      // uiStateController.controlHostProps with the resolved subset on every render.
       uiStateController.props = props;
 
       if (hasStateProp) {
@@ -253,8 +256,8 @@ export const useUIStateController = (
       return toDomValue(uiStateController, uiState);
     },
     onInteraction: (e, { skipCommand } = {}) => {
-      if (controlType === "button" && uiStateController.props.name) {
-        const buttonName = uiStateController.props.name;
+      if (controlType === "button" && uiStateController.controlHostProps.name) {
+        const buttonName = uiStateController.controlHostProps.name;
         const parentController = uiStateController.parentUIStateController;
         if (parentController && parentController.wantRequesterButtonState) {
           const currentState = parentController.uiState;
@@ -285,7 +288,7 @@ export const useUIStateController = (
       }
       if (skipCommand) {
       } else {
-        const command = uiStateController.props.command;
+        const command = uiStateController.controlHostProps.command;
         if (command) {
           const element = uiStateController.elementRef.current;
           if (element) {
@@ -317,7 +320,7 @@ export const useUIStateController = (
         );
         if (
           controlType === "input" &&
-          uiStateController.props.type === "radio" &&
+          uiStateController.controlHostProps.type === "radio" &&
           !isInternalEvent(e)
         ) {
           notifyParentAboutChildInteraction(e, { stateChanged: false });
@@ -355,7 +358,7 @@ export const useUIStateController = (
       // Uses the in-memory registry instead of DOM queries so this works even
       // when sibling items are virtualized (not in the DOM).
       // Form scoping is preserved by comparing parentUIStateController references.
-      const controlProxyFor = uiStateController.props["navi-control-proxy-for"];
+      const controlProxyFor = uiStateController.controlHostProps["navi-control-proxy-for"];
       if (isRadio && newUIState && uiStateController.name && !controlProxyFor) {
         const siblings = getRadioSiblings(uiStateController);
         if (siblings) {

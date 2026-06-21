@@ -211,13 +211,13 @@ const ListSelectable = (props) => {
         ? (childUIStateController) => {
             return (
               childUIStateController.controlType === "input" &&
-              childUIStateController.props.type === "checkbox"
+              childUIStateController.controlHostProps.type === "checkbox"
             );
           }
         : (childUIStateController) => {
             return (
               childUIStateController.controlType === "input" &&
-              childUIStateController.props.type === "radio"
+              childUIStateController.controlHostProps.type === "radio"
             );
           },
       aggregateChildStates: multiple

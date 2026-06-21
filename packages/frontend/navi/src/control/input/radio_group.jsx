@@ -43,7 +43,7 @@ const RadioGroupInterface = (props) => {
         childControlFilter: (childUIStateController) => {
           return (
             childUIStateController.controlType === "input" &&
-            childUIStateController.props.type === "radio"
+            childUIStateController.controlHostProps.type === "radio"
           );
         },
         aggregateChildStates: (childUIStateControllers) => {

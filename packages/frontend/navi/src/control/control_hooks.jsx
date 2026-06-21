@@ -1159,10 +1159,10 @@ const useInteractiveProps = (
   }
   // controlHostProps is a curated subset of props with resolved values applied
   // (e.g. readOnly resolved from context + action loading). The interaction system
-  // reads off uiStateController.props at runtime (e.g. READONLY_CONSTRAINT checks
-  // props.readOnly), so pointing the controller at controlHostProps keeps those
-  // reads current without any extra bookkeeping.
-  uiStateController.props = controlHostProps;
+  // reads off uiStateController.controlHostProps at runtime (e.g. READONLY_CONSTRAINT
+  // checks controlHostProps.readOnly), so pointing the controller at controlHostProps
+  // keeps those reads current without any extra bookkeeping.
+  uiStateController.controlHostProps = controlHostProps;
 
   return [controlRootProps, controlHostProps];
 };

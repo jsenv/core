@@ -5,7 +5,7 @@ export const SAME_AS_CONSTRAINT = {
   name: "same_as",
   messageAttribute: "data-same-as-message",
   check: (field) => {
-    const sameAs = field.props["data-same-as"];
+    const sameAs = field.controlHostProps["data-same-as"];
     if (sameAs === undefined) {
       return null;
     }
@@ -27,7 +27,7 @@ export const SAME_AS_CONSTRAINT = {
     if (valueAsString === otherFieldValue) {
       return null;
     }
-    const type = field.props.type;
+    const type = field.controlHostProps.type;
     // sameAs implies the field must be filled — no need for required on a confirm field.
     if (!valueAsString) {
       if (type === "password") {

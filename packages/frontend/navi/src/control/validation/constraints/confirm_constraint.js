@@ -4,7 +4,7 @@ export const CONFIRM_CONSTRAINT = {
   name: "confirm",
   // messageAttribute: "data-confirm-message",
   check: (field) => {
-    const confirmAttribute = field.props["data-confirm"];
+    const confirmAttribute = field.controlHostProps["data-confirm"];
     if (!confirmAttribute) {
       return "";
     }

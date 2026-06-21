@@ -450,7 +450,7 @@ export const createControlValidity = (
     const activeFailedConstraintInfo =
       interactionFailedConstraintInfo || failedConstraintInfo;
     if (activeFailedConstraintInfo && !activeFailedConstraintInfo.silent) {
-      const titleLess = controller.props.title === undefined;
+      const titleLess = controller.controlHostProps.title === undefined;
       if (titleLess) {
         const element = controller.elementRef.current;
         if (element) {
@@ -461,7 +461,7 @@ export const createControlValidity = (
         }
       }
     } else {
-      const titleLess = controller.props.title === undefined;
+      const titleLess = controller.controlHostProps.title === undefined;
       if (titleLess) {
         const element = controller.elementRef.current;
         if (element) {
@@ -605,7 +605,7 @@ export const createControlValidity = (
   // - Pure interaction event (mousedown on editable field) → close the callout:
   //   user intends to edit, we clear the message so it doesn't block them.
   const syncValidity = (event, { fromRequestAction = false } = {}) => {
-    const hasOwnAction = Boolean(controller.props.action);
+    const hasOwnAction = Boolean(controller.controlHostProps.action);
     const isValid = checkValidity({ event, fromRequestAction });
     if (failingManagedControlValidity) {
       // Group/form case: find the actual failing leaf and report on it.

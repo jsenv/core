@@ -46,7 +46,7 @@ const CheckboxGroupInterface = (props) => {
         childControlFilter: (childUIStateController) => {
           return (
             childUIStateController.controlType === "input" &&
-            childUIStateController.props.type === "checkbox"
+            childUIStateController.controlHostProps.type === "checkbox"
           );
         },
         aggregateChildStates: (childUIStateControllers) => {

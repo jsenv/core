@@ -6,21 +6,20 @@ export const READONLY_CONSTRAINT = {
   messageAttribute: "data-readonly-message",
   check: (field) => {
     const readOnly = Boolean(
-      field.props.readOnly ||
-      field.props["data-readonly"] === "" ||
-      field.props["aria-readonly"] === "true",
+      field.controlHostProps.readOnly ||
+      field.controlHostProps["aria-readonly"] === "true",
     );
     if (!readOnly) {
       return null;
     }
-    const type = field.props.type;
+    const type = field.controlHostProps.type;
     if (type === "hidden") {
       return null;
     }
 
     const isButton = field.controlType === "button";
-    const isBusy = field.props["aria-busy"] === "true";
-    const readonlySilent = field.props["data-readonly-silent"] === "";
+    const isBusy = field.controlHostProps["aria-busy"] === "true";
+    const readonlySilent = field.controlHostProps["data-readonly-silent"] === "";
     if (readonlySilent) {
       return { silent: true };
     }

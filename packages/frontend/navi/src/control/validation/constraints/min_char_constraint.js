@@ -7,11 +7,11 @@ export const MIN_LOWER_LETTER_CONSTRAINT = {
   check: (field) => {
     const valueAsString =
       field.uiState === undefined ? "" : String(field.uiState);
-    const required = field.props.required;
+    const required = field.controlHostProps.required;
     if (!valueAsString && !required) {
       return "";
     }
-    const minAttribute = field.props["data-min-lower-letter"];
+    const minAttribute = field.controlHostProps["data-min-lower-letter"];
     if (!minAttribute) {
       return "";
     }
@@ -27,14 +27,14 @@ export const MIN_LOWER_LETTER_CONSTRAINT = {
     }
 
     if (min === 1) {
-      const type = field.props.type;
+      const type = field.controlHostProps.type;
       if (type === "password") {
         return naviI18n("constraint.min_lower_letter.password.singular");
       }
       return naviI18n("constraint.min_lower_letter.default.singular");
     }
     const key = (() => {
-      const type = field.props.type;
+      const type = field.controlHostProps.type;
       if (type === "password") {
         return "constraint.min_lower_letter.password.plural";
       }
@@ -53,11 +53,11 @@ export const MIN_UPPER_LETTER_CONSTRAINT = {
   check: (field) => {
     const valueAsString =
       field.uiState === undefined ? "" : String(field.uiState);
-    const required = field.props.required;
+    const required = field.controlHostProps.required;
     if (!valueAsString && !required) {
       return null;
     }
-    const minAttribute = field.props["data-min-upper-letter"];
+    const minAttribute = field.controlHostProps["data-min-upper-letter"];
     if (!minAttribute) {
       return null;
     }
@@ -72,7 +72,7 @@ export const MIN_UPPER_LETTER_CONSTRAINT = {
       return null;
     }
 
-    const type = field.props.type;
+    const type = field.controlHostProps.type;
     const context = type === "password" ? "password" : "default";
     if (min === 1) {
       return naviI18n(`constraint.min_upper_letter.${context}.singular`);
@@ -90,11 +90,11 @@ export const MIN_DIGIT_CONSTRAINT = {
   check: (field) => {
     const valueAsString =
       field.uiState === undefined ? "" : String(field.uiState);
-    const required = field.props.required;
+    const required = field.controlHostProps.required;
     if (!valueAsString && !required) {
       return null;
     }
-    const minAttribute = field.props["data-min-digit"];
+    const minAttribute = field.controlHostProps["data-min-digit"];
     if (!minAttribute) {
       return null;
     }
@@ -109,7 +109,7 @@ export const MIN_DIGIT_CONSTRAINT = {
       return null;
     }
 
-    const type = field.props.type;
+    const type = field.controlHostProps.type;
     const context = type === "password" ? "password" : "default";
     if (min === 1) {
       return naviI18n(`constraint.min_digit.${context}.singular`);
@@ -127,16 +127,16 @@ export const MIN_SPECIAL_CHAR_CONSTRAINT = {
   check: (field) => {
     const valueAsString =
       field.uiState === undefined ? "" : String(field.uiState);
-    const required = field.props.required;
+    const required = field.controlHostProps.required;
     if (!valueAsString && !required) {
       return null;
     }
-    const minSpecialChars = field.props["data-min-special-char"];
+    const minSpecialChars = field.controlHostProps["data-min-special-char"];
     if (!minSpecialChars) {
       return null;
     }
     const min = parseInt(minSpecialChars, 10);
-    const specialCharset = field.props["data-special-charset"];
+    const specialCharset = field.controlHostProps["data-special-charset"];
     if (!specialCharset) {
       return "L'attribut data-special-charset doit être défini pour utiliser data-min-special-char.";
     }
@@ -151,7 +151,7 @@ export const MIN_SPECIAL_CHAR_CONSTRAINT = {
       return null;
     }
 
-    const type = field.props.type;
+    const type = field.controlHostProps.type;
     const context = type === "password" ? "password" : "default";
     if (min === 1) {
       return naviI18n(`constraint.min_special_char.${context}.singular`, {
