@@ -409,7 +409,7 @@ export const useControlProps = (
               wasCheckedAtMousedownRef.current = e.currentTarget.checked;
             }
           },
-          click: () => {
+          click: (e) => {
             if (isRadio && wasCheckedAtMousedownRef.current) {
               // When a radio is already checked and gets clicked, the browser does NOT
               // fire an input event (state doesn't change), so asAction never runs.
@@ -419,13 +419,13 @@ export const useControlProps = (
               return {
                 name: `click on checked radio`,
                 category: "interaction",
-                allowed: (e) => triggerUIAction(e),
+                allowed: () => triggerUIAction(e),
               };
             }
             return {
               name: `click on ${props.type}`,
               category: "interaction",
-              allowed: (e) => triggerUIAction(e),
+              allowed: () => triggerUIAction(e),
             };
           },
           input: (e) => {
