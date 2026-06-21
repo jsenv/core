@@ -207,7 +207,9 @@ export const useControlProps = (
       actionAfterChange = actionEvent === "change",
       actionDebounce,
     } = props;
-    let isCheckable = false;
+    const isCheckable =
+      controlType === "input" &&
+      (props.type === "radio" || props.type === "checkbox");
 
     const transferFocusToTarget = (pointerEvent) => {
       const naviProxyTarget =
