@@ -494,10 +494,12 @@ export const createControlValidity = (
 
   const [notifyCalloutOpen, onCalloutOpen] = createPubSub();
   const reportValidity = ({ event, requester, skipFocus } = {}) => {
-    // Interaction constraints (disabled/readonly) take precedence: they must be shown
-    // without touching or resetting the value-level failedConstraintInfo.
+    // Interaction constraints (disabled/readonly) take precedence over value constraints,
+    // EXCEPT when the value constraint is at error level — errors always win.
     const activeConstraintInfo =
-      interactionFailedConstraintInfo || failedConstraintInfo;
+      failedConstraintInfo?.status === "error"
+        ? failedConstraintInfo
+        : interactionFailedConstraintInfo || failedConstraintInfo;
     if (!activeConstraintInfo) {
       innerRequestCloseCallout(event, "is_valid");
       return;

@@ -12,19 +12,34 @@ export const useCheckableProps = (props, options) => {
   ) {
     const defaultVal = checkedProp.options.getDefaultValue(false);
     if (defaultVal !== undefined) {
-      const itemValue = props.value;
       if (props.type === "radio") {
-        props.defaultChecked = defaultVal === itemValue;
+        if (defaultVal === true) {
+          props.defaultChecked = true;
+        } else if (
+          Object.hasOwn(props, "value") &&
+          defaultVal === props.value
+        ) {
+          props.defaultChecked = true;
+        }
       } else if (props.type === "checkbox") {
+        const itemValue = props.value;
         props.defaultChecked =
           Array.isArray(defaultVal) && defaultVal.includes(itemValue);
       }
     }
   }
-  const result = useControlProps(props, {
-    controlType: "input",
-    ...options,
-  });
+  const result = useControlProps(
+    {
+      resetOnCancel: true,
+      resetOnAbort: true,
+      resetOnError: true,
+      ...props,
+    },
+    {
+      controlType: "input",
+      ...options,
+    },
+  );
   result[1].onnavi_get_value = (e) => {
     e.detail.respondWith(props.value);
   };
