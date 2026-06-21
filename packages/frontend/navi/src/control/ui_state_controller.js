@@ -423,13 +423,12 @@ export const useUIStateController = (
     resetUIState: (e) => {
       uiStateController.setUIState(uiStateController.state, e);
     },
-    actionEnd: async (e) => {
+    actionEnd: (e) => {
       debugUIState(`"${controlType}" actionEnd called`);
-      // if (persists) {
-      //   setNavState(undefined);
-      // }
-      // wait a tick for preact to have time to remove attrs (like data-readonly) as "navi_action_end" side effects are executed
-      await new Promise((r) => requestAnimationFrame(r));
+      controlValidity.syncValidity(e);
+    },
+    actionError: (e) => {
+      debugUIState(`"${controlType}" actionError called`);
       controlValidity.syncValidity(e);
     },
     subscribe: subscribeUIState,
@@ -933,6 +932,11 @@ export const useUIGroupStateController = (
     actionEnd: (e) => {
       for (const childUIStateController of childUIStateControllerArray) {
         childUIStateController.actionEnd(e);
+      }
+    },
+    actionError: (e) => {
+      for (const childUIStateController of childUIStateControllerArray) {
+        childUIStateController.actionError(e);
       }
     },
     findChildById: (id) => {

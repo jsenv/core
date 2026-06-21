@@ -62,7 +62,7 @@ export const useExecuteAction = (
   }, [error]);
 
   const validationMessageTargetRef = useRef(null);
-  const addErrorMessage = (error, { event } = {}) => {
+  const addErrorMessage = (error) => {
     let target = validationMessageTargetRef.current;
     let message;
     if (errorMapping) {
@@ -89,8 +89,6 @@ export const useExecuteAction = (
         target:
           target === validationMessageTargetRef.current ? undefined : target,
       });
-      controller.controlValidity.checkValidity({ event });
-      controller.controlValidity.reportValidity({ event });
     }
   };
   const removeErrorMessage = () => {
@@ -138,7 +136,10 @@ export const useExecuteAction = (
       if (resetErrorBoundary) {
         resetErrorBoundary();
       }
-      removeErrorMessage();
+      // removeErrorMessage might be superfluous here because we autoResetOnActio
+      // which is basically doing this but sooner to allow the action to be re-executed
+      // (error is non blocking otherwise we could not ever re-submit)
+      // removeErrorMessage();
       setError(null);
 
       const element = elementRef.current;
@@ -173,7 +174,13 @@ export const useExecuteAction = (
             });
           }
         },
-        error: (error, { event }) => {
+        error: (error) => {
+          if (errorEffect === "show_validation_message") {
+            addErrorMessage(error);
+          } else if (errorEffect === "throw") {
+            setError(error);
+          }
+
           const element = elementRef.current;
           if (
             // at this stage the action side effect might have removed the <element> from the DOM
@@ -185,11 +192,6 @@ export const useExecuteAction = (
               ...sharedActionEventDetail,
               error,
             });
-          }
-          if (errorEffect === "show_validation_message") {
-            addErrorMessage(error, { event });
-          } else if (errorEffect === "throw") {
-            setError(error);
           }
         },
         complete: (data) => {

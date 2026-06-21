@@ -1240,6 +1240,7 @@ const useInteractiveProps = (
       },
       onnavi_action_error: (e) => {
         const { error } = e.detail;
+        uiStateController.actionError(e);
         if (resetOnError) {
           dispatchRequestResetUIState(e.currentTarget, e);
         }
