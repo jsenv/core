@@ -231,34 +231,6 @@ export const useControlProps = (
       naviProxyTarget.focus({ focusVisible: false });
       return true;
     };
-    const lastEventRequestingActionRef = useRef();
-    const lastActionValueRef = useRef(NO_ACTION_YET);
-    const wasCheckedAtMousedownRef = useRef(false);
-    // Keep lastActionValueRef in sync with state changes that happen outside of asAction
-    // (e.g. radio_sibling_uncheck, or external programmatic set via navi_set_ui_state).
-    // Otherwise the dedup below would wrongly skip a real user click that re-checks a radio
-    // whose lastActionValueRef still matched a value from a previous interaction.
-    //
-    // For checkables (radio/checkbox): sync on any external state change — not just
-    // radio_sibling_uncheck. When a programmatic set (e.g. --navi-unselect) unchecks a
-    // radio, setUIState dispatches a synthetic input event. Without syncing here, asAction
-    // would run again from that synthetic input and fire the action a second time.
-    //
-    // We do NOT sync when the change originated from the checkable's own user input event,
-    // because at that point asAction hasn't run yet and we must not pre-empt its dedup.
-    controlHostProps.onnavi_ui_state_change = (e) => {
-      const originatingEvent = e.detail.event;
-      if (isCheckable) {
-        const sourceIsOwnInput =
-          originatingEvent?.type === "input" &&
-          originatingEvent?.target === ref.current;
-        if (!sourceIsOwnInput) {
-          lastActionValueRef.current = e.detail.value;
-        }
-      } else if (originatingEvent?.type === "radio_sibling_uncheck") {
-        lastActionValueRef.current = e.detail.value;
-      }
-    };
     const syncStateFromControl = (e) => {
       const controlEl = e.currentTarget || uiStateController.elementRef.current;
       const value = readControlValue(controlEl);
@@ -542,6 +514,34 @@ export const useControlProps = (
     const defaultEventReactionDefinitions =
       getDefaultEventReactionDefinitions();
     const { eventReactionDefinitions } = props;
+    const lastEventRequestingActionRef = useRef();
+    const lastActionValueRef = useRef(NO_ACTION_YET);
+    const wasCheckedAtMousedownRef = useRef(false);
+    // Keep lastActionValueRef in sync with state changes that happen outside of asAction
+    // (e.g. radio_sibling_uncheck, or external programmatic set via navi_set_ui_state).
+    // Otherwise the dedup below would wrongly skip a real user click that re-checks a radio
+    // whose lastActionValueRef still matched a value from a previous interaction.
+    //
+    // For checkables (radio/checkbox): sync on any external state change — not just
+    // radio_sibling_uncheck. When a programmatic set (e.g. --navi-unselect) unchecks a
+    // radio, setUIState dispatches a synthetic input event. Without syncing here, asAction
+    // would run again from that synthetic input and fire the action a second time.
+    //
+    // We do NOT sync when the change originated from the checkable's own user input event,
+    // because at that point asAction hasn't run yet and we must not pre-empt its dedup.
+    controlHostProps.onnavi_ui_state_change = (e) => {
+      const originatingEvent = e.detail.event;
+      if (isCheckable) {
+        const sourceIsOwnInput =
+          originatingEvent?.type === "input" &&
+          originatingEvent?.target === ref.current;
+        if (!sourceIsOwnInput) {
+          lastActionValueRef.current = e.detail.value;
+        }
+      } else if (originatingEvent?.type === "radio_sibling_uncheck") {
+        lastActionValueRef.current = e.detail.value;
+      }
+    };
     const applyEventReaction = (eventName, e, { ifValueModified } = {}) => {
       const defaultEventReactionDefinition =
         defaultEventReactionDefinitions?.[eventName];
