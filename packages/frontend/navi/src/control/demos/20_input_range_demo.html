@@ -617,9 +617,11 @@
       };
 
       const ActionHandlingDemo = () => {
-        const [immediateLog, pushImmediateLog, clearImmediateLog] = useCallLog();
+        const [immediateLog, pushImmediateLog, clearImmediateLog] =
+          useCallLog();
         const [slowLog, pushSlowLog, clearSlowLog] = useCallLog();
-        const [debouncedLog, pushDebouncedLog, clearDebouncedLog] = useCallLog();
+        const [debouncedLog, pushDebouncedLog, clearDebouncedLog] =
+          useCallLog();
 
         const slowAction = async (value, setter) => {
           await new Promise((resolve) => setTimeout(resolve, 1500));
@@ -676,7 +678,8 @@
         const AfterChangeDemo = () => {
           const [uiValue, setUIValue] = useState(50);
           const [processedRadius, setProcessedRadius] = useState(50);
-          const [afterChangeLog, pushAfterChangeLog, clearAfterChangeLog] = useCallLog();
+          const [afterChangeLog, pushAfterChangeLog, clearAfterChangeLog] =
+            useCallLog();
 
           return (
             <fieldset>

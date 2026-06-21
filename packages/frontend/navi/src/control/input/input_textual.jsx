@@ -365,6 +365,9 @@ const InputTextualUI = (props) => {
       pseudoStateSelector=".navi_control_input"
       pseudoClasses={InputPseudoClasses}
       pseudoElements={InputPseudoElements}
+      // input may have left/right icons and we want the anchor to target the input element
+      // which is where the interaction can happen
+      data-callout-anchor=".navi_control_input"
     >
       <LoadingOutline
         loading={loading}

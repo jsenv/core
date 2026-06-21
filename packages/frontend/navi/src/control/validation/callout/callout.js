@@ -513,12 +513,7 @@ export const openCallout = (
     }
     const controlRoot = findControlRoot(anchorElement);
     if (controlRoot) {
-      if (controlRoot.matches('[navi-control="input"]')) {
-        // input may have left/right icons and we want the anchor to target the input element
-        // which is where the interaction can happen
-      } else {
-        anchorElement = controlRoot;
-      }
+      anchorElement = controlRoot;
     }
     const anchorVisuallyVisibleInfo = getVisuallyVisibleInfo(anchorElement, {
       countOffscreenAsVisible: true,
