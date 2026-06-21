@@ -591,7 +591,7 @@ export const useControlProps = (
       }
       const control = ref.current;
       let currentValue;
-      if (wantAction) {
+      if (wantAction && controlType !== "button") {
         currentValue = readControlValue(control);
         // Skip if requesting the same value as the last *successful* action.
         // lastActionValueRef is updated only inside the allowed callback, so a
@@ -615,7 +615,7 @@ export const useControlProps = (
           prevented?.();
         },
         allowed: () => {
-          if (wantAction) {
+          if (wantAction && controlType !== "button") {
             lastActionValueRef.current = currentValue;
           }
           allowed?.();
