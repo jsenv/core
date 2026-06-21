@@ -255,7 +255,7 @@ export const openCallout = (
     if (!callout.opened) {
       return;
     }
-    const { reason } = event.detail.reason;
+    const { reason } = event.detail;
     const clickOrSpaceOutside =
       reason === "click_outside" || reason === "space_outside";
     if (clickOrSpaceOutside) {

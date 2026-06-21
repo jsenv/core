@@ -335,8 +335,8 @@ export const createControlValidity = (
   } = {}) => {
     if (fromRequestAction) {
       for (const [, validityInfo] of validityInfoMap) {
-        if (validityInfo.constraint.autoReset) {
-          validityInfo.constraint.onAutoReset(controller);
+        if (validityInfo.constraint.autoResetOnAction) {
+          validityInfo.constraint.onAutoResetOnAction(controller);
         }
       }
     }
