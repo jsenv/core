@@ -82,11 +82,6 @@ const DetailsField = (props) => {
       },
       {
         controlType: "details",
-        statePropName: "open",
-        defaultStatePropName: "defaultOpen",
-        fallbackState: false,
-        getStateFromProp: (open) => (open ? props.value : undefined),
-        getPropFromState: Boolean,
         persists,
       },
     );

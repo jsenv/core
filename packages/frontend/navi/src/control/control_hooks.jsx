@@ -60,6 +60,10 @@ import {
 } from "./control_context.js";
 import { findControlProxyTarget } from "./control_proxy.js";
 import { readControlValue } from "./control_value.js";
+import {
+  onUIStateControllerCreated,
+  toDomValue,
+} from "./controller_registry.js";
 import { FormContext } from "./form_context.js";
 import { addInputEffect } from "./input_effect.js";
 import {
@@ -148,43 +152,54 @@ export const ControlgroupChildrenWrapper = ({
  */
 export const useControlProps = (
   props,
-  {
-    controlType,
-    statePropName,
-    defaultStatePropName,
-    fallbackState,
-    getStateFromProp,
-    getPropFromState,
-    getStateFromParent,
-    allowNameless,
-    persists,
-
-    uiActionInternal,
-    readOnlySupported,
-  },
+  { controlType, allowNameless, persists, uiActionInternal },
 ) => {
   const idDefault = useId();
-  const debugInteraction = useDebugInteraction();
-  const controlName = useContext(ControlNameContext);
   const controlId = useContext(ControlIdContext);
-  const state = props[statePropName];
-
-  props.name = props.name || controlName;
   props.id = props.id || controlId || idDefault;
-  if (isSignal(state)) {
-    props = {
-      ...props,
-      [statePropName]: state.value,
-    };
-  }
+  const controlName = useContext(ControlNameContext);
+  props.name = props.name || controlName;
 
+  const toDomProps = (newUIState) => {
+    if (
+      controlType === "input" &&
+      (props.type === "radio" || props.type === "checkbox")
+    ) {
+      const domValue = toDomValue(props.value, {
+        controlType,
+        id: props.id,
+        type: props.type,
+      });
+      return {
+        value: domValue,
+        checked: newUIState !== undefined,
+      };
+    }
+
+    const domValue = toDomValue(newUIState, {
+      controlType,
+      id: props.id,
+      type: props.type,
+      inputMode: props.inputMode,
+    });
+    return {
+      value: domValue,
+    };
+  };
+  const syncDomState = (newUIState) => {
+    const el = props.ref.current;
+    if (!el) {
+      return;
+    }
+    const domProps = toDomProps(newUIState);
+    Object.assign(el, domProps);
+  };
+
+  const controlInfo = createControlInfo(props, { controlType });
+  const readOnlyUncontrolled = useReadOnlyUncontrolled(props, controlInfo);
+  controlInfo.readOnlyUncontrolled = readOnlyUncontrolled;
   const uiStateController = useUIStateController(props, controlType, {
-    statePropName,
-    defaultStatePropName,
-    fallbackState,
-    getStateFromProp,
-    getPropFromState,
-    getStateFromParent,
+    syncDomState,
     allowNameless,
     persists,
     uiActionInternal,
@@ -196,10 +211,11 @@ export const useControlProps = (
   const [controlRootProps, controlHostProps] = useInteractiveProps(props, {
     uiStateController,
     boundAction,
-    readOnlySupported,
+    controlInfo,
   });
 
   reactions: {
+    const debugInteraction = useDebugInteraction();
     const {
       ref,
       actionEvent,
@@ -362,9 +378,13 @@ export const useControlProps = (
                   name: "enter to check radio",
                   category: "request_update",
                   allowed: () =>
-                    dispatchRequestSetUIState(inputEl, true, {
-                      event: e,
-                    }),
+                    dispatchRequestSetUIState(
+                      inputEl,
+                      uiStateController.value,
+                      {
+                        event: e,
+                      },
+                    ),
                   always,
                 };
               }
@@ -383,7 +403,7 @@ export const useControlProps = (
                 name: "enter to check checkbox",
                 category: "request_update",
                 allowed: () =>
-                  dispatchRequestSetUIState(inputEl, true, {
+                  dispatchRequestSetUIState(inputEl, uiStateController.value, {
                     event: e,
                   }),
                 always,
@@ -668,7 +688,126 @@ export const useControlProps = (
     });
   }
 
+  const uiState = uiStateController.uiStateSignal.peek();
+  const domProps = toDomProps(uiState);
+  Object.assign(controlHostProps, domProps);
+
   return [controlRootProps, controlHostProps, { uiStateController }];
+};
+const createControlInfo = (props, { controlType }) => {
+  let statePropName;
+  let defaultStatePropName;
+  let stateInitial;
+  let readOnlySupported = false;
+  let hasStateProp;
+  let value;
+
+  if (controlType === "input") {
+    if (props.type === "checkbox" || props.type === "radio") {
+      statePropName = "checked";
+      defaultStatePropName = "defaultChecked";
+      hasStateProp = Object.hasOwn(props, "checked");
+      value = props.value || "on";
+      if (hasStateProp) {
+        let checked = props.checked;
+        if (isSignal(checked)) {
+          checked = checked.value;
+        }
+        if (checked) {
+          stateInitial = value;
+        } else {
+          stateInitial = undefined;
+        }
+      } else if (props.defaultChecked) {
+        stateInitial = value;
+      } else {
+        stateInitial = undefined;
+      }
+    } else {
+      statePropName = "value";
+      defaultStatePropName = "defaultValue";
+      hasStateProp = Object.hasOwn(props, "value");
+      if (hasStateProp) {
+        value = props.value;
+        if (isSignal(value)) {
+          value = value.value;
+        }
+        stateInitial = value;
+      } else if (Object.hasOwn(props, "defaultValue")) {
+        stateInitial = props.defaultValue;
+      } else {
+        stateInitial = undefined;
+      }
+
+      readOnlySupported = true;
+    }
+  } else if (controlType === "button") {
+    statePropName = "value";
+    stateInitial = props.value;
+  } else if (controlType === "details") {
+    statePropName = "open";
+    defaultStatePropName = "defaultOpen";
+    stateInitial = props.open || props.defaultOpen;
+    value = props.value || "open";
+  } else if (controlType === "picker") {
+    statePropName = "value";
+    defaultStatePropName = "defaultValue";
+    hasStateProp = Object.hasOwn(props, "value");
+    if (hasStateProp) {
+      let value = props.value;
+      if (isSignal(value)) {
+        value = value.value;
+      }
+      stateInitial = value;
+    } else if (Object.hasOwn(props, "defaultValue")) {
+      stateInitial = props.defaultValue;
+    } else {
+      stateInitial = undefined;
+    }
+
+    readOnlySupported = true; // it's an input under the hood
+  }
+
+  return {
+    controlType,
+    statePropName,
+    defaultStatePropName,
+    hasStateProp,
+    stateInitial,
+    value,
+
+    readOnlySupported,
+  };
+};
+const useReadOnlyUncontrolled = (props, controlInfo) => {
+  if (!controlInfo.hasStateProp) {
+    return false;
+  }
+  const isProxy = Boolean(props["navi-control-proxy-for"]);
+  const formContext = useContext(FormContext);
+  const parentUIStateController = useContext(ParentUIStateControllerContext);
+  const controlled =
+    props.uiAction ||
+    props.action ||
+    formContext ||
+    parentUIStateController ||
+    isProxy ||
+    props.command;
+  if (controlled) {
+    return false;
+  }
+  if (
+    // explicit readonly is ok
+    !props.readOnly &&
+    import.meta.dev
+  ) {
+    const { controlType, statePropName, defaultStatePropName } = controlInfo;
+    console.warn(
+      `"${controlType}" is controlled by "${statePropName}" prop. Replace it by "${defaultStatePropName}" or pass "uiAction"/"action" to make field interactive.`,
+    );
+    console.log(props);
+  }
+  return true;
 };
 
 /**
@@ -714,6 +853,9 @@ export const useControlgroupProps = (
   const [controlRootProps, controlgroupProps] = useInteractiveProps(props, {
     uiStateController: uiGroupStateController,
     boundAction,
+    // here the state is derived from the children
+    // so we don't have a value concept, nor readonly etc
+    controlInfo: { controlType },
   });
 
   const { basePseudoState } = controlgroupProps;
@@ -822,14 +964,13 @@ export const ControlFacadeChildrenWrapper = ({
 
 const useInteractiveProps = (
   props,
-  { uiStateController, boundAction, readOnlySupported },
+  { uiStateController, boundAction, controlInfo },
 ) => {
   const { ref } = props;
   const [controlRootProps, controlHostProps] = splitControlProps(props);
-  controlRootProps["navi-control"] = uiStateController.controlType;
+  controlRootProps["navi-control"] = controlInfo.controlType;
 
   const { "navi-control-proxy-for": naviProxyFor } = props;
-  const isProxy = Boolean(naviProxyFor);
   controlHostProps["navi-control-proxy-for"] = naviProxyFor;
 
   const debugCommand = useDebugCommand();
@@ -854,8 +995,6 @@ const useInteractiveProps = (
     });
   }
   control_state_props: {
-    const formContext = useContext(FormContext);
-    const parentUIStateController = useContext(ParentUIStateControllerContext);
     const controlDisabled = useContext(DisabledContext);
     const controlReadOnly = useContext(ReadOnlyContext);
     const controlRequired = useContext(RequiredContext);
@@ -863,31 +1002,16 @@ const useInteractiveProps = (
     const parentActionRequester = useContext(ActionRequesterContext);
     const actionStatus = useActionStatus(boundAction);
     const { disabled, required, readOnly, loading } = props;
-    const { statePropName, controlType, defaultStatePropName } =
-      uiStateController;
-    const hasStateProp = statePropName
-      ? Object.hasOwn(props, statePropName)
-      : false;
-    const uncontrolled =
-      !props.uiAction &&
-      !props.action &&
-      !formContext &&
-      !parentUIStateController &&
-      !isProxy &&
-      !props.command;
-    const readOnlyUncontrolled = uncontrolled && hasStateProp;
-    if (readOnlyUncontrolled && import.meta.dev && !readOnly) {
-      console.warn(
-        `"${controlType}" is controlled by "${statePropName}" prop. Replace it by "${defaultStatePropName}" or pass "uiAction"/"action" to make field interactive.`,
-      );
-      console.log(props);
-    }
+
     const disabledResolved = disabled || controlDisabled;
     const requiredResolved = required || controlRequired;
     const loadingBase =
       loading || (controlLoading && parentActionRequester === ref.current);
     const readOnlyBase =
-      readOnly || controlReadOnly || loadingBase || readOnlyUncontrolled;
+      readOnly ||
+      controlReadOnly ||
+      loadingBase ||
+      controlInfo.readOnlyUncontrolled;
     const loadingResolved = loadingBase || actionStatus.loading;
     const readOnlyResolved = readOnlyBase || actionStatus.loading;
 
@@ -902,7 +1026,7 @@ const useInteractiveProps = (
         ...props.basePseudoState,
       },
     });
-    if (readOnlySupported) {
+    if (controlInfo.readOnlySupported) {
       controlHostProps.readOnly = readOnlyResolved;
     } else {
       controlHostProps["aria-readonly"] = readOnlyResolved ? "true" : "false";
@@ -941,7 +1065,6 @@ const useInteractiveProps = (
     }, []);
   }
   ui_state_and_value: {
-    const uiState = uiStateController.uiStateSignal.value;
     const isCheckable =
       uiStateController.controlType === "input" &&
       (props.type === "radio" || props.type === "checkbox");
@@ -961,12 +1084,16 @@ const useInteractiveProps = (
       },
       onnavi_request_check: (e) => {
         if (isCheckable) {
-          uiStateController.setUIState(true, e);
+          uiStateController.setUIState(uiStateController.value, e);
+        } else {
+          // warn?
         }
       },
       onnavi_request_uncheck: (e) => {
         if (isCheckable) {
-          uiStateController.setUIState(false, e);
+          uiStateController.setUIState(undefined, e);
+        } else {
+          // warn?
         }
       },
     });
@@ -980,16 +1107,6 @@ const useInteractiveProps = (
       onnavi_request_check: controlHostProps.onnavi_request_check,
       onnavi_request_uncheck: controlHostProps.onnavi_request_uncheck,
     });
-
-    const { statePropName } = uiStateController;
-    if (statePropName) {
-      const statePropValueDom = uiStateController.toControlHostValue(uiState);
-      controlHostProps[statePropName] = statePropValueDom;
-      if (statePropName === "checked") {
-        const { value } = props;
-        controlHostProps.value = value;
-      }
-    }
   }
   children_prop: {
     const { children } = props;
@@ -1102,7 +1219,7 @@ const useInteractiveProps = (
           // special case for the use case where form.submit is called
           e.detail.action = boundAction;
         }
-        if (uiStateController.controlType === "button") {
+        if (controlInfo.controlType === "button") {
           // Trigger the button's command (e.g. --navi-send) and uiAction callbacks.
           // Buttons don't have mutable UI state, so we call onInteraction directly
           // instead of going through dispatchRequestSetUIState.
@@ -1162,7 +1279,15 @@ const useInteractiveProps = (
   // reads off uiStateController.controlHostProps at runtime (e.g. READONLY_CONSTRAINT
   // checks controlHostProps.readOnly), so pointing the controller at controlHostProps
   // keeps those reads current without any extra bookkeeping.
+  const firstRender = uiStateController.controlHostProps === undefined;
   uiStateController.controlHostProps = controlHostProps;
+  if (firstRender) {
+    // Deferred from the factory so these run after controlHostProps is set.
+    // Constraints like READONLY_CONSTRAINT and findControlProxyTargetController
+    // read controlHostProps — calling these earlier would throw or produce wrong results.
+    onUIStateControllerCreated(uiStateController);
+    uiStateController.controlValidity.checkValidity();
+  }
 
   return [controlRootProps, controlHostProps];
 };

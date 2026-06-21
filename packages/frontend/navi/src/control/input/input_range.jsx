@@ -276,8 +276,6 @@ const InputRangeFieldInterface = (props) => {
   resolveInputProps(props);
   const [rangeRootProps, rangeHostProps] = useControlProps(props, {
     controlType: "input",
-    statePropName: "value",
-    defaultStatePropName: "defaultValue",
     readOnlySupported: true,
   });
   const { basePseudoState } = rangeHostProps;

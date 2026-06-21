@@ -315,9 +315,6 @@ const PickerButton = (props) => {
       },
       {
         controlType: "picker",
-        statePropName: "value",
-        defaultStatePropName: "defaultValue",
-        readOnlySupported: true,
       },
     );
   const uiStateController = getUIStateControllerById(inputProps.id);

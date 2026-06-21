@@ -9,18 +9,14 @@ import { computed, signal } from "@preact/signals";
 import { createContext } from "preact";
 import { useContext, useLayoutEffect, useMemo, useRef } from "preact/hooks";
 
-import { useNavState } from "../nav/browser_integration/browser_integration.js";
 import { useDebugFocus, useDebugUIState } from "../navi_debug.jsx";
-import { useInitialValue } from "../state/use_initial_value.js";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import { triggerNaviCommand } from "./commands.js";
 import {
   findProxyController,
   getRadioSiblings,
   getUIStateControllerById,
-  onUIStateControllerCreated,
   onUIStateControllerDestroyed,
-  toDomValue,
 } from "./controller_registry.js";
 import { FormContext } from "./form_context.js";
 import { createControlValidity } from "./validation/control_validity.js";
@@ -81,14 +77,9 @@ export const ParentUIStateControllerContext = createContext();
  */
 export const useUIStateController = (
   props,
-  controlType,
   {
-    statePropName,
-    defaultStatePropName,
-    fallbackState = undefined,
-    getStateFromProp = (prop) => prop,
-    getPropFromState = (state) => state,
-    getStateFromParent,
+    controlInfo,
+    syncDomState,
     uiActionInternal,
     persists,
     allowNameless = false,
@@ -100,39 +91,14 @@ export const useUIStateController = (
   const uiStateControllerRef = useRef();
   const parentUIStateController = useContext(ParentUIStateControllerContext);
   const formContext = useContext(FormContext);
-  const { id, name, uiAction } = props;
+  const { id, uiAction } = props;
   const ref = props.ref;
   const isProxy = Boolean(props["navi-control-proxy-for"]);
-  const hasStateProp = Object.hasOwn(props, statePropName);
-
   if (persists === undefined && formContext) {
     persists = true;
   }
-  const [navState, setNavState] = useNavState(id);
-  const state = props[statePropName];
-  const stateValue = state;
-  const defaultState = props[defaultStatePropName];
-  const stateInitial = useInitialValue(() => {
-    if (hasStateProp) {
-      // controlled by state prop ("value" or "checked")
-      return getStateFromProp(stateValue);
-    }
-    if (defaultState) {
-      // not controlled but want an initial state (a value or being checked)
-      return getStateFromProp(defaultState);
-    }
-    if (persists && navState) {
-      // not controlled but want to use value from nav state
-      // (I think this should likely move earlier to win over the hasUIStateProp when it's undefined)
-      return getStateFromProp(navState);
-    }
-    if (parentUIStateController && getStateFromParent) {
-      return getStateFromParent(parentUIStateController);
-    }
-    return getStateFromProp(fallbackState);
-  });
+  const controlType = controlInfo.controlType;
   const isRadio = controlType === "input" && props.type === "radio";
-
   const [
     notifyParentAboutChildMount,
     notifyParentAboutChildInteraction,
@@ -162,16 +128,12 @@ export const useUIStateController = (
   const existingUIStateController = uiStateControllerRef.current;
   if (existingUIStateController) {
     existingUIStateController._checkForUpdates({
-      name,
-      getPropFromState,
-      getStateFromProp,
-      hasStateProp,
-      stateInitial,
-      state,
       props,
+      controlInfo,
     });
     return existingUIStateController;
   }
+  const { stateInitial } = controlInfo;
   debugUIState(
     `Creating "${controlType}" ui state controller - initial state:`,
     JSON.stringify(stateInitial),
@@ -179,7 +141,9 @@ export const useUIStateController = (
   const [publishUIState, subscribeUIState] = createPubSub();
   const ownUIStateSignal = signal(stateInitial);
   const inherit =
-    controlType === "button" && !hasStateProp && parentUIStateController;
+    controlType === "button" &&
+    !controlInfo.hasState &&
+    parentUIStateController;
   const uiStateSignal = inherit
     ? computed(() => {
         const parentUIState = parentUIStateController.uiStateSignal.value;
@@ -189,55 +153,48 @@ export const useUIStateController = (
     : ownUIStateSignal;
 
   const uiStateController = {
-    _checkForUpdates: ({
-      name,
-      getPropFromState,
-      getStateFromProp,
-      hasStateProp,
-      stateInitial,
-      state,
-      props,
-    }) => {
-      uiStateController.name = name;
-      uiStateController.getPropFromState = getPropFromState;
-      uiStateController.getStateFromProp = getStateFromProp;
-      uiStateController.stateInitial = stateInitial;
+    _checkForUpdates: ({ props, controlInfo }) => {
       // Raw Preact props from the current render. These are the component's input props,
       // not the resolved/curated host props. useInteractiveProps overwrites
       // uiStateController.controlHostProps with the resolved subset on every render.
       uiStateController.props = props;
+      uiStateController.id = props.id; // never suppoed to changed, not supported for now
+      uiStateController.name = props.name;
 
-      if (hasStateProp) {
-        uiStateController.hasStateProp = true;
+      const { value, hasState, state } = controlInfo;
+      uiStateController.value = value;
+      if (hasState) {
+        uiStateController.hasState = true;
         const currentState = uiStateController.state;
-        const stateFromProp = getStateFromProp(state);
-        if (stateFromProp !== currentState) {
-          uiStateController.state = stateFromProp;
+        if (compareTwoJsValues(state, currentState)) {
+          // state is the same, nothing to do
+        } else {
+          uiStateController.state = state;
           uiStateController.setUIState(
-            uiStateController.getPropFromState(state),
+            state,
             new CustomEvent("state_prop_change"),
           );
         }
-      } else if (uiStateController.hasStateProp) {
-        uiStateController.hasStateProp = false;
-        uiStateController.state = uiStateController.stateInitial;
+      } else if (uiStateController.hasState) {
+        uiStateController.hasState = false;
+        uiStateController.state = stateInitial;
       }
     },
 
-    id,
     controlType,
     parentUIStateController,
     isProxy,
     allowNameless,
-    name,
+    elementRef: ref,
     props,
-    statePropName,
-    defaultStatePropName,
-    hasStateProp,
+
+    id: props.id,
+    name: props.name,
     state: stateInitial,
     uiState: stateInitial,
     uiStateSignal,
-    elementRef: ref,
+    value: controlInfo.value,
+
     facadeChild: null,
     getManagedControls: () => {
       if (uiStateController.facadeChild) {
@@ -249,11 +206,6 @@ export const useUIStateController = (
         return [child];
       }
       return [];
-    },
-    getPropFromState,
-    getStateFromProp,
-    toControlHostValue: (uiState) => {
-      return toDomValue(uiStateController, uiState);
     },
     onInteraction: (e, { skipCommand } = {}) => {
       if (controlType === "button" && uiStateController.controlHostProps.name) {
@@ -300,12 +252,11 @@ export const useUIStateController = (
         }
       }
     },
-    setUIState: (prop, e) => {
-      const newUIState = uiStateController.getStateFromProp(prop);
+    setUIState: (newUIState, e) => {
       const controllerSig = getElementSignature(e.currentTarget || ref.current);
-      if (persists) {
-        setNavState(prop);
-      }
+      // if (persists) {
+      //   setNavState(prop);
+      // }
       const currentUIState = uiStateController.uiState;
       const stateIsTheSame = compareTwoJsValues(newUIState, currentUIState);
       if (stateIsTheSame) {
@@ -340,15 +291,10 @@ export const useUIStateController = (
         uiStateController.onInteraction(e);
         return false;
       }
-      const el = ref.current;
-      const domValue = toDomValue(uiStateController, newUIState);
-      if (el) {
-        // set immediatly (don't wait for preact re-render) so ui is in the right state for:
-        // - side effect
-        // - any "input" event that might be dispatched below
-        const propName = uiStateController.statePropName;
-        el[propName] = domValue;
-      }
+      // set immediatly (don't wait for preact re-render) so ui is in the right state for:
+      // - side effect
+      // - any "input" event that might be dispatched below
+      syncDomState(newUIState);
       uiStateController.uiState = newUIState;
       ownUIStateSignal.value = newUIState;
       // Radio group: when a radio becomes checked, uncheck all siblings.
@@ -358,7 +304,8 @@ export const useUIStateController = (
       // Uses the in-memory registry instead of DOM queries so this works even
       // when sibling items are virtualized (not in the DOM).
       // Form scoping is preserved by comparing parentUIStateController references.
-      const controlProxyFor = uiStateController.controlHostProps["navi-control-proxy-for"];
+      const controlProxyFor =
+        uiStateController.controlHostProps["navi-control-proxy-for"];
       if (isRadio && newUIState && uiStateController.name && !controlProxyFor) {
         const siblings = getRadioSiblings(uiStateController);
         if (siblings) {
@@ -376,12 +323,13 @@ export const useUIStateController = (
             ) {
               continue;
             }
-            siblingController.setUIState(false, siblingUncheckEvent);
+            siblingController.setUIState(undefined, siblingUncheckEvent);
           }
         }
       }
       debugUIState(e, `publishUIState(${JSON.stringify(newUIState)})`);
       publishUIState(newUIState, e);
+      const el = ref.current;
       // Always notify the element that its UI state changed.
       // Listeners use this to stay in sync (e.g. input_effect.js tracks currentState,
       // useUIState subscribes for reactive updates). Separate from navi_set_ui_state
@@ -403,7 +351,7 @@ export const useUIStateController = (
         // Communicates directly to the proxy controller — no DOM query needed.
         const proxyController = findProxyController(id);
         if (proxyController) {
-          proxyController.setUIState(prop, e);
+          proxyController.setUIState(newUIState, e);
         }
       }
       if (isInternalEvent(e)) {
@@ -424,9 +372,9 @@ export const useUIStateController = (
         if (targetController) {
           debugUIState(
             e,
-            `forwarding set_ui_state "${prop}" to ${getElementSignature(targetController.elementRef.current)}`,
+            `forwarding set_ui_state "${newUIState}" to ${getElementSignature(targetController.elementRef.current)}`,
           );
-          targetController.setUIState(prop, e);
+          targetController.setUIState(newUIState, e);
         }
       }
       if (el) {
@@ -477,10 +425,9 @@ export const useUIStateController = (
     },
     actionEnd: async (e) => {
       debugUIState(`"${controlType}" actionEnd called`);
-      if (persists) {
-        setNavState(undefined);
-      }
-
+      // if (persists) {
+      //   setNavState(undefined);
+      // }
       // wait a tick for preact to have time to remove attrs (like data-readonly) as "navi_action_end" side effects are executed
       await new Promise((r) => requestAnimationFrame(r));
       controlValidity.syncValidity(e);
@@ -515,10 +462,6 @@ export const useUIStateController = (
     debugFocus,
   });
   uiStateController.controlValidity = controlValidity;
-  controlValidity.checkValidity();
-  // Register synchronously during render so getUIStateControllerById works
-  // immediately in the same render cycle (e.g. InputTextualUI reading uiState).
-  onUIStateControllerCreated(uiStateController);
   return uiStateController;
 };
 
@@ -737,10 +680,10 @@ export const useUIGroupStateController = (
 
   const existingController = controllerRef.current;
   if (existingController) {
+    existingController.props = props;
     existingController.id = id;
     existingController.name = name;
     existingController.value = value;
-    existingController.props = props;
     uiActionRef.current = uiAction;
     return existingController;
   }
@@ -1015,8 +958,6 @@ export const useUIGroupStateController = (
     debugFocus,
   });
   groupUIStateController.controlValidity = controlValidity;
-  controlValidity.checkValidity();
-  onUIStateControllerCreated(groupUIStateController);
   return groupUIStateController;
 };
 // Stable reference for an empty selection so the action always receives an
@@ -1169,7 +1110,9 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
     debugFocus,
   });
   facadeUIStateController.controlValidity = controlValidity;
-  controlValidity.checkValidity();
+  // No initial checkValidity() here — the facade has no controlHostProps and no children
+  // have registered yet, so any check would be a no-op. The real validity check happens
+  // when child controllers trigger interactions through the facade.
   return facadeUIStateController;
 };
 

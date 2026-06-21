@@ -369,7 +369,6 @@ export const ButtonUI = (props) => {
     controlChildrenWrapperProps,
   ] = useControlProps(props, {
     controlType: "button",
-    statePropName: "value",
     allowNameless: true,
   });
   const { basePseudoState, children } = buttonControlHostProps;

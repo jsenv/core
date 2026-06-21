@@ -23,11 +23,6 @@ export const useCheckableProps = (props, options) => {
   }
   const result = useControlProps(props, {
     controlType: "input",
-    statePropName: "checked",
-    defaultStatePropName: "defaultChecked",
-    fallbackState: false,
-    getStateFromProp: (checked) => (checked ? props.value : undefined),
-    getPropFromState: Boolean,
     ...options,
   });
   result[1].onnavi_get_value = (e) => {

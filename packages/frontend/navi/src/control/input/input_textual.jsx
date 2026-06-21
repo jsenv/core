@@ -304,9 +304,6 @@ const InputTextualHeadless = (props) => {
 const useInputTextualProps = (props) => {
   return useControlProps(props, {
     controlType: "input",
-    statePropName: "value",
-    defaultStatePropName: "defaultValue",
-    readOnlySupported: true,
   });
 };
 const InputTextualUI = (props) => {

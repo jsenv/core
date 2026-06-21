@@ -111,7 +111,6 @@ const BadgeButton = (props) => {
   props.ref = props.ref || defaultRef;
   const [buttonRootProps, buttonHostProps] = useControlProps(props, {
     controlType: "button",
-    statePropName: "value",
     allowNameless: true,
   });
 
