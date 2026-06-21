@@ -1221,12 +1221,6 @@ const useInteractiveProps = (
           // special case for the use case where form.submit is called
           e.detail.action = boundAction;
         }
-        if (controlInfo.controlType === "button") {
-          // Trigger the button's command (e.g. --navi-send) and uiAction callbacks.
-          // Buttons don't have mutable UI state, so we call onInteraction directly
-          // instead of going through dispatchRequestSetUIState.
-          uiStateController.onInteraction(e);
-        }
         debugAction(e, `executing action ${e.detail.action.callSource}`);
         executeAction(e);
       },

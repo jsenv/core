@@ -261,8 +261,7 @@ export const useUIStateController = (
       const stateIsTheSame = compareTwoJsValues(newUIState, currentUIState);
       if (stateIsTheSame) {
         if (controlType === "button") {
-          // Button state is fixed — setUIState is a no-op.
-          // Side effects (command, uiAction) are triggered via onInteraction() instead.
+          uiStateController.onInteraction(e);
           return true;
         }
         debugUIState(
@@ -409,12 +408,7 @@ export const useUIStateController = (
           // TODO: select, textarea
         }
       }
-      uiStateController.onInteraction(e, {
-        // Buttons never trigger their command via setUIState — only via onInteraction()
-        // called explicitly in onnavi_action_allowed. This prevents a value prop change
-        // from accidentally firing the command.
-        skipCommand: controlType === "button",
-      });
+      uiStateController.onInteraction(e);
       return true;
     },
     clearUIState: (e) => {
