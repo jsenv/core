@@ -52,6 +52,7 @@ export const CONTROL_PROP_SET = new Set([
   "actionDebounce",
   "defaultValue",
   "defaultChecked",
+  "readOnly", // will depend wether readOnly is supported
 
   "loading",
   "basePseudoState",
