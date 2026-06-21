@@ -3,6 +3,7 @@ import {
   createPubSub,
   createStyleController,
   createValueEffect,
+  dispatchCustomEvent,
   dispatchPublicCustomEvent,
   findEvent,
   getBorderSizes,
@@ -244,10 +245,17 @@ export const openCallout = (
   );
 
   const [teardown, addTeardown] = createPubSub(true);
-  const requestClose = (event, reason) => {
+  const requestClose = (e, reason) => {
+    return dispatchCustomEvent(callout.element, "navi_request_close", {
+      event: e,
+      reason,
+    });
+  };
+  const onRequestClose = (event) => {
     if (!callout.opened) {
       return;
     }
+    const { reason } = event.detail.reason;
     const clickOrSpaceOutside =
       reason === "click_outside" || reason === "space_outside";
     if (clickOrSpaceOutside) {
@@ -269,7 +277,8 @@ export const openCallout = (
     if (debug) {
       debug(event, `callout close (reason: ${reason})`);
     }
-    if (event.type === "mousedown") {
+    const mousedownEvent = findEvent(event, "mousedown");
+    if (mousedownEvent) {
       const isInsideCallout =
         callout.element && callout.element.contains(event.target);
       if (isInsideCallout) {
@@ -491,7 +500,7 @@ export const openCallout = (
   }
   close_on_custom_event: {
     const handleCustomCloseEvent = (e) => {
-      requestClose(e, "custom_event");
+      onRequestClose(e);
     };
     calloutElement.addEventListener(
       "navi_request_close",
