@@ -265,7 +265,7 @@
 
       const App = () => {
         return (
-          <NaviDebug debugInteraction debugAction>
+          <NaviDebug debugUIState debugInteraction debugAction>
             <div>
               <TableOfContents />
               <BasicStatesDemo />
@@ -624,7 +624,7 @@
           useCallLog();
 
         const slowAction = async (value, setter) => {
-          await new Promise((resolve) => setTimeout(resolve, 1500));
+          await new Promise((resolve) => setTimeout(resolve, 15000));
           setter(value);
         };
 

@@ -336,162 +336,8 @@ export const useControlProps = (
         };
       }
 
-      if (controlType === "input") {
-        if (props.type === "radio" || props.type === "checkbox") {
-          const isRadio = props.type === "radio";
-
-          return {
-            keyDown: (e) => {
-              if (e.key === "Enter") {
-                const inputEl = ref.current;
-                const isRadio = props.type === "radio";
-                const checked = inputEl.checked;
-                const always = () => {
-                  if (inputEl.form) {
-                    e.preventDefault();
-                  }
-                };
-
-                if (isRadio) {
-                  if (checked) {
-                    return {
-                      name: "enter on checked radio",
-                      category: "interaction",
-                      allowed: () => triggerUIAction(e),
-                      always,
-                    };
-                  }
-                  return {
-                    name: "enter to check radio",
-                    category: "request_update",
-                    allowed: () =>
-                      dispatchRequestSetUIState(inputEl, true, {
-                        event: e,
-                      }),
-                    always,
-                  };
-                }
-                if (checked) {
-                  return {
-                    name: "enter to uncheck checkbox",
-                    category: "request_update",
-                    allowed: () =>
-                      dispatchRequestSetUIState(inputEl, undefined, {
-                        event: e,
-                      }),
-                    always,
-                  };
-                }
-                return {
-                  name: "enter to check checkbox",
-                  category: "request_update",
-                  allowed: () =>
-                    dispatchRequestSetUIState(inputEl, true, {
-                      event: e,
-                    }),
-                  always,
-                };
-              }
-              if (isRadio && e.key === " ") {
-                const inputEl = e.currentTarget;
-                if (inputEl.checked) {
-                  // allow space to still trigger uiState and commands
-                  // on checked radios (won't update the ui state but will notify of interaction)
-                  return {
-                    name: "space to activate checked radio",
-                    category: "interaction",
-                    allowed: () => triggerUIAction(e),
-                  };
-                }
-                // let browser perform "space to check radio"
-              }
-              return keyDownDefault(e);
-            },
-            mouseDown: (e) => {
-              if (isRadio) {
-                wasCheckedAtMousedownRef.current = e.currentTarget.checked;
-              }
-            },
-            click: () => {
-              if (isRadio && wasCheckedAtMousedownRef.current) {
-                // When a radio is already checked and gets clicked, the browser does NOT
-                // fire an input event (state doesn't change), so asAction never runs.
-                // We still want uiAction + command to fire. We can tell whether the click
-                // is on an already-checked radio by looking at wasCheckedAtMousedownRef:
-                // if it was checked at mousedown, the input event won't come, so we do it here.
-                return {
-                  name: `click on checked radio`,
-                  category: "interaction",
-                  allowed: (e) => triggerUIAction(e),
-                };
-              }
-              return {
-                name: `click on ${props.type}`,
-                category: "interaction",
-                allowed: (e) => triggerUIAction(e),
-              };
-            },
-            input: (e) => {
-              return {
-                name: "input",
-                wantAction: true,
-                category: "update",
-                allowed: () => syncStateFromControl(e),
-              };
-            },
-          };
-        }
-
-        const keyDownDefaultOnInput = (e) => {
-          if (e.key === "Enter") {
-            if (actionDebounce) {
-              // The input has its own debounced action; Enter fires it directly
-              // (input_effect.js cancels the debounce and triggers the action via the change event).
-              // Don't propagate to --navi-send, which would cause a double action call.
-              return null;
-            }
-            const input = e.currentTarget;
-            return {
-              name: "enter on input to send closest control group",
-              category: "interaction",
-              allowed: () => triggerNaviCommand(input, "--navi-send", e),
-            };
-          }
-          return keyDownDefault(e);
-        };
-
-        if (props.type === "range") {
-          return {
-            keyDown: keyDownDefaultOnInput,
-            mouseDown: (e) => {
-              return {
-                name: "mousedown",
-                category: "request_update",
-                allowed: () => syncStateFromControl(e),
-              };
-            },
-            // Range fires "input" on pointer release, not during drag.
-            // The dismissal behavior for ranges is handled differently and is excluded here.
-            input: (e) => {
-              return {
-                name: "input",
-                category: "update",
-                allowed: () => syncStateFromControl(e),
-              };
-            },
-            naviChange: (e) => {
-              return {
-                wantAction: true,
-                name: "navi_change",
-                category: "update",
-                allowed: () => syncStateFromControl(e),
-              };
-            },
-          };
-        }
-
+      if (controlType === "picker") {
         return {
-          keyDown: keyDownDefaultOnInput,
           input: (e) => {
             return {
               name: "input",
@@ -510,8 +356,167 @@ export const useControlProps = (
         };
       }
 
-      if (controlType === "picker") {
+      const isInputCheckable =
+        controlType === "input" &&
+        (props.type === "radio" || props.type === "checkbox");
+      if (isInputCheckable) {
+        const isRadio = props.type === "radio";
+
         return {
+          keyDown: (e) => {
+            if (e.key === "Enter") {
+              const inputEl = ref.current;
+              const isRadio = props.type === "radio";
+              const checked = inputEl.checked;
+              const always = () => {
+                if (inputEl.form) {
+                  e.preventDefault();
+                }
+              };
+
+              if (isRadio) {
+                if (checked) {
+                  return {
+                    name: "enter on checked radio",
+                    category: "interaction",
+                    allowed: () => triggerUIAction(e),
+                    always,
+                  };
+                }
+                return {
+                  name: "enter to check radio",
+                  category: "request_update",
+                  allowed: () =>
+                    dispatchRequestSetUIState(inputEl, true, {
+                      event: e,
+                    }),
+                  always,
+                };
+              }
+              if (checked) {
+                return {
+                  name: "enter to uncheck checkbox",
+                  category: "request_update",
+                  allowed: () =>
+                    dispatchRequestSetUIState(inputEl, undefined, {
+                      event: e,
+                    }),
+                  always,
+                };
+              }
+              return {
+                name: "enter to check checkbox",
+                category: "request_update",
+                allowed: () =>
+                  dispatchRequestSetUIState(inputEl, true, {
+                    event: e,
+                  }),
+                always,
+              };
+            }
+            if (isRadio && e.key === " ") {
+              const inputEl = e.currentTarget;
+              if (inputEl.checked) {
+                // allow space to still trigger uiState and commands
+                // on checked radios (won't update the ui state but will notify of interaction)
+                return {
+                  name: "space to activate checked radio",
+                  category: "interaction",
+                  allowed: () => triggerUIAction(e),
+                };
+              }
+              // let browser perform "space to check radio"
+            }
+            return keyDownDefault(e);
+          },
+          mouseDown: (e) => {
+            if (isRadio) {
+              wasCheckedAtMousedownRef.current = e.currentTarget.checked;
+            }
+          },
+          click: () => {
+            if (isRadio && wasCheckedAtMousedownRef.current) {
+              // When a radio is already checked and gets clicked, the browser does NOT
+              // fire an input event (state doesn't change), so asAction never runs.
+              // We still want uiAction + command to fire. We can tell whether the click
+              // is on an already-checked radio by looking at wasCheckedAtMousedownRef:
+              // if it was checked at mousedown, the input event won't come, so we do it here.
+              return {
+                name: `click on checked radio`,
+                category: "interaction",
+                allowed: (e) => triggerUIAction(e),
+              };
+            }
+            return {
+              name: `click on ${props.type}`,
+              category: "interaction",
+              allowed: (e) => triggerUIAction(e),
+            };
+          },
+          input: (e) => {
+            return {
+              name: "input",
+              wantAction: true,
+              category: "update",
+              allowed: () => syncStateFromControl(e),
+            };
+          },
+        };
+      }
+
+      const keyDownDefaultOnInput = (e) => {
+        if (e.key === "Enter") {
+          if (actionDebounce) {
+            // The input has its own debounced action; Enter fires it directly
+            // (input_effect.js cancels the debounce and triggers the action via the change event).
+            // Don't propagate to --navi-send, which would cause a double action call.
+            return null;
+          }
+          const input = e.currentTarget;
+          return {
+            name: "enter on input to send closest control group",
+            category: "interaction",
+            allowed: () => triggerNaviCommand(input, "--navi-send", e),
+          };
+        }
+        return keyDownDefault(e);
+      };
+
+      const isInputRange = controlType === "input" && props.type === "range";
+      if (isInputRange) {
+        return {
+          keyDown: keyDownDefaultOnInput,
+          mouseDown: (e) => {
+            return {
+              name: "mousedown",
+              category: "request_update",
+              allowed: () => syncStateFromControl(e),
+            };
+          },
+          // Range fires "input" on pointer release, not during drag.
+          // The dismissal behavior for ranges is handled differently and is excluded here.
+          input: (e) => {
+            return {
+              name: "input",
+              category: "update",
+              allowed: () => syncStateFromControl(e),
+            };
+          },
+          naviChange: (e) => {
+            return {
+              wantAction: true,
+              name: "navi_change",
+              category: "update",
+              allowed: () => syncStateFromControl(e),
+            };
+          },
+        };
+      }
+
+      const isInputTextual = controlType === "input";
+      if (isInputTextual) {
+        return {
+          keyDown: keyDownDefaultOnInput,
           input: (e) => {
             return {
               name: "input",
