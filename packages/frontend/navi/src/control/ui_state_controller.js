@@ -261,7 +261,9 @@ export const useUIStateController = (
       const stateIsTheSame = compareTwoJsValues(newUIState, currentUIState);
       if (stateIsTheSame) {
         if (controlType === "button") {
-          uiStateController.onInteraction(e);
+          if (!isInternalEvent(e)) {
+            uiStateController.onInteraction(e);
+          }
           return true;
         }
         debugUIState(
