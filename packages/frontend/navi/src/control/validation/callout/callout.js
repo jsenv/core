@@ -248,6 +248,24 @@ export const openCallout = (
     if (!callout.opened) {
       return;
     }
+    const clickOrSpaceOutside =
+      reason === "click_outside" || reason === "space_outside";
+    if (clickOrSpaceOutside) {
+      if (!closeOnClickOutside) {
+        return;
+      }
+      if (callout.status === "error") {
+        return;
+      }
+    } else if (reason === "blur_outside") {
+      if (!closeOnBlur) {
+        return;
+      }
+      if (callout.status === "error") {
+        return;
+      }
+    }
+
     if (debug) {
       debug(event, `callout close (reason: ${reason})`);
     }
@@ -373,9 +391,6 @@ export const openCallout = (
   };
   close_on_click_outside: {
     const handleClickOutside = (event) => {
-      if (!closeOnClickOutside) {
-        return;
-      }
       if (event.button !== 0) {
         // right click
         return;
@@ -390,9 +405,6 @@ export const openCallout = (
       requestClose(event, "click_outside");
     };
     const handleSpaceOutside = (event) => {
-      if (!closeOnClickOutside) {
-        return;
-      }
       if (event.key !== " ") {
         return;
       }
@@ -482,7 +494,7 @@ export const openCallout = (
       requestClose(e, "custom_event");
     };
     calloutElement.addEventListener(
-      "navi_callout_request_close",
+      "navi_request_close",
       handleCustomCloseEvent,
     );
   }

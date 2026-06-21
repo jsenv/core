@@ -517,10 +517,9 @@ export const createControlValidity = (
       { requester },
     );
     if (controlValidity.callout) {
-      const { status, closeOnClickOutside } = activeConstraintInfo;
+      const { status } = activeConstraintInfo;
       controlValidity.callout.update(message, {
         status,
-        closeOnClickOutside,
       });
       return;
     }
@@ -546,7 +545,6 @@ export const createControlValidity = (
     controlValidity.callout = openCallout(message, {
       anchorElement,
       status: activeConstraintInfo.status,
-      closeOnClickOutside: activeConstraintInfo.closeOnClickOutside,
       openingEvent: event,
       debug: debugUIState,
       onClose: ({ event, focusWithinCallout }) => {
