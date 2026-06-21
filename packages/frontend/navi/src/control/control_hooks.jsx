@@ -894,7 +894,7 @@ const useInteractiveProps = (
     Object.assign(controlHostProps, {
       "required": requiredResolved,
       "disabled": disabledResolved,
-      "aria-busy": loadingResolved,
+      "aria-busy": loadingResolved ? "true" : "false",
       "basePseudoState": {
         ":disabled": disabledResolved,
         ":read-only": readOnlyResolved,
@@ -905,7 +905,7 @@ const useInteractiveProps = (
     if (readOnlySupported) {
       controlHostProps.readOnly = readOnlyResolved;
     } else {
-      controlHostProps["aria-readonly"] = readOnlyResolved;
+      controlHostProps["aria-readonly"] = readOnlyResolved ? "true" : "false";
     }
     // inform any associated label of our state (connected, disabled, readOnly)
     // dispatched directly on the label — works whether the label wraps the control
