@@ -5,7 +5,6 @@ import {
   useNextResolver,
 } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
-import { ButtonInsideFormResolver } from "./button_inside_form.jsx";
 import { ButtonRouteResolver } from "./button_route.jsx";
 import { ButtonUI } from "./button_ui.jsx";
 
@@ -20,6 +19,10 @@ const ButtonFirstResolver = (props) => {
 const ButtonCommandPropResolver = (props) => {
   const Next = useNextResolver();
 
+  if (props.type === "submit") {
+    props.type = "button";
+    props.command = props.command || "--navi-send";
+  }
   const command = props.command;
 
   const commandDefaultProps = COMMAND_DEFAULT_PROPS[command];
@@ -61,7 +64,6 @@ const COMMAND_DEFAULT_PROPS = {
 export const Button = createComponentResolver([
   ButtonFirstResolver,
   ButtonRouteResolver,
-  ButtonInsideFormResolver,
   ButtonCommandPropResolver,
   ButtonUI,
 ]);
