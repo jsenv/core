@@ -1178,7 +1178,7 @@ const useInteractiveProps = (
         }
       },
       onnavi_request_interaction: (e) => {
-        if (e.detail.wantAction && !e.detail.action) {
+        if (e.detail.wantAction && !e.detail.action && props.action) {
           e.detail.action = boundAction;
           e.detail.actionOrigin = "action_prop";
         }
