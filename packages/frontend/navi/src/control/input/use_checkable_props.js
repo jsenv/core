@@ -6,9 +6,9 @@ export const useCheckableProps = (props, options) => {
   // default value so resetUIState restores to the original default.
   const checkedProp = props.checked;
   if (
+    !Object.hasOwn(props, "defaultChecked") &&
     isSignal(checkedProp) &&
-    checkedProp.options &&
-    !Object.hasOwn(props, "defaultChecked")
+    checkedProp.options
   ) {
     const defaultVal = checkedProp.options.getDefaultValue(false);
     if (defaultVal !== undefined) {
