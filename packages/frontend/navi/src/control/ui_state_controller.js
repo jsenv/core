@@ -423,8 +423,10 @@ export const useUIStateController = (
     resetUIState: (e) => {
       uiStateController.setUIState(uiStateController.state, e);
     },
-    actionEnd: (e) => {
+    actionEnd: async (e) => {
       debugUIState(`"${controlType}" actionEnd called`);
+      // wait for preact to re-render to update readonly as action end side effects are runned
+      await new Promise((r) => requestAnimationFrame(r));
       controlValidity.syncValidity(e);
     },
     actionError: (e) => {
