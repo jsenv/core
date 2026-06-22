@@ -1,6 +1,5 @@
 import { useContext, useRef } from "preact/hooks";
 
-import { renderActionableComponent } from "../../action/render_actionable_component.jsx";
 import { PSEUDO_CLASSES } from "../../box/pseudo_styles.js";
 import { useControlProps } from "../../control/control_hooks.jsx";
 import {
@@ -16,8 +15,6 @@ import {
 } from "../../graphic/icons/link_svgs.jsx";
 import { PhoneSvg } from "../../graphic/icons/phone_svg.jsx";
 import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
-import { useKeyboardShortcuts } from "../../keyboard/keyboard_shortcuts.js";
-import { useRequestedActionStatus } from "../../keyboard/use_action_events.js";
 import { Icon } from "../../text/icon.jsx";
 import { markAsOutsideTextFlow, Text } from "../../text/text.jsx";
 import { TitleLevelContext } from "../../text/title.jsx";
@@ -25,7 +22,6 @@ import { useDocumentUrl } from "../browser_integration/document_url_signal.js";
 import { getHrefTargetInfo } from "../browser_integration/href_target_info.js";
 import { useIsVisited } from "../browser_integration/use_is_visited.js";
 import { assertRoute, useRouteStatus } from "../route.js";
-
 import { useDimColorWhen } from "./use_dim_color.js";
 
 /*
@@ -413,12 +409,6 @@ Object.assign(PSEUDO_CLASSES, {
 export const Link = (props) => {
   import.meta.css = css;
 
-  return renderActionableComponent(props, {
-    Basic: LinkBasic,
-    WithAction: LinkWithAction,
-  });
-};
-const LinkBasic = (props) => {
   if (props.route) {
     return <LinkWithRoute {...props} />;
   }
@@ -435,9 +425,9 @@ const LinkWithRoute = ({ route, routeParams, current, children, ...rest }) => {
   const innerCurrent = current || linkMatching;
 
   return (
-    <LinkBasic href={url} current={innerCurrent} {...rest}>
+    <Link href={url} current={innerCurrent} {...rest}>
       {children || route.buildRelativeUrl(routeParams)}
-    </LinkBasic>
+    </Link>
   );
 };
 
@@ -615,45 +605,3 @@ const LinkCurrentIndicator = () => {
   return <span className="navi_current_indicator" />;
 };
 markAsOutsideTextFlow(LinkCurrentIndicator);
-
-const LinkWithAction = (props) => {
-  const {
-    shortcuts = [],
-    readOnly,
-    onActionPrevented,
-    onActionStart,
-    onActionAbort,
-    onActionError,
-    onActionEnd,
-    children,
-    loading,
-    ...rest
-  } = props;
-  const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
-  const { actionPending } = useRequestedActionStatus(ref, {
-    actionOrigin: "keyboard_shortcut",
-  });
-  const innerLoading = Boolean(loading || actionPending);
-
-  useKeyboardShortcuts(ref, shortcuts, {
-    onActionPrevented,
-    onActionStart,
-    onActionAbort,
-    onActionError,
-    onActionEnd,
-  });
-
-  return (
-    <LinkBasic
-      {...rest}
-      ref={ref}
-      loading={innerLoading}
-      readOnly={readOnly || actionPending}
-      /* When we have keyboard shortcuts the link outline is visible on focus (not solely on focus-visible) */
-      data-focus-visible=""
-    >
-      {children}
-    </LinkBasic>
-  );
-};
