@@ -22,7 +22,6 @@ import {
 } from "./control_hooks.jsx";
 import { FormContext } from "./form_context.js";
 import { dispatchRequestAction } from "./rules/control_action.js";
-import { dispatchRequestInteraction } from "./rules/control_interaction.js";
 import { dispatchRequestResetUIState } from "./ui_state_dom.js";
 
 export const Form = (props) => {
@@ -80,13 +79,13 @@ const FormControl = (props) => {
       pseudoClasses={FormPseudoClasses}
       onSubmit={(e) => {
         const form = e.currentTarget;
-        dispatchRequestInteraction(form, {
+        dispatchRequestAction(form, {
           event: e,
           name: "form_submit",
-          requester: e.submitter || form,
           always: () => {
             e.preventDefault();
           },
+          requester: e.submitter || form,
         });
       }}
       onReset={(e) => {
@@ -137,8 +136,7 @@ HTMLFormElement.prototype.requestSubmit = function (submitter) {
   });
   dispatchRequestAction(form, {
     event: programmaticEvent,
-    interactionName: "requestSubmit",
-    action: "auto",
+    name: "requestSubmit",
     requester: submitter,
   });
 };

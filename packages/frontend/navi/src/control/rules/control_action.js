@@ -36,17 +36,27 @@ import { dispatchRequestInteraction } from "./control_interaction.js";
  */
 export const dispatchRequestAction = (
   element,
-  { event, interactionName = "dispatchRequestAction", ...actionOptions } = {},
+  {
+    event,
+    name = "dispatchRequestAction",
+    prevented,
+    allowed,
+    always,
+    ...actionOptions // action, requester, actionOrigin, method, meta
+  } = {},
 ) => {
   return dispatchRequestInteraction(element, {
     event,
-    name: interactionName,
+    name,
+    prevented,
     allowed: () => {
+      allowed?.();
       return tryActionAfterInteractionAllowed(element, {
         event,
         ...actionOptions,
       });
     },
+    always,
   });
 };
 

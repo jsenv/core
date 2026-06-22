@@ -8,11 +8,12 @@ import { Dialog } from "@jsenv/navi/src/popup/dialog.jsx";
 import { Popover } from "@jsenv/navi/src/popup/popover.jsx";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { compareTwoJsValues } from "@jsenv/navi/src/utils/compare_two_js_values.js";
+import { dispatchRequestAction } from "../rules/control_action.js";
+import { dispatchRequestInteraction } from "../rules/control_interaction.js";
 import {
   dispatchRequestSetUIState,
   getUIStateFromElement,
 } from "../ui_state_dom.js";
-import { dispatchRequestInteraction } from "../rules/control_interaction.js";
 
 const css = /* css */ `
   .navi_picker {
@@ -392,49 +393,17 @@ const PickerCustom = (props) => {
           );
           return;
         }
-
-        const onActionPrevented = () => {
-          inputEl.removeEventListener(
-            "navi_action_prevented",
-            onActionPrevented,
-          );
-          inputEl.removeEventListener("navi_action_start", onActionStart);
-          debugPopup(
-            requestCloseEvent,
-            "picker action prevented -> keep picker opened (let user fix issues)",
-          );
-        };
-        const onActionStart = (actionStartEvent) => {
-          inputEl.removeEventListener(
-            "navi_action_prevented",
-            onActionPrevented,
-          );
-          inputEl.removeEventListener("navi_action_start", onActionStart);
-          actionStartEvent.detail.addSideEffect({
-            abort: () => {
-              // keep it opened, must be explicitely re-attempted
-            },
-            error: () => {
-              // keep it opened to see error
-            },
-            complete: () => {
-              closePermission.allow();
-            },
-          });
-        };
         debugPopup(
           requestCloseEvent,
           `picker attempt to close with value (${JSON.stringify(valueAtClose)}) wait for picker action to close picker`,
         );
-        closePermission.deny();
-        inputEl.addEventListener("navi_action_prevented", onActionPrevented);
-        inputEl.addEventListener("navi_action_start", onActionStart);
-        dispatchRequestInteraction(inputEl, {
+        dispatchRequestAction(inputEl, {
           event: requestCloseEvent,
-          wantAction: true,
           name: "picker close",
-          category: "request_update",
-          uiState: valueAtClose,
+          prevented: () => {
+            closePermission.deny();
+          },
+          allowed: () => {},
         });
       },
       onnavi_open: (e) => {
@@ -450,7 +419,7 @@ const PickerCustom = (props) => {
         "a-z": (e) => {
           return {
             name: "letter key to open",
-            effect: () => {
+            allowed: () => {
               requestOpen(e);
             },
           };
@@ -458,7 +427,7 @@ const PickerCustom = (props) => {
         "0-9": (e) => {
           return {
             name: "numeric key to open",
-            effect: () => {
+            allowed: () => {
               requestOpen(e);
             },
           };
@@ -466,7 +435,7 @@ const PickerCustom = (props) => {
         "arrowdown": (e) => {
           return {
             name: "arrow_down_to_open",
-            effect: () => {
+            allowed: () => {
               requestOpen(e);
               e.preventDefault(); // prevent container scroll
             },
@@ -475,7 +444,7 @@ const PickerCustom = (props) => {
         "arrowup": (e) => {
           return {
             name: "arrow_up_to_open",
-            effect: () => {
+            allowed: () => {
               requestOpen(e);
               e.preventDefault(); // prevent container scroll
             },
@@ -484,7 +453,7 @@ const PickerCustom = (props) => {
         "space": (e) => {
           return {
             name: "space_to_open",
-            effect: () => {
+            allowed: () => {
               requestOpen(e);
               e.preventDefault(); // prevent scroll
             },
@@ -496,7 +465,7 @@ const PickerCustom = (props) => {
           }
           return {
             name: "escape_to_cancel",
-            effect: () => {
+            allowed: () => {
               requestClose(e, { isCancel: true });
               e.preventDefault(); // prevent browser from closing the dialog (if any)
             },
@@ -510,12 +479,12 @@ const PickerCustom = (props) => {
             if (expandedRef.current) {
               return {
                 name: "mousedown to close picker",
-                effect: () => requestClose(e),
+                allowed: () => requestClose(e),
               };
             }
             return {
               name: "mousedown to open picker",
-              effect: () => {
+              allowed: () => {
                 debugFocus(
                   e,
                   `prevent browser giving focus to button (mousedown.preventDefault())`,
@@ -533,7 +502,7 @@ const PickerCustom = (props) => {
                 e.detail === 0
                   ? "click (keyboard or progammatic) to open picker"
                   : "click to open picker",
-              effect: () => {
+              allowed: () => {
                 requestOpen(e);
                 e.preventDefault();
               },

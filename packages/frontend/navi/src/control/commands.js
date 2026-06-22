@@ -232,9 +232,7 @@ registerNaviCommand("--navi-clear", (source, event) => {
         event,
         name: "--navi-clear",
         prevented: () => event.preventDefault(),
-        allowed: () => {
-          dispatchRequestClearUIState(target, event);
-        },
+        allowed: () => dispatchRequestClearUIState(target, event),
       });
     },
   };
@@ -289,25 +287,29 @@ registerNaviCommand("--navi-send", (source, event) => {
           requester = firstButtonSubmitting;
         }
       }
-      const allowed = dispatchRequestAction(target, {
+      return dispatchRequestAction(target, {
         event,
-        interactionName: "--navi-send",
+        name: "--navi-send",
+        always: () => {
+          const initiator =
+            event.detail && typeof event.detail === "object"
+              ? event.detail.eventChain[0]
+              : event;
+          const { form } = target;
+          if (form) {
+            // prevent form submission when clicking buttons or pressing enter on inputs
+            initiator.preventDefault();
+          } else if (
+            initiator.type === "keydown" &&
+            initiator.key === "Enter"
+          ) {
+            // prevent triggering click on such button, they are already performing submit
+            // (this ensures enter inside a picker won't trigger picker button click)
+            initiator.preventDefault();
+          }
+        },
         requester,
       });
-      const initiator =
-        event.detail && typeof event.detail === "object"
-          ? event.detail.eventChain[0]
-          : event;
-      const { form } = target;
-      if (form) {
-        // prevent form submission when clicking buttons or pressing enter on inputs
-        initiator.preventDefault();
-      } else if (initiator.type === "keydown" && initiator.key === "Enter") {
-        // prevent triggering click on such button, they are already performing submit
-        // (this ensures enter inside a picker won't trigger picker button click)
-        initiator.preventDefault();
-      }
-      return allowed;
     },
   };
 });

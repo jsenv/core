@@ -1302,8 +1302,7 @@ const useInteractiveProps = (
             const originalEvent = e.detail.eventChain[0];
             dispatchRequestAction(parentEl, {
               event: originalEvent,
-              interactionName: "auto_group_action",
-              action: "auto",
+              name: "auto_group_action",
               requester: e.detail.requester,
             });
           }
