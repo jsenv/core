@@ -588,6 +588,7 @@ export const openCallout = (
   });
 
   if (anchorElement) {
+    anchorElement.scrollIntoView({ behavior: "smooth", block: "nearest" });
     allowWheelThrough(calloutElement, visualAnchorElement);
     anchorElement.setAttribute("data-callout", calloutId);
     addTeardown(() => {
