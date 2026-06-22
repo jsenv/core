@@ -452,7 +452,10 @@ export const useControlProps = (
             return {
               name: `click on ${props.type}`,
               category: "request_update", // click is requesting to check/uncheck from browser perspective
-              allowed: () => triggerUIAction(e),
+              // Do NOT call triggerUIAction here: the browser will fire its own "input" event
+              // after the click which will sync the state and trigger uiAction.
+              // Calling triggerUIAction here would dispatch a synthetic input + the browser
+              // dispatches a real input → two uiAction calls for a single click.
               prevented: () => e.preventDefault(),
             };
           },
