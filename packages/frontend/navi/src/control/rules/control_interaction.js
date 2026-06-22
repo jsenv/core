@@ -106,7 +106,14 @@ export const createControlInteraction = (
       }
     }
 
-    return !interactionFailedConstraintInfo && !failingManagedInteraction;
+    const canInteract =
+      !interactionFailedConstraintInfo && !failingManagedInteraction;
+    // When the control is now interactable, clear the interaction callout reason
+    // so the callout closes if no other reasons (e.g. validation) are active.
+    if (canInteract) {
+      callout.closeCallout(event, "interaction");
+    }
+    return canInteract;
   };
 
   const reportInteractivity = ({ event } = {}) => {
@@ -120,6 +127,7 @@ export const createControlInteraction = (
       `reportInteractivity (${interactionFailedConstraintInfo.name})`,
     );
     callout.openConstraintCallout(interactionFailedConstraintInfo, {
+      reason: "interaction",
       event,
       skipFocus: true,
     });

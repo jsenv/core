@@ -38,22 +38,55 @@ export const createCalloutManager = (
   { addTeardown, debugFocus, debugPopup, onOpen } = {},
 ) => {
   let callout = null;
+  // Tracks active reasons why the callout should be displayed.
+  // reasonKey → constraintInfo
+  // When the last reason is removed, the callout closes automatically.
+  const reasons = new Map();
 
-  const closeCallout = (event, reason) => {
+  // Remove a named reason. Closes the callout only when no reasons remain.
+  // If other reasons are still active, updates the callout to show the first remaining reason.
+  const closeCallout = (event, reasonKey) => {
+    if (!reasons.has(reasonKey)) {
+      return false;
+    }
+    reasons.delete(reasonKey);
+    if (reasons.size > 0) {
+      if (callout) {
+        const [, remainingConstraintInfo] = reasons.entries().next().value;
+        const { message } = getConstraintMessage(
+          controller,
+          remainingConstraintInfo.constraint,
+          remainingConstraintInfo.message,
+          {},
+        );
+        callout.update(message, { status: remainingConstraintInfo.status });
+      }
+      return false;
+    }
     if (!callout) {
       return false;
     }
-    return callout.requestClose(event, reason);
+    return callout.requestClose(event, reasonKey);
+  };
+
+  // Force-close the callout regardless of active reasons (teardown / cleanup).
+  const forceCloseCallout = (event, debugReason) => {
+    reasons.clear();
+    if (!callout) {
+      return false;
+    }
+    return callout.requestClose(event, debugReason);
   };
 
   const openConstraintCallout = (
     constraintInfo,
-    { event, requester, skipFocus } = {},
+    { reason = "default", event, requester, skipFocus } = {},
   ) => {
     if (!constraintInfo) {
-      closeCallout(event, "is_valid");
+      closeCallout(event, reason);
       return;
     }
+    reasons.set(reason, constraintInfo);
     const { message } = getConstraintMessage(
       controller,
       constraintInfo.constraint,
@@ -76,7 +109,7 @@ export const createCalloutManager = (
       focusTarget.focus();
     }
     const removeCloseOnCleanup = addTeardown?.(() => {
-      closeCallout(new CustomEvent("cleanup"), "cleanup");
+      forceCloseCallout(new CustomEvent("cleanup"), "cleanup");
     });
     // `openResults` is referenced in onClose which runs later — forward ref is intentional.
     let openResults = [];
@@ -93,6 +126,8 @@ export const createCalloutManager = (
           }
         }
         callout = null;
+        // User dismissed the callout — clear all reasons so it doesn't reopen spuriously.
+        reasons.clear();
         if (constraintInfo) {
           constraintInfo.reportStatus = "closed";
         }
@@ -127,9 +162,10 @@ export const createCalloutManager = (
   const calloutManager = {
     openConstraintCallout,
     closeCallout,
+    forceCloseCallout,
+    get callout() {
+      return callout;
+    },
   };
-  Object.defineProperty(calloutManager, "callout", {
-    get: () => callout,
-  });
   return calloutManager;
 };

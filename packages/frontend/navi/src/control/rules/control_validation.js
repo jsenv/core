@@ -265,10 +265,7 @@ export const createControlValidation = (
       }
       const checkValidityCallEvent =
         event || new CustomEvent("checkValidity called with no event");
-      callout.closeCallout(
-        checkValidityCallEvent,
-        `now_valid (after ${checkValidityCallEvent.type})`,
-      );
+      callout.closeCallout(checkValidityCallEvent, "validation");
     }
 
     if (
@@ -289,6 +286,7 @@ export const createControlValidation = (
 
   const reportValidity = ({ event, requester, skipFocus } = {}) => {
     callout.openConstraintCallout(failedConstraintInfo, {
+      reason: "validation",
       event,
       requester,
       skipFocus,
@@ -306,10 +304,6 @@ export const createControlValidation = (
     get: () => callout.callout,
   });
   controlValidity.onCalloutOpen = onCalloutOpen;
-  controlValidity.closeCallout = (event, reason) => {
-    callout.closeCallout(event, reason);
-  };
-
   // Centralized validity sync: decides what to show/close based on the event type
   // and the current constraint state.
   //
@@ -346,14 +340,20 @@ export const createControlValidation = (
           event,
           `syncValidity ${elementSig}: has failing constraint but no own action -> close callout if any`,
         );
-        callout.closeCallout(event, event?.type);
+        callout.closeCallout(event, "validation");
       }
     } else {
+      // Sync interaction state — if the control is now interactable the interaction
+      // callout reason is cleared, allowing the callout to close.
+      const ci = controller.rules.interaction;
+      if (ci) {
+        ci.checkInteractivity({ event });
+      }
       debugUIState(
         event,
         `syncValidity ${elementSig}: no failing constraint -> close callout if any`,
       );
-      callout.closeCallout(event, event?.type);
+      callout.closeCallout(event, "validation");
     }
     // Propagate a silent validity update up the controller chain.
     // Parent controllers (group, facade) don't report — the leaf's callout is enough.
