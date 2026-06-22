@@ -54,7 +54,7 @@ export const tryActionAfterInteractionAllowed = (
   element,
   {
     event,
-    action,
+    action = "auto",
     requester,
     actionOrigin = "action_prop",
     method = "rerun",
