@@ -272,8 +272,7 @@
       };
 
       const ActionBasicDemo = () => {
-        const [lastValue, setLastValue] = useState(undefined);
-        const [fired, setFired] = useState(false);
+        const [entries, push, clear] = useCallLog();
         return (
           <fieldset>
             <legend>
@@ -296,23 +295,12 @@
                 <Input
                   type="checkbox"
                   name="enabled"
-                  action={(value) => {
-                    setLastValue(value);
-                    setFired(true);
-                  }}
+                  uiAction={(value) => push("uiAction", value)}
+                  action={(value) => push("action", value)}
                 />
                 Enable feature
               </Field>
-              {fired && (
-                <span style={{ fontSize: "0.85rem", color: "#555" }}>
-                  action called with:{" "}
-                  <code>
-                    {lastValue === undefined
-                      ? "undefined"
-                      : JSON.stringify(lastValue)}
-                  </code>
-                </span>
-              )}
+              <CallLog entries={entries} onClear={clear} />
             </Box>
           </fieldset>
         );
