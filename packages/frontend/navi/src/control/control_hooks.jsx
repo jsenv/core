@@ -475,6 +475,8 @@ export const useControlProps = (
             name: "enter on input to send closest control group",
             category: "interaction",
             allowed: () => triggerNaviCommand(input, "--navi-send", e),
+            // prevent dispatching click as result of this enter
+            prevented: () => e.preventDefault(),
           };
         }
         return keyDownDefault(e);
