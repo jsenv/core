@@ -559,13 +559,26 @@ export const useControlProps = (
       }
       const control = ref.current;
       const currentValue = readControlValue(control);
-      const lastActionValue = lastActionValueRef.current;
-      const valueSameAsLastAction =
-        lastActionValue !== NO_ACTION_YET &&
-        compareTwoJsValues(currentValue, lastActionValue);
-      if (valueSameAsLastAction) {
-        debugAction(e, `skipping action: value same as last action`);
-        return false;
+      // For checkables: skip value dedup. The browser only fires `input` when state
+      // actually changes, so there is no spurious double-dispatch to guard against.
+      // Dedup would wrongly block re-try after a failed action: resetOnError unchecks
+      // the box but lastActionValueRef still holds the checked value, preventing the
+      // next user click from firing the action.
+      // Same for radio siblings: when a sibling check unchecks this radio
+      // (radio_sibling_uncheck, internal event, no synthetic input), lastActionValueRef
+      // keeps the stale value and blocks the user from re-checking this radio.
+      const isCheckable =
+        controlType === "input" &&
+        (props.type === "radio" || props.type === "checkbox");
+      if (!isCheckable) {
+        const lastActionValue = lastActionValueRef.current;
+        const valueSameAsLastAction =
+          lastActionValue !== NO_ACTION_YET &&
+          compareTwoJsValues(currentValue, lastActionValue);
+        if (valueSameAsLastAction) {
+          debugAction(e, `skipping action: value same as last action`);
+          return false;
+        }
       }
       const dispatched = tryActionAfterInteractionAllowed(control, {
         event: e,
