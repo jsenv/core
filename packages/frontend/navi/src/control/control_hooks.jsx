@@ -259,7 +259,7 @@ export const useControlProps = (
       naviProxyTarget.focus({ focusVisible: false });
       return true;
     };
-    const syncStateFromControl = (e) => {
+    const syncUIStateWithDOM = (e) => {
       const controlEl = e.currentTarget || uiStateController.elementRef.current;
       const value = readControlValue(controlEl);
       uiStateController.setUIState(value, e);
@@ -268,7 +268,7 @@ export const useControlProps = (
     // not every interaction is a uiAction
     // (arrow keys inside an input, tab etc -> not a ui action for instance)
     const triggerUIAction = (e) => {
-      syncStateFromControl(e);
+      syncUIStateWithDOM(e);
     };
     const wasCheckedAtMousedownRef = useRef(false);
     const getDefaultEventReactionDefinitions = () => {
@@ -344,14 +344,14 @@ export const useControlProps = (
           input: (e) => {
             return {
               name: "input",
-              allowed: () => syncStateFromControl(e),
+              allowed: () => syncUIStateWithDOM(e),
             };
           },
           naviChange: (e) => {
             return {
               name: "navi_change",
               allowed: () => {
-                syncStateFromControl(e);
+                syncUIStateWithDOM(e);
                 requestActionOnAllowed(e);
               },
             };
@@ -489,7 +489,7 @@ export const useControlProps = (
             return {
               name: "input",
               allowed: () => {
-                syncStateFromControl(e);
+                syncUIStateWithDOM(e);
                 requestActionOnAllowed(e);
               },
             };
@@ -504,7 +504,7 @@ export const useControlProps = (
           mouseDown: (e) => {
             return {
               name: "mousedown",
-              allowed: () => syncStateFromControl(e),
+              allowed: () => syncUIStateWithDOM(e),
             };
           },
           // Range fires "input" on pointer release, not during drag.
@@ -512,14 +512,14 @@ export const useControlProps = (
           input: (e) => {
             return {
               name: "input",
-              allowed: () => syncStateFromControl(e),
+              allowed: () => syncUIStateWithDOM(e),
             };
           },
           naviChange: (e) => {
             return {
               name: "navi_change",
               allowed: () => {
-                syncStateFromControl(e);
+                syncUIStateWithDOM(e);
                 requestActionOnAllowed(e);
               },
             };
@@ -534,14 +534,14 @@ export const useControlProps = (
           input: (e) => {
             return {
               name: "input",
-              allowed: () => syncStateFromControl(e),
+              allowed: () => syncUIStateWithDOM(e),
             };
           },
           naviChange: (e) => {
             return {
               name: "navi_change",
               allowed: () => {
-                syncStateFromControl(e);
+                syncUIStateWithDOM(e);
                 requestActionOnAllowed(e);
               },
             };
