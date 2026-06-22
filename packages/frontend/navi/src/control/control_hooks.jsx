@@ -519,7 +519,6 @@ export const useControlProps = (
             return {
               name: "navi_change",
               allowed: () => {
-                syncUIStateWithDOM(e);
                 requestActionOnAllowed(e);
               },
             };
@@ -541,7 +540,6 @@ export const useControlProps = (
             return {
               name: "navi_change",
               allowed: () => {
-                syncUIStateWithDOM(e);
                 requestActionOnAllowed(e);
               },
             };
