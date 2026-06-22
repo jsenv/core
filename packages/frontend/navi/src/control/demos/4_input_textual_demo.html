@@ -543,6 +543,7 @@
 
             <FormBasicDemo />
             <FormWithInputActionDemo />
+            <FormWithReadonlyInputDemo />
           </div>
         );
       };
@@ -864,6 +865,40 @@
                 <Field flex spacing="s">
                   <Label>Note (regular input)</Label>
                   <Input name="note" defaultValue="cute" />
+                </Field>
+                <Button type="submit">Submit form</Button>
+                <CallLog entries={entries} onClear={clear} />
+              </Box>
+            </Form>
+          </fieldset>
+        );
+      };
+
+      const FormWithReadonlyInputDemo = () => {
+        const [entries, push, clear] = useCallLog();
+
+        return (
+          <fieldset>
+            <legend>Form with a readonly input</legend>
+            <p className="states-description">
+              A readonly input cannot be edited but its value is still included
+              in the form submission. Clicking it shows a callout explaining why
+              it cannot be modified.
+            </p>
+            <Form
+              action={async (params) => {
+                push("[form] action", params);
+                await delay(800);
+              }}
+            >
+              <Box flex="y" spacing="s" alignX="start">
+                <Field flex spacing="s">
+                  <Label>Username (editable)</Label>
+                  <Input name="username" defaultValue="dam" />
+                </Field>
+                <Field flex spacing="s">
+                  <Label>Role (readonly)</Label>
+                  <Input name="role" value="admin" readOnly />
                 </Field>
                 <Button type="submit">Submit form</Button>
                 <CallLog entries={entries} onClear={clear} />
