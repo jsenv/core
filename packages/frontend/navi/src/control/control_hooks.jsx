@@ -198,12 +198,13 @@ export const useControlProps = (
     if (!el) {
       return;
     }
-    debugUIState(
-      e,
-      `syncDomState: ${getElementSignature(el)} to ${newUIState}`,
-    );
     const domProps = toDomProps(newUIState);
     Object.assign(el, domProps);
+    debugUIState(
+      e,
+      `syncDomState: updated to ${getElementSignature(el)}`,
+      domProps,
+    );
   };
 
   const controlInfo = createControlInfo(props, { controlType });
