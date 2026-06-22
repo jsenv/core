@@ -446,7 +446,7 @@ export const useControlProps = (
             }
             return {
               name: `click on ${props.type}`,
-              category: "interaction",
+              category: "request_update", // click is requesting to check/uncheck from browser perspective
               allowed: () => triggerUIAction(e),
               prevented: () => e.preventDefault(),
             };
