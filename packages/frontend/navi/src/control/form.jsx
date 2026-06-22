@@ -21,6 +21,7 @@ import {
   useControlgroupProps,
 } from "./control_hooks.jsx";
 import { FormContext } from "./form_context.js";
+import { dispatchRequestAction } from "./rules/control_action.js";
 import { dispatchRequestInteraction } from "./rules/control_interaction.js";
 import { dispatchRequestResetUIState } from "./ui_state_dom.js";
 
@@ -134,16 +135,11 @@ HTMLFormElement.prototype.requestSubmit = function (submitter) {
     cancelable: true,
     detail: { submitter },
   });
-  dispatchRequestInteraction(form, {
+  dispatchRequestAction(form, {
     event: programmaticEvent,
-    name: "requestSubmit",
-    allowed: () => {
-      dispatchRequestAction(form, {
-        event: programmaticEvent,
-        action: "auto",
-        requester: submitter,
-      });
-    },
+    interactionName: "requestSubmit",
+    action: "auto",
+    requester: submitter,
   });
 };
 
