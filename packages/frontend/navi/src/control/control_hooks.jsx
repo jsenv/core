@@ -355,6 +355,28 @@ export const useControlProps = (
         };
       }
 
+      const keyDownDefaultOnInput = (e) => {
+        if (e.key === "Enter") {
+          if (actionDebounce) {
+            // The input has its own debounced action; Enter fires it directly
+            // (input_effect.js cancels the debounce and triggers the action via the change event).
+            // Don't propagate to --navi-send, which would cause a double action call.
+            return null;
+          }
+          const input = e.currentTarget;
+          return {
+            name: "enter on input to send closest control group",
+            category: "interaction",
+            bypassInteractivity: true,
+            bypassValidity: true,
+            allowed: () => triggerNaviCommand(input, "--navi-send", e),
+            // prevent dispatching click as result of this enter
+            prevented: () => e.preventDefault(),
+          };
+        }
+        return keyDownDefault(e);
+      };
+
       const isInputCheckable =
         controlType === "input" &&
         (props.type === "radio" || props.type === "checkbox");
@@ -469,28 +491,6 @@ export const useControlProps = (
           },
         };
       }
-
-      const keyDownDefaultOnInput = (e) => {
-        if (e.key === "Enter") {
-          if (actionDebounce) {
-            // The input has its own debounced action; Enter fires it directly
-            // (input_effect.js cancels the debounce and triggers the action via the change event).
-            // Don't propagate to --navi-send, which would cause a double action call.
-            return null;
-          }
-          const input = e.currentTarget;
-          return {
-            name: "enter on input to send closest control group",
-            category: "interaction",
-            bypassInteractivity: true,
-            bypassValidity: true,
-            allowed: () => triggerNaviCommand(input, "--navi-send", e),
-            // prevent dispatching click as result of this enter
-            prevented: () => e.preventDefault(),
-          };
-        }
-        return keyDownDefault(e);
-      };
 
       const isInputRange = controlType === "input" && props.type === "range";
       if (isInputRange) {
