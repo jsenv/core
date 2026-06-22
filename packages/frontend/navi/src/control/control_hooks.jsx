@@ -433,9 +433,7 @@ export const useControlProps = (
             return keyDownDefault(e);
           },
           mouseDown: (e) => {
-            if (isRadio) {
-              wasCheckedAtMousedownRef.current = e.currentTarget.checked;
-            }
+            wasCheckedAtMousedownRef.current = e.currentTarget.checked;
           },
           click: (e) => {
             if (isRadio && wasCheckedAtMousedownRef.current) {
