@@ -110,6 +110,8 @@ const css = /* css */ `
       }
 
       .navi_callout_body {
+        --callout-icon-height: round(1.5em, 1px);
+
         position: relative;
         display: flex;
         /* 85vw on small screens (<500px), then 47vw to not grow too large capped at 1000px */
@@ -117,8 +119,6 @@ const css = /* css */ `
         padding: var(--callout-padding);
         flex-direction: row;
         gap: 10px;
-
-        --callout-icon-height: round(1.5em, 1px);
 
         .navi_callout_icon {
           display: flex;
