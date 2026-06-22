@@ -706,9 +706,25 @@ export const createControlValidity = (
       leafCV.reportValidity({ event });
       return isValid;
     }
-    if (failedConstraintInfo && hasOwnAction) {
-      reportValidity({ event });
+    if (failedConstraintInfo) {
+      if (hasOwnAction) {
+        debugUIState(
+          event,
+          `syncValidity: has failing constraint and own action -> reportValidity`,
+        );
+        reportValidity({ event });
+      } else {
+        debugUIState(
+          event,
+          `syncValidity: has failing constraint but no own action -> do not report (callout would have no anchor)`,
+        );
+      }
+      innerRequestCloseCallout(event, event?.type);
     } else {
+      debugUIState(
+        event,
+        `syncValidity: no failing constraint -> close callout if any`,
+      );
       innerRequestCloseCallout(event, event?.type);
     }
     // Propagate a silent validity update up the controller chain.
