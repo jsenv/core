@@ -78,7 +78,7 @@ export const tryActionAfterInteractionAllowed = (
 
   // Validity gate: re-check (handles autoResetOnAction side effects), then read
   // the result and decide whether to report/prevent/allow.
-  const cv = controller?.rules?.validation;
+  const cv = controller?.rules.validation;
   if (cv) {
     const isValid = cv.checkValidity({ event, fromRequestAction: true });
     if (!isValid) {
