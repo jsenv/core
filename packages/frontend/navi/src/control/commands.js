@@ -7,6 +7,7 @@ import {
   isControlRoot,
 } from "./control_dom.js";
 import { readControlValue } from "./control_value.js";
+import { dispatchRequestAction } from "./rules/control_action.js";
 import { dispatchRequestInteraction } from "./rules/control_interaction.js";
 import {
   dispatchRequestClearUIState,
@@ -288,34 +289,25 @@ registerNaviCommand("--navi-send", (source, event) => {
           requester = firstButtonSubmitting;
         }
       }
-      return dispatchRequestInteraction(target, {
+      const allowed = dispatchRequestAction(target, {
         event,
+        interactionName: "--navi-send",
         requester,
-        name: "--navi-send",
-        allowed: () => {
-          // TODO: do something that will:
-          // 1. update validity for that target
-          // 2. trigger the action for that target
-        },
-        always: () => {
-          const initiator =
-            event.detail && typeof event.detail === "object"
-              ? event.detail.eventChain[0]
-              : event;
-          const { form } = target;
-          if (form) {
-            // prevent form submission when clicking buttons or pressing enter on inputs
-            initiator.preventDefault();
-          } else if (
-            initiator.type === "keydown" &&
-            initiator.key === "Enter"
-          ) {
-            // prevent triggering click on such button, they are already performing submit
-            // (this ensures enter inside a picker won't trigger picker button click)
-            initiator.preventDefault();
-          }
-        },
       });
+      const initiator =
+        event.detail && typeof event.detail === "object"
+          ? event.detail.eventChain[0]
+          : event;
+      const { form } = target;
+      if (form) {
+        // prevent form submission when clicking buttons or pressing enter on inputs
+        initiator.preventDefault();
+      } else if (initiator.type === "keydown" && initiator.key === "Enter") {
+        // prevent triggering click on such button, they are already performing submit
+        // (this ensures enter inside a picker won't trigger picker button click)
+        initiator.preventDefault();
+      }
+      return allowed;
     },
   };
 });
