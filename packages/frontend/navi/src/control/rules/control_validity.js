@@ -55,7 +55,6 @@
 
 import {
   createPubSub,
-  dispatchInternalCustomEvent,
   dispatchPublicCustomEvent,
   findFocusDelegateTarget,
   getElementSignature,
@@ -94,153 +93,14 @@ import {
 
 export const NAVI_VALIDITY_CHANGE_CUSTOM_EVENT = "navi_validity_change";
 
-export const dispatchRequestInteraction = (
-  element,
-  {
-    event,
-    name = "",
-    wantAction = false,
-    category = "none",
-    prevented,
-    allowed,
-    always,
-    ...detailRest
-  } = {},
-) => {
-  const controlHost = findControlHost(element) || element;
+// Interaction gate (interactivity only — no validity).
+// Re-exported here so existing importers don't need to update their paths.
+export {
+  dispatchRequestInteraction,
+  onRequestInteraction,
+} from "../control_interaction.js";
 
-  return dispatchInternalCustomEvent(controlHost, "navi_request_interaction", {
-    event,
-    wantAction,
-    name,
-    category,
-    prevented,
-    allowed,
-    always,
-    ...detailRest,
-  });
-};
-export const onRequestInteraction = (
-  requestInteractionCustomEvent,
-  { debugInteraction },
-) => {
-  const {
-    event,
-    name,
-    wantAction = false,
-    action,
-    actionOrigin = "action_prop",
-    requester = event.target,
-    meta = {},
-    method = "rerun",
-    bypassInteractivity = false,
-    bypassValidity = false,
-    prevented,
-    allowed,
-    always,
-  } = requestInteractionCustomEvent.detail;
-
-  const onPrevented = (reason) => {
-    debugInteraction(event, `"${name}" prevented (${reason})`);
-    requestInteractionCustomEvent.preventDefault();
-    if (wantAction) {
-      dispatchInternalCustomEvent(
-        requestInteractionCustomEvent.currentTarget,
-        "navi_action_prevented",
-        {
-          event: requestInteractionCustomEvent,
-          requester,
-          actionOrigin,
-          action,
-          method,
-          meta,
-        },
-      );
-    }
-    prevented?.();
-    always?.();
-  };
-  const onAllowed = () => {
-    debugInteraction(event, `"${name}" allowed`);
-    allowed?.();
-    always?.();
-    if (wantAction && action?.isAction) {
-      debugInteraction(
-        requestInteractionCustomEvent,
-        `${DEFAULT_CONSTRAINT_SET.size} constraints verified${
-          elementForAction.hasAttribute("data-action")
-            ? ` -> execute action ${action.callSource}`
-            : " -> no own action, nothing to execute"
-        }`,
-      );
-      dispatchInternalCustomEvent(elementForAction, "navi_action_allowed", {
-        event: requestInteractionCustomEvent,
-        requester,
-        uiState,
-        actionOrigin,
-        action,
-        method,
-        meta,
-      });
-    }
-  };
-
-  if (event.defaultPrevented) {
-    onPrevented("event.defaultPrevented");
-    return false;
-  }
-
-  // For wantAction: resolve proxy so navi_action_* fires on the real control element.
-  let elementForAction = requestInteractionCustomEvent.currentTarget;
-  let uiState;
-  if (wantAction) {
-    const handlingController = elementForAction.__uiStateController__;
-    const proxyTargetController = handlingController
-      ? findControlProxyTargetController(handlingController)
-      : null;
-    if (proxyTargetController) {
-      elementForAction = proxyTargetController.elementRef.current;
-    }
-    const activeController = proxyTargetController ?? handlingController;
-    uiState = activeController?.uiState;
-  }
-  const cv = getControlValidityFromElement(
-    requestInteractionCustomEvent.currentTarget,
-  );
-  if (cv) {
-    if (!bypassInteractivity) {
-      const canInteract = cv.checkInteractivity(event);
-      if (!canInteract) {
-        const failedInfo =
-          cv.interactionFailedConstraintInfo ??
-          cv.failingManagedControlValidity?.interactionFailedConstraintInfo;
-        const reason = failedInfo
-          ? `failing interaction constraint "${failedInfo.name}"`
-          : "not interactable";
-        cv.reportInteractivity({ event });
-        onPrevented(reason);
-        return false;
-      }
-    }
-    if (!bypassValidity) {
-      const isValid = cv.syncValidity(event, { fromRequestAction: wantAction });
-      if (!isValid) {
-        const failedInfo =
-          cv.failingManagedControlValidity?.failedConstraintInfo ??
-          cv.failedConstraintInfo;
-        const reason = failedInfo
-          ? `failing constraint "${failedInfo.name}"`
-          : "invalid";
-        onPrevented(reason);
-        return false;
-      }
-    }
-  }
-  onAllowed();
-  return true;
-};
-
-const getControlValidityFromElement = (element) => {
+export const getControlValidityFromElement = (element) => {
   const controlHost = findControlHost(element);
   const elementToCheck = controlHost || element;
   return elementToCheck.__uiStateController__?.controlValidity;

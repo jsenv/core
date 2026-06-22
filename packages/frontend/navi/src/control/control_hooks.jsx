@@ -34,7 +34,7 @@ import { useComposeElementRef } from "@jsenv/navi/src/box/ref_composition/use_el
 import {
   dispatchRequestInteraction,
   onRequestInteraction,
-} from "@jsenv/navi/src/control/validation/control_validity.js";
+} from "@jsenv/navi/src/control/control_interaction.js";
 import {
   useDebugAction,
   useDebugCommand,
@@ -271,13 +271,10 @@ export const useControlProps = (
       const keyDownDefault = (e) => {
         const defaultAction = getKeyboardEventDefaultAction(e);
         if (defaultAction === "type" || defaultAction === "value_change") {
-          // interactions that change the value of a control (typing, activating, etc.) should be validated
           return {
             name: `keydown to ${defaultAction}`,
             category: "request_update",
             prevented: () => e.preventDefault(),
-            // no need for triggerUIAction here because the input event will follow and do what we need
-            // here we just want to eventually prevent
           };
         }
         if (defaultAction === "activate") {
@@ -368,7 +365,6 @@ export const useControlProps = (
             name: "enter on input to send closest control group",
             category: "interaction",
             bypassInteractivity: true,
-            bypassValidity: true,
             allowed: () => triggerNaviCommand(input, "--navi-send", e),
             // prevent dispatching click as result of this enter
             prevented: () => e.preventDefault(),
@@ -482,7 +478,6 @@ export const useControlProps = (
             return {
               name: `click on ${props.type}`,
               category: "request_update",
-              bypassValidity: true, // allow to check required checkboxes
               // click is requesting to check/uncheck from browser perspective
               // Do NOT call triggerUIAction here: the browser will fire its own "input" event
               // after the click which will sync the state and trigger uiAction.
@@ -605,7 +600,6 @@ export const useControlProps = (
         name,
         category,
         bypassInteractivity = false,
-        bypassValidity = false,
         allowed,
         prevented,
         always,
@@ -635,7 +629,6 @@ export const useControlProps = (
         name,
         category,
         bypassInteractivity,
-        bypassValidity,
         prevented: () => {
           debugInteraction(e, `interaction not allowed`);
           if (e.type === "keydown") {
@@ -1249,6 +1242,16 @@ const useInteractiveProps = (
         if (e.detail.action === "auto") {
           // special case for the use case where form.submit is called
           e.detail.action = boundAction;
+        }
+        // Validity gate: interaction is allowed (interactivity passed) but the
+        // action must only execute when the current value satisfies all constraints.
+        const cv = uiStateController.controlValidity;
+        if (cv) {
+          const isValid = cv.syncValidity(e, { fromRequestAction: true });
+          if (!isValid) {
+            onActionPrevented?.(e);
+            return;
+          }
         }
         debugAction(e, `executing action ${e.detail.action.callSource}`);
         executeAction(e);
