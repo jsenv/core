@@ -4,7 +4,7 @@ import {
   getElementSignature,
 } from "@jsenv/dom";
 import { isValidElement } from "preact";
-import { useCallback, useLayoutEffect, useRef, useState } from "preact/hooks";
+import { useCallback, useLayoutEffect, useState } from "preact/hooks";
 
 import { registerGlobalConstraint } from "../control/validation/control_validity.js";
 import { useResetErrorBoundary } from "../error_boundary_context.js";
@@ -18,9 +18,11 @@ const NAVI_ACTION_ERROR_CONSTRAINT = {
     if (!errorInfo) {
       return null;
     }
+    const { target, message } = errorInfo;
     return {
       status: "error",
-      ...errorInfo,
+      target,
+      message,
     };
   },
   // This should not prevent <form> submission
@@ -61,9 +63,12 @@ export const useExecuteAction = (
     }
   }, [error]);
 
-  const validationMessageTargetRef = useRef(null);
-  const addErrorMessage = (error) => {
-    let target = validationMessageTargetRef.current;
+  const addErrorMessage = (error, { requester } = {}) => {
+    // The error is stored on the element that owns the action (the form/element itself).
+    // The requester (e.g. submit button) is stored as the callout display target
+    // so the validation message appears on the button, not the form.
+    const element = elementRef.current;
+    let target = requester;
     let message;
     if (errorMapping) {
       const errorMappingResult = errorMapping(error);
@@ -83,17 +88,14 @@ export const useExecuteAction = (
     } else {
       message = error;
     }
-    const controller = target.__uiStateController__;
+    const controller = element.__uiStateController__;
     if (controller) {
-      setActionError(controller, message, {
-        target:
-          target === validationMessageTargetRef.current ? undefined : target,
-      });
+      setActionError(controller, message, { requester, target });
     }
   };
   const removeErrorMessage = () => {
-    const element = validationMessageTargetRef.current;
-    const controller = element?.__uiStateController__;
+    const element = elementRef.current;
+    const controller = element.__uiStateController__;
     if (controller) {
       clearActionError(controller);
       controller.controlValidity.checkValidity();
@@ -148,9 +150,6 @@ export const useExecuteAction = (
           "useExecuteAction: elementRef.current is null, make sure to pass a ref to an element",
         );
       }
-      const validationMessageTarget = requester || element;
-      validationMessageTargetRef.current = validationMessageTarget;
-
       const [triggerAbort, addAbortCallback] = createPubSub();
       const [triggerError, addErrorCallback] = createPubSub();
       const [triggerComplete, addCompleteCallback] = createPubSub();
@@ -176,7 +175,7 @@ export const useExecuteAction = (
         },
         error: (error) => {
           if (errorEffect === "show_validation_message") {
-            addErrorMessage(error);
+            addErrorMessage(error, { requester });
           } else if (errorEffect === "throw") {
             setError(error);
           }

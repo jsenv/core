@@ -657,7 +657,6 @@ export const createControlValidity = (
   // - Pure interaction event (mousedown on editable field) → close the callout:
   //   user intends to edit, we clear the message so it doesn't block them.
   const syncValidity = (event, { fromRequestAction = false } = {}) => {
-    const hasOwnAction = Boolean(controller.props.action);
     const elementSig = getElementSignature(controller.elementRef.current);
     const isValid = checkValidity({ event, fromRequestAction });
     if (failingManagedControlValidity) {
@@ -674,10 +673,11 @@ export const createControlValidity = (
       return isValid;
     }
     if (failedConstraintInfo) {
-      if (hasOwnAction) {
+      const hasActionProp = Boolean(controller.props.action);
+      if (hasActionProp) {
         debugUIState(
           event,
-          `syncValidity ${elementSig}: has failing constraint and own action -> reportValidity`,
+          `syncValidity ${elementSig}: has failing constraint and action context -> reportValidity`,
         );
         reportValidity({ event });
       } else {
