@@ -4,7 +4,11 @@ import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
 export const READONLY_CONSTRAINT = {
   name: "readonly",
   messageAttribute: "data-readonly-message",
-  check: (field, { fromParentSubmission } = {}) => {
+  // Readonly is an interaction constraint: it controls whether the user can
+  // interact with the element and what callout to show, but it does not count
+  // as a value-validity failure (the element's value is still valid).
+  interactionOnly: true,
+  check: (field) => {
     const readOnly = Boolean(
       field.controlHostProps.readOnly ||
       field.controlHostProps["aria-readonly"] === "true",
@@ -16,36 +20,18 @@ export const READONLY_CONSTRAINT = {
     if (type === "hidden") {
       return null;
     }
-    // Readonly/loading controls should not block their parent form from submitting.
-    // This mirrors standard HTML form behaviour where readonly inputs are submitted
-    // as-is and never prevent submission.
-    if (fromParentSubmission) {
-      return null;
-    }
-
-    const isButton = field.controlType === "button";
-    const isBusy = field.controlHostProps["aria-busy"] === "true";
     const readonlySilent =
       field.controlHostProps["data-readonly-silent"] === "";
     if (readonlySilent) {
       return { silent: true };
     }
-    const message = (() => {
-      if (isBusy) {
-        if (isButton) {
-          return naviI18n("constraint.readonly.button_busy");
-        }
-        return naviI18n("constraint.readonly.busy");
-      }
-      if (isButton) {
-        return naviI18n("constraint.readonly.button");
-      }
-      return naviI18n("constraint.readonly.default");
-    })();
-    return {
-      message,
-      status: "info",
-    };
+    const isButton = field.controlType === "button";
+    const message = isButton
+      ? naviI18n("constraint.readonly.button")
+      : naviI18n("constraint.readonly.default");
+    // A readonly element does not block its parent from submitting — mirrors
+    // standard HTML form behaviour where readonly inputs are submitted as-is.
+    return { message, status: "info", ignoredByParents: true };
   },
 };
 // CONSTRAINT_ATTRIBUTE_SET.add("readOnly"); // not all control support this attr

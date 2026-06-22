@@ -209,17 +209,9 @@ naviI18n.addAll({
     fr: "Ce champ est désactivé.",
     en: "This field is disabled.",
   },
-  "constraint.readonly.busy": {
-    fr: "Cet élément est occupé.",
-    en: "This element is busy.",
-  },
   "constraint.readonly.button": {
     fr: "Cette action n'est pas disponible pour l'instant.",
     en: "This action is not available right now.",
-  },
-  "constraint.readonly.button_busy": {
-    fr: "Cette action est en cours...",
-    en: "This action is in progress...",
   },
   "constraint.readonly.option": {
     fr: "Cette option n'est pas disponible.",
@@ -228,6 +220,14 @@ naviI18n.addAll({
   "constraint.readonly.default": {
     fr: "Cet élément est en lecture seule et ne peut pas être modifié.",
     en: "This element is read-only and cannot be modified.",
+  },
+  "constraint.busy.button": {
+    fr: "Cette action est en cours...",
+    en: "This action is in progress...",
+  },
+  "constraint.busy.default": {
+    fr: "Cet élément est occupé.",
+    en: "This element is busy.",
   },
   "constraint.one_of.no_match": {
     fr: "Aucune suggestion ne correspond à votre saisie.",

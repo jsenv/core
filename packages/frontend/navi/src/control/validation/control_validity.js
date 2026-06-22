@@ -66,6 +66,7 @@ import { findControlHost } from "../control_dom.js";
 import { findControlProxyTargetController } from "../controller_registry.js";
 import { openCallout } from "./callout/callout.js";
 import { getConstraintMessage } from "./constraint_message.js";
+import { BUSY_CONSTRAINT } from "./constraints/busy_constraint.js";
 import {
   MIN_DIGIT_CONSTRAINT,
   MIN_LOWER_LETTER_CONSTRAINT,
@@ -203,10 +204,20 @@ export const onRequestInteraction = (
     requestInteractionCustomEvent.currentTarget,
   );
   if (cv) {
-    const isValid = cv.syncValidity(event, { fromRequestAction: wantAction });
-    if (!isValid && (cv.interactionFailedConstraintInfo || wantAction)) {
+    const canInteract = cv.checkInteractivity(event);
+    if (!canInteract) {
       const failedInfo =
         cv.interactionFailedConstraintInfo ??
+        cv.failingManagedControlValidity?.interactionFailedConstraintInfo;
+      const reason = failedInfo
+        ? `failing interaction constraint "${failedInfo.name}"`
+        : "not interactable";
+      onPrevented(reason);
+      return false;
+    }
+    const isValid = cv.syncValidity(event, { fromRequestAction: wantAction });
+    if (!isValid && wantAction) {
+      const failedInfo =
         cv.failingManagedControlValidity?.failedConstraintInfo ??
         cv.failedConstraintInfo;
       const reason = failedInfo
@@ -226,11 +237,13 @@ const getControlValidityFromElement = (element) => {
   return elementToCheck.__uiStateController__?.controlValidity;
 };
 
-const INTERACTION_CONSTRAINTS = [DISABLED_CONSTRAINT, READONLY_CONSTRAINT];
-const INTERACTION_CONSTRAINT_SET = new Set(INTERACTION_CONSTRAINTS);
+const INTERACTION_CONSTRAINT_SET = new Set([
+  DISABLED_CONSTRAINT,
+  BUSY_CONSTRAINT,
+  READONLY_CONSTRAINT,
+]);
 
 const STANDARD_CONSTRAINT_SET = new Set([
-  DISABLED_CONSTRAINT,
   REQUIRED_CONSTRAINT,
   PATTERN_CONSTRAINT,
   TYPE_EMAIL_CONSTRAINT,
@@ -252,7 +265,6 @@ const NAVI_CONSTRAINT_SET = new Set([
   MIN_LOWER_LETTER_CONSTRAINT,
   SAME_AS_CONSTRAINT,
   ONE_OF_CONSTRAINT,
-  READONLY_CONSTRAINT,
 ]);
 const DEFAULT_CONSTRAINT_SET = new Set([
   ...STANDARD_CONSTRAINT_SET,
@@ -323,7 +335,6 @@ export const createControlValidity = (
     }
     validityInfoMap.clear();
     failedConstraintInfo = null;
-    interactionFailedConstraintInfo = null;
     failingManagedControlValidity = null;
   };
   addTeardown(resetValidity);
@@ -332,7 +343,6 @@ export const createControlValidity = (
     event,
     requester = controller.elementRef.current,
     fromRequestAction,
-    fromParentSubmission = false,
   } = {}) => {
     if (fromRequestAction) {
       for (const [, validityInfo] of validityInfoMap) {
@@ -362,7 +372,6 @@ export const createControlValidity = (
         event,
         requester,
         fromRequestAction,
-        fromParentSubmission: true,
       });
       if (!managedIsValid) {
         failingManagedControlValidity = managedCV;
@@ -400,7 +409,6 @@ export const createControlValidity = (
 
       const checkResult = constraint.check(fieldForConstraint, {
         fromRequestAction,
-        fromParentSubmission,
         registerChange,
       });
       if (!checkResult) {
@@ -427,14 +435,7 @@ export const createControlValidity = (
       validityInfoMap.set(constraint, thisConstraintFailureInfo);
       newConstraintValidityState.valid = false;
       newConstraintValidityState[constraint.name] = thisConstraintFailureInfo;
-
-      // Constraint evaluation: evaluate all constraints when required is set,
-      // otherwise follow native behavior (skip constraints on empty values)
-      if (INTERACTION_CONSTRAINT_SET.has(constraint)) {
-        if (!interactionFailedConstraintInfo) {
-          interactionFailedConstraintInfo = thisConstraintFailureInfo;
-        }
-      } else if (failedConstraintInfo) {
+      if (failedConstraintInfo) {
         // there is already a failing value constraint, which one do we pick?
         const constraintPicked = pickConstraintFailureInfo(
           failedConstraintInfo,
@@ -451,8 +452,7 @@ export const createControlValidity = (
       }
     }
 
-    const activeFailedConstraintInfo =
-      interactionFailedConstraintInfo || failedConstraintInfo;
+    const activeFailedConstraintInfo = failedConstraintInfo;
     if (activeFailedConstraintInfo && !activeFailedConstraintInfo.silent) {
       const titleLess = controller.controlHostProps.title === undefined;
       if (titleLess) {
@@ -497,43 +497,34 @@ export const createControlValidity = (
   };
 
   const [notifyCalloutOpen, onCalloutOpen] = createPubSub();
-  const reportValidity = ({ event, requester, skipFocus } = {}) => {
-    // Interaction constraints (disabled/readonly) take precedence over value constraints,
-    // EXCEPT when the value constraint is at error level — errors always win.
-    const activeConstraintInfo =
-      failedConstraintInfo?.status === "error"
-        ? failedConstraintInfo
-        : interactionFailedConstraintInfo || failedConstraintInfo;
-    if (!activeConstraintInfo) {
+  // Shared callout-opening logic used by both reportValidity and reportInteractivity.
+  const openConstraintCallout = (
+    constraintInfo,
+    { event, requester, skipFocus } = {},
+  ) => {
+    if (!constraintInfo) {
       innerRequestCloseCallout(event, "is_valid");
       return;
     }
-    if (activeConstraintInfo.silent) {
+    if (constraintInfo.silent) {
       innerRequestCloseCallout(event, "invalid_silent");
       return;
     }
-
-    // Always resolve the right message first (handles custom messages, attributes, fallback).
     const { message } = getConstraintMessage(
       controller,
-      activeConstraintInfo.constraint,
-      activeConstraintInfo.message,
+      constraintInfo.constraint,
+      constraintInfo.message,
       { requester },
     );
     if (controlValidity.callout) {
-      const { status } = activeConstraintInfo;
       controlValidity.callout.update(message, {
-        status,
+        status: constraintInfo.status,
       });
       return;
     }
     const anchorElement =
-      activeConstraintInfo.target || controller.elementRef.current;
-    if (
-      !skipFocus &&
-      // skip focus on proxy (which uses aria-hidden and are not meant to be focused)
-      !anchorElement.closest('[aria-hidden="true"]')
-    ) {
+      constraintInfo.target || controller.elementRef.current;
+    if (!skipFocus && !anchorElement.closest('[aria-hidden="true"]')) {
       const focusTarget =
         findFocusDelegateTarget(anchorElement) || anchorElement;
       debugFocus(
@@ -545,10 +536,9 @@ export const createControlValidity = (
     const removeCloseOnCleanup = addTeardown(() => {
       innerRequestCloseCallout(new CustomEvent("cleanup"), "cleanup");
     });
-
     controlValidity.callout = openCallout(message, {
       anchorElement,
-      status: activeConstraintInfo.status,
+      status: constraintInfo.status,
       openingEvent: event,
       debug: debugUIState,
       onClose: ({ event, focusWithinCallout }) => {
@@ -559,15 +549,15 @@ export const createControlValidity = (
           }
         }
         controlValidity.callout = null;
-        if (activeConstraintInfo) {
-          activeConstraintInfo.reportStatus = "closed";
+        if (constraintInfo) {
+          constraintInfo.reportStatus = "closed";
         }
         const element = controller.elementRef.current;
         if (
           !skipFocus &&
           focusWithinCallout &&
           element &&
-          !element.closest('[aria-hidden="true"]') // do not focus invalid proxy
+          !element.closest('[aria-hidden="true"]')
         ) {
           const focusTarget =
             findFocusDelegateTarget(anchorElement) || anchorElement;
@@ -575,15 +565,88 @@ export const createControlValidity = (
             event,
             `callout is closing with focus, give focus back to the control ${getElementSignature(focusTarget)}.focus()`,
           );
-          // focus is withing callout and we are closing it
-          // if we don't do anything browser will move focus to the body
-          // it's better to have it back to the field
           focusTarget.focus();
         }
       },
     });
     const results = notifyCalloutOpen(event);
-    activeConstraintInfo.reportStatus = "reported";
+    constraintInfo.reportStatus = "reported";
+  };
+
+  const checkInteractivity = (event) => {
+    interactionFailedConstraintInfo = null;
+    failingManagedControlValidity = null;
+    for (const constraint of INTERACTION_CONSTRAINT_SET) {
+      const checkResult = constraint.check(controller);
+      if (!checkResult) {
+        continue;
+      }
+      const constraintInfo =
+        typeof checkResult === "string"
+          ? { message: checkResult }
+          : checkResult;
+      constraintInfo.messageString = constraintInfo.message;
+      interactionFailedConstraintInfo = {
+        name: constraint.name,
+        constraint,
+        status: "info",
+        ...constraintInfo,
+        reportStatus: "not_reported",
+      };
+      break;
+    }
+    // Also check managed controls for blocking interaction constraints (e.g. busy).
+    if (!interactionFailedConstraintInfo) {
+      const managedControllers = controller.getManagedControls();
+      for (const managedController of managedControllers) {
+        const managedCV = managedController.controlValidity;
+        const managedCanInteract = managedCV.checkInteractivity(event);
+        if (!managedCanInteract) {
+          const managedFailed = managedCV.interactionFailedConstraintInfo;
+          if (managedFailed && !managedFailed.ignoredByParents) {
+            failingManagedControlValidity = managedCV;
+            break;
+          }
+        }
+      }
+    }
+    // Manage title attribute based on interaction state.
+    const titleLess = controller.controlHostProps.title === undefined;
+    if (titleLess) {
+      const element = controller.elementRef.current;
+      if (element) {
+        if (
+          interactionFailedConstraintInfo &&
+          !interactionFailedConstraintInfo.silent
+        ) {
+          element.setAttribute(
+            "title",
+            interactionFailedConstraintInfo.messageString,
+          );
+        } else if (!failedConstraintInfo) {
+          // Only remove if value validity also has no failure — checkValidity manages its own title.
+          element.removeAttribute("title");
+        }
+      }
+    }
+    return !interactionFailedConstraintInfo && !failingManagedControlValidity;
+  };
+  controlValidity.checkInteractivity = checkInteractivity;
+
+  const reportInteractivity = ({ event, requester, skipFocus } = {}) => {
+    const constraintInfo =
+      interactionFailedConstraintInfo ??
+      failingManagedControlValidity?.interactionFailedConstraintInfo;
+    openConstraintCallout(constraintInfo, { event, requester, skipFocus });
+  };
+  controlValidity.reportInteractivity = reportInteractivity;
+
+  const reportValidity = ({ event, requester, skipFocus } = {}) => {
+    openConstraintCallout(failedConstraintInfo, {
+      event,
+      requester,
+      skipFocus,
+    });
   };
   controlValidity.checkValidity = checkValidity;
   controlValidity.reportValidity = reportValidity;
@@ -604,7 +667,7 @@ export const createControlValidity = (
   // Centralized validity sync: decides what to show/close based on the event type
   // and the current constraint state.
   //
-  // - Interaction constraints (readonly/disabled) violated → always report them.
+  // - Interaction constraints (readonly/disabled/busy) violated → always report them.
   // - Value-modifying event (input, keydown...) + own action + value invalid → report.
   // - Pure interaction event (mousedown on editable field) → close the callout:
   //   user intends to edit, we clear the message so it doesn't block them.
@@ -617,16 +680,11 @@ export const createControlValidity = (
       let leafCV = failingManagedControlValidity;
       while (
         leafCV.failingManagedControlValidity &&
-        !leafCV.failedConstraintInfo &&
-        !leafCV.interactionFailedConstraintInfo
+        !leafCV.failedConstraintInfo
       ) {
         leafCV = leafCV.failingManagedControlValidity;
       }
       leafCV.reportValidity({ event });
-      return isValid;
-    }
-    if (interactionFailedConstraintInfo) {
-      reportValidity({ event });
       return isValid;
     }
     if (failedConstraintInfo && hasOwnAction) {

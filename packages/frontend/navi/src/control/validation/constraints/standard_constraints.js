@@ -12,24 +12,27 @@ import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
 export const DISABLED_CONSTRAINT = {
   name: "disabled",
   messageAttribute: "data-disabled-message",
-  check: (field, { fromParentSubmission } = {}) => {
+  // Disabled is an interaction constraint: it controls whether the user can
+  // interact with the element and what callout to show, but it does not count
+  // as a value-validity failure.
+  interactionOnly: true,
+  check: (field) => {
     const disabled = field.controlHostProps.disabled;
     if (!disabled) {
       return null;
     }
-    // Disabled controls should not block their parent form from submitting.
-    if (fromParentSubmission) {
-      return null;
-    }
 
     const type = field.controlHostProps.type;
+    let message;
     if (type === "radio") {
-      return naviI18n(`constraint.disabled.radio`);
+      message = naviI18n(`constraint.disabled.radio`);
+    } else if (type === "checkbox") {
+      message = naviI18n(`constraint.disabled.checkbox`);
+    } else {
+      message = naviI18n(`constraint.disabled.default`);
     }
-    if (type === "checkbox") {
-      return naviI18n(`constraint.disabled.checkbox`);
-    }
-    return naviI18n(`constraint.disabled.default`);
+    // A disabled element does not block its parent from submitting.
+    return { message, status: "info", ignoredByParents: true };
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("disabled");
