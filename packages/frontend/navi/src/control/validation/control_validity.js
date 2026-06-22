@@ -224,7 +224,7 @@ export const onRequestInteraction = (
     }
     if (!bypassValidity) {
       const isValid = cv.syncValidity(event, { fromRequestAction: wantAction });
-      if (!isValid && wantAction) {
+      if (!isValid) {
         const failedInfo =
           cv.failingManagedControlValidity?.failedConstraintInfo ??
           cv.failedConstraintInfo;

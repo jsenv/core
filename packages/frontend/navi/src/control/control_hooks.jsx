@@ -482,6 +482,7 @@ export const useControlProps = (
             return {
               name: `click on ${props.type}`,
               category: "request_update",
+              bypassValidity: true, // allow to check required checkboxes
               // click is requesting to check/uncheck from browser perspective
               // Do NOT call triggerUIAction here: the browser will fire its own "input" event
               // after the click which will sync the state and trigger uiAction.
