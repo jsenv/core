@@ -1065,6 +1065,27 @@
               </Form>
             </fieldset>
 
+            <fieldset>
+              <legend>required attribute</legend>
+              <Form
+                action={async () => {
+                  await delay(600);
+                }}
+              >
+                <Box flex="y" spacing="s" alignX="start">
+                  <Field flex spacing="s">
+                    <Label>Username (required)</Label>
+                    <Input
+                      name="username"
+                      required
+                      placeholder="Enter username..."
+                    />
+                  </Field>
+                  <Button type="submit">Submit</Button>
+                </Box>
+              </Form>
+            </fieldset>
+
             <h3>Pattern + action</h3>
             <p className="states-description">
               Input with <code>pattern="[0-9]*"</code> (numbers only) and an{" "}
