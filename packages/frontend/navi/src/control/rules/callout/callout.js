@@ -118,10 +118,12 @@ const css = /* css */ `
         flex-direction: row;
         gap: 10px;
 
+        --callout-icon-height: round(1.5em, 1px);
+
         .navi_callout_icon {
           display: flex;
           aspect-ratio: 1/1;
-          height: round(1.5em, 1px);
+          height: var(--callout-icon-height);
           flex-shrink: 0;
           align-items: center;
           align-self: flex-start;
@@ -160,7 +162,7 @@ const css = /* css */ `
 
     .navi_callout_close_button_column {
       display: flex;
-      height: 1lh;
+      height: var(--callout-icon-height);
       align-self: flex-start;
 
       .navi_callout_close_button {
