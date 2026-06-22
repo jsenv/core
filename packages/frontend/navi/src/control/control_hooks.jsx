@@ -474,6 +474,8 @@ export const useControlProps = (
           return {
             name: "enter on input to send closest control group",
             category: "interaction",
+            bypassInteractivity: true,
+            bypassValidity: true,
             allowed: () => triggerNaviCommand(input, "--navi-send", e),
             // prevent dispatching click as result of this enter
             prevented: () => e.preventDefault(),
@@ -584,6 +586,8 @@ export const useControlProps = (
         wantAction = false,
         name,
         category,
+        bypassInteractivity = false,
+        bypassValidity = false,
         allowed,
         prevented,
         always,
@@ -612,8 +616,13 @@ export const useControlProps = (
         wantAction,
         name,
         category,
+        bypassInteractivity,
+        bypassValidity,
         prevented: () => {
           debugInteraction(e, `interaction not allowed`);
+          if (e.type === "keydown") {
+            e.preventDefault();
+          }
           prevented?.();
         },
         allowed: () => {

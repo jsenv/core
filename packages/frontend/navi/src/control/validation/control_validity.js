@@ -133,6 +133,8 @@ export const onRequestInteraction = (
     requester = event.target,
     meta = {},
     method = "rerun",
+    bypassInteractivity = false,
+    bypassValidity = false,
     prevented,
     allowed,
     always,
@@ -206,28 +208,32 @@ export const onRequestInteraction = (
     requestInteractionCustomEvent.currentTarget,
   );
   if (cv) {
-    const canInteract = cv.checkInteractivity(event);
-    if (!canInteract) {
-      const failedInfo =
-        cv.interactionFailedConstraintInfo ??
-        cv.failingManagedControlValidity?.interactionFailedConstraintInfo;
-      const reason = failedInfo
-        ? `failing interaction constraint "${failedInfo.name}"`
-        : "not interactable";
-      cv.reportInteractivity({ event });
-      onPrevented(reason);
-      return false;
+    if (!bypassInteractivity) {
+      const canInteract = cv.checkInteractivity(event);
+      if (!canInteract) {
+        const failedInfo =
+          cv.interactionFailedConstraintInfo ??
+          cv.failingManagedControlValidity?.interactionFailedConstraintInfo;
+        const reason = failedInfo
+          ? `failing interaction constraint "${failedInfo.name}"`
+          : "not interactable";
+        cv.reportInteractivity({ event });
+        onPrevented(reason);
+        return false;
+      }
     }
-    const isValid = cv.syncValidity(event, { fromRequestAction: wantAction });
-    if (!isValid && wantAction) {
-      const failedInfo =
-        cv.failingManagedControlValidity?.failedConstraintInfo ??
-        cv.failedConstraintInfo;
-      const reason = failedInfo
-        ? `failing constraint "${failedInfo.name}"`
-        : "invalid";
-      onPrevented(reason);
-      return false;
+    if (!bypassValidity) {
+      const isValid = cv.syncValidity(event, { fromRequestAction: wantAction });
+      if (!isValid && wantAction) {
+        const failedInfo =
+          cv.failingManagedControlValidity?.failedConstraintInfo ??
+          cv.failedConstraintInfo;
+        const reason = failedInfo
+          ? `failing constraint "${failedInfo.name}"`
+          : "invalid";
+        onPrevented(reason);
+        return false;
+      }
     }
   }
   onAllowed();
