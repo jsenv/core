@@ -6,15 +6,10 @@
  *  - `control_interaction.js` — interaction blocked (disabled, readonly, busy)
  *
  * Usage:
- *   const calloutManager = createCalloutManager(controller, {
- *     addTeardown,
- *     debugFocus,
- *     debugCallout,
- *     onOpen,   // called after opening — returns array of cleanup fns (can be createPubSub publisher)
- *   });
- *
- *   calloutManager.openConstraintCallout(constraintInfo, { event, requester, skipFocus });
- *   calloutManager.closeCallout(event, reason);
+ *   const myToken = createOpenToken();
+ *   calloutManager.addOpenToken(myToken, { constraint, event, requester, skipFocus });
+ *   calloutManager.removeOpenToken(myToken, event);
+ *   calloutManager.requestCloseCallout(event, debugReason); // force-close all
  *   calloutManager.callout  // current open callout or null
  */
 
@@ -22,6 +17,12 @@ import { findFocusDelegateTarget, getElementSignature } from "@jsenv/dom";
 
 import { openCallout } from "./callout/callout.js";
 import { getConstraintMessage } from "./constraint_message.js";
+
+/**
+ * Creates an opaque token used as a key for callout open reasons.
+ * Each caller (validation, interaction, …) owns one token.
+ */
+export const createOpenToken = () => ({});
 
 /**
  * Creates a callout state manager for a controller.
@@ -38,21 +39,20 @@ export const createCalloutManager = (
   { addTeardown, debugFocus, debugPopup, onOpen } = {},
 ) => {
   let callout = null;
-  // Tracks active reasons why the callout should be displayed.
-  // reasonKey → constraintInfo
-  // When the last reason is removed, the callout closes automatically.
-  const reasons = new Map();
+  // Tracks open tokens → their constraint info.
+  // The callout closes automatically when the last token is removed.
+  const tokens = new Map();
 
-  // Remove a named reason. Closes the callout only when no reasons remain.
-  // If other reasons are still active, updates the callout to show the first remaining reason.
-  const closeCallout = (event, reasonKey) => {
-    if (!reasons.has(reasonKey)) {
+  // Remove a token. Closes the callout only when no tokens remain.
+  // If other tokens are still active, updates the callout to show the first remaining one.
+  const removeOpenToken = (token, event) => {
+    if (!tokens.has(token)) {
       return false;
     }
-    reasons.delete(reasonKey);
-    if (reasons.size > 0) {
+    tokens.delete(token);
+    if (tokens.size > 0) {
       if (callout) {
-        const [, remainingConstraintInfo] = reasons.entries().next().value;
+        const [, remainingConstraintInfo] = tokens.entries().next().value;
         const { message } = getConstraintMessage(
           controller,
           remainingConstraintInfo.constraint,
@@ -66,39 +66,38 @@ export const createCalloutManager = (
     if (!callout) {
       return false;
     }
-    return callout.requestClose(event, reasonKey);
+    return callout.requestClose(event, "token_removed");
   };
 
-  // Force-close the callout regardless of active reasons (teardown / cleanup).
-  const forceCloseCallout = (event, debugReason) => {
-    reasons.clear();
+  // Force-close the callout regardless of active tokens (teardown / external request).
+  const requestCloseCallout = (event, debugReason) => {
+    tokens.clear();
     if (!callout) {
       return false;
     }
     return callout.requestClose(event, debugReason);
   };
 
-  const openConstraintCallout = (
-    constraintInfo,
-    { reason = "default", event, requester, skipFocus } = {},
+  const addOpenToken = (
+    token,
+    { constraint, event, requester, skipFocus } = {},
   ) => {
-    if (!constraintInfo) {
-      closeCallout(event, reason);
+    if (!constraint) {
+      removeOpenToken(token, event);
       return;
     }
-    reasons.set(reason, constraintInfo);
+    tokens.set(token, constraint);
     const { message } = getConstraintMessage(
       controller,
-      constraintInfo.constraint,
-      constraintInfo.message,
+      constraint.constraint,
+      constraint.message,
       { requester },
     );
     if (callout) {
-      callout.update(message, { status: constraintInfo.status });
+      callout.update(message, { status: constraint.status });
       return;
     }
-    const anchorElement =
-      constraintInfo.target || controller.elementRef.current;
+    const anchorElement = constraint.target || controller.elementRef.current;
     if (!skipFocus && !anchorElement.closest('[aria-hidden="true"]')) {
       const focusTarget =
         findFocusDelegateTarget(anchorElement) || anchorElement;
@@ -109,13 +108,13 @@ export const createCalloutManager = (
       focusTarget.focus();
     }
     const removeCloseOnCleanup = addTeardown?.(() => {
-      forceCloseCallout(new CustomEvent("cleanup"), "cleanup");
+      requestCloseCallout(new CustomEvent("cleanup"), "cleanup");
     });
     // `openResults` is referenced in onClose which runs later — forward ref is intentional.
     let openResults = [];
     callout = openCallout(message, {
       anchorElement,
-      status: constraintInfo.status,
+      status: constraint.status,
       openingEvent: event,
       debug: debugPopup,
       onClose: ({ event: closeEvent, focusWithinCallout }) => {
@@ -126,10 +125,10 @@ export const createCalloutManager = (
           }
         }
         callout = null;
-        // User dismissed the callout — clear all reasons so it doesn't reopen spuriously.
-        reasons.clear();
-        if (constraintInfo) {
-          constraintInfo.reportStatus = "closed";
+        // User dismissed the callout — clear all tokens so it doesn't reopen spuriously.
+        tokens.clear();
+        if (constraint) {
+          constraint.reportStatus = "closed";
         }
         const element = controller.elementRef.current;
         if (
@@ -156,13 +155,13 @@ export const createCalloutManager = (
     } else if (rawResults !== undefined) {
       openResults = [rawResults];
     }
-    constraintInfo.reportStatus = "reported";
+    constraint.reportStatus = "reported";
   };
 
   const calloutManager = {
-    openConstraintCallout,
-    closeCallout,
-    forceCloseCallout,
+    addOpenToken,
+    removeOpenToken,
+    requestCloseCallout,
     get callout() {
       return callout;
     },

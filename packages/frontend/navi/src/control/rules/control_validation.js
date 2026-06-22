@@ -57,6 +57,7 @@ import { dispatchPublicCustomEvent, getElementSignature } from "@jsenv/dom";
 
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 import { findControlProxyTargetController } from "../controller_registry.js";
+import { createOpenToken } from "./control_callout.js";
 import {
   MIN_DIGIT_CONSTRAINT,
   MIN_LOWER_LETTER_CONSTRAINT,
@@ -79,6 +80,8 @@ import {
 } from "./validation/standard_constraints.js";
 
 export const NAVI_VALIDITY_CHANGE_CUSTOM_EVENT = "navi_validity_change";
+
+const VALIDATION_TOKEN = createOpenToken();
 
 const STANDARD_CONSTRAINT_SET = new Set([
   REQUIRED_CONSTRAINT,
@@ -265,7 +268,7 @@ export const createControlValidation = (
       }
       const checkValidityCallEvent =
         event || new CustomEvent("checkValidity called with no event");
-      callout.closeCallout(checkValidityCallEvent, "validation");
+      callout.removeOpenToken(VALIDATION_TOKEN, checkValidityCallEvent);
     }
 
     if (
@@ -285,8 +288,8 @@ export const createControlValidation = (
   };
 
   const reportValidity = ({ event, requester, skipFocus } = {}) => {
-    callout.openConstraintCallout(failedConstraintInfo, {
-      reason: "validation",
+    callout.addOpenToken(VALIDATION_TOKEN, {
+      constraint: failedConstraintInfo,
       event,
       requester,
       skipFocus,
@@ -299,9 +302,6 @@ export const createControlValidation = (
   });
   Object.defineProperty(controlValidity, "failingManagedControlValidity", {
     get: () => failingManagedControlValidity,
-  });
-  Object.defineProperty(controlValidity, "callout", {
-    get: () => callout.callout,
   });
   controlValidity.onCalloutOpen = onCalloutOpen;
   // Centralized validity sync: decides what to show/close based on the event type
@@ -340,11 +340,11 @@ export const createControlValidation = (
           event,
           `syncValidity ${elementSig}: has failing constraint but no own action -> close callout if any`,
         );
-        callout.closeCallout(event, "validation");
+        callout.removeOpenToken(VALIDATION_TOKEN, event);
       }
     } else {
       // Sync interaction state — if the control is now interactable the interaction
-      // callout reason is cleared, allowing the callout to close.
+      // callout token is removed, allowing the callout to close.
       const ci = controller.rules.interaction;
       if (ci) {
         ci.checkInteractivity({ event });
@@ -353,7 +353,7 @@ export const createControlValidation = (
         event,
         `syncValidity ${elementSig}: no failing constraint -> close callout if any`,
       );
-      callout.closeCallout(event, "validation");
+      callout.removeOpenToken(VALIDATION_TOKEN, event);
     }
     // Propagate a silent validity update up the controller chain.
     // Parent controllers (group, facade) don't report — the leaf's callout is enough.
@@ -379,12 +379,11 @@ export const requestCloseValidityCallout = (
   if (!controller) {
     return false;
   }
-  const controlValidity = controller.rules.validation;
-  const { callout } = controlValidity;
-  if (!callout) {
+  const rulesCallout = controller.rules.callout;
+  if (!rulesCallout) {
     return false;
   }
-  return callout.requestClose(event, reason);
+  return rulesCallout.requestCloseCallout(event, reason);
 };
 
 const pickConstraintFailureInfo = (a, b) => {

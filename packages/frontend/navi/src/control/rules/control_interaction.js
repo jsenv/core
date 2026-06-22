@@ -24,9 +24,12 @@
 import { dispatchInternalCustomEvent } from "@jsenv/dom";
 
 import { findControlHost } from "../control_dom.js";
+import { createOpenToken } from "./control_callout.js";
 import { BUSY_CONSTRAINT } from "./interaction/busy_constraint.js";
 import { DISABLED_CONSTRAINT } from "./interaction/disabled_constraint.js";
 import { READONLY_CONSTRAINT } from "./interaction/readonly_constraint.js";
+
+const INTERACTION_TOKEN = createOpenToken();
 
 const INTERACTION_CONSTRAINT_SET = new Set([
   DISABLED_CONSTRAINT,
@@ -108,10 +111,10 @@ export const createControlInteraction = (
 
     const canInteract =
       !interactionFailedConstraintInfo && !failingManagedInteraction;
-    // When the control is now interactable, clear the interaction callout reason
-    // so the callout closes if no other reasons (e.g. validation) are active.
+    // When the control is now interactable, remove the interaction token
+    // so the callout closes if no other tokens (e.g. validation) are active.
     if (canInteract) {
-      callout.closeCallout(event, "interaction");
+      callout.removeOpenToken(INTERACTION_TOKEN, event);
     }
     return canInteract;
   };
@@ -126,8 +129,8 @@ export const createControlInteraction = (
       event,
       `reportInteractivity (${interactionFailedConstraintInfo.name})`,
     );
-    callout.openConstraintCallout(interactionFailedConstraintInfo, {
-      reason: "interaction",
+    callout.addOpenToken(INTERACTION_TOKEN, {
+      constraint: interactionFailedConstraintInfo,
       event,
       skipFocus: true,
     });
