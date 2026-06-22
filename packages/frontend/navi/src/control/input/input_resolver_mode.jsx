@@ -1,6 +1,6 @@
 import { dispatchPublicCustomEvent } from "@jsenv/dom";
+import { dispatchRequestInteraction } from "@jsenv/navi/src/control/rules/control_interaction.js";
 import { dispatchRequestSetUIState } from "@jsenv/navi/src/control/ui_state_dom.js";
-import { dispatchRequestInteraction } from "@jsenv/navi/src/control/validation/control_validity.js";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 
 export const InputModeResolver = (props) => {
@@ -105,7 +105,6 @@ const performArrowUpDown = (e) => {
   dispatchRequestInteraction(input, {
     event: e,
     name: "--navi-arrow-up-down",
-    category: "request_update",
     prevented: () => e.preventDefault(),
     allowed: () => {
       dispatchRequestSetUIState(input, nextValue, { event: e });

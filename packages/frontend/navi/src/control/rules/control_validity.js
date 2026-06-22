@@ -65,9 +65,6 @@ import { findControlHost } from "../control_dom.js";
 import { findControlProxyTargetController } from "../controller_registry.js";
 import { openCallout } from "./callout/callout.js";
 import { getConstraintMessage } from "./constraint_message.js";
-import { BUSY_CONSTRAINT } from "./interaction/busy_constraint.js";
-import { DISABLED_CONSTRAINT } from "./interaction/disabled_constraint.js";
-import { READONLY_CONSTRAINT } from "./interaction/readonly_constraint.js";
 import {
   MIN_DIGIT_CONSTRAINT,
   MIN_LOWER_LETTER_CONSTRAINT,
@@ -96,12 +93,6 @@ export const getControlValidityFromElement = (element) => {
   const elementToCheck = controlHost || element;
   return elementToCheck.__uiStateController__?.controlValidity;
 };
-
-const INTERACTION_CONSTRAINT_SET = new Set([
-  DISABLED_CONSTRAINT,
-  BUSY_CONSTRAINT,
-  READONLY_CONSTRAINT,
-]);
 
 const STANDARD_CONSTRAINT_SET = new Set([
   REQUIRED_CONSTRAINT,
@@ -180,7 +171,6 @@ export const createControlValidity = (
   }
 
   let failedConstraintInfo = null;
-  let interactionFailedConstraintInfo = null;
   let failingManagedControlValidity = null;
   const validityInfoMap = new Map();
   let constraintValidityState = { valid: true };
@@ -402,81 +392,6 @@ export const createControlValidity = (
     constraintInfo.reportStatus = "reported";
   };
 
-  const checkInteractivity = (event) => {
-    interactionFailedConstraintInfo = null;
-    failingManagedControlValidity = null;
-    for (const constraint of INTERACTION_CONSTRAINT_SET) {
-      const checkResult = constraint.check(controller);
-      if (!checkResult) {
-        continue;
-      }
-      const constraintInfo =
-        typeof checkResult === "string"
-          ? { message: checkResult }
-          : checkResult;
-      constraintInfo.messageString = constraintInfo.message;
-      interactionFailedConstraintInfo = {
-        name: constraint.name,
-        constraint,
-        status: "info",
-        ...constraintInfo,
-        reportStatus: "not_reported",
-      };
-      break;
-    }
-    // Also check managed controls for blocking interaction constraints (e.g. busy).
-    if (!interactionFailedConstraintInfo) {
-      const managedControllers = controller.getManagedControls();
-      for (const managedController of managedControllers) {
-        const managedCV = managedController.controlValidity;
-        const managedCanInteract = managedCV.checkInteractivity(event);
-        if (!managedCanInteract) {
-          const managedFailed = managedCV.interactionFailedConstraintInfo;
-          if (managedFailed && !managedFailed.ignoredByParents) {
-            failingManagedControlValidity = managedCV;
-            break;
-          }
-        }
-      }
-    }
-    // Manage title attribute based on interaction state.
-    const titleLess = controller.controlHostProps.title === undefined;
-    if (titleLess) {
-      const element = controller.elementRef.current;
-      if (element) {
-        if (interactionFailedConstraintInfo) {
-          element.setAttribute(
-            "title",
-            interactionFailedConstraintInfo.messageString,
-          );
-        } else if (!failedConstraintInfo) {
-          // Only remove if value validity also has no failure — checkValidity manages its own title.
-          element.removeAttribute("title");
-        }
-      }
-    }
-    return !interactionFailedConstraintInfo && !failingManagedControlValidity;
-  };
-  controlValidity.checkInteractivity = checkInteractivity;
-
-  const reportInteractivity = ({ event, requester, skipFocus } = {}) => {
-    if (failingManagedControlValidity) {
-      // Delegate to the leaf CV so the callout appears on the failing element, not the form/group.
-      let leafCV = failingManagedControlValidity;
-      while (leafCV.failingManagedControlValidity) {
-        leafCV = leafCV.failingManagedControlValidity;
-      }
-      leafCV.reportInteractivity({ event, requester, skipFocus });
-      return;
-    }
-    openConstraintCallout(interactionFailedConstraintInfo, {
-      event,
-      requester,
-      skipFocus,
-    });
-  };
-  controlValidity.reportInteractivity = reportInteractivity;
-
   const reportValidity = ({ event, requester, skipFocus } = {}) => {
     openConstraintCallout(failedConstraintInfo, {
       event,
@@ -488,9 +403,6 @@ export const createControlValidity = (
   controlValidity.reportValidity = reportValidity;
   Object.defineProperty(controlValidity, "failedConstraintInfo", {
     get: () => failedConstraintInfo,
-  });
-  Object.defineProperty(controlValidity, "interactionFailedConstraintInfo", {
-    get: () => interactionFailedConstraintInfo,
   });
   Object.defineProperty(controlValidity, "failingManagedControlValidity", {
     get: () => failingManagedControlValidity,
@@ -598,49 +510,3 @@ const getConstraintFailureInfoPriority = (failureInfo) => {
   }
   return 1;
 };
-
-// https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Constraint_validation
-const requestSubmit = HTMLFormElement.prototype.requestSubmit;
-HTMLFormElement.prototype.requestSubmit = function (submitter) {
-  const form = this;
-  const controller = form.__uiStateController__;
-  if (!controller) {
-    requestSubmit.call(form, submitter);
-    return;
-  }
-  const programmaticEvent = new CustomEvent("programmatic_request_submit", {
-    cancelable: true,
-    detail: {
-      submitter,
-    },
-  });
-  dispatchRequestInteraction(form, {
-    event: programmaticEvent,
-    requester: submitter,
-    wantAction: true,
-    name: "requestSubmit",
-    category: "interaction",
-  });
-
-  // When all fields are valid calling the native requestSubmit would let browser go through the
-  // standard form validation steps leading to form submission.
-  // We don't want that because we have our own action system to handle forms
-  // If we did that the form submission would happen in parallel of our action system
-  // and because we listen to "submit" event to dispatch "action" event
-  // we would end up with two actions being executed.
-  //
-  // In case we have discrepencies in our implementation compared to the browser standard
-  // this also prevent the native validation message to show up.
-
-  // requestSubmit.call(this, submitter);
-};
-
-// const submit = HTMLFormElement.prototype.submit;
-// HTMLFormElement.prototype.submit = function (...args) {
-//   const form = this;
-//   if (form.hasAttribute("data-method")) {
-//     console.warn("You must use form.requestSubmit() instead of form.submit()");
-//     return form.requestSubmit();
-//   }
-//   return submit.apply(this, args);
-// };

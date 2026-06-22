@@ -19,7 +19,8 @@ import {
   onUIStateControllerDestroyed,
 } from "./controller_registry.js";
 import { FormContext } from "./form_context.js";
-import { createControlValidity } from "./validation/control_validity.js";
+import { createControlInteraction } from "./rules/control_interaction.js";
+import { createControlValidity } from "./rules/control_validity.js";
 
 /**
  * Minimal interface that any object placed in `ParentUIStateControllerContext` must satisfy.
@@ -226,13 +227,6 @@ export const useUIStateController = (
       }
       // Trigger side effects of a user interaction without changing UI state.
       const currentUIState = uiStateController.uiState;
-      // Sync validity: for user interactions, decide what to show/close based on the
-      // event type and constraint state. For programmatic events, just re-check silently.
-      if (isInternalEvent(e)) {
-        uiStateController.controlValidity.checkValidity({ event: e });
-      } else {
-        uiStateController.controlValidity.syncValidity(e);
-      }
       uiActionInternal?.(currentUIState, e);
       if (uiAction) {
         debugUIState(`calling uiAction for ${controlType}`, currentUIState);
@@ -411,6 +405,14 @@ export const useUIStateController = (
         }
       }
       uiStateController.onInteraction(e);
+      // Sync validity after state change: re-check constraints against the new value.
+      // Internal events (programmatic) → silent check only.
+      // User events → full sync (may open/close callout).
+      if (isInternalEvent(e)) {
+        uiStateController.controlValidity.checkValidity({ event: e });
+      } else {
+        uiStateController.controlValidity.syncValidity(e);
+      }
       return true;
     },
     clearUIState: (e) => {
@@ -454,6 +456,8 @@ export const useUIStateController = (
     },
   };
   uiStateControllerRef.current = uiStateController;
+  const controlInteraction = createControlInteraction(uiStateController);
+  uiStateController.controlInteraction = controlInteraction;
   const controlValidity = createControlValidity(uiStateController, {
     debugUIState,
     debugFocus,
@@ -951,6 +955,8 @@ export const useUIGroupStateController = (
     subscribe: subscribeUIState,
   };
   controllerRef.current = groupUIStateController;
+  const controlInteraction = createControlInteraction(groupUIStateController);
+  groupUIStateController.controlInteraction = controlInteraction;
   const controlValidity = createControlValidity(groupUIStateController, {
     debugUIState: debugUIGroup,
     debugFocus,
@@ -1103,6 +1109,8 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
     },
   };
   controllerRef.current = facadeUIStateController;
+  const controlInteraction = createControlInteraction(facadeUIStateController);
+  facadeUIStateController.controlInteraction = controlInteraction;
   const controlValidity = createControlValidity(facadeUIStateController, {
     debugUIState,
     debugFocus,

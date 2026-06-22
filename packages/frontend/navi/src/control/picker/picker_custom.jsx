@@ -12,7 +12,7 @@ import {
   dispatchRequestSetUIState,
   getUIStateFromElement,
 } from "../ui_state_dom.js";
-import { dispatchRequestInteraction } from "../validation/control_validity.js";
+import { dispatchRequestInteraction } from "../rules/control_interaction.js";
 
 const css = /* css */ `
   .navi_picker {

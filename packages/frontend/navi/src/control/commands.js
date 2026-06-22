@@ -7,13 +7,13 @@ import {
   isControlRoot,
 } from "./control_dom.js";
 import { readControlValue } from "./control_value.js";
+import { dispatchRequestInteraction } from "./rules/control_interaction.js";
 import {
   dispatchRequestClearUIState,
   dispatchRequestResetUIState,
   dispatchRequestSetUIState,
   getUIStateFromElement,
 } from "./ui_state_dom.js";
-import { dispatchRequestInteraction } from "./validation/control_validity.js";
 
 export const triggerNaviCommand = (
   element,
@@ -198,7 +198,6 @@ registerNaviCommand("--navi-update", (source, event) => {
       dispatchRequestInteraction(target, {
         event,
         name: "--navi-update",
-        category: "request_update",
         prevented: () => event.preventDefault(),
         allowed: () => {
           const commandValue = resolveCommandValue(source, event);
@@ -231,7 +230,6 @@ registerNaviCommand("--navi-clear", (source, event) => {
       dispatchRequestInteraction(target, {
         event,
         name: "--navi-clear",
-        category: "request_update",
         prevented: () => event.preventDefault(),
         allowed: () => {
           dispatchRequestClearUIState(target, event);
@@ -252,7 +250,6 @@ registerNaviCommand("--navi-reset", (source, event) => {
       dispatchRequestInteraction(target, {
         event,
         name: "--navi-reset",
-        category: "request_update",
         prevented: () => event.preventDefault(),
         allowed: () => dispatchRequestResetUIState(target, event),
       });
@@ -291,26 +288,34 @@ registerNaviCommand("--navi-send", (source, event) => {
           requester = firstButtonSubmitting;
         }
       }
-      const allowed = dispatchRequestInteraction(target, {
+      return dispatchRequestInteraction(target, {
         event,
         requester,
-        wantAction: true,
         name: "--navi-send",
+        allowed: () => {
+          // TODO: do something that will:
+          // 1. update validity for that target
+          // 2. trigger the action for that target
+        },
+        always: () => {
+          const initiator =
+            event.detail && typeof event.detail === "object"
+              ? event.detail.eventChain[0]
+              : event;
+          const { form } = target;
+          if (form) {
+            // prevent form submission when clicking buttons or pressing enter on inputs
+            initiator.preventDefault();
+          } else if (
+            initiator.type === "keydown" &&
+            initiator.key === "Enter"
+          ) {
+            // prevent triggering click on such button, they are already performing submit
+            // (this ensures enter inside a picker won't trigger picker button click)
+            initiator.preventDefault();
+          }
+        },
       });
-      const initiator =
-        event.detail && typeof event.detail === "object"
-          ? event.detail.eventChain[0]
-          : event;
-      const { form } = target;
-      if (form) {
-        // prevent form submission when clicking buttons or pressing enter on inputs
-        initiator.preventDefault();
-      } else if (initiator.type === "keydown" && initiator.key === "Enter") {
-        // prevent triggering click on such button, they are already performing submit
-        // (this ensures enter inside a picker won't trigger picker button click)
-        initiator.preventDefault();
-      }
-      return allowed;
     },
   };
 });

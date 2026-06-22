@@ -6,7 +6,7 @@ import {
 import { isValidElement } from "preact";
 import { useCallback, useLayoutEffect, useState } from "preact/hooks";
 
-import { registerGlobalConstraint } from "../control/validation/control_validity.js";
+import { registerGlobalConstraint } from "../control/rules/control_validity.js";
 import { useResetErrorBoundary } from "../error_boundary_context.js";
 import { useDebugAction } from "../navi_debug.jsx";
 

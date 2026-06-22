@@ -21,8 +21,8 @@ import {
   useControlgroupProps,
 } from "./control_hooks.jsx";
 import { FormContext } from "./form_context.js";
+import { dispatchRequestInteraction } from "./rules/control_interaction.js";
 import { dispatchRequestResetUIState } from "./ui_state_dom.js";
-import { dispatchRequestInteraction } from "./validation/control_validity.js";
 
 export const Form = (props) => {
   const defaultRef = useRef();
@@ -79,13 +79,13 @@ const FormControl = (props) => {
       pseudoClasses={FormPseudoClasses}
       onSubmit={(e) => {
         const form = e.currentTarget;
-        e.preventDefault();
         dispatchRequestInteraction(form, {
           event: e,
-          wantAction: true,
           name: "form_submit",
           requester: e.submitter || form,
-          actionOrigin: "form_submit",
+          always: () => {
+            e.preventDefault();
+          },
         });
       }}
       onReset={(e) => {

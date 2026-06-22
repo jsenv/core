@@ -4,7 +4,7 @@ import { useEffect, useRef } from "preact/hooks";
 
 import { useAction } from "../action/use_action.js";
 import { useExecuteAction } from "../action/use_execute_action.js";
-import { dispatchRequestInteraction } from "../control/validation/control_validity.js";
+import { dispatchRequestInteraction } from "../control/rules/control_interaction.js";
 import { keyMapping } from "./keyboard_key_meta.js";
 import { isMac } from "./os.js";
 import { useActionEvents } from "./use_action_events.js";

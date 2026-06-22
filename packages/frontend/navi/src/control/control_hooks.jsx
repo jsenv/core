@@ -34,7 +34,7 @@ import { useComposeElementRef } from "@jsenv/navi/src/box/ref_composition/use_el
 import {
   dispatchRequestInteraction,
   onRequestInteraction,
-} from "@jsenv/navi/src/control/control_interaction.js";
+} from "@jsenv/navi/src/control/rules/control_interaction.js";
 import {
   useDebugAction,
   useDebugCommand,
@@ -273,7 +273,6 @@ export const useControlProps = (
         if (defaultAction === "type" || defaultAction === "value_change") {
           return {
             name: `keydown to ${defaultAction}`,
-            category: "request_update",
             prevented: () => e.preventDefault(),
           };
         }
@@ -281,7 +280,6 @@ export const useControlProps = (
           // activating the control (e.g. space on a button/range)
           return {
             name: `keydown to ${defaultAction}`,
-            category: "interaction",
             prevented: () => e.preventDefault(),
             allowed: () => triggerUIAction(e),
           };
@@ -293,7 +291,6 @@ export const useControlProps = (
           // I prefer input to keep eating this interaction while readonly
           return {
             name: `keydown to ${defaultAction}`,
-            category: "interaction",
             prevented: () => e.preventDefault(),
             // scrolling does not concern the value of the control so no need to trigger a uiAction
           };
@@ -312,7 +309,6 @@ export const useControlProps = (
               return {
                 name: "mousedown",
                 wantAction: true,
-                category: "interaction",
                 allowed: () => triggerUIAction(e),
               };
             }
@@ -325,7 +321,6 @@ export const useControlProps = (
             return {
               name: "click",
               wantAction: true,
-              category: "interaction",
               allowed: () => triggerUIAction(e),
             };
           },
@@ -337,7 +332,6 @@ export const useControlProps = (
           input: (e) => {
             return {
               name: "input",
-              category: "update",
               allowed: () => syncStateFromControl(e),
             };
           },
@@ -345,7 +339,6 @@ export const useControlProps = (
             return {
               wantAction: true,
               name: "navi_change",
-              category: "update",
               allowed: () => syncStateFromControl(e),
             };
           },
@@ -363,7 +356,6 @@ export const useControlProps = (
           const input = e.currentTarget;
           return {
             name: "enter on input to send closest control group",
-            category: "interaction",
             bypassInteractivity: true,
             allowed: () => triggerNaviCommand(input, "--navi-send", e),
             // prevent dispatching click as result of this enter
@@ -403,14 +395,12 @@ export const useControlProps = (
                 if (checked) {
                   return {
                     name: "enter on checked radio",
-                    category: "interaction",
                     allowed: () => triggerUIAction(e),
                     always,
                   };
                 }
                 return {
                   name: "enter to check radio",
-                  category: "request_update",
                   allowed: () =>
                     dispatchRequestSetUIState(
                       inputEl,
@@ -425,7 +415,6 @@ export const useControlProps = (
               if (checked) {
                 return {
                   name: "enter to uncheck checkbox",
-                  category: "request_update",
                   allowed: () =>
                     dispatchRequestSetUIState(inputEl, undefined, {
                       event: e,
@@ -435,7 +424,6 @@ export const useControlProps = (
               }
               return {
                 name: "enter to check checkbox",
-                category: "request_update",
                 allowed: () =>
                   dispatchRequestSetUIState(inputEl, uiStateController.value, {
                     event: e,
@@ -450,7 +438,6 @@ export const useControlProps = (
                 // on checked radios (won't update the ui state but will notify of interaction)
                 return {
                   name: "space to activate checked radio",
-                  category: "interaction",
                   allowed: () => triggerUIAction(e),
                 };
               }
@@ -470,14 +457,12 @@ export const useControlProps = (
               // if it was checked at mousedown, the input event won't come, so we do it here.
               return {
                 name: `click on checked radio`,
-                category: "interaction",
                 allowed: () => triggerUIAction(e),
                 prevented: () => e.preventDefault(),
               };
             }
             return {
               name: `click on ${props.type}`,
-              category: "request_update",
               // click is requesting to check/uncheck from browser perspective
               // Do NOT call triggerUIAction here: the browser will fire its own "input" event
               // after the click which will sync the state and trigger uiAction.
@@ -490,7 +475,6 @@ export const useControlProps = (
             return {
               name: "input",
               wantAction: true,
-              category: "update",
               allowed: () => syncStateFromControl(e),
             };
           },
@@ -504,7 +488,6 @@ export const useControlProps = (
           mouseDown: (e) => {
             return {
               name: "mousedown",
-              category: "request_update",
               allowed: () => syncStateFromControl(e),
             };
           },
@@ -513,7 +496,6 @@ export const useControlProps = (
           input: (e) => {
             return {
               name: "input",
-              category: "update",
               allowed: () => syncStateFromControl(e),
             };
           },
@@ -521,7 +503,6 @@ export const useControlProps = (
             return {
               wantAction: true,
               name: "navi_change",
-              category: "update",
               allowed: () => syncStateFromControl(e),
             };
           },
@@ -535,7 +516,6 @@ export const useControlProps = (
           input: (e) => {
             return {
               name: "input",
-              category: "update",
               allowed: () => syncStateFromControl(e),
             };
           },
@@ -543,7 +523,6 @@ export const useControlProps = (
             return {
               wantAction: true,
               name: "navi_change",
-              category: "update",
               allowed: () => syncStateFromControl(e),
             };
           },
@@ -598,7 +577,6 @@ export const useControlProps = (
       const {
         wantAction = false,
         name,
-        category,
         bypassInteractivity = false,
         allowed,
         prevented,
@@ -627,8 +605,7 @@ export const useControlProps = (
         event: e,
         wantAction,
         name,
-        category,
-        bypassInteractivity,
+
         prevented: () => {
           debugInteraction(e, `interaction not allowed`);
           if (e.type === "keydown") {
@@ -697,7 +674,6 @@ export const useControlProps = (
       dispatchRequestInteraction(ref.current, {
         event: e,
         name: "paste",
-        category: "request_update",
         prevented: () => e.preventDefault(),
       });
     };
@@ -1296,7 +1272,6 @@ const useInteractiveProps = (
               event: originalEvent,
               wantAction: true,
               name: "auto_group_action",
-              category: "interaction",
             });
           }
         }

@@ -21,7 +21,7 @@ import {
 import { getUIStateControllerById } from "../controller_registry.js";
 import { Input } from "../input/input.jsx";
 import { useCheckableProps } from "../input/use_checkable_props.js";
-import { dispatchRequestInteraction } from "../validation/control_validity.js";
+import { dispatchRequestInteraction } from "../rules/control_interaction.js";
 
 const css = /* css */ `
   @layer navi {
@@ -358,7 +358,6 @@ const ListSelectable = (props) => {
         dispatchRequestInteraction(list, {
           event: e,
           name: "select",
-          category: "request_update",
           prevented: () => e.preventDefault(), // tell the requester that we don't want to select this item
           allowed: () => childController.setUIState(true, e),
         });
@@ -377,7 +376,6 @@ const ListSelectable = (props) => {
         dispatchRequestInteraction(list, {
           event: e,
           name: "unselect",
-          category: "request_update",
           prevented: () => e.preventDefault(), // tell the requester that we don't want to unselect this item
           allowed: () => childController.setUIState(false, e),
         });
