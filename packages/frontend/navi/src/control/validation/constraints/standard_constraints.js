@@ -10,10 +10,7 @@ import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
 export const REQUIRED_CONSTRAINT = {
   name: "required",
   messageAttribute: "data-required-message",
-  check: (field, { skipRequired }) => {
-    if (skipRequired) {
-      return null;
-    }
+  check: (field) => {
     const required = field.controlHostProps.required;
     if (!required) {
       return null;
