@@ -371,6 +371,7 @@ export const useControlProps = (
           const input = e.currentTarget;
           return {
             name: "enter on input to send closest control group",
+            // allow to dispatch --navi-send even if input is readonly
             bypassInteractivity: true,
             allowed: () => triggerNaviCommand(input, "--navi-send", e),
             // prevent dispatching click as result of this enter
