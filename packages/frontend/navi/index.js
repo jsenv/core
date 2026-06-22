@@ -86,7 +86,7 @@ export { SummaryMarker } from "./src/control/details/summary_marker.jsx";
 // Validation
 export { openCallout } from "./src/control/rules/callout/callout.js";
 export { useCalloutRequestClose } from "./src/control/rules/callout/callout.jsx";
-export { registerGlobalConstraint } from "./src/control/rules/control_validity.js";
+export { registerGlobalConstraint } from "./src/control/rules/control_validation.js";
 export { useConstraintValidityState } from "./src/control/rules/hooks/use_constraint_validity_state.js";
 export { createAvailableConstraint } from "./src/control/rules/validation/create_available_constraint.js";
 // Selection

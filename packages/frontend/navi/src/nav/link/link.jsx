@@ -2,11 +2,11 @@ import { useContext, useRef } from "preact/hooks";
 
 import { renderActionableComponent } from "../../action/render_actionable_component.jsx";
 import { PSEUDO_CLASSES } from "../../box/pseudo_styles.js";
+import { requestCloseValidityCallout } from "../../control/rules/control_validation.js";
 import {
   SelectionContext,
   useSelectableElement,
 } from "../../control/selection/selection.jsx";
-import { requestCloseValidityCallout } from "../../control/rules/control_validity.js";
 import { EmailSvg } from "../../graphic/icons/email_svg.jsx";
 import {
   LinkAnchorSvg,

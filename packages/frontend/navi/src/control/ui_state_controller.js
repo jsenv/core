@@ -19,8 +19,7 @@ import {
   onUIStateControllerDestroyed,
 } from "./controller_registry.js";
 import { FormContext } from "./form_context.js";
-import { createControlInteraction } from "./rules/control_interaction.js";
-import { createControlValidity } from "./rules/control_validity.js";
+import { createControlRules } from "./rules/control_rules.js";
 
 /**
  * Minimal interface that any object placed in `ParentUIStateControllerContext` must satisfy.
@@ -409,9 +408,9 @@ export const useUIStateController = (
       // Internal events (programmatic) → silent check only.
       // User events → full sync (may open/close callout).
       if (isInternalEvent(e)) {
-        uiStateController.controlValidity.checkValidity({ event: e });
+        uiStateController.rules.validation.checkValidity({ event: e });
       } else {
-        uiStateController.controlValidity.syncValidity(e);
+        uiStateController.rules.validation.syncValidity(e);
       }
       return true;
     },
@@ -425,11 +424,11 @@ export const useUIStateController = (
       debugUIState(`"${controlType}" actionEnd called`);
       // wait for preact to re-render to update readonly as action end side effects are runned
       await new Promise((r) => requestAnimationFrame(r));
-      controlValidity.syncValidity(e);
+      uiStateController.rules.validation.syncValidity(e);
     },
     actionError: (e) => {
       debugUIState(`"${controlType}" actionError called`);
-      controlValidity.syncValidity(e);
+      uiStateController.rules.validation.syncValidity(e);
     },
     subscribe: subscribeUIState,
     // Leaf controls don't aggregate children, but they act as a transparent
@@ -456,13 +455,11 @@ export const useUIStateController = (
     },
   };
   uiStateControllerRef.current = uiStateController;
-  const controlInteraction = createControlInteraction(uiStateController);
-  uiStateController.controlInteraction = controlInteraction;
-  const controlValidity = createControlValidity(uiStateController, {
+  const rules = createControlRules(uiStateController, {
     debugUIState,
     debugFocus,
   });
-  uiStateController.controlValidity = controlValidity;
+  uiStateController.rules = rules;
   return uiStateController;
 };
 
@@ -932,10 +929,10 @@ export const useUIGroupStateController = (
       onChange(e, { notifyExternal: true });
     },
     actionEnd: (e) => {
-      controlValidity.syncValidity(e);
+      groupUIStateController.rules.validation.syncValidity(e);
     },
     actionError: (e) => {
-      controlValidity.syncValidity(e);
+      groupUIStateController.rules.validation.syncValidity(e);
     },
     findChildById: (id) => {
       for (const childUIStateController of childUIStateControllerArray) {
@@ -955,13 +952,11 @@ export const useUIGroupStateController = (
     subscribe: subscribeUIState,
   };
   controllerRef.current = groupUIStateController;
-  const controlInteraction = createControlInteraction(groupUIStateController);
-  groupUIStateController.controlInteraction = controlInteraction;
-  const controlValidity = createControlValidity(groupUIStateController, {
+  const rules = createControlRules(groupUIStateController, {
     debugUIState: debugUIGroup,
     debugFocus,
   });
-  groupUIStateController.controlValidity = controlValidity;
+  groupUIStateController.rules = rules;
   return groupUIStateController;
 };
 // Stable reference for an empty selection so the action always receives an
@@ -1109,13 +1104,11 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
     },
   };
   controllerRef.current = facadeUIStateController;
-  const controlInteraction = createControlInteraction(facadeUIStateController);
-  facadeUIStateController.controlInteraction = controlInteraction;
-  const controlValidity = createControlValidity(facadeUIStateController, {
+  const rules = createControlRules(facadeUIStateController, {
     debugUIState,
     debugFocus,
   });
-  facadeUIStateController.controlValidity = controlValidity;
+  facadeUIStateController.rules = rules;
   // No initial checkValidity() here — the facade has no controlHostProps and no children
   // have registered yet, so any check would be a no-op. The real validity check happens
   // when child controllers trigger interactions through the facade.

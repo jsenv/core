@@ -6,7 +6,7 @@ import {
 import { isValidElement } from "preact";
 import { useCallback, useLayoutEffect, useState } from "preact/hooks";
 
-import { registerGlobalConstraint } from "../control/rules/control_validity.js";
+import { registerGlobalConstraint } from "../control/rules/control_validation.js";
 import { useResetErrorBoundary } from "../error_boundary_context.js";
 import { useDebugAction } from "../navi_debug.jsx";
 
@@ -98,7 +98,7 @@ export const useExecuteAction = (
     const controller = element.__uiStateController__;
     if (controller) {
       clearActionError(controller);
-      controller.controlValidity.checkValidity();
+      controller.rules.validation.checkValidity();
     }
   };
 

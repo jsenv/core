@@ -31,6 +31,7 @@ import { useActionBoundToOneParam } from "@jsenv/navi/src/action/use_action.js";
 import { useActionStatus } from "@jsenv/navi/src/action/use_action_status.js";
 import { useExecuteAction } from "@jsenv/navi/src/action/use_execute_action.js";
 import { useComposeElementRef } from "@jsenv/navi/src/box/ref_composition/use_element_ref.js";
+import { dispatchRequestAction } from "@jsenv/navi/src/control/rules/control_action.js";
 import {
   dispatchRequestInteraction,
   onRequestInteraction,
@@ -308,8 +309,10 @@ export const useControlProps = (
             if (actionOnMouseDown) {
               return {
                 name: "mousedown",
-                wantAction: true,
-                allowed: () => triggerUIAction(e),
+                allowed: () => {
+                  triggerUIAction(e);
+                  requestAction(e);
+                },
               };
             }
             return null;
@@ -320,8 +323,10 @@ export const useControlProps = (
             }
             return {
               name: "click",
-              wantAction: true,
-              allowed: () => triggerUIAction(e),
+              allowed: () => {
+                triggerUIAction(e);
+                requestAction(e);
+              },
             };
           },
         };
@@ -337,9 +342,11 @@ export const useControlProps = (
           },
           naviChange: (e) => {
             return {
-              wantAction: true,
               name: "navi_change",
-              allowed: () => syncStateFromControl(e),
+              allowed: () => {
+                syncStateFromControl(e);
+                requestAction(e);
+              },
             };
           },
         };
@@ -474,8 +481,10 @@ export const useControlProps = (
           input: (e) => {
             return {
               name: "input",
-              wantAction: true,
-              allowed: () => syncStateFromControl(e),
+              allowed: () => {
+                syncStateFromControl(e);
+                requestAction(e);
+              },
             };
           },
         };
@@ -501,9 +510,11 @@ export const useControlProps = (
           },
           naviChange: (e) => {
             return {
-              wantAction: true,
               name: "navi_change",
-              allowed: () => syncStateFromControl(e),
+              allowed: () => {
+                syncStateFromControl(e);
+                requestAction(e);
+              },
             };
           },
         };
@@ -521,9 +532,11 @@ export const useControlProps = (
           },
           naviChange: (e) => {
             return {
-              wantAction: true,
               name: "navi_change",
-              allowed: () => syncStateFromControl(e),
+              allowed: () => {
+                syncStateFromControl(e);
+                requestAction(e);
+              },
             };
           },
         };
@@ -535,6 +548,37 @@ export const useControlProps = (
       getDefaultEventReactionDefinitions();
     const { eventReactionDefinitions } = props;
     const lastActionValueRef = useRef(NO_ACTION_YET);
+    const requestAction = (e) => {
+      if (actionEvent === "custom") {
+        return false;
+      }
+      const control = ref.current;
+      if (controlType === "button") {
+        return dispatchRequestAction(control, {
+          event: e,
+          action: boundAction,
+          requester: control,
+        });
+      }
+      const currentValue = readControlValue(control);
+      const lastActionValue = lastActionValueRef.current;
+      const valueSameAsLastAction =
+        lastActionValue !== NO_ACTION_YET &&
+        compareTwoJsValues(currentValue, lastActionValue);
+      if (valueSameAsLastAction) {
+        e.preventDefault();
+        return false;
+      }
+      const dispatched = dispatchRequestAction(control, {
+        event: e,
+        action: boundAction,
+        requester: control,
+      });
+      if (dispatched) {
+        lastActionValueRef.current = currentValue;
+      }
+      return dispatched;
+    };
     // Keep lastActionValueRef in sync with state changes that happen outside of asAction
     // (e.g. radio_sibling_uncheck, or external programmatic set via navi_set_ui_state).
     // Otherwise the dedup below would wrongly skip a real user click that re-checks a radio
@@ -575,37 +619,17 @@ export const useControlProps = (
         return false;
       }
       const {
-        wantAction = false,
         name,
         bypassInteractivity = false,
         allowed,
         prevented,
         always,
       } = reaction;
-      if (wantAction && actionEvent === "custom") {
-        return false;
-      }
       const control = ref.current;
-      let currentValue;
-      if (wantAction && controlType !== "button") {
-        currentValue = readControlValue(control);
-        // Skip if requesting the same value as the last *successful* action.
-        // lastActionValueRef is updated only inside the allowed callback, so a
-        // blocked attempt (e.g. readonly during loading) never poisons this check.
-        const lastActionValue = lastActionValueRef.current;
-        const valueSameAsLastAction =
-          lastActionValue !== NO_ACTION_YET &&
-          compareTwoJsValues(currentValue, lastActionValue);
-        if (valueSameAsLastAction) {
-          e.preventDefault();
-          return false;
-        }
-      }
       return dispatchRequestInteraction(control, {
         event: e,
-        wantAction,
         name,
-
+        bypassInteractivity,
         prevented: () => {
           debugInteraction(e, `interaction not allowed`);
           if (e.type === "keydown") {
@@ -614,9 +638,6 @@ export const useControlProps = (
           prevented?.();
         },
         allowed: () => {
-          if (wantAction && controlType !== "button") {
-            lastActionValueRef.current = currentValue;
-          }
           allowed?.();
         },
         always,
@@ -1176,10 +1197,6 @@ const useInteractiveProps = (
         }
       },
       onnavi_request_interaction: (e) => {
-        if (e.detail.wantAction && !e.detail.action && props.action) {
-          e.detail.action = boundAction;
-          e.detail.actionOrigin = "action_prop";
-        }
         onRequestInteraction(e, { debugInteraction });
       },
       onnavi_cancel: (e) => {
@@ -1216,18 +1233,8 @@ const useInteractiveProps = (
       onnavi_action_prevented: onActionPrevented,
       onnavi_action_allowed: (e) => {
         if (e.detail.action === "auto") {
-          // special case for the use case where form.submit is called
+          // special case for the use case where form.requestSubmit is called
           e.detail.action = boundAction;
-        }
-        // Validity gate: interaction is allowed (interactivity passed) but the
-        // action must only execute when the current value satisfies all constraints.
-        const cv = uiStateController.controlValidity;
-        if (cv) {
-          const isValid = cv.syncValidity(e, { fromRequestAction: true });
-          if (!isValid) {
-            onActionPrevented?.(e);
-            return;
-          }
         }
         debugAction(e, `executing action ${e.detail.action.callSource}`);
         executeAction(e);
@@ -1270,8 +1277,14 @@ const useInteractiveProps = (
             const originalEvent = e.detail.eventChain[0];
             dispatchRequestInteraction(parentEl, {
               event: originalEvent,
-              wantAction: true,
               name: "auto_group_action",
+              allowed: () => {
+                dispatchRequestAction(parentEl, {
+                  event: originalEvent,
+                  action: "auto",
+                  requester: e.detail.requester,
+                });
+              },
             });
           }
         }
@@ -1290,7 +1303,7 @@ const useInteractiveProps = (
     // Constraints like READONLY_CONSTRAINT and findControlProxyTargetController
     // read controlHostProps — calling these earlier would throw or produce wrong results.
     onUIStateControllerCreated(uiStateController);
-    uiStateController.controlValidity.checkValidity();
+    uiStateController.rules.validation.checkValidity();
   }
 
   return [controlRootProps, controlHostProps];

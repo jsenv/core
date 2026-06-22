@@ -2,9 +2,9 @@
  * Interaction gate: decides whether a user interaction is allowed to proceed
  * based solely on the control's interactivity state (disabled / read-only / busy).
  *
- * Validity (required, pattern, …) is intentionally NOT checked here.
- * It is the responsibility of the action execution path (`onnavi_action_allowed`)
- * to verify validity before running an action.
+ * Does NOT know about actions or validity — those are handled separately:
+ * - Action dispatch + validity: `control_action.js` / `dispatchRequestAction`
+ * - Validity checking: `control_validation.js`
  *
  * Each UI state controller gets its own `controlInteraction` instance (created by
  * `createControlInteraction`) just like it gets a `controlValidity` instance.
@@ -15,18 +15,16 @@
  *   → "navi_request_interaction" event
  *   → onRequestInteraction
  *       → check disabled / read-only / busy (via controller.controlInteraction)
- *       → if blocked  → "navi_action_prevented" (when wantAction) + prevented()
- *       → if allowed  → allowed() + "navi_action_allowed" (when wantAction)
- *   → "navi_action_allowed" handler (in control_hooks.jsx)
- *       → check validity via controller.controlValidity.syncValidity()
- *       → if invalid → do not execute action
- *       → if valid   → executeAction()
+ *       → if blocked  → prevented()
+ *       → if allowed  → allowed()
+ *         → (in allowed callback) setUIState(value)
+ *         → (in allowed callback) dispatchRequestAction(element, { action, event })
  */
 
 import { dispatchInternalCustomEvent } from "@jsenv/dom";
 
 import { findControlHost } from "../control_dom.js";
-import { findControlProxyTargetController } from "../controller_registry.js";
+import { dispatchRequestAction } from "./control_action.js";
 import { BUSY_CONSTRAINT } from "./interaction/busy_constraint.js";
 import { DISABLED_CONSTRAINT } from "./interaction/disabled_constraint.js";
 import { READONLY_CONSTRAINT } from "./interaction/readonly_constraint.js";
@@ -40,12 +38,16 @@ const INTERACTION_CONSTRAINT_SET = new Set([
 /**
  * Per-controller interactivity state manager.
  * Checks whether the control is currently interactive (not disabled/readonly/busy).
- * Knows nothing about validity — only about whether the user can interact at all.
+ * Shows a callout when interaction is blocked.
+ * Knows nothing about validity or actions.
+ *
+ * @param {object} controller - The UI state controller.
+ * @param {object} callout    - Shared callout manager from `controller.rules.callout`.
  */
-export const createControlInteraction = (controller) => {
+export const createControlInteraction = (controller, callout) => {
   let interactionFailedConstraintInfo = null;
 
-  const checkInteractivity = () => {
+  const checkInteractivity = ({ event } = {}) => {
     interactionFailedConstraintInfo = null;
     for (const constraint of INTERACTION_CONSTRAINT_SET) {
       const checkResult = constraint.check(controller);
@@ -63,19 +65,29 @@ export const createControlInteraction = (controller) => {
       };
       break;
     }
-    // Also check managed controls (e.g. a busy child blocks the parent action).
+    // Check managed controls — a non-interactable child blocks the parent,
+    // UNLESS the child's failing constraint has `ignoredByParents: true`
+    // (e.g. a disabled child inside a group should not prevent the group from acting).
     let failingManagedInteraction = null;
     if (!interactionFailedConstraintInfo) {
       for (const mc of controller.getManagedControls()) {
-        if (
-          mc.controlInteraction &&
-          !mc.controlInteraction.checkInteractivity()
-        ) {
-          failingManagedInteraction = mc.controlInteraction;
-          break;
+        const mci = mc.rules.interaction;
+        if (!mci) {
+          continue;
         }
+        const canInteract = mci.checkInteractivity({ event });
+        if (canInteract) {
+          continue;
+        }
+        const failedInfo = mci.interactionFailedConstraintInfo;
+        if (failedInfo?.ignoredByParents) {
+          continue;
+        }
+        failingManagedInteraction = mci;
+        break;
       }
     }
+
     // Keep title attribute in sync for accessibility.
     const titleLess = !controller.controlHostProps?.title;
     if (titleLess) {
@@ -87,15 +99,25 @@ export const createControlInteraction = (controller) => {
             interactionFailedConstraintInfo.message,
           );
         }
-        // Note: title removal is managed by controlValidity which also sets it
-        // for validation errors. We do not remove here to avoid races.
+        // Title removal is managed by controlValidation to avoid conflicts.
       }
     }
-    return !interactionFailedConstraintInfo && !failingManagedInteraction;
+
+    const interactable =
+      !interactionFailedConstraintInfo && !failingManagedInteraction;
+    return interactable;
+  };
+
+  const reportInteractivity = ({ event } = {}) => {
+    callout.openConstraintCallout(interactionFailedConstraintInfo, {
+      event,
+      skipFocus: true,
+    });
   };
 
   const controlInteraction = {
     checkInteractivity,
+    reportInteractivity,
   };
   Object.defineProperty(controlInteraction, "interactionFailedConstraintInfo", {
     get: () => interactionFailedConstraintInfo,
@@ -105,20 +127,11 @@ export const createControlInteraction = (controller) => {
 
 export const dispatchRequestInteraction = (
   element,
-  {
-    event,
-    name = "",
-    wantAction = false,
-    prevented,
-    allowed,
-    always,
-    ...detailRest
-  } = {},
+  { event, name = "", prevented, allowed, always, ...detailRest } = {},
 ) => {
   const controlHost = findControlHost(element) || element;
   return dispatchInternalCustomEvent(controlHost, "navi_request_interaction", {
     event,
-    wantAction,
     name,
     prevented,
     allowed,
@@ -134,12 +147,6 @@ export const onRequestInteraction = (
   const {
     event,
     name,
-    wantAction = false,
-    action,
-    actionOrigin = "action_prop",
-    requester = event.target,
-    meta = {},
-    method = "rerun",
     bypassInteractivity = false,
     prevented,
     allowed,
@@ -149,20 +156,6 @@ export const onRequestInteraction = (
   const onPrevented = (reason) => {
     debugInteraction(event, `"${name}" prevented (${reason})`);
     requestInteractionCustomEvent.preventDefault();
-    if (wantAction) {
-      dispatchInternalCustomEvent(
-        requestInteractionCustomEvent.currentTarget,
-        "navi_action_prevented",
-        {
-          event: requestInteractionCustomEvent,
-          requester,
-          actionOrigin,
-          action,
-          method,
-          meta,
-        },
-      );
-    }
     prevented?.();
     always?.();
   };
@@ -171,29 +164,6 @@ export const onRequestInteraction = (
     debugInteraction(event, `"${name}" allowed`);
     allowed?.();
     always?.();
-    if (wantAction && action?.isAction) {
-      // Resolve proxy so navi_action_* fires on the real control element.
-      let elementForAction = requestInteractionCustomEvent.currentTarget;
-      const handlingController = elementForAction.__uiStateController__;
-      const proxyTargetController = handlingController
-        ? findControlProxyTargetController(handlingController)
-        : null;
-      if (proxyTargetController) {
-        elementForAction = proxyTargetController.elementRef.current;
-      }
-      const activeController = proxyTargetController ?? handlingController;
-      const uiState = activeController?.uiState;
-
-      dispatchInternalCustomEvent(elementForAction, "navi_action_allowed", {
-        event: requestInteractionCustomEvent,
-        requester,
-        uiState,
-        actionOrigin,
-        action,
-        method,
-        meta,
-      });
-    }
   };
 
   if (event.defaultPrevented) {
@@ -205,14 +175,15 @@ export const onRequestInteraction = (
     const currentTarget = requestInteractionCustomEvent.currentTarget;
     const controlHost = findControlHost(currentTarget) || currentTarget;
     const controller = controlHost.__uiStateController__;
-    const ci = controller?.controlInteraction;
+    const ci = controller?.rules.interaction;
     if (ci) {
-      const canInteract = ci.checkInteractivity();
+      const canInteract = ci.checkInteractivity({ event });
       if (!canInteract) {
         const failedInfo = ci.interactionFailedConstraintInfo;
         const reason = failedInfo
           ? `failing interaction constraint "${failedInfo.name}"`
           : "not interactable";
+        ci.reportInteractivity({ event });
         onPrevented(reason);
         return false;
       }
@@ -225,8 +196,7 @@ export const onRequestInteraction = (
 
 // https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Constraint_validation
 // Override requestSubmit so that programmatic form submissions go through the
-// navi interaction gate (interactivity + validity checks) instead of the browser
-// native validation pipeline.
+// navi interaction gate (interactivity check) and then the action gate (validity).
 const requestSubmit = HTMLFormElement.prototype.requestSubmit;
 HTMLFormElement.prototype.requestSubmit = function (submitter) {
   const form = this;
@@ -241,10 +211,13 @@ HTMLFormElement.prototype.requestSubmit = function (submitter) {
   });
   dispatchRequestInteraction(form, {
     event: programmaticEvent,
-    requester: submitter,
-    wantAction: true,
     name: "requestSubmit",
+    allowed: () => {
+      dispatchRequestAction(form, {
+        event: programmaticEvent,
+        action: "auto",
+        requester: submitter,
+      });
+    },
   });
-  // requestSubmit.call(this, submitter); — intentionally skipped to avoid
-  // double-firing: navi handles the action pipeline itself.
 };

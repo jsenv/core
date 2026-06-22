@@ -1,6 +1,6 @@
 import { useLayoutEffect, useState } from "preact/hooks";
 
-import { NAVI_VALIDITY_CHANGE_CUSTOM_EVENT } from "../control_validity.js";
+import { NAVI_VALIDITY_CHANGE_CUSTOM_EVENT } from "../control_validation.js";
 
 const DEFAULT_VALIDITY_STATE = { valid: true };
 export const useConstraintValidityState = (ref) => {
@@ -13,7 +13,7 @@ export const useConstraintValidityState = (ref) => {
     if (!controller) {
       return DEFAULT_VALIDITY_STATE;
     }
-    const controlValidity = controller.controlValidity;
+    const controlValidity = controller.rules.validation;
     const value = controlValidity.getConstraintValidityState();
     return value;
   };

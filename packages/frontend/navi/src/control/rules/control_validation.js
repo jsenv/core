@@ -53,18 +53,10 @@
  * We keep this behavior on purpose but in practice you always want to go through the form validation process
  */
 
-import {
-  createPubSub,
-  dispatchPublicCustomEvent,
-  findFocusDelegateTarget,
-  getElementSignature,
-} from "@jsenv/dom";
+import { dispatchPublicCustomEvent, getElementSignature } from "@jsenv/dom";
 
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
-import { findControlHost } from "../control_dom.js";
 import { findControlProxyTargetController } from "../controller_registry.js";
-import { openCallout } from "./callout/callout.js";
-import { getConstraintMessage } from "./constraint_message.js";
 import {
   MIN_DIGIT_CONSTRAINT,
   MIN_LOWER_LETTER_CONSTRAINT,
@@ -87,12 +79,6 @@ import {
 } from "./validation/standard_constraints.js";
 
 export const NAVI_VALIDITY_CHANGE_CUSTOM_EVENT = "navi_validity_change";
-
-export const getControlValidityFromElement = (element) => {
-  const controlHost = findControlHost(element);
-  const elementToCheck = controlHost || element;
-  return elementToCheck.__uiStateController__?.controlValidity;
-};
 
 const STANDARD_CONSTRAINT_SET = new Set([
   REQUIRED_CONSTRAINT,
@@ -128,30 +114,12 @@ export const registerGlobalConstraint = (customConstraint) => {
 
 export const createControlValidity = (
   controller,
-  { debugUIState, debugFocus },
+  { callout, debugUIState, onCalloutOpen },
 ) => {
   const controlValidity = {
-    uninstall: undefined,
     registerConstraint: undefined,
     checkValidity: undefined,
     reportValidity: undefined,
-    callout: null,
-  };
-
-  const [teardown, addTeardown] = createPubSub();
-  cleanup: {
-    const uninstall = () => {
-      teardown();
-    };
-    controlValidity.uninstall = uninstall;
-  }
-
-  const innerRequestCloseCallout = (event, reason) => {
-    const { callout } = controlValidity;
-    if (!callout) {
-      return false;
-    }
-    return callout.requestClose(event, reason);
   };
 
   const dynamicConstraintSet = new Set();
@@ -193,7 +161,7 @@ export const createControlValidity = (
     // Never validate a proxy — always delegate to the underlying element
     const proxyTargetController = findControlProxyTargetController(controller);
     if (proxyTargetController) {
-      return proxyTargetController.controlValidity.checkValidity({
+      return proxyTargetController.rules.validation.checkValidity({
         event,
         fromRequestAction,
         requester,
@@ -205,7 +173,7 @@ export const createControlValidity = (
     failingManagedControlValidity = null;
     const managedControllers = controller.getManagedControls();
     for (const managedController of managedControllers) {
-      const managedCV = managedController.controlValidity;
+      const managedCV = managedController.rules.validation;
       const managedIsValid = managedCV.checkValidity({
         event,
         requester,
@@ -297,7 +265,7 @@ export const createControlValidity = (
       }
       const checkValidityCallEvent =
         event || new CustomEvent("checkValidity called with no event");
-      innerRequestCloseCallout(
+      callout.closeCallout(
         checkValidityCallEvent,
         `now_valid (after ${checkValidityCallEvent.type})`,
       );
@@ -319,81 +287,8 @@ export const createControlValidity = (
     return newConstraintValidityState.valid;
   };
 
-  const [notifyCalloutOpen, onCalloutOpen] = createPubSub();
-  // Shared callout-opening logic used by both reportValidity and reportInteractivity.
-  const openConstraintCallout = (
-    constraintInfo,
-    { event, requester, skipFocus } = {},
-  ) => {
-    if (!constraintInfo) {
-      innerRequestCloseCallout(event, "is_valid");
-      return;
-    }
-    const { message } = getConstraintMessage(
-      controller,
-      constraintInfo.constraint,
-      constraintInfo.message,
-      { requester },
-    );
-    if (controlValidity.callout) {
-      controlValidity.callout.update(message, {
-        status: constraintInfo.status,
-      });
-      return;
-    }
-    const anchorElement =
-      constraintInfo.target || controller.elementRef.current;
-    if (!skipFocus && !anchorElement.closest('[aria-hidden="true"]')) {
-      const focusTarget =
-        findFocusDelegateTarget(anchorElement) || anchorElement;
-      debugFocus(
-        event,
-        `opening callout, give focus to anchor -> ${getElementSignature(focusTarget)}.focus()`,
-      );
-      focusTarget.focus();
-    }
-    const removeCloseOnCleanup = addTeardown(() => {
-      innerRequestCloseCallout(new CustomEvent("cleanup"), "cleanup");
-    });
-    controlValidity.callout = openCallout(message, {
-      anchorElement,
-      status: constraintInfo.status,
-      openingEvent: event,
-      debug: debugUIState,
-      onClose: ({ event, focusWithinCallout }) => {
-        removeCloseOnCleanup();
-        for (const result of results) {
-          if (typeof result === "function") {
-            result();
-          }
-        }
-        controlValidity.callout = null;
-        if (constraintInfo) {
-          constraintInfo.reportStatus = "closed";
-        }
-        const element = controller.elementRef.current;
-        if (
-          !skipFocus &&
-          focusWithinCallout &&
-          element &&
-          !element.closest('[aria-hidden="true"]')
-        ) {
-          const focusTarget =
-            findFocusDelegateTarget(anchorElement) || anchorElement;
-          debugFocus(
-            event,
-            `callout is closing with focus, give focus back to the control ${getElementSignature(focusTarget)}.focus()`,
-          );
-          focusTarget.focus();
-        }
-      },
-    });
-    const results = notifyCalloutOpen(event);
-    constraintInfo.reportStatus = "reported";
-  };
-
   const reportValidity = ({ event, requester, skipFocus } = {}) => {
-    openConstraintCallout(failedConstraintInfo, {
+    callout.openConstraintCallout(failedConstraintInfo, {
       event,
       requester,
       skipFocus,
@@ -407,9 +302,12 @@ export const createControlValidity = (
   Object.defineProperty(controlValidity, "failingManagedControlValidity", {
     get: () => failingManagedControlValidity,
   });
+  Object.defineProperty(controlValidity, "callout", {
+    get: () => callout.callout,
+  });
   controlValidity.onCalloutOpen = onCalloutOpen;
   controlValidity.closeCallout = (event, reason) => {
-    innerRequestCloseCallout(event, reason);
+    callout.closeCallout(event, reason);
   };
 
   // Centralized validity sync: decides what to show/close based on the event type
@@ -448,21 +346,21 @@ export const createControlValidity = (
           event,
           `syncValidity ${elementSig}: has failing constraint but no own action -> close callout if any`,
         );
-        innerRequestCloseCallout(event, event?.type);
+        callout.closeCallout(event, event?.type);
       }
     } else {
       debugUIState(
         event,
         `syncValidity ${elementSig}: no failing constraint -> close callout if any`,
       );
-      innerRequestCloseCallout(event, event?.type);
+      callout.closeCallout(event, event?.type);
     }
     // Propagate a silent validity update up the controller chain.
     // Parent controllers (group, facade) don't report — the leaf's callout is enough.
     // They just need their validity state kept current so _attemptCommit can read it.
     let parentController = controller.parentUIStateController;
     while (parentController) {
-      parentController.controlValidity.checkValidity({ event });
+      parentController.rules.validation.checkValidity({ event });
       parentController = parentController.parentUIStateController;
     }
     return isValid;
@@ -481,7 +379,7 @@ export const requestCloseValidityCallout = (
   if (!controller) {
     return false;
   }
-  const controlValidity = controller.controlValidity;
+  const controlValidity = controller.rules.validation;
   const { callout } = controlValidity;
   if (!callout) {
     return false;
