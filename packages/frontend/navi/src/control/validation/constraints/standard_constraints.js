@@ -56,7 +56,7 @@ export const REQUIRED_CONSTRAINT = {
     }
     if (type === "checkbox") {
       const parent = field.parentUIStateController;
-      if (parent) {
+      if (parent.controlType === "checkbox_group") {
         // handled by parent
         return null;
       }
