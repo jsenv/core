@@ -76,13 +76,16 @@
           <div class="demo-section">
             <h2>Standalone</h2>
             <p style={{ margin: "0 0 12px", color: "#555" }}>
-              <code>action</code> is called each time a radio is selected. It
-              receives the selected value, or <code>undefined</code> when
-              nothing is selected.
+              <code>uiAction</code> fires on every interaction (even re-clicking
+              the already-selected radio). <code>action</code> fires only when
+              the selected value changes.
             </p>
 
             <RadioGroup
               name="standalone_option"
+              uiAction={(value) => {
+                push("uiAction", value);
+              }}
               action={(value) => {
                 push("action", value);
               }}
