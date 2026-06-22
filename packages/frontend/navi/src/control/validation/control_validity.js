@@ -214,6 +214,7 @@ export const onRequestInteraction = (
       const reason = failedInfo
         ? `failing interaction constraint "${failedInfo.name}"`
         : "not interactable";
+      cv.reportInteractivity({ event });
       onPrevented(reason);
       return false;
     }
