@@ -383,6 +383,14 @@ export const useControlProps = (
       if (isInputCheckable) {
         const isRadio = props.type === "radio";
 
+        // I've decided that enter on radio/checkbox would not submit form like browser does but
+        // - trigger ui action on checked radio
+        // - radio
+        //      - check unchecked radio
+        //      - trigger ui action on checked radio
+        // - chekcbox: toggle checkbox (like space key does)
+        // It's useful on selectable list, especially inside picker where it would be strange to
+        // close picker on enter
         return {
           keyDown: (e) => {
             if (e.key === "Enter") {
