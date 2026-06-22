@@ -13,7 +13,11 @@
  *   calloutManager.callout  // current open callout or null
  */
 
-import { findFocusDelegateTarget, getElementSignature } from "@jsenv/dom";
+import {
+  createPubSub,
+  findFocusDelegateTarget,
+  getElementSignature,
+} from "@jsenv/dom";
 
 import { openCallout } from "./callout/callout.js";
 import { getConstraintMessage } from "./constraint_message.js";
@@ -38,6 +42,8 @@ export const createCalloutManager = (
   controller,
   { addTeardown, debugFocus, debugPopup } = {},
 ) => {
+  const [notifyCalloutOpen, onCalloutOpen] = createPubSub();
+
   let callout = null;
   // Tracks open tokens → their constraint info.
   // The callout closes automatically when the last token is removed.
@@ -149,16 +155,12 @@ export const createCalloutManager = (
     });
     // `onOpen` can be a createPubSub publisher — its return value is an array of cleanup fns.
     // Or just a plain callback — wrap the single return value in an array.
-    const rawResults = onOpen?.(event);
-    if (Array.isArray(rawResults)) {
-      openResults = rawResults;
-    } else if (rawResults !== undefined) {
-      openResults = [rawResults];
-    }
+    openResults = notifyCalloutOpen(event);
     constraint.reportStatus = "reported";
   };
 
   const calloutManager = {
+    onOpen: onCalloutOpen,
     addOpenToken,
     removeOpenToken,
     requestCloseCallout,
