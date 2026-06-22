@@ -677,7 +677,6 @@ const LinkWithAction = (props) => {
       ref={ref}
       loading={innerLoading}
       readOnly={readOnly || actionPending}
-      data-readonly-silent={actionPending && !readOnly ? "" : undefined}
       /* When we have keyboard shortcuts the link outline is visible on focus (not solely on focus-visible) */
       data-focus-visible=""
     >
