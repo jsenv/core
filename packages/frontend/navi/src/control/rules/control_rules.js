@@ -16,7 +16,7 @@ import { createPubSub } from "@jsenv/dom";
 
 import { createCalloutManager } from "./control_callout.js";
 import { createControlInteraction } from "./control_interaction.js";
-import { createControlValidity } from "./control_validation.js";
+import { createControlValidation } from "./control_validation.js";
 
 /**
  * Creates all three rule managers for a controller and wires them together.
@@ -29,7 +29,7 @@ import { createControlValidity } from "./control_validation.js";
  */
 export const createControlRules = (
   controller,
-  { debugUIState, debugFocus } = {},
+  { debugInteraction, debugPopup, debugUIState, debugFocus } = {},
 ) => {
   const [teardown, addTeardown] = createPubSub();
   const [notifyCalloutOpen, onCalloutOpen] = createPubSub();
@@ -37,16 +37,19 @@ export const createControlRules = (
   const callout = createCalloutManager(controller, {
     addTeardown,
     debugFocus,
-    debugCallout: debugUIState,
+    debugPopup,
     onOpen: notifyCalloutOpen,
   });
 
-  const interaction = createControlInteraction(controller, callout);
-
-  const validation = createControlValidity(controller, {
+  const interaction = createControlInteraction(controller, {
     callout,
-    debugUIState,
+    debugInteraction,
+  });
+
+  const validation = createControlValidation(controller, {
+    callout,
     onCalloutOpen,
+    debugUIState,
   });
 
   return {

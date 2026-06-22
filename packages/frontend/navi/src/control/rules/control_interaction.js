@@ -43,7 +43,10 @@ const INTERACTION_CONSTRAINT_SET = new Set([
  * @param {object} controller - The UI state controller.
  * @param {object} callout    - Shared callout manager from `controller.rules.callout`.
  */
-export const createControlInteraction = (controller, callout) => {
+export const createControlInteraction = (
+  controller,
+  { callout, debugInteraction },
+) => {
   let interactionFailedConstraintInfo = null;
   let failingManagedInteraction = null;
 
@@ -112,6 +115,9 @@ export const createControlInteraction = (controller, callout) => {
       failingManagedInteraction.reportInteractivity({ event });
       return;
     }
+    debugInteraction(event, "reportInteractivity", {
+      interactionFailedConstraintInfo,
+    });
     callout.openConstraintCallout(interactionFailedConstraintInfo, {
       event,
       skipFocus: true,

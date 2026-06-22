@@ -9,7 +9,12 @@ import { computed, signal } from "@preact/signals";
 import { createContext } from "preact";
 import { useContext, useLayoutEffect, useMemo, useRef } from "preact/hooks";
 
-import { useDebugFocus, useDebugUIState } from "../navi_debug.jsx";
+import {
+  useDebugFocus,
+  useDebugInteraction,
+  useDebugPopup,
+  useDebugUIState,
+} from "../navi_debug.jsx";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import { triggerNaviCommand } from "./commands.js";
 import {
@@ -85,6 +90,8 @@ export const useUIStateController = (
     allowNameless = false,
   } = {},
 ) => {
+  const debugPopup = useDebugPopup();
+  const debugInteraction = useDebugInteraction();
   const debugUIState = useDebugUIState();
   const debugFocus = useDebugFocus();
 
@@ -463,6 +470,8 @@ export const useUIStateController = (
   };
   uiStateControllerRef.current = uiStateController;
   const rules = createControlRules(uiStateController, {
+    debugPopup,
+    debugInteraction,
     debugUIState,
     debugFocus,
   });
@@ -562,6 +571,8 @@ export const useUIGroupStateController = (
     cascadeValidationToChildren = false,
   },
 ) => {
+  const debugPopup = useDebugPopup();
+  const debugInteraction = useDebugInteraction();
   const debugUIGroup = useDebugUIState();
   const debugFocus = useDebugFocus();
 
@@ -960,6 +971,8 @@ export const useUIGroupStateController = (
   };
   controllerRef.current = groupUIStateController;
   const rules = createControlRules(groupUIStateController, {
+    debugPopup,
+    debugInteraction,
     debugUIState: debugUIGroup,
     debugFocus,
   });
@@ -998,6 +1011,8 @@ const EMPTY_OBJECT = {};
 export const useUIFacadeStateController = (props, realUIStateController) => {
   const firstChildControllerRef = useRef(null);
   const updatingRef = useRef(false);
+  const debugPopup = useDebugPopup();
+  const debugInteraction = useDebugInteraction();
   const debugUIState = useDebugUIState();
   const debugFocus = useDebugFocus();
 
@@ -1112,6 +1127,8 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
   };
   controllerRef.current = facadeUIStateController;
   const rules = createControlRules(facadeUIStateController, {
+    debugPopup,
+    debugInteraction,
     debugUIState,
     debugFocus,
   });

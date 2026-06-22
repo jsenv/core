@@ -41,7 +41,7 @@
  */
 
 /**
- * To enable this API one have to call createControlValidity(controller)
+ * To enable this API one have to call createControlValidation(controller)
  * on the <form> and every element within the <form> (<input>, <button>, etc.)
  * (In practice this is done automatically by jsx components in navi package)
  *
@@ -112,7 +112,7 @@ export const registerGlobalConstraint = (customConstraint) => {
   DEFAULT_CONSTRAINT_SET.add(customConstraint);
 };
 
-export const createControlValidity = (
+export const createControlValidation = (
   controller,
   { callout, debugUIState, onCalloutOpen },
 ) => {

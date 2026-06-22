@@ -76,13 +76,14 @@ export const useDebugUIState = () => {
  */
 
 export const NaviDebug = ({
-  debugCommand,
-  debugInteraction,
-  debugFocus,
-  debugScroll,
-  debugPopup,
-  debugAction,
-  debugUIState,
+  debugAll,
+  debugCommand = debugAll,
+  debugInteraction = debugAll,
+  debugFocus = debugAll,
+  debugScroll = debugAll,
+  debugPopup = debugAll,
+  debugAction = debugAll,
+  debugUIState = debugAll,
   children,
 }) => {
   if (debugCommand === true) {

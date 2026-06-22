@@ -30,12 +30,12 @@ import { getConstraintMessage } from "./constraint_message.js";
  * @param {object} [options]
  * @param {Function} [options.addTeardown]   - Register a cleanup fn (called on controller unmount).
  * @param {Function} [options.debugFocus]    - Focus debug logger.
- * @param {Function} [options.debugCallout]  - Callout debug logger (passed as `debug` to openCallout).
+ * @param {Function} [options.debugPopup]  - Callout debug logger (passed as `debug` to openCallout).
  * @param {Function} [options.onOpen]        - Called after opening. May return an array of cleanup fns.
  */
 export const createCalloutManager = (
   controller,
-  { addTeardown, debugFocus, debugCallout, onOpen } = {},
+  { addTeardown, debugFocus, debugPopup, onOpen } = {},
 ) => {
   let callout = null;
 
@@ -84,7 +84,7 @@ export const createCalloutManager = (
       anchorElement,
       status: constraintInfo.status,
       openingEvent: event,
-      debug: debugCallout,
+      debug: debugPopup,
       onClose: ({ event: closeEvent, focusWithinCallout }) => {
         removeCloseOnCleanup?.();
         for (const result of openResults) {
