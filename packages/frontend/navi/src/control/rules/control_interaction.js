@@ -115,9 +115,10 @@ export const createControlInteraction = (
       failingManagedInteraction.reportInteractivity({ event });
       return;
     }
-    debugInteraction(event, "reportInteractivity", {
-      interactionFailedConstraintInfo,
-    });
+    debugInteraction(
+      event,
+      `reportInteractivity (${interactionFailedConstraintInfo.name})`,
+    );
     callout.openConstraintCallout(interactionFailedConstraintInfo, {
       event,
       skipFocus: true,
