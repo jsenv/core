@@ -462,7 +462,7 @@ export const createControlValidity = (
     }
 
     const activeFailedConstraintInfo = failedConstraintInfo;
-    if (activeFailedConstraintInfo && !activeFailedConstraintInfo.silent) {
+    if (activeFailedConstraintInfo) {
       const titleLess = controller.controlHostProps.title === undefined;
       if (titleLess) {
         const element = controller.elementRef.current;
@@ -513,10 +513,6 @@ export const createControlValidity = (
   ) => {
     if (!constraintInfo) {
       innerRequestCloseCallout(event, "is_valid");
-      return;
-    }
-    if (constraintInfo.silent) {
-      innerRequestCloseCallout(event, "invalid_silent");
       return;
     }
     const { message } = getConstraintMessage(
@@ -624,10 +620,7 @@ export const createControlValidity = (
     if (titleLess) {
       const element = controller.elementRef.current;
       if (element) {
-        if (
-          interactionFailedConstraintInfo &&
-          !interactionFailedConstraintInfo.silent
-        ) {
+        if (interactionFailedConstraintInfo) {
           element.setAttribute(
             "title",
             interactionFailedConstraintInfo.messageString,
