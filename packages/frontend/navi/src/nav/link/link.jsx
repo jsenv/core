@@ -2,7 +2,6 @@ import { useContext, useRef } from "preact/hooks";
 
 import { renderActionableComponent } from "../../action/render_actionable_component.jsx";
 import { PSEUDO_CLASSES } from "../../box/pseudo_styles.js";
-import { requestCloseValidityCallout } from "../../control/rules/control_validation.js";
 import {
   SelectionContext,
   useSelectableElement,
@@ -598,7 +597,6 @@ const LinkPlain = (props) => {
         if (preventDefault) {
           e.preventDefault();
         }
-        requestCloseValidityCallout(e.target, e, "click");
         if (readOnly) {
           e.preventDefault();
           return;
