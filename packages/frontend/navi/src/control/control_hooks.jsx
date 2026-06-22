@@ -306,16 +306,23 @@ export const useControlProps = (
       };
 
       if (controlType === "button") {
+        const onButtonInteractionAllowed = (e) => {
+          triggerUIAction(e);
+          const control = ref.current;
+          tryActionAfterInteractionAllowed(control, {
+            event: e,
+            action: boundAction,
+            requester: control,
+          });
+        };
+
         return {
           keyDown: keyDownDefault,
           mouseDown: (e) => {
             if (actionOnMouseDown) {
               return {
                 name: "mousedown",
-                allowed: () => {
-                  triggerUIAction(e);
-                  requestAction(e);
-                },
+                allowed: () => onButtonInteractionAllowed(e),
               };
             }
             return null;
@@ -326,10 +333,7 @@ export const useControlProps = (
             }
             return {
               name: "click",
-              allowed: () => {
-                triggerUIAction(e);
-                requestAction(e);
-              },
+              allowed: () => onButtonInteractionAllowed(e),
             };
           },
         };
@@ -556,13 +560,6 @@ export const useControlProps = (
         return false;
       }
       const control = ref.current;
-      if (controlType === "button") {
-        return tryActionAfterInteractionAllowed(control, {
-          event: e,
-          action: boundAction,
-          requester: control,
-        });
-      }
       const currentValue = readControlValue(control);
       const lastActionValue = lastActionValueRef.current;
       const valueSameAsLastAction =
