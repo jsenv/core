@@ -40,6 +40,7 @@ import {
   useDebugCommand,
   useDebugFocus,
   useDebugInteraction,
+  useDebugUIState,
 } from "@jsenv/navi/src/navi_debug.jsx";
 import { compareTwoJsValues } from "@jsenv/navi/src/utils/compare_two_js_values.js";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
@@ -154,6 +155,8 @@ export const useControlProps = (
   props,
   { controlType, allowNameless, persists, uiActionInternal },
 ) => {
+  const debugUIState = useDebugUIState();
+
   const idDefault = useId();
   const controlId = useContext(ControlIdContext);
   props.id = props.id || controlId || idDefault;
@@ -186,11 +189,15 @@ export const useControlProps = (
       value: domValue,
     };
   };
-  const syncDomState = (newUIState) => {
+  const syncDomState = (newUIState, e) => {
     const el = props.ref.current;
     if (!el) {
       return;
     }
+    debugUIState(
+      e,
+      `syncDomState: ${getElementSignature(el)} to ${newUIState}`,
+    );
     const domProps = toDomProps(newUIState);
     Object.assign(el, domProps);
   };

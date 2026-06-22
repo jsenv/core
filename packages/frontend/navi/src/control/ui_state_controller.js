@@ -295,7 +295,7 @@ export const useUIStateController = (
       // set immediatly (don't wait for preact re-render) so ui is in the right state for:
       // - side effect
       // - any "input" event that might be dispatched below
-      syncDomState(newUIState);
+      syncDomState(newUIState, e);
       uiStateController.uiState = newUIState;
       ownUIStateSignal.value = newUIState;
       // Radio group: when a radio becomes checked, uncheck all siblings.
