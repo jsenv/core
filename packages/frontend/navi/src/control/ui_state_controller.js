@@ -928,14 +928,10 @@ export const useUIGroupStateController = (
       onChange(e, { notifyExternal: true });
     },
     actionEnd: (e) => {
-      for (const childUIStateController of childUIStateControllerArray) {
-        childUIStateController.actionEnd(e);
-      }
+      controlValidity.syncValidity(e);
     },
     actionError: (e) => {
-      for (const childUIStateController of childUIStateControllerArray) {
-        childUIStateController.actionError(e);
-      }
+      controlValidity.syncValidity(e);
     },
     findChildById: (id) => {
       for (const childUIStateController of childUIStateControllerArray) {
