@@ -66,7 +66,11 @@ import { findControlHost } from "../control_dom.js";
 import { findControlProxyTargetController } from "../controller_registry.js";
 import { openCallout } from "./callout/callout.js";
 import { getConstraintMessage } from "./constraint_message.js";
-import { BUSY_CONSTRAINT } from "./constraints/busy_constraint.js";
+import {
+  BUSY_CONSTRAINT,
+  DISABLED_CONSTRAINT,
+  READONLY_CONSTRAINT,
+} from "./constraints/interaction_constraints.js";
 import {
   MIN_DIGIT_CONSTRAINT,
   MIN_LOWER_LETTER_CONSTRAINT,
@@ -74,11 +78,9 @@ import {
   MIN_UPPER_LETTER_CONSTRAINT,
 } from "./constraints/min_char_constraint.js";
 import { ONE_OF_CONSTRAINT } from "./constraints/one_of_constraint.js";
-import { READONLY_CONSTRAINT } from "./constraints/readonly_constraint.js";
 import { SAME_AS_CONSTRAINT } from "./constraints/same_as_constraint.js";
 import { SINGLE_SPACE_CONSTRAINT } from "./constraints/single_space_constraint.js";
 import {
-  DISABLED_CONSTRAINT,
   MAX_CONSTRAINT,
   MAX_LENGTH_CONSTRAINT,
   MIN_CONSTRAINT,

@@ -7,37 +7,6 @@ import { langSignal } from "@jsenv/navi/src/text/lang_signal.js";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
 
-// this constraint is not really a native constraint and browser just not let this happen at all
-// in our case it's just here in case some code is wrongly calling "requestAction" or "checkValidity" on a disabled element
-export const DISABLED_CONSTRAINT = {
-  name: "disabled",
-  messageAttribute: "data-disabled-message",
-  // Disabled is an interaction constraint: it controls whether the user can
-  // interact with the element and what callout to show, but it does not count
-  // as a value-validity failure.
-  interactionOnly: true,
-  check: (field) => {
-    const disabled = field.controlHostProps.disabled;
-    if (!disabled) {
-      return null;
-    }
-
-    const type = field.controlHostProps.type;
-    let message;
-    if (type === "radio") {
-      message = naviI18n(`constraint.disabled.radio`);
-    } else if (type === "checkbox") {
-      message = naviI18n(`constraint.disabled.checkbox`);
-    } else {
-      message = naviI18n(`constraint.disabled.default`);
-    }
-    // A disabled element does not block its parent from submitting.
-    return { message, status: "info", ignoredByParents: true };
-  },
-};
-CONSTRAINT_ATTRIBUTE_SET.add("disabled");
-CONSTRAINT_ATTRIBUTE_SET.add("data-disabled");
-
 export const REQUIRED_CONSTRAINT = {
   name: "required",
   messageAttribute: "data-required-message",
