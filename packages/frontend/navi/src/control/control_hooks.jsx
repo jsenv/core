@@ -31,7 +31,10 @@ import { useActionBoundToOneParam } from "@jsenv/navi/src/action/use_action.js";
 import { useActionStatus } from "@jsenv/navi/src/action/use_action_status.js";
 import { useExecuteAction } from "@jsenv/navi/src/action/use_execute_action.js";
 import { useComposeElementRef } from "@jsenv/navi/src/box/ref_composition/use_element_ref.js";
-import { dispatchRequestAction } from "@jsenv/navi/src/control/rules/control_action.js";
+import {
+  dispatchRequestAction,
+  tryActionAfterInteractionAllowed,
+} from "@jsenv/navi/src/control/rules/control_action.js";
 import {
   dispatchRequestInteraction,
   onRequestInteraction,
@@ -554,7 +557,7 @@ export const useControlProps = (
       }
       const control = ref.current;
       if (controlType === "button") {
-        return dispatchRequestAction(control, {
+        return tryActionAfterInteractionAllowed(control, {
           event: e,
           action: boundAction,
           requester: control,
@@ -569,7 +572,7 @@ export const useControlProps = (
         e.preventDefault();
         return false;
       }
-      const dispatched = dispatchRequestAction(control, {
+      const dispatched = tryActionAfterInteractionAllowed(control, {
         event: e,
         action: boundAction,
         requester: control,
@@ -1275,16 +1278,11 @@ const useInteractiveProps = (
           const parentEl = parentController.elementRef.current;
           if (parentEl) {
             const originalEvent = e.detail.eventChain[0];
-            dispatchRequestInteraction(parentEl, {
+            dispatchRequestAction(parentEl, {
               event: originalEvent,
-              name: "auto_group_action",
-              allowed: () => {
-                dispatchRequestAction(parentEl, {
-                  event: originalEvent,
-                  action: "auto",
-                  requester: e.detail.requester,
-                });
-              },
+              interactionName: "auto_group_action",
+              action: "auto",
+              requester: e.detail.requester,
             });
           }
         }

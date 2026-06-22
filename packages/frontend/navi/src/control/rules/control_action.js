@@ -12,14 +12,16 @@
  *   3. Still in `allowed`: `dispatchRequestAction(element, { action, event })` — action gate
  *
  * `dispatchRequestAction` assumes `checkValidity` has already been called (it is called
- * by `setUIState` on every state change). It only calls `syncValidity` to decide
- * whether to show/close the callout and whether to fire `navi_action_allowed`.
+ * by `setUIState` on every state change). It re-checks with `fromRequestAction: true`
+ * to trigger any `autoResetOnAction` side effects, then reads the validity state to
+ * decide whether to report the failure or fire `navi_action_allowed`.
  */
 
 import { dispatchInternalCustomEvent } from "@jsenv/dom";
 
 import { findControlHost } from "../control_dom.js";
 import { findControlProxyTargetController } from "../controller_registry.js";
+import { dispatchRequestInteraction } from "./control_interaction.js";
 
 /**
  * Requests that `action` be executed on `element`.
@@ -34,38 +36,61 @@ import { findControlProxyTargetController } from "../controller_registry.js";
  */
 export const dispatchRequestAction = (
   element,
+  { event, interactionName = "dispatchRequestAction", ...actionOptions } = {},
+) => {
+  return dispatchRequestInteraction(element, {
+    event,
+    name: interactionName,
+    allowed: () => {
+      return tryActionAfterInteractionAllowed(element, {
+        event,
+        ...actionOptions,
+      });
+    },
+  });
+};
+
+export const tryActionAfterInteractionAllowed = (
+  element,
   {
     event,
     action,
     requester,
     actionOrigin = "action_prop",
-    uiState,
     method = "rerun",
     meta = {},
-  } = {},
+  },
 ) => {
   const controlHost = findControlHost(element) || element;
   const controller = controlHost.__uiStateController__;
 
   // Resolve proxy so navi_action_* fires on the real control element.
   let elementForAction = controlHost;
+  let uiState;
   if (controller) {
     const proxyTargetController = findControlProxyTargetController(controller);
     if (proxyTargetController) {
       elementForAction = proxyTargetController.elementRef.current;
     }
-    if (uiState === undefined) {
-      const activeController = proxyTargetController ?? controller;
-      uiState = activeController?.uiState;
-    }
+    const activeController = proxyTargetController ?? controller;
+    uiState = activeController?.uiState;
   }
 
-  // Validity gate: syncValidity both re-checks constraints and decides
-  // whether to open/close/update the callout.
-  const cv = controller?.rules.validation;
+  // Validity gate: re-check (handles autoResetOnAction side effects), then read
+  // the result and decide whether to report/prevent/allow.
+  const cv = controller?.rules?.validation;
   if (cv) {
-    const isValid = cv.syncValidity(event, { fromRequestAction: true });
+    const isValid = cv.checkValidity({ event, fromRequestAction: true });
     if (!isValid) {
+      // Find the specific failing leaf to show the callout on (mirrors syncValidity logic).
+      let leafCV = cv;
+      while (
+        leafCV.failingManagedControlValidity &&
+        !leafCV.failedConstraintInfo
+      ) {
+        leafCV = leafCV.failingManagedControlValidity;
+      }
+      leafCV.reportValidity({ event });
       if (action === "auto" || action?.isAction) {
         dispatchInternalCustomEvent(elementForAction, "navi_action_prevented", {
           event,
