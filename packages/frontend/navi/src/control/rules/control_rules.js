@@ -32,13 +32,11 @@ export const createControlRules = (
   { debugInteraction, debugPopup, debugUIState, debugFocus } = {},
 ) => {
   const [teardown, addTeardown] = createPubSub();
-  const [notifyCalloutOpen, onCalloutOpen] = createPubSub();
 
   const callout = createCalloutManager(controller, {
     addTeardown,
     debugFocus,
     debugPopup,
-    onOpen: notifyCalloutOpen,
   });
 
   const interaction = createControlInteraction(controller, {
@@ -48,7 +46,6 @@ export const createControlRules = (
 
   const validation = createControlValidation(controller, {
     callout,
-    onCalloutOpen,
     debugUIState,
   });
 

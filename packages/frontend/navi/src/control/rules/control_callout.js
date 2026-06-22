@@ -36,7 +36,7 @@ export const createOpenToken = () => ({});
  */
 export const createCalloutManager = (
   controller,
-  { addTeardown, debugFocus, debugPopup, onOpen } = {},
+  { addTeardown, debugFocus, debugPopup } = {},
 ) => {
   let callout = null;
   // Tracks open tokens → their constraint info.

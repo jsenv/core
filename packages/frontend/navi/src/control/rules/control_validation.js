@@ -117,7 +117,7 @@ export const registerGlobalConstraint = (customConstraint) => {
 
 export const createControlValidation = (
   controller,
-  { callout, debugUIState, onCalloutOpen },
+  { callout, debugUIState },
 ) => {
   const controlValidity = {
     registerConstraint: undefined,
@@ -303,7 +303,6 @@ export const createControlValidation = (
   Object.defineProperty(controlValidity, "failingManagedControlValidity", {
     get: () => failingManagedControlValidity,
   });
-  controlValidity.onCalloutOpen = onCalloutOpen;
   // Centralized validity sync: decides what to show/close based on the event type
   // and the current constraint state.
   //
