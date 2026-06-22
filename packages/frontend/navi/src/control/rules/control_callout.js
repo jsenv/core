@@ -7,7 +7,7 @@
  *
  * Usage:
  *   const myToken = createOpenToken();
- *   calloutManager.addOpenToken(myToken, { constraint, event, requester, skipFocus });
+ *   calloutManager.addOpenToken(myToken, { message, status, anchorElement, event, skipFocus, onClose });
  *   calloutManager.removeOpenToken(myToken, event);
  *   calloutManager.requestCloseCallout(event, debugReason); // force-close all
  *   calloutManager.callout  // current open callout or null
@@ -20,7 +20,6 @@ import {
 } from "@jsenv/dom";
 
 import { openCallout } from "./callout/callout.js";
-import { getConstraintMessage } from "./constraint_message.js";
 
 /**
  * Creates an opaque token used as a key for callout open reasons.
@@ -58,14 +57,10 @@ export const createCalloutManager = (
     tokens.delete(token);
     if (tokens.size > 0) {
       if (callout) {
-        const [, remainingConstraintInfo] = tokens.entries().next().value;
-        const { message } = getConstraintMessage(
-          controller,
-          remainingConstraintInfo.constraint,
-          remainingConstraintInfo.message,
-          {},
-        );
-        callout.update(message, { status: remainingConstraintInfo.status });
+        const [, remainingTokenData] = tokens.entries().next().value;
+        callout.update(remainingTokenData.message, {
+          status: remainingTokenData.status,
+        });
       }
       return false;
     }
@@ -86,27 +81,22 @@ export const createCalloutManager = (
 
   const addOpenToken = (
     token,
-    { constraint, event, requester, skipFocus } = {},
+    { message, status, anchorElement, event, skipFocus, onClose } = {},
   ) => {
-    if (!constraint) {
+    if (!message) {
       removeOpenToken(token, event);
       return;
     }
-    tokens.set(token, constraint);
-    const { message } = getConstraintMessage(
-      controller,
-      constraint.constraint,
-      constraint.message,
-      { requester },
-    );
+    tokens.set(token, { message, status, onClose });
     if (callout) {
-      callout.update(message, { status: constraint.status });
+      callout.update(message, { status });
       return;
     }
-    const anchorElement = constraint.target || controller.elementRef.current;
-    if (!skipFocus && !anchorElement.closest('[aria-hidden="true"]')) {
+    const resolvedAnchorElement =
+      anchorElement || controller.elementRef.current;
+    if (!skipFocus && !resolvedAnchorElement.closest('[aria-hidden="true"]')) {
       const focusTarget =
-        findFocusDelegateTarget(anchorElement) || anchorElement;
+        findFocusDelegateTarget(resolvedAnchorElement) || resolvedAnchorElement;
       debugFocus?.(
         event,
         `opening callout, give focus to anchor -> ${getElementSignature(focusTarget)}.focus()`,
@@ -119,8 +109,8 @@ export const createCalloutManager = (
     // `openResults` is referenced in onClose which runs later — forward ref is intentional.
     let openResults = [];
     callout = openCallout(message, {
-      anchorElement,
-      status: constraint.status,
+      anchorElement: resolvedAnchorElement,
+      status,
       openingEvent: event,
       debug: debugPopup,
       onClose: ({ event: closeEvent, focusWithinCallout }) => {
@@ -131,11 +121,11 @@ export const createCalloutManager = (
           }
         }
         callout = null;
-        // User dismissed the callout — clear all tokens so it doesn't reopen spuriously.
-        tokens.clear();
-        if (constraint) {
-          constraint.reportStatus = "closed";
+        // User dismissed the callout — notify all active tokens then clear.
+        for (const [, tokenData] of tokens) {
+          tokenData.onClose?.();
         }
+        tokens.clear();
         const element = controller.elementRef.current;
         if (
           !skipFocus &&
@@ -144,7 +134,8 @@ export const createCalloutManager = (
           !element.closest('[aria-hidden="true"]')
         ) {
           const focusTarget =
-            findFocusDelegateTarget(anchorElement) || anchorElement;
+            findFocusDelegateTarget(resolvedAnchorElement) ||
+            resolvedAnchorElement;
           debugFocus(
             closeEvent,
             `callout is closing with focus, give focus back to the control ${getElementSignature(focusTarget)}.focus()`,
@@ -156,7 +147,6 @@ export const createCalloutManager = (
     // `onOpen` can be a createPubSub publisher — its return value is an array of cleanup fns.
     // Or just a plain callback — wrap the single return value in an array.
     openResults = notifyCalloutOpen(event);
-    constraint.reportStatus = "reported";
   };
 
   const calloutManager = {

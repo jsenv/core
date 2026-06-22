@@ -24,6 +24,7 @@
 import { dispatchInternalCustomEvent } from "@jsenv/dom";
 
 import { findControlHost } from "../control_dom.js";
+import { getConstraintMessage } from "./constraint_message.js";
 import { createOpenToken } from "./control_callout.js";
 import { BUSY_CONSTRAINT } from "./interaction/busy_constraint.js";
 import { DISABLED_CONSTRAINT } from "./interaction/disabled_constraint.js";
@@ -129,8 +130,16 @@ export const createControlInteraction = (
       event,
       `reportInteractivity (${interactionFailedConstraintInfo.name})`,
     );
+    const { message } = getConstraintMessage(
+      controller,
+      interactionFailedConstraintInfo.constraint,
+      interactionFailedConstraintInfo.message,
+      {},
+    );
     callout.addOpenToken(INTERACTION_TOKEN, {
-      constraint: interactionFailedConstraintInfo,
+      message,
+      status: interactionFailedConstraintInfo.status,
+      anchorElement: interactionFailedConstraintInfo.target,
       event,
       skipFocus: true,
     });

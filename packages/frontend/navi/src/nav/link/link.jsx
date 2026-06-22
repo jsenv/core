@@ -2,15 +2,11 @@ import { useContext, useRef } from "preact/hooks";
 
 import { renderActionableComponent } from "../../action/render_actionable_component.jsx";
 import { PSEUDO_CLASSES } from "../../box/pseudo_styles.js";
-import {
-  dispatchRequestInteraction,
-  onRequestInteraction,
-} from "../../control/rules/control_interaction.js";
+import { useControlProps } from "../../control/control_hooks.jsx";
 import {
   SelectionContext,
   useSelectableElement,
 } from "../../control/selection/selection.jsx";
-import { useUIStateController } from "../../control/ui_state_controller.js";
 import { EmailSvg } from "../../graphic/icons/email_svg.jsx";
 import {
   LinkAnchorSvg,
@@ -22,11 +18,9 @@ import { PhoneSvg } from "../../graphic/icons/phone_svg.jsx";
 import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
 import { useKeyboardShortcuts } from "../../keyboard/keyboard_shortcuts.js";
 import { useRequestedActionStatus } from "../../keyboard/use_action_events.js";
-import { useDebugInteraction } from "../../navi_debug.jsx";
 import { Icon } from "../../text/icon.jsx";
 import { markAsOutsideTextFlow, Text } from "../../text/text.jsx";
 import { TitleLevelContext } from "../../text/title.jsx";
-import { useAutoFocus } from "../../utils/focus/use_auto_focus.js";
 import { useDocumentUrl } from "../browser_integration/document_url_signal.js";
 import { getHrefTargetInfo } from "../browser_integration/href_target_info.js";
 import { useIsVisited } from "../browser_integration/use_is_visited.js";
@@ -447,61 +441,14 @@ const LinkWithRoute = ({ route, routeParams, current, children, ...rest }) => {
   );
 };
 
-const LINK_CONTROL_INFO = { controlType: "link" };
-
-const useLinkInteraction = (ref, { disabled, readOnly, loading }) => {
-  const debugInteraction = useDebugInteraction();
-  const controlProps = { ref };
-  const uiStateController = useUIStateController(controlProps, {
-    controlInfo: LINK_CONTROL_INFO,
-    syncDomState: () => {},
-    allowNameless: true,
-  });
-  // Update controlHostProps on every render so interaction constraints see current values.
-  uiStateController.controlHostProps = {
-    "aria-readonly": readOnly ? "true" : undefined,
-    "disabled": disabled || undefined,
-    "aria-busy": loading ? "true" : undefined,
-  };
-  const handleInteraction = (e, { name, prevented, allowed } = {}) => {
-    const el = ref.current;
-    if (!el) {
-      return;
-    }
-    dispatchRequestInteraction(el, {
-      event: e,
-      name,
-      prevented,
-      allowed,
-    });
-  };
-  return {
-    interactionProps: {
-      "navi-control": "link",
-      "navi-control-host": "",
-      "onnavi_request_interaction": (e) => {
-        onRequestInteraction(e, { debugInteraction });
-      },
-    },
-    handleInteraction,
-  };
-};
-
 const LinkPlain = (props) => {
   const titleLevel = useContext(TitleLevelContext);
-  const selectionContext = useContext(SelectionContext);
+  const defaultRef = useRef();
+  props.ref = props.ref || defaultRef;
   const {
-    loading,
-    readOnly,
-    disabled,
-    autoFocus,
-    spaceToClick = true,
-    onClick,
-    onKeyDown,
     href,
     target,
     rel,
-    preventDefault,
     anchor,
     value = href,
 
@@ -519,31 +466,40 @@ const LinkPlain = (props) => {
     hrefFallback = !anchor,
 
     children,
-
-    ...remainingProps
   } = props;
-  const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
+
+  const selectionContext = useContext(SelectionContext);
   const visited = useIsVisited(href);
 
   const { selection, selectionController } = selectionContext || {};
-  const { selected } = useSelectableElement(ref, {
+  const { selected } = useSelectableElement(props.ref, {
     selection,
     selectionController,
   });
 
-  const autoFocusProps = useAutoFocus(ref, autoFocus);
-  const shouldDimColor = readOnly || disabled;
-  useDimColorWhen(ref, shouldDimColor);
-  const { interactionProps, handleInteraction } = useLinkInteraction(ref, {
-    disabled,
-    readOnly,
-    loading,
+  const [controlRootProps, controlHostProps] = useControlProps(props, {
+    controlType: "link",
+    allowNameless: true,
   });
+  const { basePseudoState } = controlHostProps;
+  const readOnly = basePseudoState[":read-only"];
+  const disabled = basePseudoState[":disabled"];
+  const loading = basePseudoState[":-navi-loading"];
+  const shouldDimColor = readOnly || disabled;
+  useDimColorWhen(props.ref, shouldDimColor);
   // subscribe to document url to re-render and re-compute getHrefTargetInfo
   useDocumentUrl();
   const { isSameSite, isAnchor, isCurrent } = getHrefTargetInfo(href);
   const innerCurrent = current || isCurrent;
+  controlHostProps.basePseudoState = {
+    ...basePseudoState,
+    ":visited": visited,
+    ":-navi-href-internal": isSameSite,
+    ":-navi-href-external": !isSameSite,
+    ":-navi-href-anchor": isAnchor,
+    ":-navi-href-current": innerCurrent,
+    ":-navi-selected": selected,
+  };
 
   const innerTarget =
     target === undefined ? (isSameSite ? "_self" : "_blank") : target;
@@ -598,20 +554,25 @@ const LinkPlain = (props) => {
       <LinkCurrentIndicator />
     ) : null;
 
+  const { onClick, preventDefault } = props;
+
   return (
     <Text
       as="a"
       color={anchor && !innerChildren ? "inherit" : undefined}
       id={anchor ? href.slice(1) : undefined}
-      {...remainingProps}
-      {...autoFocusProps}
-      {...interactionProps}
-      ref={ref}
+      {...controlRootProps}
+      {...controlHostProps}
+      preventDefault={undefined}
+      onClick={(e) => {
+        onClick?.(e);
+        if (preventDefault) {
+          e.preventDefault();
+        }
+      }}
       href={href}
       rel={innerRel}
       target={innerTarget === "_self" ? undefined : target}
-      aria-busy={loading}
-      inert={disabled}
       aria-current={isCurrent ? "page" : undefined}
       aria-selected={selectionContext ? selected : undefined}
       data-value-event="navi_value"
@@ -632,43 +593,6 @@ const LinkPlain = (props) => {
       styleCSSVars={LinkStyleCSSVars}
       pseudoClasses={LinkPseudoClasses}
       pseudoElements={LinkPseudoElements}
-      basePseudoState={{
-        ":read-only": readOnly,
-        ":disabled": disabled,
-        ":visited": visited,
-        ":-navi-loading": loading,
-        ":-navi-href-internal": isSameSite,
-        ":-navi-href-external": !isSameSite,
-        ":-navi-href-anchor": isAnchor,
-        ":-navi-href-current": innerCurrent,
-        ":-navi-selected": selected,
-      }}
-      onClick={(e) => {
-        if (preventDefault) {
-          e.preventDefault();
-        }
-        handleInteraction(e, {
-          name: "click",
-          prevented: () => {
-            e.preventDefault();
-          },
-          allowed: () => {
-            onClick?.(e);
-          },
-        });
-      }}
-      onKeyDown={(e) => {
-        if (spaceToClick && e.key === " ") {
-          e.preventDefault(); // Prevent page scroll
-          handleInteraction(e, {
-            name: "keydown Space",
-            allowed: () => {
-              e.target.click();
-            },
-          });
-        }
-        onKeyDown?.(e);
-      }}
       childrenOutsideFlow={
         <>
           <LoadingOutline

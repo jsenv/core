@@ -57,6 +57,7 @@ import { dispatchPublicCustomEvent, getElementSignature } from "@jsenv/dom";
 
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 import { findControlProxyTargetController } from "../controller_registry.js";
+import { getConstraintMessage } from "./constraint_message.js";
 import { createOpenToken } from "./control_callout.js";
 import {
   MIN_DIGIT_CONSTRAINT,
@@ -288,12 +289,23 @@ export const createControlValidation = (
   };
 
   const reportValidity = ({ event, requester, skipFocus } = {}) => {
+    const { message } = getConstraintMessage(
+      controller,
+      failedConstraintInfo.constraint,
+      failedConstraintInfo.message,
+      { requester },
+    );
     callout.addOpenToken(VALIDATION_TOKEN, {
-      constraint: failedConstraintInfo,
+      message,
+      status: failedConstraintInfo.status,
+      anchorElement: failedConstraintInfo.target,
       event,
-      requester,
       skipFocus,
+      onClose: () => {
+        failedConstraintInfo.reportStatus = "closed";
+      },
     });
+    failedConstraintInfo.reportStatus = "reported";
   };
   controlValidity.checkValidity = checkValidity;
   controlValidity.reportValidity = reportValidity;

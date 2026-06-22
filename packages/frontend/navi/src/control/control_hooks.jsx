@@ -304,6 +304,33 @@ export const useControlProps = (
         return null;
       };
 
+      if (controlType === "link") {
+        return {
+          keyDown: (e) => {
+            if (e.key === " ") {
+              return {
+                name: "space to click",
+                allowed: () => {
+                  ref.current.click();
+                },
+                always: () => {
+                  e.preventDefault(); // prevent page scroll
+                },
+              };
+            }
+            return null;
+          },
+          click: (e) => {
+            return {
+              name: "click",
+              prevented: () => {
+                e.preventDefault();
+              },
+            };
+          },
+        };
+      }
+
       if (controlType === "button") {
         const onButtonInteractionAllowed = (e) => {
           triggerUIAction(e);
@@ -703,6 +730,7 @@ const createControlInfo = (props, { controlType }) => {
   let defaultStatePropName;
   let stateInitial;
   let readOnlySupported = false;
+  let disabledSupported = false;
   let hasStateProp;
   let value;
 
@@ -745,9 +773,13 @@ const createControlInfo = (props, { controlType }) => {
 
       readOnlySupported = true;
     }
+
+    disabledSupported = true;
   } else if (controlType === "button") {
     statePropName = "value";
     stateInitial = props.value;
+
+    disabledSupported = true;
   } else if (controlType === "details") {
     statePropName = "open";
     defaultStatePropName = "defaultOpen";
@@ -769,6 +801,7 @@ const createControlInfo = (props, { controlType }) => {
       stateInitial = undefined;
     }
 
+    disabledSupported = true;
     readOnlySupported = true; // it's an input under the hood
   }
 
@@ -782,6 +815,7 @@ const createControlInfo = (props, { controlType }) => {
     value,
 
     readOnlySupported,
+    disabledSupported,
   };
 };
 const useReadOnlyUncontrolled = (props, controlInfo) => {
@@ -1022,7 +1056,6 @@ const useInteractiveProps = (
 
     Object.assign(controlHostProps, {
       "required": requiredResolved,
-      "disabled": disabledResolved,
       "aria-busy": loadingResolved ? "true" : "false",
       "basePseudoState": {
         ":disabled": disabledResolved,
@@ -1035,6 +1068,14 @@ const useInteractiveProps = (
       controlHostProps.readOnly = readOnlyResolved;
     } else {
       controlHostProps["aria-readonly"] = readOnlyResolved ? "true" : "false";
+    }
+    if (controlInfo.disabledSupported) {
+      controlHostProps.disabled = disabledResolved;
+    } else {
+      controlHostProps["aria-disabled"] = disabledResolved ? "true" : "false";
+      if (disabledResolved) {
+        controlHostProps["inert"] = "";
+      }
     }
     // inform any associated label of our state (connected, disabled, readOnly)
     // dispatched directly on the label — works whether the label wraps the control
