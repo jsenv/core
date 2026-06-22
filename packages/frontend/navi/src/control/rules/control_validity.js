@@ -65,20 +65,18 @@ import { findControlHost } from "../control_dom.js";
 import { findControlProxyTargetController } from "../controller_registry.js";
 import { openCallout } from "./callout/callout.js";
 import { getConstraintMessage } from "./constraint_message.js";
-import {
-  BUSY_CONSTRAINT,
-  DISABLED_CONSTRAINT,
-  READONLY_CONSTRAINT,
-} from "./constraints/interaction_constraints.js";
+import { BUSY_CONSTRAINT } from "./interaction/busy_constraint.js";
+import { DISABLED_CONSTRAINT } from "./interaction/disabled_constraint.js";
+import { READONLY_CONSTRAINT } from "./interaction/readonly_constraint.js";
 import {
   MIN_DIGIT_CONSTRAINT,
   MIN_LOWER_LETTER_CONSTRAINT,
   MIN_SPECIAL_CHAR_CONSTRAINT,
   MIN_UPPER_LETTER_CONSTRAINT,
-} from "./constraints/min_char_constraint.js";
-import { ONE_OF_CONSTRAINT } from "./constraints/one_of_constraint.js";
-import { SAME_AS_CONSTRAINT } from "./constraints/same_as_constraint.js";
-import { SINGLE_SPACE_CONSTRAINT } from "./constraints/single_space_constraint.js";
+} from "./validation/min_char_constraint.js";
+import { ONE_OF_CONSTRAINT } from "./validation/one_of_constraint.js";
+import { SAME_AS_CONSTRAINT } from "./validation/same_as_constraint.js";
+import { SINGLE_SPACE_CONSTRAINT } from "./validation/single_space_constraint.js";
 import {
   MAX_CONSTRAINT,
   MAX_LENGTH_CONSTRAINT,
@@ -89,16 +87,9 @@ import {
   STEP_CONSTRAINT,
   TYPE_EMAIL_CONSTRAINT,
   TYPE_NUMBER_CONSTRAINT,
-} from "./constraints/standard_constraints.js";
+} from "./validation/standard_constraints.js";
 
 export const NAVI_VALIDITY_CHANGE_CUSTOM_EVENT = "navi_validity_change";
-
-// Interaction gate (interactivity only — no validity).
-// Re-exported here so existing importers don't need to update their paths.
-export {
-  dispatchRequestInteraction,
-  onRequestInteraction,
-} from "../control_interaction.js";
 
 export const getControlValidityFromElement = (element) => {
   const controlHost = findControlHost(element);

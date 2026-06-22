@@ -84,11 +84,11 @@ export { SummaryMarker } from "./src/control/details/summary_marker.jsx";
 
 // Form
 // Validation
-export { openCallout } from "./src/control/validation/callout/callout.js";
-export { useCalloutRequestClose } from "./src/control/validation/callout/callout.jsx";
-export { createAvailableConstraint } from "./src/control/validation/constraints/create_available_constraint.js";
-export { registerGlobalConstraint } from "./src/control/validation/control_validity.js";
-export { useConstraintValidityState } from "./src/control/validation/hooks/use_constraint_validity_state.js";
+export { openCallout } from "./src/control/rules/callout/callout.js";
+export { useCalloutRequestClose } from "./src/control/rules/callout/callout.jsx";
+export { registerGlobalConstraint } from "./src/control/rules/control_validity.js";
+export { useConstraintValidityState } from "./src/control/rules/hooks/use_constraint_validity_state.js";
+export { createAvailableConstraint } from "./src/control/rules/validation/create_available_constraint.js";
 // Selection
 export {
   SelectionContext,

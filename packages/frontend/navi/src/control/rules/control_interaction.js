@@ -22,9 +22,9 @@
 
 import { dispatchInternalCustomEvent } from "@jsenv/dom";
 
-import { findControlHost } from "./control_dom.js";
-import { findControlProxyTargetController } from "./controller_registry.js";
-import { getControlValidityFromElement } from "./validation/control_validity.js";
+import { findControlHost } from "../control_dom.js";
+import { findControlProxyTargetController } from "../controller_registry.js";
+import { getControlValidityFromElement } from "./control_validity.js";
 
 export const dispatchRequestInteraction = (
   element,
