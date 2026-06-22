@@ -352,7 +352,7 @@ export const useControlProps = (
               name: "navi_change",
               allowed: () => {
                 syncStateFromControl(e);
-                requestAction(e);
+                requestActionOnAllowed(e);
               },
             };
           },
@@ -490,7 +490,7 @@ export const useControlProps = (
               name: "input",
               allowed: () => {
                 syncStateFromControl(e);
-                requestAction(e);
+                requestActionOnAllowed(e);
               },
             };
           },
@@ -520,7 +520,7 @@ export const useControlProps = (
               name: "navi_change",
               allowed: () => {
                 syncStateFromControl(e);
-                requestAction(e);
+                requestActionOnAllowed(e);
               },
             };
           },
@@ -542,7 +542,7 @@ export const useControlProps = (
               name: "navi_change",
               allowed: () => {
                 syncStateFromControl(e);
-                requestAction(e);
+                requestActionOnAllowed(e);
               },
             };
           },
@@ -555,7 +555,7 @@ export const useControlProps = (
       getDefaultEventReactionDefinitions();
     const { eventReactionDefinitions } = props;
     const lastActionValueRef = useRef(NO_ACTION_YET);
-    const requestAction = (e) => {
+    const requestActionOnAllowed = (e) => {
       if (actionEvent === "custom") {
         return false;
       }
@@ -579,6 +579,7 @@ export const useControlProps = (
       }
       return dispatched;
     };
+
     // Keep lastActionValueRef in sync with state changes that happen outside of asAction
     // (e.g. radio_sibling_uncheck, or external programmatic set via navi_set_ui_state).
     // Otherwise the dedup below would wrongly skip a real user click that re-checks a radio
