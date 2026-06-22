@@ -1898,10 +1898,11 @@
           <div id="proxy" className="demo-section">
             <h2>Proxy</h2>
             <p>
-              Any element can act as a proxy for a checkbox using the{" "}
-              <code>navi-control-proxy-for</code> attribute. On mousedown the
-              checkbox receives focus; on click the proxy's <code>value</code>{" "}
-              prop is forwarded as the new checked state.
+              External buttons can control a checkbox using{" "}
+              <code>command="--navi-check"</code> /{" "}
+              <code>command="--navi-uncheck"</code> with a{" "}
+              <code>commandFor</code> pointing to the checkbox id. This triggers
+              the checkbox's action.
             </p>
             <div
               style={{
@@ -1921,18 +1922,18 @@
                     letterSpacing: "0.06em",
                   }}
                 >
-                  Proxy buttons
+                  External buttons
                 </div>
                 <Box flex="y" spacing="s">
                   <Button
-                    value={true}
-                    navi-control-proxy-for="checkbox_being_proxied"
+                    command="--navi-check"
+                    commandFor="checkbox_being_proxied"
                   >
                     Check
                   </Button>
                   <Button
-                    value={false}
-                    navi-control-proxy-for="checkbox_being_proxied"
+                    command="--navi-uncheck"
+                    commandFor="checkbox_being_proxied"
                   >
                     Uncheck
                   </Button>
