@@ -381,9 +381,10 @@ export const createControlValidity = (
       ...DEFAULT_CONSTRAINT_SET,
       ...dynamicConstraintSet,
     ]);
+    const elementSig = getElementSignature(controller.elementRef.current);
     debugUIState(
       event,
-      `${constraintSet.size} constraints to check, reseting validity`,
+      `check ${elementSig}: ${constraintSet.size} constraints`,
     );
     validityInfoMap.clear();
     failedConstraintInfo = null;
@@ -404,7 +405,7 @@ export const createControlValidity = (
           : checkResult;
       constraintValidityInfo.messageString = constraintValidityInfo.message;
       debugUIState(
-        `constraint "${constraint.name}" failed -> ${constraintValidityInfo.message}`,
+        `${elementSig} constraint "${constraint.name}" failed -> ${constraintValidityInfo.message}`,
       );
       const thisConstraintFailureInfo = {
         name: constraint.name,
@@ -469,7 +470,7 @@ export const createControlValidity = (
       if (element) {
         debugUIState(
           event,
-          `constraint validity changed -> dispatch ${NAVI_VALIDITY_CHANGE_CUSTOM_EVENT}`,
+          `${elementSig} constraint validity changed -> dispatch ${NAVI_VALIDITY_CHANGE_CUSTOM_EVENT}`,
         );
         dispatchPublicCustomEvent(element, NAVI_VALIDITY_CHANGE_CUSTOM_EVENT);
       }
@@ -657,6 +658,7 @@ export const createControlValidity = (
   //   user intends to edit, we clear the message so it doesn't block them.
   const syncValidity = (event, { fromRequestAction = false } = {}) => {
     const hasOwnAction = Boolean(controller.props.action);
+    const elementSig = getElementSignature(controller.elementRef.current);
     const isValid = checkValidity({ event, fromRequestAction });
     if (failingManagedControlValidity) {
       // Group/form case: find the actual failing leaf and report on it.
@@ -675,20 +677,20 @@ export const createControlValidity = (
       if (hasOwnAction) {
         debugUIState(
           event,
-          `syncValidity: has failing constraint and own action -> reportValidity`,
+          `syncValidity ${elementSig}: has failing constraint and own action -> reportValidity`,
         );
         reportValidity({ event });
       } else {
         debugUIState(
           event,
-          `syncValidity: has failing constraint but no own action -> close callout if any`,
+          `syncValidity ${elementSig}: has failing constraint but no own action -> close callout if any`,
         );
         innerRequestCloseCallout(event, event?.type);
       }
     } else {
       debugUIState(
         event,
-        `syncValidity: no failing constraint -> close callout if any`,
+        `syncValidity ${elementSig}: no failing constraint -> close callout if any`,
       );
       innerRequestCloseCallout(event, event?.type);
     }
