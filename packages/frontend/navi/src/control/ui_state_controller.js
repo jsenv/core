@@ -360,15 +360,22 @@ export const useUIStateController = (
       }
       notifyParentAboutChildUIAction(e, { stateChanged: true });
       if (controlProxyFor) {
-        // Proxy: forward the state change to the real input
-        // The real input will handle its own UIState update + synthetic input.
+        // Proxy: forward the state change to the real input.
+        // Use a dedicated internal event so that when the real input's setUIState
+        // sees stateIsTheSame=true (already updated by the real input's own flow),
+        // it does NOT fire notifyParentAboutChildUIAction(stateChanged=false) back
+        // to the group — which would trigger the group action with a stale value.
         const targetController = getUIStateControllerById(controlProxyFor);
         if (targetController) {
           debugUIState(
             e,
             `forwarding set_ui_state "${newUIState}" to ${getElementSignature(targetController.elementRef.current)}`,
           );
-          targetController.setUIState(newUIState, e);
+          const forwardEvent = new CustomEvent("proxy_forward_set_ui_state", {
+            detail: {},
+          });
+          chainEvent(forwardEvent, e);
+          targetController.setUIState(newUIState, forwardEvent);
         }
       }
       if (el) {
@@ -1136,6 +1143,10 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
 const INTERNAL_EVENT_SET = new Set([
   "state_prop_change",
   "radio_sibling_uncheck",
+  // Proxy forwarding to real input: prevents the real input from sending a
+  // spurious stateChanged=false notification to the group when the proxy
+  // forwards back a value the real input already holds.
+  "proxy_forward_set_ui_state",
   "propagate_down_set_ui_state",
   "propagate_down_reset_ui_state",
   "propagate_down_clear_ui_state",
