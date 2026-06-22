@@ -119,6 +119,34 @@ const FormPseudoClasses = [
   ":-navi-loading",
 ];
 
+// https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Constraint_validation
+// Override requestSubmit so that programmatic form submissions go through the
+// navi interaction gate (interactivity check) and then the action gate (validity).
+const requestSubmit = HTMLFormElement.prototype.requestSubmit;
+HTMLFormElement.prototype.requestSubmit = function (submitter) {
+  const form = this;
+  const controller = form.__uiStateController__;
+  if (!controller) {
+    requestSubmit.call(form, submitter);
+    return;
+  }
+  const programmaticEvent = new CustomEvent("programmatic_request_submit", {
+    cancelable: true,
+    detail: { submitter },
+  });
+  dispatchRequestInteraction(form, {
+    event: programmaticEvent,
+    name: "requestSubmit",
+    allowed: () => {
+      dispatchRequestAction(form, {
+        event: programmaticEvent,
+        action: "auto",
+        requester: submitter,
+      });
+    },
+  });
+};
+
 // const dispatchCustomEventOnFormAndFormElements = (type, options) => {
 //   const form = innerRef.current;
 //   const customEvent = new CustomEvent(type, options);

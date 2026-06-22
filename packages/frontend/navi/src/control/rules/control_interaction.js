@@ -24,7 +24,6 @@
 import { dispatchInternalCustomEvent } from "@jsenv/dom";
 
 import { findControlHost } from "../control_dom.js";
-import { dispatchRequestAction } from "./control_action.js";
 import { BUSY_CONSTRAINT } from "./interaction/busy_constraint.js";
 import { DISABLED_CONSTRAINT } from "./interaction/disabled_constraint.js";
 import { READONLY_CONSTRAINT } from "./interaction/readonly_constraint.js";
@@ -192,32 +191,4 @@ export const onRequestInteraction = (
 
   onAllowed();
   return true;
-};
-
-// https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Constraint_validation
-// Override requestSubmit so that programmatic form submissions go through the
-// navi interaction gate (interactivity check) and then the action gate (validity).
-const requestSubmit = HTMLFormElement.prototype.requestSubmit;
-HTMLFormElement.prototype.requestSubmit = function (submitter) {
-  const form = this;
-  const controller = form.__uiStateController__;
-  if (!controller) {
-    requestSubmit.call(form, submitter);
-    return;
-  }
-  const programmaticEvent = new CustomEvent("programmatic_request_submit", {
-    cancelable: true,
-    detail: { submitter },
-  });
-  dispatchRequestInteraction(form, {
-    event: programmaticEvent,
-    name: "requestSubmit",
-    allowed: () => {
-      dispatchRequestAction(form, {
-        event: programmaticEvent,
-        action: "auto",
-        requester: submitter,
-      });
-    },
-  });
 };
