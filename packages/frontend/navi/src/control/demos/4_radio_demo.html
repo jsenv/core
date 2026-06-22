@@ -1003,13 +1003,15 @@
                 <div className="col-label">Proxy buttons</div>
                 <Box flex="y" spacing="s">
                   <Button
-                    value={true}
+                    command="--navi-check"
+                    commandFor="radio_being_proxied"
                     navi-control-proxy-for="radio_being_proxied"
                   >
                     Enable
                   </Button>
                   <Button
-                    value={false}
+                    command="--navi-uncheck"
+                    commandFor="radio_being_proxied"
                     navi-control-proxy-for="radio_being_proxied"
                   >
                     Disable
