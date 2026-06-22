@@ -4,7 +4,7 @@ import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
 export const READONLY_CONSTRAINT = {
   name: "readonly",
   messageAttribute: "data-readonly-message",
-  check: (field) => {
+  check: (field, { fromParentSubmission } = {}) => {
     const readOnly = Boolean(
       field.controlHostProps.readOnly ||
       field.controlHostProps["aria-readonly"] === "true",
@@ -16,10 +16,17 @@ export const READONLY_CONSTRAINT = {
     if (type === "hidden") {
       return null;
     }
+    // Readonly/loading controls should not block their parent form from submitting.
+    // This mirrors standard HTML form behaviour where readonly inputs are submitted
+    // as-is and never prevent submission.
+    if (fromParentSubmission) {
+      return null;
+    }
 
     const isButton = field.controlType === "button";
     const isBusy = field.controlHostProps["aria-busy"] === "true";
-    const readonlySilent = field.controlHostProps["data-readonly-silent"] === "";
+    const readonlySilent =
+      field.controlHostProps["data-readonly-silent"] === "";
     if (readonlySilent) {
       return { silent: true };
     }

@@ -332,6 +332,7 @@ export const createControlValidity = (
     event,
     requester = controller.elementRef.current,
     fromRequestAction,
+    fromParentSubmission = false,
   } = {}) => {
     if (fromRequestAction) {
       for (const [, validityInfo] of validityInfoMap) {
@@ -361,6 +362,7 @@ export const createControlValidity = (
         event,
         requester,
         fromRequestAction,
+        fromParentSubmission: true,
       });
       if (!managedIsValid) {
         failingManagedControlValidity = managedCV;
@@ -398,6 +400,7 @@ export const createControlValidity = (
 
       const checkResult = constraint.check(fieldForConstraint, {
         fromRequestAction,
+        fromParentSubmission,
         registerChange,
       });
       if (!checkResult) {

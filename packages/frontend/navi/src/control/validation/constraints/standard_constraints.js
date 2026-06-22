@@ -12,9 +12,13 @@ import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
 export const DISABLED_CONSTRAINT = {
   name: "disabled",
   messageAttribute: "data-disabled-message",
-  check: (field) => {
+  check: (field, { fromParentSubmission } = {}) => {
     const disabled = field.controlHostProps.disabled;
     if (!disabled) {
+      return null;
+    }
+    // Disabled controls should not block their parent form from submitting.
+    if (fromParentSubmission) {
       return null;
     }
 
@@ -201,7 +205,8 @@ export const MIN_LENGTH_CONSTRAINT = {
     const type = field.controlHostProps.type ?? "text";
     const isInput = field.controlType === "input";
     const isTextarea =
-      field.controlHostProps.as === "textarea" || field.controlType === "textarea";
+      field.controlHostProps.as === "textarea" ||
+      field.controlType === "textarea";
     if (isInput) {
       if (!INPUT_TYPE_SUPPORTING_MIN_LENGTH_SET.has(type)) {
         return null;
@@ -273,7 +278,8 @@ export const MAX_LENGTH_CONSTRAINT = {
     const type = field.controlHostProps.type ?? "text";
     const isInput = field.controlType === "input";
     const isTextarea =
-      field.controlHostProps.as === "textarea" || field.controlType === "textarea";
+      field.controlHostProps.as === "textarea" ||
+      field.controlType === "textarea";
     if (isInput) {
       if (!INPUT_TYPE_SUPPORTING_MAX_LENGTH_SET.has(type)) {
         return null;
