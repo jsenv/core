@@ -139,7 +139,7 @@ export const createCalloutManager = (
         ) {
           const focusTarget =
             findFocusDelegateTarget(anchorElement) || anchorElement;
-          debugFocus?.(
+          debugFocus(
             closeEvent,
             `callout is closing with focus, give focus back to the control ${getElementSignature(focusTarget)}.focus()`,
           );

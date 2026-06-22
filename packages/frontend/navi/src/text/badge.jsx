@@ -116,7 +116,6 @@ const BadgeButton = (props) => {
 
   return (
     <Text
-      overflowPinned
       className="navi_badge_button"
       role="button"
       onnavi_get_value={(e) => {
