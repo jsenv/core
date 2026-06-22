@@ -45,6 +45,7 @@ const INTERACTION_CONSTRAINT_SET = new Set([
  */
 export const createControlInteraction = (controller, callout) => {
   let interactionFailedConstraintInfo = null;
+  let failingManagedInteraction = null;
 
   const checkInteractivity = ({ event } = {}) => {
     interactionFailedConstraintInfo = null;
@@ -67,7 +68,7 @@ export const createControlInteraction = (controller, callout) => {
     // Check managed controls — a non-interactable child blocks the parent,
     // UNLESS the child's failing constraint has `ignoredByParents: true`
     // (e.g. a disabled child inside a group should not prevent the group from acting).
-    let failingManagedInteraction = null;
+    failingManagedInteraction = null;
     if (!interactionFailedConstraintInfo) {
       for (const mc of controller.getManagedControls()) {
         const mci = mc.rules.interaction;
@@ -102,12 +103,15 @@ export const createControlInteraction = (controller, callout) => {
       }
     }
 
-    const interactable =
-      !interactionFailedConstraintInfo && !failingManagedInteraction;
-    return interactable;
+    return !interactionFailedConstraintInfo && !failingManagedInteraction;
   };
 
   const reportInteractivity = ({ event } = {}) => {
+    if (failingManagedInteraction) {
+      // Report on the specific child that is blocking, not the parent.
+      failingManagedInteraction.reportInteractivity({ event });
+      return;
+    }
     callout.openConstraintCallout(interactionFailedConstraintInfo, {
       event,
       skipFocus: true,
@@ -120,6 +124,9 @@ export const createControlInteraction = (controller, callout) => {
   };
   Object.defineProperty(controlInteraction, "interactionFailedConstraintInfo", {
     get: () => interactionFailedConstraintInfo,
+  });
+  Object.defineProperty(controlInteraction, "failingManagedInteraction", {
+    get: () => failingManagedInteraction,
   });
   return controlInteraction;
 };
