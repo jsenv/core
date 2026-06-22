@@ -160,6 +160,7 @@ export const useControlProps = (
   { controlType, allowNameless, persists, uiActionInternal },
 ) => {
   const debugUIState = useDebugUIState();
+  const debugAction = useDebugAction();
 
   const idDefault = useId();
   const controlId = useContext(ControlIdContext);
@@ -563,7 +564,7 @@ export const useControlProps = (
         lastActionValue !== NO_ACTION_YET &&
         compareTwoJsValues(currentValue, lastActionValue);
       if (valueSameAsLastAction) {
-        e.preventDefault();
+        debugAction(e, `skipping action: value same as last action`);
         return false;
       }
       const dispatched = tryActionAfterInteractionAllowed(control, {
