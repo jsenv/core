@@ -25,7 +25,7 @@ import { dispatchRequestInteraction } from "../rules/control_interaction.js";
 
 const css = /* css */ `
   @layer navi {
-    .navi_list_item[navi-selectable] {
+    .navi_list_container[navi-selectable] {
       /* Focus outline */
       --list-item-outline-width: var(--navi-focus-outline-width);
       /* here we draw the outline ON the item, not outside of it */

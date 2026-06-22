@@ -352,7 +352,11 @@ export const useUIStateController = (
         // Communicates directly to the proxy controller — no DOM query needed.
         const proxyController = findProxyController(id);
         if (proxyController) {
-          proxyController.setUIState(newUIState, e);
+          const mirrorEvent = new CustomEvent("proxy_mirror_state", {
+            detail: {},
+          });
+          chainEvent(mirrorEvent, e);
+          proxyController.setUIState(newUIState, mirrorEvent);
         }
       }
       if (isInternalEvent(e)) {
@@ -1164,6 +1168,9 @@ const INTERNAL_EVENT_SET = new Set([
   // spurious stateChanged=false notification to the group when the proxy
   // forwards back a value the real input already holds.
   "proxy_forward_set_ui_state",
+  // Real input mirroring state to its proxy: the proxy is a visual replica;
+  // it should sync DOM only — no action pipeline, no group notification, no synthetic input.
+  "proxy_mirror_state",
   "propagate_down_set_ui_state",
   "propagate_down_reset_ui_state",
   "propagate_down_clear_ui_state",
