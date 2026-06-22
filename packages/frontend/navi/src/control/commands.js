@@ -114,7 +114,12 @@ const resolveClosestControlWithAction = (el) => {
 };
 
 const resolveCommandValue = (source, event) => {
-  if (Object.hasOwn(event.detail, "value")) {
+  if (
+    // event.detail can be a number for some native events
+    event.detail &&
+    typeof event.detail === "object" &&
+    Object.hasOwn(event.detail, "value")
+  ) {
     return event.detail.value;
   }
   if (source.hasAttribute("command-value")) {
