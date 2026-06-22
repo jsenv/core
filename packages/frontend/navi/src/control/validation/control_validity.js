@@ -637,10 +637,20 @@ export const createControlValidity = (
   controlValidity.checkInteractivity = checkInteractivity;
 
   const reportInteractivity = ({ event, requester, skipFocus } = {}) => {
-    const constraintInfo =
-      interactionFailedConstraintInfo ??
-      failingManagedControlValidity?.interactionFailedConstraintInfo;
-    openConstraintCallout(constraintInfo, { event, requester, skipFocus });
+    if (failingManagedControlValidity) {
+      // Delegate to the leaf CV so the callout appears on the failing element, not the form/group.
+      let leafCV = failingManagedControlValidity;
+      while (leafCV.failingManagedControlValidity) {
+        leafCV = leafCV.failingManagedControlValidity;
+      }
+      leafCV.reportInteractivity({ event, requester, skipFocus });
+      return;
+    }
+    openConstraintCallout(interactionFailedConstraintInfo, {
+      event,
+      requester,
+      skipFocus,
+    });
   };
   controlValidity.reportInteractivity = reportInteractivity;
 
