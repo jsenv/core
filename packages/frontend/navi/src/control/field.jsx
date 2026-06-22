@@ -3,7 +3,7 @@ import { useContext, useId, useRef, useState } from "preact/hooks";
 import { Box } from "../box/box.jsx";
 import { resolveSpacingSize } from "../box/box_style_util.js";
 import { ControlIdContext, MessagePropsRefContext } from "./control_context.js";
-import { extractMessageAndRemainingProps } from "./validation/constraint_message.js";
+import { extractMessageAndRemainingProps } from "./rules/constraint_message.js";
 
 const css = /* css */ `
   @layer navi {

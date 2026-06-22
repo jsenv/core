@@ -1,7 +1,7 @@
 import { createContext } from "preact";
 
-import { CONSTRAINT_ATTRIBUTE_SET } from "./validation/constraint_attribute_set.js";
-import { CONSTRAINT_MESSAGE_PROP_NAME_SET } from "./validation/constraint_message.js";
+import { CONSTRAINT_ATTRIBUTE_SET } from "./rules/constraint_attribute_set.js";
+import { CONSTRAINT_MESSAGE_PROP_NAME_SET } from "./rules/constraint_message.js";
 
 // prop that we'll set on the control
 export const CONTROL_ATTRIBUTE_SET = new Set([
