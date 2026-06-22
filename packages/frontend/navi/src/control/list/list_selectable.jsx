@@ -359,7 +359,7 @@ const ListSelectable = (props) => {
           event: e,
           name: "select",
           prevented: () => e.preventDefault(), // tell the requester that we don't want to select this item
-          allowed: () => childController.setUIState(true, e),
+          allowed: () => childController.setUIState(childController.value, e),
         });
       }}
       onnavi_request_unselect={(e) => {
@@ -377,7 +377,7 @@ const ListSelectable = (props) => {
           event: e,
           name: "unselect",
           prevented: () => e.preventDefault(), // tell the requester that we don't want to unselect this item
-          allowed: () => childController.setUIState(false, e),
+          allowed: () => childController.setUIState(undefined, e),
         });
       }}
       onnavi_request_nav={(e) => {
