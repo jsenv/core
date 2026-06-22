@@ -336,18 +336,6 @@ export const createControlValidity = (
   const getConstraintValidityState = () => constraintValidityState;
   controlValidity.getConstraintValidityState = getConstraintValidityState;
 
-  const resetValidity = () => {
-    for (const [, validityInfo] of validityInfoMap) {
-      if (validityInfo.cleanup) {
-        validityInfo.cleanup();
-      }
-    }
-    validityInfoMap.clear();
-    failedConstraintInfo = null;
-    failingManagedControlValidity = null;
-  };
-  addTeardown(resetValidity);
-
   const checkValidity = ({
     event,
     requester = controller.elementRef.current,
@@ -397,31 +385,16 @@ export const createControlValidity = (
       event,
       `${constraintSet.size} constraints to check, reseting validity`,
     );
-    resetValidity();
+    validityInfoMap.clear();
+    failedConstraintInfo = null;
+    failingManagedControlValidity = null;
     for (const constraint of constraintSet) {
       const fieldForConstraint = controller;
-      const constraintCleanupSet = new Set();
-      const registerChange = (register) => {
-        const registerResult = register((options) => {
-          checkValidity(options);
-        });
-        if (typeof registerResult === "function") {
-          constraintCleanupSet.add(registerResult);
-        }
-      };
-      const cleanup = () => {
-        for (const cleanupCallback of constraintCleanupSet) {
-          cleanupCallback();
-        }
-        constraintCleanupSet.clear();
-      };
 
       const checkResult = constraint.check(fieldForConstraint, {
         fromRequestAction,
-        registerChange,
       });
       if (!checkResult) {
-        cleanup();
         newConstraintValidityState[constraint.name] = null;
         continue;
       }
@@ -438,7 +411,6 @@ export const createControlValidity = (
         constraint,
         status: "warning",
         ...constraintValidityInfo,
-        cleanup,
         reportStatus: "not_reported",
       };
       validityInfoMap.set(constraint, thisConstraintFailureInfo);
@@ -709,10 +681,10 @@ export const createControlValidity = (
       } else {
         debugUIState(
           event,
-          `syncValidity: has failing constraint but no own action -> do not report (callout would have no anchor)`,
+          `syncValidity: has failing constraint but no own action -> close callout if any`,
         );
+        innerRequestCloseCallout(event, event?.type);
       }
-      innerRequestCloseCallout(event, event?.type);
     } else {
       debugUIState(
         event,
