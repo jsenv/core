@@ -185,7 +185,9 @@ export const onRequestInteraction = (
     if (ci) {
       const canInteract = ci.checkInteractivity({ event });
       if (!canInteract) {
-        const failedInfo = ci.interactionFailedConstraintInfo;
+        const failedInfo =
+          ci.interactionFailedConstraintInfo ??
+          ci.failingManagedInteraction?.interactionFailedConstraintInfo;
         const reason = failedInfo
           ? `failing interaction constraint "${failedInfo.name}"`
           : "not interactable";
