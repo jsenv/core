@@ -85,16 +85,6 @@ const resolveExplicitTarget = (element) => {
   }
   return undefined;
 };
-const resolvePickerInnerControl = (target) => {
-  if (!target.hasAttribute("navi-picker")) {
-    return null;
-  }
-  const content = target.querySelector(".navi_picker_content");
-  if (!content) {
-    return null;
-  }
-  return content.querySelector("[navi-control-host]") ?? null;
-};
 const resolveFirstParentControl = (el) => {
   return getParentControl(el);
 };
