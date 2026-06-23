@@ -1171,6 +1171,11 @@ const INTERNAL_EVENT_SET = new Set([
   // Real input mirroring state to its proxy: the proxy is a visual replica;
   // it should sync DOM only — no action pipeline, no group notification, no synthetic input.
   "proxy_mirror_state",
+  // Facade propagating child group state up to the picker input: the facade
+  // already handled parent notification; the picker input must not re-notify
+  // upward (loop risk) and must not dispatch a synthetic input that would
+  // fire onUIAction a second time.
+  "facade_propagate_up",
   "propagate_down_set_ui_state",
   "propagate_down_reset_ui_state",
   "propagate_down_clear_ui_state",

@@ -330,14 +330,8 @@ const PickerCustom = (props) => {
       });
     };
 
-    const onInteraction = (e, { name, effect }) => {
-      dispatchRequestInteraction(ref.current, {
-        event: e,
-        name,
-        allowed: () => {
-          effect();
-        },
-      });
+    const requestInteraction = (options) => {
+      dispatchRequestInteraction(ref.current, options);
     };
 
     const { onActionStart, children } = props;
@@ -351,16 +345,18 @@ const PickerCustom = (props) => {
         if (expandedRef.current) {
           return;
         }
-        onInteraction(e, {
+        requestInteraction({
+          event: e,
           name: "navi_request_open_event",
-          effect: () => {
+          allowed: () => {
             requestOpen(e);
           },
         });
       },
       "onnavi_request_close": (e) => {
-        onInteraction(e, {
-          effect: () => {
+        requestInteraction({
+          event: e,
+          allowed: () => {
             requestClose(e);
           },
         });
