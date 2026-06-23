@@ -177,6 +177,9 @@ const PickerNative = (props) => {
       // (it would cause too many calls and would likely not be what the user expects)
       // (uiAction can be used to react live)
       actionEvent={props.action ? "change" : undefined}
+      resetOnCancel
+      resetOnAbort
+      resetOnError
       onnavi_request_open={(e) => {
         const pickerButton = e.currentTarget;
         const pickerInput = getPickerInput(pickerButton);
