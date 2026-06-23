@@ -499,6 +499,39 @@
         );
       };
 
+      // ─── Section: Action throws ────────────────────────────────────────────────
+      // When the action throws, the error should be surfaced somehow.
+      const ActionThrowDemo = () => {
+        return (
+          <div className="demo-section">
+            <h2>Action throws</h2>
+            <p>
+              The <code>Form</code> action always throws. Submit to see what
+              happens.
+            </p>
+            <Box flex="y" spacing="s">
+              <Form
+                action={() => {
+                  throw new Error("Something went wrong!");
+                }}
+              >
+                <Field vertical>
+                  <Label>Username</Label>
+                  <Input
+                    name="username"
+                    placeholder="type something…"
+                    autoComplete="off"
+                  />
+                </Field>
+                <Button type="submit" style={{ marginTop: "8px" }}>
+                  Submit
+                </Button>
+              </Form>
+            </Box>
+          </div>
+        );
+      };
+
       // ─── App ─────────────────────────────────────────────────────────────────────
       const App = () => (
         <div>
@@ -548,6 +581,9 @@
           </div>
           <div id="action-after-change">
             <ActionAfterChangeDemo />
+          </div>
+          <div id="action-throw">
+            <ActionThrowDemo />
           </div>
           <div id="readonly">
             <ReadonlyDemo />
