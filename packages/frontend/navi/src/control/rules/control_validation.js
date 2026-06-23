@@ -335,20 +335,23 @@ export const createControlValidation = (
       ) {
         leafCV = leafCV.failingManagedControlValidity;
       }
-      leafCV.syncValidity(event, { fromRequestAction });
+      // The parent (form/group/picker) has an action and decided to execute it.
+      // Always report on the failing leaf — no need to check hasOwnAction here.
+      leafCV.reportValidity({ event });
       return isValid;
     }
     if (failedConstraintInfo) {
-      if (fromRequestAction) {
+      const hasOwnAction = Boolean(controller.props.action);
+      if (fromRequestAction && hasOwnAction) {
         debugUIState(
           event,
-          `syncValidity ${elementSig}: has failing constraint and action requested -> reportValidity`,
+          `syncValidity ${elementSig}: has failing constraint, action requested and own action -> reportValidity`,
         );
         reportValidity({ event });
       } else {
         debugUIState(
           event,
-          `syncValidity ${elementSig}: has failing constraint but no action requested -> close callout if any`,
+          `syncValidity ${elementSig}: has failing constraint but no action requested or no own action -> close callout if any`,
         );
         callout.removeOpenToken(VALIDATION_TOKEN, event);
       }
