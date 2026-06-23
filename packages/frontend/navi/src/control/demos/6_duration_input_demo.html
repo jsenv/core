@@ -66,6 +66,18 @@
         font-size: 1.2rem;
         border-bottom: 2px solid #ddd;
       }
+      .states-grid {
+        display: grid;
+        grid-template-columns: repeat(2, auto);
+        gap: 16px 32px;
+        align-items: start;
+      }
+      .states-grid label {
+        font-size: 12px;
+        color: #888;
+        font-family: monospace;
+        padding-top: 4px;
+      }
     </style>
   </head>
   <body>
@@ -73,7 +85,14 @@
       <h1>Duration Input Demo</h1>
       <nav id="toc">
         <ul>
-          <li><a href="#unit-customization">Unit customization</a></li>
+          <li>
+            <a href="#display">Display</a>
+            <ul>
+              <li><a href="#basic">Basic</a></li>
+              <li><a href="#states">States</a></li>
+            </ul>
+          </li>
+          <li><a href="#customization">Customization</a></li>
           <li>
             <a href="#interactivity">Interactivity</a>
             <ul>
@@ -108,10 +127,14 @@
 
       const App = () => (
         <Box flex="y" spacing="l">
-          <div class="demo-section-group" id="unit-customization">
-            <h2>Unit customization</h2>
+          <div class="demo-section-group" id="display">
+            <h2>Display</h2>
             <BasicDemo />
-            <LongUnitDemo />
+            <StatesDemo />
+          </div>
+          <div class="demo-section-group" id="customization">
+            <h2>Customization</h2>
+            <UnitCustomizationDemo />
           </div>
           <div class="demo-section-group" id="interactivity">
             <h2>Interactivity</h2>
@@ -128,14 +151,9 @@
         const minutesSignal = useSignal(135); // 2h15
 
         return (
-          <div class="demo-section">
-            <h2>Default units</h2>
-            <p class="desc">
-              Two <code>unit={"{false}"}</code> inputs side by side, each paired
-              with its <code>&lt;Unit&gt;</code> label displayed below.
-            </p>
+          <div class="demo-section" id="basic">
+            <h2>Basic</h2>
             <InputDuration
-              border="1px dotted grey"
               unit="minute"
               value={minutesSignal.value}
               uiAction={(v) => {
@@ -146,16 +164,36 @@
         );
       };
 
-      // ── LongUnitDemo ──────────────────────────────────────────────────────
-      const LongUnitDemo = () => {
+      // ── StatesDemo ────────────────────────────────────────────────────────
+      const StatesDemo = () => {
+        return (
+          <div class="demo-section" id="states">
+            <h2>States</h2>
+            <div class="states-grid">
+              <label>:read-only</label>
+              <InputDuration unit="minute" value={135} readOnly />
+
+              <label>:disabled</label>
+              <InputDuration unit="minute" value={135} disabled />
+
+              <label>:-navi-loading</label>
+              <InputDuration unit="minute" value={135} loading />
+            </div>
+          </div>
+        );
+      };
+
+      // ── UnitCustomizationDemo ─────────────────────────────────────────────
+      const UnitCustomizationDemo = () => {
         const minutesSignal = useSignal(90); // 1h30
 
         return (
           <div class="demo-section">
-            <h2>Long unit labels → input stretches</h2>
+            <h2>Custom hour unit label</h2>
             <p class="desc">
-              When the unit label is wider than the input, the label dictates
-              the column width and the input stretches to fill it.
+              Pass <code>unitHour</code> to replace the default "hours" label.
+              When the label is wider than the input, the input stretches to
+              fill the column.
             </p>
             <InputDuration
               unit="minute"
@@ -186,9 +224,7 @@
           <div class="demo-section" id="outside-form">
             <h2>Outside form</h2>
             <p class="desc">
-              The duration input is used standalone, outside any{" "}
-              <code>Form</code> or <code>ControlGroup</code>. Values are managed
-              directly via signals and <code>uiAction</code> callbacks.
+              Standalone usage: <code>uiAction</code> fires on every change.
             </p>
             <Box flex="y" spacing="s" alignX="start">
               <InputDuration
@@ -214,9 +250,8 @@
           <div class="demo-section" id="inside-form">
             <h2>Inside form</h2>
             <p class="desc">
-              The duration input is wrapped in a <code>Form</code>. Submitting
-              collects <code>{"{ duration: totalMinutes }"}</code> from the form
-              values.
+              Inside a <code>Form</code>: the form collects{" "}
+              <code>{"{ duration: totalMinutes }"}</code> on submit.
             </p>
             <Form
               action={(values) => {
@@ -252,11 +287,9 @@
           <div class="demo-section" id="inside-control-group">
             <h2>Inside control group</h2>
             <p class="desc">
-              The duration input is grouped inside a{" "}
-              <code>ControlGroup name="duration"</code> (no surrounding{" "}
-              <code>Form</code>). The group aggregates child state and fires{" "}
-              <code>uiAction</code> with{" "}
-              <code>{"{ minutes: totalMinutes }"}</code> as the group value.
+              Inside a <code>ControlGroup name="duration"</code>: the group
+              fires <code>uiAction</code> with{" "}
+              <code>{"{ minutes: totalMinutes }"}</code>.
             </p>
             <Box flex="y" spacing="s" alignX="start">
               <ControlGroup
@@ -294,8 +327,7 @@
 
         const DurationPickerUI = () => {
           const minute = minuteSignal.value;
-
-          if (minuteSignal === undefined) {
+          if (minute === undefined) {
             return <Time type="minute" />;
           }
           return <Time type="minute">{minute}</Time>;
@@ -305,10 +337,9 @@
           <div class="demo-section" id="inside-picker-in-form">
             <h2>Inside picker (in form)</h2>
             <p class="desc">
-              The duration input lives inside a{" "}
-              <code>Picker type="controlgroup" name="duration"</code> which is
-              itself inside a <code>Form</code>. The form receives{" "}
-              <code>{"{ duration: { hour, minute } }"}</code> on submit.
+              Inside a <code>Picker type="controlgroup"</code> inside a{" "}
+              <code>Form</code>: the form collects{" "}
+              <code>{"{ duration: totalMinutes }"}</code> on submit.
             </p>
             <Form
               action={(values) => {
