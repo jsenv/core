@@ -408,13 +408,13 @@ const PickerCustom = (props) => {
         dispatchRequestAction(inputEl, {
           event: requestCloseEvent,
           name: "picker close",
+          prevented: () => {
+            closePermission.deny();
+          },
           // Always report validation when the picker tries to close so the
           // user sees what is wrong, even if the picker has no action prop.
           reportOnInvalid: true,
           onInvalid: () => {
-            closePermission.deny();
-          },
-          prevented: () => {
             closePermission.deny();
           },
           allowed: () => {},
