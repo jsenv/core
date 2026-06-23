@@ -32,7 +32,7 @@ export const InputDuration = (props) => {
 
 const InputDurationAsMinutes = (props) => {
   resolveDurationAsMinuteProps(props);
-  const { max } = props;
+  const { max, unitHour } = props;
   const showHour = max === undefined || max >= 60;
 
   const defaultRef = useRef();
@@ -73,16 +73,8 @@ const InputDurationAsMinutes = (props) => {
       },
     );
 
-  const {
-    value,
-    min,
-    step,
-    unitHour,
-    required,
-    readOnly,
-    disabled,
-    basePseudoState,
-  } = groupHostProps;
+  const { value, min, step, required, readOnly, disabled, basePseudoState } =
+    groupHostProps;
   const childProps = {
     value,
     min,
@@ -102,8 +94,14 @@ const InputDurationAsMinutes = (props) => {
   );
 
   return (
-    <Box {...groupRootProps}>
-      <input {...groupHostProps} type="hidden" />
+    <Box
+      width="fit-content"
+      {...groupRootProps}
+      unit={undefined}
+      unitHour={undefined}
+    >
+      {/* eslint-disable-next-line react/no-unknown-property */}
+      <input {...groupHostProps} type="hidden" basePseudoState={undefined} />
       <ControlgroupChildrenWrapper {...childrenWrapperProps} name={undefined}>
         {children}
       </ControlgroupChildrenWrapper>
