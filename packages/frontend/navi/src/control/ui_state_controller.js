@@ -458,7 +458,12 @@ export const useUIStateController = (
       return true;
     },
     clearUIState: (e) => {
-      uiStateController.setUIState("", e);
+      // Radio and checkbox "unchecked" state is `undefined`, not `""`.
+      // Passing `""` would set checked=true because `"" !== undefined`.
+      const isCheckable =
+        controlType === "input" &&
+        (props.type === "radio" || props.type === "checkbox");
+      uiStateController.setUIState(isCheckable ? undefined : "", e);
     },
     resetUIState: (e) => {
       uiStateController.setUIState(uiStateController.state, e);
