@@ -241,8 +241,8 @@ const css = /* css */ `
       .navi_input_underline {
         position: absolute;
         top: calc(100% - 1px);
-        right: 0;
-        left: 0;
+        right: var(--x-padding-right);
+        left: var(--x-padding-left);
         height: 1px;
         background-color: var(--x-border-color);
         pointer-events: none;

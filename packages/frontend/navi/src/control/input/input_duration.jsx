@@ -2,6 +2,8 @@ import { parseDurationToSeconds } from "@jsenv/validity";
 import { useRef } from "preact/hooks";
 
 import { Unit } from "@jsenv/navi/src/text/unit.jsx";
+import { ControlChildrenWrapper } from "../control_hooks.jsx";
+import { ControlGroup } from "../control_group.jsx";
 import { Label } from "../field.jsx";
 import { Input } from "./input.jsx";
 import { InputGroup } from "./input_group.jsx";
@@ -10,42 +12,75 @@ import { InputGroup } from "./input_group.jsx";
 // Renders hour + minute sub-inputs for ergonomic entry; the hour field is omitted
 // when max < 60 (the range fits within a single minute field).
 // uiAction / action are called with the total number of minutes.
+//
+// Architecture:
+//   - A hidden <Input type="hidden"> is the single control registered with the
+//     outer form/picker (carries the total-minutes value and the name).
+//   - The hour+minute sub-inputs are wrapped in ControlChildrenWrapper(null) so
+//     they are invisible to the outer parent's UI state tracking.
+//   - A ControlGroup inside that null-context aggregates { hour, minute } and
+//     calls uiAction with the total minutes. Its DOM events (navi_action_prevented)
+//     still bubble naturally, so the sub-inputs' validation still blocks the form.
 export const InputDuration = ({
   name,
   value, // total minutes (number | undefined | null)
-  unit, // only "minute" supported for now
+  unit = "minute", // only "minute" supported for now
   uiAction,
-  ...props
+  action,
+  required,
+  disabled,
+  readOnly,
+  loading,
+  ...rest
 }) => {
-  if (unit === undefined) {
-    return `InputDuration requires unit="minute"`;
-  }
   if (unit !== "minute") {
     return `InputDuration only supports unit="minute" for now`;
   }
 
   const hiddenInputRef = useRef();
-  const hiddenInput = (
-    <Input
-      ref={hiddenInputRef}
-      type="hidden"
-      name={name}
-      value={value === undefined || value === null ? "" : value}
-      uiAction={() => {}}
-    />
-  );
 
   return (
     <>
-      {hiddenInput}
-      <InputDurationAsMinutes
-        value={value}
-        {...props}
-        uiAction={(minute, e) => {
-          hiddenInputRef.current.value = minute;
-          uiAction?.(minute, e);
-        }}
+      {/* Face to the outer world: single hidden input the form/picker sees */}
+      <Input
+        ref={hiddenInputRef}
+        type="hidden"
+        name={name}
+        value={value === undefined || value === null ? "" : value}
+        uiAction={() => {}}
       />
+      {/*
+       * Null the outer parent context so hour/minute sub-inputs don't register
+       * with the outer form or picker. DOM events still bubble up for validation.
+       */}
+      <ControlChildrenWrapper uiStateController={null}>
+        <ControlGroup
+          required={required}
+          disabled={disabled}
+          readOnly={readOnly}
+          loading={loading}
+          uiAction={(aggregated) => {
+            const h = aggregated?.hour ?? 0;
+            const m = aggregated?.minute ?? 0;
+            const totalMinutes = h * 60 + m;
+            if (hiddenInputRef.current) {
+              hiddenInputRef.current.value = totalMinutes;
+            }
+            uiAction?.(totalMinutes);
+          }}
+          action={
+            action
+              ? async (aggregated) => {
+                  const h = aggregated?.hour ?? 0;
+                  const m = aggregated?.minute ?? 0;
+                  await action(h * 60 + m);
+                }
+              : undefined
+          }
+        >
+          <InputDurationAsMinutes value={value} {...rest} />
+        </ControlGroup>
+      </ControlChildrenWrapper>
     </>
   );
 };
