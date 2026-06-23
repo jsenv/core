@@ -164,11 +164,13 @@
                   value={hour}
                   required
                   uiAction={(v) => {
+                    hourRef.current = v;
                     uiAction?.({ hour: v, minute: minuteRef.current });
                   }}
                   action={
                     action
                       ? (v, context) => {
+                          hourRef.current = v;
                           action(
                             { hour: v, minute: minuteRef.current },
                             context,
@@ -192,11 +194,13 @@
                   value={minute}
                   required
                   uiAction={(v) => {
+                    minuteRef.current = v;
                     uiAction?.({ hour: hourRef.current, minute: v });
                   }}
                   action={
                     action
                       ? (v, context) => {
+                          minuteRef.current = v;
                           action({ hour: hourRef.current, minute: v }, context);
                         }
                       : undefined
