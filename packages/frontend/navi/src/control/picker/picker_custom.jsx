@@ -306,8 +306,10 @@ const PickerCustom = (props) => {
         );
         if (spaceEvent) {
           // space would trigger a click on the picker button causing it to re-open immediatly after closing
-          debugPopup(e, `closed by space key -> disable next click`);
-          disableClickFor();
+          debugPopup(e, `closed by space key -> prevent browser click`);
+          // browser won't try to dispatch click
+          // and our "space_to_open" will see e.defaultPrevented too and won't try to open picker
+          spaceEvent.preventDefault();
         }
       }
       expandedRef.current = false;
