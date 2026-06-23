@@ -221,6 +221,13 @@ registerNaviCommand("--navi-clear", (source, event) => {
   return {
     target,
     implementation: () => {
+      dispatchRequestInteraction(target, {
+        event,
+        name: "--navi-clear",
+        prevented: () => event.preventDefault(),
+        allowed: () => dispatchRequestClearUIState(target, event),
+      });
+
       if (fromInput) {
         // clearing input search should not close a popover/dialog
       } else {
@@ -228,12 +235,6 @@ registerNaviCommand("--navi-clear", (source, event) => {
           optional: true,
         });
       }
-      dispatchRequestInteraction(target, {
-        event,
-        name: "--navi-clear",
-        prevented: () => event.preventDefault(),
-        allowed: () => dispatchRequestClearUIState(target, event),
-      });
     },
   };
 });
