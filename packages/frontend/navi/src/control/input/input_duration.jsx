@@ -1,9 +1,12 @@
 import { parseDurationToSeconds } from "@jsenv/validity";
 import { useRef } from "preact/hooks";
 
+import { Box } from "@jsenv/navi/src/box/box.jsx";
 import { Unit } from "@jsenv/navi/src/text/unit.jsx";
-import { ControlGroup } from "../control_group.jsx";
-import { ControlChildrenWrapper } from "../control_hooks.jsx";
+import {
+  ControlgroupChildrenWrapper,
+  useControlgroupProps,
+} from "../control_hooks.jsx";
 import { Label } from "../field.jsx";
 import { Input } from "./input.jsx";
 import { InputGroup } from "./input_group.jsx";
@@ -14,75 +17,17 @@ import { InputGroup } from "./input_group.jsx";
 // uiAction / action are called with the total number of minutes.
 //
 // Architecture:
-//   - A hidden <Input type="hidden"> is the single control registered with the
-//     outer form/picker (carries the total-minutes value and the name).
-//   - The hour+minute sub-inputs are wrapped in ControlChildrenWrapper(null) so
-//     they are invisible to the outer parent's UI state tracking.
-//   - A ControlGroup inside that null-context aggregates { hour, minute } and
-//     calls uiAction with the total minutes. Its DOM events (navi_action_prevented)
-//     still bubble naturally, so the sub-inputs' validation still blocks the form.
-export const InputDuration = ({
-  name,
-  value, // total minutes (number | undefined | null)
-  unit = "minute", // only "minute" supported for now
-  uiAction,
-  action,
-  required,
-  disabled,
-  readOnly,
-  loading,
-  ...rest
-}) => {
-  if (unit !== "minute") {
+//   - A plain <input type="hidden"> acts as both the form-submission value holder
+//     and the controlgroup DOM host (receives navi-control-group props).
+//   - useControlgroupProps registers this component with the outer form as a
+//     single named entry; sub-inputs register with this group, not the outer form.
+//   - ControlgroupChildrenWrapper cascades required/disabled/readOnly/loading and
+//     provides the group controller as parent for sub-inputs.
+export const InputDuration = (props) => {
+  if (props.unit !== "minute") {
     return `InputDuration only supports unit="minute" for now`;
   }
-
-  const hiddenInputRef = useRef();
-
-  return (
-    <>
-      {/* Face to the outer world: single hidden input the form/picker sees */}
-      <Input
-        ref={hiddenInputRef}
-        type="hidden"
-        name={name}
-        value={value === undefined || value === null ? "" : value}
-        uiAction={() => {}}
-      />
-      {/*
-       * Null the outer parent context so hour/minute sub-inputs don't register
-       * with the outer form or picker. DOM events still bubble up for validation.
-       */}
-      <ControlChildrenWrapper uiStateController={null}>
-        <ControlGroup
-          required={required}
-          disabled={disabled}
-          readOnly={readOnly}
-          loading={loading}
-          uiAction={(group, event) => {
-            const h = group?.hour ?? 0;
-            const m = group?.minute ?? 0;
-            const totalMinutes = h * 60 + m;
-            if (hiddenInputRef.current) {
-              hiddenInputRef.current.value = totalMinutes;
-            }
-            uiAction?.(totalMinutes, event);
-          }}
-          action={
-            action
-              ? async (group, info) => {
-                  const h = group?.hour ?? 0;
-                  const m = group?.minute ?? 0;
-                  await action(h * 60 + m, info);
-                }
-              : undefined
-          }
-        >
-          <InputDurationAsMinutes value={value} {...rest} />
-        </ControlGroup>
-      </ControlChildrenWrapper>
-    </>
-  );
+  return <InputDurationAsMinutes {...props} />;
 };
 
 const resolveDurationAsMinuteProps = (props) => {
@@ -113,10 +58,58 @@ const InputDurationAsMinutes = (props) => {
   const { max } = props;
   const showHour = max === undefined || max >= 60;
 
-  if (showHour) {
-    return <InputDurationHourAndMinute {...props} />;
-  }
-  return <InputDurationMinute {...props} />;
+  const defaultRef = useRef();
+  props.ref = props.ref || defaultRef;
+  const { uiAction, action, ref } = props;
+  const [groupRootProps, groupHostProps, childrenWrapperProps] =
+    useControlgroupProps(
+      {
+        ...props,
+        uiAction: (group, event) => {
+          const totalMinutes = (group?.hour ?? 0) * 60 + (group?.minute ?? 0);
+          const hiddenInput = ref.current;
+          if (hiddenInput) {
+            hiddenInput.value = totalMinutes;
+          }
+          uiAction?.(totalMinutes, event);
+        },
+        action: action
+          ? (group, info) => {
+              const minutes = (group?.hour ?? 0) * 60 + (group?.minute ?? 0);
+              return action(minutes, info);
+            }
+          : undefined,
+      },
+      {
+        controlType: "duration_group",
+        stateType: "object",
+        cascadeValidationToChildren: true,
+        aggregateChildStates: (childUIStateControllers) => {
+          const groupValues = {};
+          for (const child of childUIStateControllers) {
+            if (child.name) {
+              groupValues[child.name] = child.uiState;
+            }
+          }
+          return groupValues;
+        },
+      },
+    );
+
+  const children = showHour ? (
+    <InputDurationHourAndMinute {...props} />
+  ) : (
+    <InputDurationMinute {...props} />
+  );
+
+  return (
+    <Box {...groupRootProps}>
+      <input {...groupHostProps} type="hidden" />
+      <ControlgroupChildrenWrapper {...childrenWrapperProps} name={undefined}>
+        {children}
+      </ControlgroupChildrenWrapper>
+    </Box>
+  );
 };
 
 const InputDurationHourAndMinute = ({ value, min, max, unitHour }) => {
