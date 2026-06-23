@@ -392,6 +392,14 @@ export const useUIStateController = (
         uiStateController.onUIAction(e, {
           skipCommand: true,
         });
+        // Exception: when the facade propagates a child state change up to the
+        // real picker input, also notify the parent group (e.g. Form) so it
+        // keeps its cached aggregated state in sync and fires its own uiAction.
+        // This is consistent with how a direct Input inside a Form behaves:
+        // the Form's uiAction fires on every value change.
+        if (e.type === "facade_propagate_up") {
+          notifyParentAboutChildUIAction(e, { stateChanged: true });
+        }
         return true;
       }
       notifyParentAboutChildUIAction(e, { stateChanged: true });
@@ -897,7 +905,7 @@ export const useUIGroupStateController = (
         // childUIStateController,
       });
     },
-    onChildUIAction: (childUIStateController, e, { stateChanged }) => {
+    onChildUIAction: (childUIStateController, e, { stateChanged, silent }) => {
       const delegatedTo = delegatedChildrenRef.current.get(
         childUIStateController,
       );
@@ -906,6 +914,7 @@ export const useUIGroupStateController = (
         // but their parent (who adopted them) needs to know about the change.
         delegatedTo.onChildUIAction(childUIStateController, e, {
           stateChanged,
+          silent,
         });
         return;
       }
@@ -919,8 +928,15 @@ export const useUIGroupStateController = (
         )}`,
       );
       if (stateChanged) {
-        // Value changed: re-aggregate and fire all reactions (uiAction, command, action pipeline).
-        onChange(e, { notifyExternal: true });
+        if (silent) {
+          // Silent update: keep the group's cached state in sync without firing
+          // uiAction, command, or action pipeline. Used when e.g. the picker facade
+          // propagates a child state change up through an internal event path.
+          onChange(e, { notifyExternal: "silent" });
+        } else {
+          // Value changed: re-aggregate and fire all reactions (uiAction, command, action pipeline).
+          onChange(e, { notifyExternal: true });
+        }
       } else {
         // Value unchanged (e.g. radio re-clicked): fire uiAction + command only.
         groupUIStateController.onUIAction(e);
