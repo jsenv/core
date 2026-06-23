@@ -169,42 +169,42 @@ export const PickerCustomResolver = (props) => {
 const PickerNative = (props) => {
   const Next = useNextResolver();
 
-  const onRequestOpen = (e) => {
-    const pickerButton = e.currentTarget;
-    const pickerInput = getPickerInput(pickerButton);
-    if (!pickerInput) {
-      return;
-    }
-    dispatchRequestInteraction(pickerInput, {
-      event: e,
-      name:
-        e.type === "click" ? "click to show picker" : "navi_request_open event",
-      allowed: () => {
-        try {
-          pickerInput.showPicker();
-        } catch {
-          pickerInput.click();
-        }
-      },
-    });
-  };
-
   return (
     <Next
       {...props}
-      // Only wait for the native "change" event (dialog close) when the picker has its own
-      // action. Without an action, the change event would trigger a noop action cycle and
-      // cause spurious state updates (e.g. when closing the color dialog on form submit).
+      // When the picker has its own action we want to run it when native "change" event occur (native picker dialog closes)
+      // not on every change of color while user is selecting a color for instance
+      // (it would cause too many calls and would likely not be what the user expects)
+      // (uiAction can be used to react live)
       actionEvent={props.action ? "change" : undefined}
       onnavi_request_open={(e) => {
-        onRequestOpen(e);
+        const pickerButton = e.currentTarget;
+        const pickerInput = getPickerInput(pickerButton);
+        if (!pickerInput) {
+          e.preventDefault();
+          return;
+        }
+        dispatchRequestInteraction(pickerInput, {
+          event: e,
+          name: "navi_request_open to show native picker",
+          allowed: () => {
+            try {
+              pickerInput.showPicker();
+            } catch {
+              pickerInput.click();
+            }
+          },
+        });
       }}
       eventReactionDefinitions={{
         click: (e) => {
+          const pickerButton = e.currentTarget;
+          const pickerInput = getPickerInput(pickerButton);
+
           return {
-            name: "click to open native picker",
-            effect: () => {
-              onRequestOpen(e);
+            name: "click to show native picker",
+            allowed: () => {
+              pickerInput.showPicker();
             },
           };
         },
