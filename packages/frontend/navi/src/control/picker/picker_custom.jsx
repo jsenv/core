@@ -305,6 +305,7 @@ const PickerCustom = (props) => {
           (e) => e.type === "keydown" && e.key === " ",
         );
         if (spaceEvent) {
+          // space would trigger a click on the picker button causing it to re-open immediatly after closing
           debugPopup(e, `closed by space key -> disable next click`);
           disableClickFor();
         }

@@ -1040,8 +1040,14 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
     });
   }, []);
 
-  const includeChildController = (childController) => {
+  const canRegisterAsFacadeChild = (childController) => {
     if (childController.controlType === "button") {
+      return false;
+    }
+    if (childController.controlType === "facade") {
+      return false;
+    }
+    if (childController.isProxy) {
       return false;
     }
     if (childController.props["navi-list"]) {
@@ -1077,7 +1083,7 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
     elementRef: realUIStateController.elementRef,
     uiStateSignal: realUIStateController.uiStateSignal,
     registerChild: (child) => {
-      if (!includeChildController(child)) {
+      if (!canRegisterAsFacadeChild(child)) {
         return;
       }
       const childType = child.controlType;
