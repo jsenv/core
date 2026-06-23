@@ -384,7 +384,7 @@
               <List.Item
                 selectable
                 key={swatchValue}
-                id={swatchValue}
+                id={`${props.name}_${swatchValue}`}
                 index={i}
                 value={swatchValue}
                 selected={props.value === swatchValue}
