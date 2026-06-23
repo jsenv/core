@@ -72,6 +72,16 @@ const InputDurationAsMinutes = (props) => {
           }
           return hour * 60 + minute;
         },
+        // Reverse mapping: totalMinutes → { hour, minute } so that when the
+        // picker cancels and calls setUIState(storedValue), the sub-inputs are
+        // correctly reset to the original hour/minute values.
+        distributeChildUIState: (totalMinutes) => {
+          const minutes = typeof totalMinutes === "number" ? totalMinutes : 0;
+          return {
+            hour: Math.floor(minutes / 60),
+            minute: minutes % 60,
+          };
+        },
       },
     );
 

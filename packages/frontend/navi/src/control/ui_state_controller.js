@@ -615,6 +615,7 @@ export const useUIGroupStateController = (
     stateType,
     childControlFilter,
     aggregateChildStates,
+    distributeChildUIState,
     wantRequesterButtonState,
     uiActionInternal,
     allowCapture = false,
@@ -833,6 +834,20 @@ export const useUIGroupStateController = (
             ? childUIStateController.props.value
             : undefined;
           childUIStateController.setUIState(childNewState, propagateDownEvent);
+        } else if (distributeChildUIState) {
+          const childrenStateMap = distributeChildUIState(newUIState);
+          if (childrenStateMap && typeof childrenStateMap === "object") {
+            const childName = childUIStateController.name;
+            if (
+              childName &&
+              Object.prototype.hasOwnProperty.call(childrenStateMap, childName)
+            ) {
+              childUIStateController.setUIState(
+                childrenStateMap[childName],
+                propagateDownEvent,
+              );
+            }
+          }
         } else {
           const childName = childUIStateController.name;
           if (
