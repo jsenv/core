@@ -6,6 +6,7 @@ import { BadgeList } from "@jsenv/navi/src/text/badge_list.jsx";
 import { Color } from "@jsenv/navi/src/text/color.jsx";
 import { Text } from "@jsenv/navi/src/text/text.jsx";
 import { Time } from "@jsenv/navi/src/text/time.jsx";
+import { renderSafe } from "@jsenv/navi/src/utils/render_safe.js";
 import { PickerContext } from "./picker_context.jsx";
 
 export const PickerTypeResolver = (props) => {
@@ -62,7 +63,7 @@ export const PickerControlGroupUI = () => {
     if (!placeholder) {
       return null;
     }
-    return placeholder;
+    return renderSafe(placeholder);
   }
   return (
     <BadgeList>
@@ -91,7 +92,7 @@ export const PickerArrayUI = () => {
     if (!placeholder) {
       return null;
     }
-    return placeholder;
+    return renderSafe(placeholder);
   }
   return (
     <Text spacing=", " shrinkWrap maxLines={maxLines}>
@@ -116,7 +117,7 @@ export const PickerColorUI = () => {
     if (!placeholder) {
       return <Color />;
     }
-    return placeholder;
+    return renderSafe(placeholder);
   }
   return <Color>{value}</Color>;
 };
@@ -142,7 +143,7 @@ export const PickerDateUI = (props) => {
         />
       );
     }
-    return placeholder;
+    return renderSafe(placeholder);
   }
   return (
     <Time type="date" capitalize {...props}>
@@ -172,7 +173,7 @@ export const PickerMonthUI = (props) => {
         <Time type="month" color="var(--picker-placeholder-color" {...props} />
       );
     }
-    return placeholder;
+    return renderSafe(placeholder);
   }
   return (
     <Time type="month" capitalize {...props}>
@@ -197,7 +198,7 @@ export const PickerWeekUI = (props) => {
         <Time type="week" color="var(--picker-placeholder-color" {...props} />
       );
     }
-    return placeholder;
+    return renderSafe(placeholder);
   }
   return (
     <Time type="week" capitalize {...props}>
@@ -222,7 +223,7 @@ export const PickerTimeUI = (props) => {
         <Time type="time" color="var(--picker-placeholder-color" {...props} />
       );
     }
-    return placeholder;
+    return renderSafe(placeholder);
   }
   return (
     <Time type="time" {...props}>
@@ -256,7 +257,7 @@ export const PickerDatetimeUI = (props) => {
         />
       );
     }
-    return placeholder;
+    return renderSafe(placeholder);
   }
   return <Time type="datetime">{value}</Time>;
 };
@@ -275,10 +276,10 @@ export const PickerFileUI = () => {
     if (!placeholder) {
       return null;
     }
-    return placeholder;
+    return renderSafe(placeholder);
   }
   // value is a FileList-like string from the input; display file names
-  return value;
+  return String(value);
 };
 
 export const PencilSvg = () => {
