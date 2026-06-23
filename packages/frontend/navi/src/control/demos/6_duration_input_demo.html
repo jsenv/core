@@ -328,7 +328,7 @@
         const DurationPickerUI = () => {
           const minute = minuteSignal.value;
           if (minute === undefined) {
-            return <Time type="minute" />;
+            return <Time type="time" />;
           }
           return <Time type="minute">{minute}</Time>;
         };
