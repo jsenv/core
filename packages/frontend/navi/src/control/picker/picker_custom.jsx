@@ -299,6 +299,15 @@ const PickerCustom = (props) => {
       if (mousedownEvent) {
         debugPopup(e, `closed by mousedown -> disable next click`);
         disableClickFor();
+      } else {
+        const spaceEvent = findEvent(
+          e,
+          (e) => e.type === "keydown" && e.key === " ",
+        );
+        if (spaceEvent) {
+          debugPopup(e, `closed by space key -> disable next click`);
+          disableClickFor();
+        }
       }
       expandedRef.current = false;
       setExpanded(false);
