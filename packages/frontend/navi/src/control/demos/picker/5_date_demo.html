@@ -739,12 +739,10 @@
                     name="combo_date"
                     type="date"
                     required
-                    value={dateSignalCombo.value}
+                    value={dateSignalCombo}
                     uiAction={(v) => {
                       dateSignalCombo.value = v;
                     }}
-                    min={now}
-                    max={in30days}
                   />
                   <Picker
                     name="combo_time"
