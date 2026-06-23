@@ -90,7 +90,11 @@ export const tryActionAfterInteractionAllowed = (
   // the result and decide whether to report/prevent/allow.
   const cv = controller?.rules.validation;
   if (cv) {
-    const isValid = cv.syncValidity(event, { fromRequestAction: true });
+    const hasOwnAction = Boolean(controller.props.action);
+    const isValid = cv.syncValidity(event, {
+      report: hasOwnAction,
+      fromRequestAction: true,
+    });
     if (!isValid) {
       if (action === "auto" || action?.isAction) {
         dispatchInternalCustomEvent(elementForAction, "navi_action_prevented", {

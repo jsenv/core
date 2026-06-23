@@ -484,9 +484,7 @@ export const useUIStateController = (
     },
     actionError: (e) => {
       debugUIState(`"${controlType}" actionError called`);
-      uiStateController.rules.validation.syncValidity(e, {
-        fromActionError: true,
-      });
+      uiStateController.rules.validation.syncValidity(e, { report: true });
     },
     subscribe: subscribeUIState,
     // Leaf controls don't aggregate children, but they act as a transparent
@@ -1011,9 +1009,7 @@ export const useUIGroupStateController = (
       groupUIStateController.rules.validation.syncValidity(e);
     },
     actionError: (e) => {
-      groupUIStateController.rules.validation.syncValidity(e, {
-        fromActionError: true,
-      });
+      groupUIStateController.rules.validation.syncValidity(e, { report: true });
     },
     findChildById: (id) => {
       for (const childUIStateController of childUIStateControllerArray) {

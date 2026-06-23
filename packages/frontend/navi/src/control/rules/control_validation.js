@@ -324,7 +324,7 @@ export const createControlValidation = (
   //   user intends to edit, we clear the message so it doesn't block them.
   const syncValidity = (
     event,
-    { fromRequestAction = false, fromActionError = false } = {},
+    { report = false, fromRequestAction = false } = {},
   ) => {
     const elementSig = getElementSignature(controller.elementRef.current);
     const isValid = checkValidity({ event, fromRequestAction });
@@ -338,21 +338,23 @@ export const createControlValidation = (
       ) {
         leafCV = leafCV.failingManagedControlValidity;
       }
-      leafCV.syncValidity(event, { fromRequestAction, fromActionError });
+      // Forward the report decision to the leaf — the parent already decided.
+      if (report) {
+        leafCV.reportValidity({ event });
+      }
       return isValid;
     }
     if (failedConstraintInfo) {
-      const hasOwnAction = Boolean(controller.props.action);
-      if (fromActionError || (fromRequestAction && hasOwnAction)) {
+      if (report) {
         debugUIState(
           event,
-          `syncValidity ${elementSig}: has failing constraint, action requested and own action -> reportValidity`,
+          `syncValidity ${elementSig}: has failing constraint and report=true -> reportValidity`,
         );
         reportValidity({ event });
       } else {
         debugUIState(
           event,
-          `syncValidity ${elementSig}: has failing constraint but no action requested or no own action -> close callout if any`,
+          `syncValidity ${elementSig}: has failing constraint but report=false -> close callout if any`,
         );
         callout.removeOpenToken(VALIDATION_TOKEN, event);
       }
