@@ -2,8 +2,8 @@ import { parseDurationToSeconds } from "@jsenv/validity";
 import { useRef } from "preact/hooks";
 
 import { Unit } from "@jsenv/navi/src/text/unit.jsx";
-import { ControlChildrenWrapper } from "../control_hooks.jsx";
 import { ControlGroup } from "../control_group.jsx";
+import { ControlChildrenWrapper } from "../control_hooks.jsx";
 import { Label } from "../field.jsx";
 import { Input } from "./input.jsx";
 import { InputGroup } from "./input_group.jsx";
@@ -59,21 +59,21 @@ export const InputDuration = ({
           disabled={disabled}
           readOnly={readOnly}
           loading={loading}
-          uiAction={(aggregated) => {
-            const h = aggregated?.hour ?? 0;
-            const m = aggregated?.minute ?? 0;
+          uiAction={(group, event) => {
+            const h = group?.hour ?? 0;
+            const m = group?.minute ?? 0;
             const totalMinutes = h * 60 + m;
             if (hiddenInputRef.current) {
               hiddenInputRef.current.value = totalMinutes;
             }
-            uiAction?.(totalMinutes);
+            uiAction?.(totalMinutes, event);
           }}
           action={
             action
-              ? async (aggregated) => {
-                  const h = aggregated?.hour ?? 0;
-                  const m = aggregated?.minute ?? 0;
-                  await action(h * 60 + m);
+              ? async (group, info) => {
+                  const h = group?.hour ?? 0;
+                  const m = group?.minute ?? 0;
+                  await action(h * 60 + m, info);
                 }
               : undefined
           }
@@ -119,79 +119,23 @@ const InputDurationAsMinutes = (props) => {
   return <InputDurationMinute {...props} />;
 };
 
-const InputDurationHourAndMinute = ({
-  value,
-  required,
-  min,
-  max,
-  action,
-  uiAction,
-  unitHour,
-}) => {
+const InputDurationHourAndMinute = ({ value, min, max, unitHour }) => {
   const hour =
     value !== undefined && value !== null ? Math.floor(value / 60) : undefined;
   const minute = value !== undefined && value !== null ? value % 60 : undefined;
   const minHour = min !== undefined ? Math.floor(min / 60) : undefined;
   const maxHour = max !== undefined ? Math.floor(max / 60) : undefined;
 
-  // Use refs to always read the latest derived values in callbacks,
-  // even if navi Input caches the uiAction/action reference internally.
-  const hourRef = useRef(hour);
-  const minuteRef = useRef(minute);
-  hourRef.current = hour;
-  minuteRef.current = minute;
-
-  const onUIAction = (e) => {
-    const h = hourRef.current ?? 0;
-    const m = minuteRef.current ?? 0;
-    const totalMinutes = h * 60 + m;
-    uiAction?.(totalMinutes, e);
-  };
-  const onAction = (context) => {
-    const h = hourRef.current ?? 0;
-    const m = minuteRef.current ?? 0;
-    const totalMinutes = h * 60 + m;
-    action?.(totalMinutes, context);
-  };
-
   return (
     <InputGroup flex spacing="xxs" width="fit-content">
       <InputDurationHour
-        required={required}
+        value={hour}
         min={minHour}
         max={maxHour}
-        uiAction={(v, e) => {
-          hourRef.current = v;
-          onUIAction(e);
-        }}
-        action={
-          action
-            ? (v, context) => {
-                hourRef.current = v;
-                onAction(context);
-              }
-            : undefined
-        }
         unit={unitHour}
         separator=":"
       />
-      <InputDurationMinute
-        required={required}
-        min={0}
-        max={59}
-        uiAction={(v, e) => {
-          minuteRef.current = v;
-          onUIAction(e);
-        }}
-        action={
-          action
-            ? (v, context) => {
-                minuteRef.current = v;
-                onAction(context);
-              }
-            : undefined
-        }
-      />
+      <InputDurationMinute value={minute} min={0} max={59} />
     </InputGroup>
   );
 };
@@ -203,6 +147,7 @@ const InputDurationMinute = (props) => {
     <Label flex="y">
       <Input
         type="navi_minute"
+        name="minute"
         size="l"
         unit={false}
         variant="underline"
@@ -230,6 +175,7 @@ const InputDurationHour = (props) => {
     <Label flex="y" textAlign="right">
       <Input
         type="navi_hour"
+        name="hour"
         unit={false}
         variant="underline"
         size="l"
