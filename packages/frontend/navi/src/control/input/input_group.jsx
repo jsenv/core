@@ -42,9 +42,13 @@ const useInputGroup = (ref) => {
         return;
       }
       if (e.key === "ArrowRight") {
-        const atEnd =
-          active.selectionStart === active.value.length &&
+        const allSelected =
+          active.selectionStart === 0 &&
           active.selectionEnd === active.value.length;
+        const atEnd =
+          allSelected ||
+          (active.selectionStart === active.value.length &&
+            active.selectionEnd === active.value.length);
         if (!atEnd) {
           return;
         }
@@ -75,7 +79,12 @@ const useInputGroup = (ref) => {
         focusInput(inputs[idx + 1]);
         return;
       }
-      const atStart = active.selectionStart === 0 && active.selectionEnd === 0;
+      const allSelected =
+        active.selectionStart === 0 &&
+        active.selectionEnd === active.value.length;
+      const atStart =
+        allSelected ||
+        (active.selectionStart === 0 && active.selectionEnd === 0);
       if (!atStart) {
         return;
       }
