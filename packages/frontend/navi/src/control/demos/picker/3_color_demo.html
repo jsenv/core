@@ -350,6 +350,7 @@
                   name="badge_color_readonly"
                   value={colorSignal.value}
                   readOnly
+                  action={() => {}}
                 />
               </Field>
               <Field vertical>
@@ -358,6 +359,7 @@
                   name="badge_color_loading"
                   value={colorSignal.value}
                   loading
+                  action={() => {}}
                 />
               </Field>
             </Box>
@@ -375,15 +377,8 @@
         );
       };
 
-      const SwatchPicker = ({ name, value, action, readOnly, loading }) => (
-        <Picker
-          name={name}
-          type="color"
-          value={value}
-          action={action}
-          readOnly={readOnly}
-          loading={loading}
-        >
+      const SwatchPicker = (props) => (
+        <Picker type="color" {...props}>
           <List selectable command="--navi-send">
             {SWATCHES.map(({ label, value: swatchValue }, i) => (
               <List.Item
@@ -392,7 +387,7 @@
                 id={swatchValue}
                 index={i}
                 value={swatchValue}
-                selected={value === swatchValue}
+                selected={props.value === swatchValue}
                 flex
                 alignY="center"
                 spacing="s"
@@ -409,7 +404,7 @@
       );
 
       render(
-        <NaviDebug debugAction debugInteraction debugPopup>
+        <NaviDebug debugAll>
           <App />
         </NaviDebug>,
         document.getElementById("app"),
