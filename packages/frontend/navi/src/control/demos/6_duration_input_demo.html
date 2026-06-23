@@ -382,13 +382,13 @@
       const InsidePickerInFormDemo = () => {
         const [entries, push, clear] = useCallLog();
         const pickerId = "duration-picker";
-        const hourSignal = useSignal(null);
-        const minuteSignal = useSignal(null);
+        const hourSignal = useSignal(undefined);
+        const minuteSignal = useSignal(undefined);
 
         const DurationPickerUI = () => {
           const h = hourSignal.value;
           const m = minuteSignal.value;
-          if (h === null && m === null) {
+          if (h === undefined && m === undefined) {
             return <Time type="time" />;
           }
           const hh = String(h ?? 0).padStart(2, "0");
