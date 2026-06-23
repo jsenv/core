@@ -476,13 +476,13 @@ export const useUIStateController = (
     resetUIState: (e) => {
       uiStateController.setUIState(uiStateController.state, e);
     },
-    actionEnd: async (e) => {
+    onActionEnd: async (e) => {
       debugUIState(`"${controlType}" actionEnd called`);
       // wait for preact to re-render to update readonly as action end side effects are runned
       await new Promise((r) => requestAnimationFrame(r));
       uiStateController.rules.validation.syncValidity(e);
     },
-    actionError: (e) => {
+    onActionError: (e) => {
       debugUIState(`"${controlType}" actionError called`);
       uiStateController.rules.validation.syncValidity(e, { report: true });
     },
@@ -1005,10 +1005,10 @@ export const useUIGroupStateController = (
       }
       onChange(e, { notifyExternal: true });
     },
-    actionEnd: (e) => {
+    onActionEnd: (e) => {
       groupUIStateController.rules.validation.syncValidity(e);
     },
-    actionError: (e) => {
+    onActionError: (e) => {
       groupUIStateController.rules.validation.syncValidity(e, { report: true });
     },
     findChildById: (id) => {

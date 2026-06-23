@@ -351,6 +351,14 @@ export const createControlValidation = (
           `syncValidity ${elementSig}: has failing constraint and report=true -> reportValidity`,
         );
         reportValidity({ event });
+      } else if (failedConstraintInfo.status === "error") {
+        // Error-status constraints (e.g. navi_action_error) must persist even when
+        // report=false — the callout should stay open until the user dismisses it
+        // or retries (autoResetOnAction clears it on next action attempt).
+        debugUIState(
+          event,
+          `syncValidity ${elementSig}: has error constraint and report=false -> keep callout open`,
+        );
       } else {
         debugUIState(
           event,

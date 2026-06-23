@@ -1275,18 +1275,19 @@ const useInteractiveProps = (
       },
       onnavi_action_error: (e) => {
         const { error } = e.detail;
-        uiStateController.actionError(e);
+        debugAction(e, `action error`, error);
         if (resetOnError) {
           dispatchRequestResetUIState(e.currentTarget, e);
         }
         onActionError?.(error, e);
+        uiStateController.onActionError(e);
       },
       onnavi_action_end: (e) => {
         const { data } = e.detail;
-        uiStateController.actionEnd(e);
         debugAction(e, `action end with data: ${JSON.stringify(data)}`);
         onActionEnd?.(data, e);
         controlRootProps.onnavi_action_end?.(e);
+        uiStateController.onActionEnd(e);
 
         // For radio/checkbox: auto-trigger the parent group's action after the
         // leaf action completes. The parent (radio_group/checkbox_group) has
