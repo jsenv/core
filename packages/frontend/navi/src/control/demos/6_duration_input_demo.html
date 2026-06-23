@@ -69,14 +69,14 @@
       .states-grid {
         display: grid;
         grid-template-columns: repeat(2, auto);
-        gap: 16px 32px;
         align-items: start;
+        gap: 16px 32px;
       }
       .states-grid label {
-        font-size: 12px;
-        color: #888;
-        font-family: monospace;
         padding-top: 4px;
+        color: #888;
+        font-size: 12px;
+        font-family: monospace;
       }
     </style>
   </head>
@@ -92,7 +92,6 @@
               <li><a href="#states">States</a></li>
             </ul>
           </li>
-          <li><a href="#customization">Customization</a></li>
           <li>
             <a href="#interactivity">Interactivity</a>
             <ul>
@@ -104,6 +103,7 @@
               </li>
             </ul>
           </li>
+          <li><a href="#customization">Customization</a></li>
         </ul>
       </nav>
       <div id="app"></div>
@@ -132,16 +132,16 @@
             <BasicDemo />
             <StatesDemo />
           </div>
-          <div class="demo-section-group" id="customization">
-            <h2>Customization</h2>
-            <UnitCustomizationDemo />
-          </div>
           <div class="demo-section-group" id="interactivity">
             <h2>Interactivity</h2>
             <OutsideFormDemo />
             <InsideFormDemo />
             <InsideControlGroupDemo />
             <InsidePickerInFormDemo />
+          </div>
+          <div class="demo-section-group" id="customization">
+            <h2>Customization</h2>
+            <UnitCustomizationDemo />
           </div>
         </Box>
       );
