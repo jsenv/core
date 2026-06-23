@@ -63,11 +63,9 @@
         Label,
         List,
         Input,
-        InputGroup,
         Picker,
         Form,
         Text,
-        Unit,
         ControlGroup,
         Button,
         Time,
@@ -110,36 +108,18 @@
         id: "duration2",
         oneOf: [...PRESET_DURATIONS, "custom"],
       });
-      const customDurationHourSignal2 = stateSignal(undefined, {
-        id: "custom_hour2",
-        type: "hour",
-        min: 0,
-        max: 4,
-      });
-      const customDurationMinuteSignal2 = stateSignal(undefined, {
-        id: "custom_minute2",
-        type: "minute",
-        min: 0,
-        max: 59,
-        step: 5,
+      // Total minutes for the custom option (no default)
+      const customDurationMinutesSignal2 = stateSignal(undefined, {
+        id: "custom_minutes2",
       });
 
       const durationSignal3 = stateSignal(90, {
         id: "duration3",
         oneOf: [...PRESET_DURATIONS, "custom"],
       });
-      const customDurationHourSignal3 = stateSignal(2, {
-        id: "custom_hour3",
-        type: "hour",
-        min: 0,
-        max: 4,
-      });
-      const customDurationMinuteSignal3 = stateSignal(15, {
-        id: "custom_minute3",
-        type: "minute",
-        min: 0,
-        max: 59,
-        step: 5,
+      // Total minutes for the custom option (default: 2h15 = 135 min)
+      const customDurationMinutesSignal3 = stateSignal(135, {
+        id: "custom_minutes3",
       });
 
       const DEMO_ROUTE = route("", {
@@ -149,11 +129,9 @@
           custom_hour: customDurationHourSignal,
           custom_minute: customDurationMinuteSignal,
           duration2: durationSignal2,
-          custom_hour2: customDurationHourSignal2,
-          custom_minute2: customDurationMinuteSignal2,
+          custom_minutes2: customDurationMinutesSignal2,
           duration3: durationSignal3,
-          custom_hour3: customDurationHourSignal3,
-          custom_minute3: customDurationMinuteSignal3,
+          custom_minutes3: customDurationMinutesSignal3,
         },
       });
       setupRoutes([DEMO_ROUTE]);
@@ -221,11 +199,10 @@
               l'heure et les minutes.
             </p>
             <Form
-              action={(values) => {
-                const { duration, durationCustom } = values;
+              action={({ duration }) => {
                 const minutes =
                   duration === "custom"
-                    ? durationCustom.hour * 60 + durationCustom.minute
+                    ? customDurationMinutesSignal2.value
                     : duration;
                 formResultSignal.value = { minutes };
               }}
@@ -264,9 +241,11 @@
               clic.
             </p>
             <Form
-              action={({ duration, hour, minute }) => {
+              action={({ duration }) => {
                 const minutes =
-                  duration === "custom" ? hour * 60 + minute : duration;
+                  duration === "custom"
+                    ? customDurationMinutesSignal3.value
+                    : duration;
                 formResultSignal.value = { minutes };
               }}
               flex="y"
@@ -433,8 +412,7 @@
       };
 
       const CustomDurationOptionWithPicker2 = (props) => {
-        const hours = customDurationHourSignal2.value;
-        const minutes = customDurationMinuteSignal2.value;
+        const totalMinutes = customDurationMinutesSignal2.value;
 
         return (
           <List.Item
@@ -453,10 +431,10 @@
             // navi-command-target="child-control"
             {...props}
           >
-            {!hours && !minutes ? (
+            {totalMinutes === undefined || totalMinutes === null ? (
               <Text>Personnalisé</Text>
             ) : (
-              <Time type="minute">{(hours || 0) * 60 + (minutes || 0)}</Time>
+              <Time type="minute">{totalMinutes}</Time>
             )}
             <Icon marginRight="-1ch">
               <Picker.UI.PencilSvg />
@@ -471,17 +449,19 @@
             >
               <Box flex="y" alignX="center" padding="m" spacing="m">
                 <Text bold>Veuillez saisir une durée</Text>
-                <ControlGroup>
-                  <InputDuration
-                    hour={hours}
-                    minute={minutes}
-                    required
-                    uiAction={({ hour, minute }) => {
-                      customDurationHourSignal2.value = hour;
-                      customDurationMinuteSignal2.value = minute;
-                    }}
-                  />
-                </ControlGroup>
+
+                <InputDuration
+                  unit="minute"
+                  name="durationCustom"
+                  value={totalMinutes}
+                  min="15min"
+                  max="4h30"
+                  step="5min"
+                  required
+                  uiAction={(v) => {
+                    customDurationMinutesSignal2.value = v;
+                  }}
+                />
                 <Box flex spacing="s" expandX alignX="end">
                   <Button command="--navi-cancel" variant="discrete" />
                   <Button command="--navi-define" variant="discrete" />
@@ -535,8 +515,7 @@
       };
 
       const CustomDurationOptionWithPicker3 = (props) => {
-        const hours = customDurationHourSignal3.value;
-        const minutes = customDurationMinuteSignal3.value;
+        const totalMinutes = customDurationMinutesSignal3.value;
 
         return (
           <List.Item
@@ -555,7 +534,7 @@
             // navi-command-target="child-control"
             {...props}
           >
-            <Time type="minute">{hours * 60 + minutes}</Time>
+            <Time type="minute">{totalMinutes}</Time>
             <Icon marginRight="-1ch">
               <Picker.UI.PencilSvg />
             </Icon>
@@ -570,41 +549,15 @@
               <Box flex="y" alignX="center" padding="m" spacing="m">
                 <Text bold>Veuillez saisir une durée</Text>
                 <ControlGroup>
-                  <InputGroup flex spacing="xxs">
-                    <Box flex="y">
-                      <Input
-                        type="navi_hour"
-                        name="hour"
-                        unit={false}
-                        variant="underline"
-                        size="l"
-                        expandX
-                        value={hours}
-                        uiAction={(v) => {
-                          customDurationHourSignal3.value = v;
-                        }}
-                        textAlign="right"
-                      >
-                        <Input.UI.UnitSlot>:</Input.UI.UnitSlot>
-                      </Input>
-                      <Unit unit="hour" plural marginRight="1ch" />
-                    </Box>
-                    <Box flex="y">
-                      <Input
-                        type="navi_minute"
-                        name="minute"
-                        unit={false}
-                        variant="underline"
-                        size="l"
-                        expandX
-                        value={minutes}
-                        uiAction={(v) => {
-                          customDurationMinuteSignal3.value = v;
-                        }}
-                      />
-                      <Unit unit="minute" plural />
-                    </Box>
-                  </InputGroup>
+                  <InputDuration
+                    value={totalMinutes}
+                    min={0}
+                    max={240}
+                    step={5}
+                    uiAction={(v) => {
+                      customDurationMinutesSignal3.value = v;
+                    }}
+                  />
                 </ControlGroup>
                 <Box flex spacing="s" expandX alignX="end">
                   <Button command="--navi-cancel" variant="discrete" />
