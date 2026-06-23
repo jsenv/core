@@ -31,6 +31,7 @@ export const InputDuration = ({
       type="hidden"
       name={name}
       value={value === undefined || value === null ? "" : value}
+      uiAction={() => {}}
     />
   );
 

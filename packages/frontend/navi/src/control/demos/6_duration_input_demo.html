@@ -91,21 +91,18 @@
     </div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useRef } from "preact/hooks";
       import { useSignal } from "@preact/signals";
       import {
         Box,
         Button,
         ControlGroup,
         Form,
-        Input,
-        Label,
-        InputGroup,
         Unit,
         Picker,
         Text,
         Time,
         NaviDebug,
+        InputDuration,
       } from "@jsenv/navi";
       import { CallLog, useCallLog } from "./utils/call_log.jsx";
 
@@ -126,97 +123,9 @@
         </Box>
       );
 
-      const DurationInput = ({
-        hour,
-        minute,
-        uiAction,
-        action,
-        unitHour = (
-          <Unit
-            unit="hour"
-            plural
-            color="secondary"
-            // We need this because ":" is inside the first input so
-            // in case unit pushes to the right it should account for the space of ":"
-            marginRight="1ch"
-          />
-        ),
-        unitMinute = <Unit unit="minute" plural color="secondary" />,
-      }) => {
-        // Use refs to always read the latest prop values in callbacks,
-        // even if navi Input caches the uiAction/action reference internally.
-        const hourRef = useRef(hour);
-        const minuteRef = useRef(minute);
-        hourRef.current = hour;
-        minuteRef.current = minute;
-
-        return (
-          <Box border="1px dotted #aaa" width="fit-content">
-            <InputGroup flex spacing="xxs" width="fit-content">
-              <Label flex="y" textAlign="right">
-                <Input
-                  type="navi_hour"
-                  name="hour"
-                  unit={false}
-                  variant="underline"
-                  size="l"
-                  expandX
-                  value={hour}
-                  required
-                  uiAction={(v) => {
-                    hourRef.current = v;
-                    uiAction?.({ hour: v, minute: minuteRef.current });
-                  }}
-                  action={
-                    action
-                      ? (v, context) => {
-                          hourRef.current = v;
-                          action(
-                            { hour: v, minute: minuteRef.current },
-                            context,
-                          );
-                        }
-                      : undefined
-                  }
-                >
-                  <Input.UI.UnitSlot>:</Input.UI.UnitSlot>
-                </Input>
-                {unitHour}
-              </Label>
-              <Label flex="y">
-                <Input
-                  type="navi_minute"
-                  name="minute"
-                  size="l"
-                  unit={false}
-                  variant="underline"
-                  expandX
-                  value={minute}
-                  required
-                  uiAction={(v) => {
-                    minuteRef.current = v;
-                    uiAction?.({ hour: hourRef.current, minute: v });
-                  }}
-                  action={
-                    action
-                      ? (v, context) => {
-                          minuteRef.current = v;
-                          action({ hour: hourRef.current, minute: v }, context);
-                        }
-                      : undefined
-                  }
-                />
-                {unitMinute}
-              </Label>
-            </InputGroup>
-          </Box>
-        );
-      };
-
       // ── BasicDemo ─────────────────────────────────────────────────────────
       const BasicDemo = () => {
-        const hourSignal = useSignal(2);
-        const minuteSignal = useSignal(15);
+        const minutesSignal = useSignal(135); // 2h15
 
         return (
           <div class="demo-section">
@@ -225,12 +134,11 @@
               Two <code>unit={"{false}"}</code> inputs side by side, each paired
               with its <code>&lt;Unit&gt;</code> label displayed below.
             </p>
-            <DurationInput
-              hour={hourSignal.value}
-              minute={minuteSignal.value}
-              uiAction={({ hour, minute }) => {
-                hourSignal.value = hour;
-                minuteSignal.value = minute;
+            <InputDuration
+              unit="minute"
+              value={minutesSignal.value}
+              uiAction={(v) => {
+                minutesSignal.value = v;
               }}
             />
           </div>
@@ -239,8 +147,7 @@
 
       // ── LongUnitDemo ──────────────────────────────────────────────────────
       const LongUnitDemo = () => {
-        const hourSignal = useSignal(1);
-        const minuteSignal = useSignal(30);
+        const minutesSignal = useSignal(90); // 1h30
 
         return (
           <div class="demo-section">
@@ -249,12 +156,10 @@
               When the unit label is wider than the input, the label dictates
               the column width and the input stretches to fill it.
             </p>
-            <DurationInput
-              hour={hourSignal.value}
-              minute={minuteSignal.value}
-              uiAction={({ hour, minute }) => {
-                hourSignal.value = hour;
-                minuteSignal.value = minute;
+            <InputDuration
+              value={minutesSignal.value}
+              uiAction={(v) => {
+                minutesSignal.value = v;
               }}
               unitHour={
                 <Unit
@@ -272,8 +177,7 @@
 
       // ── OutsideFormDemo ───────────────────────────────────────────────────
       const OutsideFormDemo = () => {
-        const hourSignal = useSignal(2);
-        const minuteSignal = useSignal(15);
+        const minutesSignal = useSignal(135); // 2h15
         const [entries, push, clear] = useCallLog();
 
         return (
@@ -285,13 +189,11 @@
               directly via signals and <code>uiAction</code> callbacks.
             </p>
             <Box flex="y" spacing="s" alignX="start">
-              <DurationInput
-                hour={hourSignal.value}
-                minute={minuteSignal.value}
-                uiAction={({ hour, minute }) => {
-                  push("uiAction", { hour, minute });
-                  hourSignal.value = hour;
-                  minuteSignal.value = minute;
+              <InputDuration
+                value={minutesSignal.value}
+                uiAction={(v) => {
+                  push("uiAction", v);
+                  minutesSignal.value = v;
                 }}
               />
               <CallLog entries={entries} onClear={clear} />
@@ -302,8 +204,7 @@
 
       // ── InsideFormDemo ────────────────────────────────────────────────────
       const InsideFormDemo = () => {
-        const hourSignal = useSignal(2);
-        const minuteSignal = useSignal(15);
+        const minutesSignal = useSignal(135); // 2h15
         const [entries, push, clear] = useCallLog();
 
         return (
@@ -311,7 +212,8 @@
             <h2>Inside form</h2>
             <p class="desc">
               The duration input is wrapped in a <code>Form</code>. Submitting
-              collects <code>{"{ hour, minute }"}</code> from the form values.
+              collects <code>{"{ duration: totalMinutes }"}</code> from the form
+              values.
             </p>
             <Form
               action={(values) => {
@@ -322,12 +224,11 @@
               }}
             >
               <Box flex="y" spacing="s" alignX="start">
-                <DurationInput
-                  hour={hourSignal.value}
-                  minute={minuteSignal.value}
-                  uiAction={({ hour, minute }) => {
-                    hourSignal.value = hour;
-                    minuteSignal.value = minute;
+                <InputDuration
+                  name="duration"
+                  value={minutesSignal.value}
+                  uiAction={(v) => {
+                    minutesSignal.value = v;
                   }}
                 />
                 <Button type="submit">Submit</Button>
@@ -340,8 +241,7 @@
 
       // ── InsideControlGroupDemo ────────────────────────────────────────────
       const InsideControlGroupDemo = () => {
-        const hourSignal = useSignal(2);
-        const minuteSignal = useSignal(15);
+        const minutesSignal = useSignal(135); // 2h15
         const [entries, push, clear] = useCallLog();
 
         return (
@@ -351,8 +251,8 @@
               The duration input is grouped inside a{" "}
               <code>ControlGroup name="duration"</code> (no surrounding{" "}
               <code>Form</code>). The group aggregates child state and fires{" "}
-              <code>uiAction</code> with <code>{"{ hour, minute }"}</code> as
-              the group value.
+              <code>uiAction</code> with{" "}
+              <code>{"{ minutes: totalMinutes }"}</code> as the group value.
             </p>
             <Box flex="y" spacing="s" alignX="start">
               <ControlGroup
@@ -365,12 +265,11 @@
                 }}
               >
                 <Box flex="y" spacing="s" alignX="start">
-                  <DurationInput
-                    hour={hourSignal.value}
-                    minute={minuteSignal.value}
-                    uiAction={({ hour, minute }) => {
-                      hourSignal.value = hour;
-                      minuteSignal.value = minute;
+                  <InputDuration
+                    name="minutes"
+                    value={minutesSignal.value}
+                    uiAction={(v) => {
+                      minutesSignal.value = v;
                     }}
                   />
                   <Button command="--navi-send">Submit</Button>
@@ -431,7 +330,7 @@
                   <ControlGroup>
                     <Box flex="y" spacing="l" padding="s" alignX="center">
                       <Text bold>Enter a duration</Text>
-                      <DurationInput
+                      <InputDuration
                         hour={hourSignal.value}
                         minute={minuteSignal.value}
                         uiAction={({ hour, minute }) => {
