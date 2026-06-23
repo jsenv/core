@@ -17,8 +17,11 @@ export const InputDuration = ({
   uiAction,
   ...props
 }) => {
+  if (unit === undefined) {
+    return `InputDuration requires unit="minute"`;
+  }
   if (unit !== "minute") {
-    return "Not supported yet: InputDuration only supports unit='minute' (total minutes).";
+    return `InputDuration only supports unit="minute" for now`;
   }
 
   const hiddenInputRef = useRef();
@@ -42,7 +45,6 @@ export const InputDuration = ({
           uiAction?.(minute, e);
         }}
       />
-      ;
     </>
   );
 };
@@ -112,7 +114,7 @@ const InputDurationHourAndMinute = ({
     const h = hourRef.current ?? 0;
     const m = minuteRef.current ?? 0;
     const totalMinutes = h * 60 + m;
-    onAction?.(totalMinutes, context);
+    action?.(totalMinutes, context);
   };
 
   return (
@@ -128,7 +130,7 @@ const InputDurationHourAndMinute = ({
         action={
           action
             ? (v, context) => {
-                minuteRef.current = v;
+                hourRef.current = v;
                 onAction(context);
               }
             : undefined
@@ -137,7 +139,7 @@ const InputDurationHourAndMinute = ({
       <InputDurationMinute
         required={required}
         min={0}
-        max={60}
+        max={59}
         uiAction={(v, e) => {
           minuteRef.current = v;
           onUIAction(e);
