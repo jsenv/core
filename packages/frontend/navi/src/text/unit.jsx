@@ -5,6 +5,7 @@ export const Unit = ({
   unit,
   plural,
   lang,
+  label,
   size = "smaller",
   sizeRatio,
   style,
@@ -19,22 +20,23 @@ export const Unit = ({
   }
   const isPlural = Boolean(plural);
   let unitText = unit;
-  const singularText = naviI18n(unit, undefined, { lang });
-  if (singularText !== unit) {
-    // unit is known to naviI18n
-    if (isPlural) {
+  if (label) {
+    unitText = label;
+  } else {
+    const singularText = naviI18n(unit, undefined, { lang });
+    if (singularText === unit) {
+      // naviI18n has no translation — try Intl.NumberFormat with style:"unit"
+      const intlText = formatIntlUnit(unit, isPlural, lang);
+      if (intlText !== null) {
+        unitText = intlText;
+      }
+    } else if (isPlural) {
       const pluralKey = `${unit}__plural`;
       const pluralText = naviI18n(pluralKey, undefined, { lang });
       // fallback to singular if no plural key registered
       unitText = pluralText !== pluralKey ? pluralText : singularText;
     } else {
       unitText = singularText;
-    }
-  } else {
-    // naviI18n has no translation — try Intl.NumberFormat with style:"unit"
-    const intlText = formatIntlUnit(unit, isPlural, lang);
-    if (intlText !== null) {
-      unitText = intlText;
     }
   }
 
