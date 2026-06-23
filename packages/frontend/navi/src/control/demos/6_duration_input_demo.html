@@ -157,9 +157,13 @@
                 uiAction={(v) => {
                   uiAction?.({ hour: v, minute });
                 }}
-                action={(v) => {
-                  action?.({ hour: v, minute });
-                }}
+                action={
+                  action
+                    ? (v, context) => {
+                        action({ hour: v, minute }, context);
+                      }
+                    : undefined
+                }
               >
                 <Input.UI.UnitSlot>:</Input.UI.UnitSlot>
               </Input>
