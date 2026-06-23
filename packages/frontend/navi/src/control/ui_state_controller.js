@@ -795,14 +795,23 @@ export const useUIGroupStateController = (
           continue;
         }
         if (controlType === "radio_group") {
-          const childChecked =
+          const childSelected =
             childUIStateController.props.value === newUIState;
-          childUIStateController.setUIState(childChecked, propagateDownEvent);
+          // Pass the child's own value (not `true`) when selected, `undefined` (not `false`) when not.
+          // `toDomProps` uses `newUIState !== undefined` to determine `checked`, so passing `false`
+          // would incorrectly render the radio as checked.
+          const childNewState = childSelected
+            ? childUIStateController.props.value
+            : undefined;
+          childUIStateController.setUIState(childNewState, propagateDownEvent);
         } else if (controlType === "checkbox_group") {
-          const childChecked =
+          const childSelected =
             Array.isArray(newUIState) &&
             newUIState.includes(childUIStateController.props.value);
-          childUIStateController.setUIState(childChecked, propagateDownEvent);
+          const childNewState = childSelected
+            ? childUIStateController.props.value
+            : undefined;
+          childUIStateController.setUIState(childNewState, propagateDownEvent);
         } else {
           const childName = childUIStateController.name;
           if (
