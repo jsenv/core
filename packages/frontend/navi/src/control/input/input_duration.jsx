@@ -91,6 +91,7 @@ const InputDurationHourAndMinute = ({
   max,
   action,
   uiAction,
+  unitHour,
 }) => {
   const hour =
     value !== undefined && value !== null ? Math.floor(value / 60) : undefined;
@@ -153,6 +154,7 @@ const InputDurationHourAndMinute = ({
               }
             : undefined
         }
+        unit={unitHour}
       />
     </InputGroup>
   );

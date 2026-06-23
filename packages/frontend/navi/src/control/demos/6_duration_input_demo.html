@@ -157,6 +157,7 @@
               the column width and the input stretches to fill it.
             </p>
             <InputDuration
+              unit="minute"
               value={minutesSignal.value}
               uiAction={(v) => {
                 minutesSignal.value = v;
@@ -190,6 +191,7 @@
             </p>
             <Box flex="y" spacing="s" alignX="start">
               <InputDuration
+                unit="minute"
                 value={minutesSignal.value}
                 uiAction={(v) => {
                   push("uiAction", v);
@@ -225,6 +227,7 @@
             >
               <Box flex="y" spacing="s" alignX="start">
                 <InputDuration
+                  unit="minute"
                   name="duration"
                   value={minutesSignal.value}
                   uiAction={(v) => {
@@ -266,6 +269,7 @@
               >
                 <Box flex="y" spacing="s" alignX="start">
                   <InputDuration
+                    unit="minute"
                     name="minutes"
                     value={minutesSignal.value}
                     uiAction={(v) => {
@@ -285,18 +289,15 @@
       const InsidePickerInFormDemo = () => {
         const [entries, push, clear] = useCallLog();
         const pickerId = "duration-picker";
-        const hourSignal = useSignal(undefined);
         const minuteSignal = useSignal(undefined);
 
         const DurationPickerUI = () => {
-          const h = hourSignal.value;
-          const m = minuteSignal.value;
-          if (h === undefined && m === undefined) {
-            return <Time type="time" />;
+          const minute = minuteSignal.value;
+
+          if (minuteSignal === undefined) {
+            return <Time type="minute" />;
           }
-          const hh = String(h ?? 0).padStart(2, "0");
-          const mm = String(m ?? 0).padStart(2, "0");
-          return <Time type="time">{`${hh}:${mm}`}</Time>;
+          return <Time type="minute">{minute}</Time>;
         };
 
         return (
@@ -331,11 +332,10 @@
                     <Box flex="y" spacing="l" padding="s" alignX="center">
                       <Text bold>Enter a duration</Text>
                       <InputDuration
-                        hour={hourSignal.value}
-                        minute={minuteSignal.value}
-                        uiAction={({ hour, minute }) => {
-                          hourSignal.value = hour;
-                          minuteSignal.value = minute;
+                        unit="minute"
+                        value={minuteSignal.value}
+                        uiAction={(value) => {
+                          minuteSignal.value = value;
                         }}
                       />
                       <Box flex="x" spacing="s" alignX="end" expandX>
