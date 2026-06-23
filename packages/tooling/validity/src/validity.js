@@ -220,7 +220,9 @@ export const createValidity = (ruleConfig) => {
     }
     if (step !== undefined) {
       validity.step = undefined;
-      if (typeof step !== "number" || step <= 0) {
+      const stepIsNumber = typeof step === "number" && step > 0;
+      const stepIsTimeString = theType === "time" && typeof step === "string";
+      if (!stepIsNumber && !stepIsTimeString) {
         throw new Error(`[createValidity] step must be a positive number`);
       }
       ruleSet.add({

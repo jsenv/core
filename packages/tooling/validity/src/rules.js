@@ -24,7 +24,12 @@ export const MIN_RULE = {
       return null;
     }
     const type = ruleConfig.type;
-    if (type === "date" || type === "month" || type === "datetime") {
+    if (
+      type === "date" ||
+      type === "month" ||
+      type === "datetime" ||
+      type === "time"
+    ) {
       const valueMs = toMs(value, type);
       const minMs = toMs(min, type);
       if (valueMs === null || minMs === null) {
@@ -58,7 +63,12 @@ export const MAX_RULE = {
       return null;
     }
     const type = ruleConfig.type;
-    if (type === "date" || type === "month" || type === "datetime") {
+    if (
+      type === "date" ||
+      type === "month" ||
+      type === "datetime" ||
+      type === "time"
+    ) {
       const valueMs = toMs(value, type);
       const maxMs = toMs(max, type);
       if (valueMs === null || maxMs === null) {
@@ -87,9 +97,48 @@ export const MAX_RULE = {
 };
 export const STEP_RULE = {
   id: "step",
-  applyOn: (step, value, { min = 0 }) => {
+  applyOn: (step, value, { min = 0, type }) => {
     if (step === undefined) {
       return null;
+    }
+    if (type === "time") {
+      if (typeof value !== "string") {
+        return null;
+      }
+      const valueSeconds = timeStringToSeconds(value);
+      const minSeconds =
+        typeof min === "string"
+          ? timeStringToSeconds(min)
+          : typeof min === "number"
+            ? min
+            : 0;
+      if (valueSeconds === null || minSeconds === null) {
+        return null;
+      }
+      const stepSeconds =
+        typeof step === "number" ? step : timeStringToSeconds(step);
+      if (stepSeconds === null || stepSeconds <= 0) {
+        return null;
+      }
+      const remainder =
+        (((valueSeconds - minSeconds) % stepSeconds) + stepSeconds) %
+        stepSeconds;
+      if (remainder === 0) {
+        return null;
+      }
+      const beforeSeconds = valueSeconds - remainder;
+      const afterSeconds = beforeSeconds + stepSeconds;
+      const before = secondsToTimeString(beforeSeconds);
+      const after = secondsToTimeString(afterSeconds);
+      return {
+        message: `must be a multiple of ${stepSeconds}s from ${typeof min === "string" ? min : secondsToTimeString(minSeconds)} (e.g. ${before} or ${after})`,
+        autoFix: () => {
+          const rounded =
+            minSeconds +
+            Math.round((valueSeconds - minSeconds) / stepSeconds) * stepSeconds;
+          return secondsToTimeString(rounded);
+        },
+      };
     }
     if (typeof value !== "number") {
       return null;
@@ -175,6 +224,15 @@ export const ONE_OF_RULE = {
 
 // Converts a temporal value (string YYYY-MM-DD, YYYY-MM, timestamp, or Date) to ms
 const toMs = (value, type) => {
+  if (type === "time") {
+    const seconds =
+      typeof value === "string"
+        ? timeStringToSeconds(value)
+        : typeof value === "number"
+          ? value
+          : null;
+    return seconds !== null ? seconds * 1000 : null;
+  }
   if (typeof value === "number" && Number.isFinite(value)) {
     if (type === "date") {
       // Normalize to start of local day
@@ -208,6 +266,9 @@ const toMs = (value, type) => {
 };
 // Converts a ms timestamp back to the same format as the original value
 const fromMs = (ms, originalValue, type) => {
+  if (type === "time") {
+    return secondsToTimeString(Math.round(ms / 1000));
+  }
   const d = new Date(ms);
   if (typeof originalValue === "number") {
     return ms;
@@ -230,6 +291,9 @@ const fromMs = (ms, originalValue, type) => {
   return d.toISOString();
 };
 const formatTemporalBound = (value, type) => {
+  if (type === "time") {
+    return typeof value === "string" ? value : secondsToTimeString(value);
+  }
   if (typeof value === "number") {
     const d = new Date(value);
     if (type === "date") {
@@ -241,4 +305,31 @@ const formatTemporalBound = (value, type) => {
     return d.toLocaleString();
   }
   return String(value);
+};
+
+const timeStringToSeconds = (value) => {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const match = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(value);
+  if (!match) {
+    return null;
+  }
+  const h = parseInt(match[1], 10);
+  const m = parseInt(match[2], 10);
+  const s = match[3] ? parseInt(match[3], 10) : 0;
+  return h * 3600 + m * 60 + s;
+};
+
+const secondsToTimeString = (totalSeconds) => {
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
+  const hh = String(h).padStart(2, "0");
+  const mm = String(m).padStart(2, "0");
+  if (s === 0) {
+    return `${hh}:${mm}`;
+  }
+  const ss = String(s).padStart(2, "0");
+  return `${hh}:${mm}:${ss}`;
 };

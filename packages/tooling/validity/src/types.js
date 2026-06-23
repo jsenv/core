@@ -604,6 +604,11 @@ export const TYPES = {
   "time": {
     jsType: "string",
     localStorageRepresentation: "string",
+    props: {
+      min: { resolver: (v) => v }, // kept as-is (HH:MM string or number of seconds)
+      max: { resolver: (v) => v },
+      step: { resolver: (v) => v }, // HH:MM string or number of seconds
+    },
     validate: (value) => {
       if (typeof value !== "string") {
         return `must be a string`;

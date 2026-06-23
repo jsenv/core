@@ -701,12 +701,17 @@
       const dateSignalCombo = stateSignal(DEFAULT_DATE, {
         type: "date",
         min: now,
-        autoFix: true,
+        // autoFix: true,
+      });
+      const timeSignalCombo = stateSignal("09:00", {
+        type: "time",
+        min: "07:00",
+        max: "21:00",
+        step: "00:30",
       });
 
       const DateTimeComboDemo = () => {
         const [entries, push, clear] = useCallLog();
-        const hourSignal = useSignal("09:00");
 
         return (
           <div class="demo-section" id="date-time-combo">
@@ -735,7 +740,7 @@
                     type="date"
                     required
                     value={dateSignalCombo.value}
-                    action={(v) => {
+                    uiAction={(v) => {
                       dateSignalCombo.value = v;
                     }}
                     min={now}
@@ -743,18 +748,11 @@
                   />
                   <Picker
                     name="combo_time"
-                    type="navi_time"
+                    type="time"
                     required
-                    min={
-                      isToday(dateSignalCombo.value)
-                        ? getNowHoursRoundedToStep(30, -5)
-                        : "07:00"
-                    }
-                    max="21:00"
-                    step="00:30"
-                    value={hourSignal.value}
-                    action={(v) => {
-                      hourSignal.value = v;
+                    value={timeSignalCombo}
+                    uiAction={(v) => {
+                      timeSignalCombo.value = v;
                     }}
                   />
                 </Box>
