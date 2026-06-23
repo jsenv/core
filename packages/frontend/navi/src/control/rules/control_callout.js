@@ -113,7 +113,7 @@ export const createCalloutManager = (
       status,
       openingEvent: event,
       debug: debugPopup,
-      onClose: ({ event: closeEvent, focusWithinCallout }) => {
+      onClose: ({ event: closeEvent, shouldTransferFocusFromCallout }) => {
         removeCloseOnCleanup?.();
         for (const result of openResults) {
           if (typeof result === "function") {
@@ -128,8 +128,7 @@ export const createCalloutManager = (
         tokens.clear();
         const element = controller.elementRef.current;
         if (
-          !skipFocus &&
-          focusWithinCallout &&
+          shouldTransferFocusFromCallout &&
           element &&
           !element.closest('[aria-hidden="true"]')
         ) {

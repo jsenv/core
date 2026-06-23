@@ -288,7 +288,7 @@ export const openCallout = (
           event,
           "preventing mousedown default to avoid focus change on callout close",
         );
-        event.preventDefault(); // prevent focus change to the callout, let it on the input
+        mousedownEvent.preventDefault(); // prevent focus change to the callout, let it on the input
       }
     }
     callout.opened = false;
@@ -296,10 +296,36 @@ export const openCallout = (
   };
   if (onClose) {
     addTeardown(({ event, reason }) => {
-      const focusWithinCallout = callout.element.contains(
-        document.activeElement,
-      );
-      onClose({ event, reason, focusWithinCallout });
+      let shouldTransferFocusFromCallout = false;
+      const focusOut = findEvent(event, "focusout");
+      if (focusOut) {
+        const relatedTarget = focusOut.relatedTarget;
+        if (relatedTarget && callout.element.contains(relatedTarget)) {
+          shouldTransferFocusFromCallout = true;
+        } else {
+          // let focus go away from the callout to new target
+        }
+      } else {
+        const focusInsideCallout = callout.element.contains(
+          document.activeElement,
+        );
+        if (focusInsideCallout) {
+          shouldTransferFocusFromCallout = true;
+        } else {
+          // mousedown to close callout would have given focus to the callout
+          // so we can consider focus was inside callout
+          const mousedownEvent = findEvent(event, "mousedown");
+          if (mousedownEvent) {
+            const mousedownInsideCallout =
+              callout.element && callout.element.contains(event.target);
+            if (mousedownInsideCallout) {
+              shouldTransferFocusFromCallout = true;
+            }
+          }
+        }
+      }
+
+      onClose({ event, reason, shouldTransferFocusFromCallout });
     });
   }
 
