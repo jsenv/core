@@ -335,21 +335,20 @@ export const createControlValidation = (
       ) {
         leafCV = leafCV.failingManagedControlValidity;
       }
-      leafCV.reportValidity({ event });
+      leafCV.syncValidity(event, { fromRequestAction });
       return isValid;
     }
     if (failedConstraintInfo) {
-      const hasActionProp = Boolean(controller.props.action);
-      if (hasActionProp) {
+      if (fromRequestAction) {
         debugUIState(
           event,
-          `syncValidity ${elementSig}: has failing constraint and action context -> reportValidity`,
+          `syncValidity ${elementSig}: has failing constraint and action requested -> reportValidity`,
         );
         reportValidity({ event });
       } else {
         debugUIState(
           event,
-          `syncValidity ${elementSig}: has failing constraint but no own action -> close callout if any`,
+          `syncValidity ${elementSig}: has failing constraint but no action requested -> close callout if any`,
         );
         callout.removeOpenToken(VALIDATION_TOKEN, event);
       }
