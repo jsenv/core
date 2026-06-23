@@ -69,6 +69,8 @@ export const tryActionAfterInteractionAllowed = (
     actionOrigin = "action_prop",
     method = "rerun",
     meta = {},
+    reportOnInvalid,
+    onInvalid,
   },
 ) => {
   const controlHost = findControlHost(element) || element;
@@ -92,10 +94,11 @@ export const tryActionAfterInteractionAllowed = (
   if (cv) {
     const hasOwnAction = Boolean(controller.props.action);
     const isValid = cv.syncValidity(event, {
-      report: hasOwnAction,
+      report: reportOnInvalid ?? hasOwnAction,
       fromRequestAction: true,
     });
     if (!isValid) {
+      onInvalid?.();
       if (action === "auto" || action?.isAction) {
         dispatchInternalCustomEvent(elementForAction, "navi_action_prevented", {
           event,
