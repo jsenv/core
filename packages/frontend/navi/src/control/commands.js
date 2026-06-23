@@ -376,19 +376,6 @@ registerNaviCommand("--navi-define", (source, event) => {
   };
 });
 const executeNaviDefine = (source, event, target) => {
-  // Skip --navi-update when the picker already has an inner control that
-  // manages the picker's value autonomously:
-  // - A ControlGroup aggregates all child values and syncs them up via its
-  //   own command="--navi-update". Calling --navi-update from the send button
-  //   (which has no value) would override the aggregated value.
-  // - Any other inner control host (e.g. a plain Input inside the picker
-  //   popup) already propagates its value to the picker via its own
-  //   command="--navi-update" on every change. Calling it again from the
-  //   send button's undefined value would corrupt the picker state.
-  const skipUpdate = resolvePickerInnerControl(target) !== null;
-  if (!skipUpdate) {
-    triggerNaviCommand(source, "--navi-update", event);
-  }
   // The picker's onClose already dispatches the action with the final value.
   // Dispatching again here would fire the action twice.
   return triggerNaviCommand(target, "--navi-close", event);
