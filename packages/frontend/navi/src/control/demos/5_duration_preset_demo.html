@@ -313,7 +313,7 @@
                 <DurationPreset
                   key={minutes}
                   index={i}
-                  id={minutes}
+                  id={`duration_${minutes}`}
                   value={minutes}
                   selected={duration === String(minutes)}
                 >
@@ -322,7 +322,7 @@
               ))}
               <CustomDurationOption
                 index={PRESET_DURATIONS.length}
-                id="custom"
+                id="duration_custom"
                 value="custom"
                 selected={duration === "custom"}
               />
@@ -413,7 +413,7 @@
                 <DurationPreset
                   key={minutes}
                   index={i}
-                  id={minutes}
+                  id={`duration2_${minutes}`}
                   value={minutes}
                   selected={duration === String(minutes)}
                 >
@@ -422,6 +422,7 @@
               ))}
               <CustomDurationOptionWithPicker2
                 index={PRESET_DURATIONS.length}
+                id="duration2_custom"
                 value="custom"
                 selected={duration === "custom"}
               />
@@ -542,7 +543,7 @@
                 <DurationPreset
                   key={minutes}
                   index={i}
-                  id={minutes}
+                  id={`duration3_${minutes}`}
                   value={minutes}
                   selected={duration === String(minutes)}
                 >
@@ -551,7 +552,7 @@
               ))}
               <CustomDurationOptionWithPicker3
                 index={PRESET_DURATIONS.length}
-                id="custom_duration3"
+                id="duration3_custom"
                 value="custom"
                 selected={duration === "custom"}
               />
