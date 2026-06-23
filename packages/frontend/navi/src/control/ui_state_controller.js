@@ -1137,6 +1137,8 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
     debugFocus,
   });
   facadeUIStateController.rules = rules;
+  facadeUIStateController.controlHostProps =
+    realUIStateController.controlHostProps;
   // No initial checkValidity() here — the facade has no controlHostProps and no children
   // have registered yet, so any check would be a no-op. The real validity check happens
   // when child controllers trigger UI actions through the facade.
