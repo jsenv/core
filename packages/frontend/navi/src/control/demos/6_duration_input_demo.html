@@ -182,9 +182,13 @@
                 uiAction={(v) => {
                   uiAction?.({ hour, minute: v });
                 }}
-                action={(v) => {
-                  action?.({ hour, minute: v });
-                }}
+                action={
+                  action
+                    ? (v, context) => {
+                        action({ hour, minute: v }, context);
+                      }
+                    : undefined
+                }
               />
               {unitMinute}
             </Label>
