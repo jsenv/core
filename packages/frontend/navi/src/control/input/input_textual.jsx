@@ -286,7 +286,15 @@ const InputHeadlessResolver = (props) => {
   if (props.headless) {
     return <InputTextualHeadless {...props} />;
   }
+  if (props.type === "hidden") {
+    return <InputHidden {...props} />;
+  }
   return <Next {...props} />;
+};
+const InputHidden = (props) => {
+  const [inputRootProps, inputHostProps] = useInputTextualProps(props);
+
+  return <RealInput {...inputRootProps} {...inputHostProps} />;
 };
 const InputTextualHeadless = (props) => {
   const [inputRootProps, inputHostProps] = useInputTextualProps(props);
