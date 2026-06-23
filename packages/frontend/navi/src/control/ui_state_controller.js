@@ -422,6 +422,7 @@ export const useUIStateController = (
           targetController.setUIState(newUIState, forwardEvent);
         }
       }
+      let syntheticInputFired = false;
       if (el) {
         // Dispatch a synthetic "input" event so external listeners see the new
         // value. Skip when an input event on this element already exists in the chain.
@@ -436,6 +437,7 @@ export const useUIStateController = (
                 "dispatching synthetic input event without data for checkbox/radio",
               );
               el.dispatchEvent(new Event("input", { bubbles: true }));
+              syntheticInputFired = true;
             } else {
               debugUIState(
                 e,
@@ -449,12 +451,18 @@ export const useUIStateController = (
                   data: newUIState,
                 }),
               );
+              syntheticInputFired = true;
             }
           }
           // TODO: select, textarea
         }
       }
-      uiStateController.onUIAction(e);
+      // When a synthetic "input" event was dispatched, the stateIsTheSame path
+      // already called onUIAction via the input event handler — skip here to
+      // avoid a duplicate uiAction on the same user gesture.
+      if (!syntheticInputFired) {
+        uiStateController.onUIAction(e);
+      }
       // Sync validity after state change: re-check constraints against the new value.
       // Internal events (programmatic) → silent check only.
       // User events → full sync (may open/close callout).
