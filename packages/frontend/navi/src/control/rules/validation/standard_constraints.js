@@ -119,13 +119,13 @@ export const PATTERN_CONSTRAINT = {
     if (!pattern) {
       return null;
     }
-    const value = field.uiState;
-    const required = field.controlHostProps.required;
-    if (!value && !required) {
+    const valueAsString =
+      field.uiState === undefined ? "" : String(field.uiState);
+    if (!valueAsString) {
       return null;
     }
     const regex = new RegExp(`^(?:${pattern})$`);
-    if (regex.test(value)) {
+    if (regex.test(valueAsString)) {
       return null;
     }
 
@@ -160,6 +160,7 @@ export const TYPE_EMAIL_CONSTRAINT = {
     if (emailregex.test(valueAsString)) {
       return null;
     }
+
     if (!valueAsString.includes("@")) {
       return naviI18n("constraint.type.email.at", { value: valueAsString });
     }
@@ -172,7 +173,8 @@ export const MIN_LENGTH_CONSTRAINT = {
   messageAttribute: "data-min-length-message",
   check: (field) => {
     const type = field.controlHostProps.type ?? "text";
-    const isInput = field.controlType === "input";
+    const isInput =
+      field.controlType === "input" || field.controlType === "picker";
     const isTextarea =
       field.controlHostProps.as === "textarea" ||
       field.controlType === "textarea";
@@ -189,19 +191,16 @@ export const MIN_LENGTH_CONSTRAINT = {
     }
     const valueAsString =
       field.uiState === undefined ? "" : String(field.uiState);
-    const valueLength = valueAsString.length;
-    // Empty value is only invalid when required — minLength does not apply to
-    // an empty optional field (mirrors native browser behaviour).
-    if (valueLength === 0) {
+    if (!valueAsString) {
       return null;
     }
+    const valueLength = valueAsString.length;
     if (valueLength >= minLength) {
       return null;
     }
 
     if (valueLength === 1) {
       const singularKey = (() => {
-        const type = field.controlHostProps.type;
         if (type === "email") {
           return `constraint.min_length.singular.email`;
         }
@@ -215,7 +214,6 @@ export const MIN_LENGTH_CONSTRAINT = {
       });
     }
     const pluralKey = (() => {
-      const type = field.controlHostProps.type;
       if (type === "email") {
         return `constraint.min_length.plural.email`;
       }
@@ -245,7 +243,8 @@ export const MAX_LENGTH_CONSTRAINT = {
   messageAttribute: "data-max-length-message",
   check: (field) => {
     const type = field.controlHostProps.type ?? "text";
-    const isInput = field.controlType === "input";
+    const isInput =
+      field.controlType === "input" || field.controlType === "picker";
     const isTextarea =
       field.controlHostProps.as === "textarea" ||
       field.controlType === "textarea";
@@ -262,13 +261,15 @@ export const MAX_LENGTH_CONSTRAINT = {
     }
     const valueAsString =
       field.uiState === undefined ? "" : String(field.uiState);
+    if (!valueAsString) {
+      return null;
+    }
     const valueLength = valueAsString.length;
     if (valueLength <= maxLength) {
       return null;
     }
 
     const maxLengthKey = (() => {
-      const type = field.controlHostProps.type;
       if (type === "email") {
         return `constraint.max_length.email`;
       }
@@ -292,7 +293,7 @@ export const TYPE_NUMBER_CONSTRAINT = {
   name: "type_number",
   messageAttribute: "data-type-message",
   check: (field) => {
-    if (field.controlType !== "input") {
+    if (field.controlType !== "input" && field.controlType !== "picker") {
       return null;
     }
     const type = field.controlHostProps.type;
@@ -342,7 +343,7 @@ export const MIN_CONSTRAINT = {
   name: "min",
   messageAttribute: "data-min-message",
   check: (field) => {
-    if (field.controlType !== "input") {
+    if (field.controlType !== "input" && field.controlType !== "picker") {
       return null;
     }
     const minString = field.controlHostProps.min;
@@ -351,14 +352,18 @@ export const MIN_CONSTRAINT = {
     }
     const type = field.controlHostProps.type;
     const inputMode = field.controlHostProps.inputMode;
-    const value = field.uiState;
+    const valueAsString =
+      field.uiState === undefined ? "" : String(field.uiState);
+    if (!valueAsString) {
+      return null;
+    }
     const isNumber = type === "number" || inputMode === "numeric";
     if (isNumber) {
       const minNumber = parseFloat(minString);
       if (isNaN(minNumber)) {
         return null;
       }
-      const numericValue = Number(value);
+      const numericValue = Number(valueAsString);
       if (isNaN(numericValue)) {
         return null;
       }
@@ -391,11 +396,8 @@ export const MIN_CONSTRAINT = {
       return null;
     }
     if (type === "time") {
-      if (!value) {
-        return null;
-      }
       const [minHours, minMinutes] = minString.split(":").map(Number);
-      const [hours, minutes] = value.split(":").map(Number);
+      const [hours, minutes] = valueAsString.split(":").map(Number);
       if (hours < minHours || (hours === minHours && minutes < minMinutes)) {
         return naviI18n("constraint.min.time.default", {
           min: minString,
@@ -406,10 +408,7 @@ export const MIN_CONSTRAINT = {
     // range inputs enforce boundaries via their UI and browser clamping for programmatic updates
     // so they never need a min/max validation message.
     if (DATE_INPUT_TYPE_SET.has(type)) {
-      if (!value) {
-        return null;
-      }
-      if (value < minString) {
+      if (valueAsString < minString) {
         const todayIso = getTodayIso(type);
         if (minString === todayIso) {
           return naviI18n("constraint.min.date.today.default");
@@ -429,7 +428,7 @@ export const MAX_CONSTRAINT = {
   name: "max",
   messageAttribute: "data-max-message",
   check: (field) => {
-    if (field.controlType !== "input") {
+    if (field.controlType !== "input" && field.controlType !== "picker") {
       return null;
     }
     const maxString = field.controlHostProps.max;
@@ -438,51 +437,53 @@ export const MAX_CONSTRAINT = {
     }
     const type = field.controlHostProps.type;
     const inputMode = field.controlHostProps.inputMode;
-    const value = field.uiState;
+    const valueAsString =
+      field.uiState === undefined ? "" : String(field.uiState);
+    if (!valueAsString) {
+      return null;
+    }
     const isNumber = type === "number" || inputMode === "numeric";
     if (isNumber) {
       const maxNumber = parseFloat(maxString);
       if (isNaN(maxNumber)) {
         return null;
       }
-      const numericValue = Number(value);
+      const numericValue = Number(valueAsString);
       if (isNaN(numericValue)) {
         return null;
       }
-      if (numericValue > maxNumber) {
-        const naviInputType = field.controlHostProps["navi-input-type"];
-        if (naviInputType === "hour") {
-          return naviI18n(`constraint.max.hour.default`, {
-            max: maxString,
-          });
-        }
-        if (naviInputType === "minute") {
-          return naviI18n(`constraint.max.minute.default`, {
-            max: maxString,
-          });
-        }
-        if (naviInputType === "second") {
-          return naviI18n(`constraint.max.second.default`, {
-            max: maxString,
-          });
-        }
-        if (naviInputType === "percentage") {
-          return naviI18n(`constraint.max.percentage.default`, {
-            max: maxString,
-          });
-        }
-        return naviI18n(`constraint.max.number.default`, {
+      if (numericValue <= maxNumber) {
+        return null;
+      }
+
+      const naviInputType = field.controlHostProps["navi-input-type"];
+      if (naviInputType === "hour") {
+        return naviI18n(`constraint.max.hour.default`, {
           max: maxString,
         });
       }
-      return null;
+      if (naviInputType === "minute") {
+        return naviI18n(`constraint.max.minute.default`, {
+          max: maxString,
+        });
+      }
+      if (naviInputType === "second") {
+        return naviI18n(`constraint.max.second.default`, {
+          max: maxString,
+        });
+      }
+      if (naviInputType === "percentage") {
+        return naviI18n(`constraint.max.percentage.default`, {
+          max: maxString,
+        });
+      }
+      return naviI18n(`constraint.max.number.default`, {
+        max: maxString,
+      });
     }
     if (type === "time") {
-      if (!value) {
-        return null;
-      }
       const [maxHours, maxMinutes] = maxString.split(":").map(Number);
-      const [hours, minutes] = value.split(":").map(Number);
+      const [hours, minutes] = valueAsString.split(":").map(Number);
       if (hours > maxHours || (hours === maxHours && minutes > maxMinutes)) {
         return naviI18n("constraint.max.time.default", {
           max: maxString,
@@ -491,19 +492,17 @@ export const MAX_CONSTRAINT = {
       return null;
     }
     if (DATE_INPUT_TYPE_SET.has(type)) {
-      if (!value) {
+      if (valueAsString <= maxString) {
         return null;
       }
-      if (value > maxString) {
-        const todayIso = getTodayIso(type);
-        if (maxString === todayIso) {
-          return naviI18n("constraint.max.date.today.default");
-        }
-        return naviI18n("constraint.max.date.default", {
-          max: formatDateIso(maxString, type),
-        });
+
+      const todayIso = getTodayIso(type);
+      if (maxString === todayIso) {
+        return naviI18n("constraint.max.date.today.default");
       }
-      return null;
+      return naviI18n("constraint.max.date.default", {
+        max: formatDateIso(maxString, type),
+      });
     }
     return null;
   },
@@ -523,7 +522,7 @@ export const STEP_CONSTRAINT = {
   name: "step",
   messageAttribute: "data-step-message",
   check: (field) => {
-    if (field.controlType !== "input") {
+    if (field.controlType !== "input" && field.controlType !== "picker") {
       return null;
     }
     const type = field.controlHostProps.type;
@@ -536,13 +535,17 @@ export const STEP_CONSTRAINT = {
     if (!stepString || stepString === "any") {
       return null;
     }
-    const value = field.uiState;
+    const valueAsString =
+      field.uiState === undefined ? "" : String(field.uiState);
+    if (!valueAsString) {
+      return null;
+    }
     const minString = field.controlHostProps.min;
     const isNumber = type === "number" || isNumericText;
     if (isNumber) {
       const step = parseFloat(stepString);
       const base = minString ? parseFloat(minString) : 0;
-      const numericValue = Number(value);
+      const numericValue = Number(valueAsString);
       if (isNaN(numericValue)) {
         return null;
       }
@@ -582,7 +585,7 @@ export const STEP_CONSTRAINT = {
       const stepSeconds = parseFloat(stepString);
       if (!isNaN(stepSeconds)) {
         const stepMs = stepSeconds * 1000;
-        const valueMs = timeStringToMs(value);
+        const valueMs = timeStringToMs(valueAsString);
         const baseMs = minString ? timeStringToMs(minString) : 0;
         const remainder = (((valueMs - baseMs) % stepMs) + stepMs) % stepMs;
         if (remainder === 0) {
@@ -619,7 +622,7 @@ export const STEP_CONSTRAINT = {
       const baseDate = minString
         ? new Date(`${minString}T00:00:00`)
         : new Date(0);
-      const valueDate = new Date(`${value}T00:00:00`);
+      const valueDate = new Date(`${valueAsString}T00:00:00`);
       const diffDays = Math.round((valueDate - baseDate) / 86400000);
       if (diffDays % step === 0) {
         return null;
