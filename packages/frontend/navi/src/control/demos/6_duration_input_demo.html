@@ -360,26 +360,24 @@
                     push("picker uiAction", v);
                   }}
                 >
-                  <ControlGroup>
-                    <Box flex="y" spacing="l" padding="s" alignX="center">
-                      <Text bold>Enter a duration</Text>
-                      <InputDuration
-                        unit="minute"
-                        value={minuteSignal.value}
-                        uiAction={(value) => {
-                          minuteSignal.value = value;
-                        }}
-                      />
-                      <Box flex="x" spacing="s" alignX="end" expandX>
-                        <Button command="--navi-cancel" variant="discrete">
-                          Cancel
-                        </Button>
-                        <Button command="--navi-define" variant="discrete">
-                          Confirm
-                        </Button>
-                      </Box>
+                  <Box flex="y" spacing="l" padding="s" alignX="center">
+                    <Text bold>Enter a duration</Text>
+                    <InputDuration
+                      unit="minute"
+                      value={minuteSignal.value}
+                      uiAction={(value) => {
+                        minuteSignal.value = value;
+                      }}
+                    />
+                    <Box flex="x" spacing="s" alignX="end" expandX>
+                      <Button command="--navi-cancel" variant="discrete">
+                        Cancel
+                      </Button>
+                      <Button command="--navi-define" variant="discrete">
+                        Confirm
+                      </Button>
                     </Box>
-                  </ControlGroup>
+                  </Box>
                 </Picker>
                 <Button command="--navi-send">Submit</Button>
                 <CallLog entries={entries} onClear={clear} />
