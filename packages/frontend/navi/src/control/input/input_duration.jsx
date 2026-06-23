@@ -42,41 +42,56 @@ const InputDurationAsMinutes = (props) => {
     useControlgroupProps(
       {
         ...props,
-        uiAction: (totalMinutes, event) => {
+        uiAction: (groupState, event) => {
           const hiddenInput = ref.current;
           if (hiddenInput) {
-            hiddenInput.value = totalMinutes;
+            hiddenInput.value =
+              typeof groupState === "number" ? groupState : "";
           }
-          uiAction?.(totalMinutes, event);
+          uiAction?.(groupState, event);
         },
         action: action
-          ? (totalMinutes, info) => {
-              return action(totalMinutes, info);
+          ? (groupState, info) => {
+              return action(groupState, info);
             }
           : undefined,
       },
       {
         controlType: "duration_group",
-        stateType: "number",
         cascadeValidationToChildren: true,
         aggregateChildStates: (childUIStateControllers) => {
-          let hour = 0;
-          let minute = 0;
+          let hour;
+          let minute;
           for (const child of childUIStateControllers) {
             if (child.name === "hour") {
-              hour = child.uiState ?? 0;
+              hour = child.uiState;
             }
             if (child.name === "minute") {
-              minute = child.uiState ?? 0;
+              minute = child.uiState;
             }
           }
-          return hour * 60 + minute;
+          // If either child has a non-numeric value (e.g. mid-edit "2a"),
+          // pass it through as-is so uiAction receives the raw invalid value.
+          // This avoids NaN which would cause a Preact signals cycle
+          // (NaN !== NaN is always true, making the signal never settle).
+          const h = toFiniteMinutes(hour);
+          if (h === null) {
+            return hour;
+          }
+          const m = toFiniteMinutes(minute);
+          if (m === null) {
+            return minute;
+          }
+          return h * 60 + m;
         },
         // Reverse mapping: totalMinutes → { hour, minute } so that when the
         // picker cancels and calls setUIState(storedValue), the sub-inputs are
         // correctly reset to the original hour/minute values.
-        distributeChildUIState: (totalMinutes) => {
-          const minutes = typeof totalMinutes === "number" ? totalMinutes : 0;
+        distributeChildUIState: (groupState) => {
+          const minutes =
+            typeof groupState === "number" && Number.isFinite(groupState)
+              ? groupState
+              : 0;
           return {
             hour: Math.floor(minutes / 60),
             minute: minutes % 60,
@@ -214,4 +229,14 @@ const InputDurationHour = (props) => {
       {unit}
     </Label>
   );
+};
+
+// Returns the value as a finite integer, or null if it cannot be parsed.
+// Used by aggregateChildStates to detect invalid child values.
+const toFiniteMinutes = (v) => {
+  if (v === null || v === undefined) {
+    return 0;
+  }
+  const n = typeof v === "number" ? v : parseInt(v, 10);
+  return Number.isFinite(n) ? n : null;
 };
