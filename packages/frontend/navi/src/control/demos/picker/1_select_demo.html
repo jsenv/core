@@ -195,11 +195,11 @@
         id: "update_fruit",
         type: "string",
       });
-      const searchFruitSelectedSignal = stateSignal("", {
+      const searchFruitSelectedSignal = stateSignal(undefined, {
         id: "search_fruit_selected",
         type: "string",
       });
-      const placeSlugSignal = stateSignal("", {
+      const placeSlugSignal = stateSignal(undefined, {
         id: "place_slug",
         type: "string",
       });
@@ -568,7 +568,7 @@
 
       const SearchableSelectNormal = () => {
         const selected = searchFruitSelectedSignal.value;
-        const searchTextSignal = useSignal("");
+        const searchTextSignal = useSignal(undefined);
         const searchText = searchTextSignal.value;
         const [entries, push, clear] = useCallLog();
         return (

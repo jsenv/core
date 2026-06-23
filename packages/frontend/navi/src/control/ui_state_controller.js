@@ -360,6 +360,24 @@ export const useUIStateController = (
         }
       }
       if (isInternalEvent(e)) {
+        if (e.type === "facade_child_mount_sync") {
+          // Warn when the picker's initial signal value is "" but the list
+          // resolved to undefined (no selection). These are semantically
+          // equivalent but technically different, so the mount-sync registers
+          // as a state change and fires uiAction unexpectedly.
+          // Fix: initialise the signal with undefined instead of "".
+          const wasEmptyString =
+            currentUIState === "" && newUIState === undefined;
+          const wasUndefinedNowEmpty =
+            currentUIState === undefined && newUIState === "";
+          if (wasEmptyString || wasUndefinedNowEmpty) {
+            console.warn(
+              `[navi] Picker mount sync changed state from ${JSON.stringify(currentUIState)} to ${JSON.stringify(newUIState)}. ` +
+                `This will call uiAction on mount, which is likely unintended. ` +
+                `Initialise the signal with undefined instead of "" to avoid this.`,
+            );
+          }
+        }
         // Still fire uiAction so external listeners (e.g. signals) stay in
         // sync, but do NOT fire the command and do NOT notify the parent —
         // both would cause an infinite loop when a parent cascades state
