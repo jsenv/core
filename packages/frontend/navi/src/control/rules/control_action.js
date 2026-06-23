@@ -90,17 +90,8 @@ export const tryActionAfterInteractionAllowed = (
   // the result and decide whether to report/prevent/allow.
   const cv = controller?.rules.validation;
   if (cv) {
-    const isValid = cv.checkValidity({ event, fromRequestAction: true });
+    const isValid = cv.syncValidity(event, { fromRequestAction: true });
     if (!isValid) {
-      // Find the specific failing leaf to show the callout on (mirrors syncValidity logic).
-      let leafCV = cv;
-      while (
-        leafCV.failingManagedControlValidity &&
-        !leafCV.failedConstraintInfo
-      ) {
-        leafCV = leafCV.failingManagedControlValidity;
-      }
-      leafCV.reportValidity({ event });
       if (action === "auto" || action?.isAction) {
         dispatchInternalCustomEvent(elementForAction, "navi_action_prevented", {
           event,
