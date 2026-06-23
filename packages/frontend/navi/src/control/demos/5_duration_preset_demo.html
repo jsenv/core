@@ -73,6 +73,7 @@
         Time,
         Icon,
         NaviDebug,
+        InputDuration,
       } from "@jsenv/navi";
 
       const PRESET_DURATIONS = [60, 90, 120];
@@ -471,43 +472,15 @@
               <Box flex="y" alignX="center" padding="m" spacing="m">
                 <Text bold>Veuillez saisir une durée</Text>
                 <ControlGroup>
-                  <InputGroup flex spacing="xxs">
-                    <Box flex="y">
-                      <Input
-                        type="navi_hour"
-                        name="hour"
-                        unit={false}
-                        variant="underline"
-                        size="l"
-                        expandX
-                        value={hours}
-                        uiAction={(v) => {
-                          customDurationHourSignal2.value = v;
-                        }}
-                        textAlign="right"
-                        required
-                      >
-                        <Input.UI.UnitSlot>:</Input.UI.UnitSlot>
-                      </Input>
-                      <Unit unit="hour" plural marginRight="1ch" />
-                    </Box>
-                    <Box flex="y">
-                      <Input
-                        type="navi_minute"
-                        name="minute"
-                        unit={false}
-                        variant="underline"
-                        size="l"
-                        expandX
-                        value={minutes}
-                        uiAction={(v) => {
-                          customDurationMinuteSignal2.value = v;
-                        }}
-                        required
-                      />
-                      <Unit unit="minute" plural />
-                    </Box>
-                  </InputGroup>
+                  <InputDuration
+                    hour={hours}
+                    minute={minutes}
+                    required
+                    uiAction={({ hour, minute }) => {
+                      customDurationHourSignal2.value = hour;
+                      customDurationMinuteSignal2.value = minute;
+                    }}
+                  />
                 </ControlGroup>
                 <Box flex spacing="s" expandX alignX="end">
                   <Button command="--navi-cancel" variant="discrete" />

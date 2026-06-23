@@ -108,6 +108,7 @@ export { Group } from "./src/control/group.jsx";
 export { Button } from "./src/control/input/button.jsx";
 export { CheckboxGroup } from "./src/control/input/checkbox_group.jsx";
 export { Input } from "./src/control/input/input.jsx";
+export { InputDuration } from "./src/control/input/input_duration.jsx";
 export { InputGroup } from "./src/control/input/input_group.jsx";
 export { RadioGroup } from "./src/control/input/radio_group.jsx";
 export { Picker } from "./src/control/picker/picker.jsx";
