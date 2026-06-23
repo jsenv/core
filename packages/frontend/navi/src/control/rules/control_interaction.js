@@ -204,6 +204,11 @@ export const onRequestInteraction = (
     return false;
   }
 
+  if (POINTER_DOWN_TYPE_SET.has(event.type) && event.button !== 0) {
+    onPrevented(`non-primary mouse button (${event.button})`);
+    return false;
+  }
+
   if (!bypassInteractivity) {
     const currentTarget = requestInteractionCustomEvent.currentTarget;
     const controlHost = findControlHost(currentTarget) || currentTarget;
@@ -228,3 +233,5 @@ export const onRequestInteraction = (
   onAllowed();
   return true;
 };
+
+const POINTER_DOWN_TYPE_SET = new Set(["pointerdown", "mousedown", "click"]);

@@ -40,9 +40,13 @@ const css = /* css */ `
       --x-color: var(--color, #333);
     }
 
-    &[data-text-overflow] .navi_text_overflow_wrapper {
-      /* Keep badge text and button together */
-      gap: 0;
+    &[data-text-overflow] {
+      display: flex;
+
+      .navi_text_overflow_wrapper {
+        /* Keep badge text and button together */
+        gap: 0;
+      }
     }
 
     [role="button"] {
