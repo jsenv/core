@@ -30,29 +30,6 @@ export const InputDuration = (props) => {
   return <InputDurationAsMinutes {...props} />;
 };
 
-const resolveDurationAsMinuteProps = (props) => {
-  props.min = parseDurationToMinutes(props.min);
-  props.max = parseDurationToMinutes(props.max);
-  props.step = parseDurationToMinutes(props.step);
-  return props;
-};
-// Parse a min/max duration value to total minutes.
-// Accepts: number (already minutes), or any string supported by parseDurationToSeconds
-// ("1h", "1h20min", "20min", "30s", "2hour", …).
-const parseDurationToMinutes = (value) => {
-  if (value === undefined || value === null) {
-    return undefined;
-  }
-  if (typeof value === "number") {
-    return value;
-  }
-  const seconds = parseDurationToSeconds(String(value));
-  if (seconds === null) {
-    return undefined;
-  }
-  return seconds / 60;
-};
-
 const InputDurationAsMinutes = (props) => {
   resolveDurationAsMinuteProps(props);
   const { max } = props;
@@ -96,10 +73,32 @@ const InputDurationAsMinutes = (props) => {
       },
     );
 
+  const {
+    value,
+    min,
+    step,
+    unitHour,
+    required,
+    readOnly,
+    disabled,
+    basePseudoState,
+  } = groupHostProps;
+  const childProps = {
+    value,
+    min,
+    max,
+    step,
+    required,
+    unitHour,
+    basePseudoState,
+    readOnly,
+    disabled,
+  };
+
   const children = showHour ? (
-    <InputDurationHourAndMinute {...props} />
+    <InputDurationHourAndMinute {...childProps} />
   ) : (
-    <InputDurationMinute {...props} />
+    <InputDurationMinute {...childProps} />
   );
 
   return (
@@ -111,8 +110,30 @@ const InputDurationAsMinutes = (props) => {
     </Box>
   );
 };
+const resolveDurationAsMinuteProps = (props) => {
+  props.min = parseDurationToMinutes(props.min);
+  props.max = parseDurationToMinutes(props.max);
+  props.step = parseDurationToMinutes(props.step);
 
-const InputDurationHourAndMinute = ({ value, min, max, unitHour }) => {
+  return props;
+};
+// Parse a min/max duration value to total minutes.
+// Accepts: number (already minutes), or any string supported by parseDurationToSeconds
+// ("1h", "1h20min", "20min", "30s", "2hour", …).
+const parseDurationToMinutes = (value) => {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+  if (typeof value === "number") {
+    return value;
+  }
+  const seconds = parseDurationToSeconds(String(value));
+  if (seconds === null) {
+    return undefined;
+  }
+  return seconds / 60;
+};
+const InputDurationHourAndMinute = ({ value, min, max, unitHour, ...rest }) => {
   const hour =
     value !== undefined && value !== null ? Math.floor(value / 60) : undefined;
   const minute = value !== undefined && value !== null ? value % 60 : undefined;
@@ -127,12 +148,12 @@ const InputDurationHourAndMinute = ({ value, min, max, unitHour }) => {
         max={maxHour}
         unit={unitHour}
         separator=":"
+        {...rest}
       />
-      <InputDurationMinute value={minute} min={0} max={59} />
+      <InputDurationMinute value={minute} min={0} max={59} {...rest} />
     </InputGroup>
   );
 };
-
 const InputDurationMinute = (props) => {
   const unit = props.unit || <Unit unit="minute" plural color="secondary" />;
 
