@@ -513,6 +513,7 @@
                       type="text"
                       name="query"
                       placeholder="Search query…"
+                      defaultValue="toto"
                     />
                     <Box flex="y" spacing="s">
                       <Button
@@ -2249,7 +2250,7 @@
       };
 
       render(
-        <NaviDebug debugUIState debugInteraction debugCommand debugAction>
+        <NaviDebug debugAll>
           <App />
         </NaviDebug>,
         document.querySelector("#root"),
