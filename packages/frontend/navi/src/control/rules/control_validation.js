@@ -322,7 +322,10 @@ export const createControlValidation = (
   // - Value-modifying event (input, keydown...) + own action + value invalid → report.
   // - Pure interaction event (mousedown on editable field) → close the callout:
   //   user intends to edit, we clear the message so it doesn't block them.
-  const syncValidity = (event, { fromRequestAction = false } = {}) => {
+  const syncValidity = (
+    event,
+    { fromRequestAction = false, fromActionError = false } = {},
+  ) => {
     const elementSig = getElementSignature(controller.elementRef.current);
     const isValid = checkValidity({ event, fromRequestAction });
     if (failingManagedControlValidity) {
@@ -335,14 +338,12 @@ export const createControlValidation = (
       ) {
         leafCV = leafCV.failingManagedControlValidity;
       }
-      // The parent (form/group/picker) has an action and decided to execute it.
-      // Always report on the failing leaf — no need to check hasOwnAction here.
-      leafCV.reportValidity({ event });
+      leafCV.syncValidity(event, { fromRequestAction, fromActionError });
       return isValid;
     }
     if (failedConstraintInfo) {
       const hasOwnAction = Boolean(controller.props.action);
-      if (fromRequestAction && hasOwnAction) {
+      if (fromActionError || (fromRequestAction && hasOwnAction)) {
         debugUIState(
           event,
           `syncValidity ${elementSig}: has failing constraint, action requested and own action -> reportValidity`,
