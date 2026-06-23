@@ -245,7 +245,7 @@
       const dateSignalCombo = stateSignal(DEFAULT_DATE, {
         type: "date",
         min: now,
-        // autoFix: true,
+        autoFix: true,
       });
       const timeSignalCombo = stateSignal("09:00", {
         type: "time",
@@ -735,24 +735,28 @@
               <Field vertical>
                 <Label>Jour</Label>
                 <Box flex spacing="s">
-                  <Picker
-                    name="combo_date"
-                    type="date"
-                    required
-                    value={dateSignalCombo}
-                    uiAction={(v) => {
-                      dateSignalCombo.value = v;
-                    }}
-                  />
-                  <Picker
-                    name="combo_time"
-                    type="time"
-                    required
-                    value={timeSignalCombo}
-                    uiAction={(v) => {
-                      timeSignalCombo.value = v;
-                    }}
-                  />
+                  <Field>
+                    <Picker
+                      name="combo_date"
+                      type="date"
+                      required
+                      value={dateSignalCombo}
+                      uiAction={(v) => {
+                        dateSignalCombo.value = v;
+                      }}
+                    />
+                  </Field>
+                  <Field>
+                    <Picker
+                      name="combo_time"
+                      type="time"
+                      required
+                      value={timeSignalCombo}
+                      uiAction={(v) => {
+                        timeSignalCombo.value = v;
+                      }}
+                    />
+                  </Field>
                 </Box>
               </Field>
               <Button type="submit">Soumettre</Button>

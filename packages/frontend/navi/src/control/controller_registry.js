@@ -48,6 +48,16 @@ const isSerializableAsDomValue = (value) => {
 export const onUIStateControllerCreated = (uiStateController) => {
   const { id, name, controlType } = uiStateController;
   if (id) {
+    if (import.meta.dev) {
+      const existing = controllersById.get(id);
+      if (existing && existing !== uiStateController) {
+        console.warn(
+          `[navi] Two controls share the same id "${id}" ("${existing.controlType}" and "${controlType}"). ` +
+            `This happens when multiple controls are placed inside a single <Field>: the Field provides one id via context and both controls consume it. ` +
+            `Put each control in its own <Field>, or give one of them an explicit id.`,
+        );
+      }
+    }
     controllersById.set(id, uiStateController);
   }
   const proxyFor = uiStateController.props["navi-control-proxy-for"];
