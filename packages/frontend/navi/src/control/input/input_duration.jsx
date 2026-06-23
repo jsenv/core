@@ -42,8 +42,7 @@ const InputDurationAsMinutes = (props) => {
     useControlgroupProps(
       {
         ...props,
-        uiAction: (group, event) => {
-          const totalMinutes = (group?.hour ?? 0) * 60 + (group?.minute ?? 0);
+        uiAction: (totalMinutes, event) => {
           const hiddenInput = ref.current;
           if (hiddenInput) {
             hiddenInput.value = totalMinutes;
@@ -51,24 +50,27 @@ const InputDurationAsMinutes = (props) => {
           uiAction?.(totalMinutes, event);
         },
         action: action
-          ? (group, info) => {
-              const minutes = (group?.hour ?? 0) * 60 + (group?.minute ?? 0);
-              return action(minutes, info);
+          ? (totalMinutes, info) => {
+              return action(totalMinutes, info);
             }
           : undefined,
       },
       {
         controlType: "duration_group",
-        stateType: "object",
+        stateType: "number",
         cascadeValidationToChildren: true,
         aggregateChildStates: (childUIStateControllers) => {
-          const groupValues = {};
+          let hour = 0;
+          let minute = 0;
           for (const child of childUIStateControllers) {
-            if (child.name) {
-              groupValues[child.name] = child.uiState;
+            if (child.name === "hour") {
+              hour = child.uiState ?? 0;
+            }
+            if (child.name === "minute") {
+              minute = child.uiState ?? 0;
             }
           }
-          return groupValues;
+          return hour * 60 + minute;
         },
       },
     );
