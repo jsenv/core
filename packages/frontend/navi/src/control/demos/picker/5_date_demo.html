@@ -58,7 +58,6 @@
     </div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useSignal } from "@preact/signals";
       import { CallLog, useCallLog } from "../utils/call_log.jsx";
       import {
         Box,
@@ -68,8 +67,6 @@
         Form,
         Button,
         NaviDebug,
-        isToday,
-        getNowHoursRoundedToStep,
         stateSignal,
         route,
         setupRoutes,
@@ -241,10 +238,29 @@
         type: "date",
       });
 
+      const now = new Date();
+      const in30days = new Date(now);
+      in30days.setDate(now.getDate() + 30);
+
+      const dateSignalCombo = stateSignal(DEFAULT_DATE, {
+        type: "date",
+        min: now,
+        // autoFix: true,
+      });
+      const timeSignalCombo = stateSignal("09:00", {
+        type: "time",
+        min: "07:00",
+        max: "21:00",
+        step: "00:30",
+      });
+
       const DEMO_ROUTE = route("", {
         searchParams: {
           no_initial_date: noInitialDateSignal,
           with_initial_date: withInitialDateSignal,
+
+          combo_date: dateSignalCombo,
+          combo_time: timeSignalCombo,
         },
       });
       setupRoutes([DEMO_ROUTE]);
@@ -693,22 +709,6 @@
       );
 
       // ── 5. Date + Time combo ─────────────────────────────────────────────
-
-      const now = new Date();
-      const in30days = new Date(now);
-      in30days.setDate(now.getDate() + 30);
-
-      const dateSignalCombo = stateSignal(DEFAULT_DATE, {
-        type: "date",
-        min: now,
-        // autoFix: true,
-      });
-      const timeSignalCombo = stateSignal("09:00", {
-        type: "time",
-        min: "07:00",
-        max: "21:00",
-        step: "00:30",
-      });
 
       const DateTimeComboDemo = () => {
         const [entries, push, clear] = useCallLog();
