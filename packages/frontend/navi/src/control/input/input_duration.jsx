@@ -137,6 +137,8 @@ const InputDurationHourAndMinute = ({
               }
             : undefined
         }
+        unit={unitHour}
+        separator=":"
       />
       <InputDurationMinute
         required={required}
@@ -154,7 +156,6 @@ const InputDurationHourAndMinute = ({
               }
             : undefined
         }
-        unit={unitHour}
       />
     </InputGroup>
   );
@@ -178,6 +179,7 @@ const InputDurationMinute = (props) => {
   );
 };
 const InputDurationHour = (props) => {
+  const { separator } = props;
   const unit = props.unit || (
     <Unit
       unit="hour"
@@ -185,7 +187,7 @@ const InputDurationHour = (props) => {
       color="secondary"
       // We need this because ":" is inside the first input so
       // in case unit pushes to the right it should account for the space of ":"
-      marginRight="1ch"
+      marginRight={separator ? `${separator.length}ch` : undefined}
     />
   );
 
@@ -198,8 +200,11 @@ const InputDurationHour = (props) => {
         size="l"
         expandX
         {...props}
+        separator={undefined}
       >
-        <Input.UI.UnitSlot>:</Input.UI.UnitSlot>
+        {separator ? (
+          <Input.UI.UnitSlot>{separator}</Input.UI.UnitSlot>
+        ) : undefined}
       </Input>
       {unit}
     </Label>
