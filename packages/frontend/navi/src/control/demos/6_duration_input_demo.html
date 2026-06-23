@@ -91,6 +91,7 @@
     </div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
+      import { useRef } from "preact/hooks";
       import { useSignal } from "@preact/signals";
       import {
         Box,
@@ -141,60 +142,72 @@
           />
         ),
         unitMinute = <Unit unit="minute" plural color="secondary" />,
-      }) => (
-        <Box border="1px dotted #aaa" width="fit-content">
-          <InputGroup flex spacing="xxs" width="fit-content">
-            <Label flex="y" textAlign="right">
-              <Input
-                type="navi_hour"
-                name="hour"
-                unit={false}
-                variant="underline"
-                size="l"
-                expandX
-                value={hour}
-                required
-                uiAction={(v) => {
-                  uiAction?.({ hour: v, minute });
-                }}
-                action={
-                  action
-                    ? (v, context) => {
-                        action({ hour: v, minute }, context);
-                      }
-                    : undefined
-                }
-              >
-                <Input.UI.UnitSlot>:</Input.UI.UnitSlot>
-              </Input>
-              {unitHour}
-            </Label>
-            <Label flex="y">
-              <Input
-                type="navi_minute"
-                name="minute"
-                size="l"
-                unit={false}
-                variant="underline"
-                expandX
-                value={minute}
-                required
-                uiAction={(v) => {
-                  uiAction?.({ hour, minute: v });
-                }}
-                action={
-                  action
-                    ? (v, context) => {
-                        action({ hour, minute: v }, context);
-                      }
-                    : undefined
-                }
-              />
-              {unitMinute}
-            </Label>
-          </InputGroup>
-        </Box>
-      );
+      }) => {
+        // Use refs to always read the latest prop values in callbacks,
+        // even if navi Input caches the uiAction/action reference internally.
+        const hourRef = useRef(hour);
+        const minuteRef = useRef(minute);
+        hourRef.current = hour;
+        minuteRef.current = minute;
+
+        return (
+          <Box border="1px dotted #aaa" width="fit-content">
+            <InputGroup flex spacing="xxs" width="fit-content">
+              <Label flex="y" textAlign="right">
+                <Input
+                  type="navi_hour"
+                  name="hour"
+                  unit={false}
+                  variant="underline"
+                  size="l"
+                  expandX
+                  value={hour}
+                  required
+                  uiAction={(v) => {
+                    uiAction?.({ hour: v, minute: minuteRef.current });
+                  }}
+                  action={
+                    action
+                      ? (v, context) => {
+                          action(
+                            { hour: v, minute: minuteRef.current },
+                            context,
+                          );
+                        }
+                      : undefined
+                  }
+                >
+                  <Input.UI.UnitSlot>:</Input.UI.UnitSlot>
+                </Input>
+                {unitHour}
+              </Label>
+              <Label flex="y">
+                <Input
+                  type="navi_minute"
+                  name="minute"
+                  size="l"
+                  unit={false}
+                  variant="underline"
+                  expandX
+                  value={minute}
+                  required
+                  uiAction={(v) => {
+                    uiAction?.({ hour: hourRef.current, minute: v });
+                  }}
+                  action={
+                    action
+                      ? (v, context) => {
+                          action({ hour: hourRef.current, minute: v }, context);
+                        }
+                      : undefined
+                  }
+                />
+                {unitMinute}
+              </Label>
+            </InputGroup>
+          </Box>
+        );
+      };
 
       // ── BasicDemo ─────────────────────────────────────────────────────────
       const BasicDemo = () => {
