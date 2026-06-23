@@ -289,6 +289,13 @@ export const useUIStateController = (
         if (e.type === "state_prop_change") {
           return false;
         }
+        // "change" fires after "input" for native inputs (date, color, etc.).
+        // The "input" event already updated the state and fired uiAction.
+        // When state is unchanged here it means "input" already ran — skip to
+        // avoid a duplicate uiAction on the same user gesture.
+        if (e.type === "change") {
+          return false;
+        }
         uiStateController.onUIAction(e);
         return false;
       }
