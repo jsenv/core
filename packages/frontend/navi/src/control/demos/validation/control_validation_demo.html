@@ -195,7 +195,60 @@
         );
       };
 
-      // ─── Section 3: Input readonly ─────────────────────────────────────────────────────────
+      // ─── Section 3: Input with action + actionAfterChange ─────────────────────
+      // action is on the input, but actionAfterChange delays the action until
+      // blur or Enter. Validation is only reported when the action attempts to fire.
+      const ActionAfterChangeDemo = () => {
+        const inputRef = useRef();
+        const [committed, setCommitted] = useState(null);
+
+        return (
+          <div className="demo-section">
+            <h2>Input with action + actionAfterChange</h2>
+            <p>
+              The <code>action</code> is on the input but{" "}
+              <code>actionAfterChange</code> delays it until blur or Enter.
+              Validation is only reported when the action actually attempts to
+              fire — not on every keystroke.
+            </p>
+            <Box flex="y" spacing="s">
+              <Field vertical>
+                <Label>Username (min 4 chars, required)</Label>
+                <Input
+                  ref={inputRef}
+                  name="username"
+                  required
+                  minLength="4"
+                  placeholder="type something…"
+                  autoComplete="off"
+                  actionAfterChange
+                  action={(username) => {
+                    setCommitted(username);
+                  }}
+                />
+              </Field>
+              <Box
+                flex="y"
+                spacing="xs"
+                style={{ fontSize: "0.85rem", color: "#555" }}
+              >
+                <span>
+                  💾 action received:{" "}
+                  <strong>
+                    {committed === null ? "—" : JSON.stringify(committed)}
+                  </strong>
+                </span>
+              </Box>
+              <ControlValidityDebug
+                inputRef={inputRef}
+                committedValue={committed}
+              />
+            </Box>
+          </div>
+        );
+      };
+
+      // ─── Section 4: Input readonly ─────────────────────────────────────────────────────────
       // readonly blocks editing but validity is still evaluated.
       const ReadonlyDemo = () => {
         const readonlyRef = useRef();
@@ -464,6 +517,11 @@
                 <a href="#in-place">Input with action</a>
               </li>
               <li>
+                <a href="#action-after-change">
+                  Input with action + actionAfterChange
+                </a>
+              </li>
+              <li>
                 <a href="#readonly">Input readonly</a>
               </li>
               <li>
@@ -488,6 +546,9 @@
           <div id="in-place">
             <InPlaceEditingDemo />
           </div>
+          <div id="action-after-change">
+            <ActionAfterChangeDemo />
+          </div>
           <div id="readonly">
             <ReadonlyDemo />
           </div>
@@ -504,7 +565,7 @@
       );
 
       render(
-        <NaviDebug debugUIState>
+        <NaviDebug debugAll>
           <App />
         </NaviDebug>,
         document.getElementById("root"),
