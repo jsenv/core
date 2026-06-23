@@ -81,8 +81,8 @@
         <Box flex="y" spacing="l">
           <TableOfContents />
           <StatesDemo />
-          <WithActionDemo />
           <InFormDemo />
+          <WithActionDemo />
           <CustomizationDemo />
         </Box>
       );
@@ -98,10 +98,10 @@
               Interactivity
               <ol style={{ paddingLeft: "20px" }}>
                 <li>
-                  <a href="#outside-form">Outside a form</a>
+                  <a href="#inside-form">Inside a form (+ required)</a>
                 </li>
                 <li>
-                  <a href="#inside-form">Inside a form (+ required)</a>
+                  <a href="#outside-form">Outside a form</a>
                 </li>
               </ol>
             </li>
@@ -220,7 +220,7 @@
 
         return (
           <div class="demo-section" id="outside-form">
-            <h2>2. Interactivity — outside a form</h2>
+            <h2>3. Interactivity — outside a form</h2>
             <p class="desc">
               L'action est asynchrone (simule un appel réseau de 800 ms). Le
               picker passe en état loading pendant ce temps.
@@ -256,6 +256,21 @@
                   }}
                 />
               </Field>
+              <Field vertical>
+                <Label>Action throws after 500ms</Label>
+                <Picker
+                  name="theme_color_throws"
+                  type="color"
+                  uiAction={(v) => {
+                    push("Picker uiAction", v);
+                  }}
+                  action={async (v) => {
+                    push("Picker action", v);
+                    await sleep(500);
+                    throw new Error("Action failed");
+                  }}
+                />
+              </Field>
             </Box>
             <CallLog entries={entries} onClear={clear} />
           </div>
@@ -269,7 +284,7 @@
 
         return (
           <div class="demo-section" id="inside-form">
-            <h2>3. Interactivity — inside a form</h2>
+            <h2>2. Interactivity — inside a form</h2>
             <p class="desc">
               Deux pickers obligatoires : l'un avec une valeur par défaut,
               l'autre sans. La soumission échoue si un champ est vide.
