@@ -214,6 +214,23 @@
       });
       setupRoutes([DEMO_ROUTE]);
 
+      const App = () => (
+        <NaviDebug
+          debugUIState
+          debugCommand
+          debugAction
+          debugInteraction
+          debugPopup
+        >
+          <Box flex="y" spacing="l">
+            <TableOfContents />
+            <InteractivitySection />
+            <SearchableSelectSection />
+            <PlacePickerSection />
+          </Box>
+        </NaviDebug>
+      );
+
       const TableOfContents = () => (
         <div class="demo-section">
           <h2>Table of contents</h2>
@@ -282,23 +299,6 @@
           <h2>3. Place picker</h2>
           <PlacePickerDemo />
         </div>
-      );
-
-      const App = () => (
-        <NaviDebug
-          debugUIState
-          debugCommand
-          debugAction
-          debugInteraction
-          debugPopup
-        >
-          <Box flex="y" spacing="l">
-            <TableOfContents />
-            <InteractivitySection />
-            <SearchableSelectSection />
-            <PlacePickerSection />
-          </Box>
-        </NaviDebug>
       );
 
       // ── 1. Interactivity ─────────────────────────────────────────────────────────
