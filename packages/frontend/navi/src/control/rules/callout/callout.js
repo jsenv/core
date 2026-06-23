@@ -400,6 +400,57 @@ export const openCallout = (
       callout.updatePosition();
     }
   };
+
+  const originalAnchorElement = anchorElement;
+  if (anchorElement) {
+    const proxyElement = findControlProxy(anchorElement);
+    if (proxyElement) {
+      anchorElement = proxyElement;
+    }
+    const controlRoot = findControlRoot(anchorElement);
+    if (controlRoot) {
+      anchorElement = controlRoot;
+    }
+    const anchorVisuallyVisibleInfo = getVisuallyVisibleInfo(anchorElement, {
+      countOffscreenAsVisible: true,
+    });
+    if (!anchorVisuallyVisibleInfo.visible) {
+      anchorElement = getFirstVisuallyVisibleAncestor(anchorElement);
+      if (!anchorElement) {
+        // anchorElement is not in the DOM anymore, fallback to body
+        anchorElement = document.body;
+      }
+      console.warn(
+        `anchor is not visually visible (${anchorVisuallyVisibleInfo.reason}) -> callout will anchor to first visually visible ancestor (${getElementSignature(anchorElement)})`,
+      );
+    }
+  }
+  // Resolve the visual anchor for positioning: when data-callout-anchor is set,
+  // use the inner element it points to. anchorElement remains the container
+  // that receives data-callout and CSS vars.
+  let visualAnchorElement = anchorElement;
+  if (anchorElement && anchorElement !== document.body) {
+    const calloutAnchorSelector = anchorElement.getAttribute(
+      "data-callout-anchor",
+    );
+    if (calloutAnchorSelector) {
+      const resolvedAnchor = anchorElement.querySelector(calloutAnchorSelector);
+      if (resolvedAnchor) {
+        visualAnchorElement = resolvedAnchor;
+      }
+    }
+  }
+  const calloutContainer = (() => {
+    if (!anchorElement || anchorElement === document.body) {
+      return document.body;
+    }
+    // Some elements (e.g. <input>) cannot have children
+    if (canContainCallout(anchorElement)) {
+      return anchorElement;
+    }
+    return anchorElement.parentNode || document.body;
+  })();
+
   close_on_click_outside: {
     const handleClickOutside = (event) => {
       if (event.button !== 0) {
@@ -485,7 +536,9 @@ export const openCallout = (
     }
   }
   close_on_escape_from_anchor: {
-    if (!anchorElement) break close_on_escape_from_anchor;
+    if (!anchorElement) {
+      break close_on_escape_from_anchor;
+    }
     calloutCloseButton.tabIndex = -1;
     calloutCloseButton.setAttribute("navi-focus-delegate", "");
     const onAnchorKeydown = (e) => {
@@ -528,55 +581,6 @@ export const openCallout = (
     }
   });
 
-  const originalAnchorElement = anchorElement;
-  if (anchorElement) {
-    const proxyElement = findControlProxy(anchorElement);
-    if (proxyElement) {
-      anchorElement = proxyElement;
-    }
-    const controlRoot = findControlRoot(anchorElement);
-    if (controlRoot) {
-      anchorElement = controlRoot;
-    }
-    const anchorVisuallyVisibleInfo = getVisuallyVisibleInfo(anchorElement, {
-      countOffscreenAsVisible: true,
-    });
-    if (!anchorVisuallyVisibleInfo.visible) {
-      anchorElement = getFirstVisuallyVisibleAncestor(anchorElement);
-      if (!anchorElement) {
-        // anchorElement is not in the DOM anymore, fallback to body
-        anchorElement = document.body;
-      }
-      console.warn(
-        `anchor is not visually visible (${anchorVisuallyVisibleInfo.reason}) -> callout will anchor to first visually visible ancestor (${getElementSignature(anchorElement)})`,
-      );
-    }
-  }
-  // Resolve the visual anchor for positioning: when data-callout-anchor is set,
-  // use the inner element it points to. anchorElement remains the container
-  // that receives data-callout and CSS vars.
-  let visualAnchorElement = anchorElement;
-  if (anchorElement && anchorElement !== document.body) {
-    const calloutAnchorSelector = anchorElement.getAttribute(
-      "data-callout-anchor",
-    );
-    if (calloutAnchorSelector) {
-      const resolvedAnchor = anchorElement.querySelector(calloutAnchorSelector);
-      if (resolvedAnchor) {
-        visualAnchorElement = resolvedAnchor;
-      }
-    }
-  }
-  const calloutContainer = (() => {
-    if (!anchorElement || anchorElement === document.body) {
-      return document.body;
-    }
-    // Some elements (e.g. <input>) cannot have children
-    if (canContainCallout(anchorElement)) {
-      return anchorElement;
-    }
-    return anchorElement.parentNode || document.body;
-  })();
   if (debug) {
     debug(
       openingEvent,
