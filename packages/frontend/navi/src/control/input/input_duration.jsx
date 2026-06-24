@@ -1,7 +1,4 @@
-import {
-  parseDurationComponents,
-  parseDurationToSeconds,
-} from "@jsenv/validity";
+import { durationToMinutes, parseDuration } from "@jsenv/validity";
 import { useRef } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
@@ -81,7 +78,7 @@ const InputDurationAsMinutes = (props) => {
         // cancels and calls setUIState(storedValue), the sub-inputs are
         // correctly reset to their original raw string values.
         distributeChildUIState: (groupState) => {
-          const components = parseDurationComponents(groupState);
+          const components = parseDuration(groupState);
           return components ?? { hour: undefined, minute: undefined };
         },
       },
@@ -89,7 +86,7 @@ const InputDurationAsMinutes = (props) => {
 
   const { value, min, step, required, readOnly, disabled, basePseudoState } =
     groupHostProps;
-  const components = parseDurationComponents(value);
+  const components = parseDuration(value);
   const hourValue = components?.hour;
   const minuteValue = components?.minute;
   const baseChildProps = {
@@ -135,27 +132,30 @@ const InputDurationAsMinutes = (props) => {
   );
 };
 const resolveDurationAsMinuteProps = (props) => {
-  props.min = parseDurationToMinutes(props.min);
-  props.max = parseDurationToMinutes(props.max);
-  props.step = parseDurationToMinutes(props.step);
+  props.min = toMinutes(props.min);
+  props.max = toMinutes(props.max);
+  props.step = toMinutes(props.step);
 
   return props;
 };
 // Parse a min/max duration value to total minutes.
 // Accepts: number (already minutes), or any string supported by parseDurationToSeconds
-// ("1h", "1h20min", "20min", "30s", "2hour", …).
-const parseDurationToMinutes = (value) => {
+// ("1hour", "1hour20minute", "20minute", "30second", "2hour", …).
+const toMinutes = (value) => {
   if (value === undefined || value === null) {
     return undefined;
   }
   if (typeof value === "number") {
     return value;
   }
-  const seconds = parseDurationToSeconds(String(value));
-  if (seconds === null) {
-    return undefined;
+  if (typeof value === "string") {
+    const seconds = durationToMinutes(value);
+    if (seconds === null) {
+      return value;
+    }
+    return seconds / 60;
   }
-  return seconds / 60;
+  return value;
 };
 const InputDurationHourAndMinute = ({
   hourValue,

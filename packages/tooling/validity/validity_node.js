@@ -1,4 +1,7 @@
 export {
+  durationToHours,
+  durationToMinutes,
+  durationToNumber,
   durationToSeconds,
   durationToString,
   parseDuration,

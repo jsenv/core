@@ -98,7 +98,7 @@ const findUnitIndex = (s, name) => {
 };
 // Units ordered from largest to smallest.
 // .name is the keyword used in duration strings (singular, no trailing "s").
-// .seconds is the conversion factor for durationToSeconds.
+// .seconds is the conversion factor to seconds (used by durationToNumber).
 const UNITS = [
   { key: "years", name: "year", seconds: 31536000 },
   { key: "months", name: "month", seconds: 2592000 },
@@ -148,25 +148,29 @@ export const durationToString = (duration) => {
 };
 
 /**
- * Returns the total duration as a number of seconds.
+ * Returns the total duration as a number in the given unit.
  *
  * Accepts either a duration string (parsed via {@link parseDuration}) or a
- * pre-parsed duration object. Returns `null` if the value cannot be parsed or
- * if any unit value is not a finite number.
+ * pre-parsed duration object. Returns `null` if the value cannot be parsed,
+ * if any unit value is not a finite number, or if `unit` is not recognised.
  *
  * @param {string|Object|null} value - A duration string or a duration object.
+ * @param {string} unit - Target unit name (e.g. `"second"`, `"minute"`, `"hour"`).
  * @returns {number|null}
  *
  * @example
- * durationToSeconds("2hour15minute")           // 8100
- * durationToSeconds({ hours: 2, minutes: 15 }) // 8100
- * durationToSeconds("-1second")                // -1
- * durationToSeconds("30")                      // null — no unit
- * durationToSeconds({ hours: "2a" })           // null — invalid number
- * durationToSeconds(null)                      // null
+ * durationToNumber("2hour15minute", "minute")           // 135
+ * durationToNumber({ hours: 2, minutes: 15 }, "minute") // 135
+ * durationToNumber("30", "second")                      // null — no unit
+ * durationToNumber({ hours: "2a" }, "second")           // null — invalid number
+ * durationToNumber(null, "second")                      // null
  */
-export const durationToSeconds = (value) => {
+export const durationToNumber = (value, unit) => {
   if (value === null || value === undefined) {
+    return null;
+  }
+  const targetUnit = UNITS.find((u) => u.name === unit);
+  if (!targetUnit) {
     return null;
   }
   let duration;
@@ -180,7 +184,7 @@ export const durationToSeconds = (value) => {
   } else {
     return null;
   }
-  let total = 0;
+  let totalSeconds = 0;
   for (const { key, seconds } of UNITS) {
     if (duration[key] === undefined || duration[key] === null) {
       continue;
@@ -189,10 +193,28 @@ export const durationToSeconds = (value) => {
     if (!isFinite(n)) {
       return null;
     }
-    total += n * seconds;
+    totalSeconds += n * seconds;
   }
-  return total;
+  return totalSeconds / targetUnit.seconds;
 };
+
+/**
+ * Returns the total duration as a number of seconds.
+ *
+ * @param {string|Object|null} value - A duration string or a duration object.
+ * @returns {number|null}
+ *
+ * @example
+ * durationToSeconds("2hour15minute")           // 8100
+ * durationToSeconds({ hours: 2, minutes: 15 }) // 8100
+ * durationToSeconds("-1second")                // -1
+ * durationToSeconds("30")                      // null — no unit
+ * durationToSeconds({ hours: "2a" })           // null — invalid number
+ * durationToSeconds(null)                      // null
+ */
+export const durationToSeconds = (value) => durationToNumber(value, "second");
+export const durationToMinutes = (value) => durationToNumber(value, "minute");
+export const durationToHours = (value) => durationToNumber(value, "hour");
 
 // Formats a number of milliseconds as a short duration string.
 //
