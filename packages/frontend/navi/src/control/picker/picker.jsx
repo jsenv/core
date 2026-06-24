@@ -274,6 +274,19 @@ const css = /* css */ `
       --x-picker-background-color: transparent;
       --x-picker-icon-color: currentColor;
     }
+    &[data-variant="headless"] {
+      --x-picker-padding-top: 0;
+      --x-picker-padding-right: 0;
+      --x-picker-padding-bottom: 0;
+      --x-picker-padding-left: 0;
+      --picker-border-width: 0;
+      --x-picker-border-color: transparent;
+      --x-picker-background-color: transparent;
+      --x-picker-icon-color: currentColor;
+
+      position: absolute;
+      inset: 0;
+    }
   }
 `;
 
@@ -313,7 +326,7 @@ const PickerButton = (props) => {
   if (typeof props.maxLines === "string") {
     props.maxLines = parseInt(props.maxLines);
   }
-  const { ref, variant, icon, placeholder, ui, maxLines = 1, headless } = props;
+  const { ref, variant, icon, placeholder, ui, maxLines = 1 } = props;
   const isSingleLine = maxLines === 1;
   const inputRef = useRef(null);
   const [pickerRemainingProps, inputProps, facadeChildrenProps] =
@@ -348,18 +361,19 @@ const PickerButton = (props) => {
       ui={undefined}
       maxLines={undefined}
       dayLabel={undefined}
-      headless={undefined}
       onKeyDown={(e) => {
         // This wrapper will receive keyboard event bubbling from the picker popup content
         // we re-dispatch on the input (to get escape to close for instance)
         inputProps.onKeyDown(e);
       }}
     >
-      <LoadingOutline
-        loading={loading}
-        color="var(--picker-loader-color)"
-        inset={-2}
-      />
+      {variant === "headless" ? null : (
+        <LoadingOutline
+          loading={loading}
+          color="var(--picker-loader-color)"
+          inset={-2}
+        />
+      )}
       <PickerInput
         {...inputProps}
         // eslint-disable-next-line react/no-children-prop
@@ -444,7 +458,7 @@ const PickerButton = (props) => {
           e.preventDefault();
         }}
       />
-      {variant === "icon" || headless ? null : (
+      {variant === "icon" || variant === "headless" ? null : (
         <Text
           className="navi_picker_value"
           navi-placeholder={
@@ -457,7 +471,7 @@ const PickerButton = (props) => {
           </PickerContext.Provider>
         </Text>
       )}
-      {headless ? null : (
+      {variant === "headless" ? null : (
         <span className="navi_picker_right_slot">
           <Icon size="m">{icon === undefined ? <ChevronDownSvg /> : icon}</Icon>
         </span>

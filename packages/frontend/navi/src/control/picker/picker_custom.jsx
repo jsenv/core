@@ -227,7 +227,10 @@ const PickerCustom = (props) => {
   const defaultModeRef = useRef(null);
   if (defaultModeRef.current === null) {
     const isSmallScreen = windowWidthSignal.peek() <= 600;
-    defaultModeRef.current = modeProp ?? (isSmallScreen ? "dialog" : "popover");
+    const maxWidthPx = parseFloat(props.maxWidth);
+    const isCompact = isFinite(maxWidthPx) && maxWidthPx < 150;
+    defaultModeRef.current =
+      modeProp ?? (isSmallScreen && !isCompact ? "dialog" : "popover");
   }
   const mode = defaultModeRef.current;
 
