@@ -1,4 +1,4 @@
-import { durationToSeconds, durationToString } from "./duration.js";
+import { durationToSeconds, durationToString, parseDuration } from "./duration.js";
 
 export const CANNOT_CONVERT = {};
 
@@ -417,6 +417,33 @@ export const TYPES = {
         return "";
       }
       return `must be a number`;
+    },
+  },
+  // "duration" holds a duration string in the form "<value><unit>..." (e.g. "2hour15minute").
+  // ISO 8601 strings ("PT2H15M") are accepted on input and normalised to the canonical form.
+  // The value stores the raw multi-part string, not a number, so that sub-unit precision is
+  // preserved across URL round-trips without losing e.g. the hours component.
+  "duration": {
+    jsType: "string",
+    localStorageRepresentation: "string",
+    representations: {
+      string: {
+        // Accept both canonical ("2hour15minute") and ISO 8601 ("PT2H15M") — normalise to canonical.
+        parse: (value) => {
+          if (typeof value !== "string") return CANNOT_CONVERT;
+          const parsed = parseDuration(value);
+          if (!parsed) return CANNOT_CONVERT;
+          return durationToString(parsed) ?? CANNOT_CONVERT;
+        },
+        format: (value) => value,
+      },
+    },
+    validate: (value) => {
+      if (typeof value !== "string") return "must be a string";
+      if (!parseDuration(value)) {
+        return `must be a valid duration string (e.g. "2hour15minute")`;
+      }
+      return "";
     },
   },
   // "week" matches the value format of <input type="week">: "YYYY-Www" (e.g. "2024-W03")
