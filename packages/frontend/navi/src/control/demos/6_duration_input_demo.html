@@ -148,7 +148,7 @@
 
       // ── BasicDemo ─────────────────────────────────────────────────────────
       const BasicDemo = () => {
-        const minutesSignal = useSignal(135); // 2h15
+        const minutesSignal = useSignal("2h15");
 
         return (
           <div class="demo-section" id="basic">
@@ -171,13 +171,13 @@
             <h2>States</h2>
             <div class="states-grid">
               <label>:read-only</label>
-              <InputDuration unit="minute" value={135} readOnly />
+              <InputDuration unit="minute" value="2h15" readOnly />
 
               <label>:disabled</label>
-              <InputDuration unit="minute" value={135} disabled />
+              <InputDuration unit="minute" value="2h15" disabled />
 
               <label>:-navi-loading</label>
-              <InputDuration unit="minute" value={135} loading />
+              <InputDuration unit="minute" value="2h15" loading />
             </div>
           </div>
         );
@@ -185,7 +185,7 @@
 
       // ── UnitCustomizationDemo ─────────────────────────────────────────────
       const UnitCustomizationDemo = () => {
-        const minutesSignal = useSignal(90); // 1h30
+        const minutesSignal = useSignal("1h30");
 
         return (
           <div class="demo-section">
@@ -217,7 +217,7 @@
 
       // ── OutsideFormDemo ───────────────────────────────────────────────────
       const OutsideFormDemo = () => {
-        const minutesSignal = useSignal(135); // 2h15
+        const minutesSignal = useSignal("2h15");
         const [entries, push, clear] = useCallLog();
 
         return (
@@ -243,7 +243,7 @@
 
       // ── InsideFormDemo ────────────────────────────────────────────────────
       const InsideFormDemo = () => {
-        const minutesSignal = useSignal(135); // 2h15
+        const minutesSignal = useSignal("2h15");
         const [entries, push, clear] = useCallLog();
 
         return (
@@ -280,7 +280,7 @@
 
       // ── InsideControlGroupDemo ────────────────────────────────────────────
       const InsideControlGroupDemo = () => {
-        const minutesSignal = useSignal(135); // 2h15
+        const minutesSignal = useSignal("2h15");
         const [entries, push, clear] = useCallLog();
 
         return (

@@ -1,4 +1,7 @@
-import { parseDurationToSeconds } from "@jsenv/validity";
+import {
+  parseDurationComponents,
+  parseDurationToSeconds,
+} from "@jsenv/validity";
 import { useRef } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
@@ -11,18 +14,18 @@ import { Label } from "../field.jsx";
 import { Input } from "./input.jsx";
 import { InputGroup } from "./input_group.jsx";
 
-// An input for a duration expressed as a total number of minutes (unit="minute").
-// Renders hour + minute sub-inputs for ergonomic entry; the hour field is omitted
-// when max < 60 (the range fits within a single minute field).
-// uiAction / action are called with the total number of minutes.
+// An input for a duration expressed as a "HhM" string (e.g. "2h15", "30min").
+// Both parts are raw strings so invalid mid-edit values ("2ah15") are preserved.
+// The component renders hour + minute sub-inputs for ergonomic entry; the hour
+// field is omitted when max < 60 (the range fits within a single minute field).
+// uiAction / action are called with the "HhM" string.
 //
-// Architecture:
-//   - A plain <input type="hidden"> acts as both the form-submission value holder
-//     and the controlgroup DOM host (receives navi-control-group props).
-//   - useControlgroupProps registers this component with the outer form as a
-//     single named entry; sub-inputs register with this group, not the outer form.
-//   - ControlgroupChildrenWrapper cascades required/disabled/readOnly/loading and
-//     provides the group controller as parent for sub-inputs.
+// Value format:
+//   "2h15"   — 2 hours 15 minutes (h is separator + hour unit)
+//   "2h"     — 2 hours
+//   "30min"  — 30 minutes (minute-only display when max < 60)
+//   "2ah15" — invalid mid-edit: hour part "2a", minute part "15"
+// A bare number ("30") is not valid; a unit is always required.
 export const InputDuration = (props) => {
   if (props.unit !== "minute") {
     return `InputDuration only supports unit="minute" for now`;
@@ -45,8 +48,7 @@ const InputDurationAsMinutes = (props) => {
         uiAction: (groupState, event) => {
           const hiddenInput = ref.current;
           if (hiddenInput) {
-            hiddenInput.value =
-              typeof groupState === "number" ? groupState : "";
+            hiddenInput.value = groupState ?? "";
           }
           uiAction?.(groupState, event);
         },
@@ -59,65 +61,62 @@ const InputDurationAsMinutes = (props) => {
       {
         controlType: "duration_group",
         cascadeValidationToChildren: true,
+        // Always aggregates to "HH:MM" string — even mid-edit invalid values
+        // like "2a" are preserved as-is. Using strings (not numbers) avoids
+        // NaN which would cause a Preact signals cycle (NaN !== NaN = true).
         aggregateChildStates: (childUIStateControllers) => {
-          let hour;
-          let minute;
+          let h = "";
+          let m = "";
           for (const child of childUIStateControllers) {
             if (child.name === "hour") {
-              hour = child.uiState;
+              h = child.uiState ?? "";
             }
             if (child.name === "minute") {
-              minute = child.uiState;
+              m = child.uiState ?? "";
             }
           }
-          // If either child has a non-numeric value (e.g. mid-edit "2a"),
-          // pass it through as-is so uiAction receives the raw invalid value.
-          // This avoids NaN which would cause a Preact signals cycle
-          // (NaN !== NaN is always true, making the signal never settle).
-          const h = toFiniteMinutes(hour);
-          if (h === null) {
-            return hour;
-          }
-          const m = toFiniteMinutes(minute);
-          if (m === null) {
-            return minute;
-          }
-          return h * 60 + m;
+          return `${showHour ? h : "0"}:${m}`;
         },
-        // Reverse mapping: totalMinutes → { hour, minute } so that when the
-        // picker cancels and calls setUIState(storedValue), the sub-inputs are
-        // correctly reset to the original hour/minute values.
+        // Reverse mapping: "HH:MM" → { hour, minute } so that when the picker
+        // cancels and calls setUIState(storedValue), the sub-inputs are
+        // correctly reset to their original raw string values.
         distributeChildUIState: (groupState) => {
-          const minutes =
-            typeof groupState === "number" && Number.isFinite(groupState)
-              ? groupState
-              : 0;
-          return {
-            hour: Math.floor(minutes / 60),
-            minute: minutes % 60,
-          };
+          const components = parseDurationComponents(groupState);
+          return components ?? { hour: undefined, minute: undefined };
         },
       },
     );
 
   const { value, min, step, required, readOnly, disabled, basePseudoState } =
     groupHostProps;
-  const childProps = {
-    value,
+  const components = parseDurationComponents(value);
+  const hourValue = components?.hour;
+  const minuteValue = components?.minute;
+  const baseChildProps = {
     min,
-    max,
     step,
     required,
-    unitHour,
-    basePseudoState,
     readOnly,
     disabled,
+    basePseudoState,
   };
 
   const children = showHour ? (
-    <InputDurationHourAndMinute {...childProps} />
+    <InputDurationHourAndMinute
+      hourValue={hourValue}
+      minuteValue={minuteValue}
+      min={min}
+      max={max}
+      unitHour={unitHour}
+      {...baseChildProps}
+    />
   ) : (
-    <InputDurationMinute {...childProps} />
+    <InputDurationMinute
+      value={minuteValue}
+      min={0}
+      max={max}
+      {...baseChildProps}
+    />
   );
 
   return (
@@ -158,24 +157,28 @@ const parseDurationToMinutes = (value) => {
   }
   return seconds / 60;
 };
-const InputDurationHourAndMinute = ({ value, min, max, unitHour, ...rest }) => {
-  const hour =
-    value !== undefined && value !== null ? Math.floor(value / 60) : undefined;
-  const minute = value !== undefined && value !== null ? value % 60 : undefined;
+const InputDurationHourAndMinute = ({
+  hourValue,
+  minuteValue,
+  min,
+  max,
+  unitHour,
+  ...rest
+}) => {
   const minHour = min !== undefined ? Math.floor(min / 60) : undefined;
   const maxHour = max !== undefined ? Math.floor(max / 60) : undefined;
 
   return (
     <InputGroup flex spacing="xxs" width="fit-content">
       <InputDurationHour
-        value={hour}
+        value={hourValue}
         min={minHour}
         max={maxHour}
         unit={unitHour}
         separator=":"
         {...rest}
       />
-      <InputDurationMinute value={minute} min={0} max={59} {...rest} />
+      <InputDurationMinute value={minuteValue} min={0} max={59} {...rest} />
     </InputGroup>
   );
 };
@@ -229,14 +232,4 @@ const InputDurationHour = (props) => {
       {unit}
     </Label>
   );
-};
-
-// Returns the value as a finite integer, or null if it cannot be parsed.
-// Used by aggregateChildStates to detect invalid child values.
-const toFiniteMinutes = (v) => {
-  if (v === null || v === undefined) {
-    return 0;
-  }
-  const n = typeof v === "number" ? v : parseInt(v, 10);
-  return Number.isFinite(n) ? n : null;
 };

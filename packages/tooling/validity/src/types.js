@@ -8,16 +8,27 @@ export const CANNOT_CONVERT = {};
 
 // Parses a duration string into a total number of seconds.
 // Supported notations:
+//   shorthand     "2h15" → 2h + 15min (number after h, no unit needed)
 //   single unit   "5s" / "5second", "10min" / "10minute"
 //                 "2h" / "2hour", "3d" / "3day"
 //                 "2w" / "2week", "1month", "1year"
 //   compound      "1h20min" → 1h + 20min, "1h20min30s" → 1h + 20min + 30s
+// A bare number without a unit (e.g. "30") returns null.
 // Returns null when the value cannot be parsed.
 export const parseDurationToSeconds = (value) => {
   if (typeof value !== "string") {
     return null;
   }
   const str = value.trim();
+
+  // Shorthand: "2h15" or "2h" — number after 'h' (no 'min' suffix) counts as minutes.
+  // This is matched before the compound regex to avoid "2h15" being rejected.
+  const shorthandMatch = /^(\d+(?:\.\d+)?)h(\d+(?:\.\d+)?)?$/.exec(str);
+  if (shorthandMatch) {
+    const h = parseFloat(shorthandMatch[1]);
+    const min = shorthandMatch[2] ? parseFloat(shorthandMatch[2]) : 0;
+    return h * 3600 + min * 60;
+  }
 
   // Compound: 1h20min, 1h20min30s, 2h30min, 20min30s, etc.
   const compoundMatch =
@@ -64,6 +75,60 @@ export const parseDurationToSeconds = (value) => {
     }
   }
 
+  return null;
+};
+
+// Parses the STRUCTURE of a duration string into its raw component parts,
+// preserving invalid mid-edit values (e.g. "2ah15" → { hour: "2a", minute: "15" }).
+//
+// Format rules (same as parseDurationToSeconds):
+//   "2h15"    → { hour: "2",  minute: "15" }
+//   "2h15min" → { hour: "2",  minute: "15" }
+//   "2h"      → { hour: "2",  minute: undefined }
+//   "h15"     → { hour: "",   minute: "15" }  (empty hour = not entered)
+//   "15min"   → { hour: undefined, minute: "15" }
+//   "2ah15"   → { hour: "2a", minute: "15" }  (invalid hour preserved)
+//   "2h1a5"   → { hour: "2",  minute: "1a5" } (invalid minute preserved)
+//   ""        → { hour: undefined, minute: undefined }
+//
+// Returns null when the string has no recognisable unit/separator ("30" alone).
+export const parseDurationComponents = (value) => {
+  if (value == null || value === "") {
+    return { hour: undefined, minute: undefined };
+  }
+  const s = String(value).trim();
+  if (s === "") {
+    return { hour: undefined, minute: undefined };
+  }
+
+  // "h" acts as both the hour unit and the hours/minutes separator.
+  const hIndex = s.indexOf("h");
+  if (hIndex !== -1) {
+    const hourPart = s.slice(0, hIndex); // raw hours string, may be invalid
+    let minutePart = s.slice(hIndex + 1); // raw minutes string, may be invalid
+    // Strip trailing "min" if present (normalise "2h15min" → minute="15")
+    if (minutePart.endsWith("min")) {
+      minutePart = minutePart.slice(0, -3);
+    }
+    return {
+      hour: hourPart === "" ? undefined : hourPart,
+      minute: minutePart === "" ? undefined : minutePart,
+    };
+  }
+
+  // No "h": look for "min" or "s" suffix.
+  if (s.endsWith("min")) {
+    const minutePart = s.slice(0, -3);
+    return {
+      hour: undefined,
+      minute: minutePart === "" ? undefined : minutePart,
+    };
+  }
+  if (s.endsWith("s")) {
+    return { hour: undefined, minute: undefined }; // seconds not used by InputDuration
+  }
+
+  // No unit/separator — ambiguous (e.g. "30"). Return null to signal invalid format.
   return null;
 };
 const resolveToHours = (value) => {
