@@ -378,6 +378,10 @@ const PickerButton = (props) => {
             return;
           }
           e.preventDefault();
+          // Put the ui state in the clipboard, not what user sees
+          // because here we want to favor copy/paste of the underlying value
+          // the formatted value is not always a valide value for now
+          // A date picker could display "Vendredi 21 Septembre" which is not a valid date string, but the ui state is "2023-09-21" which is valid.
           e.clipboardData.setData("text/plain", String(uiState));
           e.clipboardData.setData(
             "application/x-navi",
