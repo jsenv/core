@@ -370,56 +370,69 @@ const PickerButton = (props) => {
           inputProps.onFocus(e);
         }
       }}
+      // They don't really work for now:
+      // - 1 copy occurs on navi text when it's selected but button itself cannot be copied
+      // - 2 browser don't allow to paste either on right click
+      // I'm not sure we have a solution here because if we used an input the keyboard would open
+      // on mobile
       onCopy={(e) => {
-        // Only handle copy on the picker button itself, not from children (e.g. inputs inside the popup).
-        if (e.target !== ref.current) {
+        const pickerEl = ref.current;
+        if (isWithinPickerContent(e.target, pickerEl)) {
+          // Don't intercept inside the picker popup content.
           return;
         }
-        const inputEl = inputRef.current;
-        const uiState = inputEl.__uiStateController__.uiState;
+        const uiState = uiStateController.uiState;
         if (uiState === undefined) {
           return;
         }
-        const text =
-          typeof uiState === "string" ? uiState : JSON.stringify(uiState);
-        e.clipboardData.setData("text/plain", text);
-        e.preventDefault();
+        e.clipboardData.setData("application/x-navi", JSON.stringify(uiState));
+        // No preventDefault — let the browser run its default copy too.
       }}
       onCut={(e) => {
-        if (e.target !== ref.current) {
+        const pickerEl = ref.current;
+        if (isWithinPickerContent(e.target, pickerEl)) {
+          // Don't intercept inside the picker popup content.
           return;
         }
-        const pickerEl = ref.current;
-        const inputEl = inputRef.current;
-        const uiState = inputEl.__uiStateController__.uiState;
+        const uiState = uiStateController.uiState;
         if (uiState === undefined) {
           return;
         }
-        const text =
-          typeof uiState === "string" ? uiState : JSON.stringify(uiState);
-        e.clipboardData.setData("text/plain", text);
-        e.preventDefault();
+        e.clipboardData.setData("application/x-navi", JSON.stringify(uiState));
+        // No preventDefault — let the browser run its default cut too.
         dispatchRequestInteraction(pickerEl, {
           event: e,
           name: "cut",
           allowed: () => {
-            dispatchRequestClearUIState(inputEl, e);
+            dispatchRequestClearUIState(inputRef.current, e);
           },
         });
       }}
       onPaste={(e) => {
-        if (e.target !== ref.current) {
+        const pickerEl = ref.current;
+        if (isWithinPickerContent(e.target, pickerEl)) {
+          // Don't intercept inside the picker popup content.
           return;
         }
-        const pickerEl = ref.current;
-        const inputEl = inputRef.current;
-        const text = e.clipboardData.getData("text/plain");
+        const naviData = e.clipboardData.getData("application/x-navi");
+        let pasteValue;
+        if (naviData) {
+          try {
+            pasteValue = JSON.parse(naviData);
+          } catch {
+            pasteValue = naviData;
+          }
+        } else {
+          pasteValue = e.clipboardData.getData("text/plain");
+        }
         e.preventDefault();
         dispatchRequestInteraction(pickerEl, {
           event: e,
           name: "paste",
           allowed: () => {
-            dispatchRequestSetUIState(inputEl, text, { event: e });
+            dispatchRequestSetUIState(inputRef.current, pasteValue, {
+              event: e,
+            });
           },
         });
       }}
@@ -461,6 +474,9 @@ const PickerButton = (props) => {
       </ControlFacadeChildrenWrapper>
     </Box>
   );
+};
+const isWithinPickerContent = (el, pickerEl) => {
+  return pickerEl.querySelector(".navi_picker_content")?.contains(el);
 };
 
 const PickerInput = (props) => {
