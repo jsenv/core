@@ -56,6 +56,32 @@
         </Box>
       );
 
+      const TOC = () => (
+        <nav
+          style={{
+            marginBottom: "32px",
+            padding: "16px 20px",
+            background: "white",
+            borderRadius: "8px",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+          }}
+        >
+          <Title as="h2" style={{ margin: "0 0 8px", fontSize: "1rem" }}>
+            Contents
+          </Title>
+          <ol style={{ margin: 0, paddingLeft: "20px", lineHeight: "1.8" }}>
+            <li><a href="#relative">type="relative" (default)</a></li>
+            <li><a href="#duration">type="duration"</a></li>
+            <li><a href="#date">type="date"</a></li>
+            <li><a href="#month">type="month"</a></li>
+            <li><a href="#time">type="time"</a></li>
+            <li><a href="#datetime">type="datetime"</a></li>
+            <li><a href="#minute">type="minute"</a></li>
+            <li><a href="#hour">type="hour"</a></li>
+          </ol>
+        </nav>
+      );
+
       const NOW = new Date();
       const TODAY = new Date(
         NOW.getFullYear(),
@@ -111,9 +137,104 @@
               ))}
             </Box>
 
+            <TOC />
+
+            <Section
+              id="relative"
+              title='1. type="relative" (default)'
+              desc="Affiche une date/heure en format relatif (dans X min, il y a X heures…). eventDuration permet de définir une fenêtre «En cours»."
+            >
+              <Row label="1 hour ago">
+                <Time locale={lang}>
+                  {new Date(NOW.getTime() - 60 * 60 * 1000)}
+                </Time>
+              </Row>
+              <Row label="30 min ago">
+                <Time locale={lang}>
+                  {new Date(NOW.getTime() - 30 * 60 * 1000)}
+                </Time>
+              </Row>
+              <Row label="in 2 hours">
+                <Time locale={lang}>
+                  {new Date(NOW.getTime() + 2 * 60 * 60 * 1000)}
+                </Time>
+              </Row>
+              <Row label="in 15 min">
+                <Time locale={lang}>
+                  {new Date(NOW.getTime() + 15 * 60 * 1000)}
+                </Time>
+              </Row>
+              <Row label="yesterday (14:30)">
+                <Time locale={lang}>{YESTERDAY}</Time>
+              </Row>
+              <Row label="last week">
+                <Time locale={lang}>{LAST_WEEK}</Time>
+              </Row>
+              <Row label="bare (no «il y a»)">
+                <Time bare locale={lang}>
+                  {new Date(NOW.getTime() - 45 * 60 * 1000)}
+                </Time>
+              </Row>
+              <Row label="eventDuration=1h (En cours if within window)">
+                <Time eventDuration={60 * 60 * 1000} locale={lang}>
+                  {new Date(NOW.getTime() - 20 * 60 * 1000)}
+                </Time>
+              </Row>
+              <Row label="undefined → –">
+                <Time locale={lang}>{undefined}</Time>
+              </Row>
+            </Section>
+
+            <Section
+              id="duration"
+              title='2. type="duration"'
+              desc="Affiche une durée lisible. Accepte un nombre de secondes, une chaîne durée («2hour15minute»), une chaîne ISO 8601 («PT2H15M»), ou un objet durée. Prop long pour la forme longue."
+            >
+              <Row label='"2hour15minute" (short)'>
+                <Time type="duration" locale={lang}>
+                  {"2hour15minute"}
+                </Time>
+              </Row>
+              <Row label='"2hour15minute" (long)'>
+                <Time type="duration" long locale={lang}>
+                  {"2hour15minute"}
+                </Time>
+              </Row>
+              <Row label='"PT2H15M" (ISO 8601)'>
+                <Time type="duration" locale={lang}>
+                  {"PT2H15M"}
+                </Time>
+              </Row>
+              <Row label="{ hours: 2, minutes: 15 } (object)">
+                <Time type="duration" locale={lang}>
+                  {{ hours: 2, minutes: 15 }}
+                </Time>
+              </Row>
+              <Row label="5400 (number = 90 minutes in seconds)">
+                <Time type="duration" locale={lang}>
+                  {5400}
+                </Time>
+              </Row>
+              <Row label="300 (number = 5 minutes in seconds)">
+                <Time type="duration" locale={lang}>
+                  {300}
+                </Time>
+              </Row>
+              <Row label="invalid string → rendered as-is">
+                <Time type="duration" locale={lang}>
+                  {"badvalue"}
+                </Time>
+              </Row>
+              <Row label="undefined → --">
+                <Time type="duration" locale={lang}>
+                  {undefined}
+                </Time>
+              </Row>
+            </Section>
+
             <Section
               id="date"
-              title='1. type="date"'
+              title='3. type="date"'
               desc="Affiche une date. Accepte un objet Date, un timestamp ms, ou une chaîne YYYY-MM-DD. Supporte les props long, numeric, dayLabel."
             >
               <Row label="Date (short)">
@@ -160,7 +281,7 @@
 
             <Section
               id="month"
-              title='2. type="month"'
+              title='4. type="month"'
               desc='Affiche un mois. Accepte une chaîne "YYYY-MM", un Date, ou un timestamp.'
             >
               <Row label="Month (string YYYY-MM)">
@@ -182,7 +303,7 @@
 
             <Section
               id="time"
-              title='3. type="time"'
+              title='5. type="time"'
               desc='Affiche une heure. Accepte "HH:MM", "HH:MM:SS", un Date ou un timestamp. Sans valeur affiche "--:--".'
             >
               <Row label='Time (string "14:30")'>
@@ -219,7 +340,7 @@
 
             <Section
               id="datetime"
-              title='4. type="datetime"'
+              title='6. type="datetime"'
               desc="Affiche une date et une heure. Accepte un Date, un timestamp, ou une chaîne ISO."
             >
               <Row label="Datetime (Date)">
@@ -241,7 +362,7 @@
 
             <Section
               id="minute"
-              title='5. type="minute"'
+              title='7. type="minute"'
               desc="Affiche une durée en minutes. Accepte un nombre ou une chaîne numérique. Prop long pour la forme longue, timeString pour l'affichage HH:MM."
             >
               <Row label="90 minutes (short)">
@@ -278,7 +399,7 @@
 
             <Section
               id="hour"
-              title='6. type="hour"'
+              title='8. type="hour"'
               desc="Affiche une durée en heures. Accepte un nombre ou une chaîne numérique. Prop long pour la forme longue."
             >
               <Row label="2 hours (short)">
@@ -305,52 +426,6 @@
                 <Time type="hour" locale={lang}>
                   {undefined}
                 </Time>
-              </Row>
-            </Section>
-
-            <Section
-              id="relative"
-              title='7. type="relative" (default)'
-              desc="Affiche une date/heure en format relatif (dans X min, il y a X heures…). eventDuration permet de définir une fenêtre «En cours»."
-            >
-              <Row label="1 hour ago">
-                <Time locale={lang}>
-                  {new Date(NOW.getTime() - 60 * 60 * 1000)}
-                </Time>
-              </Row>
-              <Row label="30 min ago">
-                <Time locale={lang}>
-                  {new Date(NOW.getTime() - 30 * 60 * 1000)}
-                </Time>
-              </Row>
-              <Row label="in 2 hours">
-                <Time locale={lang}>
-                  {new Date(NOW.getTime() + 2 * 60 * 60 * 1000)}
-                </Time>
-              </Row>
-              <Row label="in 15 min">
-                <Time locale={lang}>
-                  {new Date(NOW.getTime() + 15 * 60 * 1000)}
-                </Time>
-              </Row>
-              <Row label="yesterday (14:30)">
-                <Time locale={lang}>{YESTERDAY}</Time>
-              </Row>
-              <Row label="last week">
-                <Time locale={lang}>{LAST_WEEK}</Time>
-              </Row>
-              <Row label="bare (no «il y a»)">
-                <Time bare locale={lang}>
-                  {new Date(NOW.getTime() - 45 * 60 * 1000)}
-                </Time>
-              </Row>
-              <Row label="eventDuration=1h (En cours if within window)">
-                <Time eventDuration={60 * 60 * 1000} locale={lang}>
-                  {new Date(NOW.getTime() - 20 * 60 * 1000)}
-                </Time>
-              </Row>
-              <Row label="undefined → –">
-                <Time locale={lang}>{undefined}</Time>
               </Row>
             </Section>
           </div>
