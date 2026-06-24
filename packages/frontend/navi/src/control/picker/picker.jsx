@@ -1,5 +1,6 @@
 import { useContext, useRef } from "preact/hooks";
 
+import { performTabNavigation } from "@jsenv/dom/src/interaction/focus/tab_navigation.js";
 import { Box } from "@jsenv/navi/src/box/box.jsx";
 import { ChevronDownSvg } from "@jsenv/navi/src/graphic/icons/chevron_updown_svg.jsx";
 import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.jsx";
@@ -395,7 +396,7 @@ const PickerButton = (props) => {
           if (uiState === undefined) {
             return;
           }
-          e.preventDefault();
+          // the copy part don't need control to be interactable
           const displayText =
             pickerEl.querySelector(".navi_picker_value")?.textContent ??
             String(uiState);
@@ -404,6 +405,7 @@ const PickerButton = (props) => {
             "application/x-navi",
             JSON.stringify(uiState),
           );
+          // the clear ui state part need control to be interactable
           dispatchRequestInteraction(pickerEl, {
             event: e,
             name: "cut",
@@ -411,6 +413,7 @@ const PickerButton = (props) => {
               dispatchRequestClearUIState(inputRef.current, e);
             },
           });
+          e.preventDefault();
         }}
         onPaste={(e) => {
           const pickerEl = ref.current;
@@ -429,7 +432,6 @@ const PickerButton = (props) => {
           } else {
             pasteValue = e.clipboardData.getData("text/plain");
           }
-          e.preventDefault();
           dispatchRequestInteraction(pickerEl, {
             event: e,
             name: "paste",
@@ -439,6 +441,7 @@ const PickerButton = (props) => {
               });
             },
           });
+          e.preventDefault();
         }}
       />
       {variant === "icon" || headless ? null : (
@@ -481,9 +484,11 @@ const PickerInput = (props) => {
       pseudoClasses={PickerInputPseudoClasses}
       onKeyDown={(e) => {
         props.onKeyDown(e);
-        if (e && e.key === "Enter") {
+        if (e.key === "Enter") {
           // prevent form submission now that input can have focus
           e.preventDefault();
+        } else if (e.key === "Tab") {
+          performTabNavigation(e);
         }
       }}
     />
