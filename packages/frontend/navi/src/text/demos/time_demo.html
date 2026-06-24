@@ -240,42 +240,54 @@
               <Title as="h3" style={{ margin: "24px 0 12px", fontSize: "0.9rem", color: "#555" }}>
                 Valeurs invalides
               </Title>
-              <Grid cols={[""]}>
+              <Grid cols={["", "long"]}>
                 <GRow label='"ahour3minute"'>
                   <Time type="duration" locale={lang}>{"ahour3minute"}</Time>
+                  <Time type="duration" long locale={lang}>{"ahour3minute"}</Time>
                 </GRow>
                 <GRow label='"2ahour15minute"'>
                   <Time type="duration" locale={lang}>{"2ahour15minute"}</Time>
+                  <Time type="duration" long locale={lang}>{"2ahour15minute"}</Time>
                 </GRow>
                 <GRow label='"hour3minute"'>
                   <Time type="duration" locale={lang}>{"hour3minute"}</Time>
+                  <Time type="duration" long locale={lang}>{"hour3minute"}</Time>
                 </GRow>
                 <GRow label='"2hour3minuteXXX"'>
                   <Time type="duration" locale={lang}>{"2hour3minuteXXX"}</Time>
+                  <Time type="duration" long locale={lang}>{"2hour3minuteXXX"}</Time>
                 </GRow>
                 <GRow label='""'>
                   <Time type="duration" locale={lang}>{""}</Time>
+                  <Time type="duration" long locale={lang}>{""}</Time>
                 </GRow>
                 <GRow label='"2"'>
                   <Time type="duration" locale={lang}>{"2"}</Time>
+                  <Time type="duration" long locale={lang}>{"2"}</Time>
                 </GRow>
                 <GRow label='"-1hour"'>
                   <Time type="duration" locale={lang}>{"-1hour"}</Time>
+                  <Time type="duration" long locale={lang}>{"-1hour"}</Time>
                 </GRow>
                 <GRow label='{ hours: "abc" }'>
                   <Time type="duration" locale={lang}>{{ hours: "abc" }}</Time>
+                  <Time type="duration" long locale={lang}>{{ hours: "abc" }}</Time>
                 </GRow>
                 <GRow label="{ hours: NaN }">
                   <Time type="duration" locale={lang}>{{ hours: NaN }}</Time>
+                  <Time type="duration" long locale={lang}>{{ hours: NaN }}</Time>
                 </GRow>
                 <GRow label="{ hours: Infinity }">
                   <Time type="duration" locale={lang}>{{ hours: Infinity }}</Time>
+                  <Time type="duration" long locale={lang}>{{ hours: Infinity }}</Time>
                 </GRow>
                 <GRow label="null">
                   <Time type="duration" locale={lang}>{null}</Time>
+                  <Time type="duration" long locale={lang}>{null}</Time>
                 </GRow>
                 <GRow label="0">
                   <Time type="duration" locale={lang}>{0}</Time>
+                  <Time type="duration" long locale={lang}>{0}</Time>
                 </GRow>
               </Grid>
             </Section>

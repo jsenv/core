@@ -252,7 +252,15 @@ export const formatHourDuration = (hours, locale, { long = false } = {}) => {
 export const formatDuration = (duration, locale, { long = false } = {}) => {
   const has = (key) => duration[key] !== undefined && duration[key] !== null;
 
-  // Use Intl.DurationFormat for long mode when all present values are finite numbers
+  // Long mode delegates to Intl.DurationFormat (when available and all values are numeric)
+  // because it produces correct locale-aware text like "1 heure 30 minutes".
+  //
+  // Compact mode always uses our own naviI18n symbols ("2h15", "45min") instead of
+  // Intl.DurationFormat for two reasons:
+  // 1. We omit the minute symbol when hours are also present ("2h15" not "2h 15 min"),
+  //    which Intl.DurationFormat style:"narrow" does not do.
+  // 2. Non-numeric mid-edit values (e.g. { hours: "2a" }) must render as-is with their
+  //    unit symbol — Intl.DurationFormat only accepts integers.
   if (long && typeof Intl.DurationFormat !== "undefined") {
     const intlDuration = {};
     let allNumeric = true;
@@ -266,7 +274,9 @@ export const formatDuration = (duration, locale, { long = false } = {}) => {
       "seconds",
       "milliseconds",
     ]) {
-      if (!has(key)) continue;
+      if (!has(key)) {
+        continue;
+      }
       const n = Number(duration[key]);
       if (!isFinite(n)) {
         allNumeric = false;
@@ -286,10 +296,18 @@ export const formatDuration = (duration, locale, { long = false } = {}) => {
     naviI18n(`time.duration.${key}_symbol`, undefined, { lang: locale });
   const parts = [];
 
-  if (has("years")) parts.push(`${duration.years}${sym("year")}`);
-  if (has("months")) parts.push(`${duration.months}${sym("month")}`);
-  if (has("weeks")) parts.push(`${duration.weeks}${sym("week")}`);
-  if (has("days")) parts.push(`${duration.days}${sym("day")}`);
+  if (has("years")) {
+    parts.push(`${duration.years}${sym("year")}`);
+  }
+  if (has("months")) {
+    parts.push(`${duration.months}${sym("month")}`);
+  }
+  if (has("weeks")) {
+    parts.push(`${duration.weeks}${sym("week")}`);
+  }
+  if (has("days")) {
+    parts.push(`${duration.days}${sym("day")}`);
+  }
 
   // Hours + minutes: when both present, pad minutes to 2 digits after the h symbol
   const hSym = sym("hour");
@@ -304,8 +322,12 @@ export const formatDuration = (duration, locale, { long = false } = {}) => {
     parts.push(`${duration.minutes}${mSym}`);
   }
 
-  if (has("seconds")) parts.push(`${duration.seconds}${sym("second")}`);
-  if (has("milliseconds")) parts.push(`${duration.milliseconds}${sym("millisecond")}`);
+  if (has("seconds")) {
+    parts.push(`${duration.seconds}${sym("second")}`);
+  }
+  if (has("milliseconds")) {
+    parts.push(`${duration.milliseconds}${sym("millisecond")}`);
+  }
   return parts.join("") || "0";
 };
 

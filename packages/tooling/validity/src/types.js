@@ -445,6 +445,8 @@ export const TYPES = {
         format: (value) => value,
       },
     },
+    // Converts the canonical string value to seconds for min/max/step comparison.
+    toComparable: (value) => durationToSeconds(value),
     validate: (value) => {
       if (typeof value !== "string") return "must be a string";
       if (!parseDuration(value)) {

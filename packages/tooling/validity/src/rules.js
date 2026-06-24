@@ -44,6 +44,17 @@ export const MIN_RULE = {
         autoFix: () => fromMs(minMs, value, type),
       };
     }
+    const typeDef = type ? TYPES[type] : null;
+    if (typeDef?.toComparable) {
+      const comparable = typeDef.toComparable(value);
+      if (comparable === null || comparable === undefined) {
+        return null;
+      }
+      if (comparable >= min) {
+        return null;
+      }
+      return { message: `must be >= ${min}` };
+    }
     if (typeof value !== "number") {
       return null;
     }
@@ -82,6 +93,17 @@ export const MAX_RULE = {
         message: `must be on or before ${maxLabel}`,
         autoFix: () => fromMs(maxMs, value, type),
       };
+    }
+    const typeDef = type ? TYPES[type] : null;
+    if (typeDef?.toComparable) {
+      const comparable = typeDef.toComparable(value);
+      if (comparable === null || comparable === undefined) {
+        return null;
+      }
+      if (comparable <= max) {
+        return null;
+      }
+      return { message: `must be <= ${max}` };
     }
     if (typeof value !== "number") {
       return null;
