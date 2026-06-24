@@ -60,7 +60,7 @@ return renderTable([[cell("input"), cell("parseDuration()")], ...rows], {
 │                         │   "minutes": "15"       │
 │                         │ }                       │
 ├─────────────────────────┼─────────────────────────┤
-│ "<X>second"              │ {                       │
+│ "30second"              │ {                       │
 │                         │   "seconds": "30"       │
 │                         │ }                       │
 ├─────────────────────────┼─────────────────────────┤
@@ -95,7 +95,7 @@ return renderTable([[cell("input"), cell("parseDuration()")], ...rows], {
 │                         │   "days": "3"           │
 │                         │ }                       │
 ├─────────────────────────┼─────────────────────────┤
-│ "1hour20minute<X>second" │ {                       │
+│ "1hour20minute30second" │ {                       │
 │                         │   "hours": "1",         │
 │                         │   "minutes": "20",      │
 │                         │   "seconds": "30"       │
@@ -111,11 +111,11 @@ return renderTable([[cell("input"), cell("parseDuration()")], ...rows], {
 │                         │   "minutes": " 15"      │
 │                         │ }                       │
 ├─────────────────────────┼─────────────────────────┤
-│ "<X>second"            │ {                       │
+│ "1.14second"            │ {                       │
 │                         │   "seconds": "1.14"     │
 │                         │ }                       │
 ├─────────────────────────┼─────────────────────────┤
-│ "-<X>second"              │ {                       │
+│ "-1second"              │ {                       │
 │                         │   "seconds": "-1"       │
 │                         │ }                       │
 ├─────────────────────────┼─────────────────────────┤

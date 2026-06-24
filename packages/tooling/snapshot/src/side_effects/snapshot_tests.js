@@ -10,6 +10,10 @@ import { renderSideEffects, renderSmallLink } from "./render_side_effects.js";
 
 /**
  * Generate a markdown file describing test(s) side effects. When executed in CI throw if there is a diff.
+ *
+ * Options can be passed inline as the third argument or pre-configured with
+ * {@link snapshotTests.prefConfigure} to keep the call site formatting clean.
+ *
  * @param {URL} sourceFileUrl
  * @param {Function} fnRegisteringTest
  * @param {Object} snapshotTestsOptions
@@ -252,13 +256,23 @@ export const snapshotTests = async (
 
   return { dirUrlMap, sideEffectsMap };
 };
-// preConfigure is just so that when we update the snapshot test options
-// it does not influence too much the formatting
-// snapshotTests(import.meta.url, ({ test }) => { }, options)
-// becomes
-// snapshotTests.prefConfigure(options)
-// snapshotTests(import.meta.url, ({ test }) => { })
-// which are equivalent
+/**
+ * Pre-configure options for the next {@link snapshotTests} call.
+ *
+ * Useful to avoid options cluttering the call site when options are declared
+ * separately or updated frequently. The pre-configured options are merged into
+ * the next `snapshotTests` call and then cleared, so they apply exactly once.
+ *
+ * @param {Object} options - Same options accepted by {@link snapshotTests}.
+ *
+ * @example
+ * // Instead of:
+ * snapshotTests(import.meta.url, ({ test }) => { }, options)
+ *
+ * // Write:
+ * snapshotTests.prefConfigure(options)
+ * snapshotTests(import.meta.url, ({ test }) => { })
+ */
 snapshotTests.prefConfigure = (options) => {
   preconfiguredOptions = options;
 };

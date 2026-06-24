@@ -50,7 +50,7 @@ return renderTable([[cell("input"), cell("durationToString()")], ...rows], {
 │   "months": 2         │                                           │
 │ }                     │                                           │
 ├───────────────────────┼───────────────────────────────────────────┤
-│ {                     │ "1year2month3week4day5hour6minute<X>second" │
+│ {                     │ "1year2month3week4day5hour6minute7second" │
 │   "years": 1,         │                                           │
 │   "months": 2,        │                                           │
 │   "weeks": 3,         │                                           │
@@ -64,7 +64,7 @@ return renderTable([[cell("input"), cell("durationToString()")], ...rows], {
 │   "minutes": 30       │                                           │
 │ }                     │                                           │
 ├───────────────────────┼───────────────────────────────────────────┤
-│ {                     │ "<X>second"                                │
+│ {                     │ "90second"                                │
 │   "seconds": 90       │                                           │
 │ }                     │                                           │
 ├───────────────────────┼───────────────────────────────────────────┤
@@ -77,7 +77,7 @@ return renderTable([[cell("input"), cell("durationToString()")], ...rows], {
 │   "hours": "2a"       │                                           │
 │ }                     │                                           │
 ├───────────────────────┼───────────────────────────────────────────┤
-│ {                     │ "-<X>second"                                │
+│ {                     │ "-1second"                                │
 │   "seconds": "-1"     │                                           │
 │ }                     │                                           │
 ├───────────────────────┼───────────────────────────────────────────┤
