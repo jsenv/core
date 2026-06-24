@@ -246,7 +246,7 @@ const css = /* css */ `
       --x-picker-cursor: default;
     }
     /* Focus */
-    &[data-focus-visible] {
+    &[data-focus-within]:has(.navi_picker_input[data-focus-visible]) {
       --x-picker-border-color: transparent;
       outline-style: solid;
     }
@@ -381,7 +381,10 @@ const PickerButton = (props) => {
             pickerEl.querySelector(".navi_picker_value")?.textContent ??
             String(uiState);
           e.clipboardData.setData("text/plain", displayText);
-          e.clipboardData.setData("application/x-navi", JSON.stringify(uiState));
+          e.clipboardData.setData(
+            "application/x-navi",
+            JSON.stringify(uiState),
+          );
         }}
         onCut={(e) => {
           const pickerEl = ref.current;
@@ -397,7 +400,10 @@ const PickerButton = (props) => {
             pickerEl.querySelector(".navi_picker_value")?.textContent ??
             String(uiState);
           e.clipboardData.setData("text/plain", displayText);
-          e.clipboardData.setData("application/x-navi", JSON.stringify(uiState));
+          e.clipboardData.setData(
+            "application/x-navi",
+            JSON.stringify(uiState),
+          );
           dispatchRequestInteraction(pickerEl, {
             event: e,
             name: "cut",
