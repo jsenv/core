@@ -148,6 +148,72 @@ export const durationToString = (duration) => {
 };
 
 /**
+ * Serialises a duration object or string to an ISO 8601 duration string.
+ *
+ * Milliseconds are folded into the seconds component as a decimal fraction
+ * (e.g. 500ms → 0.5S). Returns `null` for non-numeric unit values, empty
+ * durations, or inputs that cannot be parsed.
+ *
+ * @param {string|Object|null} value - A duration string or a duration object.
+ * @returns {string|null}
+ *
+ * @example
+ * durationToISOString("2hour15minute")                    // "PT2H15M"
+ * durationToISOString({ years: 1, months: 2 })            // "P1Y2M"
+ * durationToISOString({ seconds: 1, milliseconds: 500 })  // "PT1.5S"
+ * durationToISOString("30")                               // null — no unit
+ * durationToISOString({ hours: "2a" })                    // null — invalid number
+ * durationToISOString(null)                               // null
+ */
+export const durationToISOString = (value) => {
+  const duration =
+    typeof value === "object" && value !== null ? value : parseDuration(value);
+  if (!duration) {
+    return null;
+  }
+  const toNum = (key) => {
+    const v = duration[key];
+    if (v === undefined || v === null) {
+      return 0;
+    }
+    const n = Number(v);
+    return isFinite(n) ? n : null;
+  };
+  const years = toNum("years");
+  const months = toNum("months");
+  const weeks = toNum("weeks");
+  const days = toNum("days");
+  const hours = toNum("hours");
+  const minutes = toNum("minutes");
+  const secs = toNum("seconds");
+  const ms = toNum("milliseconds");
+  if (
+    years === null ||
+    months === null ||
+    weeks === null ||
+    days === null ||
+    hours === null ||
+    minutes === null ||
+    secs === null ||
+    ms === null
+  ) {
+    return null;
+  }
+  const totalSeconds = secs + ms / 1000;
+  let date = "";
+  if (years) date += `${years}Y`;
+  if (months) date += `${months}M`;
+  if (weeks) date += `${weeks}W`;
+  if (days) date += `${days}D`;
+  let time = "";
+  if (hours) time += `${hours}H`;
+  if (minutes) time += `${minutes}M`;
+  if (totalSeconds) time += `${totalSeconds}S`;
+  const result = `P${date}${time ? `T${time}` : ""}`;
+  return result === "P" ? null : result;
+};
+
+/**
  * Returns the total duration as a number in the given unit.
  *
  * Accepts either a duration string (parsed via {@link parseDuration}) or a

@@ -1,5 +1,6 @@
 export {
   durationToHours,
+  durationToISOString,
   durationToMinutes,
   durationToNumber,
   durationToSeconds,
