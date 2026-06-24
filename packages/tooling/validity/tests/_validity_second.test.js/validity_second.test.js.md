@@ -3,6 +3,7 @@
 
 - [second type validation](0_second_type_validation/0_second_type_validation.md)
 - [second type with max and decimal step](1_second_type_with_max_and_decimal_step/1_second_type_with_max_and_decimal_step.md)
+- [second type with duration string max](2_second_type_with_duration_string_max/2_second_type_with_duration_string_max.md)
 
 ---
 

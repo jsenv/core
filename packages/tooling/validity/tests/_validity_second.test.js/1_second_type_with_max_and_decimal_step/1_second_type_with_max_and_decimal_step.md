@@ -1,7 +1,11 @@
 # [second type with max and decimal step](../../validity_second.test.js)
 
 ```js
-const [validity, applyOn] = createValidity({ type: "second", max: 59, step: 0.5 });
+const [validity, applyOn] = createValidity({
+  type: "second",
+  max: 59,
+  step: 0.5,
+});
 return makeTable(validity, applyOn, [0, 30.5, 30.3, 60], ["max", "step"]);
 ```
 

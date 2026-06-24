@@ -33,14 +33,28 @@ const makeTable = (validity, applyOn, cases, cols) => {
   );
 };
 
+snapshotTests.prefConfigure({ preserveDurations: true });
 await snapshotTests(import.meta.url, ({ test }) => {
   test("minute type validation", () => {
     const [validity, applyOn] = createValidity({ type: "minute" });
-    return makeTable(validity, applyOn, [0, 30, 90, -5, 1.5, "45", true, undefined], ["type", "min", "step"]);
+    return makeTable(
+      validity,
+      applyOn,
+      [0, 30, 90, -5, 1.5, "45", "1hour", "30minute", true, undefined],
+      ["type", "min", "step"],
+    );
   });
 
   test("minute type with max", () => {
     const [validity, applyOn] = createValidity({ type: "minute", max: 59 });
     return makeTable(validity, applyOn, [0, 59, 60], ["max"]);
+  });
+
+  test("minute type with duration string max", () => {
+    const [validity, applyOn] = createValidity({
+      type: "minute",
+      max: "1hour",
+    });
+    return makeTable(validity, applyOn, [0, 60, 61], ["max"]);
   });
 });
