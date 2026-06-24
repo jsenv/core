@@ -164,6 +164,48 @@
                   <Time bare locale={lang}>{undefined}</Time>
                 </GRow>
               </Grid>
+
+              {/* eventDuration: walk through the lifecycle of a 1-hour event */}
+              <Title as="h3" style={{ margin: "24px 0 12px", fontSize: "0.9rem", color: "#555" }}>
+                eventDuration
+              </Title>
+              <Grid cols={["eventDuration=0", "eventDuration=30min", "eventDuration=1h"]}>
+                <GRow label="now + 1h">
+                  <Time locale={lang}>{new Date(NOW.getTime() + 60 * 60 * 1000)}</Time>
+                  <Time eventDuration={30 * 60 * 1000} locale={lang}>{new Date(NOW.getTime() + 60 * 60 * 1000)}</Time>
+                  <Time eventDuration={60 * 60 * 1000} locale={lang}>{new Date(NOW.getTime() + 60 * 60 * 1000)}</Time>
+                </GRow>
+                <GRow label="now + 10min">
+                  <Time locale={lang}>{new Date(NOW.getTime() + 10 * 60 * 1000)}</Time>
+                  <Time eventDuration={30 * 60 * 1000} locale={lang}>{new Date(NOW.getTime() + 10 * 60 * 1000)}</Time>
+                  <Time eventDuration={60 * 60 * 1000} locale={lang}>{new Date(NOW.getTime() + 10 * 60 * 1000)}</Time>
+                </GRow>
+                <GRow label="now - 1min">
+                  <Time locale={lang}>{new Date(NOW.getTime() - 1 * 60 * 1000)}</Time>
+                  <Time eventDuration={30 * 60 * 1000} locale={lang}>{new Date(NOW.getTime() - 1 * 60 * 1000)}</Time>
+                  <Time eventDuration={60 * 60 * 1000} locale={lang}>{new Date(NOW.getTime() - 1 * 60 * 1000)}</Time>
+                </GRow>
+                <GRow label="now - 20min">
+                  <Time locale={lang}>{new Date(NOW.getTime() - 20 * 60 * 1000)}</Time>
+                  <Time eventDuration={30 * 60 * 1000} locale={lang}>{new Date(NOW.getTime() - 20 * 60 * 1000)}</Time>
+                  <Time eventDuration={60 * 60 * 1000} locale={lang}>{new Date(NOW.getTime() - 20 * 60 * 1000)}</Time>
+                </GRow>
+                <GRow label="now - 31min">
+                  <Time locale={lang}>{new Date(NOW.getTime() - 31 * 60 * 1000)}</Time>
+                  <Time eventDuration={30 * 60 * 1000} locale={lang}>{new Date(NOW.getTime() - 31 * 60 * 1000)}</Time>
+                  <Time eventDuration={60 * 60 * 1000} locale={lang}>{new Date(NOW.getTime() - 31 * 60 * 1000)}</Time>
+                </GRow>
+                <GRow label="now - 59min">
+                  <Time locale={lang}>{new Date(NOW.getTime() - 59 * 60 * 1000)}</Time>
+                  <Time eventDuration={30 * 60 * 1000} locale={lang}>{new Date(NOW.getTime() - 59 * 60 * 1000)}</Time>
+                  <Time eventDuration={60 * 60 * 1000} locale={lang}>{new Date(NOW.getTime() - 59 * 60 * 1000)}</Time>
+                </GRow>
+                <GRow label="now - 61min">
+                  <Time locale={lang}>{new Date(NOW.getTime() - 61 * 60 * 1000)}</Time>
+                  <Time eventDuration={30 * 60 * 1000} locale={lang}>{new Date(NOW.getTime() - 61 * 60 * 1000)}</Time>
+                  <Time eventDuration={60 * 60 * 1000} locale={lang}>{new Date(NOW.getTime() - 61 * 60 * 1000)}</Time>
+                </GRow>
+              </Grid>
             </Section>
 
             {/* ── 2. duration ───────────────────────────────────────────── */}
