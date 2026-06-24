@@ -11,7 +11,6 @@ import {
 const BORDER = { color: COLORS.GREY };
 const cell = (value) => ({ value, border: BORDER });
 
-snapshotTests.prefConfigure({ preserveDurations: true });
 await snapshotTests(import.meta.url, ({ test }) => {
   test("parseDuration", () => {
     const cases = [
@@ -19,6 +18,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
       "2hour",
       "15minute",
       "30second",
+      "140millisecond",
       "3day",
       "2week",
       "1month",
@@ -27,11 +27,15 @@ await snapshotTests(import.meta.url, ({ test }) => {
       "2hour15minute",
       "1year2month3day",
       "1hour20minute30second",
-      // spaces between tokens are accepted
+      "1second140millisecond",
+      // spaces are NOT trimmed -- " 15" is the raw minute value
       "2hour 15minute",
+      // decimal value
+      "1.14second",
+      // negative sign
+      "-1second",
       // invalid values preserved (parser only splits, does not validate)
       "2ahour",
-      "2hourhour",
       // plural forms not accepted (format is singular-only)
       "2hours",
       "15minutes",
@@ -73,9 +77,10 @@ await snapshotTests(import.meta.url, ({ test }) => {
       { seconds: 90 },
       // key order in object does not matter -- output is always largest-first
       { minutes: 15, hours: 2 },
-      // invalid value preserved as-is, unit appended -> implicit escaping
+      // invalid value preserved as-is, unit appended
       { hours: "2a" },
-      { hours: "2hour" },
+      { seconds: "-1" },
+      { seconds: 1, milliseconds: 140 },
       {},
       null,
       undefined,
@@ -98,6 +103,9 @@ await snapshotTests(import.meta.url, ({ test }) => {
       "2hour15minute",
       "1year",
       "30second",
+      "1.14second",
+      "-1second",
+      "1second140millisecond",
       "30",
       "",
       null,
@@ -105,6 +113,8 @@ await snapshotTests(import.meta.url, ({ test }) => {
       { hours: 2, minutes: 15 },
       { years: 1 },
       { minutes: 30 },
+      { seconds: "-1" },
+      { hours: "2a" },
       {},
     ];
 

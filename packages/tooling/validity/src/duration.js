@@ -9,33 +9,68 @@ const UNITS = [
   { key: "hours", name: "hour", seconds: 3600 },
   { key: "minutes", name: "minute", seconds: 60 },
   { key: "seconds", name: "second", seconds: 1 },
+  { key: "milliseconds", name: "millisecond", seconds: 0.001 },
 ];
 
-// Parses a duration string into a plain object with only the units present.
+// Returns the index of the last occurrence of `name` in `s` where it is NOT
+// embedded inside a longer known unit name (e.g. "second" inside "millisecond").
+// This prevents matching "second" in "1second140millisecond" at the wrong position
+// while still allowing invalid value characters like "2a" in "2ahour".
+const findUnitIndex = (s, name) => {
+  let idx = s.lastIndexOf(name);
+  while (idx !== -1) {
+    let isPartOfLongerUnit = false;
+    for (const unit of UNITS) {
+      if (unit.name === name || !unit.name.endsWith(name)) {
+        continue;
+      }
+      const prefix = unit.name.slice(0, unit.name.length - name.length);
+      if (
+        idx >= prefix.length &&
+        s.slice(idx - prefix.length, idx) === prefix
+      ) {
+        isPartOfLongerUnit = true;
+        break;
+      }
+    }
+    if (!isPartOfLongerUnit) {
+      return idx;
+    }
+    idx = s.lastIndexOf(name, idx - 1);
+  }
+  return -1;
+};
+
 //
-// Algorithm: scan left-to-right by unit size (year -> second). For each unit,
-// find its LAST occurrence in the remaining string. Everything to the left is
-// the raw value for that unit (preserved as-is, even if invalid). This means:
+// Algorithm: scan left-to-right by unit size (year -> millisecond). For each
+// unit, find its last boundary-aware occurrence in the remaining string (the
+// character before the unit name must be non-alphabetic). Everything to the
+// left is the raw value for that unit, preserved as-is even if invalid.
 //
-//   "2ahour"    -> { hours: "2a" }         invalid value, preserved
-//   "2hourhour" -> { hours: "2hour" }      round-trip escape (see durationToString)
+//   "2ahour"             -> { hours: "2a" }          invalid value, preserved
+//   "-1second"           -> { seconds: "-1" }         negative sign supported
+//   "1.14second"         -> { seconds: "1.14" }       decimal preserved
+//   "1second140millisecond" -> { seconds: "1", milliseconds: "140" }
 //
 // Input can be:
 //   - a string: "2hour", "15minute", "2hour15minute", "1year2month3day"
 //   - a plain object: passed through as-is (shallow clone)
 //   - anything else: returns null
 //
-// Values in the returned object are raw strings, not numbers.
+// Values in the returned object are raw strings, not numbers. No trimming
+// is applied to values — spaces are preserved as-is so callers can see them.
 // Use durationToSeconds() for numeric conversion and validation.
 //
 // Examples:
-//   parseDuration("2hour")          -> { hours: "2" }
-//   parseDuration("2hour15minute")  -> { hours: "2", minutes: "15" }
-//   parseDuration("2ahour")         -> { hours: "2a" }
-//   parseDuration("2hourhour")      -> { hours: "2hour" }
-//   parseDuration("30")             -> null  (no unit)
-//   parseDuration({ hours: 2 })     -> { hours: 2 }  (object passthrough)
-//   parseDuration(null)             -> null
+//   parseDuration("2hour")                    -> { hours: "2" }
+//   parseDuration("2hour15minute")            -> { hours: "2", minutes: "15" }
+//   parseDuration("-1second")                 -> { seconds: "-1" }
+//   parseDuration("1second140millisecond")    -> { seconds: "1", milliseconds: "140" }
+//   parseDuration("1.14second")               -> { seconds: "1.14" }
+//   parseDuration("2ahour")                   -> { hours: "2a" }
+//   parseDuration("30")                       -> null  (no unit)
+//   parseDuration({ hours: 2 })               -> { hours: 2 }  (object passthrough)
+//   parseDuration(null)                       -> null
 export const parseDuration = (value) => {
   if (value === null || value === undefined) {
     return null;
@@ -53,12 +88,12 @@ export const parseDuration = (value) => {
 
   const result = {};
   for (const { key, name } of UNITS) {
-    const idx = s.lastIndexOf(name);
+    const idx = findUnitIndex(s, name);
     if (idx === -1) {
       continue;
     }
-    const rawValue = s.slice(0, idx).trim();
-    const remainder = s.slice(idx + name.length).trim();
+    const rawValue = s.slice(0, idx);
+    const remainder = s.slice(idx + name.length);
     if (rawValue !== "") {
       result[key] = rawValue;
     }
@@ -82,18 +117,17 @@ export const parseDuration = (value) => {
 // Each unit is written as <rawValue><unitName> with no separator between units.
 // Units always appear in order from largest to smallest.
 //
-// Values may be numbers or strings. If a string value contains the unit name
-// (e.g. { hours: "2hour" }), appending the unit name again produces "2hourhour".
-// parseDuration will correctly recover { hours: "2hour" } from that string via
-// the lastIndexOf rule -- this is the implicit escaping mechanism.
+// Values may be numbers or strings. Negative values are preserved (e.g.
+// { seconds: "-1" } -> "-1second").
 //
 // Examples:
-//   durationToString({ hours: 2, minutes: 15 }) -> "2hour15minute"
-//   durationToString({ years: 1, months: 2 })   -> "1year2month"
-//   durationToString({ hours: "2a" })            -> "2ahour"
-//   durationToString({ hours: "2hour" })         -> "2hourhour"  (escaped)
-//   durationToString({})                          -> null
-//   durationToString(null)                        -> null
+//   durationToString({ hours: 2, minutes: 15 })          -> "2hour15minute"
+//   durationToString({ years: 1, months: 2 })            -> "1year2month"
+//   durationToString({ hours: "2a" })                    -> "2ahour"
+//   durationToString({ seconds: "-1" })                  -> "-1second"
+//   durationToString({ seconds: 1, milliseconds: 140 })  -> "1second140millisecond"
+//   durationToString({})                                  -> null
+//   durationToString(null)                                -> null
 export const durationToString = (duration) => {
   if (!duration || typeof duration !== "object") {
     return null;
