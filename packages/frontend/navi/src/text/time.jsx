@@ -1,4 +1,9 @@
 import {
+  durationToISOString,
+  durationToSeconds,
+  parseDuration,
+} from "@jsenv/validity";
+import {
   formatDatePlaceholder,
   formatDatetime,
   formatDatetimePlaceholder,
@@ -76,6 +81,9 @@ export const Time = (props) => {
   }
   if (type === "hour") {
     return <TimeHour {...props} />;
+  }
+  if (type === "duration") {
+    return <TimeDuration {...props} />;
   }
   return <TimeRelative {...props} />;
 };
@@ -299,6 +307,43 @@ const TimeHour = ({ children, locale, long, ...props }) => {
   return <TimeText {...props}>{text}</TimeText>;
 };
 
+const TimeDuration = ({ children, locale, long, ...props }) => {
+  const lang = locale || langSignal.value;
+
+  if (children === undefined || children === null) {
+    return <TimeText {...props}>--</TimeText>;
+  }
+
+  // Accept: duration.js string ("2hour15minute"), ISO 8601 ("PT2H15M"), number (seconds)
+  let duration;
+  if (typeof children === "number") {
+    duration = { seconds: children };
+  } else if (typeof children === "string") {
+    duration = parseDuration(children);
+    if (!duration) {
+      return <TimeText {...props}>{children}</TimeText>;
+    }
+  } else if (typeof children === "object") {
+    duration = children;
+  } else {
+    return <TimeText {...props}>{String(children)}</TimeText>;
+  }
+
+  const totalSeconds = durationToSeconds(duration);
+  if (totalSeconds === null) {
+    return <TimeText {...props}>{String(children)}</TimeText>;
+  }
+
+  const totalMinutes = totalSeconds / 60;
+  const text = formatMinuteDuration(totalMinutes, lang, { long });
+  const dateTime = durationToISOString(duration) ?? String(children);
+  return (
+    <TimeText dateTime={dateTime} {...props}>
+      {text}
+    </TimeText>
+  );
+};
+
 const TimeRelative = ({
   children,
   locale,
@@ -317,7 +362,14 @@ const TimeRelative = ({
     return <TimeText {...props}>{String(children)}</TimeText>;
   }
 
-  const text = formatTimeRelative(date, eventDuration, lang, { bare });
+  // eventDuration accepts ms (number), duration.js string, or ISO 8601 string
+  let eventDurationMs = eventDuration;
+  if (typeof eventDuration === "string") {
+    const s = durationToSeconds(eventDuration);
+    eventDurationMs = s !== null ? s * 1000 : 0;
+  }
+
+  const text = formatTimeRelative(date, eventDurationMs, lang, { bare });
   const dateTime = date.toISOString();
   return (
     <TimeText dateTime={dateTime} {...props}>

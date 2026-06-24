@@ -42,6 +42,12 @@ export const parseDuration = (value) => {
     return null;
   }
 
+  // ISO 8601 duration: P[nY][nM][nW][nD][T[nH][nM][nS]]
+  // e.g. "PT1H30M", "P1Y2M3DT4H5M6S", "P3W"
+  if (s[0] === "P" || s[0] === "p") {
+    return parseISODuration(s.toUpperCase());
+  }
+
   const result = {};
   for (const { key, name } of UNITS) {
     const idx = findUnitIndex(s, name);
@@ -96,6 +102,43 @@ const findUnitIndex = (s, name) => {
   }
   return -1;
 };
+// ISO 8601 duration regex: P[nY][nM][nW][nD][T[nH][nM][nS]]
+const ISO_DURATION_RE =
+  /^P(?:(\d+(?:\.\d+)?)Y)?(?:(\d+(?:\.\d+)?)M)?(?:(\d+(?:\.\d+)?)W)?(?:(\d+(?:\.\d+)?)D)?(?:T(?:(\d+(?:\.\d+)?)H)?(?:(\d+(?:\.\d+)?)M)?(?:(\d+(?:\.\d+)?)S)?)?$/;
+const parseISODuration = (s) => {
+  const match = ISO_DURATION_RE.exec(s);
+  if (!match) {
+    return null;
+  }
+  const [, y, mo, w, d, h, min, sec] = match;
+  if (!y && !mo && !w && !d && !h && !min && !sec) {
+    return null; // bare "P" with no components
+  }
+  const result = {};
+  if (y) {
+    result.years = y;
+  }
+  if (mo) {
+    result.months = mo;
+  }
+  if (w) {
+    result.weeks = w;
+  }
+  if (d) {
+    result.days = d;
+  }
+  if (h) {
+    result.hours = h;
+  }
+  if (min) {
+    result.minutes = min;
+  }
+  if (sec) {
+    result.seconds = sec;
+  }
+  return result;
+};
+
 // Units ordered from largest to smallest.
 // .name is the keyword used in duration strings (singular, no trailing "s").
 // .seconds is the conversion factor to seconds (used by durationToNumber).
@@ -263,88 +306,6 @@ export const durationToNumber = (value, unit) => {
   }
   return totalSeconds / targetUnit.seconds;
 };
-
-/**
- * Returns the total duration as a number of seconds.
- *
- * @param {string|Object|null} value - A duration string or a duration object.
- * @returns {number|null}
- *
- * @example
- * durationToSeconds("2hour15minute")           // 8100
- * durationToSeconds({ hours: 2, minutes: 15 }) // 8100
- * durationToSeconds("-1second")                // -1
- * durationToSeconds("30")                      // null — no unit
- * durationToSeconds({ hours: "2a" })           // null — invalid number
- * durationToSeconds(null)                      // null
- */
 export const durationToSeconds = (value) => durationToNumber(value, "second");
 export const durationToMinutes = (value) => durationToNumber(value, "minute");
 export const durationToHours = (value) => durationToNumber(value, "hour");
-
-// Formats a number of milliseconds as a short duration string.
-//
-// Rules:
-//   - No rounding: full precision is preserved
-//   - Always short unit notation: ms, s, m, h
-//   - Sub-ms values        → "0.1ms"
-//   - < 1s, ≤2 decimal places as seconds → "0.1s", "0.01s"
-//   - < 1s, 3+ decimal places as seconds → "1ms", "10ms", "100ms"
-//   - ≥ 1s                 → compound units: "1m1s", "1h30m", "1h30m30.5s"
-//
-// Examples:
-//   formatSeconds(0.1)    → "0.1s"
-//   formatSeconds(0.01)   → "0.01s"
-//   formatSeconds(0.001)  → "1ms"
-//   formatSeconds(61)     → "1m1s"
-//   formatMinutes(90)     → "1h30m"
-//   formatHours(1.5)      → "1h30m"
-
-export const formatSeconds = (s) =>
-  s === 0 ? "0s" : formatDurationMs(s * 1_000);
-export const formatMinutes = (m) =>
-  m === 0 ? "0m" : formatDurationMs(m * 60_000);
-export const formatHours = (h) =>
-  h === 0 ? "0h" : formatDurationMs(h * 3_600_000);
-
-const formatDurationMs = (rawMs) => {
-  // Clean up floating point noise (round to nearest microsecond)
-  const totalMs = Math.round(rawMs * 1e3) / 1e3;
-  if (totalMs === 0) {
-    return "0s";
-  }
-  if (totalMs < 1) {
-    return `${trimDecimal(totalMs)}ms`;
-  }
-  if (totalMs < 1000) {
-    const asSec = totalMs / 1000;
-    const asSecStr = trimDecimal(asSec);
-    const decimalPart = asSecStr.split(".")[1] || "";
-    if (decimalPart.length <= 2) {
-      return `${asSecStr}s`;
-    }
-    return `${trimDecimal(totalMs)}ms`;
-  }
-  const hours = Math.floor(totalMs / 3_600_000);
-  const minutes = Math.floor((totalMs % 3_600_000) / 60_000);
-  const seconds = (totalMs % 60_000) / 1_000;
-  const parts = [];
-  if (hours > 0) {
-    parts.push(`${hours}h`);
-  }
-  if (minutes > 0) {
-    parts.push(`${minutes}m`);
-  }
-  if (seconds > 0 || parts.length === 0) {
-    parts.push(`${trimDecimal(seconds)}s`);
-  }
-  return parts.join("");
-};
-
-const trimDecimal = (n) => {
-  const s = String(n);
-  if (!s.includes(".")) {
-    return s;
-  }
-  return s.replace(/\.?0+$/, "");
-};
