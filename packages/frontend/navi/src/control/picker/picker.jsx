@@ -348,16 +348,9 @@ const PickerButton = (props) => {
       maxLines={undefined}
       dayLabel={undefined}
       headless={undefined}
-      // onMouseDown={(e) => {
-      //   inputProps.onMouseDown(e);
-      // }}
-      // onClick={(e) => {
-      //   inputProps.onClick(e);
-      // }}
       onKeyDown={(e) => {
-        // The button has the focus so he is the one handling keydown interactions
-        // it's also the one wrapping other elements so keydown bubbling will reach the button
-        // but neevr the input
+        // This wrapper will receive keyboard event bubbling from the picker popup content
+        // we re-dispatch on the input (to get escape to close for instance)
         inputProps.onKeyDown(e);
       }}
     >
@@ -384,11 +377,12 @@ const PickerButton = (props) => {
           if (uiState === undefined) {
             return;
           }
+          e.preventDefault();
+          e.clipboardData.setData("text/plain", String(uiState));
           e.clipboardData.setData(
             "application/x-navi",
             JSON.stringify(uiState),
           );
-          // No preventDefault — let the browser run its default copy too.
         }}
         onCut={(e) => {
           const pickerEl = ref.current;
