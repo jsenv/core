@@ -125,6 +125,30 @@
       } from "@jsenv/navi";
       import { CallLog, useCallLog } from "./utils/call_log.jsx";
 
+      // Shows the raw signal value and how <Time type="duration"> renders it.
+      const StateDisplay = ({ value }) => (
+        <Box
+          flex="x"
+          spacing="s"
+          style={{
+            padding: "6px 10px",
+            background: "#f8f8f8",
+            borderRadius: "4px",
+            fontSize: "12px",
+            fontFamily: "monospace",
+            alignItems: "center",
+            gap: "8px",
+          }}
+        >
+          <Text style={{ color: "#aaa", whiteSpace: "nowrap" }}>signal:</Text>
+          <Text style={{ color: "#555" }}>
+            {value === undefined ? "undefined" : JSON.stringify(value)}
+          </Text>
+          <Text style={{ color: "#aaa" }}>→</Text>
+          <Time type="duration">{value}</Time>
+        </Box>
+      );
+
       const App = () => (
         <Box flex="y" spacing="l">
           <div class="demo-section-group" id="display">
@@ -235,6 +259,7 @@
                   minutesSignal.value = v;
                 }}
               />
+              <StateDisplay value={minutesSignal.value} />
               <CallLog entries={entries} onClear={clear} />
             </Box>
           </div>
@@ -270,6 +295,7 @@
                     minutesSignal.value = v;
                   }}
                 />
+                <StateDisplay value={minutesSignal.value} />
                 <Button type="submit">Submit</Button>
                 <CallLog entries={entries} onClear={clear} />
               </Box>
@@ -310,6 +336,7 @@
                       minutesSignal.value = v;
                     }}
                   />
+                  <StateDisplay value={minutesSignal.value} />
                   <Button command="--navi-send">Submit</Button>
                 </Box>
               </ControlGroup>
@@ -379,6 +406,7 @@
                     </Box>
                   </Box>
                 </Picker>
+                <StateDisplay value={minuteSignal.value} />
                 <Button command="--navi-send">Submit</Button>
                 <CallLog entries={entries} onClear={clear} />
               </Box>
