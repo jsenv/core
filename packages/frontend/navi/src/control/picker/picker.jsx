@@ -480,6 +480,13 @@ const PickerInput = (props) => {
       {...props}
       className="navi_picker_input"
       pseudoClasses={PickerInputPseudoClasses}
+      onKeyDown={(e) => {
+        props.onKeyDown(e);
+        if (e && e.key === "Enter") {
+          // prevent form submission now that input can have focus
+          e.preventDefault();
+        }
+      }}
     />
   );
 };
