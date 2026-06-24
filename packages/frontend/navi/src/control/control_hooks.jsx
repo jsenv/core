@@ -1088,12 +1088,14 @@ const useInteractiveProps = (
         return;
       }
       const labels = getAssociatedLabels(element);
+      const readOnlyForced = element.hasAttribute("data-readonly-forced");
+      const readOnly = readOnlyForced ? false : readOnlyResolved;
       for (const label of labels) {
         label.dispatchEvent(
           new CustomEvent("navi_control_state", {
             detail: {
               disabled: disabledResolved,
-              readOnly: readOnlyResolved,
+              readOnly,
             },
           }),
         );
@@ -1354,9 +1356,10 @@ const getAssociatedLabels = (element) => {
   if (!element) {
     return [];
   }
-  const closestPicker = element.closest('[navi-control="picker"]');
-  const insidePicker = closestPicker && element !== closestPicker;
-  const formElement = insidePicker ? closestPicker : element;
+  // const closestPicker = element.closest('[navi-control="picker"]');
+  // const insidePicker = closestPicker && element !== closestPicker;
+  // const formElement = insidePicker ? closestPicker : element;
+  const formElement = element;
   // Native form elements expose .labels directly
   if (formElement.labels && formElement.labels.length > 0) {
     return Array.from(formElement.labels);

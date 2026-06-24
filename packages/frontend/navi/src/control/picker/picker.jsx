@@ -180,6 +180,7 @@ const css = /* css */ `
       padding-left: var(--x-picker-padding-left);
       flex-grow: 1;
       justify-content: inherit;
+      pointer-events: none;
 
       &[navi-placeholder] {
         color: var(--picker-placeholder-color);
@@ -198,6 +199,7 @@ const css = /* css */ `
       align-self: flex-start;
       justify-content: center;
       color: var(--x-picker-icon-color);
+      pointer-events: none;
 
       .navi_icon {
         height: 100%;
@@ -221,7 +223,8 @@ const css = /* css */ `
       border: none;
       opacity: 0;
       appearance: none;
-      pointer-events: none;
+      cursor: inherit;
+      pointer-events: auto;
     }
 
     .navi_picker_content {
@@ -324,117 +327,38 @@ const PickerButton = (props) => {
     );
   const uiStateController = getUIStateControllerById(inputProps.id);
   const value = uiStateController.uiState;
-  const { id, basePseudoState, disabled, children } = inputProps;
+  const { basePseudoState, children } = inputProps;
   const loading = basePseudoState[":-navi-loading"];
 
   return (
     <Box
-      as={headless ? "div" : "button"} // keep it a <div> in headless mode so it stays non focusable
-      role={headless ? "button" : undefined}
-      type="button" /* ensure click inside the picker cannot submit ancestor form if any */
+      as="div"
       ref={ref}
       baseClassName="navi_picker"
       pseudoClasses={PICKER_BUTTON_PSEUDO_CLASSES}
-      disabled={disabled}
       data-variant={variant}
-      navi-visually-hidden={headless ? "" : undefined}
       navi-picker=""
       navi-single-line={isSingleLine ? "" : undefined}
       {...pickerRemainingProps}
       basePseudoState={basePseudoState}
       styleCSSVars={PickerStyleCSSVars}
-      // we must put the id on the button and not the input
-      // so that a <label> tries to give focus to the button and not the input
-      id={id}
       variant={undefined}
       icon={undefined}
       ui={undefined}
       maxLines={undefined}
       dayLabel={undefined}
       headless={undefined}
-      // The button is handling the pointer interactions
-      onMouseDown={(e) => {
-        inputProps.onMouseDown(e);
-      }}
-      onClick={(e) => {
-        inputProps.onClick(e);
-      }}
+      // onMouseDown={(e) => {
+      //   inputProps.onMouseDown(e);
+      // }}
+      // onClick={(e) => {
+      //   inputProps.onClick(e);
+      // }}
       onKeyDown={(e) => {
         // The button has the focus so he is the one handling keydown interactions
         // it's also the one wrapping other elements so keydown bubbling will reach the button
         // but neevr the input
         inputProps.onKeyDown(e);
-      }}
-      onFocus={(e) => {
-        if (headless) {
-          inputProps.onFocus(e);
-        }
-      }}
-      // They don't really work for now:
-      // - 1 copy occurs on navi text when it's selected but button itself cannot be copied
-      // - 2 browser don't allow to paste either on right click
-      // I'm not sure we have a solution here because if we used an input the keyboard would open
-      // on mobile
-      onCopy={(e) => {
-        const pickerEl = ref.current;
-        if (isWithinPickerContent(e.target, pickerEl)) {
-          // Don't intercept inside the picker popup content.
-          return;
-        }
-        const uiState = uiStateController.uiState;
-        if (uiState === undefined) {
-          return;
-        }
-        e.clipboardData.setData("application/x-navi", JSON.stringify(uiState));
-        // No preventDefault — let the browser run its default copy too.
-      }}
-      onCut={(e) => {
-        const pickerEl = ref.current;
-        if (isWithinPickerContent(e.target, pickerEl)) {
-          // Don't intercept inside the picker popup content.
-          return;
-        }
-        const uiState = uiStateController.uiState;
-        if (uiState === undefined) {
-          return;
-        }
-        e.clipboardData.setData("application/x-navi", JSON.stringify(uiState));
-        // No preventDefault — let the browser run its default cut too.
-        dispatchRequestInteraction(pickerEl, {
-          event: e,
-          name: "cut",
-          allowed: () => {
-            dispatchRequestClearUIState(inputRef.current, e);
-          },
-        });
-      }}
-      onPaste={(e) => {
-        const pickerEl = ref.current;
-        if (isWithinPickerContent(e.target, pickerEl)) {
-          // Don't intercept inside the picker popup content.
-          return;
-        }
-        const naviData = e.clipboardData.getData("application/x-navi");
-        let pasteValue;
-        if (naviData) {
-          try {
-            pasteValue = JSON.parse(naviData);
-          } catch {
-            pasteValue = naviData;
-          }
-        } else {
-          pasteValue = e.clipboardData.getData("text/plain");
-        }
-        e.preventDefault();
-        dispatchRequestInteraction(pickerEl, {
-          event: e,
-          name: "paste",
-          allowed: () => {
-            dispatchRequestSetUIState(inputRef.current, pasteValue, {
-              event: e,
-            });
-          },
-        });
       }}
     >
       <LoadingOutline
@@ -445,11 +369,78 @@ const PickerButton = (props) => {
       <PickerInput
         {...inputProps}
         // eslint-disable-next-line react/no-children-prop
-        children={undefined} // we will render children into the button
-        id={undefined}
-        onMouseDown={undefined}
-        onClick={undefined}
-        onKeyDown={undefined}
+        children={undefined} // we will render children into the div
+        onFocus={(e) => {
+          inputProps.onFocus?.(e);
+          e.target.select();
+        }}
+        onCopy={(e) => {
+          const pickerEl = ref.current;
+          if (isWithinPickerContent(e.target, pickerEl)) {
+            // Don't intercept inside the picker popup content.
+            return;
+          }
+          const uiState = uiStateController.uiState;
+          if (uiState === undefined) {
+            return;
+          }
+          e.clipboardData.setData(
+            "application/x-navi",
+            JSON.stringify(uiState),
+          );
+          // No preventDefault — let the browser run its default copy too.
+        }}
+        onCut={(e) => {
+          const pickerEl = ref.current;
+          if (isWithinPickerContent(e.target, pickerEl)) {
+            // Don't intercept inside the picker popup content.
+            return;
+          }
+          const uiState = uiStateController.uiState;
+          if (uiState === undefined) {
+            return;
+          }
+          e.clipboardData.setData(
+            "application/x-navi",
+            JSON.stringify(uiState),
+          );
+          // No preventDefault — let the browser run its default cut too.
+          dispatchRequestInteraction(pickerEl, {
+            event: e,
+            name: "cut",
+            allowed: () => {
+              dispatchRequestClearUIState(inputRef.current, e);
+            },
+          });
+        }}
+        onPaste={(e) => {
+          const pickerEl = ref.current;
+          if (isWithinPickerContent(e.target, pickerEl)) {
+            // Don't intercept inside the picker popup content.
+            return;
+          }
+          const naviData = e.clipboardData.getData("application/x-navi");
+          let pasteValue;
+          if (naviData) {
+            try {
+              pasteValue = JSON.parse(naviData);
+            } catch {
+              pasteValue = naviData;
+            }
+          } else {
+            pasteValue = e.clipboardData.getData("text/plain");
+          }
+          e.preventDefault();
+          dispatchRequestInteraction(pickerEl, {
+            event: e,
+            name: "paste",
+            allowed: () => {
+              dispatchRequestSetUIState(inputRef.current, pasteValue, {
+                event: e,
+              });
+            },
+          });
+        }}
       />
       {variant === "icon" || headless ? null : (
         <Text
@@ -483,11 +474,12 @@ const PickerInput = (props) => {
   return (
     <Box
       as="input"
+      // readOnly because user MUST use the picker to change the value
+      readOnly
+      data-readonly-forced={props.readOnly ? undefined : ""}
       {...props}
       className="navi_picker_input"
       pseudoClasses={PickerInputPseudoClasses}
-      tabIndex={-1} // Make input non tabbable
-      navi-focus-delegate="" // Ensure callout focus the button and not the input
     />
   );
 };
@@ -503,6 +495,8 @@ const PICKER_BUTTON_PSEUDO_CLASSES = [
   ":-navi-has-value",
 ];
 const PickerInputPseudoClasses = [
+  ":focus",
+  ":focus-visible",
   ":read-only",
   ":disabled",
   ":-navi-loading",

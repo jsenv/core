@@ -181,8 +181,8 @@ const PickerNative = (props) => {
       resetOnAbort
       resetOnError
       onnavi_request_open={(e) => {
-        const pickerButton = e.currentTarget;
-        const pickerInput = getPickerInput(pickerButton);
+        const pickerEl = props.ref.current;
+        const pickerInput = getPickerInput(pickerEl);
         if (!pickerInput) {
           e.preventDefault();
           return;
@@ -201,11 +201,14 @@ const PickerNative = (props) => {
       }}
       eventReactionDefinitions={{
         click: (e) => {
-          const pickerButton = e.currentTarget;
-          const pickerInput = getPickerInput(pickerButton);
+          const pickerEl = props.ref.current;
+          const pickerInput = getPickerInput(pickerEl);
 
           return {
             name: "click to show native picker",
+            prevented: () => {
+              e.preventDefault();
+            },
             allowed: () => {
               pickerInput.showPicker();
             },
