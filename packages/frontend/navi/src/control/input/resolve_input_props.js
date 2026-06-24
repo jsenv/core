@@ -1,7 +1,7 @@
-import { parseDurationToSeconds } from "@jsenv/validity";
+import { durationToSeconds } from "@jsenv/validity";
 
 import { isSignal } from "../../utils/is_signal.js";
-import { parseStepToSeconds } from "../picker/time_helpers.js";
+import { timeStringToSeconds } from "../picker/time_helpers.js";
 
 // Maps validity type names → navi input type names
 const VALIDITY_TYPE_TO_INPUT_TYPE = {
@@ -144,31 +144,31 @@ export const resolveInputProps = (props) => {
   resolveInputProps(props);
 };
 
-const timeStringToMinutes = (value) => {
+const toMinutes = (value) => {
   if (typeof value !== "string") {
     return value;
   }
-  const seconds = parseDurationToSeconds(value);
+  const seconds = durationToSeconds(value);
   if (seconds !== null) {
     return seconds / 60;
   }
   return value;
 };
-const timeStringToHours = (value) => {
+const toHours = (value) => {
   if (typeof value !== "string") {
     return value;
   }
-  const seconds = parseDurationToSeconds(value);
+  const seconds = durationToSeconds(value);
   if (seconds !== null) {
     return seconds / 3600;
   }
   return value;
 };
-const timeStringToSeconds = (value) => {
+const toSeconds = (value) => {
   if (typeof value !== "string") {
     return value;
   }
-  const seconds = parseDurationToSeconds(value);
+  const seconds = durationToSeconds(value);
   if (seconds !== null) {
     return seconds;
   }
@@ -246,9 +246,9 @@ const toInputDatetime = (value) => {
 };
 
 const MIN_MAX_FORMATTER_BY_TYPE = {
-  "navi_minute": timeStringToMinutes,
-  "navi_hour": timeStringToHours,
-  "navi_second": timeStringToSeconds,
+  "navi_minute": toMinutes,
+  "navi_hour": toHours,
+  "navi_second": toSeconds,
   "date": toInputDate,
   "month": toInputMonth,
   "week": toInputWeek,
@@ -257,10 +257,10 @@ const MIN_MAX_FORMATTER_BY_TYPE = {
   "datetime": toInputDatetime,
 };
 const STEP_FORMATTER_BY_TYPE = {
-  "navi_minute": timeStringToMinutes,
-  "navi_hour": timeStringToHours,
-  "navi_second": timeStringToSeconds,
-  "time": parseStepToSeconds,
-  "datetime-local": parseStepToSeconds,
-  "datetime": parseStepToSeconds,
+  "navi_minute": toMinutes,
+  "navi_hour": toHours,
+  "navi_second": toSeconds,
+  "time": timeStringToSeconds,
+  "datetime-local": timeStringToSeconds,
+  "datetime": timeStringToSeconds,
 };

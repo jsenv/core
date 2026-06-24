@@ -1,20 +1,20 @@
 /**
- * Parses a step value into seconds.
+ * Parses a time string into seconds.
  * Accepts:
  *   - number: returned as-is (already in seconds)
  *   - "HH:MM" string: converted to seconds (e.g. "00:30" → 1800, "01:00" → 3600)
  *   - undefined/null: returned as-is
  */
-export const parseStepToSeconds = (step) => {
-  if (typeof step !== "string") {
-    return step;
+export const timeStringToSeconds = (timeString) => {
+  if (typeof timeString !== "string") {
+    return timeString;
   }
-  const colonIndex = step.indexOf(":");
+  const colonIndex = timeString.indexOf(":");
   if (colonIndex === -1) {
-    return Number(step);
+    return Number(timeString);
   }
-  const hours = parseInt(step.slice(0, colonIndex), 10);
-  const minutes = parseInt(step.slice(colonIndex + 1), 10);
+  const hours = parseInt(timeString.slice(0, colonIndex), 10);
+  const minutes = parseInt(timeString.slice(colonIndex + 1), 10);
   return (hours * 60 + minutes) * 60;
 };
 

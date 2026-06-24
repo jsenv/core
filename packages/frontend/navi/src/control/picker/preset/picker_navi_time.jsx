@@ -3,7 +3,7 @@ import { useMemo } from "preact/hooks";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Time } from "@jsenv/navi/src/text/time.jsx";
 import { List } from "../../list/list.jsx";
-import { parseStepToSeconds } from "../time_helpers.js";
+import { timeStringToSeconds } from "../time_helpers.js";
 
 /**
  * PickerNaviTime — a fully custom time picker driven by min/max/step.
@@ -19,7 +19,7 @@ import { parseStepToSeconds } from "../time_helpers.js";
 export const PickerNaviTime = (props) => {
   const Next = useNextResolver();
   const { min = "00:00", max = "23:30", step, value } = props;
-  const stepSeconds = parseStepToSeconds(step) ?? 1800;
+  const stepSeconds = timeStringToSeconds(step) ?? 1800;
   const slots = useMemo(
     () => generateTimeSlots(min, max, stepSeconds),
     [min, max, stepSeconds],
