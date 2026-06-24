@@ -12,7 +12,44 @@
       import { useState } from "preact/hooks";
       import { Box, Title, Text, Time } from "@jsenv/navi";
 
-      const Section = ({ id, title, desc, children }) => (
+      // Grid: label column + one column per prop variant.
+      // Children must be alternating: <label/>, <cell/>, <cell/>, <label/>, ...
+      const Grid = ({ cols, children }) => (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: `160px ${cols.map(() => "1fr").join(" ")}`,
+            columnGap: "24px",
+            rowGap: "10px",
+            alignItems: "center",
+            marginBottom: "8px",
+          }}
+        >
+          {/* header row */}
+          <div />
+          {cols.map((c, i) => (
+            <Text
+              key={i}
+              style={{ fontSize: "11px", color: "#bbb", fontFamily: "monospace" }}
+            >
+              {c}
+            </Text>
+          ))}
+          {children}
+        </div>
+      );
+
+      // One row inside a Grid: label + one child per column.
+      const GRow = ({ label, children }) => (
+        <>
+          <Text style={{ color: "#888", fontSize: "13px", fontFamily: "monospace" }}>
+            {label}
+          </Text>
+          {children}
+        </>
+      );
+
+      const Section = ({ id, title, children }) => (
         <Box
           as="section"
           id={id}
@@ -24,34 +61,9 @@
             boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
           }}
         >
-          <Title as="h2" style={{ margin: "0 0 6px" }}>
+          <Title as="h2" style={{ margin: "0 0 16px" }}>
             {title}
           </Title>
-          {desc && (
-            <Text
-              style={{
-                display: "block",
-                marginBottom: "16px",
-                color: "#555",
-                fontSize: "13px",
-              }}
-            >
-              {desc}
-            </Text>
-          )}
-          {children}
-        </Box>
-      );
-
-      const Row = ({ label, children }) => (
-        <Box
-          flex="x"
-          spacing="m"
-          style={{ alignItems: "center", marginBottom: "8px" }}
-        >
-          <Text style={{ minWidth: "280px", color: "#888", fontSize: "13px" }}>
-            {label}
-          </Text>
           {children}
         </Box>
       );
@@ -83,41 +95,22 @@
       );
 
       const NOW = new Date();
-      const TODAY = new Date(
-        NOW.getFullYear(),
-        NOW.getMonth(),
-        NOW.getDate(),
-        14,
-        30,
-        0,
-      );
+      const TODAY = new Date(NOW.getFullYear(), NOW.getMonth(), NOW.getDate(), 14, 30, 0);
       const YESTERDAY = new Date(TODAY);
       YESTERDAY.setDate(YESTERDAY.getDate() - 1);
       const TOMORROW = new Date(TODAY);
       TOMORROW.setDate(TOMORROW.getDate() + 1);
       const LAST_WEEK = new Date(TODAY);
       LAST_WEEK.setDate(LAST_WEEK.getDate() - 7);
-      const NEXT_MONTH = new Date(TODAY);
-      NEXT_MONTH.setMonth(NEXT_MONTH.getMonth() + 1);
 
       const Demo = () => {
         const [lang, setLang] = useState("fr");
 
         return (
-          <div
-            style={{
-              padding: "20px",
-              fontFamily: "system-ui, sans-serif",
-              maxWidth: "900px",
-            }}
-          >
+          <div style={{ padding: "20px", fontFamily: "system-ui, sans-serif", maxWidth: "900px" }}>
             <Title as="h1">Time Demo</Title>
 
-            <Box
-              flex="x"
-              spacing="m"
-              style={{ alignItems: "center", marginBottom: "24px" }}
-            >
+            <Box flex="x" spacing="m" style={{ alignItems: "center", marginBottom: "24px" }}>
               <Text>Language:</Text>
               {["fr", "en", "de", "ja"].map((l) => (
                 <button
@@ -139,294 +132,207 @@
 
             <TOC />
 
-            <Section
-              id="relative"
-              title='1. type="relative" (default)'
-              desc="Affiche une date/heure en format relatif (dans X min, il y a X heures…). eventDuration permet de définir une fenêtre «En cours»."
-            >
-              <Row label="1 hour ago">
-                <Time locale={lang}>
-                  {new Date(NOW.getTime() - 60 * 60 * 1000)}
-                </Time>
-              </Row>
-              <Row label="30 min ago">
-                <Time locale={lang}>
-                  {new Date(NOW.getTime() - 30 * 60 * 1000)}
-                </Time>
-              </Row>
-              <Row label="in 2 hours">
-                <Time locale={lang}>
-                  {new Date(NOW.getTime() + 2 * 60 * 60 * 1000)}
-                </Time>
-              </Row>
-              <Row label="in 15 min">
-                <Time locale={lang}>
-                  {new Date(NOW.getTime() + 15 * 60 * 1000)}
-                </Time>
-              </Row>
-              <Row label="yesterday (14:30)">
-                <Time locale={lang}>{YESTERDAY}</Time>
-              </Row>
-              <Row label="last week">
-                <Time locale={lang}>{LAST_WEEK}</Time>
-              </Row>
-              <Row label="bare (no «il y a»)">
-                <Time bare locale={lang}>
-                  {new Date(NOW.getTime() - 45 * 60 * 1000)}
-                </Time>
-              </Row>
-              <Row label="eventDuration=1h (En cours if within window)">
-                <Time eventDuration={60 * 60 * 1000} locale={lang}>
-                  {new Date(NOW.getTime() - 20 * 60 * 1000)}
-                </Time>
-              </Row>
-              <Row label="undefined → –">
-                <Time locale={lang}>{undefined}</Time>
-              </Row>
+            {/* ── 1. relative ───────────────────────────────────────────── */}
+            <Section id="relative" title='1. type="relative" (default)'>
+              <Grid cols={["", "bare"]}>
+                <GRow label="now - 1h">
+                  <Time locale={lang}>{new Date(NOW.getTime() - 60 * 60 * 1000)}</Time>
+                  <Time bare locale={lang}>{new Date(NOW.getTime() - 60 * 60 * 1000)}</Time>
+                </GRow>
+                <GRow label="now - 30min">
+                  <Time locale={lang}>{new Date(NOW.getTime() - 30 * 60 * 1000)}</Time>
+                  <Time bare locale={lang}>{new Date(NOW.getTime() - 30 * 60 * 1000)}</Time>
+                </GRow>
+                <GRow label="now + 2h">
+                  <Time locale={lang}>{new Date(NOW.getTime() + 2 * 60 * 60 * 1000)}</Time>
+                  <Time bare locale={lang}>{new Date(NOW.getTime() + 2 * 60 * 60 * 1000)}</Time>
+                </GRow>
+                <GRow label="now + 15min">
+                  <Time locale={lang}>{new Date(NOW.getTime() + 15 * 60 * 1000)}</Time>
+                  <Time bare locale={lang}>{new Date(NOW.getTime() + 15 * 60 * 1000)}</Time>
+                </GRow>
+                <GRow label="yesterday">
+                  <Time locale={lang}>{YESTERDAY}</Time>
+                  <Time bare locale={lang}>{YESTERDAY}</Time>
+                </GRow>
+                <GRow label="last week">
+                  <Time locale={lang}>{LAST_WEEK}</Time>
+                  <Time bare locale={lang}>{LAST_WEEK}</Time>
+                </GRow>
+                <GRow label="undefined">
+                  <Time locale={lang}>{undefined}</Time>
+                  <Time bare locale={lang}>{undefined}</Time>
+                </GRow>
+              </Grid>
             </Section>
 
-            <Section
-              id="duration"
-              title='2. type="duration"'
-              desc="Affiche une durée lisible. Accepte un nombre de secondes, une chaîne durée («2hour15minute»), une chaîne ISO 8601 («PT2H15M»), ou un objet durée. Prop long pour la forme longue."
-            >
-              <Row label='"2hour15minute" (short)'>
-                <Time type="duration" locale={lang}>
-                  {"2hour15minute"}
-                </Time>
-              </Row>
-              <Row label='"2hour15minute" (long)'>
-                <Time type="duration" long locale={lang}>
-                  {"2hour15minute"}
-                </Time>
-              </Row>
-              <Row label='"PT2H15M" (ISO 8601)'>
-                <Time type="duration" locale={lang}>
-                  {"PT2H15M"}
-                </Time>
-              </Row>
-              <Row label="{ hours: 2, minutes: 15 } (object)">
-                <Time type="duration" locale={lang}>
-                  {{ hours: 2, minutes: 15 }}
-                </Time>
-              </Row>
-              <Row label="5400 (number = 90 minutes in seconds)">
-                <Time type="duration" locale={lang}>
-                  {5400}
-                </Time>
-              </Row>
-              <Row label="300 (number = 5 minutes in seconds)">
-                <Time type="duration" locale={lang}>
-                  {300}
-                </Time>
-              </Row>
-              <Row label="invalid string → rendered as-is">
-                <Time type="duration" locale={lang}>
-                  {"badvalue"}
-                </Time>
-              </Row>
-              <Row label="undefined → --">
-                <Time type="duration" locale={lang}>
-                  {undefined}
-                </Time>
-              </Row>
+            {/* ── 2. duration ───────────────────────────────────────────── */}
+            <Section id="duration" title='2. type="duration"'>
+              <Grid cols={["", "long"]}>
+                <GRow label='"2hour15minute"'>
+                  <Time type="duration" locale={lang}>{"2hour15minute"}</Time>
+                  <Time type="duration" long locale={lang}>{"2hour15minute"}</Time>
+                </GRow>
+                <GRow label='"PT2H15M"'>
+                  <Time type="duration" locale={lang}>{"PT2H15M"}</Time>
+                  <Time type="duration" long locale={lang}>{"PT2H15M"}</Time>
+                </GRow>
+                <GRow label="{ hours: 2, minutes: 15 }">
+                  <Time type="duration" locale={lang}>{{ hours: 2, minutes: 15 }}</Time>
+                  <Time type="duration" long locale={lang}>{{ hours: 2, minutes: 15 }}</Time>
+                </GRow>
+                <GRow label="5400">
+                  <Time type="duration" locale={lang}>{5400}</Time>
+                  <Time type="duration" long locale={lang}>{5400}</Time>
+                </GRow>
+                <GRow label="300">
+                  <Time type="duration" locale={lang}>{300}</Time>
+                  <Time type="duration" long locale={lang}>{300}</Time>
+                </GRow>
+                <GRow label='"badvalue"'>
+                  <Time type="duration" locale={lang}>{"badvalue"}</Time>
+                  <Time type="duration" long locale={lang}>{"badvalue"}</Time>
+                </GRow>
+                <GRow label="undefined">
+                  <Time type="duration" locale={lang}>{undefined}</Time>
+                  <Time type="duration" long locale={lang}>{undefined}</Time>
+                </GRow>
+              </Grid>
             </Section>
 
-            <Section
-              id="date"
-              title='3. type="date"'
-              desc="Affiche une date. Accepte un objet Date, un timestamp ms, ou une chaîne YYYY-MM-DD. Supporte les props long, numeric, dayLabel."
-            >
-              <Row label="Date (short)">
-                <Time type="date" locale={lang}>
-                  {TODAY}
-                </Time>
-              </Row>
-              <Row label="Date (long)">
-                <Time type="date" long locale={lang}>
-                  {TODAY}
-                </Time>
-              </Row>
-              <Row label="Date (numeric)">
-                <Time type="date" numeric locale={lang}>
-                  {TODAY}
-                </Time>
-              </Row>
-              <Row label="Date + dayLabel (hier)">
-                <Time type="date" dayLabel locale={lang}>
-                  {YESTERDAY}
-                </Time>
-              </Row>
-              <Row label="Date + dayLabel (aujourd'hui)">
-                <Time type="date" dayLabel locale={lang}>
-                  {TODAY}
-                </Time>
-              </Row>
-              <Row label="Date + dayLabel (demain)">
-                <Time type="date" dayLabel locale={lang}>
-                  {TOMORROW}
-                </Time>
-              </Row>
-              <Row label="Date (string YYYY-MM-DD)">
-                <Time type="date" locale={lang}>
-                  {"2025-12-25"}
-                </Time>
-              </Row>
-              <Row label="Date (undefined → placeholder)">
-                <Time type="date" locale={lang}>
-                  {undefined}
-                </Time>
-              </Row>
+            {/* ── 3. date ───────────────────────────────────────────────── */}
+            <Section id="date" title='3. type="date"'>
+              <Grid cols={["", "long", "dayLabel"]}>
+                <GRow label="today">
+                  <Time type="date" locale={lang}>{TODAY}</Time>
+                  <Time type="date" long locale={lang}>{TODAY}</Time>
+                  <Time type="date" dayLabel locale={lang}>{TODAY}</Time>
+                </GRow>
+                <GRow label="yesterday">
+                  <Time type="date" locale={lang}>{YESTERDAY}</Time>
+                  <Time type="date" long locale={lang}>{YESTERDAY}</Time>
+                  <Time type="date" dayLabel locale={lang}>{YESTERDAY}</Time>
+                </GRow>
+                <GRow label="tomorrow">
+                  <Time type="date" locale={lang}>{TOMORROW}</Time>
+                  <Time type="date" long locale={lang}>{TOMORROW}</Time>
+                  <Time type="date" dayLabel locale={lang}>{TOMORROW}</Time>
+                </GRow>
+                <GRow label='"2025-12-25"'>
+                  <Time type="date" locale={lang}>{"2025-12-25"}</Time>
+                  <Time type="date" long locale={lang}>{"2025-12-25"}</Time>
+                  <Time type="date" dayLabel locale={lang}>{"2025-12-25"}</Time>
+                </GRow>
+                <GRow label="undefined">
+                  <Time type="date" locale={lang}>{undefined}</Time>
+                  <Time type="date" long locale={lang}>{undefined}</Time>
+                  <Time type="date" dayLabel locale={lang}>{undefined}</Time>
+                </GRow>
+              </Grid>
             </Section>
 
-            <Section
-              id="month"
-              title='4. type="month"'
-              desc='Affiche un mois. Accepte une chaîne "YYYY-MM", un Date, ou un timestamp.'
-            >
-              <Row label="Month (string YYYY-MM)">
-                <Time type="month" locale={lang}>
-                  {"2025-12"}
-                </Time>
-              </Row>
-              <Row label="Month (Date)">
-                <Time type="month" locale={lang}>
-                  {TODAY}
-                </Time>
-              </Row>
-              <Row label="Month (undefined → placeholder)">
-                <Time type="month" locale={lang}>
-                  {undefined}
-                </Time>
-              </Row>
+            {/* ── 4. month ──────────────────────────────────────────────── */}
+            <Section id="month" title='4. type="month"'>
+              <Grid cols={[""]}>
+                <GRow label='"2025-12"'>
+                  <Time type="month" locale={lang}>{"2025-12"}</Time>
+                </GRow>
+                <GRow label="Date">
+                  <Time type="month" locale={lang}>{TODAY}</Time>
+                </GRow>
+                <GRow label="undefined">
+                  <Time type="month" locale={lang}>{undefined}</Time>
+                </GRow>
+              </Grid>
             </Section>
 
-            <Section
-              id="time"
-              title='5. type="time"'
-              desc='Affiche une heure. Accepte "HH:MM", "HH:MM:SS", un Date ou un timestamp. Sans valeur affiche "--:--".'
-            >
-              <Row label='Time (string "14:30")'>
-                <Time type="time" locale={lang}>
-                  {"14:30"}
-                </Time>
-              </Row>
-              <Row label='Time (string "09:05:00")'>
-                <Time type="time" locale={lang}>
-                  {"09:05:00"}
-                </Time>
-              </Row>
-              <Row label="Time (Date)">
-                <Time type="time" locale={lang}>
-                  {TODAY}
-                </Time>
-              </Row>
-              <Row label='Time (durationFormat="short")'>
-                <Time type="time" durationFormat="short" locale={lang}>
-                  {"01:30"}
-                </Time>
-              </Row>
-              <Row label='Time (durationFormat="long")'>
-                <Time type="time" durationFormat="long" locale={lang}>
-                  {"01:30"}
-                </Time>
-              </Row>
-              <Row label="Time (undefined → --:--)">
-                <Time type="time" locale={lang}>
-                  {undefined}
-                </Time>
-              </Row>
+            {/* ── 5. time ───────────────────────────────────────────────── */}
+            <Section id="time" title='5. type="time"'>
+              <Grid cols={["", 'durationFormat="short"', 'durationFormat="long"']}>
+                <GRow label='"14:30"'>
+                  <Time type="time" locale={lang}>{"14:30"}</Time>
+                  <Time type="time" durationFormat="short" locale={lang}>{"14:30"}</Time>
+                  <Time type="time" durationFormat="long" locale={lang}>{"14:30"}</Time>
+                </GRow>
+                <GRow label='"09:05:00"'>
+                  <Time type="time" locale={lang}>{"09:05:00"}</Time>
+                  <Time type="time" durationFormat="short" locale={lang}>{"09:05:00"}</Time>
+                  <Time type="time" durationFormat="long" locale={lang}>{"09:05:00"}</Time>
+                </GRow>
+                <GRow label="Date">
+                  <Time type="time" locale={lang}>{TODAY}</Time>
+                  <Time type="time" durationFormat="short" locale={lang}>{TODAY}</Time>
+                  <Time type="time" durationFormat="long" locale={lang}>{TODAY}</Time>
+                </GRow>
+                <GRow label="undefined">
+                  <Time type="time" locale={lang}>{undefined}</Time>
+                  <Time type="time" durationFormat="short" locale={lang}>{undefined}</Time>
+                  <Time type="time" durationFormat="long" locale={lang}>{undefined}</Time>
+                </GRow>
+              </Grid>
             </Section>
 
-            <Section
-              id="datetime"
-              title='6. type="datetime"'
-              desc="Affiche une date et une heure. Accepte un Date, un timestamp, ou une chaîne ISO."
-            >
-              <Row label="Datetime (Date)">
-                <Time type="datetime" locale={lang}>
-                  {TODAY}
-                </Time>
-              </Row>
-              <Row label="Datetime (timestamp)">
-                <Time type="datetime" locale={lang}>
-                  {TODAY.getTime()}
-                </Time>
-              </Row>
-              <Row label="Datetime (undefined → placeholder)">
-                <Time type="datetime" locale={lang}>
-                  {undefined}
-                </Time>
-              </Row>
+            {/* ── 6. datetime ───────────────────────────────────────────── */}
+            <Section id="datetime" title='6. type="datetime"'>
+              <Grid cols={[""]}>
+                <GRow label="Date">
+                  <Time type="datetime" locale={lang}>{TODAY}</Time>
+                </GRow>
+                <GRow label="timestamp">
+                  <Time type="datetime" locale={lang}>{TODAY.getTime()}</Time>
+                </GRow>
+                <GRow label="undefined">
+                  <Time type="datetime" locale={lang}>{undefined}</Time>
+                </GRow>
+              </Grid>
             </Section>
 
-            <Section
-              id="minute"
-              title='7. type="minute"'
-              desc="Affiche une durée en minutes. Accepte un nombre ou une chaîne numérique. Prop long pour la forme longue, timeString pour l'affichage HH:MM."
-            >
-              <Row label="90 minutes (short)">
-                <Time type="minute" locale={lang}>
-                  {90}
-                </Time>
-              </Row>
-              <Row label="90 minutes (long)">
-                <Time type="minute" long locale={lang}>
-                  {90}
-                </Time>
-              </Row>
-              <Row label="90 minutes (timeString)">
-                <Time type="minute" timeString locale={lang}>
-                  {90}
-                </Time>
-              </Row>
-              <Row label="5 minutes">
-                <Time type="minute" locale={lang}>
-                  {5}
-                </Time>
-              </Row>
-              <Row label="0 minutes">
-                <Time type="minute" locale={lang}>
-                  {0}
-                </Time>
-              </Row>
-              <Row label="undefined → --">
-                <Time type="minute" locale={lang}>
-                  {undefined}
-                </Time>
-              </Row>
+            {/* ── 7. minute ─────────────────────────────────────────────── */}
+            <Section id="minute" title='7. type="minute"'>
+              <Grid cols={["", "long", "timeString"]}>
+                <GRow label="90">
+                  <Time type="minute" locale={lang}>{90}</Time>
+                  <Time type="minute" long locale={lang}>{90}</Time>
+                  <Time type="minute" timeString locale={lang}>{90}</Time>
+                </GRow>
+                <GRow label="5">
+                  <Time type="minute" locale={lang}>{5}</Time>
+                  <Time type="minute" long locale={lang}>{5}</Time>
+                  <Time type="minute" timeString locale={lang}>{5}</Time>
+                </GRow>
+                <GRow label="0">
+                  <Time type="minute" locale={lang}>{0}</Time>
+                  <Time type="minute" long locale={lang}>{0}</Time>
+                  <Time type="minute" timeString locale={lang}>{0}</Time>
+                </GRow>
+                <GRow label="undefined">
+                  <Time type="minute" locale={lang}>{undefined}</Time>
+                  <Time type="minute" long locale={lang}>{undefined}</Time>
+                  <Time type="minute" timeString locale={lang}>{undefined}</Time>
+                </GRow>
+              </Grid>
             </Section>
 
-            <Section
-              id="hour"
-              title='8. type="hour"'
-              desc="Affiche une durée en heures. Accepte un nombre ou une chaîne numérique. Prop long pour la forme longue."
-            >
-              <Row label="2 hours (short)">
-                <Time type="hour" locale={lang}>
-                  {2}
-                </Time>
-              </Row>
-              <Row label="2 hours (long)">
-                <Time type="hour" long locale={lang}>
-                  {2}
-                </Time>
-              </Row>
-              <Row label="1 hour">
-                <Time type="hour" locale={lang}>
-                  {1}
-                </Time>
-              </Row>
-              <Row label="0.5 hours">
-                <Time type="hour" locale={lang}>
-                  {0.5}
-                </Time>
-              </Row>
-              <Row label="undefined → --">
-                <Time type="hour" locale={lang}>
-                  {undefined}
-                </Time>
-              </Row>
+            {/* ── 8. hour ───────────────────────────────────────────────── */}
+            <Section id="hour" title='8. type="hour"'>
+              <Grid cols={["", "long"]}>
+                <GRow label="2">
+                  <Time type="hour" locale={lang}>{2}</Time>
+                  <Time type="hour" long locale={lang}>{2}</Time>
+                </GRow>
+                <GRow label="1">
+                  <Time type="hour" locale={lang}>{1}</Time>
+                  <Time type="hour" long locale={lang}>{1}</Time>
+                </GRow>
+                <GRow label="0.5">
+                  <Time type="hour" locale={lang}>{0.5}</Time>
+                  <Time type="hour" long locale={lang}>{0.5}</Time>
+                </GRow>
+                <GRow label="undefined">
+                  <Time type="hour" locale={lang}>{undefined}</Time>
+                  <Time type="hour" long locale={lang}>{undefined}</Time>
+                </GRow>
+              </Grid>
             </Section>
           </div>
         );
