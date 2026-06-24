@@ -143,10 +143,6 @@
       const controlGroupSignal = stateSignal("2hour15minute", { id: "group" });
       const pickerSignal = stateSignal(undefined, { id: "picker" });
       const customSignal = stateSignal("1hour30minute", { id: "custom" });
-      const valMinSignal = stateSignal("30minute", { id: "val-min" });
-      const valMaxSignal = stateSignal("1hour", { id: "val-max" });
-      const valCombinedSignal = stateSignal("30minute", { id: "val-combined" });
-
       const DEMO_ROUTE = route("", {
         searchParams: {
           basic: basicSignal,
@@ -155,9 +151,6 @@
           group: controlGroupSignal,
           picker: pickerSignal,
           custom: customSignal,
-          "val-min": valMinSignal,
-          "val-max": valMaxSignal,
-          "val-combined": valCombinedSignal,
         },
       });
       setupRoutes([DEMO_ROUTE]);
@@ -452,71 +445,72 @@
       };
 
       // ── ValidationMinDemo ─────────────────────────────────────────────────
-      const ValidationMinDemo = () => (
-        <div class="demo-section" id="val-min">
-          <h2>min only</h2>
-          <p class="desc">
-            <code>min="10minute"</code> — value must be at least 10 minutes.
-          </p>
-          <Box flex="y" spacing="s" alignX="start">
-            <InputDuration
-              unit="minute"
-              min="10minute"
-              value={valMinSignal.value}
-              uiAction={(v) => {
-                valMinSignal.value = v;
-              }}
-            />
-            <StateDisplay value={valMinSignal.value} />
-          </Box>
-        </div>
-      );
+      const ValidationMinDemo = () => {
+        const [entries, push, clear] = useCallLog();
+        return (
+          <div class="demo-section" id="val-min">
+            <h2>min only</h2>
+            <p class="desc">
+              <code>min="10minute"</code> — value must be at least 10 minutes.
+            </p>
+            <Form action={(values) => push("form action", values)}>
+              <Box flex="y" spacing="s" alignX="start">
+                <InputDuration unit="minute" name="duration" min="10minute" />
+                <Button type="submit">Submit</Button>
+                <CallLog entries={entries} onClear={clear} />
+              </Box>
+            </Form>
+          </div>
+        );
+      };
 
       // ── ValidationMaxDemo ─────────────────────────────────────────────────
-      const ValidationMaxDemo = () => (
-        <div class="demo-section" id="val-max">
-          <h2>max only</h2>
-          <p class="desc">
-            <code>max="1hour30minute"</code> — value must be at most 1h30.
-          </p>
-          <Box flex="y" spacing="s" alignX="start">
-            <InputDuration
-              unit="minute"
-              max="1hour30minute"
-              value={valMaxSignal.value}
-              uiAction={(v) => {
-                valMaxSignal.value = v;
-              }}
-            />
-            <StateDisplay value={valMaxSignal.value} />
-          </Box>
-        </div>
-      );
+      const ValidationMaxDemo = () => {
+        const [entries, push, clear] = useCallLog();
+        return (
+          <div class="demo-section" id="val-max">
+            <h2>max only</h2>
+            <p class="desc">
+              <code>max="1hour30minute"</code> — value must be at most 1h30.
+            </p>
+            <Form action={(values) => push("form action", values)}>
+              <Box flex="y" spacing="s" alignX="start">
+                <InputDuration unit="minute" name="duration" max="1hour30minute" />
+                <Button type="submit">Submit</Button>
+                <CallLog entries={entries} onClear={clear} />
+              </Box>
+            </Form>
+          </div>
+        );
+      };
 
       // ── ValidationCombinedDemo ────────────────────────────────────────────
-      const ValidationCombinedDemo = () => (
-        <div class="demo-section" id="val-combined">
-          <h2>min + max + step</h2>
-          <p class="desc">
-            <code>min="5minute"</code> <code>max="3hour30minute"</code>{" "}
-            <code>step="5minute"</code> — value must be between 5 min and
-            3h30, in 5-minute increments.
-          </p>
-          <Box flex="y" spacing="s" alignX="start">
-            <InputDuration
-              unit="minute"
-              min="5minute"
-              max="3hour30minute"
-              step="5minute"
-              value={valCombinedSignal.value}
-              uiAction={(v) => {
-                valCombinedSignal.value = v;
-              }}
-            />
-            <StateDisplay value={valCombinedSignal.value} />
-          </Box>
-        </div>
-      );
+      const ValidationCombinedDemo = () => {
+        const [entries, push, clear] = useCallLog();
+        return (
+          <div class="demo-section" id="val-combined">
+            <h2>min + max + step</h2>
+            <p class="desc">
+              <code>min="5minute"</code> <code>max="3hour30minute"</code>{" "}
+              <code>step="5minute"</code> — value must be between 5 min and
+              3h30, in 5-minute increments.
+            </p>
+            <Form action={(values) => push("form action", values)}>
+              <Box flex="y" spacing="s" alignX="start">
+                <InputDuration
+                  unit="minute"
+                  name="duration"
+                  min="5minute"
+                  max="3hour30minute"
+                  step="5minute"
+                />
+                <Button type="submit">Submit</Button>
+                <CallLog entries={entries} onClear={clear} />
+              </Box>
+            </Form>
+          </div>
+        );
+      };
 
       render(
         <NaviDebug debugAll>
