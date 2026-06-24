@@ -426,6 +426,13 @@ export const TYPES = {
   "duration": {
     jsType: "string",
     localStorageRepresentation: "string",
+    props: {
+      // min/max/step accept duration strings ("1hour30minute", "PT1H30M") or plain seconds.
+      // Resolved to seconds so that constraint checking can compare numerically.
+      min: { resolver: (v) => typeof v === "string" ? durationToSeconds(v) ?? v : v },
+      max: { resolver: (v) => typeof v === "string" ? durationToSeconds(v) ?? v : v },
+      step: { resolver: (v) => typeof v === "string" ? durationToSeconds(v) ?? v : v },
+    },
     representations: {
       string: {
         // Accept both canonical ("2hour15minute") and ISO 8601 ("PT2H15M") — normalise to canonical.

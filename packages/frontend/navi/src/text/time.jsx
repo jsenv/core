@@ -9,6 +9,7 @@ import {
   formatDatetimePlaceholder,
   formatDay,
   formatDayRelative,
+  formatDuration,
   formatHourDuration,
   formatMinuteDuration,
   formatMonth,
@@ -332,44 +333,20 @@ const TimeDuration = ({ children, locale, long, ...props }) => {
   const totalSeconds = durationToSeconds(duration);
   if (totalSeconds === null) {
     // Non-numeric unit values (e.g. mid-edit "2ahour15minute" or { hours: "abc" }):
-    // render the raw values with compact unit suffixes instead of stringifying.
-    return <TimeText {...props}>{formatRawDuration(duration)}</TimeText>;
+    // formatDuration reads the raw values and appends compact unit symbols.
+    return <TimeText {...props}>{formatDuration(duration, lang)}</TimeText>;
   }
   if (totalSeconds === 0) {
-    // Zero has no meaningful unit — just show "0".
     return <TimeText {...props}>{"0"}</TimeText>;
   }
 
-  const totalMinutes = totalSeconds / 60;
-  const text = formatMinuteDuration(totalMinutes, lang, { long });
+  const text = formatDuration(duration, lang, { long });
   const dateTime = durationToISOString(duration) ?? String(children);
   return (
     <TimeText dateTime={dateTime} {...props}>
       {text}
     </TimeText>
   );
-};
-
-// Renders a duration object whose unit values may be non-numeric (mid-edit state).
-// Uses compact suffixes: h, min, s, ms. Minutes omit "min" when hours are present,
-// matching the valid-value compact format ("2h15" rather than "2h15min").
-const formatRawDuration = (duration) => {
-  const has = (key) =>
-    duration[key] !== undefined && duration[key] !== null;
-  const parts = [];
-  if (has("years")) parts.push(`${duration.years}y`);
-  if (has("months")) parts.push(`${duration.months}mo`);
-  if (has("weeks")) parts.push(`${duration.weeks}w`);
-  if (has("days")) parts.push(`${duration.days}d`);
-  if (has("hours")) parts.push(`${duration.hours}h`);
-  if (has("minutes")) {
-    parts.push(
-      has("hours") ? String(duration.minutes) : `${duration.minutes}min`,
-    );
-  }
-  if (has("seconds")) parts.push(`${duration.seconds}s`);
-  if (has("milliseconds")) parts.push(`${duration.milliseconds}ms`);
-  return parts.join("") || "0";
 };
 
 const TimeRelative = ({

@@ -14,7 +14,11 @@ import { naviI18n } from "./navi_i18n.js";
  * formatDay(tomorrow, "fr")   // "mardi 12 mai (demain)"
  * formatDay(nextWeek, "fr")   // "lundi 18 mai"
  */
-export const formatDay = (date, locale, { long = false, numeric = false } = {}) => {
+export const formatDay = (
+  date,
+  locale,
+  { long = false, numeric = false } = {},
+) => {
   if (numeric) {
     return new Intl.DateTimeFormat(locale, {
       day: "2-digit",
@@ -224,6 +228,85 @@ export const formatMinuteDuration = (
 export const formatHourDuration = (hours, locale, { long = false } = {}) => {
   const totalMinutes = Math.round(hours * 60);
   return formatMinuteDuration(totalMinutes, locale, { long });
+};
+
+/**
+ * Formats a duration object as a human-readable string.
+ * Reads the parts directly — no conversion to seconds — so years/months/days
+ * are preserved as-is and non-numeric mid-edit values (e.g. "2a") are rendered
+ * with their unit symbol rather than being stringified.
+ *
+ * @param {{ years?: any, months?: any, weeks?: any, days?: any,
+ *           hours?: any, minutes?: any, seconds?: any, milliseconds?: any }} duration
+ * @param {string} locale
+ * @param {{ long?: boolean }} [options]
+ *
+ * @example
+ * formatDuration({ hours: 2, minutes: 15 }, "fr")               // "2h15"
+ * formatDuration({ minutes: 45 }, "fr")                         // "45min"
+ * formatDuration({ hours: 2 }, "fr")                            // "2h"
+ * formatDuration({ hours: "2a", minutes: "15" }, "fr")          // "2ah15"
+ * formatDuration({ days: 1, hours: 2, minutes: 15 }, "fr")      // "1d 2h15"
+ * formatDuration({ hours: 1, minutes: 30 }, "fr", { long: true }) // "1 heure 30 minutes"
+ */
+export const formatDuration = (duration, locale, { long = false } = {}) => {
+  const has = (key) => duration[key] !== undefined && duration[key] !== null;
+
+  // Use Intl.DurationFormat for long mode when all present values are finite numbers
+  if (long && typeof Intl.DurationFormat !== "undefined") {
+    const intlDuration = {};
+    let allNumeric = true;
+    for (const key of [
+      "years",
+      "months",
+      "weeks",
+      "days",
+      "hours",
+      "minutes",
+      "seconds",
+      "milliseconds",
+    ]) {
+      if (!has(key)) continue;
+      const n = Number(duration[key]);
+      if (!isFinite(n)) {
+        allNumeric = false;
+        break;
+      }
+      intlDuration[key] = n;
+    }
+    if (allNumeric && Object.keys(intlDuration).length > 0) {
+      return new Intl.DurationFormat(locale, { style: "long" }).format(
+        intlDuration,
+      );
+    }
+    // Fall through to compact notation when values are non-numeric
+  }
+
+  const sym = (key) =>
+    naviI18n(`time.duration.${key}_symbol`, undefined, { lang: locale });
+  const parts = [];
+
+  if (has("years")) parts.push(`${duration.years}${sym("year")}`);
+  if (has("months")) parts.push(`${duration.months}${sym("month")}`);
+  if (has("weeks")) parts.push(`${duration.weeks}${sym("week")}`);
+  if (has("days")) parts.push(`${duration.days}${sym("day")}`);
+
+  // Hours + minutes: when both present, pad minutes to 2 digits after the h symbol
+  const hSym = sym("hour");
+  const mSym = sym("minute");
+  if (has("hours") && has("minutes")) {
+    parts.push(
+      `${duration.hours}${hSym}${String(duration.minutes).padStart(2, "0")}`,
+    );
+  } else if (has("hours")) {
+    parts.push(`${duration.hours}${hSym}`);
+  } else if (has("minutes")) {
+    parts.push(`${duration.minutes}${mSym}`);
+  }
+
+  if (has("seconds")) parts.push(`${duration.seconds}${sym("second")}`);
+  if (has("milliseconds")) parts.push(`${duration.milliseconds}${sym("millisecond")}`);
+  return parts.join("") || "0";
 };
 
 /**
