@@ -1,76 +1,32 @@
-// Units ordered from largest to smallest.
-// .name is the keyword used in duration strings (singular, no trailing "s").
-// .seconds is the conversion factor for durationToSeconds.
-const UNITS = [
-  { key: "years", name: "year", seconds: 31536000 },
-  { key: "months", name: "month", seconds: 2592000 },
-  { key: "weeks", name: "week", seconds: 604800 },
-  { key: "days", name: "day", seconds: 86400 },
-  { key: "hours", name: "hour", seconds: 3600 },
-  { key: "minutes", name: "minute", seconds: 60 },
-  { key: "seconds", name: "second", seconds: 1 },
-  { key: "milliseconds", name: "millisecond", seconds: 0.001 },
-];
-
-// Returns the index of the last occurrence of `name` in `s` where it is NOT
-// embedded inside a longer known unit name (e.g. "second" inside "millisecond").
-// This prevents matching "second" in "1second140millisecond" at the wrong position
-// while still allowing invalid value characters like "2a" in "2ahour".
-const findUnitIndex = (s, name) => {
-  let idx = s.lastIndexOf(name);
-  while (idx !== -1) {
-    let isPartOfLongerUnit = false;
-    for (const unit of UNITS) {
-      if (unit.name === name || !unit.name.endsWith(name)) {
-        continue;
-      }
-      const prefix = unit.name.slice(0, unit.name.length - name.length);
-      if (
-        idx >= prefix.length &&
-        s.slice(idx - prefix.length, idx) === prefix
-      ) {
-        isPartOfLongerUnit = true;
-        break;
-      }
-    }
-    if (!isPartOfLongerUnit) {
-      return idx;
-    }
-    idx = s.lastIndexOf(name, idx - 1);
-  }
-  return -1;
-};
-
-//
-// Algorithm: scan left-to-right by unit size (year -> millisecond). For each
-// unit, find its last boundary-aware occurrence in the remaining string (the
-// character before the unit name must be non-alphabetic). Everything to the
-// left is the raw value for that unit, preserved as-is even if invalid.
-//
-//   "2ahour"             -> { hours: "2a" }          invalid value, preserved
-//   "-1second"           -> { seconds: "-1" }         negative sign supported
-//   "1.14second"         -> { seconds: "1.14" }       decimal preserved
-//   "1second140millisecond" -> { seconds: "1", milliseconds: "140" }
-//
-// Input can be:
-//   - a string: "2hour", "15minute", "2hour15minute", "1year2month3day"
-//   - a plain object: passed through as-is (shallow clone)
-//   - anything else: returns null
-//
-// Values in the returned object are raw strings, not numbers. No trimming
-// is applied to values — spaces are preserved as-is so callers can see them.
-// Use durationToSeconds() for numeric conversion and validation.
-//
-// Examples:
-//   parseDuration("2hour")                    -> { hours: "2" }
-//   parseDuration("2hour15minute")            -> { hours: "2", minutes: "15" }
-//   parseDuration("-1second")                 -> { seconds: "-1" }
-//   parseDuration("1second140millisecond")    -> { seconds: "1", milliseconds: "140" }
-//   parseDuration("1.14second")               -> { seconds: "1.14" }
-//   parseDuration("2ahour")                   -> { hours: "2a" }
-//   parseDuration("30")                       -> null  (no unit)
-//   parseDuration({ hours: 2 })               -> { hours: 2 }  (object passthrough)
-//   parseDuration(null)                       -> null
+/**
+ * Parses a duration string or object into a plain object with named unit keys.
+ *
+ * Supported string format: one or more `<value><unit>` pairs in any order,
+ * e.g. `"2hour"`, `"15minute"`, `"2hour15minute"`, `"1year2month3day"`.
+ * Supported units: `year`, `month`, `week`, `day`, `hour`, `minute`, `second`, `millisecond`.
+ *
+ * Values in the returned object are **raw strings**, not numbers, so invalid
+ * or unusual input is preserved for the caller to inspect. Use
+ * {@link durationToSeconds} when you need a numeric result.
+ *
+ * A plain object input is returned as a shallow clone (passthrough). Any other
+ * non-string input returns `null`.
+ *
+ * @param {string|Object} value - A duration string or a pre-parsed duration object.
+ * @returns {{ years?: string, months?: string, weeks?: string, days?: string,
+ *             hours?: string, minutes?: string, seconds?: string, milliseconds?: string }|null}
+ *   An object containing only the units present in the input, or `null` if the
+ *   value cannot be parsed.
+ *
+ * @example
+ * parseDuration("2hour")             // { hours: "2" }
+ * parseDuration("2hour15minute")     // { hours: "2", minutes: "15" }
+ * parseDuration("-1second")          // { seconds: "-1" }
+ * parseDuration("1.14second")        // { seconds: "1.14" }
+ * parseDuration({ hours: 2 })        // { hours: 2 }
+ * parseDuration("30")                // null — no unit
+ * parseDuration(null)                // null
+ */
 export const parseDuration = (value) => {
   if (value === null || value === undefined) {
     return null;
@@ -112,6 +68,47 @@ export const parseDuration = (value) => {
   }
   return result;
 };
+// Returns the index of the last occurrence of `name` in `s` where it is NOT
+// embedded inside a longer known unit name (e.g. "second" inside "millisecond").
+// This prevents matching "second" in "1second140millisecond" at the wrong position
+// while still allowing invalid value characters like "2a" in "2ahour".
+const findUnitIndex = (s, name) => {
+  let idx = s.lastIndexOf(name);
+  while (idx !== -1) {
+    let isPartOfLongerUnit = false;
+    for (const unit of UNITS) {
+      if (unit.name === name || !unit.name.endsWith(name)) {
+        continue;
+      }
+      const prefix = unit.name.slice(0, unit.name.length - name.length);
+      if (
+        idx >= prefix.length &&
+        s.slice(idx - prefix.length, idx) === prefix
+      ) {
+        isPartOfLongerUnit = true;
+        break;
+      }
+    }
+    if (!isPartOfLongerUnit) {
+      return idx;
+    }
+    idx = s.lastIndexOf(name, idx - 1);
+  }
+  return -1;
+};
+// Units ordered from largest to smallest.
+// .name is the keyword used in duration strings (singular, no trailing "s").
+// .seconds is the conversion factor for durationToSeconds.
+const UNITS = [
+  { key: "years", name: "year", seconds: 31536000 },
+  { key: "months", name: "month", seconds: 2592000 },
+  { key: "weeks", name: "week", seconds: 604800 },
+  { key: "days", name: "day", seconds: 86400 },
+  { key: "hours", name: "hour", seconds: 3600 },
+  { key: "minutes", name: "minute", seconds: 60 },
+  { key: "seconds", name: "second", seconds: 1 },
+  { key: "milliseconds", name: "millisecond", seconds: 0.001 },
+];
 
 // Serialises a duration object back to a string.
 // Each unit is written as <rawValue><unitName> with no separator between units.
