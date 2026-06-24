@@ -103,6 +103,11 @@
               title="1. Intl units (browser built-in)"
               desc="Standard CLDR unit identifiers resolved via Intl.NumberFormat. Singular and plural forms are derived automatically."
             >
+              <Row label="">
+                <Text style={{ minWidth: "120px", fontWeight: "bold", fontSize: "11px", color: "#666", textTransform: "uppercase" }}>long (default)</Text>
+                <Text style={{ minWidth: "80px" }} />
+                <Text style={{ minWidth: "120px", fontWeight: "bold", fontSize: "11px", color: "#666", textTransform: "uppercase" }}>short</Text>
+              </Row>
               {[
                 "hour",
                 "minute",
@@ -125,9 +130,10 @@
                 "milliliter",
               ].map((unit) => (
                 <Row key={unit} label={unit}>
-                  <Unit unit={unit} lang={lang} />
-                  <Text style={{ color: "#aaa" }}>/</Text>
-                  <Unit unit={unit} plural lang={lang} />
+                  <Unit unit={unit} lang={lang} style={{ minWidth: "80px" }} />
+                  <Unit unit={unit} plural lang={lang} style={{ minWidth: "80px" }} />
+                  <Unit unit={unit} short lang={lang} style={{ minWidth: "80px" }} />
+                  <Unit unit={unit} short plural lang={lang} style={{ minWidth: "80px" }} />
                 </Row>
               ))}
             </Section>

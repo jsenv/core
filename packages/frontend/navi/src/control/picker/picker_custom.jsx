@@ -11,6 +11,7 @@ import { compareTwoJsValues } from "@jsenv/navi/src/utils/compare_two_js_values.
 import { dispatchRequestAction } from "../rules/control_action.js";
 import { dispatchRequestInteraction } from "../rules/control_interaction.js";
 import {
+  dispatchRequestClearUIState,
   dispatchRequestSetUIState,
   getUIStateFromElement,
 } from "../ui_state_dom.js";
@@ -258,10 +259,16 @@ const PickerCustom = (props) => {
     expandedRef.current = expanded;
     const valueAtOpenRef = useRef(null);
     const activeElementAtOpenRef = useRef(null);
+    // Tracks whether a uiAction has occurred since the last close denial.
+    // true  = no pending denial (initial state, or user has interacted since)
+    // false = close was denied and user hasn't interacted yet
+    // When false, a second close attempt is treated as cancel.
+    const uiActionSinceDeniedRef = useRef(true);
 
     const onOpen = (e) => {
       expandedRef.current = true;
       setExpanded(true);
+      uiActionSinceDeniedRef.current = true;
 
       const focusedBeforeOpen = e.detail.focusedBeforeOpen;
       activeElementAtOpenRef.current = focusedBeforeOpen;
@@ -349,7 +356,7 @@ const PickerCustom = (props) => {
       dispatchRequestInteraction(ref.current, options);
     };
 
-    const { onActionStart, children } = props;
+    const { onActionStart, children, uiAction: uiActionProp } = props;
     Object.assign(pickerProps, {
       "aria-expanded": expanded,
       "onActionStart": (e) => {
@@ -376,6 +383,11 @@ const PickerCustom = (props) => {
           },
         });
       },
+      // Intercept uiAction to detect user interaction after a close denial.
+      "uiAction": (v, e) => {
+        uiActionSinceDeniedRef.current = true;
+        uiActionProp?.(v, e);
+      },
       children,
     });
     Object.assign(popupProps, {
@@ -391,11 +403,27 @@ const PickerCustom = (props) => {
         const valueAtOpen = valueAtOpenRef.current;
 
         if (isCancel) {
+          uiActionSinceDeniedRef.current = true;
           dispatchRequestSetUIState(inputEl, valueAtOpen, {
             event: requestCloseEvent,
           });
           return;
         }
+
+        // If close was previously denied and the user hasn't interacted since,
+        // treat this re-attempt as a cancel so they are not trapped.
+        if (!uiActionSinceDeniedRef.current) {
+          debugPopup(
+            requestCloseEvent,
+            `picker close was denied and user did not interact, treating re-attempt as cancel (restoring ${JSON.stringify(valueAtOpen)})`,
+          );
+          uiActionSinceDeniedRef.current = true;
+          dispatchRequestSetUIState(inputEl, valueAtOpen, {
+            event: requestCloseEvent,
+          });
+          return;
+        }
+
         const valueAtClose = getPickerInputUIState(pickerEl);
         if (compareTwoJsValues(valueAtClose, valueAtOpen)) {
           debugPopup(
@@ -418,6 +446,7 @@ const PickerCustom = (props) => {
           // user sees what is wrong, even if the picker has no action prop.
           reportOnInvalid: true,
           onInvalid: () => {
+            uiActionSinceDeniedRef.current = false;
             closePermission.deny();
           },
           allowed: () => {},
@@ -490,6 +519,51 @@ const PickerCustom = (props) => {
         },
       });
 
+      Object.assign(pickerProps, {
+        onCopy: (e) => {
+          // Only handle copy on the picker button itself, not from children (e.g. inputs inside the popup).
+          if (e.target !== ref.current) return;
+          const pickerEl = ref.current;
+          const uiState = getPickerInputUIState(pickerEl);
+          if (uiState === undefined) return;
+          const text =
+            typeof uiState === "string" ? uiState : JSON.stringify(uiState);
+          e.clipboardData.setData("text/plain", text);
+          e.preventDefault();
+        },
+        onCut: (e) => {
+          if (e.target !== ref.current) return;
+          const pickerEl = ref.current;
+          const inputEl = getPickerInput(pickerEl);
+          const uiState = getPickerInputUIState(pickerEl);
+          if (uiState === undefined) return;
+          const text =
+            typeof uiState === "string" ? uiState : JSON.stringify(uiState);
+          e.clipboardData.setData("text/plain", text);
+          e.preventDefault();
+          requestInteraction({
+            event: e,
+            name: "cut",
+            allowed: () => {
+              dispatchRequestClearUIState(inputEl, e);
+            },
+          });
+        },
+        onPaste: (e) => {
+          if (e.target !== ref.current) return;
+          const pickerEl = ref.current;
+          const inputEl = getPickerInput(pickerEl);
+          const text = e.clipboardData.getData("text/plain");
+          e.preventDefault();
+          requestInteraction({
+            event: e,
+            name: "paste",
+            allowed: () => {
+              dispatchRequestSetUIState(inputEl, text, { event: e });
+            },
+          });
+        },
+      });
       Object.assign(pickerProps, {
         eventReactionDefinitions: {
           mouseDown: (e) => {

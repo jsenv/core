@@ -4,6 +4,7 @@ import { Text } from "./text.jsx";
 export const Unit = ({
   unit,
   plural,
+  short,
   lang,
   label,
   size = "smaller",
@@ -18,7 +19,6 @@ export const Unit = ({
     const ratio = sizeRatio !== undefined ? sizeRatio : 0.8;
     resolvedStyle = { fontSize: `calc(${ratio} * 1em)`, ...style };
   }
-  const isPlural = Boolean(plural);
   let unitText = unit;
   if (label) {
     unitText = label;
@@ -26,11 +26,15 @@ export const Unit = ({
     const singularText = naviI18n(unit, undefined, { lang });
     if (singularText === unit) {
       // naviI18n has no translation — try Intl.NumberFormat with style:"unit"
-      const intlText = formatIntlUnit(unit, isPlural, lang);
+      const intlText = formatIntlUnit(unit, { plural, lang, short });
       if (intlText !== null) {
         unitText = intlText;
       }
-    } else if (isPlural) {
+    } else if (short) {
+      const shortKey = `${unit}__short`;
+      const shortText = naviI18n(shortKey, undefined, { lang });
+      unitText = shortText !== shortKey ? shortText : singularText;
+    } else if (plural) {
       const pluralKey = `${unit}__plural`;
       const pluralText = naviI18n(pluralKey, undefined, { lang });
       // fallback to singular if no plural key registered
@@ -52,13 +56,13 @@ export const Unit = ({
   );
 };
 
-const formatIntlUnit = (unit, plural, lang) => {
+const formatIntlUnit = (unit, { lang, plural, short }) => {
   try {
     const count = plural ? 2 : 1;
     const parts = new Intl.NumberFormat(lang, {
       style: "unit",
       unit,
-      unitDisplay: "long",
+      unitDisplay: short ? "short" : "long",
     }).formatToParts(count);
     const unitPart = parts.find((p) => p.type === "unit");
     return unitPart ? unitPart.value : null;

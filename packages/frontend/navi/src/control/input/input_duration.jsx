@@ -171,6 +171,20 @@ const InputDurationHourAndMinute = ({
   const minHour = min !== undefined ? Math.floor(min / 60) : undefined;
   const maxHour = max !== undefined ? Math.floor(max / 60) : undefined;
 
+  // Minute bounds depend on the current hour value: when hours are at their
+  // minimum, the minute field must cover the remaining minutes; at the maximum,
+  // the minute field is capped to not exceed the total.
+  const hourNum = hourValue !== undefined ? Number(hourValue) : NaN;
+  const hourMinutes = isFinite(hourNum) ? hourNum * 60 : undefined;
+  const minuteMin =
+    min !== undefined && hourMinutes !== undefined
+      ? Math.max(0, min - hourMinutes)
+      : 0;
+  const minuteMax =
+    max !== undefined && hourMinutes !== undefined
+      ? Math.min(59, max - hourMinutes)
+      : 59;
+
   return (
     <InputGroup flex spacing="xxs" width="fit-content">
       <InputDurationHour
@@ -181,7 +195,12 @@ const InputDurationHourAndMinute = ({
         separator=":"
         {...rest}
       />
-      <InputDurationMinute value={minuteValue} min={0} max={59} {...rest} />
+      <InputDurationMinute
+        value={minuteValue}
+        min={minuteMin}
+        max={minuteMax}
+        {...rest}
+      />
     </InputGroup>
   );
 };
