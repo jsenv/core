@@ -1,4 +1,4 @@
-import { durationToMinutes, parseDuration } from "@jsenv/validity";
+import { durationToMinutes, durationToString, parseDuration } from "@jsenv/validity";
 import { useRef } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
@@ -11,17 +11,18 @@ import { Label } from "../field.jsx";
 import { Input } from "./input.jsx";
 import { InputGroup } from "./input_group.jsx";
 
-// An input for a duration expressed as a "HhM" string (e.g. "2h15", "30min").
-// Both parts are raw strings so invalid mid-edit values ("2ah15") are preserved.
+// An input for a duration expressed as a durationToString-compatible string
+// (e.g. "2hour15minute", "15minute"). Both parts are raw strings so invalid
+// mid-edit values ("2ahour15minute") are preserved by durationToString.
 // The component renders hour + minute sub-inputs for ergonomic entry; the hour
 // field is omitted when max < 60 (the range fits within a single minute field).
-// uiAction / action are called with the "HhM" string.
+// uiAction / action are called with the durationToString value.
 //
-// Value format:
-//   "2h15"   — 2 hours 15 minutes (h is separator + hour unit)
-//   "2h"     — 2 hours
-//   "30min"  — 30 minutes (minute-only display when max < 60)
-//   "2ah15" — invalid mid-edit: hour part "2a", minute part "15"
+// Value format (produced by durationToString):
+//   "2hour15minute"  — 2 hours 15 minutes
+//   "2hour"          — 2 hours, no minutes
+//   "15minute"       — 15 minutes (minute-only display when max < 60)
+//   "2ahour15minute" — invalid mid-edit: hour part "2a", minute part "15"
 // A bare number ("30") is not valid; a unit is always required.
 export const InputDuration = (props) => {
   if (props.unit !== "minute") {
@@ -58,9 +59,10 @@ const InputDurationAsMinutes = (props) => {
       {
         controlType: "duration_group",
         cascadeValidationToChildren: true,
-        // Always aggregates to "HH:MM" string — even mid-edit invalid values
-        // like "2a" are preserved as-is. Using strings (not numbers) avoids
-        // NaN which would cause a Preact signals cycle (NaN !== NaN = true).
+        // Aggregates sub-input raw strings into a durationToString value
+        // ("2hour15minute"). Invalid mid-edit values like "2a" are preserved
+        // by durationToString. Using strings (not numbers) avoids NaN which
+        // would cause a Preact signals cycle (NaN !== NaN = true).
         aggregateChildStates: (childUIStateControllers) => {
           let h = "";
           let m = "";
@@ -72,14 +74,18 @@ const InputDurationAsMinutes = (props) => {
               m = child.uiState ?? "";
             }
           }
-          return `${showHour ? h : "0"}:${m}`;
+          const durationObj = {};
+          if (showHour && h !== "") durationObj.hours = h;
+          if (m !== "") durationObj.minutes = m;
+          return durationToString(durationObj) ?? "";
         },
-        // Reverse mapping: "HH:MM" → { hour, minute } so that when the picker
-        // cancels and calls setUIState(storedValue), the sub-inputs are
+        // Reverse mapping: duration string → { hour, minute } so that when the
+        // picker cancels and calls setUIState(storedValue), the sub-inputs are
         // correctly reset to their original raw string values.
         distributeChildUIState: (groupState) => {
           const components = parseDuration(groupState);
-          return components ?? { hour: undefined, minute: undefined };
+          if (!components) return { hour: undefined, minute: undefined };
+          return { hour: components.hours, minute: components.minutes };
         },
       },
     );
@@ -87,8 +93,8 @@ const InputDurationAsMinutes = (props) => {
   const { value, min, step, required, readOnly, disabled, basePseudoState } =
     groupHostProps;
   const components = parseDuration(value);
-  const hourValue = components?.hour;
-  const minuteValue = components?.minute;
+  const hourValue = components?.hours;
+  const minuteValue = components?.minutes;
   const baseChildProps = {
     min,
     step,
@@ -139,7 +145,7 @@ const resolveDurationAsMinuteProps = (props) => {
   return props;
 };
 // Parse a min/max duration value to total minutes.
-// Accepts: number (already minutes), or any string supported by parseDurationToSeconds
+// Accepts: number (already minutes), or any duration string
 // ("1hour", "1hour20minute", "20minute", "30second", "2hour", …).
 const toMinutes = (value) => {
   if (value === undefined || value === null) {
@@ -149,11 +155,8 @@ const toMinutes = (value) => {
     return value;
   }
   if (typeof value === "string") {
-    const seconds = durationToMinutes(value);
-    if (seconds === null) {
-      return value;
-    }
-    return seconds / 60;
+    const minutes = durationToMinutes(value);
+    return minutes ?? value;
   }
   return value;
 };
@@ -224,6 +227,7 @@ const InputDurationHour = (props) => {
         expandX
         {...props}
         separator={undefined}
+        data-separator={separator || undefined}
       >
         {separator ? (
           <Input.UI.UnitSlot>{separator}</Input.UI.UnitSlot>

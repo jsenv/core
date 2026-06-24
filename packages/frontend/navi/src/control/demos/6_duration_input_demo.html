@@ -123,6 +123,7 @@
         NaviDebug,
         InputDuration,
       } from "@jsenv/navi";
+      import { durationToMinutes } from "@jsenv/validity";
       import { CallLog, useCallLog } from "./utils/call_log.jsx";
 
       const App = () => (
@@ -148,7 +149,7 @@
 
       // ── BasicDemo ─────────────────────────────────────────────────────────
       const BasicDemo = () => {
-        const minutesSignal = useSignal("2h15");
+        const minutesSignal = useSignal("2hour15minute");
 
         return (
           <div class="demo-section" id="basic">
@@ -171,13 +172,13 @@
             <h2>States</h2>
             <div class="states-grid">
               <label>:read-only</label>
-              <InputDuration unit="minute" value="2h15" readOnly />
+              <InputDuration unit="minute" value="2hour15minute" readOnly />
 
               <label>:disabled</label>
-              <InputDuration unit="minute" value="2h15" disabled />
+              <InputDuration unit="minute" value="2hour15minute" disabled />
 
               <label>:-navi-loading</label>
-              <InputDuration unit="minute" value="2h15" loading />
+              <InputDuration unit="minute" value="2hour15minute" loading />
             </div>
           </div>
         );
@@ -185,7 +186,7 @@
 
       // ── UnitCustomizationDemo ─────────────────────────────────────────────
       const UnitCustomizationDemo = () => {
-        const minutesSignal = useSignal("1h30");
+        const minutesSignal = useSignal("1hour30minute");
 
         return (
           <div class="demo-section">
@@ -217,7 +218,7 @@
 
       // ── OutsideFormDemo ───────────────────────────────────────────────────
       const OutsideFormDemo = () => {
-        const minutesSignal = useSignal("2h15");
+        const minutesSignal = useSignal("2hour15minute");
         const [entries, push, clear] = useCallLog();
 
         return (
@@ -243,7 +244,7 @@
 
       // ── InsideFormDemo ────────────────────────────────────────────────────
       const InsideFormDemo = () => {
-        const minutesSignal = useSignal("2h15");
+        const minutesSignal = useSignal("2hour15minute");
         const [entries, push, clear] = useCallLog();
 
         return (
@@ -280,7 +281,7 @@
 
       // ── InsideControlGroupDemo ────────────────────────────────────────────
       const InsideControlGroupDemo = () => {
-        const minutesSignal = useSignal("2h15");
+        const minutesSignal = useSignal("2hour15minute");
         const [entries, push, clear] = useCallLog();
 
         return (
@@ -326,11 +327,15 @@
         const minuteSignal = useSignal(undefined);
 
         const DurationPickerUI = () => {
-          const minute = minuteSignal.value;
-          if (minute === undefined) {
+          const value = minuteSignal.value;
+          if (value === undefined) {
             return <Time type="time" />;
           }
-          return <Time type="minute">{minute}</Time>;
+          const minutes = durationToMinutes(value);
+          if (minutes === null) {
+            return <Time type="time" />;
+          }
+          return <Time type="minute">{minutes}</Time>;
         };
 
         return (

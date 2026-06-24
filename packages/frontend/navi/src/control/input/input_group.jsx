@@ -1,13 +1,24 @@
 import { useEffect, useRef } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
+import { dispatchRequestInteraction } from "@jsenv/navi/src/control/rules/control_interaction.js";
+import { dispatchRequestSetUIState } from "@jsenv/navi/src/control/ui_state_dom.js";
 import { useDebugFocus } from "@jsenv/navi/src/navi_debug.jsx";
 
 /**
- * Wraps multiple inputs together and handles keyboard navigation between them.
- * ArrowRight at the end of an input moves focus to the next input.
- * ArrowLeft at the start of an input moves focus to the previous input.
- * navi_input_full (emitted when an input reaches maxLength) also moves forward.
+ * Wraps multiple inputs together and handles keyboard navigation and paste
+ * distribution between them.
+ *
+ * Keyboard navigation:
+ *   ArrowRight at the end of an input moves focus to the next input.
+ *   ArrowLeft at the start of an input moves focus to the previous input.
+ *   navi_input_full (emitted when an input reaches maxLength) also moves forward.
+ *
+ * Paste distribution:
+ *   When an input has a data-separator attribute, pasting a string that
+ *   contains that separator (e.g. "27/04/1990" into a day input with
+ *   data-separator="/") splits the text on each separator and fills the
+ *   corresponding sub-inputs in order.
  */
 export const InputGroup = (props) => {
   const ref = useRef(null);
@@ -127,13 +138,74 @@ const useInputGroup = (ref) => {
       focusInput(nextInput);
     };
 
+    const handlePaste = (e) => {
+      const active = document.activeElement;
+      if (!isTextInputElement(active) || !el.contains(active)) {
+        return;
+      }
+      const inputs = getInputs();
+      const startIdx = inputs.indexOf(active);
+      if (startIdx === -1) {
+        return;
+      }
+      const pastedText = e.clipboardData?.getData("text") ?? "";
+      if (!pastedText) {
+        return;
+      }
+      // Only intercept when the pasted text contains at least one separator
+      // from the inputs starting at the focused position.
+      const remainingInputs = inputs.slice(startIdx);
+      const hasSeparatorMatch = remainingInputs.some(
+        (input) =>
+          input.dataset.separator &&
+          pastedText.includes(input.dataset.separator),
+      );
+      if (!hasSeparatorMatch) {
+        return;
+      }
+      e.preventDefault();
+      let remaining = pastedText;
+      let lastFilledIdx = startIdx;
+      for (let i = 0; i < remainingInputs.length; i++) {
+        const input = remainingInputs[i];
+        const separator = input.dataset.separator;
+        let part;
+        if (separator && remaining.includes(separator)) {
+          const sepIdx = remaining.indexOf(separator);
+          part = remaining.slice(0, sepIdx);
+          remaining = remaining.slice(sepIdx + separator.length);
+        } else {
+          part = remaining;
+          remaining = "";
+        }
+        requestSubPaste(input, part, e);
+        lastFilledIdx = startIdx + i;
+        if (remaining === "") {
+          break;
+        }
+      }
+      focusInput(inputs[lastFilledIdx]);
+    };
+
     el.addEventListener("keydown", handleKeyDown, { capture: false });
     el.addEventListener("navi_input_full", handleNaviInputFull);
+    el.addEventListener("paste", handlePaste, { capture: true });
     return () => {
       el.removeEventListener("keydown", handleKeyDown, { capture: false });
       el.removeEventListener("navi_input_full", handleNaviInputFull);
+      el.removeEventListener("paste", handlePaste, { capture: true });
     };
   }, [debugFocus]);
+};
+
+const requestSubPaste = (input, value, event) => {
+  dispatchRequestInteraction(input, {
+    event,
+    name: "subpaste",
+    allowed: () => {
+      dispatchRequestSetUIState(input, value, { event });
+    },
+  });
 };
 
 const isTextInputElement = (el) => {
