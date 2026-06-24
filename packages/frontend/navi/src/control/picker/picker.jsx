@@ -370,7 +370,6 @@ const PickerButton = (props) => {
         onCopy={(e) => {
           const pickerEl = ref.current;
           if (isWithinPickerContent(e.target, pickerEl)) {
-            // Don't intercept inside the picker popup content.
             return;
           }
           const uiState = uiStateController.uiState;
@@ -378,31 +377,27 @@ const PickerButton = (props) => {
             return;
           }
           e.preventDefault();
-          // Put the ui state in the clipboard, not what user sees
-          // because here we want to favor copy/paste of the underlying value
-          // the formatted value is not always a valide value for now
-          // A date picker could display "Vendredi 21 Septembre" which is not a valid date string, but the ui state is "2023-09-21" which is valid.
-          e.clipboardData.setData("text/plain", String(uiState));
-          e.clipboardData.setData(
-            "application/x-navi",
-            JSON.stringify(uiState),
-          );
+          const displayText =
+            pickerEl.querySelector(".navi_picker_value")?.textContent ??
+            String(uiState);
+          e.clipboardData.setData("text/plain", displayText);
+          e.clipboardData.setData("application/x-navi", JSON.stringify(uiState));
         }}
         onCut={(e) => {
           const pickerEl = ref.current;
           if (isWithinPickerContent(e.target, pickerEl)) {
-            // Don't intercept inside the picker popup content.
             return;
           }
           const uiState = uiStateController.uiState;
           if (uiState === undefined) {
             return;
           }
-          e.clipboardData.setData(
-            "application/x-navi",
-            JSON.stringify(uiState),
-          );
-          // No preventDefault — let the browser run its default cut too.
+          e.preventDefault();
+          const displayText =
+            pickerEl.querySelector(".navi_picker_value")?.textContent ??
+            String(uiState);
+          e.clipboardData.setData("text/plain", displayText);
+          e.clipboardData.setData("application/x-navi", JSON.stringify(uiState));
           dispatchRequestInteraction(pickerEl, {
             event: e,
             name: "cut",
