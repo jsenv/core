@@ -58,6 +58,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
     return renderTable([[cell("input"), cell("parseDuration()")], ...rows], {
       borderCollapse: true,
+      maxRows: Infinity,
     });
   });
 
