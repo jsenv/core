@@ -317,6 +317,12 @@ const generateCrossPlatformCombination = (combination) => {
 };
 const keyboardEventIsMatchingKeyCombination = (event, keyCombination) => {
   const keys = keyCombination.toLowerCase().split("+");
+  const activeModifiers = new Set();
+  for (const eventProperty of Object.keys(modifierKeyMapping)) {
+    if (event[eventProperty]) {
+      activeModifiers.add(eventProperty);
+    }
+  }
 
   for (const key of keys) {
     let modifierFound = false;
@@ -335,6 +341,7 @@ const keyboardEventIsMatchingKeyCombination = (event, keyCombination) => {
         if (!event[eventProperty]) {
           return false;
         }
+        activeModifiers.delete(eventProperty);
         modifierFound = true;
         break;
       }
@@ -378,6 +385,13 @@ const keyboardEventIsMatchingKeyCombination = (event, keyCombination) => {
       return false;
     }
   }
+
+  const activeModifierNotSpecified = activeModifiers.size > 0;
+  // If any active modifier was not specified in the combination, reject the match
+  if (activeModifierNotSpecified) {
+    return false;
+  }
+
   return true;
 };
 // Configuration for mapping shortcut key names to browser event properties
