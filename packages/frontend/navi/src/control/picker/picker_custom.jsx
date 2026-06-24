@@ -11,7 +11,6 @@ import { compareTwoJsValues } from "@jsenv/navi/src/utils/compare_two_js_values.
 import { dispatchRequestAction } from "../rules/control_action.js";
 import { dispatchRequestInteraction } from "../rules/control_interaction.js";
 import {
-  dispatchRequestClearUIState,
   dispatchRequestSetUIState,
   getUIStateFromElement,
 } from "../ui_state_dom.js";
@@ -519,51 +518,6 @@ const PickerCustom = (props) => {
         },
       });
 
-      Object.assign(pickerProps, {
-        onCopy: (e) => {
-          // Only handle copy on the picker button itself, not from children (e.g. inputs inside the popup).
-          if (e.target !== ref.current) return;
-          const pickerEl = ref.current;
-          const uiState = getPickerInputUIState(pickerEl);
-          if (uiState === undefined) return;
-          const text =
-            typeof uiState === "string" ? uiState : JSON.stringify(uiState);
-          e.clipboardData.setData("text/plain", text);
-          e.preventDefault();
-        },
-        onCut: (e) => {
-          if (e.target !== ref.current) return;
-          const pickerEl = ref.current;
-          const inputEl = getPickerInput(pickerEl);
-          const uiState = getPickerInputUIState(pickerEl);
-          if (uiState === undefined) return;
-          const text =
-            typeof uiState === "string" ? uiState : JSON.stringify(uiState);
-          e.clipboardData.setData("text/plain", text);
-          e.preventDefault();
-          requestInteraction({
-            event: e,
-            name: "cut",
-            allowed: () => {
-              dispatchRequestClearUIState(inputEl, e);
-            },
-          });
-        },
-        onPaste: (e) => {
-          if (e.target !== ref.current) return;
-          const pickerEl = ref.current;
-          const inputEl = getPickerInput(pickerEl);
-          const text = e.clipboardData.getData("text/plain");
-          e.preventDefault();
-          requestInteraction({
-            event: e,
-            name: "paste",
-            allowed: () => {
-              dispatchRequestSetUIState(inputEl, text, { event: e });
-            },
-          });
-        },
-      });
       Object.assign(pickerProps, {
         eventReactionDefinitions: {
           mouseDown: (e) => {

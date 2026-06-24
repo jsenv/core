@@ -16,6 +16,11 @@ import {
 } from "../control_hooks.jsx";
 import { getUIStateControllerById } from "../controller_registry.js";
 import { resolveInputProps } from "../input/resolve_input_props.js";
+import { dispatchRequestInteraction } from "../rules/control_interaction.js";
+import {
+  dispatchRequestClearUIState,
+  dispatchRequestSetUIState,
+} from "../ui_state_dom.js";
 import { PickerContext } from "./picker_context.jsx";
 import { PickerCustomResolver } from "./picker_custom.jsx";
 import { PickerPresetResolver } from "./picker_preset.jsx";
@@ -160,7 +165,7 @@ const css = /* css */ `
     outline-offset: var(--picker-outline-offset);
     cursor: var(--x-picker-cursor, pointer);
     pointer-events: auto;
-    user-select: none;
+    /* user-select: none; */
     -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
 
     .navi_picker_value {
@@ -364,6 +369,59 @@ const PickerButton = (props) => {
         if (headless) {
           inputProps.onFocus(e);
         }
+      }}
+      onCopy={(e) => {
+        // Only handle copy on the picker button itself, not from children (e.g. inputs inside the popup).
+        if (e.target !== ref.current) {
+          return;
+        }
+        const inputEl = inputRef.current;
+        const uiState = inputEl.__uiStateController__.uiState;
+        if (uiState === undefined) {
+          return;
+        }
+        const text =
+          typeof uiState === "string" ? uiState : JSON.stringify(uiState);
+        e.clipboardData.setData("text/plain", text);
+        e.preventDefault();
+      }}
+      onCut={(e) => {
+        if (e.target !== ref.current) {
+          return;
+        }
+        const pickerEl = ref.current;
+        const inputEl = inputRef.current;
+        const uiState = inputEl.__uiStateController__.uiState;
+        if (uiState === undefined) {
+          return;
+        }
+        const text =
+          typeof uiState === "string" ? uiState : JSON.stringify(uiState);
+        e.clipboardData.setData("text/plain", text);
+        e.preventDefault();
+        dispatchRequestInteraction(pickerEl, {
+          event: e,
+          name: "cut",
+          allowed: () => {
+            dispatchRequestClearUIState(inputEl, e);
+          },
+        });
+      }}
+      onPaste={(e) => {
+        if (e.target !== ref.current) {
+          return;
+        }
+        const pickerEl = ref.current;
+        const inputEl = inputRef.current;
+        const text = e.clipboardData.getData("text/plain");
+        e.preventDefault();
+        dispatchRequestInteraction(pickerEl, {
+          event: e,
+          name: "paste",
+          allowed: () => {
+            dispatchRequestSetUIState(inputEl, text, { event: e });
+          },
+        });
       }}
     >
       <LoadingOutline
