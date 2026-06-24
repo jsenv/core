@@ -123,7 +123,6 @@
         NaviDebug,
         InputDuration,
       } from "@jsenv/navi";
-      import { durationToMinutes } from "@jsenv/validity";
       import { CallLog, useCallLog } from "./utils/call_log.jsx";
 
       const App = () => (
@@ -331,11 +330,7 @@
           if (value === undefined) {
             return <Time type="time" />;
           }
-          const minutes = durationToMinutes(value);
-          if (minutes === null) {
-            return <Time type="time" />;
-          }
-          return <Time type="minute">{minutes}</Time>;
+          return <Time type="duration">{value}</Time>;
         };
 
         return (
