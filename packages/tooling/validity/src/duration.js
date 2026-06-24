@@ -1,148 +1,152 @@
-// Parses a duration string into a total number of seconds.
-// Supported notations:
-//   shorthand     "2h15" → 2h + 15min (number after h, no unit needed)
-//   single unit   "5s" / "5second", "10min" / "10minute"
-//                 "2h" / "2hour", "3d" / "3day"
-//                 "2w" / "2week", "1month", "1year"
-//   compound      "1h20min" → 1h + 20min, "1h20min30s" → 1h + 20min + 30s
-// A bare number without a unit (e.g. "30") returns null.
-// Returns null when the value cannot be parsed.
-export const parseDurationToSeconds = (value) => {
+// Units ordered from largest to smallest.
+// .name is the keyword used in duration strings (singular, no trailing "s").
+// .seconds is the conversion factor for durationToSeconds.
+const UNITS = [
+  { key: "years", name: "year", seconds: 31536000 },
+  { key: "months", name: "month", seconds: 2592000 },
+  { key: "weeks", name: "week", seconds: 604800 },
+  { key: "days", name: "day", seconds: 86400 },
+  { key: "hours", name: "hour", seconds: 3600 },
+  { key: "minutes", name: "minute", seconds: 60 },
+  { key: "seconds", name: "second", seconds: 1 },
+];
+
+// Parses a duration string into a plain object with only the units present.
+//
+// Algorithm: scan left-to-right by unit size (year -> second). For each unit,
+// find its LAST occurrence in the remaining string. Everything to the left is
+// the raw value for that unit (preserved as-is, even if invalid). This means:
+//
+//   "2ahour"    -> { hours: "2a" }         invalid value, preserved
+//   "2hourhour" -> { hours: "2hour" }      round-trip escape (see durationToString)
+//
+// Input can be:
+//   - a string: "2hour", "15minute", "2hour15minute", "1year2month3day"
+//   - a plain object: passed through as-is (shallow clone)
+//   - anything else: returns null
+//
+// Values in the returned object are raw strings, not numbers.
+// Use durationToSeconds() for numeric conversion and validation.
+//
+// Examples:
+//   parseDuration("2hour")          -> { hours: "2" }
+//   parseDuration("2hour15minute")  -> { hours: "2", minutes: "15" }
+//   parseDuration("2ahour")         -> { hours: "2a" }
+//   parseDuration("2hourhour")      -> { hours: "2hour" }
+//   parseDuration("30")             -> null  (no unit)
+//   parseDuration({ hours: 2 })     -> { hours: 2 }  (object passthrough)
+//   parseDuration(null)             -> null
+export const parseDuration = (value) => {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  if (typeof value === "object") {
+    return { ...value };
+  }
   if (typeof value !== "string") {
     return null;
   }
-  const str = value.trim();
-
-  // Shorthand: "2h15" or "2h" — number after 'h' (no 'min' suffix) counts as minutes.
-  // This is matched before the compound regex to avoid "2h15" being rejected.
-  const shorthandMatch = /^(\d+(?:\.\d+)?)h(\d+(?:\.\d+)?)?$/.exec(str);
-  if (shorthandMatch) {
-    const h = parseFloat(shorthandMatch[1]);
-    const min = shorthandMatch[2] ? parseFloat(shorthandMatch[2]) : 0;
-    return h * 3600 + min * 60;
-  }
-
-  // Compound: 1h20min, 1h20min30s, 2h30min, 20min30s, etc.
-  const compoundMatch =
-    /^(?:(\d+(?:\.\d+)?)h)?(?:(\d+(?:\.\d+)?)min)?(?:(\d+(?:\.\d+)?)s)?$/.exec(
-      str,
-    );
-  if (
-    compoundMatch &&
-    (compoundMatch[1] || compoundMatch[2] || compoundMatch[3]) &&
-    str !== ""
-  ) {
-    const h = compoundMatch[1] ? parseFloat(compoundMatch[1]) : 0;
-    const min = compoundMatch[2] ? parseFloat(compoundMatch[2]) : 0;
-    const sec = compoundMatch[3] ? parseFloat(compoundMatch[3]) : 0;
-    return h * 3600 + min * 60 + sec;
-  }
-
-  // Single value with long-form unit
-  const singleMatch =
-    /^(\d+(?:\.\d+)?)(second|minute|hour|day|week|month|year)s?$/.exec(str);
-  if (singleMatch) {
-    const n = parseFloat(singleMatch[1]);
-    const unit = singleMatch[2];
-    if (unit === "second") {
-      return n;
-    }
-    if (unit === "minute") {
-      return n * 60;
-    }
-    if (unit === "hour") {
-      return n * 3600;
-    }
-    if (unit === "day") {
-      return n * 86400;
-    }
-    if (unit === "week") {
-      return n * 604800;
-    }
-    if (unit === "month") {
-      return n * 2592000;
-    }
-    if (unit === "year") {
-      return n * 31536000;
-    }
-  }
-
-  return null;
-};
-
-// Parses the STRUCTURE of a duration string into its raw component parts,
-// preserving invalid mid-edit values (e.g. "2ah15" → { hour: "2a", minute: "15" }).
-//
-// Format rules (same as parseDurationToSeconds):
-//   "2h15"    → { hour: "2",  minute: "15" }
-//   "2h15min" → { hour: "2",  minute: "15" }
-//   "2h"      → { hour: "2",  minute: undefined }
-//   "h15"     → { hour: "",   minute: "15" }  (empty hour = not entered)
-//   "15min"   → { hour: undefined, minute: "15" }
-//   "2ah15"   → { hour: "2a", minute: "15" }  (invalid hour preserved)
-//   "2h1a5"   → { hour: "2",  minute: "1a5" } (invalid minute preserved)
-//   ""        → { hour: undefined, minute: undefined }
-//
-// Returns null when the string has no recognisable unit/separator ("30" alone).
-export const parseDurationComponents = (value) => {
-  if (value == null || value === "") {
-    return { hour: undefined, minute: undefined };
-  }
-  const s = String(value).trim();
+  let s = value.trim();
   if (s === "") {
-    return { hour: undefined, minute: undefined };
+    return null;
   }
 
-  // "h" acts as both the hour unit and the hours/minutes separator.
-  const hIndex = s.indexOf("h");
-  if (hIndex !== -1) {
-    const hourPart = s.slice(0, hIndex); // raw hours string, may be invalid
-    let minutePart = s.slice(hIndex + 1); // raw minutes string, may be invalid
-    // Strip trailing "min" if present (normalise "2h15min" → minute="15")
-    if (minutePart.endsWith("min")) {
-      minutePart = minutePart.slice(0, -3);
+  const result = {};
+  for (const { key, name } of UNITS) {
+    const idx = s.lastIndexOf(name);
+    if (idx === -1) {
+      continue;
     }
-    return {
-      hour: hourPart === "" ? undefined : hourPart,
-      minute: minutePart === "" ? undefined : minutePart,
-    };
+    const rawValue = s.slice(0, idx).trim();
+    const remainder = s.slice(idx + name.length).trim();
+    if (rawValue !== "") {
+      result[key] = rawValue;
+    }
+    s = remainder;
+    if (s === "") {
+      break;
+    }
   }
 
-  // No "h": look for "min" or "s" suffix.
-  if (s.endsWith("min")) {
-    const minutePart = s.slice(0, -3);
-    return {
-      hour: undefined,
-      minute: minutePart === "" ? undefined : minutePart,
-    };
+  // Leftover text has no matching unit -- the string is not a valid duration.
+  if (s.trim() !== "") {
+    return null;
   }
-  if (s.endsWith("s")) {
-    return { hour: undefined, minute: undefined }; // seconds not used by InputDuration
+  if (Object.keys(result).length === 0) {
+    return null;
   }
+  return result;
+};
 
-  // No unit/separator — ambiguous (e.g. "30"). Return null to signal invalid format.
-  return null;
-};
-const resolveToHours = (value) => {
-  const seconds = parseDurationToSeconds(value);
-  if (seconds === null) {
-    return value;
+// Serialises a duration object back to a string.
+// Each unit is written as <rawValue><unitName> with no separator between units.
+// Units always appear in order from largest to smallest.
+//
+// Values may be numbers or strings. If a string value contains the unit name
+// (e.g. { hours: "2hour" }), appending the unit name again produces "2hourhour".
+// parseDuration will correctly recover { hours: "2hour" } from that string via
+// the lastIndexOf rule -- this is the implicit escaping mechanism.
+//
+// Examples:
+//   durationToString({ hours: 2, minutes: 15 }) -> "2hour15minute"
+//   durationToString({ years: 1, months: 2 })   -> "1year2month"
+//   durationToString({ hours: "2a" })            -> "2ahour"
+//   durationToString({ hours: "2hour" })         -> "2hourhour"  (escaped)
+//   durationToString({})                          -> null
+//   durationToString(null)                        -> null
+export const durationToString = (duration) => {
+  if (!duration || typeof duration !== "object") {
+    return null;
   }
-  return seconds / 3600;
-};
-const resolveToMinutes = (value) => {
-  const seconds = parseDurationToSeconds(value);
-  if (seconds === null) {
-    return value;
+  const parts = [];
+  for (const { key, name } of UNITS) {
+    if (duration[key] !== undefined && duration[key] !== null) {
+      parts.push(String(duration[key]) + name);
+    }
   }
-  return seconds / 60;
-};
-const resolveToSeconds = (value) => {
-  const seconds = parseDurationToSeconds(value);
-  if (seconds === null) {
-    return value;
+  if (parts.length === 0) {
+    return null;
   }
-  return seconds;
+  return parts.join("");
+};
+
+// Returns the total duration as a number of seconds.
+// Accepts either a duration string or a duration object.
+// Returns null if the value cannot be parsed or any unit value is not a finite number.
+//
+// Examples:
+//   durationToSeconds("2hour15minute")           -> 8100
+//   durationToSeconds({ hours: 2, minutes: 15 }) -> 8100
+//   durationToSeconds("30")                      -> null  (no unit)
+//   durationToSeconds({ hours: "2a" })           -> null  (invalid number)
+//   durationToSeconds(null)                      -> null
+export const durationToSeconds = (value) => {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  let duration;
+  if (typeof value === "object") {
+    duration = value;
+  } else if (typeof value === "string") {
+    duration = parseDuration(value);
+    if (duration === null) {
+      return null;
+    }
+  } else {
+    return null;
+  }
+  let total = 0;
+  for (const { key, seconds } of UNITS) {
+    if (duration[key] === undefined || duration[key] === null) {
+      continue;
+    }
+    const n = Number(duration[key]);
+    if (!isFinite(n)) {
+      return null;
+    }
+    total += n * seconds;
+  }
+  return total;
 };
 
 // Formats a number of milliseconds as a short duration string.
