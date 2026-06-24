@@ -11,6 +11,7 @@ import {
 const BORDER = { color: COLORS.GREY };
 const cell = (value) => ({ value, border: BORDER });
 
+snapshotTests.prefConfigure({ preserveDurations: true });
 await snapshotTests(import.meta.url, ({ test }) => {
   test("parseDuration", () => {
     const cases = [
