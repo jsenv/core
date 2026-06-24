@@ -691,10 +691,14 @@ export const renderTable = (
         const cell = row[x];
         const { value, format } = cell;
 
-        if (format !== "size" && isFinite(value) && value !== "") {
-          const isNegative = value < 0;
-          if (value % 1 === 0) {
-            const { integer } = tokenizeInteger(Math.abs(value));
+        const numericValue =
+          typeof value === "string"
+            ? Number(value.replace(/_/g, ""))
+            : value;
+        if (format !== "size" && isFinite(numericValue) && value !== "") {
+          const isNegative = numericValue < 0;
+          if (numericValue % 1 === 0) {
+            const { integer } = tokenizeInteger(Math.abs(numericValue));
             const integerFormatted = groupDigits(integer);
             const integerWidth = measureTextWidth(integerFormatted);
             const largestIntegerInColumn =
@@ -724,7 +728,7 @@ export const renderTable = (
             });
           } else {
             const { integer, decimalSeparator, decimal } = tokenizeFloat(
-              Math.abs(value),
+              Math.abs(numericValue),
             );
             const integerFormatted = groupDigits(integer);
             const integerWidth = measureTextWidth(integerFormatted);
