@@ -110,21 +110,27 @@ const UNITS = [
   { key: "milliseconds", name: "millisecond", seconds: 0.001 },
 ];
 
-// Serialises a duration object back to a string.
-// Each unit is written as <rawValue><unitName> with no separator between units.
-// Units always appear in order from largest to smallest.
-//
-// Values may be numbers or strings. Negative values are preserved (e.g.
-// { seconds: "-1" } -> "-1second").
-//
-// Examples:
-//   durationToString({ hours: 2, minutes: 15 })          -> "2hour15minute"
-//   durationToString({ years: 1, months: 2 })            -> "1year2month"
-//   durationToString({ hours: "2a" })                    -> "2ahour"
-//   durationToString({ seconds: "-1" })                  -> "-1second"
-//   durationToString({ seconds: 1, milliseconds: 140 })  -> "1second140millisecond"
-//   durationToString({})                                  -> null
-//   durationToString(null)                                -> null
+/**
+ * Serialises a duration object back to a duration string.
+ *
+ * Each unit is written as `<value><unitName>` with no separator, always in
+ * order from largest to smallest unit. Values may be numbers or strings;
+ * non-numeric and negative values are preserved as-is. Returns `null` for
+ * empty objects or non-object inputs.
+ *
+ * @param {{ years?: any, months?: any, weeks?: any, days?: any,
+ *           hours?: any, minutes?: any, seconds?: any, milliseconds?: any }|null} duration
+ * @returns {string|null}
+ *
+ * @example
+ * durationToString({ hours: 2, minutes: 15 })          // "2hour15minute"
+ * durationToString({ years: 1, months: 2 })            // "1year2month"
+ * durationToString({ hours: "2a" })                    // "2ahour"
+ * durationToString({ seconds: "-1" })                  // "-1second"
+ * durationToString({ seconds: 1, milliseconds: 140 })  // "1second140millisecond"
+ * durationToString({})                                 // null
+ * durationToString(null)                               // null
+ */
 export const durationToString = (duration) => {
   if (!duration || typeof duration !== "object") {
     return null;
@@ -141,16 +147,24 @@ export const durationToString = (duration) => {
   return parts.join("");
 };
 
-// Returns the total duration as a number of seconds.
-// Accepts either a duration string or a duration object.
-// Returns null if the value cannot be parsed or any unit value is not a finite number.
-//
-// Examples:
-//   durationToSeconds("2hour15minute")           -> 8100
-//   durationToSeconds({ hours: 2, minutes: 15 }) -> 8100
-//   durationToSeconds("30")                      -> null  (no unit)
-//   durationToSeconds({ hours: "2a" })           -> null  (invalid number)
-//   durationToSeconds(null)                      -> null
+/**
+ * Returns the total duration as a number of seconds.
+ *
+ * Accepts either a duration string (parsed via {@link parseDuration}) or a
+ * pre-parsed duration object. Returns `null` if the value cannot be parsed or
+ * if any unit value is not a finite number.
+ *
+ * @param {string|Object|null} value - A duration string or a duration object.
+ * @returns {number|null}
+ *
+ * @example
+ * durationToSeconds("2hour15minute")           // 8100
+ * durationToSeconds({ hours: 2, minutes: 15 }) // 8100
+ * durationToSeconds("-1second")                // -1
+ * durationToSeconds("30")                      // null — no unit
+ * durationToSeconds({ hours: "2a" })           // null — invalid number
+ * durationToSeconds(null)                      // null
+ */
 export const durationToSeconds = (value) => {
   if (value === null || value === undefined) {
     return null;

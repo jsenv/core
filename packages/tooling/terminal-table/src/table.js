@@ -692,6 +692,7 @@ export const renderTable = (
         const { value, format } = cell;
 
         if (format !== "size" && isFinite(value) && value !== "") {
+          const isNegative = value < 0;
           if (value % 1 === 0) {
             const { integer } = tokenizeInteger(Math.abs(value));
             const integerFormatted = groupDigits(integer);
@@ -711,6 +712,13 @@ export const renderTable = (
               const floatWidth = largestFloatInColumnMap.get(cell.x);
               if (floatWidth) {
                 integerText += " ".repeat(floatWidth);
+              }
+              if (isNegative) {
+                const firstDigitIdx = integerText.search(/\S/);
+                integerText =
+                  firstDigitIdx > 0
+                    ? `${integerText.slice(0, firstDigitIdx - 1)}-${integerText.slice(firstDigitIdx)}`
+                    : `-${integerText}`;
               }
               cell.updateValue(integerText);
             });
@@ -739,6 +747,13 @@ export const renderTable = (
               if (floatWidth < floatColumnWidth) {
                 const padding = floatColumnWidth - floatWidth;
                 floatText += " ".repeat(padding - 1);
+              }
+              if (isNegative) {
+                const firstDigitIdx = floatText.search(/\S/);
+                floatText =
+                  firstDigitIdx > 0
+                    ? `${floatText.slice(0, firstDigitIdx - 1)}-${floatText.slice(firstDigitIdx)}`
+                    : `-${floatText}`;
               }
               cell.updateValue(floatText);
             });
