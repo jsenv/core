@@ -110,7 +110,6 @@
     </div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useSignal } from "@preact/signals";
       import {
         Box,
         Button,
@@ -122,8 +121,32 @@
         Time,
         NaviDebug,
         InputDuration,
+        stateSignal,
+        route,
+        setupRoutes,
       } from "@jsenv/navi";
       import { CallLog, useCallLog } from "./utils/call_log.jsx";
+
+      // ── State signals (persisted in URL search params) ────────────────────
+
+      const basicSignal = stateSignal("2hour15minute", { id: "basic" });
+      const outsideFormSignal = stateSignal("2hour15minute", { id: "outside" });
+      const insideFormSignal = stateSignal("2hour15minute", { id: "form" });
+      const controlGroupSignal = stateSignal("2hour15minute", { id: "group" });
+      const pickerSignal = stateSignal(undefined, { id: "picker" });
+      const customSignal = stateSignal("1hour30minute", { id: "custom" });
+
+      const DEMO_ROUTE = route("", {
+        searchParams: {
+          basic: basicSignal,
+          outside: outsideFormSignal,
+          form: insideFormSignal,
+          group: controlGroupSignal,
+          picker: pickerSignal,
+          custom: customSignal,
+        },
+      });
+      setupRoutes([DEMO_ROUTE]);
 
       // Shows the raw signal value and how <Time type="duration"> renders it.
       const StateDisplay = ({ value }) => (
@@ -172,16 +195,14 @@
 
       // ── BasicDemo ─────────────────────────────────────────────────────────
       const BasicDemo = () => {
-        const minutesSignal = useSignal("2hour15minute");
-
         return (
           <div class="demo-section" id="basic">
             <h2>Basic</h2>
             <InputDuration
               unit="minute"
-              value={minutesSignal.value}
+              value={basicSignal.value}
               uiAction={(v) => {
-                minutesSignal.value = v;
+                basicSignal.value = v;
               }}
             />
           </div>
@@ -209,7 +230,6 @@
 
       // ── UnitCustomizationDemo ─────────────────────────────────────────────
       const UnitCustomizationDemo = () => {
-        const minutesSignal = useSignal("1hour30minute");
 
         return (
           <div class="demo-section">
@@ -221,9 +241,9 @@
             </p>
             <InputDuration
               unit="minute"
-              value={minutesSignal.value}
+              value={customSignal.value}
               uiAction={(v) => {
-                minutesSignal.value = v;
+                customSignal.value = v;
               }}
               unitHour={
                 <Unit
@@ -241,7 +261,6 @@
 
       // ── OutsideFormDemo ───────────────────────────────────────────────────
       const OutsideFormDemo = () => {
-        const minutesSignal = useSignal("2hour15minute");
         const [entries, push, clear] = useCallLog();
 
         return (
@@ -253,13 +272,13 @@
             <Box flex="y" spacing="s" alignX="start">
               <InputDuration
                 unit="minute"
-                value={minutesSignal.value}
+                value={outsideFormSignal.value}
                 uiAction={(v) => {
                   push("uiAction", v);
-                  minutesSignal.value = v;
+                  outsideFormSignal.value = v;
                 }}
               />
-              <StateDisplay value={minutesSignal.value} />
+              <StateDisplay value={outsideFormSignal.value} />
               <CallLog entries={entries} onClear={clear} />
             </Box>
           </div>
@@ -268,7 +287,6 @@
 
       // ── InsideFormDemo ────────────────────────────────────────────────────
       const InsideFormDemo = () => {
-        const minutesSignal = useSignal("2hour15minute");
         const [entries, push, clear] = useCallLog();
 
         return (
@@ -290,12 +308,12 @@
                 <InputDuration
                   unit="minute"
                   name="duration"
-                  value={minutesSignal.value}
+                  value={insideFormSignal.value}
                   uiAction={(v) => {
-                    minutesSignal.value = v;
+                    insideFormSignal.value = v;
                   }}
                 />
-                <StateDisplay value={minutesSignal.value} />
+                <StateDisplay value={insideFormSignal.value} />
                 <Button type="submit">Submit</Button>
                 <CallLog entries={entries} onClear={clear} />
               </Box>
@@ -306,7 +324,6 @@
 
       // ── InsideControlGroupDemo ────────────────────────────────────────────
       const InsideControlGroupDemo = () => {
-        const minutesSignal = useSignal("2hour15minute");
         const [entries, push, clear] = useCallLog();
 
         return (
@@ -331,12 +348,12 @@
                   <InputDuration
                     unit="minute"
                     name="minutes"
-                    value={minutesSignal.value}
+                    value={controlGroupSignal.value}
                     uiAction={(v) => {
-                      minutesSignal.value = v;
+                      controlGroupSignal.value = v;
                     }}
                   />
-                  <StateDisplay value={minutesSignal.value} />
+                  <StateDisplay value={controlGroupSignal.value} />
                   <Button command="--navi-send">Submit</Button>
                 </Box>
               </ControlGroup>
@@ -350,10 +367,9 @@
       const InsidePickerInFormDemo = () => {
         const [entries, push, clear] = useCallLog();
         const pickerId = "duration-picker";
-        const minuteSignal = useSignal(undefined);
 
         const DurationPickerUI = () => {
-          const value = minuteSignal.value;
+          const value = pickerSignal.value;
           if (value === undefined) {
             return <Time type="time" />;
           }
@@ -391,9 +407,9 @@
                     <Text bold>Enter a duration</Text>
                     <InputDuration
                       unit="minute"
-                      value={minuteSignal.value}
+                      value={pickerSignal.value}
                       uiAction={(value) => {
-                        minuteSignal.value = value;
+                        pickerSignal.value = value;
                       }}
                     />
                     <Box flex="x" spacing="s" alignX="end" expandX>
@@ -406,7 +422,7 @@
                     </Box>
                   </Box>
                 </Picker>
-                <StateDisplay value={minuteSignal.value} />
+                <StateDisplay value={pickerSignal.value} />
                 <Button command="--navi-send">Submit</Button>
                 <CallLog entries={entries} onClear={clear} />
               </Box>
