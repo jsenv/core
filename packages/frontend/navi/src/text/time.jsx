@@ -49,14 +49,16 @@ import { Text } from "./text.jsx";
  * @param {boolean} [bare]
  *   When true, strips the past-tense literal ("il y a", "ago") and returns only integer + unit.
  *   Only applies to the past state of `type="relative"`.
- * @param {boolean} [long]
- *   When true and `type="date"`, uses the long weekday/month format.
+ * @param {"long"|"short"|"timestring"} [format="long"]
+ *   Controls the verbosity of the output. Defaults to `"long"` for all types.
+ *   - `"short"`      → abbreviated format (e.g. "2h15" instead of "2 heures 15 minutes")
+ *   - `"timestring"` → clock-style string, only for `type="time"` and `type="minute"` (e.g. "14:30")
  * @param {boolean} [numeric]
  *   When true and `type="date"`, formats as numeric date (e.g. "11/09/2026") using locale separators.
  * @param {boolean} [dayLabel]
  *   When true and `type="date"`, appends the locale-aware relative label
  *   ("hier", "aujourd'hui", "demain") when the date is yesterday, today, or tomorrow.
- * @param {string} [locale]
+ * @param {string} [lang]
  *   BCP 47 locale tag (e.g. `"fr"`, `"en-US"`).
  *   Defaults to `langSignal.value` (the browser's current language).
  */
@@ -92,7 +94,7 @@ export const Time = (props) => {
 const TimeDate = ({
   children,
   lang = langSignal.value,
-  long,
+  format = "long",
   numeric,
   dayLabel,
   now,
@@ -117,7 +119,7 @@ const TimeDate = ({
     return <TimeText {...props}>{String(children)}</TimeText>;
   }
 
-  const base = formatDay(date, { lang, long, numeric });
+  const base = formatDay(date, { lang, long: format !== "short", numeric });
   let text;
   if (dayLabel) {
     const offset = getRelativeDay(date, { now });
@@ -206,7 +208,7 @@ const TimeDatetime = ({ children, lang = langSignal.value, ...props }) => {
 const TimeTime = ({
   children,
   lang = langSignal.value,
-  durationFormat,
+  format = "long",
   ...props
 }) => {
   if (children === undefined) {
@@ -227,19 +229,18 @@ const TimeTime = ({
   const hh = String(date.getHours()).padStart(2, "0");
   const mm = String(date.getMinutes()).padStart(2, "0");
   const dateTime = `${hh}:${mm}`; // See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
-  if (durationFormat) {
-    const totalMinutes = date.getHours() * 60 + date.getMinutes();
-    const text = formatMinuteDuration(totalMinutes, {
-      lang,
-      long: durationFormat === "long",
-    });
+  if (format === "timestring") {
     return (
       <TimeText dateTime={dateTime} {...props}>
-        {text}
+        {formatTime(date, lang)}
       </TimeText>
     );
   }
-  const text = formatTime(date, lang);
+  const totalMinutes = date.getHours() * 60 + date.getMinutes();
+  const text = formatMinuteDuration(totalMinutes, {
+    lang,
+    long: format !== "short",
+  });
   return (
     <TimeText dateTime={dateTime} {...props}>
       {text}
@@ -250,12 +251,11 @@ const TimeTime = ({
 const TimeMinute = ({
   children,
   lang = langSignal.value,
-  long,
-  timeString,
+  format = "long",
   ...props
 }) => {
   if (children === undefined) {
-    return <TimeText {...props}>{timeString ? "--:--" : "--"}</TimeText>;
+    return <TimeText {...props}>{format === "timestring" ? "--:--" : "--"}</TimeText>;
   }
   let minutes;
   if (typeof children === "number") {
@@ -274,11 +274,11 @@ const TimeMinute = ({
   const mm = String(remainingMinutes).padStart(2, "0");
   const dateTime = `${hh}:${mm}`;
   let text;
-  if (timeString) {
+  if (format === "timestring") {
     const date = new Date(1970, 0, 1, totalHours, remainingMinutes, 0);
     text = formatTime(date, lang);
   } else {
-    text = formatMinuteDuration(minutes, { lang, long });
+    text = formatMinuteDuration(minutes, { lang, long: format !== "short" });
   }
   return (
     <TimeText dateTime={dateTime} {...props}>
@@ -287,7 +287,7 @@ const TimeMinute = ({
   );
 };
 
-const TimeHour = ({ children, lang = langSignal.value, long, ...props }) => {
+const TimeHour = ({ children, lang = langSignal.value, format = "long", ...props }) => {
   if (children === undefined) {
     return <TimeText {...props}>--</TimeText>;
   }
@@ -302,14 +302,14 @@ const TimeHour = ({ children, lang = langSignal.value, long, ...props }) => {
     hours = childrenAsNumber;
   }
 
-  const text = formatHourDuration(hours, { lang, long });
+  const text = formatHourDuration(hours, { lang, long: format !== "short" });
   return <TimeText {...props}>{text}</TimeText>;
 };
 
 const TimeDuration = ({
   children,
   lang = langSignal.value,
-  long,
+  format = "long",
   ...props
 }) => {
   if (children === undefined || children === null) {
@@ -341,7 +341,7 @@ const TimeDuration = ({
     return <TimeText {...props}>{"0"}</TimeText>;
   }
 
-  const text = formatDuration(duration, { lang, long });
+  const text = formatDuration(duration, { lang, long: format !== "short" });
   const dateTime = durationToISOString(duration) ?? String(children);
   return (
     <TimeText dateTime={dateTime} {...props}>
