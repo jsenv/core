@@ -89,6 +89,7 @@
             <li><a href="#time">type="time"</a></li>
             <li><a href="#hour">type="hour"</a></li>
             <li><a href="#minute">type="minute"</a></li>
+            <li><a href="#second">type="second"</a></li>
           </ol>
         </nav>
       );
@@ -505,6 +506,47 @@
                   <Time type="minute" format="narrow" lang={lang}>{undefined}</Time>
                   <Time type="minute" format="compact" lang={lang}>{undefined}</Time>
                   <Time type="minute" format="timestring" lang={lang}>{undefined}</Time>
+                </GRow>
+              </Grid>
+            </Section>
+
+            {/* ── 9. second ─────────────────────────────────────────────── */}
+            <Section id="second" title='9. type="second"'>
+              <Grid cols={['(default)', 'format="short"', 'format="narrow"', 'format="compact"', 'format="timestring"']}>
+                <GRow label="3661">
+                  <Time type="second" lang={lang}>{3661}</Time>
+                  <Time type="second" format="short" lang={lang}>{3661}</Time>
+                  <Time type="second" format="narrow" lang={lang}>{3661}</Time>
+                  <Time type="second" format="compact" lang={lang}>{3661}</Time>
+                  <Time type="second" format="timestring" lang={lang}>{3661}</Time>
+                </GRow>
+                <GRow label="90">
+                  <Time type="second" lang={lang}>{90}</Time>
+                  <Time type="second" format="short" lang={lang}>{90}</Time>
+                  <Time type="second" format="narrow" lang={lang}>{90}</Time>
+                  <Time type="second" format="compact" lang={lang}>{90}</Time>
+                  <Time type="second" format="timestring" lang={lang}>{90}</Time>
+                </GRow>
+                <GRow label="45">
+                  <Time type="second" lang={lang}>{45}</Time>
+                  <Time type="second" format="short" lang={lang}>{45}</Time>
+                  <Time type="second" format="narrow" lang={lang}>{45}</Time>
+                  <Time type="second" format="compact" lang={lang}>{45}</Time>
+                  <Time type="second" format="timestring" lang={lang}>{45}</Time>
+                </GRow>
+                <GRow label="0">
+                  <Time type="second" lang={lang}>{0}</Time>
+                  <Time type="second" format="short" lang={lang}>{0}</Time>
+                  <Time type="second" format="narrow" lang={lang}>{0}</Time>
+                  <Time type="second" format="compact" lang={lang}>{0}</Time>
+                  <Time type="second" format="timestring" lang={lang}>{0}</Time>
+                </GRow>
+                <GRow label="undefined">
+                  <Time type="second" lang={lang}>{undefined}</Time>
+                  <Time type="second" format="short" lang={lang}>{undefined}</Time>
+                  <Time type="second" format="narrow" lang={lang}>{undefined}</Time>
+                  <Time type="second" format="compact" lang={lang}>{undefined}</Time>
+                  <Time type="second" format="timestring" lang={lang}>{undefined}</Time>
                 </GRow>
               </Grid>
             </Section>
