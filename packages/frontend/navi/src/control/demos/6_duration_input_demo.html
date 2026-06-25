@@ -488,9 +488,10 @@
               <Box flex="y" spacing="s" alignX="start">
                 <InputDuration
                   name="duration"
-                  min="5minute"
-                  max="3hour30minute"
-                  step="5minute"
+                  min="5min"
+                  max="3h30"
+                  step="5min"
+                  defaultValue="7min"
                 />
                 <Button type="submit">Submit</Button>
                 <CallLog entries={entries} onClear={clear} />
