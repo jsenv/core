@@ -133,48 +133,41 @@
 
             {/* ── 1. relative ───────────────────────────────────────────── */}
             <Section id="relative" title='1. type="relative" (default)'>
-              <Grid cols={['(default)', 'format="short"', 'format="narrow"', "bare"]}>
+              <Grid cols={['(default)', 'format="short"', 'format="narrow"']}>
                 <GRow label="now - 1h">
                   <Time lang={lang}>{new Date(NOW.getTime() - 60 * 60 * 1000)}</Time>
                   <Time format="short" lang={lang}>{new Date(NOW.getTime() - 60 * 60 * 1000)}</Time>
                   <Time format="narrow" lang={lang}>{new Date(NOW.getTime() - 60 * 60 * 1000)}</Time>
-                  <Time bare lang={lang}>{new Date(NOW.getTime() - 60 * 60 * 1000)}</Time>
                 </GRow>
                 <GRow label="now - 30min">
                   <Time lang={lang}>{new Date(NOW.getTime() - 30 * 60 * 1000)}</Time>
                   <Time format="short" lang={lang}>{new Date(NOW.getTime() - 30 * 60 * 1000)}</Time>
                   <Time format="narrow" lang={lang}>{new Date(NOW.getTime() - 30 * 60 * 1000)}</Time>
-                  <Time bare lang={lang}>{new Date(NOW.getTime() - 30 * 60 * 1000)}</Time>
                 </GRow>
                 <GRow label="now + 2h">
                   <Time lang={lang}>{new Date(NOW.getTime() + 2 * 60 * 60 * 1000)}</Time>
                   <Time format="short" lang={lang}>{new Date(NOW.getTime() + 2 * 60 * 60 * 1000)}</Time>
                   <Time format="narrow" lang={lang}>{new Date(NOW.getTime() + 2 * 60 * 60 * 1000)}</Time>
-                  <Time bare lang={lang}>{new Date(NOW.getTime() + 2 * 60 * 60 * 1000)}</Time>
                 </GRow>
                 <GRow label="now + 15min">
                   <Time lang={lang}>{new Date(NOW.getTime() + 15 * 60 * 1000)}</Time>
                   <Time format="short" lang={lang}>{new Date(NOW.getTime() + 15 * 60 * 1000)}</Time>
                   <Time format="narrow" lang={lang}>{new Date(NOW.getTime() + 15 * 60 * 1000)}</Time>
-                  <Time bare lang={lang}>{new Date(NOW.getTime() + 15 * 60 * 1000)}</Time>
                 </GRow>
                 <GRow label="yesterday">
                   <Time lang={lang}>{YESTERDAY}</Time>
                   <Time format="short" lang={lang}>{YESTERDAY}</Time>
                   <Time format="narrow" lang={lang}>{YESTERDAY}</Time>
-                  <Time bare lang={lang}>{YESTERDAY}</Time>
                 </GRow>
                 <GRow label="last week">
                   <Time lang={lang}>{LAST_WEEK}</Time>
                   <Time format="short" lang={lang}>{LAST_WEEK}</Time>
                   <Time format="narrow" lang={lang}>{LAST_WEEK}</Time>
-                  <Time bare lang={lang}>{LAST_WEEK}</Time>
                 </GRow>
                 <GRow label="undefined">
                   <Time lang={lang}>{undefined}</Time>
                   <Time format="short" lang={lang}>{undefined}</Time>
                   <Time format="narrow" lang={lang}>{undefined}</Time>
-                  <Time bare lang={lang}>{undefined}</Time>
                 </GRow>
               </Grid>
 
@@ -216,6 +209,39 @@
                   <Time lang={lang}>{new Date(NOW.getTime() - 61 * 60 * 1000)}</Time>
                   <Time eventDuration={30 * 60 * 1000} lang={lang}>{new Date(NOW.getTime() - 61 * 60 * 1000)}</Time>
                   <Time eventDuration={60 * 60 * 1000} lang={lang}>{new Date(NOW.getTime() - 61 * 60 * 1000)}</Time>
+                </GRow>
+              </Grid>
+
+              <Title as="h3" style={{ margin: "24px 0 12px", fontSize: "0.9rem", color: "#555" }}>
+                bare
+              </Title>
+              <Text style={{ display: "block", marginBottom: "12px", color: "#555", fontSize: "13px" }}>
+                Strips the past-tense prefix ("il y a", "ago") and returns only the amount.
+                Use when the surrounding UI already carries that meaning — e.g.{" "}
+                <em>Member since: <Time bare lang={lang}>{LAST_WEEK}</Time></em>{" "}
+                instead of <em>Member since: <Time lang={lang}>{LAST_WEEK}</Time></em>.
+                Only affects past dates; future dates are unchanged.
+              </Text>
+              <Grid cols={['(default)', 'bare']}>
+                <GRow label="now - 1h">
+                  <Time lang={lang}>{new Date(NOW.getTime() - 60 * 60 * 1000)}</Time>
+                  <Time bare lang={lang}>{new Date(NOW.getTime() - 60 * 60 * 1000)}</Time>
+                </GRow>
+                <GRow label="now - 30min">
+                  <Time lang={lang}>{new Date(NOW.getTime() - 30 * 60 * 1000)}</Time>
+                  <Time bare lang={lang}>{new Date(NOW.getTime() - 30 * 60 * 1000)}</Time>
+                </GRow>
+                <GRow label="yesterday">
+                  <Time lang={lang}>{YESTERDAY}</Time>
+                  <Time bare lang={lang}>{YESTERDAY}</Time>
+                </GRow>
+                <GRow label="last week">
+                  <Time lang={lang}>{LAST_WEEK}</Time>
+                  <Time bare lang={lang}>{LAST_WEEK}</Time>
+                </GRow>
+                <GRow label="now + 2h (future)">
+                  <Time lang={lang}>{new Date(NOW.getTime() + 2 * 60 * 60 * 1000)}</Time>
+                  <Time bare lang={lang}>{new Date(NOW.getTime() + 2 * 60 * 60 * 1000)}</Time>
                 </GRow>
               </Grid>
             </Section>
