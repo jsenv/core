@@ -12,6 +12,8 @@ import {
   useControlgroupProps,
 } from "../control_hooks.jsx";
 import { Label } from "../field.jsx";
+import { dispatchRequestInteraction } from "../rules/control_interaction.js";
+import { dispatchRequestSetUIState } from "../ui_state_dom.js";
 import { Input } from "./input.jsx";
 import { InputGroup } from "./input_group.jsx";
 
@@ -203,6 +205,157 @@ export const InputDuration = (props) => {
     );
 
   const { required, readOnly, disabled, basePseudoState } = groupHostProps;
+
+  const visibleFields = [];
+  if (showHours) visibleFields.push("hour");
+  if (showMinutes) visibleFields.push("minute");
+  if (showSeconds) visibleFields.push("second");
+  if (showMilliseconds) visibleFields.push("millisecond");
+
+  const getClipboardPayload = () => {
+    const isoString = ref.current?.value;
+    if (!isoString) return null;
+    const parsed = parseDuration(isoString);
+    if (!parsed) return null;
+    const rawS = parsed.seconds;
+    const wholeS = rawS !== undefined ? Math.floor(rawS) : undefined;
+    const ms =
+      typeof rawS === "number" && rawS % 1 !== 0
+        ? Math.round((rawS % 1) * 1000)
+        : (parsed.milliseconds ?? undefined);
+    const byField = {
+      hour: parsed.hours,
+      minute: parsed.minutes,
+      second: wholeS,
+      millisecond: ms,
+    };
+    const parts = visibleFields
+      .filter((f) => f !== "millisecond")
+      .map((f, i) => {
+        const v = byField[f] ?? 0;
+        return i === 0 ? String(v) : String(v).padStart(2, "0");
+      });
+    let plainText = parts.join(":");
+    if (showMilliseconds) {
+      plainText += `.${String(byField.millisecond ?? 0).padStart(3, "0")}`;
+    }
+    return { isoString, plainText };
+  };
+
+  const setSubInputValues = (valueByField, sourceEvent) => {
+    const container = sourceEvent.currentTarget;
+    const subInputs = Array.from(
+      container.querySelectorAll(".navi_control_input"),
+    );
+    visibleFields.forEach((field, i) => {
+      const el = subInputs[i];
+      if (!el) return;
+      const value = valueByField[field];
+      dispatchRequestInteraction(el, {
+        event: sourceEvent,
+        name: "subpaste",
+        allowed: () => {
+          dispatchRequestSetUIState(
+            el,
+            value !== undefined ? String(value) : "",
+            { event: sourceEvent },
+          );
+        },
+      });
+    });
+  };
+
+  const handleCopy = (e) => {
+    debugger;
+    const payload = getClipboardPayload();
+    if (!payload) return;
+    e.preventDefault();
+    e.clipboardData.setData("text/plain", payload.plainText);
+    e.clipboardData.setData("application/x-navi", payload.isoString);
+  };
+
+  const handleCut = (e) => {
+    const payload = getClipboardPayload();
+    if (!payload) return;
+    e.preventDefault();
+    e.clipboardData.setData("text/plain", payload.plainText);
+    e.clipboardData.setData("application/x-navi", payload.isoString);
+    const empty = Object.fromEntries(visibleFields.map((f) => [f, ""]));
+    setSubInputValues(empty, e);
+  };
+
+  const handlePaste = (e) => {
+    const naviData = e.clipboardData.getData("application/x-navi");
+    const textData = e.clipboardData.getData("text/plain");
+
+    let valueByField = null;
+
+    if (naviData) {
+      const parsed = parseDuration(naviData);
+      if (parsed) {
+        const rawS = parsed.seconds;
+        const wholeS = rawS !== undefined ? Math.floor(rawS) : undefined;
+        const ms =
+          typeof rawS === "number" && rawS % 1 !== 0
+            ? Math.round((rawS % 1) * 1000)
+            : (parsed.milliseconds ?? undefined);
+        valueByField = {
+          hour: parsed.hours,
+          minute: parsed.minutes,
+          second: wholeS,
+          millisecond: ms,
+        };
+      }
+    }
+
+    if (!valueByField && textData) {
+      // Try to parse as a duration string first (e.g. "1h30m")
+      const parsed = parseDuration(textData);
+      if (parsed) {
+        const rawS = parsed.seconds;
+        const wholeS = rawS !== undefined ? Math.floor(rawS) : undefined;
+        const ms =
+          typeof rawS === "number" && rawS % 1 !== 0
+            ? Math.round((rawS % 1) * 1000)
+            : (parsed.milliseconds ?? undefined);
+        valueByField = {
+          hour: parsed.hours,
+          minute: parsed.minutes,
+          second: wholeS,
+          millisecond: ms,
+        };
+      } else {
+        // Fall back to colon-split: "1:30" or "1:30:45" or "1:30:45.500"
+        const colonParts = textData.trim().split(":");
+        if (colonParts.length > 0) {
+          valueByField = {};
+          const fields = [...visibleFields];
+          colonParts.forEach((part, i) => {
+            const field = fields[i];
+            if (!field) return;
+            if (i === colonParts.length - 1 && part.includes(".")) {
+              const [sec, msPart] = part.split(".");
+              valueByField[field] = parseInt(sec, 10);
+              const msField = fields[i + 1];
+              if (msField === "millisecond") {
+                valueByField[msField] = parseInt(
+                  msPart.slice(0, 3).padEnd(3, "0"),
+                  10,
+                );
+              }
+            } else {
+              valueByField[field] = parseInt(part, 10);
+            }
+          });
+        }
+      }
+    }
+
+    if (!valueByField) return;
+    e.preventDefault();
+    setSubInputValues(valueByField, e);
+  };
+
   const hourValue = components?.hours;
   const minuteValue = components?.minutes;
   const rawSecondValue = components?.seconds;
@@ -226,6 +379,9 @@ export const InputDuration = (props) => {
       {...groupRootProps}
       unit={undefined}
       unitHour={undefined}
+      onCopy={handleCopy}
+      onCut={handleCut}
+      onPaste={handlePaste}
     >
       {/* eslint-disable-next-line react/no-unknown-property */}
       <input {...groupHostProps} type="hidden" basePseudoState={undefined} />
