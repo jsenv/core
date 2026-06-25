@@ -171,8 +171,12 @@ const resolveDurationProps = (props) => {
 };
 
 const toSeconds = (value) => {
-  if (value === undefined || value === null) return undefined;
-  if (typeof value === "number") return value;
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+  if (typeof value === "number") {
+    return value;
+  }
   if (typeof value === "string") {
     const secs = durationToSeconds(value);
     return secs ?? value;
@@ -324,6 +328,7 @@ const InputDurationHour = (props) => {
       <Input
         type="navi_hour"
         name="hour"
+        alignX="center"
         unit={false}
         variant="underline"
         size="l"
@@ -349,6 +354,7 @@ const InputDurationMinute = ({ separator, ...props }) => {
       <Input
         type="navi_minute"
         name="minute"
+        alignX="center"
         size="l"
         unit={false}
         variant="underline"
@@ -372,6 +378,7 @@ const InputDurationSecond = (props) => {
       <Input
         type="navi_second"
         name="second"
+        alignX="center"
         size="l"
         unit={false}
         variant="underline"
