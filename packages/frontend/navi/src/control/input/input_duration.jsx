@@ -15,6 +15,12 @@ import { Label } from "../field.jsx";
 import { Input } from "./input.jsx";
 import { InputGroup } from "./input_group.jsx";
 
+import.meta.css = /* css */ `
+  .navi_input_duration .navi_label:has(+ .navi_label) .navi_unit {
+    margin-right: 1ch;
+  }
+`;
+
 // An input for a duration expressed as an ISO 8601 duration string
 // (e.g. "PT2H15M", "PT2H15M30S"). Which sub-fields are shown
 // is derived from min/max/step:
@@ -382,7 +388,12 @@ const InputDurationFields = ({
   }
 
   return (
-    <InputGroup flex spacing="xxs" width="fit-content">
+    <InputGroup
+      class="navi_input_duration"
+      flex
+      spacing="xxs"
+      width="fit-content"
+    >
       {inputs}
     </InputGroup>
   );
@@ -390,15 +401,7 @@ const InputDurationFields = ({
 
 const InputDurationHour = (props) => {
   const { separator } = props;
-  const unitNode = props.unit || <Unit unit="hour" plural color="secondary" />;
-  // We need this because ":" is inside the first input so
-  // in case unit pushes to the right it should account for the space of ":"
-  const spacingRight = separator ? `${separator.length}ch` : undefined;
-  const unit = spacingRight ? (
-    <span style={{ paddingRight: spacingRight }}>{unitNode}</span>
-  ) : (
-    unitNode
-  );
+  const unit = props.unit || <Unit unit="hour" plural color="secondary" />;
 
   return (
     <Label flex="y" textAlign="right">
@@ -424,13 +427,7 @@ const InputDurationHour = (props) => {
 };
 
 const InputDurationMinute = ({ separator, ...props }) => {
-  const unitNode = <Unit unit="minute" plural color="secondary" />;
-  const spacingRight = separator ? `${separator.length}ch` : undefined;
-  const unit = spacingRight ? (
-    <span style={{ paddingRight: spacingRight }}>{unitNode}</span>
-  ) : (
-    unitNode
-  );
+  const unit = <Unit unit="minute" plural color="secondary" />;
 
   return (
     <Label flex="y">

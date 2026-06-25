@@ -177,7 +177,6 @@
         Unit,
         Picker,
         Text,
-        Time,
         NaviDebug,
         InputDuration,
         stateSignal,
@@ -205,28 +204,6 @@
         },
       });
       setupRoutes([DEMO_ROUTE]);
-
-      const StateDisplay = ({ value }) => (
-        <Box
-          flex="x"
-          style={{
-            padding: "5px 10px",
-            background: "#f8f8f8",
-            borderRadius: "4px",
-            fontSize: "12px",
-            fontFamily: "monospace",
-            alignItems: "center",
-            gap: "8px",
-          }}
-        >
-          <Text style={{ color: "#aaa", whiteSpace: "nowrap" }}>signal:</Text>
-          <Text style={{ color: "#555" }}>
-            {value === undefined ? "undefined" : JSON.stringify(value)}
-          </Text>
-          <Text style={{ color: "#aaa" }}>→</Text>
-          <Time type="duration">{value}</Time>
-        </Box>
-      );
 
       // ── App ───────────────────────────────────────────────────────────────
 
@@ -511,7 +488,6 @@
                   outsideFormSignal.value = v;
                 }}
               />
-              <StateDisplay value={outsideFormSignal.value} />
               <CallLog entries={entries} onClear={clear} />
             </Box>
           </div>
@@ -539,7 +515,6 @@
                     insideFormSignal.value = v;
                   }}
                 />
-                <StateDisplay value={insideFormSignal.value} />
                 <Button type="submit">Submit</Button>
                 <CallLog entries={entries} onClear={clear} />
               </Box>
@@ -567,7 +542,6 @@
                       controlGroupSignal.value = v;
                     }}
                   />
-                  <StateDisplay value={controlGroupSignal.value} />
                   <Button command="--navi-send">Submit</Button>
                 </Box>
               </ControlGroup>
@@ -611,7 +585,6 @@
                     </Box>
                   </Box>
                 </Picker>
-                <StateDisplay value={pickerSignal.value} />
                 <Button command="--navi-send">Submit</Button>
                 <CallLog entries={entries} onClear={clear} />
               </Box>
