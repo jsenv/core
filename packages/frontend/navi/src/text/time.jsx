@@ -315,7 +315,7 @@ const TimeSecond = ({
 }) => {
   if (children === undefined) {
     return (
-      <TimeText {...props}>{format === "timestring" ? "--:--" : "--"}</TimeText>
+      <TimeText {...props}>{format === "timestring" ? "--:--:--" : "--"}</TimeText>
     );
   }
   let seconds;
@@ -336,9 +336,8 @@ const TimeSecond = ({
 
   let text;
   if (format === "timestring") {
-    const mm = String(m).padStart(2, "0");
-    const ss = String(s).padStart(2, "0");
-    text = h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
+    // Always HH:MM:SS to avoid ambiguity with HH:MM time-of-day format
+    text = dateTime;
   } else {
     text = formatSecondDuration(seconds, { lang, format });
   }
