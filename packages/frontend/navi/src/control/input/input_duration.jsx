@@ -30,10 +30,8 @@ export const InputDuration = (props) => {
   return <InputDurationImpl {...props} />;
 };
 
-const DEFAULT_MAX_SECONDS = 24 * 3600; // 86400
-
 const InputDurationImpl = (props) => {
-  const { max = DEFAULT_MAX_SECONDS } = props;
+  const { max = "23h59" } = props;
   const minDuration = parseDuration(props.min);
   const maxDuration = parseDuration(max);
   const stepDuration = parseDuration(props.step);
