@@ -243,7 +243,7 @@ const PickerDuration = (props) => {
       ui={<PickerDurationUI />}
       icon={<DurationSvg />}
       {...props}
-      type="time"
+      type="text"
     />
   );
 };
