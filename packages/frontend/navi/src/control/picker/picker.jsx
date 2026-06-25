@@ -226,6 +226,10 @@ const css = /* css */ `
       appearance: none;
       cursor: inherit;
       pointer-events: auto;
+
+      &::-webkit-calendar-picker-indicator {
+        cursor: inherit;
+      }
     }
 
     .navi_picker_content {

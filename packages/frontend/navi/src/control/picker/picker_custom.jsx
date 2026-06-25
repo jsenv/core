@@ -201,16 +201,21 @@ const PickerNative = (props) => {
       }}
       eventReactionDefinitions={{
         click: (e) => {
-          const pickerEl = props.ref.current;
-          const pickerInput = getPickerInput(pickerEl);
-
           return {
             name: "click to show native picker",
             prevented: () => {
               e.preventDefault();
             },
             allowed: () => {
-              pickerInput.showPicker();
+              const pickerEl = props.ref.current;
+              const pickerInput = getPickerInput(pickerEl);
+              // requestCloseValidityCallout(pickerEl, e);
+              if (pickerInput.type === "color") {
+                // nothing to do, color picker whole surface is opening the picker
+              } else {
+                // other picker might not open the picker when clicking the input surface (only the calendar picker for instance would open)
+                pickerInput.showPicker();
+              }
             },
           };
         },
