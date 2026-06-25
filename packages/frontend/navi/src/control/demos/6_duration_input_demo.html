@@ -439,7 +439,12 @@
             </p>
             <Form action={(values) => push("form action", values)}>
               <Box flex="y" spacing="s" alignX="start">
-                <InputDuration name="duration" min="10minute" />
+                <InputDuration
+                  name="duration"
+                  min="10minute"
+                  defaultValue="1min"
+                  max="30min"
+                />
                 <Button type="submit">Submit</Button>
                 <CallLog entries={entries} onClear={clear} />
               </Box>
