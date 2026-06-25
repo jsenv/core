@@ -88,7 +88,9 @@
           <li>
             <a href="#display">Display</a>
             <ul>
-              <li><a href="#basic">Basic</a></li>
+              <li><a href="#basic">Basic (H:M)</a></li>
+              <li><a href="#with-seconds">With seconds (H:M:S)</a></li>
+              <li><a href="#minute-only">Minute only</a></li>
               <li><a href="#states">States</a></li>
             </ul>
           </li>
@@ -143,6 +145,7 @@
       const controlGroupSignal = stateSignal("2hour15minute", { id: "group" });
       const pickerSignal = stateSignal(undefined, { id: "picker" });
       const customSignal = stateSignal("1hour30minute", { id: "custom" });
+      const secondsSignal = stateSignal("1hour30minute30second", { id: "seconds" });
       const DEMO_ROUTE = route("", {
         searchParams: {
           basic: basicSignal,
@@ -151,6 +154,7 @@
           group: controlGroupSignal,
           picker: pickerSignal,
           custom: customSignal,
+          seconds: secondsSignal,
         },
       });
       setupRoutes([DEMO_ROUTE]);
@@ -184,6 +188,8 @@
           <div class="demo-section-group" id="display">
             <h2>Display</h2>
             <BasicDemo />
+            <WithSecondsDemo />
+            <MinuteOnlyDemo />
             <StatesDemo />
           </div>
           <div class="demo-section-group" id="interactivity">
@@ -210,13 +216,71 @@
       const BasicDemo = () => {
         return (
           <div class="demo-section" id="basic">
-            <h2>Basic</h2>
+            <h2>Basic (H:M)</h2>
+            <p class="desc">
+              Default layout: hour + minute fields. Max defaults to{" "}
+              <code>"23h59"</code>. The seconds field only appears when{" "}
+              <code>min</code>, <code>max</code>, or <code>step</code> includes
+              a seconds component.
+            </p>
             <InputDuration
               value={basicSignal.value}
               uiAction={(v) => {
                 basicSignal.value = v;
               }}
             />
+          </div>
+        );
+      };
+
+      // ── WithSecondsDemo ───────────────────────────────────────────────────
+      const WithSecondsDemo = () => {
+        return (
+          <div class="demo-section" id="with-seconds">
+            <h2>With seconds (H:M:S)</h2>
+            <p class="desc">
+              The seconds sub-field is shown automatically when{" "}
+              <code>min</code>, <code>max</code>, or <code>step</code> includes
+              a seconds component (detected via <code>parseDuration</code>).
+            </p>
+            <Box flex="y" spacing="m" alignX="start">
+              <Text size="s" color="secondary">
+                <code>step="30second"</code> — 30-second increments
+              </Text>
+              <InputDuration
+                value={secondsSignal.value}
+                uiAction={(v) => {
+                  secondsSignal.value = v;
+                }}
+                step="30second"
+              />
+              <StateDisplay value={secondsSignal.value} />
+
+              <Text size="s" color="secondary" style={{ marginTop: "8px" }}>
+                <code>min="0second"</code> — seconds implied by min
+              </Text>
+              <InputDuration defaultValue="PT0S" min="0second" />
+
+              <Text size="s" color="secondary" style={{ marginTop: "8px" }}>
+                <code>max="5minute30second"</code> — minute + second only
+                (max &lt; 1 hour)
+              </Text>
+              <InputDuration defaultValue="PT2M30S" max="5minute30second" />
+            </Box>
+          </div>
+        );
+      };
+
+      // ── MinuteOnlyDemo ────────────────────────────────────────────────────
+      const MinuteOnlyDemo = () => {
+        return (
+          <div class="demo-section" id="minute-only">
+            <h2>Minute only</h2>
+            <p class="desc">
+              When <code>max</code> is less than 1 hour, only the minute field
+              is shown.
+            </p>
+            <InputDuration defaultValue="15minute" max="59minute" />
           </div>
         );
       };
@@ -235,6 +299,9 @@
 
               <label>:-navi-loading</label>
               <InputDuration value="2hour15minute" loading />
+
+              <label>H:M:S :read-only</label>
+              <InputDuration value="1hour30minute45second" step="1second" readOnly />
             </div>
           </div>
         );
@@ -247,8 +314,9 @@
             <h2>Custom hour unit label</h2>
             <p class="desc">
               Pass <code>unitHour</code> to replace the default "hours" label.
-              When the label is wider than the input, the input stretches to
-              fill the column.
+              The label is wrapped in a <code>span</code> with{" "}
+              <code>padding-right: 1ch</code> automatically when another field
+              follows, so no manual margin is needed.
             </p>
             <InputDuration
               value={customSignal.value}
@@ -260,7 +328,6 @@
                   unit="hour"
                   plural
                   color="secondary"
-                  marginRight="1ch"
                   label="This is way longer"
                 />
               }
@@ -303,7 +370,7 @@
             <h2>Inside form</h2>
             <p class="desc">
               Inside a <code>Form</code>: the form collects{" "}
-              <code>{"{ duration: totalMinutes }"}</code> on submit.
+              <code>{"{ duration: isoString }"}</code> on submit.
             </p>
             <Form
               action={(values) => {
@@ -381,7 +448,7 @@
             <p class="desc">
               Inside a <code>Picker type="controlgroup"</code> inside a{" "}
               <code>Form</code>: the form collects{" "}
-              <code>{"{ duration: totalMinutes }"}</code> on submit.
+              <code>{"{ duration: isoString }"}</code> on submit.
             </p>
             <Form
               action={(values) => {
