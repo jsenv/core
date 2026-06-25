@@ -4,7 +4,7 @@ import { Text } from "./text.jsx";
 export const Unit = ({
   unit,
   plural,
-  short,
+  format = "long",
   lang,
   label,
   size = "smaller",
@@ -26,14 +26,14 @@ export const Unit = ({
     const singularText = naviI18n(unit, undefined, { lang });
     if (singularText === unit) {
       // naviI18n has no translation — try Intl.NumberFormat with style:"unit"
-      const intlText = formatIntlUnit(unit, { plural, lang, short });
+      const intlText = formatIntlUnit(unit, { plural, lang, format });
       if (intlText !== null) {
         unitText = intlText;
       }
-    } else if (short) {
+    } else if (format === "short" || format === "narrow") {
       const shortKey = `${unit}__short`;
       const shortText = naviI18n(shortKey, undefined, { lang });
-      unitText = shortText !== shortKey ? shortText : singularText;
+      unitText = shortText === shortKey ? singularText : shortText;
     } else if (plural) {
       const pluralKey = `${unit}__plural`;
       const pluralText = naviI18n(pluralKey, undefined, { lang });
@@ -56,13 +56,13 @@ export const Unit = ({
   );
 };
 
-const formatIntlUnit = (unit, { lang, plural, short }) => {
+const formatIntlUnit = (unit, { lang, plural, format }) => {
   try {
     const count = plural ? 2 : 1;
     const parts = new Intl.NumberFormat(lang, {
       style: "unit",
       unit,
-      unitDisplay: short ? "short" : "long",
+      unitDisplay: format,
     }).formatToParts(count);
     const unitPart = parts.find((p) => p.type === "unit");
     return unitPart ? unitPart.value : null;

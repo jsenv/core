@@ -48,18 +48,42 @@
         </Box>
       );
 
-      const Row = ({ label, children }) => (
-        <Box
-          flex="x"
-          spacing="m"
-          style={{ alignItems: "center", marginBottom: "8px" }}
-        >
-          <Text style={{ minWidth: "160px", color: "#888", fontSize: "13px" }}>
-            {label}
-          </Text>
-          {children}
-        </Box>
-      );
+      const headerStyle = {
+        fontWeight: "bold",
+        fontSize: "11px",
+        color: "#666",
+        textTransform: "uppercase",
+        paddingBottom: "4px",
+        borderBottom: "1px solid #eee",
+      };
+
+      const labelStyle = {
+        color: "#888",
+        fontSize: "13px",
+        fontFamily: "monospace",
+      };
+
+      const INTL_UNITS = [
+        "hour",
+        "minute",
+        "second",
+        "day",
+        "week",
+        "month",
+        "year",
+        "meter",
+        "kilometer",
+        "byte",
+        "kilobyte",
+        "megabyte",
+        "gigabyte",
+        "celsius",
+        "fahrenheit",
+        "kilogram",
+        "gram",
+        "liter",
+        "milliliter",
+      ];
 
       const Demo = () => {
         const [lang, setLang] = useState("en");
@@ -69,7 +93,7 @@
             style={{
               padding: "20px",
               fontFamily: "system-ui, sans-serif",
-              maxWidth: "800px",
+              maxWidth: "900px",
             }}
           >
             <Title as="h1">Unit Demo</Title>
@@ -103,39 +127,34 @@
               title="1. Intl units (browser built-in)"
               desc="Standard CLDR unit identifiers resolved via Intl.NumberFormat. Singular and plural forms are derived automatically."
             >
-              <Row label="">
-                <Text style={{ minWidth: "120px", fontWeight: "bold", fontSize: "11px", color: "#666", textTransform: "uppercase" }}>long (default)</Text>
-                <Text style={{ minWidth: "80px" }} />
-                <Text style={{ minWidth: "120px", fontWeight: "bold", fontSize: "11px", color: "#666", textTransform: "uppercase" }}>short</Text>
-              </Row>
-              {[
-                "hour",
-                "minute",
-                "second",
-                "day",
-                "week",
-                "month",
-                "year",
-                "meter",
-                "kilometer",
-                "byte",
-                "kilobyte",
-                "megabyte",
-                "gigabyte",
-                "celsius",
-                "fahrenheit",
-                "kilogram",
-                "gram",
-                "liter",
-                "milliliter",
-              ].map((unit) => (
-                <Row key={unit} label={unit}>
-                  <Unit unit={unit} lang={lang} style={{ minWidth: "80px" }} />
-                  <Unit unit={unit} plural lang={lang} style={{ minWidth: "80px" }} />
-                  <Unit unit={unit} short lang={lang} style={{ minWidth: "80px" }} />
-                  <Unit unit={unit} short plural lang={lang} style={{ minWidth: "80px" }} />
-                </Row>
-              ))}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "auto repeat(6, auto)",
+                  columnGap: "20px",
+                  rowGap: "8px",
+                  alignItems: "center",
+                  overflowX: "auto",
+                }}
+              >
+                {/* header */}
+                <div />
+                <div style={{ ...headerStyle, gridColumn: "span 2" }}>long (default)</div>
+                <div style={{ ...headerStyle, gridColumn: "span 2" }}>format="short"</div>
+                <div style={{ ...headerStyle, gridColumn: "span 2" }}>format="narrow"</div>
+
+                {INTL_UNITS.map((unit) => (
+                  <>
+                    <div key={unit} style={labelStyle}>{unit}</div>
+                    <Unit unit={unit} lang={lang} />
+                    <Unit unit={unit} plural lang={lang} />
+                    <Unit unit={unit} format="short" lang={lang} />
+                    <Unit unit={unit} format="short" plural lang={lang} />
+                    <Unit unit={unit} format="narrow" lang={lang} />
+                    <Unit unit={unit} format="narrow" plural lang={lang} />
+                  </>
+                ))}
+              </div>
             </Section>
 
             <Section
@@ -143,12 +162,14 @@
               title="2. naviI18n units (custom translations)"
               desc='Units registered via naviI18n.addAll(). The "item" unit is registered with English and French translations.'
             >
-              <Row label="item (singular)">
+              <Box flex="x" spacing="m" style={{ alignItems: "center", marginBottom: "8px" }}>
+                <Text style={{ minWidth: "160px", ...labelStyle }}>item (singular)</Text>
                 <Unit unit="item" lang={lang} />
-              </Row>
-              <Row label="item (plural)">
+              </Box>
+              <Box flex="x" spacing="m" style={{ alignItems: "center" }}>
+                <Text style={{ minWidth: "160px", ...labelStyle }}>item (plural)</Text>
                 <Unit unit="item" plural lang={lang} />
-              </Row>
+              </Box>
             </Section>
 
             <Section
@@ -175,11 +196,12 @@
               title="4. Unknown unit (raw fallback)"
               desc="When the unit is not known to naviI18n and not a valid Intl unit, the raw string is displayed as-is."
             >
-              <Row label="foobar">
+              <Box flex="x" spacing="m" style={{ alignItems: "center" }}>
+                <Text style={{ minWidth: "160px", ...labelStyle }}>foobar</Text>
                 <Unit unit="foobar" />
                 <Text style={{ color: "#aaa" }}>/</Text>
                 <Unit unit="foobar" plural />
-              </Row>
+              </Box>
             </Section>
           </div>
         );
