@@ -133,6 +133,7 @@
       <nav id="toc">
         <ul>
           <li><a href="#basic">Basic (H:M)</a></li>
+          <li><a href="#clipboard">Clipboard debug</a></li>
           <li>
             <a href="#standalone">Standalone (single field)</a>
             <ul>
@@ -169,6 +170,7 @@
     </div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
+      import { useState } from "preact/hooks";
       import {
         Box,
         Button,
@@ -210,6 +212,7 @@
       const App = () => (
         <Box flex="y" spacing="l">
           <BasicDemo />
+          <ClipboardDebug />
 
           <div class="demo-group" id="standalone">
             <h2>Standalone (single field)</h2>
@@ -276,6 +279,77 @@
           />
         </div>
       );
+
+      // ── Clipboard debug ───────────────────────────────────────────────────
+
+      const ClipboardDebug = () => {
+        const [clipText, setClipText] = useState("");
+
+        return (
+          <div class="demo-section" id="clipboard">
+            <h2>Clipboard debug</h2>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "24px",
+                alignItems: "start",
+              }}
+            >
+              <Box flex="y" spacing="s" alignX="start">
+                <Text size="s" color="secondary">
+                  Copy source — select a field and press{" "}
+                  <kbd>Ctrl+C</kbd> / <kbd>⌘C</kbd>
+                </Text>
+                <InputDuration defaultValue="1hour30minute45second" step="1second" />
+              </Box>
+              <Box flex="y" spacing="s" alignX="start">
+                <Text size="s" color="secondary">
+                  Paste target — press{" "}
+                  <kbd>Ctrl+V</kbd> / <kbd>⌘V</kbd> while focused in a field
+                </Text>
+                <InputDuration step="1second" />
+              </Box>
+            </div>
+            <Box flex="y" spacing="xs" style={{ marginTop: "16px" }}>
+              <Text size="s" color="secondary">
+                Paste here to inspect raw clipboard text
+              </Text>
+              <textarea
+                rows={2}
+                style={{
+                  fontFamily: "monospace",
+                  fontSize: "13px",
+                  width: "100%",
+                  boxSizing: "border-box",
+                  padding: "6px 8px",
+                  border: "1px solid #ccc",
+                  borderRadius: "4px",
+                }}
+                placeholder="paste here…"
+                onPaste={(e) => {
+                  e.preventDefault();
+                  setClipText(e.clipboardData.getData("text/plain"));
+                }}
+              />
+              {clipText ? (
+                <code
+                  style={{
+                    display: "block",
+                    padding: "6px 10px",
+                    background: "#f0f0f0",
+                    borderRadius: "4px",
+                    fontSize: "13px",
+                    wordBreak: "break-all",
+                  }}
+                >
+                  {JSON.stringify(clipText)}
+                </code>
+              ) : null}
+            </Box>
+          </div>
+        );
+      };
 
       // ── Standalone cards ──────────────────────────────────────────────────
 
