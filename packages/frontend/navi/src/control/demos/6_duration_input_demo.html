@@ -12,7 +12,7 @@
         background: #f5f5f5;
       }
       #container {
-        max-width: 600px;
+        max-width: 700px;
         margin: 0 auto;
       }
       h1 {
@@ -20,23 +20,24 @@
         font-size: 1.4rem;
       }
       h2 {
-        margin: 0 0 8px;
+        margin: 0 0 4px;
         font-size: 1.1rem;
       }
       .demo-section {
-        margin-bottom: 24px;
-        padding: 24px;
+        margin-bottom: 16px;
+        padding: 20px 24px;
         background: white;
         border-radius: 8px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       }
       p.desc {
-        margin: 0 0 16px;
+        margin: 0 0 14px;
         color: #555;
         font-size: 13px;
+        line-height: 1.5;
       }
       #toc {
-        margin-bottom: 32px;
+        margin-bottom: 28px;
         padding: 16px 20px;
         background: white;
         border-radius: 8px;
@@ -47,8 +48,8 @@
         padding: 0 0 0 16px;
       }
       #toc li {
-        margin: 4px 0;
-        font-size: 14px;
+        margin: 3px 0;
+        font-size: 13px;
       }
       #toc > ul {
         padding: 0;
@@ -57,20 +58,66 @@
       #toc > ul > li > ul {
         list-style: disc;
       }
-      .demo-section-group {
-        margin-bottom: 32px;
+      .demo-group {
+        margin-bottom: 16px;
       }
-      .demo-section-group > h2 {
-        margin: 0 0 12px;
-        padding-bottom: 6px;
+      .demo-group > h2 {
+        margin: 0 0 10px;
+        padding-bottom: 5px;
         font-size: 1.2rem;
         border-bottom: 2px solid #ddd;
       }
+      /* grid for standalone / combo sections */
+      .field-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+      .field-card {
+        padding: 14px 16px;
+        background: white;
+        border: 1px solid #e8e8e8;
+        border-radius: 6px;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+      }
+      .field-card h3 {
+        margin: 0 0 2px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #333;
+      }
+      .field-card .prop-hint {
+        display: block;
+        margin: 0 0 8px;
+        font-size: 11px;
+        color: #888;
+        font-family: monospace;
+      }
+      .field-card p.desc {
+        margin: 0 0 10px;
+        font-size: 12px;
+      }
+      /* auto-readonly table */
+      .readonly-grid {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 16px 24px;
+        align-items: start;
+      }
+      .readonly-grid .props {
+        padding-top: 4px;
+        font-size: 11px;
+        font-family: monospace;
+        color: #666;
+        line-height: 1.8;
+        white-space: nowrap;
+      }
+      /* state grid */
       .states-grid {
         display: grid;
-        grid-template-columns: repeat(2, auto);
+        grid-template-columns: auto 1fr;
         align-items: start;
-        gap: 16px 32px;
+        gap: 12px 24px;
       }
       .states-grid label {
         padding-top: 4px;
@@ -85,39 +132,36 @@
       <h1>Duration Input Demo</h1>
       <nav id="toc">
         <ul>
+          <li><a href="#basic">Basic (H:M)</a></li>
           <li>
-            <a href="#display">Display</a>
+            <a href="#standalone">Standalone (single field)</a>
             <ul>
-              <li><a href="#basic">Basic (H:M)</a></li>
-              <li><a href="#with-seconds">With seconds (H:M:S)</a></li>
-              <li><a href="#hour-only">Hour only</a></li>
-              <li><a href="#minute-only">Minute only</a></li>
-              <li><a href="#second-only">Second only</a></li>
-              <li><a href="#millisecond">Millisecond</a></li>
-              <li><a href="#read-only-seconds">Read-only with seconds</a></li>
-              <li><a href="#read-only-minutes">Read-only with minutes</a></li>
-              <li><a href="#states">States</a></li>
+              <li><a href="#hours-only">Hours only</a></li>
+              <li><a href="#minutes-only">Minutes only</a></li>
+              <li><a href="#seconds-only">Seconds only</a></li>
+              <li><a href="#ms-only">Milliseconds only</a></li>
             </ul>
           </li>
+          <li>
+            <a href="#combos">Two-field combinations</a>
+            <ul>
+              <li><a href="#h-m">H + M</a></li>
+              <li><a href="#m-s">M + S</a></li>
+              <li><a href="#s-ms">S + MS</a></li>
+            </ul>
+          </li>
+          <li><a href="#auto-readonly">Auto-readonly fields</a></li>
+          <li><a href="#states">States</a></li>
           <li>
             <a href="#interactivity">Interactivity</a>
             <ul>
               <li><a href="#outside-form">Outside form</a></li>
               <li><a href="#inside-form">Inside form</a></li>
               <li><a href="#inside-control-group">Inside control group</a></li>
-              <li>
-                <a href="#inside-picker-in-form">Inside picker (in form)</a>
-              </li>
+              <li><a href="#inside-picker">Inside picker</a></li>
             </ul>
           </li>
-          <li>
-            <a href="#validation">Validation</a>
-            <ul>
-              <li><a href="#val-min">min only</a></li>
-              <li><a href="#val-max">max only</a></li>
-              <li><a href="#val-combined">min + max + step</a></li>
-            </ul>
-          </li>
+          <li><a href="#validation">Validation</a></li>
           <li><a href="#customization">Customization</a></li>
         </ul>
       </nav>
@@ -142,7 +186,7 @@
       } from "@jsenv/navi";
       import { CallLog, useCallLog } from "./utils/call_log.jsx";
 
-      // ── State signals (persisted in URL search params) ────────────────────
+      // ── State signals ─────────────────────────────────────────────────────
 
       const basicSignal = stateSignal("2hour15minute", { id: "basic" });
       const outsideFormSignal = stateSignal("2hour15minute", { id: "outside" });
@@ -150,9 +194,6 @@
       const controlGroupSignal = stateSignal("2hour15minute", { id: "group" });
       const pickerSignal = stateSignal(undefined, { id: "picker" });
       const customSignal = stateSignal("1hour30minute", { id: "custom" });
-      const secondsSignal = stateSignal("1hour30minute30second", {
-        id: "seconds",
-      });
       const DEMO_ROUTE = route("", {
         searchParams: {
           basic: basicSignal,
@@ -161,18 +202,15 @@
           group: controlGroupSignal,
           picker: pickerSignal,
           custom: customSignal,
-          seconds: secondsSignal,
         },
       });
       setupRoutes([DEMO_ROUTE]);
 
-      // Shows the raw signal value and how <Time type="duration"> renders it.
       const StateDisplay = ({ value }) => (
         <Box
           flex="x"
-          spacing="s"
           style={{
-            padding: "6px 10px",
+            padding: "5px 10px",
             background: "#f8f8f8",
             borderRadius: "4px",
             fontSize: "12px",
@@ -190,261 +228,280 @@
         </Box>
       );
 
+      // ── App ───────────────────────────────────────────────────────────────
+
       const App = () => (
         <Box flex="y" spacing="l">
-          <div class="demo-section-group" id="display">
-            <h2>Display</h2>
-            <BasicDemo />
-            <WithSecondsDemo />
-            <HourOnlyDemo />
-            <MinuteOnlyDemo />
-            <SecondOnlyDemo />
-            <MillisecondDemo />
-            <ReadOnlySecondsDemo />
-            <ReadOnlyMinutesDemo />
-            <StatesDemo />
+          <BasicDemo />
+
+          <div class="demo-group" id="standalone">
+            <h2>Standalone (single field)</h2>
+            <p style={{ margin: "0 0 10px", fontSize: "13px", color: "#555" }}>
+              Which sub-fields appear is driven by <code>max</code> and{" "}
+              <code>step</code>. Use these patterns to isolate a single unit.
+            </p>
+            <div class="field-grid">
+              <HoursOnlyCard />
+              <MinutesOnlyCard />
+              <SecondsOnlyCard />
+              <MsOnlyCard />
+            </div>
           </div>
-          <div class="demo-section-group" id="interactivity">
+
+          <div class="demo-group" id="combos">
+            <h2>Two-field combinations</h2>
+            <p style={{ margin: "0 0 10px", fontSize: "13px", color: "#555" }}>
+              Combine <code>max</code> with a seconds or milliseconds component
+              to unlock additional fields without showing all four.
+            </p>
+            <div class="field-grid">
+              <HMCard />
+              <MSCard />
+              <SMsCard />
+            </div>
+          </div>
+
+          <AutoReadonlyDemo />
+          <StatesDemo />
+
+          <div class="demo-group" id="interactivity">
             <h2>Interactivity</h2>
             <OutsideFormDemo />
             <InsideFormDemo />
             <InsideControlGroupDemo />
-            <InsidePickerInFormDemo />
+            <InsidePickerDemo />
           </div>
-          <div class="demo-section-group" id="validation">
+
+          <div class="demo-group" id="validation">
             <h2>Validation</h2>
             <ValidationMinDemo />
             <ValidationMaxDemo />
             <ValidationCombinedDemo />
           </div>
-          <div class="demo-section-group" id="customization">
-            <h2>Customization</h2>
-            <UnitCustomizationDemo />
-          </div>
+
+          <UnitCustomizationDemo />
         </Box>
       );
 
-      // ── BasicDemo ─────────────────────────────────────────────────────────
-      const BasicDemo = () => {
-        return (
-          <div class="demo-section" id="basic">
-            <h2>Basic (H:M)</h2>
-            <p class="desc">
-              Default layout: hour + minute fields. Max defaults to{" "}
-              <code>"23h59"</code>. The seconds field only appears when{" "}
-              <code>min</code>, <code>max</code>, or <code>step</code> includes
-              a seconds component.
-            </p>
-            <InputDuration
-              value={basicSignal.value}
-              uiAction={(v) => {
-                basicSignal.value = v;
-              }}
-            />
-          </div>
-        );
-      };
+      // ── Basic ─────────────────────────────────────────────────────────────
 
-      // ── WithSecondsDemo ───────────────────────────────────────────────────
-      const WithSecondsDemo = () => {
-        return (
-          <div class="demo-section" id="with-seconds">
-            <h2>With seconds (H:M:S)</h2>
-            <p class="desc">
-              The seconds sub-field is shown automatically when <code>min</code>
-              , <code>max</code>, or <code>step</code> includes a seconds
-              component (detected via <code>parseDuration</code>).
-            </p>
-            <Box flex="y" spacing="m" alignX="start">
-              <Text size="s" color="secondary">
-                <code>step="30second"</code> — 30-second increments
+      const BasicDemo = () => (
+        <div class="demo-section" id="basic">
+          <h2>Basic (H:M)</h2>
+          <p class="desc">
+            Default layout — hour + minute. Max defaults to{" "}
+            <code>"23h59"</code>. Seconds and milliseconds fields appear only
+            when <code>min</code>, <code>max</code>, or <code>step</code>{" "}
+            include a seconds/milliseconds component, or when the current value
+            itself carries that precision.
+          </p>
+          <InputDuration
+            value={basicSignal.value}
+            uiAction={(v) => {
+              basicSignal.value = v;
+            }}
+          />
+        </div>
+      );
+
+      // ── Standalone cards ──────────────────────────────────────────────────
+
+      const HoursOnlyCard = () => (
+        <div class="field-card" id="hours-only">
+          <h3>Hours only</h3>
+          <code class="prop-hint">step="1hour"</code>
+          <p class="desc">
+            A whole-hour step hides the minute field — fractional hours would
+            contradict the step.
+          </p>
+          <InputDuration defaultValue="3hour" step="1hour" />
+        </div>
+      );
+
+      const MinutesOnlyCard = () => (
+        <div class="field-card" id="minutes-only">
+          <h3>Minutes only</h3>
+          <code class="prop-hint">max="59min"</code>
+          <p class="desc">
+            Max below 1 hour removes the hour field. No seconds component in
+            the max, so the seconds field stays hidden.
+          </p>
+          <InputDuration defaultValue="30minute" max="59min" />
+        </div>
+      );
+
+      const SecondsOnlyCard = () => (
+        <div class="field-card" id="seconds-only">
+          <h3>Seconds only</h3>
+          <code class="prop-hint">max="59second"</code>
+          <p class="desc">
+            Max below 1 minute removes hour and minute fields. The{" "}
+            <code>seconds</code> component in the max triggers the seconds
+            field.
+          </p>
+          <InputDuration defaultValue="45second" max="59second" />
+        </div>
+      );
+
+      const MsOnlyCard = () => (
+        <div class="field-card" id="ms-only">
+          <h3>Milliseconds only</h3>
+          <code class="prop-hint">max="999millisecond"</code>
+          <p class="desc">
+            Max below 1 second removes all upper fields. The{" "}
+            <code>milliseconds</code> component in the max triggers the ms
+            field.
+          </p>
+          <InputDuration
+            defaultValue="500millisecond"
+            max="999millisecond"
+          />
+        </div>
+      );
+
+      // ── Combo cards ───────────────────────────────────────────────────────
+
+      const HMCard = () => (
+        <div class="field-card" id="h-m">
+          <h3>H + M</h3>
+          <code class="prop-hint">(default)</code>
+          <p class="desc">
+            The default — no special props needed. The built-in max{" "}
+            <code>"23h59"</code> naturally produces the H + M layout.
+          </p>
+          <InputDuration defaultValue="1hour30minute" />
+        </div>
+      );
+
+      const MSCard = () => (
+        <div class="field-card" id="m-s">
+          <h3>M + S</h3>
+          <code class="prop-hint">max="59minute59second"</code>
+          <p class="desc">
+            Max below 1 hour removes the hour field. Adding a{" "}
+            <code>seconds</code> component to the max adds the seconds field.
+          </p>
+          <InputDuration
+            defaultValue="5minute30second"
+            max="59minute59second"
+          />
+        </div>
+      );
+
+      const SMsCard = () => (
+        <div class="field-card" id="s-ms">
+          <h3>S + MS</h3>
+          <code class="prop-hint">max="59second999millisecond"</code>
+          <p class="desc">
+            Max below 1 minute and both <code>seconds</code> and{" "}
+            <code>milliseconds</code> in the max produce the S + MS layout.
+          </p>
+          <InputDuration
+            defaultValue="12second500millisecond"
+            max="59second999millisecond"
+          />
+        </div>
+      );
+
+      // ── Auto-readonly ─────────────────────────────────────────────────────
+
+      const AutoReadonlyDemo = () => (
+        <div class="demo-section" id="auto-readonly">
+          <h2>Auto-readonly fields (step precision)</h2>
+          <p class="desc">
+            When the stored value has finer precision than the step allows, the
+            sub-fields that cannot be legally edited are displayed{" "}
+            <strong>read-only automatically</strong> — no explicit{" "}
+            <code>readOnly</code> prop needed. This makes the full stored
+            precision visible while preventing the user from creating an invalid
+            step.
+          </p>
+          <div class="readonly-grid">
+            <div class="props">
+              step="1hour"
+              <br />
+              defaultValue="2h30min"
+            </div>
+            <Box flex="y" spacing="xs" alignX="start">
+              <InputDuration defaultValue="2hour30minute" step="1hour" />
+              <Text size="xs" color="secondary">
+                Minute field is read-only — a 1-hour step makes changing
+                minutes invalid.
               </Text>
+            </Box>
+
+            <div class="props">
+              step="1minute"
+              <br />
+              defaultValue="1min30s"
+            </div>
+            <Box flex="y" spacing="xs" alignX="start">
               <InputDuration
-                value={secondsSignal.value}
-                uiAction={(v) => {
-                  secondsSignal.value = v;
-                }}
-                step="30second"
+                defaultValue="1minute30second"
+                step="1minute"
               />
-              <StateDisplay value={secondsSignal.value} />
-
-              <Text size="s" color="secondary" style={{ marginTop: "8px" }}>
-                <code>min="0second"</code> — seconds implied by min
+              <Text size="xs" color="secondary">
+                Second field is read-only — a 1-minute step makes changing
+                seconds invalid.
               </Text>
-              <InputDuration defaultValue="PT0S" min="0second" />
+            </Box>
 
-              <Text size="s" color="secondary" style={{ marginTop: "8px" }}>
-                <code>max="5minute30second"</code> — minute + second only (max
-                &lt; 1 hour)
+            <div class="props">
+              step="1second"
+              <br />
+              defaultValue="PT1.500S"
+            </div>
+            <Box flex="y" spacing="xs" alignX="start">
+              <InputDuration defaultValue="PT1.500S" step="1second" />
+              <Text size="xs" color="secondary">
+                Milliseconds field is read-only — a 1-second step makes
+                changing ms invalid. ISO 8601 fractional seconds (
+                <code>PT1.500S</code>) are split into 1 s + 500 ms for display.
               </Text>
-              <InputDuration defaultValue="PT2M30S" max="5minute30second" />
             </Box>
           </div>
-        );
-      };
+        </div>
+      );
 
-      // ── MinuteOnlyDemo ────────────────────────────────────────────────────
-      const MinuteOnlyDemo = () => {
-        return (
-          <div class="demo-section" id="minute-only">
-            <h2>Minute only</h2>
-            <p class="desc">
-              When <code>max</code> is less than 1 hour, only the minute field
-              is shown.
-            </p>
-            <InputDuration defaultValue="15minute" max="59minute" />
-          </div>
-        );
-      };
+      // ── States ────────────────────────────────────────────────────────────
 
-      // ── HourOnlyDemo ──────────────────────────────────────────────────────
-      const HourOnlyDemo = () => {
-        return (
-          <div class="demo-section" id="hour-only">
-            <h2>Hour only</h2>
-            <p class="desc">
-              When <code>step</code> is a whole number of hours, the minute
-              field is hidden — entering fractional hours would be contradicted
-              by the step constraint.
-            </p>
-            <InputDuration defaultValue="2hour" step="1hour" />
-          </div>
-        );
-      };
+      const StatesDemo = () => (
+        <div class="demo-section" id="states">
+          <h2>States</h2>
+          <div class="states-grid">
+            <label>default (H:M)</label>
+            <InputDuration value="2hour15minute" />
 
-      // ── SecondOnlyDemo ────────────────────────────────────────────────────
-      const SecondOnlyDemo = () => {
-        return (
-          <div class="demo-section" id="second-only">
-            <h2>Second only</h2>
-            <p class="desc">
-              When <code>max</code> is below 60 seconds, only the second field
-              is shown.
-            </p>
-            <InputDuration defaultValue="30second" max="59second" />
-          </div>
-        );
-      };
+            <label>:read-only</label>
+            <InputDuration value="2hour15minute" readOnly />
 
-      // ── MillisecondDemo ───────────────────────────────────────────────────
-      const MillisecondDemo = () => {
-        return (
-          <div class="demo-section" id="millisecond">
-            <h2>Millisecond</h2>
-            <p class="desc">
-              When <code>max</code>, <code>min</code>, or <code>step</code>
-              includes a milliseconds component, the millisecond field is shown.
-              Default step for milliseconds is <code>100ms</code>; min defaults
-              to <code>0</code> and max to <code>999ms</code> here.
-            </p>
-            <InputDuration defaultValue="500ms" max="999ms" step="100ms" />
-          </div>
-        );
-      };
+            <label>:disabled</label>
+            <InputDuration value="2hour15minute" disabled />
 
-      // ── ReadOnlySecondsDemo ───────────────────────────────────────────────
-      const ReadOnlySecondsDemo = () => {
-        return (
-          <div class="demo-section" id="read-only-seconds">
-            <h2>Read-only with seconds</h2>
-            <p class="desc">
-              A rare case: seconds are visible but the field is read-only.
-              Useful when displaying a stored duration with second-level
-              precision that the user shouldn't be able to edit (e.g. a logged
-              elapsed time). In most cases, prefer{" "}
-              <code>&lt;Time type="duration"&gt;</code> for purely display
-              purposes.
-            </p>
+            <label>:-navi-loading</label>
+            <InputDuration value="2hour15minute" loading />
+
+            <label>H:M:S (step="1second")</label>
+            <InputDuration value="1hour30minute45second" step="1second" />
+
+            <label>H:M:S:MS (step="100ms")</label>
             <InputDuration
-              value="1hour30minute45second"
-              step="1second"
-              readOnly
+              value="1hour30minute45second500millisecond"
+              step="100millisecond"
             />
           </div>
-        );
-      };
+        </div>
+      );
 
-      // ── ReadOnlyMinutesDemo ───────────────────────────────────────────────
-      const ReadOnlyMinutesDemo = () => {
-        return (
-          <div class="demo-section" id="read-only-minutes">
-            <h2>Read-only with minutes</h2>
-            <p class="desc">
-              When <code>step="1hour"</code> is combined with a stored value
-              that has minute-level precision, the minute field is shown
-              read-only. The stored precision is faithfully displayed even
-              though the user could only enter whole hours if the field were
-              editable.
-            </p>
-            <InputDuration value="1hour30minute" step="1hour" readOnly />
-          </div>
-        );
-      };
+      // ── Interactivity ─────────────────────────────────────────────────────
 
-      // ── StatesDemo ────────────────────────────────────────────────────────
-      const StatesDemo = () => {
-        return (
-          <div class="demo-section" id="states">
-            <h2>States</h2>
-            <div class="states-grid">
-              <label>:read-only</label>
-              <InputDuration value="2hour15minute" readOnly />
-
-              <label>:disabled</label>
-              <InputDuration value="2hour15minute" disabled />
-
-              <label>:-navi-loading</label>
-              <InputDuration value="2hour15minute" loading />
-
-              <label>H:M:S :read-only</label>
-              <InputDuration
-                value="1hour30minute45second"
-                step="1second"
-                readOnly
-              />
-            </div>
-          </div>
-        );
-      };
-
-      // ── UnitCustomizationDemo ─────────────────────────────────────────────
-      const UnitCustomizationDemo = () => {
-        return (
-          <div class="demo-section">
-            <h2>Custom hour unit label</h2>
-            <p class="desc">
-              Pass <code>unitHour</code> to replace the default "hours" label.
-              The label is wrapped in a <code>span</code> with{" "}
-              <code>padding-right: 1ch</code> automatically when another field
-              follows, so no manual margin is needed.
-            </p>
-            <InputDuration
-              value={customSignal.value}
-              uiAction={(v) => {
-                customSignal.value = v;
-              }}
-              unitHour={
-                <Unit
-                  unit="hour"
-                  plural
-                  color="secondary"
-                  label="This is way longer"
-                />
-              }
-            />
-          </div>
-        );
-      };
-
-      // ── OutsideFormDemo ───────────────────────────────────────────────────
       const OutsideFormDemo = () => {
         const [entries, push, clear] = useCallLog();
-
         return (
           <div class="demo-section" id="outside-form">
             <h2>Outside form</h2>
             <p class="desc">
-              Standalone usage: <code>uiAction</code> fires on every change.
+              Standalone — <code>uiAction</code> fires on every change.
             </p>
             <Box flex="y" spacing="s" alignX="start">
               <InputDuration
@@ -461,24 +518,18 @@
         );
       };
 
-      // ── InsideFormDemo ────────────────────────────────────────────────────
       const InsideFormDemo = () => {
         const [entries, push, clear] = useCallLog();
-
         return (
           <div class="demo-section" id="inside-form">
             <h2>Inside form</h2>
             <p class="desc">
-              Inside a <code>Form</code>: the form collects{" "}
+              Inside a <code>Form</code>: collects{" "}
               <code>{"{ duration: isoString }"}</code> on submit.
             </p>
             <Form
-              action={(values) => {
-                push("form action", values);
-              }}
-              uiAction={(values) => {
-                push("form uiAction", values);
-              }}
+              action={(values) => push("form action", values)}
+              uiAction={(values) => push("form uiAction", values)}
             >
               <Box flex="y" spacing="s" alignX="start">
                 <InputDuration
@@ -497,27 +548,16 @@
         );
       };
 
-      // ── InsideControlGroupDemo ────────────────────────────────────────────
       const InsideControlGroupDemo = () => {
         const [entries, push, clear] = useCallLog();
-
         return (
           <div class="demo-section" id="inside-control-group">
             <h2>Inside control group</h2>
-            <p class="desc">
-              Inside a <code>ControlGroup name="duration"</code>: the group
-              fires <code>uiAction</code> with{" "}
-              <code>{"{ duration: durationISOString }"}</code>.
-            </p>
             <Box flex="y" spacing="s" alignX="start">
               <ControlGroup
                 name="duration"
-                action={(values) => {
-                  push("group action", values);
-                }}
-                uiAction={(v) => {
-                  push("group uiAction", v);
-                }}
+                action={(values) => push("group action", values)}
+                uiAction={(v) => push("group uiAction", v)}
               >
                 <Box flex="y" spacing="s" alignX="start">
                   <InputDuration
@@ -537,43 +577,28 @@
         );
       };
 
-      // ── InsidePickerInFormDemo ──────────────────────────────────────────
-      const InsidePickerInFormDemo = () => {
+      const InsidePickerDemo = () => {
         const [entries, push, clear] = useCallLog();
-        const pickerId = "duration-picker";
-
         return (
-          <div class="demo-section" id="inside-picker-in-form">
+          <div class="demo-section" id="inside-picker">
             <h2>Inside picker (in form)</h2>
-            <p class="desc">
-              Inside a <code>Picker type="controlgroup"</code> inside a{" "}
-              <code>Form</code>: the form collects{" "}
-              <code>{"{ duration: isoString }"}</code> on submit.
-            </p>
             <Form
-              action={(values) => {
-                push("form action", values);
-              }}
-              uiAction={(values) => {
-                push("form uiAction", values);
-              }}
+              action={(values) => push("form action", values)}
+              uiAction={(values) => push("form uiAction", values)}
             >
               <Box flex="y" spacing="s" alignX="start">
                 <Picker
-                  id={pickerId}
                   name="duration"
                   type="duration"
                   placeholder="Enter a duration"
-                  uiAction={(v) => {
-                    push("picker uiAction", v);
-                  }}
+                  uiAction={(v) => push("picker uiAction", v)}
                 >
                   <Box flex="y" spacing="l" padding="s" alignX="center">
                     <Text bold>Enter a duration</Text>
                     <InputDuration
                       value={pickerSignal.value}
-                      uiAction={(value) => {
-                        pickerSignal.value = value;
+                      uiAction={(v) => {
+                        pickerSignal.value = v;
                       }}
                     />
                     <Box flex="x" spacing="s" alignX="end" expandX>
@@ -595,14 +620,15 @@
         );
       };
 
-      // ── ValidationMinDemo ─────────────────────────────────────────────────
+      // ── Validation ────────────────────────────────────────────────────────
+
       const ValidationMinDemo = () => {
         const [entries, push, clear] = useCallLog();
         return (
-          <div class="demo-section" id="val-min">
+          <div class="demo-section">
             <h2>min only</h2>
             <p class="desc">
-              <code>min="10minute"</code> — value must be at least 10 minutes.
+              <code>min="10minute"</code> — value must be ≥ 10 min.
             </p>
             <Form action={(values) => push("form action", values)}>
               <Box flex="y" spacing="s" alignX="start">
@@ -620,14 +646,13 @@
         );
       };
 
-      // ── ValidationMaxDemo ─────────────────────────────────────────────────
       const ValidationMaxDemo = () => {
         const [entries, push, clear] = useCallLog();
         return (
-          <div class="demo-section" id="val-max">
+          <div class="demo-section">
             <h2>max only</h2>
             <p class="desc">
-              <code>max="1hour30minute"</code> — value must be at most 1h30.
+              <code>max="1hour30minute"</code> — value must be ≤ 1h30.
             </p>
             <Form action={(values) => push("form action", values)}>
               <Box flex="y" spacing="s" alignX="start">
@@ -640,16 +665,14 @@
         );
       };
 
-      // ── ValidationCombinedDemo ────────────────────────────────────────────
       const ValidationCombinedDemo = () => {
         const [entries, push, clear] = useCallLog();
         return (
-          <div class="demo-section" id="val-combined">
+          <div class="demo-section">
             <h2>min + max + step</h2>
             <p class="desc">
-              <code>min="5minute"</code> <code>max="3hour30minute"</code>{" "}
-              <code>step="5minute"</code> — value must be between 5 min and
-              3h30, in 5-minute increments.
+              <code>min="5min"</code> <code>max="3h30"</code>{" "}
+              <code>step="5min"</code> — 5-minute increments, range 5 min–3h30.
             </p>
             <Form action={(values) => push("form action", values)}>
               <Box flex="y" spacing="s" alignX="start">
@@ -667,6 +690,34 @@
           </div>
         );
       };
+
+      // ── Customization ─────────────────────────────────────────────────────
+
+      const UnitCustomizationDemo = () => (
+        <div class="demo-section" id="customization">
+          <h2>Custom hour unit label</h2>
+          <p class="desc">
+            Pass <code>unitHour</code> to replace the default "hours" label.
+            When another field follows, the label is automatically wrapped in a{" "}
+            <code>span</code> with <code>padding-right: 1ch</code> — no manual
+            margin needed.
+          </p>
+          <InputDuration
+            value={customSignal.value}
+            uiAction={(v) => {
+              customSignal.value = v;
+            }}
+            unitHour={
+              <Unit
+                unit="hour"
+                plural
+                color="secondary"
+                label="This is way longer"
+              />
+            }
+          />
+        </div>
+      );
 
       render(
         <NaviDebug debugAll>
