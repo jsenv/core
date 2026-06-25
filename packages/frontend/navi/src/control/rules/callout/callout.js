@@ -549,7 +549,7 @@ export const openCallout = (
     }
   }
   close_on_focus_leave: {
-    if (closeOnFocusLeave && anchorElement) {
+    if (anchorElement) {
       const handleFocusOut = (event) => {
         // relatedTarget is the element receiving focus; null means focus left the document
         const { relatedTarget } = event;
