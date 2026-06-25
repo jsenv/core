@@ -1,8 +1,6 @@
 import { useEffect, useRef } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
-import { dispatchRequestInteraction } from "@jsenv/navi/src/control/rules/control_interaction.js";
-import { dispatchRequestSetUIState } from "@jsenv/navi/src/control/ui_state_dom.js";
 import { useDebugFocus } from "@jsenv/navi/src/navi_debug.jsx";
 
 /**
@@ -142,75 +140,75 @@ const useInputGroup = (ref) => {
       focusInput(nextInput);
     };
 
-    const handlePaste = (e) => {
-      const active = document.activeElement;
-      if (!isTextInputElement(active) || !el.contains(active)) {
-        return;
-      }
-      const inputs = getInputs();
-      const startIdx = inputs.indexOf(active);
-      if (startIdx === -1) {
-        return;
-      }
-      const pastedText = e.clipboardData?.getData("text") ?? "";
-      if (!pastedText) {
-        return;
-      }
-      // Only intercept when the pasted text contains at least one separator
-      // from the inputs starting at the focused position.
-      const remainingInputs = inputs.slice(startIdx);
-      const hasSeparatorMatch = remainingInputs.some(
-        (input) =>
-          input.dataset.separator &&
-          pastedText.includes(input.dataset.separator),
-      );
-      if (!hasSeparatorMatch) {
-        return;
-      }
-      e.preventDefault();
-      let remaining = pastedText;
-      let lastFilledIdx = startIdx;
-      for (let i = 0; i < remainingInputs.length; i++) {
-        const input = remainingInputs[i];
-        const separator = input.dataset.separator;
-        let part;
-        if (separator && remaining.includes(separator)) {
-          const sepIdx = remaining.indexOf(separator);
-          part = remaining.slice(0, sepIdx);
-          remaining = remaining.slice(sepIdx + separator.length);
-        } else {
-          part = remaining;
-          remaining = "";
-        }
-        requestSubPaste(input, part, e);
-        lastFilledIdx = startIdx + i;
-        if (remaining === "") {
-          break;
-        }
-      }
-      focusInput(inputs[lastFilledIdx]);
-    };
+    // const handlePaste = (e) => {
+    //   const active = document.activeElement;
+    //   if (!isTextInputElement(active) || !el.contains(active)) {
+    //     return;
+    //   }
+    //   const inputs = getInputs();
+    //   const startIdx = inputs.indexOf(active);
+    //   if (startIdx === -1) {
+    //     return;
+    //   }
+    //   const pastedText = e.clipboardData?.getData("text") ?? "";
+    //   if (!pastedText) {
+    //     return;
+    //   }
+    //   // Only intercept when the pasted text contains at least one separator
+    //   // from the inputs starting at the focused position.
+    //   const remainingInputs = inputs.slice(startIdx);
+    //   const hasSeparatorMatch = remainingInputs.some(
+    //     (input) =>
+    //       input.dataset.separator &&
+    //       pastedText.includes(input.dataset.separator),
+    //   );
+    //   if (!hasSeparatorMatch) {
+    //     return;
+    //   }
+    //   e.preventDefault();
+    //   let remaining = pastedText;
+    //   let lastFilledIdx = startIdx;
+    //   for (let i = 0; i < remainingInputs.length; i++) {
+    //     const input = remainingInputs[i];
+    //     const separator = input.dataset.separator;
+    //     let part;
+    //     if (separator && remaining.includes(separator)) {
+    //       const sepIdx = remaining.indexOf(separator);
+    //       part = remaining.slice(0, sepIdx);
+    //       remaining = remaining.slice(sepIdx + separator.length);
+    //     } else {
+    //       part = remaining;
+    //       remaining = "";
+    //     }
+    //     requestSubPaste(input, part, e);
+    //     lastFilledIdx = startIdx + i;
+    //     if (remaining === "") {
+    //       break;
+    //     }
+    //   }
+    //   focusInput(inputs[lastFilledIdx]);
+    // };
 
     el.addEventListener("keydown", handleKeyDown, { capture: true });
     el.addEventListener("navi_input_full", handleNaviInputFull);
-    el.addEventListener("paste", handlePaste, { capture: true });
+    // el.addEventListener("paste", handlePaste, { capture: true });
     return () => {
       el.removeEventListener("keydown", handleKeyDown, { capture: true });
       el.removeEventListener("navi_input_full", handleNaviInputFull);
-      el.removeEventListener("paste", handlePaste, { capture: true });
+      // el.removeEventListener("paste", handlePaste, { capture: true });
     };
   }, [debugFocus]);
 };
 
-const requestSubPaste = (input, value, event) => {
-  dispatchRequestInteraction(input, {
-    event,
-    name: "subpaste",
-    allowed: () => {
-      dispatchRequestSetUIState(input, value, { event });
-    },
-  });
-};
+// const requestSubPaste = (input, value, event) => {
+//   dispatchRequestInteraction(input, {
+//     event,
+//     name: "subpaste",
+//     allowed: () => {
+//       dispatchRequestSetUIState(input, value, { event });
+//     },
+//   });
+// };
 
 const isTextInputElement = (el) => {
   if (!el) {
