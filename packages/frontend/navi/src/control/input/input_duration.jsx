@@ -48,23 +48,41 @@ const InputDurationImpl = (props) => {
   const renderSource = hasValue ? props.value : props.defaultValue;
   const components = parseDuration(renderSource);
   const valueHasSeconds = components?.seconds !== undefined;
+  const valueHasMinutes = components?.minutes !== undefined;
+  // Fractional seconds (e.g. 0.5 from "PT0.5S") also imply milliseconds.
+  const valueHasMilliseconds =
+    components?.milliseconds !== undefined ||
+    (typeof components?.seconds === "number" && components.seconds % 1 !== 0);
 
   const stepHasSeconds = Object.hasOwn(stepDuration ?? {}, "seconds");
+  const stepHasMilliseconds = Object.hasOwn(stepDuration ?? {}, "milliseconds");
   const showSeconds =
     Object.hasOwn(minDuration ?? {}, "seconds") ||
     Object.hasOwn(maxDuration ?? {}, "seconds") ||
     stepHasSeconds ||
     valueHasSeconds;
-  // Seconds field is read-only when the value has sub-minute precision but the
-  // step only aligns to whole minutes — the user cannot legally edit seconds.
+  const showMilliseconds =
+    Object.hasOwn(minDuration ?? {}, "milliseconds") ||
+    Object.hasOwn(maxDuration ?? {}, "milliseconds") ||
+    stepHasMilliseconds ||
+    valueHasMilliseconds;
+  // Seconds/minutes field is read-only when the value has sub-step precision
+  // but the step only aligns to a coarser unit — the user cannot legally edit it.
   const secondsReadOnly =
     valueHasSeconds && stepSeconds !== undefined && !stepHasSeconds;
+  const millisecondsReadOnly =
+    valueHasMilliseconds && stepSeconds !== undefined && !stepHasMilliseconds;
 
   const showHours = maxSeconds >= 3600;
   // Hide minutes when the step is a whole number of hours — entering fractional
   // hours would contradict the step, so only the hour field is shown.
+  // Exception: if the current value already has minutes, show them read-only so
+  // the stored precision is faithfully displayed.
   const showMinutes =
-    maxSeconds >= 60 && (stepSeconds === undefined || stepSeconds < 3600);
+    maxSeconds >= 60 &&
+    (stepSeconds === undefined || stepSeconds < 3600 || valueHasMinutes);
+  const minutesReadOnly =
+    valueHasMinutes && stepSeconds !== undefined && stepSeconds >= 3600;
 
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
@@ -96,10 +114,12 @@ const InputDurationImpl = (props) => {
           let h = "";
           let m = "";
           let s = "";
+          let ms = "";
           for (const child of childUIStateControllers) {
             if (child.name === "hour") h = child.uiState ?? "";
             if (child.name === "minute") m = child.uiState ?? "";
             if (child.name === "second") s = child.uiState ?? "";
+            if (child.name === "millisecond") ms = child.uiState ?? "";
           }
           const durationObj = {};
           if (showHours && h !== "") {
@@ -111,20 +131,42 @@ const InputDurationImpl = (props) => {
           if (showSeconds && s !== "") {
             durationObj.seconds = s;
           }
+          if (showMilliseconds && ms !== "") {
+            durationObj.milliseconds = ms;
+          }
           return durationToISOString(durationObj) ?? "";
         },
-        // Reverse mapping: duration string → { hour, minute, second } so that
-        // when the picker cancels and calls setUIState(storedValue), the
+        // Reverse mapping: duration string → { hour, minute, second, millisecond }
+        // so that when the picker cancels and calls setUIState(storedValue), the
         // sub-inputs are correctly reset to their original raw string values.
+        // ISO 8601 encodes milliseconds as fractional seconds (e.g. "PT0.5S" = 500ms),
+        // so fractional seconds are split back into whole seconds + ms.
         distributeChildUIState: (groupState) => {
           const components = parseDuration(groupState);
           if (!components) {
-            return { hour: undefined, minute: undefined, second: undefined };
+            return {
+              hour: undefined,
+              minute: undefined,
+              second: undefined,
+              millisecond: undefined,
+            };
+          }
+          const rawSeconds = components.seconds;
+          let secondForField = rawSeconds;
+          let millisecondForField = components.milliseconds;
+          if (
+            typeof rawSeconds === "number" &&
+            rawSeconds % 1 !== 0 &&
+            millisecondForField === undefined
+          ) {
+            secondForField = Math.floor(rawSeconds);
+            millisecondForField = Math.round((rawSeconds % 1) * 1000);
           }
           return {
             hour: components.hours,
             minute: components.minutes,
-            second: components.seconds,
+            second: secondForField,
+            millisecond: millisecondForField,
           };
         },
       },
@@ -133,7 +175,18 @@ const InputDurationImpl = (props) => {
   const { required, readOnly, disabled, basePseudoState } = groupHostProps;
   const hourValue = components?.hours;
   const minuteValue = components?.minutes;
-  const secondValue = components?.seconds;
+  const rawSecondValue = components?.seconds;
+  // ISO 8601 fractional seconds encode ms (e.g. 0.5 = 500ms); split them.
+  let secondValue = rawSecondValue;
+  let millisecondValue = components?.milliseconds;
+  if (
+    typeof rawSecondValue === "number" &&
+    rawSecondValue % 1 !== 0 &&
+    millisecondValue === undefined
+  ) {
+    secondValue = Math.floor(rawSecondValue);
+    millisecondValue = Math.round((rawSecondValue % 1) * 1000);
+  }
 
   return (
     <Box
@@ -150,11 +203,16 @@ const InputDurationImpl = (props) => {
           showHours={showHours}
           showMinutes={showMinutes}
           showSeconds={showSeconds}
+          showMilliseconds={showMilliseconds}
+          minutesReadOnly={minutesReadOnly}
           secondsReadOnly={secondsReadOnly}
+          millisecondsReadOnly={millisecondsReadOnly}
+          stepHasMilliseconds={stepHasMilliseconds}
           controlled={hasValue}
           hourValue={hourValue}
           minuteValue={minuteValue}
           secondValue={secondValue}
+          millisecondValue={millisecondValue}
           minSeconds={minSeconds}
           maxSeconds={maxSeconds}
           stepSeconds={stepSeconds}
@@ -177,11 +235,16 @@ const InputDurationFields = ({
   showHours,
   showMinutes,
   showSeconds,
+  showMilliseconds,
+  minutesReadOnly,
   secondsReadOnly,
+  millisecondsReadOnly,
+  stepHasMilliseconds,
   controlled,
   hourValue,
   minuteValue,
   secondValue,
+  millisecondValue,
   minSeconds,
   maxSeconds,
   stepSeconds,
@@ -238,6 +301,14 @@ const InputDurationFields = ({
     stepSeconds !== undefined && stepSeconds % 3600 === 0
       ? stepSeconds / 3600
       : 1;
+  // Millisecond bounds and step.
+  const millisecondMin = 0;
+  const millisecondMax = maxSeconds < 1 ? Math.floor(maxSeconds * 1000) : 999;
+  // When the step has sub-second precision, derive the ms step from the
+  // fractional-seconds part. Otherwise leave it undefined (free editing).
+  const stepForMs = stepHasMilliseconds
+    ? Math.round((stepSeconds % 1) * 1000)
+    : undefined;
 
   const inputs = [];
 
@@ -268,6 +339,7 @@ const InputDurationFields = ({
         step={stepForMinutes}
         separator={showSeconds ? ":" : undefined}
         {...childProps}
+        readOnly={minutesReadOnly || childProps.readOnly}
       />,
     );
   }
@@ -282,8 +354,25 @@ const InputDurationFields = ({
         min={secondMin}
         max={secondMax}
         step={stepSeconds}
+        separator={showMilliseconds ? "." : undefined}
         {...childProps}
         readOnly={secondsReadOnly || childProps.readOnly}
+      />,
+    );
+  }
+
+  if (showMilliseconds) {
+    inputs.push(
+      <InputDurationMillisecond
+        key="millisecond"
+        {...(controlled
+          ? { value: millisecondValue }
+          : { defaultValue: millisecondValue })}
+        min={millisecondMin}
+        max={millisecondMax}
+        step={stepForMs}
+        {...childProps}
+        readOnly={millisecondsReadOnly || childProps.readOnly}
       />,
     );
   }
@@ -364,7 +453,7 @@ const InputDurationMinute = ({ separator, ...props }) => {
   );
 };
 
-const InputDurationSecond = (props) => {
+const InputDurationSecond = ({ separator, ...props }) => {
   const unit = <Unit unit="second" plural color="secondary" />;
 
   return (
@@ -372,6 +461,30 @@ const InputDurationSecond = (props) => {
       <Input
         type="navi_second"
         name="second"
+        alignX="center"
+        size="l"
+        unit={false}
+        variant="underline"
+        expandX
+        {...props}
+      >
+        {separator ? (
+          <Input.UI.UnitSlot>{separator}</Input.UI.UnitSlot>
+        ) : undefined}
+      </Input>
+      {unit}
+    </Label>
+  );
+};
+
+const InputDurationMillisecond = (props) => {
+  const unit = <Unit unit="millisecond" plural color="secondary" />;
+
+  return (
+    <Label flex="y">
+      <Input
+        type="number"
+        name="millisecond"
         alignX="center"
         size="l"
         unit={false}

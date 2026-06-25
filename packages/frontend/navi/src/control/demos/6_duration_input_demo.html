@@ -93,7 +93,9 @@
               <li><a href="#hour-only">Hour only</a></li>
               <li><a href="#minute-only">Minute only</a></li>
               <li><a href="#second-only">Second only</a></li>
+              <li><a href="#millisecond">Millisecond</a></li>
               <li><a href="#read-only-seconds">Read-only with seconds</a></li>
+              <li><a href="#read-only-minutes">Read-only with minutes</a></li>
               <li><a href="#states">States</a></li>
             </ul>
           </li>
@@ -197,7 +199,9 @@
             <HourOnlyDemo />
             <MinuteOnlyDemo />
             <SecondOnlyDemo />
+            <MillisecondDemo />
             <ReadOnlySecondsDemo />
+            <ReadOnlyMinutesDemo />
             <StatesDemo />
           </div>
           <div class="demo-section-group" id="interactivity">
@@ -322,6 +326,22 @@
         );
       };
 
+      // ── MillisecondDemo ───────────────────────────────────────────────────
+      const MillisecondDemo = () => {
+        return (
+          <div class="demo-section" id="millisecond">
+            <h2>Millisecond</h2>
+            <p class="desc">
+              When <code>max</code>, <code>min</code>, or <code>step</code>
+              includes a milliseconds component, the millisecond field is shown.
+              Default step for milliseconds is <code>100ms</code>; min defaults
+              to <code>0</code> and max to <code>999ms</code> here.
+            </p>
+            <InputDuration defaultValue="500ms" max="999ms" step="100ms" />
+          </div>
+        );
+      };
+
       // ── ReadOnlySecondsDemo ───────────────────────────────────────────────
       const ReadOnlySecondsDemo = () => {
         return (
@@ -340,6 +360,23 @@
               step="1second"
               readOnly
             />
+          </div>
+        );
+      };
+
+      // ── ReadOnlyMinutesDemo ───────────────────────────────────────────────
+      const ReadOnlyMinutesDemo = () => {
+        return (
+          <div class="demo-section" id="read-only-minutes">
+            <h2>Read-only with minutes</h2>
+            <p class="desc">
+              When <code>step="1hour"</code> is combined with a stored value
+              that has minute-level precision, the minute field is shown
+              read-only. The stored precision is faithfully displayed even
+              though the user could only enter whole hours if the field were
+              editable.
+            </p>
+            <InputDuration value="1hour30minute" step="1hour" readOnly />
           </div>
         );
       };
