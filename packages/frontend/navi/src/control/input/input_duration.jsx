@@ -19,8 +19,25 @@ import { InputGroup } from "./input_group.jsx";
 
 const css = /* css */ `
   .navi_input_duration {
-    .navi_label:has(+ .navi_label) .navi_unit {
-      margin-right: 1ch;
+    --duration-separator-spacing: 4px;
+
+    .navi_label {
+      &[data-separator] {
+        .navi_unit {
+          margin-right: 1ch;
+          margin-right: calc(1ch + var(--duration-separator-spacing));
+        }
+      }
+    }
+
+    .navi_input {
+      --padding-x: 0;
+
+      .navi_input_slot {
+        --slot-spacing: var(--duration-separator-spacing);
+
+        margin-right: calc(var(--slot-spacing) / 2);
+      }
     }
   }
 `;
@@ -404,8 +421,7 @@ const InputDurationFields = ({
   ...childProps
 }) => {
   // Hour bounds (in hours)
-  const minHours =
-    minSeconds !== undefined ? Math.floor(minSeconds / 3600) : 0;
+  const minHours = minSeconds !== undefined ? Math.floor(minSeconds / 3600) : 0;
   const maxHours = Math.floor(maxSeconds / 3600);
 
   // Minute bounds (in minutes).
@@ -540,18 +556,17 @@ const InputDurationPart = ({ unit, label, separator, ...props }) => {
   const unitLabel = label ?? <Unit unit={unit} plural color="secondary" />;
 
   return (
-    <Label flex="y" textAlign={unit === "hour" ? "right" : undefined}>
+    <Label flex="y" data-separator={separator || undefined}>
       <Input
         type="navi_number"
         navi-input-type={unit}
         name={unit}
-        alignX="center"
+        textAlign={separator ? "right" : "left"}
         size="l"
         unit={false}
         variant="underline"
         expandX
         {...props}
-        data-separator={separator || undefined}
       >
         {separator ? (
           <Input.UI.UnitSlot>{separator}</Input.UI.UnitSlot>
