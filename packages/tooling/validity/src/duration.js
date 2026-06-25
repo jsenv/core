@@ -48,20 +48,41 @@ export const parseDuration = (value) => {
     return parseISODuration(s.toUpperCase());
   }
 
+  // Spaces are allowed between number and unit (e.g. "2 hours 15 minutes").
+  // Strip them so the rest of the parser can work on a compact string.
+  s = s.split(" ").join("");
+
   const result = {};
-  for (const { key, name } of UNITS) {
-    const idx = findUnitIndex(s, name);
-    if (idx === -1) {
+  let lastMatchedUnitIndex = -1;
+  for (let unitIndex = 0; unitIndex < UNITS.length; unitIndex++) {
+    const { key, aliases } = UNITS[unitIndex];
+    const match = findUnitMatch(s, aliases);
+    if (match === null) {
       continue;
     }
+    const { idx, aliasLength } = match;
     const rawValue = s.slice(0, idx);
-    const remainder = s.slice(idx + name.length);
+    const remainder = s.slice(idx + aliasLength);
     if (rawValue !== "") {
       result[key] = rawValue;
     }
+    lastMatchedUnitIndex = unitIndex;
     s = remainder;
     if (s === "") {
       break;
+    }
+  }
+
+  // If there is a trailing value with no unit (e.g. "1h30"), infer the next
+  // smaller unit after the last matched one ("30" → minutes after hours).
+  if (s !== "" && lastMatchedUnitIndex !== -1) {
+    const nextUnitIndex = lastMatchedUnitIndex + 1;
+    if (nextUnitIndex < UNITS.length) {
+      const { key } = UNITS[nextUnitIndex];
+      if (result[key] === undefined) {
+        result[key] = s;
+        s = "";
+      }
     }
   }
 
@@ -74,33 +95,57 @@ export const parseDuration = (value) => {
   }
   return result;
 };
-// Returns the index of the last occurrence of `name` in `s` where it is NOT
-// embedded inside a longer known unit name (e.g. "second" inside "millisecond").
-// This prevents matching "second" in "1second140millisecond" at the wrong position
-// while still allowing invalid value characters like "2a" in "2ahour".
-const findUnitIndex = (s, name) => {
-  let idx = s.lastIndexOf(name);
-  while (idx !== -1) {
-    let isPartOfLongerUnit = false;
-    for (const unit of UNITS) {
-      if (unit.name === name || !unit.name.endsWith(name)) {
+// Returns { idx, aliasLength } for the last occurrence of any alias in `aliases`
+// within `s` that is a valid standalone match:
+//   - not preceded by characters that make it a suffix of a longer known alias
+//     (e.g. "second" inside "millisecond")
+//   - not followed by a letter that would extend it into a longer word
+//     (e.g. "m" at the start of "ms", or "h" inside "hour")
+// Aliases are sorted longest-first so that e.g. "minutes" is tried before
+// "minute" — otherwise "minute" would match in "30minutes" and leave a
+// trailing "s" that could be mistakenly consumed by the seconds alias.
+// Returns null when no valid match exists.
+const findUnitMatch = (s, aliases) => {
+  const sortedAliases = [...aliases].sort((a, b) => b.length - a.length);
+  for (const alias of sortedAliases) {
+    let idx = s.lastIndexOf(alias);
+    while (idx !== -1) {
+      if (
+        !isEmbeddedInLongerAlias(s, alias, idx) &&
+        !isFollowedByLetter(s, idx + alias.length)
+      ) {
+        return { idx, aliasLength: alias.length };
+      }
+      idx = s.lastIndexOf(alias, idx - 1);
+    }
+  }
+  return null;
+};
+// True when the character at `pos` is a lowercase letter — meaning the alias
+// immediately before it is a prefix of a longer word, not a standalone unit name.
+const isFollowedByLetter = (s, pos) => {
+  const ch = s[pos];
+  return ch !== undefined && ch >= "a" && ch <= "z";
+};
+// True when alias at position `idx` in `s` is preceded by characters that form
+// the prefix of a longer known alias (e.g. "second" at 5 in "millisecond",
+// or "s" at 1 in "ms").
+const isEmbeddedInLongerAlias = (s, alias, idx) => {
+  for (const unit of UNITS) {
+    for (const otherAlias of unit.aliases) {
+      if (otherAlias.length <= alias.length || !otherAlias.endsWith(alias)) {
         continue;
       }
-      const prefix = unit.name.slice(0, unit.name.length - name.length);
+      const prefix = otherAlias.slice(0, otherAlias.length - alias.length);
       if (
         idx >= prefix.length &&
         s.slice(idx - prefix.length, idx) === prefix
       ) {
-        isPartOfLongerUnit = true;
-        break;
+        return true;
       }
     }
-    if (!isPartOfLongerUnit) {
-      return idx;
-    }
-    idx = s.lastIndexOf(name, idx - 1);
   }
-  return -1;
+  return false;
 };
 // ISO 8601 duration regex: P[nY][nM][nW][nD][T[nH][nM][nS]]
 const ISO_DURATION_RE =
@@ -140,17 +185,60 @@ const parseISODuration = (s) => {
 };
 
 // Units ordered from largest to smallest.
-// .name is the keyword used in duration strings (singular, no trailing "s").
+// .name is the canonical English singular used as a lookup key (e.g. durationToNumber).
+// .aliases lists every accepted spelling for the human-friendly parser
+//   (findUnitMatch sorts them longest-first automatically).
+//   Trying longest first ensures "millisecond" beats "second", "min" beats "m", etc.
 // .seconds is the conversion factor to seconds (used by durationToNumber).
 const UNITS = [
-  { key: "years", name: "year", seconds: 31536000 },
-  { key: "months", name: "month", seconds: 2592000 },
-  { key: "weeks", name: "week", seconds: 604800 },
-  { key: "days", name: "day", seconds: 86400 },
-  { key: "hours", name: "hour", seconds: 3600 },
-  { key: "minutes", name: "minute", seconds: 60 },
-  { key: "seconds", name: "second", seconds: 1 },
-  { key: "milliseconds", name: "millisecond", seconds: 0.001 },
+  {
+    key: "years",
+    name: "year",
+    aliases: ["years", "year", "y"],
+    seconds: 31536000,
+  },
+  {
+    key: "months",
+    name: "month",
+    aliases: ["months", "month", "mo"],
+    seconds: 2592000,
+  },
+  {
+    key: "weeks",
+    name: "week",
+    aliases: ["weeks", "week", "w"],
+    seconds: 604800,
+  },
+  {
+    key: "days",
+    name: "day",
+    aliases: ["days", "day", "d"],
+    seconds: 86400,
+  },
+  {
+    key: "hours",
+    name: "hour",
+    aliases: ["hours", "hour", "h"],
+    seconds: 3600,
+  },
+  {
+    key: "minutes",
+    name: "minute",
+    aliases: ["minutes", "minute", "min", "m"],
+    seconds: 60,
+  },
+  {
+    key: "seconds",
+    name: "second",
+    aliases: ["seconds", "second", "sec", "s"],
+    seconds: 1,
+  },
+  {
+    key: "milliseconds",
+    name: "millisecond",
+    aliases: ["milliseconds", "millisecond", "ms"],
+    seconds: 0.001,
+  },
 ];
 
 /**

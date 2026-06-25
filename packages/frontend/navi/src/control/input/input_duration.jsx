@@ -1,6 +1,6 @@
 import {
+  durationToISOString,
   durationToSeconds,
-  durationToString,
   parseDuration,
 } from "@jsenv/validity";
 import { useRef } from "preact/hooks";
@@ -15,14 +15,16 @@ import { Label } from "../field.jsx";
 import { Input } from "./input.jsx";
 import { InputGroup } from "./input_group.jsx";
 
-// An input for a duration expressed as a durationToString-compatible string
-// (e.g. "2hour15minute", "2hour15minute30second"). Which sub-fields are shown
+// An input for a duration expressed as an ISO 8601 duration string
+// (e.g. "PT2H15M", "PT2H15M30S"). Which sub-fields are shown
 // is derived from min/max/step:
 //   default (no props): hour + minute  (max defaults to 24h, step to 1min)
 //   max="59minute"    : minute only    (max < 1 hour → no hour field)
 //   min="0second"     : hour + minute + second (seconds unit detected in props)
 //
-// uiAction / action receive the aggregated durationToString string.
+// value/min/max/step accept both ISO 8601 strings and human-friendly strings
+// (e.g. "1h30min", "2 hours", "5minute") which are converted automatically.
+// uiAction / action receive an ISO 8601 string.
 // The internal representation is always in seconds (min/max/step are converted).
 export const InputDuration = (props) => {
   return <InputDurationImpl {...props} />;
@@ -69,8 +71,8 @@ const InputDurationImpl = (props) => {
       {
         controlType: "duration_group",
         cascadeValidationToChildren: true,
-        // Aggregates sub-input raw strings into a durationToString value.
-        // Invalid mid-edit values like "2a" are preserved by durationToString.
+        // Aggregates sub-input values into an ISO 8601 duration string.
+        // Returns "" when no sub-field has a value yet.
         aggregateChildStates: (childUIStateControllers) => {
           let h = "";
           let m = "";
@@ -84,7 +86,7 @@ const InputDurationImpl = (props) => {
           if (showHours && h !== "") durationObj.hours = h;
           if (showMinutes && m !== "") durationObj.minutes = m;
           if (showSeconds && s !== "") durationObj.seconds = s;
-          return durationToString(durationObj) ?? "";
+          return durationToISOString(durationObj) ?? "";
         },
         // Reverse mapping: duration string → { hour, minute, second } so that
         // when the picker cancels and calls setUIState(storedValue), the
