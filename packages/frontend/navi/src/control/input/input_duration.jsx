@@ -242,117 +242,83 @@ export const InputDuration = (props) => {
     return { isoString, plainText };
   };
 
-  const setSubInputValues = (valueByField, sourceEvent) => {
-    const container = sourceEvent.currentTarget;
-    const subInputs = Array.from(
-      container.querySelectorAll(".navi_control_input"),
-    );
-    visibleFields.forEach((field, i) => {
-      const el = subInputs[i];
-      if (!el) return;
-      const value = valueByField[field];
-      dispatchRequestInteraction(el, {
-        event: sourceEvent,
-        name: "subpaste",
-        allowed: () => {
-          dispatchRequestSetUIState(
-            el,
-            value !== undefined ? String(value) : "",
-            { event: sourceEvent },
-          );
-        },
-      });
+  const applyToGroup = (isoValue, e) => {
+    const host = ref.current;
+    dispatchRequestInteraction(host, {
+      event: e,
+      name: "subpaste",
+      allowed: () => {
+        dispatchRequestSetUIState(host, isoValue, { event: e });
+      },
     });
+    e.preventDefault();
   };
 
   const handleCopy = (e) => {
     const payload = getClipboardPayload();
     if (!payload) return;
-    e.preventDefault();
     e.clipboardData.setData("text/plain", payload.plainText);
     e.clipboardData.setData("application/x-navi", payload.isoString);
+    e.preventDefault();
   };
 
   const handleCut = (e) => {
     const payload = getClipboardPayload();
     if (!payload) return;
-    e.preventDefault();
     e.clipboardData.setData("text/plain", payload.plainText);
     e.clipboardData.setData("application/x-navi", payload.isoString);
-    const empty = Object.fromEntries(visibleFields.map((f) => [f, ""]));
-    setSubInputValues(empty, e);
+    applyToGroup("", e);
+  };
+
+  const FIELD_TO_KEY = {
+    hour: "hours",
+    minute: "minutes",
+    second: "seconds",
+    millisecond: "milliseconds",
   };
 
   const handlePaste = (e) => {
     const naviData = e.clipboardData.getData("application/x-navi");
     const textData = e.clipboardData.getData("text/plain");
 
-    let valueByField = null;
+    let isoValue = null;
 
-    if (naviData) {
-      const parsed = parseDuration(naviData);
-      if (parsed) {
-        const rawS = parsed.seconds;
-        const wholeS = rawS !== undefined ? Math.floor(rawS) : undefined;
-        const ms =
-          typeof rawS === "number" && rawS % 1 !== 0
-            ? Math.round((rawS % 1) * 1000)
-            : (parsed.milliseconds ?? undefined);
-        valueByField = {
-          hour: parsed.hours,
-          minute: parsed.minutes,
-          second: wholeS,
-          millisecond: ms,
-        };
-      }
+    if (naviData && parseDuration(naviData)) {
+      isoValue = naviData;
     }
 
-    if (!valueByField && textData) {
-      // Try to parse as a duration string first (e.g. "1h30m")
+    if (!isoValue && textData) {
       const parsed = parseDuration(textData);
       if (parsed) {
-        const rawS = parsed.seconds;
-        const wholeS = rawS !== undefined ? Math.floor(rawS) : undefined;
-        const ms =
-          typeof rawS === "number" && rawS % 1 !== 0
-            ? Math.round((rawS % 1) * 1000)
-            : (parsed.milliseconds ?? undefined);
-        valueByField = {
-          hour: parsed.hours,
-          minute: parsed.minutes,
-          second: wholeS,
-          millisecond: ms,
-        };
+        isoValue = durationToISOString(parsed) ?? null;
       } else {
-        // Fall back to colon-split: "1:30" or "1:30:45" or "1:30:45.500"
+        // Colon-split fallback: "1:30", "1:30:45", "1:30:45.500"
         const colonParts = textData.trim().split(":");
-        if (colonParts.length > 0) {
-          valueByField = {};
-          const fields = [...visibleFields];
+        if (colonParts.length > 1 || visibleFields.length === 1) {
+          const durationObj = {};
           colonParts.forEach((part, i) => {
-            const field = fields[i];
-            if (!field) return;
+            const field = visibleFields[i];
+            if (!field || field === "millisecond") return;
             if (i === colonParts.length - 1 && part.includes(".")) {
               const [sec, msPart] = part.split(".");
-              valueByField[field] = parseInt(sec, 10);
-              const msField = fields[i + 1];
-              if (msField === "millisecond") {
-                valueByField[msField] = parseInt(
+              durationObj[FIELD_TO_KEY[field]] = parseInt(sec, 10);
+              if (visibleFields[i + 1] === "millisecond") {
+                durationObj.milliseconds = parseInt(
                   msPart.slice(0, 3).padEnd(3, "0"),
                   10,
                 );
               }
             } else {
-              valueByField[field] = parseInt(part, 10);
+              durationObj[FIELD_TO_KEY[field]] = parseInt(part, 10);
             }
           });
+          isoValue = durationToISOString(durationObj) ?? null;
         }
       }
     }
 
-    if (!valueByField) return;
-    e.preventDefault();
-    setSubInputValues(valueByField, e);
+    if (!isoValue) return;
+    applyToGroup(isoValue, e);
   };
 
   const hourValue = components?.hours;
