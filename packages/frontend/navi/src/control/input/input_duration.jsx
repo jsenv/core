@@ -290,15 +290,14 @@ const InputDurationFields = ({
 
 const InputDurationHour = (props) => {
   const { separator } = props;
-  const unit = props.unit || (
-    <Unit
-      unit="hour"
-      plural
-      color="secondary"
-      // We need this because ":" is inside the first input so
-      // in case unit pushes to the right it should account for the space of ":"
-      marginRight={separator ? `${separator.length}ch` : undefined}
-    />
+  const unitNode = props.unit || <Unit unit="hour" plural color="secondary" />;
+  // We need this because ":" is inside the first input so
+  // in case unit pushes to the right it should account for the space of ":"
+  const spacingRight = separator ? `${separator.length}ch` : undefined;
+  const unit = spacingRight ? (
+    <span style={{ paddingRight: spacingRight }}>{unitNode}</span>
+  ) : (
+    unitNode
   );
 
   return (
@@ -325,7 +324,13 @@ const InputDurationHour = (props) => {
 };
 
 const InputDurationMinute = ({ separator, ...props }) => {
-  const unit = <Unit unit="minute" plural color="secondary" />;
+  const unitNode = <Unit unit="minute" plural color="secondary" />;
+  const spacingRight = separator ? `${separator.length}ch` : undefined;
+  const unit = spacingRight ? (
+    <span style={{ paddingRight: spacingRight }}>{unitNode}</span>
+  ) : (
+    unitNode
+  );
 
   return (
     <Label flex="y">
