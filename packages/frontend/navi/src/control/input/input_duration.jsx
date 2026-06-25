@@ -21,22 +21,43 @@ import.meta.css = /* css */ `
   }
 `;
 
-// An input for a duration expressed as an ISO 8601 duration string
-// (e.g. "PT2H15M", "PT2H15M30S"). Which sub-fields are shown
-// is derived from min/max/step:
-//   default (no props): hour + minute  (max defaults to 24h, step to 1min)
-//   max="59minute"    : minute only    (max < 1 hour → no hour field)
-//   min="0second"     : hour + minute + second (seconds unit detected in props)
-//
-// value/min/max/step accept both ISO 8601 strings and human-friendly strings
-// (e.g. "1h30min", "2 hours", "5minute") which are converted automatically.
-// uiAction / action receive an ISO 8601 string.
-// The internal representation is always in seconds (min/max/step are converted).
+/**
+ * An input for a duration expressed as an ISO 8601 duration string
+ * (e.g. "PT2H15M", "PT2H15M30S").
+ *
+ * Which sub-fields are shown is derived from `min`, `max`, and `step`:
+ *   - default:             H + M  (max defaults to "23h59")
+ *   - max < 1 hour:        M only (e.g. max="59min")
+ *   - max < 1 minute:      S only (e.g. max="59second")
+ *   - max < 1 second:      MS only (e.g. max="999millisecond")
+ *   - step="1hour":        H only (whole-hour step hides minutes)
+ *   - max includes seconds: adds S field (e.g. max="59min59second" → M + S)
+ *   - value has seconds:   adds S field read-only if step doesn't allow seconds
+ *
+ * `value`, `min`, `max`, `step` accept ISO 8601 strings or human-friendly
+ * strings (e.g. "1h30min", "2 hours", "5minute").
+ *
+ * `uiAction` / `action` receive an ISO 8601 duration string.
+ *
+ * Loading state is displayed on the group container only — sub-inputs do not
+ * carry individual loading outlines.
+ *
+ * @param {Object} props
+ * @param {string} [props.value] - Controlled value (ISO 8601 or human-friendly)
+ * @param {string} [props.defaultValue] - Uncontrolled initial value
+ * @param {string} [props.min] - Minimum duration
+ * @param {string} [props.max="23h59"] - Maximum duration (also controls which fields appear)
+ * @param {string} [props.step] - Step between valid values (also controls which fields appear)
+ * @param {string} [props.name] - Field name for form submission
+ * @param {boolean} [props.readOnly]
+ * @param {boolean} [props.disabled]
+ * @param {boolean} [props.required]
+ * @param {boolean} [props.loading]
+ * @param {Function} [props.uiAction] - Called on every change with the ISO 8601 value
+ * @param {Function} [props.action] - Called on form submission
+ * @param {preact.ComponentChild} [props.unitHour] - Custom label for the hour sub-field
+ */
 export const InputDuration = (props) => {
-  return <InputDurationImpl {...props} />;
-};
-
-const InputDurationImpl = (props) => {
   props.max = props.max || "23h59";
   const minDuration = parseDuration(props.min);
   const maxDuration = parseDuration(props.max);
@@ -255,6 +276,8 @@ const InputDurationFields = ({
   maxSeconds,
   stepSeconds,
   unitHour,
+  // Loading is displayed on the InputGroup wrapper, not on individual sub-inputs.
+  basePseudoState,
   ...childProps
 }) => {
   const hourNum = hourValue !== undefined ? Number(hourValue) : NaN;
@@ -393,6 +416,7 @@ const InputDurationFields = ({
       flex
       spacing="xxs"
       width="fit-content"
+      basePseudoState={basePseudoState}
     >
       {inputs}
     </InputGroup>
