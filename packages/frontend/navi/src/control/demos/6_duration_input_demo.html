@@ -119,7 +119,7 @@
         align-items: start;
         gap: 12px 24px;
       }
-      .states-grid label {
+      .states-grid .legend {
         padding-top: 4px;
         color: #888;
         font-size: 12px;
@@ -479,22 +479,22 @@
         <div class="demo-section" id="states">
           <h2>States</h2>
           <div class="states-grid">
-            <label>default (H:M)</label>
+            <span class="legend">default (H:M)</span>
             <InputDuration value="2hour15minute" />
 
-            <label>:read-only</label>
+            <span class="legend">:read-only</span>
             <InputDuration value="2hour15minute" readOnly />
 
-            <label>:disabled</label>
+            <span class="legend">:disabled</span>
             <InputDuration value="2hour15minute" disabled />
 
-            <label>:-navi-loading</label>
+            <span class="legend">:-navi-loading</span>
             <InputDuration value="2hour15minute" loading />
 
-            <label>H:M:S (step="1second")</label>
+            <span class="legend">H:M:S (step="1second")</span>
             <InputDuration value="1hour30minute45second" step="1second" />
 
-            <label>H:M:S:MS (step="100ms")</label>
+            <span class="legend">H:M:S:MS (step="100ms")</span>
             <InputDuration
               value="1hour30minute45second500millisecond"
               step="100millisecond"
@@ -723,12 +723,12 @@
               ))}
             </Box>
             <div class="states-grid">
-              <label>H + M</label>
+              <span class="legend">H + M</span>
               <InputDuration
                 defaultValue="1hour30minute"
                 textAlign={align}
               />
-              <label>H + M + S</label>
+              <span class="legend">H + M + S</span>
               <InputDuration
                 defaultValue="1hour30minute45second"
                 step="1second"
