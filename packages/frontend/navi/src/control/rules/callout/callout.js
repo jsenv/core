@@ -515,17 +515,24 @@ export const openCallout = (
       }
       requestClose(event, "space_outside");
     };
-    const onCalloutClick = (event) => {
-      if (calloutElement.closest("label")) {
-        // prevent click to propagate to the label which would propagate to the input
-        // which would be considered outside
-        event.preventDefault();
-      }
-    };
-    calloutElement.addEventListener("click", onCalloutClick);
-    const registerClickOutsideListener = () => {
-      calloutElement.removeEventListener("click", onCalloutClick);
 
+    const closestLabel = calloutContainer.closest("label");
+    if (closestLabel) {
+      const onLabelClick = (e) => {
+        const isWithinCallout = calloutElement.contains(e.target);
+        if (isWithinCallout) {
+          // prevent click to propagate to the label which would propagate to the input
+          // which would be considered outside
+          e.preventDefault();
+        }
+      };
+      closestLabel.addEventListener("click", onLabelClick);
+      addTeardown(() => {
+        closestLabel.removeEventListener("click", onLabelClick);
+      });
+    }
+
+    const registerClickOutsideListener = () => {
       document.addEventListener("click", handleClickOutside, true);
       document.addEventListener("keydown", handleSpaceOutside, true);
       addTeardown(() => {
