@@ -918,7 +918,11 @@
               for developers: if the input feels frozen, it likely means the
               code provides a value but no way to update it.
             </p>
-            <Input value="Frozen — no action provided" />
+            <Input
+              value="Frozen — no action provided"
+              // To avoid warning in the console but in practice without the readOnly prop it would still be readOnly
+              readOnly
+            />
           </div>
         );
       };
