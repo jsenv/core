@@ -100,10 +100,9 @@ const FieldAsLabel = (props) => {
       data-vertical={vertical ? "" : undefined}
       {...remainingProps}
       vertical={undefined}
-      fieldId={undefined}
     >
       <MessagePropsRefContext.Provider value={messagePropsRef}>
-        <ControlIdContext.Provider value={props.fieldId}>
+        <ControlIdContext.Provider value={props.htmlFor}>
           {children}
         </ControlIdContext.Provider>
       </MessagePropsRefContext.Provider>
