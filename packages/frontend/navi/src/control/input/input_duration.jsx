@@ -1,4 +1,8 @@
-import { durationToSeconds, durationToString, parseDuration } from "@jsenv/validity";
+import {
+  durationToSeconds,
+  durationToString,
+  parseDuration,
+} from "@jsenv/validity";
 import { useRef } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
@@ -218,8 +222,14 @@ const InputDurationFields = ({
       : maxSeconds;
 
   // Per-field step values
-  const stepForMinutes = stepSeconds !== undefined ? stepSeconds / 60 : undefined;
-  const stepForHours = stepSeconds !== undefined ? stepSeconds / 3600 : undefined;
+  const stepForMinutes =
+    stepSeconds !== undefined ? stepSeconds / 60 : undefined;
+  // If the step is a whole number of hours, apply it to the hour field.
+  // Otherwise (step expressed in minutes/seconds) the hour field increments by 1.
+  const stepForHours =
+    stepSeconds !== undefined && stepSeconds % 3600 === 0
+      ? stepSeconds / 3600
+      : 1;
 
   const inputs = [];
 
