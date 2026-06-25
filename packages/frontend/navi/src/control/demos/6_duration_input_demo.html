@@ -82,15 +82,15 @@
       }
       .field-card h3 {
         margin: 0 0 2px;
-        font-size: 0.85rem;
-        font-weight: 600;
         color: #333;
+        font-weight: 600;
+        font-size: 0.85rem;
       }
       .field-card .prop-hint {
         display: block;
         margin: 0 0 8px;
-        font-size: 11px;
         color: #888;
+        font-size: 11px;
         font-family: monospace;
       }
       .field-card p.desc {
@@ -101,14 +101,14 @@
       .readonly-grid {
         display: grid;
         grid-template-columns: auto 1fr;
-        gap: 16px 24px;
         align-items: start;
+        gap: 16px 24px;
       }
       .readonly-grid .props {
         padding-top: 4px;
+        color: #666;
         font-size: 11px;
         font-family: monospace;
-        color: #666;
         line-height: 1.8;
         white-space: nowrap;
       }
@@ -272,11 +272,11 @@
         <div class="demo-section" id="basic">
           <h2>Basic (H:M)</h2>
           <p class="desc">
-            Default layout — hour + minute. Max defaults to{" "}
-            <code>"23h59"</code>. Seconds and milliseconds fields appear only
-            when <code>min</code>, <code>max</code>, or <code>step</code>{" "}
-            include a seconds/milliseconds component, or when the current value
-            itself carries that precision.
+            Default layout — hour + minute. Max defaults to <code>"23h59"</code>
+            . Seconds and milliseconds fields appear only when <code>min</code>,{" "}
+            <code>max</code>, or <code>step</code> include a
+            seconds/milliseconds component, or when the current value itself
+            carries that precision.
           </p>
           <InputDuration
             value={basicSignal.value}
@@ -316,15 +316,18 @@
             >
               <Box flex="y" spacing="s" alignX="start">
                 <Text size="s" color="secondary">
-                  Copy source — select a field and press{" "}
-                  <kbd>Ctrl+C</kbd> / <kbd>⌘C</kbd>
+                  Copy source — select a field and press <kbd>Ctrl+C</kbd> /{" "}
+                  <kbd>⌘C</kbd>
                 </Text>
-                <InputDuration defaultValue="1hour30minute45second" step="1second" />
+                <InputDuration
+                  defaultValue="1hour30minute45second"
+                  step="1second"
+                />
               </Box>
               <Box flex="y" spacing="s" alignX="start">
                 <Text size="s" color="secondary">
-                  Paste target — press{" "}
-                  <kbd>Ctrl+V</kbd> / <kbd>⌘V</kbd> while focused in a field
+                  Paste target — press <kbd>Ctrl+V</kbd> / <kbd>⌘V</kbd> while
+                  focused in a field
                 </Text>
                 <InputDuration step="1second" />
               </Box>
@@ -348,14 +351,38 @@
                 onPaste={onPaste}
               />
               {clipEntries ? (
-                <table style={{ borderCollapse: "collapse", fontSize: "13px", width: "100%" }}>
+                <table
+                  style={{
+                    borderCollapse: "collapse",
+                    fontSize: "13px",
+                    width: "100%",
+                  }}
+                >
                   {clipEntries.map(({ type, value }) => (
                     <tr key={type} style={{ borderTop: "1px solid #e8e8e8" }}>
-                      <td style={{ padding: "4px 10px 4px 0", fontFamily: "monospace", color: "#888", whiteSpace: "nowrap", verticalAlign: "top" }}>
+                      <td
+                        style={{
+                          padding: "4px 10px 4px 0",
+                          fontFamily: "monospace",
+                          color: "#888",
+                          whiteSpace: "nowrap",
+                          verticalAlign: "top",
+                        }}
+                      >
                         {type}
                       </td>
-                      <td style={{ padding: "4px 0", fontFamily: "monospace", wordBreak: "break-all" }}>
-                        {value ? JSON.stringify(value) : <span style={{ color: "#bbb" }}>(empty)</span>}
+                      <td
+                        style={{
+                          padding: "4px 0",
+                          fontFamily: "monospace",
+                          wordBreak: "break-all",
+                        }}
+                      >
+                        {value ? (
+                          JSON.stringify(value)
+                        ) : (
+                          <span style={{ color: "#bbb" }}>(empty)</span>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -396,10 +423,7 @@
         <div class="field-card" id="ms-only">
           <h3>Milliseconds only</h3>
           <code class="prop-hint">max="999millisecond"</code>
-          <InputDuration
-            defaultValue="500millisecond"
-            max="999millisecond"
-          />
+          <InputDuration defaultValue="500millisecond" max="999millisecond" />
         </div>
       );
 
@@ -458,10 +482,7 @@
               <br />
               defaultValue="1min30s"
             </div>
-            <InputDuration
-              defaultValue="1minute30second"
-              step="1minute"
-            />
+            <InputDuration defaultValue="1minute30second" step="1minute" />
 
             <div class="props">
               step="1second"
@@ -483,23 +504,26 @@
             <InputDuration defaultValue="2hour15minute" />
 
             <span class="legend">value (no uiAction → readonly)</span>
-            <InputDuration value="2hour15minute" />
+            <InputDuration defaultValue="2hour15minute" />
 
             <span class="legend">:read-only</span>
-            <InputDuration value="2hour15minute" readOnly />
+            <InputDuration defaultValue="2hour15minute" readOnly />
 
             <span class="legend">:disabled</span>
-            <InputDuration value="2hour15minute" disabled />
+            <InputDuration defaultValue="2hour15minute" disabled />
 
             <span class="legend">:-navi-loading</span>
-            <InputDuration value="2hour15minute" loading />
+            <InputDuration defaultValue="2hour15minute" loading />
 
             <span class="legend">H:M:S (step="1second")</span>
-            <InputDuration value="1hour30minute45second" step="1second" />
+            <InputDuration
+              defaultValue="1hour30minute45second"
+              step="1second"
+            />
 
             <span class="legend">H:M:S:MS (step="100ms")</span>
             <InputDuration
-              value="1hour30minute45second500millisecond"
+              defaultValue="1hour30minute45second500millisecond"
               step="100millisecond"
             />
           </div>
@@ -727,10 +751,7 @@
             </Box>
             <div class="states-grid">
               <span class="legend">H + M</span>
-              <InputDuration
-                defaultValue="1hour30minute"
-                textAlign={align}
-              />
+              <InputDuration defaultValue="1hour30minute" textAlign={align} />
               <span class="legend">H + M + S</span>
               <InputDuration
                 defaultValue="1hour30minute45second"

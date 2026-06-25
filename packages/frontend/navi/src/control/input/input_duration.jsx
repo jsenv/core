@@ -117,12 +117,14 @@ export const InputDuration = (props) => {
     Object.hasOwn(maxDuration ?? {}, "milliseconds") ||
     stepHasMilliseconds ||
     valueHasMilliseconds;
-  // Seconds/minutes field is read-only when the value has sub-step precision
-  // but the step only aligns to a coarser unit — the user cannot legally edit it.
+  // A field is read-only when the step is a multiple of that field's unit,
+  // meaning stepping never passes through it (e.g. step=1min → seconds stay 0).
   const secondsReadOnly =
-    valueHasSeconds && stepSeconds !== undefined && !stepHasSeconds && !stepHasMilliseconds;
+    valueHasSeconds && stepSeconds !== undefined && stepSeconds % 60 === 0;
   const millisecondsReadOnly =
-    valueHasMilliseconds && stepSeconds !== undefined && !stepHasMilliseconds;
+    valueHasMilliseconds && stepSeconds !== undefined && stepSeconds % 1 === 0;
+  const minutesReadOnly =
+    valueHasMinutes && stepSeconds !== undefined && stepSeconds % 3600 === 0;
 
   const showHours = maxSeconds >= 3600;
   // Hide minutes when the step is a whole number of hours — entering fractional
@@ -131,18 +133,20 @@ export const InputDuration = (props) => {
   // the stored precision is faithfully displayed.
   const showMinutes =
     maxSeconds >= 60 &&
-    (stepSeconds === undefined || stepSeconds < 3600 || valueHasMinutes);
-  const minutesReadOnly =
-    valueHasMinutes && stepSeconds !== undefined && stepSeconds >= 3600;
+    (stepSeconds === undefined || stepSeconds % 3600 !== 0 || valueHasMinutes);
 
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
   const { uiAction, action, ref } = props;
 
+  // Mirror the single-input behaviour: a controlled value with no handler makes the field read-only.
+  const implicitReadOnly = hasValue && !uiAction && !action;
+
   const [groupRootProps, groupHostProps, childrenWrapperProps] =
     useControlgroupProps(
       {
         ...props,
+        readOnly: props.readOnly || implicitReadOnly,
         uiAction: (groupState, event) => {
           const hiddenInput = ref.current;
           if (hiddenInput) {
