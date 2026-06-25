@@ -138,21 +138,38 @@ export const formatDayRelative = (offset, lang) => {
   return relativeDay;
 };
 
-export const formatMonth = (date, lang) => {
+export const formatMonth = (date, { lang = langSignal.value, format = "long" } = {}) => {
   return new Intl.DateTimeFormat(lang, {
-    month: "long",
+    month: format, // "long", "short", or "narrow"
     year: "numeric",
   }).format(date);
 };
 
 /**
- * Formats a date as "lun. 11 mai, 14:30".
+ * Formats a date as "lun. 11 mai, 14:30" (long), "11 mai, 14:30" (short), "11/05, 14:30" (narrow).
  */
-export const formatDatetime = (date, lang) => {
+export const formatDatetime = (date, { lang = langSignal.value, format = "long" } = {}) => {
+  if (format === "long") {
+    return new Intl.DateTimeFormat(lang, {
+      weekday: "short",
+      day: "numeric",
+      month: "long",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(date);
+  }
+  if (format === "narrow") {
+    return new Intl.DateTimeFormat(lang, {
+      day: "2-digit",
+      month: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(date);
+  }
+  // "short": no weekday
   return new Intl.DateTimeFormat(lang, {
-    weekday: "short",
     day: "numeric",
-    month: "long",
+    month: "short",
     hour: "2-digit",
     minute: "2-digit",
   }).format(date);

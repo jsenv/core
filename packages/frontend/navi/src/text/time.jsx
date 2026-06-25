@@ -51,8 +51,8 @@ import { Text } from "./text.jsx";
  *   Only applies to the past state of `type="relative"`.
  * @param {"long"|"short"|"narrow"|"compact"|"numeric"|"timestring"|"iso"} [format="long"]
  *   Controls the verbosity of the output. Defaults to `"long"` for all types.
- *   - `"short"`      → Intl short (e.g. "2 h et 15 min" for durations, short weekday/month for dates)
- *   - `"narrow"`     → Intl narrow (e.g. "2h 15min" via Intl.DurationFormat)
+ *   - `"short"`      → Intl short (e.g. "2 h et 15 min", short month for dates/datetimes, no weekday for datetime)
+ *   - `"narrow"`     → Intl narrow (e.g. "2h 15min", numeric month for datetime)
  *   - `"compact"`    → custom compact notation (e.g. "2h15", no minute symbol when hours present)
  *   - `"numeric"`    → numeric date, only for `type="date"` (e.g. "11/09/2026")
  *   - `"timestring"` → clock display for `type="time"`, `type="minute"`, and `type="hour"` (e.g. "14:30")
@@ -143,7 +143,7 @@ const TimeDate = ({
   );
 };
 
-const TimeMonth = ({ children, lang = langSignal.value, ...props }) => {
+const TimeMonth = ({ children, lang = langSignal.value, format = "long", ...props }) => {
   if (children === undefined) {
     return <TimeText {...props}>{formatMonthPlaceholder(lang)}</TimeText>;
   }
@@ -159,7 +159,7 @@ const TimeMonth = ({ children, lang = langSignal.value, ...props }) => {
     return <TimeText {...props}>{String(children)}</TimeText>;
   }
 
-  const text = formatMonth(date, lang);
+  const text = formatMonth(date, { lang, format });
   const yyyy = date.getFullYear();
   const mm = String(date.getMonth() + 1).padStart(2, "0");
   const dateTime = `${yyyy}-${mm}`; // See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
@@ -183,7 +183,7 @@ const TimeWeek = ({ children, lang = langSignal.value, ...props }) => {
   );
 };
 
-const TimeDatetime = ({ children, lang = langSignal.value, ...props }) => {
+const TimeDatetime = ({ children, lang = langSignal.value, format = "long", ...props }) => {
   if (children === undefined) {
     return (
       <TimeText {...props} capitalize={false}>
@@ -197,7 +197,7 @@ const TimeDatetime = ({ children, lang = langSignal.value, ...props }) => {
     return <TimeText {...props}>{String(children)}</TimeText>;
   }
 
-  const text = formatDatetime(date, lang);
+  const text = formatDatetime(date, { lang, format });
   const dateTime = date.toISOString(); // See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
   return (
     <TimeText dateTime={dateTime} {...props}>
