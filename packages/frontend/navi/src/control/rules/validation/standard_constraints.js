@@ -5,7 +5,19 @@
 import { formatDay, formatMonth } from "@jsenv/navi/src/text/format_time.js";
 import { langSignal } from "@jsenv/navi/src/text/lang_signal.js";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
+import { durationToSeconds, durationToString } from "@jsenv/validity";
 import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
+
+const secondsToDurationString = (totalSeconds) => {
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = Math.floor(totalSeconds % 60);
+  const obj = {};
+  if (h) obj.hours = h;
+  if (m) obj.minutes = m;
+  if (s) obj.seconds = s;
+  return durationToString(obj) ?? String(totalSeconds);
+};
 
 export const REQUIRED_CONSTRAINT = {
   name: "required",
@@ -343,6 +355,23 @@ export const MIN_CONSTRAINT = {
   name: "min",
   messageAttribute: "data-min-message",
   check: (field) => {
+    if (field.controlType === "duration_group") {
+      const minNumber = field.controlHostProps.min;
+      if (minNumber === undefined || minNumber === null) {
+        return null;
+      }
+      const valueSeconds = durationToSeconds(field.uiState);
+      if (valueSeconds === null) {
+        return null;
+      }
+      if (valueSeconds >= minNumber) {
+        return null;
+      }
+
+      return naviI18n("constraint.min.duration.default", {
+        min: secondsToDurationString(minNumber),
+      });
+    }
     if (field.controlType !== "input" && field.controlType !== "picker") {
       return null;
     }
@@ -428,6 +457,23 @@ export const MAX_CONSTRAINT = {
   name: "max",
   messageAttribute: "data-max-message",
   check: (field) => {
+    if (field.controlType === "duration_group") {
+      const maxNumber = field.controlHostProps.max;
+      if (maxNumber === undefined || maxNumber === null) {
+        return null;
+      }
+      const valueSeconds = durationToSeconds(field.uiState);
+      if (valueSeconds === null) {
+        return null;
+      }
+      if (valueSeconds <= maxNumber) {
+        return null;
+      }
+
+      return naviI18n("constraint.max.duration.default", {
+        max: secondsToDurationString(maxNumber),
+      });
+    }
     if (field.controlType !== "input" && field.controlType !== "picker") {
       return null;
     }
@@ -522,6 +568,31 @@ export const STEP_CONSTRAINT = {
   name: "step",
   messageAttribute: "data-step-message",
   check: (field) => {
+    if (field.controlType === "duration_group") {
+      const stepNumber = field.controlHostProps.step;
+      if (!stepNumber) {
+        return null;
+      }
+      const minNumber = field.controlHostProps.min ?? 0;
+      const valueSeconds = durationToSeconds(field.uiState);
+      if (valueSeconds === null) {
+        return null;
+      }
+      const remainder =
+        (((valueSeconds - minNumber) % stepNumber) + stepNumber) % stepNumber;
+      const epsilon = stepNumber * 1e-9;
+      if (remainder <= epsilon || remainder >= stepNumber - epsilon) {
+        return null;
+      }
+
+      const before = valueSeconds - remainder;
+      const after = before + stepNumber;
+      return naviI18n("constraint.step.duration.default", {
+        step: secondsToDurationString(stepNumber),
+        before: secondsToDurationString(before),
+        after: secondsToDurationString(after),
+      });
+    }
     if (field.controlType !== "input" && field.controlType !== "picker") {
       return null;
     }

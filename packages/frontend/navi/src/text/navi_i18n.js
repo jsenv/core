@@ -453,6 +453,18 @@ naviI18n.addAll({
     fr: "Le pourcentage doit être <strong>[min]</strong> ou plus.",
     en: "The percentage must be <strong>[min]</strong> or greater.",
   },
+  "constraint.min.duration.default": {
+    fr: "La durée doit être d'au moins <strong>[min]</strong>.",
+    en: "The duration must be at least <strong>[min]</strong>.",
+  },
+  "constraint.max.duration.default": {
+    fr: "La durée ne doit pas dépasser <strong>[max]</strong>.",
+    en: "The duration must not exceed <strong>[max]</strong>.",
+  },
+  "constraint.step.duration.default": {
+    fr: "La durée doit être un multiple de <strong>[step]</strong> (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
+    en: "The duration must be a multiple of <strong>[step]</strong> (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
+  },
   "constraint.min.time.default": {
     fr: "L'heure doit être <strong>[min]</strong> ou plus.",
     en: "The time must be <strong>[min]</strong> or later.",

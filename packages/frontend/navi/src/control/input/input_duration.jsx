@@ -1,4 +1,4 @@
-import { durationToMinutes, durationToString, parseDuration } from "@jsenv/validity";
+import { durationToSeconds, durationToString, parseDuration } from "@jsenv/validity";
 import { useRef } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
@@ -12,33 +12,41 @@ import { Input } from "./input.jsx";
 import { InputGroup } from "./input_group.jsx";
 
 // An input for a duration expressed as a durationToString-compatible string
-// (e.g. "2hour15minute", "15minute"). Both parts are raw strings so invalid
-// mid-edit values ("2ahour15minute") are preserved by durationToString.
-// The component renders hour + minute sub-inputs for ergonomic entry; the hour
-// field is omitted when max < 60 (the range fits within a single minute field).
-// uiAction / action are called with the durationToString value.
+// (e.g. "2hour15minute", "2hour15minute30second"). Which sub-fields are shown
+// is derived from min/max/step:
+//   default (no props): hour + minute  (max defaults to 24h, step to 1min)
+//   max="59minute"    : minute only    (max < 1 hour → no hour field)
+//   min="0second"     : hour + minute + second (seconds unit detected in props)
 //
-// Value format (produced by durationToString):
-//   "2hour15minute"  — 2 hours 15 minutes
-//   "2hour"          — 2 hours, no minutes
-//   "15minute"       — 15 minutes (minute-only display when max < 60)
-//   "2ahour15minute" — invalid mid-edit: hour part "2a", minute part "15"
-// A bare number ("30") is not valid; a unit is always required.
+// uiAction / action receive the aggregated durationToString string.
+// The internal representation is always in seconds (min/max/step are converted).
 export const InputDuration = (props) => {
-  if (props.unit !== "minute") {
-    return `InputDuration only supports unit="minute" for now`;
-  }
-  return <InputDurationAsMinutes {...props} />;
+  return <InputDurationImpl {...props} />;
 };
 
-const InputDurationAsMinutes = (props) => {
-  resolveDurationAsMinuteProps(props);
-  const { max, unitHour } = props;
-  const showHour = max === undefined || max >= 60;
+const DEFAULT_MAX_SECONDS = 24 * 3600; // 86400
+
+const InputDurationImpl = (props) => {
+  // Detect seconds precision from raw string props BEFORE numeric conversion.
+  const showSeconds =
+    hasDurationUnit(props.min, "seconds") ||
+    hasDurationUnit(props.max, "seconds") ||
+    hasDurationUnit(props.step, "seconds");
+
+  resolveDurationProps(props); // converts min/max/step strings → total seconds numbers
+
+  const { unitHour } = props;
+  const minSeconds = props.min;
+  const maxSeconds = props.max !== undefined ? props.max : DEFAULT_MAX_SECONDS;
+  const stepSeconds = props.step;
+
+  const showHours = maxSeconds >= 3600;
+  const showMinutes = maxSeconds >= 60;
 
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
   const { uiAction, action, ref } = props;
+
   const [groupRootProps, groupHostProps, childrenWrapperProps] =
     useControlgroupProps(
       {
@@ -51,76 +59,52 @@ const InputDurationAsMinutes = (props) => {
           uiAction?.(groupState, event);
         },
         action: action
-          ? (groupState, info) => {
-              return action(groupState, info);
-            }
+          ? (groupState, info) => action(groupState, info)
           : undefined,
       },
       {
         controlType: "duration_group",
         cascadeValidationToChildren: true,
-        // Aggregates sub-input raw strings into a durationToString value
-        // ("2hour15minute"). Invalid mid-edit values like "2a" are preserved
-        // by durationToString. Using strings (not numbers) avoids NaN which
-        // would cause a Preact signals cycle (NaN !== NaN = true).
+        // Aggregates sub-input raw strings into a durationToString value.
+        // Invalid mid-edit values like "2a" are preserved by durationToString.
         aggregateChildStates: (childUIStateControllers) => {
           let h = "";
           let m = "";
+          let s = "";
           for (const child of childUIStateControllers) {
-            if (child.name === "hour") {
-              h = child.uiState ?? "";
-            }
-            if (child.name === "minute") {
-              m = child.uiState ?? "";
-            }
+            if (child.name === "hour") h = child.uiState ?? "";
+            if (child.name === "minute") m = child.uiState ?? "";
+            if (child.name === "second") s = child.uiState ?? "";
           }
           const durationObj = {};
-          if (showHour && h !== "") durationObj.hours = h;
-          if (m !== "") durationObj.minutes = m;
+          if (showHours && h !== "") durationObj.hours = h;
+          if (showMinutes && m !== "") durationObj.minutes = m;
+          if (showSeconds && s !== "") durationObj.seconds = s;
           return durationToString(durationObj) ?? "";
         },
-        // Reverse mapping: duration string → { hour, minute } so that when the
-        // picker cancels and calls setUIState(storedValue), the sub-inputs are
-        // correctly reset to their original raw string values.
+        // Reverse mapping: duration string → { hour, minute, second } so that
+        // when the picker cancels and calls setUIState(storedValue), the
+        // sub-inputs are correctly reset to their original raw string values.
         distributeChildUIState: (groupState) => {
           const components = parseDuration(groupState);
-          if (!components) return { hour: undefined, minute: undefined };
-          return { hour: components.hours, minute: components.minutes };
+          if (!components) {
+            return { hour: undefined, minute: undefined, second: undefined };
+          }
+          return {
+            hour: components.hours,
+            minute: components.minutes,
+            second: components.seconds,
+          };
         },
       },
     );
 
-  const { value, min, step, required, readOnly, disabled, basePseudoState } =
+  const { value, required, readOnly, disabled, basePseudoState } =
     groupHostProps;
   const components = parseDuration(value);
   const hourValue = components?.hours;
   const minuteValue = components?.minutes;
-  const baseChildProps = {
-    min,
-    step,
-    required,
-    readOnly,
-    disabled,
-    basePseudoState,
-  };
-
-  const children = showHour ? (
-    <InputDurationHourAndMinute
-      hourValue={hourValue}
-      minuteValue={minuteValue}
-      min={min}
-      max={max}
-      unitHour={unitHour}
-      {...baseChildProps}
-    />
-  ) : (
-    <InputDurationMinute
-      value={minuteValue}
-      min={0}
-      max={max}
-      {...baseChildProps}
-    />
-  );
+  const secondValue = components?.seconds;
 
   return (
     <Box
@@ -132,96 +116,166 @@ const InputDurationAsMinutes = (props) => {
       {/* eslint-disable-next-line react/no-unknown-property */}
       <input {...groupHostProps} type="hidden" basePseudoState={undefined} />
       <ControlgroupChildrenWrapper {...childrenWrapperProps} name={undefined}>
-        {children}
+        <InputDurationFields
+          showHours={showHours}
+          showMinutes={showMinutes}
+          showSeconds={showSeconds}
+          hourValue={hourValue}
+          minuteValue={minuteValue}
+          secondValue={secondValue}
+          minSeconds={minSeconds}
+          maxSeconds={maxSeconds}
+          stepSeconds={stepSeconds}
+          unitHour={unitHour}
+          required={required}
+          readOnly={readOnly}
+          disabled={disabled}
+          basePseudoState={basePseudoState}
+        />
       </ControlgroupChildrenWrapper>
     </Box>
   );
 };
-const resolveDurationAsMinuteProps = (props) => {
-  props.min = toMinutes(props.min);
-  props.max = toMinutes(props.max);
-  props.step = toMinutes(props.step);
 
-  return props;
+// Returns true if the duration prop (a string) explicitly mentions the given
+// unit key (e.g. "seconds" in parseDuration's output).
+const hasDurationUnit = (value, unitKey) => {
+  const parsed = parseDuration(value);
+  return parsed !== null && parsed[unitKey] !== undefined;
 };
-// Parse a min/max duration value to total minutes.
-// Accepts: number (already minutes), or any duration string
-// ("1hour", "1hour20minute", "20minute", "30second", "2hour", …).
-const toMinutes = (value) => {
-  if (value === undefined || value === null) {
-    return undefined;
-  }
-  if (typeof value === "number") {
-    return value;
-  }
+
+// Converts min/max/step duration strings to total seconds (number).
+const resolveDurationProps = (props) => {
+  props.min = toSeconds(props.min);
+  props.max = toSeconds(props.max);
+  props.step = toSeconds(props.step);
+};
+
+const toSeconds = (value) => {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value === "number") return value;
   if (typeof value === "string") {
-    const minutes = durationToMinutes(value);
-    return minutes ?? value;
+    const secs = durationToSeconds(value);
+    return secs ?? value;
   }
   return value;
 };
-const InputDurationHourAndMinute = ({
+
+// Renders the appropriate combination of hour/minute/second sub-inputs based
+// on which fields are active. Bounds for each field are derived from the
+// current values of the other fields so that the combination stays within
+// [minSeconds, maxSeconds].
+const InputDurationFields = ({
+  showHours,
+  showMinutes,
+  showSeconds,
   hourValue,
   minuteValue,
-  min,
-  max,
+  secondValue,
+  minSeconds,
+  maxSeconds,
+  stepSeconds,
   unitHour,
-  ...rest
+  ...childProps
 }) => {
-  const minHour = min !== undefined ? Math.floor(min / 60) : undefined;
-  const maxHour = max !== undefined ? Math.floor(max / 60) : undefined;
-
-  // Minute bounds depend on the current hour value: when hours are at their
-  // minimum, the minute field must cover the remaining minutes; at the maximum,
-  // the minute field is capped to not exceed the total.
   const hourNum = hourValue !== undefined ? Number(hourValue) : NaN;
-  const hourMinutes = isFinite(hourNum) ? hourNum * 60 : undefined;
-  const minuteMin =
-    min !== undefined && hourMinutes !== undefined
-      ? Math.max(0, min - hourMinutes)
-      : 0;
-  const minuteMax =
-    max !== undefined && hourMinutes !== undefined
-      ? Math.min(59, max - hourMinutes)
-      : 59;
+  const minuteNum = minuteValue !== undefined ? Number(minuteValue) : NaN;
+  const hourInSeconds = isFinite(hourNum) ? hourNum * 3600 : undefined;
+  const minuteInSeconds = isFinite(minuteNum) ? minuteNum * 60 : undefined;
 
-  return (
-    <InputGroup flex spacing="xxs" width="fit-content">
+  // Hour bounds (in hours)
+  const minHours =
+    minSeconds !== undefined ? Math.floor(minSeconds / 3600) : undefined;
+  const maxHours = Math.floor(maxSeconds / 3600);
+
+  // Minute bounds (in minutes), offset by the current hour value when present
+  const minuteMin =
+    showHours && hourInSeconds !== undefined
+      ? minSeconds !== undefined
+        ? Math.max(0, Math.floor((minSeconds - hourInSeconds) / 60))
+        : 0
+      : minSeconds !== undefined
+        ? Math.floor(minSeconds / 60)
+        : 0;
+  const minuteMax =
+    showHours && hourInSeconds !== undefined
+      ? Math.min(59, Math.floor((maxSeconds - hourInSeconds) / 60))
+      : Math.floor(maxSeconds / 60);
+
+  // Second bounds (in seconds), offset by the current hour+minute values
+  const baseSeconds = (hourInSeconds ?? 0) + (minuteInSeconds ?? 0);
+  const secondMin =
+    showMinutes && minuteInSeconds !== undefined
+      ? minSeconds !== undefined
+        ? Math.max(0, minSeconds - baseSeconds)
+        : 0
+      : minSeconds !== undefined
+        ? minSeconds
+        : 0;
+  const secondMax =
+    showMinutes && minuteInSeconds !== undefined
+      ? Math.min(59, maxSeconds - baseSeconds)
+      : maxSeconds;
+
+  // Per-field step values
+  const stepForMinutes = stepSeconds !== undefined ? stepSeconds / 60 : undefined;
+  const stepForHours = stepSeconds !== undefined ? stepSeconds / 3600 : undefined;
+
+  const inputs = [];
+
+  if (showHours) {
+    inputs.push(
       <InputDurationHour
+        key="hour"
         value={hourValue}
-        min={minHour}
-        max={maxHour}
+        min={minHours}
+        max={maxHours}
+        step={stepForHours}
         unit={unitHour}
-        separator=":"
-        {...rest}
-      />
+        separator={showMinutes || showSeconds ? ":" : undefined}
+        {...childProps}
+      />,
+    );
+  }
+
+  if (showMinutes) {
+    inputs.push(
       <InputDurationMinute
+        key="minute"
         value={minuteValue}
         min={minuteMin}
         max={minuteMax}
-        {...rest}
-      />
+        step={stepForMinutes}
+        separator={showSeconds ? ":" : undefined}
+        {...childProps}
+      />,
+    );
+  }
+
+  if (showSeconds) {
+    inputs.push(
+      <InputDurationSecond
+        key="second"
+        value={secondValue}
+        min={secondMin}
+        max={secondMax}
+        step={stepSeconds}
+        {...childProps}
+      />,
+    );
+  }
+
+  if (inputs.length === 1) {
+    return inputs[0];
+  }
+
+  return (
+    <InputGroup flex spacing="xxs" width="fit-content">
+      {inputs}
     </InputGroup>
   );
 };
-const InputDurationMinute = (props) => {
-  const unit = props.unit || <Unit unit="minute" plural color="secondary" />;
 
-  return (
-    <Label flex="y">
-      <Input
-        type="navi_minute"
-        name="minute"
-        size="l"
-        unit={false}
-        variant="underline"
-        expandX
-        {...props}
-      />
-      {unit}
-    </Label>
-  );
-};
 const InputDurationHour = (props) => {
   const { separator } = props;
   const unit = props.unit || (
@@ -252,6 +306,48 @@ const InputDurationHour = (props) => {
           <Input.UI.UnitSlot>{separator}</Input.UI.UnitSlot>
         ) : undefined}
       </Input>
+      {unit}
+    </Label>
+  );
+};
+
+const InputDurationMinute = ({ separator, ...props }) => {
+  const unit = <Unit unit="minute" plural color="secondary" />;
+
+  return (
+    <Label flex="y">
+      <Input
+        type="navi_minute"
+        name="minute"
+        size="l"
+        unit={false}
+        variant="underline"
+        expandX
+        {...props}
+      >
+        {separator ? (
+          <Input.UI.UnitSlot>{separator}</Input.UI.UnitSlot>
+        ) : undefined}
+      </Input>
+      {unit}
+    </Label>
+  );
+};
+
+const InputDurationSecond = (props) => {
+  const unit = <Unit unit="second" plural color="secondary" />;
+
+  return (
+    <Label flex="y">
+      <Input
+        type="navi_second"
+        name="second"
+        size="l"
+        unit={false}
+        variant="underline"
+        expandX
+        {...props}
+      />
       {unit}
     </Label>
   );

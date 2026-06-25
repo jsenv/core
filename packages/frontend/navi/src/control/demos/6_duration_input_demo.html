@@ -212,7 +212,6 @@
           <div class="demo-section" id="basic">
             <h2>Basic</h2>
             <InputDuration
-              unit="minute"
               value={basicSignal.value}
               uiAction={(v) => {
                 basicSignal.value = v;
@@ -229,13 +228,13 @@
             <h2>States</h2>
             <div class="states-grid">
               <label>:read-only</label>
-              <InputDuration unit="minute" value="2hour15minute" readOnly />
+              <InputDuration value="2hour15minute" readOnly />
 
               <label>:disabled</label>
-              <InputDuration unit="minute" value="2hour15minute" disabled />
+              <InputDuration value="2hour15minute" disabled />
 
               <label>:-navi-loading</label>
-              <InputDuration unit="minute" value="2hour15minute" loading />
+              <InputDuration value="2hour15minute" loading />
             </div>
           </div>
         );
@@ -243,7 +242,6 @@
 
       // ── UnitCustomizationDemo ─────────────────────────────────────────────
       const UnitCustomizationDemo = () => {
-
         return (
           <div class="demo-section">
             <h2>Custom hour unit label</h2>
@@ -253,7 +251,6 @@
               fill the column.
             </p>
             <InputDuration
-              unit="minute"
               value={customSignal.value}
               uiAction={(v) => {
                 customSignal.value = v;
@@ -284,7 +281,6 @@
             </p>
             <Box flex="y" spacing="s" alignX="start">
               <InputDuration
-                unit="minute"
                 value={outsideFormSignal.value}
                 uiAction={(v) => {
                   push("uiAction", v);
@@ -319,7 +315,6 @@
             >
               <Box flex="y" spacing="s" alignX="start">
                 <InputDuration
-                  unit="minute"
                   name="duration"
                   value={insideFormSignal.value}
                   uiAction={(v) => {
@@ -359,7 +354,6 @@
               >
                 <Box flex="y" spacing="s" alignX="start">
                   <InputDuration
-                    unit="minute"
                     name="minutes"
                     value={controlGroupSignal.value}
                     uiAction={(v) => {
@@ -419,7 +413,6 @@
                   <Box flex="y" spacing="l" padding="s" alignX="center">
                     <Text bold>Enter a duration</Text>
                     <InputDuration
-                      unit="minute"
                       value={pickerSignal.value}
                       uiAction={(value) => {
                         pickerSignal.value = value;
@@ -455,7 +448,7 @@
             </p>
             <Form action={(values) => push("form action", values)}>
               <Box flex="y" spacing="s" alignX="start">
-                <InputDuration unit="minute" name="duration" min="10minute" />
+                <InputDuration name="duration" min="10minute" />
                 <Button type="submit">Submit</Button>
                 <CallLog entries={entries} onClear={clear} />
               </Box>
@@ -475,7 +468,7 @@
             </p>
             <Form action={(values) => push("form action", values)}>
               <Box flex="y" spacing="s" alignX="start">
-                <InputDuration unit="minute" name="duration" max="1hour30minute" />
+                <InputDuration name="duration" max="1hour30minute" />
                 <Button type="submit">Submit</Button>
                 <CallLog entries={entries} onClear={clear} />
               </Box>
@@ -498,7 +491,6 @@
             <Form action={(values) => push("form action", values)}>
               <Box flex="y" spacing="s" alignX="start">
                 <InputDuration
-                  unit="minute"
                   name="duration"
                   min="5minute"
                   max="3hour30minute"
