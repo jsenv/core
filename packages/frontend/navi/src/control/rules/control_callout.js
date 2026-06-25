@@ -87,9 +87,14 @@ export const createCalloutManager = (
       removeOpenToken(token, event);
       return;
     }
+    const calloutOptions = {
+      status,
+      closeOnClickOutside: status !== "error",
+    };
+
     tokens.set(token, { message, status, onClose });
     if (callout) {
-      callout.update(message, { status });
+      callout.update(message, calloutOptions);
       return;
     }
     const resolvedAnchorElement =
@@ -109,8 +114,8 @@ export const createCalloutManager = (
     // `openResults` is referenced in onClose which runs later — forward ref is intentional.
     let openResults = [];
     callout = openCallout(message, {
+      ...calloutOptions,
       anchorElement: resolvedAnchorElement,
-      status,
       openingEvent: event,
       debug: debugPopup,
       onClose: ({ event: closeEvent, shouldTransferFocusFromCallout }) => {

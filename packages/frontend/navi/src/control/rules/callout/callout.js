@@ -219,7 +219,7 @@ export const openCallout = (
     status = "",
     onClose,
     closeOnClickOutside = status === "info",
-    closeOnBlur = closeOnClickOutside,
+    closeOnBlur,
     openingEvent,
     showErrorStack,
     debug = () => {},
@@ -368,8 +368,11 @@ export const openCallout = (
       updateStatus(options.status);
     }
 
-    if (options.closeOnClickOutside) {
+    if (Object.hasOwn(options, "closeOnClickOutside")) {
       closeOnClickOutside = options.closeOnClickOutside;
+    }
+    if (Object.hasOwn(options, "closeOnBlur")) {
+      closeOnBlur = options.closeOnBlur;
     }
 
     if (isValidElement(newMessage)) {
