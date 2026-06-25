@@ -35,13 +35,13 @@ import { Text } from "./text.jsx";
  *
  * @param {"day"|"month"|"datetime"|"time"|"relative"} [type="relative"]
  *   Controls the display format:
- *   - `"date"`       → "Lun. 11 mai"  — short by default; use `long` for full "lundi 11 mai (aujourd'hui)"
- *   - `"month"`     → "mai 2026"
- *   - `"datetime"`  → "lun. 11 mai, 14:30"
- *   - `"time"`      → "14:30"
- *   - `"relative"`  → "dans 1 heure 30" / "En cours" / "il y a 2 heures"
- *                     Handles past, present, and future.
- *                     `eventDuration` defaults to 0 (instantaneous: no "En cours" window).
+ *   - `"date"`     → "lundi 11 mai" (long by default); `format="short"` → "lun. 11 mai"; `format="numeric"` → "11/05/2026"
+ *   - `"month"`    → "mai 2026"
+ *   - `"datetime"` → "lun. 11 mai, 14:30"
+ *   - `"time"`     → duration format by default; `format="timestring"` → clock "14 h 30"
+ *   - `"relative"` → "dans 1 heure 30" / "En cours" / "il y a 2 heures"
+ *                    Handles past, present, and future.
+ *                    `eventDuration` defaults to 0 (instantaneous: no "En cours" window).
  *
  * @param {number} [eventDuration=0]
  *   Duration of the event in milliseconds. Only used with `type="relative"`.
@@ -49,12 +49,12 @@ import { Text } from "./text.jsx";
  * @param {boolean} [bare]
  *   When true, strips the past-tense literal ("il y a", "ago") and returns only integer + unit.
  *   Only applies to the past state of `type="relative"`.
- * @param {"long"|"short"|"timestring"} [format="long"]
+ * @param {"long"|"short"|"narrow"|"numeric"|"timestring"} [format="long"]
  *   Controls the verbosity of the output. Defaults to `"long"` for all types.
- *   - `"short"`      → abbreviated format (e.g. "2h15" instead of "2 heures 15 minutes")
- *   - `"timestring"` → clock-style string, only for `type="time"` and `type="minute"` (e.g. "14:30")
- * @param {boolean} [numeric]
- *   When true and `type="date"`, formats as numeric date (e.g. "11/09/2026") using locale separators.
+ *   - `"short"`      → abbreviated format (e.g. "2h15" for durations, short weekday/month for dates)
+ *   - `"narrow"`     → narrow Intl format (e.g. "2h 15m" via Intl.DurationFormat narrow)
+ *   - `"numeric"`    → numeric date, only for `type="date"` (e.g. "11/09/2026")
+ *   - `"timestring"` → clock display for `type="time"`, `type="minute"`, and `type="hour"` (e.g. "14:30")
  * @param {boolean} [dayLabel]
  *   When true and `type="date"`, appends the locale-aware relative label
  *   ("hier", "aujourd'hui", "demain") when the date is yesterday, today, or tomorrow.
@@ -95,7 +95,6 @@ const TimeDate = ({
   children,
   lang = langSignal.value,
   format = "long",
-  numeric,
   dayLabel,
   now,
   ...props
@@ -119,7 +118,7 @@ const TimeDate = ({
     return <TimeText {...props}>{String(children)}</TimeText>;
   }
 
-  const base = formatDay(date, { lang, long: format !== "short", numeric });
+  const base = formatDay(date, { lang, format });
   let text;
   if (dayLabel) {
     const offset = getRelativeDay(date, { now });
@@ -237,10 +236,7 @@ const TimeTime = ({
     );
   }
   const totalMinutes = date.getHours() * 60 + date.getMinutes();
-  const text = formatMinuteDuration(totalMinutes, {
-    lang,
-    long: format !== "short",
-  });
+  const text = formatMinuteDuration(totalMinutes, { lang, format });
   return (
     <TimeText dateTime={dateTime} {...props}>
       {text}
@@ -278,7 +274,7 @@ const TimeMinute = ({
     const date = new Date(1970, 0, 1, totalHours, remainingMinutes, 0);
     text = formatTime(date, lang);
   } else {
-    text = formatMinuteDuration(minutes, { lang, long: format !== "short" });
+    text = formatMinuteDuration(minutes, { lang, format });
   }
   return (
     <TimeText dateTime={dateTime} {...props}>
@@ -289,7 +285,7 @@ const TimeMinute = ({
 
 const TimeHour = ({ children, lang = langSignal.value, format = "long", ...props }) => {
   if (children === undefined) {
-    return <TimeText {...props}>--</TimeText>;
+    return <TimeText {...props}>{format === "timestring" ? "--:--" : "--"}</TimeText>;
   }
   let hours;
   if (typeof children === "number") {
@@ -302,7 +298,12 @@ const TimeHour = ({ children, lang = langSignal.value, format = "long", ...props
     hours = childrenAsNumber;
   }
 
-  const text = formatHourDuration(hours, { lang, long: format !== "short" });
+  if (format === "timestring") {
+    const totalMinutes = Math.round(hours * 60);
+    const date = new Date(1970, 0, 1, Math.floor(totalMinutes / 60), totalMinutes % 60, 0);
+    return <TimeText {...props}>{formatTime(date, lang)}</TimeText>;
+  }
+  const text = formatHourDuration(hours, { lang, format });
   return <TimeText {...props}>{text}</TimeText>;
 };
 
@@ -335,13 +336,13 @@ const TimeDuration = ({
   if (totalSeconds === null) {
     // Non-numeric unit values (e.g. mid-edit "2ahour15minute" or { hours: "abc" }):
     // formatDuration reads the raw values and appends compact unit symbols.
-    return <TimeText {...props}>{formatDuration(duration, { lang })}</TimeText>;
+    return <TimeText {...props}>{formatDuration(duration, { lang, format })}</TimeText>;
   }
   if (totalSeconds === 0) {
     return <TimeText {...props}>{"0"}</TimeText>;
   }
 
-  const text = formatDuration(duration, { lang, long: format !== "short" });
+  const text = formatDuration(duration, { lang, format });
   const dateTime = durationToISOString(duration) ?? String(children);
   return (
     <TimeText dateTime={dateTime} {...props}>
@@ -353,6 +354,7 @@ const TimeDuration = ({
 const TimeRelative = ({
   children,
   lang = langSignal.value,
+  format = "long",
   eventDuration = 0,
   bare,
   ...props
@@ -373,7 +375,7 @@ const TimeRelative = ({
     eventDurationMs = s !== null ? s * 1000 : 0;
   }
 
-  const text = formatTimeRelative(date, eventDurationMs, { lang, bare });
+  const text = formatTimeRelative(date, eventDurationMs, { lang, bare, format });
   const dateTime = date.toISOString();
   return (
     <TimeText dateTime={dateTime} {...props}>

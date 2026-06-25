@@ -7,31 +7,33 @@ import { langSignal } from "./lang_signal.js";
 import { naviI18n } from "./navi_i18n.js";
 
 /**
- * Formats a date as a human-readable day, appending "(aujourd'hui)" or
- * "(demain)" when the date matches today or tomorrow.
+ * Formats a date as a human-readable day string.
+ *
+ * @param {Date} date
+ * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"numeric" }} [options]
  *
  * @example
- * formatDay(new Date(), "fr") // "lundi 11 mai (aujourd'hui)"
- * formatDay(tomorrow, "fr")   // "mardi 12 mai (demain)"
- * formatDay(nextWeek, "fr")   // "lundi 18 mai"
+ * formatDay(new Date(), { lang: "fr" })                    // "lundi 11 mai" (long, default)
+ * formatDay(new Date(), { lang: "fr", format: "short" })  // "lun. 11 mai"
+ * formatDay(new Date(), { lang: "fr", format: "narrow" }) // "lu. 11 mai"
+ * formatDay(new Date(), { lang: "fr", format: "numeric" }) // "11/05/2026"
  */
 export const formatDay = (
   date,
-  { lang = langSignal.value, long = false, numeric = false } = {},
+  { lang = langSignal.value, format = "long" } = {},
 ) => {
-  if (numeric) {
+  if (format === "numeric") {
     return new Intl.DateTimeFormat(lang, {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
     }).format(date);
   }
-  const result = new Intl.DateTimeFormat(lang, {
-    weekday: long ? "long" : "short",
+  return new Intl.DateTimeFormat(lang, {
+    weekday: format, // "long", "short", or "narrow"
     day: "numeric",
-    month: long ? "long" : "short",
+    month: format,
   }).format(date);
-  return result;
 };
 
 /**
@@ -167,27 +169,27 @@ export const formatTime = (date, lang) => {
 };
 
 /**
- * Formats a duration expressed in minutes as a short human-readable string.
- * Uses Intl.DurationFormat when available, falls back to a compact notation.
+ * Formats a duration expressed in minutes as a human-readable string.
+ * Uses Intl.DurationFormat when available for "long" and "narrow" formats,
+ * falls back to a compact notation for "short".
  *
  * @param {number} minutes
- * @param {string} lang
- * @param {{ long?: boolean }} [options]
+ * @param {{ lang?: string, format?: "long"|"short"|"narrow" }} [options]
  *
  * @example
- * formatMinuteDuration(90, "fr")             // "1h30"        (compact, default)
- * formatMinuteDuration(90, "fr", { long: true }) // "1 heure 30" or "1 h 30 min" via Intl
- * formatMinuteDuration(45, "en")             // "45min"
- * formatMinuteDuration(120, "fr")            // "2h"
+ * formatMinuteDuration(90, { lang: "fr" })                    // "1 heure 30 minutes" (long, default)
+ * formatMinuteDuration(90, { lang: "fr", format: "short" })  // "1h30" (compact)
+ * formatMinuteDuration(90, { lang: "fr", format: "narrow" }) // via Intl.DurationFormat narrow
+ * formatMinuteDuration(45, { lang: "en", format: "short" })  // "45min"
  */
 export const formatMinuteDuration = (
   minutes,
-  { lang = langSignal.value, long = false } = {},
+  { lang = langSignal.value, format = "long" } = {},
 ) => {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
-  if (long && typeof Intl.DurationFormat !== "undefined") {
-    const fmt = new Intl.DurationFormat(lang, { style: "long" });
+  if (format !== "short" && typeof Intl.DurationFormat !== "undefined") {
+    const fmt = new Intl.DurationFormat(lang, { style: format }); // "long" or "narrow"
     if (h === 0) {
       return fmt.format({ minutes: m });
     }
@@ -196,13 +198,9 @@ export const formatMinuteDuration = (
     }
     return fmt.format({ hours: h, minutes: m });
   }
-  // Compact notation: "1h30", "45min", "2h"
-  const hSym = naviI18n("time.duration.hour_symbol", undefined, {
-    lang,
-  });
-  const mSym = naviI18n("time.duration.minute_symbol", undefined, {
-    lang,
-  });
+  // format="short": compact notation "1h30", "45min", "2h"
+  const hSym = naviI18n("time.duration.hour_symbol", undefined, { lang });
+  const mSym = naviI18n("time.duration.minute_symbol", undefined, { lang });
   if (h === 0) {
     return `${m}${mSym}`;
   }
@@ -213,16 +211,16 @@ export const formatMinuteDuration = (
 };
 
 /**
- * Formats a duration expressed in hours (possibly fractional) as a short human-readable string.
+ * Formats a duration expressed in hours (possibly fractional) as a human-readable string.
+ * Delegates to {@link formatMinuteDuration} after converting hours to minutes.
  *
  * @param {number} hours
- * @param {string} locale
- * @param {{ long?: boolean }} [options]
+ * @param {{ lang?: string, format?: "long"|"short"|"narrow" }} [options]
  *
  * @example
- * formatHourDuration(1.5, "fr")              // "1h30"
- * formatHourDuration(1.5, "fr", { long: true }) // "1 heure 30" or "1 h 30 min" via Intl
- * formatHourDuration(2, "en")               // "2h"
+ * formatHourDuration(1.5, { lang: "fr" })                    // "1 heure 30 minutes" (long, default)
+ * formatHourDuration(1.5, { lang: "fr", format: "short" })  // "1h30"
+ * formatHourDuration(2, { lang: "en", format: "short" })    // "2h"
  */
 export const formatHourDuration = (hours, options) => {
   const totalMinutes = Math.round(hours * 60);
@@ -237,33 +235,28 @@ export const formatHourDuration = (hours, options) => {
  *
  * @param {{ years?: any, months?: any, weeks?: any, days?: any,
  *           hours?: any, minutes?: any, seconds?: any, milliseconds?: any }} duration
- * @param {string} locale
- * @param {{ long?: boolean }} [options]
+ * @param {{ lang?: string, format?: "long"|"short"|"narrow" }} [options]
  *
  * @example
- * formatDuration({ hours: 2, minutes: 15 }, "fr")               // "2h15"
- * formatDuration({ minutes: 45 }, "fr")                         // "45min"
- * formatDuration({ hours: 2 }, "fr")                            // "2h"
- * formatDuration({ hours: "2a", minutes: "15" }, "fr")          // "2ah15"
- * formatDuration({ days: 1, hours: 2, minutes: 15 }, "fr")      // "1d 2h15"
- * formatDuration({ hours: 1, minutes: 30 }, "fr", { long: true }) // "1 heure 30 minutes"
+ * formatDuration({ hours: 2, minutes: 15 }, { lang: "fr" })                    // "2 heures 15 minutes" (long, default)
+ * formatDuration({ hours: 2, minutes: 15 }, { lang: "fr", format: "short" })  // "2h15"
+ * formatDuration({ minutes: 45 }, { lang: "fr", format: "short" })            // "45min"
+ * formatDuration({ hours: "2a", minutes: "15" }, { lang: "fr", format: "short" }) // "2ah15"
  */
 export const formatDuration = (
   duration,
-  { lang = langSignal.value, long = false } = {},
+  { lang = langSignal.value, format = "long" } = {},
 ) => {
   const has = (key) => duration[key] !== undefined && duration[key] !== null;
 
-  // Long mode delegates to Intl.DurationFormat (when available and all values are numeric)
-  // because it produces correct locale-aware text like "1 heure 30 minutes".
+  // "long" and "narrow" delegate to Intl.DurationFormat when available and all values are numeric.
   //
-  // Compact mode always uses our own naviI18n symbols ("2h15", "45min") instead of
-  // Intl.DurationFormat for two reasons:
+  // "short" always uses our own compact symbols ("2h15", "45min") because:
   // 1. We omit the minute symbol when hours are also present ("2h15" not "2h 15 min"),
   //    which Intl.DurationFormat style:"narrow" does not do.
   // 2. Non-numeric mid-edit values (e.g. { hours: "2a" }) must render as-is with their
   //    unit symbol — Intl.DurationFormat only accepts integers.
-  if (long && typeof Intl.DurationFormat !== "undefined") {
+  if (format !== "short" && typeof Intl.DurationFormat !== "undefined") {
     const intlDuration = {};
     let allNumeric = true;
     for (const key of [
@@ -287,7 +280,7 @@ export const formatDuration = (
       intlDuration[key] = n;
     }
     if (allNumeric && Object.keys(intlDuration).length > 0) {
-      return new Intl.DurationFormat(lang, { style: "long" }).format(
+      return new Intl.DurationFormat(lang, { style: format }).format(
         intlDuration,
       );
     }
@@ -338,9 +331,9 @@ export const formatDuration = (
  */
 const formatTimeAgo = (
   date,
-  { lang = langSignal.value, now = new Date(), bare } = {},
+  { lang = langSignal.value, now = new Date(), bare, format = "long" } = {},
 ) => {
-  const rtf = new Intl.RelativeTimeFormat(lang, { numeric: "auto" });
+  const rtf = new Intl.RelativeTimeFormat(lang, { numeric: "auto", style: format });
   const nowMs = now instanceof Date ? now.getTime() : now;
   const diff = date.getTime() - nowMs;
   const absDiff = Math.abs(diff);
@@ -393,21 +386,22 @@ const formatTimeAgo = (
  *
  * @param {Date|number} start      Start of the event (Date or ms timestamp)
  * @param {number}      durationMs Duration in milliseconds (0 = instant event)
- * @param {string}      locale     BCP 47 locale tag
- * @param {{ now?: Date|number }} options
+ * @param {{ lang?: string, now?: Date|number, bare?: boolean, format?: "long"|"short"|"narrow" }} options
  *
  * @example
  * // 90 min from now
- * formatDuration(Date.now() + 90 * 60_000, 0, "fr") // "dans 1 heure 30"
+ * formatTimeRelative(Date.now() + 90 * 60_000, 0, { lang: "fr" }) // "dans 1 heure 30"
  * // currently happening (30 min window)
- * formatDuration(Date.now() - 5 * 60_000, 30 * 60_000, "fr") // "En cours"
+ * formatTimeRelative(Date.now() - 5 * 60_000, 30 * 60_000, { lang: "fr" }) // "En cours"
  * // ended 2 hours ago
- * formatDuration(Date.now() - 3 * 3_600_000, 3_600_000, "fr") // "il y a 2 heures"
+ * formatTimeRelative(Date.now() - 3 * 3_600_000, 3_600_000, { lang: "fr" }) // "il y a 2 heures"
+ * // short format
+ * formatTimeRelative(Date.now() - 3 * 3_600_000, 0, { lang: "fr", format: "short" }) // "il y a 3 h"
  */
 export const formatTimeRelative = (
   start,
   durationMs = 0,
-  { lang = langSignal.value, now = new Date(), bare } = {},
+  { lang = langSignal.value, now = new Date(), bare, format = "long" } = {},
 ) => {
   const startMs = start instanceof Date ? start.getTime() : Number(start);
   const endMs = startMs + durationMs;
@@ -418,15 +412,15 @@ export const formatTimeRelative = (
   }
   if (nowMs >= endMs) {
     const refDate = endMs > startMs ? new Date(endMs) : new Date(startMs);
-    return formatTimeAgo(refDate, { lang, now, bare });
+    return formatTimeAgo(refDate, { lang, now, bare, format });
   }
 
   const diff = startMs - nowMs;
-  return formatFuture(new Date(startMs), diff, { lang, now });
+  return formatFuture(new Date(startMs), diff, { lang, now, format });
 };
 
-const formatFuture = (date, diff, { lang, now }) => {
-  const rtf = new Intl.RelativeTimeFormat(lang, { numeric: "auto" });
+const formatFuture = (date, diff, { lang, now, format = "long" }) => {
+  const rtf = new Intl.RelativeTimeFormat(lang, { numeric: "auto", style: format });
   const nowDate = now instanceof Date ? now : new Date(now);
 
   // < 1 min
@@ -448,7 +442,7 @@ const formatFuture = (date, diff, { lang, now }) => {
     }
     const duration = formatMinuteDuration(hours * 60 + minutes, {
       lang,
-      long: true,
+      format,
     });
     const template = naviI18n("time.in_duration", undefined, { lang });
     if (template !== "time.in_duration") {
