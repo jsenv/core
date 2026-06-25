@@ -41,11 +41,19 @@ await snapshotTests(import.meta.url, ({ test }) => {
       validity,
       applyOn,
       [
+        // ISO 8601 — must be valid and stay valid (numeric values in parsed object)
+        "PT2H15M",
+        "P1Y2M3DT4H5M6S",
+        // Human-friendly aliases
+        "1h30min",
+        "1h30",
+        "2 hours 15 minutes",
+        // Legacy format still accepted
         "2hour15minute",
         "30minute",
         "1hour",
-        "PT2H15M",
-        "P1Y2M3DT4H5M6S",
+        // Invalid / not parseable
+        "1aday",
         "30",
         "",
         "invalid",

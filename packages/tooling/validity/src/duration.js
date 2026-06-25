@@ -1,31 +1,39 @@
 /**
  * Parses a duration string or object into a plain object with named unit keys.
  *
- * Supported string format: one or more `<value><unit>` pairs in any order,
- * e.g. `"2hour"`, `"15minute"`, `"2hour15minute"`, `"1year2month3day"`.
- * Supported units: `year`, `month`, `week`, `day`, `hour`, `minute`, `second`, `millisecond`.
+ * Accepts two string formats:
+ * - ISO 8601: "PT2H15M", "P1Y2M3DT4H5M6S", "P3W"
+ * - Human-friendly: one or more `<value><unit>` pairs in any order,
+ *   e.g. "2h", "15min", "1h30", "2 hours 15 minutes", "1year2months3days".
+ *   Units accept plural, singular, and short forms ("hours"/"hour"/"h",
+ *   "minutes"/"minute"/"min"/"m", "months"/"month"/"mo", etc.).
+ *   Spaces between the number and unit are ignored.
+ *   A trailing number with no unit is inferred as the next smaller unit
+ *   after the last explicitly matched one (e.g. "1h30" → hours=1, minutes=30).
  *
- * Values in the returned object are **raw strings**, not numbers, so invalid
- * or unusual input is preserved for the caller to inspect. Use
- * {@link durationToSeconds} when you need a numeric result.
- *
- * A plain object input is returned as a shallow clone (passthrough). Any other
- * non-string input returns `null`.
+ * Values in the returned object are **numbers** when the input is numeric,
+ * or **strings** for mid-edit / non-numeric values (e.g. "1a" for hours).
+ * A plain object input is returned as a shallow clone (passthrough).
+ * Any other non-string input returns `null`.
  *
  * @param {string|Object} value - A duration string or a pre-parsed duration object.
- * @returns {{ years?: string, months?: string, weeks?: string, days?: string,
- *             hours?: string, minutes?: string, seconds?: string, milliseconds?: string }|null}
+ * @returns {{ years?: number|string, months?: number|string, weeks?: number|string,
+ *             days?: number|string, hours?: number|string, minutes?: number|string,
+ *             seconds?: number|string, milliseconds?: number|string }|null}
  *   An object containing only the units present in the input, or `null` if the
  *   value cannot be parsed.
  *
  * @example
- * parseDuration("2hour")             // { hours: "2" }
- * parseDuration("2hour15minute")     // { hours: "2", minutes: "15" }
- * parseDuration("-1second")          // { seconds: "-1" }
- * parseDuration("1.14second")        // { seconds: "1.14" }
- * parseDuration({ hours: 2 })        // { hours: 2 }
- * parseDuration("30")                // null — no unit
- * parseDuration(null)                // null
+ * parseDuration("2h")                // { hours: 2 }
+ * parseDuration("1h30")             // { hours: 1, minutes: 30 }
+ * parseDuration("2h 15min")         // { hours: 2, minutes: 15 }
+ * parseDuration("1 hour 30 minutes") // { hours: 1, minutes: 30 }
+ * parseDuration("-1.5s")            // { seconds: -1.5 }
+ * parseDuration("1aday")            // { days: "1a" }  — mid-edit, non-numeric preserved
+ * parseDuration("PT2H15M")          // { hours: 2, minutes: 15 }
+ * parseDuration({ hours: 2 })       // { hours: 2 }
+ * parseDuration("30")               // null — no unit and no context
+ * parseDuration(null)               // null
  */
 export const parseDuration = (value) => {
   if (value === null || value === undefined) {
@@ -161,27 +169,28 @@ const parseISODuration = (s) => {
   if (!y && !mo && !w && !d && !h && !min && !sec) {
     return null; // bare "P" with no components
   }
+  const toNum = (v) => (v !== undefined ? Number(v) : undefined);
   const result = {};
   if (y) {
-    result.years = y;
+    result.years = toNum(y);
   }
   if (mo) {
-    result.months = mo;
+    result.months = toNum(mo);
   }
   if (w) {
-    result.weeks = w;
+    result.weeks = toNum(w);
   }
   if (d) {
-    result.days = d;
+    result.days = toNum(d);
   }
   if (h) {
-    result.hours = h;
+    result.hours = toNum(h);
   }
   if (min) {
-    result.minutes = min;
+    result.minutes = toNum(min);
   }
   if (sec) {
-    result.seconds = sec;
+    result.seconds = toNum(sec);
   }
   return result;
 };

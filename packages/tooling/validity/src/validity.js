@@ -11,7 +11,7 @@ import { CANNOT_CONVERT, TYPES } from "./types.js";
  * Creates a validation system with configurable rules for data validation and auto-fixing.
  *
  * @param {Object} ruleConfig - Configuration object defining validation rules
- * @param {string} [ruleConfig.type] - Expected data type ('number', 'string', 'boolean', 'percentage', 'object')
+ * @param {string} [ruleConfig.type] - Expected data type ('number', 'string', 'boolean', 'duration', 'percentage', 'object')
  * @param {number} [ruleConfig.min] - Minimum value (for numbers)
  * @param {number} [ruleConfig.max] - Maximum value (for numbers)
  * @param {number} [ruleConfig.step] - Step increment for numbers (e.g., 0.1 for one decimal place, 1 for integers)
