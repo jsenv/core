@@ -70,6 +70,7 @@ const css = /* css */ `
     /* will be positioned with transform: translate */
     transition: opacity 0.2s ease-in-out;
     pointer-events: auto; /* Must be interactive to be closabled (overrid list item pointer-events none for instance)  */
+    outline: none; /* programmatic focus may land here briefly before being redirected to close button */
     overflow: visible;
 
     &[data-status="success"] {
@@ -179,6 +180,11 @@ const css = /* css */ `
 
         &:hover {
           background: rgba(0, 0, 0, 0.1);
+        }
+
+        &:focus-visible,
+        .navi_callout:focus-visible & {
+          outline: auto;
         }
 
         .navi_callout_close_button_svg {
@@ -550,8 +556,14 @@ export const openCallout = (
   }
   close_on_focus_leave: {
     if (anchorElement) {
+      // Make the callout itself focusable so that when the user clicks on a
+      // non-interactive part of it, the browser can transfer focus there.
+      // Without this, relatedTarget on focusout would be null (non-focusable
+      // elements don't receive focus), making it impossible to distinguish
+      // "clicked the callout" from "focus left the document entirely".
+      // tabIndex=-1 keeps it out of the natural tab order.
+      calloutElement.tabIndex = -1;
       const handleFocusOut = (event) => {
-        // relatedTarget is the element receiving focus; null means focus left the document
         const { relatedTarget } = event;
         if (relatedTarget && anchorElement.contains(relatedTarget)) {
           return;
