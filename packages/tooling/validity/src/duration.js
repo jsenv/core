@@ -517,3 +517,31 @@ export const compareTwoDurations = (a, b) => {
   }
   return 0;
 };
+
+/**
+ * Returns true if the duration value contains any non-numeric (mid-edit) unit value.
+ * Use this to skip min/max/step validation while the user is still typing.
+ *
+ * @param {string|number|Object|null} value
+ * @returns {boolean}
+ *
+ * @example
+ * durationContainsNaN("PTaH15M")            // true  — hours is "a"
+ * durationContainsNaN({ hours: "2a" })      // true  — non-numeric hours
+ * durationContainsNaN("PT2H15M")            // false — fully numeric
+ * durationContainsNaN("")                   // false — empty, not mid-edit
+ * durationContainsNaN(null)                 // false
+ */
+export const durationContainsNaN = (value) => {
+  const duration = parseDuration(value);
+  if (!duration) {
+    return false;
+  }
+  for (const { key } of UNITS) {
+    const v = duration[key];
+    if (v !== undefined && v !== null && !isFinite(Number(v))) {
+      return true;
+    }
+  }
+  return false;
+};

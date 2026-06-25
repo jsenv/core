@@ -1,5 +1,6 @@
 export {
   compareTwoDurations,
+  durationContainsNaN,
   durationToHours,
   durationToISOString,
   durationToMinutes,

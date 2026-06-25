@@ -2,7 +2,11 @@
  * https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Constraint_validation
  */
 
-import { compareTwoDurations, durationToSeconds } from "@jsenv/validity";
+import {
+  compareTwoDurations,
+  durationContainsNaN,
+  durationToSeconds,
+} from "@jsenv/validity";
 
 import {
   formatDay,
@@ -359,6 +363,9 @@ export const MIN_CONSTRAINT = {
       if (min === undefined || min === null) {
         return null;
       }
+      if (durationContainsNaN(field.uiState)) {
+        return null;
+      }
       const cmp = compareTwoDurations(field.uiState, min);
       if (cmp === null || cmp >= 0) {
         return null;
@@ -461,6 +468,9 @@ export const MAX_CONSTRAINT = {
     if (field.controlType === "duration_group") {
       const max = field.controlHostProps.max;
       if (max === undefined || max === null) {
+        return null;
+      }
+      if (durationContainsNaN(field.uiState)) {
         return null;
       }
       const cmp = compareTwoDurations(field.uiState, max);
@@ -571,12 +581,14 @@ export const STEP_CONSTRAINT = {
       if (!step) {
         return null;
       }
+      if (durationContainsNaN(field.uiState)) {
+        return null;
+      }
       const min = field.controlHostProps.min ?? 0;
       const valueSeconds = durationToSeconds(field.uiState);
       if (valueSeconds === null) {
         return null;
       }
-
       const stepSeconds =
         typeof step === "number" ? step : durationToSeconds(step);
       const minSeconds =
