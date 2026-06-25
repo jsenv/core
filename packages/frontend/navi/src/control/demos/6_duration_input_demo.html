@@ -90,7 +90,10 @@
             <ul>
               <li><a href="#basic">Basic (H:M)</a></li>
               <li><a href="#with-seconds">With seconds (H:M:S)</a></li>
+              <li><a href="#hour-only">Hour only</a></li>
               <li><a href="#minute-only">Minute only</a></li>
+              <li><a href="#second-only">Second only</a></li>
+              <li><a href="#read-only-seconds">Read-only with seconds</a></li>
               <li><a href="#states">States</a></li>
             </ul>
           </li>
@@ -145,7 +148,9 @@
       const controlGroupSignal = stateSignal("2hour15minute", { id: "group" });
       const pickerSignal = stateSignal(undefined, { id: "picker" });
       const customSignal = stateSignal("1hour30minute", { id: "custom" });
-      const secondsSignal = stateSignal("1hour30minute30second", { id: "seconds" });
+      const secondsSignal = stateSignal("1hour30minute30second", {
+        id: "seconds",
+      });
       const DEMO_ROUTE = route("", {
         searchParams: {
           basic: basicSignal,
@@ -189,7 +194,10 @@
             <h2>Display</h2>
             <BasicDemo />
             <WithSecondsDemo />
+            <HourOnlyDemo />
             <MinuteOnlyDemo />
+            <SecondOnlyDemo />
+            <ReadOnlySecondsDemo />
             <StatesDemo />
           </div>
           <div class="demo-section-group" id="interactivity">
@@ -239,9 +247,9 @@
           <div class="demo-section" id="with-seconds">
             <h2>With seconds (H:M:S)</h2>
             <p class="desc">
-              The seconds sub-field is shown automatically when{" "}
-              <code>min</code>, <code>max</code>, or <code>step</code> includes
-              a seconds component (detected via <code>parseDuration</code>).
+              The seconds sub-field is shown automatically when <code>min</code>
+              , <code>max</code>, or <code>step</code> includes a seconds
+              component (detected via <code>parseDuration</code>).
             </p>
             <Box flex="y" spacing="m" alignX="start">
               <Text size="s" color="secondary">
@@ -262,8 +270,8 @@
               <InputDuration defaultValue="PT0S" min="0second" />
 
               <Text size="s" color="secondary" style={{ marginTop: "8px" }}>
-                <code>max="5minute30second"</code> — minute + second only
-                (max &lt; 1 hour)
+                <code>max="5minute30second"</code> — minute + second only (max
+                &lt; 1 hour)
               </Text>
               <InputDuration defaultValue="PT2M30S" max="5minute30second" />
             </Box>
@@ -285,6 +293,57 @@
         );
       };
 
+      // ── HourOnlyDemo ──────────────────────────────────────────────────────
+      const HourOnlyDemo = () => {
+        return (
+          <div class="demo-section" id="hour-only">
+            <h2>Hour only</h2>
+            <p class="desc">
+              When <code>step</code> is a whole number of hours, the minute
+              field is hidden — entering fractional hours would be contradicted
+              by the step constraint.
+            </p>
+            <InputDuration defaultValue="2hour" step="1hour" />
+          </div>
+        );
+      };
+
+      // ── SecondOnlyDemo ────────────────────────────────────────────────────
+      const SecondOnlyDemo = () => {
+        return (
+          <div class="demo-section" id="second-only">
+            <h2>Second only</h2>
+            <p class="desc">
+              When <code>max</code> is below 60 seconds, only the second field
+              is shown.
+            </p>
+            <InputDuration defaultValue="30second" max="59second" />
+          </div>
+        );
+      };
+
+      // ── ReadOnlySecondsDemo ───────────────────────────────────────────────
+      const ReadOnlySecondsDemo = () => {
+        return (
+          <div class="demo-section" id="read-only-seconds">
+            <h2>Read-only with seconds</h2>
+            <p class="desc">
+              A rare case: seconds are visible but the field is read-only.
+              Useful when displaying a stored duration with second-level
+              precision that the user shouldn't be able to edit (e.g. a logged
+              elapsed time). In most cases, prefer{" "}
+              <code>&lt;Time type="duration"&gt;</code> for purely display
+              purposes.
+            </p>
+            <InputDuration
+              value="1hour30minute45second"
+              step="1second"
+              readOnly
+            />
+          </div>
+        );
+      };
+
       // ── StatesDemo ────────────────────────────────────────────────────────
       const StatesDemo = () => {
         return (
@@ -301,7 +360,11 @@
               <InputDuration value="2hour15minute" loading />
 
               <label>H:M:S :read-only</label>
-              <InputDuration value="1hour30minute45second" step="1second" readOnly />
+              <InputDuration
+                value="1hour30minute45second"
+                step="1second"
+                readOnly
+              />
             </div>
           </div>
         );

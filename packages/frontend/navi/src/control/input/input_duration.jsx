@@ -61,7 +61,10 @@ const InputDurationImpl = (props) => {
     valueHasSeconds && stepSeconds !== undefined && !stepHasSeconds;
 
   const showHours = maxSeconds >= 3600;
-  const showMinutes = maxSeconds >= 60;
+  // Hide minutes when the step is a whole number of hours — entering fractional
+  // hours would contradict the step, so only the hour field is shown.
+  const showMinutes =
+    maxSeconds >= 60 && (stepSeconds === undefined || stepSeconds < 3600);
 
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
