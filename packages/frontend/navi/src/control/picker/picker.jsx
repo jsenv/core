@@ -29,6 +29,7 @@ import {
   CalendarSvg,
   ClockSvg,
   ColorSvg,
+  DurationSvg,
   FileSvg,
   PencilSvg,
   PickerArrayUI,
@@ -36,6 +37,7 @@ import {
   PickerControlGroupUI,
   PickerDatetimeUI,
   PickerDateUI,
+  PickerDurationUI,
   PickerFileUI,
   PickerTimeUI,
   PickerTypeResolver,
@@ -595,6 +597,7 @@ Picker.UI = PickerDefaultUI;
 
 Picker.UI.Date = PickerDateUI;
 Picker.UI.Time = PickerTimeUI;
+Picker.UI.Duration = PickerDurationUI;
 Picker.UI.Week = PickerWeekUI;
 Picker.UI.Datetime = PickerDatetimeUI;
 Picker.UI.File = PickerFileUI;
@@ -605,6 +608,7 @@ Picker.UI.Multiple = PickerArrayUI;
 Picker.UI.PencilSvg = PencilSvg;
 Picker.UI.ChevronDownSvg = ChevronDownSvg;
 Picker.UI.ClockSvg = ClockSvg;
+Picker.UI.DurationSvg = DurationSvg;
 Picker.UI.CalendarSvg = CalendarSvg;
 Picker.UI.FileSvg = FileSvg;
 Picker.UI.ColorSvg = ColorSvg;

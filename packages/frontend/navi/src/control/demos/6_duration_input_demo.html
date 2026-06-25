@@ -340,7 +340,7 @@
             <p class="desc">
               Inside a <code>ControlGroup name="duration"</code>: the group
               fires <code>uiAction</code> with{" "}
-              <code>{"{ minutes: totalMinutes }"}</code>.
+              <code>{"{ duration: durationISOString }"}</code>.
             </p>
             <Box flex="y" spacing="s" alignX="start">
               <ControlGroup
@@ -354,7 +354,7 @@
               >
                 <Box flex="y" spacing="s" alignX="start">
                   <InputDuration
-                    name="minutes"
+                    name="duration"
                     value={controlGroupSignal.value}
                     uiAction={(v) => {
                       controlGroupSignal.value = v;
@@ -374,14 +374,6 @@
       const InsidePickerInFormDemo = () => {
         const [entries, push, clear] = useCallLog();
         const pickerId = "duration-picker";
-
-        const DurationPickerUI = () => {
-          const value = pickerSignal.value;
-          if (value === undefined) {
-            return <Time type="time" />;
-          }
-          return <Time type="duration">{value}</Time>;
-        };
 
         return (
           <div class="demo-section" id="inside-picker-in-form">
@@ -403,9 +395,8 @@
                 <Picker
                   id={pickerId}
                   name="duration"
-                  type="controlgroup"
+                  type="duration"
                   placeholder="Enter a duration"
-                  ui={<DurationPickerUI />}
                   uiAction={(v) => {
                     push("picker uiAction", v);
                   }}
