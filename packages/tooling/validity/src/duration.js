@@ -64,7 +64,8 @@ export const parseDuration = (value) => {
     const rawValue = s.slice(0, idx);
     const remainder = s.slice(idx + aliasLength);
     if (rawValue !== "") {
-      result[key] = rawValue;
+      const num = Number(rawValue);
+      result[key] = isFinite(num) ? num : rawValue;
     }
     lastMatchedUnitIndex = unitIndex;
     s = remainder;
@@ -80,7 +81,8 @@ export const parseDuration = (value) => {
     if (nextUnitIndex < UNITS.length) {
       const { key } = UNITS[nextUnitIndex];
       if (result[key] === undefined) {
-        result[key] = s;
+        const num = Number(s);
+        result[key] = isFinite(num) ? num : s;
         s = "";
       }
     }
