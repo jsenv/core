@@ -1,4 +1,8 @@
-import { durationToSeconds, durationToString, parseDuration } from "./duration.js";
+import {
+  durationToISOString,
+  durationToSeconds,
+  parseDuration,
+} from "./duration.js";
 
 export const CANNOT_CONVERT = {};
 
@@ -339,9 +343,18 @@ export const TYPES = {
     jsType: "number",
     localStorageRepresentation: "string",
     props: {
-      min: { default: 0, resolver: (v) => typeof v === "string" ? durationToSeconds(v) : v },
-      max: { default: 60, resolver: (v) => typeof v === "string" ? durationToSeconds(v) : v },
-      step: { default: 1, resolver: (v) => typeof v === "string" ? durationToSeconds(v) : v },
+      min: {
+        default: 0,
+        resolver: (v) => (typeof v === "string" ? durationToSeconds(v) : v),
+      },
+      max: {
+        default: 60,
+        resolver: (v) => (typeof v === "string" ? durationToSeconds(v) : v),
+      },
+      step: {
+        default: 1,
+        resolver: (v) => (typeof v === "string" ? durationToSeconds(v) : v),
+      },
     },
     // canonical: number of seconds (e.g. 90)
     representations: {
@@ -353,7 +366,7 @@ export const TYPES = {
           }
           return convertStringToNumber(value);
         },
-        format: (value) => durationToString({ seconds: value }),
+        format: (value) => durationToISOString({ seconds: value }),
       },
     },
     validate: (value) => {
@@ -367,9 +380,21 @@ export const TYPES = {
     jsType: "number",
     localStorageRepresentation: "string",
     props: {
-      min: { default: 0, resolver: (v) => typeof v === "string" ? (durationToSeconds(v) ?? v) / 60 : v },
-      max: { default: 60, resolver: (v) => typeof v === "string" ? (durationToSeconds(v) ?? v) / 60 : v },
-      step: { default: 1, resolver: (v) => typeof v === "string" ? (durationToSeconds(v) ?? v) / 60 : v },
+      min: {
+        default: 0,
+        resolver: (v) =>
+          typeof v === "string" ? (durationToSeconds(v) ?? v) / 60 : v,
+      },
+      max: {
+        default: 60,
+        resolver: (v) =>
+          typeof v === "string" ? (durationToSeconds(v) ?? v) / 60 : v,
+      },
+      step: {
+        default: 1,
+        resolver: (v) =>
+          typeof v === "string" ? (durationToSeconds(v) ?? v) / 60 : v,
+      },
     },
     // canonical: number of minutes (e.g. 90)
     representations: {
@@ -381,7 +406,7 @@ export const TYPES = {
           }
           return convertStringToNumber(value);
         },
-        format: (value) => durationToString({ minutes: value }),
+        format: (value) => durationToISOString({ minutes: value }),
       },
     },
     validate: (value) => {
@@ -395,9 +420,21 @@ export const TYPES = {
     jsType: "number",
     localStorageRepresentation: "string",
     props: {
-      min: { default: 0, resolver: (v) => typeof v === "string" ? (durationToSeconds(v) ?? v) / 3600 : v },
-      max: { default: 24, resolver: (v) => typeof v === "string" ? (durationToSeconds(v) ?? v) / 3600 : v },
-      step: { default: 1, resolver: (v) => typeof v === "string" ? (durationToSeconds(v) ?? v) / 3600 : v },
+      min: {
+        default: 0,
+        resolver: (v) =>
+          typeof v === "string" ? (durationToSeconds(v) ?? v) / 3600 : v,
+      },
+      max: {
+        default: 24,
+        resolver: (v) =>
+          typeof v === "string" ? (durationToSeconds(v) ?? v) / 3600 : v,
+      },
+      step: {
+        default: 1,
+        resolver: (v) =>
+          typeof v === "string" ? (durationToSeconds(v) ?? v) / 3600 : v,
+      },
     },
     // canonical: number of hours (e.g. 1.5)
     representations: {
@@ -409,7 +446,7 @@ export const TYPES = {
           }
           return convertStringToNumber(value);
         },
-        format: (value) => durationToString({ hours: value }),
+        format: (value) => durationToISOString({ hours: value }),
       },
     },
     validate: (value) => {
@@ -419,28 +456,35 @@ export const TYPES = {
       return `must be a number`;
     },
   },
-  // "duration" holds a duration string in the form "<value><unit>..." (e.g. "2hour15minute").
-  // ISO 8601 strings ("PT2H15M") are accepted on input and normalised to the canonical form.
-  // The value stores the raw multi-part string, not a number, so that sub-unit precision is
-  // preserved across URL round-trips without losing e.g. the hours component.
+  // "duration" holds an ISO 8601 duration string (e.g. "PT2H15M", "P1Y2M").
+  // Human-friendly strings ("1h30min", "2 hours") are accepted on input and normalised to ISO.
   "duration": {
     jsType: "string",
     localStorageRepresentation: "string",
     props: {
       // min/max/step accept duration strings ("1hour30minute", "PT1H30M") or plain seconds.
       // Resolved to seconds so that constraint checking can compare numerically.
-      min: { resolver: (v) => typeof v === "string" ? durationToSeconds(v) ?? v : v },
-      max: { resolver: (v) => typeof v === "string" ? durationToSeconds(v) ?? v : v },
-      step: { resolver: (v) => typeof v === "string" ? durationToSeconds(v) ?? v : v },
+      min: {
+        resolver: (v) =>
+          typeof v === "string" ? (durationToSeconds(v) ?? v) : v,
+      },
+      max: {
+        resolver: (v) =>
+          typeof v === "string" ? (durationToSeconds(v) ?? v) : v,
+      },
+      step: {
+        resolver: (v) =>
+          typeof v === "string" ? (durationToSeconds(v) ?? v) : v,
+      },
     },
     representations: {
       string: {
-        // Accept both canonical ("2hour15minute") and ISO 8601 ("PT2H15M") — normalise to canonical.
+        // Accept ISO 8601 ("PT2H15M") and human-friendly ("1h30min") — normalise to ISO.
         parse: (value) => {
           if (typeof value !== "string") return CANNOT_CONVERT;
           const parsed = parseDuration(value);
           if (!parsed) return CANNOT_CONVERT;
-          return durationToString(parsed) ?? CANNOT_CONVERT;
+          return durationToISOString(parsed) ?? CANNOT_CONVERT;
         },
         format: (value) => value,
       },
@@ -449,8 +493,14 @@ export const TYPES = {
     toComparable: (value) => durationToSeconds(value),
     validate: (value) => {
       if (typeof value !== "string") return "must be a string";
-      if (!parseDuration(value)) {
-        return `must be a valid duration string (e.g. "2hour15minute")`;
+      const parsed = parseDuration(value);
+      if (!parsed) {
+        return `must be a valid duration string (e.g. "PT2H15M")`;
+      }
+      for (const v of Object.values(parsed)) {
+        if (typeof v !== "number") {
+          return `must be a valid duration string (e.g. "PT2H15M")`;
+        }
       }
       return "";
     },
