@@ -3,24 +3,23 @@
  */
 
 import {
+  compareTwoDurations,
+  durationToSeconds,
+  parseDuration,
+} from "@jsenv/validity";
+
+import {
   formatDay,
   formatDuration,
   formatMonth,
 } from "@jsenv/navi/src/text/format_time.js";
 import { langSignal } from "@jsenv/navi/src/text/lang_signal.js";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
-import { compareTwoDurations, durationToSeconds } from "@jsenv/validity";
 import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
 
 const formatSecondsDuration = (totalSeconds) => {
-  const h = Math.floor(totalSeconds / 3600);
-  const m = Math.floor((totalSeconds % 3600) / 60);
-  const s = Math.floor(totalSeconds % 60);
-  const obj = {};
-  if (h) obj.hours = h;
-  if (m) obj.minutes = m;
-  if (s) obj.seconds = s;
-  return formatDuration(obj);
+  const duration = parseDuration(`${totalSeconds}second`);
+  return formatDuration(duration);
 };
 
 export const REQUIRED_CONSTRAINT = {
