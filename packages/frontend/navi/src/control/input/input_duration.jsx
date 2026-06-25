@@ -33,19 +33,22 @@ export const InputDuration = (props) => {
 const DEFAULT_MAX_SECONDS = 24 * 3600; // 86400
 
 const InputDurationImpl = (props) => {
-  // Detect seconds precision from raw string props BEFORE numeric conversion.
+  const minDuration = parseDuration(props.min);
+  const maxDuration = parseDuration(props.max);
+  const stepDuration = parseDuration(props.step);
+
   const showSeconds =
-    hasDurationUnit(props.min, "seconds") ||
-    hasDurationUnit(props.max, "seconds") ||
-    hasDurationUnit(props.step, "seconds");
+    Object.hasOwn(minDuration ?? {}, "seconds") ||
+    Object.hasOwn(maxDuration ?? {}, "seconds") ||
+    Object.hasOwn(stepDuration ?? {}, "seconds");
 
   const hasValue = Object.hasOwn(props, "value");
-  resolveDurationProps(props); // converts min/max/step strings → total seconds numbers
 
   const { unitHour } = props;
-  const minSeconds = props.min;
-  const maxSeconds = props.max !== undefined ? props.max : DEFAULT_MAX_SECONDS;
-  const stepSeconds = props.step;
+  const minSeconds = toSeconds(props.min);
+  const maxSeconds =
+    props.max !== undefined ? toSeconds(props.max) : DEFAULT_MAX_SECONDS;
+  const stepSeconds = toSeconds(props.step);
 
   const showHours = maxSeconds >= 3600;
   const showMinutes = maxSeconds >= 60;
@@ -154,20 +157,6 @@ const InputDurationImpl = (props) => {
       </ControlgroupChildrenWrapper>
     </Box>
   );
-};
-
-// Returns true if the duration prop (a string) explicitly mentions the given
-// unit key (e.g. "seconds" in parseDuration's output).
-const hasDurationUnit = (value, unitKey) => {
-  const parsed = parseDuration(value);
-  return parsed !== null && parsed[unitKey] !== undefined;
-};
-
-// Converts min/max/step duration strings to total seconds (number).
-const resolveDurationProps = (props) => {
-  props.min = toSeconds(props.min);
-  props.max = toSeconds(props.max);
-  props.step = toSeconds(props.step);
 };
 
 const toSeconds = (value) => {

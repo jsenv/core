@@ -16,7 +16,7 @@
  * A plain object input is returned as a shallow clone (passthrough).
  * Any other non-string input returns `null`.
  *
- * @param {string|Object} value - A duration string or a pre-parsed duration object.
+ * @param {string|number|Object} value - A duration string, a number of seconds, or a pre-parsed duration object.
  * @returns {{ years?: number|string, months?: number|string, weeks?: number|string,
  *             days?: number|string, hours?: number|string, minutes?: number|string,
  *             seconds?: number|string, milliseconds?: number|string }|null}
@@ -32,6 +32,7 @@
  * parseDuration("1aday")            // { days: "1a" }  — mid-edit, non-numeric preserved
  * parseDuration("PT2H15M")          // { hours: 2, minutes: 15 }
  * parseDuration({ hours: 2 })       // { hours: 2 }
+ * parseDuration(3600)               // { seconds: 3600 }  — number treated as seconds
  * parseDuration("30")               // null — no unit and no context
  * parseDuration(null)               // null
  */
@@ -41,6 +42,9 @@ export const parseDuration = (value) => {
   }
   if (typeof value === "object") {
     return { ...value };
+  }
+  if (typeof value === "number") {
+    return isFinite(value) ? { seconds: value } : null;
   }
   if (typeof value !== "string") {
     return null;

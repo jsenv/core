@@ -2,11 +2,7 @@
  * https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Constraint_validation
  */
 
-import {
-  compareTwoDurations,
-  durationToSeconds,
-  parseDuration,
-} from "@jsenv/validity";
+import { compareTwoDurations, durationToSeconds } from "@jsenv/validity";
 
 import {
   formatDay,
@@ -16,11 +12,6 @@ import {
 import { langSignal } from "@jsenv/navi/src/text/lang_signal.js";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
-
-const formatSecondsDuration = (totalSeconds) => {
-  const duration = parseDuration(`${totalSeconds}second`);
-  return formatDuration(duration);
-};
 
 export const REQUIRED_CONSTRAINT = {
   name: "required",
@@ -605,9 +596,9 @@ export const STEP_CONSTRAINT = {
       const before = valueSeconds - remainder;
       const after = before + stepSeconds;
       return naviI18n("constraint.step.duration.default", {
-        step: formatSecondsDuration(stepSeconds),
-        before: formatSecondsDuration(before),
-        after: formatSecondsDuration(after),
+        step: formatDuration(stepSeconds),
+        before: formatDuration(before),
+        after: formatDuration(after),
       });
     }
     if (field.controlType !== "input" && field.controlType !== "picker") {

@@ -3,6 +3,8 @@
  * All functions accept an optional `{ now }` parameter for testability.
  */
 
+import { parseDuration } from "@jsenv/validity";
+
 import { langSignal } from "./lang_signal.js";
 import { naviI18n } from "./navi_i18n.js";
 
@@ -372,6 +374,24 @@ export const formatDuration = (
   duration,
   { lang = langSignal.value, format = "long" } = {},
 ) => {
+  if (typeof duration === "string") {
+    duration = parseDuration(duration) ?? {};
+  } else if (typeof duration === "number") {
+    const h = Math.floor(duration / 3600);
+    const m = Math.floor((duration % 3600) / 60);
+    const s = duration % 60;
+    const obj = {};
+    if (h > 0) {
+      obj.hours = h;
+    }
+    if (m > 0) {
+      obj.minutes = m;
+    }
+    if (s > 0 || (h === 0 && m === 0)) {
+      obj.seconds = s;
+    }
+    duration = obj;
+  }
   const has = (key) => duration[key] !== undefined && duration[key] !== null;
 
   // "long" and "narrow" delegate to Intl.DurationFormat when available and all values are numeric.
