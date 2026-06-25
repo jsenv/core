@@ -459,7 +459,7 @@
             </p>
             <Form action={(values) => push("form action", values)}>
               <Box flex="y" spacing="s" alignX="start">
-                <InputDuration name="duration" max="1hour30minute" />
+                <InputDuration name="duration" max="1hour30minute" value="2h" />
                 <Button type="submit">Submit</Button>
                 <CallLog entries={entries} onClear={clear} />
               </Box>

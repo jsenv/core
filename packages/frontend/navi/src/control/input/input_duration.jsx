@@ -39,6 +39,7 @@ const InputDurationImpl = (props) => {
     hasDurationUnit(props.max, "seconds") ||
     hasDurationUnit(props.step, "seconds");
 
+  const hasValue = Object.hasOwn(props, "value");
   resolveDurationProps(props); // converts min/max/step strings → total seconds numbers
 
   const { unitHour } = props;
@@ -115,7 +116,10 @@ const InputDurationImpl = (props) => {
 
   const { value, required, readOnly, disabled, basePseudoState } =
     groupHostProps;
-  const components = parseDuration(value);
+  // When controlled (value prop), parse the current value.
+  // When uncontrolled (defaultValue prop), parse defaultValue for the initial render.
+  const renderSource = hasValue ? value : props.defaultValue;
+  const components = parseDuration(renderSource);
   const hourValue = components?.hours;
   const minuteValue = components?.minutes;
   const secondValue = components?.seconds;
@@ -134,6 +138,7 @@ const InputDurationImpl = (props) => {
           showHours={showHours}
           showMinutes={showMinutes}
           showSeconds={showSeconds}
+          controlled={hasValue}
           hourValue={hourValue}
           minuteValue={minuteValue}
           secondValue={secondValue}
@@ -183,6 +188,7 @@ const InputDurationFields = ({
   showHours,
   showMinutes,
   showSeconds,
+  controlled,
   hourValue,
   minuteValue,
   secondValue,
@@ -247,7 +253,7 @@ const InputDurationFields = ({
     inputs.push(
       <InputDurationHour
         key="hour"
-        value={hourValue}
+        {...(controlled ? { value: hourValue } : { defaultValue: hourValue })}
         min={minHours}
         max={maxHours}
         step={stepForHours}
@@ -262,7 +268,9 @@ const InputDurationFields = ({
     inputs.push(
       <InputDurationMinute
         key="minute"
-        value={minuteValue}
+        {...(controlled
+          ? { value: minuteValue }
+          : { defaultValue: minuteValue })}
         min={minuteMin}
         max={minuteMax}
         step={stepForMinutes}
@@ -276,7 +284,9 @@ const InputDurationFields = ({
     inputs.push(
       <InputDurationSecond
         key="second"
-        value={secondValue}
+        {...(controlled
+          ? { value: secondValue }
+          : { defaultValue: secondValue })}
         min={secondMin}
         max={secondMax}
         step={stepSeconds}

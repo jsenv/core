@@ -503,7 +503,6 @@ export const openCallout = (
       ) {
         return;
       }
-      debugger;
       requestClose(event, "click_outside");
     };
     const handleSpaceOutside = (event) => {

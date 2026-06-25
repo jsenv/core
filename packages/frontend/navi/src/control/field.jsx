@@ -154,16 +154,18 @@ const FIELD_PSEUDO_CLASSES = [
 
 export const Label = (props) => {
   import.meta.css = css;
-  const { children, htmlFor, ...rest } = props;
+  const { children, ...rest } = props;
   const controlId = useContext(ControlIdContext);
   const [disabled, setDisabled] = useState(false);
   const [readOnly, setReadOnly] = useState(false);
   const [connected, setConnected] = useState(false);
+  const defaultId = useId();
+  const htmlFor = props.htmlFor || controlId || `label_auto_${defaultId}`;
 
   return (
     <Box
       as="label"
-      htmlFor={htmlFor || controlId}
+      htmlFor={htmlFor}
       baseClassName="navi_label"
       pseudoClasses={FIELD_PSEUDO_CLASSES}
       data-control-connected={connected ? "" : undefined}
@@ -183,7 +185,9 @@ export const Label = (props) => {
         setReadOnly(false);
       }}
     >
-      {children}
+      <ControlIdContext.Provider value={htmlFor}>
+        {children}
+      </ControlIdContext.Provider>
     </Box>
   );
 };
