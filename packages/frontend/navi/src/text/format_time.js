@@ -256,7 +256,7 @@ export const formatDuration = (
   //    which Intl.DurationFormat style:"narrow" does not do.
   // 2. Non-numeric mid-edit values (e.g. { hours: "2a" }) must render as-is with their
   //    unit symbol — Intl.DurationFormat only accepts integers.
-  if (format !== "short" && typeof Intl.DurationFormat !== "undefined") {
+  if (format !== "compact" && typeof Intl.DurationFormat !== "undefined") {
     const intlDuration = {};
     let allNumeric = true;
     for (const key of [
@@ -333,7 +333,10 @@ const formatTimeAgo = (
   date,
   { lang = langSignal.value, now = new Date(), bare, format = "long" } = {},
 ) => {
-  const rtf = new Intl.RelativeTimeFormat(lang, { numeric: "auto", style: format });
+  const rtf = new Intl.RelativeTimeFormat(lang, {
+    numeric: "auto",
+    style: format,
+  });
   const nowMs = now instanceof Date ? now.getTime() : now;
   const diff = date.getTime() - nowMs;
   const absDiff = Math.abs(diff);
@@ -420,7 +423,10 @@ export const formatTimeRelative = (
 };
 
 const formatFuture = (date, diff, { lang, now, format = "long" }) => {
-  const rtf = new Intl.RelativeTimeFormat(lang, { numeric: "auto", style: format });
+  const rtf = new Intl.RelativeTimeFormat(lang, {
+    numeric: "auto",
+    style: format,
+  });
   const nowDate = now instanceof Date ? now : new Date(now);
 
   // < 1 min
