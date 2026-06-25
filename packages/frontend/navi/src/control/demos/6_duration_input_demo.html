@@ -227,10 +227,6 @@
 
           <div class="demo-group" id="combos">
             <h2>Two-field combinations</h2>
-            <p style={{ margin: "0 0 10px", fontSize: "13px", color: "#555" }}>
-              Combine <code>max</code> with a seconds or milliseconds component
-              to unlock additional fields without showing all four.
-            </p>
             <div class="field-grid">
               <HMCard />
               <MSCard />
@@ -287,10 +283,6 @@
         <div class="field-card" id="hours-only">
           <h3>Hours only</h3>
           <code class="prop-hint">step="1hour"</code>
-          <p class="desc">
-            A whole-hour step hides the minute field — fractional hours would
-            contradict the step.
-          </p>
           <InputDuration defaultValue="3hour" step="1hour" />
         </div>
       );
@@ -299,10 +291,6 @@
         <div class="field-card" id="minutes-only">
           <h3>Minutes only</h3>
           <code class="prop-hint">max="59min"</code>
-          <p class="desc">
-            Max below 1 hour removes the hour field. No seconds component in
-            the max, so the seconds field stays hidden.
-          </p>
           <InputDuration defaultValue="30minute" max="59min" />
         </div>
       );
@@ -311,11 +299,6 @@
         <div class="field-card" id="seconds-only">
           <h3>Seconds only</h3>
           <code class="prop-hint">max="59second"</code>
-          <p class="desc">
-            Max below 1 minute removes hour and minute fields. The{" "}
-            <code>seconds</code> component in the max triggers the seconds
-            field.
-          </p>
           <InputDuration defaultValue="45second" max="59second" />
         </div>
       );
@@ -324,11 +307,6 @@
         <div class="field-card" id="ms-only">
           <h3>Milliseconds only</h3>
           <code class="prop-hint">max="999millisecond"</code>
-          <p class="desc">
-            Max below 1 second removes all upper fields. The{" "}
-            <code>milliseconds</code> component in the max triggers the ms
-            field.
-          </p>
           <InputDuration
             defaultValue="500millisecond"
             max="999millisecond"
@@ -342,10 +320,6 @@
         <div class="field-card" id="h-m">
           <h3>H + M</h3>
           <code class="prop-hint">(default)</code>
-          <p class="desc">
-            The default — no special props needed. The built-in max{" "}
-            <code>"23h59"</code> naturally produces the H + M layout.
-          </p>
           <InputDuration defaultValue="1hour30minute" />
         </div>
       );
@@ -354,10 +328,6 @@
         <div class="field-card" id="m-s">
           <h3>M + S</h3>
           <code class="prop-hint">max="59minute59second"</code>
-          <p class="desc">
-            Max below 1 hour removes the hour field. Adding a{" "}
-            <code>seconds</code> component to the max adds the seconds field.
-          </p>
           <InputDuration
             defaultValue="5minute30second"
             max="59minute59second"
@@ -369,10 +339,6 @@
         <div class="field-card" id="s-ms">
           <h3>S + MS</h3>
           <code class="prop-hint">max="59second999millisecond"</code>
-          <p class="desc">
-            Max below 1 minute and both <code>seconds</code> and{" "}
-            <code>milliseconds</code> in the max produce the S + MS layout.
-          </p>
           <InputDuration
             defaultValue="12second500millisecond"
             max="59second999millisecond"
@@ -386,12 +352,9 @@
         <div class="demo-section" id="auto-readonly">
           <h2>Auto-readonly fields (step precision)</h2>
           <p class="desc">
-            When the stored value has finer precision than the step allows, the
-            sub-fields that cannot be legally edited are displayed{" "}
-            <strong>read-only automatically</strong> — no explicit{" "}
-            <code>readOnly</code> prop needed. This makes the full stored
-            precision visible while preventing the user from creating an invalid
-            step.
+            When the stored value has finer precision than the step allows,
+            sub-fields that cannot be legally changed become read-only
+            automatically.
           </p>
           <div class="readonly-grid">
             <div class="props">
@@ -399,43 +362,24 @@
               <br />
               defaultValue="2h30min"
             </div>
-            <Box flex="y" spacing="xs" alignX="start">
-              <InputDuration defaultValue="2hour30minute" step="1hour" />
-              <Text size="xs" color="secondary">
-                Minute field is read-only — a 1-hour step makes changing
-                minutes invalid.
-              </Text>
-            </Box>
+            <InputDuration defaultValue="2hour30minute" step="1hour" />
 
             <div class="props">
               step="1minute"
               <br />
               defaultValue="1min30s"
             </div>
-            <Box flex="y" spacing="xs" alignX="start">
-              <InputDuration
-                defaultValue="1minute30second"
-                step="1minute"
-              />
-              <Text size="xs" color="secondary">
-                Second field is read-only — a 1-minute step makes changing
-                seconds invalid.
-              </Text>
-            </Box>
+            <InputDuration
+              defaultValue="1minute30second"
+              step="1minute"
+            />
 
             <div class="props">
               step="1second"
               <br />
               defaultValue="PT1.500S"
             </div>
-            <Box flex="y" spacing="xs" alignX="start">
-              <InputDuration defaultValue="PT1.500S" step="1second" />
-              <Text size="xs" color="secondary">
-                Milliseconds field is read-only — a 1-second step makes
-                changing ms invalid. ISO 8601 fractional seconds (
-                <code>PT1.500S</code>) are split into 1 s + 500 ms for display.
-              </Text>
-            </Box>
+            <InputDuration defaultValue="PT1.500S" step="1second" />
           </div>
         </div>
       );

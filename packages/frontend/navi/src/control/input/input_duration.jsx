@@ -15,9 +15,11 @@ import { Label } from "../field.jsx";
 import { Input } from "./input.jsx";
 import { InputGroup } from "./input_group.jsx";
 
-import.meta.css = /* css */ `
-  .navi_input_duration .navi_label:has(+ .navi_label) .navi_unit {
-    margin-right: 1ch;
+const css = /* css */ `
+  .navi_input_duration {
+    .navi_label:has(+ .navi_label) .navi_unit {
+      margin-right: 1ch;
+    }
   }
 `;
 
@@ -58,6 +60,7 @@ import.meta.css = /* css */ `
  * @param {preact.ComponentChild} [props.unitHour] - Custom label for the hour sub-field
  */
 export const InputDuration = (props) => {
+  import.meta.css = css;
   props.max = props.max || "23h59";
   const minDuration = parseDuration(props.min);
   const maxDuration = parseDuration(props.max);
@@ -217,6 +220,7 @@ export const InputDuration = (props) => {
 
   return (
     <Box
+      className="navi_input_duration"
       data-callout-arrow-x="center"
       width="fit-content"
       {...groupRootProps}
@@ -343,13 +347,14 @@ const InputDurationFields = ({
 
   if (showHours) {
     inputs.push(
-      <InputDurationHour
+      <InputDurationPart
         key="hour"
+        unit="hour"
+        label={unitHour}
         {...(controlled ? { value: hourValue } : { defaultValue: hourValue })}
         min={minHours}
         max={maxHours}
         step={stepForHours}
-        unit={unitHour}
         separator={showMinutes || showSeconds ? ":" : undefined}
         {...childProps}
       />,
@@ -358,8 +363,9 @@ const InputDurationFields = ({
 
   if (showMinutes) {
     inputs.push(
-      <InputDurationMinute
+      <InputDurationPart
         key="minute"
+        unit="minute"
         {...(controlled
           ? { value: minuteValue }
           : { defaultValue: minuteValue })}
@@ -375,8 +381,9 @@ const InputDurationFields = ({
 
   if (showSeconds) {
     inputs.push(
-      <InputDurationSecond
+      <InputDurationPart
         key="second"
+        unit="second"
         {...(controlled
           ? { value: secondValue }
           : { defaultValue: secondValue })}
@@ -392,8 +399,9 @@ const InputDurationFields = ({
 
   if (showMilliseconds) {
     inputs.push(
-      <InputDurationMillisecond
+      <InputDurationPart
         key="millisecond"
+        unit="millisecond"
         {...(controlled
           ? { value: millisecondValue }
           : { defaultValue: millisecondValue })}
@@ -412,7 +420,6 @@ const InputDurationFields = ({
 
   return (
     <InputGroup
-      class="navi_input_duration"
       flex
       spacing="xxs"
       width="fit-content"
@@ -423,97 +430,28 @@ const InputDurationFields = ({
   );
 };
 
-const InputDurationHour = (props) => {
-  const { separator } = props;
-  const unit = props.unit || <Unit unit="hour" plural color="secondary" />;
+const InputDurationPart = ({ unit, label, separator, ...props }) => {
+  const unitLabel = label ?? <Unit unit={unit} plural color="secondary" />;
 
   return (
-    <Label flex="y" textAlign="right">
+    <Label flex="y" textAlign={unit === "hour" ? "right" : undefined}>
       <Input
-        type="navi_hour"
-        name="hour"
+        type="navi_number"
+        navi-input-type={unit}
+        name={unit}
         alignX="center"
+        size="l"
         unit={false}
         variant="underline"
-        size="l"
         expandX
         {...props}
-        separator={undefined}
         data-separator={separator || undefined}
       >
         {separator ? (
           <Input.UI.UnitSlot>{separator}</Input.UI.UnitSlot>
         ) : undefined}
       </Input>
-      {unit}
-    </Label>
-  );
-};
-
-const InputDurationMinute = ({ separator, ...props }) => {
-  const unit = <Unit unit="minute" plural color="secondary" />;
-
-  return (
-    <Label flex="y">
-      <Input
-        type="navi_minute"
-        name="minute"
-        alignX="center"
-        size="l"
-        unit={false}
-        variant="underline"
-        expandX
-        {...props}
-      >
-        {separator ? (
-          <Input.UI.UnitSlot>{separator}</Input.UI.UnitSlot>
-        ) : undefined}
-      </Input>
-      {unit}
-    </Label>
-  );
-};
-
-const InputDurationSecond = ({ separator, ...props }) => {
-  const unit = <Unit unit="second" plural color="secondary" />;
-
-  return (
-    <Label flex="y">
-      <Input
-        type="navi_second"
-        name="second"
-        alignX="center"
-        size="l"
-        unit={false}
-        variant="underline"
-        expandX
-        {...props}
-      >
-        {separator ? (
-          <Input.UI.UnitSlot>{separator}</Input.UI.UnitSlot>
-        ) : undefined}
-      </Input>
-      {unit}
-    </Label>
-  );
-};
-
-const InputDurationMillisecond = (props) => {
-  const unit = <Unit unit="millisecond" plural color="secondary" />;
-
-  return (
-    <Label flex="y">
-      <Input
-        type="number"
-        name="millisecond"
-        alignX="center"
-        size="l"
-        unit={false}
-        variant="underline"
-        expandX
-        {...props}
-      />
-      {unit}
+      {unitLabel}
     </Label>
   );
 };
