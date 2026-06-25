@@ -98,6 +98,38 @@ await snapshotTests(import.meta.url, ({ test }) => {
     });
   });
 
+  test("parseDuration ISO strings", () => {
+    const cases = [
+      // standard ISO
+      "PT2H30M",
+      "P1Y2M3W4DT5H6M7S",
+      "P3W",
+      // lowercase accepted
+      "pt2h30m",
+      // decimal seconds
+      "PT1.5S",
+      // bare P / PT — no components → null
+      "P",
+      "PT",
+      // non-numeric values preserved (mid-edit support)
+      // value before the marker letter is kept as-is
+      "PTabH", // hours: "ab"
+      "PTaHH", // hours: "aH"  (last H is the marker, "aH" is the value)
+      "PT30MabH", // hours: "30Mab"  (last H is marker; everything before it is the value)
+      "P1YabMT2H", // years: 1, months: "ab", hours: 2
+    ];
+
+    const rows = cases.map((value) => {
+      const result = parseDuration(value);
+      return [cell(humanize(value)), cell(humanize(result))];
+    });
+
+    return renderTable([[cell("input"), cell("parseDuration()")], ...rows], {
+      borderCollapse: true,
+      maxRows: Infinity,
+    });
+  });
+
   test("durationToSeconds", () => {
     const cases = [
       // strings

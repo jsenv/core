@@ -51,9 +51,9 @@ export const parseDuration = (value) => {
   }
 
   // ISO 8601 duration: P[nY][nM][nW][nD][T[nH][nM][nS]]
-  // e.g. "PT1H30M", "P1Y2M3DT4H5M6S", "P3W"
+  // e.g. "PT1H30M", "P1Y2M3DT4H5M6S", "P3W", case-insensitive
   if (s[0] === "P" || s[0] === "p") {
-    return parseISODuration(s.toUpperCase());
+    return parseISODuration(s);
   }
 
   // Spaces are allowed between number and unit (e.g. "2 hours 15 minutes").
@@ -157,43 +157,99 @@ const isEmbeddedInLongerAlias = (s, alias, idx) => {
   }
   return false;
 };
-// ISO 8601 duration regex: P[nY][nM][nW][nD][T[nH][nM][nS]]
-const ISO_DURATION_RE =
-  /^P(?:(\d+(?:\.\d+)?)Y)?(?:(\d+(?:\.\d+)?)M)?(?:(\d+(?:\.\d+)?)W)?(?:(\d+(?:\.\d+)?)D)?(?:T(?:(\d+(?:\.\d+)?)H)?(?:(\d+(?:\.\d+)?)M)?(?:(\d+(?:\.\d+)?)S)?)?$/;
+// Parses the ISO 8601 portion of a duration string (P prefix already known).
+// Uses character scanning instead of a regex so that non-numeric values between
+// markers are preserved as strings (e.g. "PTabH" → { hours: "ab" },
+// "PTaHH" → { hours: "aH" } because the LAST 'H' is the unit marker).
+// Case-insensitive: "pt2h30m" is treated the same as "PT2H30M".
+// Original casing of values is preserved so mid-edit strings round-trip cleanly.
 const parseISODuration = (s) => {
-  const match = ISO_DURATION_RE.exec(s);
-  if (!match) {
-    return null;
+  // Skip the leading P/p
+  let rest = s.slice(1);
+
+  // Split on the first T/t into date part (Y M W D) and time part (H M S)
+  const tIdx = indexOfCI(rest, "T");
+  let datePart;
+  let timePart;
+  if (tIdx === -1) {
+    datePart = rest;
+    timePart = "";
+  } else {
+    datePart = rest.slice(0, tIdx);
+    timePart = rest.slice(tIdx + 1);
   }
-  const [, y, mo, w, d, h, min, sec] = match;
-  if (!y && !mo && !w && !d && !h && !min && !sec) {
-    return null; // bare "P" with no components
-  }
-  const toNum = (v) => (v !== undefined ? Number(v) : undefined);
+
   const result = {};
-  if (y) {
-    result.years = toNum(y);
+
+  // Date components: scan largest → smallest, consuming the string left-to-right.
+  // lastIndexOfCI finds the LAST occurrence of a marker so that a marker letter
+  // appearing inside a bizarre value (e.g. "aY" before the real "Y") is treated
+  // as part of the value, not as the unit delimiter.
+  for (const [marker, key] of ISO_DATE_MARKERS) {
+    const idx = lastIndexOfCI(datePart, marker);
+    if (idx === -1) {
+      continue;
+    }
+    const rawValue = datePart.slice(0, idx);
+    datePart = datePart.slice(idx + 1);
+    if (rawValue !== "") {
+      const num = Number(rawValue);
+      result[key] = isFinite(num) ? num : rawValue;
+    }
   }
-  if (mo) {
-    result.months = toNum(mo);
+
+  // Time components: same strategy.
+  for (const [marker, key] of ISO_TIME_MARKERS) {
+    const idx = lastIndexOfCI(timePart, marker);
+    if (idx === -1) {
+      continue;
+    }
+    const rawValue = timePart.slice(0, idx);
+    timePart = timePart.slice(idx + 1);
+    if (rawValue !== "") {
+      const num = Number(rawValue);
+      result[key] = isFinite(num) ? num : rawValue;
+    }
   }
-  if (w) {
-    result.weeks = toNum(w);
-  }
-  if (d) {
-    result.days = toNum(d);
-  }
-  if (h) {
-    result.hours = toNum(h);
-  }
-  if (min) {
-    result.minutes = toNum(min);
-  }
-  if (sec) {
-    result.seconds = toNum(sec);
+
+  if (Object.keys(result).length === 0) {
+    return null; // bare "P" or "PT" with no components
   }
   return result;
 };
+// Case-insensitive indexOf for a single character.
+const indexOfCI = (s, ch) => {
+  const upper = ch.toUpperCase();
+  const lower = ch.toLowerCase();
+  for (let i = 0; i < s.length; i++) {
+    if (s[i] === upper || s[i] === lower) {
+      return i;
+    }
+  }
+  return -1;
+};
+// Case-insensitive lastIndexOf for a single character.
+const lastIndexOfCI = (s, ch) => {
+  const upper = ch.toUpperCase();
+  const lower = ch.toLowerCase();
+  for (let i = s.length - 1; i >= 0; i--) {
+    if (s[i] === upper || s[i] === lower) {
+      return i;
+    }
+  }
+  return -1;
+};
+const ISO_DATE_MARKERS = [
+  ["Y", "years"],
+  ["M", "months"],
+  ["W", "weeks"],
+  ["D", "days"],
+];
+const ISO_TIME_MARKERS = [
+  ["H", "hours"],
+  ["M", "minutes"],
+  ["S", "seconds"],
+];
 
 // Units ordered from largest to smallest.
 // .name is the canonical English singular used as a lookup key (e.g. durationToNumber).
@@ -292,9 +348,17 @@ export const durationToString = (duration) => {
 /**
  * Serialises a duration object or string to an ISO 8601 duration string.
  *
- * Milliseconds are folded into the seconds component as a decimal fraction
- * (e.g. 500ms → 0.5S). Returns `null` for non-numeric unit values, empty
- * durations, or inputs that cannot be parsed.
+ * For fully-numeric durations this produces a valid ISO 8601 string, folding
+ * milliseconds into the seconds component as a decimal fraction (e.g. 500ms
+ * → 0.5S) and omitting zero-value fields.
+ *
+ * Non-numeric (mid-edit) unit values are embedded as-is between their ISO
+ * markers so that the result can always be round-tripped back through
+ * {@link parseDuration} (which uses `lastIndexOf` per marker). For example
+ * `{ hours: "ab" }` → `"PTabH"` → `parseDuration` → `{ hours: "ab" }`.
+ *
+ * Milliseconds have no dedicated ISO marker and are silently ignored when
+ * non-numeric. Returns `null` for empty durations or unparseable inputs.
  *
  * @param {string|Object|null} value - A duration string or a duration object.
  * @returns {string|null}
@@ -303,8 +367,9 @@ export const durationToString = (duration) => {
  * durationToISOString("2hour15minute")                    // "PT2H15M"
  * durationToISOString({ years: 1, months: 2 })            // "P1Y2M"
  * durationToISOString({ seconds: 1, milliseconds: 500 })  // "PT1.5S"
+ * durationToISOString({ hours: "ab", minutes: 30 })       // "PTabH30M"
+ * durationToISOString({ hours: "aH", minutes: 30 })       // "PTaHH30M"  (parser: last H wins)
  * durationToISOString("30")                               // null — no unit
- * durationToISOString({ hours: "2a" })                    // null — invalid number
  * durationToISOString(null)                               // null
  */
 export const durationToISOString = (value) => {
@@ -313,50 +378,45 @@ export const durationToISOString = (value) => {
   if (!duration) {
     return null;
   }
-  const toNum = (key) => {
+  const resolveValue = (key) => {
     const v = duration[key];
     if (v === undefined || v === null) {
-      return 0;
+      return null;
     }
     const n = Number(v);
-    return isFinite(n) ? n : null;
+    return isFinite(n) ? n : String(v);
   };
-  const years = toNum("years");
-  const months = toNum("months");
-  const weeks = toNum("weeks");
-  const days = toNum("days");
-  const hours = toNum("hours");
-  const minutes = toNum("minutes");
-  const secs = toNum("seconds");
-  const ms = toNum("milliseconds");
-  if (
-    years === null ||
-    months === null ||
-    weeks === null ||
-    days === null ||
-    hours === null ||
-    minutes === null ||
-    secs === null ||
-    ms === null
-  ) {
-    return null;
-  }
-  const totalSeconds = secs + ms / 1000;
+  const years = resolveValue("years");
+  const months = resolveValue("months");
+  const weeks = resolveValue("weeks");
+  const days = resolveValue("days");
+  const hours = resolveValue("hours");
+  const minutes = resolveValue("minutes");
+  const secs = resolveValue("seconds");
+  const ms = resolveValue("milliseconds");
   let date = "";
-  if (years) date += `${years}Y`;
-  if (months) date += `${months}M`;
-  if (weeks) date += `${weeks}W`;
-  if (days) date += `${days}D`;
+  if (years !== null && years !== 0) { date += `${years}Y`; }
+  if (months !== null && months !== 0) { date += `${months}M`; }
+  if (weeks !== null && weeks !== 0) { date += `${weeks}W`; }
+  if (days !== null && days !== 0) { date += `${days}D`; }
   let time = "";
-  if (hours) time += `${hours}H`;
-  if (minutes) time += `${minutes}M`;
-  if (totalSeconds) time += `${totalSeconds}S`;
+  if (hours !== null && hours !== 0) { time += `${hours}H`; }
+  if (minutes !== null && minutes !== 0) { time += `${minutes}M`; }
+  if (typeof secs === "string") {
+    // Non-numeric seconds — embed as-is; ms has no ISO marker so it is ignored
+    time += `${secs}S`;
+  } else {
+    // Numeric path — fold ms into seconds
+    const numSecs = secs ?? 0;
+    const numMs = typeof ms === "number" ? ms : 0;
+    const totalSeconds = numSecs + numMs / 1000;
+    if (totalSeconds) { time += `${totalSeconds}S`; }
+  }
   const result = `P${date}${time ? `T${time}` : ""}`;
   return result === "P" ? null : result;
 };
 
 /**
- * Returns the total duration as a number in the given unit.
  *
  * Accepts either a duration string (parsed via {@link parseDuration}) or a
  * pre-parsed duration object. Returns `null` if the value cannot be parsed,

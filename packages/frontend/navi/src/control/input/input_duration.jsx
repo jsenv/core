@@ -71,8 +71,10 @@ const InputDurationImpl = (props) => {
       {
         controlType: "duration_group",
         cascadeValidationToChildren: true,
-        // Aggregates sub-input values into an ISO 8601 duration string.
-        // Returns "" when no sub-field has a value yet.
+        // Aggregates sub-input values into an ISO 8601-like duration string.
+        // durationToISOString preserves non-numeric mid-edit values
+        // (e.g. hours="ab") between their unit markers ("PTabH30M"),
+        // which round-trips correctly through parseISODuration.
         aggregateChildStates: (childUIStateControllers) => {
           let h = "";
           let m = "";
@@ -83,9 +85,15 @@ const InputDurationImpl = (props) => {
             if (child.name === "second") s = child.uiState ?? "";
           }
           const durationObj = {};
-          if (showHours && h !== "") durationObj.hours = h;
-          if (showMinutes && m !== "") durationObj.minutes = m;
-          if (showSeconds && s !== "") durationObj.seconds = s;
+          if (showHours && h !== "") {
+            durationObj.hours = h;
+          }
+          if (showMinutes && m !== "") {
+            durationObj.minutes = m;
+          }
+          if (showSeconds && s !== "") {
+            durationObj.seconds = s;
+          }
           return durationToISOString(durationObj) ?? "";
         },
         // Reverse mapping: duration string → { hour, minute, second } so that

@@ -3,7 +3,8 @@
 
 - [parseDuration](0_parseduration/0_parseduration.md)
 - [durationToString](1_durationtostring/1_durationtostring.md)
-- [durationToSeconds](2_durationtoseconds/2_durationtoseconds.md)
+- [parseDuration ISO strings](2_parseduration_iso_strings/2_parseduration_iso_strings.md)
+- [durationToSeconds](3_durationtoseconds/3_durationtoseconds.md)
 
 ---
 
