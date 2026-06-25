@@ -639,23 +639,23 @@ export const STEP_CONSTRAINT = {
       const before = base + Math.floor((numericValue - base) / step) * step;
       const after = before + step;
       const decimals = (stepString.split(".")[1] || "").length;
-      const naviI18nKey = (() => {
+      const context = (() => {
         const naviInputType = field.controlHostProps["navi-input-type"];
         if (naviInputType === "hour") {
-          return `constraint.step.hour`;
+          return `hour`;
         }
         if (naviInputType === "minute") {
-          return `constraint.step.minute`;
+          return `minute`;
         }
         if (naviInputType === "second") {
-          return `constraint.step.second`;
+          return `second`;
         }
         if (naviInputType === "percentage") {
-          return `constraint.step.percentage`;
+          return `percentage`;
         }
-        return `constraint.step.number`;
+        return `number`;
       })();
-      return naviI18n(naviI18nKey, {
+      return naviI18n(`constraint.step.${context}.default`, {
         step: stepString,
         before: before.toFixed(decimals),
         after: after.toFixed(decimals),

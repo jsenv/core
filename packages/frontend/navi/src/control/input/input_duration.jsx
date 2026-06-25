@@ -131,6 +131,7 @@ const InputDurationImpl = (props) => {
 
   return (
     <Box
+      data-callout-arrow-x="center"
       width="fit-content"
       {...groupRootProps}
       unit={undefined}
