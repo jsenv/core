@@ -36,11 +36,6 @@ const InputDurationImpl = (props) => {
   const maxDuration = parseDuration(props.max);
   const stepDuration = parseDuration(props.step);
 
-  const showSeconds =
-    Object.hasOwn(minDuration ?? {}, "seconds") ||
-    Object.hasOwn(maxDuration ?? {}, "seconds") ||
-    Object.hasOwn(stepDuration ?? {}, "seconds");
-
   const hasValue = Object.hasOwn(props, "value");
 
   const { unitHour } = props;
@@ -49,6 +44,21 @@ const InputDurationImpl = (props) => {
   const stepSeconds = stepDuration
     ? durationToSeconds(stepDuration)
     : undefined;
+
+  const renderSource = hasValue ? props.value : props.defaultValue;
+  const components = parseDuration(renderSource);
+  const valueHasSeconds = components?.seconds !== undefined;
+
+  const stepHasSeconds = Object.hasOwn(stepDuration ?? {}, "seconds");
+  const showSeconds =
+    Object.hasOwn(minDuration ?? {}, "seconds") ||
+    Object.hasOwn(maxDuration ?? {}, "seconds") ||
+    stepHasSeconds ||
+    valueHasSeconds;
+  // Seconds field is read-only when the value has sub-minute precision but the
+  // step only aligns to whole minutes — the user cannot legally edit seconds.
+  const secondsReadOnly =
+    valueHasSeconds && stepSeconds !== undefined && !stepHasSeconds;
 
   const showHours = maxSeconds >= 3600;
   const showMinutes = maxSeconds >= 60;
@@ -117,12 +127,7 @@ const InputDurationImpl = (props) => {
       },
     );
 
-  const { value, required, readOnly, disabled, basePseudoState } =
-    groupHostProps;
-  // When controlled (value prop), parse the current value.
-  // When uncontrolled (defaultValue prop), parse defaultValue for the initial render.
-  const renderSource = hasValue ? value : props.defaultValue;
-  const components = parseDuration(renderSource);
+  const { required, readOnly, disabled, basePseudoState } = groupHostProps;
   const hourValue = components?.hours;
   const minuteValue = components?.minutes;
   const secondValue = components?.seconds;
@@ -142,6 +147,7 @@ const InputDurationImpl = (props) => {
           showHours={showHours}
           showMinutes={showMinutes}
           showSeconds={showSeconds}
+          secondsReadOnly={secondsReadOnly}
           controlled={hasValue}
           hourValue={hourValue}
           minuteValue={minuteValue}
@@ -168,6 +174,7 @@ const InputDurationFields = ({
   showHours,
   showMinutes,
   showSeconds,
+  secondsReadOnly,
   controlled,
   hourValue,
   minuteValue,
@@ -217,11 +224,13 @@ const InputDurationFields = ({
       ? Math.min(59, maxSeconds - baseSeconds)
       : maxSeconds;
 
-  // Per-field step values
+  // The step applies to the finest-grained field; coarser fields use step=1.
   const stepForMinutes =
-    stepSeconds !== undefined ? stepSeconds / 60 : undefined;
-  // If the step is a whole number of hours, apply it to the hour field.
-  // Otherwise (step expressed in minutes/seconds) the hour field increments by 1.
+    stepSeconds === undefined
+      ? undefined
+      : stepSeconds % 60 === 0
+        ? stepSeconds / 60
+        : 1; // sub-minute step → minute always increments by 1
   const stepForHours =
     stepSeconds !== undefined && stepSeconds % 3600 === 0
       ? stepSeconds / 3600
@@ -271,6 +280,7 @@ const InputDurationFields = ({
         max={secondMax}
         step={stepSeconds}
         {...childProps}
+        readOnly={secondsReadOnly || childProps.readOnly}
       />,
     );
   }

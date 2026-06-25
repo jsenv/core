@@ -6,6 +6,8 @@ import {
   dispatchCustomEvent,
   dispatchPublicCustomEvent,
   findEvent,
+  findFocusable,
+  findFocusDelegateTarget,
   getBorderSizes,
   getElementSignature,
   getFirstVisuallyVisibleAncestor,
@@ -229,6 +231,7 @@ export const openCallout = (
     closeOnFocusLeave = closeOnClickOutside,
     openingEvent,
     showErrorStack,
+    skipFocus = false,
     debug = () => {},
   } = {},
 ) => {
@@ -609,6 +612,46 @@ export const openCallout = (
     addTeardown(() => {
       anchorElement.removeEventListener("keydown", onAnchorKeydown);
     });
+    // Also close when Escape reaches the callout itself
+    // e.g. when close button is focused
+    // Usually callout is inside anchor so the anchor would see the escape being pressed
+    // but callout can be appended outside anchor when anchor cannot receive children
+    const onCalloutKeydown = (e) => {
+      if (e.key === "Escape") {
+        requestClose(e, "escape_key");
+        e.stopPropagation();
+        e.preventDefault();
+      }
+    };
+    calloutElement.addEventListener("keydown", onCalloutKeydown);
+    addTeardown(() => {
+      calloutElement.removeEventListener("keydown", onCalloutKeydown);
+    });
+  }
+  focus_on_open: {
+    if (!anchorElement) {
+      break focus_on_open;
+    }
+    if (skipFocus) {
+      break focus_on_open;
+    }
+    if (anchorElement.closest('[aria-hidden="true"]')) {
+      break focus_on_open;
+    }
+    // If focus is already inside the anchor, don't steal it — the user is
+    // actively typing and Escape via close_on_escape_from_anchor will work.
+    if (anchorElement.contains(document.activeElement)) {
+      break focus_on_open;
+    }
+    // Move focus into the anchor so the user can immediately press Escape to
+    // dismiss the callout. Prefer navi-focus-delegate targets (explicit intent),
+    // fall back to first generic focusable, then the callout close button for
+    // anchors with no focusable descendants (e.g. a read-only group).
+    const focusTarget =
+      findFocusDelegateTarget(anchorElement) ||
+      findFocusable(anchorElement) ||
+      calloutCloseButton;
+    focusTarget.focus({ preventScroll: true });
   }
   close_on_custom_event: {
     const handleCustomCloseEvent = (e) => {

@@ -99,15 +99,6 @@ export const createCalloutManager = (
     }
     const resolvedAnchorElement =
       anchorElement || controller.elementRef.current;
-    if (!skipFocus && !resolvedAnchorElement.closest('[aria-hidden="true"]')) {
-      const focusTarget =
-        findFocusDelegateTarget(resolvedAnchorElement) || resolvedAnchorElement;
-      debugFocus?.(
-        event,
-        `opening callout, give focus to anchor -> ${getElementSignature(focusTarget)}.focus()`,
-      );
-      focusTarget.focus();
-    }
     const removeCloseOnCleanup = addTeardown?.(() => {
       requestCloseCallout(new CustomEvent("cleanup"), "cleanup");
     });
@@ -117,6 +108,7 @@ export const createCalloutManager = (
       ...calloutOptions,
       anchorElement: resolvedAnchorElement,
       openingEvent: event,
+      skipFocus,
       debug: debugPopup,
       onClose: ({ event: closeEvent, shouldTransferFocusFromCallout }) => {
         removeCloseOnCleanup?.();
