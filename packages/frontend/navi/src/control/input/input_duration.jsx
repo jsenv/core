@@ -120,7 +120,7 @@ export const InputDuration = (props) => {
   // Seconds/minutes field is read-only when the value has sub-step precision
   // but the step only aligns to a coarser unit — the user cannot legally edit it.
   const secondsReadOnly =
-    valueHasSeconds && stepSeconds !== undefined && !stepHasSeconds;
+    valueHasSeconds && stepSeconds !== undefined && !stepHasSeconds && !stepHasMilliseconds;
   const millisecondsReadOnly =
     valueHasMilliseconds && stepSeconds !== undefined && !stepHasMilliseconds;
 
