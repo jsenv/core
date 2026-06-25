@@ -395,22 +395,37 @@ export const durationToISOString = (value) => {
   const secs = resolveValue("seconds");
   const ms = resolveValue("milliseconds");
   let date = "";
-  if (years !== null && years !== 0) { date += `${years}Y`; }
-  if (months !== null && months !== 0) { date += `${months}M`; }
-  if (weeks !== null && weeks !== 0) { date += `${weeks}W`; }
-  if (days !== null && days !== 0) { date += `${days}D`; }
+  if (years !== null) {
+    date += `${years}Y`;
+  }
+  if (months !== null) {
+    date += `${months}M`;
+  }
+  if (weeks !== null) {
+    date += `${weeks}W`;
+  }
+  if (days !== null) {
+    date += `${days}D`;
+  }
   let time = "";
-  if (hours !== null && hours !== 0) { time += `${hours}H`; }
-  if (minutes !== null && minutes !== 0) { time += `${minutes}M`; }
+  if (hours !== null) {
+    time += `${hours}H`;
+  }
+  if (minutes !== null) {
+    time += `${minutes}M`;
+  }
   if (typeof secs === "string") {
     // Non-numeric seconds — embed as-is; ms has no ISO marker so it is ignored
     time += `${secs}S`;
   } else {
-    // Numeric path — fold ms into seconds
+    // Numeric path — fold ms into seconds; include even if total is 0 so that
+    // an explicitly-set field (user typed "0") is preserved in the output
     const numSecs = secs ?? 0;
     const numMs = typeof ms === "number" ? ms : 0;
     const totalSeconds = numSecs + numMs / 1000;
-    if (totalSeconds) { time += `${totalSeconds}S`; }
+    if (secs !== null || (ms !== null && typeof ms === "number")) {
+      time += `${totalSeconds}S`;
+    }
   }
   const result = `P${date}${time ? `T${time}` : ""}`;
   return result === "P" ? null : result;

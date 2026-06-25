@@ -3,6 +3,7 @@ import { snapshotTests } from "@jsenv/snapshot";
 import { COLORS, renderTable } from "@jsenv/terminal-table";
 
 import {
+  durationToISOString,
   durationToSeconds,
   durationToString,
   parseDuration,
@@ -160,6 +161,103 @@ await snapshotTests(import.meta.url, ({ test }) => {
     return renderTable(
       [[cell("input"), cell("durationToSeconds()")], ...rows],
       { borderCollapse: true },
+    );
+  });
+
+  test("durationToISOString", () => {
+    const cases = [
+      // standard numeric durations
+      { hours: 2, minutes: 30 },
+      { years: 1, months: 2 },
+      { seconds: 1, milliseconds: 500 },
+      // explicit zeros are preserved (user typed "0" vs field left empty)
+      { hours: 0, minutes: 30 },
+      { hours: 0 },
+      { seconds: 0 },
+      // non-numeric mid-edit values embedded as-is between markers
+      { hours: "ab", minutes: 30 },
+      { hours: "aH", minutes: 30 },
+      // empty / null → null
+      {},
+      null,
+    ];
+
+    const rows = cases.map((value) => {
+      const result = durationToISOString(value);
+      return [cell(humanize(value)), cell(humanize(result))];
+    });
+
+    return renderTable(
+      [[cell("input"), cell("durationToISOString()")], ...rows],
+      { borderCollapse: true, maxRows: Infinity },
+    );
+  });
+
+  // Demonstrates the full mid-edit round-trip that InputDuration relies on:
+  //   build an ISO string from sub-field values → store it → parse it back → validate
+  //
+  // The sub-fields (hours / minutes / seconds) each map to one key in the
+  // duration object. A field that is still empty is omitted from the object;
+  // a field that contains a partial or invalid string is included as-is.
+  // durationToISOString embeds those values between ISO markers so they survive
+  // the round-trip through parseDuration.
+  test("mid-edit round-trip", () => {
+    // Each step records { hours, minutes, seconds } as the component would
+    // build durationObj (absent = not in object, present = raw input string).
+    const steps = [
+      {
+        label: "initial — all fields empty",
+        durationObj: {},
+      },
+      {
+        label: 'user types "a" into hours',
+        durationObj: { hours: "a" },
+      },
+      {
+        label: 'user types "0" into minutes',
+        durationObj: { hours: "a", minutes: "0" },
+      },
+      {
+        label: 'user replaces hours with "2"',
+        durationObj: { hours: "2", minutes: "0" },
+      },
+      {
+        label: 'user replaces minutes with "30"',
+        durationObj: { hours: "2", minutes: "30" },
+      },
+    ];
+
+    const rows = steps.map(({ label, durationObj }) => {
+      const iso = durationToISOString(durationObj);
+      const parsed = parseDuration(iso);
+      // validation: all values must be finite numbers
+      let valid = false;
+      if (parsed) {
+        valid = Object.values(parsed).every(
+          (v) => typeof v === "number" && isFinite(v),
+        );
+      }
+      return [
+        cell(label),
+        cell(humanize(durationObj)),
+        cell(humanize(iso)),
+        cell(humanize(parsed)),
+        cell(valid ? "valid" : "invalid"),
+      ];
+    });
+
+    return renderTable(
+      [
+        [
+          cell("step"),
+          cell("durationObj"),
+          cell("ISO string"),
+          cell("parsed back"),
+          cell("valid?"),
+        ],
+        ...rows,
+      ],
+      { borderCollapse: true, maxRows: Infinity },
     );
   });
 });

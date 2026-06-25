@@ -5,6 +5,8 @@
 - [durationToString](1_durationtostring/1_durationtostring.md)
 - [parseDuration ISO strings](2_parseduration_iso_strings/2_parseduration_iso_strings.md)
 - [durationToSeconds](3_durationtoseconds/3_durationtoseconds.md)
+- [durationToISOString](4_durationtoisostring/4_durationtoisostring.md)
+- [mid-edit round-trip](5_mid-edit_round-trip/5_mid-edit_round-trip.md)
 
 ---
 

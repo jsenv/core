@@ -15,10 +15,10 @@ const cases = [
   "PT",
   // non-numeric values preserved (mid-edit support)
   // value before the marker letter is kept as-is
-  "PTabH",       // hours: "ab"
-  "PTaHH",       // hours: "aH"  (last H is the marker, "aH" is the value)
-  "PT30MabH",    // hours: "ab", minutes: 30 (H at end of "30MabH")
-  "P1YabMT2H",   // years: 1, months: "ab", hours: 2
+  "PTabH", // hours: "ab"
+  "PTaHH", // hours: "aH"  (last H is the marker, "aH" is the value)
+  "PT30MabH", // hours: "30Mab"  (last H is marker; everything before it is the value)
+  "P1YabMT2H", // years: 1, months: "ab", hours: 2
 ];
 
 const rows = cases.map((value) => {
@@ -26,10 +26,10 @@ const rows = cases.map((value) => {
   return [cell(humanize(value)), cell(humanize(result))];
 });
 
-return renderTable(
-  [[cell("input"), cell("parseDuration()")], ...rows],
-  { borderCollapse: true, maxRows: Infinity },
-);
+return renderTable([[cell("input"), cell("parseDuration()")], ...rows], {
+  borderCollapse: true,
+  maxRows: Infinity,
+});
 ```
 
 ```js
