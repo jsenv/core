@@ -266,7 +266,6 @@ export const InputDuration = (props) => {
   };
 
   const handleCopy = (e) => {
-    debugger;
     const payload = getClipboardPayload();
     if (!payload) return;
     e.preventDefault();
