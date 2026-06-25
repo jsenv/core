@@ -610,10 +610,11 @@ export const STEP_CONSTRAINT = {
     if (!isNumericText && !STEP_SUPPORTED_TYPE_SET.has(type)) {
       return null;
     }
-    const stepString = field.controlHostProps.step;
-    if (!stepString || stepString === "any") {
+    const stepRaw = field.controlHostProps.step;
+    if (!stepRaw || stepRaw === "any") {
       return null;
     }
+    const stepString = String(stepRaw);
     const valueAsString =
       field.uiState === undefined ? "" : String(field.uiState);
     if (!valueAsString) {
