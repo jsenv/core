@@ -49,12 +49,14 @@ import { Text } from "./text.jsx";
  * @param {boolean} [bare]
  *   When true, strips the past-tense literal ("il y a", "ago") and returns only integer + unit.
  *   Only applies to the past state of `type="relative"`.
- * @param {"long"|"short"|"narrow"|"numeric"|"timestring"} [format="long"]
+ * @param {"long"|"short"|"narrow"|"compact"|"numeric"|"timestring"|"iso"} [format="long"]
  *   Controls the verbosity of the output. Defaults to `"long"` for all types.
- *   - `"short"`      → abbreviated format (e.g. "2h15" for durations, short weekday/month for dates)
- *   - `"narrow"`     → narrow Intl format (e.g. "2h 15m" via Intl.DurationFormat narrow)
+ *   - `"short"`      → Intl short (e.g. "2 h et 15 min" for durations, short weekday/month for dates)
+ *   - `"narrow"`     → Intl narrow (e.g. "2h 15min" via Intl.DurationFormat)
+ *   - `"compact"`    → custom compact notation (e.g. "2h15", no minute symbol when hours present)
  *   - `"numeric"`    → numeric date, only for `type="date"` (e.g. "11/09/2026")
  *   - `"timestring"` → clock display for `type="time"`, `type="minute"`, and `type="hour"` (e.g. "14:30")
+ *   - `"iso"`        → ISO 8601 string, only for `type="duration"` (e.g. "PT2H15M")
  * @param {boolean} [dayLabel]
  *   When true and `type="date"`, appends the locale-aware relative label
  *   ("hier", "aujourd'hui", "demain") when the date is yesterday, today, or tomorrow.
@@ -332,6 +334,11 @@ const TimeDuration = ({
     return <TimeText {...props}>{String(children)}</TimeText>;
   }
 
+  const isoString = durationToISOString(duration) ?? String(children);
+  if (format === "iso") {
+    return <TimeText dateTime={isoString} {...props}>{isoString}</TimeText>;
+  }
+
   const totalSeconds = durationToSeconds(duration);
   if (totalSeconds === null) {
     // Non-numeric unit values (e.g. mid-edit "2ahour15minute" or { hours: "abc" }):
@@ -343,9 +350,8 @@ const TimeDuration = ({
   }
 
   const text = formatDuration(duration, { lang, format });
-  const dateTime = durationToISOString(duration) ?? String(children);
   return (
-    <TimeText dateTime={dateTime} {...props}>
+    <TimeText dateTime={isoString} {...props}>
       {text}
     </TimeText>
   );

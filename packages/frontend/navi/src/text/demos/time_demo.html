@@ -248,66 +248,78 @@
 
             {/* ── 2. duration ───────────────────────────────────────────── */}
             <Section id="duration" title='2. type="duration"'>
-              <Grid cols={['(default)', 'format="short"', 'format="narrow"']}>
+              <Grid cols={['(default)', 'format="short"', 'format="narrow"', 'format="compact"', 'format="iso"']}>
                 <GRow label='"2hour15minute"'>
                   <Time type="duration" lang={lang}>{"2hour15minute"}</Time>
                   <Time type="duration" format="short" lang={lang}>{"2hour15minute"}</Time>
                   <Time type="duration" format="narrow" lang={lang}>{"2hour15minute"}</Time>
+                  <Time type="duration" format="compact" lang={lang}>{"2hour15minute"}</Time>
+                  <Time type="duration" format="iso" lang={lang}>{"2hour15minute"}</Time>
                 </GRow>
                 <GRow label='"PT2H15M"'>
                   <Time type="duration" lang={lang}>{"PT2H15M"}</Time>
                   <Time type="duration" format="short" lang={lang}>{"PT2H15M"}</Time>
                   <Time type="duration" format="narrow" lang={lang}>{"PT2H15M"}</Time>
+                  <Time type="duration" format="compact" lang={lang}>{"PT2H15M"}</Time>
+                  <Time type="duration" format="iso" lang={lang}>{"PT2H15M"}</Time>
                 </GRow>
                 <GRow label="{ hours: 2, minutes: 15 }">
                   <Time type="duration" lang={lang}>{{ hours: 2, minutes: 15 }}</Time>
                   <Time type="duration" format="short" lang={lang}>{{ hours: 2, minutes: 15 }}</Time>
                   <Time type="duration" format="narrow" lang={lang}>{{ hours: 2, minutes: 15 }}</Time>
+                  <Time type="duration" format="compact" lang={lang}>{{ hours: 2, minutes: 15 }}</Time>
+                  <Time type="duration" format="iso" lang={lang}>{{ hours: 2, minutes: 15 }}</Time>
                 </GRow>
                 <GRow label="5400 (seconds)">
                   <Time type="duration" lang={lang}>{5400}</Time>
                   <Time type="duration" format="short" lang={lang}>{5400}</Time>
                   <Time type="duration" format="narrow" lang={lang}>{5400}</Time>
+                  <Time type="duration" format="compact" lang={lang}>{5400}</Time>
+                  <Time type="duration" format="iso" lang={lang}>{5400}</Time>
                 </GRow>
                 <GRow label="300 (seconds)">
                   <Time type="duration" lang={lang}>{300}</Time>
                   <Time type="duration" format="short" lang={lang}>{300}</Time>
                   <Time type="duration" format="narrow" lang={lang}>{300}</Time>
+                  <Time type="duration" format="compact" lang={lang}>{300}</Time>
+                  <Time type="duration" format="iso" lang={lang}>{300}</Time>
                 </GRow>
                 <GRow label="undefined">
                   <Time type="duration" lang={lang}>{undefined}</Time>
                   <Time type="duration" format="short" lang={lang}>{undefined}</Time>
                   <Time type="duration" format="narrow" lang={lang}>{undefined}</Time>
+                  <Time type="duration" format="compact" lang={lang}>{undefined}</Time>
+                  <Time type="duration" format="iso" lang={lang}>{undefined}</Time>
                 </GRow>
               </Grid>
 
               <Title as="h3" style={{ margin: "24px 0 12px", fontSize: "0.9rem", color: "#555" }}>
                 Valeurs invalides
               </Title>
-              <Grid cols={['(default)', 'format="short"']}>
+              <Grid cols={['(default)', 'format="compact"']}>
                 <GRow label='"ahour3minute"'>
                   <Time type="duration" lang={lang}>{"ahour3minute"}</Time>
-                  <Time type="duration" format="short" lang={lang}>{"ahour3minute"}</Time>
+                  <Time type="duration" format="compact" lang={lang}>{"ahour3minute"}</Time>
                 </GRow>
                 <GRow label='"2ahour15minute"'>
                   <Time type="duration" lang={lang}>{"2ahour15minute"}</Time>
-                  <Time type="duration" format="short" lang={lang}>{"2ahour15minute"}</Time>
+                  <Time type="duration" format="compact" lang={lang}>{"2ahour15minute"}</Time>
                 </GRow>
                 <GRow label='""'>
                   <Time type="duration" lang={lang}>{""}</Time>
-                  <Time type="duration" format="short" lang={lang}>{""}</Time>
+                  <Time type="duration" format="compact" lang={lang}>{""}</Time>
                 </GRow>
                 <GRow label='"-1hour"'>
                   <Time type="duration" lang={lang}>{"-1hour"}</Time>
-                  <Time type="duration" format="short" lang={lang}>{"-1hour"}</Time>
+                  <Time type="duration" format="compact" lang={lang}>{"-1hour"}</Time>
                 </GRow>
                 <GRow label='{ hours: "abc" }'>
                   <Time type="duration" lang={lang}>{{ hours: "abc" }}</Time>
-                  <Time type="duration" format="short" lang={lang}>{{ hours: "abc" }}</Time>
+                  <Time type="duration" format="compact" lang={lang}>{{ hours: "abc" }}</Time>
                 </GRow>
                 <GRow label="0">
                   <Time type="duration" lang={lang}>{0}</Time>
-                  <Time type="duration" format="short" lang={lang}>{0}</Time>
+                  <Time type="duration" format="compact" lang={lang}>{0}</Time>
                 </GRow>
               </Grid>
             </Section>
@@ -370,29 +382,33 @@
 
             {/* ── 5. time ───────────────────────────────────────────────── */}
             <Section id="time" title='5. type="time"'>
-              <Grid cols={['(default)', 'format="short"', 'format="narrow"', 'format="timestring"']}>
+              <Grid cols={['(default)', 'format="short"', 'format="narrow"', 'format="compact"', 'format="timestring"']}>
                 <GRow label='"14:30"'>
                   <Time type="time" lang={lang}>{"14:30"}</Time>
                   <Time type="time" format="short" lang={lang}>{"14:30"}</Time>
                   <Time type="time" format="narrow" lang={lang}>{"14:30"}</Time>
+                  <Time type="time" format="compact" lang={lang}>{"14:30"}</Time>
                   <Time type="time" format="timestring" lang={lang}>{"14:30"}</Time>
                 </GRow>
                 <GRow label='"09:05:00"'>
                   <Time type="time" lang={lang}>{"09:05:00"}</Time>
                   <Time type="time" format="short" lang={lang}>{"09:05:00"}</Time>
                   <Time type="time" format="narrow" lang={lang}>{"09:05:00"}</Time>
+                  <Time type="time" format="compact" lang={lang}>{"09:05:00"}</Time>
                   <Time type="time" format="timestring" lang={lang}>{"09:05:00"}</Time>
                 </GRow>
                 <GRow label="Date (14:30)">
                   <Time type="time" lang={lang}>{TODAY}</Time>
                   <Time type="time" format="short" lang={lang}>{TODAY}</Time>
                   <Time type="time" format="narrow" lang={lang}>{TODAY}</Time>
+                  <Time type="time" format="compact" lang={lang}>{TODAY}</Time>
                   <Time type="time" format="timestring" lang={lang}>{TODAY}</Time>
                 </GRow>
                 <GRow label="undefined">
                   <Time type="time" lang={lang}>{undefined}</Time>
                   <Time type="time" format="short" lang={lang}>{undefined}</Time>
                   <Time type="time" format="narrow" lang={lang}>{undefined}</Time>
+                  <Time type="time" format="compact" lang={lang}>{undefined}</Time>
                   <Time type="time" format="timestring" lang={lang}>{undefined}</Time>
                 </GRow>
               </Grid>
@@ -415,29 +431,33 @@
 
             {/* ── 7. minute ─────────────────────────────────────────────── */}
             <Section id="minute" title='7. type="minute"'>
-              <Grid cols={['(default)', 'format="short"', 'format="narrow"', 'format="timestring"']}>
+              <Grid cols={['(default)', 'format="short"', 'format="narrow"', 'format="compact"', 'format="timestring"']}>
                 <GRow label="90">
                   <Time type="minute" lang={lang}>{90}</Time>
                   <Time type="minute" format="short" lang={lang}>{90}</Time>
                   <Time type="minute" format="narrow" lang={lang}>{90}</Time>
+                  <Time type="minute" format="compact" lang={lang}>{90}</Time>
                   <Time type="minute" format="timestring" lang={lang}>{90}</Time>
                 </GRow>
                 <GRow label="5">
                   <Time type="minute" lang={lang}>{5}</Time>
                   <Time type="minute" format="short" lang={lang}>{5}</Time>
                   <Time type="minute" format="narrow" lang={lang}>{5}</Time>
+                  <Time type="minute" format="compact" lang={lang}>{5}</Time>
                   <Time type="minute" format="timestring" lang={lang}>{5}</Time>
                 </GRow>
                 <GRow label="0">
                   <Time type="minute" lang={lang}>{0}</Time>
                   <Time type="minute" format="short" lang={lang}>{0}</Time>
                   <Time type="minute" format="narrow" lang={lang}>{0}</Time>
+                  <Time type="minute" format="compact" lang={lang}>{0}</Time>
                   <Time type="minute" format="timestring" lang={lang}>{0}</Time>
                 </GRow>
                 <GRow label="undefined">
                   <Time type="minute" lang={lang}>{undefined}</Time>
                   <Time type="minute" format="short" lang={lang}>{undefined}</Time>
                   <Time type="minute" format="narrow" lang={lang}>{undefined}</Time>
+                  <Time type="minute" format="compact" lang={lang}>{undefined}</Time>
                   <Time type="minute" format="timestring" lang={lang}>{undefined}</Time>
                 </GRow>
               </Grid>
@@ -445,29 +465,33 @@
 
             {/* ── 8. hour ───────────────────────────────────────────────── */}
             <Section id="hour" title='8. type="hour"'>
-              <Grid cols={['(default)', 'format="short"', 'format="narrow"', 'format="timestring"']}>
+              <Grid cols={['(default)', 'format="short"', 'format="narrow"', 'format="compact"', 'format="timestring"']}>
                 <GRow label="2">
                   <Time type="hour" lang={lang}>{2}</Time>
                   <Time type="hour" format="short" lang={lang}>{2}</Time>
                   <Time type="hour" format="narrow" lang={lang}>{2}</Time>
+                  <Time type="hour" format="compact" lang={lang}>{2}</Time>
                   <Time type="hour" format="timestring" lang={lang}>{2}</Time>
                 </GRow>
                 <GRow label="1.5">
                   <Time type="hour" lang={lang}>{1.5}</Time>
                   <Time type="hour" format="short" lang={lang}>{1.5}</Time>
                   <Time type="hour" format="narrow" lang={lang}>{1.5}</Time>
+                  <Time type="hour" format="compact" lang={lang}>{1.5}</Time>
                   <Time type="hour" format="timestring" lang={lang}>{1.5}</Time>
                 </GRow>
                 <GRow label="0.5">
                   <Time type="hour" lang={lang}>{0.5}</Time>
                   <Time type="hour" format="short" lang={lang}>{0.5}</Time>
                   <Time type="hour" format="narrow" lang={lang}>{0.5}</Time>
+                  <Time type="hour" format="compact" lang={lang}>{0.5}</Time>
                   <Time type="hour" format="timestring" lang={lang}>{0.5}</Time>
                 </GRow>
                 <GRow label="undefined">
                   <Time type="hour" lang={lang}>{undefined}</Time>
                   <Time type="hour" format="short" lang={lang}>{undefined}</Time>
                   <Time type="hour" format="narrow" lang={lang}>{undefined}</Time>
+                  <Time type="hour" format="compact" lang={lang}>{undefined}</Time>
                   <Time type="hour" format="timestring" lang={lang}>{undefined}</Time>
                 </GRow>
               </Grid>

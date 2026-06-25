@@ -170,17 +170,18 @@ export const formatTime = (date, lang) => {
 
 /**
  * Formats a duration expressed in minutes as a human-readable string.
- * Uses Intl.DurationFormat when available for "long" and "narrow" formats,
- * falls back to a compact notation for "short".
+ * "long", "short", "narrow" delegate to Intl.DurationFormat.
+ * "compact" uses our own notation that omits the minute symbol when hours are present.
  *
  * @param {number} minutes
- * @param {{ lang?: string, format?: "long"|"short"|"narrow" }} [options]
+ * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"compact" }} [options]
  *
  * @example
- * formatMinuteDuration(90, { lang: "fr" })                    // "1 heure 30 minutes" (long, default)
- * formatMinuteDuration(90, { lang: "fr", format: "short" })  // "1h30" (compact)
- * formatMinuteDuration(90, { lang: "fr", format: "narrow" }) // via Intl.DurationFormat narrow
- * formatMinuteDuration(45, { lang: "en", format: "short" })  // "45min"
+ * formatMinuteDuration(90, { lang: "fr" })                       // "1 heure 30 minutes" (long, default)
+ * formatMinuteDuration(90, { lang: "fr", format: "short" })     // "1 h et 30 min" (Intl short)
+ * formatMinuteDuration(90, { lang: "fr", format: "narrow" })    // "1h 30min" (Intl narrow)
+ * formatMinuteDuration(90, { lang: "fr", format: "compact" })   // "1h30" (custom, no minute symbol)
+ * formatMinuteDuration(45, { lang: "en", format: "compact" })   // "45min"
  */
 export const formatMinuteDuration = (
   minutes,
@@ -188,8 +189,8 @@ export const formatMinuteDuration = (
 ) => {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
-  if (format !== "short" && typeof Intl.DurationFormat !== "undefined") {
-    const fmt = new Intl.DurationFormat(lang, { style: format }); // "long" or "narrow"
+  if (format !== "compact" && typeof Intl.DurationFormat !== "undefined") {
+    const fmt = new Intl.DurationFormat(lang, { style: format }); // "long", "short", or "narrow"
     if (h === 0) {
       return fmt.format({ minutes: m });
     }
@@ -198,7 +199,7 @@ export const formatMinuteDuration = (
     }
     return fmt.format({ hours: h, minutes: m });
   }
-  // format="short": compact notation "1h30", "45min", "2h"
+  // format="compact": "1h30", "45min", "2h" — no minute symbol when hours are present
   const hSym = naviI18n("time.duration.hour_symbol", undefined, { lang });
   const mSym = naviI18n("time.duration.minute_symbol", undefined, { lang });
   if (h === 0) {
@@ -215,12 +216,12 @@ export const formatMinuteDuration = (
  * Delegates to {@link formatMinuteDuration} after converting hours to minutes.
  *
  * @param {number} hours
- * @param {{ lang?: string, format?: "long"|"short"|"narrow" }} [options]
+ * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"compact" }} [options]
  *
  * @example
- * formatHourDuration(1.5, { lang: "fr" })                    // "1 heure 30 minutes" (long, default)
- * formatHourDuration(1.5, { lang: "fr", format: "short" })  // "1h30"
- * formatHourDuration(2, { lang: "en", format: "short" })    // "2h"
+ * formatHourDuration(1.5, { lang: "fr" })                       // "1 heure 30 minutes" (long, default)
+ * formatHourDuration(1.5, { lang: "fr", format: "compact" })   // "1h30"
+ * formatHourDuration(2, { lang: "en", format: "compact" })     // "2h"
  */
 export const formatHourDuration = (hours, options) => {
   const totalMinutes = Math.round(hours * 60);
@@ -235,13 +236,15 @@ export const formatHourDuration = (hours, options) => {
  *
  * @param {{ years?: any, months?: any, weeks?: any, days?: any,
  *           hours?: any, minutes?: any, seconds?: any, milliseconds?: any }} duration
- * @param {{ lang?: string, format?: "long"|"short"|"narrow" }} [options]
+ * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"compact" }} [options]
  *
  * @example
- * formatDuration({ hours: 2, minutes: 15 }, { lang: "fr" })                    // "2 heures 15 minutes" (long, default)
- * formatDuration({ hours: 2, minutes: 15 }, { lang: "fr", format: "short" })  // "2h15"
- * formatDuration({ minutes: 45 }, { lang: "fr", format: "short" })            // "45min"
- * formatDuration({ hours: "2a", minutes: "15" }, { lang: "fr", format: "short" }) // "2ah15"
+ * formatDuration({ hours: 2, minutes: 15 }, { lang: "fr" })                       // "2 heures 15 minutes" (long, default)
+ * formatDuration({ hours: 2, minutes: 15 }, { lang: "fr", format: "short" })     // "2 h et 15 min" (Intl short)
+ * formatDuration({ hours: 2, minutes: 15 }, { lang: "fr", format: "narrow" })    // "2h 15min" (Intl narrow)
+ * formatDuration({ hours: 2, minutes: 15 }, { lang: "fr", format: "compact" })   // "2h15" (custom, no minute symbol)
+ * formatDuration({ minutes: 45 }, { lang: "fr", format: "compact" })             // "45min"
+ * formatDuration({ hours: "2a", minutes: "15" }, { lang: "fr", format: "compact" }) // "2ah15"
  */
 export const formatDuration = (
   duration,
