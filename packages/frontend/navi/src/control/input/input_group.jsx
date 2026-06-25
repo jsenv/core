@@ -115,6 +115,10 @@ const useInputGroup = (ref) => {
     };
 
     const handleNaviInputFull = (e) => {
+      if (!e.detail.event?.isTrusted) {
+        // Programmatic value change (e.g. ArrowUp/Down) — don't auto-advance.
+        return;
+      }
       const input = e.detail.event.currentTarget;
       if (!el.contains(input)) {
         return;

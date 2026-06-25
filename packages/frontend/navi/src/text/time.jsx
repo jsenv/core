@@ -14,6 +14,7 @@ import {
   formatMinuteDuration,
   formatMonth,
   formatMonthPlaceholder,
+  formatSecondDuration,
   formatTime,
   formatTimeRelative,
   formatWeekPlaceholder,
@@ -33,12 +34,16 @@ import { Text } from "./text.jsx";
  *   If the value cannot be parsed, it is rendered as-is.
  *   If undefined/null, renders `"–"`.
  *
- * @param {"day"|"month"|"datetime"|"time"|"relative"} [type="relative"]
+ * @param {"date"|"month"|"datetime"|"time"|"hour"|"minute"|"second"|"duration"|"relative"} [type="relative"]
  *   Controls the display format:
  *   - `"date"`     → "lundi 11 mai" (long by default); `format="short"` → "lun. 11 mai"; `format="numeric"` → "11/05/2026"
- *   - `"month"`    → "mai 2026"
- *   - `"datetime"` → "lun. 11 mai, 14:30"
- *   - `"time"`     → duration format by default; `format="timestring"` → clock "14 h 30"
+ *   - `"month"`    → "juin 2026"
+ *   - `"datetime"` → "lun. 11 mai, 14:30" (long); `format="short"` → "11 mai, 14:30"; `format="narrow"` → "11/05, 14:30"
+ *   - `"time"`     → time-of-day as duration by default; `format="timestring"` → clock "14 h 30"
+ *   - `"hour"`     → hours as duration (e.g. 1.5 → "1 heure 30 minutes")
+ *   - `"minute"`   → minutes as duration (e.g. 90 → "1 heure 30 minutes")
+ *   - `"second"`   → seconds as duration (e.g. 90 → "1 minute 30 secondes")
+ *   - `"duration"` → duration string/object/number (seconds); `format="iso"` → ISO 8601
  *   - `"relative"` → "dans 1 heure 30" / "En cours" / "il y a 2 heures"
  *                    Handles past, present, and future.
  *                    `eventDuration` defaults to 0 (instantaneous: no "En cours" window).
@@ -55,7 +60,7 @@ import { Text } from "./text.jsx";
  *   - `"narrow"`     → Intl narrow (e.g. "2h 15min", numeric month for datetime)
  *   - `"compact"`    → custom compact notation (e.g. "2h15", no minute symbol when hours present)
  *   - `"numeric"`    → numeric date, only for `type="date"` (e.g. "11/09/2026")
- *   - `"timestring"` → clock display for `type="time"`, `type="minute"`, and `type="hour"` (e.g. "14:30")
+ *   - `"timestring"` → clock display for `type="time"`, `type="minute"`, `type="hour"`, and `type="second"` (e.g. "14:30", "01:30" for 90s)
  *   - `"iso"`        → ISO 8601 string, only for `type="duration"` (e.g. "PT2H15M")
  * @param {boolean} [dayLabel]
  *   When true and `type="date"`, appends the locale-aware relative label
@@ -84,6 +89,9 @@ export const Time = (props) => {
   if (type === "minute") {
     return <TimeMinute {...props} />;
   }
+  if (type === "second") {
+    return <TimeSecond {...props} />;
+  }
   if (type === "hour") {
     return <TimeHour {...props} />;
   }
@@ -104,7 +112,7 @@ const TimeDate = ({
   if (children === undefined) {
     return (
       <TimeText {...props} capitalize={false}>
-        {formatDatePlaceholder(lang)}
+        {formatDatePlaceholder({ lang })}
       </TimeText>
     );
   }
@@ -143,9 +151,16 @@ const TimeDate = ({
   );
 };
 
-const TimeMonth = ({ children, lang = langSignal.value, format = "long", ...props }) => {
+const TimeMonth = ({
+  children,
+  lang = langSignal.value,
+  format = "long",
+  ...props
+}) => {
   if (children === undefined) {
-    return <TimeText {...props}>{formatMonthPlaceholder(lang)}</TimeText>;
+    return (
+      <TimeText {...props}>{formatMonthPlaceholder({ lang, format })}</TimeText>
+    );
   }
 
   const date = toDate(children, (value) => {
@@ -172,7 +187,7 @@ const TimeMonth = ({ children, lang = langSignal.value, format = "long", ...prop
 
 const TimeWeek = ({ children, lang = langSignal.value, ...props }) => {
   if (children === undefined || children === null) {
-    return <TimeText {...props}>{formatWeekPlaceholder(lang)}</TimeText>;
+    return <TimeText {...props}>{formatWeekPlaceholder({ lang })}</TimeText>;
   }
 
   const dateTime = String(children);
@@ -183,11 +198,16 @@ const TimeWeek = ({ children, lang = langSignal.value, ...props }) => {
   );
 };
 
-const TimeDatetime = ({ children, lang = langSignal.value, format = "long", ...props }) => {
+const TimeDatetime = ({
+  children,
+  lang = langSignal.value,
+  format = "long",
+  ...props
+}) => {
   if (children === undefined) {
     return (
       <TimeText {...props} capitalize={false}>
-        {formatDatetimePlaceholder(lang)}
+        {formatDatetimePlaceholder({ lang, format })}
       </TimeText>
     );
   }
@@ -253,7 +273,9 @@ const TimeMinute = ({
   ...props
 }) => {
   if (children === undefined) {
-    return <TimeText {...props}>{format === "timestring" ? "--:--" : "--"}</TimeText>;
+    return (
+      <TimeText {...props}>{format === "timestring" ? "--:--" : "--"}</TimeText>
+    );
   }
   let minutes;
   if (typeof children === "number") {
@@ -285,9 +307,58 @@ const TimeMinute = ({
   );
 };
 
-const TimeHour = ({ children, lang = langSignal.value, format = "long", ...props }) => {
+const TimeSecond = ({
+  children,
+  lang = langSignal.value,
+  format = "long",
+  ...props
+}) => {
   if (children === undefined) {
-    return <TimeText {...props}>{format === "timestring" ? "--:--" : "--"}</TimeText>;
+    return (
+      <TimeText {...props}>{format === "timestring" ? "--:--" : "--"}</TimeText>
+    );
+  }
+  let seconds;
+  if (typeof children === "number") {
+    seconds = children;
+  } else {
+    const n = Number(children);
+    if (isNaN(n)) {
+      return <TimeText {...props}>{children}</TimeText>;
+    }
+    seconds = n;
+  }
+
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  const dateTime = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+
+  let text;
+  if (format === "timestring") {
+    const mm = String(m).padStart(2, "0");
+    const ss = String(s).padStart(2, "0");
+    text = h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
+  } else {
+    text = formatSecondDuration(seconds, { lang, format });
+  }
+  return (
+    <TimeText dateTime={dateTime} {...props}>
+      {text}
+    </TimeText>
+  );
+};
+
+const TimeHour = ({
+  children,
+  lang = langSignal.value,
+  format = "long",
+  ...props
+}) => {
+  if (children === undefined) {
+    return (
+      <TimeText {...props}>{format === "timestring" ? "--:--" : "--"}</TimeText>
+    );
   }
   let hours;
   if (typeof children === "number") {
@@ -302,7 +373,14 @@ const TimeHour = ({ children, lang = langSignal.value, format = "long", ...props
 
   if (format === "timestring") {
     const totalMinutes = Math.round(hours * 60);
-    const date = new Date(1970, 0, 1, Math.floor(totalMinutes / 60), totalMinutes % 60, 0);
+    const date = new Date(
+      1970,
+      0,
+      1,
+      Math.floor(totalMinutes / 60),
+      totalMinutes % 60,
+      0,
+    );
     return <TimeText {...props}>{formatTime(date, lang)}</TimeText>;
   }
   const text = formatHourDuration(hours, { lang, format });
@@ -336,14 +414,22 @@ const TimeDuration = ({
 
   const isoString = durationToISOString(duration) ?? String(children);
   if (format === "iso") {
-    return <TimeText dateTime={isoString} {...props}>{isoString}</TimeText>;
+    return (
+      <TimeText dateTime={isoString} {...props}>
+        {isoString}
+      </TimeText>
+    );
   }
 
   const totalSeconds = durationToSeconds(duration);
   if (totalSeconds === null) {
     // Non-numeric unit values (e.g. mid-edit "2ahour15minute" or { hours: "abc" }):
     // formatDuration reads the raw values and appends compact unit symbols.
-    return <TimeText {...props}>{formatDuration(duration, { lang, format })}</TimeText>;
+    return (
+      <TimeText {...props}>
+        {formatDuration(duration, { lang, format })}
+      </TimeText>
+    );
   }
   if (totalSeconds === 0) {
     return <TimeText {...props}>{"0"}</TimeText>;
@@ -381,7 +467,11 @@ const TimeRelative = ({
     eventDurationMs = s !== null ? s * 1000 : 0;
   }
 
-  const text = formatTimeRelative(date, eventDurationMs, { lang, bare, format });
+  const text = formatTimeRelative(date, eventDurationMs, {
+    lang,
+    bare,
+    format,
+  });
   const dateTime = date.toISOString();
   return (
     <TimeText dateTime={dateTime} {...props}>
