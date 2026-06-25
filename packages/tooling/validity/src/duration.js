@@ -309,3 +309,33 @@ export const durationToNumber = (value, unit) => {
 export const durationToSeconds = (value) => durationToNumber(value, "second");
 export const durationToMinutes = (value) => durationToNumber(value, "minute");
 export const durationToHours = (value) => durationToNumber(value, "hour");
+
+/**
+ * Compares two duration values (strings or numbers of seconds).
+ * Mirrors the Temporal.Duration.compare API — returns -1, 0, or 1.
+ * Returns null if either value cannot be converted to seconds.
+ *
+ * @param {string|number} a
+ * @param {string|number} b
+ * @returns {-1|0|1|null}
+ *
+ * @example
+ * compareTwoDurations("1hour", "30minute")   // 1  (1h > 30min)
+ * compareTwoDurations("30minute", "1hour")   // -1
+ * compareTwoDurations("1hour", 3600)         // 0  (number treated as seconds)
+ * compareTwoDurations("invalid", "1hour")    // null
+ */
+export const compareTwoDurations = (a, b) => {
+  const aSeconds = typeof a === "number" ? a : durationToSeconds(a);
+  const bSeconds = typeof b === "number" ? b : durationToSeconds(b);
+  if (aSeconds === null || bSeconds === null) {
+    return null;
+  }
+  if (aSeconds < bSeconds) {
+    return -1;
+  }
+  if (aSeconds > bSeconds) {
+    return 1;
+  }
+  return 0;
+};

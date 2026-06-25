@@ -91,15 +91,13 @@ export const Time = (props) => {
 
 const TimeDate = ({
   children,
-  locale,
+  lang = langSignal.value,
   long,
   numeric,
   dayLabel,
   now,
   ...props
 }) => {
-  const lang = locale || langSignal.value;
-
   if (children === undefined) {
     return (
       <TimeText {...props} capitalize={false}>
@@ -119,7 +117,7 @@ const TimeDate = ({
     return <TimeText {...props}>{String(children)}</TimeText>;
   }
 
-  const base = formatDay(date, lang, { long, numeric });
+  const base = formatDay(date, { lang, long, numeric });
   let text;
   if (dayLabel) {
     const offset = getRelativeDay(date, { now });
@@ -142,9 +140,7 @@ const TimeDate = ({
   );
 };
 
-const TimeMonth = ({ children, locale, ...props }) => {
-  const lang = locale || langSignal.value;
-
+const TimeMonth = ({ children, lang = langSignal.value, ...props }) => {
   if (children === undefined) {
     return <TimeText {...props}>{formatMonthPlaceholder(lang)}</TimeText>;
   }
@@ -171,9 +167,7 @@ const TimeMonth = ({ children, locale, ...props }) => {
   );
 };
 
-const TimeWeek = ({ children, locale, ...props }) => {
-  const lang = locale || langSignal.value;
-
+const TimeWeek = ({ children, lang = langSignal.value, ...props }) => {
   if (children === undefined || children === null) {
     return <TimeText {...props}>{formatWeekPlaceholder(lang)}</TimeText>;
   }
@@ -186,9 +180,7 @@ const TimeWeek = ({ children, locale, ...props }) => {
   );
 };
 
-const TimeDatetime = ({ children, locale, ...props }) => {
-  const lang = locale || langSignal.value;
-
+const TimeDatetime = ({ children, lang = langSignal.value, ...props }) => {
   if (children === undefined) {
     return (
       <TimeText {...props} capitalize={false}>
@@ -211,9 +203,12 @@ const TimeDatetime = ({ children, locale, ...props }) => {
   );
 };
 
-const TimeTime = ({ children, locale, durationFormat, ...props }) => {
-  const lang = locale || langSignal.value;
-
+const TimeTime = ({
+  children,
+  lang = langSignal.value,
+  durationFormat,
+  ...props
+}) => {
   if (children === undefined) {
     return <TimeText {...props}>--:--</TimeText>;
   }
@@ -234,7 +229,8 @@ const TimeTime = ({ children, locale, durationFormat, ...props }) => {
   const dateTime = `${hh}:${mm}`; // See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
   if (durationFormat) {
     const totalMinutes = date.getHours() * 60 + date.getMinutes();
-    const text = formatMinuteDuration(totalMinutes, lang, {
+    const text = formatMinuteDuration(totalMinutes, {
+      lang,
       long: durationFormat === "long",
     });
     return (
@@ -251,9 +247,13 @@ const TimeTime = ({ children, locale, durationFormat, ...props }) => {
   );
 };
 
-const TimeMinute = ({ children, locale, long, timeString, ...props }) => {
-  const lang = locale || langSignal.value;
-
+const TimeMinute = ({
+  children,
+  lang = langSignal.value,
+  long,
+  timeString,
+  ...props
+}) => {
   if (children === undefined) {
     return <TimeText {...props}>{timeString ? "--:--" : "--"}</TimeText>;
   }
@@ -278,7 +278,7 @@ const TimeMinute = ({ children, locale, long, timeString, ...props }) => {
     const date = new Date(1970, 0, 1, totalHours, remainingMinutes, 0);
     text = formatTime(date, lang);
   } else {
-    text = formatMinuteDuration(minutes, lang, { long });
+    text = formatMinuteDuration(minutes, { lang, long });
   }
   return (
     <TimeText dateTime={dateTime} {...props}>
@@ -287,9 +287,7 @@ const TimeMinute = ({ children, locale, long, timeString, ...props }) => {
   );
 };
 
-const TimeHour = ({ children, locale, long, ...props }) => {
-  const lang = locale || langSignal.value;
-
+const TimeHour = ({ children, lang = langSignal.value, long, ...props }) => {
   if (children === undefined) {
     return <TimeText {...props}>--</TimeText>;
   }
@@ -304,13 +302,16 @@ const TimeHour = ({ children, locale, long, ...props }) => {
     hours = childrenAsNumber;
   }
 
-  const text = formatHourDuration(hours, lang, { long });
+  const text = formatHourDuration(hours, { lang, long });
   return <TimeText {...props}>{text}</TimeText>;
 };
 
-const TimeDuration = ({ children, locale, long, ...props }) => {
-  const lang = locale || langSignal.value;
-
+const TimeDuration = ({
+  children,
+  lang = langSignal.value,
+  long,
+  ...props
+}) => {
   if (children === undefined || children === null) {
     return <TimeText {...props}>--</TimeText>;
   }
@@ -334,13 +335,13 @@ const TimeDuration = ({ children, locale, long, ...props }) => {
   if (totalSeconds === null) {
     // Non-numeric unit values (e.g. mid-edit "2ahour15minute" or { hours: "abc" }):
     // formatDuration reads the raw values and appends compact unit symbols.
-    return <TimeText {...props}>{formatDuration(duration, lang)}</TimeText>;
+    return <TimeText {...props}>{formatDuration(duration, { lang })}</TimeText>;
   }
   if (totalSeconds === 0) {
     return <TimeText {...props}>{"0"}</TimeText>;
   }
 
-  const text = formatDuration(duration, lang, { long });
+  const text = formatDuration(duration, { lang, long });
   const dateTime = durationToISOString(duration) ?? String(children);
   return (
     <TimeText dateTime={dateTime} {...props}>
@@ -351,13 +352,11 @@ const TimeDuration = ({ children, locale, long, ...props }) => {
 
 const TimeRelative = ({
   children,
-  locale,
+  lang = langSignal.value,
   eventDuration = 0,
   bare,
   ...props
 }) => {
-  const lang = locale || langSignal.value;
-
   if (children === undefined) {
     return <TimeText {...props}>–</TimeText>;
   }
@@ -374,7 +373,7 @@ const TimeRelative = ({
     eventDurationMs = s !== null ? s * 1000 : 0;
   }
 
-  const text = formatTimeRelative(date, eventDurationMs, lang, { bare });
+  const text = formatTimeRelative(date, eventDurationMs, { lang, bare });
   const dateTime = date.toISOString();
   return (
     <TimeText dateTime={dateTime} {...props}>

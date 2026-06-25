@@ -2,13 +2,17 @@
  * https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Constraint_validation
  */
 
-import { formatDay, formatMonth } from "@jsenv/navi/src/text/format_time.js";
+import {
+  formatDay,
+  formatDuration,
+  formatMonth,
+} from "@jsenv/navi/src/text/format_time.js";
 import { langSignal } from "@jsenv/navi/src/text/lang_signal.js";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
-import { durationToSeconds, durationToString } from "@jsenv/validity";
+import { compareTwoDurations, durationToSeconds } from "@jsenv/validity";
 import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
 
-const secondsToDurationString = (totalSeconds) => {
+const formatSecondsDuration = (totalSeconds) => {
   const h = Math.floor(totalSeconds / 3600);
   const m = Math.floor((totalSeconds % 3600) / 60);
   const s = Math.floor(totalSeconds % 60);
@@ -16,7 +20,7 @@ const secondsToDurationString = (totalSeconds) => {
   if (h) obj.hours = h;
   if (m) obj.minutes = m;
   if (s) obj.seconds = s;
-  return durationToString(obj) ?? String(totalSeconds);
+  return formatDuration(obj);
 };
 
 export const REQUIRED_CONSTRAINT = {
@@ -356,20 +360,17 @@ export const MIN_CONSTRAINT = {
   messageAttribute: "data-min-message",
   check: (field) => {
     if (field.controlType === "duration_group") {
-      const minNumber = field.controlHostProps.min;
-      if (minNumber === undefined || minNumber === null) {
+      const min = field.controlHostProps.min;
+      if (min === undefined || min === null) {
         return null;
       }
-      const valueSeconds = durationToSeconds(field.uiState);
-      if (valueSeconds === null) {
-        return null;
-      }
-      if (valueSeconds >= minNumber) {
+      const cmp = compareTwoDurations(field.uiState, min);
+      if (cmp === null || cmp >= 0) {
         return null;
       }
 
       return naviI18n("constraint.min.duration.default", {
-        min: secondsToDurationString(minNumber),
+        min: formatDuration(min),
       });
     }
     if (field.controlType !== "input" && field.controlType !== "picker") {
@@ -458,20 +459,17 @@ export const MAX_CONSTRAINT = {
   messageAttribute: "data-max-message",
   check: (field) => {
     if (field.controlType === "duration_group") {
-      const maxNumber = field.controlHostProps.max;
-      if (maxNumber === undefined || maxNumber === null) {
+      const max = field.controlHostProps.max;
+      if (max === undefined || max === null) {
         return null;
       }
-      const valueSeconds = durationToSeconds(field.uiState);
-      if (valueSeconds === null) {
-        return null;
-      }
-      if (valueSeconds <= maxNumber) {
+      const cmp = compareTwoDurations(field.uiState, max);
+      if (cmp === null || cmp <= 0) {
         return null;
       }
 
       return naviI18n("constraint.max.duration.default", {
-        max: secondsToDurationString(maxNumber),
+        max: formatDuration(max),
       });
     }
     if (field.controlType !== "input" && field.controlType !== "picker") {
@@ -569,28 +567,38 @@ export const STEP_CONSTRAINT = {
   messageAttribute: "data-step-message",
   check: (field) => {
     if (field.controlType === "duration_group") {
-      const stepNumber = field.controlHostProps.step;
-      if (!stepNumber) {
+      const step = field.controlHostProps.step;
+      if (!step) {
         return null;
       }
-      const minNumber = field.controlHostProps.min ?? 0;
+      const min = field.controlHostProps.min ?? 0;
       const valueSeconds = durationToSeconds(field.uiState);
       if (valueSeconds === null) {
         return null;
       }
+
+      const stepSeconds =
+        typeof step === "number" ? step : durationToSeconds(step);
+      const minSeconds =
+        typeof min === "number" ? min : (durationToSeconds(min) ?? 0);
+      if (stepSeconds === null) {
+        return null;
+      }
+
       const remainder =
-        (((valueSeconds - minNumber) % stepNumber) + stepNumber) % stepNumber;
-      const epsilon = stepNumber * 1e-9;
-      if (remainder <= epsilon || remainder >= stepNumber - epsilon) {
+        (((valueSeconds - minSeconds) % stepSeconds) + stepSeconds) %
+        stepSeconds;
+      const epsilon = stepSeconds * 1e-9;
+      if (remainder <= epsilon || remainder >= stepSeconds - epsilon) {
         return null;
       }
 
       const before = valueSeconds - remainder;
-      const after = before + stepNumber;
+      const after = before + stepSeconds;
       return naviI18n("constraint.step.duration.default", {
-        step: secondsToDurationString(stepNumber),
-        before: secondsToDurationString(before),
-        after: secondsToDurationString(after),
+        step: formatSecondsDuration(stepSeconds),
+        before: formatSecondsDuration(before),
+        after: formatSecondsDuration(after),
       });
     }
     if (field.controlType !== "input" && field.controlType !== "picker") {

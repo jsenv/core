@@ -187,11 +187,11 @@ const useInputGroup = (ref) => {
       focusInput(inputs[lastFilledIdx]);
     };
 
-    el.addEventListener("keydown", handleKeyDown, { capture: false });
+    el.addEventListener("keydown", handleKeyDown, { capture: true });
     el.addEventListener("navi_input_full", handleNaviInputFull);
     el.addEventListener("paste", handlePaste, { capture: true });
     return () => {
-      el.removeEventListener("keydown", handleKeyDown, { capture: false });
+      el.removeEventListener("keydown", handleKeyDown, { capture: true });
       el.removeEventListener("navi_input_full", handleNaviInputFull);
       el.removeEventListener("paste", handlePaste, { capture: true });
     };

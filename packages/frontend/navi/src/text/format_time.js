@@ -3,6 +3,7 @@
  * All functions accept an optional `{ now }` parameter for testability.
  */
 
+import { langSignal } from "./lang_signal.js";
 import { naviI18n } from "./navi_i18n.js";
 
 /**
@@ -16,17 +17,16 @@ import { naviI18n } from "./navi_i18n.js";
  */
 export const formatDay = (
   date,
-  locale,
-  { long = false, numeric = false } = {},
+  { lang = langSignal.value, long = false, numeric = false } = {},
 ) => {
   if (numeric) {
-    return new Intl.DateTimeFormat(locale, {
+    return new Intl.DateTimeFormat(lang, {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
     }).format(date);
   }
-  const result = new Intl.DateTimeFormat(locale, {
+  const result = new Intl.DateTimeFormat(lang, {
     weekday: long ? "long" : "short",
     day: "numeric",
     month: long ? "long" : "short",
@@ -75,11 +75,11 @@ export const getRelativeDay = (date, { now = new Date() } = {}) => {
 
 const SENTINEL_DATE = new Date(9999, 10, 28); // 28 Nov 9999 — day≠month, both 2-digit
 
-const getToken = (key, locale) =>
-  naviI18n(`time.placeholder.${key}`, undefined, { lang: locale });
+const getToken = (key, lang) =>
+  naviI18n(`time.placeholder.${key}`, undefined, { lang });
 
-export const formatDatePlaceholder = (locale) => {
-  const parts = new Intl.DateTimeFormat(locale, {
+export const formatDatePlaceholder = (lang) => {
+  const parts = new Intl.DateTimeFormat(lang, {
     day: "numeric",
     month: "numeric",
     year: "numeric",
@@ -87,57 +87,57 @@ export const formatDatePlaceholder = (locale) => {
   return parts
     .map((p) => {
       if (p.type === "day") {
-        return getToken("day", locale);
+        return getToken("day", lang);
       }
       if (p.type === "month") {
-        return getToken("month", locale);
+        return getToken("month", lang);
       }
       if (p.type === "year") {
-        return getToken("year", locale);
+        return getToken("year", lang);
       }
       return p.value;
     })
     .join("");
 };
 
-export const formatMonthPlaceholder = (locale) => {
-  const parts = new Intl.DateTimeFormat(locale, {
+export const formatMonthPlaceholder = (lang) => {
+  const parts = new Intl.DateTimeFormat(lang, {
     month: "numeric",
     year: "numeric",
   }).formatToParts(SENTINEL_DATE);
   return parts
     .map((p) => {
       if (p.type === "month") {
-        return getToken("month", locale);
+        return getToken("month", lang);
       }
       if (p.type === "year") {
-        return getToken("year", locale);
+        return getToken("year", lang);
       }
       return p.value;
     })
     .join("");
 };
 
-export const formatWeekPlaceholder = (locale) => {
-  return `${getToken("week", locale)} xx / ${getToken("year", locale)}`;
+export const formatWeekPlaceholder = (lang) => {
+  return `${getToken("week", lang)} xx / ${getToken(lang)}`;
 };
 
-export const formatDatetimePlaceholder = (locale) => {
-  const datePart = formatDatePlaceholder(locale);
-  return `${datePart}, ${getToken("hour", locale)}:${getToken("minute", locale)}`;
+export const formatDatetimePlaceholder = (lang) => {
+  const datePart = formatDatePlaceholder(lang);
+  return `${datePart}, ${getToken("hour", lang)}:${getToken("minute", lang)}`;
 };
 
 // ── End placeholder helpers ────────────────────────────────────────────────
 
-export const formatDayRelative = (offset, locale) => {
-  const relativeDay = new Intl.RelativeTimeFormat(locale, {
+export const formatDayRelative = (offset, lang) => {
+  const relativeDay = new Intl.RelativeTimeFormat(lang, {
     numeric: "auto",
   }).format(offset, "day");
   return relativeDay;
 };
 
-export const formatMonth = (date, locale) => {
-  return new Intl.DateTimeFormat(locale, {
+export const formatMonth = (date, lang) => {
+  return new Intl.DateTimeFormat(lang, {
     month: "long",
     year: "numeric",
   }).format(date);
@@ -146,8 +146,8 @@ export const formatMonth = (date, locale) => {
 /**
  * Formats a date as "lun. 11 mai, 14:30".
  */
-export const formatDatetime = (date, locale) => {
-  return new Intl.DateTimeFormat(locale, {
+export const formatDatetime = (date, lang) => {
+  return new Intl.DateTimeFormat(lang, {
     weekday: "short",
     day: "numeric",
     month: "long",
@@ -159,8 +159,8 @@ export const formatDatetime = (date, locale) => {
 /**
  * Formats a date as "14:30".
  */
-export const formatTime = (date, locale) => {
-  return new Intl.DateTimeFormat(locale, {
+export const formatTime = (date, lang) => {
+  return new Intl.DateTimeFormat(lang, {
     hour: "2-digit",
     minute: "2-digit",
   }).format(date);
@@ -171,7 +171,7 @@ export const formatTime = (date, locale) => {
  * Uses Intl.DurationFormat when available, falls back to a compact notation.
  *
  * @param {number} minutes
- * @param {string} locale
+ * @param {string} lang
  * @param {{ long?: boolean }} [options]
  *
  * @example
@@ -182,13 +182,12 @@ export const formatTime = (date, locale) => {
  */
 export const formatMinuteDuration = (
   minutes,
-  locale,
-  { long = false } = {},
+  { lang = langSignal.value, long = false } = {},
 ) => {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   if (long && typeof Intl.DurationFormat !== "undefined") {
-    const fmt = new Intl.DurationFormat(locale, { style: "long" });
+    const fmt = new Intl.DurationFormat(lang, { style: "long" });
     if (h === 0) {
       return fmt.format({ minutes: m });
     }
@@ -199,10 +198,10 @@ export const formatMinuteDuration = (
   }
   // Compact notation: "1h30", "45min", "2h"
   const hSym = naviI18n("time.duration.hour_symbol", undefined, {
-    lang: locale,
+    lang,
   });
   const mSym = naviI18n("time.duration.minute_symbol", undefined, {
-    lang: locale,
+    lang,
   });
   if (h === 0) {
     return `${m}${mSym}`;
@@ -225,9 +224,9 @@ export const formatMinuteDuration = (
  * formatHourDuration(1.5, "fr", { long: true }) // "1 heure 30" or "1 h 30 min" via Intl
  * formatHourDuration(2, "en")               // "2h"
  */
-export const formatHourDuration = (hours, locale, { long = false } = {}) => {
+export const formatHourDuration = (hours, options) => {
   const totalMinutes = Math.round(hours * 60);
-  return formatMinuteDuration(totalMinutes, locale, { long });
+  return formatMinuteDuration(totalMinutes, options);
 };
 
 /**
@@ -249,7 +248,10 @@ export const formatHourDuration = (hours, locale, { long = false } = {}) => {
  * formatDuration({ days: 1, hours: 2, minutes: 15 }, "fr")      // "1d 2h15"
  * formatDuration({ hours: 1, minutes: 30 }, "fr", { long: true }) // "1 heure 30 minutes"
  */
-export const formatDuration = (duration, locale, { long = false } = {}) => {
+export const formatDuration = (
+  duration,
+  { lang = langSignal.value, long = false } = {},
+) => {
   const has = (key) => duration[key] !== undefined && duration[key] !== null;
 
   // Long mode delegates to Intl.DurationFormat (when available and all values are numeric)
@@ -285,7 +287,7 @@ export const formatDuration = (duration, locale, { long = false } = {}) => {
       intlDuration[key] = n;
     }
     if (allNumeric && Object.keys(intlDuration).length > 0) {
-      return new Intl.DurationFormat(locale, { style: "long" }).format(
+      return new Intl.DurationFormat(lang, { style: "long" }).format(
         intlDuration,
       );
     }
@@ -293,7 +295,7 @@ export const formatDuration = (duration, locale, { long = false } = {}) => {
   }
 
   const sym = (key) =>
-    naviI18n(`time.duration.${key}_symbol`, undefined, { lang: locale });
+    naviI18n(`time.duration.${key}_symbol`, undefined, { lang });
   const parts = [];
 
   if (has("years")) {
@@ -334,8 +336,11 @@ export const formatDuration = (duration, locale, { long = false } = {}) => {
 /**
  * Formats a date relative to now: "il y a 3 jours", "dans 2 heures", etc.
  */
-const formatTimeAgo = (date, locale, { now = new Date(), bare } = {}) => {
-  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
+const formatTimeAgo = (
+  date,
+  { lang = langSignal.value, now = new Date(), bare } = {},
+) => {
+  const rtf = new Intl.RelativeTimeFormat(lang, { numeric: "auto" });
   const nowMs = now instanceof Date ? now.getTime() : now;
   const diff = date.getTime() - nowMs;
   const absDiff = Math.abs(diff);
@@ -402,32 +407,31 @@ const formatTimeAgo = (date, locale, { now = new Date(), bare } = {}) => {
 export const formatTimeRelative = (
   start,
   durationMs = 0,
-  locale,
-  { now = new Date(), bare } = {},
+  { lang = langSignal.value, now = new Date(), bare } = {},
 ) => {
   const startMs = start instanceof Date ? start.getTime() : Number(start);
   const endMs = startMs + durationMs;
   const nowMs = now instanceof Date ? now.getTime() : Number(now);
 
   if (nowMs >= startMs && nowMs < endMs) {
-    return getOngoingText(locale);
+    return getOngoingText(lang);
   }
   if (nowMs >= endMs) {
     const refDate = endMs > startMs ? new Date(endMs) : new Date(startMs);
-    return formatTimeAgo(refDate, locale, { now, bare });
+    return formatTimeAgo(refDate, { lang, now, bare });
   }
 
   const diff = startMs - nowMs;
-  return formatFuture(new Date(startMs), diff, locale, { now });
+  return formatFuture(new Date(startMs), diff, { lang, now });
 };
 
-const formatFuture = (date, diff, locale, { now }) => {
-  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
+const formatFuture = (date, diff, { lang, now }) => {
+  const rtf = new Intl.RelativeTimeFormat(lang, { numeric: "auto" });
   const nowDate = now instanceof Date ? now : new Date(now);
 
   // < 1 min
   if (diff < MINUTE) {
-    return getLessThanMinuteText(locale);
+    return getLessThanMinuteText(lang);
   }
 
   // < 1 hour → "dans X minutes"
@@ -442,10 +446,11 @@ const formatFuture = (date, diff, locale, { now }) => {
     if (minutes === 0) {
       return rtf.format(hours, "hour");
     }
-    const duration = formatMinuteDuration(hours * 60 + minutes, locale, {
+    const duration = formatMinuteDuration(hours * 60 + minutes, {
+      lang,
       long: true,
     });
-    const template = naviI18n("time.in_duration", undefined, { lang: locale });
+    const template = naviI18n("time.in_duration", undefined, { lang });
     if (template !== "time.in_duration") {
       return template.replace("[duration]", duration);
     }
@@ -461,7 +466,7 @@ const formatFuture = (date, diff, locale, { now }) => {
   const tomorrowDate = new Date(nowDate);
   tomorrowDate.setDate(tomorrowDate.getDate() + 1);
   if (diff < 30 * HOUR && toLocalDayKey(date) === toLocalDayKey(tomorrowDate)) {
-    return formatTomorrowAt(date, locale);
+    return formatTomorrowAt(date, lang);
   }
 
   // < 24h → "dans X heures"
@@ -487,17 +492,17 @@ const formatFuture = (date, diff, locale, { now }) => {
   return rtf.format(Math.round(diff / YEAR), "year");
 };
 
-const formatTomorrowAt = (date, locale) => {
-  const dayLabel = new Intl.RelativeTimeFormat(locale, {
+const formatTomorrowAt = (date, lang) => {
+  const dayLabel = new Intl.RelativeTimeFormat(lang, {
     numeric: "auto",
   }).format(1, "day");
   const hasMinutes = date.getMinutes() !== 0;
-  const timeLabel = new Intl.DateTimeFormat(locale, {
+  const timeLabel = new Intl.DateTimeFormat(lang, {
     hour: "numeric",
     ...(hasMinutes ? { minute: "2-digit" } : {}),
   }).format(date);
   const atTemplate = naviI18n("time.tomorrow_at", undefined, {
-    lang: locale,
+    lang,
   });
   // atTemplate is e.g. "[day] à [time]" — replace placeholders
   if (atTemplate !== "time.tomorrow_at") {
@@ -507,12 +512,12 @@ const formatTomorrowAt = (date, locale) => {
   return `${dayLabel} ${timeLabel}`;
 };
 
-const getLessThanMinuteText = (locale) => {
-  return naviI18n("time.less_than_minute", undefined, { lang: locale });
+const getLessThanMinuteText = (lang) => {
+  return naviI18n("time.less_than_minute", undefined, { lang });
 };
 
-const getOngoingText = (locale) => {
-  return naviI18n("time.ongoing", undefined, { lang: locale });
+const getOngoingText = (lang) => {
+  return naviI18n("time.ongoing", undefined, { lang });
 };
 
 const MINUTE = 60_000;
