@@ -163,7 +163,13 @@
             </ul>
           </li>
           <li><a href="#validation">Validation</a></li>
-          <li><a href="#customization">Customization</a></li>
+          <li>
+            <a href="#customization">Customization</a>
+            <ul>
+              <li><a href="#text-align">textAlign</a></li>
+              <li><a href="#customization">Custom unit label</a></li>
+            </ul>
+          </li>
         </ul>
       </nav>
       <div id="app"></div>
@@ -255,6 +261,7 @@
             <ValidationCombinedDemo />
           </div>
 
+          <TextAlignDemo />
           <UnitCustomizationDemo />
         </Box>
       );
@@ -692,14 +699,51 @@
 
       // ── Customization ─────────────────────────────────────────────────────
 
+      const ALIGN_OPTIONS = ["auto", "left", "center", "right"];
+
+      const TextAlignDemo = () => {
+        const [align, setAlign] = useState("auto");
+        return (
+          <div class="demo-section" id="text-align">
+            <h2>textAlign</h2>
+            <p class="desc">
+              Controls how the number is aligned inside each sub-field.{" "}
+              <code>"auto"</code> (default) aligns each field toward its
+              separator: first→right, last→left, solo/middle→center.
+            </p>
+            <Box flex spacing="s" style={{ marginBottom: "16px" }}>
+              {ALIGN_OPTIONS.map((v) => (
+                <Button
+                  key={v}
+                  variant={align === v ? "contained" : "outlined"}
+                  onClick={() => setAlign(v)}
+                >
+                  {v}
+                </Button>
+              ))}
+            </Box>
+            <div class="states-grid">
+              <label>H + M</label>
+              <InputDuration
+                defaultValue="1hour30minute"
+                textAlign={align}
+              />
+              <label>H + M + S</label>
+              <InputDuration
+                defaultValue="1hour30minute45second"
+                step="1second"
+                textAlign={align}
+              />
+            </div>
+          </div>
+        );
+      };
+
       const UnitCustomizationDemo = () => (
         <div class="demo-section" id="customization">
           <h2>Custom hour unit label</h2>
           <p class="desc">
             Pass <code>unitHour</code> to replace the default "hours" label.
-            When another field follows, the label is automatically wrapped in a{" "}
-            <code>span</code> with <code>padding-right: 1ch</code> — no manual
-            margin needed.
           </p>
           <InputDuration
             value={customSignal.value}

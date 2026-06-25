@@ -77,6 +77,8 @@ const css = /* css */ `
  * @param {Function} [props.uiAction] - Called on every change with the ISO 8601 value
  * @param {Function} [props.action] - Called on form submission
  * @param {preact.ComponentChild} [props.unitHour] - Custom label for the hour sub-field
+ * @param {"auto"|"left"|"center"|"right"} [props.textAlign="auto"] - Text alignment of sub-inputs.
+ *   "auto" aligns each field toward its neighbouring separator (first→right, last→left, middle/solo→center).
  */
 export const InputDuration = (props) => {
   import.meta.css = css;
@@ -87,7 +89,7 @@ export const InputDuration = (props) => {
 
   const hasValue = Object.hasOwn(props, "value");
 
-  const { unitHour } = props;
+  const { unitHour, textAlign = "auto" } = props;
   const minSeconds = minDuration ? durationToSeconds(minDuration) : undefined;
   const maxSeconds = durationToSeconds(maxDuration);
   const stepSeconds = stepDuration
@@ -386,6 +388,7 @@ export const InputDuration = (props) => {
           maxSeconds={maxSeconds}
           stepSeconds={stepSeconds}
           unitHour={unitHour}
+          textAlign={textAlign}
           required={required}
           readOnly={readOnly}
           disabled={disabled}
@@ -416,6 +419,7 @@ const InputDurationFields = ({
   maxSeconds,
   stepSeconds,
   unitHour,
+  textAlign,
   // Loading is displayed on the InputGroup wrapper, not on individual sub-inputs.
   basePseudoState,
   ...childProps
@@ -465,6 +469,22 @@ const InputDurationFields = ({
     ? Math.round((stepSeconds % 1) * 1000)
     : undefined;
 
+  const visibleUnits = [
+    showHours && "hour",
+    showMinutes && "minute",
+    showSeconds && "second",
+    showMilliseconds && "millisecond",
+  ].filter(Boolean);
+
+  const textAlignFor = (unit) => {
+    if (textAlign !== "auto") return textAlign;
+    const i = visibleUnits.indexOf(unit);
+    if (visibleUnits.length === 1) return "center";
+    if (i === 0) return "right";
+    if (i === visibleUnits.length - 1) return "left";
+    return "center";
+  };
+
   const inputs = [];
 
   if (showHours) {
@@ -473,6 +493,7 @@ const InputDurationFields = ({
         key="hour"
         unit="hour"
         label={unitHour}
+        textAlign={textAlignFor("hour")}
         {...(controlled ? { value: hourValue } : { defaultValue: hourValue })}
         min={minHours}
         max={maxHours}
@@ -488,6 +509,7 @@ const InputDurationFields = ({
       <InputDurationPart
         key="minute"
         unit="minute"
+        textAlign={textAlignFor("minute")}
         {...(controlled
           ? { value: minuteValue }
           : { defaultValue: minuteValue })}
@@ -506,6 +528,7 @@ const InputDurationFields = ({
       <InputDurationPart
         key="second"
         unit="second"
+        textAlign={textAlignFor("second")}
         {...(controlled
           ? { value: secondValue }
           : { defaultValue: secondValue })}
@@ -524,6 +547,7 @@ const InputDurationFields = ({
       <InputDurationPart
         key="millisecond"
         unit="millisecond"
+        textAlign={textAlignFor("millisecond")}
         {...(controlled
           ? { value: millisecondValue }
           : { defaultValue: millisecondValue })}
@@ -561,7 +585,6 @@ const InputDurationPart = ({ unit, label, separator, ...props }) => {
         type="navi_number"
         navi-input-type={unit}
         name={unit}
-        textAlign={separator ? "right" : "left"}
         size="l"
         unit={false}
         variant="underline"
