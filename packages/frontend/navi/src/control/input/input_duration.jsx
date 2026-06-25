@@ -259,9 +259,7 @@ export const InputDuration = (props) => {
 };
 
 // Renders the appropriate combination of hour/minute/second sub-inputs based
-// on which fields are active. Bounds for each field are derived from the
-// current values of the other fields so that the combination stays within
-// [minSeconds, maxSeconds].
+// on which fields are active.
 const InputDurationFields = ({
   showHours,
   showMinutes,
@@ -284,44 +282,31 @@ const InputDurationFields = ({
   basePseudoState,
   ...childProps
 }) => {
-  const hourNum = hourValue !== undefined ? Number(hourValue) : NaN;
-  const minuteNum = minuteValue !== undefined ? Number(minuteValue) : NaN;
-  const hourInSeconds = isFinite(hourNum) ? hourNum * 3600 : undefined;
-  const minuteInSeconds = isFinite(minuteNum) ? minuteNum * 60 : undefined;
-
   // Hour bounds (in hours)
   const minHours =
     minSeconds !== undefined ? Math.floor(minSeconds / 3600) : undefined;
   const maxHours = Math.floor(maxSeconds / 3600);
 
-  // Minute bounds (in minutes), offset by the current hour value when present
-  const minuteMin =
-    showHours && hourInSeconds !== undefined
-      ? minSeconds !== undefined
-        ? Math.max(0, Math.floor((minSeconds - hourInSeconds) / 60))
-        : 0
-      : minSeconds !== undefined
-        ? Math.floor(minSeconds / 60)
-        : 0;
-  const minuteMax =
-    showHours && hourInSeconds !== undefined
-      ? Math.min(59, Math.floor((maxSeconds - hourInSeconds) / 60))
-      : Math.floor(maxSeconds / 60);
+  // Minute bounds (in minutes).
+  // When hours are also shown, keep the natural [0, 59] range — the group-level
+  // constraint validates the combined total. Dynamic per-hour offsets can produce
+  // negative max values (e.g. max=1h30 + current hours=2 → max=-30 for minutes).
+  const minuteMin = showHours
+    ? 0
+    : minSeconds !== undefined
+      ? Math.floor(minSeconds / 60)
+      : 0;
+  const minuteMax = showHours ? 59 : Math.min(59, Math.floor(maxSeconds / 60));
 
-  // Second bounds (in seconds), offset by the current hour+minute values
-  const baseSeconds = (hourInSeconds ?? 0) + (minuteInSeconds ?? 0);
+  // Second bounds (in seconds). Same reasoning as minutes.
   const secondMin =
-    showMinutes && minuteInSeconds !== undefined
-      ? minSeconds !== undefined
-        ? Math.max(0, minSeconds - baseSeconds)
-        : 0
+    showHours || showMinutes
+      ? 0
       : minSeconds !== undefined
-        ? minSeconds
+        ? Math.floor(minSeconds)
         : 0;
   const secondMax =
-    showMinutes && minuteInSeconds !== undefined
-      ? Math.min(59, maxSeconds - baseSeconds)
-      : maxSeconds;
+    showHours || showMinutes ? 59 : Math.min(59, Math.floor(maxSeconds));
 
   // The step applies to the finest-grained field; coarser fields use step=1.
   const stepForMinutes =
