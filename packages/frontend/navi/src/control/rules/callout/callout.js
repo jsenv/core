@@ -66,11 +66,12 @@ const css = /* css */ `
     font-size: initial; /* Callout fells disconnected from the element, font size should be predictible and stable */
     background: transparent;
     border: none;
+    outline: none; /* programmatic focus may land here briefly before being redirected to close button */
     opacity: 0;
     /* will be positioned with transform: translate */
     transition: opacity 0.2s ease-in-out;
+    cursor: initial; /* Do not inherit element cursor, inside the element but should use regular cursor */
     pointer-events: auto; /* Must be interactive to be closabled (overrid list item pointer-events none for instance)  */
-    outline: none; /* programmatic focus may land here briefly before being redirected to close button */
     overflow: visible;
 
     &[data-status="success"] {
@@ -274,7 +275,7 @@ export const openCallout = (
         return;
       }
     } else if (reason === "focus_leave") {
-      if (!closeOnFocusLeave) {
+      if (!closeOnFocusLeave || import.meta.dev) {
         return;
       }
       if (callout.status === "error") {
@@ -502,6 +503,7 @@ export const openCallout = (
       ) {
         return;
       }
+      debugger;
       requestClose(event, "click_outside");
     };
     const handleSpaceOutside = (event) => {
@@ -514,7 +516,17 @@ export const openCallout = (
       }
       requestClose(event, "space_outside");
     };
+    const onCalloutClick = (event) => {
+      if (calloutElement.closest("label")) {
+        // prevent click to propagate to the label which would propagate to the input
+        // which would be considered outside
+        event.preventDefault();
+      }
+    };
+    calloutElement.addEventListener("click", onCalloutClick);
     const registerClickOutsideListener = () => {
+      calloutElement.removeEventListener("click", onCalloutClick);
+
       document.addEventListener("click", handleClickOutside, true);
       document.addEventListener("keydown", handleSpaceOutside, true);
       addTeardown(() => {
