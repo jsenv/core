@@ -405,7 +405,7 @@ const InputDurationFields = ({
 }) => {
   // Hour bounds (in hours)
   const minHours =
-    minSeconds !== undefined ? Math.floor(minSeconds / 3600) : undefined;
+    minSeconds !== undefined ? Math.floor(minSeconds / 3600) : 0;
   const maxHours = Math.floor(maxSeconds / 3600);
 
   // Minute bounds (in minutes).

@@ -391,6 +391,8 @@ export const formatDuration = (
   if (format !== "compact" && typeof Intl.DurationFormat !== "undefined") {
     const intlDuration = {};
     let allNumeric = true;
+    let hasNegative = false;
+    let hasPositive = false;
     for (const key of [
       "years",
       "months",
@@ -409,14 +411,25 @@ export const formatDuration = (
         allNumeric = false;
         break;
       }
+      if (n < 0) {
+        hasNegative = true;
+      } else if (n > 0) {
+        hasPositive = true;
+      }
       intlDuration[key] = n;
     }
-    if (allNumeric && Object.keys(intlDuration).length > 0) {
+    // Temporal requires all components to share the same sign.
+    // Mixed-sign values (e.g. { hours: -1, minutes: 15 }) throw a RangeError.
+    if (
+      allNumeric &&
+      Object.keys(intlDuration).length > 0 &&
+      !(hasNegative && hasPositive)
+    ) {
       return new Intl.DurationFormat(lang, { style: format }).format(
         intlDuration,
       );
     }
-    // Fall through to compact notation when values are non-numeric
+    // Fall through to compact notation when values are non-numeric or mixed-sign
   }
 
   const sym = (key) =>
