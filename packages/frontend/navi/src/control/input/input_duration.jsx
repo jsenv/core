@@ -141,6 +141,12 @@ export const InputDuration = (props) => {
 
   // Mirror the single-input behaviour: a controlled value with no handler makes the field read-only.
   const implicitReadOnly = hasValue && !uiAction && !action;
+  if (implicitReadOnly && !props.readOnly && import.meta.dev) {
+    console.warn(
+      `"duration_group" is controlled by "value" prop. Replace it by "defaultValue" or pass "uiAction"/"action" to make the field interactive.`,
+    );
+    console.log(props);
+  }
 
   const [groupRootProps, groupHostProps, childrenWrapperProps] =
     useControlgroupProps(
