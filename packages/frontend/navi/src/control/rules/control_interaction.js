@@ -193,12 +193,6 @@ export const onRequestInteraction = (
     always?.();
   };
 
-  const onAllowed = () => {
-    debugInteraction(event, `"${name}" allowed`);
-    allowed?.();
-    always?.();
-  };
-
   if (event.defaultPrevented) {
     onPrevented("event.defaultPrevented");
     return false;
@@ -209,10 +203,11 @@ export const onRequestInteraction = (
     return false;
   }
 
+  const currentTarget = requestInteractionCustomEvent.currentTarget;
+  const controlHost = findControlHost(currentTarget) || currentTarget;
+  const controller = controlHost.__uiStateController__;
+
   if (!bypassInteractivity) {
-    const currentTarget = requestInteractionCustomEvent.currentTarget;
-    const controlHost = findControlHost(currentTarget) || currentTarget;
-    const controller = controlHost.__uiStateController__;
     const ci = controller?.rules.interaction;
     if (ci) {
       const canInteract = ci.checkInteractivity({ event });
@@ -230,7 +225,13 @@ export const onRequestInteraction = (
     }
   }
 
-  onAllowed();
+  debugInteraction(event, `"${name}" allowed`);
+  // Any allowed interaction signals the user is actively working on the field.
+  // Close the callout (validation or interaction) so it does not obstruct
+  // their action. It will reappear on the next form submit if still needed.
+  controller.rules.callout.requestCloseCallout(event);
+  allowed?.();
+  always?.();
   return true;
 };
 

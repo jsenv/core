@@ -566,9 +566,7 @@ export const useControlProps = (
           naviChange: (e) => {
             return {
               name: "navi_change",
-              allowed: () => {
-                requestActionOnAllowed(e);
-              },
+              allowed: () => requestActionOnAllowed(e),
             };
           },
         };
