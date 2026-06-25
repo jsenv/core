@@ -483,6 +483,17 @@ export const openCallout = (
     if (!anchorElement || anchorElement === document.body) {
       return document.body;
     }
+    const closestLabel = anchorElement.closest("label");
+    if (closestLabel) {
+      // Putting callout inside label would be problematic:
+      // - Click on callout would be catched by the browser and re-dispatched to the label
+      // -> Callout would detect a click outside and close
+      // (We could preventDefault but that would prevent click interaction on the callout like selecting callout text)
+      // (Even ignoring the click without preventDefault prevent click to select as browser use click for label)
+      // -> We put callout inside label aprent
+      const labelParent = closestLabel.parentElement;
+      return labelParent;
+    }
     // Some elements (e.g. <input>) cannot have children
     if (canContainCallout(anchorElement)) {
       return anchorElement;
@@ -515,22 +526,6 @@ export const openCallout = (
       }
       requestClose(event, "space_outside");
     };
-
-    const closestLabel = calloutContainer.closest("label");
-    if (closestLabel) {
-      const onLabelClick = (e) => {
-        const isWithinCallout = calloutElement.contains(e.target);
-        if (isWithinCallout) {
-          // prevent click to propagate to the label which would propagate to the input
-          // which would be considered outside
-          e.preventDefault();
-        }
-      };
-      closestLabel.addEventListener("click", onLabelClick);
-      addTeardown(() => {
-        closestLabel.removeEventListener("click", onLabelClick);
-      });
-    }
 
     const registerClickOutsideListener = () => {
       document.addEventListener("click", handleClickOutside, true);
