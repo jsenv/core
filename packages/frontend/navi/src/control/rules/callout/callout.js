@@ -219,7 +219,7 @@ export const openCallout = (
     status = "",
     onClose,
     closeOnClickOutside = status === "info",
-    closeOnBlur,
+    closeOnFocusLeave = closeOnClickOutside,
     openingEvent,
     showErrorStack,
     debug = () => {},
@@ -267,8 +267,8 @@ export const openCallout = (
       if (callout.status === "error") {
         return;
       }
-    } else if (reason === "blur_outside") {
-      if (!closeOnBlur) {
+    } else if (reason === "focus_leave") {
+      if (!closeOnFocusLeave) {
         return;
       }
       if (callout.status === "error") {
@@ -370,9 +370,12 @@ export const openCallout = (
 
     if (Object.hasOwn(options, "closeOnClickOutside")) {
       closeOnClickOutside = options.closeOnClickOutside;
+      if (closeOnClickOutside) {
+        closeOnFocusLeave = true;
+      }
     }
-    if (Object.hasOwn(options, "closeOnBlur")) {
-      closeOnBlur = options.closeOnBlur;
+    if (Object.hasOwn(options, "closeOnFocusLeave")) {
+      closeOnFocusLeave = options.closeOnFocusLeave;
     }
 
     if (isValidElement(newMessage)) {
@@ -545,8 +548,8 @@ export const openCallout = (
       registerClickOutsideListener();
     }
   }
-  close_on_blur: {
-    if (closeOnBlur && anchorElement) {
+  close_on_focus_leave: {
+    if (closeOnFocusLeave && anchorElement) {
       const handleFocusOut = (event) => {
         // relatedTarget is the element receiving focus; null means focus left the document
         const { relatedTarget } = event;
@@ -556,7 +559,7 @@ export const openCallout = (
         if (relatedTarget && calloutElement.contains(relatedTarget)) {
           return;
         }
-        requestClose(event, "blur_outside");
+        requestClose(event, "focus_leave");
       };
       anchorElement.addEventListener("focusout", handleFocusOut);
       addTeardown(() => {

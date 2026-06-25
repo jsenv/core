@@ -412,7 +412,32 @@ export const InputTextual = createComponentResolver([
 ]);
 
 const RealInput = (props) => {
-  return <Box {...props} as="input" baseClassName="navi_control_input" />;
+  return (
+    <Box
+      {...props}
+      as="input"
+      baseClassName="navi_control_input"
+      // When readonly focus and mousedown should select input content
+      // (the only relevant interaction to perform on readonly is copying the value)
+      // Nice side effect is that input_group.jsx will see all input is selected
+      // and arrow left/right will always nav between inputs.
+      // (Otherwise we would prevent left/right + show calllout about readonly)
+      onFocus={(e) => {
+        props.onFocus(e);
+        if (!e.defaultPrevented && e.target.readOnly) {
+          e.preventDefault();
+          e.target.select();
+        }
+      }}
+      onMouseDown={(e) => {
+        props.onMouseDown(e);
+        if (!e.defaultPrevented && e.target.readOnly) {
+          e.preventDefault();
+          e.target.select();
+        }
+      }}
+    />
+  );
 };
 
 const InputStyleCSSVars = {
