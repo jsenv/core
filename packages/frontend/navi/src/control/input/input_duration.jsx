@@ -31,9 +31,9 @@ export const InputDuration = (props) => {
 };
 
 const InputDurationImpl = (props) => {
-  const { max = "23h59" } = props;
+  props.max = props.max || "23h59";
   const minDuration = parseDuration(props.min);
-  const maxDuration = parseDuration(max);
+  const maxDuration = parseDuration(props.max);
   const stepDuration = parseDuration(props.step);
 
   const showSeconds =
