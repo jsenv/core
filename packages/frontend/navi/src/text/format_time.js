@@ -377,20 +377,7 @@ export const formatDuration = (
   if (typeof duration === "string") {
     duration = parseDuration(duration) ?? {};
   } else if (typeof duration === "number") {
-    const h = Math.floor(duration / 3600);
-    const m = Math.floor((duration % 3600) / 60);
-    const s = duration % 60;
-    const obj = {};
-    if (h > 0) {
-      obj.hours = h;
-    }
-    if (m > 0) {
-      obj.minutes = m;
-    }
-    if (s > 0 || (h === 0 && m === 0)) {
-      obj.seconds = s;
-    }
-    duration = obj;
+    duration = { seconds: duration };
   }
   const has = (key) => duration[key] !== undefined && duration[key] !== null;
 

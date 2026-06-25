@@ -33,8 +33,9 @@ export const InputDuration = (props) => {
 const DEFAULT_MAX_SECONDS = 24 * 3600; // 86400
 
 const InputDurationImpl = (props) => {
+  const { max = DEFAULT_MAX_SECONDS } = props;
   const minDuration = parseDuration(props.min);
-  const maxDuration = parseDuration(props.max);
+  const maxDuration = parseDuration(max);
   const stepDuration = parseDuration(props.step);
 
   const showSeconds =
@@ -45,10 +46,11 @@ const InputDurationImpl = (props) => {
   const hasValue = Object.hasOwn(props, "value");
 
   const { unitHour } = props;
-  const minSeconds = toSeconds(props.min);
-  const maxSeconds =
-    props.max !== undefined ? toSeconds(props.max) : DEFAULT_MAX_SECONDS;
-  const stepSeconds = toSeconds(props.step);
+  const minSeconds = minDuration ? durationToSeconds(minDuration) : undefined;
+  const maxSeconds = durationToSeconds(maxDuration);
+  const stepSeconds = stepDuration
+    ? durationToSeconds(stepDuration)
+    : undefined;
 
   const showHours = maxSeconds >= 3600;
   const showMinutes = maxSeconds >= 60;
@@ -157,20 +159,6 @@ const InputDurationImpl = (props) => {
       </ControlgroupChildrenWrapper>
     </Box>
   );
-};
-
-const toSeconds = (value) => {
-  if (value === undefined || value === null) {
-    return undefined;
-  }
-  if (typeof value === "number") {
-    return value;
-  }
-  if (typeof value === "string") {
-    const secs = durationToSeconds(value);
-    return secs ?? value;
-  }
-  return value;
 };
 
 // Renders the appropriate combination of hour/minute/second sub-inputs based
