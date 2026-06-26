@@ -436,11 +436,10 @@
             spacing="xs"
             command="--navi-open"
             commandFor="custom_duration_picker2"
-            // navi-command-target="child-control"
             {...props}
           >
             {customDuration === undefined || customDuration === null ? (
-              <Text>Personnalisé</Text>
+              <Text>Perso</Text>
             ) : (
               <Time type="duration" format="compact">
                 {customDuration}
@@ -457,7 +456,7 @@
               borderRadius="s"
               type="duration"
             >
-              <Box flex="y" alignX="center" padding="m" spacing="m">
+              <Box flex="y" alignX="center" padding="m" spacing="l">
                 <Text bold>Veuillez saisir une durée</Text>
 
                 <InputDuration
