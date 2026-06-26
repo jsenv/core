@@ -314,10 +314,19 @@ const getVisibleFields = (container) => {
 
 const useClipboardProps = (groupRef) => {
   const getClipboardPayload = () => {
-    const isoString = ref.current?.value;
-    if (!isoString) return null;
+    const groupEl = groupRef.current;
+    if (!groupEl) {
+      return null;
+    }
+    const hiddenInput = groupEl.querySelector('input[type="hidden"]');
+    const isoString = hiddenInput.value;
+    if (!isoString) {
+      return null;
+    }
     const parsed = parseDuration(isoString);
-    if (!parsed) return null;
+    if (!parsed) {
+      return null;
+    }
     const rawS = parsed.seconds;
     const wholeS = rawS !== undefined ? Math.floor(rawS) : undefined;
     const ms =
@@ -330,7 +339,7 @@ const useClipboardProps = (groupRef) => {
       second: wholeS,
       millisecond: ms,
     };
-    const visibleFields = getVisibleFields(groupRef.current);
+    const visibleFields = getVisibleFields(groupEl);
     const showMilliseconds = visibleFields.includes("millisecond");
     const parts = visibleFields
       .filter((f) => f !== "millisecond")
