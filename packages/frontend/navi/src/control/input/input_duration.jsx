@@ -306,7 +306,13 @@ export const InputDuration = (props) => {
   );
 };
 
-const useClipboardProps = (ref) => {
+const getVisibleFields = (container) => {
+  return ["hour", "minute", "second", "millisecond"].filter(
+    (f) => container.querySelector(`[navi-input-type="${f}"]`) !== null,
+  );
+};
+
+const useClipboardProps = (groupRef) => {
   const getClipboardPayload = () => {
     const isoString = ref.current?.value;
     if (!isoString) return null;
@@ -324,6 +330,8 @@ const useClipboardProps = (ref) => {
       second: wholeS,
       millisecond: ms,
     };
+    const visibleFields = getVisibleFields(groupRef.current);
+    const showMilliseconds = visibleFields.includes("millisecond");
     const parts = visibleFields
       .filter((f) => f !== "millisecond")
       .map((f, i) => {
@@ -338,7 +346,7 @@ const useClipboardProps = (ref) => {
   };
 
   const applyToGroup = (isoValue, e) => {
-    const host = ref.current;
+    const host = groupRef.current;
     dispatchRequestInteraction(host, {
       event: e,
       name: "subpaste",
@@ -382,6 +390,7 @@ const useClipboardProps = (ref) => {
       } else {
         // Colon-split fallback: "1:30", "1:30:45", "1:30:45.500"
         const colonParts = textData.trim().split(":");
+        const visibleFields = getVisibleFields(groupRef.current);
         if (colonParts.length > 1 || visibleFields.length === 1) {
           const durationObj = {};
           colonParts.forEach((part, i) => {
