@@ -1,7 +1,8 @@
 # [formatMinuteDuration — compact (default)](../../format_time.test.js)
 
 ```js
-const run = (minutes, locale) => formatMinuteDuration(minutes, locale);
+const run = (minutes, locale) =>
+  formatMinuteDuration(minutes, { lang: locale, format: "compact" });
 return table(
   ["minutes", "locale", "result"],
   [

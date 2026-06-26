@@ -4,9 +4,9 @@
 return table(
   ["date", "locale", "result"],
   [
-    ["2026-05-01", "fr", formatMonth(new Date("2026-05-01"), "fr")],
-    ["2026-05-01", "en", formatMonth(new Date("2026-05-01"), "en")],
-    ["2026-01-01", "fr", formatMonth(new Date("2026-01-01"), "fr")],
+    ["2026-05-01", "fr", formatMonth(new Date("2026-05-01"), { lang: "fr" })],
+    ["2026-05-01", "en", formatMonth(new Date("2026-05-01"), { lang: "en" })],
+    ["2026-01-01", "fr", formatMonth(new Date("2026-01-01"), { lang: "fr" })],
   ],
 );
 ```

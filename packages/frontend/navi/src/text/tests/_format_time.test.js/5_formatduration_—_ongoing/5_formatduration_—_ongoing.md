@@ -9,13 +9,13 @@ return table(
       "-10min",
       "1h",
       "fr",
-      formatTimeRelative(ms(-10 * 60_000), 60 * 60_000, "fr", opts),
+      formatTimeRelative(ms(-10 * 60_000), 60 * 60_000, { lang: "fr", ...opts }),
     ],
     [
       "-10min",
       "1h",
       "en",
-      formatTimeRelative(ms(-10 * 60_000), 60 * 60_000, "en", opts),
+      formatTimeRelative(ms(-10 * 60_000), 60 * 60_000, { lang: "en", ...opts }),
     ],
   ],
 );

@@ -9,9 +9,9 @@ return table(
       "-3h",
       "1h",
       "fr",
-      formatTimeRelative(ms(-3 * 3_600_000), 3_600_000, "fr", opts),
+      formatTimeRelative(ms(-3 * 3_600_000), 3_600_000, { lang: "fr", ...opts }),
     ],
-    ["-5min", 0, "fr", formatTimeRelative(ms(-5 * 60_000), 0, "fr", opts)],
+    ["-5min", 0, "fr", formatTimeRelative(ms(-5 * 60_000), 0, { lang: "fr", ...opts })],
   ],
 );
 ```
