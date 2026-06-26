@@ -82,29 +82,31 @@ const css = /* css */ `
  */
 export const InputDuration = (props) => {
   import.meta.css = css;
+  const defaultRef = useRef();
+  props.ref = props.ref || defaultRef;
   props.max = props.max || "23h59";
+  const { ref, uiAction, action, unitHour, textAlign = "auto" } = props;
   const minDuration = parseDuration(props.min);
   const maxDuration = parseDuration(props.max);
   const stepDuration = parseDuration(props.step);
-
   const hasValue = Object.hasOwn(props, "value");
 
-  const { unitHour, textAlign = "auto" } = props;
   const minSeconds = minDuration ? durationToSeconds(minDuration) : undefined;
   const maxSeconds = durationToSeconds(maxDuration);
   const stepSeconds = stepDuration
     ? durationToSeconds(stepDuration)
     : undefined;
-
   const renderSource = hasValue ? props.value : props.defaultValue;
   const components = parseDuration(renderSource);
+  const initialIsoString = components
+    ? (durationToISOString(components) ?? "")
+    : "";
   const valueHasSeconds = components?.seconds !== undefined;
   const valueHasMinutes = components?.minutes !== undefined;
   // Fractional seconds (e.g. 0.5 from "PT0.5S") also imply milliseconds.
   const valueHasMilliseconds =
     components?.milliseconds !== undefined ||
     (typeof components?.seconds === "number" && components.seconds % 1 !== 0);
-
   const stepHasSeconds = Object.hasOwn(stepDuration ?? {}, "seconds");
   const stepHasMilliseconds = Object.hasOwn(stepDuration ?? {}, "milliseconds");
   const showSeconds =
@@ -125,7 +127,6 @@ export const InputDuration = (props) => {
     valueHasMilliseconds && stepSeconds !== undefined && stepSeconds % 1 === 0;
   const minutesReadOnly =
     valueHasMinutes && stepSeconds !== undefined && stepSeconds % 3600 === 0;
-
   const showHours = maxSeconds >= 3600;
   // Hide minutes when the step is a whole number of hours — entering fractional
   // hours would contradict the step, so only the hour field is shown.
@@ -134,10 +135,6 @@ export const InputDuration = (props) => {
   const showMinutes =
     maxSeconds >= 60 &&
     (stepSeconds === undefined || stepSeconds % 3600 !== 0 || valueHasMinutes);
-
-  const defaultRef = useRef();
-  props.ref = props.ref || defaultRef;
-  const { uiAction, action, ref } = props;
 
   // Mirror the single-input behaviour: a controlled value with no handler makes the field read-only.
   const implicitReadOnly = hasValue && !uiAction && !action;
@@ -272,8 +269,14 @@ export const InputDuration = (props) => {
       unitHour={undefined}
       {...clipboardProps}
     >
-      {/* eslint-disable-next-line react/no-unknown-property */}
-      <input {...groupHostProps} type="hidden" basePseudoState={undefined} />
+      <input
+        {...groupHostProps}
+        type="hidden"
+        basePseudoState={undefined} // eslint-disable-line react/no-unknown-property
+        {...(hasValue
+          ? { value: initialIsoString }
+          : { defaultValue: initialIsoString })}
+      />
       <Box flex spacing="xxs" width="fit-content">
         <ControlgroupChildrenWrapper {...childrenWrapperProps} name={undefined}>
           <InputDurationFields
