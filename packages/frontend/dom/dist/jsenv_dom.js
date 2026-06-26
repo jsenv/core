@@ -420,7 +420,7 @@ const getEventLabel = (e) => {
     return e.type;
   }
   if (e.type === "keydown") {
-    const key = e.key === " " ? "space" : e.key.toLowerCase();
+    const key = e.key === " " ? "space" : e.key?.toLowerCase();
     const modifiers = [];
     if (e.ctrlKey) {
       modifiers.push("ctrl");
@@ -507,6 +507,15 @@ const createIterableWeakSet = () => {
   };
 };
 
+/**
+ * Creates a simple publish/subscribe pair.
+ *
+ * @param {boolean} [clearOnPublish=false] - When true, all subscribers are removed after each publish call.
+ * @returns {[publish: (...args: any[]) => any[], subscribe: (callback: Function) => () => void, clear: () => void]}
+ *   - `publish(...args)` — calls all subscribers with the given arguments and returns their return values.
+ *   - `subscribe(callback)` — registers a subscriber and returns an unsubscribe function.
+ *   - `clear()` — removes all subscribers without calling them.
+ */
 const createPubSub = (clearOnPublish = false) => {
   const callbackSet = new Set();
 
@@ -4593,7 +4602,13 @@ const DEFAULT_BEHAVIORS = [
   {
     test: (el) => el.matches("input[type='radio'], input[type='checkbox']"),
     keys: {
-      space: "activate",
+      space: (e) => {
+        if (e.target.type === "radio" && e.target.checked) {
+          // space on checked radio does nothing
+          return "";
+        }
+        return "activate";
+      },
       enter: (e) => (e.target.form ? "form_submit" : ""),
       arrowleft: "focus_nav",
       arrowright: "focus_nav",
@@ -4609,17 +4624,20 @@ const DEFAULT_BEHAVIORS = [
     keys: {
       escape: (e) => {
         if (e.target.type === "search") {
+          if (e.target.readOnly) {
+            return "";
+          }
           return e.target.value ? "clear" : "";
         }
         return "";
       },
       enter: (e) => (e.target.form ? "form_submit" : ""),
-      arrowleft: "cursor_move",
-      arrowright: "cursor_move",
-      arrowup: "cursor_move",
-      arrowdown: "cursor_move",
-      home: "cursor_move",
-      end: "cursor_move",
+      arrowleft: (e) => (e.target.readOnly ? "scroll" : "cursor_move"),
+      arrowright: (e) => (e.target.readOnly ? "scroll" : "cursor_move"),
+      arrowup: (e) => (e.target.readOnly ? "scroll" : "cursor_move"),
+      arrowdown: (e) => (e.target.readOnly ? "scroll" : "cursor_move"),
+      home: (e) => (e.target.readOnly ? "scroll" : "cursor_move"),
+      end: (e) => (e.target.readOnly ? "scroll" : "cursor_move"),
     },
     fallback: (e) => (isTypingIntent(e) ? "type" : undefined),
   },
@@ -4658,7 +4676,7 @@ const DEFAULT_BEHAVIORS = [
       ),
     keys: {
       space: "activate",
-      enter: (e) => (e.target.form ? "form_submit" : ""),
+      enter: "activate",
       arrowleft: "value_change",
       arrowright: "value_change",
       arrowup: "value_change",
@@ -4666,19 +4684,19 @@ const DEFAULT_BEHAVIORS = [
     },
   },
   {
-    // Color input: Space opens the color picker, Enter submits the form
+    // Color input: Space opens the color picker, Enter  too
     test: (el) => el.matches("input[type='color']"),
     keys: {
       space: "activate",
-      enter: (e) => (e.target.form ? "form_submit" : ""),
+      enter: "activate",
     },
   },
   {
-    // File input: Space opens the picker, Enter submits the form
+    // File input: Space opens the picker, Enter too
     test: (el) => el.matches("input[type='file']"),
     keys: {
       space: "activate",
-      enter: (e) => (e.target.form ? "form_submit" : ""),
+      enter: "activate",
     },
   },
   {
@@ -4725,7 +4743,10 @@ const DEFAULT_BEHAVIORS = [
   {
     // SELECT: don't intercept anything while the dropdown may be open
     test: (el) => el.tagName === "SELECT",
-    keys: {},
+    keys: {
+      space: "activate",
+      enter: "activate",
+    },
   },
   {
     // Non-interactive elements: browser scrolls on Space and arrow keys
@@ -11556,9 +11577,19 @@ const visibleRectEffect = (
  * @param {HTMLElement} anchor - The anchor element to position against
  * @param {object} [options]
  * @param {string} [options.positionX="center"] - Preferred X placement, with viewport fallback.
+ *   "to-the-left"   — element.right  = anchor.left   (sits entirely to the left of anchor)
+ *   "left-aligned"  — element.left   = anchor.left   (left edges aligned)
+ *   "center"        — element centered horizontally over anchor  (default)
+ *   "right-aligned" — element.right  = anchor.right  (right edges aligned)
+ *   "to-the-right"  — element.left   = anchor.right  (sits entirely to the right of anchor)
  * @param {string} [options.positionY="below"] - Preferred Y placement, with viewport fallback.
- * @param {string} [options.positionXFixed] - Force X placement, skipping the fit-check.
- * @param {string} [options.positionYFixed] - Force Y placement, skipping the fit-check.
+ *   "above"         — element.bottom = anchor.top    (sits above, no overlap)
+ *   "above-overlap" — element.bottom = anchor.bottom (sits above, overlapping anchor)
+ *   "center"        — element centered vertically over anchor
+ *   "below-overlap" — element.top    = anchor.top    (sits below, overlapping anchor)
+ *   "below"         — element.top    = anchor.bottom (sits below, no overlap)  (default)
+ * @param {string} [options.positionXFixed] - Force X placement, skipping the fit-check. Same values as positionX.
+ * @param {string} [options.positionYFixed] - Force Y placement, skipping the fit-check. Same values as positionY.
  * @param {number} [options.alignToViewportEdgeWhenAnchorNearEdge=0] - Snap to viewport left
  *   edge when anchor is within this many px of the left edge and element is wider than anchor.
  * @param {number} [options.minLeft=0] - Minimum left coordinate (document-relative).
