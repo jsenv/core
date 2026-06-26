@@ -104,7 +104,55 @@ naviI18n.addAll({
     pt: "em [duration]",
     nl: "over [duration]",
   },
-  // Compact duration unit symbols used in "1h30", "45min", etc.
+  // Compact duration unit symbols used in "1h30", "45min", "2d", etc.
+  "time.duration.year_symbol": {
+    en: "y",
+    fr: "a",
+    de: "J",
+    es: "a",
+    it: "a",
+    pt: "a",
+    nl: "j",
+    ja: "年",
+    zh: "年",
+    ko: "년",
+  },
+  "time.duration.month_symbol": {
+    en: "mo",
+    fr: "mo",
+    de: "Mo",
+    es: "mo",
+    it: "mo",
+    pt: "mo",
+    nl: "mo",
+    ja: "月",
+    zh: "月",
+    ko: "월",
+  },
+  "time.duration.week_symbol": {
+    en: "w",
+    fr: "sem",
+    de: "W",
+    es: "sem",
+    it: "sett",
+    pt: "sem",
+    nl: "w",
+    ja: "週",
+    zh: "周",
+    ko: "주",
+  },
+  "time.duration.day_symbol": {
+    en: "d",
+    fr: "j",
+    de: "T",
+    es: "d",
+    it: "g",
+    pt: "d",
+    nl: "d",
+    ja: "日",
+    zh: "天",
+    ko: "일",
+  },
   "time.duration.hour_symbol": {
     en: "h",
     fr: "h",
@@ -128,6 +176,30 @@ naviI18n.addAll({
     ja: "分",
     zh: "分",
     ko: "분",
+  },
+  "time.duration.second_symbol": {
+    en: "s",
+    fr: "s",
+    de: "s",
+    es: "s",
+    it: "s",
+    pt: "s",
+    nl: "s",
+    ja: "秒",
+    zh: "秒",
+    ko: "초",
+  },
+  "time.duration.millisecond_symbol": {
+    en: "ms",
+    fr: "ms",
+    de: "ms",
+    es: "ms",
+    it: "ms",
+    pt: "ms",
+    nl: "ms",
+    ja: "ms",
+    zh: "ms",
+    ko: "ms",
   },
 });
 
@@ -197,14 +269,6 @@ naviI18n.addAll({
     fr: "Veuillez sélectionner au moins un fichier.",
     en: "Please select at least one file.",
   },
-  "constraint.disabled.password": {
-    fr: "Ce mot de passe est désactivé.",
-    en: "This password is disabled.",
-  },
-  "constraint.disabled.email": {
-    fr: "Cette adresse e-mail est désactivée.",
-    en: "This email address is disabled.",
-  },
   "constraint.disabled.checkbox": {
     fr: "Cette case est désactivée.",
     en: "This checkbox is disabled.",
@@ -217,17 +281,9 @@ naviI18n.addAll({
     fr: "Ce champ est désactivé.",
     en: "This field is disabled.",
   },
-  "constraint.readonly.busy": {
-    fr: "Cet élément est occupé.",
-    en: "This element is busy.",
-  },
   "constraint.readonly.button": {
     fr: "Cette action n'est pas disponible pour l'instant.",
     en: "This action is not available right now.",
-  },
-  "constraint.readonly.button_busy": {
-    fr: "Cette action est en cours...",
-    en: "This action is in progress...",
   },
   "constraint.readonly.option": {
     fr: "Cette option n'est pas disponible.",
@@ -236,6 +292,14 @@ naviI18n.addAll({
   "constraint.readonly.default": {
     fr: "Cet élément est en lecture seule et ne peut pas être modifié.",
     en: "This element is read-only and cannot be modified.",
+  },
+  "constraint.busy.button": {
+    fr: "Cette action est en cours...",
+    en: "This action is in progress...",
+  },
+  "constraint.busy.default": {
+    fr: "Cet élément est occupé.",
+    en: "This element is busy.",
   },
   "constraint.one_of.no_match": {
     fr: "Aucune suggestion ne correspond à votre saisie.",
@@ -389,6 +453,18 @@ naviI18n.addAll({
     fr: "Le pourcentage doit être <strong>[min]</strong> ou plus.",
     en: "The percentage must be <strong>[min]</strong> or greater.",
   },
+  "constraint.min.duration.default": {
+    fr: "La durée doit être d'au moins <strong>[min]</strong>.",
+    en: "The duration must be at least <strong>[min]</strong>.",
+  },
+  "constraint.max.duration.default": {
+    fr: "La durée ne doit pas dépasser <strong>[max]</strong>.",
+    en: "The duration must not exceed <strong>[max]</strong>.",
+  },
+  "constraint.step.duration.default": {
+    fr: "La durée doit être un multiple de <strong>[step]</strong> (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
+    en: "The duration must be a multiple of <strong>[step]</strong> (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
+  },
   "constraint.min.time.default": {
     fr: "L'heure doit être <strong>[min]</strong> ou plus.",
     en: "The time must be <strong>[min]</strong> or later.",
@@ -481,67 +557,67 @@ naviI18n.addAll({
     fr: "Ce champ ne doit pas contenir plusieurs espaces consécutifs.",
     en: "This field must not contain consecutive spaces.",
   },
-  "constraint.min_lower_letter.singular.password": {
+  "constraint.min_lower_letter.password.singular": {
     fr: "Ce mot de passe doit contenir au moins une lettre minuscule.",
     en: "This password must contain at least one lowercase letter.",
   },
-  "constraint.min_lower_letter.singular.default": {
-    fr: "Ce champ doit contenir au moins une lettre minuscule.",
-    en: "This field must contain at least one lowercase letter.",
-  },
-  "constraint.min_lower_letter.plural.password": {
+  "constraint.min_lower_letter.password.plural": {
     fr: "Ce mot de passe doit contenir au moins [min] lettres minuscules.",
     en: "This password must contain at least [min] lowercase letters.",
   },
-  "constraint.min_lower_letter.plural.default": {
+  "constraint.min_lower_letter.default.singular": {
+    fr: "Ce champ doit contenir au moins une lettre minuscule.",
+    en: "This field must contain at least one lowercase letter.",
+  },
+  "constraint.min_lower_letter.default.plural": {
     fr: "Ce champ doit contenir au moins [min] lettres minuscules.",
     en: "This field must contain at least [min] lowercase letters.",
   },
-  "constraint.min_upper_letter.singular.password": {
+  "constraint.min_upper_letter.password.singular": {
     fr: "Ce mot de passe doit contenir au moins une lettre majuscule.",
     en: "This password must contain at least one uppercase letter.",
   },
-  "constraint.min_upper_letter.singular.default": {
-    fr: "Ce champ doit contenir au moins une lettre majuscule.",
-    en: "This field must contain at least one uppercase letter.",
-  },
-  "constraint.min_upper_letter.plural.password": {
+  "constraint.min_upper_letter.password.plural": {
     fr: "Ce mot de passe doit contenir au moins [min] lettres majuscules.",
     en: "This password must contain at least [min] uppercase letters.",
   },
-  "constraint.min_upper_letter.plural.default": {
+  "constraint.min_upper_letter.default.singular": {
+    fr: "Ce champ doit contenir au moins une lettre majuscule.",
+    en: "This field must contain at least one uppercase letter.",
+  },
+  "constraint.min_upper_letter.default.plural": {
     fr: "Ce champ doit contenir au moins [min] lettres majuscules.",
     en: "This field must contain at least [min] uppercase letters.",
   },
-  "constraint.min_digit.singular.password": {
+  "constraint.min_digit.password.singular": {
     fr: "Ce mot de passe doit contenir au moins un chiffre.",
     en: "This password must contain at least one digit.",
   },
-  "constraint.min_digit.singular.default": {
-    fr: "Ce champ doit contenir au moins un chiffre.",
-    en: "This field must contain at least one digit.",
-  },
-  "constraint.min_digit.plural.password": {
+  "constraint.min_digit.password.plural": {
     fr: "Ce mot de passe doit contenir au moins [min] chiffres.",
     en: "This password must contain at least [min] digits.",
   },
-  "constraint.min_digit.plural.default": {
+  "constraint.min_digit.default.singular": {
+    fr: "Ce champ doit contenir au moins un chiffre.",
+    en: "This field must contain at least one digit.",
+  },
+  "constraint.min_digit.default.plural": {
     fr: "Ce champ doit contenir au moins [min] chiffres.",
     en: "This field must contain at least [min] digits.",
   },
-  "constraint.min_special_char.singular.password": {
+  "constraint.min_special_char.password.singular": {
     fr: "Ce mot de passe doit contenir au moins un caractère spécial. ([charset])",
     en: "This password must contain at least one special character. ([charset])",
   },
-  "constraint.min_special_char.singular.default": {
-    fr: "Ce champ doit contenir au moins un caractère spécial. ([charset])",
-    en: "This field must contain at least one special character. ([charset])",
-  },
-  "constraint.min_special_char.plural.password": {
+  "constraint.min_special_char.password.plural": {
     fr: "Ce mot de passe doit contenir au moins [min] caractères spéciaux. ([charset])",
     en: "This password must contain at least [min] special characters. ([charset])",
   },
-  "constraint.min_special_char.plural.default": {
+  "constraint.min_special_char.default.singular": {
+    fr: "Ce champ doit contenir au moins un caractère spécial. ([charset])",
+    en: "This field must contain at least one special character. ([charset])",
+  },
+  "constraint.min_special_char.default.plural": {
     fr: "Ce champ doit contenir au moins [min] caractères spéciaux. ([charset])",
     en: "This field must contain at least [min] special characters. ([charset])",
   },

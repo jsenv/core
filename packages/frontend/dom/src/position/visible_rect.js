@@ -491,9 +491,19 @@ export const visibleRectEffect = (
  * @param {HTMLElement} anchor - The anchor element to position against
  * @param {object} [options]
  * @param {string} [options.positionX="center"] - Preferred X placement, with viewport fallback.
+ *   "to-the-left"   — element.right  = anchor.left   (sits entirely to the left of anchor)
+ *   "left-aligned"  — element.left   = anchor.left   (left edges aligned)
+ *   "center"        — element centered horizontally over anchor  (default)
+ *   "right-aligned" — element.right  = anchor.right  (right edges aligned)
+ *   "to-the-right"  — element.left   = anchor.right  (sits entirely to the right of anchor)
  * @param {string} [options.positionY="below"] - Preferred Y placement, with viewport fallback.
- * @param {string} [options.positionXFixed] - Force X placement, skipping the fit-check.
- * @param {string} [options.positionYFixed] - Force Y placement, skipping the fit-check.
+ *   "above"         — element.bottom = anchor.top    (sits above, no overlap)
+ *   "above-overlap" — element.bottom = anchor.bottom (sits above, overlapping anchor)
+ *   "center"        — element centered vertically over anchor
+ *   "below-overlap" — element.top    = anchor.top    (sits below, overlapping anchor)
+ *   "below"         — element.top    = anchor.bottom (sits below, no overlap)  (default)
+ * @param {string} [options.positionXFixed] - Force X placement, skipping the fit-check. Same values as positionX.
+ * @param {string} [options.positionYFixed] - Force Y placement, skipping the fit-check. Same values as positionY.
  * @param {number} [options.alignToViewportEdgeWhenAnchorNearEdge=0] - Snap to viewport left
  *   edge when anchor is within this many px of the left edge and element is wider than anchor.
  * @param {number} [options.minLeft=0] - Minimum left coordinate (document-relative).

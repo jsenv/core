@@ -691,9 +691,14 @@ export const renderTable = (
         const cell = row[x];
         const { value, format } = cell;
 
-        if (format !== "size" && isFinite(value) && value !== "") {
-          if (value % 1 === 0) {
-            const { integer } = tokenizeInteger(Math.abs(value));
+        const numericValue =
+          typeof value === "string"
+            ? Number(value.replace(/_/g, ""))
+            : value;
+        if (format !== "size" && isFinite(numericValue) && value !== "") {
+          const isNegative = numericValue < 0;
+          if (numericValue % 1 === 0) {
+            const { integer } = tokenizeInteger(Math.abs(numericValue));
             const integerFormatted = groupDigits(integer);
             const integerWidth = measureTextWidth(integerFormatted);
             const largestIntegerInColumn =
@@ -712,11 +717,18 @@ export const renderTable = (
               if (floatWidth) {
                 integerText += " ".repeat(floatWidth);
               }
+              if (isNegative) {
+                const firstDigitIdx = integerText.search(/\S/);
+                integerText =
+                  firstDigitIdx > 0
+                    ? `${integerText.slice(0, firstDigitIdx - 1)}-${integerText.slice(firstDigitIdx)}`
+                    : `-${integerText}`;
+              }
               cell.updateValue(integerText);
             });
           } else {
             const { integer, decimalSeparator, decimal } = tokenizeFloat(
-              Math.abs(value),
+              Math.abs(numericValue),
             );
             const integerFormatted = groupDigits(integer);
             const integerWidth = measureTextWidth(integerFormatted);
@@ -739,6 +751,13 @@ export const renderTable = (
               if (floatWidth < floatColumnWidth) {
                 const padding = floatColumnWidth - floatWidth;
                 floatText += " ".repeat(padding - 1);
+              }
+              if (isNegative) {
+                const firstDigitIdx = floatText.search(/\S/);
+                floatText =
+                  firstDigitIdx > 0
+                    ? `${floatText.slice(0, firstDigitIdx - 1)}-${floatText.slice(firstDigitIdx)}`
+                    : `-${floatText}`;
               }
               cell.updateValue(floatText);
             });

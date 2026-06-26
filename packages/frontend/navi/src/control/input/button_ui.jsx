@@ -369,7 +369,6 @@ export const ButtonUI = (props) => {
     controlChildrenWrapperProps,
   ] = useControlProps(props, {
     controlType: "button",
-    statePropName: "value",
     allowNameless: true,
   });
   const { basePseudoState, children } = buttonControlHostProps;
@@ -405,6 +404,10 @@ export const ButtonUI = (props) => {
       {...buttonControlHostProps}
       // eslint-disable-next-line react/no-children-prop
       children={undefined}
+      // All button are forced to type="button" as a way to avoid form submission which
+      // should always go through --navi-send command instead
+      // without having to call preventDefault() on button clicks
+      type="button"
       spacing={undefined}
       cta={undefined}
       ref={ref}

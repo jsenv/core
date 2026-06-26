@@ -513,8 +513,9 @@
                       type="text"
                       name="query"
                       placeholder="Search query…"
+                      defaultValue="toto"
                     />
-                    <Box row spacing="s">
+                    <Box flex="y" spacing="s">
                       <Button
                         action={async ({ query }) => {
                           push("Button action", { query });
@@ -2249,7 +2250,7 @@
       };
 
       render(
-        <NaviDebug debugCommand debugAction>
+        <NaviDebug debugAll>
           <App />
         </NaviDebug>,
         document.querySelector("#root"),

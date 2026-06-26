@@ -1,13 +1,11 @@
 import { useContext, useRef } from "preact/hooks";
 
-import { renderActionableComponent } from "../../action/render_actionable_component.jsx";
 import { PSEUDO_CLASSES } from "../../box/pseudo_styles.js";
+import { useControlProps } from "../../control/control_hooks.jsx";
 import {
   SelectionContext,
   useSelectableElement,
 } from "../../control/selection/selection.jsx";
-import { closeValidationMessage } from "../../control/validation/custom_constraint_validation.js";
-import { useConstraints } from "../../control/validation/hooks/use_constraints.js";
 import { EmailSvg } from "../../graphic/icons/email_svg.jsx";
 import {
   LinkAnchorSvg,
@@ -17,17 +15,13 @@ import {
 } from "../../graphic/icons/link_svgs.jsx";
 import { PhoneSvg } from "../../graphic/icons/phone_svg.jsx";
 import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
-import { useKeyboardShortcuts } from "../../keyboard/keyboard_shortcuts.js";
-import { useRequestedActionStatus } from "../../keyboard/use_action_events.js";
 import { Icon } from "../../text/icon.jsx";
 import { markAsOutsideTextFlow, Text } from "../../text/text.jsx";
 import { TitleLevelContext } from "../../text/title.jsx";
-import { useAutoFocus } from "../../utils/focus/use_auto_focus.js";
 import { useDocumentUrl } from "../browser_integration/document_url_signal.js";
 import { getHrefTargetInfo } from "../browser_integration/href_target_info.js";
 import { useIsVisited } from "../browser_integration/use_is_visited.js";
 import { assertRoute, useRouteStatus } from "../route.js";
-
 import { useDimColorWhen } from "./use_dim_color.js";
 
 /*
@@ -415,12 +409,6 @@ Object.assign(PSEUDO_CLASSES, {
 export const Link = (props) => {
   import.meta.css = css;
 
-  return renderActionableComponent(props, {
-    Basic: LinkBasic,
-    WithAction: LinkWithAction,
-  });
-};
-const LinkBasic = (props) => {
   if (props.route) {
     return <LinkWithRoute {...props} />;
   }
@@ -437,27 +425,20 @@ const LinkWithRoute = ({ route, routeParams, current, children, ...rest }) => {
   const innerCurrent = current || linkMatching;
 
   return (
-    <LinkBasic href={url} current={innerCurrent} {...rest}>
+    <Link href={url} current={innerCurrent} {...rest}>
       {children || route.buildRelativeUrl(routeParams)}
-    </LinkBasic>
+    </Link>
   );
 };
 
 const LinkPlain = (props) => {
   const titleLevel = useContext(TitleLevelContext);
-  const selectionContext = useContext(SelectionContext);
+  const defaultRef = useRef();
+  props.ref = props.ref || defaultRef;
   const {
-    loading,
-    readOnly,
-    disabled,
-    autoFocus,
-    spaceToClick = true,
-    onClick,
-    onKeyDown,
     href,
     target,
     rel,
-    preventDefault,
     anchor,
     value = href,
 
@@ -473,31 +454,42 @@ const LinkPlain = (props) => {
     endIcon,
     revealOnInteraction = Boolean(titleLevel),
     hrefFallback = !anchor,
-    maxLines,
 
     children,
-    constraints,
-
-    ...remainingProps
   } = props;
-  const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
+
+  const selectionContext = useContext(SelectionContext);
   const visited = useIsVisited(href);
 
   const { selection, selectionController } = selectionContext || {};
-  const { selected } = useSelectableElement(ref, {
+  const { selected } = useSelectableElement(props.ref, {
     selection,
     selectionController,
   });
 
-  const autoFocusProps = useAutoFocus(ref, autoFocus);
-  useConstraints(ref, constraints);
+  const [controlRootProps, controlHostProps] = useControlProps(props, {
+    controlType: "link",
+    allowNameless: true,
+  });
+  const { basePseudoState } = controlHostProps;
+  const readOnly = basePseudoState[":read-only"];
+  const disabled = basePseudoState[":disabled"];
+  const loading = basePseudoState[":-navi-loading"];
   const shouldDimColor = readOnly || disabled;
-  useDimColorWhen(ref, shouldDimColor);
+  useDimColorWhen(props.ref, shouldDimColor);
   // subscribe to document url to re-render and re-compute getHrefTargetInfo
   useDocumentUrl();
   const { isSameSite, isAnchor, isCurrent } = getHrefTargetInfo(href);
   const innerCurrent = current || isCurrent;
+  controlHostProps.basePseudoState = {
+    ...basePseudoState,
+    ":visited": visited,
+    ":-navi-href-internal": isSameSite,
+    ":-navi-href-external": !isSameSite,
+    ":-navi-href-anchor": isAnchor,
+    ":-navi-href-current": innerCurrent,
+    ":-navi-selected": selected,
+  };
 
   const innerTarget =
     target === undefined ? (isSameSite ? "_self" : "_blank") : target;
@@ -552,19 +544,25 @@ const LinkPlain = (props) => {
       <LinkCurrentIndicator />
     ) : null;
 
+  const { onClick, preventDefault } = props;
+
   return (
     <Text
       as="a"
       color={anchor && !innerChildren ? "inherit" : undefined}
       id={anchor ? href.slice(1) : undefined}
-      {...remainingProps}
-      {...autoFocusProps}
-      ref={ref}
+      {...controlRootProps}
+      {...controlHostProps}
+      preventDefault={undefined}
+      onClick={(e) => {
+        onClick?.(e);
+        if (preventDefault) {
+          e.preventDefault();
+        }
+      }}
       href={href}
       rel={innerRel}
       target={innerTarget === "_self" ? undefined : target}
-      aria-busy={loading}
-      inert={disabled}
       aria-current={isCurrent ? "page" : undefined}
       aria-selected={selectionContext ? selected : undefined}
       data-value-event="navi_value"
@@ -573,7 +571,6 @@ const LinkPlain = (props) => {
       }}
       holdSpaceForStyle={currentEffectBold ? { fontWeight: "bold" } : undefined}
       preventSpaceUnderlines
-      maxLines={maxLines}
       // Visual
       data-appearance={appearance}
       data-current-effect-bold={currentEffectBold ? "" : undefined}
@@ -586,37 +583,6 @@ const LinkPlain = (props) => {
       styleCSSVars={LinkStyleCSSVars}
       pseudoClasses={LinkPseudoClasses}
       pseudoElements={LinkPseudoElements}
-      basePseudoState={{
-        ":read-only": readOnly,
-        ":disabled": disabled,
-        ":visited": visited,
-        ":-navi-loading": loading,
-        ":-navi-href-internal": isSameSite,
-        ":-navi-href-external": !isSameSite,
-        ":-navi-href-anchor": isAnchor,
-        ":-navi-href-current": innerCurrent,
-        ":-navi-selected": selected,
-      }}
-      onClick={(e) => {
-        if (preventDefault) {
-          e.preventDefault();
-        }
-        closeValidationMessage(e.target, e, "click");
-        if (readOnly) {
-          e.preventDefault();
-          return;
-        }
-        onClick?.(e);
-      }}
-      onKeyDown={(e) => {
-        if (spaceToClick && e.key === " ") {
-          e.preventDefault(); // Prevent page scroll
-          if (!readOnly && !disabled) {
-            e.target.click();
-          }
-        }
-        onKeyDown?.(e);
-      }}
       childrenOutsideFlow={
         <>
           <LoadingOutline
@@ -630,13 +596,7 @@ const LinkPlain = (props) => {
     >
       {startIconEl}
       {innerChildren}
-      {endIconEl ? (
-        maxLines === 1 || maxLines === "1" ? (
-          <Text overflowPinned>{endIconEl}</Text>
-        ) : (
-          endIconEl
-        )
-      ) : null}
+      {endIconEl}
     </Text>
   );
 };
@@ -645,46 +605,3 @@ const LinkCurrentIndicator = () => {
   return <span className="navi_current_indicator" />;
 };
 markAsOutsideTextFlow(LinkCurrentIndicator);
-
-const LinkWithAction = (props) => {
-  const {
-    shortcuts = [],
-    readOnly,
-    onActionPrevented,
-    onActionStart,
-    onActionAbort,
-    onActionError,
-    onActionEnd,
-    children,
-    loading,
-    ...rest
-  } = props;
-  const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
-  const { actionPending } = useRequestedActionStatus(ref, {
-    actionOrigin: "keyboard_shortcut",
-  });
-  const innerLoading = Boolean(loading || actionPending);
-
-  useKeyboardShortcuts(ref, shortcuts, {
-    onActionPrevented,
-    onActionStart,
-    onActionAbort,
-    onActionError,
-    onActionEnd,
-  });
-
-  return (
-    <LinkBasic
-      {...rest}
-      ref={ref}
-      loading={innerLoading}
-      readOnly={readOnly || actionPending}
-      data-readonly-silent={actionPending && !readOnly ? "" : undefined}
-      /* When we have keyboard shortcuts the link outline is visible on focus (not solely on focus-visible) */
-      data-focus-visible=""
-    >
-      {children}
-    </LinkBasic>
-  );
-};

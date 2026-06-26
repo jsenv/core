@@ -8,7 +8,6 @@ import {
   ControlgroupChildrenWrapper,
   useControlgroupProps,
 } from "../control_hooks.jsx";
-import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
 
 const css = /* css */ `
   .navi_checkbox_group {
@@ -32,7 +31,7 @@ export const CheckboxGroup = (props) => {
 
 const CheckboxGroupInterface = (props) => {
   import.meta.css = css;
-  const { ref, name } = props;
+  const { ref } = props;
   const [checkboxGroupProps, remainingProps, childrenWrapperProps] =
     useControlgroupProps(
       {
@@ -47,7 +46,7 @@ const CheckboxGroupInterface = (props) => {
         childControlFilter: (childUIStateController) => {
           return (
             childUIStateController.controlType === "input" &&
-            childUIStateController.props.type === "checkbox"
+            childUIStateController.controlHostProps.type === "checkbox"
           );
         },
         aggregateChildStates: (childUIStateControllers) => {
@@ -72,21 +71,6 @@ const CheckboxGroupInterface = (props) => {
       baseClassName="navi_checkbox_group"
       navi-checkbox-list=""
       data-callout-point-to-border-box=""
-      onChange={(e) => {
-        // we rely on change event bubbling but we want to catch only the relevant checkbox change events
-        const target = e.target;
-        if (target.tagName !== "INPUT" || target.type !== "checkbox") {
-          return;
-        }
-        if (target.name !== name) {
-          return;
-        }
-        const checkboxGroup = ref.current;
-        dispatchRequestAction(checkboxGroup, {
-          event: e,
-          requester: target,
-        });
-      }}
     >
       <ControlgroupChildrenWrapper {...childrenWrapperProps}>
         {props.children}

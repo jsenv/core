@@ -1,0 +1,612 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Control Validity Demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      body {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 20px;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: #f5f5f5;
+      }
+
+      h1 {
+        margin-bottom: 30px;
+        color: #333;
+        font-size: 2rem;
+        text-align: center;
+      }
+
+      .page-description {
+        margin: -20px 0 30px;
+        color: #666;
+        font-size: 0.95rem;
+        text-align: center;
+      }
+
+      .demo-section {
+        margin-bottom: 20px;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .demo-section h2 {
+        margin: 0 0 16px;
+        padding-bottom: 10px;
+        color: #333;
+        font-size: 1.2rem;
+        border-bottom: 2px solid #ddd;
+      }
+
+      .demo-section > p {
+        margin: 0 0 16px;
+        color: #555;
+        font-size: 0.9rem;
+      }
+
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        gap: 24px;
+      }
+
+      .col {
+        display: flex;
+        min-width: 200px;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      nav ol {
+        margin: 0;
+        padding-left: 20px;
+        line-height: 2;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useRef, useState } from "preact/hooks";
+      import {
+        Input,
+        Button,
+        Label,
+        Field,
+        Form,
+        Box,
+        NaviDebug,
+      } from "@jsenv/navi";
+      import { ControlValidityDebug } from "../utils/control_validity_debug.jsx";
+
+      // ─── Section 1: Form — le cas nominal ───────────────────────────────────────
+      // L'input n'a pas d'action propre. C'est le <Form> qui collecte les champs
+      // et déclenche l'action à la soumission. La validation n'est reportée qu'au submit.
+      const FormNominalDemo = () => {
+        const inputRef = useRef();
+        const [committed, setCommitted] = useState(null);
+
+        return (
+          <div className="demo-section">
+            <h2>Form with action</h2>
+            <p>
+              The <code>action</code> lives on the <code>{"<Form>"}</code>, not
+              the input. Validation is only reported on submit — blur does
+              nothing.
+            </p>
+            <Box flex="y" spacing="s">
+              <Form
+                action={(formData) => {
+                  setCommitted(formData);
+                }}
+              >
+                <Field vertical>
+                  <Label>Username (min 4 chars, required)</Label>
+                  <Input
+                    ref={inputRef}
+                    name="username"
+                    required
+                    minLength="4"
+                    placeholder="type something…"
+                    autoComplete="off"
+                  />
+                </Field>
+                <Button type="submit" style={{ marginTop: "8px" }}>
+                  Submit
+                </Button>
+              </Form>
+              <Box
+                flex="y"
+                spacing="xs"
+                style={{ fontSize: "0.85rem", color: "#555" }}
+              >
+                <span>
+                  💾 form action received:{" "}
+                  <strong>
+                    {committed === null ? "—" : JSON.stringify(committed)}
+                  </strong>
+                </span>
+              </Box>
+              <ControlValidityDebug
+                inputRef={inputRef}
+                committedValue={committed?.username}
+              />
+            </Box>
+          </div>
+        );
+      };
+
+      // ─── Section 2: Input with action ───────────────────────────────────
+      // action is on the input itself; validation is reported immediately.
+      const InPlaceEditingDemo = () => {
+        const inputRef = useRef();
+        const [committed, setCommitted] = useState(null);
+
+        return (
+          <div className="demo-section">
+            <h2>Input with action</h2>
+            <p>
+              The <code>action</code> is on the input itself — no{" "}
+              <code>{"<Form>"}</code> needed. Validation is reported
+              immediately: blur or Enter on an invalid value blocks the action.
+            </p>
+            <Box flex="y" spacing="s">
+              <Field vertical>
+                <Label>Username (min 4 chars, required)</Label>
+                <Input
+                  ref={inputRef}
+                  name="username"
+                  required
+                  minLength="4"
+                  placeholder="type something…"
+                  autoComplete="off"
+                  action={(username) => {
+                    setCommitted(username);
+                  }}
+                />
+              </Field>
+              <Box
+                flex="y"
+                spacing="xs"
+                style={{ fontSize: "0.85rem", color: "#555" }}
+              >
+                <span>
+                  💾 action received:{" "}
+                  <strong>
+                    {committed === null ? "—" : JSON.stringify(committed)}
+                  </strong>
+                </span>
+              </Box>
+              <ControlValidityDebug
+                inputRef={inputRef}
+                committedValue={committed}
+              />
+            </Box>
+          </div>
+        );
+      };
+
+      // ─── Section 3: Input with action + actionAfterChange ─────────────────────
+      // action is on the input, but actionAfterChange delays the action until
+      // blur or Enter. Validation is only reported when the action attempts to fire.
+      const ActionAfterChangeDemo = () => {
+        const inputRef = useRef();
+        const [committed, setCommitted] = useState(null);
+
+        return (
+          <div className="demo-section">
+            <h2>Input with action + actionAfterChange</h2>
+            <p>
+              The <code>action</code> is on the input but{" "}
+              <code>actionAfterChange</code> delays it until blur or Enter.
+              Validation is only reported when the action actually attempts to
+              fire — not on every keystroke.
+            </p>
+            <Box flex="y" spacing="s">
+              <Field vertical>
+                <Label>Username (min 4 chars, required)</Label>
+                <Input
+                  ref={inputRef}
+                  name="username"
+                  required
+                  minLength="4"
+                  placeholder="type something…"
+                  autoComplete="off"
+                  actionAfterChange
+                  action={(username) => {
+                    setCommitted(username);
+                  }}
+                />
+              </Field>
+              <Box
+                flex="y"
+                spacing="xs"
+                style={{ fontSize: "0.85rem", color: "#555" }}
+              >
+                <span>
+                  💾 action received:{" "}
+                  <strong>
+                    {committed === null ? "—" : JSON.stringify(committed)}
+                  </strong>
+                </span>
+              </Box>
+              <ControlValidityDebug
+                inputRef={inputRef}
+                committedValue={committed}
+              />
+            </Box>
+          </div>
+        );
+      };
+
+      // ─── Section 4: Input readonly ─────────────────────────────────────────────────────────
+      // readonly blocks editing but validity is still evaluated.
+      const ReadonlyDemo = () => {
+        const readonlyRef = useRef();
+
+        return (
+          <div className="demo-section">
+            <h2>Input readonly</h2>
+            <p>
+              <code>readonly</code> blocks editing but does not bypass
+              validation — an invalid value stays invalid. Trying to edit shows
+              the readonly callout.
+            </p>
+            <Box flex="y" spacing="s">
+              <Field vertical>
+                <Label>Readonly (minLength 6, value “hi”)</Label>
+                <Input
+                  ref={readonlyRef}
+                  name="readonly_field"
+                  minLength="6"
+                  value="hi"
+                  readOnly
+                />
+              </Field>
+              <ControlValidityDebug inputRef={readonlyRef} />
+            </Box>
+          </div>
+        );
+      };
+
+      // ─── Section 4: External updates ────────────────────────────────────────────────────────
+      // --navi-update respects both validation and readonly.
+      const NaviUpdateDemo = () => {
+        const validationRef = useRef();
+        const readonlyRef = useRef();
+
+        return (
+          <div className="demo-section">
+            <h2>External updates on input</h2>
+
+            <h3 style={{ margin: "0 0 8px", fontSize: "1rem", color: "#444" }}>
+              Respects validation
+            </h3>
+            <Box flex="y" spacing="s" style={{ marginBottom: "24px" }}>
+              <Field vertical>
+                <Label>Code (min 5 chars)</Label>
+                <Input
+                  ref={validationRef}
+                  name="code"
+                  id="code"
+                  defaultValue="hello"
+                  minLength="5"
+                />
+              </Field>
+              <Box flex spacing="s" style={{ flexWrap: "wrap" }}>
+                <Button command="--navi-update" commandFor="code" value="ab">
+                  Set "ab" (invalid)
+                </Button>
+                <Button command="--navi-update" commandFor="code" value="hello">
+                  Set "hello" (valid)
+                </Button>
+              </Box>
+              <ControlValidityDebug inputRef={validationRef} />
+            </Box>
+
+            <h3 style={{ margin: "0 0 8px", fontSize: "1rem", color: "#444" }}>
+              Respects readonly
+            </h3>
+            <Box flex="y" spacing="s">
+              <Field vertical>
+                <Label>Config (readonly)</Label>
+                <Input
+                  ref={readonlyRef}
+                  name="config"
+                  id="config"
+                  value="initial"
+                  readOnly
+                />
+              </Field>
+              <Box flex spacing="s" style={{ flexWrap: "wrap" }}>
+                <Button
+                  command="--navi-update"
+                  commandFor="config"
+                  value="updated"
+                >
+                  Set "updated" (blocked)
+                </Button>
+              </Box>
+              <ControlValidityDebug inputRef={readonlyRef} />
+            </Box>
+          </div>
+        );
+      };
+
+      // ─── Section 6: navi_number ──────────────────────────────────────────────────
+      // type="navi_number" est un input texte avec inputMode="numeric".
+      // Il a ses propres contraintes (min, max, step) et son propre readonly.
+      const NaviNumberDemo = () => {
+        const editableRef = useRef();
+        const readonlyRef = useRef();
+        const [committed, setCommitted] = useState(null);
+
+        return (
+          <div className="demo-section">
+            <h2>Numeric input</h2>
+            <p>
+              Text-based numeric input. Use the arrow keys to
+              increment/decrement.
+            </p>
+
+            <h3 style={{ margin: "0 0 8px", fontSize: "1rem", color: "#444" }}>
+              Editable
+            </h3>
+            <Box flex="y" spacing="s" style={{ marginBottom: "24px" }}>
+              <Field vertical>
+                <Label>Quantity (min 1, max 10)</Label>
+                <Input
+                  ref={editableRef}
+                  name="quantity"
+                  type="navi_number"
+                  min={1}
+                  max={10}
+                  required
+                  placeholder="enter a number…"
+                  action={(value) => {
+                    setCommitted(value);
+                  }}
+                />
+              </Field>
+              <Box
+                flex="y"
+                spacing="xs"
+                style={{ fontSize: "0.85rem", color: "#555" }}
+              >
+                <span>
+                  💾 committed:{" "}
+                  <strong>
+                    {committed === null ? "—" : JSON.stringify(committed)}
+                  </strong>
+                </span>
+              </Box>
+              <ControlValidityDebug
+                inputRef={editableRef}
+                committedValue={committed}
+              />
+            </Box>
+
+            <h3 style={{ margin: "0 0 8px", fontSize: "1rem", color: "#444" }}>
+              Readonly
+            </h3>
+            <p
+              style={{ margin: "0 0 16px", color: "#555", fontSize: "0.9rem" }}
+            >
+              Arrow keys show the readonly callout.
+            </p>
+            <Box flex="y" spacing="s">
+              <Field vertical>
+                <Label>Out of range (max 10, value 42)</Label>
+                <Input
+                  ref={readonlyRef}
+                  name="quantity_readonly"
+                  type="navi_number"
+                  min={1}
+                  max={10}
+                  value={42}
+                  readOnly
+                />
+              </Field>
+              <ControlValidityDebug inputRef={readonlyRef} />
+            </Box>
+          </div>
+        );
+      };
+
+      // ─── Section 7: Range ────────────────────────────────────────────────────────
+      // type="range" est un slider. Il a ses propres contraintes (min, max, step).
+      // Le readonly et la validation fonctionnent de la même façon.
+      const RangeDemo = () => {
+        const editableRef = useRef();
+        const readonlyRef = useRef();
+        const [committed, setCommitted] = useState(null);
+
+        return (
+          <div className="demo-section">
+            <h2>Range input</h2>
+
+            <h3 style={{ margin: "0 0 8px", fontSize: "1rem", color: "#444" }}>
+              Editable
+            </h3>
+            <Box flex="y" spacing="s" style={{ marginBottom: "24px" }}>
+              <Field vertical>
+                <Label>Volume (0–100, step 10)</Label>
+                <Input
+                  ref={editableRef}
+                  name="volume"
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={10}
+                  defaultValue={50}
+                  action={(value) => {
+                    setCommitted(value);
+                  }}
+                />
+              </Field>
+              <Box
+                flex="y"
+                spacing="xs"
+                style={{ fontSize: "0.85rem", color: "#555" }}
+              >
+                <span>
+                  💾 committed:{" "}
+                  <strong>
+                    {committed === null ? "—" : JSON.stringify(committed)}
+                  </strong>
+                </span>
+              </Box>
+              <ControlValidityDebug
+                inputRef={editableRef}
+                committedValue={committed}
+              />
+            </Box>
+
+            <h3 style={{ margin: "0 0 8px", fontSize: "1rem", color: "#444" }}>
+              Readonly
+            </h3>
+            <p
+              style={{ margin: "0 0 16px", color: "#555", fontSize: "0.9rem" }}
+            >
+              The slider is frozen — dragging it shows the readonly callout.
+            </p>
+            <Box flex="y" spacing="s">
+              <Field vertical>
+                <Label>Volume (readonly, value 70)</Label>
+                <Input
+                  ref={readonlyRef}
+                  name="volume_readonly"
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={10}
+                  value={70}
+                  readOnly
+                />
+              </Field>
+              <ControlValidityDebug inputRef={readonlyRef} />
+            </Box>
+          </div>
+        );
+      };
+
+      // ─── Section: Action throws ────────────────────────────────────────────────
+      // When the action throws, the error should be surfaced somehow.
+      const ActionThrowDemo = () => {
+        return (
+          <div className="demo-section">
+            <h2>Action throws</h2>
+            <p>
+              The <code>Form</code> action always throws. Submit to see what
+              happens.
+            </p>
+            <Box flex="y" spacing="s">
+              <Form
+                action={async () => {
+                  await new Promise((resolve) => setTimeout(resolve, 500));
+                  throw new Error("Something went wrong!");
+                }}
+              >
+                <Field vertical>
+                  <Label>Username</Label>
+                  <Input
+                    name="username"
+                    placeholder="type something…"
+                    autoComplete="off"
+                  />
+                </Field>
+                <Button type="submit" style={{ marginTop: "8px" }}>
+                  Submit
+                </Button>
+              </Form>
+            </Box>
+          </div>
+        );
+      };
+
+      // ─── App ─────────────────────────────────────────────────────────────────────
+      const App = () => (
+        <div>
+          <h1>Control Validity Demo</h1>
+          <p className="page-description">
+            When constraints are evaluated, how <code>action</code> controls
+            validation reporting, and how readonly and{" "}
+            <code>--navi-update</code> interact with the system.
+          </p>
+          <nav style={{ marginBottom: "32px" }}>
+            <ol>
+              <li>
+                <a href="#form-nominal">Form with action</a>
+              </li>
+              <li>
+                <a href="#in-place">Input with action</a>
+              </li>
+              <li>
+                <a href="#action-after-change">
+                  Input with action + actionAfterChange
+                </a>
+              </li>
+              <li>
+                <a href="#readonly">Input readonly</a>
+              </li>
+              <li>
+                <a href="#navi-update">External updates on input</a>
+              </li>
+              <li>
+                Other inputs
+                <ol>
+                  <li>
+                    <a href="#navi-number">Numeric</a>
+                  </li>
+                  <li>
+                    <a href="#range">Range</a>
+                  </li>
+                </ol>
+              </li>
+            </ol>
+          </nav>
+          <div id="form-nominal">
+            <FormNominalDemo />
+          </div>
+          <div id="in-place">
+            <InPlaceEditingDemo />
+          </div>
+          <div id="action-after-change">
+            <ActionAfterChangeDemo />
+          </div>
+          <div id="action-throw">
+            <ActionThrowDemo />
+          </div>
+          <div id="readonly">
+            <ReadonlyDemo />
+          </div>
+          <div id="navi-update">
+            <NaviUpdateDemo />
+          </div>
+          <div id="navi-number">
+            <NaviNumberDemo />
+          </div>
+          <div id="range">
+            <RangeDemo />
+          </div>
+        </div>
+      );
+
+      render(
+        <NaviDebug debugAll>
+          <App />
+        </NaviDebug>,
+        document.getElementById("root"),
+      );
+    </script>
+  </body>
+</html>

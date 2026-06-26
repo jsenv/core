@@ -28,8 +28,6 @@ import {
   useNextResolver,
 } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { ControlChildrenWrapper, useControlProps } from "../control_hooks.jsx";
-import { InputNaviHourResolver } from "./input_navi_hour.jsx";
-import { InputNaviMinuteResolver } from "./input_navi_minute.jsx";
 import { InputModeResolver } from "./input_resolver_mode.jsx";
 import { InputTypeResolver } from "./input_resolver_type.jsx";
 import { InputTextualContext } from "./input_textual_context.js";
@@ -120,6 +118,7 @@ const css = /* css */ `
     color: var(--x-color);
     font-size: var(--font-size);
     font-family: var(--font-family);
+    text-align: initial;
     background-color: var(--x-background-color);
     border-width: var(--border-width);
     border-style: solid;
@@ -240,8 +239,8 @@ const css = /* css */ `
       .navi_input_underline {
         position: absolute;
         top: calc(100% - 1px);
-        right: 0;
-        left: 0;
+        right: var(--x-padding-right);
+        left: var(--x-padding-left);
         height: 1px;
         background-color: var(--x-border-color);
         pointer-events: none;
@@ -285,7 +284,15 @@ const InputHeadlessResolver = (props) => {
   if (props.headless) {
     return <InputTextualHeadless {...props} />;
   }
+  if (props.type === "hidden") {
+    return <InputHidden {...props} />;
+  }
   return <Next {...props} />;
+};
+const InputHidden = (props) => {
+  const [inputRootProps, inputHostProps] = useInputTextualProps(props);
+
+  return <RealInput {...inputRootProps} {...inputHostProps} />;
 };
 const InputTextualHeadless = (props) => {
   const [inputRootProps, inputHostProps] = useInputTextualProps(props);
@@ -303,9 +310,6 @@ const InputTextualHeadless = (props) => {
 const useInputTextualProps = (props) => {
   return useControlProps(props, {
     controlType: "input",
-    statePropName: "value",
-    defaultStatePropName: "defaultValue",
-    readOnlySupported: true,
   });
 };
 const InputTextualUI = (props) => {
@@ -364,6 +368,9 @@ const InputTextualUI = (props) => {
       pseudoStateSelector=".navi_control_input"
       pseudoClasses={InputPseudoClasses}
       pseudoElements={InputPseudoElements}
+      // input may have left/right icons and we want the anchor to target the input element
+      // which is where the interaction can happen
+      data-callout-anchor=".navi_control_input"
     >
       <LoadingOutline
         loading={loading}
@@ -394,8 +401,6 @@ export const InputTextual = createComponentResolver([
   InputTextualFirstResolver,
   InputWithListResolver,
   InputWithSuggestionsResolver,
-  InputNaviHourResolver,
-  InputNaviMinuteResolver,
   InputTypeResolver,
   InputModeResolver,
   InputHeadlessResolver,
@@ -403,7 +408,32 @@ export const InputTextual = createComponentResolver([
 ]);
 
 const RealInput = (props) => {
-  return <Box {...props} as="input" baseClassName="navi_control_input" />;
+  return (
+    <Box
+      {...props}
+      as="input"
+      baseClassName="navi_control_input"
+      // When readonly focus and mousedown should select input content
+      // (the only relevant interaction to perform on readonly is copying the value)
+      // Nice side effect is that input_group.jsx will see all input is selected
+      // and arrow left/right will always nav between inputs.
+      // (Otherwise we would prevent left/right + show calllout about readonly)
+      onFocus={(e) => {
+        props.onFocus(e);
+        if (!e.defaultPrevented && e.target.readOnly) {
+          e.preventDefault();
+          e.target.select();
+        }
+      }}
+      onMouseDown={(e) => {
+        props.onMouseDown(e);
+        if (!e.defaultPrevented && e.target.readOnly) {
+          e.preventDefault();
+          e.target.select();
+        }
+      }}
+    />
+  );
 };
 
 const InputStyleCSSVars = {

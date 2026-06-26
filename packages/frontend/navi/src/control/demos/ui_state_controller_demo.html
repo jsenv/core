@@ -5,8 +5,71 @@
     <link rel="icon" href="data:," />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>UI State Controller Demo</title>
+    <style>
+      body {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 20px;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: #f5f5f5;
+      }
+
+      h1 {
+        margin-bottom: 30px;
+        color: #333;
+        font-size: 2rem;
+        text-align: center;
+      }
+
+      .demo-category {
+        margin: 40px 0 0;
+        padding: 6px 16px;
+        color: white;
+        font-weight: 600;
+        font-size: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        background: #555;
+        border-radius: 6px 6px 0 0;
+      }
+
+      .demo-section {
+        margin-bottom: 20px;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .demo-category + .demo-section {
+        border-radius: 0 8px 8px 8px;
+      }
+
+      .demo-section h2 {
+        margin: 0 0 16px;
+        padding-bottom: 10px;
+        color: #333;
+        font-size: 1.2rem;
+        border-bottom: 2px solid #ddd;
+      }
+
+      fieldset {
+        margin: 10px 0;
+        padding: 12px 15px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+      }
+
+      legend {
+        padding: 0 8px;
+        color: #555;
+        font-weight: 500;
+      }
+    </style>
   </head>
   <body>
+    <h1>UI State Controller</h1>
     <div id="root"></div>
 
     <script type="module" jsenv-type="module/jsx">
@@ -32,233 +95,161 @@
 
       const App = () => {
         return (
-          <Box flex="y" spacing="xl" alignX="start" padding="m" maxWidth="640">
-            <h1>UI State Controller</h1>
+          <div>
+            <TableOfContents />
 
-            <nav>
-              <ol>
-                <li>
-                  <a href="#group">Group (ControlGroup)</a>
-                  <ol>
-                    <li>
-                      <a href="#group-basic">Basique</a>
-                    </li>
-                    <li>
-                      <a href="#group-clear">Clear (--navi-clear)</a>
-                    </li>
-                    <li>
-                      <a href="#group-reset">Reset (--navi-reset)</a>
-                    </li>
-                    <li>
-                      <a href="#group-required">Required / validation</a>
-                    </li>
-                    <li>
-                      <a href="#group-inside-form">Inside a Form</a>
-                    </li>
-                    <li>
-                      <a href="#group-external">
-                        Contrôle externe (--navi-update)
-                      </a>
-                    </li>
-                    <li>
-                      <a href="#group-mixed">Texte + liste sélectable</a>
-                    </li>
-                  </ol>
-                </li>
-                <li>
-                  <a href="#checkbox">Checkbox</a>
-                  <ol>
-                    <li>
-                      <a href="#checkbox-basic">Basique</a>
-                    </li>
-                  </ol>
-                </li>
-                <li>
-                  <a href="#radio-group">Radio group (List selectable)</a>
-                  <ol>
-                    <li>
-                      <a href="#radio-group-external">Contrôle externe</a>
-                    </li>
-                  </ol>
-                </li>
-                <li>
-                  <a href="#checkbox-group">
-                    Checkbox group (List selectable multiple)
-                  </a>
-                  <ol>
-                    <li>
-                      <a href="#checkbox-group-external">Contrôle externe</a>
-                    </li>
-                  </ol>
-                </li>
-                <li>
-                  <a href="#facade">Facade (Picker)</a>
-                  <ol>
-                    <li>
-                      <a href="#facade-text">Input texte</a>
-                    </li>
-                    <li>
-                      <a href="#facade-text-in-form">
-                        Input texte — inside a form
-                      </a>
-                    </li>
-                    <li>
-                      <a href="#facade-controlgroup">ControlGroup interne</a>
-                    </li>
-                    <li>
-                      <a href="#facade-controlgroup-in-form">
-                        ControlGroup interne — inside a form
-                      </a>
-                    </li>
-                  </ol>
-                </li>
-                <li>
-                  <a href="#bubble-up">Bubble-up (enregistrement cross-leaf)</a>
-                  <ol>
-                    <li>
-                      <a href="#bubble-up-basic">
-                        Input dans un List.Item bubble vers ControlGroup
-                      </a>
-                    </li>
-                    <li>
-                      <a href="#bubble-up-boundary">
-                        ControlGroup stoppe le bubble
-                      </a>
-                    </li>
-                    <li>
-                      <a href="#bubble-up-picker">
-                        Picker dans un List.Item bubble vers ControlGroup
-                      </a>
-                    </li>
-                  </ol>
-                </li>
-              </ol>
-            </nav>
+            <div class="demo-category" id="group">
+              Group (ControlGroup)
+            </div>
+            <StandaloneDemo />
+            <StandaloneClearDemo />
+            <StandaloneResetDemo />
+            <TextRequiredDemo />
+            <StandaloneRequiredDemo />
+            <InsideFormDemo />
+            <ExternalControlDemo />
+            <ExternalMixedDemo />
 
-            <section id="group">
-              <h2>Group (ControlGroup)</h2>
+            <div class="demo-category" id="checkbox">
+              Checkbox
+            </div>
+            <CheckboxBasicDemo />
 
-              <section id="group-basic">
-                <h3>Basique</h3>
-                <StandaloneDemo />
-              </section>
+            <div class="demo-category" id="radio-group">
+              Radio group (List selectable)
+            </div>
+            <ExternalSelectableDemo />
 
-              <section id="group-clear">
-                <h3>Clear (--navi-clear)</h3>
-                <StandaloneClearDemo />
-              </section>
+            <div class="demo-category" id="checkbox-group">
+              Checkbox group (List selectable multiple)
+            </div>
+            <ExternalSelectableMultipleDemo />
 
-              <section id="group-reset">
-                <h3>Reset (--navi-reset)</h3>
-                <StandaloneResetDemo />
-              </section>
+            <div class="demo-category" id="facade">
+              Facade (Picker)
+            </div>
+            <PickerTextExternalDemo />
+            <PickerTextInFormDemo />
+            <PickerControlGroupExternalDemo />
+            <PickerControlGroupInFormDemo />
+            <PickerControlGroupRequiredDemo />
 
-              <section id="group-required">
-                <h3>Required / validation</h3>
-                <TextRequiredDemo />
-                <StandaloneRequiredDemo />
-              </section>
-
-              <section id="group-inside-form">
-                <h3>Inside a Form</h3>
-                <InsideFormDemo />
-              </section>
-
-              <section id="group-external">
-                <h3>Contrôle externe (--navi-update)</h3>
-                <ExternalControlDemo />
-              </section>
-
-              <section id="group-mixed">
-                <h3>Texte + liste sélectable</h3>
-                <ExternalMixedDemo />
-              </section>
-            </section>
-
-            <section id="checkbox">
-              <h2>Checkbox</h2>
-
-              <section id="checkbox-basic">
-                <h3>Basique</h3>
-                <CheckboxBasicDemo />
-              </section>
-            </section>
-
-            <section id="radio-group">
-              <h2>Radio group (List selectable)</h2>
-
-              <section id="radio-group-external">
-                <h3>Contrôle externe</h3>
-                <ExternalSelectableDemo />
-              </section>
-            </section>
-
-            <section id="checkbox-group">
-              <h2>Checkbox group (List selectable multiple)</h2>
-
-              <section id="checkbox-group-external">
-                <h3>Contrôle externe</h3>
-                <ExternalSelectableMultipleDemo />
-              </section>
-            </section>
-
-            <section id="facade">
-              <h2>Facade (Picker)</h2>
-
-              <section id="facade-text">
-                <h3>Input texte</h3>
-                <PickerTextExternalDemo />
-              </section>
-
-              <section id="facade-text-in-form">
-                <h3>Input texte — inside a form</h3>
-                <PickerTextInFormDemo />
-              </section>
-
-              <section id="facade-controlgroup">
-                <h3>ControlGroup interne</h3>
-                <PickerControlGroupExternalDemo />
-              </section>
-
-              <section id="facade-controlgroup-in-form">
-                <h3>ControlGroup interne — inside a form</h3>
-                <PickerControlGroupInFormDemo />
-              </section>
-            </section>
-
-            <section id="bubble-up">
-              <h2>Bubble-up (enregistrement cross-leaf)</h2>
-              <p
-                style={{
-                  margin: "0 0 16px",
-                  color: "#555",
-                  fontSize: "0.9rem",
-                }}
-              >
-                Un control rejeté par son parent direct (radio_group, etc.)
-                remonte automatiquement jusqu'au premier ancêtre qui l'accepte
-                (ControlGroup ou Form). La structure ci-dessous chaque démo
-                montre en temps réel qui est enregistré où.
-              </p>
-
-              <section id="bubble-up-basic">
-                <h3>Input dans un List.Item bubble vers ControlGroup</h3>
-                <BubbleUpBasicDemo />
-              </section>
-
-              <section id="bubble-up-boundary">
-                <h3>ControlGroup stoppe le bubble</h3>
-                <BubbleUpBoundaryDemo />
-              </section>
-
-              <section id="bubble-up-picker">
-                <h3>Picker dans un List.Item bubble vers ControlGroup</h3>
-                <BubbleUpPickerDemo />
-              </section>
-            </section>
-          </Box>
+            <div class="demo-category" id="bubble-up">
+              Bubble-up (enregistrement cross-leaf)
+            </div>
+            <BubbleUpBasicDemo />
+            <BubbleUpBoundaryDemo />
+            <BubbleUpPickerDemo />
+          </div>
         );
       };
+
+      const TableOfContents = () => (
+        <div class="demo-section">
+          <h2>Table of contents</h2>
+          <ol style={{ margin: 0, paddingLeft: "20px", lineHeight: "2" }}>
+            <li>
+              <a href="#group">Group (ControlGroup)</a>
+              <ol style={{ paddingLeft: "20px" }}>
+                <li>
+                  <a href="#group-basic">Basique</a>
+                </li>
+                <li>
+                  <a href="#group-clear">Clear (--navi-clear)</a>
+                </li>
+                <li>
+                  <a href="#group-reset">Reset (--navi-reset)</a>
+                </li>
+                <li>
+                  <a href="#group-required">Required / validation</a>
+                </li>
+                <li>
+                  <a href="#group-required-2">Required (standalone)</a>
+                </li>
+                <li>
+                  <a href="#group-inside-form">Inside a Form</a>
+                </li>
+                <li>
+                  <a href="#group-external">Contrôle externe (--navi-update)</a>
+                </li>
+                <li>
+                  <a href="#group-mixed">Texte + liste sélectable</a>
+                </li>
+              </ol>
+            </li>
+            <li>
+              <a href="#checkbox">Checkbox</a>
+              <ol style={{ paddingLeft: "20px" }}>
+                <li>
+                  <a href="#checkbox-basic">Basique</a>
+                </li>
+              </ol>
+            </li>
+            <li>
+              <a href="#radio-group">Radio group (List selectable)</a>
+              <ol style={{ paddingLeft: "20px" }}>
+                <li>
+                  <a href="#radio-group-external">Contrôle externe</a>
+                </li>
+              </ol>
+            </li>
+            <li>
+              <a href="#checkbox-group">
+                Checkbox group (List selectable multiple)
+              </a>
+              <ol style={{ paddingLeft: "20px" }}>
+                <li>
+                  <a href="#checkbox-group-external">Contrôle externe</a>
+                </li>
+              </ol>
+            </li>
+            <li>
+              <a href="#facade">Facade (Picker)</a>
+              <ol style={{ paddingLeft: "20px" }}>
+                <li>
+                  <a href="#facade-text">Input texte</a>
+                </li>
+                <li>
+                  <a href="#facade-text-in-form">Input texte — inside a form</a>
+                </li>
+                <li>
+                  <a href="#facade-controlgroup">ControlGroup interne</a>
+                </li>
+                <li>
+                  <a href="#facade-controlgroup-in-form">
+                    ControlGroup interne — inside a form
+                  </a>
+                </li>
+                <li>
+                  <a href="#facade-controlgroup-required">
+                    ControlGroup interne — champ requis
+                  </a>
+                </li>
+              </ol>
+            </li>
+            <li>
+              <a href="#bubble-up">Bubble-up (enregistrement cross-leaf)</a>
+              <ol style={{ paddingLeft: "20px" }}>
+                <li>
+                  <a href="#bubble-up-basic">
+                    Input dans un List.Item bubble vers ControlGroup
+                  </a>
+                </li>
+                <li>
+                  <a href="#bubble-up-boundary">
+                    ControlGroup stoppe le bubble
+                  </a>
+                </li>
+                <li>
+                  <a href="#bubble-up-picker">
+                    Picker dans un List.Item bubble vers ControlGroup
+                  </a>
+                </li>
+              </ol>
+            </li>
+          </ol>
+        </div>
+      );
 
       const LABELS = ["Alpha", "Beta", "Gamma"];
 
@@ -268,92 +259,21 @@
         const [label, setLabel] = useState("a name");
 
         return (
-          <Box flex="y" spacing="m" alignX="start">
-            <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
-              Un <code>Input</code> texte à l'intérieur du picker. Les boutons
-              extérieurs envoient <code>--navi-update</code> — l'input interne
-              doit être mis à jour et son <code>uiAction</code> déclenché.
-            </p>
-            <fieldset>
-              <legend>label</legend>
-              <Picker
-                id={pickerId}
-                name="label"
-                placeholder="Saisir un label"
-                value={label}
-                uiAction={(v) => {
-                  pushEntry("uiAction (picker)", v);
-                }}
-                action={(v) => {
-                  pushEntry("action (picker)", v);
-                }}
-              >
-                <Box flex="y" spacing="s" padding="s" alignX="start">
-                  <fieldset>
-                    <legend>label</legend>
-                    <Input
-                      name="label"
-                      placeholder="Texte libre"
-                      value={label}
-                      uiAction={(v) => {
-                        setLabel(v);
-                        pushEntry("uiAction (input)", v);
-                      }}
-                    />
-                  </fieldset>
-                  <Box flex="x" spacing="s">
-                    <Button command="--navi-cancel">Annuler</Button>
-                    <Button command="--navi-send">Confirmer</Button>
-                  </Box>
-                </Box>
-              </Picker>
-            </fieldset>
-            <Box flex="x" spacing="s">
-              {LABELS.map((label) => (
-                <Button
-                  key={label}
-                  command="--navi-update"
-                  commandfor={pickerId}
-                  value={label}
-                >
-                  {label}
-                </Button>
-              ))}
-              <Button command="--navi-clear" commandfor={pickerId}>
-                Vider
-              </Button>
-              <Button command="--navi-send" commandfor={pickerId}>
-                Envoyer
-              </Button>
-            </Box>
-            <CallLog entries={entries} onClear={clearEntries} />
-          </Box>
-        );
-      };
-
-      const PickerTextInFormDemo = () => {
-        const [entries, pushEntry, clearEntries] = useCallLog();
-
-        return (
-          <Box flex="y" spacing="m" alignX="start">
-            <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
-              Le <code>Picker</code> est dans un <code>Form</code>. On vérifie
-              que le formulaire récupère bien la valeur du picker sous son{" "}
-              <code>name</code> lors du submit.
-            </p>
-            <Form
-              action={(values) => {
-                pushEntry("Form action", values);
-              }}
-              flex="y"
-              spacing="m"
-              alignX="start"
-            >
+          <div class="demo-section" id="facade-text">
+            <h2>Input texte</h2>
+            <Box flex="y" spacing="m" alignX="start">
+              <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+                Un <code>Input</code> texte à l'intérieur du picker. Les boutons
+                extérieurs envoient <code>--navi-update</code> — l'input interne
+                doit être mis à jour et son <code>uiAction</code> déclenché.
+              </p>
               <fieldset>
                 <legend>label</legend>
                 <Picker
+                  id={pickerId}
                   name="label"
                   placeholder="Saisir un label"
+                  value={label}
                   uiAction={(v) => {
                     pushEntry("uiAction (picker)", v);
                   }}
@@ -367,7 +287,9 @@
                       <Input
                         name="label"
                         placeholder="Texte libre"
+                        value={label}
                         uiAction={(v) => {
+                          setLabel(v);
                           pushEntry("uiAction (input)", v);
                         }}
                       />
@@ -379,10 +301,85 @@
                   </Box>
                 </Picker>
               </fieldset>
-              <Button type="submit">Submit</Button>
-            </Form>
-            <CallLog entries={entries} onClear={clearEntries} />
-          </Box>
+              <Box flex="x" spacing="s">
+                {LABELS.map((label) => (
+                  <Button
+                    key={label}
+                    command="--navi-update"
+                    commandfor={pickerId}
+                    value={label}
+                  >
+                    {label}
+                  </Button>
+                ))}
+                <Button command="--navi-clear" commandfor={pickerId}>
+                  Vider
+                </Button>
+                <Button command="--navi-send" commandfor={pickerId}>
+                  Envoyer
+                </Button>
+              </Box>
+              <CallLog entries={entries} onClear={clearEntries} />
+            </Box>
+          </div>
+        );
+      };
+
+      const PickerTextInFormDemo = () => {
+        const [entries, pushEntry, clearEntries] = useCallLog();
+
+        return (
+          <div class="demo-section" id="facade-text-in-form">
+            <h2>Input texte — inside a form</h2>
+            <Box flex="y" spacing="m" alignX="start">
+              <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+                Le <code>Picker</code> est dans un <code>Form</code>. On vérifie
+                que le formulaire récupère bien la valeur du picker sous son{" "}
+                <code>name</code> lors du submit.
+              </p>
+              <Form
+                action={(values) => {
+                  pushEntry("Form action", values);
+                }}
+                flex="y"
+                spacing="m"
+                alignX="start"
+              >
+                <fieldset>
+                  <legend>label</legend>
+                  <Picker
+                    name="label"
+                    placeholder="Saisir un label"
+                    uiAction={(v) => {
+                      pushEntry("uiAction (picker)", v);
+                    }}
+                    action={(v) => {
+                      pushEntry("action (picker)", v);
+                    }}
+                  >
+                    <Box flex="y" spacing="s" padding="s" alignX="start">
+                      <fieldset>
+                        <legend>label</legend>
+                        <Input
+                          name="label"
+                          placeholder="Texte libre"
+                          uiAction={(v) => {
+                            pushEntry("uiAction (input)", v);
+                          }}
+                        />
+                      </fieldset>
+                      <Box flex="x" spacing="s">
+                        <Button command="--navi-cancel">Annuler</Button>
+                        <Button command="--navi-send">Confirmer</Button>
+                      </Box>
+                    </Box>
+                  </Picker>
+                </fieldset>
+                <Button type="submit">Submit</Button>
+              </Form>
+              <CallLog entries={entries} onClear={clearEntries} />
+            </Box>
+          </div>
         );
       };
 
@@ -391,106 +388,19 @@
         const pickerId = "picker-controlgroup-external-picker";
 
         return (
-          <Box flex="y" spacing="m" alignX="start">
-            <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
-              Des boutons extérieurs envoient <code>--navi-update</code> avec
-              une valeur objet sur un <code>Picker type="controlgroup"</code>.
-              Les champs internes doivent se mettre à jour et le{" "}
-              <code>uiAction</code> doit être appelé.
-            </p>
-            <fieldset>
-              <legend>address</legend>
-              <Picker
-                id={pickerId}
-                name="address"
-                type="controlgroup"
-                placeholder="Saisir une adresse"
-                uiAction={(v) => {
-                  pushEntry("uiAction", v);
-                }}
-                action={(v) => {
-                  pushEntry("action", v);
-                }}
-              >
-                <ControlGroup>
-                  <Box flex="y" spacing="s" padding="s" alignX="start">
-                    <fieldset>
-                      <legend>street</legend>
-                      <Input
-                        name="street"
-                        placeholder="Street"
-                        defaultValue="Rue de la paix"
-                        uiAction={(v) => {
-                          pushEntry("uiAction (street)", v);
-                        }}
-                      />
-                    </fieldset>
-                    <fieldset>
-                      <legend>city</legend>
-                      <Input
-                        name="city"
-                        placeholder="City"
-                        uiAction={(v) => {
-                          pushEntry("uiAction (city)", v);
-                        }}
-                      />
-                    </fieldset>
-                  </Box>
-                </ControlGroup>
-                <Box flex spacing="s">
-                  <Button command="--navi-cancel">Annuler</Button>
-                  <Button command="--navi-define">Définir</Button>
-                </Box>
-              </Picker>
-            </fieldset>
-            <Box flex="x" spacing="s">
-              <Button
-                command="--navi-update"
-                commandfor={pickerId}
-                value={{ street: "12 rue de la Paix", city: "Paris" }}
-              >
-                Paris
-              </Button>
-              <Button
-                command="--navi-update"
-                commandfor={pickerId}
-                value={{ street: "1 place Bellecour", city: "Lyon" }}
-              >
-                Lyon
-              </Button>
-              <Button command="--navi-clear" commandfor={pickerId}>
-                Vider
-              </Button>
-              <Button command="--navi-send" commandfor={pickerId}>
-                Envoyer
-              </Button>
-            </Box>
-            <CallLog entries={entries} onClear={clearEntries} />
-          </Box>
-        );
-      };
-
-      const PickerControlGroupInFormDemo = () => {
-        const [entries, pushEntry, clearEntries] = useCallLog();
-
-        return (
-          <Box flex="y" spacing="m" alignX="start">
-            <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
-              Le <code>Picker type="controlgroup"</code> est dans un{" "}
-              <code>Form</code>. On vérifie que le formulaire récupère bien la
-              valeur objet du picker sous son <code>name</code> lors du submit.
-            </p>
-            <Form
-              action={(values) => {
-                pushEntry("Form action", values);
-              }}
-              flex="y"
-              spacing="m"
-              alignX="start"
-            >
+          <div class="demo-section" id="facade-controlgroup">
+            <h2>ControlGroup interne</h2>
+            <Box flex="y" spacing="m" alignX="start">
+              <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+                Des boutons extérieurs envoient <code>--navi-update</code> avec
+                une valeur objet sur un <code>Picker type="controlgroup"</code>.
+                Les champs internes doivent se mettre à jour et le{" "}
+                <code>uiAction</code> doit être appelé.
+              </p>
               <fieldset>
                 <legend>address</legend>
                 <Picker
+                  id={pickerId}
                   name="address"
                   type="controlgroup"
                   placeholder="Saisir une adresse"
@@ -532,10 +442,169 @@
                   </Box>
                 </Picker>
               </fieldset>
-              <Button type="submit">Submit</Button>
-            </Form>
-            <CallLog entries={entries} onClear={clearEntries} />
-          </Box>
+              <Box flex="x" spacing="s">
+                <Button
+                  command="--navi-update"
+                  commandfor={pickerId}
+                  value={{ street: "12 rue de la Paix", city: "Paris" }}
+                >
+                  Paris
+                </Button>
+                <Button
+                  command="--navi-update"
+                  commandfor={pickerId}
+                  value={{ street: "1 place Bellecour", city: "Lyon" }}
+                >
+                  Lyon
+                </Button>
+                <Button command="--navi-clear" commandfor={pickerId}>
+                  Vider
+                </Button>
+                <Button command="--navi-send" commandfor={pickerId}>
+                  Envoyer
+                </Button>
+              </Box>
+              <CallLog entries={entries} onClear={clearEntries} />
+            </Box>
+          </div>
+        );
+      };
+
+      const PickerControlGroupInFormDemo = () => {
+        const [entries, pushEntry, clearEntries] = useCallLog();
+
+        return (
+          <div class="demo-section" id="facade-controlgroup-in-form">
+            <h2>ControlGroup interne — inside a form</h2>
+            <Box flex="y" spacing="m" alignX="start">
+              <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+                Le <code>Picker type="controlgroup"</code> est dans un{" "}
+                <code>Form</code>. On vérifie que le formulaire récupère bien la
+                valeur objet du picker sous son <code>name</code> lors du
+                submit.
+              </p>
+              <Form
+                action={(values) => {
+                  pushEntry("Form action", values);
+                }}
+                flex="y"
+                spacing="m"
+                alignX="start"
+              >
+                <fieldset>
+                  <legend>address</legend>
+                  <Picker
+                    name="address"
+                    type="controlgroup"
+                    placeholder="Saisir une adresse"
+                    uiAction={(v) => {
+                      pushEntry("uiAction", v);
+                    }}
+                    action={(v) => {
+                      pushEntry("action", v);
+                    }}
+                  >
+                    <ControlGroup>
+                      <Box flex="y" spacing="s" padding="s" alignX="start">
+                        <fieldset>
+                          <legend>street</legend>
+                          <Input
+                            name="street"
+                            placeholder="Street"
+                            defaultValue="Rue de la paix"
+                            uiAction={(v) => {
+                              pushEntry("uiAction (street)", v);
+                            }}
+                          />
+                        </fieldset>
+                        <fieldset>
+                          <legend>city</legend>
+                          <Input
+                            name="city"
+                            placeholder="City"
+                            uiAction={(v) => {
+                              pushEntry("uiAction (city)", v);
+                            }}
+                          />
+                        </fieldset>
+                      </Box>
+                    </ControlGroup>
+                    <Box flex spacing="s">
+                      <Button command="--navi-cancel">Annuler</Button>
+                      <Button command="--navi-define">Définir</Button>
+                    </Box>
+                  </Picker>
+                </fieldset>
+                <Button type="submit">Submit</Button>
+              </Form>
+              <CallLog entries={entries} onClear={clearEntries} />
+            </Box>
+          </div>
+        );
+      };
+
+      const PickerControlGroupRequiredDemo = () => {
+        const [entries, pushEntry, clearEntries] = useCallLog();
+
+        return (
+          <div class="demo-section" id="facade-controlgroup-required">
+            <h2>ControlGroup interne — champ requis</h2>
+            <Box flex="y" spacing="m" alignX="start">
+              <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+                Un champ <code>required</code> à l'intérieur du picker. Cliquer
+                sur <em>Définir</em> sans remplir le champ doit bloquer la
+                fermeture et afficher une erreur de validation. Cliquer sur{" "}
+                <em>Annuler</em> doit toujours fermer le picker (pas de
+                validation au cancel).
+              </p>
+              <fieldset>
+                <legend>contact</legend>
+                <Picker
+                  name="contact"
+                  type="controlgroup"
+                  placeholder="Renseigner le contact"
+                  uiAction={(v) => {
+                    pushEntry("uiAction", v);
+                  }}
+                  action={(v) => {
+                    pushEntry("action", v);
+                  }}
+                >
+                  <ControlGroup>
+                    <Box flex="y" spacing="s" padding="s" alignX="start">
+                      <fieldset>
+                        <legend>firstName (required)</legend>
+                        <Input
+                          name="firstName"
+                          placeholder="Prénom"
+                          required
+                          uiAction={(v) => {
+                            pushEntry("uiAction (firstName)", v);
+                          }}
+                          defaultValue="a"
+                        />
+                      </fieldset>
+                      <fieldset>
+                        <legend>lastName</legend>
+                        <Input
+                          name="lastName"
+                          placeholder="Nom"
+                          uiAction={(v) => {
+                            pushEntry("uiAction (lastName)", v);
+                          }}
+                        />
+                      </fieldset>
+                    </Box>
+                  </ControlGroup>
+                  <Box flex spacing="s">
+                    <Button command="--navi-cancel">Annuler</Button>
+                    <Button command="--navi-define">Définir</Button>
+                  </Box>
+                </Picker>
+              </fieldset>
+              <CallLog entries={entries} onClear={clearEntries} />
+            </Box>
+          </div>
         );
       };
 
@@ -544,36 +613,40 @@
         const checkboxId = "checkbox-basic-input";
 
         return (
-          <Box flex="y" spacing="m" alignX="start">
-            <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
-              Un <code>Input type="checkbox"</code> avec des boutons{" "}
-              <code>--navi-check</code> et <code>--navi-uncheck</code> externes.
-            </p>
-            <fieldset>
-              <legend>agrément</legend>
-              <Input
-                id={checkboxId}
-                type="checkbox"
-                name="agreed"
-                value={{ toto: true }}
-                uiAction={(v) => {
-                  pushEntry("uiAction", v);
-                }}
-                action={(v) => {
-                  pushEntry("action", v);
-                }}
-              />
-            </fieldset>
-            <Box flex="x" spacing="s">
-              <Button command="--navi-check" commandfor={checkboxId}>
-                Check
-              </Button>
-              <Button command="--navi-uncheck" commandfor={checkboxId}>
-                Uncheck
-              </Button>
+          <div class="demo-section" id="checkbox-basic">
+            <h2>Basique</h2>
+            <Box flex="y" spacing="m" alignX="start">
+              <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+                Un <code>Input type="checkbox"</code> avec des boutons{" "}
+                <code>--navi-check</code> et <code>--navi-uncheck</code>{" "}
+                externes.
+              </p>
+              <fieldset>
+                <legend>agrément</legend>
+                <Input
+                  id={checkboxId}
+                  type="checkbox"
+                  name="agreed"
+                  value={{ toto: true }}
+                  uiAction={(v) => {
+                    pushEntry("uiAction", v);
+                  }}
+                  action={(v) => {
+                    pushEntry("action", v);
+                  }}
+                />
+              </fieldset>
+              <Box flex="x" spacing="s">
+                <Button command="--navi-check" commandfor={checkboxId}>
+                  Check
+                </Button>
+                <Button command="--navi-uncheck" commandfor={checkboxId}>
+                  Uncheck
+                </Button>
+              </Box>
+              <CallLog entries={entries} onClear={clearEntries} />
             </Box>
-            <CallLog entries={entries} onClear={clearEntries} />
-          </Box>
+          </div>
         );
       };
 
@@ -584,85 +657,88 @@
         const cgId = "external-control-mixed-cg";
 
         return (
-          <Box flex="y" spacing="m" alignX="start">
-            <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
-              Un <code>ControlGroup</code> qui contient un champ texte{" "}
-              <code>label</code> et une liste sélectable <code>color</code>. Les
-              boutons extérieurs envoient <code>--navi-update</code> avec un
-              objet <code>{"{ label, color }"}</code> pour mettre à jour les
-              deux d'un coup.
-            </p>
-            <fieldset>
-              <legend>info</legend>
-              <ControlGroup
-                id={cgId}
-                name="info"
-                action={(v) => {
-                  pushEntry("action", v);
-                }}
-                uiAction={(v) => {
-                  pushEntry("uiAction", v);
-                }}
-              >
-                <Box flex="y" spacing="s" alignX="start">
-                  <fieldset>
-                    <legend>label</legend>
-                    <Input
-                      type="text"
-                      name="label"
-                      placeholder="Saisir un label"
-                      uiAction={(v) => {
-                        pushEntry("uiAction (label)", v);
-                      }}
-                    />
-                  </fieldset>
-                  <fieldset>
-                    <legend>color</legend>
-                    <List
-                      name="color"
-                      selectable
-                      uiAction={(v) => {
-                        pushEntry("uiAction (color)", v);
-                      }}
-                      expandX
-                    >
-                      {COLORS.map((color, i) => (
-                        <List.Item
-                          selectable
-                          key={color}
-                          index={i}
-                          value={color}
-                          flex
-                          spacing="s"
-                        >
-                          <SelectableInput />
-                          {color}
-                        </List.Item>
-                      ))}
-                    </List>
-                  </fieldset>
-                </Box>
+          <div class="demo-section" id="group-mixed">
+            <h2>Texte + liste sélectable</h2>
+            <Box flex="y" spacing="m" alignX="start">
+              <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+                Un <code>ControlGroup</code> qui contient un champ texte{" "}
+                <code>label</code> et une liste sélectable <code>color</code>.
+                Les boutons extérieurs envoient <code>--navi-update</code> avec
+                un objet <code>{"{ label, color }"}</code> pour mettre à jour
+                les deux d'un coup.
+              </p>
+              <fieldset>
+                <legend>info</legend>
+                <ControlGroup
+                  id={cgId}
+                  name="info"
+                  action={(v) => {
+                    pushEntry("action", v);
+                  }}
+                  uiAction={(v) => {
+                    pushEntry("uiAction", v);
+                  }}
+                >
+                  <Box flex="y" spacing="s" alignX="start">
+                    <fieldset>
+                      <legend>label</legend>
+                      <Input
+                        type="text"
+                        name="label"
+                        placeholder="Saisir un label"
+                        uiAction={(v) => {
+                          pushEntry("uiAction (label)", v);
+                        }}
+                      />
+                    </fieldset>
+                    <fieldset>
+                      <legend>color</legend>
+                      <List
+                        name="color"
+                        selectable
+                        uiAction={(v) => {
+                          pushEntry("uiAction (color)", v);
+                        }}
+                        expandX
+                      >
+                        {COLORS.map((color, i) => (
+                          <List.Item
+                            selectable
+                            key={color}
+                            index={i}
+                            value={color}
+                            flex
+                            spacing="s"
+                          >
+                            <SelectableInput />
+                            {color}
+                          </List.Item>
+                        ))}
+                      </List>
+                    </fieldset>
+                  </Box>
 
-                <Box flex="x" spacing="s" marginTop="s">
-                  <Button
-                    command="--navi-update"
-                    value={{ label: "Ciel", color: "Blue" }}
-                  >
-                    Ciel bleu
-                  </Button>
-                  <Button
-                    command="--navi-update"
-                    value={{ label: "Forêt", color: "Green" }}
-                  >
-                    Forêt verte
-                  </Button>
-                  <Button command="--navi-clear" />
-                  <Button command="--navi-send" />
-                </Box>
-              </ControlGroup>
-            </fieldset>
-            <CallLog entries={entries} onClear={clearEntries} />
-          </Box>
+                  <Box flex="x" spacing="s" marginTop="s">
+                    <Button
+                      command="--navi-update"
+                      value={{ label: "Ciel", color: "Blue" }}
+                    >
+                      Ciel bleu
+                    </Button>
+                    <Button
+                      command="--navi-update"
+                      value={{ label: "Forêt", color: "Green" }}
+                    >
+                      Forêt verte
+                    </Button>
+                    <Button command="--navi-clear" />
+                    <Button command="--navi-send" />
+                  </Box>
+                </ControlGroup>
+              </fieldset>
+              <CallLog entries={entries} onClear={clearEntries} />
+            </Box>
+          </div>
         );
       };
 
@@ -671,67 +747,70 @@
         const cgId = "external-control-object-cg";
 
         return (
-          <Box flex="y" spacing="m" alignX="start">
-            <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
-              Des boutons extérieurs envoient <code>--navi-update</code> avec
-              une valeur objet sur le ControlGroup. Les champs doivent se mettre
-              à jour et les <code>uiAction</code> des inputs doivent être
-              appelés (pour syncer les signaux).
-            </p>
-            <fieldset>
-              <legend>contact</legend>
-              <ControlGroup
-                id={cgId}
-                name="contact"
-                action={(v) => {
-                  pushEntry("action (group)", v);
-                }}
-                uiAction={(v) => {
-                  pushEntry("uiAction (group)", v);
-                }}
-              >
-                <Box flex="y" spacing="s" alignX="start">
-                  <fieldset>
-                    <legend>firstName</legend>
-                    <Input
-                      type="text"
-                      name="firstName"
-                      uiAction={(v) => {
-                        pushEntry("uiAction (firstName)", v);
-                      }}
-                    />
-                  </fieldset>
-                  <fieldset>
-                    <legend>lastName</legend>
-                    <Input
-                      type="text"
-                      name="lastName"
-                      uiAction={(v) => {
-                        pushEntry("uiAction (lastName)", v);
-                      }}
-                    />
-                  </fieldset>
-                </Box>
-                <Box flex="x" spacing="s" marginTop="s">
-                  <Button
-                    command="--navi-update"
-                    value={{ firstName: "Jean", lastName: "Dupont" }}
-                  >
-                    Set Jean Dupont
-                  </Button>
-                  <Button
-                    command="--navi-update"
-                    value={{ firstName: "Marie", lastName: "Curie" }}
-                  >
-                    Set Marie Curie
-                  </Button>
-                  <Button command="--navi-clear" />
-                  <Button command="--navi-send" />
-                </Box>
-              </ControlGroup>
-            </fieldset>
-            <CallLog entries={entries} onClear={clearEntries} />
-          </Box>
+          <div class="demo-section" id="group-external">
+            <h2>Contrôle externe (--navi-update)</h2>
+            <Box flex="y" spacing="m" alignX="start">
+              <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+                Des boutons extérieurs envoient <code>--navi-update</code> avec
+                une valeur objet sur le ControlGroup. Les champs doivent se
+                mettre à jour et les <code>uiAction</code> des inputs doivent
+                être appelés (pour syncer les signaux).
+              </p>
+              <fieldset>
+                <legend>contact</legend>
+                <ControlGroup
+                  id={cgId}
+                  name="contact"
+                  action={(v) => {
+                    pushEntry("action (group)", v);
+                  }}
+                  uiAction={(v) => {
+                    pushEntry("uiAction (group)", v);
+                  }}
+                >
+                  <Box flex="y" spacing="s" alignX="start">
+                    <fieldset>
+                      <legend>firstName</legend>
+                      <Input
+                        type="text"
+                        name="firstName"
+                        uiAction={(v) => {
+                          pushEntry("uiAction (firstName)", v);
+                        }}
+                      />
+                    </fieldset>
+                    <fieldset>
+                      <legend>lastName</legend>
+                      <Input
+                        type="text"
+                        name="lastName"
+                        uiAction={(v) => {
+                          pushEntry("uiAction (lastName)", v);
+                        }}
+                      />
+                    </fieldset>
+                  </Box>
+                  <Box flex="x" spacing="s" marginTop="s">
+                    <Button
+                      command="--navi-update"
+                      value={{ firstName: "Jean", lastName: "Dupont" }}
+                    >
+                      Set Jean Dupont
+                    </Button>
+                    <Button
+                      command="--navi-update"
+                      value={{ firstName: "Marie", lastName: "Curie" }}
+                    >
+                      Set Marie Curie
+                    </Button>
+                    <Button command="--navi-clear" />
+                    <Button command="--navi-send" />
+                  </Box>
+                </ControlGroup>
+              </fieldset>
+              <CallLog entries={entries} onClear={clearEntries} />
+            </Box>
+          </div>
         );
       };
 
@@ -742,65 +821,68 @@
         const FRUIT_VALUES = [1, 2, 3, 4, 5];
 
         return (
-          <Box flex="y" spacing="m" alignX="start">
-            <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
-              Des boutons extérieurs envoient <code>--navi-update</code> avec
-              une valeur scalaire sur une <code>List selectable</code> (radio
-              group). La sélection doit se mettre à jour et le{" "}
-              <code>uiAction</code> de la liste doit être appelé.
-            </p>
-            <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
-              Les items ont des <code>value</code> numériques (1–5) — vérifier
-              dans les logs que <code>uiAction</code>/<code>action</code> reçoit
-              bien un nombre et non une chaîne.
-            </p>
-            <fieldset>
-              <legend>external-control-single-list</legend>
-              <List
-                id={listId}
-                selectable
-                uiAction={(v) => {
-                  pushEntry("uiAction", v);
-                }}
-                action={(v) => {
-                  pushEntry("action", v);
-                }}
-                expandX
-              >
-                {FRUITS.map((fruit, i) => (
-                  <List.Item
-                    selectable
-                    key={fruit}
-                    id={`external-single-${fruit.toLowerCase()}`}
-                    index={i}
-                    value={FRUIT_VALUES[i]}
-                    flex
-                    spacing="s"
-                  >
-                    <SelectableInput />
-                    {fruit} (value={FRUIT_VALUES[i]})
-                  </List.Item>
-                ))}
-              </List>
-              <Box flex="x" spacing="s" marginTop="s">
-                {FRUITS.map((fruit, i) => (
-                  <Button
-                    key={fruit}
-                    command="--navi-update"
-                    commandfor={listId}
-                    value={FRUIT_VALUES[i]}
-                  >
-                    {fruit}
+          <div class="demo-section" id="radio-group-external">
+            <h2>Contrôle externe</h2>
+            <Box flex="y" spacing="m" alignX="start">
+              <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+                Des boutons extérieurs envoient <code>--navi-update</code> avec
+                une valeur scalaire sur une <code>List selectable</code> (radio
+                group). La sélection doit se mettre à jour et le{" "}
+                <code>uiAction</code> de la liste doit être appelé.
+              </p>
+              <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+                Les items ont des <code>value</code> numériques (1–5) — vérifier
+                dans les logs que <code>uiAction</code>/<code>action</code>{" "}
+                reçoit bien un nombre et non une chaîne.
+              </p>
+              <fieldset>
+                <legend>external-control-single-list</legend>
+                <List
+                  id={listId}
+                  selectable
+                  uiAction={(v) => {
+                    pushEntry("uiAction", v);
+                  }}
+                  action={(v) => {
+                    pushEntry("action", v);
+                  }}
+                  expandX
+                >
+                  {FRUITS.map((fruit, i) => (
+                    <List.Item
+                      selectable
+                      key={fruit}
+                      id={`external-single-${fruit.toLowerCase()}`}
+                      index={i}
+                      value={FRUIT_VALUES[i]}
+                      flex
+                      spacing="s"
+                    >
+                      <SelectableInput />
+                      {fruit} (value={FRUIT_VALUES[i]})
+                    </List.Item>
+                  ))}
+                </List>
+                <Box flex="x" spacing="s" marginTop="s">
+                  {FRUITS.map((fruit, i) => (
+                    <Button
+                      key={fruit}
+                      command="--navi-update"
+                      commandfor={listId}
+                      value={FRUIT_VALUES[i]}
+                    >
+                      {fruit}
+                    </Button>
+                  ))}
+                  <Button command="--navi-clear" commandfor={listId}>
+                    Désélectionner
                   </Button>
-                ))}
-                <Button command="--navi-clear" commandfor={listId}>
-                  Désélectionner
-                </Button>
-                <Button command="--navi-send" commandfor={listId} />
-              </Box>
-            </fieldset>
-            <CallLog entries={entries} onClear={clearEntries} />
-          </Box>
+                  <Button command="--navi-send" commandfor={listId} />
+                </Box>
+              </fieldset>
+              <CallLog entries={entries} onClear={clearEntries} />
+            </Box>
+          </div>
         );
       };
 
@@ -811,70 +893,73 @@
         const FRUIT_VALUES = [1, 2, 3, 4, 5];
 
         return (
-          <Box flex="y" spacing="m" alignX="start">
-            <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
-              Des boutons extérieurs envoient <code>--navi-update</code> avec
-              une valeur tableau sur une <code>List selectable multiple</code>{" "}
-              (checkbox group). La sélection doit se mettre à jour et le{" "}
-              <code>uiAction</code> de la liste doit être appelé.
-            </p>
-            <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
-              Les items ont des <code>value</code> numériques (1–5) — vérifier
-              dans les logs que <code>uiAction</code>/<code>action</code> reçoit
-              bien un tableau de nombres.
-            </p>
-            <fieldset>
-              <legend>external-control-multiple-list</legend>
-              <List
-                id={listId}
-                selectable
-                multiple
-                uiAction={(v) => {
-                  pushEntry("uiAction", JSON.stringify(v));
-                }}
-                action={(v) => {
-                  pushEntry("action", JSON.stringify(v));
-                }}
-                expandX
-              >
-                {FRUITS.map((fruit, i) => (
-                  <List.Item
-                    selectable
-                    key={fruit}
-                    id={`external-multiple-${fruit.toLowerCase()}`}
-                    index={i}
-                    value={FRUIT_VALUES[i]}
-                    flex
-                    spacing="s"
+          <div class="demo-section" id="checkbox-group-external">
+            <h2>Contrôle externe</h2>
+            <Box flex="y" spacing="m" alignX="start">
+              <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+                Des boutons extérieurs envoient <code>--navi-update</code> avec
+                une valeur tableau sur une <code>List selectable multiple</code>{" "}
+                (checkbox group). La sélection doit se mettre à jour et le{" "}
+                <code>uiAction</code> de la liste doit être appelé.
+              </p>
+              <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+                Les items ont des <code>value</code> numériques (1–5) — vérifier
+                dans les logs que <code>uiAction</code>/<code>action</code>{" "}
+                reçoit bien un tableau de nombres.
+              </p>
+              <fieldset>
+                <legend>external-control-multiple-list</legend>
+                <List
+                  id={listId}
+                  selectable
+                  multiple
+                  uiAction={(v) => {
+                    pushEntry("uiAction", JSON.stringify(v));
+                  }}
+                  action={(v) => {
+                    pushEntry("action", JSON.stringify(v));
+                  }}
+                  expandX
+                >
+                  {FRUITS.map((fruit, i) => (
+                    <List.Item
+                      selectable
+                      key={fruit}
+                      id={`external-multiple-${fruit.toLowerCase()}`}
+                      index={i}
+                      value={FRUIT_VALUES[i]}
+                      flex
+                      spacing="s"
+                    >
+                      <SelectableInput />
+                      {fruit} (value={FRUIT_VALUES[i]})
+                    </List.Item>
+                  ))}
+                </List>
+                <Box flex="x" spacing="s" marginTop="s">
+                  <Button
+                    command="--navi-update"
+                    commandfor={listId}
+                    value={[1, 3]}
                   >
-                    <SelectableInput />
-                    {fruit} (value={FRUIT_VALUES[i]})
-                  </List.Item>
-                ))}
-              </List>
-              <Box flex="x" spacing="s" marginTop="s">
-                <Button
-                  command="--navi-update"
-                  commandfor={listId}
-                  value={[1, 3]}
-                >
-                  Apple + Cherry
-                </Button>
-                <Button
-                  command="--navi-update"
-                  commandfor={listId}
-                  value={[2, 4, 5]}
-                >
-                  Banana + Date + Elderberry
-                </Button>
-                <Button command="--navi-clear" commandfor={listId}>
-                  Tout désélectionner
-                </Button>
-                <Button command="--navi-send" commandfor={listId} />
-              </Box>
-            </fieldset>
-            <CallLog entries={entries} onClear={clearEntries} />
-          </Box>
+                    Apple + Cherry
+                  </Button>
+                  <Button
+                    command="--navi-update"
+                    commandfor={listId}
+                    value={[2, 4, 5]}
+                  >
+                    Banana + Date + Elderberry
+                  </Button>
+                  <Button command="--navi-clear" commandfor={listId}>
+                    Tout désélectionner
+                  </Button>
+                  <Button command="--navi-send" commandfor={listId} />
+                </Box>
+              </fieldset>
+              <CallLog entries={entries} onClear={clearEntries} />
+            </Box>
+          </div>
         );
       };
 
@@ -882,36 +967,39 @@
         const [entries, pushEntry, clearEntries] = useCallLog();
 
         return (
-          <Box flex="y" spacing="m" alignX="start">
-            <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
-              ControlGroup sans parent — agit comme un mini-formulaire.
-            </p>
-            <fieldset>
-              <legend>address</legend>
-              <ControlGroup
-                name="address"
-                action={(value) => {
-                  pushEntry("action", value);
-                }}
-                uiAction={(value) => {
-                  pushEntry("uiAction", value);
-                }}
-              >
-                <Box flex="y" spacing="s" alignX="start">
-                  <fieldset>
-                    <legend>firstName</legend>
-                    <Input type="text" name="firstName" defaultValue="dam" />
-                  </fieldset>
-                  <fieldset>
-                    <legend>lastName</legend>
-                    <Input type="text" name="lastName" />
-                  </fieldset>
-                  <Button command="--navi-send" />
-                </Box>
-              </ControlGroup>
-            </fieldset>
-            <CallLog entries={entries} onClear={clearEntries} />
-          </Box>
+          <div class="demo-section" id="group-basic">
+            <h2>Basique</h2>
+            <Box flex="y" spacing="m" alignX="start">
+              <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+                ControlGroup sans parent — agit comme un mini-formulaire.
+              </p>
+              <fieldset>
+                <legend>address</legend>
+                <ControlGroup
+                  name="address"
+                  action={(value) => {
+                    pushEntry("action", value);
+                  }}
+                  uiAction={(value) => {
+                    pushEntry("uiAction", value);
+                  }}
+                >
+                  <Box flex="y" spacing="s" alignX="start">
+                    <fieldset>
+                      <legend>firstName</legend>
+                      <Input type="text" name="firstName" defaultValue="dam" />
+                    </fieldset>
+                    <fieldset>
+                      <legend>lastName</legend>
+                      <Input type="text" name="lastName" />
+                    </fieldset>
+                    <Button command="--navi-send" />
+                  </Box>
+                </ControlGroup>
+              </fieldset>
+              <CallLog entries={entries} onClear={clearEntries} />
+            </Box>
+          </div>
         );
       };
 
@@ -919,57 +1007,64 @@
         const [entries, pushEntry, clearEntries] = useCallLog();
 
         return (
-          <Box flex="y" spacing="m" alignX="start">
-            <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
-              <code>Button command="--navi-clear"</code> réinitialise tous les
-              champs à vide (chaîne vide). C'est le bouton à privilégier pour
-              permettre à l'utilisateur de repartir de zéro. Le{" "}
-              <code>uiAction</code> de l'input met à jour un signal — vérifier
-              qu'il repasse à <code>""</code> après un Clear.
-            </p>
-            <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
-              nickNameSignalA :{" "}
-              <strong>{JSON.stringify(nickNameSignalA.value)}</strong>
-            </p>
-            <fieldset>
-              <legend>address</legend>
-              <ControlGroup
-                name="address"
-                action={(value) => {
-                  pushEntry("action", value);
-                }}
-                uiAction={(value) => {
-                  pushEntry("uiAction", value);
-                }}
-              >
-                <Box flex="y" spacing="s" alignX="start">
-                  <fieldset>
-                    <legend>firstName</legend>
-                    <Input type="text" name="firstName" defaultValue="Jean" />
-                  </fieldset>
-                  <fieldset>
-                    <legend>lastName</legend>
-                    <Input type="text" name="lastName" defaultValue="Dupont" />
-                  </fieldset>
-                  <fieldset>
-                    <legend>nickName (uiAction → signal)</legend>
-                    <Input
-                      type="text"
-                      name="nickName"
-                      uiAction={(v) => {
-                        nickNameSignalA.value = v;
-                      }}
-                    />
-                  </fieldset>
-                  <Box flex="x" spacing="s">
-                    <Button command="--navi-clear" />
-                    <Button command="--navi-send" />
+          <div class="demo-section" id="group-clear">
+            <h2>Clear (--navi-clear)</h2>
+            <Box flex="y" spacing="m" alignX="start">
+              <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+                <code>Button command="--navi-clear"</code> réinitialise tous les
+                champs à vide (chaîne vide). C'est le bouton à privilégier pour
+                permettre à l'utilisateur de repartir de zéro. Le{" "}
+                <code>uiAction</code> de l'input met à jour un signal — vérifier
+                qu'il repasse à <code>""</code> après un Clear.
+              </p>
+              <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+                nickNameSignalA :{" "}
+                <strong>{JSON.stringify(nickNameSignalA.value)}</strong>
+              </p>
+              <fieldset>
+                <legend>address</legend>
+                <ControlGroup
+                  name="address"
+                  action={(value) => {
+                    pushEntry("action", value);
+                  }}
+                  uiAction={(value) => {
+                    pushEntry("uiAction", value);
+                  }}
+                >
+                  <Box flex="y" spacing="s" alignX="start">
+                    <fieldset>
+                      <legend>firstName</legend>
+                      <Input type="text" name="firstName" defaultValue="Jean" />
+                    </fieldset>
+                    <fieldset>
+                      <legend>lastName</legend>
+                      <Input
+                        type="text"
+                        name="lastName"
+                        defaultValue="Dupont"
+                      />
+                    </fieldset>
+                    <fieldset>
+                      <legend>nickName (uiAction → signal)</legend>
+                      <Input
+                        type="text"
+                        name="nickName"
+                        uiAction={(v) => {
+                          nickNameSignalA.value = v;
+                        }}
+                      />
+                    </fieldset>
+                    <Box flex="x" spacing="s">
+                      <Button command="--navi-clear" />
+                      <Button command="--navi-send" />
+                    </Box>
                   </Box>
-                </Box>
-              </ControlGroup>
-            </fieldset>
-            <CallLog entries={entries} onClear={clearEntries} />
-          </Box>
+                </ControlGroup>
+              </fieldset>
+              <CallLog entries={entries} onClear={clearEntries} />
+            </Box>
+          </div>
         );
       };
 
@@ -977,58 +1072,62 @@
         const [entries, pushEntry, clearEntries] = useCallLog();
 
         return (
-          <Box flex="y" spacing="m" alignX="start">
-            <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
-              <code>Button command="--navi-reset"</code> remet les champs à leur{" "}
-              <code>defaultValue</code>. Si un champ n'a pas de{" "}
-              <code>defaultValue</code>, il revient à vide. À utiliser quand on
-              veut annuler les modifications sans effacer les valeurs initiales.
-            </p>
-            <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
-              nickNameSignalB :{" "}
-              <strong>{JSON.stringify(nickNameSignalB.value)}</strong>
-            </p>
-            <fieldset>
-              <legend>address</legend>
-              <ControlGroup
-                name="address"
-                action={(value) => {
-                  pushEntry("action", value);
-                }}
-                uiAction={(value) => {
-                  pushEntry("uiAction", value);
-                }}
-              >
-                <Box flex="y" spacing="s" alignX="start">
-                  <fieldset>
-                    <legend>firstName (defaultValue="Jean")</legend>
-                    <Input type="text" name="firstName" defaultValue="Jean" />
-                  </fieldset>
-                  <fieldset>
-                    <legend>lastName (no defaultValue)</legend>
-                    <Input type="text" name="lastName" />
-                  </fieldset>
-                  <fieldset>
-                    <legend>nickName (defaultValue via signal)</legend>
-                    <Input
-                      type="text"
-                      name="nickName"
-                      defaultValue={nickNameSignalB.value}
-                      uiAction={(v) => {
-                        nickNameSignalB.value = v;
-                        pushEntry("uiAction (nickName)", v);
-                      }}
-                    />
-                  </fieldset>
-                  <Box flex="x" spacing="s">
-                    <Button command="--navi-reset" />
-                    <Button command="--navi-send" />
+          <div class="demo-section" id="group-reset">
+            <h2>Reset (--navi-reset)</h2>
+            <Box flex="y" spacing="m" alignX="start">
+              <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+                <code>Button command="--navi-reset"</code> remet les champs à
+                leur <code>defaultValue</code>. Si un champ n'a pas de{" "}
+                <code>defaultValue</code>, il revient à vide. À utiliser quand
+                on veut annuler les modifications sans effacer les valeurs
+                initiales.
+              </p>
+              <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+                nickNameSignalB :{" "}
+                <strong>{JSON.stringify(nickNameSignalB.value)}</strong>
+              </p>
+              <fieldset>
+                <legend>address</legend>
+                <ControlGroup
+                  name="address"
+                  action={(value) => {
+                    pushEntry("action", value);
+                  }}
+                  uiAction={(value) => {
+                    pushEntry("uiAction", value);
+                  }}
+                >
+                  <Box flex="y" spacing="s" alignX="start">
+                    <fieldset>
+                      <legend>firstName (defaultValue="Jean")</legend>
+                      <Input type="text" name="firstName" defaultValue="Jean" />
+                    </fieldset>
+                    <fieldset>
+                      <legend>lastName (no defaultValue)</legend>
+                      <Input type="text" name="lastName" />
+                    </fieldset>
+                    <fieldset>
+                      <legend>nickName (defaultValue via signal)</legend>
+                      <Input
+                        type="text"
+                        name="nickName"
+                        defaultValue={nickNameSignalB.value}
+                        uiAction={(v) => {
+                          nickNameSignalB.value = v;
+                          pushEntry("uiAction (nickName)", v);
+                        }}
+                      />
+                    </fieldset>
+                    <Box flex="x" spacing="s">
+                      <Button command="--navi-reset" />
+                      <Button command="--navi-send" />
+                    </Box>
                   </Box>
-                </Box>
-              </ControlGroup>
-            </fieldset>
-            <CallLog entries={entries} onClear={clearEntries} />
-          </Box>
+                </ControlGroup>
+              </fieldset>
+              <CallLog entries={entries} onClear={clearEntries} />
+            </Box>
+          </div>
         );
       };
 
@@ -1036,33 +1135,36 @@
         const [entries, pushEntry, clearEntries] = useCallLog();
 
         return (
-          <Box flex="y" spacing="m" alignX="start">
-            <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
-              Un <code>Input type="text" required</code> — soumettre sans le
-              remplir doit bloquer l'action.
-            </p>
-            <fieldset>
-              <legend>info</legend>
-              <ControlGroup
-                name="info"
-                action={(value) => {
-                  pushEntry("action", value);
-                }}
-                uiAction={(value) => {
-                  pushEntry("uiAction", value);
-                }}
-              >
-                <Box flex="y" spacing="s" alignX="start">
-                  <fieldset>
-                    <legend>label</legend>
-                    <Input type="text" name="label" required />
-                  </fieldset>
-                  <Button command="--navi-send" />
-                </Box>
-              </ControlGroup>
-            </fieldset>
-            <CallLog entries={entries} onClear={clearEntries} />
-          </Box>
+          <div class="demo-section" id="group-required">
+            <h2>Required / validation</h2>
+            <Box flex="y" spacing="m" alignX="start">
+              <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+                Un <code>Input type="text" required</code> — soumettre sans le
+                remplir doit bloquer l'action.
+              </p>
+              <fieldset>
+                <legend>info</legend>
+                <ControlGroup
+                  name="info"
+                  action={(value) => {
+                    pushEntry("action", value);
+                  }}
+                  uiAction={(value) => {
+                    pushEntry("uiAction", value);
+                  }}
+                >
+                  <Box flex="y" spacing="s" alignX="start">
+                    <fieldset>
+                      <legend>label</legend>
+                      <Input type="text" name="label" required />
+                    </fieldset>
+                    <Button command="--navi-send" />
+                  </Box>
+                </ControlGroup>
+              </fieldset>
+              <CallLog entries={entries} onClear={clearEntries} />
+            </Box>
+          </div>
         );
       };
 
@@ -1070,37 +1172,40 @@
         const [entries, pushEntry, clearEntries] = useCallLog();
 
         return (
-          <Box flex="y" spacing="m" alignX="start">
-            <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
-              Même chose avec <code>firstName</code> requis — soumettre sans le
-              remplir doit bloquer l'action.
-            </p>
-            <fieldset>
-              <legend>address</legend>
-              <ControlGroup
-                name="address"
-                action={(value) => {
-                  pushEntry("action", value);
-                }}
-                uiAction={(value) => {
-                  pushEntry("uiAction", value);
-                }}
-              >
-                <Box flex="y" spacing="s" alignX="start">
-                  <fieldset>
-                    <legend>firstName</legend>
-                    <Input type="text" name="firstName" required />
-                  </fieldset>
-                  <fieldset>
-                    <legend>lastName</legend>
-                    <Input type="text" name="lastName" />
-                  </fieldset>
-                  <Button command="--navi-send" />
-                </Box>
-              </ControlGroup>
-            </fieldset>
-            <CallLog entries={entries} onClear={clearEntries} />
-          </Box>
+          <div class="demo-section" id="group-required-2">
+            <h2>Required (standalone)</h2>
+            <Box flex="y" spacing="m" alignX="start">
+              <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+                Même chose avec <code>firstName</code> requis — soumettre sans
+                le remplir doit bloquer l'action.
+              </p>
+              <fieldset>
+                <legend>address</legend>
+                <ControlGroup
+                  name="address"
+                  action={(value) => {
+                    pushEntry("action", value);
+                  }}
+                  uiAction={(value) => {
+                    pushEntry("uiAction", value);
+                  }}
+                >
+                  <Box flex="y" spacing="s" alignX="start">
+                    <fieldset>
+                      <legend>firstName</legend>
+                      <Input type="text" name="firstName" required />
+                    </fieldset>
+                    <fieldset>
+                      <legend>lastName</legend>
+                      <Input type="text" name="lastName" />
+                    </fieldset>
+                    <Button command="--navi-send" />
+                  </Box>
+                </ControlGroup>
+              </fieldset>
+              <CallLog entries={entries} onClear={clearEntries} />
+            </Box>
+          </div>
         );
       };
 
@@ -1109,57 +1214,60 @@
         const [groupEntries, pushGroupEntry, clearGroupEntries] = useCallLog();
 
         return (
-          <Box flex="y" spacing="m">
-            <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
-              Le ControlGroup (<code>name="address"</code>) produit une clé{" "}
-              <code>address</code> dans la valeur du Form parent.
-            </p>
-            <Form
-              action={(value) => {
-                pushFormEntry("action", value);
-              }}
-              uiAction={(value) => {
-                pushFormEntry("uiAction", value);
-              }}
-            >
-              <Box flex="y" spacing="s" alignX="start">
-                <fieldset>
-                  <legend>name</legend>
-                  <Input type="text" name="name" />
-                </fieldset>
-                <fieldset>
-                  <legend>address</legend>
-                  <ControlGroup
-                    name="address"
-                    uiAction={(value) => {
-                      pushGroupEntry("uiAction", value);
-                    }}
-                    required
-                  >
-                    <Box flex="y" spacing="s" alignX="start">
-                      <fieldset>
-                        <legend>street</legend>
-                        <Input type="text" name="street" />
-                      </fieldset>
-                      <fieldset>
-                        <legend>city</legend>
-                        <Input type="text" name="city" />
-                      </fieldset>
-                    </Box>
-                  </ControlGroup>
-                </fieldset>
-                <Button command="--navi-send" />
-              </Box>
-            </Form>
-            <p style={{ margin: 0, fontSize: "0.85rem", color: "#777" }}>
-              ControlGroup
-            </p>
-            <CallLog entries={groupEntries} onClear={clearGroupEntries} />
-            <p style={{ margin: 0, fontSize: "0.85rem", color: "#777" }}>
-              Form
-            </p>
-            <CallLog entries={formEntries} onClear={clearFormEntries} />
-          </Box>
+          <div class="demo-section" id="group-inside-form">
+            <h2>Inside a Form</h2>
+            <Box flex="y" spacing="m">
+              <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+                Le ControlGroup (<code>name="address"</code>) produit une clé{" "}
+                <code>address</code> dans la valeur du Form parent.
+              </p>
+              <Form
+                action={(value) => {
+                  pushFormEntry("action", value);
+                }}
+                uiAction={(value) => {
+                  pushFormEntry("uiAction", value);
+                }}
+              >
+                <Box flex="y" spacing="s" alignX="start">
+                  <fieldset>
+                    <legend>name</legend>
+                    <Input type="text" name="name" />
+                  </fieldset>
+                  <fieldset>
+                    <legend>address</legend>
+                    <ControlGroup
+                      name="address"
+                      uiAction={(value) => {
+                        pushGroupEntry("uiAction", value);
+                      }}
+                      required
+                    >
+                      <Box flex="y" spacing="s" alignX="start">
+                        <fieldset>
+                          <legend>street</legend>
+                          <Input type="text" name="street" />
+                        </fieldset>
+                        <fieldset>
+                          <legend>city</legend>
+                          <Input type="text" name="city" />
+                        </fieldset>
+                      </Box>
+                    </ControlGroup>
+                  </fieldset>
+                  <Button command="--navi-send" />
+                </Box>
+              </Form>
+              <p style={{ margin: 0, fontSize: "0.85rem", color: "#777" }}>
+                ControlGroup
+              </p>
+              <CallLog entries={groupEntries} onClear={clearGroupEntries} />
+              <p style={{ margin: 0, fontSize: "0.85rem", color: "#777" }}>
+                Form
+              </p>
+              <CallLog entries={formEntries} onClear={clearFormEntries} />
+            </Box>
+          </div>
         );
       };
 
@@ -1167,108 +1275,129 @@
 
       const BubbleUpBasicDemo = () => {
         return (
-          <Box flex="y" spacing="m" alignX="start">
-            <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
-              Un <code>Input name="extra"</code> est placé dans un{" "}
-              <code>List.Item</code>. Le radio_group le rejette (ce n'est pas un
-              radio), il remonte et se fait enregistrer par le{" "}
-              <code>ControlGroup</code> extérieur. La structure ci-dessous
-              montre qui voit quoi.
-            </p>
-            <ControlGroup id="bubble-up-basic-cg" name="data">
-              <List selectable name="choice">
-                <List.Item selectable index={0} value="a" padding="s">
-                  Option A
-                  <Input name="extra" placeholder="extra info" />
-                </List.Item>
-                <List.Item selectable index={1} value="b" padding="s">
-                  Option B
-                </List.Item>
-              </List>
-            </ControlGroup>
-            <DebugUIStateController id="bubble-up-basic-cg" />
-          </Box>
+          <div class="demo-section" id="bubble-up-basic">
+            <h2>Input dans un List.Item bubble vers ControlGroup</h2>
+            <Box flex="y" spacing="m" alignX="start">
+              <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+                Un <code>Input name="extra"</code> est placé dans un{" "}
+                <code>List.Item</code>. Le radio_group le rejette (ce n'est pas
+                un radio), il remonte et se fait enregistrer par le{" "}
+                <code>ControlGroup</code> extérieur. La structure ci-dessous
+                montre qui voit quoi.
+              </p>
+              <ControlGroup id="bubble-up-basic-cg" name="data">
+                <List selectable name="choice">
+                  <List.Item selectable index={0} value="a" padding="s">
+                    Option A
+                    <Input name="extra" placeholder="extra info" />
+                  </List.Item>
+                  <List.Item selectable index={1} value="b" padding="s">
+                    Option B
+                  </List.Item>
+                </List>
+              </ControlGroup>
+              <DebugUIStateController id="bubble-up-basic-cg" />
+            </Box>
+          </div>
         );
       };
 
       const BubbleUpBoundaryDemo = () => {
         return (
-          <Box flex="y" spacing="m" alignX="start">
-            <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
-              Deux <code>ControlGroup</code> imbriqués. L'input dans le
-              List.Item remonte jusqu'au ControlGroup <em>interne</em>{" "}
-              (frontière la plus proche) et s'arrête là. Le ControlGroup externe
-              ne le voit pas.
-            </p>
-            <ControlGroup id="bubble-up-boundary-outer" name="outer">
-              <ControlGroup id="bubble-up-boundary-inner" name="inner">
-                <List selectable name="choice">
-                  <List.Item selectable index={0} value="x" padding="s">
-                    Option X
-                    <Input name="extra" placeholder="extra" />
-                  </List.Item>
-                  <List.Item selectable index={1} value="y" padding="s">
-                    Option Y
-                  </List.Item>
-                </List>
+          <div class="demo-section" id="bubble-up-boundary">
+            <h2>ControlGroup stoppe le bubble</h2>
+            <Box flex="y" spacing="m" alignX="start">
+              <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+                Deux <code>ControlGroup</code> imbriqués. L'input dans le
+                List.Item remonte jusqu'au ControlGroup <em>interne</em>{" "}
+                (frontière la plus proche) et s'arrête là. Le ControlGroup
+                externe ne le voit pas.
+              </p>
+              <ControlGroup id="bubble-up-boundary-outer" name="outer">
+                <ControlGroup id="bubble-up-boundary-inner" name="inner">
+                  <List selectable name="choice">
+                    <List.Item selectable index={0} value="x" padding="s">
+                      Option X
+                      <Input name="extra" placeholder="extra" />
+                    </List.Item>
+                    <List.Item selectable index={1} value="y" padding="s">
+                      Option Y
+                    </List.Item>
+                  </List>
+                </ControlGroup>
               </ControlGroup>
-            </ControlGroup>
-            <p
-              style={{ margin: "8px 0 0", fontSize: "0.85rem", color: "#777" }}
-            >
-              outer ControlGroup :
-            </p>
-            <DebugUIStateController id="bubble-up-boundary-outer" />
-          </Box>
+              <p
+                style={{
+                  margin: "8px 0 0",
+                  fontSize: "0.85rem",
+                  color: "#777",
+                }}
+              >
+                outer ControlGroup :
+              </p>
+              <DebugUIStateController id="bubble-up-boundary-outer" />
+            </Box>
+          </div>
         );
       };
 
       const BubbleUpPickerDemo = () => {
         return (
-          <Box flex="y" spacing="m" alignX="start">
-            <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
-              Un <code>Picker</code> placé dans un <code>List.Item</code>. Le
-              radio_group le rejette, il remonte et se fait enregistrer par le{" "}
-              <code>ControlGroup</code> extérieur.
-            </p>
-            <ControlGroup id="bubble-up-picker-cg" name="schedule">
-              <List selectable name="duration">
-                <List.Item selectable index={0} value="30min" padding="s">
-                  30 min
-                </List.Item>
-                <List.Item selectable index={1} value="1h" padding="s">
-                  1 h
-                </List.Item>
-                <List.Item selectable index={2} value="custom" padding="s">
-                  Personnalisé
-                  <Picker name="custom" type="controlgroup" placeholder="hh:mm">
-                    <ControlGroup>
-                      <Box flex="x" spacing="s" padding="s">
-                        <fieldset>
-                          <legend>h</legend>
-                          <Input name="hour" type="number" placeholder="0" />
-                        </fieldset>
-                        <fieldset>
-                          <legend>min</legend>
-                          <Input name="minute" type="number" placeholder="0" />
-                        </fieldset>
+          <div class="demo-section" id="bubble-up-picker">
+            <h2>Picker dans un List.Item bubble vers ControlGroup</h2>
+            <Box flex="y" spacing="m" alignX="start">
+              <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+                Un <code>Picker</code> placé dans un <code>List.Item</code>. Le
+                radio_group le rejette, il remonte et se fait enregistrer par le{" "}
+                <code>ControlGroup</code> extérieur.
+              </p>
+              <ControlGroup id="bubble-up-picker-cg" name="schedule">
+                <List selectable name="duration">
+                  <List.Item selectable index={0} value="30min" padding="s">
+                    30 min
+                  </List.Item>
+                  <List.Item selectable index={1} value="1h" padding="s">
+                    1 h
+                  </List.Item>
+                  <List.Item selectable index={2} value="custom" padding="s">
+                    Personnalisé
+                    <Picker
+                      name="custom"
+                      type="controlgroup"
+                      placeholder="hh:mm"
+                    >
+                      <ControlGroup>
+                        <Box flex="x" spacing="s" padding="s">
+                          <fieldset>
+                            <legend>h</legend>
+                            <Input name="hour" type="number" placeholder="0" />
+                          </fieldset>
+                          <fieldset>
+                            <legend>min</legend>
+                            <Input
+                              name="minute"
+                              type="number"
+                              placeholder="0"
+                            />
+                          </fieldset>
+                        </Box>
+                      </ControlGroup>
+                      <Box flex spacing="s">
+                        <Button command="--navi-cancel">Annuler</Button>
+                        <Button command="--navi-define">Définir</Button>
                       </Box>
-                    </ControlGroup>
-                    <Box flex spacing="s">
-                      <Button command="--navi-cancel">Annuler</Button>
-                      <Button command="--navi-define">Définir</Button>
-                    </Box>
-                  </Picker>
-                </List.Item>
-              </List>
-            </ControlGroup>
-            <DebugUIStateController id="bubble-up-picker-cg" />
-          </Box>
+                    </Picker>
+                  </List.Item>
+                </List>
+              </ControlGroup>
+              <DebugUIStateController id="bubble-up-picker-cg" />
+            </Box>
+          </div>
         );
       };
 
       render(
-        <NaviDebug debugCommand debugAction debugInteraction debugUIState>
+        <NaviDebug debugAll>
           <App />
         </NaviDebug>,
         document.querySelector("#root"),

@@ -21,8 +21,8 @@ import {
   useControlgroupProps,
 } from "./control_hooks.jsx";
 import { FormContext } from "./form_context.js";
+import { dispatchRequestAction } from "./rules/control_action.js";
 import { dispatchRequestResetUIState } from "./ui_state_dom.js";
-import { dispatchRequestAction } from "./validation/custom_constraint_validation.js";
 
 export const Form = (props) => {
   const defaultRef = useRef();
@@ -41,6 +41,7 @@ const FormControl = (props) => {
       wantRequesterButtonState: true,
       controlType: "form",
       stateType: "object",
+      cascadeValidationToChildren: true,
       aggregateChildStates: (childUIStateControllers) => {
         const formValues = {};
         for (const childUIStateController of childUIStateControllers) {
@@ -78,16 +79,14 @@ const FormControl = (props) => {
       pseudoClasses={FormPseudoClasses}
       onSubmit={(e) => {
         const form = e.currentTarget;
-        e.preventDefault();
         dispatchRequestAction(form, {
           event: e,
+          name: "form_submit",
+          always: () => {
+            e.preventDefault();
+          },
           requester: e.submitter || form,
-          actionOrigin: "form_submit",
-          meta: { isSubmit: true },
         });
-      }}
-      onnavi_get_managed_controls={(e) => {
-        e.detail.respondWith(getFormManagedControls(e.currentTarget));
       }}
       onReset={(e) => {
         const form = ref.current;
@@ -120,22 +119,26 @@ const FormPseudoClasses = [
   ":-navi-loading",
 ];
 
-const getFormManagedControls = (form) => {
-  const managedControls = [];
-  for (const element of form.elements) {
-    // Exclude inputs that are inside any control group (radio, checkbox, control_group…)
-    // — the group host is the managed control for the form, not its individual child inputs.
-    const controlGroupHost = element.closest("[navi-control-group]");
-    if (
-      controlGroupHost &&
-      controlGroupHost !== form &&
-      form.contains(controlGroupHost)
-    ) {
-      continue;
-    }
-    managedControls.push(element);
+// https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Constraint_validation
+// Override requestSubmit so that programmatic form submissions go through the
+// navi interaction gate (interactivity check) and then the action gate (validity).
+const requestSubmit = HTMLFormElement.prototype.requestSubmit;
+HTMLFormElement.prototype.requestSubmit = function (submitter) {
+  const form = this;
+  const controller = form.__uiStateController__;
+  if (!controller) {
+    requestSubmit.call(form, submitter);
+    return;
   }
-  return managedControls;
+  const programmaticEvent = new CustomEvent("programmatic_request_submit", {
+    cancelable: true,
+    detail: { submitter },
+  });
+  dispatchRequestAction(form, {
+    event: programmaticEvent,
+    name: "requestSubmit",
+    requester: submitter,
+  });
 };
 
 // const dispatchCustomEventOnFormAndFormElements = (type, options) => {

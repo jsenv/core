@@ -18,14 +18,14 @@ import {
   ControlgroupChildrenWrapper,
   useControlgroupProps,
 } from "../control_hooks.jsx";
+import { getUIStateControllerById } from "../controller_registry.js";
 import { Input } from "../input/input.jsx";
 import { useCheckableProps } from "../input/use_checkable_props.js";
-import { getUIStateControllerById } from "../ui_state_controller.js";
-import { dispatchRequestInteraction } from "../validation/custom_constraint_validation.js";
+import { dispatchRequestInteraction } from "../rules/control_interaction.js";
 
 const css = /* css */ `
   @layer navi {
-    .navi_list_item[navi-selectable] {
+    .navi_list_container[navi-selectable] {
       /* Focus outline */
       --list-item-outline-width: var(--navi-focus-outline-width);
       /* here we draw the outline ON the item, not outside of it */
@@ -211,13 +211,13 @@ const ListSelectable = (props) => {
         ? (childUIStateController) => {
             return (
               childUIStateController.controlType === "input" &&
-              childUIStateController.props.type === "checkbox"
+              childUIStateController.controlHostProps.type === "checkbox"
             );
           }
         : (childUIStateController) => {
             return (
               childUIStateController.controlType === "input" &&
-              childUIStateController.props.type === "radio"
+              childUIStateController.controlHostProps.type === "radio"
             );
           },
       aggregateChildStates: multiple
@@ -355,12 +355,12 @@ const ListSelectable = (props) => {
           return;
         }
         const list = ref.current;
-        const allowed = dispatchRequestInteraction(list, e, "select");
-        if (!allowed) {
-          e.preventDefault();
-          return;
-        }
-        childController.setUIState(true, e);
+        dispatchRequestInteraction(list, {
+          event: e,
+          name: "select",
+          prevented: () => e.preventDefault(), // tell the requester that we don't want to select this item
+          allowed: () => childController.setUIState(childController.value, e),
+        });
       }}
       onnavi_request_unselect={(e) => {
         const { id } = e.detail;
@@ -373,12 +373,12 @@ const ListSelectable = (props) => {
           return;
         }
         const list = ref.current;
-        const allowed = dispatchRequestInteraction(list, e, "unselect");
-        if (!allowed) {
-          e.preventDefault();
-          return;
-        }
-        childController.setUIState(false, e);
+        dispatchRequestInteraction(list, {
+          event: e,
+          name: "unselect",
+          prevented: () => e.preventDefault(), // tell the requester that we don't want to unselect this item
+          allowed: () => childController.setUIState(undefined, e),
+        });
       }}
       onnavi_request_nav={(e) => {
         const { goal } = e.detail;
@@ -467,9 +467,10 @@ export const ListItemSelectableResolver = (props) => {
 };
 const ListItemSelectable = (props) => {
   const Next = useNextResolver();
+  const defaultId = useId();
   const {
     index,
-    id,
+    id = defaultId,
     highlight,
     hidden,
     filtered,

@@ -290,13 +290,10 @@
 
       // ── 3. Validation ─────────────────────────────────────────────────────
 
-      const ValidationDemo = () => {
+      const ValidationRequired = () => {
         const [entries, push, clear] = useCallLog();
-
         return (
-          <div class="demo-section" id="validation">
-            <h2>3. Validation</h2>
-
+          <div>
             <h3
               id="validation-required"
               style={{ margin: "0 0 8px", fontSize: "0.95rem" }}
@@ -309,7 +306,7 @@
             </p>
             <Form
               action={(values) => {
-                push("Form action (required)", values);
+                push("Form action", values);
               }}
               flex="y"
               spacing="m"
@@ -340,15 +337,15 @@
               </Field>
               <Button type="submit">Soumettre</Button>
             </Form>
+            <CallLog entries={entries} onClear={clear} />
+          </div>
+        );
+      };
 
-            <hr
-              style={{
-                margin: "20px 0",
-                border: "none",
-                borderTop: "1px solid #eee",
-              }}
-            />
-
+      const ValidationMin = () => {
+        const [entries, push, clear] = useCallLog();
+        return (
+          <div>
             <h3
               id="validation-min"
               style={{ margin: "0 0 8px", fontSize: "0.95rem" }}
@@ -362,7 +359,7 @@
             </p>
             <Form
               action={(values) => {
-                push("Form action (min)", values);
+                push("Form action", values);
               }}
               flex="y"
               spacing="m"
@@ -380,15 +377,15 @@
               </Field>
               <Button type="submit">Soumettre</Button>
             </Form>
+            <CallLog entries={entries} onClear={clear} />
+          </div>
+        );
+      };
 
-            <hr
-              style={{
-                margin: "20px 0",
-                border: "none",
-                borderTop: "1px solid #eee",
-              }}
-            />
-
+      const ValidationMax = () => {
+        const [entries, push, clear] = useCallLog();
+        return (
+          <div>
             <h3
               id="validation-max"
               style={{ margin: "0 0 8px", fontSize: "0.95rem" }}
@@ -402,7 +399,7 @@
             </p>
             <Form
               action={(values) => {
-                push("Form action (max)", values);
+                push("Form action", values);
               }}
               flex="y"
               spacing="m"
@@ -420,15 +417,16 @@
               </Field>
               <Button type="submit">Soumettre</Button>
             </Form>
+            <CallLog entries={entries} onClear={clear} />
+          </div>
+        );
+      };
 
-            <hr
-              style={{
-                margin: "20px 0",
-                border: "none",
-                borderTop: "1px solid #eee",
-              }}
-            />
-
+      const ValidationStep = () => {
+        const [entriesMin, pushMin, clearMin] = useCallLog();
+        const [entriesH, pushH, clearH] = useCallLog();
+        return (
+          <div>
             <h3
               id="validation-step"
               style={{ margin: "0 0 8px", fontSize: "0.95rem" }}
@@ -441,7 +439,7 @@
             </p>
             <Form
               action={(values) => {
-                push("Form action (step minutes)", values);
+                pushMin("Form action", values);
               }}
               flex="y"
               spacing="m"
@@ -459,6 +457,7 @@
               </Field>
               <Button type="submit">Soumettre</Button>
             </Form>
+            <CallLog entries={entriesMin} onClear={clearMin} />
 
             <hr
               style={{
@@ -474,7 +473,7 @@
             </p>
             <Form
               action={(values) => {
-                push("Form action (step heures)", values);
+                pushH("Form action", values);
               }}
               flex="y"
               spacing="m"
@@ -492,11 +491,43 @@
               </Field>
               <Button type="submit">Soumettre</Button>
             </Form>
-
-            <CallLog entries={entries} onClear={clear} />
+            <CallLog entries={entriesH} onClear={clearH} />
           </div>
         );
       };
+
+      const ValidationDemo = () => (
+        <div class="demo-section" id="validation">
+          <h2>3. Validation</h2>
+          <Box flex="y" spacing="m">
+            <ValidationRequired />
+            <hr
+              style={{
+                margin: "4px 0",
+                border: "none",
+                borderTop: "1px solid #eee",
+              }}
+            />
+            <ValidationMin />
+            <hr
+              style={{
+                margin: "4px 0",
+                border: "none",
+                borderTop: "1px solid #eee",
+              }}
+            />
+            <ValidationMax />
+            <hr
+              style={{
+                margin: "4px 0",
+                border: "none",
+                borderTop: "1px solid #eee",
+              }}
+            />
+            <ValidationStep />
+          </Box>
+        </div>
+      );
 
       // ── 4. navi_time ──────────────────────────────────────────────────────
 
@@ -594,7 +625,7 @@
       );
 
       render(
-        <NaviDebug debugAction debugInteraction debugPopup>
+        <NaviDebug debugAll>
           <App />
         </NaviDebug>,
         document.getElementById("app"),

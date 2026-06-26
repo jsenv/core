@@ -240,7 +240,7 @@ const getEventLabel = (e) => {
     return e.type;
   }
   if (e.type === "keydown") {
-    const key = e.key === " " ? "space" : e.key.toLowerCase();
+    const key = e.key === " " ? "space" : e.key?.toLowerCase();
     const modifiers = [];
     if (e.ctrlKey) {
       modifiers.push("ctrl");

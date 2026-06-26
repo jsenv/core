@@ -56,6 +56,7 @@ export const Popover = (props) => {
     positionYFixed,
     spacing = 0,
     viewportSpacing = 0,
+    closeRequestHandler,
     ...rest
   } = props;
 
@@ -196,6 +197,24 @@ export const Popover = (props) => {
     }
     if (!openedRef.current) {
       return;
+    }
+    if (closeRequestHandler) {
+      let denied = false;
+      const closePermission = {
+        deny: () => {
+          denied = true;
+        },
+        allow: () => {
+          denied = false;
+        },
+      };
+      closeRequestHandler(e, closePermission);
+      if (denied) {
+        closePermission.allow = () => {
+          close(e);
+        };
+        return;
+      }
     }
     close(e);
   };

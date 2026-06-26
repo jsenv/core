@@ -7,16 +7,14 @@ import {
   isControlRoot,
 } from "./control_dom.js";
 import { readControlValue } from "./control_value.js";
+import { dispatchRequestAction } from "./rules/control_action.js";
+import { dispatchRequestInteraction } from "./rules/control_interaction.js";
 import {
   dispatchRequestClearUIState,
   dispatchRequestResetUIState,
   dispatchRequestSetUIState,
   getUIStateFromElement,
 } from "./ui_state_dom.js";
-import {
-  dispatchRequestAction,
-  dispatchRequestInteraction,
-} from "./validation/custom_constraint_validation.js";
 
 export const triggerNaviCommand = (
   element,
@@ -87,16 +85,6 @@ const resolveExplicitTarget = (element) => {
   }
   return undefined;
 };
-const resolvePickerInnerControl = (target) => {
-  if (!target.hasAttribute("navi-picker")) {
-    return null;
-  }
-  const content = target.querySelector(".navi_picker_content");
-  if (!content) {
-    return null;
-  }
-  return content.querySelector("[navi-control-host]") ?? null;
-};
 const resolveFirstParentControl = (el) => {
   return getParentControl(el);
 };
@@ -117,7 +105,12 @@ const resolveClosestControlWithAction = (el) => {
 };
 
 const resolveCommandValue = (source, event) => {
-  if (Object.hasOwn(event.detail, "value")) {
+  if (
+    // event.detail can be a number for some native events
+    event.detail &&
+    typeof event.detail === "object" &&
+    Object.hasOwn(event.detail, "value")
+  ) {
     return event.detail.value;
   }
   if (source.hasAttribute("command-value")) {
@@ -193,20 +186,17 @@ registerNaviCommand("--navi-update", (source, event) => {
   return {
     target,
     implementation: () => {
-      const allowed = dispatchRequestInteraction(
-        target,
+      dispatchRequestInteraction(target, {
         event,
-        "--navi-update",
-      );
-      if (!allowed) {
-        event.preventDefault();
-        return false;
-      }
-      const commandValue = resolveCommandValue(source, event);
-      dispatchRequestSetUIState(target, commandValue, {
-        event,
+        name: "--navi-update",
+        prevented: () => event.preventDefault(),
+        allowed: () => {
+          const commandValue = resolveCommandValue(source, event);
+          dispatchRequestSetUIState(target, commandValue, {
+            event,
+          });
+        },
       });
-      return true;
     },
   };
 });
@@ -221,6 +211,13 @@ registerNaviCommand("--navi-clear", (source, event) => {
   return {
     target,
     implementation: () => {
+      dispatchRequestInteraction(target, {
+        event,
+        name: "--navi-clear",
+        prevented: () => event.preventDefault(),
+        allowed: () => dispatchRequestClearUIState(target, event),
+      });
+
       if (fromInput) {
         // clearing input search should not close a popover/dialog
       } else {
@@ -228,13 +225,6 @@ registerNaviCommand("--navi-clear", (source, event) => {
           optional: true,
         });
       }
-      const allowed = dispatchRequestInteraction(target, event, "--navi-clear");
-      if (!allowed) {
-        event.preventDefault();
-        return false;
-      }
-      dispatchRequestClearUIState(target, event);
-      return true;
     },
   };
 });
@@ -247,12 +237,12 @@ registerNaviCommand("--navi-reset", (source, event) => {
   return {
     target,
     implementation: () => {
-      const allowed = dispatchRequestInteraction(target, event, "--navi-reset");
-      if (!allowed) {
-        event.preventDefault();
-        return false;
-      }
-      return dispatchRequestResetUIState(target, event);
+      dispatchRequestInteraction(target, {
+        event,
+        name: "--navi-reset",
+        prevented: () => event.preventDefault(),
+        allowed: () => dispatchRequestResetUIState(target, event),
+      });
     },
   };
 });
@@ -288,21 +278,29 @@ registerNaviCommand("--navi-send", (source, event) => {
           requester = firstButtonSubmitting;
         }
       }
-      const allowed = dispatchRequestAction(target, { event, requester });
-      const initiator =
-        event.detail && typeof event.detail === "object"
-          ? event.detail.eventChain[0]
-          : event;
-      const { form } = target;
-      if (form) {
-        // prevent form submission when clicking buttons or pressing enter on inputs
-        initiator.preventDefault();
-      } else if (initiator.type === "keydown" && initiator.key === "Enter") {
-        // prevent triggering click on such button, they are already performing submit
-        // (this ensures enter inside a picker won't trigger picker button click)
-        initiator.preventDefault();
-      }
-      return allowed;
+      return dispatchRequestAction(target, {
+        event,
+        name: "--navi-send",
+        always: () => {
+          const initiator =
+            event.detail && typeof event.detail === "object"
+              ? event.detail.eventChain[0]
+              : event;
+          const { form } = target;
+          if (form) {
+            // prevent form submission when clicking buttons or pressing enter on inputs
+            initiator.preventDefault();
+          } else if (
+            initiator.type === "keydown" &&
+            initiator.key === "Enter"
+          ) {
+            // prevent triggering click on such button, they are already performing submit
+            // (this ensures enter inside a picker won't trigger picker button click)
+            initiator.preventDefault();
+          }
+        },
+        requester,
+      });
     },
   };
 });
@@ -368,19 +366,6 @@ registerNaviCommand("--navi-define", (source, event) => {
   };
 });
 const executeNaviDefine = (source, event, target) => {
-  // Skip --navi-update when the picker already has an inner control that
-  // manages the picker's value autonomously:
-  // - A ControlGroup aggregates all child values and syncs them up via its
-  //   own command="--navi-update". Calling --navi-update from the send button
-  //   (which has no value) would override the aggregated value.
-  // - Any other inner control host (e.g. a plain Input inside the picker
-  //   popup) already propagates its value to the picker via its own
-  //   command="--navi-update" on every change. Calling it again from the
-  //   send button's undefined value would corrupt the picker state.
-  const skipUpdate = resolvePickerInnerControl(target) !== null;
-  if (!skipUpdate) {
-    triggerNaviCommand(source, "--navi-update", event);
-  }
   // The picker's onClose already dispatches the action with the final value.
   // Dispatching again here would fire the action twice.
   return triggerNaviCommand(target, "--navi-close", event);

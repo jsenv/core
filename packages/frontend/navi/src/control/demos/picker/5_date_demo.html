@@ -58,7 +58,6 @@
     </div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useSignal } from "@preact/signals";
       import { CallLog, useCallLog } from "../utils/call_log.jsx";
       import {
         Box,
@@ -68,8 +67,6 @@
         Form,
         Button,
         NaviDebug,
-        isToday,
-        getNowHoursRoundedToStep,
         stateSignal,
         route,
         setupRoutes,
@@ -241,10 +238,29 @@
         type: "date",
       });
 
+      const now = new Date();
+      const in30days = new Date(now);
+      in30days.setDate(now.getDate() + 30);
+
+      const dateSignalCombo = stateSignal(DEFAULT_DATE, {
+        type: "date",
+        min: now,
+        autoFix: true,
+      });
+      const timeSignalCombo = stateSignal("09:00", {
+        type: "time",
+        min: "07:00",
+        max: "21:00",
+        step: "00:30",
+      });
+
       const DEMO_ROUTE = route("", {
         searchParams: {
           no_initial_date: noInitialDateSignal,
           with_initial_date: withInitialDateSignal,
+
+          combo_date: dateSignalCombo,
+          combo_time: timeSignalCombo,
         },
       });
       setupRoutes([DEMO_ROUTE]);
@@ -350,13 +366,10 @@
 
       // ── 4. Validation ───────────────────────────────────────────────────
 
-      const ValidationDemo = () => {
+      const ValidationRequired = () => {
         const [entries, push, clear] = useCallLog();
-
         return (
-          <div class="demo-section" id="validation">
-            <h2>4. Validation</h2>
-
+          <div>
             <h3
               id="validation-required"
               style={{ margin: "0 0 8px", fontSize: "0.95rem" }}
@@ -369,7 +382,7 @@
             </p>
             <Form
               action={(values) => {
-                push("Form action (required)", values);
+                push("Form action", values);
               }}
               flex="y"
               spacing="m"
@@ -381,15 +394,15 @@
               </Field>
               <Button type="submit">Soumettre</Button>
             </Form>
+            <CallLog entries={entries} onClear={clear} />
+          </div>
+        );
+      };
 
-            <hr
-              style={{
-                margin: "20px 0",
-                border: "none",
-                borderTop: "1px solid #eee",
-              }}
-            />
-
+      const ValidationMin = () => {
+        const [entries, push, clear] = useCallLog();
+        return (
+          <div>
             <h3
               id="validation-min"
               style={{ margin: "0 0 8px", fontSize: "0.95rem" }}
@@ -403,7 +416,7 @@
             </p>
             <Form
               action={(values) => {
-                push("Form action (min)", values);
+                push("Form action", values);
               }}
               flex="y"
               spacing="m"
@@ -421,15 +434,15 @@
               </Field>
               <Button type="submit">Soumettre</Button>
             </Form>
+            <CallLog entries={entries} onClear={clear} />
+          </div>
+        );
+      };
 
-            <hr
-              style={{
-                margin: "20px 0",
-                border: "none",
-                borderTop: "1px solid #eee",
-              }}
-            />
-
+      const ValidationMax = () => {
+        const [entries, push, clear] = useCallLog();
+        return (
+          <div>
             <h3
               id="validation-max"
               style={{ margin: "0 0 8px", fontSize: "0.95rem" }}
@@ -443,7 +456,7 @@
             </p>
             <Form
               action={(values) => {
-                push("Form action (max)", values);
+                push("Form action", values);
               }}
               flex="y"
               spacing="m"
@@ -461,15 +474,15 @@
               </Field>
               <Button type="submit">Soumettre</Button>
             </Form>
+            <CallLog entries={entries} onClear={clear} />
+          </div>
+        );
+      };
 
-            <hr
-              style={{
-                margin: "20px 0",
-                border: "none",
-                borderTop: "1px solid #eee",
-              }}
-            />
-
+      const ValidationStep = () => {
+        const [entries, push, clear] = useCallLog();
+        return (
+          <div>
             <h3
               id="validation-step"
               style={{ margin: "0 0 8px", fontSize: "0.95rem" }}
@@ -483,7 +496,7 @@
             </p>
             <Form
               action={(values) => {
-                push("Form action (step)", values);
+                push("Form action", values);
               }}
               flex="y"
               spacing="m"
@@ -502,11 +515,43 @@
               </Field>
               <Button type="submit">Soumettre</Button>
             </Form>
-
             <CallLog entries={entries} onClear={clear} />
           </div>
         );
       };
+
+      const ValidationDemo = () => (
+        <div class="demo-section" id="validation">
+          <h2>4. Validation</h2>
+          <Box flex="y" spacing="m">
+            <ValidationRequired />
+            <hr
+              style={{
+                margin: "4px 0",
+                border: "none",
+                borderTop: "1px solid #eee",
+              }}
+            />
+            <ValidationMin />
+            <hr
+              style={{
+                margin: "4px 0",
+                border: "none",
+                borderTop: "1px solid #eee",
+              }}
+            />
+            <ValidationMax />
+            <hr
+              style={{
+                margin: "4px 0",
+                border: "none",
+                borderTop: "1px solid #eee",
+              }}
+            />
+            <ValidationStep />
+          </Box>
+        </div>
+      );
 
       // ── 5. Customization ─────────────────────────────────────────────────
 
@@ -665,19 +710,8 @@
 
       // ── 5. Date + Time combo ─────────────────────────────────────────────
 
-      const now = new Date();
-      const in30days = new Date(now);
-      in30days.setDate(now.getDate() + 30);
-
-      const dateSignalCombo = stateSignal(DEFAULT_DATE, {
-        type: "date",
-        min: now,
-        autoFix: true,
-      });
-
       const DateTimeComboDemo = () => {
         const [entries, push, clear] = useCallLog();
-        const hourSignal = useSignal("09:00");
 
         return (
           <div class="demo-section" id="date-time-combo">
@@ -701,33 +735,28 @@
               <Field vertical>
                 <Label>Jour</Label>
                 <Box flex spacing="s">
-                  <Picker
-                    name="combo_date"
-                    type="date"
-                    required
-                    value={dateSignalCombo.value}
-                    action={(v) => {
-                      dateSignalCombo.value = v;
-                    }}
-                    min={now}
-                    max={in30days}
-                  />
-                  <Picker
-                    name="combo_time"
-                    type="navi_time"
-                    required
-                    min={
-                      isToday(dateSignalCombo.value)
-                        ? getNowHoursRoundedToStep(30, -5)
-                        : "07:00"
-                    }
-                    max="21:00"
-                    step="00:30"
-                    value={hourSignal.value}
-                    action={(v) => {
-                      hourSignal.value = v;
-                    }}
-                  />
+                  <Field>
+                    <Picker
+                      name="combo_date"
+                      type="date"
+                      required
+                      value={dateSignalCombo}
+                      uiAction={(v) => {
+                        dateSignalCombo.value = v;
+                      }}
+                    />
+                  </Field>
+                  <Field>
+                    <Picker
+                      name="combo_time"
+                      type="time"
+                      required
+                      value={timeSignalCombo}
+                      uiAction={(v) => {
+                        timeSignalCombo.value = v;
+                      }}
+                    />
+                  </Field>
                 </Box>
               </Field>
               <Button type="submit">Soumettre</Button>
@@ -739,7 +768,7 @@
       };
 
       render(
-        <NaviDebug debugCommand debugAction debugInteraction debugPopup>
+        <NaviDebug debugAll>
           <App />
         </NaviDebug>,
         document.getElementById("app"),

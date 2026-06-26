@@ -41,6 +41,7 @@ export const Dialog = (props) => {
     scrollTrap,
     pointerTrap,
     centerInVisualViewport: centerInVisualViewportProp,
+    closeRequestHandler,
     ...rest
   } = props;
   const defaultRef = useRef();
@@ -131,6 +132,24 @@ export const Dialog = (props) => {
     }
     if (!openedRef.current) {
       return;
+    }
+    if (closeRequestHandler) {
+      let denied = false;
+      const closePermission = {
+        deny: () => {
+          denied = true;
+        },
+        allow: () => {
+          denied = false;
+        },
+      };
+      closeRequestHandler(e, closePermission);
+      if (denied) {
+        closePermission.allow = () => {
+          close(e);
+        };
+        return;
+      }
     }
     close(e);
   };

@@ -1,13 +1,8 @@
-import { parseDurationToSeconds } from "@jsenv/validity";
-
 import { isSignal } from "../../utils/is_signal.js";
-import { parseStepToSeconds } from "../picker/time_helpers.js";
+import { timeStringToSeconds } from "../picker/time_helpers.js";
 
 // Maps validity type names → navi input type names
 const VALIDITY_TYPE_TO_INPUT_TYPE = {
-  hour: "navi_hour",
-  minute: "navi_minute",
-  second: "navi_second",
   percentage: "navi_percentage",
 };
 
@@ -20,27 +15,6 @@ const NAVI_TYPE_DEFAULTS = {
     "navi-input-type": "time",
     "min": 0,
     "max": 24 * 3600 - 1,
-    "step": 1,
-  },
-  navi_hour: {
-    "type": "navi_number",
-    "navi-input-type": "hour",
-    "min": 0,
-    "max": 23,
-    "step": 1,
-  },
-  navi_minute: {
-    "type": "navi_number",
-    "navi-input-type": "minute",
-    "min": 0,
-    "max": 59,
-    "step": 1,
-  },
-  navi_second: {
-    "type": "navi_number",
-    "navi-input-type": "second",
-    "min": 0,
-    "max": 59,
     "step": 1,
   },
   navi_percentage: {
@@ -64,7 +38,7 @@ const NAVI_TYPE_DEFAULTS = {
  * `<Picker>`, `<Input>` (textual) and `<Range>`. Mutates the props object in place.
  *
  * Normalization is applied recursively: a navi type may resolve to another navi
- * type (e.g. `navi_hour` → `navi_number` → `text`), and each step applies its
+ * type (e.g. `navi_percentage` → `navi_number` → `text`), and each step applies its
  * own formatters and defaults before moving to the next.
  *
  * Steps applied for each type:
@@ -78,9 +52,6 @@ const NAVI_TYPE_DEFAULTS = {
  *    then recurse.
  *
  * Supported navi types and their targets:
- * - `navi_hour`       → `navi_number`  (HH:MM strings accepted for min/max/step → hours as float)
- * - `navi_minute`     → `navi_number`  (HH:MM strings → total minutes as integer)
- * - `navi_second`     → `navi_number`  (HH:MM strings → total seconds as integer)
  * - `navi_percentage` → `navi_number`  (0–100, step 1)
  * - `navi_number`     → `text`         (inputMode="numeric", no spin buttons implied)
  * - `navi_time`       → `time`         (step in seconds)
@@ -142,37 +113,6 @@ export const resolveInputProps = (props) => {
   const targetType = currentTypeDefaults.type;
   props.type = targetType;
   resolveInputProps(props);
-};
-
-const timeStringToMinutes = (value) => {
-  if (typeof value !== "string") {
-    return value;
-  }
-  const seconds = parseDurationToSeconds(value);
-  if (seconds !== null) {
-    return seconds / 60;
-  }
-  return value;
-};
-const timeStringToHours = (value) => {
-  if (typeof value !== "string") {
-    return value;
-  }
-  const seconds = parseDurationToSeconds(value);
-  if (seconds !== null) {
-    return seconds / 3600;
-  }
-  return value;
-};
-const timeStringToSeconds = (value) => {
-  if (typeof value !== "string") {
-    return value;
-  }
-  const seconds = parseDurationToSeconds(value);
-  if (seconds !== null) {
-    return seconds;
-  }
-  return value;
 };
 
 const normalizeToDate = (value) => {
@@ -246,9 +186,6 @@ const toInputDatetime = (value) => {
 };
 
 const MIN_MAX_FORMATTER_BY_TYPE = {
-  "navi_minute": timeStringToMinutes,
-  "navi_hour": timeStringToHours,
-  "navi_second": timeStringToSeconds,
   "date": toInputDate,
   "month": toInputMonth,
   "week": toInputWeek,
@@ -257,10 +194,7 @@ const MIN_MAX_FORMATTER_BY_TYPE = {
   "datetime": toInputDatetime,
 };
 const STEP_FORMATTER_BY_TYPE = {
-  "navi_minute": timeStringToMinutes,
-  "navi_hour": timeStringToHours,
-  "navi_second": timeStringToSeconds,
-  "time": parseStepToSeconds,
-  "datetime-local": parseStepToSeconds,
-  "datetime": parseStepToSeconds,
+  "time": timeStringToSeconds,
+  "datetime-local": timeStringToSeconds,
+  "datetime": timeStringToSeconds,
 };

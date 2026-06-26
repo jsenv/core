@@ -543,6 +543,7 @@
 
             <FormBasicDemo />
             <FormWithInputActionDemo />
+            <FormWithReadonlyInputDemo />
           </div>
         );
       };
@@ -565,8 +566,8 @@
                 <Input
                   defaultValue="Hello World!"
                   placeholder="Enter text..."
-                  uiAction={(v) => {
-                    push("uiAction", v);
+                  uiAction={(v, e) => {
+                    push("uiAction", v, e);
                   }}
                 />
               </div>
@@ -576,11 +577,11 @@
                 </label>
                 <Input
                   value={controlledValue}
-                  uiAction={(v) => {
-                    push("uiAction", v);
+                  uiAction={(v, e) => {
+                    push("uiAction", v, e);
                   }}
-                  action={(v) => {
-                    push("action", v);
+                  action={(v, e) => {
+                    push("action", v, e);
                     setControlledValue(v);
                   }}
                   placeholder="Controlled input"
@@ -605,11 +606,11 @@
             <Box flex="y" spacing="s">
               <Input
                 placeholder="Type something..."
-                uiAction={(v) => {
-                  push("uiAction", v);
+                uiAction={(v, e) => {
+                  push("uiAction", v, e);
                 }}
-                action={(v) => {
-                  push("action", v);
+                action={(v, e) => {
+                  push("action", v, e);
                 }}
               />
               <CallLog entries={entries} onClear={clear} />
@@ -634,11 +635,11 @@
               <Input
                 placeholder="Type something..."
                 autoComplete="off"
-                uiAction={(v) => {
-                  push("uiAction", v);
+                uiAction={(v, e) => {
+                  push("uiAction", v, e);
                 }}
-                action={async (value) => {
-                  push("action", value);
+                action={async (value, e) => {
+                  push("action", value, e);
                   await delay(1000);
                 }}
               />
@@ -662,11 +663,11 @@
             <Box flex="y" spacing="s">
               <Input
                 placeholder="Type something (debounced 600ms)..."
-                uiAction={(v) => {
-                  push("uiAction", v);
+                uiAction={(v, e) => {
+                  push("uiAction", v, e);
                 }}
-                action={async (value) => {
-                  push("action", value);
+                action={async (value, e) => {
+                  push("action", value, e);
                   await new Promise((resolve) => setTimeout(resolve, 1500));
                 }}
                 actionDebounce={600}
@@ -692,11 +693,11 @@
               <Input
                 placeholder="Type something (debounced 600ms)..."
                 value={searchValueSignal}
-                uiAction={(v) => {
-                  push("uiAction", v);
+                uiAction={(v, e) => {
+                  push("uiAction", v, e);
                 }}
-                action={async (value) => {
-                  push("action", value);
+                action={async (value, e) => {
+                  push("action", value, e);
                   await new Promise((resolve) => setTimeout(resolve, 1500));
                   searchValueSignal.value = value;
                 }}
@@ -722,11 +723,11 @@
             <Box flex="y" spacing="s">
               <Input
                 placeholder="Type and press Enter or blur..."
-                uiAction={(v) => {
-                  push("uiAction", v);
+                uiAction={(v, e) => {
+                  push("uiAction", v, e);
                 }}
-                action={async (value) => {
-                  push("action", value);
+                action={async (value, e) => {
+                  push("action", value, e);
                   await new Promise((resolve) => setTimeout(resolve, 1500));
                 }}
                 actionAfterChange
@@ -760,12 +761,12 @@
             <Box flex="y" spacing="s">
               <Input
                 placeholder="Type something (with abort)..."
-                uiAction={(v) => {
-                  push("uiAction", v);
+                uiAction={(v, e) => {
+                  push("uiAction", v, e);
                 }}
-                action={(value) => {
+                action={(value, e) => {
                   const abortSignal = cancelPrevious();
-                  push("action", value);
+                  push("action", value, e);
                   setTimeout(() => {
                     if (!abortSignal.aborted) {
                       push("action resolved", value);
@@ -798,11 +799,11 @@
                   <Input
                     name="username"
                     value={username}
-                    uiAction={(v) => {
-                      push("uiAction", v);
+                    uiAction={(v, e) => {
+                      push("uiAction", v, e);
                     }}
-                    action={(v) => {
-                      push("action", v);
+                    action={(v, e) => {
+                      push("action", v, e);
                       setUsername(v);
                     }}
                     placeholder="Enter username"
@@ -851,11 +852,11 @@
                   <Input
                     name="search"
                     defaultValue="cats"
-                    uiAction={(v) => {
-                      push("uiAction", v);
+                    uiAction={(v, e) => {
+                      push("uiAction", v, e);
                     }}
-                    action={async (value) => {
-                      push("action", value);
+                    action={async (value, e) => {
+                      push("action", value, e);
                       await delay(600);
                     }}
                     actionAfterChange
@@ -864,6 +865,40 @@
                 <Field flex spacing="s">
                   <Label>Note (regular input)</Label>
                   <Input name="note" defaultValue="cute" />
+                </Field>
+                <Button type="submit">Submit form</Button>
+                <CallLog entries={entries} onClear={clear} />
+              </Box>
+            </Form>
+          </fieldset>
+        );
+      };
+
+      const FormWithReadonlyInputDemo = () => {
+        const [entries, push, clear] = useCallLog();
+
+        return (
+          <fieldset>
+            <legend>Form with a readonly input</legend>
+            <p className="states-description">
+              A readonly input cannot be edited but its value is still included
+              in the form submission. Clicking it shows a callout explaining why
+              it cannot be modified.
+            </p>
+            <Form
+              action={async (params) => {
+                push("[form] action", params);
+                await delay(800);
+              }}
+            >
+              <Box flex="y" spacing="s" alignX="start">
+                <Field flex spacing="s">
+                  <Label>Username (editable)</Label>
+                  <Input name="username" defaultValue="dam" />
+                </Field>
+                <Field flex spacing="s">
+                  <Label>Role (readonly)</Label>
+                  <Input name="role" value="admin" readOnly />
                 </Field>
                 <Button type="submit">Submit form</Button>
                 <CallLog entries={entries} onClear={clear} />
@@ -883,7 +918,11 @@
               for developers: if the input feels frozen, it likely means the
               code provides a value but no way to update it.
             </p>
-            <Input value="Frozen — no action provided" />
+            <Input
+              value="Frozen — no action provided"
+              // To avoid warning in the console but in practice without the readOnly prop it would still be readOnly
+              readOnly
+            />
           </div>
         );
       };
@@ -1022,6 +1061,27 @@
                           currently only <strong>{"hi".length}</strong> 🙈
                         </span>
                       }
+                      placeholder="Enter username..."
+                    />
+                  </Field>
+                  <Button type="submit">Submit</Button>
+                </Box>
+              </Form>
+            </fieldset>
+
+            <fieldset>
+              <legend>required attribute</legend>
+              <Form
+                action={async () => {
+                  await delay(600);
+                }}
+              >
+                <Box flex="y" spacing="s" alignX="start">
+                  <Field flex spacing="s">
+                    <Label>Username (required)</Label>
+                    <Input
+                      name="username"
+                      required
                       placeholder="Enter username..."
                     />
                   </Field>
@@ -1268,7 +1328,7 @@
       );
 
       render(
-        <NaviDebug debugAction debugInteraction>
+        <NaviDebug debugUIState debugAction debugInteraction>
           <App />
         </NaviDebug>,
         document.querySelector("#root"),

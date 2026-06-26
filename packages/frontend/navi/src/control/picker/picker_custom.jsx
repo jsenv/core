@@ -8,14 +8,12 @@ import { Dialog } from "@jsenv/navi/src/popup/dialog.jsx";
 import { Popover } from "@jsenv/navi/src/popup/popover.jsx";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { compareTwoJsValues } from "@jsenv/navi/src/utils/compare_two_js_values.js";
+import { dispatchRequestAction } from "../rules/control_action.js";
+import { dispatchRequestInteraction } from "../rules/control_interaction.js";
 import {
   dispatchRequestSetUIState,
   getUIStateFromElement,
 } from "../ui_state_dom.js";
-import {
-  dispatchRequestAction,
-  dispatchRequestInteraction,
-} from "../validation/custom_constraint_validation.js";
 
 const css = /* css */ `
   .navi_picker {
@@ -171,42 +169,53 @@ export const PickerCustomResolver = (props) => {
 const PickerNative = (props) => {
   const Next = useNextResolver();
 
-  const onRequestOpen = (e) => {
-    const pickerButton = e.currentTarget;
-    const pickerInput = getPickerInput(pickerButton);
-    if (!pickerInput) {
-      return;
-    }
-    const allowed = dispatchRequestInteraction(
-      pickerInput,
-      e,
-      e.type === "click" ? "click to show picker" : "navi_request_open event",
-    );
-    if (allowed) {
-      try {
-        pickerInput.showPicker();
-      } catch {
-        pickerInput.click();
-      }
-    }
-  };
-
   return (
     <Next
       {...props}
-      // Only wait for the native "change" event (dialog close) when the picker has its own
-      // action. Without an action, the change event would trigger a noop action cycle and
-      // cause spurious state updates (e.g. when closing the color dialog on form submit).
-      actionInteraction={props.action ? "change" : undefined}
+      // When the picker has its own action we want to run it when native "change" event occur (native picker dialog closes)
+      // not on every change of color while user is selecting a color for instance
+      // (it would cause too many calls and would likely not be what the user expects)
+      // (uiAction can be used to react live)
+      actionEvent={props.action ? "change" : undefined}
+      resetOnCancel
+      resetOnAbort
+      resetOnError
       onnavi_request_open={(e) => {
-        onRequestOpen(e);
+        const pickerEl = props.ref.current;
+        const pickerInput = getPickerInput(pickerEl);
+        if (!pickerInput) {
+          e.preventDefault();
+          return;
+        }
+        dispatchRequestInteraction(pickerInput, {
+          event: e,
+          name: "navi_request_open to show native picker",
+          allowed: () => {
+            try {
+              pickerInput.showPicker();
+            } catch {
+              pickerInput.click();
+            }
+          },
+        });
       }}
-      interactionDefinitions={{
+      eventReactionDefinitions={{
         click: (e) => {
           return {
-            name: "click to open native picker",
-            effect: () => {
-              onRequestOpen(e);
+            name: "click to show native picker",
+            prevented: () => {
+              e.preventDefault();
+            },
+            allowed: () => {
+              const pickerEl = props.ref.current;
+              const pickerInput = getPickerInput(pickerEl);
+              // requestCloseValidityCallout(pickerEl, e);
+              if (pickerInput.type === "color") {
+                // nothing to do, color picker whole surface is opening the picker
+              } else {
+                // other picker might not open the picker when clicking the input surface (only the calendar picker for instance would open)
+                pickerInput.showPicker();
+              }
             },
           };
         },
@@ -223,7 +232,10 @@ const PickerCustom = (props) => {
   const defaultModeRef = useRef(null);
   if (defaultModeRef.current === null) {
     const isSmallScreen = windowWidthSignal.peek() <= 600;
-    defaultModeRef.current = modeProp ?? (isSmallScreen ? "dialog" : "popover");
+    const maxWidthPx = parseFloat(props.maxWidth);
+    const isCompact = isFinite(maxWidthPx) && maxWidthPx < 150;
+    defaultModeRef.current =
+      modeProp ?? (isSmallScreen && !isCompact ? "dialog" : "popover");
   }
   const mode = defaultModeRef.current;
 
@@ -233,7 +245,7 @@ const PickerCustom = (props) => {
   const popupProps = {};
   Object.assign(pickerProps, {
     popupProps,
-    actionInteraction: "custom",
+    actionEvent: "custom",
   });
   // ref
   const popupRef = useRef(null);
@@ -257,10 +269,16 @@ const PickerCustom = (props) => {
     expandedRef.current = expanded;
     const valueAtOpenRef = useRef(null);
     const activeElementAtOpenRef = useRef(null);
+    // Tracks whether a uiAction has occurred since the last close denial.
+    // true  = no pending denial (initial state, or user has interacted since)
+    // false = close was denied and user hasn't interacted yet
+    // When false, a second close attempt is treated as cancel.
+    const uiActionSinceDeniedRef = useRef(true);
 
     const onOpen = (e) => {
       expandedRef.current = true;
       setExpanded(true);
+      uiActionSinceDeniedRef.current = true;
 
       const focusedBeforeOpen = e.detail.focusedBeforeOpen;
       activeElementAtOpenRef.current = focusedBeforeOpen;
@@ -297,44 +315,27 @@ const PickerCustom = (props) => {
       return;
     };
     const onClose = (e) => {
-      const cancelEvent = findEvent(
-        e,
-        (eInChain) =>
-          eInChain.type === "navi_request_close" && eInChain.detail.isCancel,
-      );
-      const isCancel = Boolean(cancelEvent);
-
       const mousedownEvent = findEvent(e, "mousedown");
       if (mousedownEvent) {
         debugPopup(e, `closed by mousedown -> disable next click`);
         disableClickFor();
+      } else {
+        const spaceEvent = findEvent(
+          e,
+          (e) => e.type === "keydown" && e.key === " ",
+        );
+        if (spaceEvent) {
+          // space would trigger a click on the picker button causing it to re-open immediatly after closing
+          debugPopup(e, `closed by space key -> prevent browser click`);
+          // browser won't try to dispatch click
+          // and our "space_to_open" will see e.defaultPrevented too and won't try to open picker
+          spaceEvent.preventDefault();
+        }
       }
-
       expandedRef.current = false;
       setExpanded(false);
       // Reset so the next opening re-evaluates screen size
       defaultModeRef.current = null;
-      const pickerEl = ref.current;
-      const inputEl = getPickerInput(pickerEl);
-      if (!inputEl) {
-        restoreFocus(e);
-        return;
-      }
-      const valueAtOpen = valueAtOpenRef.current;
-      if (isCancel) {
-        dispatchRequestSetUIState(inputEl, valueAtOpen, { event: e });
-        restoreFocus(e);
-        return;
-      }
-      const valueAtClose = getPickerInputUIState(pickerEl);
-      if (compareTwoJsValues(valueAtClose, valueAtOpen)) {
-        debugPopup(
-          e,
-          `picker closed with same value as when it opened (${JSON.stringify(valueAtClose)}), no action dispatched`,
-        );
-      } else {
-        dispatchRequestAction(inputEl, { event: e, uiState: valueAtClose });
-      }
       restoreFocus(e);
     };
     const disableClickFor = useIgnoreClickForMousedown(ref, (e) => {
@@ -361,42 +362,106 @@ const PickerCustom = (props) => {
       });
     };
 
-    const onInteraction = (e, { name, effect }) => {
-      const allowed = dispatchRequestInteraction(ref.current, e, name);
-      if (!allowed) {
-        return;
-      }
-      effect();
+    const requestInteraction = (options) => {
+      dispatchRequestInteraction(ref.current, options);
     };
 
-    const { onActionStart, children } = props;
+    const { onActionStart, children, uiAction: uiActionProp } = props;
     Object.assign(pickerProps, {
       "aria-expanded": expanded,
       "onActionStart": (e) => {
         onActionStart?.(e);
-        requestClose(e);
+        // requestClose(e);
       },
       "onnavi_request_open": (e) => {
         if (expandedRef.current) {
           return;
         }
-        onInteraction(e, {
+        requestInteraction({
+          event: e,
           name: "navi_request_open_event",
-          effect: () => {
+          allowed: () => {
             requestOpen(e);
           },
         });
       },
       "onnavi_request_close": (e) => {
-        onInteraction(e, {
-          effect: () => {
+        requestInteraction({
+          event: e,
+          allowed: () => {
             requestClose(e);
           },
         });
       },
+      // Intercept uiAction to detect user interaction after a close denial.
+      "uiAction": (v, e) => {
+        uiActionSinceDeniedRef.current = true;
+        uiActionProp?.(v, e);
+      },
       children,
     });
     Object.assign(popupProps, {
+      closeRequestHandler: (requestCloseEvent, closePermission) => {
+        const cancelEvent = findEvent(
+          requestCloseEvent,
+          (eInChain) =>
+            eInChain.type === "navi_request_close" && eInChain.detail.isCancel,
+        );
+        const isCancel = Boolean(cancelEvent);
+        const pickerEl = ref.current;
+        const inputEl = getPickerInput(pickerEl);
+        const valueAtOpen = valueAtOpenRef.current;
+
+        if (isCancel) {
+          uiActionSinceDeniedRef.current = true;
+          dispatchRequestSetUIState(inputEl, valueAtOpen, {
+            event: requestCloseEvent,
+          });
+          return;
+        }
+
+        // If close was previously denied and the user hasn't interacted since,
+        // treat this re-attempt as a cancel so they are not trapped.
+        if (!uiActionSinceDeniedRef.current) {
+          debugPopup(
+            requestCloseEvent,
+            `picker close was denied and user did not interact, treating re-attempt as cancel (restoring ${JSON.stringify(valueAtOpen)})`,
+          );
+          uiActionSinceDeniedRef.current = true;
+          dispatchRequestSetUIState(inputEl, valueAtOpen, {
+            event: requestCloseEvent,
+          });
+          return;
+        }
+
+        const valueAtClose = getPickerInputUIState(pickerEl);
+        if (compareTwoJsValues(valueAtClose, valueAtOpen)) {
+          debugPopup(
+            requestCloseEvent,
+            `picker closed with same value as when it opened (${JSON.stringify(valueAtClose)}), no action dispatched`,
+          );
+          return;
+        }
+        debugPopup(
+          requestCloseEvent,
+          `picker attempt to close with value (${JSON.stringify(valueAtClose)}) wait for picker action to close picker`,
+        );
+        dispatchRequestAction(inputEl, {
+          event: requestCloseEvent,
+          name: "picker close",
+          prevented: () => {
+            closePermission.deny();
+          },
+          // Always report validation when the picker tries to close so the
+          // user sees what is wrong, even if the picker has no action prop.
+          reportOnInvalid: true,
+          onInvalid: () => {
+            uiActionSinceDeniedRef.current = false;
+            closePermission.deny();
+          },
+          allowed: () => {},
+        });
+      },
       onnavi_open: (e) => {
         onOpen(e);
       },
@@ -410,7 +475,7 @@ const PickerCustom = (props) => {
         "a-z": (e) => {
           return {
             name: "letter key to open",
-            effect: () => {
+            allowed: () => {
               requestOpen(e);
             },
           };
@@ -418,7 +483,7 @@ const PickerCustom = (props) => {
         "0-9": (e) => {
           return {
             name: "numeric key to open",
-            effect: () => {
+            allowed: () => {
               requestOpen(e);
             },
           };
@@ -426,7 +491,7 @@ const PickerCustom = (props) => {
         "arrowdown": (e) => {
           return {
             name: "arrow_down_to_open",
-            effect: () => {
+            allowed: () => {
               requestOpen(e);
               e.preventDefault(); // prevent container scroll
             },
@@ -435,7 +500,7 @@ const PickerCustom = (props) => {
         "arrowup": (e) => {
           return {
             name: "arrow_up_to_open",
-            effect: () => {
+            allowed: () => {
               requestOpen(e);
               e.preventDefault(); // prevent container scroll
             },
@@ -444,7 +509,7 @@ const PickerCustom = (props) => {
         "space": (e) => {
           return {
             name: "space_to_open",
-            effect: () => {
+            allowed: () => {
               requestOpen(e);
               e.preventDefault(); // prevent scroll
             },
@@ -456,7 +521,7 @@ const PickerCustom = (props) => {
           }
           return {
             name: "escape_to_cancel",
-            effect: () => {
+            allowed: () => {
               requestClose(e, { isCancel: true });
               e.preventDefault(); // prevent browser from closing the dialog (if any)
             },
@@ -465,17 +530,17 @@ const PickerCustom = (props) => {
       });
 
       Object.assign(pickerProps, {
-        interactionDefinitions: {
+        eventReactionDefinitions: {
           mouseDown: (e) => {
             if (expandedRef.current) {
               return {
                 name: "mousedown to close picker",
-                effect: () => requestClose(e),
+                allowed: () => requestClose(e),
               };
             }
             return {
               name: "mousedown to open picker",
-              effect: () => {
+              allowed: () => {
                 debugFocus(
                   e,
                   `prevent browser giving focus to button (mousedown.preventDefault())`,
@@ -493,7 +558,7 @@ const PickerCustom = (props) => {
                 e.detail === 0
                   ? "click (keyboard or progammatic) to open picker"
                   : "click to open picker",
-              effect: () => {
+              allowed: () => {
                 requestOpen(e);
                 e.preventDefault();
               },
@@ -600,9 +665,17 @@ const PickerContentInsidePopover = (props) => {
         const focusStaysInside =
           (pickerEl && pickerEl.contains(relatedTarget)) ||
           (popoverEl && popoverEl.contains(relatedTarget));
-        if (!focusStaysInside && dispatchRequestInteraction(pickerEl, e)) {
-          dispatchCustomEvent(popoverEl, "navi_request_close", { event: e });
+        if (focusStaysInside) {
+          return;
         }
+        dispatchRequestInteraction(pickerEl, {
+          event: e,
+          name: "blur",
+          category: "interaction",
+          allowed: () => {
+            dispatchCustomEvent(popoverEl, "navi_request_close", { event: e });
+          },
+        });
       }}
     >
       <Popover

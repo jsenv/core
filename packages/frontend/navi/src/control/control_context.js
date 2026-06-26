@@ -1,6 +1,7 @@
 import { createContext } from "preact";
 
-import { CONSTRAINT_ATTRIBUTE_SET } from "./validation/constraint_attribute_set.js";
+import { CONSTRAINT_ATTRIBUTE_SET } from "./rules/constraint_attribute_set.js";
+import { CONSTRAINT_MESSAGE_PROP_NAME_SET } from "./rules/constraint_message.js";
 
 // prop that we'll set on the control
 export const CONTROL_ATTRIBUTE_SET = new Set([
@@ -29,6 +30,8 @@ export const CONTROL_ATTRIBUTE_SET = new Set([
   "navi-control-proxy-for",
   "navi-command-target",
   "onnavi_command",
+  "onnavi_request_open",
+  "onnavi_request_close",
 
   "data-callout-arrow-x",
   "data-callout-point-to-border-box",
@@ -38,18 +41,21 @@ export const CONTROL_ATTRIBUTE_SET = new Set([
   "data-callout-position-fixed",
 
   "data-testid", // playwright, cypress
+  "data-separator", // used by InputGroup paste-to-fill
 ]);
 // prop concerning control but that won't end up in the DOM if not inside CONTROL_ATTRIBUTE_SET
 export const CONTROL_PROP_SET = new Set([
   ...CONTROL_ATTRIBUTE_SET,
+  ...CONSTRAINT_MESSAGE_PROP_NAME_SET,
 
   "action",
-  "actionInteraction",
+  "actionEvent",
   "actionAfterChange",
   "actionOnMouseDown",
   "actionDebounce",
   "defaultValue",
   "defaultChecked",
+  "readOnly", // will depend wether readOnly is supported
 
   "loading",
   "basePseudoState",
@@ -64,7 +70,7 @@ export const CONTROL_PROP_SET = new Set([
   "onKeyDown",
   "onPaste",
   "onInput",
-  "interactionDefinitions",
+  "eventReactionDefinitions",
 
   "onCancel",
   "cancelOnBlurInvalid",

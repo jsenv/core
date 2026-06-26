@@ -1,5 +1,6 @@
 import { useContext, useRef } from "preact/hooks";
 
+import { performTabNavigation } from "@jsenv/dom/src/interaction/focus/tab_navigation.js";
 import { Box } from "@jsenv/navi/src/box/box.jsx";
 import { ChevronDownSvg } from "@jsenv/navi/src/graphic/icons/chevron_updown_svg.jsx";
 import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.jsx";
@@ -9,12 +10,18 @@ import {
 } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
 import { Text } from "@jsenv/navi/src/text/text.jsx";
+import { renderSafe } from "@jsenv/navi/src/utils/render_safe.js";
 import {
   ControlFacadeChildrenWrapper,
   useControlFacadeProps,
 } from "../control_hooks.jsx";
+import { getUIStateControllerById } from "../controller_registry.js";
 import { resolveInputProps } from "../input/resolve_input_props.js";
-import { getUIStateControllerById } from "../ui_state_controller.js";
+import { dispatchRequestInteraction } from "../rules/control_interaction.js";
+import {
+  dispatchRequestClearUIState,
+  dispatchRequestSetUIState,
+} from "../ui_state_dom.js";
 import { PickerContext } from "./picker_context.jsx";
 import { PickerCustomResolver } from "./picker_custom.jsx";
 import { PickerPresetResolver } from "./picker_preset.jsx";
@@ -22,6 +29,7 @@ import {
   CalendarSvg,
   ClockSvg,
   ColorSvg,
+  DurationSvg,
   FileSvg,
   PencilSvg,
   PickerArrayUI,
@@ -29,6 +37,7 @@ import {
   PickerControlGroupUI,
   PickerDatetimeUI,
   PickerDateUI,
+  PickerDurationUI,
   PickerFileUI,
   PickerTimeUI,
   PickerTypeResolver,
@@ -159,7 +168,7 @@ const css = /* css */ `
     outline-offset: var(--picker-outline-offset);
     cursor: var(--x-picker-cursor, pointer);
     pointer-events: auto;
-    user-select: none;
+    /* user-select: none; */
     -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
 
     .navi_picker_value {
@@ -174,6 +183,7 @@ const css = /* css */ `
       padding-left: var(--x-picker-padding-left);
       flex-grow: 1;
       justify-content: inherit;
+      pointer-events: none;
 
       &[navi-placeholder] {
         color: var(--picker-placeholder-color);
@@ -192,6 +202,7 @@ const css = /* css */ `
       align-self: flex-start;
       justify-content: center;
       color: var(--x-picker-icon-color);
+      pointer-events: none;
 
       .navi_icon {
         height: 100%;
@@ -215,7 +226,12 @@ const css = /* css */ `
       border: none;
       opacity: 0;
       appearance: none;
-      pointer-events: none;
+      cursor: inherit;
+      pointer-events: auto;
+
+      &::-webkit-calendar-picker-indicator {
+        cursor: inherit;
+      }
     }
 
     .navi_picker_content {
@@ -237,7 +253,7 @@ const css = /* css */ `
       --x-picker-cursor: default;
     }
     /* Focus */
-    &[data-focus-visible] {
+    &[data-focus-within]:has(.navi_picker_input[data-focus-visible]) {
       --x-picker-border-color: transparent;
       outline-style: solid;
     }
@@ -263,6 +279,20 @@ const css = /* css */ `
       --x-picker-border-color: transparent;
       --x-picker-background-color: transparent;
       --x-picker-icon-color: currentColor;
+    }
+    &[data-variant="headless"] {
+      --x-picker-padding-top: 0;
+      --x-picker-padding-right: 0;
+      --x-picker-padding-bottom: 0;
+      --x-picker-padding-left: 0;
+      --picker-border-width: 0;
+      --x-picker-border-color: transparent;
+      --x-picker-background-color: transparent;
+      --x-picker-icon-color: currentColor;
+
+      position: absolute;
+      inset: 0;
+      z-index: -1;
     }
   }
 `;
@@ -303,7 +333,7 @@ const PickerButton = (props) => {
   if (typeof props.maxLines === "string") {
     props.maxLines = parseInt(props.maxLines);
   }
-  const { ref, variant, icon, placeholder, ui, maxLines = 1, headless } = props;
+  const { ref, variant, icon, placeholder, ui, maxLines = 1 } = props;
   const isSingleLine = maxLines === 1;
   const inputRef = useRef(null);
   const [pickerRemainingProps, inputProps, facadeChildrenProps] =
@@ -314,75 +344,132 @@ const PickerButton = (props) => {
       },
       {
         controlType: "picker",
-        statePropName: "value",
-        defaultStatePropName: "defaultValue",
-        readOnlySupported: true,
       },
     );
   const uiStateController = getUIStateControllerById(inputProps.id);
   const value = uiStateController.uiState;
-  const { id, basePseudoState, disabled, children } = inputProps;
+  const { basePseudoState, children } = inputProps;
   const loading = basePseudoState[":-navi-loading"];
 
   return (
     <Box
-      as={headless ? "div" : "button"} // keep it a <div> in headless mode so it stays non focusable
-      role={headless ? "button" : undefined}
-      type="button" /* ensure click inside the picker cannot submit ancestor form if any */
+      as="div"
       ref={ref}
       baseClassName="navi_picker"
       pseudoClasses={PICKER_BUTTON_PSEUDO_CLASSES}
-      disabled={disabled}
       data-variant={variant}
-      navi-visually-hidden={headless ? "" : undefined}
       navi-picker=""
       navi-single-line={isSingleLine ? "" : undefined}
       {...pickerRemainingProps}
       basePseudoState={basePseudoState}
       styleCSSVars={PickerStyleCSSVars}
-      // we must put the id on the button and not the input
-      // so that a <label> tries to give focus to the button and not the input
-      id={id}
       variant={undefined}
       icon={undefined}
       ui={undefined}
       maxLines={undefined}
       dayLabel={undefined}
-      headless={undefined}
-      // The button is handling the pointer interactions
-      onMouseDown={(e) => {
-        inputProps.onMouseDown(e);
-      }}
-      onClick={(e) => {
-        inputProps.onClick(e);
-      }}
-      onKeyDown={(e) => {
-        // The button has the focus so he is the one handling keydown interactions
-        // it's also the one wrapping other elements so keydown bubbling will reach the button
-        // but neevr the input
-        inputProps.onKeyDown(e);
-      }}
-      onFocus={(e) => {
-        if (headless) {
-          inputProps.onFocus(e);
-        }
-      }}
+      // This wrapper will receive keyboard event bubbling from the picker popup content
+      // we re-dispatch on the input (to get escape to close for instance)
+      onKeyDown={inputProps.onKeyDown}
+      // in case request open/close are dispatched on the control root ->
+      // redispatch them to the host
+      onnavi_request_open={inputProps.onnavi_request_open}
+      onnavi_request_close={inputProps.onnavi_request_close}
     >
-      <LoadingOutline
-        loading={loading}
-        color="var(--picker-loader-color)"
-        inset={-2}
-      />
+      {variant === "headless" ? null : (
+        <LoadingOutline
+          loading={loading}
+          color="var(--picker-loader-color)"
+          inset={-2}
+        />
+      )}
       <PickerInput
+        tabIndex={variant === "headless" ? -1 : undefined}
+        aria-hidden={variant === "headless" ? "true" : undefined}
         {...inputProps}
         // eslint-disable-next-line react/no-children-prop
-        children={undefined} // we will render children into the button
-        id={undefined}
-        onMouseDown={undefined}
-        onClick={undefined}
-        onKeyDown={undefined}
+        children={undefined} // we will render children into the div
+        onFocus={(e) => {
+          inputProps.onFocus?.(e);
+          e.target.select();
+        }}
+        onCopy={(e) => {
+          const pickerEl = ref.current;
+          if (isWithinPickerContent(e.target, pickerEl)) {
+            return;
+          }
+          const uiState = uiStateController.uiState;
+          if (uiState === undefined) {
+            return;
+          }
+          e.preventDefault();
+          const displayText =
+            pickerEl.querySelector(".navi_picker_value")?.textContent ??
+            String(uiState);
+          e.clipboardData.setData("text/plain", displayText);
+          e.clipboardData.setData(
+            "application/x-navi",
+            JSON.stringify(uiState),
+          );
+        }}
+        onCut={(e) => {
+          const pickerEl = ref.current;
+          if (isWithinPickerContent(e.target, pickerEl)) {
+            return;
+          }
+          const uiState = uiStateController.uiState;
+          if (uiState === undefined) {
+            return;
+          }
+          // the copy part don't need control to be interactable
+          const displayText =
+            pickerEl.querySelector(".navi_picker_value")?.textContent ??
+            String(uiState);
+          e.clipboardData.setData("text/plain", displayText);
+          e.clipboardData.setData(
+            "application/x-navi",
+            JSON.stringify(uiState),
+          );
+          // the clear ui state part need control to be interactable
+          dispatchRequestInteraction(pickerEl, {
+            event: e,
+            name: "cut",
+            allowed: () => {
+              dispatchRequestClearUIState(inputRef.current, e);
+            },
+          });
+          e.preventDefault();
+        }}
+        onPaste={(e) => {
+          const pickerEl = ref.current;
+          if (isWithinPickerContent(e.target, pickerEl)) {
+            // Don't intercept inside the picker popup content.
+            return;
+          }
+          const naviData = e.clipboardData.getData("application/x-navi");
+          let pasteValue;
+          if (naviData) {
+            try {
+              pasteValue = JSON.parse(naviData);
+            } catch {
+              pasteValue = naviData;
+            }
+          } else {
+            pasteValue = e.clipboardData.getData("text/plain");
+          }
+          dispatchRequestInteraction(pickerEl, {
+            event: e,
+            name: "paste",
+            allowed: () => {
+              dispatchRequestSetUIState(inputRef.current, pasteValue, {
+                event: e,
+              });
+            },
+          });
+          e.preventDefault();
+        }}
       />
-      {variant === "icon" || headless ? null : (
+      {variant === "icon" || variant === "headless" ? null : (
         <Text
           className="navi_picker_value"
           navi-placeholder={
@@ -395,7 +482,7 @@ const PickerButton = (props) => {
           </PickerContext.Provider>
         </Text>
       )}
-      {headless ? null : (
+      {variant === "headless" ? null : (
         <span className="navi_picker_right_slot">
           <Icon size="m">{icon === undefined ? <ChevronDownSvg /> : icon}</Icon>
         </span>
@@ -406,16 +493,29 @@ const PickerButton = (props) => {
     </Box>
   );
 };
+const isWithinPickerContent = (el, pickerEl) => {
+  return pickerEl.querySelector(".navi_picker_content")?.contains(el);
+};
 
 const PickerInput = (props) => {
   return (
     <Box
       as="input"
+      // readOnly because user MUST use the picker to change the value
+      readOnly
+      data-readonly-forced={props.readOnly ? undefined : ""}
       {...props}
       className="navi_picker_input"
       pseudoClasses={PickerInputPseudoClasses}
-      tabIndex={-1} // Make input non tabbable
-      navi-focus-delegate="" // Ensure callout focus the button and not the input
+      onKeyDown={(e) => {
+        props.onKeyDown(e);
+        if (e.key === "Enter") {
+          // prevent form submission now that input can have focus
+          e.preventDefault();
+        } else if (e.key === "Tab") {
+          performTabNavigation(e);
+        }
+      }}
     />
   );
 };
@@ -431,6 +531,8 @@ const PICKER_BUTTON_PSEUDO_CLASSES = [
   ":-navi-has-value",
 ];
 const PickerInputPseudoClasses = [
+  ":focus",
+  ":focus-visible",
   ":read-only",
   ":disabled",
   ":-navi-loading",
@@ -470,13 +572,14 @@ const PickerStyleCSSVars = {
 
 const PickerDefaultUI = () => {
   const { value, placeholder } = useContext(PickerContext);
+
   if (!value) {
     if (!placeholder) {
       return null;
     }
-    return placeholder;
+    return renderSafe(placeholder);
   }
-  return value;
+  return renderSafe(value);
 };
 
 const PickerFirstResolver = (props) => {
@@ -499,6 +602,7 @@ Picker.UI = PickerDefaultUI;
 
 Picker.UI.Date = PickerDateUI;
 Picker.UI.Time = PickerTimeUI;
+Picker.UI.Duration = PickerDurationUI;
 Picker.UI.Week = PickerWeekUI;
 Picker.UI.Datetime = PickerDatetimeUI;
 Picker.UI.File = PickerFileUI;
@@ -509,6 +613,7 @@ Picker.UI.Multiple = PickerArrayUI;
 Picker.UI.PencilSvg = PencilSvg;
 Picker.UI.ChevronDownSvg = ChevronDownSvg;
 Picker.UI.ClockSvg = ClockSvg;
+Picker.UI.DurationSvg = DurationSvg;
 Picker.UI.CalendarSvg = CalendarSvg;
 Picker.UI.FileSvg = FileSvg;
 Picker.UI.ColorSvg = ColorSvg;

@@ -4,7 +4,7 @@ import { useEffect, useRef } from "preact/hooks";
 
 import { useAction } from "../action/use_action.js";
 import { useExecuteAction } from "../action/use_execute_action.js";
-import { dispatchRequestAction } from "../control/validation/custom_constraint_validation.js";
+import { dispatchRequestInteraction } from "../control/rules/control_interaction.js";
 import { keyMapping } from "./keyboard_key_meta.js";
 import { isMac } from "./os.js";
 import { useActionEvents } from "./use_action_events.js";
@@ -186,10 +186,12 @@ const createOnKeyDownForShortcutArray = (shortcuts, busyRef) => {
         const { action } = shortcutCandidate;
         const actionWithEvent = action.bindParams(keyboardEvent);
         const element = keyboardEvent.currentTarget;
-        return dispatchRequestAction(element, {
+        return dispatchRequestInteraction(element, {
           event: keyboardEvent,
+          wantAction: true,
+          name: "keyboard_shortcut",
+          category: "interaction",
           requester: document.activeElement,
-
           action: actionWithEvent,
           actionOrigin: "keyboard_shortcut",
           confirmMessage: shortcutCandidate.confirmMessage,
@@ -315,6 +317,12 @@ const generateCrossPlatformCombination = (combination) => {
 };
 const keyboardEventIsMatchingKeyCombination = (event, keyCombination) => {
   const keys = keyCombination.toLowerCase().split("+");
+  const activeModifiers = new Set();
+  for (const eventProperty of Object.keys(modifierKeyMapping)) {
+    if (event[eventProperty]) {
+      activeModifiers.add(eventProperty);
+    }
+  }
 
   for (const key of keys) {
     let modifierFound = false;
@@ -333,6 +341,7 @@ const keyboardEventIsMatchingKeyCombination = (event, keyCombination) => {
         if (!event[eventProperty]) {
           return false;
         }
+        activeModifiers.delete(eventProperty);
         modifierFound = true;
         break;
       }
@@ -376,6 +385,13 @@ const keyboardEventIsMatchingKeyCombination = (event, keyCombination) => {
       return false;
     }
   }
+
+  const activeModifierNotSpecified = activeModifiers.size > 0;
+  // If any active modifier was not specified in the combination, reject the match
+  if (activeModifierNotSpecified) {
+    return false;
+  }
+
   return true;
 };
 // Configuration for mapping shortcut key names to browser event properties

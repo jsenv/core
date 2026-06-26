@@ -3,6 +3,7 @@
 
 - [minute type validation](0_minute_type_validation/0_minute_type_validation.md)
 - [minute type with max](1_minute_type_with_max/1_minute_type_with_max.md)
+- [minute type with duration string max](2_minute_type_with_duration_string_max/2_minute_type_with_duration_string_max.md)
 
 ---
 

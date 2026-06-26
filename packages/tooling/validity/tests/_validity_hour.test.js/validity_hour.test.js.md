@@ -3,6 +3,7 @@
 
 - [hour type validation](0_hour_type_validation/0_hour_type_validation.md)
 - [hour type with max](1_hour_type_with_max/1_hour_type_with_max.md)
+- [hour type with duration string max](2_hour_type_with_duration_string_max/2_hour_type_with_duration_string_max.md)
 
 ---
 

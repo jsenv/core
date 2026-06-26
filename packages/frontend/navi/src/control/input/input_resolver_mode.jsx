@@ -1,6 +1,6 @@
 import { dispatchPublicCustomEvent } from "@jsenv/dom";
+import { dispatchRequestInteraction } from "@jsenv/navi/src/control/rules/control_interaction.js";
 import { dispatchRequestSetUIState } from "@jsenv/navi/src/control/ui_state_dom.js";
-import { dispatchRequestInteraction } from "@jsenv/navi/src/control/validation/custom_constraint_validation.js";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 
 export const InputModeResolver = (props) => {
@@ -102,11 +102,13 @@ const performArrowUpDown = (e) => {
   if (max !== undefined && nextValue > max) {
     nextValue = max;
   }
-  const allowed = dispatchRequestInteraction(input, e, "--navi-arrow-up-down");
-  if (!allowed) {
-    e.preventDefault();
-    return;
-  }
-  dispatchRequestSetUIState(input, nextValue, { event: e });
-  e.preventDefault();
+  dispatchRequestInteraction(input, {
+    event: e,
+    name: "--navi-arrow-up-down",
+    prevented: () => e.preventDefault(),
+    allowed: () => {
+      dispatchRequestSetUIState(input, nextValue, { event: e });
+      e.preventDefault();
+    },
+  });
 };

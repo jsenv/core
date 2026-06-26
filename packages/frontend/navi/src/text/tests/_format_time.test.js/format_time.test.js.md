@@ -5,7 +5,7 @@
 - [getRelativeDay](1_getrelativeday/1_getrelativeday.md)
 - [formatMonth](2_formatmonth/2_formatmonth.md)
 - [formatTime](3_formattime/3_formattime.md)
-- [formatDuration — future](4_formatduration_%E2%80%94_future/4_formatduration_%E2%80%94_future.md)
+- [formatDuration - future](4_formatduration_-_future/4_formatduration_-_future.md)
 - [formatDuration — ongoing](5_formatduration_%E2%80%94_ongoing/5_formatduration_%E2%80%94_ongoing.md)
 - [formatDuration — past](6_formatduration_%E2%80%94_past/6_formatduration_%E2%80%94_past.md)
 - [formatMinuteDuration — compact (default)](7_formatminuteduration_%E2%80%94_compact_(default)/7_formatminuteduration_%E2%80%94_compact_(default).md)

@@ -6,30 +6,40 @@ export const useCheckableProps = (props, options) => {
   // default value so resetUIState restores to the original default.
   const checkedProp = props.checked;
   if (
+    !Object.hasOwn(props, "defaultChecked") &&
     isSignal(checkedProp) &&
-    checkedProp.options &&
-    !Object.hasOwn(props, "defaultChecked")
+    checkedProp.options
   ) {
     const defaultVal = checkedProp.options.getDefaultValue(false);
     if (defaultVal !== undefined) {
-      const itemValue = props.value;
       if (props.type === "radio") {
-        props.defaultChecked = defaultVal === itemValue;
+        if (defaultVal === true) {
+          props.defaultChecked = true;
+        } else if (
+          Object.hasOwn(props, "value") &&
+          defaultVal === props.value
+        ) {
+          props.defaultChecked = true;
+        }
       } else if (props.type === "checkbox") {
+        const itemValue = props.value;
         props.defaultChecked =
           Array.isArray(defaultVal) && defaultVal.includes(itemValue);
       }
     }
   }
-  const result = useControlProps(props, {
-    controlType: "input",
-    statePropName: "checked",
-    defaultStatePropName: "defaultChecked",
-    fallbackState: false,
-    getStateFromProp: (checked) => (checked ? props.value : undefined),
-    getPropFromState: Boolean,
-    ...options,
-  });
+  const result = useControlProps(
+    {
+      resetOnCancel: true,
+      resetOnAbort: true,
+      resetOnError: true,
+      ...props,
+    },
+    {
+      controlType: "input",
+      ...options,
+    },
+  );
   result[1].onnavi_get_value = (e) => {
     e.detail.respondWith(props.value);
   };

@@ -185,7 +185,7 @@
 
       const App = () => {
         return (
-          <NaviDebug debugAction debugInteraction>
+          <NaviDebug debugUIState debugAction debugInteraction>
             <div>
               <TableOfContents />
               <BasicStatesDemo />
@@ -1003,17 +1003,15 @@
                 <div className="col-label">Proxy buttons</div>
                 <Box flex="y" spacing="s">
                   <Button
-                    command="--navi-update"
+                    command="--navi-check"
                     commandFor="radio_being_proxied"
-                    value={true}
                     navi-control-proxy-for="radio_being_proxied"
                   >
                     Enable
                   </Button>
                   <Button
-                    command="--navi-update"
+                    command="--navi-uncheck"
                     commandFor="radio_being_proxied"
-                    value={false}
                     navi-control-proxy-for="radio_being_proxied"
                   >
                     Disable

@@ -76,13 +76,16 @@
           <div class="demo-section">
             <h2>Standalone</h2>
             <p style={{ margin: "0 0 12px", color: "#555" }}>
-              <code>action</code> is called each time a radio is selected. It
-              receives the selected value, or <code>undefined</code> when
-              nothing is selected.
+              <code>uiAction</code> fires on every interaction (even re-clicking
+              the already-selected radio). <code>action</code> fires only when
+              the selected value changes.
             </p>
 
             <RadioGroup
               name="standalone_option"
+              uiAction={(value) => {
+                push("uiAction", value);
+              }}
               action={(value) => {
                 push("action", value);
               }}
@@ -90,15 +93,33 @@
               alignX="start"
             >
               <legend>Pick an option</legend>
-              <Field flex alignY="center" spacing="s" border="1px dotted #ccc">
+              <Field
+                as="label"
+                flex
+                alignY="center"
+                spacing="s"
+                border="1px dotted #ccc"
+              >
                 <Input type="radio" value="alpha" />
                 Alpha
               </Field>
-              <Field flex alignY="center" spacing="s" border="1px dotted #ccc">
+              <Field
+                as="label"
+                flex
+                alignY="center"
+                spacing="s"
+                border="1px dotted #ccc"
+              >
                 <Input type="radio" value="beta" />
                 Beta
               </Field>
-              <Field flex alignY="center" spacing="s" border="1px dotted #ccc">
+              <Field
+                as="label"
+                flex
+                alignY="center"
+                spacing="s"
+                border="1px dotted #ccc"
+              >
                 <Input type="radio" value="gamma" />
                 Gamma
               </Field>
@@ -126,6 +147,7 @@
               <RadioGroup name="form_option" flex="y" alignX="start">
                 <legend>Pick an option</legend>
                 <Field
+                  as="label"
                   flex
                   alignY="center"
                   spacing="s"
@@ -135,6 +157,7 @@
                   Alpha
                 </Field>
                 <Field
+                  as="label"
                   flex
                   alignY="center"
                   spacing="s"
@@ -144,6 +167,7 @@
                   Beta
                 </Field>
                 <Field
+                  as="label"
                   flex
                   alignY="center"
                   spacing="s"
@@ -198,6 +222,7 @@
               >
                 <legend>Pick an option (required)</legend>
                 <Field
+                  as="label"
                   flex
                   alignY="center"
                   spacing="s"
@@ -207,6 +232,7 @@
                   Alpha
                 </Field>
                 <Field
+                  as="label"
                   flex
                   alignY="center"
                   spacing="s"
@@ -216,6 +242,7 @@
                   Beta
                 </Field>
                 <Field
+                  as="label"
                   flex
                   alignY="center"
                   spacing="s"

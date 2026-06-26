@@ -1,92 +1,10 @@
 import {
-  formatHours,
-  formatMinutes,
-  formatSeconds,
-} from "./format_duration.js";
+  durationToISOString,
+  durationToSeconds,
+  parseDuration,
+} from "./duration.js";
 
 export const CANNOT_CONVERT = {};
-
-// Parses a duration string into a total number of seconds.
-// Supported notations:
-//   single unit   "5s" / "5second", "10min" / "10minute"
-//                 "2h" / "2hour", "3d" / "3day"
-//                 "2w" / "2week", "1month", "1year"
-//   compound      "1h20min" → 1h + 20min, "1h20min30s" → 1h + 20min + 30s
-// Returns null when the value cannot be parsed.
-export const parseDurationToSeconds = (value) => {
-  if (typeof value !== "string") {
-    return null;
-  }
-  const str = value.trim();
-
-  // Compound: 1h20min, 1h20min30s, 2h30min, 20min30s, etc.
-  const compoundMatch =
-    /^(?:(\d+(?:\.\d+)?)h)?(?:(\d+(?:\.\d+)?)min)?(?:(\d+(?:\.\d+)?)s)?$/.exec(
-      str,
-    );
-  if (
-    compoundMatch &&
-    (compoundMatch[1] || compoundMatch[2] || compoundMatch[3]) &&
-    str !== ""
-  ) {
-    const h = compoundMatch[1] ? parseFloat(compoundMatch[1]) : 0;
-    const min = compoundMatch[2] ? parseFloat(compoundMatch[2]) : 0;
-    const sec = compoundMatch[3] ? parseFloat(compoundMatch[3]) : 0;
-    return h * 3600 + min * 60 + sec;
-  }
-
-  // Single value with long-form unit
-  const singleMatch =
-    /^(\d+(?:\.\d+)?)(second|minute|hour|day|week|month|year)s?$/.exec(str);
-  if (singleMatch) {
-    const n = parseFloat(singleMatch[1]);
-    const unit = singleMatch[2];
-    if (unit === "second") {
-      return n;
-    }
-    if (unit === "minute") {
-      return n * 60;
-    }
-    if (unit === "hour") {
-      return n * 3600;
-    }
-    if (unit === "day") {
-      return n * 86400;
-    }
-    if (unit === "week") {
-      return n * 604800;
-    }
-    if (unit === "month") {
-      return n * 2592000;
-    }
-    if (unit === "year") {
-      return n * 31536000;
-    }
-  }
-
-  return null;
-};
-const resolveToHours = (value) => {
-  const seconds = parseDurationToSeconds(value);
-  if (seconds === null) {
-    return value;
-  }
-  return seconds / 3600;
-};
-const resolveToMinutes = (value) => {
-  const seconds = parseDurationToSeconds(value);
-  if (seconds === null) {
-    return value;
-  }
-  return seconds / 60;
-};
-const resolveToSeconds = (value) => {
-  const seconds = parseDurationToSeconds(value);
-  if (seconds === null) {
-    return value;
-  }
-  return seconds;
-};
 
 const validateNumber = (value) => {
   if (typeof value !== "number") {
@@ -425,21 +343,30 @@ export const TYPES = {
     jsType: "number",
     localStorageRepresentation: "string",
     props: {
-      min: { default: 0, resolver: resolveToSeconds },
-      max: { default: 60, resolver: resolveToSeconds },
-      step: { default: 1, resolver: resolveToSeconds },
+      min: {
+        default: 0,
+        resolver: (v) => (typeof v === "string" ? durationToSeconds(v) : v),
+      },
+      max: {
+        default: 60,
+        resolver: (v) => (typeof v === "string" ? durationToSeconds(v) : v),
+      },
+      step: {
+        default: 1,
+        resolver: (v) => (typeof v === "string" ? durationToSeconds(v) : v),
+      },
     },
     // canonical: number of seconds (e.g. 90)
     representations: {
       string: {
         parse: (value) => {
-          const fromDuration = resolveToSeconds(value);
-          if (typeof fromDuration === "number") {
-            return fromDuration;
+          if (typeof value === "string") {
+            const seconds = durationToSeconds(value);
+            if (typeof seconds === "number") return seconds;
           }
           return convertStringToNumber(value);
         },
-        format: formatSeconds,
+        format: (value) => durationToISOString({ seconds: value }),
       },
     },
     validate: (value) => {
@@ -453,21 +380,33 @@ export const TYPES = {
     jsType: "number",
     localStorageRepresentation: "string",
     props: {
-      min: { default: 0, resolver: resolveToMinutes },
-      max: { default: 60, resolver: resolveToMinutes },
-      step: { default: 1, resolver: resolveToMinutes },
+      min: {
+        default: 0,
+        resolver: (v) =>
+          typeof v === "string" ? (durationToSeconds(v) ?? v) / 60 : v,
+      },
+      max: {
+        default: 60,
+        resolver: (v) =>
+          typeof v === "string" ? (durationToSeconds(v) ?? v) / 60 : v,
+      },
+      step: {
+        default: 1,
+        resolver: (v) =>
+          typeof v === "string" ? (durationToSeconds(v) ?? v) / 60 : v,
+      },
     },
     // canonical: number of minutes (e.g. 90)
     representations: {
       string: {
         parse: (value) => {
-          const fromDuration = resolveToMinutes(value);
-          if (typeof fromDuration === "number") {
-            return fromDuration;
+          if (typeof value === "string") {
+            const seconds = durationToSeconds(value);
+            if (typeof seconds === "number") return seconds / 60;
           }
           return convertStringToNumber(value);
         },
-        format: formatMinutes,
+        format: (value) => durationToISOString({ minutes: value }),
       },
     },
     validate: (value) => {
@@ -481,21 +420,33 @@ export const TYPES = {
     jsType: "number",
     localStorageRepresentation: "string",
     props: {
-      min: { default: 0, resolver: resolveToHours },
-      max: { default: 24, resolver: resolveToHours },
-      step: { default: 1, resolver: resolveToHours },
+      min: {
+        default: 0,
+        resolver: (v) =>
+          typeof v === "string" ? (durationToSeconds(v) ?? v) / 3600 : v,
+      },
+      max: {
+        default: 24,
+        resolver: (v) =>
+          typeof v === "string" ? (durationToSeconds(v) ?? v) / 3600 : v,
+      },
+      step: {
+        default: 1,
+        resolver: (v) =>
+          typeof v === "string" ? (durationToSeconds(v) ?? v) / 3600 : v,
+      },
     },
     // canonical: number of hours (e.g. 1.5)
     representations: {
       string: {
         parse: (value) => {
-          const fromDuration = resolveToHours(value);
-          if (typeof fromDuration === "number") {
-            return fromDuration;
+          if (typeof value === "string") {
+            const seconds = durationToSeconds(value);
+            if (typeof seconds === "number") return seconds / 3600;
           }
           return convertStringToNumber(value);
         },
-        format: formatHours,
+        format: (value) => durationToISOString({ hours: value }),
       },
     },
     validate: (value) => {
@@ -503,6 +454,55 @@ export const TYPES = {
         return "";
       }
       return `must be a number`;
+    },
+  },
+  // "duration" holds an ISO 8601 duration string (e.g. "PT2H15M", "P1Y2M").
+  // Human-friendly strings ("1h30min", "2 hours") are accepted on input and normalised to ISO.
+  "duration": {
+    jsType: "string",
+    localStorageRepresentation: "string",
+    props: {
+      // min/max/step accept duration strings ("1hour30minute", "PT1H30M") or plain seconds.
+      // Resolved to seconds so that constraint checking can compare numerically.
+      min: {
+        resolver: (v) =>
+          typeof v === "string" ? (durationToSeconds(v) ?? v) : v,
+      },
+      max: {
+        resolver: (v) =>
+          typeof v === "string" ? (durationToSeconds(v) ?? v) : v,
+      },
+      step: {
+        resolver: (v) =>
+          typeof v === "string" ? (durationToSeconds(v) ?? v) : v,
+      },
+    },
+    representations: {
+      string: {
+        // Accept ISO 8601 ("PT2H15M") and human-friendly ("1h30min") — normalise to ISO.
+        parse: (value) => {
+          if (typeof value !== "string") return CANNOT_CONVERT;
+          const parsed = parseDuration(value);
+          if (!parsed) return CANNOT_CONVERT;
+          return durationToISOString(parsed) ?? CANNOT_CONVERT;
+        },
+        format: (value) => value,
+      },
+    },
+    // Converts the canonical string value to seconds for min/max/step comparison.
+    toComparable: (value) => durationToSeconds(value),
+    validate: (value) => {
+      if (typeof value !== "string") return "must be a string";
+      const parsed = parseDuration(value);
+      if (!parsed) {
+        return `must be a valid duration string (e.g. "PT2H15M")`;
+      }
+      for (const v of Object.values(parsed)) {
+        if (typeof v !== "number") {
+          return `must be a valid duration string (e.g. "PT2H15M")`;
+        }
+      }
+      return "";
     },
   },
   // "week" matches the value format of <input type="week">: "YYYY-Www" (e.g. "2024-W03")
@@ -604,6 +604,11 @@ export const TYPES = {
   "time": {
     jsType: "string",
     localStorageRepresentation: "string",
+    props: {
+      min: { resolver: (v) => v }, // kept as-is (HH:MM string or number of seconds)
+      max: { resolver: (v) => v },
+      step: { resolver: (v) => v }, // HH:MM string or number of seconds
+    },
     validate: (value) => {
       if (typeof value !== "string") {
         return `must be a string`;

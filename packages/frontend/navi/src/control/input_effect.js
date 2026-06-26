@@ -34,8 +34,9 @@ export const addInputEffect = (
 
       if (skipDebounce) {
         debugInteraction(e, `skip debounce, callback called with "${state}"`);
-        currentState = state;
-        callback(e);
+        if (callback(e) !== false) {
+          currentState = state;
+        }
       } else {
         debugInteraction(
           e,
@@ -46,8 +47,9 @@ export const addInputEffect = (
             e,
             `debounce elapsed, callback called with "${state}"`,
           );
-          currentState = state;
-          callback(e);
+          if (callback(e) !== false) {
+            currentState = state;
+          }
         }, debounce);
       }
     };
@@ -58,7 +60,7 @@ export const addInputEffect = (
       (e) => {
         onEvent(e, { skipDebounce: true });
       },
-      { getState },
+      { getState, changeOnEnter: true },
     );
     addTeardown(() => {
       stop();
@@ -75,8 +77,9 @@ export const addInputEffect = (
         return;
       }
       debugInteraction(e, `callback called with "${state}"`);
-      currentState = state;
-      callback(e);
+      if (callback(e) !== false) {
+        currentState = state;
+      }
     };
     // Autocomplete, programmatic changes, form restoration
     input.addEventListener("change", onEvent);
@@ -144,7 +147,11 @@ export const addInputEffect = (
   return teardown;
 };
 
-const listenInputStateChange = (input, callback, { getState }) => {
+const listenInputStateChange = (
+  input,
+  callback,
+  { getState, changeOnEnter },
+) => {
   const [teardown, addTeardown] = createPubSub();
 
   let stateAtInteraction;
@@ -159,6 +166,9 @@ const listenInputStateChange = (input, callback, { getState }) => {
        * We need to prevent the next change event otherwise we would request action twice
        */
       stateAtInteraction = getState();
+      if (changeOnEnter) {
+        onchange(e);
+      }
     }
     if (e.key === "Escape") {
       /**

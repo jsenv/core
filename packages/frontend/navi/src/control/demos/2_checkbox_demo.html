@@ -169,7 +169,7 @@
 
       const App = () => {
         return (
-          <NaviDebug debugCommand debugAction debugInteraction>
+          <NaviDebug debugUIState debugCommand debugAction debugInteraction>
             <div>
               <TableOfContents />
               <BasicStatesDemo />
@@ -272,8 +272,7 @@
       };
 
       const ActionBasicDemo = () => {
-        const [lastValue, setLastValue] = useState(undefined);
-        const [fired, setFired] = useState(false);
+        const [entries, push, clear] = useCallLog();
         return (
           <fieldset>
             <legend>
@@ -286,27 +285,22 @@
               .
             </p>
             <Box flex="y" spacing="s" alignX="start" alignY="center">
-              <Field flex spacing="xs" alignY="center" border="1px dotted grey">
+              <Field
+                as="label"
+                flex
+                spacing="xs"
+                alignY="center"
+                border="1px dotted grey"
+              >
                 <Input
                   type="checkbox"
                   name="enabled"
-                  action={(value) => {
-                    setLastValue(value);
-                    setFired(true);
-                  }}
+                  uiAction={(value) => push("uiAction", value)}
+                  action={(value) => push("action", value)}
                 />
                 Enable feature
               </Field>
-              {fired && (
-                <span style={{ fontSize: "0.85rem", color: "#555" }}>
-                  action called with:{" "}
-                  <code>
-                    {lastValue === undefined
-                      ? "undefined"
-                      : JSON.stringify(lastValue)}
-                  </code>
-                </span>
-              )}
+              <CallLog entries={entries} onClear={clear} />
             </Box>
           </fieldset>
         );
@@ -637,6 +631,7 @@
             >
               <Box flex="y" spacing="s" alignX="start">
                 <Field
+                  as="label"
                   flex
                   spacing="s"
                   alignY="center"
@@ -701,6 +696,7 @@
             >
               <Box flex="y" spacing="s" alignX="start">
                 <Field
+                  as="label"
                   flex
                   spacing="s"
                   border="1px dotted grey"
@@ -744,7 +740,7 @@
                 <Box as="fieldset" width="250">
                   <legend>Default</legend>
                   <Box flex="y" spacing="s" alignX="start">
-                    <Field border="1px dotted grey">
+                    <Field as="label" border="1px dotted grey">
                       <Input type="checkbox" margin="3px 3px 3px 4px" />
                       Navi
                     </Field>
@@ -757,7 +753,7 @@
                 <Box as="fieldset" width="250">
                   <legend>:focus-visible</legend>
                   <Box flex="y" spacing="s" alignX="start">
-                    <Field border="1px dotted grey">
+                    <Field as="label" border="1px dotted grey">
                       <Input
                         type="checkbox"
                         pseudoState={{ ":focus-visible": true }}
@@ -766,7 +762,7 @@
                       Navi
                     </Field>
                     <label style="border: 1px dotted grey;">
-                      <input type="checkbox" autofocus />
+                      <input type="checkbox" />
                       User agent
                     </label>
                   </Box>
@@ -1408,7 +1404,7 @@
                 theming as regular checkboxes.
               </p>
 
-              <Box flex spacing="s">
+              <Box flex spacing="s" flexWrap>
                 <fieldset style="margin: 0">
                   <legend>Orange</legend>
                   <div
@@ -1609,7 +1605,7 @@
                 sizing.
               </p>
 
-              <Box flex spacing="s">
+              <Box flex spacing="s" flexWrap>
                 <fieldset>
                   <legend>Default Width</legend>
                   <Box flex spacing="s" alignX="start" alignY="center">
@@ -1890,10 +1886,11 @@
           <div id="proxy" className="demo-section">
             <h2>Proxy</h2>
             <p>
-              Any element can act as a proxy for a checkbox using the{" "}
-              <code>navi-control-proxy-for</code> attribute. On mousedown the
-              checkbox receives focus; on click the proxy's <code>value</code>{" "}
-              prop is forwarded as the new checked state.
+              External buttons can control a checkbox using{" "}
+              <code>command="--navi-check"</code> /{" "}
+              <code>command="--navi-uncheck"</code> with a{" "}
+              <code>commandFor</code> pointing to the checkbox id. This triggers
+              the checkbox's action.
             </p>
             <div
               style={{
@@ -1913,22 +1910,18 @@
                     letterSpacing: "0.06em",
                   }}
                 >
-                  Proxy buttons
+                  External buttons
                 </div>
                 <Box flex="y" spacing="s">
                   <Button
-                    command="--navi-update"
+                    command="--navi-check"
                     commandFor="checkbox_being_proxied"
-                    value={true}
-                    navi-control-proxy-for="checkbox_being_proxied"
                   >
                     Check
                   </Button>
                   <Button
-                    command="--navi-update"
+                    command="--navi-uncheck"
                     commandFor="checkbox_being_proxied"
-                    value={false}
-                    navi-control-proxy-for="checkbox_being_proxied"
                   >
                     Uncheck
                   </Button>

@@ -33,6 +33,10 @@ const css = /* css */ `
     --x-message-color: var(--color-info);
     /* color: var(--x-color); */
     background-color: var(--x-message-background-color);
+
+    > .navi_icon {
+      flex-shrink: 0;
+    }
   }
 
   .navi_message_box[data-status-info] {
@@ -94,7 +98,7 @@ export const MessageBox = ({
       data-left-stripe={innerLeftStripe ? "" : undefined}
       inline
       column
-      alignY="start"
+      alignY="center"
       spacing="s"
       {...rest}
       className={withPropsClassName("navi_message_box", rest.className)}
@@ -109,7 +113,17 @@ export const MessageBox = ({
     >
       <MessageBoxStatusContext.Provider value={status}>
         <MessageBoxReportTitleChildContext.Provider value={setHasTitleChild}>
-          {icon && <Icon color="var(--x-message-color)">{icon}</Icon>}
+          {icon && (
+            <Icon
+              color="var(--x-message-color)"
+              height="1.5em"
+              maxHeight="auto"
+              selfAlignY="start"
+              aspectRatio="auto"
+            >
+              {icon}
+            </Icon>
+          )}
           <Text>{children}</Text>
           {onClose && (
             <Button
