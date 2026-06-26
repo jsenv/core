@@ -88,6 +88,10 @@ export const Dialog = (props) => {
         clearTimeout(resizeTimeout);
       };
       const onResize = () => {
+        // On mobile, tapping from one input to another triggers a resize because
+        // the virtual keyboard briefly starts to close before the new input receives
+        // focus and the keyboard reopens. Debouncing prevents repositioning the
+        // dialog during that transient state, which would cause a visible flicker.
         cancelDelayedUpdatePosition();
         resizeTimeout = setTimeout(updatePosition, 100);
       };

@@ -34878,7 +34878,7 @@ const Dialog = props => {
       addCleanup(trapScrollInside(dialogEl));
     }
     if (centerInVisualViewportProp && window.visualViewport) {
-      const centerInVisualViewport = () => {
+      const updatePosition = () => {
         const vv = window.visualViewport;
         const dialogHeight = dialogEl.offsetHeight;
         const availableHeight = vv.height;
@@ -34886,12 +34886,28 @@ const Dialog = props => {
         const marginTop = availableHeight > dialogHeight ? topOffset + (availableHeight - dialogHeight) / 2 : topOffset;
         dialogEl.style.setProperty("--dialog-top-inset", `${snapToPixel(marginTop)}px`);
       };
-      centerInVisualViewport();
-      window.visualViewport.addEventListener("resize", centerInVisualViewport);
-      window.visualViewport.addEventListener("scroll", centerInVisualViewport);
+      const onScroll = () => {
+        updatePosition();
+      };
+      let resizeTimeout;
+      const cancelDelayedUpdatePosition = () => {
+        clearTimeout(resizeTimeout);
+      };
+      const onResize = () => {
+        // On mobile, tapping from one input to another triggers a resize because
+        // the virtual keyboard briefly starts to close before the new input receives
+        // focus and the keyboard reopens. Debouncing prevents repositioning the
+        // dialog during that transient state, which would cause a visible flicker.
+        cancelDelayedUpdatePosition();
+        resizeTimeout = setTimeout(updatePosition, 100);
+      };
+      updatePosition();
+      window.visualViewport.addEventListener("resize", onResize);
+      window.visualViewport.addEventListener("scroll", onScroll);
       addCleanup(() => {
-        window.visualViewport.removeEventListener("resize", centerInVisualViewport);
-        window.visualViewport.removeEventListener("scroll", centerInVisualViewport);
+        cancelDelayedUpdatePosition();
+        window.visualViewport.removeEventListener("resize", onResize);
+        window.visualViewport.removeEventListener("scroll", onScroll);
         dialogEl.style.removeProperty("--dialog-top-inset");
       });
     }
