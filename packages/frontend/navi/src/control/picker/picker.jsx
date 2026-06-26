@@ -368,11 +368,13 @@ const PickerButton = (props) => {
       ui={undefined}
       maxLines={undefined}
       dayLabel={undefined}
-      onKeyDown={(e) => {
-        // This wrapper will receive keyboard event bubbling from the picker popup content
-        // we re-dispatch on the input (to get escape to close for instance)
-        inputProps.onKeyDown(e);
-      }}
+      // This wrapper will receive keyboard event bubbling from the picker popup content
+      // we re-dispatch on the input (to get escape to close for instance)
+      onKeyDown={inputProps.onKeyDown}
+      // in case request open/close are dispatched on the control root ->
+      // redispatch them to the host
+      onnavi_request_open={inputProps.onnavi_request_open}
+      onnavi_request_close={inputProps.onnavi_request_close}
     >
       {variant === "headless" ? null : (
         <LoadingOutline
