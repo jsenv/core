@@ -62,7 +62,6 @@
       // ── Native date picker ────────────────────────────────────────────────
       const NativeDateDemo = () => {
         const dateSignal = useSignal(null);
-        const pickerRef = useRef(null);
 
         return (
           <div class="demo-section">
@@ -74,16 +73,15 @@
             <Box flex spacing="m" alignY="center">
               <Button
                 selfAlignY="end"
-                onClick={() => {
-                  triggerShowPicker(pickerRef);
-                }}
+                command="--navi-open"
+                commandFor="native-date-picker"
               >
                 Ouvrir le calendrier
               </Button>
               <Field>
                 <Label>Date</Label>
                 <Picker
-                  ref={pickerRef}
+                  id="native-date-picker"
                   type="date"
                   value={dateSignal.value}
                   action={(v) => {
@@ -106,7 +104,6 @@
 
       const CustomSelectDemo = () => {
         const valueSignal = useSignal(null);
-        const pickerRef = useRef(null);
 
         return (
           <div class="demo-section">
@@ -118,16 +115,15 @@
             <Box flex spacing="m" alignY="center">
               <Button
                 selfAlignY="end"
-                onClick={() => {
-                  triggerShowPicker(pickerRef);
-                }}
+                command="--navi-open"
+                commandFor="custom-select-picker"
               >
                 Ouvrir la liste
               </Button>
               <Field>
                 <Label>Couleur</Label>
                 <Picker
-                  ref={pickerRef}
+                  id="custom-select-picker"
                   ui={valueSignal.value ?? "Choisir…"}
                   action={(v) => {
                     valueSignal.value = v;
@@ -170,7 +166,6 @@
 
       const HeadlessPickerDemo = () => {
         const valueSignal = useSignal(null);
-        const pickerRef = useRef(null);
 
         return (
           <div class="demo-section">
@@ -184,13 +179,12 @@
               <Button
                 selfAlignY="end"
                 style={{ position: "relative" }}
-                onClick={() => {
-                  triggerShowPicker(pickerRef);
-                }}
+                command="--navi-open"
+                commandFor="headless-picker"
               >
                 {valueSignal.value ?? "Choisir un fruit"}
                 <Picker
-                  ref={pickerRef}
+                  id="headless-picker"
                   variant="headless"
                   action={(v) => {
                     valueSignal.value = v;
