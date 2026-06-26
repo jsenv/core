@@ -17,6 +17,17 @@ export { NaviDebug } from "./src/navi_debug.jsx";
 
 // state management
 export {
+  compareTwoDurations,
+  durationContainsNaN,
+  durationToHours,
+  durationToISOString,
+  durationToMinutes,
+  durationToNumber,
+  durationToSeconds,
+  durationToString,
+  parseDuration,
+} from "@jsenv/validity";
+export {
   arraySignalMembership,
   useArraySignalMembership,
 } from "./src/state/array_signal_membership.js";

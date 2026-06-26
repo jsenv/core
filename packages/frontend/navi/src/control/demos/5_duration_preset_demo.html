@@ -72,9 +72,10 @@
         Icon,
         NaviDebug,
         InputDuration,
+        durationToMinutes,
       } from "@jsenv/navi";
 
-      const PRESET_DURATIONS = [60, 90, 120];
+      const PRESET_DURATIONS = ["1h", "1h30", "2h"];
       // Value is one of the preset numbers (60, 90, 120) or the string "custom".
       // When "custom", the actual duration is derived from customDurationHourSignal
       // and customDurationMinuteSignal.
@@ -109,8 +110,8 @@
         oneOf: [...PRESET_DURATIONS, "custom"],
       });
       // Total minutes for the custom option (no default)
-      const customDurationMinutesSignal2 = stateSignal(undefined, {
-        id: "custom_minutes2",
+      const customDurationSignal = stateSignal(undefined, {
+        id: "custom_duration",
       });
 
       const durationSignal3 = stateSignal(90, {
@@ -129,7 +130,7 @@
           custom_hour: customDurationHourSignal,
           custom_minute: customDurationMinuteSignal,
           duration2: durationSignal2,
-          custom_minutes2: customDurationMinutesSignal2,
+          custom_duration: customDurationSignal,
           duration3: durationSignal3,
           custom_minutes3: customDurationMinutesSignal3,
         },
@@ -202,8 +203,8 @@
               action={({ duration }) => {
                 const minutes =
                   duration === "custom"
-                    ? customDurationMinutesSignal2.value
-                    : duration;
+                    ? durationToMinutes(customDurationSignal.value)
+                    : durationToMinutes(duration);
                 formResultSignal.value = { minutes };
               }}
               flex="y"
@@ -289,15 +290,15 @@
               }}
               border="none"
             >
-              {PRESET_DURATIONS.map((minutes, i) => (
+              {PRESET_DURATIONS.map((durationPreset, i) => (
                 <DurationPreset
-                  key={minutes}
+                  key={durationPreset}
                   index={i}
-                  id={`duration_${minutes}`}
-                  value={minutes}
-                  selected={duration === String(minutes)}
+                  id={`duration_${durationPreset}`}
+                  value={durationPreset}
+                  selected={durationPreset === duration}
                 >
-                  {minutes}
+                  {durationPreset}
                 </DurationPreset>
               ))}
               <CustomDurationOption
@@ -325,7 +326,9 @@
             alignX="center"
             {...props}
           >
-            <Time type="minute">{children}</Time>
+            <Time type="duration" format="compact">
+              {children}
+            </Time>
           </List.Item>
         );
       };
@@ -416,7 +419,7 @@
       };
 
       const CustomDurationOptionWithPicker2 = (props) => {
-        const totalMinutes = customDurationMinutesSignal2.value;
+        const customDuration = customDurationSignal.value;
 
         return (
           <List.Item
@@ -435,10 +438,12 @@
             // navi-command-target="child-control"
             {...props}
           >
-            {totalMinutes === undefined || totalMinutes === null ? (
+            {customDuration === undefined || customDuration === null ? (
               <Text>Personnalisé</Text>
             ) : (
-              <Time type="minute">{totalMinutes}</Time>
+              <Time type="duration" format="compact">
+                {customDuration}
+              </Time>
             )}
             <Icon marginRight="-1ch">
               <Picker.UI.PencilSvg />
@@ -456,13 +461,13 @@
 
                 <InputDuration
                   unit="minute"
-                  value={totalMinutes}
+                  value={customDuration}
                   min="15min"
                   max="4h30"
                   step="5min"
                   required
                   uiAction={(v) => {
-                    customDurationMinutesSignal2.value = v;
+                    customDurationSignal.value = v;
                   }}
                 />
                 <Box flex spacing="s" expandX alignX="end">
