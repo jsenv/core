@@ -318,7 +318,7 @@ export const useControlProps = (
                 },
               };
             }
-            return null;
+            return keyDownDefault(e);
           },
           click: (e) => {
             return {
@@ -367,6 +367,20 @@ export const useControlProps = (
 
       if (controlType === "picker") {
         return {
+          keyDown: (e) => {
+            if (e.key === " ") {
+              return {
+                name: "space to click",
+                allowed: () => {
+                  ref.current.click();
+                },
+                always: () => {
+                  e.preventDefault(); // prevent page scroll
+                },
+              };
+            }
+            return keyDownDefault(e);
+          },
           input: (e) => {
             return {
               name: "input",
