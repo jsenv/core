@@ -383,6 +383,7 @@ const PickerButton = (props) => {
       )}
       <PickerInput
         tabIndex={variant === "headless" ? -1 : undefined}
+        aria-hidden={variant === "headless" ? "true" : undefined}
         {...inputProps}
         // eslint-disable-next-line react/no-children-prop
         children={undefined} // we will render children into the div
