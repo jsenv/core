@@ -33853,27 +33853,39 @@ const formatIntlUnit = (unit, {
   }
 };
 
-const InputGroup = props => {
-  const ref = useRef(null);
-  useInputGroup(ref);
-  return jsx(Box, {
-    ref: ref,
-    ...props
-  });
-};
-const useInputGroup = ref => {
+/**
+ * Wraps multiple inputs together and handles keyboard navigation and paste
+ * distribution between them.
+ *
+ * Keyboard navigation:
+ *   ArrowRight at the end of an input moves focus to the next input.
+ *   ArrowLeft at the start of an input moves focus to the previous input.
+ *   navi_input_full (emitted when an input reaches maxLength) also moves forward.
+ *
+ * Paste distribution:
+ *   When an input has a data-separator attribute, pasting a string that
+ *   contains that separator (e.g. "27/04/1990" into a day input with
+ *   data-separator="/") splits the text on each separator and fills the
+ *   corresponding sub-inputs in order.
+ */
+const useInputGroup = (ref) => {
   const debugFocus = useDebugFocus();
+
   useEffect(() => {
     const el = ref.current;
     if (!el) {
       return () => {};
     }
-    const getInputs = () => Array.from(el.querySelectorAll(".navi_control_input"));
-    const focusInput = input => {
+
+    const getInputs = () =>
+      Array.from(el.querySelectorAll(".navi_control_input"));
+
+    const focusInput = (input) => {
       input.focus();
       input.select();
     };
-    const handleKeyDown = e => {
+
+    const handleKeyDown = (e) => {
       if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") {
         return;
       }
@@ -33882,28 +33894,49 @@ const useInputGroup = ref => {
         return;
       }
       if (e.key === "ArrowRight") {
-        const allSelected = active.selectionStart === 0 && active.selectionEnd === active.value.length;
-        const atEnd = allSelected || active.selectionStart === active.value.length && active.selectionEnd === active.value.length;
+        const allSelected =
+          active.selectionStart === 0 &&
+          active.selectionEnd === active.value.length;
+        const atEnd =
+          allSelected ||
+          (active.selectionStart === active.value.length &&
+            active.selectionEnd === active.value.length);
         if (!atEnd) {
           return;
         }
         const inputs = getInputs();
         const idx = inputs.indexOf(active);
         if (idx === -1) {
-          debugFocus(e, "InputGroup ArrowRight on non group input → do nothing");
+          debugFocus(
+            e,
+            "InputGroup ArrowRight on non group input → do nothing",
+          );
           return;
         }
         if (idx === inputs.length - 1) {
-          debugFocus(e, "InputGroup ArrowRight at end of last input → do nothing");
+          debugFocus(
+            e,
+            "InputGroup ArrowRight at end of last input → do nothing",
+          );
           return;
         }
-        debugFocus(e, "InputGroup ArrowRight at end of input[%d] → focus input[%d]", idx, idx + 1);
+
+        debugFocus(
+          e,
+          "InputGroup ArrowRight at end of input[%d] → focus input[%d]",
+          idx,
+          idx + 1,
+        );
         e.preventDefault();
         focusInput(inputs[idx + 1]);
         return;
       }
-      const allSelected = active.selectionStart === 0 && active.selectionEnd === active.value.length;
-      const atStart = allSelected || active.selectionStart === 0 && active.selectionEnd === 0;
+      const allSelected =
+        active.selectionStart === 0 &&
+        active.selectionEnd === active.value.length;
+      const atStart =
+        allSelected ||
+        (active.selectionStart === 0 && active.selectionEnd === 0);
       if (!atStart) {
         return;
       }
@@ -33912,11 +33945,17 @@ const useInputGroup = ref => {
       if (idx === 0) {
         return;
       }
-      debugFocus(e, "InputGroup ArrowLeft at start of input[%d] → focus input[%d]", idx, idx - 1);
+      debugFocus(
+        e,
+        "InputGroup ArrowLeft at start of input[%d] → focus input[%d]",
+        idx,
+        idx - 1,
+      );
       e.preventDefault();
       focusInput(inputs[idx - 1]);
     };
-    const handleNaviInputFull = e => {
+
+    const handleNaviInputFull = (e) => {
       if (!e.detail.event?.isTrusted) {
         // Programmatic value change (e.g. ArrowUp/Down) — don't auto-advance.
         return;
@@ -33934,7 +33973,12 @@ const useInputGroup = ref => {
         return;
       }
       const nextInput = inputs[idx + 1];
-      debugFocus(e, "InputGroup navi_input_full on input -> move to next input", input, nextInput);
+      debugFocus(
+        e,
+        "InputGroup navi_input_full on input -> move to next input",
+        input,
+        nextInput,
+      );
       e.preventDefault();
       focusInput(nextInput);
     };
@@ -33988,15 +34032,11 @@ const useInputGroup = ref => {
     //   focusInput(inputs[lastFilledIdx]);
     // };
 
-    el.addEventListener("keydown", handleKeyDown, {
-      capture: true
-    });
+    el.addEventListener("keydown", handleKeyDown, { capture: true });
     el.addEventListener("navi_input_full", handleNaviInputFull);
     // el.addEventListener("paste", handlePaste, { capture: true });
     return () => {
-      el.removeEventListener("keydown", handleKeyDown, {
-        capture: true
-      });
+      el.removeEventListener("keydown", handleKeyDown, { capture: true });
       el.removeEventListener("navi_input_full", handleNaviInputFull);
       // el.removeEventListener("paste", handlePaste, { capture: true });
     };
@@ -34013,7 +34053,7 @@ const useInputGroup = ref => {
 //   });
 // };
 
-const isTextInputElement = el => {
+const isTextInputElement = (el) => {
   if (!el) {
     return false;
   }
@@ -34024,7 +34064,15 @@ const isTextInputElement = el => {
     return false;
   }
   const type = el.type || "text";
-  return type === "text" || type === "search" || type === "url" || type === "tel" || type === "email" || type === "password" || type === "number";
+  return (
+    type === "text" ||
+    type === "search" ||
+    type === "url" ||
+    type === "tel" ||
+    type === "email" ||
+    type === "password" ||
+    type === "number"
+  );
 };
 
 installImportMetaCssBuild(import.meta);const css$t = /* css */`
@@ -34092,20 +34140,26 @@ installImportMetaCssBuild(import.meta);const css$t = /* css */`
  */
 const InputDuration = props => {
   import.meta.css = [css$t, "@jsenv/navi/src/control/input/input_duration.jsx"];
+  const defaultRef = useRef();
+  props.ref = props.ref || defaultRef;
   props.max = props.max || "23h59";
+  const {
+    ref,
+    uiAction,
+    action,
+    unitHour,
+    textAlign = "auto"
+  } = props;
   const minDuration = parseDuration(props.min);
   const maxDuration = parseDuration(props.max);
   const stepDuration = parseDuration(props.step);
   const hasValue = Object.hasOwn(props, "value");
-  const {
-    unitHour,
-    textAlign = "auto"
-  } = props;
   const minSeconds = minDuration ? durationToSeconds(minDuration) : undefined;
   const maxSeconds = durationToSeconds(maxDuration);
   const stepSeconds = stepDuration ? durationToSeconds(stepDuration) : undefined;
   const renderSource = hasValue ? props.value : props.defaultValue;
   const components = parseDuration(renderSource);
+  const initialIsoString = components ? durationToISOString(components) ?? "" : "";
   const valueHasSeconds = components?.seconds !== undefined;
   const valueHasMinutes = components?.minutes !== undefined;
   // Fractional seconds (e.g. 0.5 from "PT0.5S") also imply milliseconds.
@@ -34125,13 +34179,6 @@ const InputDuration = props => {
   // Exception: if the current value already has minutes, show them read-only so
   // the stored precision is faithfully displayed.
   const showMinutes = maxSeconds >= 60 && (stepSeconds === undefined || stepSeconds % 3600 !== 0 || valueHasMinutes);
-  const defaultRef = useRef();
-  props.ref = props.ref || defaultRef;
-  const {
-    uiAction,
-    action,
-    ref
-  } = props;
 
   // Mirror the single-input behaviour: a controlled value with no handler makes the field read-only.
   const implicitReadOnly = hasValue && !uiAction && !action;
@@ -34218,16 +34265,92 @@ const InputDuration = props => {
     disabled,
     basePseudoState
   } = groupHostProps;
-  const visibleFields = [];
-  if (showHours) visibleFields.push("hour");
-  if (showMinutes) visibleFields.push("minute");
-  if (showSeconds) visibleFields.push("second");
-  if (showMilliseconds) visibleFields.push("millisecond");
+  const groupRef = useRef();
+  useInputGroup(groupRef);
+  const clipboardProps = useClipboardProps(groupRef);
+  const hourValue = components?.hours;
+  const minuteValue = components?.minutes;
+  const rawSecondValue = components?.seconds;
+  // ISO 8601 fractional seconds encode ms (e.g. 0.5 = 500ms); split them.
+  let secondValue = rawSecondValue;
+  let millisecondValue = components?.milliseconds;
+  if (typeof rawSecondValue === "number" && rawSecondValue % 1 !== 0 && millisecondValue === undefined) {
+    secondValue = Math.floor(rawSecondValue);
+    millisecondValue = Math.round(rawSecondValue % 1 * 1000);
+  }
+  return jsxs(Box, {
+    ref: groupRef,
+    className: "navi_input_duration",
+    "data-callout-arrow-x": "center",
+    width: "fit-content",
+    ...groupRootProps,
+    unit: undefined,
+    unitHour: undefined,
+    ...clipboardProps,
+    children: [jsx("input", {
+      ...groupHostProps,
+      type: "hidden",
+      basePseudoState: undefined // eslint-disable-line react/no-unknown-property
+      ,
+
+      ...(hasValue ? {
+        value: initialIsoString
+      } : {
+        defaultValue: initialIsoString
+      })
+    }), jsx(Box, {
+      flex: true,
+      spacing: "xxs",
+      width: "fit-content",
+      children: jsx(ControlgroupChildrenWrapper, {
+        ...childrenWrapperProps,
+        name: undefined,
+        children: jsx(InputDurationFields, {
+          showHours: showHours,
+          showMinutes: showMinutes,
+          showSeconds: showSeconds,
+          showMilliseconds: showMilliseconds,
+          minutesReadOnly: minutesReadOnly,
+          secondsReadOnly: secondsReadOnly,
+          millisecondsReadOnly: millisecondsReadOnly,
+          stepHasMilliseconds: stepHasMilliseconds,
+          controlled: hasValue,
+          hourValue: hourValue,
+          minuteValue: minuteValue,
+          secondValue: secondValue,
+          millisecondValue: millisecondValue,
+          minSeconds: minSeconds,
+          maxSeconds: maxSeconds,
+          stepSeconds: stepSeconds,
+          unitHour: unitHour,
+          textAlign: textAlign,
+          required: required,
+          readOnly: readOnly,
+          disabled: disabled,
+          basePseudoState: basePseudoState
+        })
+      })
+    })]
+  });
+};
+const getVisibleFields = container => {
+  return ["hour", "minute", "second", "millisecond"].filter(f => container.querySelector(`[navi-input-type="${f}"]`) !== null);
+};
+const useClipboardProps = groupRef => {
   const getClipboardPayload = () => {
-    const isoString = ref.current?.value;
-    if (!isoString) return null;
+    const groupEl = groupRef.current;
+    if (!groupEl) {
+      return null;
+    }
+    const hiddenInput = groupEl.querySelector('input[type="hidden"]');
+    const isoString = hiddenInput.value;
+    if (!isoString) {
+      return null;
+    }
     const parsed = parseDuration(isoString);
-    if (!parsed) return null;
+    if (!parsed) {
+      return null;
+    }
     const rawS = parsed.seconds;
     const wholeS = rawS !== undefined ? Math.floor(rawS) : undefined;
     const ms = typeof rawS === "number" && rawS % 1 !== 0 ? Math.round(rawS % 1 * 1000) : parsed.milliseconds ?? undefined;
@@ -34237,6 +34360,8 @@ const InputDuration = props => {
       second: wholeS,
       millisecond: ms
     };
+    const visibleFields = getVisibleFields(groupEl);
+    const showMilliseconds = visibleFields.includes("millisecond");
     const parts = visibleFields.filter(f => f !== "millisecond").map((f, i) => {
       const v = byField[f] ?? 0;
       return i === 0 ? String(v) : String(v).padStart(2, "0");
@@ -34251,7 +34376,7 @@ const InputDuration = props => {
     };
   };
   const applyToGroup = (isoValue, e) => {
-    const host = ref.current;
+    const host = groupRef.current;
     dispatchRequestInteraction(host, {
       event: e,
       name: "subpaste",
@@ -34263,27 +34388,25 @@ const InputDuration = props => {
     });
     e.preventDefault();
   };
-  const handleCopy = e => {
+  const onCopy = e => {
     const payload = getClipboardPayload();
-    if (!payload) return;
+    if (!payload) {
+      return;
+    }
     e.clipboardData.setData("text/plain", payload.plainText);
     e.clipboardData.setData("application/x-navi", payload.isoString);
     e.preventDefault();
   };
-  const handleCut = e => {
+  const onCut = e => {
     const payload = getClipboardPayload();
-    if (!payload) return;
+    if (!payload) {
+      return;
+    }
     e.clipboardData.setData("text/plain", payload.plainText);
     e.clipboardData.setData("application/x-navi", payload.isoString);
     applyToGroup("", e);
   };
-  const FIELD_TO_KEY = {
-    hour: "hours",
-    minute: "minutes",
-    second: "seconds",
-    millisecond: "milliseconds"
-  };
-  const handlePaste = e => {
+  const onPaste = e => {
     const naviData = e.clipboardData.getData("application/x-navi");
     const textData = e.clipboardData.getData("text/plain");
     let isoValue = null;
@@ -34297,6 +34420,7 @@ const InputDuration = props => {
       } else {
         // Colon-split fallback: "1:30", "1:30:45", "1:30:45.500"
         const colonParts = textData.trim().split(":");
+        const visibleFields = getVisibleFields(groupRef.current);
         if (colonParts.length > 1 || visibleFields.length === 1) {
           const durationObj = {};
           colonParts.forEach((part, i) => {
@@ -34319,59 +34443,17 @@ const InputDuration = props => {
     if (!isoValue) return;
     applyToGroup(isoValue, e);
   };
-  const hourValue = components?.hours;
-  const minuteValue = components?.minutes;
-  const rawSecondValue = components?.seconds;
-  // ISO 8601 fractional seconds encode ms (e.g. 0.5 = 500ms); split them.
-  let secondValue = rawSecondValue;
-  let millisecondValue = components?.milliseconds;
-  if (typeof rawSecondValue === "number" && rawSecondValue % 1 !== 0 && millisecondValue === undefined) {
-    secondValue = Math.floor(rawSecondValue);
-    millisecondValue = Math.round(rawSecondValue % 1 * 1000);
-  }
-  return jsxs(Box, {
-    className: "navi_input_duration",
-    "data-callout-arrow-x": "center",
-    width: "fit-content",
-    ...groupRootProps,
-    unit: undefined,
-    unitHour: undefined,
-    onCopy: handleCopy,
-    onCut: handleCut,
-    onPaste: handlePaste,
-    children: [jsx("input", {
-      ...groupHostProps,
-      type: "hidden",
-      basePseudoState: undefined
-    }), jsx(ControlgroupChildrenWrapper, {
-      ...childrenWrapperProps,
-      name: undefined,
-      children: jsx(InputDurationFields, {
-        showHours: showHours,
-        showMinutes: showMinutes,
-        showSeconds: showSeconds,
-        showMilliseconds: showMilliseconds,
-        minutesReadOnly: minutesReadOnly,
-        secondsReadOnly: secondsReadOnly,
-        millisecondsReadOnly: millisecondsReadOnly,
-        stepHasMilliseconds: stepHasMilliseconds,
-        controlled: hasValue,
-        hourValue: hourValue,
-        minuteValue: minuteValue,
-        secondValue: secondValue,
-        millisecondValue: millisecondValue,
-        minSeconds: minSeconds,
-        maxSeconds: maxSeconds,
-        stepSeconds: stepSeconds,
-        unitHour: unitHour,
-        textAlign: textAlign,
-        required: required,
-        readOnly: readOnly,
-        disabled: disabled,
-        basePseudoState: basePseudoState
-      })
-    })]
-  });
+  return {
+    onCopy,
+    onCut,
+    onPaste
+  };
+};
+const FIELD_TO_KEY = {
+  hour: "hours",
+  minute: "minutes",
+  second: "seconds",
+  millisecond: "milliseconds"
 };
 
 // Renders the appropriate combination of hour/minute/second sub-inputs based
@@ -34395,8 +34477,6 @@ const InputDurationFields = ({
   stepSeconds,
   unitHour,
   textAlign,
-  // Loading is displayed on the InputGroup wrapper, not on individual sub-inputs.
-  basePseudoState,
   ...childProps
 }) => {
   // Hour bounds (in hours)
@@ -34503,13 +34583,7 @@ const InputDurationFields = ({
   if (inputs.length === 1) {
     return inputs[0];
   }
-  return jsx(InputGroup, {
-    flex: true,
-    spacing: "xxs",
-    width: "fit-content",
-    basePseudoState: basePseudoState,
-    children: inputs
-  });
+  return inputs;
 };
 const InputDurationPart = ({
   unit,
@@ -46169,5 +46243,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, Details, Dialog, DialogLayout, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Field, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, InputDuration, InputGroup, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, Paragraph, Picker, Popover, Quantity, RadioGroup, Route, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Thead, Time, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, actionIntegratedVia, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isToday, langSignal, localStorageSignal, moveArrayItemByIndex, navBack, navForward, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSidePanelClose, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage, windowWidthSignal };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, Details, Dialog, DialogLayout, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Field, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, Paragraph, Picker, Popover, Quantity, RadioGroup, Route, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Thead, Time, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, actionIntegratedVia, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isToday, langSignal, localStorageSignal, moveArrayItemByIndex, navBack, navForward, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSidePanelClose, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi.js.map
