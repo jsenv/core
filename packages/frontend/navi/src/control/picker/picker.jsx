@@ -1,6 +1,6 @@
+import { performTabNavigation } from "@jsenv/dom";
 import { useContext, useRef } from "preact/hooks";
 
-import { performTabNavigation } from "@jsenv/dom/src/interaction/focus/tab_navigation.js";
 import { Box } from "@jsenv/navi/src/box/box.jsx";
 import { ChevronDownSvg } from "@jsenv/navi/src/graphic/icons/chevron_updown_svg.jsx";
 import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.jsx";

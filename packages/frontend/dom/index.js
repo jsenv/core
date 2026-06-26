@@ -88,6 +88,7 @@ export { initFocusGroup } from "./src/interaction/focus/focus_group.js";
 export { preventFocusNavViaKeyboard } from "./src/interaction/focus/focus_nav.js";
 export { preventFocusNav } from "./src/interaction/focus/focus_nav_event_marker.js";
 export { trapFocusInside } from "./src/interaction/focus/focus_trap.js";
+export { performTabNavigation } from "./src/interaction/focus/tab_navigation.js";
 // interaction/keyboard
 export {
   getKeyboardEventDefaultAction,
