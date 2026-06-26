@@ -244,6 +244,7 @@ const PickerDuration = (props) => {
       icon={<DurationSvg />}
       {...props}
       type="text"
+      navi-input-type="duration"
     />
   );
 };

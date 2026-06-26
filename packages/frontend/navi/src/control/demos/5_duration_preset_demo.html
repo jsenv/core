@@ -449,14 +449,13 @@
               variant="headless"
               mode="dialog"
               borderRadius="s"
-              type="controlgroup"
+              type="duration"
             >
               <Box flex="y" alignX="center" padding="m" spacing="m">
                 <Text bold>Veuillez saisir une durée</Text>
 
                 <InputDuration
                   unit="minute"
-                  name="durationCustom"
                   value={totalMinutes}
                   min="15min"
                   max="4h30"

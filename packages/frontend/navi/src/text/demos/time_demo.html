@@ -30,7 +30,12 @@
           {cols.map((c, i) => (
             <Text
               key={i}
-              style={{ fontSize: "11px", color: "#bbb", fontFamily: "monospace", whiteSpace: "nowrap" }}
+              style={{
+                fontSize: "11px",
+                color: "#bbb",
+                fontFamily: "monospace",
+                whiteSpace: "nowrap",
+              }}
             >
               {c}
             </Text>
@@ -41,7 +46,9 @@
 
       const GRow = ({ label, children }) => (
         <>
-          <Text style={{ color: "#888", fontSize: "13px", fontFamily: "monospace" }}>
+          <Text
+            style={{ color: "#888", fontSize: "13px", fontFamily: "monospace" }}
+          >
             {label}
           </Text>
           {children}
@@ -81,21 +88,46 @@
             Contents
           </Title>
           <ol style={{ margin: 0, paddingLeft: "20px", lineHeight: "1.8" }}>
-            <li><a href="#relative">type="relative" (default)</a></li>
-            <li><a href="#duration">type="duration"</a></li>
-            <li><a href="#datetime">type="datetime"</a></li>
-            <li><a href="#date">type="date"</a></li>
-            <li><a href="#month">type="month"</a></li>
-            <li><a href="#time">type="time"</a></li>
-            <li><a href="#hour">type="hour"</a></li>
-            <li><a href="#minute">type="minute"</a></li>
-            <li><a href="#second">type="second"</a></li>
+            <li>
+              <a href="#relative">type="relative" (default)</a>
+            </li>
+            <li>
+              <a href="#duration">type="duration"</a>
+            </li>
+            <li>
+              <a href="#datetime">type="datetime"</a>
+            </li>
+            <li>
+              <a href="#date">type="date"</a>
+            </li>
+            <li>
+              <a href="#month">type="month"</a>
+            </li>
+            <li>
+              <a href="#time">type="time"</a>
+            </li>
+            <li>
+              <a href="#hour">type="hour"</a>
+            </li>
+            <li>
+              <a href="#minute">type="minute"</a>
+            </li>
+            <li>
+              <a href="#second">type="second"</a>
+            </li>
           </ol>
         </nav>
       );
 
       const NOW = new Date();
-      const TODAY = new Date(NOW.getFullYear(), NOW.getMonth(), NOW.getDate(), 14, 30, 0);
+      const TODAY = new Date(
+        NOW.getFullYear(),
+        NOW.getMonth(),
+        NOW.getDate(),
+        14,
+        30,
+        0,
+      );
       const YESTERDAY = new Date(TODAY);
       YESTERDAY.setDate(YESTERDAY.getDate() - 1);
       const TOMORROW = new Date(TODAY);
@@ -107,10 +139,20 @@
         const [lang, setLang] = useState("fr");
 
         return (
-          <div style={{ padding: "20px", fontFamily: "system-ui, sans-serif", maxWidth: "1000px" }}>
+          <div
+            style={{
+              padding: "20px",
+              fontFamily: "system-ui, sans-serif",
+              maxWidth: "1000px",
+            }}
+          >
             <Title as="h1">Time Demo</Title>
 
-            <Box flex="x" spacing="m" style={{ alignItems: "center", marginBottom: "24px" }}>
+            <Box
+              flex="x"
+              spacing="m"
+              style={{ alignItems: "center", marginBottom: "24px" }}
+            >
               <Text>Language:</Text>
               {["fr", "en", "de", "ja"].map((l) => (
                 <button
@@ -134,419 +176,944 @@
 
             {/* ── 1. relative ───────────────────────────────────────────── */}
             <Section id="relative" title='1. type="relative" (default)'>
-              <Grid cols={['(default)', 'format="short"', 'format="narrow"']}>
+              <Grid cols={["(default)", 'format="short"', 'format="narrow"']}>
                 <GRow label="now - 1h">
-                  <Time lang={lang}>{new Date(NOW.getTime() - 60 * 60 * 1000)}</Time>
-                  <Time format="short" lang={lang}>{new Date(NOW.getTime() - 60 * 60 * 1000)}</Time>
-                  <Time format="narrow" lang={lang}>{new Date(NOW.getTime() - 60 * 60 * 1000)}</Time>
+                  <Time lang={lang}>
+                    {new Date(NOW.getTime() - 60 * 60 * 1000)}
+                  </Time>
+                  <Time format="short" lang={lang}>
+                    {new Date(NOW.getTime() - 60 * 60 * 1000)}
+                  </Time>
+                  <Time format="narrow" lang={lang}>
+                    {new Date(NOW.getTime() - 60 * 60 * 1000)}
+                  </Time>
                 </GRow>
                 <GRow label="now - 30min">
-                  <Time lang={lang}>{new Date(NOW.getTime() - 30 * 60 * 1000)}</Time>
-                  <Time format="short" lang={lang}>{new Date(NOW.getTime() - 30 * 60 * 1000)}</Time>
-                  <Time format="narrow" lang={lang}>{new Date(NOW.getTime() - 30 * 60 * 1000)}</Time>
+                  <Time lang={lang}>
+                    {new Date(NOW.getTime() - 30 * 60 * 1000)}
+                  </Time>
+                  <Time format="short" lang={lang}>
+                    {new Date(NOW.getTime() - 30 * 60 * 1000)}
+                  </Time>
+                  <Time format="narrow" lang={lang}>
+                    {new Date(NOW.getTime() - 30 * 60 * 1000)}
+                  </Time>
                 </GRow>
                 <GRow label="now + 2h">
-                  <Time lang={lang}>{new Date(NOW.getTime() + 2 * 60 * 60 * 1000)}</Time>
-                  <Time format="short" lang={lang}>{new Date(NOW.getTime() + 2 * 60 * 60 * 1000)}</Time>
-                  <Time format="narrow" lang={lang}>{new Date(NOW.getTime() + 2 * 60 * 60 * 1000)}</Time>
+                  <Time lang={lang}>
+                    {new Date(NOW.getTime() + 2 * 60 * 60 * 1000)}
+                  </Time>
+                  <Time format="short" lang={lang}>
+                    {new Date(NOW.getTime() + 2 * 60 * 60 * 1000)}
+                  </Time>
+                  <Time format="narrow" lang={lang}>
+                    {new Date(NOW.getTime() + 2 * 60 * 60 * 1000)}
+                  </Time>
                 </GRow>
                 <GRow label="now + 15min">
-                  <Time lang={lang}>{new Date(NOW.getTime() + 15 * 60 * 1000)}</Time>
-                  <Time format="short" lang={lang}>{new Date(NOW.getTime() + 15 * 60 * 1000)}</Time>
-                  <Time format="narrow" lang={lang}>{new Date(NOW.getTime() + 15 * 60 * 1000)}</Time>
+                  <Time lang={lang}>
+                    {new Date(NOW.getTime() + 15 * 60 * 1000)}
+                  </Time>
+                  <Time format="short" lang={lang}>
+                    {new Date(NOW.getTime() + 15 * 60 * 1000)}
+                  </Time>
+                  <Time format="narrow" lang={lang}>
+                    {new Date(NOW.getTime() + 15 * 60 * 1000)}
+                  </Time>
                 </GRow>
                 <GRow label="yesterday">
                   <Time lang={lang}>{YESTERDAY}</Time>
-                  <Time format="short" lang={lang}>{YESTERDAY}</Time>
-                  <Time format="narrow" lang={lang}>{YESTERDAY}</Time>
+                  <Time format="short" lang={lang}>
+                    {YESTERDAY}
+                  </Time>
+                  <Time format="narrow" lang={lang}>
+                    {YESTERDAY}
+                  </Time>
                 </GRow>
                 <GRow label="last week">
                   <Time lang={lang}>{LAST_WEEK}</Time>
-                  <Time format="short" lang={lang}>{LAST_WEEK}</Time>
-                  <Time format="narrow" lang={lang}>{LAST_WEEK}</Time>
+                  <Time format="short" lang={lang}>
+                    {LAST_WEEK}
+                  </Time>
+                  <Time format="narrow" lang={lang}>
+                    {LAST_WEEK}
+                  </Time>
                 </GRow>
                 <GRow label="undefined">
                   <Time lang={lang}>{undefined}</Time>
-                  <Time format="short" lang={lang}>{undefined}</Time>
-                  <Time format="narrow" lang={lang}>{undefined}</Time>
+                  <Time format="short" lang={lang}>
+                    {undefined}
+                  </Time>
+                  <Time format="narrow" lang={lang}>
+                    {undefined}
+                  </Time>
                 </GRow>
               </Grid>
 
-              <Title as="h3" style={{ margin: "24px 0 12px", fontSize: "0.9rem", color: "#555" }}>
+              <Title
+                as="h3"
+                style={{
+                  margin: "24px 0 12px",
+                  fontSize: "0.9rem",
+                  color: "#555",
+                }}
+              >
                 eventDuration
               </Title>
-              <Grid cols={["eventDuration=0", "eventDuration=30min", "eventDuration=1h"]}>
+              <Grid
+                cols={[
+                  "eventDuration=0",
+                  "eventDuration=30min",
+                  "eventDuration=1h",
+                ]}
+              >
                 <GRow label="now + 1h">
-                  <Time lang={lang}>{new Date(NOW.getTime() + 60 * 60 * 1000)}</Time>
-                  <Time eventDuration={30 * 60 * 1000} lang={lang}>{new Date(NOW.getTime() + 60 * 60 * 1000)}</Time>
-                  <Time eventDuration={60 * 60 * 1000} lang={lang}>{new Date(NOW.getTime() + 60 * 60 * 1000)}</Time>
+                  <Time lang={lang}>
+                    {new Date(NOW.getTime() + 60 * 60 * 1000)}
+                  </Time>
+                  <Time eventDuration={30 * 60 * 1000} lang={lang}>
+                    {new Date(NOW.getTime() + 60 * 60 * 1000)}
+                  </Time>
+                  <Time eventDuration={60 * 60 * 1000} lang={lang}>
+                    {new Date(NOW.getTime() + 60 * 60 * 1000)}
+                  </Time>
                 </GRow>
                 <GRow label="now + 10min">
-                  <Time lang={lang}>{new Date(NOW.getTime() + 10 * 60 * 1000)}</Time>
-                  <Time eventDuration={30 * 60 * 1000} lang={lang}>{new Date(NOW.getTime() + 10 * 60 * 1000)}</Time>
-                  <Time eventDuration={60 * 60 * 1000} lang={lang}>{new Date(NOW.getTime() + 10 * 60 * 1000)}</Time>
+                  <Time lang={lang}>
+                    {new Date(NOW.getTime() + 10 * 60 * 1000)}
+                  </Time>
+                  <Time eventDuration={30 * 60 * 1000} lang={lang}>
+                    {new Date(NOW.getTime() + 10 * 60 * 1000)}
+                  </Time>
+                  <Time eventDuration={60 * 60 * 1000} lang={lang}>
+                    {new Date(NOW.getTime() + 10 * 60 * 1000)}
+                  </Time>
                 </GRow>
                 <GRow label="now - 1min">
-                  <Time lang={lang}>{new Date(NOW.getTime() - 1 * 60 * 1000)}</Time>
-                  <Time eventDuration={30 * 60 * 1000} lang={lang}>{new Date(NOW.getTime() - 1 * 60 * 1000)}</Time>
-                  <Time eventDuration={60 * 60 * 1000} lang={lang}>{new Date(NOW.getTime() - 1 * 60 * 1000)}</Time>
+                  <Time lang={lang}>
+                    {new Date(NOW.getTime() - 1 * 60 * 1000)}
+                  </Time>
+                  <Time eventDuration={30 * 60 * 1000} lang={lang}>
+                    {new Date(NOW.getTime() - 1 * 60 * 1000)}
+                  </Time>
+                  <Time eventDuration={60 * 60 * 1000} lang={lang}>
+                    {new Date(NOW.getTime() - 1 * 60 * 1000)}
+                  </Time>
                 </GRow>
                 <GRow label="now - 20min">
-                  <Time lang={lang}>{new Date(NOW.getTime() - 20 * 60 * 1000)}</Time>
-                  <Time eventDuration={30 * 60 * 1000} lang={lang}>{new Date(NOW.getTime() - 20 * 60 * 1000)}</Time>
-                  <Time eventDuration={60 * 60 * 1000} lang={lang}>{new Date(NOW.getTime() - 20 * 60 * 1000)}</Time>
+                  <Time lang={lang}>
+                    {new Date(NOW.getTime() - 20 * 60 * 1000)}
+                  </Time>
+                  <Time eventDuration={30 * 60 * 1000} lang={lang}>
+                    {new Date(NOW.getTime() - 20 * 60 * 1000)}
+                  </Time>
+                  <Time eventDuration={60 * 60 * 1000} lang={lang}>
+                    {new Date(NOW.getTime() - 20 * 60 * 1000)}
+                  </Time>
                 </GRow>
                 <GRow label="now - 31min">
-                  <Time lang={lang}>{new Date(NOW.getTime() - 31 * 60 * 1000)}</Time>
-                  <Time eventDuration={30 * 60 * 1000} lang={lang}>{new Date(NOW.getTime() - 31 * 60 * 1000)}</Time>
-                  <Time eventDuration={60 * 60 * 1000} lang={lang}>{new Date(NOW.getTime() - 31 * 60 * 1000)}</Time>
+                  <Time lang={lang}>
+                    {new Date(NOW.getTime() - 31 * 60 * 1000)}
+                  </Time>
+                  <Time eventDuration={30 * 60 * 1000} lang={lang}>
+                    {new Date(NOW.getTime() - 31 * 60 * 1000)}
+                  </Time>
+                  <Time eventDuration={60 * 60 * 1000} lang={lang}>
+                    {new Date(NOW.getTime() - 31 * 60 * 1000)}
+                  </Time>
                 </GRow>
                 <GRow label="now - 59min">
-                  <Time lang={lang}>{new Date(NOW.getTime() - 59 * 60 * 1000)}</Time>
-                  <Time eventDuration={30 * 60 * 1000} lang={lang}>{new Date(NOW.getTime() - 59 * 60 * 1000)}</Time>
-                  <Time eventDuration={60 * 60 * 1000} lang={lang}>{new Date(NOW.getTime() - 59 * 60 * 1000)}</Time>
+                  <Time lang={lang}>
+                    {new Date(NOW.getTime() - 59 * 60 * 1000)}
+                  </Time>
+                  <Time eventDuration={30 * 60 * 1000} lang={lang}>
+                    {new Date(NOW.getTime() - 59 * 60 * 1000)}
+                  </Time>
+                  <Time eventDuration={60 * 60 * 1000} lang={lang}>
+                    {new Date(NOW.getTime() - 59 * 60 * 1000)}
+                  </Time>
                 </GRow>
                 <GRow label="now - 61min">
-                  <Time lang={lang}>{new Date(NOW.getTime() - 61 * 60 * 1000)}</Time>
-                  <Time eventDuration={30 * 60 * 1000} lang={lang}>{new Date(NOW.getTime() - 61 * 60 * 1000)}</Time>
-                  <Time eventDuration={60 * 60 * 1000} lang={lang}>{new Date(NOW.getTime() - 61 * 60 * 1000)}</Time>
+                  <Time lang={lang}>
+                    {new Date(NOW.getTime() - 61 * 60 * 1000)}
+                  </Time>
+                  <Time eventDuration={30 * 60 * 1000} lang={lang}>
+                    {new Date(NOW.getTime() - 61 * 60 * 1000)}
+                  </Time>
+                  <Time eventDuration={60 * 60 * 1000} lang={lang}>
+                    {new Date(NOW.getTime() - 61 * 60 * 1000)}
+                  </Time>
                 </GRow>
               </Grid>
 
-              <Title as="h3" style={{ margin: "24px 0 12px", fontSize: "0.9rem", color: "#555" }}>
+              <Title
+                as="h3"
+                style={{
+                  margin: "24px 0 12px",
+                  fontSize: "0.9rem",
+                  color: "#555",
+                }}
+              >
                 bare
               </Title>
-              <Text style={{ display: "block", marginBottom: "12px", color: "#555", fontSize: "13px" }}>
-                Strips the past-tense prefix ("il y a", "ago") and returns only the amount.
-                Use when the surrounding UI already carries that meaning — e.g.{" "}
-                <em>Member since: <Time bare lang={lang}>{LAST_WEEK}</Time></em>{" "}
-                instead of <em>Member since: <Time lang={lang}>{LAST_WEEK}</Time></em>.
-                Only affects past dates; future dates are unchanged.
+              <Text
+                style={{
+                  display: "block",
+                  marginBottom: "12px",
+                  color: "#555",
+                  fontSize: "13px",
+                }}
+              >
+                Strips the past-tense prefix ("il y a", "ago") and returns only
+                the amount. Use when the surrounding UI already carries that
+                meaning — e.g.{" "}
+                <em>
+                  Member since:{" "}
+                  <Time bare lang={lang}>
+                    {LAST_WEEK}
+                  </Time>
+                </em>{" "}
+                instead of{" "}
+                <em>
+                  Member since: <Time lang={lang}>{LAST_WEEK}</Time>
+                </em>
+                . Only affects past dates; future dates are unchanged.
               </Text>
-              <Grid cols={['(default)', 'bare']}>
+              <Grid cols={["(default)", "bare"]}>
                 <GRow label="now - 1h">
-                  <Time lang={lang}>{new Date(NOW.getTime() - 60 * 60 * 1000)}</Time>
-                  <Time bare lang={lang}>{new Date(NOW.getTime() - 60 * 60 * 1000)}</Time>
+                  <Time lang={lang}>
+                    {new Date(NOW.getTime() - 60 * 60 * 1000)}
+                  </Time>
+                  <Time bare lang={lang}>
+                    {new Date(NOW.getTime() - 60 * 60 * 1000)}
+                  </Time>
                 </GRow>
                 <GRow label="now - 30min">
-                  <Time lang={lang}>{new Date(NOW.getTime() - 30 * 60 * 1000)}</Time>
-                  <Time bare lang={lang}>{new Date(NOW.getTime() - 30 * 60 * 1000)}</Time>
+                  <Time lang={lang}>
+                    {new Date(NOW.getTime() - 30 * 60 * 1000)}
+                  </Time>
+                  <Time bare lang={lang}>
+                    {new Date(NOW.getTime() - 30 * 60 * 1000)}
+                  </Time>
                 </GRow>
                 <GRow label="yesterday">
                   <Time lang={lang}>{YESTERDAY}</Time>
-                  <Time bare lang={lang}>{YESTERDAY}</Time>
+                  <Time bare lang={lang}>
+                    {YESTERDAY}
+                  </Time>
                 </GRow>
                 <GRow label="last week">
                   <Time lang={lang}>{LAST_WEEK}</Time>
-                  <Time bare lang={lang}>{LAST_WEEK}</Time>
+                  <Time bare lang={lang}>
+                    {LAST_WEEK}
+                  </Time>
                 </GRow>
                 <GRow label="now + 2h (future)">
-                  <Time lang={lang}>{new Date(NOW.getTime() + 2 * 60 * 60 * 1000)}</Time>
-                  <Time bare lang={lang}>{new Date(NOW.getTime() + 2 * 60 * 60 * 1000)}</Time>
+                  <Time lang={lang}>
+                    {new Date(NOW.getTime() + 2 * 60 * 60 * 1000)}
+                  </Time>
+                  <Time bare lang={lang}>
+                    {new Date(NOW.getTime() + 2 * 60 * 60 * 1000)}
+                  </Time>
                 </GRow>
               </Grid>
             </Section>
 
             {/* ── 2. duration ───────────────────────────────────────────── */}
             <Section id="duration" title='2. type="duration"'>
-              <Grid cols={['(default)', 'format="short"', 'format="narrow"', 'format="compact"', 'format="iso"']}>
+              <Grid
+                cols={[
+                  "(default)",
+                  'format="short"',
+                  'format="narrow"',
+                  'format="compact"',
+                  'format="iso"',
+                ]}
+              >
                 <GRow label='"2hour15minute"'>
-                  <Time type="duration" lang={lang}>{"2hour15minute"}</Time>
-                  <Time type="duration" format="short" lang={lang}>{"2hour15minute"}</Time>
-                  <Time type="duration" format="narrow" lang={lang}>{"2hour15minute"}</Time>
-                  <Time type="duration" format="compact" lang={lang}>{"2hour15minute"}</Time>
-                  <Time type="duration" format="iso" lang={lang}>{"2hour15minute"}</Time>
+                  <Time type="duration" lang={lang}>
+                    {"2hour15minute"}
+                  </Time>
+                  <Time type="duration" format="short" lang={lang}>
+                    2hour15minute
+                  </Time>
+                  <Time type="duration" format="narrow" lang={lang}>
+                    2hour15minute
+                  </Time>
+                  <Time type="duration" format="compact" lang={lang}>
+                    2hour15minute
+                  </Time>
+                  <Time type="duration" format="iso" lang={lang}>
+                    2hour15minute
+                  </Time>
                 </GRow>
                 <GRow label='"PT2H15M"'>
-                  <Time type="duration" lang={lang}>{"PT2H15M"}</Time>
-                  <Time type="duration" format="short" lang={lang}>{"PT2H15M"}</Time>
-                  <Time type="duration" format="narrow" lang={lang}>{"PT2H15M"}</Time>
-                  <Time type="duration" format="compact" lang={lang}>{"PT2H15M"}</Time>
-                  <Time type="duration" format="iso" lang={lang}>{"PT2H15M"}</Time>
+                  <Time type="duration" lang={lang}>
+                    PT2H15M
+                  </Time>
+                  <Time type="duration" format="short" lang={lang}>
+                    PT2H15M
+                  </Time>
+                  <Time type="duration" format="narrow" lang={lang}>
+                    PT2H15M
+                  </Time>
+                  <Time type="duration" format="compact" lang={lang}>
+                    PT2H15M
+                  </Time>
+                  <Time type="duration" format="iso" lang={lang}>
+                    PT2H15M
+                  </Time>
                 </GRow>
                 <GRow label="{ hours: 2, minutes: 15 }">
-                  <Time type="duration" lang={lang}>{{ hours: 2, minutes: 15 }}</Time>
-                  <Time type="duration" format="short" lang={lang}>{{ hours: 2, minutes: 15 }}</Time>
-                  <Time type="duration" format="narrow" lang={lang}>{{ hours: 2, minutes: 15 }}</Time>
-                  <Time type="duration" format="compact" lang={lang}>{{ hours: 2, minutes: 15 }}</Time>
-                  <Time type="duration" format="iso" lang={lang}>{{ hours: 2, minutes: 15 }}</Time>
+                  <Time type="duration" lang={lang}>
+                    {{ hours: 2, minutes: 15 }}
+                  </Time>
+                  <Time type="duration" format="short" lang={lang}>
+                    {{ hours: 2, minutes: 15 }}
+                  </Time>
+                  <Time type="duration" format="narrow" lang={lang}>
+                    {{ hours: 2, minutes: 15 }}
+                  </Time>
+                  <Time type="duration" format="compact" lang={lang}>
+                    {{ hours: 2, minutes: 15 }}
+                  </Time>
+                  <Time type="duration" format="iso" lang={lang}>
+                    {{ hours: 2, minutes: 15 }}
+                  </Time>
                 </GRow>
                 <GRow label="5400 (seconds)">
-                  <Time type="duration" lang={lang}>{5400}</Time>
-                  <Time type="duration" format="short" lang={lang}>{5400}</Time>
-                  <Time type="duration" format="narrow" lang={lang}>{5400}</Time>
-                  <Time type="duration" format="compact" lang={lang}>{5400}</Time>
-                  <Time type="duration" format="iso" lang={lang}>{5400}</Time>
+                  <Time type="duration" lang={lang}>
+                    {5400}
+                  </Time>
+                  <Time type="duration" format="short" lang={lang}>
+                    {5400}
+                  </Time>
+                  <Time type="duration" format="narrow" lang={lang}>
+                    {5400}
+                  </Time>
+                  <Time type="duration" format="compact" lang={lang}>
+                    {5400}
+                  </Time>
+                  <Time type="duration" format="iso" lang={lang}>
+                    {5400}
+                  </Time>
                 </GRow>
                 <GRow label="300 (seconds)">
-                  <Time type="duration" lang={lang}>{300}</Time>
-                  <Time type="duration" format="short" lang={lang}>{300}</Time>
-                  <Time type="duration" format="narrow" lang={lang}>{300}</Time>
-                  <Time type="duration" format="compact" lang={lang}>{300}</Time>
-                  <Time type="duration" format="iso" lang={lang}>{300}</Time>
+                  <Time type="duration" lang={lang}>
+                    {300}
+                  </Time>
+                  <Time type="duration" format="short" lang={lang}>
+                    {300}
+                  </Time>
+                  <Time type="duration" format="narrow" lang={lang}>
+                    {300}
+                  </Time>
+                  <Time type="duration" format="compact" lang={lang}>
+                    {300}
+                  </Time>
+                  <Time type="duration" format="iso" lang={lang}>
+                    {300}
+                  </Time>
                 </GRow>
                 <GRow label="undefined">
-                  <Time type="duration" lang={lang}>{undefined}</Time>
-                  <Time type="duration" format="short" lang={lang}>{undefined}</Time>
-                  <Time type="duration" format="narrow" lang={lang}>{undefined}</Time>
-                  <Time type="duration" format="compact" lang={lang}>{undefined}</Time>
-                  <Time type="duration" format="iso" lang={lang}>{undefined}</Time>
+                  <Time type="duration" lang={lang}>
+                    {undefined}
+                  </Time>
+                  <Time type="duration" format="short" lang={lang}>
+                    {undefined}
+                  </Time>
+                  <Time type="duration" format="narrow" lang={lang}>
+                    {undefined}
+                  </Time>
+                  <Time type="duration" format="compact" lang={lang}>
+                    {undefined}
+                  </Time>
+                  <Time type="duration" format="iso" lang={lang}>
+                    {undefined}
+                  </Time>
                 </GRow>
               </Grid>
 
-              <Title as="h3" style={{ margin: "24px 0 12px", fontSize: "0.9rem", color: "#555" }}>
+              <Title
+                as="h3"
+                style={{
+                  margin: "24px 0 12px",
+                  fontSize: "0.9rem",
+                  color: "#555",
+                }}
+              >
                 Valeurs invalides
               </Title>
-              <Grid cols={['(default)', 'format="compact"']}>
+              <Grid cols={["(default)", 'format="compact"']}>
                 <GRow label='"ahour3minute"'>
-                  <Time type="duration" lang={lang}>{"ahour3minute"}</Time>
-                  <Time type="duration" format="compact" lang={lang}>{"ahour3minute"}</Time>
+                  <Time type="duration" lang={lang}>
+                    {"ahour3minute"}
+                  </Time>
+                  <Time type="duration" format="compact" lang={lang}>
+                    {"ahour3minute"}
+                  </Time>
                 </GRow>
                 <GRow label='"2ahour15minute"'>
-                  <Time type="duration" lang={lang}>{"2ahour15minute"}</Time>
-                  <Time type="duration" format="compact" lang={lang}>{"2ahour15minute"}</Time>
+                  <Time type="duration" lang={lang}>
+                    {"2ahour15minute"}
+                  </Time>
+                  <Time type="duration" format="compact" lang={lang}>
+                    {"2ahour15minute"}
+                  </Time>
                 </GRow>
                 <GRow label='""'>
-                  <Time type="duration" lang={lang}>{""}</Time>
-                  <Time type="duration" format="compact" lang={lang}>{""}</Time>
+                  <Time type="duration" lang={lang}>
+                    {""}
+                  </Time>
+                  <Time type="duration" format="compact" lang={lang}>
+                    {""}
+                  </Time>
                 </GRow>
                 <GRow label='"-1hour"'>
-                  <Time type="duration" lang={lang}>{"-1hour"}</Time>
-                  <Time type="duration" format="compact" lang={lang}>{"-1hour"}</Time>
+                  <Time type="duration" lang={lang}>
+                    {"-1hour"}
+                  </Time>
+                  <Time type="duration" format="compact" lang={lang}>
+                    {"-1hour"}
+                  </Time>
                 </GRow>
                 <GRow label='{ hours: "abc" }'>
-                  <Time type="duration" lang={lang}>{{ hours: "abc" }}</Time>
-                  <Time type="duration" format="compact" lang={lang}>{{ hours: "abc" }}</Time>
+                  <Time type="duration" lang={lang}>
+                    {{ hours: "abc" }}
+                  </Time>
+                  <Time type="duration" format="compact" lang={lang}>
+                    {{ hours: "abc" }}
+                  </Time>
                 </GRow>
                 <GRow label="0">
-                  <Time type="duration" lang={lang}>{0}</Time>
-                  <Time type="duration" format="compact" lang={lang}>{0}</Time>
+                  <Time type="duration" lang={lang}>
+                    {0}
+                  </Time>
+                  <Time type="duration" format="compact" lang={lang}>
+                    {0}
+                  </Time>
                 </GRow>
               </Grid>
             </Section>
 
             {/* ── 3. datetime ───────────────────────────────────────────── */}
             <Section id="datetime" title='3. type="datetime"'>
-              <Grid cols={['(default)', 'format="short"', 'format="narrow"']}>
+              <Grid cols={["(default)", 'format="short"', 'format="narrow"']}>
                 <GRow label="Date">
-                  <Time type="datetime" lang={lang}>{TODAY}</Time>
-                  <Time type="datetime" format="short" lang={lang}>{TODAY}</Time>
-                  <Time type="datetime" format="narrow" lang={lang}>{TODAY}</Time>
+                  <Time type="datetime" lang={lang}>
+                    {TODAY}
+                  </Time>
+                  <Time type="datetime" format="short" lang={lang}>
+                    {TODAY}
+                  </Time>
+                  <Time type="datetime" format="narrow" lang={lang}>
+                    {TODAY}
+                  </Time>
                 </GRow>
                 <GRow label="timestamp">
-                  <Time type="datetime" lang={lang}>{TODAY.getTime()}</Time>
-                  <Time type="datetime" format="short" lang={lang}>{TODAY.getTime()}</Time>
-                  <Time type="datetime" format="narrow" lang={lang}>{TODAY.getTime()}</Time>
+                  <Time type="datetime" lang={lang}>
+                    {TODAY.getTime()}
+                  </Time>
+                  <Time type="datetime" format="short" lang={lang}>
+                    {TODAY.getTime()}
+                  </Time>
+                  <Time type="datetime" format="narrow" lang={lang}>
+                    {TODAY.getTime()}
+                  </Time>
                 </GRow>
                 <GRow label="undefined">
-                  <Time type="datetime" lang={lang}>{undefined}</Time>
-                  <Time type="datetime" format="short" lang={lang}>{undefined}</Time>
-                  <Time type="datetime" format="narrow" lang={lang}>{undefined}</Time>
+                  <Time type="datetime" lang={lang}>
+                    {undefined}
+                  </Time>
+                  <Time type="datetime" format="short" lang={lang}>
+                    {undefined}
+                  </Time>
+                  <Time type="datetime" format="narrow" lang={lang}>
+                    {undefined}
+                  </Time>
                 </GRow>
               </Grid>
             </Section>
 
             {/* ── 4. date ───────────────────────────────────────────────── */}
             <Section id="date" title='4. type="date"'>
-              <Grid cols={['(default)', 'format="short"', 'format="narrow"', 'format="numeric"', "dayLabel"]}>
+              <Grid
+                cols={[
+                  "(default)",
+                  'format="short"',
+                  'format="narrow"',
+                  'format="numeric"',
+                  "dayLabel",
+                ]}
+              >
                 <GRow label="today">
-                  <Time type="date" lang={lang}>{TODAY}</Time>
-                  <Time type="date" format="short" lang={lang}>{TODAY}</Time>
-                  <Time type="date" format="narrow" lang={lang}>{TODAY}</Time>
-                  <Time type="date" format="numeric" lang={lang}>{TODAY}</Time>
-                  <Time type="date" dayLabel lang={lang}>{TODAY}</Time>
+                  <Time type="date" lang={lang}>
+                    {TODAY}
+                  </Time>
+                  <Time type="date" format="short" lang={lang}>
+                    {TODAY}
+                  </Time>
+                  <Time type="date" format="narrow" lang={lang}>
+                    {TODAY}
+                  </Time>
+                  <Time type="date" format="numeric" lang={lang}>
+                    {TODAY}
+                  </Time>
+                  <Time type="date" dayLabel lang={lang}>
+                    {TODAY}
+                  </Time>
                 </GRow>
                 <GRow label="yesterday">
-                  <Time type="date" lang={lang}>{YESTERDAY}</Time>
-                  <Time type="date" format="short" lang={lang}>{YESTERDAY}</Time>
-                  <Time type="date" format="narrow" lang={lang}>{YESTERDAY}</Time>
-                  <Time type="date" format="numeric" lang={lang}>{YESTERDAY}</Time>
-                  <Time type="date" dayLabel lang={lang}>{YESTERDAY}</Time>
+                  <Time type="date" lang={lang}>
+                    {YESTERDAY}
+                  </Time>
+                  <Time type="date" format="short" lang={lang}>
+                    {YESTERDAY}
+                  </Time>
+                  <Time type="date" format="narrow" lang={lang}>
+                    {YESTERDAY}
+                  </Time>
+                  <Time type="date" format="numeric" lang={lang}>
+                    {YESTERDAY}
+                  </Time>
+                  <Time type="date" dayLabel lang={lang}>
+                    {YESTERDAY}
+                  </Time>
                 </GRow>
                 <GRow label="tomorrow">
-                  <Time type="date" lang={lang}>{TOMORROW}</Time>
-                  <Time type="date" format="short" lang={lang}>{TOMORROW}</Time>
-                  <Time type="date" format="narrow" lang={lang}>{TOMORROW}</Time>
-                  <Time type="date" format="numeric" lang={lang}>{TOMORROW}</Time>
-                  <Time type="date" dayLabel lang={lang}>{TOMORROW}</Time>
+                  <Time type="date" lang={lang}>
+                    {TOMORROW}
+                  </Time>
+                  <Time type="date" format="short" lang={lang}>
+                    {TOMORROW}
+                  </Time>
+                  <Time type="date" format="narrow" lang={lang}>
+                    {TOMORROW}
+                  </Time>
+                  <Time type="date" format="numeric" lang={lang}>
+                    {TOMORROW}
+                  </Time>
+                  <Time type="date" dayLabel lang={lang}>
+                    {TOMORROW}
+                  </Time>
                 </GRow>
                 <GRow label='"2025-12-25"'>
-                  <Time type="date" lang={lang}>{"2025-12-25"}</Time>
-                  <Time type="date" format="short" lang={lang}>{"2025-12-25"}</Time>
-                  <Time type="date" format="narrow" lang={lang}>{"2025-12-25"}</Time>
-                  <Time type="date" format="numeric" lang={lang}>{"2025-12-25"}</Time>
-                  <Time type="date" dayLabel lang={lang}>{"2025-12-25"}</Time>
+                  <Time type="date" lang={lang}>
+                    {"2025-12-25"}
+                  </Time>
+                  <Time type="date" format="short" lang={lang}>
+                    {"2025-12-25"}
+                  </Time>
+                  <Time type="date" format="narrow" lang={lang}>
+                    {"2025-12-25"}
+                  </Time>
+                  <Time type="date" format="numeric" lang={lang}>
+                    {"2025-12-25"}
+                  </Time>
+                  <Time type="date" dayLabel lang={lang}>
+                    {"2025-12-25"}
+                  </Time>
                 </GRow>
                 <GRow label="undefined">
-                  <Time type="date" lang={lang}>{undefined}</Time>
-                  <Time type="date" format="short" lang={lang}>{undefined}</Time>
-                  <Time type="date" format="narrow" lang={lang}>{undefined}</Time>
-                  <Time type="date" format="numeric" lang={lang}>{undefined}</Time>
-                  <Time type="date" dayLabel lang={lang}>{undefined}</Time>
+                  <Time type="date" lang={lang}>
+                    {undefined}
+                  </Time>
+                  <Time type="date" format="short" lang={lang}>
+                    {undefined}
+                  </Time>
+                  <Time type="date" format="narrow" lang={lang}>
+                    {undefined}
+                  </Time>
+                  <Time type="date" format="numeric" lang={lang}>
+                    {undefined}
+                  </Time>
+                  <Time type="date" dayLabel lang={lang}>
+                    {undefined}
+                  </Time>
                 </GRow>
               </Grid>
             </Section>
 
             {/* ── 5. month ──────────────────────────────────────────────── */}
             <Section id="month" title='5. type="month"'>
-              <Grid cols={['(default)', 'format="short"', 'format="narrow"']}>
+              <Grid cols={["(default)", 'format="short"', 'format="narrow"']}>
                 <GRow label='"2025-12"'>
-                  <Time type="month" lang={lang}>{"2025-12"}</Time>
-                  <Time type="month" format="short" lang={lang}>{"2025-12"}</Time>
-                  <Time type="month" format="narrow" lang={lang}>{"2025-12"}</Time>
+                  <Time type="month" lang={lang}>
+                    {"2025-12"}
+                  </Time>
+                  <Time type="month" format="short" lang={lang}>
+                    {"2025-12"}
+                  </Time>
+                  <Time type="month" format="narrow" lang={lang}>
+                    {"2025-12"}
+                  </Time>
                 </GRow>
                 <GRow label="Date">
-                  <Time type="month" lang={lang}>{TODAY}</Time>
-                  <Time type="month" format="short" lang={lang}>{TODAY}</Time>
-                  <Time type="month" format="narrow" lang={lang}>{TODAY}</Time>
+                  <Time type="month" lang={lang}>
+                    {TODAY}
+                  </Time>
+                  <Time type="month" format="short" lang={lang}>
+                    {TODAY}
+                  </Time>
+                  <Time type="month" format="narrow" lang={lang}>
+                    {TODAY}
+                  </Time>
                 </GRow>
                 <GRow label="undefined">
-                  <Time type="month" lang={lang}>{undefined}</Time>
-                  <Time type="month" format="short" lang={lang}>{undefined}</Time>
-                  <Time type="month" format="narrow" lang={lang}>{undefined}</Time>
+                  <Time type="month" lang={lang}>
+                    {undefined}
+                  </Time>
+                  <Time type="month" format="short" lang={lang}>
+                    {undefined}
+                  </Time>
+                  <Time type="month" format="narrow" lang={lang}>
+                    {undefined}
+                  </Time>
                 </GRow>
               </Grid>
             </Section>
 
             {/* ── 6. time ───────────────────────────────────────────────── */}
             <Section id="time" title='6. type="time"'>
-              <Grid cols={['(default)', 'format="short"', 'format="narrow"', 'format="compact"', 'format="timestring"']}>
+              <Grid
+                cols={[
+                  "(default)",
+                  'format="short"',
+                  'format="narrow"',
+                  'format="compact"',
+                  'format="timestring"',
+                ]}
+              >
                 <GRow label='"14:30"'>
-                  <Time type="time" lang={lang}>{"14:30"}</Time>
-                  <Time type="time" format="short" lang={lang}>{"14:30"}</Time>
-                  <Time type="time" format="narrow" lang={lang}>{"14:30"}</Time>
-                  <Time type="time" format="compact" lang={lang}>{"14:30"}</Time>
-                  <Time type="time" format="timestring" lang={lang}>{"14:30"}</Time>
+                  <Time type="time" lang={lang}>
+                    {"14:30"}
+                  </Time>
+                  <Time type="time" format="short" lang={lang}>
+                    {"14:30"}
+                  </Time>
+                  <Time type="time" format="narrow" lang={lang}>
+                    {"14:30"}
+                  </Time>
+                  <Time type="time" format="compact" lang={lang}>
+                    {"14:30"}
+                  </Time>
+                  <Time type="time" format="timestring" lang={lang}>
+                    {"14:30"}
+                  </Time>
                 </GRow>
                 <GRow label='"09:05:00"'>
-                  <Time type="time" lang={lang}>{"09:05:00"}</Time>
-                  <Time type="time" format="short" lang={lang}>{"09:05:00"}</Time>
-                  <Time type="time" format="narrow" lang={lang}>{"09:05:00"}</Time>
-                  <Time type="time" format="compact" lang={lang}>{"09:05:00"}</Time>
-                  <Time type="time" format="timestring" lang={lang}>{"09:05:00"}</Time>
+                  <Time type="time" lang={lang}>
+                    {"09:05:00"}
+                  </Time>
+                  <Time type="time" format="short" lang={lang}>
+                    {"09:05:00"}
+                  </Time>
+                  <Time type="time" format="narrow" lang={lang}>
+                    {"09:05:00"}
+                  </Time>
+                  <Time type="time" format="compact" lang={lang}>
+                    {"09:05:00"}
+                  </Time>
+                  <Time type="time" format="timestring" lang={lang}>
+                    {"09:05:00"}
+                  </Time>
                 </GRow>
                 <GRow label="Date (14:30)">
-                  <Time type="time" lang={lang}>{TODAY}</Time>
-                  <Time type="time" format="short" lang={lang}>{TODAY}</Time>
-                  <Time type="time" format="narrow" lang={lang}>{TODAY}</Time>
-                  <Time type="time" format="compact" lang={lang}>{TODAY}</Time>
-                  <Time type="time" format="timestring" lang={lang}>{TODAY}</Time>
+                  <Time type="time" lang={lang}>
+                    {TODAY}
+                  </Time>
+                  <Time type="time" format="short" lang={lang}>
+                    {TODAY}
+                  </Time>
+                  <Time type="time" format="narrow" lang={lang}>
+                    {TODAY}
+                  </Time>
+                  <Time type="time" format="compact" lang={lang}>
+                    {TODAY}
+                  </Time>
+                  <Time type="time" format="timestring" lang={lang}>
+                    {TODAY}
+                  </Time>
                 </GRow>
                 <GRow label="undefined">
-                  <Time type="time" lang={lang}>{undefined}</Time>
-                  <Time type="time" format="short" lang={lang}>{undefined}</Time>
-                  <Time type="time" format="narrow" lang={lang}>{undefined}</Time>
-                  <Time type="time" format="compact" lang={lang}>{undefined}</Time>
-                  <Time type="time" format="timestring" lang={lang}>{undefined}</Time>
+                  <Time type="time" lang={lang}>
+                    {undefined}
+                  </Time>
+                  <Time type="time" format="short" lang={lang}>
+                    {undefined}
+                  </Time>
+                  <Time type="time" format="narrow" lang={lang}>
+                    {undefined}
+                  </Time>
+                  <Time type="time" format="compact" lang={lang}>
+                    {undefined}
+                  </Time>
+                  <Time type="time" format="timestring" lang={lang}>
+                    {undefined}
+                  </Time>
                 </GRow>
               </Grid>
             </Section>
 
             {/* ── 7. hour ───────────────────────────────────────────────── */}
             <Section id="hour" title='7. type="hour"'>
-              <Grid cols={['(default)', 'format="short"', 'format="narrow"', 'format="compact"', 'format="timestring"']}>
+              <Grid
+                cols={[
+                  "(default)",
+                  'format="short"',
+                  'format="narrow"',
+                  'format="compact"',
+                  'format="timestring"',
+                ]}
+              >
                 <GRow label="2">
-                  <Time type="hour" lang={lang}>{2}</Time>
-                  <Time type="hour" format="short" lang={lang}>{2}</Time>
-                  <Time type="hour" format="narrow" lang={lang}>{2}</Time>
-                  <Time type="hour" format="compact" lang={lang}>{2}</Time>
-                  <Time type="hour" format="timestring" lang={lang}>{2}</Time>
+                  <Time type="hour" lang={lang}>
+                    {2}
+                  </Time>
+                  <Time type="hour" format="short" lang={lang}>
+                    {2}
+                  </Time>
+                  <Time type="hour" format="narrow" lang={lang}>
+                    {2}
+                  </Time>
+                  <Time type="hour" format="compact" lang={lang}>
+                    {2}
+                  </Time>
+                  <Time type="hour" format="timestring" lang={lang}>
+                    {2}
+                  </Time>
                 </GRow>
                 <GRow label="1.5">
-                  <Time type="hour" lang={lang}>{1.5}</Time>
-                  <Time type="hour" format="short" lang={lang}>{1.5}</Time>
-                  <Time type="hour" format="narrow" lang={lang}>{1.5}</Time>
-                  <Time type="hour" format="compact" lang={lang}>{1.5}</Time>
-                  <Time type="hour" format="timestring" lang={lang}>{1.5}</Time>
+                  <Time type="hour" lang={lang}>
+                    {1.5}
+                  </Time>
+                  <Time type="hour" format="short" lang={lang}>
+                    {1.5}
+                  </Time>
+                  <Time type="hour" format="narrow" lang={lang}>
+                    {1.5}
+                  </Time>
+                  <Time type="hour" format="compact" lang={lang}>
+                    {1.5}
+                  </Time>
+                  <Time type="hour" format="timestring" lang={lang}>
+                    {1.5}
+                  </Time>
                 </GRow>
                 <GRow label="0.5">
-                  <Time type="hour" lang={lang}>{0.5}</Time>
-                  <Time type="hour" format="short" lang={lang}>{0.5}</Time>
-                  <Time type="hour" format="narrow" lang={lang}>{0.5}</Time>
-                  <Time type="hour" format="compact" lang={lang}>{0.5}</Time>
-                  <Time type="hour" format="timestring" lang={lang}>{0.5}</Time>
+                  <Time type="hour" lang={lang}>
+                    {0.5}
+                  </Time>
+                  <Time type="hour" format="short" lang={lang}>
+                    {0.5}
+                  </Time>
+                  <Time type="hour" format="narrow" lang={lang}>
+                    {0.5}
+                  </Time>
+                  <Time type="hour" format="compact" lang={lang}>
+                    {0.5}
+                  </Time>
+                  <Time type="hour" format="timestring" lang={lang}>
+                    {0.5}
+                  </Time>
                 </GRow>
                 <GRow label="undefined">
-                  <Time type="hour" lang={lang}>{undefined}</Time>
-                  <Time type="hour" format="short" lang={lang}>{undefined}</Time>
-                  <Time type="hour" format="narrow" lang={lang}>{undefined}</Time>
-                  <Time type="hour" format="compact" lang={lang}>{undefined}</Time>
-                  <Time type="hour" format="timestring" lang={lang}>{undefined}</Time>
+                  <Time type="hour" lang={lang}>
+                    {undefined}
+                  </Time>
+                  <Time type="hour" format="short" lang={lang}>
+                    {undefined}
+                  </Time>
+                  <Time type="hour" format="narrow" lang={lang}>
+                    {undefined}
+                  </Time>
+                  <Time type="hour" format="compact" lang={lang}>
+                    {undefined}
+                  </Time>
+                  <Time type="hour" format="timestring" lang={lang}>
+                    {undefined}
+                  </Time>
                 </GRow>
               </Grid>
             </Section>
 
             {/* ── 8. minute ─────────────────────────────────────────────── */}
             <Section id="minute" title='8. type="minute"'>
-              <Grid cols={['(default)', 'format="short"', 'format="narrow"', 'format="compact"', 'format="timestring"']}>
+              <Grid
+                cols={[
+                  "(default)",
+                  'format="short"',
+                  'format="narrow"',
+                  'format="compact"',
+                  'format="timestring"',
+                ]}
+              >
                 <GRow label="90">
-                  <Time type="minute" lang={lang}>{90}</Time>
-                  <Time type="minute" format="short" lang={lang}>{90}</Time>
-                  <Time type="minute" format="narrow" lang={lang}>{90}</Time>
-                  <Time type="minute" format="compact" lang={lang}>{90}</Time>
-                  <Time type="minute" format="timestring" lang={lang}>{90}</Time>
+                  <Time type="minute" lang={lang}>
+                    {90}
+                  </Time>
+                  <Time type="minute" format="short" lang={lang}>
+                    {90}
+                  </Time>
+                  <Time type="minute" format="narrow" lang={lang}>
+                    {90}
+                  </Time>
+                  <Time type="minute" format="compact" lang={lang}>
+                    {90}
+                  </Time>
+                  <Time type="minute" format="timestring" lang={lang}>
+                    {90}
+                  </Time>
                 </GRow>
                 <GRow label="5">
-                  <Time type="minute" lang={lang}>{5}</Time>
-                  <Time type="minute" format="short" lang={lang}>{5}</Time>
-                  <Time type="minute" format="narrow" lang={lang}>{5}</Time>
-                  <Time type="minute" format="compact" lang={lang}>{5}</Time>
-                  <Time type="minute" format="timestring" lang={lang}>{5}</Time>
+                  <Time type="minute" lang={lang}>
+                    {5}
+                  </Time>
+                  <Time type="minute" format="short" lang={lang}>
+                    {5}
+                  </Time>
+                  <Time type="minute" format="narrow" lang={lang}>
+                    {5}
+                  </Time>
+                  <Time type="minute" format="compact" lang={lang}>
+                    {5}
+                  </Time>
+                  <Time type="minute" format="timestring" lang={lang}>
+                    {5}
+                  </Time>
                 </GRow>
                 <GRow label="0">
-                  <Time type="minute" lang={lang}>{0}</Time>
-                  <Time type="minute" format="short" lang={lang}>{0}</Time>
-                  <Time type="minute" format="narrow" lang={lang}>{0}</Time>
-                  <Time type="minute" format="compact" lang={lang}>{0}</Time>
-                  <Time type="minute" format="timestring" lang={lang}>{0}</Time>
+                  <Time type="minute" lang={lang}>
+                    {0}
+                  </Time>
+                  <Time type="minute" format="short" lang={lang}>
+                    {0}
+                  </Time>
+                  <Time type="minute" format="narrow" lang={lang}>
+                    {0}
+                  </Time>
+                  <Time type="minute" format="compact" lang={lang}>
+                    {0}
+                  </Time>
+                  <Time type="minute" format="timestring" lang={lang}>
+                    {0}
+                  </Time>
                 </GRow>
                 <GRow label="undefined">
-                  <Time type="minute" lang={lang}>{undefined}</Time>
-                  <Time type="minute" format="short" lang={lang}>{undefined}</Time>
-                  <Time type="minute" format="narrow" lang={lang}>{undefined}</Time>
-                  <Time type="minute" format="compact" lang={lang}>{undefined}</Time>
-                  <Time type="minute" format="timestring" lang={lang}>{undefined}</Time>
+                  <Time type="minute" lang={lang}>
+                    {undefined}
+                  </Time>
+                  <Time type="minute" format="short" lang={lang}>
+                    {undefined}
+                  </Time>
+                  <Time type="minute" format="narrow" lang={lang}>
+                    {undefined}
+                  </Time>
+                  <Time type="minute" format="compact" lang={lang}>
+                    {undefined}
+                  </Time>
+                  <Time type="minute" format="timestring" lang={lang}>
+                    {undefined}
+                  </Time>
                 </GRow>
               </Grid>
             </Section>
 
             {/* ── 9. second ─────────────────────────────────────────────── */}
             <Section id="second" title='9. type="second"'>
-              <Grid cols={['(default)', 'format="short"', 'format="narrow"', 'format="compact"', 'format="timestring"']}>
+              <Grid
+                cols={[
+                  "(default)",
+                  'format="short"',
+                  'format="narrow"',
+                  'format="compact"',
+                  'format="timestring"',
+                ]}
+              >
                 <GRow label="3661">
-                  <Time type="second" lang={lang}>{3661}</Time>
-                  <Time type="second" format="short" lang={lang}>{3661}</Time>
-                  <Time type="second" format="narrow" lang={lang}>{3661}</Time>
-                  <Time type="second" format="compact" lang={lang}>{3661}</Time>
-                  <Time type="second" format="timestring" lang={lang}>{3661}</Time>
+                  <Time type="second" lang={lang}>
+                    {3661}
+                  </Time>
+                  <Time type="second" format="short" lang={lang}>
+                    {3661}
+                  </Time>
+                  <Time type="second" format="narrow" lang={lang}>
+                    {3661}
+                  </Time>
+                  <Time type="second" format="compact" lang={lang}>
+                    {3661}
+                  </Time>
+                  <Time type="second" format="timestring" lang={lang}>
+                    {3661}
+                  </Time>
                 </GRow>
                 <GRow label="90">
-                  <Time type="second" lang={lang}>{90}</Time>
-                  <Time type="second" format="short" lang={lang}>{90}</Time>
-                  <Time type="second" format="narrow" lang={lang}>{90}</Time>
-                  <Time type="second" format="compact" lang={lang}>{90}</Time>
-                  <Time type="second" format="timestring" lang={lang}>{90}</Time>
+                  <Time type="second" lang={lang}>
+                    {90}
+                  </Time>
+                  <Time type="second" format="short" lang={lang}>
+                    {90}
+                  </Time>
+                  <Time type="second" format="narrow" lang={lang}>
+                    {90}
+                  </Time>
+                  <Time type="second" format="compact" lang={lang}>
+                    {90}
+                  </Time>
+                  <Time type="second" format="timestring" lang={lang}>
+                    {90}
+                  </Time>
                 </GRow>
                 <GRow label="45">
-                  <Time type="second" lang={lang}>{45}</Time>
-                  <Time type="second" format="short" lang={lang}>{45}</Time>
-                  <Time type="second" format="narrow" lang={lang}>{45}</Time>
-                  <Time type="second" format="compact" lang={lang}>{45}</Time>
-                  <Time type="second" format="timestring" lang={lang}>{45}</Time>
+                  <Time type="second" lang={lang}>
+                    {45}
+                  </Time>
+                  <Time type="second" format="short" lang={lang}>
+                    {45}
+                  </Time>
+                  <Time type="second" format="narrow" lang={lang}>
+                    {45}
+                  </Time>
+                  <Time type="second" format="compact" lang={lang}>
+                    {45}
+                  </Time>
+                  <Time type="second" format="timestring" lang={lang}>
+                    {45}
+                  </Time>
                 </GRow>
                 <GRow label="0">
-                  <Time type="second" lang={lang}>{0}</Time>
-                  <Time type="second" format="short" lang={lang}>{0}</Time>
-                  <Time type="second" format="narrow" lang={lang}>{0}</Time>
-                  <Time type="second" format="compact" lang={lang}>{0}</Time>
-                  <Time type="second" format="timestring" lang={lang}>{0}</Time>
+                  <Time type="second" lang={lang}>
+                    {0}
+                  </Time>
+                  <Time type="second" format="short" lang={lang}>
+                    {0}
+                  </Time>
+                  <Time type="second" format="narrow" lang={lang}>
+                    {0}
+                  </Time>
+                  <Time type="second" format="compact" lang={lang}>
+                    {0}
+                  </Time>
+                  <Time type="second" format="timestring" lang={lang}>
+                    {0}
+                  </Time>
                 </GRow>
                 <GRow label="undefined">
-                  <Time type="second" lang={lang}>{undefined}</Time>
-                  <Time type="second" format="short" lang={lang}>{undefined}</Time>
-                  <Time type="second" format="narrow" lang={lang}>{undefined}</Time>
-                  <Time type="second" format="compact" lang={lang}>{undefined}</Time>
-                  <Time type="second" format="timestring" lang={lang}>{undefined}</Time>
+                  <Time type="second" lang={lang}>
+                    {undefined}
+                  </Time>
+                  <Time type="second" format="short" lang={lang}>
+                    {undefined}
+                  </Time>
+                  <Time type="second" format="narrow" lang={lang}>
+                    {undefined}
+                  </Time>
+                  <Time type="second" format="compact" lang={lang}>
+                    {undefined}
+                  </Time>
+                  <Time type="second" format="timestring" lang={lang}>
+                    {undefined}
+                  </Time>
                 </GRow>
               </Grid>
             </Section>
