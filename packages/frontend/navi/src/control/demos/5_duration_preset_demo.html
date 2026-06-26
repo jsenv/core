@@ -111,6 +111,7 @@
       });
       // Total minutes for the custom option (no default)
       const customDurationSignal = stateSignal(undefined, {
+        type: "duration",
         id: "custom_duration",
       });
 
@@ -460,7 +461,6 @@
                 <Text bold>Veuillez saisir une durée</Text>
 
                 <InputDuration
-                  unit="minute"
                   value={customDuration}
                   min="15min"
                   max="4h30"
