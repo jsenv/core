@@ -2,7 +2,7 @@
 
 ```js
 const run = (minutes, locale) =>
-  formatMinuteDuration(minutes, locale, { long: true });
+  formatMinuteDuration(minutes, { lang: locale, format: "long" });
 return table(
   ["minutes", "locale", "result"],
   [

@@ -1,8 +1,8 @@
 # [formatHourDuration](../../format_time.test.js)
 
 ```js
-const run = (hours, locale, opts) =>
-  formatHourDuration(hours, locale, opts);
+const run = (hours, locale, long = false) =>
+  formatHourDuration(hours, { lang: locale, format: long ? "long" : "compact" });
 return table(
   ["hours", "locale", "long", "result"],
   [
@@ -11,8 +11,8 @@ return table(
     [2.25, "fr", false, run(2.25, "fr")],
     [1, "en", false, run(1, "en")],
     [1.5, "en", false, run(1.5, "en")],
-    [1.5, "fr", true, run(1.5, "fr", { long: true })],
-    [2.25, "fr", true, run(2.25, "fr", { long: true })],
+    [1.5, "fr", true, run(1.5, "fr", true)],
+    [2.25, "fr", true, run(2.25, "fr", true)],
   ],
 );
 ```
