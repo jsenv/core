@@ -351,14 +351,18 @@
             Autre
             <Box flex spacing="xxs">
               <Input
-                type="navi_hour"
+                type="navi_number"
+                min="0"
+                max="23"
                 value={hours}
                 action={(v) => {
                   customDurationHourSignal.value = v;
                 }}
               />
               <Input
-                type="navi_minute"
+                type="navi_number"
+                min="0"
+                max="59"
                 value={minutes}
                 action={(v) => {
                   customDurationMinuteSignal.value = v;

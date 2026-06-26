@@ -377,11 +377,17 @@ export const useUIStateController = (
             currentUIState === "" && newUIState === undefined;
           const wasUndefinedNowEmpty =
             currentUIState === undefined && newUIState === "";
-          if (wasEmptyString || wasUndefinedNowEmpty) {
+          if (wasEmptyString) {
             console.warn(
-              `[navi] Picker mount sync changed state from ${JSON.stringify(currentUIState)} to ${JSON.stringify(newUIState)}. ` +
+              `[navi] Picker mount sync changed state from "" to undefined. ` +
                 `This will call uiAction on mount, which is likely unintended. ` +
                 `Initialise the signal with undefined instead of "" to avoid this.`,
+            );
+          } else if (wasUndefinedNowEmpty) {
+            console.warn(
+              `[navi] Picker mount sync changed state from undefined to "". ` +
+                `This will call uiAction on mount, which is likely unintended. ` +
+                `The child component is emitting "" for an empty value — it should emit undefined instead.`,
             );
           }
         }

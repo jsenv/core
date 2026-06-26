@@ -195,7 +195,9 @@ export const InputDuration = (props) => {
           if (showMilliseconds && ms !== "") {
             durationObj.milliseconds = ms;
           }
-          return durationToISOString(durationObj) ?? "";
+          // Return undefined (not "") when all fields are empty so that a
+          // picker signal initialised with undefined stays undefined on mount.
+          return durationToISOString(durationObj) ?? undefined;
         },
         // Reverse mapping: duration string → { hour, minute, second, millisecond }
         // so that when the picker cancels and calls setUIState(storedValue), the
