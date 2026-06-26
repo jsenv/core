@@ -38,9 +38,7 @@
     <div id="app"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useRef } from "preact/hooks";
       import { useSignal } from "@preact/signals";
-      import { dispatchPublicCustomEvent } from "@jsenv/dom";
       import {
         Box,
         Button,
@@ -50,14 +48,6 @@
         Picker,
         NaviDebug,
       } from "@jsenv/navi";
-
-      const triggerShowPicker = (pickerRef) => {
-        const pickerEl = pickerRef.current;
-        if (!pickerEl) {
-          return;
-        }
-        dispatchPublicCustomEvent(pickerEl, "navi_request_open");
-      };
 
       // ── Native date picker ────────────────────────────────────────────────
       const NativeDateDemo = () => {
