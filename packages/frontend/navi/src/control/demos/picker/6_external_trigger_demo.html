@@ -191,7 +191,7 @@
                 {valueSignal.value ?? "Choisir un fruit"}
                 <Picker
                   ref={pickerRef}
-                  headless
+                  variant="headless"
                   action={(v) => {
                     valueSignal.value = v;
                   }}
@@ -224,7 +224,7 @@
       };
 
       const App = () => (
-        <NaviDebug debugInteraction debugAction>
+        <NaviDebug debugAll>
           <Box flex="y" spacing="l">
             <NativeDateDemo />
             <CustomSelectDemo />

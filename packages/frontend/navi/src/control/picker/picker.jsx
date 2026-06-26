@@ -292,6 +292,7 @@ const css = /* css */ `
 
       position: absolute;
       inset: 0;
+      z-index: -1;
     }
   }
 `;
@@ -381,6 +382,7 @@ const PickerButton = (props) => {
         />
       )}
       <PickerInput
+        tabIndex={variant === "headless" ? -1 : undefined}
         {...inputProps}
         // eslint-disable-next-line react/no-children-prop
         children={undefined} // we will render children into the div
