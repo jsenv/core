@@ -136,7 +136,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     );
   });
 
-  test("formatDuration — future", () => {
+  test("formatDuration - future", () => {
     const ms = (n) => NOW.getTime() + n;
     return table(
       ["start offset", "duration", "locale", "result"],
