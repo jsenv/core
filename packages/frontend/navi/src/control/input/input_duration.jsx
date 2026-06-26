@@ -368,7 +368,9 @@ const useClipboardProps = (groupRef) => {
 
   const onCopy = (e) => {
     const payload = getClipboardPayload();
-    if (!payload) return;
+    if (!payload) {
+      return;
+    }
     e.clipboardData.setData("text/plain", payload.plainText);
     e.clipboardData.setData("application/x-navi", payload.isoString);
     e.preventDefault();
@@ -376,7 +378,9 @@ const useClipboardProps = (groupRef) => {
 
   const onCut = (e) => {
     const payload = getClipboardPayload();
-    if (!payload) return;
+    if (!payload) {
+      return;
+    }
     e.clipboardData.setData("text/plain", payload.plainText);
     e.clipboardData.setData("application/x-navi", payload.isoString);
     applyToGroup("", e);
