@@ -1008,9 +1008,9 @@ const useInteractiveProps = (
   const { ref } = props;
   const [controlRootProps, controlHostProps] = splitControlProps(props);
   controlRootProps["navi-control"] = controlInfo.controlType;
-
   const { "navi-control-proxy-for": naviProxyFor } = props;
   controlHostProps["navi-control-proxy-for"] = naviProxyFor;
+  controlHostProps["navi-control-host"] = controlInfo.controlType;
 
   const debugCommand = useDebugCommand();
   const debugAction = useDebugAction();
@@ -1334,7 +1334,6 @@ const splitControlProps = (props) => {
   const { ref } = props;
   const controlHostProps = {
     ref,
-    "navi-control-host": "",
   };
   const controlRootProps = {};
   const propKeySet = new Set(Object.keys(props));
