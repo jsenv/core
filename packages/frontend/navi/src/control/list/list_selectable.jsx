@@ -80,6 +80,7 @@ const css = /* css */ `
       position: relative;
       font-size: var(--navi-control-font-size);
       font-family: var(--navi-control-font-family);
+      -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
     }
   }
 

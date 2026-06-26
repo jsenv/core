@@ -501,10 +501,10 @@ const PickerInput = (props) => {
   return (
     <Box
       as="input"
-      // readOnly because user MUST use the picker to change the value
-      readOnly
       data-readonly-forced={props.readOnly ? undefined : ""}
       {...props}
+      // must be readOnly to prevent opening keyboard on mobile (and direct update via keyboard too, we want people to use the picker)
+      readOnly
       className="navi_picker_input"
       pseudoClasses={PickerInputPseudoClasses}
       onKeyDown={(e) => {
