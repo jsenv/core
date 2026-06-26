@@ -15,7 +15,7 @@ import { Label } from "../field.jsx";
 import { dispatchRequestInteraction } from "../rules/control_interaction.js";
 import { dispatchRequestSetUIState } from "../ui_state_dom.js";
 import { Input } from "./input.jsx";
-import { InputGroup } from "./input_group.jsx";
+import { useInputGroup } from "./use_input_group.js";
 
 const css = /* css */ `
   .navi_input_duration {
@@ -236,6 +236,9 @@ export const InputDuration = (props) => {
     );
 
   const { required, readOnly, disabled, basePseudoState } = groupHostProps;
+  const groupRef = useRef();
+  useInputGroup(groupRef);
+  const clipboardProps = useClipboardProps(groupRef);
 
   const visibleFields = [];
   if (showHours) visibleFields.push("hour");
@@ -243,6 +246,67 @@ export const InputDuration = (props) => {
   if (showSeconds) visibleFields.push("second");
   if (showMilliseconds) visibleFields.push("millisecond");
 
+  const hourValue = components?.hours;
+  const minuteValue = components?.minutes;
+  const rawSecondValue = components?.seconds;
+  // ISO 8601 fractional seconds encode ms (e.g. 0.5 = 500ms); split them.
+  let secondValue = rawSecondValue;
+  let millisecondValue = components?.milliseconds;
+  if (
+    typeof rawSecondValue === "number" &&
+    rawSecondValue % 1 !== 0 &&
+    millisecondValue === undefined
+  ) {
+    secondValue = Math.floor(rawSecondValue);
+    millisecondValue = Math.round((rawSecondValue % 1) * 1000);
+  }
+
+  return (
+    <Box
+      ref={groupRef}
+      className="navi_input_duration"
+      data-callout-arrow-x="center"
+      width="fit-content"
+      {...groupRootProps}
+      unit={undefined}
+      unitHour={undefined}
+      {...clipboardProps}
+    >
+      {/* eslint-disable-next-line react/no-unknown-property */}
+      <input {...groupHostProps} type="hidden" basePseudoState={undefined} />
+      <Box flex spacing="xxs" width="fit-content">
+        <ControlgroupChildrenWrapper {...childrenWrapperProps} name={undefined}>
+          <InputDurationFields
+            showHours={showHours}
+            showMinutes={showMinutes}
+            showSeconds={showSeconds}
+            showMilliseconds={showMilliseconds}
+            minutesReadOnly={minutesReadOnly}
+            secondsReadOnly={secondsReadOnly}
+            millisecondsReadOnly={millisecondsReadOnly}
+            stepHasMilliseconds={stepHasMilliseconds}
+            controlled={hasValue}
+            hourValue={hourValue}
+            minuteValue={minuteValue}
+            secondValue={secondValue}
+            millisecondValue={millisecondValue}
+            minSeconds={minSeconds}
+            maxSeconds={maxSeconds}
+            stepSeconds={stepSeconds}
+            unitHour={unitHour}
+            textAlign={textAlign}
+            required={required}
+            readOnly={readOnly}
+            disabled={disabled}
+            basePseudoState={basePseudoState}
+          />
+        </ControlgroupChildrenWrapper>
+      </Box>
+    </Box>
+  );
+};
+
+const useClipboardProps = (ref) => {
   const getClipboardPayload = () => {
     const isoString = ref.current?.value;
     if (!isoString) return null;
@@ -285,7 +349,7 @@ export const InputDuration = (props) => {
     e.preventDefault();
   };
 
-  const handleCopy = (e) => {
+  const onCopy = (e) => {
     const payload = getClipboardPayload();
     if (!payload) return;
     e.clipboardData.setData("text/plain", payload.plainText);
@@ -293,7 +357,7 @@ export const InputDuration = (props) => {
     e.preventDefault();
   };
 
-  const handleCut = (e) => {
+  const onCut = (e) => {
     const payload = getClipboardPayload();
     if (!payload) return;
     e.clipboardData.setData("text/plain", payload.plainText);
@@ -301,14 +365,7 @@ export const InputDuration = (props) => {
     applyToGroup("", e);
   };
 
-  const FIELD_TO_KEY = {
-    hour: "hours",
-    minute: "minutes",
-    second: "seconds",
-    millisecond: "milliseconds",
-  };
-
-  const handlePaste = (e) => {
+  const onPaste = (e) => {
     const naviData = e.clipboardData.getData("application/x-navi");
     const textData = e.clipboardData.getData("text/plain");
 
@@ -352,63 +409,17 @@ export const InputDuration = (props) => {
     applyToGroup(isoValue, e);
   };
 
-  const hourValue = components?.hours;
-  const minuteValue = components?.minutes;
-  const rawSecondValue = components?.seconds;
-  // ISO 8601 fractional seconds encode ms (e.g. 0.5 = 500ms); split them.
-  let secondValue = rawSecondValue;
-  let millisecondValue = components?.milliseconds;
-  if (
-    typeof rawSecondValue === "number" &&
-    rawSecondValue % 1 !== 0 &&
-    millisecondValue === undefined
-  ) {
-    secondValue = Math.floor(rawSecondValue);
-    millisecondValue = Math.round((rawSecondValue % 1) * 1000);
-  }
-
-  return (
-    <Box
-      className="navi_input_duration"
-      data-callout-arrow-x="center"
-      width="fit-content"
-      {...groupRootProps}
-      unit={undefined}
-      unitHour={undefined}
-      onCopy={handleCopy}
-      onCut={handleCut}
-      onPaste={handlePaste}
-    >
-      {/* eslint-disable-next-line react/no-unknown-property */}
-      <input {...groupHostProps} type="hidden" basePseudoState={undefined} />
-      <ControlgroupChildrenWrapper {...childrenWrapperProps} name={undefined}>
-        <InputDurationFields
-          showHours={showHours}
-          showMinutes={showMinutes}
-          showSeconds={showSeconds}
-          showMilliseconds={showMilliseconds}
-          minutesReadOnly={minutesReadOnly}
-          secondsReadOnly={secondsReadOnly}
-          millisecondsReadOnly={millisecondsReadOnly}
-          stepHasMilliseconds={stepHasMilliseconds}
-          controlled={hasValue}
-          hourValue={hourValue}
-          minuteValue={minuteValue}
-          secondValue={secondValue}
-          millisecondValue={millisecondValue}
-          minSeconds={minSeconds}
-          maxSeconds={maxSeconds}
-          stepSeconds={stepSeconds}
-          unitHour={unitHour}
-          textAlign={textAlign}
-          required={required}
-          readOnly={readOnly}
-          disabled={disabled}
-          basePseudoState={basePseudoState}
-        />
-      </ControlgroupChildrenWrapper>
-    </Box>
-  );
+  return {
+    onCopy,
+    onCut,
+    onPaste,
+  };
+};
+const FIELD_TO_KEY = {
+  hour: "hours",
+  minute: "minutes",
+  second: "seconds",
+  millisecond: "milliseconds",
 };
 
 // Renders the appropriate combination of hour/minute/second sub-inputs based
@@ -432,8 +443,6 @@ const InputDurationFields = ({
   stepSeconds,
   unitHour,
   textAlign,
-  // Loading is displayed on the InputGroup wrapper, not on individual sub-inputs.
-  basePseudoState,
   ...childProps
 }) => {
   // Hour bounds (in hours)
@@ -576,16 +585,7 @@ const InputDurationFields = ({
     return inputs[0];
   }
 
-  return (
-    <InputGroup
-      flex
-      spacing="xxs"
-      width="fit-content"
-      basePseudoState={basePseudoState}
-    >
-      {inputs}
-    </InputGroup>
-  );
+  return inputs;
 };
 
 const InputDurationPart = ({ unit, label, separator, ...props }) => {

@@ -1,6 +1,5 @@
-import { useEffect, useRef } from "preact/hooks";
+import { useEffect } from "preact/hooks";
 
-import { Box } from "@jsenv/navi/src/box/box.jsx";
 import { useDebugFocus } from "@jsenv/navi/src/navi_debug.jsx";
 
 /**
@@ -18,14 +17,7 @@ import { useDebugFocus } from "@jsenv/navi/src/navi_debug.jsx";
  *   data-separator="/") splits the text on each separator and fills the
  *   corresponding sub-inputs in order.
  */
-export const InputGroup = (props) => {
-  const ref = useRef(null);
-  useInputGroup(ref);
-
-  return <Box ref={ref} {...props} />;
-};
-
-const useInputGroup = (ref) => {
+export const useInputGroup = (ref) => {
   const debugFocus = useDebugFocus();
 
   useEffect(() => {
