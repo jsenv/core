@@ -71,7 +71,6 @@ import {
 } from "./controller_registry.js";
 import { FormContext } from "./form_context.js";
 import { addInputEffect } from "./input_effect.js";
-import { isTypingIntent } from "./control_guard.js";
 import {
   ParentUIStateControllerContext,
   useUIFacadeStateController,
@@ -272,8 +271,6 @@ export const useControlProps = (
     };
     const wasCheckedAtMousedownRef = useRef(false);
 
-    const { charGuard, maxLengthGuard } = props;
-    const hasInputGuard = charGuard || maxLengthGuard !== undefined;
 
     const getDefaultEventReactionDefinitions = () => {
       const keyDownDefault = (e) => {
@@ -576,15 +573,13 @@ export const useControlProps = (
       if (isInputTextual) {
         return {
           keyDown: (e) => {
-            if (hasInputGuard && isTypingIntent(e)) {
-              const blocked = uiStateController.rules.guard.checkKeydown(
-                e,
-                ref.current,
-              );
-              if (blocked) {
-                e.preventDefault();
-                return null;
-              }
+            const blocked = uiStateController.rules.guard.checkKeydown(
+              e,
+              ref.current,
+            );
+            if (blocked) {
+              e.preventDefault();
+              return null;
             }
             return keyDownDefaultOnInput(e);
           },
@@ -732,28 +727,22 @@ export const useControlProps = (
     const refComposed = useComposeElementRef(refCallback, ref);
     const onPaste = (e) => {
       props.onPaste?.(e);
-      if (hasInputGuard) {
-        const pastedText = e.clipboardData?.getData("text") ?? "";
-        const el = ref.current;
-        const selStart = el.selectionStart ?? el.value.length;
-        const selEnd = el.selectionEnd ?? el.value.length;
-        const newValue =
-          el.value.slice(0, selStart) + pastedText + el.value.slice(selEnd);
-        const result = uiStateController.rules.guard.checkUIState(newValue, e);
-        if (result?.fixedValue !== undefined) {
-          e.preventDefault();
-          uiStateController.setUIState(result.fixedValue, e);
-          return;
-        }
-        if (result?.blocked) {
-          e.preventDefault();
-          return;
-        }
-      }
       dispatchRequestInteraction(ref.current, {
         event: e,
         name: "paste",
         prevented: () => e.preventDefault(),
+        allowed: () => {
+          const pastedText = e.clipboardData?.getData("text") ?? "";
+          const el = ref.current;
+          const selStart = el.selectionStart ?? el.value.length;
+          const selEnd = el.selectionEnd ?? el.value.length;
+          const newValue =
+            el.value.slice(0, selStart) + pastedText + el.value.slice(selEnd);
+          // Prevent the browser from applying the paste directly so the value
+          // goes through setUIState, which runs charGuard and maxLengthGuard.
+          e.preventDefault();
+          uiStateController.setUIState(newValue, e);
+        },
       });
     };
     Object.assign(controlHostProps, {

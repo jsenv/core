@@ -40,7 +40,10 @@ const getMaxLengthInsertionMessage = (el, { maxLength }) => {
   const selEnd = el.selectionEnd ?? el.value.length;
   const newLen = el.value.length - (selEnd - selStart) + 1;
   if (newLen <= maxLength) return null;
-  return naviI18n("constraint.guard.max_length.typing", { max: maxLength, s: s(maxLength) });
+  return naviI18n("constraint.guard.max_length.typing", {
+    max: maxLength,
+    s: s(maxLength),
+  });
 };
 
 // Paste / set: block when value contains disallowed chars.
@@ -57,7 +60,10 @@ const getLengthOverflowResult = (uiState, { maxLength }) => {
   if (str.length <= maxLength) return null;
   return {
     fixedValue: str.slice(0, maxLength),
-    message: naviI18n("constraint.guard.max_length.value", { max: maxLength, s: s(maxLength) }),
+    message: naviI18n("constraint.guard.max_length.value", {
+      max: maxLength,
+      s: s(maxLength),
+    }),
   };
 };
 
@@ -78,10 +84,14 @@ export const createControlGuard = (controller) => {
   };
 
   /**
-   * Called on keydown for a single printable character.
-   * Returns true when the key should be blocked (caller must call e.preventDefault()).
+   * Called on every keydown. Returns true when the key should be blocked
+   * (caller must call e.preventDefault()).
+   * Non-typing keys (Delete, Arrow…) are always allowed.
    */
   const checkKeydown = (e, el) => {
+    if (!isTypingIntent(e)) {
+      return false;
+    }
     const { charGuard, maxLengthGuard } = controller.props;
 
     if (charGuard) {
