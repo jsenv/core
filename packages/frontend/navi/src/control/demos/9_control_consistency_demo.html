@@ -54,6 +54,8 @@
       const COLORS = ["Red", "Green", "Blue", "Yellow", "Purple"];
       const SHORT_COLORS = COLORS.slice(0, 3);
 
+      const DEFAULT_DATE = "2026-06-27";
+
       const App = () => {
         const pickerA = useSignal("Green");
         const pickerB = useSignal("Green");
@@ -80,6 +82,10 @@
                   />
                   <Input type="checkbox" margin="0" />
                   <Input type="radio" margin="0" />
+                </Box>
+                <Box flex="x" alignY="center">
+                  <Picker name="date_picker_side" type="date" defaultValue={DEFAULT_DATE} />
+                  <Picker name="color_picker_native" type="color" defaultValue="#4f81e0" />
                 </Box>
                 <Box flex="x" alignY="center">
                   <Button>Click me</Button>
@@ -248,7 +254,39 @@
                       color: "#888",
                     }}
                   >
-                    Picker
+                    Picker (date)
+                  </span>
+                  <Picker
+                    name="date_picker_stacked"
+                    type="date"
+                    defaultValue={DEFAULT_DATE}
+                  />
+                </Box>
+                <Box flex="x" alignY="center" spacing="m">
+                  <span
+                    style={{
+                      width: "160px",
+                      fontSize: "0.8rem",
+                      color: "#888",
+                    }}
+                  >
+                    Picker (color)
+                  </span>
+                  <Picker
+                    name="color_picker_native_stacked"
+                    type="color"
+                    defaultValue="#4f81e0"
+                  />
+                </Box>
+                <Box flex="x" alignY="center" spacing="m">
+                  <span
+                    style={{
+                      width: "160px",
+                      fontSize: "0.8rem",
+                      color: "#888",
+                    }}
+                  >
+                    Picker (list)
                   </span>
                   <Picker
                     name="color_picker_stacked"
