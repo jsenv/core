@@ -745,9 +745,10 @@ const createControlInfo = (props, { controlType }) => {
   let disabledSupported = false;
   let hasStateProp;
   let value;
+  const typeProp = props.type || "text";
 
   if (controlType === "input") {
-    if (props.type === "checkbox" || props.type === "radio") {
+    if (typeProp === "checkbox" || typeProp === "radio") {
       statePropName = "checked";
       defaultStatePropName = "defaultChecked";
       hasStateProp = Object.hasOwn(props, "checked");
@@ -783,7 +784,7 @@ const createControlInfo = (props, { controlType }) => {
         stateInitial = undefined;
       }
 
-      readOnlySupported = true;
+      readOnlySupported = INPUT_TYPE_SUPPORTING_READONLY_SET.has(typeProp);
     }
 
     disabledSupported = true;
@@ -814,7 +815,7 @@ const createControlInfo = (props, { controlType }) => {
     }
 
     disabledSupported = true;
-    readOnlySupported = true; // it's an input under the hood
+    readOnlySupported = INPUT_TYPE_SUPPORTING_READONLY_SET.has(typeProp);
   }
 
   return {
@@ -830,6 +831,21 @@ const createControlInfo = (props, { controlType }) => {
     disabledSupported,
   };
 };
+// color, radio, image, file etc do not support readonly
+const INPUT_TYPE_SUPPORTING_READONLY_SET = new Set([
+  "text",
+  "date",
+  "datetime-local",
+  "email",
+  "month",
+  "number",
+  "password",
+  "search",
+  "tel",
+  "time",
+  "url",
+  "week",
+]);
 const useReadOnlyUncontrolled = (props, controlInfo) => {
   if (!controlInfo.hasStateProp) {
     return false;
