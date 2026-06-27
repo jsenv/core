@@ -17,6 +17,7 @@ import {
 } from "../control_hooks.jsx";
 import { getUIStateControllerById } from "../controller_registry.js";
 import { resolveInputProps } from "../input/resolve_input_props.js";
+import { useAutoSelectReadOnly } from "../input/use_autoselect_read_only.js";
 import { dispatchRequestInteraction } from "../rules/control_interaction.js";
 import {
   dispatchRequestClearUIState,
@@ -522,6 +523,8 @@ const PickerInput = (props) => {
     ? false
     : MOBILE_KEYBOARD_TYPES.has(props.type || "text");
 
+  const autoSelectReadOnlyProps = useAutoSelectReadOnly(props);
+
   return (
     <Box
       as="input"
@@ -541,6 +544,7 @@ const PickerInput = (props) => {
           performTabNavigation(e);
         }
       }}
+      {...autoSelectReadOnlyProps}
     />
   );
 };
