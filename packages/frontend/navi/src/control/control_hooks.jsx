@@ -738,10 +738,20 @@ export const useControlProps = (
           const selEnd = el.selectionEnd ?? el.value.length;
           const newValue =
             el.value.slice(0, selStart) + pastedText + el.value.slice(selEnd);
-          // Prevent the browser from applying the paste directly so the value
-          // goes through setUIState, which runs charGuard and maxLengthGuard.
-          e.preventDefault();
-          uiStateController.setUIState(newValue, e);
+          const guardResult =
+            uiStateController.rules.guard.checkUIState(newValue, e);
+          if (guardResult?.blocked) {
+            e.preventDefault();
+            return;
+          }
+          if (guardResult?.fixedValue !== undefined) {
+            // Pass newValue (not fixedValue) so setUIState's guard shows the
+            // truncation callout and applies the truncated value itself.
+            e.preventDefault();
+            uiStateController.setUIState(newValue, e);
+            return;
+          }
+          // valid — let the browser paste; the input event will sync UI state
         },
       });
     };
