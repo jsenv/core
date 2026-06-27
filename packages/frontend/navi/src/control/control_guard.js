@@ -24,7 +24,7 @@ import {
 } from "./char_guard_presets.js";
 import { createOpenToken } from "./rules/control_callout.js";
 
-export const createInputGuard = (controller) => {
+export const createControlGuard = (controller) => {
   const token = createOpenToken();
 
   const show = (message, e) => {

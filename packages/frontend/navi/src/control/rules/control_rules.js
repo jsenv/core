@@ -14,7 +14,7 @@
 
 import { createPubSub } from "@jsenv/dom";
 
-import { createInputGuard } from "../control_input_guard.js";
+import { createControlGuard } from "../control_guard.js";
 import { createCalloutManager } from "./control_callout.js";
 import { createControlInteraction } from "./control_interaction.js";
 import { createControlValidation } from "./control_validation.js";
@@ -50,7 +50,7 @@ export const createControlRules = (
     debugUIState,
   });
 
-  const guard = createInputGuard(controller);
+  const guard = createControlGuard(controller);
 
   return {
     callout,

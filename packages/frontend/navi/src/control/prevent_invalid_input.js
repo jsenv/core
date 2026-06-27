@@ -1,6 +1,6 @@
 /**
  * Pure validation helpers for the `charGuard` and `maxLengthGuard` props.
- * All functions are side-effect free; callout management lives in control_input_guard.js.
+ * All functions are side-effect free; callout management lives in control_guard.js.
  */
 
 import { getKeyboardEventDefaultAction } from "@jsenv/dom";
@@ -8,43 +8,67 @@ import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 
 const s = (n) => (n > 1 ? "s" : "");
 
-export const isTypingIntent = (e) => getKeyboardEventDefaultAction(e) === "type";
+export const isTypingIntent = (e) =>
+  getKeyboardEventDefaultAction(e) === "type";
 
-// Keydown: returns a message if `char` is not in the allowed character class.
+// Keydown: returns a message if `char` is a single known character that doesn't
+// match the allowed class. Multi-character key names (Delete, ArrowLeft…) are
+// always allowed — we only block what we're certain is a bad printable character.
 export const getInvalidCharMessage = (char, { charClass, messageKey }) => {
-  if (!new RegExp(charClass).test(char)) {
-    return naviI18n(messageKey);
+  if (char.length !== 1) {
+    return null;
   }
-  return null;
+  if (new RegExp(charClass).test(char)) {
+    return null;
+  }
+
+  return naviI18n(messageKey);
 };
 
 // Keydown: returns a message if inserting one char would exceed maxLength.
 export const getMaxLengthInsertionMessage = (el, { maxLength }) => {
-  if (maxLength === undefined) return null;
+  if (maxLength === undefined) {
+    return null;
+  }
   const selStart = el.selectionStart ?? el.value.length;
   const selEnd = el.selectionEnd ?? el.value.length;
   const newLen = el.value.length - (selEnd - selStart) + 1;
-  if (newLen > maxLength) {
-    return naviI18n("constraint.guard.max_length.typing", { max: maxLength, s: s(maxLength) });
+  if (newLen <= maxLength) {
+    return null;
   }
-  return null;
+
+  return naviI18n("constraint.guard.max_length.typing", {
+    max: maxLength,
+    s: s(maxLength),
+  });
 };
 
 // Paste / external set: returns a message if `value` contains disallowed chars.
 export const getInvalidCharsMessage = (value, { charClass, messageKey }) => {
-  if (typeof value !== "string") return null;
-  if (!new RegExp(`^(?:${charClass})*$`).test(value)) {
-    return naviI18n(messageKey);
+  if (typeof value !== "string") {
+    return null;
   }
-  return null;
+  if (new RegExp(`^(?:${charClass})*$`).test(value)) {
+    return null;
+  }
+
+  return naviI18n(messageKey);
 };
 
 // Paste / external set: when value exceeds maxLength, returns fixedValue + message.
 export const getLengthOverflowResult = (value, { maxLength }) => {
-  if (typeof value !== "string") return null;
-  if (maxLength === undefined || value.length <= maxLength) return null;
+  if (typeof value !== "string") {
+    return null;
+  }
+  if (maxLength === undefined || value.length <= maxLength) {
+    return null;
+  }
+
   return {
     fixedValue: value.slice(0, maxLength),
-    message: naviI18n("constraint.guard.max_length.value", { max: maxLength, s: s(maxLength) }),
+    message: naviI18n("constraint.guard.max_length.value", {
+      max: maxLength,
+      s: s(maxLength),
+    }),
   };
 };
