@@ -745,11 +745,8 @@ export const useUIGroupStateController = (
     );
   }
   const parentUIStateController = useContext(ParentUIStateControllerContext);
-  const hasValueProp = Object.prototype.hasOwnProperty.call(props, "value");
-  const hasDefaultValueProp = Object.prototype.hasOwnProperty.call(
-    props,
-    "defaultValue",
-  );
+  const hasValueProp = Object.hasOwn(props, "value");
+  const hasDefaultValueProp = Object.hasOwn(props, "defaultValue");
   const { id, name, value, defaultValue, uiAction, command } = props;
   const ref = props.ref;
   const uiActionRef = useRef(uiAction);
@@ -900,7 +897,10 @@ export const useUIGroupStateController = (
     uiActionRef.current = uiAction;
     // When the controlled value prop changes (or when becoming controlled for the
     // first time), silently cascade to children that have no individual state prop.
-    if (hasValueProp && (!prevHasValueProp || !compareTwoJsValues(value, prevValue))) {
+    if (
+      hasValueProp &&
+      (!prevHasValueProp || !compareTwoJsValues(value, prevValue))
+    ) {
       const propagateDownEvent = new CustomEvent(
         "propagate_down_set_ui_state",
         { detail: {} },
@@ -1058,7 +1058,10 @@ export const useUIGroupStateController = (
             childUIStateController,
           );
           if (childNewState !== CANNOT_DERIVE) {
-            childUIStateController.setUIState(childNewState, propagateDownEvent);
+            childUIStateController.setUIState(
+              childNewState,
+              propagateDownEvent,
+            );
           }
         } else if (groupUIStateController.hasDefaultValueProp) {
           // Uncontrolled: set initial state from defaultValue on mount.
@@ -1067,7 +1070,10 @@ export const useUIGroupStateController = (
             childUIStateController,
           );
           if (childNewState !== CANNOT_DERIVE) {
-            childUIStateController.setUIState(childNewState, propagateDownEvent);
+            childUIStateController.setUIState(
+              childNewState,
+              propagateDownEvent,
+            );
           }
         }
       }
