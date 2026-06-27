@@ -236,6 +236,9 @@ const css = /* css */ `
         right: calc(-1 * var(--picker-border-width));
         bottom: calc(-1 * var(--picker-border-width));
         left: calc(-1 * var(--picker-border-width));
+        /* Reset width/height for input color */
+        width: auto;
+        height: auto;
 
         opacity: 0;
         appearance: none;
