@@ -21294,7 +21294,7 @@ const isAncestorOpen = (ancestor) => {
  *   the browser's built-in scroll-into-view that accompanies focus.
  * @param {boolean} [options.focusVisible]
  *   Passed as `focusVisible` to `element.focus()`.
- * @param {boolean} [options.autoSelect]
+ * @param {boolean} [options.autoFocusSelect]
  *   When true, also calls `element.select()` after focusing (useful for text inputs).
  * @returns {Function} triggerAutofocus — can be called manually with a synthetic
  *   event to re-run the focus logic outside of the layout-effect lifecycle.
@@ -21407,7 +21407,7 @@ const useAutoFocus = (
         ? ""
         : autoFocus
       : undefined,
-    "navi-autofocus-select": autoFocus && autoSelect ? "" : undefined,
+    "navi-autofocus-select": autoSelect ? "" : undefined,
   };
 };
 
@@ -21924,7 +21924,7 @@ const CONTROL_PROP_SET = new Set([
 
   "autoFocus",
   "autoFocusVisible",
-  "autoSelect",
+  "autoFocusSelect",
 
   "onMouseDown",
   "onClick",
@@ -24588,11 +24588,11 @@ const useInteractiveProps = (props, {
     const {
       autoFocus,
       autoFocusVisible,
-      autoSelect
+      autoFocusSelect
     } = props;
     const autoFocusProps = useAutoFocus(ref, autoFocus, {
       focusVisible: autoFocusVisible,
-      autoSelect
+      autoSelect: autoFocusSelect
     });
     Object.assign(controlHostProps, autoFocusProps);
   }
@@ -33885,7 +33885,7 @@ const Editable = props => {
     maxLength,
     pattern,
     wrapperProps,
-    autoSelect = true,
+    autoFocusSelect = true,
     width,
     height,
     ...rest
@@ -33930,7 +33930,7 @@ const Editable = props => {
     valueSignal: valueSignal,
     autoFocus: editing,
     autoFocusVisible: true,
-    autoSelect: autoSelect,
+    autoFocusSelect: autoFocusSelect,
     cancelOnEscape: true,
     cancelOnBlurInvalid: true,
     constraints: constraints,
@@ -35123,7 +35123,7 @@ const InputDurationPart = ({
     // When autofocused this field should be selected
     // this help to modify the value on mobile
     , {
-      autoSelect: true,
+      autoFocusSelect: true,
       type: "navi_number",
       "navi-input-type": unit,
       name: unit,

@@ -80,7 +80,7 @@ export const Editable = (props) => {
     maxLength,
     pattern,
     wrapperProps,
-    autoSelect = true,
+    autoFocusSelect = true,
     width,
     height,
     ...rest
@@ -134,7 +134,7 @@ export const Editable = (props) => {
       valueSignal={valueSignal}
       autoFocus={editing}
       autoFocusVisible
-      autoSelect={autoSelect}
+      autoFocusSelect={autoFocusSelect}
       cancelOnEscape
       cancelOnBlurInvalid
       constraints={constraints}

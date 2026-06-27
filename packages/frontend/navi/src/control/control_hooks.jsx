@@ -1097,10 +1097,10 @@ const useInteractiveProps = (
   const debugFocus = useDebugFocus();
 
   autofocus: {
-    const { autoFocus, autoFocusVisible, autoSelect } = props;
+    const { autoFocus, autoFocusVisible, autoFocusSelect } = props;
     const autoFocusProps = useAutoFocus(ref, autoFocus, {
       focusVisible: autoFocusVisible,
-      autoSelect,
+      autoSelect: autoFocusSelect,
     });
     Object.assign(controlHostProps, autoFocusProps);
   }

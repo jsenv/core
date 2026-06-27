@@ -63,7 +63,7 @@ export const CONTROL_PROP_SET = new Set([
 
   "autoFocus",
   "autoFocusVisible",
-  "autoSelect",
+  "autoFocusSelect",
 
   "onMouseDown",
   "onClick",

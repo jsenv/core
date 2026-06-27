@@ -39,7 +39,7 @@ import { useDisplayedLayoutEffect } from "../use_displayed_layout_effect.js";
  *   the browser's built-in scroll-into-view that accompanies focus.
  * @param {boolean} [options.focusVisible]
  *   Passed as `focusVisible` to `element.focus()`.
- * @param {boolean} [options.autoSelect]
+ * @param {boolean} [options.autoFocusSelect]
  *   When true, also calls `element.select()` after focusing (useful for text inputs).
  * @returns {Function} triggerAutofocus — can be called manually with a synthetic
  *   event to re-run the focus logic outside of the layout-effect lifecycle.
@@ -152,7 +152,7 @@ export const useAutoFocus = (
         ? ""
         : autoFocus
       : undefined,
-    "navi-autofocus-select": autoFocus && autoSelect ? "" : undefined,
+    "navi-autofocus-select": autoSelect ? "" : undefined,
   };
 };
 
