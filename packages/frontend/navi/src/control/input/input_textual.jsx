@@ -17,6 +17,29 @@
  * For non-textual inputs, specialized components will be used:
  * - <InputCheckbox /> for type="checkbox"
  * - <InputRadio /> for type="radio"
+ *
+ * Guard props (immediate feedback instead of wait-for-submit):
+ *
+ * - charGuard — restricts which characters can be typed, pasted, or set externally.
+ *   Accepts a preset name or a raw regex character class:
+ *   "numeric"      → digits only, sets inputMode="numeric" + pattern auto
+ *   "alpha"        → letters only
+ *   "alphanumeric" → letters and digits
+ *   "uppercase"    → uppercase letters only
+ *   "tel"          → phone chars (digits, +, -, parens, space), sets inputMode="tel"
+ *   "card"         → credit card (digits and spaces), sets inputMode="numeric"
+ *   "hex"          → hexadecimal digits
+ *   "pin"          → numeric PIN, sets inputMode="numeric"
+ *   "postal"       → postal code (digits, letters, space, hyphen)
+ *   "iban"         → IBAN (uppercase and digits)
+ *   "slug"         → URL slug (lowercase, digits, hyphens)
+ *   "[A-Z0-9]"     → any custom regex character class
+ *   inputMode and pattern are auto-derived from the preset when not explicitly set.
+ *
+ * - maxLengthGuard — combines maxLength + overflow guard in one prop.
+ *   Blocks keydown when the limit is reached; truncates on paste/set with an info callout.
+ *   The maxLength constraint remains active for form validation at submit.
+ *   Use plain maxLength (without maxLengthGuard) for submit-only validation.
  */
 
 import { useRef } from "preact/hooks";
@@ -399,22 +422,17 @@ const InputTextualFirstResolver = (props) => {
   props.ref = props.ref || defaultRef;
   resolveInputProps(props);
 
-  // allowedCharsGuard → auto inputMode + auto pattern for mobile keyboard hints
-  if (props.allowedCharsGuard) {
+  // charGuard → auto inputMode + auto pattern for mobile keyboard hints
+  if (props.charGuard) {
     if (props.inputMode === undefined) {
-      const autoMode = resolveInputModeFromAllowedChars(props.allowedCharsGuard);
+      const autoMode = resolveInputModeFromAllowedChars(props.charGuard);
       if (autoMode) props.inputMode = autoMode;
     }
     if (props.pattern === undefined) {
-      const charClass = resolveCharClass(props.allowedCharsGuard);
+      const charClass = resolveCharClass(props.charGuard);
       props.pattern = `${charClass}*`;
     }
   }
-  // maxLengthGuard → expose as maxLength so form validation constraints pick it up
-  if (props.maxLengthGuard !== undefined && props.maxLength === undefined) {
-    props.maxLength = props.maxLengthGuard;
-  }
-
   return <Next {...props} />;
 };
 export const InputTextual = createComponentResolver([

@@ -8,7 +8,7 @@
  * Exposed as `controller.rules.guard` (created inside `createControlRules`).
  *
  * Props read from `controller.props` on each call (always up to date):
- *   - `allowedCharsGuard` — preset name (e.g. "numeric", "tel") or raw char class "[A-Z]"
+ *   - `charGuard` — preset name (e.g. "numeric", "tel") or raw char class "[A-Z]"
  *   - `maxLengthGuard`    — maximum character count (enables both guard and constraint)
  */
 
@@ -45,11 +45,11 @@ export const createInputGuard = (controller) => {
    * Returns true when the key should be blocked (caller must call e.preventDefault()).
    */
   const checkKeydown = (e, el) => {
-    const { allowedCharsGuard, maxLengthGuard } = controller.props;
+    const { charGuard, maxLengthGuard } = controller.props;
 
-    if (allowedCharsGuard) {
-      const charClass = resolveCharClass(allowedCharsGuard);
-      const isNumeric = isNumericAllowedChars(allowedCharsGuard);
+    if (charGuard) {
+      const charClass = resolveCharClass(charGuard);
+      const isNumeric = isNumericAllowedChars(charGuard);
       const charMsg = getInvalidCharMessage(e.key, { charClass, isNumeric });
       if (charMsg) {
         show(charMsg, e);
@@ -76,11 +76,11 @@ export const createInputGuard = (controller) => {
    *   { fixedValue }  — value was truncated to maxLengthGuard (callout shown as info)
    */
   const checkValue = (value, e) => {
-    const { allowedCharsGuard, maxLengthGuard } = controller.props;
+    const { charGuard, maxLengthGuard } = controller.props;
 
-    if (allowedCharsGuard) {
-      const charClass = resolveCharClass(allowedCharsGuard);
-      const isNumeric = isNumericAllowedChars(allowedCharsGuard);
+    if (charGuard) {
+      const charClass = resolveCharClass(charGuard);
+      const isNumeric = isNumericAllowedChars(charGuard);
       const charsMsg = getInvalidCharsMessage(value, { charClass, isNumeric });
       if (charsMsg) {
         show(charsMsg, e);

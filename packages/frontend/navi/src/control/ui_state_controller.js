@@ -256,7 +256,7 @@ export const useUIStateController = (
       if (
         e.type === "navi_set_ui_state" &&
         controlType === "input" &&
-        (uiStateController.props.allowedCharsGuard || uiStateController.props.maxLengthGuard !== undefined)
+        (uiStateController.props.charGuard || uiStateController.props.maxLengthGuard !== undefined)
       ) {
         const result = uiStateController.rules.guard.checkValue(String(newUIState ?? ""), e);
         if (result) {

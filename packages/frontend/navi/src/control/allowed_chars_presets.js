@@ -1,5 +1,5 @@
 /**
- * Named presets for the `allowedCharsGuard` prop.
+ * Named presets for the `charGuard` prop.
  * Each value is a regex character class (including the [ ] delimiters).
  */
 export const CHAR_CLASS_PRESETS = {

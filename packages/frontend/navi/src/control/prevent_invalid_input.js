@@ -1,5 +1,5 @@
 /**
- * Pure validation helpers for the `allowedCharsGuard` and `maxLengthGuard` props.
+ * Pure validation helpers for the `charGuard` and `maxLengthGuard` props.
  * All functions are side-effect free; callout management lives in control_input_guard.js.
  */
 

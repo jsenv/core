@@ -265,7 +265,7 @@ export const MAX_LENGTH_CONSTRAINT = {
     } else if (!isTextarea) {
       return null;
     }
-    const maxLength = field.controlHostProps.maxLength;
+    const maxLength = field.controlHostProps.maxLength ?? field.props?.maxLengthGuard;
     if (maxLength === undefined) {
       return null;
     }

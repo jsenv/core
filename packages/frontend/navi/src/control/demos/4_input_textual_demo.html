@@ -254,7 +254,7 @@
                 <a href="#max-length">maxLength → automatic width</a>
               </li>
               <li>
-                <a href="#prevent-invalid-input">allowedCharsGuard / maxLengthGuard</a>
+                <a href="#prevent-invalid-input">charGuard / maxLengthGuard</a>
               </li>
               <li>
                 <a href="#interactive-controls">Interactive Controls</a>
@@ -1331,7 +1331,7 @@
         </div>
       );
 
-      // ── allowedCharsGuard / maxLengthGuard ───────────────────────────────
+      // ── charGuard / maxLengthGuard ───────────────────────────────
 
       const InputGuardDemo = () => {
         const [entries1, push1, clear1] = useCallLog();
@@ -1341,13 +1341,13 @@
 
         return (
           <div class="demo-section" id="prevent-invalid-input">
-            <h2>allowedCharsGuard / maxLengthGuard</h2>
+            <h2>charGuard / maxLengthGuard</h2>
             <p class="desc">
               Ces deux props bloquent les saisies invalides dès qu'elles se
               produisent (touche, coller, mise à jour externe) en affichant un
               callout. Sans elles, la validation n'a lieu qu'à la soumission.
               <br />
-              <code>allowedCharsGuard</code> accepte un preset (
+              <code>charGuard</code> accepte un preset (
               <code>"numeric"</code>, <code>"tel"</code>, <code>"card"</code>,{" "}
               <code>"hex"</code>, <code>"alphanumeric"</code>…) ou une classe
               de caractères brute (<code>"[A-Z0-9]"</code>). Le{" "}
@@ -1359,11 +1359,11 @@
               contrainte formulaire à la soumission.
             </p>
 
-            {/* 1 — navi_number sans allowedCharsGuard */}
+            {/* 1 — navi_number sans charGuard */}
             <fieldset>
               <legend>
                 <code>type="navi_number"</code> — sans{" "}
-                <code>allowedCharsGuard</code>
+                <code>charGuard</code>
               </legend>
               <p class="desc">
                 On peut taper des lettres. La validation n'arrive qu'à la
@@ -1381,11 +1381,11 @@
               <CallLog entries={entries1} onClear={clear1} />
             </fieldset>
 
-            {/* 2 — navi_number avec allowedCharsGuard="numeric" */}
+            {/* 2 — navi_number avec charGuard="numeric" */}
             <fieldset style={{ marginTop: "16px" }}>
               <legend>
                 <code>type="navi_number"</code> —{" "}
-                <code>allowedCharsGuard="numeric"</code>
+                <code>charGuard="numeric"</code>
               </legend>
               <p class="desc">
                 Seuls les chiffres sont autorisés (preset{" "}
@@ -1402,7 +1402,7 @@
                   id="num_with_guard"
                   name="num_with_guard"
                   type="navi_number"
-                  allowedCharsGuard="numeric"
+                  charGuard="numeric"
                   uiAction={(v) => push2("uiAction", v)}
                 />
                 <Box flex spacing="s" alignY="center">
@@ -1515,9 +1515,9 @@
               <CallLog entries={entries4} onClear={clear4} />
             </fieldset>
 
-            {/* 5 — presets allowedCharsGuard */}
+            {/* 5 — presets charGuard */}
             <fieldset style={{ marginTop: "16px" }}>
-              <legend>Presets <code>allowedCharsGuard</code></legend>
+              <legend>Presets <code>charGuard</code></legend>
               <p class="desc">
                 Chaque preset configure automatiquement le{" "}
                 <code>inputMode</code> et le <code>pattern</code> natif.
@@ -1530,7 +1530,7 @@
                     </span>
                     <Input
                       name="guard_tel"
-                      allowedCharsGuard="tel"
+                      charGuard="tel"
                       placeholder="+33 6 12 34 56 78"
                     />
                   </Box>
@@ -1540,7 +1540,7 @@
                     </span>
                     <Input
                       name="guard_card"
-                      allowedCharsGuard="card"
+                      charGuard="card"
                       maxLengthGuard={19}
                       placeholder="4242 4242 4242 4242"
                     />
@@ -1551,7 +1551,7 @@
                     </span>
                     <Input
                       name="guard_hex"
-                      allowedCharsGuard="hex"
+                      charGuard="hex"
                       maxLengthGuard={6}
                       placeholder="FF8C00"
                     />
@@ -1564,7 +1564,7 @@
                     </span>
                     <Input
                       name="guard_alnum"
-                      allowedCharsGuard="alphanumeric"
+                      charGuard="alphanumeric"
                       placeholder="User42"
                     />
                   </Box>
@@ -1574,7 +1574,7 @@
                     </span>
                     <Input
                       name="guard_slug"
-                      allowedCharsGuard="slug"
+                      charGuard="slug"
                       placeholder="mon-article"
                     />
                   </Box>
@@ -1584,7 +1584,7 @@
                     </span>
                     <Input
                       name="guard_custom"
-                      allowedCharsGuard="[A-Z]"
+                      charGuard="[A-Z]"
                       placeholder="MAJUSCULES"
                     />
                   </Box>
