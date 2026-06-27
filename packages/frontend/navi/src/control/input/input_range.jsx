@@ -276,7 +276,6 @@ const InputRangeFieldInterface = (props) => {
   resolveInputProps(props);
   const [rangeRootProps, rangeHostProps] = useControlProps(props, {
     controlType: "input",
-    readOnlySupported: true,
   });
   const { basePseudoState } = rangeHostProps;
   const loading = basePseudoState[":-navi-loading"];
