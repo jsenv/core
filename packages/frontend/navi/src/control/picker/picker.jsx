@@ -286,7 +286,7 @@ const css = /* css */ `
       --x-picker-padding-right: 0;
       --x-picker-padding-bottom: 0;
       --x-picker-padding-left: 0;
-      --picker-border-width: 0;
+      --picker-border-width: 0px; /* must carry a unit (px) — used in calc() to offset the custom input overlay */
       --x-picker-border-color: transparent;
       --x-picker-background-color: transparent;
       --x-picker-icon-color: currentColor;
@@ -296,7 +296,7 @@ const css = /* css */ `
       --x-picker-padding-right: 0;
       --x-picker-padding-bottom: 0;
       --x-picker-padding-left: 0;
-      --picker-border-width: 0;
+      --picker-border-width: 0px; /* must carry a unit (px) — used in calc() to offset the custom input overlay */
       --x-picker-border-color: transparent;
       --x-picker-background-color: transparent;
       --x-picker-icon-color: currentColor;
