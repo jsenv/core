@@ -71,12 +71,7 @@ import {
 } from "./controller_registry.js";
 import { FormContext } from "./form_context.js";
 import { addInputEffect } from "./input_effect.js";
-import {
-  checkValue,
-  getInvalidCharMessage,
-  getMaxLengthInsertionMessage,
-  isTypingIntent,
-} from "./prevent_invalid_input.js";
+import { isTypingIntent } from "./prevent_invalid_input.js";
 import {
   ParentUIStateControllerContext,
   useUIFacadeStateController,
@@ -277,17 +272,8 @@ export const useControlProps = (
     };
     const wasCheckedAtMousedownRef = useRef(false);
 
-    const { preventInvalidInput, inputMode, allowedChars, maxLength, maxLengthAutofix } = props;
-    const showInvalidInputCallout = (message, e) => {
-      uiStateController.rules.callout.addOpenToken(uiStateController._preventInvalidInputToken, {
-        message,
-        event: e,
-        skipFocus: true,
-      });
-    };
-    const clearInvalidInputCallout = (e) => {
-      uiStateController.rules.callout.removeOpenToken(uiStateController._preventInvalidInputToken, e);
-    };
+    const { preventInvalidInput, preventLengthOverflow } = props;
+    const hasInputGuard = preventInvalidInput || preventLengthOverflow;
 
     const getDefaultEventReactionDefinitions = () => {
       const keyDownDefault = (e) => {
@@ -590,20 +576,12 @@ export const useControlProps = (
       if (isInputTextual) {
         return {
           keyDown: (e) => {
-            if (preventInvalidInput && isTypingIntent(e)) {
-              const charMsg = getInvalidCharMessage(e.key, { inputMode, allowedChars });
-              if (charMsg) {
+            if (hasInputGuard && isTypingIntent(e)) {
+              const blocked = uiStateController.inputGuard.checkKeydown(e, ref.current);
+              if (blocked) {
                 e.preventDefault();
-                showInvalidInputCallout(charMsg, e);
                 return null;
               }
-              const lenMsg = getMaxLengthInsertionMessage(ref.current, { maxLength });
-              if (lenMsg) {
-                e.preventDefault();
-                showInvalidInputCallout(lenMsg, e);
-                return null;
-              }
-              clearInvalidInputCallout(e);
             }
             return keyDownDefaultOnInput(e);
           },
@@ -751,31 +729,23 @@ export const useControlProps = (
     const refComposed = useComposeElementRef(refCallback, ref);
     const onPaste = (e) => {
       props.onPaste?.(e);
-      if (preventInvalidInput) {
+      if (hasInputGuard) {
         const pastedText = e.clipboardData?.getData("text") ?? "";
         const el = ref.current;
         const selStart = el.selectionStart ?? el.value.length;
         const selEnd = el.selectionEnd ?? el.value.length;
         const newValue =
           el.value.slice(0, selStart) + pastedText + el.value.slice(selEnd);
-        const result = checkValue(newValue, {
-          inputMode,
-          allowedChars,
-          maxLength,
-          maxLengthAutofix,
-        });
+        const result = uiStateController.inputGuard.checkValue(newValue, e);
         if (result?.fixedValue !== undefined) {
           e.preventDefault();
-          showInvalidInputCallout(result.message, e);
           uiStateController.setUIState(result.fixedValue, e);
           return;
         }
-        if (result?.message) {
+        if (result?.blocked) {
           e.preventDefault();
-          showInvalidInputCallout(result.message, e);
           return;
         }
-        clearInvalidInputCallout(e);
       }
       dispatchRequestInteraction(ref.current, {
         event: e,

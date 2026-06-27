@@ -254,7 +254,7 @@
                 <a href="#max-length">maxLength → automatic width</a>
               </li>
               <li>
-                <a href="#prevent-invalid-input">preventInvalidInput</a>
+                <a href="#prevent-invalid-input">preventInvalidInput / preventLengthOverflow</a>
               </li>
               <li>
                 <a href="#interactive-controls">Interactive Controls</a>
@@ -1331,7 +1331,7 @@
         </div>
       );
 
-      // ── preventInvalidInput ───────────────────────────────────────────────
+      // ── preventInvalidInput / preventLengthOverflow ──────────────────────
 
       const PreventInvalidInputDemo = () => {
         const [entries1, push1, clear1] = useCallLog();
@@ -1339,12 +1339,18 @@
 
         return (
           <div class="demo-section" id="prevent-invalid-input">
-            <h2>preventInvalidInput</h2>
+            <h2>preventInvalidInput / preventLengthOverflow</h2>
             <p class="desc">
-              Quand <code>preventInvalidInput</code> est actif, toute tentative
-              de saisie invalide (touche, coller, mise à jour externe) est
-              bloquée immédiatement et un callout explique la règle. Sans cette
-              prop, la validation n'a lieu qu'à la soumission.
+              Ces deux props bloquent les saisies invalides dès qu'elles se
+              produisent (touche, coller, mise à jour externe) en affichant un
+              callout. Sans elles, la validation n'a lieu qu'à la soumission.
+              <br />
+              <code>preventInvalidInput</code> gère la validation des
+              caractères (<code>inputMode</code>, <code>allowedChars</code>).
+              <br />
+              <code>preventLengthOverflow</code> gère la limite de longueur
+              (<code>maxLength</code>), avec option <code>maxLengthAutofix</code>{" "}
+              pour tronquer au lieu de bloquer.
             </p>
 
             {/* 1 — navi_number sans preventInvalidInput */}
@@ -1414,22 +1420,25 @@
               <CallLog entries={entries2} onClear={clear2} />
             </fieldset>
 
-            {/* 3 — maxLength + preventInvalidInput */}
+            {/* 3 — maxLength + preventLengthOverflow */}
             <fieldset style={{ marginTop: "16px" }}>
               <legend>
-                <code>maxLength={3}</code> + <code>preventInvalidInput</code>
+                <code>maxLength={3}</code> + <code>preventLengthOverflow</code>
               </legend>
               <p class="desc">
-                Sans <code>preventInvalidInput</code>, on peut taper autant de
-                chiffres que l'on veut. Avec, le 4ème caractère est bloqué
-                avant même d'être inséré.
+                Sans <code>preventLengthOverflow</code>, le navigateur applique
+                silencieusement <code>maxlength</code> sur le champ natif. Avec,
+                c'est notre code qui prend en charge la limite : le 4ème
+                caractère est bloqué avec un callout explicatif. La validation
+                formulaire (<code>maxLength</code>) reste active à la soumission.
               </p>
               <Box flex spacing="l" alignY="start">
                 <Box flex="y" spacing="xs" alignX="start">
                   <span class="desc" style={{ margin: 0 }}>
-                    Sans (peut dépasser)
+                    Sans (natif silencieux)
                   </span>
                   <Input
+                    name="num_max_no_prevent"
                     type="navi_number"
                     maxLength={3}
                     defaultValue="12"
@@ -1437,16 +1446,36 @@
                 </Box>
                 <Box flex="y" spacing="xs" alignX="start">
                   <span class="desc" style={{ margin: 0 }}>
-                    Avec (bloqué au 4ème)
+                    Avec (bloqué + callout)
                   </span>
                   <Input
+                    name="num_max_with_prevent"
                     type="navi_number"
                     maxLength={3}
                     defaultValue="12"
-                    preventInvalidInput
+                    preventLengthOverflow
                   />
                 </Box>
               </Box>
+              <p class="desc" style={{ marginTop: "12px" }}>
+                La validation à la soumission fonctionne dans les deux cas :
+              </p>
+              <Form
+                action={(values) => push2("submit", values)}
+                flex="y"
+                spacing="s"
+                alignX="start"
+                style={{ marginTop: "8px" }}
+              >
+                <Input
+                  name="num_max_submit"
+                  type="navi_number"
+                  maxLength={3}
+                  preventLengthOverflow
+                  required
+                />
+                <Button type="submit">Soumettre</Button>
+              </Form>
             </fieldset>
           </div>
         );

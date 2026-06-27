@@ -24,7 +24,7 @@ import {
   onUIStateControllerDestroyed,
 } from "./controller_registry.js";
 import { FormContext } from "./form_context.js";
-import { checkValue } from "./prevent_invalid_input.js";
+import { createInputGuard } from "./control_input_guard.js";
 import { createControlRules } from "./rules/control_rules.js";
 
 /**
@@ -203,7 +203,7 @@ export const useUIStateController = (
     uiStateSignal,
     value: controlInfo.value,
 
-    _preventInvalidInputToken: {},
+    inputGuard: null,
 
     facadeChild: null,
     getManagedControls: () => {
@@ -259,31 +259,17 @@ export const useUIStateController = (
       if (
         e.type === "navi_set_ui_state" &&
         controlType === "input" &&
-        uiStateController.props.preventInvalidInput
+        uiStateController.inputGuard &&
+        (uiStateController.props.preventInvalidInput || uiStateController.props.preventLengthOverflow)
       ) {
-        const { inputMode, allowedChars, maxLength, maxLengthAutofix } = uiStateController.props;
-        const result = checkValue(String(newUIState ?? ""), {
-          inputMode,
-          allowedChars,
-          maxLength,
-          maxLengthAutofix,
-        });
+        const result = uiStateController.inputGuard.checkValue(String(newUIState ?? ""), e);
         if (result) {
-          uiStateController.rules.callout.addOpenToken(
-            uiStateController._preventInvalidInputToken,
-            { message: result.message, event: e, skipFocus: true },
-          );
           if (result.fixedValue !== undefined) {
             newUIState = result.fixedValue;
-            // fall through — continue with truncated value
+            // fall through — continue with truncated value (callout already shown by guard)
           } else {
             return false;
           }
-        } else {
-          uiStateController.rules.callout.removeOpenToken(
-            uiStateController._preventInvalidInputToken,
-            e,
-          );
         }
       }
       const controllerSig = getElementSignature(e.currentTarget || ref.current);
@@ -565,6 +551,7 @@ export const useUIStateController = (
     debugFocus,
   });
   uiStateController.rules = rules;
+  uiStateController.inputGuard = createInputGuard(uiStateController);
   return uiStateController;
 };
 

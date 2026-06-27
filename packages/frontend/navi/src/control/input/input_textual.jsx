@@ -432,6 +432,10 @@ const RealInput = (props) => {
           e.target.select();
         }
       }}
+      // When preventLengthOverflow is active our code enforces maxLength — don't set the
+      // native attribute or the browser silently blocks input before our guard can run.
+      // We keep maxLength in inputControlHostProps so form validation still reads it.
+      maxLength={undefined}
     />
   );
 };
