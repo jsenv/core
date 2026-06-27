@@ -44,11 +44,9 @@ export const getMaxLengthInsertionMessage = (el, { maxLength }) => {
 };
 
 // Paste / external set: returns a message if `value` contains disallowed chars.
-export const getInvalidCharsMessage = (value, { charClass, messageKey }) => {
-  if (typeof value !== "string") {
-    return null;
-  }
-  if (new RegExp(`^(?:${charClass})*$`).test(value)) {
+export const getInvalidCharsMessage = (uiState, { charClass, messageKey }) => {
+  const valueString = uiState === undefined ? "" : String(uiState);
+  if (new RegExp(`^(?:${charClass})*$`).test(valueString)) {
     return null;
   }
 
@@ -56,16 +54,15 @@ export const getInvalidCharsMessage = (value, { charClass, messageKey }) => {
 };
 
 // Paste / external set: when value exceeds maxLength, returns fixedValue + message.
-export const getLengthOverflowResult = (value, { maxLength }) => {
-  if (typeof value !== "string") {
-    return null;
-  }
-  if (maxLength === undefined || value.length <= maxLength) {
+export const getLengthOverflowResult = (uiState, { maxLength }) => {
+  const valueString = uiState === undefined ? "" : String(uiState);
+
+  if (maxLength === undefined || valueString.length <= maxLength) {
     return null;
   }
 
   return {
-    fixedValue: value.slice(0, maxLength),
+    fixedValue: valueString.slice(0, maxLength),
     message: naviI18n("constraint.guard.max_length.value", {
       max: maxLength,
       s: s(maxLength),

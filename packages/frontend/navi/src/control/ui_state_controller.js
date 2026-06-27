@@ -253,19 +253,16 @@ export const useUIStateController = (
       }
     },
     setUIState: (newUIState, e) => {
-      if (
-        e.type === "navi_set_ui_state" &&
-        controlType === "input" &&
-        (uiStateController.props.charGuard || uiStateController.props.maxLengthGuard !== undefined)
-      ) {
-        const result = uiStateController.rules.guard.checkValue(String(newUIState ?? ""), e);
-        if (result) {
-          if (result.fixedValue !== undefined) {
-            newUIState = result.fixedValue;
-            // fall through — continue with truncated value (callout already shown by guard)
-          } else {
-            return false;
-          }
+      const guardResult = uiStateController.rules.guard.checkUIState(
+        newUIState,
+        e,
+      );
+      if (guardResult) {
+        if (Object.hasOwn(guardResult, "fixedValue")) {
+          newUIState = guardResult.fixedValue;
+          // fall through — continue with truncated value (callout already shown by guard)
+        } else {
+          return false;
         }
       }
       const controllerSig = getElementSignature(e.currentTarget || ref.current);

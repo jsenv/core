@@ -577,7 +577,10 @@ export const useControlProps = (
         return {
           keyDown: (e) => {
             if (hasInputGuard && isTypingIntent(e)) {
-              const blocked = uiStateController.rules.guard.checkKeydown(e, ref.current);
+              const blocked = uiStateController.rules.guard.checkKeydown(
+                e,
+                ref.current,
+              );
               if (blocked) {
                 e.preventDefault();
                 return null;
@@ -736,7 +739,7 @@ export const useControlProps = (
         const selEnd = el.selectionEnd ?? el.value.length;
         const newValue =
           el.value.slice(0, selStart) + pastedText + el.value.slice(selEnd);
-        const result = uiStateController.rules.guard.checkValue(newValue, e);
+        const result = uiStateController.rules.guard.checkUIState(newValue, e);
         if (result?.fixedValue !== undefined) {
           e.preventDefault();
           uiStateController.setUIState(result.fixedValue, e);
@@ -761,7 +764,6 @@ export const useControlProps = (
       onPaste,
       onInput,
     });
-
   }
 
   const uiState = uiStateController.uiStateSignal.peek();

@@ -13,15 +13,15 @@
  */
 
 import {
+  getCharGuardMessageKey,
+  resolveCharClass,
+} from "./char_guard_presets.js";
+import {
   getInvalidCharMessage,
   getInvalidCharsMessage,
   getLengthOverflowResult,
   getMaxLengthInsertionMessage,
 } from "./prevent_invalid_input.js";
-import {
-  getCharGuardMessageKey,
-  resolveCharClass,
-} from "./char_guard_presets.js";
 import { createOpenToken } from "./rules/control_callout.js";
 
 export const createControlGuard = (controller) => {
@@ -57,7 +57,9 @@ export const createControlGuard = (controller) => {
       }
     }
     if (maxLengthGuard !== undefined) {
-      const lenMsg = getMaxLengthInsertionMessage(el, { maxLength: maxLengthGuard });
+      const lenMsg = getMaxLengthInsertionMessage(el, {
+        maxLength: maxLengthGuard,
+      });
       if (lenMsg) {
         show(lenMsg, e);
         return true;
@@ -75,28 +77,35 @@ export const createControlGuard = (controller) => {
    *   { blocked }     — value rejected, caller must not apply it (callout shown)
    *   { fixedValue }  — value was truncated to maxLengthGuard (callout shown as info)
    */
-  const checkValue = (value, e) => {
+  const checkUIState = (uiState, e) => {
     const { charGuard, maxLengthGuard } = controller.props;
 
     if (charGuard) {
       const charClass = resolveCharClass(charGuard);
       const messageKey = getCharGuardMessageKey(charGuard);
-      const charsMsg = getInvalidCharsMessage(value, { charClass, messageKey });
+      const charsMsg = getInvalidCharsMessage(uiState, {
+        charClass,
+        messageKey,
+      });
       if (charsMsg) {
         show(charsMsg, e);
         return { blocked: true };
       }
     }
+
     if (maxLengthGuard !== undefined) {
-      const lengthResult = getLengthOverflowResult(value, { maxLength: maxLengthGuard });
+      const lengthResult = getLengthOverflowResult(uiState, {
+        maxLength: maxLengthGuard,
+      });
       if (lengthResult) {
         show(lengthResult.message, e);
         return { fixedValue: lengthResult.fixedValue };
       }
     }
+
     clear(e);
     return null;
   };
 
-  return { checkKeydown, checkValue, show, clear };
+  return { checkKeydown, checkUIState, show, clear };
 };
