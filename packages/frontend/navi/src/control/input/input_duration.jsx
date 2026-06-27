@@ -6,6 +6,7 @@ import {
 import { useRef } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
+import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.jsx";
 import { Unit } from "@jsenv/navi/src/text/unit.jsx";
 import {
   ControlgroupChildrenWrapper,
@@ -20,6 +21,9 @@ import { useInputGroup } from "./use_input_group.js";
 const css = /* css */ `
   .navi_input_duration {
     --duration-separator-spacing: 4px;
+    --loader-color: var(--navi-loader-color);
+
+    position: relative;
 
     .navi_label {
       &[data-separator] {
@@ -244,6 +248,9 @@ export const InputDuration = (props) => {
     millisecondValue = Math.round((rawSecondValue % 1) * 1000);
   }
 
+  const loading = basePseudoState[":-navi-loading"];
+  delete basePseudoState[":-navi-loading"];
+
   return (
     <Box
       ref={groupRef}
@@ -255,6 +262,11 @@ export const InputDuration = (props) => {
       unitHour={undefined}
       {...clipboardProps}
     >
+      <LoadingOutline
+        loading={loading}
+        color="var(--loader-color)"
+        inset={-1}
+      />
       <input
         {...groupHostProps}
         type="hidden"
