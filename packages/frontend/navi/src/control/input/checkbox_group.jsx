@@ -43,21 +43,6 @@ const CheckboxGroupInterface = (props) => {
       {
         stateType: "array",
         controlType: "checkbox_group",
-        childControlFilter: (childUIStateController) => {
-          return (
-            childUIStateController.controlType === "input" &&
-            childUIStateController.controlHostProps.type === "checkbox"
-          );
-        },
-        aggregateChildStates: (childUIStateControllers) => {
-          const values = [];
-          for (const childUIStateController of childUIStateControllers) {
-            if (childUIStateController.uiState) {
-              values.push(childUIStateController.uiState);
-            }
-          }
-          return values.length === 0 ? undefined : values;
-        },
       },
     );
   useFocusGroup(ref, { wrap: "both" });

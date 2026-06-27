@@ -6,7 +6,7 @@ import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 export const InputModeResolver = (props) => {
   const Next = useNextResolver();
 
-  if (props.inputMode === "numeric") {
+  if (props.inputMode === "numeric" || props.inputMode === "decimal") {
     return <InputModeNumeric {...props} />;
   }
   return <Next {...props} />;

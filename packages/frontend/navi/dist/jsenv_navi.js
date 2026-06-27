@@ -15447,7 +15447,12 @@ const asControlHostValue = (
     if (type === "datetime-local") {
       return asDatetimeLocalString(jsValue);
     }
-    if (type === "number" || type === "range" || inputMode === "numeric") {
+    if (
+      type === "number" ||
+      type === "range" ||
+      inputMode === "numeric" ||
+      inputMode === "decimal"
+    ) {
       return asNumberString(jsValue);
     }
     if (type === "color") {
@@ -15521,7 +15526,8 @@ const readControlValue = (controlHost) => {
     if (
       type === "number" ||
       type === "range" ||
-      controlHost.inputMode === "numeric"
+      controlHost.inputMode === "numeric" ||
+      controlHost.inputMode === "decimal"
     ) {
       return readNumberFromInput(controlHost);
     }
@@ -19426,7 +19432,11 @@ const REQUIRED_CONSTRAINT = {
       return naviI18n("constraint.required.time");
     }
     const inputMode = field.controlHostProps.inputMode;
-    if (type === "number" || inputMode === "numeric") {
+    if (
+      type === "number" ||
+      inputMode === "numeric" ||
+      inputMode === "decimal"
+    ) {
       return naviI18n("constraint.required.number");
     }
     if (type === "datetime-local") {
@@ -19587,7 +19597,8 @@ const MAX_LENGTH_CONSTRAINT = {
     } else if (!isTextarea) {
       return null;
     }
-    const maxLength = field.controlHostProps.maxLength ?? field.props?.maxLengthGuard;
+    const maxLength =
+      field.controlHostProps.maxLength ?? field.props?.maxLengthGuard;
     if (maxLength === undefined) {
       return null;
     }
@@ -19630,7 +19641,8 @@ const TYPE_NUMBER_CONSTRAINT = {
     }
     const type = field.controlHostProps.type;
     const inputMode = field.controlHostProps.inputMode;
-    const isNumber = type === "number" || inputMode === "numeric";
+    const isNumber =
+      type === "number" || inputMode === "numeric" || inputMode === "decimal";
     if (!isNumber) {
       return null;
     }
@@ -19711,7 +19723,8 @@ const MIN_CONSTRAINT = {
     if (!valueAsString) {
       return null;
     }
-    const isNumber = type === "number" || inputMode === "numeric";
+    const isNumber =
+      type === "number" || inputMode === "numeric" || inputMode === "decimal";
     if (isNumber) {
       const minNumber = parseFloat(minString);
       if (isNaN(minNumber)) {
@@ -19818,7 +19831,8 @@ const MAX_CONSTRAINT = {
     if (!valueAsString) {
       return null;
     }
-    const isNumber = type === "number" || inputMode === "numeric";
+    const isNumber =
+      type === "number" || inputMode === "numeric" || inputMode === "decimal";
     if (isNumber) {
       const maxNumber = parseFloat(maxString);
       if (isNaN(maxNumber)) {
@@ -19940,7 +19954,8 @@ const STEP_CONSTRAINT = {
     }
     const type = field.controlHostProps.type;
     const inputMode = field.controlHostProps.inputMode;
-    const isNumericText = type === "text" && inputMode === "numeric";
+    const isNumericText =
+      type === "text" && (inputMode === "numeric" || inputMode === "decimal");
     if (!isNumericText && !STEP_SUPPORTED_TYPE_SET.has(type)) {
       return null;
     }
@@ -22598,13 +22613,17 @@ const useUIStateController = (
             );
           }
         }
-        // Still fire uiAction so external listeners (e.g. signals) stay in
-        // sync, but do NOT fire the command and do NOT notify the parent —
-        // both would cause an infinite loop when a parent cascades state
-        // down to its children (child command would re-trigger the cascade).
-        uiStateController.onUIAction(e, {
-          skipCommand: true,
-        });
+        // initial_state_push is pure initialization (equivalent to defaultValue on the
+        // child itself): skip uiAction entirely so no side effects fire on mount.
+        if (e.type !== "initial_state_push") {
+          // Still fire uiAction so external listeners (e.g. signals) stay in
+          // sync, but do NOT fire the command and do NOT notify the parent —
+          // both would cause an infinite loop when a parent cascades state
+          // down to its children (child command would re-trigger the cascade).
+          uiStateController.onUIAction(e, {
+            skipCommand: true,
+          });
+        }
         // Exception: when the facade propagates a child state change up to the
         // real picker input, also notify the parent group (e.g. Form) so it
         // keeps its cached aggregated state in sync and fires its own uiAction.
@@ -22741,7 +22760,6 @@ const useUIStateController = (
   uiStateController.rules = rules;
   return uiStateController;
 };
-
 const NO_PARENT = [() => {}, () => {}, () => {}];
 const useParentControllerNotifiers = (
   parentUIStateController,
@@ -22821,6 +22839,90 @@ const useParentControllerNotifiers = (
  * **Filtering**: `childControlFilter` can exclude certain child types from aggregation
  * (e.g. ignoring buttons inside a selectable list).
  */
+const CANNOT_DERIVE = Symbol("cannot_derive");
+
+// Default aggregate/distribute implementations keyed by controlType or stateType.
+// Looked up in useUIGroupStateController to fill in omitted aggregateChildStates /
+// distributeChildUIState. If neither a default nor an explicit impl is found for a
+// group, creation throws so the caller knows it must supply them.
+const GROUP_DEFAULTS = {
+  radio_group: {
+    childControlFilter: (child) =>
+      child.controlType === "input" && child.controlHostProps?.type === "radio",
+    aggregateChildStates: (children) => {
+      for (const child of children) {
+        const childUIState = child.uiState;
+        if (childUIState !== undefined) {
+          return childUIState;
+        }
+      }
+      return undefined;
+    },
+    distributeChildUIState: (newUIState, childUIStateController) => {
+      const childSelected = childUIStateController.props.value === newUIState;
+      if (childSelected) {
+        return childUIStateController.props.value;
+      }
+      return undefined;
+    },
+  },
+  checkbox_group: {
+    childControlFilter: (child) =>
+      child.controlType === "input" &&
+      child.controlHostProps?.type === "checkbox",
+    aggregateChildStates: (children) => {
+      const values = [];
+      for (const child of children) {
+        const childUIState = child.uiState;
+        if (childUIState !== undefined) {
+          values.push(childUIState);
+        }
+      }
+      return values.length === 0 ? undefined : values;
+    },
+    distributeChildUIState: (newUIState, childUIStateController) => {
+      const childSelected =
+        Array.isArray(newUIState) &&
+        newUIState.includes(childUIStateController.props.value);
+      if (childSelected) {
+        return childUIStateController.props.value;
+      }
+      return undefined;
+    },
+  },
+  object: {
+    aggregateChildStates: (children) => {
+      const groupValues = {};
+      for (const child of children) {
+        const { name, uiState, allowNameless } = child;
+        if (!name) {
+          if (!allowNameless) {
+            console.warn(
+              "A group child is missing a name property, its state won't be included in the group state",
+              child,
+            );
+          }
+          continue;
+        }
+        groupValues[name] = uiState;
+      }
+      return groupValues;
+    },
+    distributeChildUIState: (newUIState, child) => {
+      const childName = child.name;
+      if (
+        childName &&
+        newUIState !== null &&
+        typeof newUIState === "object" &&
+        Object.prototype.hasOwnProperty.call(newUIState, childName)
+      ) {
+        return newUIState[childName];
+      }
+      return CANNOT_DERIVE;
+    },
+  },
+};
+
 const useUIGroupStateController = (
   props,
   controlType,
@@ -22840,11 +22942,26 @@ const useUIGroupStateController = (
   const debugUIGroup = useDebugUIState();
   const debugFocus = useDebugFocus();
 
-  if (typeof aggregateChildStates !== "function") {
-    throw new TypeError("aggregateChildStates must be a function");
+  const defaults = GROUP_DEFAULTS[controlType] ?? GROUP_DEFAULTS[stateType];
+  const resolvedChildControlFilter =
+    childControlFilter ?? defaults?.childControlFilter ?? null;
+  const resolvedAggregateChildStates =
+    aggregateChildStates ?? defaults?.aggregateChildStates;
+  const resolvedDistributeChildUIState =
+    distributeChildUIState ?? defaults?.distributeChildUIState;
+  if (
+    typeof resolvedAggregateChildStates !== "function" ||
+    typeof resolvedDistributeChildUIState !== "function"
+  ) {
+    throw new Error(
+      `No aggregate/distribute implementation found for controlType="${controlType}" stateType="${stateType}". ` +
+        `Either use a known controlType/stateType or provide aggregateChildStates and distributeChildUIState explicitly.`,
+    );
   }
   const parentUIStateController = useContext(ParentUIStateControllerContext);
-  const { id, name, value, uiAction, command } = props;
+  const hasValueProp = Object.hasOwn(props, "value");
+  const hasDefaultValueProp = Object.hasOwn(props, "defaultValue");
+  const { id, name, value, defaultValue, uiAction, command } = props;
   const ref = props.ref;
   const uiActionRef = useRef(uiAction);
   const fallbackState =
@@ -22893,7 +23010,7 @@ const useUIGroupStateController = (
       pendingChangeRef.current = true;
       return;
     }
-    const aggChildState = aggregateChildStates(
+    const aggChildState = resolvedAggregateChildStates(
       childUIStateControllerArray,
       fallbackState,
     );
@@ -22958,13 +23075,68 @@ const useUIGroupStateController = (
     }
   });
 
+  const isMonitoringChild = (childUIStateController) => {
+    if (childUIStateController.isProxy) {
+      return false;
+    }
+    if (
+      resolvedChildControlFilter &&
+      !resolvedChildControlFilter(childUIStateController)
+    ) {
+      return false;
+    }
+    return true;
+  };
+  const shouldPropagateStateToChild = (childUIStateController) => {
+    if (!isMonitoringChild(childUIStateController)) {
+      return false;
+    }
+    if (childUIStateController.controlType === "button") {
+      return false;
+    }
+    return true;
+  };
+
   const existingController = controllerRef.current;
   if (existingController) {
+    const prevValue = existingController.value;
+    const prevHasValueProp = existingController.hasValueProp;
     existingController.props = props;
     existingController.id = id;
     existingController.name = name;
     existingController.value = value;
+    existingController.defaultValue = defaultValue;
+    existingController.hasValueProp = hasValueProp;
+    existingController.hasDefaultValueProp = hasDefaultValueProp;
     uiActionRef.current = uiAction;
+    // When the controlled value prop changes (or when becoming controlled for the
+    // first time), silently cascade to children that have no individual state prop.
+    if (
+      hasValueProp &&
+      (!prevHasValueProp || !compareTwoJsValues(value, prevValue))
+    ) {
+      const propagateDownEvent = new CustomEvent(
+        "propagate_down_set_ui_state",
+        { detail: {} },
+      );
+      for (const childUIStateController of childUIStateControllerArray) {
+        if (!shouldPropagateStateToChild(childUIStateController)) {
+          continue;
+        }
+        if (childUIStateController.hasStateProp) {
+          continue;
+        }
+        const childNewState = existingController.distributeChildUIState(
+          value,
+          childUIStateController,
+        );
+        if (childNewState === CANNOT_DERIVE) {
+          continue;
+        }
+        childUIStateController.setUIState(childNewState, propagateDownEvent);
+      }
+      existingController.syncInternalState(value);
+    }
     return existingController;
   }
   debugUIGroup(
@@ -22973,32 +23145,23 @@ const useUIGroupStateController = (
 
   const [publishUIState, subscribeUIState] = createPubSub();
   const uiStateSignal = signal(fallbackState);
-  const isMonitoringChild = (childUIStateController) => {
-    if (childUIStateController.isProxy) {
-      return false;
-    }
-    if (childControlFilter && !childControlFilter(childUIStateController)) {
-      return false;
-    }
-    return true;
-  };
   const groupUIStateController = {
     controlType,
     id,
     name,
     value,
+    defaultValue,
+    hasValueProp,
+    hasDefaultValueProp,
     props,
     uiState: fallbackState,
     uiStateSignal,
     wantRequesterButtonState,
     elementRef: ref,
     getPropFromState: (uiState) => uiState,
-    // Cascades the new value to each monitored child (fires each child's uiAction
-    // via internalBehavior), then re-aggregates and fires this group's own reactions.
-    // Cascade strategy depends on controlType:
-    //   - "radio_group": child gets true/false based on whether its value matches the scalar state.
-    //   - "checkbox_group": child gets true/false based on whether its value is in the state array.
-    //   - default (ControlGroup): child gets the value at its named key in the state object.
+    distributeChildUIState: resolvedDistributeChildUIState,
+    // Cascades newUIState to each monitored child via resolvedDistributeChildUIState,
+    // then re-aggregates and fires this group's own reactions.
     setUIState: (newUIState, e) => {
       if (
         stateType === "object" &&
@@ -23017,73 +23180,42 @@ const useUIGroupStateController = (
         );
         return;
       }
-      const propagateDownEvent = new CustomEvent(
-        "propagate_down_set_ui_state",
-        { detail: {} },
-      );
+      // initial_state_push propagates silently (no uiAction anywhere in the chain);
+      // regular updates use propagate_down_set_ui_state which fires uiAction on children.
+      const propagateEventType =
+        e.type === "initial_state_push"
+          ? "initial_state_push"
+          : "propagate_down_set_ui_state";
+      const propagateDownEvent = new CustomEvent(propagateEventType, {
+        detail: {},
+      });
       chainEvent(propagateDownEvent, e);
       for (const childUIStateController of childUIStateControllerArray) {
-        if (!isMonitoringChild(childUIStateController)) {
+        if (!shouldPropagateStateToChild(childUIStateController)) {
           continue;
         }
-        if (childUIStateController.controlType === "button") {
+        const childNewState = resolvedDistributeChildUIState(
+          newUIState,
+          childUIStateController,
+        );
+        if (childNewState === CANNOT_DERIVE) {
           continue;
         }
-        if (controlType === "radio_group") {
-          const childSelected =
-            childUIStateController.props.value === newUIState;
-          // Pass the child's own value (not `true`) when selected, `undefined` (not `false`) when not.
-          // `toDomProps` uses `newUIState !== undefined` to determine `checked`, so passing `false`
-          // would incorrectly render the radio as checked.
-          const childNewState = childSelected
-            ? childUIStateController.props.value
-            : undefined;
-          childUIStateController.setUIState(childNewState, propagateDownEvent);
-        } else if (controlType === "checkbox_group") {
-          const childSelected =
-            Array.isArray(newUIState) &&
-            newUIState.includes(childUIStateController.props.value);
-          const childNewState = childSelected
-            ? childUIStateController.props.value
-            : undefined;
-          childUIStateController.setUIState(childNewState, propagateDownEvent);
-        } else if (distributeChildUIState) {
-          const childrenStateMap = distributeChildUIState(newUIState);
-          if (childrenStateMap && typeof childrenStateMap === "object") {
-            const childName = childUIStateController.name;
-            if (
-              childName &&
-              Object.prototype.hasOwnProperty.call(childrenStateMap, childName)
-            ) {
-              childUIStateController.setUIState(
-                childrenStateMap[childName],
-                propagateDownEvent,
-              );
-            }
-          }
-        } else {
-          const childName = childUIStateController.name;
-          if (
-            childName &&
-            newUIState !== null &&
-            typeof newUIState === "object" &&
-            Object.prototype.hasOwnProperty.call(newUIState, childName)
-          ) {
-            childUIStateController.setUIState(
-              newUIState[childName],
-              propagateDownEvent,
-            );
-          }
-        }
+        childUIStateController.setUIState(childNewState, propagateDownEvent);
       }
       // Re-aggregate from children and apply — do NOT call onChange to avoid a loop
       // (onChange would call setUIState again, which would cascade again).
-      const aggChildState = aggregateChildStates(
+      const aggChildState = resolvedAggregateChildStates(
         childUIStateControllerArray,
         fallbackState,
       );
       const groupUIState =
         aggChildState === undefined ? fallbackState : aggChildState;
+      if (e.type === "initial_state_push") {
+        // Silent initialization: update state without firing uiAction or notifying parent.
+        groupUIStateController.syncInternalState(groupUIState);
+        return;
+      }
       applyState(groupUIState, e, { internalBehavior: true });
     },
     // Called on mount/unmount/render-batch: updates state silently with no external reactions.
@@ -23133,6 +23265,33 @@ const useUIGroupStateController = (
       debugUIGroup(
         `${controlType}.registerChild("${childControlType}") -> registered (total: ${childUIStateControllerArray.length})`,
       );
+      // Auto-derive child's initial state from the group's value/defaultValue
+      // when the child has no individually-controlled state prop.
+      // Use initial_state_push so uiAction does not fire during mount initialization.
+      if (!childUIStateController.hasStateProp) {
+        const initialEvent = new CustomEvent("initial_state_push", {
+          detail: {},
+        });
+        if (groupUIStateController.hasValueProp) {
+          // Controlled: always cascade current group value (even undefined = deselect all).
+          const childNewState = resolvedDistributeChildUIState(
+            groupUIStateController.value,
+            childUIStateController,
+          );
+          if (childNewState !== CANNOT_DERIVE) {
+            childUIStateController.setUIState(childNewState, initialEvent);
+          }
+        } else if (groupUIStateController.hasDefaultValueProp) {
+          // Uncontrolled: set initial state from defaultValue on mount.
+          const childNewState = resolvedDistributeChildUIState(
+            groupUIStateController.defaultValue,
+            childUIStateController,
+          );
+          if (childNewState !== CANNOT_DERIVE) {
+            childUIStateController.setUIState(childNewState, initialEvent);
+          }
+        }
+      }
       onChange(new CustomEvent(`${childControlType}_mount`), {
         notifyExternal: "silent",
         // childUIStateController,
@@ -23211,10 +23370,7 @@ const useUIGroupStateController = (
       );
       chainEvent(propagateDownResetEvent, e);
       for (const childUIStateController of childUIStateControllerArray) {
-        if (!isMonitoringChild(childUIStateController)) {
-          continue;
-        }
-        if (childUIStateController.controlType === "button") {
+        if (!shouldPropagateStateToChild(childUIStateController)) {
           continue;
         }
         childUIStateController.resetUIState(propagateDownResetEvent);
@@ -23387,6 +23543,18 @@ const useUIFacadeStateController = (props, realUIStateController) => {
         );
         firstChildControllerRef.current = child;
         realUIStateController.facadeChild = child;
+        // If the picker already has a meaningful state (from value or defaultValue),
+        // push it to the child on registration so it reflects the pre-set value
+        // without firing uiAction (equivalent to defaultValue on the child itself).
+        const initialState = realUIStateController.uiState;
+        if (initialState !== undefined) {
+          updatingRef.current = true;
+          const initialEvent = new CustomEvent("initial_state_push", {
+            detail: {},
+          });
+          child.setUIState(initialState, initialEvent);
+          updatingRef.current = false;
+        }
       }
     },
     unregisterChild: (child) => {
@@ -23479,6 +23647,10 @@ const INTERNAL_EVENT_SET = new Set([
   // so the picker knows the child's current value (e.g. for "store value at open"),
   // but no action pipeline, command, or synthetic input event should fire.
   "facade_child_mount_sync",
+  // Facade pushing its current state (from value/defaultValue) down to the first child
+  // on registration, and group pushing value/defaultValue to children on registerChild.
+  // Equivalent to defaultValue initialization: no uiAction, no commands, no parent notification.
+  "initial_state_push",
 ]);
 const isInternalEvent = (e) => {
   return INTERNAL_EVENT_SET.has(e.type);
@@ -24282,6 +24454,12 @@ const useControlgroupProps = (props, {
     cascadeValidationToChildren
   });
   const [boundAction] = useActionBoundToOneParam(action, uiGroupStateController.uiStateSignal);
+  // Mirror single-input behaviour: a controlled value with no handler makes the
+  // group read-only so children don't appear interactive when they can't change.
+  const implicitReadOnly = uiGroupStateController.hasValueProp && !action && !props.uiAction;
+  if (implicitReadOnly && !props.readOnly) {
+    props.readOnly = true;
+  }
   const [actionRequester, setActionRequester] = useState();
   const [controlRootProps, controlgroupProps] = useInteractiveProps(props, {
     uiStateController: uiGroupStateController,
@@ -30480,25 +30658,7 @@ const ControlGroup = props => {
     wantRequesterButtonState: true,
     controlType: props.type || "control_group",
     stateType: "object",
-    cascadeValidationToChildren: true,
-    aggregateChildStates: childUIStateControllers => {
-      const groupValues = {};
-      for (const childUIStateController of childUIStateControllers) {
-        const {
-          name,
-          uiState,
-          allowNameless
-        } = childUIStateController;
-        if (!name) {
-          if (!allowNameless) {
-            console.warn("A ControlGroup child is missing a name property, its state won't be included in the group state", childUIStateController);
-          }
-          continue;
-        }
-        groupValues[name] = uiState;
-      }
-      return groupValues;
-    }
+    cascadeValidationToChildren: true
   });
   const {
     children
@@ -31979,7 +32139,6 @@ const NAVI_TYPE_DEFAULTS = {
   },
   navi_number: {
     type: "text",
-    inputMode: "numeric",
     autoCorrect: "off",
     spellcheck: false,
     autoComplete: "off",
@@ -32057,6 +32216,16 @@ const resolveInputProps = (props) => {
   const currentTypeDefaults = NAVI_TYPE_DEFAULTS[currentType];
   if (!currentTypeDefaults) {
     return;
+  }
+  // For navi_number: choose inputMode based on whether step/min/max suggest decimals.
+  // inputMode="numeric" (integer keyboard) vs "decimal" (keyboard with decimal separator).
+  if (currentType === "navi_number" && props.inputMode === undefined) {
+    props.inputMode =
+      hasDecimalPlaces(props.step) ||
+      hasDecimalPlaces(props.min) ||
+      hasDecimalPlaces(props.max)
+        ? "decimal"
+        : "numeric";
   }
   for (const key of Object.keys(currentTypeDefaults)) {
     if (props[key] === undefined) {
@@ -32150,6 +32319,14 @@ const STEP_FORMATTER_BY_TYPE = {
   "time": timeStringToSeconds,
   "datetime-local": timeStringToSeconds,
   "datetime": timeStringToSeconds,
+};
+
+const hasDecimalPlaces = (value) => {
+  if (value === undefined || value === null) {
+    return false;
+  }
+  const num = Number(value);
+  return !isNaN(num) && !Number.isInteger(num);
 };
 
 installImportMetaCssBuild(import.meta);const css$y = /* css */`
@@ -32422,7 +32599,8 @@ const InputRangeFieldInterface = props => {
   };
   resolveInputProps(props);
   const [rangeRootProps, rangeHostProps] = useControlProps(props, {
-    controlType: "input"});
+    controlType: "input"
+  });
   const {
     basePseudoState
   } = rangeHostProps;
@@ -32523,7 +32701,7 @@ const RangePseudoElements = ["::-navi-loader"];
 
 const InputModeResolver = props => {
   const Next = useNextResolver();
-  if (props.inputMode === "numeric") {
+  if (props.inputMode === "numeric" || props.inputMode === "decimal") {
     return jsx(InputModeNumeric, {
       ...props
     });
@@ -33078,6 +33256,38 @@ const InputTextualWithSuggestions = props => {
   });
 };
 
+// When readonly focus and mousedown should select input content
+// (the only relevant interaction to perform on readonly is copying the value)
+// Nice side effect is that input_group.jsx will see all input is selected
+// and arrow left/right will always nav between inputs.
+// (Otherwise we would prevent left/right + show calllout about readonly)
+const useAutoSelectReadOnly = (props) => {
+  const onFocus = (e) => {
+    props.onFocus(e);
+    if (e.defaultPrevented) {
+      return;
+    }
+    if (!e.target.readOnly) {
+      return;
+    }
+    e.preventDefault();
+    e.target.select();
+  };
+  const onMouseDown = (e) => {
+    props.onMouseDown(e);
+    if (e.defaultPrevented) {
+      return;
+    }
+    if (!e.target.readOnly) {
+      return;
+    }
+    e.preventDefault();
+    e.target.select();
+  };
+
+  return { onFocus, onMouseDown };
+};
+
 installImportMetaCssBuild(import.meta);/**
  * Input component for all textual input types.
  *
@@ -33513,35 +33723,14 @@ const InputTextualFirstResolver = props => {
 };
 const InputTextual = createComponentResolver([InputTextualFirstResolver, InputWithListResolver, InputWithSuggestionsResolver, InputTypeResolver, InputModeResolver, InputHeadlessResolver, InputTextualUI]);
 const RealInput = props => {
+  const autoSelectReadOnlyProps = useAutoSelectReadOnly(props);
   return jsx(Box, {
     ...props,
     as: "input",
-    baseClassName: "navi_control_input"
-    // When readonly focus and mousedown should select input content
-    // (the only relevant interaction to perform on readonly is copying the value)
-    // Nice side effect is that input_group.jsx will see all input is selected
-    // and arrow left/right will always nav between inputs.
-    // (Otherwise we would prevent left/right + show calllout about readonly)
-    ,
-
-    onFocus: e => {
-      props.onFocus(e);
-      if (!e.defaultPrevented && e.target.readOnly) {
-        e.preventDefault();
-        e.target.select();
-      }
-    },
-    onMouseDown: e => {
-      props.onMouseDown(e);
-      if (!e.defaultPrevented && e.target.readOnly) {
-        e.preventDefault();
-        e.target.select();
-      }
-    }
+    baseClassName: "navi_control_input",
+    ...autoSelectReadOnlyProps,
     // Never set native maxLength — our guard handles it. maxLength stays in
     // inputControlHostProps so form validation constraints still read it.
-    ,
-
     maxLength: undefined
   });
 };
@@ -33856,25 +34045,7 @@ const FormControl = props => {
     wantRequesterButtonState: true,
     controlType: "form",
     stateType: "object",
-    cascadeValidationToChildren: true,
-    aggregateChildStates: childUIStateControllers => {
-      const formValues = {};
-      for (const childUIStateController of childUIStateControllers) {
-        const {
-          name,
-          uiState,
-          allowNameless
-        } = childUIStateController;
-        if (!name) {
-          if (!allowNameless) {
-            console.warn("A form child component is missing a name property, its state won't be included in the form state", childUIStateController);
-          }
-          continue;
-        }
-        formValues[name] = uiState;
-      }
-      return formValues;
-    }
+    cascadeValidationToChildren: true
   });
   const {
     basePseudoState,
@@ -34100,19 +34271,7 @@ const CheckboxGroupInterface = props => {
     ...props
   }, {
     stateType: "array",
-    controlType: "checkbox_group",
-    childControlFilter: childUIStateController => {
-      return childUIStateController.controlType === "input" && childUIStateController.controlHostProps.type === "checkbox";
-    },
-    aggregateChildStates: childUIStateControllers => {
-      const values = [];
-      for (const childUIStateController of childUIStateControllers) {
-        if (childUIStateController.uiState) {
-          values.push(childUIStateController.uiState);
-        }
-      }
-      return values.length === 0 ? undefined : values;
-    }
+    controlType: "checkbox_group"
   });
   useFocusGroup(ref, {
     wrap: "both"
@@ -34439,6 +34598,9 @@ const isTextInputElement = (el) => {
 installImportMetaCssBuild(import.meta);const css$t = /* css */`
   .navi_input_duration {
     --duration-separator-spacing: 4px;
+    --loader-color: var(--navi-loader-color);
+
+    position: relative; /* For loading outline  */
 
     .navi_label {
       &[data-separator] {
@@ -34540,13 +34702,8 @@ const InputDuration = props => {
   // Exception: if the current value already has minutes, show them read-only so
   // the stored precision is faithfully displayed.
   const showMinutes = maxSeconds >= 60 && (stepSeconds === undefined || stepSeconds % 3600 !== 0 || valueHasMinutes);
-
-  // Mirror the single-input behaviour: a controlled value with no handler makes the field read-only.
-  const implicitReadOnly = hasValue && !uiAction && !action;
-  if (implicitReadOnly && !props.readOnly && undefined) ;
   const [groupRootProps, groupHostProps, childrenWrapperProps] = useControlgroupProps({
     ...props,
-    readOnly: props.readOnly || implicitReadOnly,
     uiAction: (groupState, event) => {
       const hiddenInput = ref.current;
       if (hiddenInput) {
@@ -34595,15 +34752,10 @@ const InputDuration = props => {
     // sub-inputs are correctly reset to their original raw string values.
     // ISO 8601 encodes milliseconds as fractional seconds (e.g. "PT0.5S" = 500ms),
     // so fractional seconds are split back into whole seconds + ms.
-    distributeChildUIState: groupState => {
+    distributeChildUIState: (groupState, childUIStateController) => {
       const components = parseDuration(groupState);
       if (!components) {
-        return {
-          hour: undefined,
-          minute: undefined,
-          second: undefined,
-          millisecond: undefined
-        };
+        return undefined;
       }
       const rawSeconds = components.seconds;
       let secondForField = rawSeconds;
@@ -34612,12 +34764,13 @@ const InputDuration = props => {
         secondForField = Math.floor(rawSeconds);
         millisecondForField = Math.round(rawSeconds % 1 * 1000);
       }
-      return {
+      const fieldMap = {
         hour: components.hours,
         minute: components.minutes,
         second: secondForField,
         millisecond: millisecondForField
       };
+      return fieldMap[childUIStateController.name];
     }
   });
   const {
@@ -34639,6 +34792,8 @@ const InputDuration = props => {
     secondValue = Math.floor(rawSecondValue);
     millisecondValue = Math.round(rawSecondValue % 1 * 1000);
   }
+  const loading = basePseudoState[":-navi-loading"];
+  delete basePseudoState[":-navi-loading"];
   return jsxs(Box, {
     ref: groupRef,
     className: "navi_input_duration",
@@ -34648,7 +34803,11 @@ const InputDuration = props => {
     unit: undefined,
     unitHour: undefined,
     ...clipboardProps,
-    children: [jsx("input", {
+    children: [jsx(LoadingOutline, {
+      loading: loading,
+      color: "var(--loader-color)",
+      inset: -1
+    }), jsx("input", {
       ...groupHostProps,
       type: "hidden",
       basePseudoState: undefined // eslint-disable-line react/no-unknown-property
@@ -34960,7 +35119,11 @@ const InputDurationPart = ({
   return jsxs(Label, {
     flex: "y",
     "data-separator": separator || undefined,
-    children: [jsx(Input, {
+    children: [jsx(Input
+    // When autofocused this field should be selected
+    // this help to modify the value on mobile
+    , {
+      autoSelect: true,
       type: "navi_number",
       "navi-input-type": unit,
       name: unit,
@@ -35006,20 +35169,7 @@ const RadioGroupInterface = props => {
     resetOnError: true,
     ...props
   }, {
-    controlType: "radio_group",
-    childControlFilter: childUIStateController => {
-      return childUIStateController.controlType === "input" && childUIStateController.controlHostProps.type === "radio";
-    },
-    aggregateChildStates: childUIStateControllers => {
-      let activeValue;
-      for (const childUIStateController of childUIStateControllers) {
-        if (childUIStateController.uiState) {
-          activeValue = childUIStateController.uiState;
-          break;
-        }
-      }
-      return activeValue;
-    }
+    controlType: "radio_group"
   });
   useFocusGroup(ref, {
     wrap: "both"
@@ -37547,30 +37697,7 @@ const ListSelectable = props => {
   } = props;
   const [listControlRootProps, listControlProps, childrenWrapperProps] = useControlgroupProps(props, {
     stateType: multiple ? "array" : "",
-    controlType: multiple ? "checkbox_group" : "radio_group",
-    childControlFilter: multiple ? childUIStateController => {
-      return childUIStateController.controlType === "input" && childUIStateController.controlHostProps.type === "checkbox";
-    } : childUIStateController => {
-      return childUIStateController.controlType === "input" && childUIStateController.controlHostProps.type === "radio";
-    },
-    aggregateChildStates: multiple ? childUIStateControllers => {
-      const values = [];
-      for (const childUIStateController of childUIStateControllers) {
-        if (childUIStateController.uiState) {
-          values.push(childUIStateController.uiState);
-        }
-      }
-      return values.length === 0 ? undefined : values;
-    } : childUIStateControllers => {
-      let activeValue;
-      for (const childUIStateController of childUIStateControllers) {
-        if (childUIStateController.uiState) {
-          activeValue = childUIStateController.uiState;
-          break;
-        }
-      }
-      return activeValue;
-    }
+    controlType: multiple ? "checkbox_group" : "radio_group"
   });
   const uiGroupStateController = getUIStateControllerById(listControlProps.id);
   useFocusGroup(ref, {
@@ -37655,6 +37782,8 @@ const ListSelectable = props => {
     ...listControlRootProps,
     ...listControlProps,
     name: undefined,
+    value: undefined,
+    defaultValue: undefined,
     selectedIndicator: undefined,
     selectable: undefined,
     multiple: undefined
@@ -38727,7 +38856,13 @@ const useListScrollSync = ({
     }
     hasBeenDisplayedRef.current = true;
     const items = tracker.itemsSignal.peek();
-    const firstSelected = items.find(i => i.selected);
+    const firstSelected = items.find(i => {
+      if (i.selected) {
+        return true;
+      }
+      const inputController = getUIStateControllerById(`${i.id}_input`);
+      return inputController ? inputController.uiStateSignal.peek() : false;
+    });
     if (firstSelected) {
       scrollToItem(firstSelected, {
         event: new CustomEvent("navi_displayed", {
@@ -40605,19 +40740,20 @@ const isWithinPickerContent = (el, pickerEl) => {
 };
 const PickerInput = props => {
   const {
-    ui
+    ui,
+    readOnly
   } = props;
 
   // After type resolution: force readOnly when the input type would open the
   // mobile keyboard. We also suppress the visual ":read-only" state so the
   // picker still looks interactive (it is — just not keyboard-typeable).
-  if (MOBILE_KEYBOARD_TYPES.has(props.type) && !props.readOnly) {
-    props.readOnly = true;
-    props["data-readonly-forced"] = "";
-  }
+  const readOnlyForced = readOnly ? false : MOBILE_KEYBOARD_TYPES.has(props.type || "text");
+  const autoSelectReadOnlyProps = useAutoSelectReadOnly(props);
   return jsx(Box, {
     as: "input",
     ...props,
+    readOnly: readOnlyForced ? true : readOnly,
+    "data-readonly-forced": readOnlyForced ? "" : undefined,
     ui: undefined,
     className: "navi_picker_input",
     pseudoClasses: PickerInputPseudoClasses,
@@ -40630,7 +40766,8 @@ const PickerInput = props => {
         // Ensure tab does not tab through the browser picker elements (like in input date)
         performTabNavigation(e);
       }
-    }
+    },
+    ...autoSelectReadOnlyProps
   });
 };
 // Input types that open the software keyboard on mobile.

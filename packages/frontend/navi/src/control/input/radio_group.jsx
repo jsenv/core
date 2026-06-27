@@ -40,22 +40,6 @@ const RadioGroupInterface = (props) => {
       },
       {
         controlType: "radio_group",
-        childControlFilter: (childUIStateController) => {
-          return (
-            childUIStateController.controlType === "input" &&
-            childUIStateController.controlHostProps.type === "radio"
-          );
-        },
-        aggregateChildStates: (childUIStateControllers) => {
-          let activeValue;
-          for (const childUIStateController of childUIStateControllers) {
-            if (childUIStateController.uiState) {
-              activeValue = childUIStateController.uiState;
-              break;
-            }
-          }
-          return activeValue;
-        },
       },
     );
   useFocusGroup(ref, { wrap: "both" });

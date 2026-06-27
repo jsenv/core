@@ -37,23 +37,6 @@ export const ControlGroup = (props) => {
       controlType: props.type || "control_group",
       stateType: "object",
       cascadeValidationToChildren: true,
-      aggregateChildStates: (childUIStateControllers) => {
-        const groupValues = {};
-        for (const childUIStateController of childUIStateControllers) {
-          const { name, uiState, allowNameless } = childUIStateController;
-          if (!name) {
-            if (!allowNameless) {
-              console.warn(
-                "A ControlGroup child is missing a name property, its state won't be included in the group state",
-                childUIStateController,
-              );
-            }
-            continue;
-          }
-          groupValues[name] = uiState;
-        }
-        return groupValues;
-      },
     });
   const { children } = controlgroupProps;
 

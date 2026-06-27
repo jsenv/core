@@ -117,6 +117,7 @@
       import { render } from "preact";
       import { useSignal } from "@preact/signals";
       import { CallLog, useCallLog } from "../utils/call_log.jsx";
+      import { ClipboardInspect } from "../utils/clipboard_inspect.jsx";
       import {
         Box,
         Field,
@@ -227,6 +228,7 @@
             <InteractivitySection />
             <SearchableSelectSection />
             <PlacePickerSection />
+            <ClipboardSection />
           </Box>
         </NaviDebug>
       );
@@ -270,6 +272,9 @@
             </li>
             <li>
               <a href="#section-3">3. Place picker</a>
+            </li>
+            <li>
+              <a href="#section-4">4. Clipboard</a>
             </li>
           </ol>
         </div>
@@ -773,7 +778,93 @@
         );
       };
 
-      // ── Renumbered sections ──────────────────────────────────────────
+      // ── 4. Clipboard ─────────────────────────────────────────────────
+
+      const ClipboardSection = () => {
+        const fruitSignal = useSignal("Cherry");
+
+        return (
+          <div id="section-4" class="demo-section">
+            <h2>4. Clipboard</h2>
+            <p>
+              Select a value in the source picker then press <kbd>Ctrl+C</kbd> /{" "}
+              <kbd>⌘C</kbd> to copy it. Paste into the target picker with{" "}
+              <kbd>Ctrl+V</kbd> / <kbd>⌘V</kbd> while it is focused.
+            </p>
+            <ClipboardInspect>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "24px",
+                  alignItems: "start",
+                }}
+              >
+                <Box flex="y" spacing="s" alignX="start">
+                  <Text size="s" color="secondary">
+                    Source — pre-filled with <strong>Cherry</strong>
+                  </Text>
+                  <Picker
+                    name="clipboard_source"
+                    placeholder="Select a fruit…"
+                    defaultValue="Cherry"
+                    value={fruitSignal.value}
+                    minWidth="200"
+                    ui={<>Fruit: {fruitSignal.value}</>}
+                  >
+                    <List selectable command="--navi-send">
+                      {FRUIT_OPTIONS.map((opt, i) => (
+                        <List.Item
+                          selectable
+                          key={opt}
+                          id={`csrc_${opt}`}
+                          index={i}
+                          value={opt}
+                          padding="s"
+                          spacing="s"
+                          uiAction={(v) => {
+                            fruitSignal.value = v;
+                          }}
+                        >
+                          {opt}
+                        </List.Item>
+                      ))}
+                    </List>
+                  </Picker>
+                </Box>
+                <Box flex="y" spacing="s" alignX="start">
+                  <Text size="s" color="secondary">
+                    Target — paste here
+                  </Text>
+                  <Picker
+                    name="clipboard_target"
+                    placeholder="Select a fruit…"
+                    minWidth="200"
+                  >
+                    <List selectable command="--navi-send">
+                      {FRUIT_OPTIONS.map((opt, i) => (
+                        <List.Item
+                          selectable
+                          key={opt}
+                          id={`ctgt_${opt}`}
+                          index={i}
+                          value={opt}
+                          padding="s"
+                          spacing="s"
+                        >
+                          {opt}
+                        </List.Item>
+                      ))}
+                    </List>
+                  </Picker>
+                </Box>
+              </div>
+            </ClipboardInspect>
+          </div>
+        );
+      };
+
+      // ── Render ───────────────────────────────────────────────────────
 
       render(<App />, document.getElementById("app"));
     </script>

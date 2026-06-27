@@ -217,39 +217,6 @@ const ListSelectable = (props) => {
     useControlgroupProps(props, {
       stateType: multiple ? "array" : "",
       controlType: multiple ? "checkbox_group" : "radio_group",
-      childControlFilter: multiple
-        ? (childUIStateController) => {
-            return (
-              childUIStateController.controlType === "input" &&
-              childUIStateController.controlHostProps.type === "checkbox"
-            );
-          }
-        : (childUIStateController) => {
-            return (
-              childUIStateController.controlType === "input" &&
-              childUIStateController.controlHostProps.type === "radio"
-            );
-          },
-      aggregateChildStates: multiple
-        ? (childUIStateControllers) => {
-            const values = [];
-            for (const childUIStateController of childUIStateControllers) {
-              if (childUIStateController.uiState) {
-                values.push(childUIStateController.uiState);
-              }
-            }
-            return values.length === 0 ? undefined : values;
-          }
-        : (childUIStateControllers) => {
-            let activeValue;
-            for (const childUIStateController of childUIStateControllers) {
-              if (childUIStateController.uiState) {
-                activeValue = childUIStateController.uiState;
-                break;
-              }
-            }
-            return activeValue;
-          },
     });
   const uiGroupStateController = getUIStateControllerById(listControlProps.id);
   useFocusGroup(ref, {
@@ -340,6 +307,8 @@ const ListSelectable = (props) => {
       {...listControlRootProps}
       {...listControlProps}
       name={undefined}
+      value={undefined}
+      defaultValue={undefined}
       selectedIndicator={undefined}
       selectable={undefined}
       multiple={undefined}

@@ -27,7 +27,12 @@ export const asControlHostValue = (
     if (type === "datetime-local") {
       return asDatetimeLocalString(jsValue);
     }
-    if (type === "number" || type === "range" || inputMode === "numeric") {
+    if (
+      type === "number" ||
+      type === "range" ||
+      inputMode === "numeric" ||
+      inputMode === "decimal"
+    ) {
       return asNumberString(jsValue);
     }
     if (type === "color") {
@@ -101,7 +106,8 @@ export const readControlValue = (controlHost) => {
     if (
       type === "number" ||
       type === "range" ||
-      controlHost.inputMode === "numeric"
+      controlHost.inputMode === "numeric" ||
+      controlHost.inputMode === "decimal"
     ) {
       return readNumberFromInput(controlHost);
     }

@@ -6,6 +6,7 @@ import {
 import { useRef } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
+import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.jsx";
 import { Unit } from "@jsenv/navi/src/text/unit.jsx";
 import {
   ControlgroupChildrenWrapper,
@@ -20,6 +21,9 @@ import { useInputGroup } from "./use_input_group.js";
 const css = /* css */ `
   .navi_input_duration {
     --duration-separator-spacing: 4px;
+    --loader-color: var(--navi-loader-color);
+
+    position: relative; /* For loading outline  */
 
     .navi_label {
       &[data-separator] {
@@ -136,20 +140,10 @@ export const InputDuration = (props) => {
     maxSeconds >= 60 &&
     (stepSeconds === undefined || stepSeconds % 3600 !== 0 || valueHasMinutes);
 
-  // Mirror the single-input behaviour: a controlled value with no handler makes the field read-only.
-  const implicitReadOnly = hasValue && !uiAction && !action;
-  if (implicitReadOnly && !props.readOnly && import.meta.dev) {
-    console.warn(
-      `"duration_group" is controlled by "value" prop. Replace it by "defaultValue" or pass "uiAction"/"action" to make the field interactive.`,
-    );
-    console.log(props);
-  }
-
   const [groupRootProps, groupHostProps, childrenWrapperProps] =
     useControlgroupProps(
       {
         ...props,
-        readOnly: props.readOnly || implicitReadOnly,
         uiAction: (groupState, event) => {
           const hiddenInput = ref.current;
           if (hiddenInput) {
@@ -201,15 +195,10 @@ export const InputDuration = (props) => {
         // sub-inputs are correctly reset to their original raw string values.
         // ISO 8601 encodes milliseconds as fractional seconds (e.g. "PT0.5S" = 500ms),
         // so fractional seconds are split back into whole seconds + ms.
-        distributeChildUIState: (groupState) => {
+        distributeChildUIState: (groupState, childUIStateController) => {
           const components = parseDuration(groupState);
           if (!components) {
-            return {
-              hour: undefined,
-              minute: undefined,
-              second: undefined,
-              millisecond: undefined,
-            };
+            return undefined;
           }
           const rawSeconds = components.seconds;
           let secondForField = rawSeconds;
@@ -222,12 +211,13 @@ export const InputDuration = (props) => {
             secondForField = Math.floor(rawSeconds);
             millisecondForField = Math.round((rawSeconds % 1) * 1000);
           }
-          return {
+          const fieldMap = {
             hour: components.hours,
             minute: components.minutes,
             second: secondForField,
             millisecond: millisecondForField,
           };
+          return fieldMap[childUIStateController.name];
         },
       },
     );
@@ -258,6 +248,9 @@ export const InputDuration = (props) => {
     millisecondValue = Math.round((rawSecondValue % 1) * 1000);
   }
 
+  const loading = basePseudoState[":-navi-loading"];
+  delete basePseudoState[":-navi-loading"];
+
   return (
     <Box
       ref={groupRef}
@@ -269,6 +262,11 @@ export const InputDuration = (props) => {
       unitHour={undefined}
       {...clipboardProps}
     >
+      <LoadingOutline
+        loading={loading}
+        color="var(--loader-color)"
+        inset={-1}
+      />
       <input
         {...groupHostProps}
         type="hidden"
@@ -619,6 +617,9 @@ const InputDurationPart = ({ unit, label, separator, ...props }) => {
   return (
     <Label flex="y" data-separator={separator || undefined}>
       <Input
+        // When autofocused this field should be selected
+        // this help to modify the value on mobile
+        autoSelect
         type="navi_number"
         navi-input-type={unit}
         name={unit}

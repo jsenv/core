@@ -263,9 +263,11 @@ export const visibleRectEffect = (
       }
     }
     on_visual_viewport_resize: {
-      // visualViewport resize is a superset of window resize:
-      // it also fires when the virtual keyboard opens/closes on mobile.
-      // Fall back to window resize when visualViewport is unavailable.
+      // visualViewport resize fires when the virtual keyboard opens/closes on mobile.
+      // window resize catches cases visualViewport misses, notably the browser input
+      // accessory bar (password/autocomplete suggestions) on iOS Safari which changes
+      // the available height without always firing a visualViewport resize event.
+      // We listen to both simultaneously; the check is idempotent so duplicates are harmless.
       const onResize = (e) => {
         autoCheck(e);
       };
@@ -274,12 +276,11 @@ export const visibleRectEffect = (
         addTeardown(() => {
           window.visualViewport.removeEventListener("resize", onResize);
         });
-      } else {
-        window.addEventListener("resize", onResize);
-        addTeardown(() => {
-          window.removeEventListener("resize", onResize);
-        });
       }
+      window.addEventListener("resize", onResize);
+      addTeardown(() => {
+        window.removeEventListener("resize", onResize);
+      });
     }
     on_visual_viewport_scroll: {
       // visualViewport scroll fires when the visual viewport pans independently
