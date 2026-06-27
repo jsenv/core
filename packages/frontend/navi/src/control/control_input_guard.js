@@ -5,16 +5,14 @@
  * The guard owns a single callout token (shared across all rejection reasons) so
  * successive rejections update the same callout rather than stacking.
  *
- * Usage: `uiStateController.inputGuard = createInputGuard(uiStateController)`
- * (created after `uiStateController.rules` is available)
+ * Exposed as `controller.rules.guard` (created inside `createControlRules`).
  *
  * Props read from `controller.props` on each call (always up to date):
  *   - `preventInvalidInput`  — block chars that don't match `inputMode`/`allowedChars`
- *   - `preventLengthOverflow` — block/autofix values that exceed `maxLength`
+ *   - `preventLengthOverflow` — block keydown / truncate paste+set that exceed `maxLength`
  *   - `inputMode`             — "numeric" → digits only
  *   - `allowedChars`          — regex character class, e.g. "[0-9A-Z ]"
  *   - `maxLength`             — maximum allowed character count
- *   - `maxLengthAutofix`      — truncate instead of blocking on paste/set
  */
 
 import {
@@ -76,14 +74,8 @@ export const createInputGuard = (controller) => {
    *   { fixedValue }  — value was truncated to maxLength (callout shown as info)
    */
   const checkValue = (value, e) => {
-    const {
-      preventInvalidInput,
-      inputMode,
-      allowedChars,
-      preventLengthOverflow,
-      maxLength,
-      maxLengthAutofix,
-    } = controller.props;
+    const { preventInvalidInput, inputMode, allowedChars, preventLengthOverflow, maxLength } =
+      controller.props;
 
     if (preventInvalidInput) {
       const charsMsg = getInvalidCharsMessage(value, { inputMode, allowedChars });
@@ -93,13 +85,11 @@ export const createInputGuard = (controller) => {
       }
     }
     if (preventLengthOverflow) {
-      const lengthResult = getLengthOverflowResult(value, { maxLength, maxLengthAutofix });
+      const lengthResult = getLengthOverflowResult(value, { maxLength });
       if (lengthResult) {
+        // Always autofix: truncate to maxLength and show info callout
         show(lengthResult.message, e);
-        if (lengthResult.fixedValue !== undefined) {
-          return { fixedValue: lengthResult.fixedValue };
-        }
-        return { blocked: true };
+        return { fixedValue: lengthResult.fixedValue };
       }
     }
     clear(e);

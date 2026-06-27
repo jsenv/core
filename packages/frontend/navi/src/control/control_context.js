@@ -90,7 +90,6 @@ export const CONTROL_PROP_SET = new Set([
   "preventInvalidInput",
   "allowedChars",
   "preventLengthOverflow",
-  "maxLengthAutofix",
 ]);
 
 export const MessagePropsRefContext = createContext();

@@ -623,42 +623,27 @@ naviI18n.addAll({
   },
 });
 
-// preventInvalidInput callout messages
+// input guard callout messages (preventInvalidInput / preventLengthOverflow)
 naviI18n.addAll({
-  // Keydown: single char rejected because field is numeric-only
-  "input.prevent_invalid.key.numeric": {
-    fr: "Ce champ n'accepte que des chiffres.",
-    en: "This field only accepts digits.",
+  // Numeric-only field — shown on keydown AND on paste/set (same rule, same message)
+  "input.guard.number": {
+    fr: "Ce champ ne peut contenir que des chiffres.",
+    en: "This field can only contain digits.",
   },
-  // Keydown: single char rejected because it doesn't match allowedChars
-  "input.prevent_invalid.key.chars": {
-    fr: "Ce caractère n'est pas autorisé.",
-    en: "This character is not allowed.",
+  // Custom allowedChars field — shown on keydown AND on paste/set
+  "input.guard.chars": {
+    fr: "Ce champ ne peut contenir que les caractères autorisés.",
+    en: "This field can only contain allowed characters.",
   },
-  // Keydown: one more character would exceed maxLength
-  "input.prevent_invalid.key.max_length": {
+  // maxLength: keydown blocked (one character would exceed the limit)
+  "input.guard.max_length.typing": {
     fr: "Longueur maximale de [max] caractère[s] atteinte.",
     en: "Maximum length of [max] character[s] reached.",
   },
-  // Paste / external set: rejected because field is numeric-only
-  "input.prevent_invalid.value.numeric": {
-    fr: "Cette valeur contient des caractères non numériques.",
-    en: "This value contains non-numeric characters.",
-  },
-  // Paste / external set: rejected because it doesn't match allowedChars
-  "input.prevent_invalid.value.chars": {
-    fr: "Cette valeur contient des caractères non autorisés.",
-    en: "This value contains disallowed characters.",
-  },
-  // Paste / external set: blocked because value exceeds maxLength (no autofix)
-  "input.prevent_invalid.value.max_length": {
-    fr: "La valeur dépasse la limite de [max] caractère[s].",
-    en: "The value exceeds the limit of [max] character[s].",
-  },
-  // Paste / external set: value was truncated to maxLength (autofix applied)
-  "input.prevent_invalid.value.max_length_truncated": {
-    fr: "Valeur tronquée à [max] caractère[s].",
-    en: "Value truncated to [max] character[s].",
+  // maxLength: paste/set truncated to maxLength (autofix always applied)
+  "input.guard.max_length.value": {
+    fr: "Ce champ ne peut pas contenir plus de [max] caractère[s], une partie a été tronquée.",
+    en: "This field cannot contain more than [max] character[s]; the value was truncated.",
   },
 });
 

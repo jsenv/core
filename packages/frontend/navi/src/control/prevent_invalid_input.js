@@ -3,12 +3,15 @@
  *
  * - `preventInvalidInput` — blocks characters that don't match the allowed set
  *   (driven by `inputMode="numeric"` or a custom `allowedChars` pattern).
- * - `preventLengthOverflow` — blocks input that would exceed `maxLength`
- *   (optionally autofixes paste/set by truncating to `maxLength`).
+ * - `preventLengthOverflow` — blocks keydown input that would exceed `maxLength`,
+ *   and truncates to `maxLength` on paste / external set.
  *
  * Interaction points:
  *   • keydown  → `getInvalidCharMessage` + `getMaxLengthInsertionMessage`
  *   • paste / external set → `getInvalidCharsMessage` + `getLengthOverflowResult`
+ *
+ * Char validation uses the same `type.*` message keys for both keydown and paste/set
+ * — the rule is the same regardless of how the input arrived.
  *
  * All functions are side-effect free. Callout management lives in control_input_guard.js.
  */
@@ -29,10 +32,10 @@ export const isTypingIntent = (e) => getKeyboardEventDefaultAction(e) === "type"
  */
 export const getInvalidCharMessage = (char, { inputMode, allowedChars }) => {
   if (inputMode === "numeric" && !/^[0-9]$/.test(char)) {
-    return naviI18n("input.prevent_invalid.key.numeric");
+    return naviI18n("input.guard.number");
   }
   if (allowedChars && !new RegExp(allowedChars).test(char)) {
-    return naviI18n("input.prevent_invalid.key.chars");
+    return naviI18n("input.guard.chars");
   }
   return null;
 };
@@ -47,7 +50,7 @@ export const getMaxLengthInsertionMessage = (el, { maxLength }) => {
   const selEnd = el.selectionEnd ?? el.value.length;
   const newLen = el.value.length - (selEnd - selStart) + 1;
   if (newLen > maxLength) {
-    return naviI18n("input.prevent_invalid.key.max_length", {
+    return naviI18n("input.guard.max_length.typing", {
       max: maxLength,
       s: s(maxLength),
     });
@@ -57,41 +60,32 @@ export const getMaxLengthInsertionMessage = (el, { maxLength }) => {
 
 /**
  * Paste / external set: returns a message if `value` contains disallowed characters,
- * null if characters are valid.
+ * null if characters are valid. Uses the same `type.*` keys as keydown.
  */
 export const getInvalidCharsMessage = (value, { inputMode, allowedChars }) => {
   if (typeof value !== "string") return null;
   if (inputMode === "numeric" && !/^[0-9]*$/.test(value)) {
-    return naviI18n("input.prevent_invalid.value.numeric");
+    return naviI18n("input.guard.number");
   }
   if (allowedChars && !new RegExp(`^(?:${allowedChars})*$`).test(value)) {
-    return naviI18n("input.prevent_invalid.value.chars");
+    return naviI18n("input.guard.chars");
   }
   return null;
 };
 
 /**
- * Paste / external set: checks whether `value` exceeds maxLength.
+ * Paste / external set: when `value` exceeds `maxLength`, returns a truncated value
+ * and an info message. Returns null when the value fits.
  *
- * Returns:
- *   null                    — value fits within maxLength
- *   { message }             — value too long and no autofix
- *   { fixedValue, message } — value truncated to maxLength (autofix mode)
+ * Length overflow on paste/set always autofixes (truncates) — use `getMaxLengthInsertionMessage`
+ * on keydown if you want to block individual keystrokes instead.
  */
-export const getLengthOverflowResult = (value, { maxLength, maxLengthAutofix }) => {
+export const getLengthOverflowResult = (value, { maxLength }) => {
   if (typeof value !== "string") return null;
   if (maxLength === undefined || value.length <= maxLength) return null;
-  if (maxLengthAutofix) {
-    return {
-      fixedValue: value.slice(0, maxLength),
-      message: naviI18n("input.prevent_invalid.value.max_length_truncated", {
-        max: maxLength,
-        s: s(maxLength),
-      }),
-    };
-  }
   return {
-    message: naviI18n("input.prevent_invalid.value.max_length", {
+    fixedValue: value.slice(0, maxLength),
+    message: naviI18n("input.guard.max_length.value", {
       max: maxLength,
       s: s(maxLength),
     }),

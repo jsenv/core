@@ -24,7 +24,6 @@ import {
   onUIStateControllerDestroyed,
 } from "./controller_registry.js";
 import { FormContext } from "./form_context.js";
-import { createInputGuard } from "./control_input_guard.js";
 import { createControlRules } from "./rules/control_rules.js";
 
 /**
@@ -203,8 +202,6 @@ export const useUIStateController = (
     uiStateSignal,
     value: controlInfo.value,
 
-    inputGuard: null,
-
     facadeChild: null,
     getManagedControls: () => {
       if (uiStateController.facadeChild) {
@@ -259,10 +256,9 @@ export const useUIStateController = (
       if (
         e.type === "navi_set_ui_state" &&
         controlType === "input" &&
-        uiStateController.inputGuard &&
         (uiStateController.props.preventInvalidInput || uiStateController.props.preventLengthOverflow)
       ) {
-        const result = uiStateController.inputGuard.checkValue(String(newUIState ?? ""), e);
+        const result = uiStateController.rules.guard.checkValue(String(newUIState ?? ""), e);
         if (result) {
           if (result.fixedValue !== undefined) {
             newUIState = result.fixedValue;
@@ -551,7 +547,6 @@ export const useUIStateController = (
     debugFocus,
   });
   uiStateController.rules = rules;
-  uiStateController.inputGuard = createInputGuard(uiStateController);
   return uiStateController;
 };
 

@@ -1336,6 +1336,8 @@
       const PreventInvalidInputDemo = () => {
         const [entries1, push1, clear1] = useCallLog();
         const [entries2, push2, clear2] = useCallLog();
+        const [entries3, push3, clear3] = useCallLog();
+        const [entries4, push4, clear4] = useCallLog();
 
         return (
           <div class="demo-section" id="prevent-invalid-input">
@@ -1349,8 +1351,7 @@
               caractères (<code>inputMode</code>, <code>allowedChars</code>).
               <br />
               <code>preventLengthOverflow</code> gère la limite de longueur
-              (<code>maxLength</code>), avec option <code>maxLengthAutofix</code>{" "}
-              pour tronquer au lieu de bloquer.
+              (<code>maxLength</code>) : bloque au keydown, tronque au paste/set.
             </p>
 
             {/* 1 — navi_number sans preventInvalidInput */}
@@ -1420,62 +1421,97 @@
               <CallLog entries={entries2} onClear={clear2} />
             </fieldset>
 
-            {/* 3 — maxLength + preventLengthOverflow */}
+            {/* 3 — maxLength=3 sans preventLengthOverflow */}
+            <fieldset style={{ marginTop: "16px" }}>
+              <legend>
+                <code>maxLength={3}</code> — sans{" "}
+                <code>preventLengthOverflow</code>
+              </legend>
+              <p class="desc">
+                Le navigateur applique silencieusement <code>maxlength</code> :
+                aucun callout, aucune explication. La contrainte{" "}
+                <code>maxLength</code> est visible à la soumission si on entre
+                une valeur trop longue via coller ou mise à jour externe.
+              </p>
+              <Form
+                action={(values) => push3("submit", values)}
+                flex="y"
+                spacing="s"
+                alignX="start"
+              >
+                <Input
+                  id="num_max_no_prevent"
+                  name="num_max_no_prevent"
+                  type="navi_number"
+                  maxLength={3}
+                  required
+                />
+                <Box flex spacing="s" alignY="center">
+                  <Button
+                    command="--navi-update"
+                    commandfor="num_max_no_prevent"
+                    command-value="12345"
+                  >
+                    Set "12345" (trop long)
+                  </Button>
+                  <Button
+                    command="--navi-update"
+                    commandfor="num_max_no_prevent"
+                    command-value="12"
+                  >
+                    Set "12" (valide)
+                  </Button>
+                  <Button type="submit">Soumettre</Button>
+                </Box>
+              </Form>
+              <CallLog entries={entries3} onClear={clear3} />
+            </fieldset>
+
+            {/* 4 — maxLength=3 avec preventLengthOverflow */}
             <fieldset style={{ marginTop: "16px" }}>
               <legend>
                 <code>maxLength={3}</code> + <code>preventLengthOverflow</code>
               </legend>
               <p class="desc">
-                Sans <code>preventLengthOverflow</code>, le navigateur applique
-                silencieusement <code>maxlength</code> sur le champ natif. Avec,
-                c'est notre code qui prend en charge la limite : le 4ème
-                caractère est bloqué avec un callout explicatif. La validation
-                formulaire (<code>maxLength</code>) reste active à la soumission.
-              </p>
-              <Box flex spacing="l" alignY="start">
-                <Box flex="y" spacing="xs" alignX="start">
-                  <span class="desc" style={{ margin: 0 }}>
-                    Sans (natif silencieux)
-                  </span>
-                  <Input
-                    name="num_max_no_prevent"
-                    type="navi_number"
-                    maxLength={3}
-                    defaultValue="12"
-                  />
-                </Box>
-                <Box flex="y" spacing="xs" alignX="start">
-                  <span class="desc" style={{ margin: 0 }}>
-                    Avec (bloqué + callout)
-                  </span>
-                  <Input
-                    name="num_max_with_prevent"
-                    type="navi_number"
-                    maxLength={3}
-                    defaultValue="12"
-                    preventLengthOverflow
-                  />
-                </Box>
-              </Box>
-              <p class="desc" style={{ marginTop: "12px" }}>
-                La validation à la soumission fonctionne dans les deux cas :
+                Le 4ème caractère est bloqué au keydown avec un callout. Au
+                paste ou mise à jour externe, la valeur est tronquée à 3
+                caractères et un callout informe de la troncature. La
+                validation formulaire reste active à la soumission.
               </p>
               <Form
-                action={(values) => push2("submit", values)}
+                action={(values) => push4("submit", values)}
                 flex="y"
                 spacing="s"
                 alignX="start"
-                style={{ marginTop: "8px" }}
               >
                 <Input
-                  name="num_max_submit"
+                  id="num_max_with_prevent"
+                  name="num_max_with_prevent"
                   type="navi_number"
                   maxLength={3}
                   preventLengthOverflow
                   required
+                  uiAction={(v) => push4("uiAction", v)}
                 />
-                <Button type="submit">Soumettre</Button>
+                <Box flex spacing="s" alignY="center">
+                  <Button
+                    command="--navi-update"
+                    commandfor="num_max_with_prevent"
+                    command-value="12345"
+                  >
+                    Set "12345" (tronqué → "123")
+                  </Button>
+                  <Button
+                    command="--navi-update"
+                    commandfor="num_max_with_prevent"
+                    command-value="12"
+                  >
+                    Set "12" (valide)
+                  </Button>
+                  <Button type="submit">Soumettre</Button>
+                </Box>
               </Form>
+              <CallLog entries={entries4} onClear={clear4} />
             </fieldset>
           </div>
         );

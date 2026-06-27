@@ -14,18 +14,19 @@
 
 import { createPubSub } from "@jsenv/dom";
 
+import { createInputGuard } from "../control_input_guard.js";
 import { createCalloutManager } from "./control_callout.js";
 import { createControlInteraction } from "./control_interaction.js";
 import { createControlValidation } from "./control_validation.js";
 
 /**
- * Creates all three rule managers for a controller and wires them together.
+ * Creates all rule managers for a controller and wires them together.
  *
  * @param {object} controller - The UI state controller.
  * @param {object} [options]
  * @param {Function} [options.debugUIState]  - Debug logger for state/validity events.
  * @param {Function} [options.debugFocus]    - Debug logger for focus events.
- * @returns {{ callout, interaction, validation, uninstall }}
+ * @returns {{ callout, interaction, validation, guard, uninstall }}
  */
 export const createControlRules = (
   controller,
@@ -49,10 +50,13 @@ export const createControlRules = (
     debugUIState,
   });
 
+  const guard = createInputGuard(controller);
+
   return {
     callout,
     interaction,
     validation,
+    guard,
     uninstall: teardown,
   };
 };
