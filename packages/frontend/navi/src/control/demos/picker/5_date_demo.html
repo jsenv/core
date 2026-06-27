@@ -638,8 +638,8 @@
               <h3 class="states-col-header">format="short" — format court</h3>
               <p class="desc">
                 Forme abrégée via <code>format="short"</code> (ex&nbsp;:
-                «&nbsp;Mer. 3 juin&nbsp;»). La largeur varie légèrement selon
-                le mois, mais reste compacte.
+                «&nbsp;Mer. 3 juin&nbsp;»). La largeur varie légèrement selon le
+                mois, mais reste compacte.
               </p>
               <Box flex="y" spacing="xs" alignX="start">
                 {DEMO_DATES.map((d, i) => (
@@ -928,9 +928,9 @@
             <h2>6. Clipboard</h2>
             <p class="desc">
               La source est en <strong>français</strong> (
-              <code>ui={"{<Picker.UI.Date lang=\"fr\" />}"}</code>) et la cible
-              en <strong>anglais</strong> (
-              <code>ui={"{<Picker.UI.Date lang=\"en\" />}"}</code>). Copier /
+              <code>ui={'{<Picker.UI.Date lang="fr" />}'}</code>) et la cible en{" "}
+              <strong>anglais</strong> (
+              <code>ui={'{<Picker.UI.Date lang="en" />}'}</code>). Copier /
               couper dans la source puis coller dans la cible : le texte affiché
               change de langue mais la date sous-jacente est préservée.
             </p>
@@ -944,9 +944,7 @@
             >
               <Box flex="y" spacing="s" alignX="start">
                 <p class="desc" style={{ margin: 0 }}>
-                  Source — <strong>fr</strong> · sélectionnez puis{" "}
-                  <kbd>Ctrl+C</kbd> / <kbd>⌘C</kbd> ou{" "}
-                  <kbd>Ctrl+X</kbd> / <kbd>⌘X</kbd>
+                  Source — <strong>fr</strong>
                 </p>
                 <Picker
                   name="clipboard_source"
@@ -957,8 +955,7 @@
               </Box>
               <Box flex="y" spacing="s" alignX="start">
                 <p class="desc" style={{ margin: 0 }}>
-                  Cible — <strong>en</strong> · <kbd>Ctrl+V</kbd> /{" "}
-                  <kbd>⌘V</kbd> ici
+                  Cible — <strong>en</strong>
                 </p>
                 <Picker
                   name="clipboard_target"
