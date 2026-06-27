@@ -85,12 +85,13 @@ const css = /* css */ `
   }
 
   .navi_list_item[navi-selectable] {
+    --list-item-padding-x-default: inherit;
+    --list-item-padding-y-default: inherit;
+
     outline-width: var(--list-item-outline-width);
     outline-color: var(--list-item-outline-color);
     outline-offset: var(--list-item-outline-offset);
     cursor: var(--x-list-item-cursor);
-    --list-item-padding-x-default: inherit;
-    --list-item-padding-y-default: inherit;
 
     &[navi-selectable] {
       user-select: none;
