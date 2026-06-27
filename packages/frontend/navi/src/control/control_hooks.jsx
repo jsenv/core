@@ -272,8 +272,8 @@ export const useControlProps = (
     };
     const wasCheckedAtMousedownRef = useRef(false);
 
-    const { preventInvalidInput, preventLengthOverflow } = props;
-    const hasInputGuard = preventInvalidInput || preventLengthOverflow;
+    const { allowedCharsGuard, maxLengthGuard } = props;
+    const hasInputGuard = allowedCharsGuard || maxLengthGuard !== undefined;
 
     const getDefaultEventReactionDefinitions = () => {
       const keyDownDefault = (e) => {

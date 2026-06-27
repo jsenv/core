@@ -16,6 +16,7 @@ export const CONTROL_ATTRIBUTE_SET = new Set([
   "checked",
   "placeholder",
   "inputMode",
+  "pattern",
   "autoComplete",
   "spellcheck",
   "autoCorrect",
@@ -87,9 +88,8 @@ export const CONTROL_PROP_SET = new Set([
   "resetOnAbort",
   "resetOnError",
 
-  "preventInvalidInput",
-  "allowedChars",
-  "preventLengthOverflow",
+  "allowedCharsGuard",
+  "maxLengthGuard",
 ]);
 
 export const MessagePropsRefContext = createContext();

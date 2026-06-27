@@ -34,6 +34,10 @@ import { InputTextualContext } from "./input_textual_context.js";
 import { InputWithListResolver } from "./input_with_list.jsx";
 import { InputWithSuggestionsResolver } from "./input_with_suggestions.jsx";
 import { resolveInputProps } from "./resolve_input_props.js";
+import {
+  resolveCharClass,
+  resolveInputModeFromAllowedChars,
+} from "../allowed_chars_presets.js";
 
 const css = /* css */ `
   @layer navi {
@@ -395,6 +399,22 @@ const InputTextualFirstResolver = (props) => {
   props.ref = props.ref || defaultRef;
   resolveInputProps(props);
 
+  // allowedCharsGuard → auto inputMode + auto pattern for mobile keyboard hints
+  if (props.allowedCharsGuard) {
+    if (props.inputMode === undefined) {
+      const autoMode = resolveInputModeFromAllowedChars(props.allowedCharsGuard);
+      if (autoMode) props.inputMode = autoMode;
+    }
+    if (props.pattern === undefined) {
+      const charClass = resolveCharClass(props.allowedCharsGuard);
+      props.pattern = `${charClass}*`;
+    }
+  }
+  // maxLengthGuard → expose as maxLength so form validation constraints pick it up
+  if (props.maxLengthGuard !== undefined && props.maxLength === undefined) {
+    props.maxLength = props.maxLengthGuard;
+  }
+
   return <Next {...props} />;
 };
 export const InputTextual = createComponentResolver([
@@ -432,9 +452,8 @@ const RealInput = (props) => {
           e.target.select();
         }
       }}
-      // When preventLengthOverflow is active our code enforces maxLength — don't set the
-      // native attribute or the browser silently blocks input before our guard can run.
-      // We keep maxLength in inputControlHostProps so form validation still reads it.
+      // Never set native maxLength — our guard handles it. maxLength stays in
+      // inputControlHostProps so form validation constraints still read it.
       maxLength={undefined}
     />
   );

@@ -8,11 +8,8 @@
  * Exposed as `controller.rules.guard` (created inside `createControlRules`).
  *
  * Props read from `controller.props` on each call (always up to date):
- *   - `preventInvalidInput`  — block chars that don't match `inputMode`/`allowedChars`
- *   - `preventLengthOverflow` — block keydown / truncate paste+set that exceed `maxLength`
- *   - `inputMode`             — "numeric" → digits only
- *   - `allowedChars`          — regex character class, e.g. "[0-9A-Z ]"
- *   - `maxLength`             — maximum allowed character count
+ *   - `allowedCharsGuard` — preset name (e.g. "numeric", "tel") or raw char class "[A-Z]"
+ *   - `maxLengthGuard`    — maximum character count (enables both guard and constraint)
  */
 
 import {
@@ -21,6 +18,10 @@ import {
   getLengthOverflowResult,
   getMaxLengthInsertionMessage,
 } from "./prevent_invalid_input.js";
+import {
+  isNumericAllowedChars,
+  resolveCharClass,
+} from "./allowed_chars_presets.js";
 import { createOpenToken } from "./rules/control_callout.js";
 
 export const createInputGuard = (controller) => {
@@ -44,18 +45,19 @@ export const createInputGuard = (controller) => {
    * Returns true when the key should be blocked (caller must call e.preventDefault()).
    */
   const checkKeydown = (e, el) => {
-    const { preventInvalidInput, inputMode, allowedChars, preventLengthOverflow, maxLength } =
-      controller.props;
+    const { allowedCharsGuard, maxLengthGuard } = controller.props;
 
-    if (preventInvalidInput) {
-      const charMsg = getInvalidCharMessage(e.key, { inputMode, allowedChars });
+    if (allowedCharsGuard) {
+      const charClass = resolveCharClass(allowedCharsGuard);
+      const isNumeric = isNumericAllowedChars(allowedCharsGuard);
+      const charMsg = getInvalidCharMessage(e.key, { charClass, isNumeric });
       if (charMsg) {
         show(charMsg, e);
         return true;
       }
     }
-    if (preventLengthOverflow) {
-      const lenMsg = getMaxLengthInsertionMessage(el, { maxLength });
+    if (maxLengthGuard !== undefined) {
+      const lenMsg = getMaxLengthInsertionMessage(el, { maxLength: maxLengthGuard });
       if (lenMsg) {
         show(lenMsg, e);
         return true;
@@ -71,23 +73,23 @@ export const createInputGuard = (controller) => {
    * Returns:
    *   null            — value is valid, proceed normally
    *   { blocked }     — value rejected, caller must not apply it (callout shown)
-   *   { fixedValue }  — value was truncated to maxLength (callout shown as info)
+   *   { fixedValue }  — value was truncated to maxLengthGuard (callout shown as info)
    */
   const checkValue = (value, e) => {
-    const { preventInvalidInput, inputMode, allowedChars, preventLengthOverflow, maxLength } =
-      controller.props;
+    const { allowedCharsGuard, maxLengthGuard } = controller.props;
 
-    if (preventInvalidInput) {
-      const charsMsg = getInvalidCharsMessage(value, { inputMode, allowedChars });
+    if (allowedCharsGuard) {
+      const charClass = resolveCharClass(allowedCharsGuard);
+      const isNumeric = isNumericAllowedChars(allowedCharsGuard);
+      const charsMsg = getInvalidCharsMessage(value, { charClass, isNumeric });
       if (charsMsg) {
         show(charsMsg, e);
         return { blocked: true };
       }
     }
-    if (preventLengthOverflow) {
-      const lengthResult = getLengthOverflowResult(value, { maxLength });
+    if (maxLengthGuard !== undefined) {
+      const lengthResult = getLengthOverflowResult(value, { maxLength: maxLengthGuard });
       if (lengthResult) {
-        // Always autofix: truncate to maxLength and show info callout
         show(lengthResult.message, e);
         return { fixedValue: lengthResult.fixedValue };
       }
