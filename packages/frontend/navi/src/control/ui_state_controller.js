@@ -745,6 +745,11 @@ export const useUIGroupStateController = (
     );
   }
   const parentUIStateController = useContext(ParentUIStateControllerContext);
+  const hasValueProp = Object.prototype.hasOwnProperty.call(props, "value");
+  const hasDefaultValueProp = Object.prototype.hasOwnProperty.call(
+    props,
+    "defaultValue",
+  );
   const { id, name, value, defaultValue, uiAction, command } = props;
   const ref = props.ref;
   const uiActionRef = useRef(uiAction);
@@ -884,14 +889,18 @@ export const useUIGroupStateController = (
   const existingController = controllerRef.current;
   if (existingController) {
     const prevValue = existingController.value;
+    const prevHasValueProp = existingController.hasValueProp;
     existingController.props = props;
     existingController.id = id;
     existingController.name = name;
     existingController.value = value;
+    existingController.defaultValue = defaultValue;
+    existingController.hasValueProp = hasValueProp;
+    existingController.hasDefaultValueProp = hasDefaultValueProp;
     uiActionRef.current = uiAction;
-    // When the controlled value prop changes, silently cascade to children
-    // that are not individually controlled (hasStateProp=false).
-    if (value !== undefined && !compareTwoJsValues(value, prevValue)) {
+    // When the controlled value prop changes (or when becoming controlled for the
+    // first time), silently cascade to children that have no individual state prop.
+    if (hasValueProp && (!prevHasValueProp || !compareTwoJsValues(value, prevValue))) {
       const propagateDownEvent = new CustomEvent(
         "propagate_down_set_ui_state",
         { detail: {} },
@@ -928,6 +937,8 @@ export const useUIGroupStateController = (
     name,
     value,
     defaultValue,
+    hasValueProp,
+    hasDefaultValueProp,
     props,
     uiState: fallbackState,
     uiStateSignal,
@@ -1033,35 +1044,30 @@ export const useUIGroupStateController = (
       debugUIGroup(
         `${controlType}.registerChild("${childControlType}") -> registered (total: ${childUIStateControllerArray.length})`,
       );
-      // Auto-derive child's initial state from the group's value/defaultValue when
-      // the child has no individually-controlled state prop.
+      // Auto-derive child's initial state from the group's value/defaultValue
+      // when the child has no individually-controlled state prop.
       if (!childUIStateController.hasStateProp) {
-        const groupValue = groupUIStateController.value;
-        const groupDefaultValue = groupUIStateController.defaultValue;
-        let cascadeValue;
-        if (groupValue !== undefined) {
-          cascadeValue = groupValue;
-        } else if (
-          groupDefaultValue !== undefined &&
-          !childUIStateController._initializedFromGroupDefault
-        ) {
-          childUIStateController._initializedFromGroupDefault = true;
-          cascadeValue = groupDefaultValue;
-        }
-        if (cascadeValue !== undefined) {
+        const propagateDownEvent = new CustomEvent(
+          "propagate_down_set_ui_state",
+          { detail: {} },
+        );
+        if (groupUIStateController.hasValueProp) {
+          // Controlled: always cascade current group value (even undefined = deselect all).
           const childNewState = resolvedDistributeChildUIState(
-            cascadeValue,
+            groupUIStateController.value,
             childUIStateController,
           );
           if (childNewState !== CANNOT_DERIVE) {
-            const propagateDownEvent = new CustomEvent(
-              "propagate_down_set_ui_state",
-              { detail: {} },
-            );
-            childUIStateController.setUIState(
-              childNewState,
-              propagateDownEvent,
-            );
+            childUIStateController.setUIState(childNewState, propagateDownEvent);
+          }
+        } else if (groupUIStateController.hasDefaultValueProp) {
+          // Uncontrolled: set initial state from defaultValue on mount.
+          const childNewState = resolvedDistributeChildUIState(
+            groupUIStateController.defaultValue,
+            childUIStateController,
+          );
+          if (childNewState !== CANNOT_DERIVE) {
+            childUIStateController.setUIState(childNewState, propagateDownEvent);
           }
         }
       }

@@ -952,8 +952,21 @@ export const useControlgroupProps = (
     action,
     uiGroupStateController.uiStateSignal,
   );
+  // Mirror single-input behaviour: a controlled value with no handler makes the
+  // group read-only so children don't appear interactive when they can't change.
+  const implicitReadOnly =
+    uiGroupStateController.hasValueProp && !action && !props.uiAction;
+  if (import.meta.dev && implicitReadOnly && !props.readOnly) {
+    console.warn(
+      `[${controlType}] is controlled (has "value" prop) but has no action handler. ` +
+        `Use "defaultValue" for uncontrolled mode, or provide "action"/"uiAction".`,
+    );
+  }
+  const effectiveProps = implicitReadOnly
+    ? { ...props, readOnly: props.readOnly || true }
+    : props;
   const [actionRequester, setActionRequester] = useState();
-  const [controlRootProps, controlgroupProps] = useInteractiveProps(props, {
+  const [controlRootProps, controlgroupProps] = useInteractiveProps(effectiveProps, {
     uiStateController: uiGroupStateController,
     boundAction,
     // here the state is derived from the children
