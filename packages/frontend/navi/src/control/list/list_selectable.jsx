@@ -132,6 +132,7 @@ const css = /* css */ `
           --list-item-background-color-keyboard-pointed
         );
         outline-style: solid;
+        --x-list-item-border-color: transparent;
 
         /* Selected must win over keyboard-pointed */
         &[data-selected] {

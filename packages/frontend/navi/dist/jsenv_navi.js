@@ -37462,6 +37462,7 @@ installImportMetaCssBuild(import.meta);const css$n = /* css */`
           --list-item-background-color-keyboard-pointed
         );
         outline-style: solid;
+        --x-list-item-border-color: transparent;
 
         /* Selected must win over keyboard-pointed */
         &[data-selected] {
@@ -38225,6 +38226,10 @@ const css$m = /* css */`
     );
     color: var(--x-list-item-color);
     font-weight: var(--x-list-item-font-weight);
+    /* Border-radius can cause background to appear behind the borders or behind the outline */
+    /* padding-box ensure background stays inside borders */
+    /* For outline we also set border-color transparent when focused */
+    background-clip: padding-box;
     background-color: var(--x-list-item-background-color);
     border: var(--x-list-item-border-width) solid
       var(--x-list-item-border-color);
