@@ -21,7 +21,7 @@ import {
 import {
   isNumericAllowedChars,
   resolveCharClass,
-} from "./allowed_chars_presets.js";
+} from "./char_guard_presets.js";
 import { createOpenToken } from "./rules/control_callout.js";
 
 export const createInputGuard = (controller) => {

@@ -60,7 +60,7 @@ import { resolveInputProps } from "./resolve_input_props.js";
 import {
   resolveCharClass,
   resolveInputModeFromAllowedChars,
-} from "../allowed_chars_presets.js";
+} from "../char_guard_presets.js";
 
 const css = /* css */ `
   @layer navi {
