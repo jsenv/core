@@ -72,6 +72,11 @@ import {
 import { FormContext } from "./form_context.js";
 import { addInputEffect } from "./input_effect.js";
 import {
+  checkValue,
+  getInvalidCharMessage,
+  getMaxLengthInsertionMessage,
+} from "./prevent_invalid_input.js";
+import {
   ParentUIStateControllerContext,
   useUIFacadeStateController,
   useUIGroupStateController,
@@ -270,6 +275,22 @@ export const useControlProps = (
       syncUIStateWithDOM(e);
     };
     const wasCheckedAtMousedownRef = useRef(false);
+
+    // preventInvalidInput — stable token (same object reference across renders) used as
+    // the Map key inside calloutManager so successive rejections update the same callout.
+    const preventInvalidInputTokenRef = useRef({});
+    const { preventInvalidInput, inputMode, allowedChars, maxLength, maxLengthAutofix } = props;
+    const showInvalidInputCallout = (message, e) => {
+      uiStateController.rules.callout.addOpenToken(preventInvalidInputTokenRef.current, {
+        message,
+        event: e,
+        skipFocus: true,
+      });
+    };
+    const clearInvalidInputCallout = (e) => {
+      uiStateController.rules.callout.removeOpenToken(preventInvalidInputTokenRef.current, e);
+    };
+
     const getDefaultEventReactionDefinitions = () => {
       const keyDownDefault = (e) => {
         const defaultAction = getKeyboardEventDefaultAction(e);
@@ -570,7 +591,30 @@ export const useControlProps = (
       const isInputTextual = controlType === "input";
       if (isInputTextual) {
         return {
-          keyDown: keyDownDefaultOnInput,
+          keyDown: (e) => {
+            if (
+              preventInvalidInput &&
+              e.key.length === 1 &&
+              !e.ctrlKey &&
+              !e.metaKey &&
+              !e.altKey
+            ) {
+              const charMsg = getInvalidCharMessage(e.key, { inputMode, allowedChars });
+              if (charMsg) {
+                e.preventDefault();
+                showInvalidInputCallout(charMsg, e);
+                return null;
+              }
+              const lenMsg = getMaxLengthInsertionMessage(ref.current, { maxLength });
+              if (lenMsg) {
+                e.preventDefault();
+                showInvalidInputCallout(lenMsg, e);
+                return null;
+              }
+              clearInvalidInputCallout(e);
+            }
+            return keyDownDefaultOnInput(e);
+          },
           input: (e) => {
             return {
               name: "input",
@@ -715,6 +759,32 @@ export const useControlProps = (
     const refComposed = useComposeElementRef(refCallback, ref);
     const onPaste = (e) => {
       props.onPaste?.(e);
+      if (preventInvalidInput) {
+        const pastedText = e.clipboardData?.getData("text") ?? "";
+        const el = ref.current;
+        const selStart = el.selectionStart ?? el.value.length;
+        const selEnd = el.selectionEnd ?? el.value.length;
+        const newValue =
+          el.value.slice(0, selStart) + pastedText + el.value.slice(selEnd);
+        const result = checkValue(newValue, {
+          inputMode,
+          allowedChars,
+          maxLength,
+          maxLengthAutofix,
+        });
+        if (result?.fixedValue !== undefined) {
+          e.preventDefault();
+          clearInvalidInputCallout(e);
+          uiStateController.setUIState(result.fixedValue, e);
+          return;
+        }
+        if (result?.message) {
+          e.preventDefault();
+          showInvalidInputCallout(result.message, e);
+          return;
+        }
+        clearInvalidInputCallout(e);
+      }
       dispatchRequestInteraction(ref.current, {
         event: e,
         name: "paste",
@@ -729,6 +799,33 @@ export const useControlProps = (
       onPaste,
       onInput,
     });
+
+    if (preventInvalidInput && controlType === "input") {
+      const origSet = controlHostProps.onnavi_set_ui_state;
+      if (origSet) {
+        const wrappedSet = (e) => {
+          const result = checkValue(String(e.detail.value ?? ""), {
+            inputMode,
+            allowedChars,
+            maxLength,
+            maxLengthAutofix,
+          });
+          if (result?.fixedValue !== undefined) {
+            clearInvalidInputCallout(e);
+            uiStateController.setUIState(result.fixedValue, e);
+            return;
+          }
+          if (result?.message) {
+            showInvalidInputCallout(result.message, e);
+            return;
+          }
+          clearInvalidInputCallout(e);
+          origSet(e);
+        };
+        controlHostProps.onnavi_set_ui_state = wrappedSet;
+        controlRootProps.onnavi_set_ui_state = wrappedSet;
+      }
+    }
   }
 
   const uiState = uiStateController.uiStateSignal.peek();

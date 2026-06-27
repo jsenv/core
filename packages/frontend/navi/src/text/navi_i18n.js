@@ -623,6 +623,25 @@ naviI18n.addAll({
   },
 });
 
+// preventInvalidInput callout messages
+naviI18n.addAll({
+  // Shown on keydown/paste/set when inputMode="numeric" and a non-digit is entered
+  "input.prevent_invalid.numeric": {
+    fr: "Ce champ doit contenir des chiffres.",
+    en: "This field must only contain digits.",
+  },
+  // Shown on keydown/paste/set when a character doesn't match allowedChars
+  "input.prevent_invalid.chars": {
+    fr: "Caractère non autorisé.",
+    en: "Character not allowed.",
+  },
+  // Shown on keydown when one more character would exceed maxLength
+  "input.prevent_invalid.max_length": {
+    fr: "Longueur maximale de [max] caractère[s] atteinte.",
+    en: "Maximum length of [max] character[s] reached.",
+  },
+});
+
 // Date/time placeholder tokens — shown when no value is selected
 // Override any key to adapt to your language conventions
 naviI18n.addAll({
