@@ -190,13 +190,12 @@ const css = /* css */ `
       }
     }
     .navi_picker_right_slot {
-      --slot-spacing: calc(0.1em);
+      --slot-spacing: var(--x-picker-padding-right);
 
       display: inline-flex;
       height: 1em;
       height: 1lh;
       margin-right: var(--slot-spacing);
-      margin-left: var(--slot-spacing);
       flex-shrink: 0;
       align-items: center;
       align-self: flex-start;
@@ -224,13 +223,18 @@ const css = /* css */ `
       padding: 0;
       background: none;
       border: none;
-      opacity: 0;
-      appearance: none;
       cursor: inherit;
       pointer-events: auto;
 
       &::-webkit-calendar-picker-indicator {
         cursor: inherit;
+      }
+    }
+
+    &[navi-ui-custom] {
+      .navi_picker_input {
+        opacity: 0;
+        appearance: none;
       }
     }
 
@@ -360,6 +364,7 @@ const PickerButton = (props) => {
       data-variant={variant}
       navi-picker=""
       navi-single-line={isSingleLine ? "" : undefined}
+      navi-ui-custom={ui === "default" ? undefined : ""}
       {...pickerRemainingProps}
       basePseudoState={basePseudoState}
       styleCSSVars={PickerStyleCSSVars}
@@ -501,10 +506,7 @@ const PickerInput = (props) => {
   return (
     <Box
       as="input"
-      data-readonly-forced={props.readOnly ? undefined : ""}
       {...props}
-      // must be readOnly to prevent opening keyboard on mobile (and direct update via keyboard too, we want people to use the picker)
-      readOnly
       className="navi_picker_input"
       pseudoClasses={PickerInputPseudoClasses}
       onKeyDown={(e) => {

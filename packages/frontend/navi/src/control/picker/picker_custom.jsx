@@ -17,20 +17,6 @@ import {
 
 const css = /* css */ `
   .navi_picker {
-    .navi_picker_input_companion {
-      position: absolute;
-      top: -1px;
-      right: -1px;
-      bottom: -1px;
-      left: -1px;
-      z-index: -1;
-      padding: 0;
-      border: none;
-      border-radius: inherit;
-      appearance: none;
-      pointer-events: none;
-    }
-
     /* popover */
     &[aria-haspopup="listbox"] {
       .navi_picker_popover {
@@ -185,23 +171,6 @@ export const PickerCustomResolver = (props) => {
 const PickerNative = (props) => {
   const Next = useNextResolver();
 
-  // showPicker() throws InvalidStateError on readonly inputs.
-  // We keep a hidden non-readonly companion whose sole purpose is to proxy
-  // showPicker() calls when the real input is readonly.
-  // It is appended at mount so the browser sees it as a stable DOM element
-  // before any interaction — creating it on-the-fly right before showPicker()
-  // risks the browser rejecting the call.
-  const mutableInputRef = useRef();
-  const callShowPicker = () => {
-    const mutableInput = mutableInputRef.current;
-
-    try {
-      mutableInput.showPicker();
-    } catch {
-      mutableInput.click();
-    }
-  };
-
   return (
     <Next
       {...props}
@@ -224,7 +193,11 @@ const PickerNative = (props) => {
           event: e,
           name: "navi_request_open to show native picker",
           allowed: () => {
-            callShowPicker(pickerEl, pickerInput);
+            try {
+              pickerInput.showPicker();
+            } catch {
+              pickerInput.click();
+            }
           },
         });
       }}
@@ -238,30 +211,21 @@ const PickerNative = (props) => {
             allowed: () => {
               const pickerEl = props.ref.current;
               const pickerInput = getPickerInput(pickerEl);
-              // requestCloseValidityCallout(pickerEl, e);
               if (pickerInput.type === "color") {
                 // nothing to do, color picker whole surface is opening the picker
-                // and cannot be readonly (ignored by browser)
               } else {
                 // other picker might not open the picker when clicking the input surface (only the calendar picker for instance would open)
-                callShowPicker(pickerEl, pickerInput);
+                try {
+                  pickerInput.showPicker();
+                } catch {
+                  pickerInput.click();
+                }
               }
             },
           };
         },
       }}
-    >
-      <input
-        className="navi_picker_input_companion"
-        ref={mutableInputRef}
-        type={props.type}
-        min={props.min}
-        max={props.max}
-        step={props.step}
-        aria-hidden="true"
-        tabIndex="-1"
-      />
-    </Next>
+    />
   );
 };
 
