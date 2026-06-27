@@ -104,7 +104,11 @@ export const REQUIRED_CONSTRAINT = {
       return naviI18n("constraint.required.time");
     }
     const inputMode = field.controlHostProps.inputMode;
-    if (type === "number" || inputMode === "numeric") {
+    if (
+      type === "number" ||
+      inputMode === "numeric" ||
+      inputMode === "decimal"
+    ) {
       return naviI18n("constraint.required.number");
     }
     if (type === "datetime-local") {
@@ -265,7 +269,8 @@ export const MAX_LENGTH_CONSTRAINT = {
     } else if (!isTextarea) {
       return null;
     }
-    const maxLength = field.controlHostProps.maxLength ?? field.props?.maxLengthGuard;
+    const maxLength =
+      field.controlHostProps.maxLength ?? field.props?.maxLengthGuard;
     if (maxLength === undefined) {
       return null;
     }
@@ -308,7 +313,8 @@ export const TYPE_NUMBER_CONSTRAINT = {
     }
     const type = field.controlHostProps.type;
     const inputMode = field.controlHostProps.inputMode;
-    const isNumber = type === "number" || inputMode === "numeric";
+    const isNumber =
+      type === "number" || inputMode === "numeric" || inputMode === "decimal";
     if (!isNumber) {
       return null;
     }
@@ -389,7 +395,8 @@ export const MIN_CONSTRAINT = {
     if (!valueAsString) {
       return null;
     }
-    const isNumber = type === "number" || inputMode === "numeric";
+    const isNumber =
+      type === "number" || inputMode === "numeric" || inputMode === "decimal";
     if (isNumber) {
       const minNumber = parseFloat(minString);
       if (isNaN(minNumber)) {
@@ -496,7 +503,8 @@ export const MAX_CONSTRAINT = {
     if (!valueAsString) {
       return null;
     }
-    const isNumber = type === "number" || inputMode === "numeric";
+    const isNumber =
+      type === "number" || inputMode === "numeric" || inputMode === "decimal";
     if (isNumber) {
       const maxNumber = parseFloat(maxString);
       if (isNaN(maxNumber)) {
@@ -618,7 +626,8 @@ export const STEP_CONSTRAINT = {
     }
     const type = field.controlHostProps.type;
     const inputMode = field.controlHostProps.inputMode;
-    const isNumericText = type === "text" && inputMode === "numeric";
+    const isNumericText =
+      type === "text" && (inputMode === "numeric" || inputMode === "decimal");
     if (!isNumericText && !STEP_SUPPORTED_TYPE_SET.has(type)) {
       return null;
     }

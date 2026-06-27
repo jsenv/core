@@ -26,7 +26,6 @@ const NAVI_TYPE_DEFAULTS = {
   },
   navi_number: {
     type: "text",
-    inputMode: "numeric",
     autoCorrect: "off",
     spellcheck: false,
     autoComplete: "off",
@@ -104,6 +103,16 @@ export const resolveInputProps = (props) => {
   const currentTypeDefaults = NAVI_TYPE_DEFAULTS[currentType];
   if (!currentTypeDefaults) {
     return;
+  }
+  // For navi_number: choose inputMode based on whether step/min/max suggest decimals.
+  // inputMode="numeric" (integer keyboard) vs "decimal" (keyboard with decimal separator).
+  if (currentType === "navi_number" && props.inputMode === undefined) {
+    props.inputMode =
+      hasDecimalPlaces(props.step) ||
+      hasDecimalPlaces(props.min) ||
+      hasDecimalPlaces(props.max)
+        ? "decimal"
+        : "numeric";
   }
   for (const key of Object.keys(currentTypeDefaults)) {
     if (props[key] === undefined) {
@@ -197,4 +206,12 @@ const STEP_FORMATTER_BY_TYPE = {
   "time": timeStringToSeconds,
   "datetime-local": timeStringToSeconds,
   "datetime": timeStringToSeconds,
+};
+
+const hasDecimalPlaces = (value) => {
+  if (value === undefined || value === null) {
+    return false;
+  }
+  const num = Number(value);
+  return !isNaN(num) && !Number.isInteger(num);
 };
