@@ -200,6 +200,7 @@
             <DatetimeDemo />
             <SizeVariationsDemo />
             <MaxLengthWidthDemo />
+            <InputGuardDemo />
             <InteractiveDemo />
           </div>
         );
@@ -251,6 +252,9 @@
               </li>
               <li>
                 <a href="#max-length">maxLength → automatic width</a>
+              </li>
+              <li>
+                <a href="#prevent-invalid-input">charGuard / maxLengthGuard</a>
               </li>
               <li>
                 <a href="#interactive-controls">Interactive Controls</a>
@@ -1326,6 +1330,270 @@
           <Input type="text" maxLength={2} defaultValue="WW" />
         </div>
       );
+
+      // ── charGuard / maxLengthGuard ───────────────────────────────
+
+      const InputGuardDemo = () => {
+        const [entries1, push1, clear1] = useCallLog();
+        const [entries2, push2, clear2] = useCallLog();
+        const [entries3, push3, clear3] = useCallLog();
+        const [entries4, push4, clear4] = useCallLog();
+
+        return (
+          <div class="demo-section" id="prevent-invalid-input">
+            <h2>charGuard / maxLengthGuard</h2>
+            <p class="desc">
+              Ces deux props bloquent les saisies invalides dès qu'elles se
+              produisent (touche, coller, mise à jour externe) en affichant un
+              callout. Sans elles, la validation n'a lieu qu'à la soumission.
+              <br />
+              <code>charGuard</code> accepte un preset (
+              <code>"numeric"</code>, <code>"tel"</code>, <code>"card"</code>,{" "}
+              <code>"hex"</code>, <code>"alphanumeric"</code>…) ou une classe
+              de caractères brute (<code>"[A-Z0-9]"</code>). Le{" "}
+              <code>inputMode</code> et <code>pattern</code> sont déduits
+              automatiquement.
+              <br />
+              <code>maxLengthGuard</code> remplace <code>maxLength</code> +
+              guard : bloque au keydown, tronque au paste/set, et garde la
+              contrainte formulaire à la soumission.
+            </p>
+
+            {/* 1 — navi_number sans charGuard */}
+            <fieldset>
+              <legend>
+                <code>type="navi_number"</code> — sans{" "}
+                <code>charGuard</code>
+              </legend>
+              <p class="desc">
+                On peut taper des lettres. La validation n'arrive qu'à la
+                soumission du formulaire.
+              </p>
+              <Form
+                action={(values) => push1("submit", values)}
+                flex="y"
+                spacing="s"
+                alignX="start"
+              >
+                <Input name="num_no_guard" type="navi_number" required />
+                <Button type="submit">Soumettre</Button>
+              </Form>
+              <CallLog entries={entries1} onClear={clear1} />
+            </fieldset>
+
+            {/* 2 — navi_number avec charGuard="numeric" */}
+            <fieldset style={{ marginTop: "16px" }}>
+              <legend>
+                <code>type="navi_number"</code> —{" "}
+                <code>charGuard="numeric"</code>
+              </legend>
+              <p class="desc">
+                Seuls les chiffres sont autorisés (preset{" "}
+                <code>"numeric"</code> → <code>inputMode="numeric"</code> +{" "}
+                <code>pattern="[0-9]*"</code> auto-déduits). Essayez de :
+              </p>
+              <ul class="desc" style={{ margin: "0 0 12px", paddingLeft: "20px" }}>
+                <li>Taper une lettre → bloqué au keydown</li>
+                <li>Coller du texte invalide (ex : "abc") → bloqué au paste</li>
+                <li>Cliquer sur « Set "abc123" » → bloqué à la mise à jour externe</li>
+              </ul>
+              <Box flex="y" spacing="s" alignX="start">
+                <Input
+                  id="num_with_guard"
+                  name="num_with_guard"
+                  type="navi_number"
+                  charGuard="numeric"
+                  uiAction={(v) => push2("uiAction", v)}
+                />
+                <Box flex spacing="s" alignY="center">
+                  <Button
+                    command="--navi-update"
+                    commandfor="num_with_guard"
+                    command-value="abc123"
+                  >
+                    Set "abc123" (invalide)
+                  </Button>
+                  <Button
+                    command="--navi-update"
+                    commandfor="num_with_guard"
+                    command-value="456"
+                  >
+                    Set "456" (valide)
+                  </Button>
+                </Box>
+              </Box>
+              <CallLog entries={entries2} onClear={clear2} />
+            </fieldset>
+
+            {/* 3 — maxLength=3 sans maxLengthGuard */}
+            <fieldset style={{ marginTop: "16px" }}>
+              <legend>
+                <code>maxLength={3}</code> — sans <code>maxLengthGuard</code>
+              </legend>
+              <p class="desc">
+                Aucun callout, aucune explication en cours de saisie. La
+                contrainte <code>maxLength</code> est visible seulement à la
+                soumission (ou si la valeur est forcée via un set externe).
+              </p>
+              <Form
+                action={(values) => push3("submit", values)}
+                flex="y"
+                spacing="s"
+                alignX="start"
+              >
+                <Input
+                  id="num_max_no_guard"
+                  name="num_max_no_guard"
+                  type="navi_number"
+                  maxLength={3}
+                  required
+                />
+                <Box flex spacing="s" alignY="center">
+                  <Button
+                    command="--navi-update"
+                    commandfor="num_max_no_guard"
+                    command-value="12345"
+                  >
+                    Set "12345" (trop long)
+                  </Button>
+                  <Button
+                    command="--navi-update"
+                    commandfor="num_max_no_guard"
+                    command-value="12"
+                  >
+                    Set "12" (valide)
+                  </Button>
+                  <Button type="submit">Soumettre</Button>
+                </Box>
+              </Form>
+              <CallLog entries={entries3} onClear={clear3} />
+            </fieldset>
+
+            {/* 4 — maxLengthGuard={3} */}
+            <fieldset style={{ marginTop: "16px" }}>
+              <legend>
+                <code>maxLengthGuard={3}</code>
+              </legend>
+              <p class="desc">
+                Le 4ème caractère est bloqué au keydown avec un callout. Au
+                paste ou mise à jour externe, la valeur est tronquée à 3
+                caractères et un callout informe de la troncature. La
+                validation formulaire reste active à la soumission.
+              </p>
+              <Form
+                action={(values) => push4("submit", values)}
+                flex="y"
+                spacing="s"
+                alignX="start"
+              >
+                <Input
+                  id="num_max_with_guard"
+                  name="num_max_with_guard"
+                  type="navi_number"
+                  maxLengthGuard={3}
+                  required
+                  uiAction={(v) => push4("uiAction", v)}
+                />
+                <Box flex spacing="s" alignY="center">
+                  <Button
+                    command="--navi-update"
+                    commandfor="num_max_with_guard"
+                    command-value="12345"
+                  >
+                    Set "12345" (tronqué → "123")
+                  </Button>
+                  <Button
+                    command="--navi-update"
+                    commandfor="num_max_with_guard"
+                    command-value="12"
+                  >
+                    Set "12" (valide)
+                  </Button>
+                  <Button type="submit">Soumettre</Button>
+                </Box>
+              </Form>
+              <CallLog entries={entries4} onClear={clear4} />
+            </fieldset>
+
+            {/* 5 — presets charGuard */}
+            <fieldset style={{ marginTop: "16px" }}>
+              <legend>Presets <code>charGuard</code></legend>
+              <p class="desc">
+                Chaque preset configure automatiquement le{" "}
+                <code>inputMode</code> et le <code>pattern</code> natif.
+              </p>
+              <Box flex="y" spacing="m">
+                <Box flex spacing="m" alignY="start">
+                  <Box flex="y" spacing="xs">
+                    <span class="desc" style={{ margin: 0 }}>
+                      <code>tel</code> — téléphone
+                    </span>
+                    <Input
+                      name="guard_tel"
+                      charGuard="tel"
+                      placeholder="+33 6 12 34 56 78"
+                    />
+                  </Box>
+                  <Box flex="y" spacing="xs">
+                    <span class="desc" style={{ margin: 0 }}>
+                      <code>card</code> — carte bancaire
+                    </span>
+                    <Input
+                      name="guard_card"
+                      charGuard="card"
+                      maxLengthGuard={19}
+                      placeholder="4242 4242 4242 4242"
+                    />
+                  </Box>
+                  <Box flex="y" spacing="xs">
+                    <span class="desc" style={{ margin: 0 }}>
+                      <code>hex</code> — couleur
+                    </span>
+                    <Input
+                      name="guard_hex"
+                      charGuard="hex"
+                      maxLengthGuard={6}
+                      placeholder="FF8C00"
+                    />
+                  </Box>
+                </Box>
+                <Box flex spacing="m" alignY="start">
+                  <Box flex="y" spacing="xs">
+                    <span class="desc" style={{ margin: 0 }}>
+                      <code>alphanumeric</code>
+                    </span>
+                    <Input
+                      name="guard_alnum"
+                      charGuard="alphanumeric"
+                      placeholder="User42"
+                    />
+                  </Box>
+                  <Box flex="y" spacing="xs">
+                    <span class="desc" style={{ margin: 0 }}>
+                      <code>slug</code> — URL
+                    </span>
+                    <Input
+                      name="guard_slug"
+                      charGuard="slug"
+                      placeholder="mon-article"
+                    />
+                  </Box>
+                  <Box flex="y" spacing="xs">
+                    <span class="desc" style={{ margin: 0 }}>
+                      Classe brute <code>"[A-Z]"</code>
+                    </span>
+                    <Input
+                      name="guard_custom"
+                      charGuard="[A-Z]"
+                      placeholder="MAJUSCULES"
+                    />
+                  </Box>
+                </Box>
+              </Box>
+            </fieldset>
+          </div>
+        );
+      };
 
       render(
         <NaviDebug debugUIState debugAction debugInteraction>

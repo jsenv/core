@@ -86,6 +86,9 @@ export const CONTROL_PROP_SET = new Set([
   "resetOnCancel",
   "resetOnAbort",
   "resetOnError",
+
+  "charGuard",
+  "maxLengthGuard",
 ]);
 
 export const MessagePropsRefContext = createContext();

@@ -401,6 +401,7 @@ const PickerButton = (props) => {
         {...inputProps}
         // eslint-disable-next-line react/no-children-prop
         children={undefined} // we will render children into the div
+        ui={ui}
         onFocus={(e) => {
           inputProps.onFocus?.(e);
           e.target.select();
@@ -512,10 +513,21 @@ const isWithinPickerContent = (el, pickerEl) => {
 };
 
 const PickerInput = (props) => {
+  const { ui } = props;
+
+  // After type resolution: force readOnly when the input type would open the
+  // mobile keyboard. We also suppress the visual ":read-only" state so the
+  // picker still looks interactive (it is — just not keyboard-typeable).
+  if (MOBILE_KEYBOARD_TYPES.has(props.type) && !props.readOnly) {
+    props.readOnly = true;
+    props["data-readonly-forced"] = "";
+  }
+
   return (
     <Box
       as="input"
       {...props}
+      ui={undefined}
       className="navi_picker_input"
       pseudoClasses={PickerInputPseudoClasses}
       onKeyDown={(e) => {
@@ -523,13 +535,27 @@ const PickerInput = (props) => {
         if (e.key === "Enter") {
           // prevent form submission now that input can have focus
           e.preventDefault();
-        } else if (e.key === "Tab") {
+        } else if (e.key === "Tab" && ui !== "default") {
+          // Ensure tab does not tab through the browser picker elements (like in input date)
           performTabNavigation(e);
         }
       }}
     />
   );
 };
+// Input types that open the software keyboard on mobile.
+// When the picker's underlying input has one of these types, we force readOnly
+// so tapping the picker doesn't open the keyboard (the picker manages its own UI).
+const MOBILE_KEYBOARD_TYPES = new Set([
+  "text",
+  "email",
+  "url",
+  "search",
+  "password",
+  "tel",
+  "number",
+]);
+
 const PICKER_BUTTON_PSEUDO_CLASSES = [
   ":hover",
   ":focus",

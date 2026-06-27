@@ -3,7 +3,7 @@ import { isValidElement, createContext, h, toChildArray, render, Fragment, clone
 import { useErrorBoundary, useLayoutEffect, useEffect, useContext, useMemo, useRef, useState, useCallback, useId } from "preact/hooks";
 import { jsxs, jsx, Fragment as Fragment$1 } from "preact/jsx-runtime";
 import { signal, effect, computed, batch, useSignal } from "@preact/signals";
-import { createIterableWeakSet, createEventGroupLogger, normalizeStyle, mergeOneStyle, createPubSub, findEvent, dispatchInternalCustomEvent, mergeTwoStyles, normalizeStyles, createGroupTransitionController, getElementSignature, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, dispatchCustomEvent, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, findFocusDelegateTarget, findFocusable, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, createStyleController, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, measureLongestVisualLineWidth, chainEvent, getKeyboardEventDefaultAction, findBefore, findAfter, resolveCSSSize, hasCSSSizeUnit, resolveOklchLightness, contrastColor, activeElementSignal, initFocusGroup, elementIsFocusable, snapToPixel, trapScrollInside, trapFocusInside, scrollIntoViewScoped, measureWidestChildRow, performTabNavigation, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
+import { createIterableWeakSet, createEventGroupLogger, normalizeStyle, mergeOneStyle, createPubSub, findEvent, dispatchInternalCustomEvent, mergeTwoStyles, normalizeStyles, createGroupTransitionController, getElementSignature, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, dispatchCustomEvent, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, findFocusDelegateTarget, findFocusable, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, createStyleController, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, measureLongestVisualLineWidth, getKeyboardEventDefaultAction, chainEvent, findBefore, findAfter, resolveCSSSize, hasCSSSizeUnit, resolveOklchLightness, contrastColor, activeElementSignal, initFocusGroup, elementIsFocusable, snapToPixel, trapScrollInside, trapFocusInside, scrollIntoViewScoped, measureWidestChildRow, performTabNavigation, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
 export { contrastColor, startDragToReorder } from "@jsenv/dom";
 import { prefixFirstAndIndentRemainingLines } from "@jsenv/humanize";
 import { createValidity, parseDuration, durationContainsNaN, compareTwoDurations, durationToSeconds, durationToISOString } from "@jsenv/validity";
@@ -18260,6 +18260,50 @@ naviI18n.addAll({
   },
 });
 
+// charGuard / maxLengthGuard callout messages
+naviI18n.addAll({
+  // Preset-specific char messages — more informative than the generic fallback
+  "constraint.guard.number": {
+    fr: "Ce champ ne peut contenir que des chiffres.",
+    en: "This field can only contain digits.",
+  },
+  "constraint.guard.alpha": {
+    fr: "Ce champ ne peut contenir que des lettres.",
+    en: "This field can only contain letters.",
+  },
+  "constraint.guard.alphanumeric": {
+    fr: "Ce champ ne peut contenir que des lettres et des chiffres.",
+    en: "This field can only contain letters and digits.",
+  },
+  "constraint.guard.uppercase": {
+    fr: "Ce champ ne peut contenir que des lettres majuscules.",
+    en: "This field can only contain uppercase letters.",
+  },
+  "constraint.guard.hex": {
+    fr: "Ce champ ne peut contenir que des chiffres hexadécimaux (0-9, A-F).",
+    en: "This field can only contain hexadecimal digits (0-9, A-F).",
+  },
+  "constraint.guard.slug": {
+    fr: "Ce champ ne peut contenir que des lettres minuscules, des chiffres et des tirets.",
+    en: "This field can only contain lowercase letters, digits, and hyphens.",
+  },
+  // Generic fallback for custom char classes and other presets (tel, card, postal, iban…)
+  "constraint.guard.chars": {
+    fr: "Ce champ ne peut contenir que les caractères autorisés.",
+    en: "This field can only contain allowed characters.",
+  },
+  // maxLength: keydown blocked (one character would exceed the limit)
+  "constraint.guard.max_length.typing": {
+    fr: "Longueur maximale de [max] caractère[s] atteinte.",
+    en: "Maximum length of [max] character[s] reached.",
+  },
+  // maxLength: paste/set truncated to maxLength (autofix always applied)
+  "constraint.guard.max_length.value": {
+    fr: "Ce champ ne peut pas contenir plus de [max] caractère[s], une partie a été tronquée.",
+    en: "This field cannot contain more than [max] character[s]; the value was truncated.",
+  },
+});
+
 // Date/time placeholder tokens — shown when no value is selected
 // Override any key to adapt to your language conventions
 naviI18n.addAll({
@@ -19543,7 +19587,7 @@ const MAX_LENGTH_CONSTRAINT = {
     } else if (!isTextarea) {
       return null;
     }
-    const maxLength = field.controlHostProps.maxLength;
+    const maxLength = field.controlHostProps.maxLength ?? field.props?.maxLengthGuard;
     if (maxLength === undefined) {
       return null;
     }
@@ -21888,6 +21932,9 @@ const CONTROL_PROP_SET = new Set([
   "resetOnCancel",
   "resetOnAbort",
   "resetOnError",
+
+  "charGuard",
+  "maxLengthGuard",
 ]);
 
 const MessagePropsRefContext = createContext();
@@ -21906,6 +21953,221 @@ const ActionRequesterContext = createContext();
 const FormContext = createContext();
 
 /**
+ * Named presets for the `charGuard` prop.
+ * Each value is a regex character class (including the [ ] delimiters).
+ */
+const CHAR_CLASS_PRESETS = {
+  numeric:      "[0-9]",         // digits only
+  alpha:        "[A-Za-z]",      // letters only
+  alphanumeric: "[0-9A-Za-z]",   // letters and digits
+  uppercase:    "[A-Z]",         // uppercase letters only
+  tel:          "[-0-9+() ]",    // phone: digits, +, -, parens, space
+  card:         "[0-9 ]",        // credit card: digits and spaces
+  hex:          "[0-9A-Fa-f]",   // hexadecimal digits
+  pin:          "[0-9]",         // numeric PIN
+  postal:       "[0-9A-Za-z -]", // postal code (FR, UK, US)
+  iban:         "[0-9A-Z]",      // IBAN: uppercase and digits
+  slug:         "[a-z0-9-]",     // URL slug
+};
+
+// Presets that imply a specific mobile keyboard layout
+const INPUT_MODE_FROM_PRESET = {
+  numeric: "numeric",
+  pin:     "numeric",
+  card:    "numeric",
+  tel:     "tel",
+};
+
+// Specific i18n keys per preset — more informative than the generic fallback
+const MESSAGE_KEY_FROM_PRESET = {
+  numeric:      "constraint.guard.number",
+  pin:          "constraint.guard.number",
+  alpha:        "constraint.guard.alpha",
+  alphanumeric: "constraint.guard.alphanumeric",
+  uppercase:    "constraint.guard.uppercase",
+  hex:          "constraint.guard.hex",
+  slug:         "constraint.guard.slug",
+  // tel, card, postal, iban, custom → generic fallback
+};
+
+/**
+ * Returns the regex character class for a preset name, or the raw value as-is
+ * if it's not a known preset (allows custom classes like "[A-Z0-9_]").
+ */
+const resolveCharClass = (value) => {
+  if (!value) return null;
+  return CHAR_CLASS_PRESETS[value] ?? value;
+};
+
+/**
+ * Returns the inputMode to auto-apply for the given preset, or null.
+ */
+const resolveInputModeFromAllowedChars = (value) => {
+  return INPUT_MODE_FROM_PRESET[value] ?? null;
+};
+
+/**
+ * Returns the i18n key for the char guard rejection message.
+ * Falls back to the generic "constraint.guard.chars" for custom classes and
+ * presets without a specific message.
+ */
+const getCharGuardMessageKey = (value) => {
+  return MESSAGE_KEY_FROM_PRESET[value] ?? "constraint.guard.chars";
+};
+
+/**
+ * Input guard — enforces character and length constraints during typing, paste,
+ * and external value sets.
+ *
+ * The guard owns a single callout token (shared across all rejection reasons) so
+ * successive rejections update the same callout rather than stacking.
+ *
+ * Exposed as `controller.rules.guard` (created inside `createControlRules`).
+ *
+ * Props read from `controller.props` on each call (always up to date):
+ *   - `charGuard`      — preset name (e.g. "numeric", "tel") or raw char class "[A-Z]"
+ *   - `maxLengthGuard` — maximum character count (enables both guard and constraint)
+ */
+
+
+const isTypingIntent = (e) =>
+  getKeyboardEventDefaultAction(e) === "type";
+
+const s = (n) => (n > 1 ? "s" : "");
+
+// Keydown: block only single printable characters that don't match the class.
+// Multi-character key names (Delete, ArrowLeft…) are always allowed.
+const getInvalidCharMessage = (char, { charClass, messageKey }) => {
+  if (char.length !== 1) return null;
+  if (new RegExp(charClass).test(char)) return null;
+  return naviI18n(messageKey);
+};
+
+// Keydown: block when inserting one char would exceed maxLength.
+const getMaxLengthInsertionMessage = (el, { maxLength }) => {
+  if (maxLength === undefined) return null;
+  const selStart = el.selectionStart ?? el.value.length;
+  const selEnd = el.selectionEnd ?? el.value.length;
+  const newLen = el.value.length - (selEnd - selStart) + 1;
+  if (newLen <= maxLength) return null;
+  return naviI18n("constraint.guard.max_length.typing", {
+    max: maxLength,
+    s: s(maxLength),
+  });
+};
+
+// Paste / set: block when value contains disallowed chars.
+const getInvalidCharsMessage = (uiState, { charClass, messageKey }) => {
+  const str = uiState === undefined ? "" : String(uiState);
+  if (new RegExp(`^(?:${charClass})*$`).test(str)) return null;
+  return naviI18n(messageKey);
+};
+
+// Paste / set: truncate when value exceeds maxLength.
+const getLengthOverflowResult = (uiState, { maxLength }) => {
+  if (maxLength === undefined) return null;
+  const str = uiState === undefined ? "" : String(uiState);
+  if (str.length <= maxLength) return null;
+  return {
+    fixedValue: str.slice(0, maxLength),
+    message: naviI18n("constraint.guard.max_length.value", {
+      max: maxLength,
+      s: s(maxLength),
+    }),
+  };
+};
+
+const createControlGuard = (controller) => {
+  const token = createOpenToken();
+
+  const show = (message, e) => {
+    controller.rules.callout.addOpenToken(token, {
+      message,
+      status: "info",
+      event: e,
+      skipFocus: true,
+    });
+  };
+
+  const clear = (e) => {
+    controller.rules.callout.removeOpenToken(token, e);
+  };
+
+  /**
+   * Called on every keydown. Returns true when the key should be blocked
+   * (caller must call e.preventDefault()).
+   * Non-typing keys (Delete, Arrow…) are always allowed.
+   */
+  const checkKeydown = (e, el) => {
+    if (!isTypingIntent(e)) {
+      return false;
+    }
+    const { charGuard, maxLengthGuard } = controller.props;
+
+    if (charGuard) {
+      const charClass = resolveCharClass(charGuard);
+      const messageKey = getCharGuardMessageKey(charGuard);
+      const charMsg = getInvalidCharMessage(e.key, { charClass, messageKey });
+      if (charMsg) {
+        show(charMsg, e);
+        return true;
+      }
+    }
+    if (maxLengthGuard !== undefined) {
+      const lenMsg = getMaxLengthInsertionMessage(el, {
+        maxLength: maxLengthGuard,
+      });
+      if (lenMsg) {
+        show(lenMsg, e);
+        return true;
+      }
+    }
+    clear(e);
+    return false;
+  };
+
+  /**
+   * Called when a full value is about to be applied (paste or external set).
+   *
+   * Returns:
+   *   null            — value is valid, proceed normally
+   *   { blocked }     — value rejected, caller must not apply it (callout shown)
+   *   { fixedValue }  — value was truncated to maxLengthGuard (callout shown as info)
+   */
+  const checkUIState = (uiState, e) => {
+    const { charGuard, maxLengthGuard } = controller.props;
+
+    if (charGuard) {
+      const charClass = resolveCharClass(charGuard);
+      const messageKey = getCharGuardMessageKey(charGuard);
+      const charsMsg = getInvalidCharsMessage(uiState, {
+        charClass,
+        messageKey,
+      });
+      if (charsMsg) {
+        show(charsMsg, e);
+        return { blocked: true };
+      }
+    }
+
+    if (maxLengthGuard !== undefined) {
+      const lengthResult = getLengthOverflowResult(uiState, {
+        maxLength: maxLengthGuard,
+      });
+      if (lengthResult) {
+        show(lengthResult.message, e);
+        return { fixedValue: lengthResult.fixedValue };
+      }
+    }
+
+    clear(e);
+    return null;
+  };
+
+  return { checkKeydown, checkUIState, show, clear };
+};
+
+/**
  * Orchestrates the three rule managers for a UI state controller.
  *
  * Instead of holding `controller.controlInteraction` + `controller.controlValidity`
@@ -21921,13 +22183,13 @@ const FormContext = createContext();
 
 
 /**
- * Creates all three rule managers for a controller and wires them together.
+ * Creates all rule managers for a controller and wires them together.
  *
  * @param {object} controller - The UI state controller.
  * @param {object} [options]
  * @param {Function} [options.debugUIState]  - Debug logger for state/validity events.
  * @param {Function} [options.debugFocus]    - Debug logger for focus events.
- * @returns {{ callout, interaction, validation, uninstall }}
+ * @returns {{ callout, interaction, validation, guard, uninstall }}
  */
 const createControlRules = (
   controller,
@@ -21951,10 +22213,13 @@ const createControlRules = (
     debugUIState,
   });
 
+  const guard = createControlGuard(controller);
+
   return {
     callout,
     interaction,
     validation,
+    guard,
     uninstall: teardown,
   };
 };
@@ -22183,6 +22448,18 @@ const useUIStateController = (
       }
     },
     setUIState: (newUIState, e) => {
+      const guardResult = uiStateController.rules.guard.checkUIState(
+        newUIState,
+        e,
+      );
+      if (guardResult) {
+        if (Object.hasOwn(guardResult, "fixedValue")) {
+          newUIState = guardResult.fixedValue;
+          // fall through — continue with truncated value (callout already shown by guard)
+        } else {
+          return false;
+        }
+      }
       const controllerSig = getElementSignature(e.currentTarget || ref.current);
       // if (persists) {
       //   setNavState(prop);
@@ -23455,7 +23732,7 @@ const useControlProps = (props, {
                 }
               };
             }
-            return null;
+            return keyDownDefault(e);
           },
           click: e => {
             return {
@@ -23501,6 +23778,20 @@ const useControlProps = (props, {
       }
       if (controlType === "picker") {
         return {
+          keyDown: e => {
+            if (e.key === " ") {
+              return {
+                name: "space to click",
+                allowed: () => {
+                  ref.current.click();
+                },
+                always: () => {
+                  e.preventDefault(); // prevent page scroll
+                }
+              };
+            }
+            return keyDownDefault(e);
+          },
           input: e => {
             return {
               name: "input",
@@ -23676,7 +23967,14 @@ const useControlProps = (props, {
       const isInputTextual = controlType === "input";
       if (isInputTextual) {
         return {
-          keyDown: keyDownDefaultOnInput,
+          keyDown: e => {
+            const blocked = uiStateController.rules.guard.checkKeydown(e, ref.current);
+            if (blocked) {
+              e.preventDefault();
+              return null;
+            }
+            return keyDownDefaultOnInput(e);
+          },
           input: e => {
             return {
               name: "input",
@@ -23800,7 +24098,27 @@ const useControlProps = (props, {
       dispatchRequestInteraction(ref.current, {
         event: e,
         name: "paste",
-        prevented: () => e.preventDefault()
+        prevented: () => e.preventDefault(),
+        allowed: () => {
+          const pastedText = e.clipboardData?.getData("text") ?? "";
+          const el = ref.current;
+          const selStart = el.selectionStart ?? el.value.length;
+          const selEnd = el.selectionEnd ?? el.value.length;
+          const newValue = el.value.slice(0, selStart) + pastedText + el.value.slice(selEnd);
+          const guardResult = uiStateController.rules.guard.checkUIState(newValue, e);
+          if (guardResult?.blocked) {
+            e.preventDefault();
+            return;
+          }
+          if (guardResult?.fixedValue !== undefined) {
+            // Pass newValue (not fixedValue) so setUIState's guard shows the
+            // truncation callout and applies the truncated value itself.
+            e.preventDefault();
+            uiStateController.setUIState(newValue, e);
+            return;
+          }
+          // valid — let the browser paste; the input event will sync UI state
+        }
       });
     };
     Object.assign(controlHostProps, {
@@ -23829,8 +24147,9 @@ const createControlInfo = (props, {
   let disabledSupported = false;
   let hasStateProp;
   let value;
+  const typeProp = props.type || "text";
   if (controlType === "input") {
-    if (props.type === "checkbox" || props.type === "radio") {
+    if (typeProp === "checkbox" || typeProp === "radio") {
       statePropName = "checked";
       defaultStatePropName = "defaultChecked";
       hasStateProp = Object.hasOwn(props, "checked");
@@ -23865,7 +24184,7 @@ const createControlInfo = (props, {
       } else {
         stateInitial = undefined;
       }
-      readOnlySupported = true;
+      readOnlySupported = INPUT_TYPE_SUPPORTING_READONLY_SET.has(typeProp);
     }
     disabledSupported = true;
   } else if (controlType === "button") {
@@ -23893,7 +24212,7 @@ const createControlInfo = (props, {
       stateInitial = undefined;
     }
     disabledSupported = true;
-    readOnlySupported = true; // it's an input under the hood
+    readOnlySupported = INPUT_TYPE_SUPPORTING_READONLY_SET.has(typeProp);
   }
   return {
     controlType,
@@ -23907,6 +24226,8 @@ const createControlInfo = (props, {
     disabledSupported
   };
 };
+// color, radio, image, file etc do not support readonly
+const INPUT_TYPE_SUPPORTING_READONLY_SET = new Set(["text", "date", "datetime-local", "email", "month", "number", "password", "search", "tel", "time", "url", "week"]);
 const useReadOnlyUncontrolled = (props, controlInfo) => {
   if (!controlInfo.hasStateProp) {
     return false;
@@ -32776,6 +33097,29 @@ installImportMetaCssBuild(import.meta);/**
  * For non-textual inputs, specialized components will be used:
  * - <InputCheckbox /> for type="checkbox"
  * - <InputRadio /> for type="radio"
+ *
+ * Guard props (immediate feedback instead of wait-for-submit):
+ *
+ * - charGuard — restricts which characters can be typed, pasted, or set externally.
+ *   Accepts a preset name or a raw regex character class:
+ *   "numeric"      → digits only, sets inputMode="numeric" + pattern auto
+ *   "alpha"        → letters only
+ *   "alphanumeric" → letters and digits
+ *   "uppercase"    → uppercase letters only
+ *   "tel"          → phone chars (digits, +, -, parens, space), sets inputMode="tel"
+ *   "card"         → credit card (digits and spaces), sets inputMode="numeric"
+ *   "hex"          → hexadecimal digits
+ *   "pin"          → numeric PIN, sets inputMode="numeric"
+ *   "postal"       → postal code (digits, letters, space, hyphen)
+ *   "iban"         → IBAN (uppercase and digits)
+ *   "slug"         → URL slug (lowercase, digits, hyphens)
+ *   "[A-Z0-9]"     → any custom regex character class
+ *   inputMode and pattern are auto-derived from the preset when not explicitly set.
+ *
+ * - maxLengthGuard — combines maxLength + overflow guard in one prop.
+ *   Blocks keydown when the limit is reached; truncates on paste/set with an info callout.
+ *   The maxLength constraint remains active for form validation at submit.
+ *   Use plain maxLength (without maxLengthGuard) for submit-only validation.
  */
 const css$x = /* css */`
   @layer navi {
@@ -33151,6 +33495,18 @@ const InputTextualFirstResolver = props => {
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
   resolveInputProps(props);
+
+  // charGuard → auto inputMode + auto pattern for mobile keyboard hints
+  if (props.charGuard) {
+    if (props.inputMode === undefined) {
+      const autoMode = resolveInputModeFromAllowedChars(props.charGuard);
+      if (autoMode) props.inputMode = autoMode;
+    }
+    if (props.pattern === undefined) {
+      const charClass = resolveCharClass(props.charGuard);
+      props.pattern = `${charClass}*`;
+    }
+  }
   return jsx(Next, {
     ...props
   });
@@ -33182,6 +33538,11 @@ const RealInput = props => {
         e.target.select();
       }
     }
+    // Never set native maxLength — our guard handles it. maxLength stays in
+    // inputControlHostProps so form validation constraints still read it.
+    ,
+
+    maxLength: undefined
   });
 };
 const InputStyleCSSVars = {
@@ -35377,6 +35738,7 @@ installImportMetaCssBuild(import.meta);const css$p = /* css */`
   }
 `;
 const PickerCustomResolver = props => {
+  import.meta.css = [css$p, "@jsenv/navi/src/control/picker/picker_custom.jsx"];
   if (props.children === undefined) {
     return jsx(PickerNative, {
       ...props
@@ -35408,6 +35770,9 @@ const PickerNative = props => {
       dispatchRequestInteraction(pickerInput, {
         event: e,
         name: "navi_request_open to show native picker",
+        prevented: () => {
+          e.preventDefault();
+        },
         allowed: () => {
           try {
             pickerInput.showPicker();
@@ -35427,10 +35792,13 @@ const PickerNative = props => {
           allowed: () => {
             const pickerEl = props.ref.current;
             const pickerInput = getPickerInput(pickerEl);
-            // requestCloseValidityCallout(pickerEl, e);
             if (pickerInput.type === "color") ; else {
               // other picker might not open the picker when clicking the input surface (only the calendar picker for instance would open)
-              pickerInput.showPicker();
+              try {
+                pickerInput.showPicker();
+              } catch {
+                pickerInput.click();
+              }
             }
           }
         };
@@ -35704,6 +36072,15 @@ const PickerCustom = props => {
             }
           };
         },
+        "enter": e => {
+          return {
+            name: "enter_to_open",
+            allowed: () => {
+              requestOpen(e);
+              e.preventDefault(); // prevent form submission
+            }
+          };
+        },
         "escape": e => {
           if (!expandedRef.current) {
             return null;
@@ -35742,6 +36119,9 @@ const PickerCustom = props => {
             // in that case we want to open it (otherwise we have already opened on mousedown interaction)
             return {
               name: e.detail === 0 ? "click (keyboard or progammatic) to open picker" : "click to open picker",
+              prevented: () => {
+                e.preventDefault();
+              },
               allowed: () => {
                 requestOpen(e);
                 e.preventDefault();
@@ -35810,7 +36190,6 @@ const getPickerInputUIState = pickerEl => {
 };
 const PickerContentInsidePopover = props => {
   const Next = useNextResolver();
-  import.meta.css = [css$p, "@jsenv/navi/src/control/picker/picker_custom.jsx"];
   const {
     popupProps,
     children,
@@ -35882,7 +36261,6 @@ const PickerContentInsidePopover = props => {
 };
 const PickerContentInsideDialog = props => {
   const Next = useNextResolver();
-  import.meta.css = [css$p, "@jsenv/navi/src/control/picker/picker_custom.jsx"];
   const {
     popupProps,
     children,
@@ -37037,6 +37415,9 @@ installImportMetaCssBuild(import.meta);const css$n = /* css */`
   }
 
   .navi_list_item[navi-selectable] {
+    --list-item-padding-x-default: inherit;
+    --list-item-padding-y-default: inherit;
+
     outline-width: var(--list-item-outline-width);
     outline-color: var(--list-item-outline-color);
     outline-offset: var(--list-item-outline-offset);
@@ -39899,13 +40280,12 @@ installImportMetaCssBuild(import.meta);const css$i = /* css */`
       }
     }
     .navi_picker_right_slot {
-      --slot-spacing: calc(0.1em);
+      --slot-spacing: calc(var(--x-picker-padding-right) * 0.5);
 
       display: inline-flex;
       height: 1em;
       height: 1lh;
       margin-right: var(--slot-spacing);
-      margin-left: var(--slot-spacing);
       flex-shrink: 0;
       align-items: center;
       align-self: flex-start;
@@ -39924,22 +40304,34 @@ installImportMetaCssBuild(import.meta);const css$i = /* css */`
       }
     }
     .navi_picker_input {
-      position: absolute;
-      inset: 0;
       box-sizing: border-box;
-      width: 100%;
-      height: 100%;
       margin: 0;
       padding: 0;
       background: none;
       border: none;
-      opacity: 0;
-      appearance: none;
+      border-radius: inherit;
+      outline: none;
       cursor: inherit;
       pointer-events: auto;
 
       &::-webkit-calendar-picker-indicator {
         cursor: inherit;
+      }
+    }
+
+    &[navi-ui-custom] {
+      .navi_picker_input {
+        position: absolute;
+        top: calc(-1 * var(--picker-border-width));
+        right: calc(-1 * var(--picker-border-width));
+        bottom: calc(-1 * var(--picker-border-width));
+        left: calc(-1 * var(--picker-border-width));
+        /* Reset width/height for input color */
+        width: auto;
+        height: auto;
+
+        opacity: 0;
+        appearance: none;
       }
     }
 
@@ -40073,6 +40465,7 @@ const PickerButton = props => {
     "data-variant": variant,
     "navi-picker": "",
     "navi-single-line": isSingleLine ? "" : undefined,
+    "navi-ui-custom": ui === "default" ? undefined : "",
     ...pickerRemainingProps,
     basePseudoState: basePseudoState,
     styleCSSVars: PickerStyleCSSVars,
@@ -40104,6 +40497,7 @@ const PickerButton = props => {
       children: undefined // we will render children into the div
       ,
 
+      ui: ui,
       onFocus: e => {
         inputProps.onFocus?.(e);
         e.target.select();
@@ -40173,7 +40567,7 @@ const PickerButton = props => {
         });
         e.preventDefault();
       }
-    }), variant === "icon" || variant === "headless" ? null : jsx(Text, {
+    }), variant === "icon" || variant === "headless" || ui === "default" ? null : jsx(Text, {
       className: "navi_picker_value",
       "navi-placeholder": value === undefined || value === "" ? "" : undefined,
       maxLines: maxLines,
@@ -40185,7 +40579,7 @@ const PickerButton = props => {
         },
         children: ui === undefined ? jsx(PickerDefaultUI, {}) : ui
       })
-    }), variant === "headless" ? null : jsx("span", {
+    }), variant === "headless" || ui === "default" ? null : jsx("span", {
       className: "navi_picker_right_slot",
       children: jsx(Icon, {
         size: "m",
@@ -40204,12 +40598,21 @@ const isWithinPickerContent = (el, pickerEl) => {
   return pickerEl.querySelector(".navi_picker_content")?.contains(el);
 };
 const PickerInput = props => {
+  const {
+    ui
+  } = props;
+
+  // After type resolution: force readOnly when the input type would open the
+  // mobile keyboard. We also suppress the visual ":read-only" state so the
+  // picker still looks interactive (it is — just not keyboard-typeable).
+  if (MOBILE_KEYBOARD_TYPES.has(props.type) && !props.readOnly) {
+    props.readOnly = true;
+    props["data-readonly-forced"] = "";
+  }
   return jsx(Box, {
     as: "input",
-    "data-readonly-forced": props.readOnly ? undefined : "",
     ...props,
-    // must be readOnly to prevent opening keyboard on mobile (and direct update via keyboard too, we want people to use the picker)
-    readOnly: true,
+    ui: undefined,
     className: "navi_picker_input",
     pseudoClasses: PickerInputPseudoClasses,
     onKeyDown: e => {
@@ -40217,12 +40620,17 @@ const PickerInput = props => {
       if (e.key === "Enter") {
         // prevent form submission now that input can have focus
         e.preventDefault();
-      } else if (e.key === "Tab") {
+      } else if (e.key === "Tab" && ui !== "default") {
+        // Ensure tab does not tab through the browser picker elements (like in input date)
         performTabNavigation(e);
       }
     }
   });
 };
+// Input types that open the software keyboard on mobile.
+// When the picker's underlying input has one of these types, we force readOnly
+// so tapping the picker doesn't open the keyboard (the picker manages its own UI).
+const MOBILE_KEYBOARD_TYPES = new Set(["text", "email", "url", "search", "password", "tel", "number"]);
 const PICKER_BUTTON_PSEUDO_CLASSES = [":hover", ":focus", ":focus-visible", ":focus-within", ":read-only", ":disabled", ":-navi-loading", ":-navi-expanded", ":-navi-has-value"];
 const PickerInputPseudoClasses = [":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading", ":-navi-has-value", ":-navi-expanded"];
 const PickerStyleCSSVars = {

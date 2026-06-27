@@ -270,6 +270,8 @@ export const useControlProps = (
       syncUIStateWithDOM(e);
     };
     const wasCheckedAtMousedownRef = useRef(false);
+
+
     const getDefaultEventReactionDefinitions = () => {
       const keyDownDefault = (e) => {
         const defaultAction = getKeyboardEventDefaultAction(e);
@@ -570,7 +572,17 @@ export const useControlProps = (
       const isInputTextual = controlType === "input";
       if (isInputTextual) {
         return {
-          keyDown: keyDownDefaultOnInput,
+          keyDown: (e) => {
+            const blocked = uiStateController.rules.guard.checkKeydown(
+              e,
+              ref.current,
+            );
+            if (blocked) {
+              e.preventDefault();
+              return null;
+            }
+            return keyDownDefaultOnInput(e);
+          },
           input: (e) => {
             return {
               name: "input",
@@ -719,6 +731,28 @@ export const useControlProps = (
         event: e,
         name: "paste",
         prevented: () => e.preventDefault(),
+        allowed: () => {
+          const pastedText = e.clipboardData?.getData("text") ?? "";
+          const el = ref.current;
+          const selStart = el.selectionStart ?? el.value.length;
+          const selEnd = el.selectionEnd ?? el.value.length;
+          const newValue =
+            el.value.slice(0, selStart) + pastedText + el.value.slice(selEnd);
+          const guardResult =
+            uiStateController.rules.guard.checkUIState(newValue, e);
+          if (guardResult?.blocked) {
+            e.preventDefault();
+            return;
+          }
+          if (guardResult?.fixedValue !== undefined) {
+            // Pass newValue (not fixedValue) so setUIState's guard shows the
+            // truncation callout and applies the truncated value itself.
+            e.preventDefault();
+            uiStateController.setUIState(newValue, e);
+            return;
+          }
+          // valid — let the browser paste; the input event will sync UI state
+        },
       });
     };
     Object.assign(controlHostProps, {

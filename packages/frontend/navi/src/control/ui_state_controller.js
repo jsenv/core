@@ -253,6 +253,18 @@ export const useUIStateController = (
       }
     },
     setUIState: (newUIState, e) => {
+      const guardResult = uiStateController.rules.guard.checkUIState(
+        newUIState,
+        e,
+      );
+      if (guardResult) {
+        if (Object.hasOwn(guardResult, "fixedValue")) {
+          newUIState = guardResult.fixedValue;
+          // fall through — continue with truncated value (callout already shown by guard)
+        } else {
+          return false;
+        }
+      }
       const controllerSig = getElementSignature(e.currentTarget || ref.current);
       // if (persists) {
       //   setNavState(prop);
