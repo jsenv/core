@@ -134,6 +134,20 @@
             <PickerControlGroupInFormDemo />
             <PickerControlGroupRequiredDemo />
 
+            <div class="demo-category" id="distribute-state">
+              Distribute state (value / defaultValue on parent)
+            </div>
+            <RadioGroupDefaultValueDemo />
+            <RadioGroupValueDemo />
+            <CheckboxGroupDefaultValueDemo />
+            <CheckboxGroupValueDemo />
+            <ControlGroupDefaultValueDemo />
+            <ControlGroupValueDemo />
+            <PickerListDefaultValueDemo />
+            <PickerListValueDemo />
+            <PickerControlGroupDefaultValueDemo />
+            <PickerControlGroupValueDemo />
+
             <div class="demo-category" id="bubble-up">
               Bubble-up (enregistrement cross-leaf)
             </div>
@@ -223,6 +237,63 @@
                 <li>
                   <a href="#facade-controlgroup-required">
                     ControlGroup interne — champ requis
+                  </a>
+                </li>
+              </ol>
+            </li>
+            <li>
+              <a href="#distribute-state">
+                Distribute state (value / defaultValue on parent)
+              </a>
+              <ol style={{ paddingLeft: "20px" }}>
+                <li>
+                  <a href="#distribute-radio-defaultvalue">
+                    Radio group — defaultValue on List
+                  </a>
+                </li>
+                <li>
+                  <a href="#distribute-radio-value">
+                    Radio group — value on List (controlled)
+                  </a>
+                </li>
+                <li>
+                  <a href="#distribute-checkbox-defaultvalue">
+                    Checkbox group — defaultValue on List
+                  </a>
+                </li>
+                <li>
+                  <a href="#distribute-checkbox-value">
+                    Checkbox group — value on List (controlled)
+                  </a>
+                </li>
+                <li>
+                  <a href="#distribute-controlgroup-defaultvalue">
+                    ControlGroup — defaultValue on group
+                  </a>
+                </li>
+                <li>
+                  <a href="#distribute-controlgroup-value">
+                    ControlGroup — value on group (controlled)
+                  </a>
+                </li>
+                <li>
+                  <a href="#distribute-picker-list-defaultvalue">
+                    Picker (List) — defaultValue on Picker
+                  </a>
+                </li>
+                <li>
+                  <a href="#distribute-picker-list-value">
+                    Picker (List) — value on Picker (controlled)
+                  </a>
+                </li>
+                <li>
+                  <a href="#distribute-picker-controlgroup-defaultvalue">
+                    Picker (ControlGroup) — defaultValue on Picker
+                  </a>
+                </li>
+                <li>
+                  <a href="#distribute-picker-controlgroup-value">
+                    Picker (ControlGroup) — value on Picker (controlled)
                   </a>
                 </li>
               </ol>
@@ -1266,6 +1337,545 @@
                 Form
               </p>
               <CallLog entries={formEntries} onClear={clearFormEntries} />
+            </Box>
+          </div>
+        );
+      };
+
+      // ── Distribute state demos ───────────────────────────────────────────
+
+      const FRUITS = ["Apple", "Banana", "Cherry", "Date", "Elderberry"];
+      const FRUIT_VALUES = [1, 2, 3, 4, 5];
+
+      const RadioGroupDefaultValueDemo = () => {
+        const [entries, pushEntry, clearEntries] = useCallLog();
+        return (
+          <div class="demo-section" id="distribute-radio-defaultvalue">
+            <h2>Radio group — defaultValue on List</h2>
+            <Box flex="y" spacing="m" alignX="start">
+              <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+                <code>defaultValue={3}</code> sur la <code>List</code> — les
+                items n'ont pas de prop <code>selected=</code>. Cherry (value=3)
+                doit être présélectionné au montage.
+              </p>
+              <List
+                selectable
+                defaultValue={3}
+                uiAction={(v) => {
+                  pushEntry("uiAction", v);
+                }}
+                action={(v) => {
+                  pushEntry("action", v);
+                }}
+                expandX
+              >
+                {FRUITS.map((fruit, i) => (
+                  <List.Item
+                    selectable
+                    key={fruit}
+                    id={`dist-radio-dv-${fruit.toLowerCase()}`}
+                    index={i}
+                    value={FRUIT_VALUES[i]}
+                    flex
+                    spacing="s"
+                  >
+                    <SelectableInput />
+                    {fruit} (value={FRUIT_VALUES[i]})
+                  </List.Item>
+                ))}
+              </List>
+              <CallLog entries={entries} onClear={clearEntries} />
+            </Box>
+          </div>
+        );
+      };
+
+      const RadioGroupValueDemo = () => {
+        const [entries, pushEntry, clearEntries] = useCallLog();
+        const [selected, setSelected] = useState(3);
+        return (
+          <div class="demo-section" id="distribute-radio-value">
+            <h2>Radio group — value on List (controlled)</h2>
+            <Box flex="y" spacing="m" alignX="start">
+              <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+                <code>value={"{selected}"}</code> sur la <code>List</code> — les
+                items n'ont pas de prop <code>selected=</code>. Cliquer un item
+                met à jour l'état React et la sélection suit.
+              </p>
+              <List
+                selectable
+                value={selected}
+                uiAction={(v) => {
+                  pushEntry("uiAction", v);
+                }}
+                action={(v) => {
+                  pushEntry("action", v);
+                  setSelected(v);
+                }}
+                expandX
+              >
+                {FRUITS.map((fruit, i) => (
+                  <List.Item
+                    selectable
+                    key={fruit}
+                    id={`dist-radio-v-${fruit.toLowerCase()}`}
+                    index={i}
+                    value={FRUIT_VALUES[i]}
+                    flex
+                    spacing="s"
+                  >
+                    <SelectableInput />
+                    {fruit} (value={FRUIT_VALUES[i]})
+                  </List.Item>
+                ))}
+              </List>
+              <CallLog entries={entries} onClear={clearEntries} />
+            </Box>
+          </div>
+        );
+      };
+
+      const CheckboxGroupDefaultValueDemo = () => {
+        const [entries, pushEntry, clearEntries] = useCallLog();
+        return (
+          <div class="demo-section" id="distribute-checkbox-defaultvalue">
+            <h2>Checkbox group — defaultValue on List</h2>
+            <Box flex="y" spacing="m" alignX="start">
+              <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+                <code>defaultValue={"{[1, 3]}"}</code> sur la{" "}
+                <code>List multiple</code> — les items n'ont pas de prop{" "}
+                <code>selected=</code>. Apple (1) et Cherry (3) doivent être
+                présélectionnés au montage.
+              </p>
+              <List
+                selectable
+                multiple
+                defaultValue={[1, 3]}
+                uiAction={(v) => {
+                  pushEntry("uiAction", JSON.stringify(v));
+                }}
+                action={(v) => {
+                  pushEntry("action", JSON.stringify(v));
+                }}
+                expandX
+              >
+                {FRUITS.map((fruit, i) => (
+                  <List.Item
+                    selectable
+                    key={fruit}
+                    id={`dist-checkbox-dv-${fruit.toLowerCase()}`}
+                    index={i}
+                    value={FRUIT_VALUES[i]}
+                    flex
+                    spacing="s"
+                  >
+                    <SelectableInput />
+                    {fruit} (value={FRUIT_VALUES[i]})
+                  </List.Item>
+                ))}
+              </List>
+              <CallLog entries={entries} onClear={clearEntries} />
+            </Box>
+          </div>
+        );
+      };
+
+      const CheckboxGroupValueDemo = () => {
+        const [entries, pushEntry, clearEntries] = useCallLog();
+        const [selected, setSelected] = useState([1, 3]);
+        return (
+          <div class="demo-section" id="distribute-checkbox-value">
+            <h2>Checkbox group — value on List (controlled)</h2>
+            <Box flex="y" spacing="m" alignX="start">
+              <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+                <code>value={"{selected}"}</code> sur la{" "}
+                <code>List multiple</code> — les items n'ont pas de prop{" "}
+                <code>selected=</code>. Cocher/décocher met à jour l'état React.
+              </p>
+              <List
+                selectable
+                multiple
+                value={selected}
+                uiAction={(v) => {
+                  pushEntry("uiAction", JSON.stringify(v));
+                }}
+                action={(v) => {
+                  pushEntry("action", JSON.stringify(v));
+                  setSelected(v);
+                }}
+                expandX
+              >
+                {FRUITS.map((fruit, i) => (
+                  <List.Item
+                    selectable
+                    key={fruit}
+                    id={`dist-checkbox-v-${fruit.toLowerCase()}`}
+                    index={i}
+                    value={FRUIT_VALUES[i]}
+                    flex
+                    spacing="s"
+                  >
+                    <SelectableInput />
+                    {fruit} (value={FRUIT_VALUES[i]})
+                  </List.Item>
+                ))}
+              </List>
+              <CallLog entries={entries} onClear={clearEntries} />
+            </Box>
+          </div>
+        );
+      };
+
+      const ControlGroupDefaultValueDemo = () => {
+        const [entries, pushEntry, clearEntries] = useCallLog();
+        return (
+          <div class="demo-section" id="distribute-controlgroup-defaultvalue">
+            <h2>ControlGroup — defaultValue on group</h2>
+            <Box flex="y" spacing="m" alignX="start">
+              <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+                <code>
+                  defaultValue=
+                  {'{{ street: "12 rue de la Paix", city: "Paris" }}'}
+                </code>{" "}
+                sur le <code>ControlGroup</code> — les inputs n'ont pas de
+                <code>defaultValue</code> individuels. Les champs doivent être
+                préremplis au montage.
+              </p>
+              <fieldset>
+                <legend>address</legend>
+                <ControlGroup
+                  name="address"
+                  defaultValue={{ street: "12 rue de la Paix", city: "Paris" }}
+                  uiAction={(v) => {
+                    pushEntry("uiAction", v);
+                  }}
+                  action={(v) => {
+                    pushEntry("action", v);
+                  }}
+                >
+                  <Box flex="y" spacing="s" alignX="start">
+                    <fieldset>
+                      <legend>street</legend>
+                      <Input
+                        type="text"
+                        name="street"
+                        placeholder="Street"
+                        uiAction={(v) => {
+                          pushEntry("uiAction (street)", v);
+                        }}
+                      />
+                    </fieldset>
+                    <fieldset>
+                      <legend>city</legend>
+                      <Input
+                        type="text"
+                        name="city"
+                        placeholder="City"
+                        uiAction={(v) => {
+                          pushEntry("uiAction (city)", v);
+                        }}
+                      />
+                    </fieldset>
+                    <Button command="--navi-send" />
+                  </Box>
+                </ControlGroup>
+              </fieldset>
+              <CallLog entries={entries} onClear={clearEntries} />
+            </Box>
+          </div>
+        );
+      };
+
+      const ControlGroupValueDemo = () => {
+        const [entries, pushEntry, clearEntries] = useCallLog();
+        const [address, setAddress] = useState({
+          street: "12 rue de la Paix",
+          city: "Paris",
+        });
+        return (
+          <div class="demo-section" id="distribute-controlgroup-value">
+            <h2>ControlGroup — value on group (controlled)</h2>
+            <Box flex="y" spacing="m" alignX="start">
+              <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+                <code>value={"{address}"}</code> sur le{" "}
+                <code>ControlGroup</code> — les inputs n'ont pas de{" "}
+                <code>value</code> individuels. Modifier un champ met à jour
+                l'état React, qui répercute la nouvelle valeur sur le groupe.
+              </p>
+              <fieldset>
+                <legend>address</legend>
+                <ControlGroup
+                  name="address"
+                  value={address}
+                  uiAction={(v) => {
+                    pushEntry("uiAction", v);
+                  }}
+                  action={(v) => {
+                    pushEntry("action", v);
+                    setAddress(v);
+                  }}
+                >
+                  <Box flex="y" spacing="s" alignX="start">
+                    <fieldset>
+                      <legend>street</legend>
+                      <Input
+                        type="text"
+                        name="street"
+                        placeholder="Street"
+                        uiAction={(v) => {
+                          pushEntry("uiAction (street)", v);
+                        }}
+                      />
+                    </fieldset>
+                    <fieldset>
+                      <legend>city</legend>
+                      <Input
+                        type="text"
+                        name="city"
+                        placeholder="City"
+                        uiAction={(v) => {
+                          pushEntry("uiAction (city)", v);
+                        }}
+                      />
+                    </fieldset>
+                    <Button command="--navi-send" />
+                  </Box>
+                </ControlGroup>
+              </fieldset>
+              <CallLog entries={entries} onClear={clearEntries} />
+            </Box>
+          </div>
+        );
+      };
+
+      const PickerListDefaultValueDemo = () => {
+        const [entries, pushEntry, clearEntries] = useCallLog();
+        return (
+          <div class="demo-section" id="distribute-picker-list-defaultvalue">
+            <h2>Picker (List) — defaultValue on Picker</h2>
+            <Box flex="y" spacing="m" alignX="start">
+              <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+                <code>defaultValue="Cherry"</code> sur le <code>Picker</code> —
+                les items n'ont pas de prop <code>selected=</code>. Cherry doit
+                être présélectionné dès l'ouverture du picker.
+              </p>
+              <fieldset>
+                <legend>fruit</legend>
+                <Picker
+                  name="fruit"
+                  placeholder="Select a fruit…"
+                  defaultValue="Cherry"
+                  uiAction={(v) => {
+                    pushEntry("uiAction", v);
+                  }}
+                  action={(v) => {
+                    pushEntry("action", v);
+                  }}
+                  minWidth="200"
+                >
+                  <List selectable command="--navi-send">
+                    {FRUITS.map((fruit, i) => (
+                      <List.Item
+                        selectable
+                        key={fruit}
+                        id={`dist-picker-list-dv-${fruit.toLowerCase()}`}
+                        index={i}
+                        value={fruit}
+                        padding="s"
+                        spacing="s"
+                      >
+                        {fruit}
+                      </List.Item>
+                    ))}
+                  </List>
+                </Picker>
+              </fieldset>
+              <CallLog entries={entries} onClear={clearEntries} />
+            </Box>
+          </div>
+        );
+      };
+
+      const PickerListValueDemo = () => {
+        const [entries, pushEntry, clearEntries] = useCallLog();
+        const [selected, setSelected] = useState("Cherry");
+        return (
+          <div class="demo-section" id="distribute-picker-list-value">
+            <h2>Picker (List) — value on Picker (controlled)</h2>
+            <Box flex="y" spacing="m" alignX="start">
+              <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+                <code>value={"{selected}"}</code> sur le <code>Picker</code> —
+                les items n'ont pas de prop <code>selected=</code>. Sélectionner
+                un item met à jour l'état React et la sélection suit.
+              </p>
+              <fieldset>
+                <legend>fruit</legend>
+                <Picker
+                  name="fruit"
+                  placeholder="Select a fruit…"
+                  value={selected}
+                  uiAction={(v) => {
+                    pushEntry("uiAction", v);
+                  }}
+                  action={(v) => {
+                    pushEntry("action", v);
+                    setSelected(v);
+                  }}
+                  minWidth="200"
+                >
+                  <List selectable command="--navi-send">
+                    {FRUITS.map((fruit, i) => (
+                      <List.Item
+                        selectable
+                        key={fruit}
+                        id={`dist-picker-list-v-${fruit.toLowerCase()}`}
+                        index={i}
+                        value={fruit}
+                        padding="s"
+                        spacing="s"
+                      >
+                        {fruit}
+                      </List.Item>
+                    ))}
+                  </List>
+                </Picker>
+              </fieldset>
+              <CallLog entries={entries} onClear={clearEntries} />
+            </Box>
+          </div>
+        );
+      };
+
+      const PickerControlGroupDefaultValueDemo = () => {
+        const [entries, pushEntry, clearEntries] = useCallLog();
+        return (
+          <div
+            class="demo-section"
+            id="distribute-picker-controlgroup-defaultvalue"
+          >
+            <h2>Picker (ControlGroup) — defaultValue on Picker</h2>
+            <Box flex="y" spacing="m" alignX="start">
+              <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+                <code>
+                  defaultValue=
+                  {'{{ street: "12 rue de la Paix", city: "Paris" }}'}
+                </code>{" "}
+                sur le <code>Picker type="controlgroup"</code> — les inputs
+                internes n'ont pas de <code>defaultValue</code>. Les champs
+                doivent être préremplis à l'ouverture.
+              </p>
+              <fieldset>
+                <legend>address</legend>
+                <Picker
+                  name="address"
+                  type="controlgroup"
+                  placeholder="Saisir une adresse"
+                  defaultValue={{ street: "12 rue de la Paix", city: "Paris" }}
+                  uiAction={(v) => {
+                    pushEntry("uiAction", v);
+                  }}
+                  action={(v) => {
+                    pushEntry("action", v);
+                  }}
+                >
+                  <ControlGroup>
+                    <Box flex="y" spacing="s" padding="s" alignX="start">
+                      <fieldset>
+                        <legend>street</legend>
+                        <Input
+                          name="street"
+                          placeholder="Street"
+                          uiAction={(v) => {
+                            pushEntry("uiAction (street)", v);
+                          }}
+                        />
+                      </fieldset>
+                      <fieldset>
+                        <legend>city</legend>
+                        <Input
+                          name="city"
+                          placeholder="City"
+                          uiAction={(v) => {
+                            pushEntry("uiAction (city)", v);
+                          }}
+                        />
+                      </fieldset>
+                    </Box>
+                  </ControlGroup>
+                  <Box flex spacing="s">
+                    <Button command="--navi-cancel">Annuler</Button>
+                    <Button command="--navi-define">Définir</Button>
+                  </Box>
+                </Picker>
+              </fieldset>
+              <CallLog entries={entries} onClear={clearEntries} />
+            </Box>
+          </div>
+        );
+      };
+
+      const PickerControlGroupValueDemo = () => {
+        const [entries, pushEntry, clearEntries] = useCallLog();
+        const [address, setAddress] = useState({
+          street: "12 rue de la Paix",
+          city: "Paris",
+        });
+        return (
+          <div class="demo-section" id="distribute-picker-controlgroup-value">
+            <h2>Picker (ControlGroup) — value on Picker (controlled)</h2>
+            <Box flex="y" spacing="m" alignX="start">
+              <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+                <code>value={"{address}"}</code> sur le{" "}
+                <code>Picker type="controlgroup"</code> — les inputs internes
+                n'ont pas de <code>value</code>. Confirmer met à jour l'état
+                React et les champs se synchronisent.
+              </p>
+              <fieldset>
+                <legend>address</legend>
+                <Picker
+                  name="address"
+                  type="controlgroup"
+                  placeholder="Saisir une adresse"
+                  value={address}
+                  uiAction={(v) => {
+                    pushEntry("uiAction", v);
+                  }}
+                  action={(v) => {
+                    pushEntry("action", v);
+                    setAddress(v);
+                  }}
+                >
+                  <ControlGroup>
+                    <Box flex="y" spacing="s" padding="s" alignX="start">
+                      <fieldset>
+                        <legend>street</legend>
+                        <Input
+                          name="street"
+                          placeholder="Street"
+                          uiAction={(v) => {
+                            pushEntry("uiAction (street)", v);
+                          }}
+                        />
+                      </fieldset>
+                      <fieldset>
+                        <legend>city</legend>
+                        <Input
+                          name="city"
+                          placeholder="City"
+                          uiAction={(v) => {
+                            pushEntry("uiAction (city)", v);
+                          }}
+                        />
+                      </fieldset>
+                    </Box>
+                  </ControlGroup>
+                  <Box flex spacing="s">
+                    <Button command="--navi-cancel">Annuler</Button>
+                    <Button command="--navi-define">Définir</Button>
+                  </Box>
+                </Picker>
+              </fieldset>
+              <CallLog entries={entries} onClear={clearEntries} />
             </Box>
           </div>
         );
