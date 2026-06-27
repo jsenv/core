@@ -192,6 +192,9 @@ const PickerNative = (props) => {
         dispatchRequestInteraction(pickerInput, {
           event: e,
           name: "navi_request_open to show native picker",
+          prevented: () => {
+            e.preventDefault();
+          },
           allowed: () => {
             try {
               pickerInput.showPicker();
@@ -572,6 +575,9 @@ const PickerCustom = (props) => {
                 e.detail === 0
                   ? "click (keyboard or progammatic) to open picker"
                   : "click to open picker",
+              prevented: () => {
+                e.preventDefault();
+              },
               allowed: () => {
                 requestOpen(e);
                 e.preventDefault();
