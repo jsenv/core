@@ -625,20 +625,40 @@ naviI18n.addAll({
 
 // preventInvalidInput callout messages
 naviI18n.addAll({
-  // Shown on keydown/paste/set when inputMode="numeric" and a non-digit is entered
-  "input.prevent_invalid.numeric": {
-    fr: "Ce champ doit contenir des chiffres.",
-    en: "This field must only contain digits.",
+  // Keydown: single char rejected because field is numeric-only
+  "input.prevent_invalid.key.numeric": {
+    fr: "Ce champ n'accepte que des chiffres.",
+    en: "This field only accepts digits.",
   },
-  // Shown on keydown/paste/set when a character doesn't match allowedChars
-  "input.prevent_invalid.chars": {
-    fr: "Caractère non autorisé.",
-    en: "Character not allowed.",
+  // Keydown: single char rejected because it doesn't match allowedChars
+  "input.prevent_invalid.key.chars": {
+    fr: "Ce caractère n'est pas autorisé.",
+    en: "This character is not allowed.",
   },
-  // Shown on keydown when one more character would exceed maxLength
-  "input.prevent_invalid.max_length": {
+  // Keydown: one more character would exceed maxLength
+  "input.prevent_invalid.key.max_length": {
     fr: "Longueur maximale de [max] caractère[s] atteinte.",
     en: "Maximum length of [max] character[s] reached.",
+  },
+  // Paste / external set: rejected because field is numeric-only
+  "input.prevent_invalid.value.numeric": {
+    fr: "Cette valeur contient des caractères non numériques.",
+    en: "This value contains non-numeric characters.",
+  },
+  // Paste / external set: rejected because it doesn't match allowedChars
+  "input.prevent_invalid.value.chars": {
+    fr: "Cette valeur contient des caractères non autorisés.",
+    en: "This value contains disallowed characters.",
+  },
+  // Paste / external set: blocked because value exceeds maxLength (no autofix)
+  "input.prevent_invalid.value.max_length": {
+    fr: "La valeur dépasse la limite de [max] caractère[s].",
+    en: "The value exceeds the limit of [max] character[s].",
+  },
+  // Paste / external set: value was truncated to maxLength (autofix applied)
+  "input.prevent_invalid.value.max_length_truncated": {
+    fr: "Valeur tronquée à [max] caractère[s].",
+    en: "Value truncated to [max] character[s].",
   },
 });
 

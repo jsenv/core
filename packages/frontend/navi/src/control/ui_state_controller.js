@@ -24,6 +24,7 @@ import {
   onUIStateControllerDestroyed,
 } from "./controller_registry.js";
 import { FormContext } from "./form_context.js";
+import { checkValue } from "./prevent_invalid_input.js";
 import { createControlRules } from "./rules/control_rules.js";
 
 /**
@@ -202,6 +203,8 @@ export const useUIStateController = (
     uiStateSignal,
     value: controlInfo.value,
 
+    _preventInvalidInputToken: {},
+
     facadeChild: null,
     getManagedControls: () => {
       if (uiStateController.facadeChild) {
@@ -253,6 +256,36 @@ export const useUIStateController = (
       }
     },
     setUIState: (newUIState, e) => {
+      if (
+        e.type === "navi_set_ui_state" &&
+        controlType === "input" &&
+        uiStateController.props.preventInvalidInput
+      ) {
+        const { inputMode, allowedChars, maxLength, maxLengthAutofix } = uiStateController.props;
+        const result = checkValue(String(newUIState ?? ""), {
+          inputMode,
+          allowedChars,
+          maxLength,
+          maxLengthAutofix,
+        });
+        if (result) {
+          uiStateController.rules.callout.addOpenToken(
+            uiStateController._preventInvalidInputToken,
+            { message: result.message, event: e, skipFocus: true },
+          );
+          if (result.fixedValue !== undefined) {
+            newUIState = result.fixedValue;
+            // fall through — continue with truncated value
+          } else {
+            return false;
+          }
+        } else {
+          uiStateController.rules.callout.removeOpenToken(
+            uiStateController._preventInvalidInputToken,
+            e,
+          );
+        }
+      }
       const controllerSig = getElementSignature(e.currentTarget || ref.current);
       // if (persists) {
       //   setNavState(prop);

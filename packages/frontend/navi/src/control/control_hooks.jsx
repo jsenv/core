@@ -75,6 +75,7 @@ import {
   checkValue,
   getInvalidCharMessage,
   getMaxLengthInsertionMessage,
+  isTypingIntent,
 } from "./prevent_invalid_input.js";
 import {
   ParentUIStateControllerContext,
@@ -276,19 +277,16 @@ export const useControlProps = (
     };
     const wasCheckedAtMousedownRef = useRef(false);
 
-    // preventInvalidInput — stable token (same object reference across renders) used as
-    // the Map key inside calloutManager so successive rejections update the same callout.
-    const preventInvalidInputTokenRef = useRef({});
     const { preventInvalidInput, inputMode, allowedChars, maxLength, maxLengthAutofix } = props;
     const showInvalidInputCallout = (message, e) => {
-      uiStateController.rules.callout.addOpenToken(preventInvalidInputTokenRef.current, {
+      uiStateController.rules.callout.addOpenToken(uiStateController._preventInvalidInputToken, {
         message,
         event: e,
         skipFocus: true,
       });
     };
     const clearInvalidInputCallout = (e) => {
-      uiStateController.rules.callout.removeOpenToken(preventInvalidInputTokenRef.current, e);
+      uiStateController.rules.callout.removeOpenToken(uiStateController._preventInvalidInputToken, e);
     };
 
     const getDefaultEventReactionDefinitions = () => {
@@ -592,13 +590,7 @@ export const useControlProps = (
       if (isInputTextual) {
         return {
           keyDown: (e) => {
-            if (
-              preventInvalidInput &&
-              e.key.length === 1 &&
-              !e.ctrlKey &&
-              !e.metaKey &&
-              !e.altKey
-            ) {
+            if (preventInvalidInput && isTypingIntent(e)) {
               const charMsg = getInvalidCharMessage(e.key, { inputMode, allowedChars });
               if (charMsg) {
                 e.preventDefault();
@@ -774,7 +766,7 @@ export const useControlProps = (
         });
         if (result?.fixedValue !== undefined) {
           e.preventDefault();
-          clearInvalidInputCallout(e);
+          showInvalidInputCallout(result.message, e);
           uiStateController.setUIState(result.fixedValue, e);
           return;
         }
@@ -800,32 +792,6 @@ export const useControlProps = (
       onInput,
     });
 
-    if (preventInvalidInput && controlType === "input") {
-      const origSet = controlHostProps.onnavi_set_ui_state;
-      if (origSet) {
-        const wrappedSet = (e) => {
-          const result = checkValue(String(e.detail.value ?? ""), {
-            inputMode,
-            allowedChars,
-            maxLength,
-            maxLengthAutofix,
-          });
-          if (result?.fixedValue !== undefined) {
-            clearInvalidInputCallout(e);
-            uiStateController.setUIState(result.fixedValue, e);
-            return;
-          }
-          if (result?.message) {
-            showInvalidInputCallout(result.message, e);
-            return;
-          }
-          clearInvalidInputCallout(e);
-          origSet(e);
-        };
-        controlHostProps.onnavi_set_ui_state = wrappedSet;
-        controlRootProps.onnavi_set_ui_state = wrappedSet;
-      }
-    }
   }
 
   const uiState = uiStateController.uiStateSignal.peek();
