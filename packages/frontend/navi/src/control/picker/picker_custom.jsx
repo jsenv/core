@@ -520,6 +520,15 @@ const PickerCustom = (props) => {
             },
           };
         },
+        "enter": (e) => {
+          return {
+            name: "enter_to_open",
+            allowed: () => {
+              requestOpen(e);
+              e.preventDefault(); // prevent form submission
+            },
+          };
+        },
         "escape": (e) => {
           if (!expandedRef.current) {
             return null;

@@ -47,7 +47,7 @@
         gap: 16px;
       }
       .states-col-header {
-        margin-bottom: 12px;
+        margin: 0 0 12px;
         color: #888;
         font-weight: 600;
         font-size: 12px;
@@ -388,6 +388,65 @@
                 <span style={{ color: "#999" }}>—</span>
               )}
             </p>
+
+            <hr
+              style={{
+                margin: "20px 0",
+                border: "none",
+                borderTop: "1px solid #eee",
+              }}
+            />
+            <h3 class="states-col-header">ui="default" — UI du navigateur</h3>
+            <p class="desc">
+              Passer <code>ui="default"</code> conserve le color picker natif
+              du navigateur tout en bénéficiant du système navi (validation,
+              action, états loading…).
+            </p>
+            <div class="states-grid">
+              <div>
+                <p class="desc" style={{ margin: "0 0 8px", fontStyle: "italic" }}>
+                  Picker ui="default"
+                </p>
+                <Box flex="y" spacing="s" alignX="start">
+                  <Picker
+                    name="color_browser_empty"
+                    type="color"
+                    ui="default"
+                  />
+                  <Picker
+                    name="color_browser_value"
+                    type="color"
+                    defaultValue={DEFAULT_COLOR}
+                    ui="default"
+                  />
+                  <Picker
+                    name="color_browser_readonly"
+                    type="color"
+                    defaultValue={DEFAULT_COLOR}
+                    readOnly
+                    ui="default"
+                  />
+                  <Picker
+                    name="color_browser_disabled"
+                    type="color"
+                    defaultValue={DEFAULT_COLOR}
+                    disabled
+                    ui="default"
+                  />
+                </Box>
+              </div>
+              <div>
+                <p class="desc" style={{ margin: "0 0 8px", fontStyle: "italic" }}>
+                  input natif (référence)
+                </p>
+                <Box flex="y" spacing="s" alignX="start">
+                  <input type="color" />
+                  <input type="color" defaultValue={DEFAULT_COLOR} />
+                  <input type="color" defaultValue={DEFAULT_COLOR} readOnly />
+                  <input type="color" defaultValue={DEFAULT_COLOR} disabled />
+                </Box>
+              </div>
+            </div>
           </div>
         );
       };
