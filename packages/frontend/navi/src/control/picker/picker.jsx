@@ -190,7 +190,7 @@ const css = /* css */ `
       }
     }
     .navi_picker_right_slot {
-      --slot-spacing: var(--x-picker-padding-right);
+      --slot-spacing: calc(var(--x-picker-padding-right) * 0.5);
 
       display: inline-flex;
       height: 1em;

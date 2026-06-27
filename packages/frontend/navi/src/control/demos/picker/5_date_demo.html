@@ -579,10 +579,11 @@
 
           <div class="states-grid">
             <div>
-              <h3 class="states-col-header">Default — format court</h3>
+              <h3 class="states-col-header">Default — format long</h3>
               <p class="desc">
-                Forme abrégée (ex&nbsp;: «&nbsp;Mer. 3 juin&nbsp;»). La largeur
-                varie légèrement selon le mois, mais reste compacte.
+                Format par défaut&nbsp;: nom du jour et du mois en toutes
+                lettres (ex&nbsp;: «&nbsp;mercredi 3 juin 2026&nbsp;»). La
+                largeur varie davantage selon la date.
               </p>
               <Box flex="y" spacing="xs" alignX="start">
                 {DEMO_DATES.map((d, i) => (
@@ -629,20 +630,20 @@
               </Box>
             </div>
             <div>
-              <h3 class="states-col-header">long — format long</h3>
+              <h3 class="states-col-header">format="short" — format court</h3>
               <p class="desc">
-                Nom du jour et du mois en toutes lettres (ex&nbsp;:
-                «&nbsp;vendredi 11 septembre 2026&nbsp;»). La largeur varie
-                davantage selon la date.
+                Forme abrégée via <code>format="short"</code> (ex&nbsp;:
+                «&nbsp;Mer. 3 juin&nbsp;»). La largeur varie légèrement selon
+                le mois, mais reste compacte.
               </p>
               <Box flex="y" spacing="xs" alignX="start">
                 {DEMO_DATES.map((d, i) => (
                   <Picker
                     key={i}
-                    name={`date_long_${i}`}
+                    name={`date_short_${i}`}
                     type="date"
                     defaultValue={d}
-                    ui={<Picker.UI.Date long />}
+                    ui={<Picker.UI.Date format="short" />}
                   />
                 ))}
               </Box>
@@ -661,22 +662,40 @@
               </p>
               <Box flex="y" spacing="xs" alignX="start">
                 <Picker
-                  name="date_long_daylabel_yesterday"
+                  name="date_short_daylabel_yesterday"
                   type="date"
                   defaultValue={DAY_LABEL_YESTERDAY}
-                  ui={<Picker.UI.Date long dayLabel now={DAY_LABEL_NOW} />}
+                  ui={
+                    <Picker.UI.Date
+                      format="short"
+                      dayLabel
+                      now={DAY_LABEL_NOW}
+                    />
+                  }
                 />
                 <Picker
-                  name="date_long_daylabel_today"
+                  name="date_short_daylabel_today"
                   type="date"
                   defaultValue={DAY_LABEL_TODAY}
-                  ui={<Picker.UI.Date long dayLabel now={DAY_LABEL_NOW} />}
+                  ui={
+                    <Picker.UI.Date
+                      format="short"
+                      dayLabel
+                      now={DAY_LABEL_NOW}
+                    />
+                  }
                 />
                 <Picker
-                  name="date_long_daylabel_tomorrow"
+                  name="date_short_daylabel_tomorrow"
                   type="date"
                   defaultValue={DAY_LABEL_TOMORROW}
-                  ui={<Picker.UI.Date long dayLabel now={DAY_LABEL_NOW} />}
+                  ui={
+                    <Picker.UI.Date
+                      format="short"
+                      dayLabel
+                      now={DAY_LABEL_NOW}
+                    />
+                  }
                 />
               </Box>
             </div>
