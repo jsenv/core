@@ -132,7 +132,12 @@ const css = /* css */ `
           --list-item-background-color-keyboard-pointed
         );
         outline-style: solid;
+        /* When outline displayed + border radius behind the outline we can see some pixels of borders + background */
+        /* To avoid this we need to hide borders and background */
+        /* border transparent + background clip padding box work */
+        /* We set background clip only here otherwise we would have the pixel issue all the time between borders and background  */
         --x-list-item-border-color: transparent;
+        background-clip: padding-box;
 
         /* Selected must win over keyboard-pointed */
         &[data-selected] {
