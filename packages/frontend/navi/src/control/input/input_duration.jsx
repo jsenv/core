@@ -23,7 +23,7 @@ const css = /* css */ `
     --duration-separator-spacing: 4px;
     --loader-color: var(--navi-loader-color);
 
-    position: relative;
+    position: relative; /* For loading outline  */
 
     .navi_label {
       &[data-separator] {
