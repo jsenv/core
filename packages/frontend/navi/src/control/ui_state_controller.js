@@ -546,7 +546,6 @@ export const useUIStateController = (
   uiStateController.rules = rules;
   return uiStateController;
 };
-
 const NO_PARENT = [() => {}, () => {}, () => {}];
 const useParentControllerNotifiers = (
   parentUIStateController,
@@ -628,18 +627,6 @@ const useParentControllerNotifiers = (
  */
 const CANNOT_DERIVE = Symbol("cannot_derive");
 
-const distributeRadioGroupUIState = (newUIState, childUIStateController) => {
-  const childSelected = childUIStateController.props.value === newUIState;
-  return childSelected ? childUIStateController.props.value : undefined;
-};
-
-const distributeCheckboxGroupUIState = (newUIState, childUIStateController) => {
-  const childSelected =
-    Array.isArray(newUIState) &&
-    newUIState.includes(childUIStateController.props.value);
-  return childSelected ? childUIStateController.props.value : undefined;
-};
-
 // Default aggregate/distribute implementations keyed by controlType or stateType.
 // Looked up in useUIGroupStateController to fill in omitted aggregateChildStates /
 // distributeChildUIState. If neither a default nor an explicit impl is found for a
@@ -647,15 +634,23 @@ const distributeCheckboxGroupUIState = (newUIState, childUIStateController) => {
 const GROUP_DEFAULTS = {
   radio_group: {
     childControlFilter: (child) =>
-      child.controlType === "input" &&
-      child.controlHostProps?.type === "radio",
+      child.controlType === "input" && child.controlHostProps?.type === "radio",
     aggregateChildStates: (children) => {
       for (const child of children) {
-        if (child.uiState) return child.uiState;
+        const childUIState = child.uiState;
+        if (childUIState !== undefined) {
+          return childUIState;
+        }
       }
       return undefined;
     },
-    distributeChildUIState: distributeRadioGroupUIState,
+    distributeChildUIState: (newUIState, childUIStateController) => {
+      const childSelected = childUIStateController.props.value === newUIState;
+      if (childSelected) {
+        return childUIStateController.props.value;
+      }
+      return undefined;
+    },
   },
   checkbox_group: {
     childControlFilter: (child) =>
@@ -664,11 +659,22 @@ const GROUP_DEFAULTS = {
     aggregateChildStates: (children) => {
       const values = [];
       for (const child of children) {
-        if (child.uiState) values.push(child.uiState);
+        const childUIState = child.uiState;
+        if (childUIState !== undefined) {
+          values.push(childUIState);
+        }
       }
       return values.length === 0 ? undefined : values;
     },
-    distributeChildUIState: distributeCheckboxGroupUIState,
+    distributeChildUIState: (newUIState, childUIStateController) => {
+      const childSelected =
+        Array.isArray(newUIState) &&
+        newUIState.includes(childUIStateController.props.value);
+      if (childSelected) {
+        return childUIStateController.props.value;
+      }
+      return undefined;
+    },
   },
   object: {
     aggregateChildStates: (children) => {
@@ -857,7 +863,10 @@ export const useUIGroupStateController = (
     if (childUIStateController.isProxy) {
       return false;
     }
-    if (resolvedChildControlFilter && !resolvedChildControlFilter(childUIStateController)) {
+    if (
+      resolvedChildControlFilter &&
+      !resolvedChildControlFilter(childUIStateController)
+    ) {
       return false;
     }
     return true;
@@ -887,7 +896,10 @@ export const useUIGroupStateController = (
             childUIStateController,
           );
           if (childNewState !== CANNOT_DERIVE) {
-            childUIStateController.setUIState(childNewState, propagateDownEvent);
+            childUIStateController.setUIState(
+              childNewState,
+              propagateDownEvent,
+            );
           }
         }
       }
@@ -1039,7 +1051,10 @@ export const useUIGroupStateController = (
               "propagate_down_set_ui_state",
               { detail: {} },
             );
-            childUIStateController.setUIState(childNewState, propagateDownEvent);
+            childUIStateController.setUIState(
+              childNewState,
+              propagateDownEvent,
+            );
           }
         }
       }
