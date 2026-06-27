@@ -19,7 +19,7 @@ import {
   getMaxLengthInsertionMessage,
 } from "./prevent_invalid_input.js";
 import {
-  isNumericAllowedChars,
+  getCharGuardMessageKey,
   resolveCharClass,
 } from "./char_guard_presets.js";
 import { createOpenToken } from "./rules/control_callout.js";
@@ -49,8 +49,8 @@ export const createInputGuard = (controller) => {
 
     if (charGuard) {
       const charClass = resolveCharClass(charGuard);
-      const isNumeric = isNumericAllowedChars(charGuard);
-      const charMsg = getInvalidCharMessage(e.key, { charClass, isNumeric });
+      const messageKey = getCharGuardMessageKey(charGuard);
+      const charMsg = getInvalidCharMessage(e.key, { charClass, messageKey });
       if (charMsg) {
         show(charMsg, e);
         return true;
@@ -80,8 +80,8 @@ export const createInputGuard = (controller) => {
 
     if (charGuard) {
       const charClass = resolveCharClass(charGuard);
-      const isNumeric = isNumericAllowedChars(charGuard);
-      const charsMsg = getInvalidCharsMessage(value, { charClass, isNumeric });
+      const messageKey = getCharGuardMessageKey(charGuard);
+      const charsMsg = getInvalidCharsMessage(value, { charClass, messageKey });
       if (charsMsg) {
         show(charsMsg, e);
         return { blocked: true };

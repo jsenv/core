@@ -623,25 +623,45 @@ naviI18n.addAll({
   },
 });
 
-// input guard callout messages (preventInvalidInput / preventLengthOverflow)
+// charGuard / maxLengthGuard callout messages
 naviI18n.addAll({
-  // Numeric-only field — shown on keydown AND on paste/set (same rule, same message)
-  "input.guard.number": {
+  // Preset-specific char messages — more informative than the generic fallback
+  "constraint.guard.number": {
     fr: "Ce champ ne peut contenir que des chiffres.",
     en: "This field can only contain digits.",
   },
-  // Custom allowedChars field — shown on keydown AND on paste/set
-  "input.guard.chars": {
+  "constraint.guard.alpha": {
+    fr: "Ce champ ne peut contenir que des lettres.",
+    en: "This field can only contain letters.",
+  },
+  "constraint.guard.alphanumeric": {
+    fr: "Ce champ ne peut contenir que des lettres et des chiffres.",
+    en: "This field can only contain letters and digits.",
+  },
+  "constraint.guard.uppercase": {
+    fr: "Ce champ ne peut contenir que des lettres majuscules.",
+    en: "This field can only contain uppercase letters.",
+  },
+  "constraint.guard.hex": {
+    fr: "Ce champ ne peut contenir que des chiffres hexadécimaux (0-9, A-F).",
+    en: "This field can only contain hexadecimal digits (0-9, A-F).",
+  },
+  "constraint.guard.slug": {
+    fr: "Ce champ ne peut contenir que des lettres minuscules, des chiffres et des tirets.",
+    en: "This field can only contain lowercase letters, digits, and hyphens.",
+  },
+  // Generic fallback for custom char classes and other presets (tel, card, postal, iban…)
+  "constraint.guard.chars": {
     fr: "Ce champ ne peut contenir que les caractères autorisés.",
     en: "This field can only contain allowed characters.",
   },
   // maxLength: keydown blocked (one character would exceed the limit)
-  "input.guard.max_length.typing": {
+  "constraint.guard.max_length.typing": {
     fr: "Longueur maximale de [max] caractère[s] atteinte.",
     en: "Maximum length of [max] character[s] reached.",
   },
   // maxLength: paste/set truncated to maxLength (autofix always applied)
-  "input.guard.max_length.value": {
+  "constraint.guard.max_length.value": {
     fr: "Ce champ ne peut pas contenir plus de [max] caractère[s], une partie a été tronquée.",
     en: "This field cannot contain more than [max] character[s]; the value was truncated.",
   },

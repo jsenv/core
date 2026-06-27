@@ -24,8 +24,17 @@ const INPUT_MODE_FROM_PRESET = {
   tel:     "tel",
 };
 
-// Presets where "digits only" is the right error message
-const NUMERIC_MESSAGE_PRESETS = new Set(["numeric", "pin"]);
+// Specific i18n keys per preset — more informative than the generic fallback
+const MESSAGE_KEY_FROM_PRESET = {
+  numeric:      "constraint.guard.number",
+  pin:          "constraint.guard.number",
+  alpha:        "constraint.guard.alpha",
+  alphanumeric: "constraint.guard.alphanumeric",
+  uppercase:    "constraint.guard.uppercase",
+  hex:          "constraint.guard.hex",
+  slug:         "constraint.guard.slug",
+  // tel, card, postal, iban, custom → generic fallback
+};
 
 /**
  * Returns the regex character class for a preset name, or the raw value as-is
@@ -44,9 +53,10 @@ export const resolveInputModeFromAllowedChars = (value) => {
 };
 
 /**
- * Returns true when the preset is numeric-flavoured and should use the
- * "digits only" error message rather than the generic "allowed chars" one.
+ * Returns the i18n key for the char guard rejection message.
+ * Falls back to the generic "constraint.guard.chars" for custom classes and
+ * presets without a specific message.
  */
-export const isNumericAllowedChars = (value) => {
-  return NUMERIC_MESSAGE_PRESETS.has(value);
+export const getCharGuardMessageKey = (value) => {
+  return MESSAGE_KEY_FROM_PRESET[value] ?? "constraint.guard.chars";
 };
