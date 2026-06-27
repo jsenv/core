@@ -626,6 +626,18 @@ const useParentControllerNotifiers = (
  * **Filtering**: `childControlFilter` can exclude certain child types from aggregation
  * (e.g. ignoring buttons inside a selectable list).
  */
+const distributeRadioGroupUIState = (newUIState, childUIStateController) => {
+  const childSelected = childUIStateController.props.value === newUIState;
+  return childSelected ? childUIStateController.props.value : undefined;
+};
+
+const distributeCheckboxGroupUIState = (newUIState, childUIStateController) => {
+  const childSelected =
+    Array.isArray(newUIState) &&
+    newUIState.includes(childUIStateController.props.value);
+  return childSelected ? childUIStateController.props.value : undefined;
+};
+
 export const useUIGroupStateController = (
   props,
   controlType,
@@ -834,38 +846,27 @@ export const useUIGroupStateController = (
         if (childUIStateController.controlType === "button") {
           continue;
         }
-        if (controlType === "radio_group") {
-          const childSelected =
-            childUIStateController.props.value === newUIState;
+        if (distributeChildUIState) {
+          const childNewState = distributeChildUIState(
+            newUIState,
+            childUIStateController,
+          );
+          childUIStateController.setUIState(childNewState, propagateDownEvent);
+        } else if (controlType === "radio_group") {
           // Pass the child's own value (not `true`) when selected, `undefined` (not `false`) when not.
           // `toDomProps` uses `newUIState !== undefined` to determine `checked`, so passing `false`
           // would incorrectly render the radio as checked.
-          const childNewState = childSelected
-            ? childUIStateController.props.value
-            : undefined;
+          const childNewState = distributeRadioGroupUIState(
+            newUIState,
+            childUIStateController,
+          );
           childUIStateController.setUIState(childNewState, propagateDownEvent);
         } else if (controlType === "checkbox_group") {
-          const childSelected =
-            Array.isArray(newUIState) &&
-            newUIState.includes(childUIStateController.props.value);
-          const childNewState = childSelected
-            ? childUIStateController.props.value
-            : undefined;
+          const childNewState = distributeCheckboxGroupUIState(
+            newUIState,
+            childUIStateController,
+          );
           childUIStateController.setUIState(childNewState, propagateDownEvent);
-        } else if (distributeChildUIState) {
-          const childrenStateMap = distributeChildUIState(newUIState);
-          if (childrenStateMap && typeof childrenStateMap === "object") {
-            const childName = childUIStateController.name;
-            if (
-              childName &&
-              Object.prototype.hasOwnProperty.call(childrenStateMap, childName)
-            ) {
-              childUIStateController.setUIState(
-                childrenStateMap[childName],
-                propagateDownEvent,
-              );
-            }
-          }
         } else {
           const childName = childUIStateController.name;
           if (
