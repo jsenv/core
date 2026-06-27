@@ -42,23 +42,6 @@ const FormControl = (props) => {
       controlType: "form",
       stateType: "object",
       cascadeValidationToChildren: true,
-      aggregateChildStates: (childUIStateControllers) => {
-        const formValues = {};
-        for (const childUIStateController of childUIStateControllers) {
-          const { name, uiState, allowNameless } = childUIStateController;
-          if (!name) {
-            if (!allowNameless) {
-              console.warn(
-                "A form child component is missing a name property, its state won't be included in the form state",
-                childUIStateController,
-              );
-            }
-            continue;
-          }
-          formValues[name] = uiState;
-        }
-        return formValues;
-      },
     },
   );
   const { basePseudoState, children } = formProps;
