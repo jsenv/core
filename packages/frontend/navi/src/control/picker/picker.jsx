@@ -520,7 +520,7 @@ const PickerInput = (props) => {
   // picker still looks interactive (it is — just not keyboard-typeable).
   const readOnlyForced = readOnly
     ? false
-    : MOBILE_KEYBOARD_TYPES.has(props.type);
+    : MOBILE_KEYBOARD_TYPES.has(props.type || "text");
 
   return (
     <Box
