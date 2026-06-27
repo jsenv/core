@@ -29,7 +29,7 @@ export const createInputGuard = (controller) => {
   const show = (message, e) => {
     controller.rules.callout.addOpenToken(token, {
       message,
-      status: "warning",
+      status: "info",
       event: e,
       skipFocus: true,
     });
