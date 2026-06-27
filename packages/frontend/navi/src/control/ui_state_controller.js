@@ -626,6 +626,17 @@ const useParentControllerNotifiers = (
  * **Filtering**: `childControlFilter` can exclude certain child types from aggregation
  * (e.g. ignoring buttons inside a selectable list).
  */
+const CANNOT_DERIVE = Symbol("cannot_derive");
+const computeChildStateForGroup = (groupValue, childController, controlType) => {
+  if (controlType === "radio_group") {
+    return distributeRadioGroupUIState(groupValue, childController);
+  }
+  if (controlType === "checkbox_group") {
+    return distributeCheckboxGroupUIState(groupValue, childController);
+  }
+  return CANNOT_DERIVE;
+};
+
 const distributeRadioGroupUIState = (newUIState, childUIStateController) => {
   const childSelected = childUIStateController.props.value === newUIState;
   return childSelected ? childUIStateController.props.value : undefined;
@@ -661,7 +672,7 @@ export const useUIGroupStateController = (
     throw new TypeError("aggregateChildStates must be a function");
   }
   const parentUIStateController = useContext(ParentUIStateControllerContext);
-  const { id, name, value, uiAction, command } = props;
+  const { id, name, value, defaultValue, uiAction, command } = props;
   const ref = props.ref;
   const uiActionRef = useRef(uiAction);
   const fallbackState =
@@ -775,21 +786,6 @@ export const useUIGroupStateController = (
     }
   });
 
-  const existingController = controllerRef.current;
-  if (existingController) {
-    existingController.props = props;
-    existingController.id = id;
-    existingController.name = name;
-    existingController.value = value;
-    uiActionRef.current = uiAction;
-    return existingController;
-  }
-  debugUIGroup(
-    `Creating "${controlType}" ui state controller (monitoring some descendants ui state(s))"`,
-  );
-
-  const [publishUIState, subscribeUIState] = createPubSub();
-  const uiStateSignal = signal(fallbackState);
   const isMonitoringChild = (childUIStateController) => {
     if (childUIStateController.isProxy) {
       return false;
@@ -799,11 +795,59 @@ export const useUIGroupStateController = (
     }
     return true;
   };
+
+  const existingController = controllerRef.current;
+  if (existingController) {
+    const prevValue = existingController.value;
+    existingController.props = props;
+    existingController.id = id;
+    existingController.name = name;
+    existingController.value = value;
+    uiActionRef.current = uiAction;
+    // When the controlled value prop changes on a distributing group, silently
+    // cascade the new state to children that are not individually controlled.
+    if (value !== undefined && !compareTwoJsValues(value, prevValue)) {
+      const canDistribute =
+        controlType === "radio_group" || controlType === "checkbox_group";
+      if (canDistribute) {
+        const propagateDownEvent = new CustomEvent(
+          "propagate_down_set_ui_state",
+          { detail: {} },
+        );
+        for (const childUIStateController of childUIStateControllerArray) {
+          if (!isMonitoringChild(childUIStateController)) continue;
+          if (childUIStateController.controlType === "button") continue;
+          if (!childUIStateController.hasStateProp) {
+            const childNewState = computeChildStateForGroup(
+              value,
+              childUIStateController,
+              controlType,
+            );
+            if (childNewState !== CANNOT_DERIVE) {
+              childUIStateController.setUIState(
+                childNewState,
+                propagateDownEvent,
+              );
+            }
+          }
+        }
+        existingController.syncInternalState(value);
+      }
+    }
+    return existingController;
+  }
+  debugUIGroup(
+    `Creating "${controlType}" ui state controller (monitoring some descendants ui state(s))"`,
+  );
+
+  const [publishUIState, subscribeUIState] = createPubSub();
+  const uiStateSignal = signal(fallbackState);
   const groupUIStateController = {
     controlType,
     id,
     name,
     value,
+    defaultValue,
     props,
     uiState: fallbackState,
     uiStateSignal,
@@ -942,6 +986,38 @@ export const useUIGroupStateController = (
       debugUIGroup(
         `${controlType}.registerChild("${childControlType}") -> registered (total: ${childUIStateControllerArray.length})`,
       );
+      // Auto-derive child's initial state from the group's value/defaultValue when
+      // the child has no individually-controlled state prop.
+      const canDistribute =
+        controlType === "radio_group" || controlType === "checkbox_group";
+      if (canDistribute && !childUIStateController.hasStateProp) {
+        const groupValue = groupUIStateController.value;
+        const groupDefaultValue = groupUIStateController.defaultValue;
+        let cascadeValue;
+        if (groupValue !== undefined) {
+          cascadeValue = groupValue;
+        } else if (
+          groupDefaultValue !== undefined &&
+          !childUIStateController._initializedFromGroupDefault
+        ) {
+          childUIStateController._initializedFromGroupDefault = true;
+          cascadeValue = groupDefaultValue;
+        }
+        if (cascadeValue !== undefined) {
+          const childNewState = computeChildStateForGroup(
+            cascadeValue,
+            childUIStateController,
+            controlType,
+          );
+          if (childNewState !== CANNOT_DERIVE) {
+            const propagateDownEvent = new CustomEvent(
+              "propagate_down_set_ui_state",
+              { detail: {} },
+            );
+            childUIStateController.setUIState(childNewState, propagateDownEvent);
+          }
+        }
+      }
       onChange(new CustomEvent(`${childControlType}_mount`), {
         notifyExternal: "silent",
         // childUIStateController,

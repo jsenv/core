@@ -340,6 +340,8 @@ const ListSelectable = (props) => {
       {...listControlRootProps}
       {...listControlProps}
       name={undefined}
+      value={undefined}
+      defaultValue={undefined}
       selectedIndicator={undefined}
       selectable={undefined}
       multiple={undefined}
