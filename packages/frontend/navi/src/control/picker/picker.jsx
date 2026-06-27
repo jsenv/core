@@ -491,7 +491,7 @@ const PickerButton = (props) => {
           </PickerContext.Provider>
         </Text>
       )}
-      {variant === "headless" ? null : (
+      {variant === "headless" || ui === 'default' ? null : (
         <span className="navi_picker_right_slot">
           <Icon size="m">{icon === undefined ? <ChevronDownSvg /> : icon}</Icon>
         </span>

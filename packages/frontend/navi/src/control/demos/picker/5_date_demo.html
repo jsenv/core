@@ -42,7 +42,7 @@
         gap: 16px;
       }
       .states-col-header {
-        margin-bottom: 12px;
+        margin: 0 0 12px;
         color: #888;
         font-weight: 600;
         font-size: 12px;
@@ -579,7 +579,7 @@
 
           <div class="states-grid">
             <div>
-              <div class="states-col-header">Default — format court</div>
+              <h3 class="states-col-header">Default — format court</h3>
               <p class="desc">
                 Forme abrégée (ex&nbsp;: «&nbsp;Mer. 3 juin&nbsp;»). La largeur
                 varie légèrement selon le mois, mais reste compacte.
@@ -629,7 +629,7 @@
               </Box>
             </div>
             <div>
-              <div class="states-col-header">long — format long</div>
+              <h3 class="states-col-header">long — format long</h3>
               <p class="desc">
                 Nom du jour et du mois en toutes lettres (ex&nbsp;:
                 «&nbsp;vendredi 11 septembre 2026&nbsp;»). La largeur varie
@@ -689,7 +689,7 @@
               borderTop: "1px solid #eee",
             }}
           />
-          <div class="states-col-header">numeric — jj/mm/aaaa</div>
+          <h3 class="states-col-header">numeric — jj/mm/aaaa</h3>
           <p class="desc">
             Format numérique&nbsp;: chiffres uniquement, séparateurs selon la
             locale (ex&nbsp;: «&nbsp;03/06/2026&nbsp;» en français).
@@ -713,13 +713,11 @@
               borderTop: "1px solid #eee",
             }}
           />
-          <div class="states-col-header">
-            Sizing, padding, border-radius, text-align
-          </div>
+          <h3 class="states-col-header">Sizing, padding, border-radius, text-align</h3>
           <p class="desc">
             Le picker accepte <code>size</code> ("s", "m", "l"…), du padding via{" "}
-            <code>--picker-padding</code>, un border-radius via{" "}
-            <code>--picker-border-radius</code>, et <code>textAlign</code>.
+            <code>paddingX</code> / <code>paddingY</code>, un border-radius via{" "}
+            <code>borderRadius</code>, et <code>textAlign</code>.
           </p>
           <Box flex="y" spacing="s" alignX="start">
             <span style={{ color: "#888", fontSize: "12px" }}>
@@ -813,14 +811,23 @@
                 textAlign="right"
               />
             </Box>
-            <Picker
-              name="date_align_right"
-              type="date"
-              defaultValue={DEMO_DATES[0]}
-              borderWidth="20"
-              borderRadius="m"
-            />
-            <Box></Box>
+            <div>
+              <p class="desc" style={{ margin: "0 0 8px" }}>
+                <strong>Interactivité de la bordure et du border-radius</strong>
+                <br />
+                Cliquer sur la bordure elle-même ouvre le picker (la bordure fait
+                partie de la surface cliquable). En revanche, les coins arrondis
+                créés par le border-radius ne sont pas interactifs — le hit-area
+                suit la forme rectangulaire de l'élément avant arrondissement.
+              </p>
+              <Picker
+                name="date_border_demo"
+                type="date"
+                defaultValue={DEMO_DATES[0]}
+                borderWidth="20"
+                borderRadius="m"
+              />
+            </div>
           </Box>
 
           <hr
@@ -830,7 +837,7 @@
               borderTop: "1px solid #eee",
             }}
           />
-          <div class="states-col-header">ui="default" — UI du navigateur</div>
+          <h3 class="states-col-header">ui="default" — UI du navigateur</h3>
           <p class="desc">
             Passer <code>ui="default"</code> conserve l'UI native du navigateur
             tout en bénéficiant du système navi (validation, action, états
