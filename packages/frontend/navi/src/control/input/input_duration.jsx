@@ -201,15 +201,10 @@ export const InputDuration = (props) => {
         // sub-inputs are correctly reset to their original raw string values.
         // ISO 8601 encodes milliseconds as fractional seconds (e.g. "PT0.5S" = 500ms),
         // so fractional seconds are split back into whole seconds + ms.
-        distributeChildUIState: (groupState) => {
+        distributeChildUIState: (groupState, childUIStateController) => {
           const components = parseDuration(groupState);
           if (!components) {
-            return {
-              hour: undefined,
-              minute: undefined,
-              second: undefined,
-              millisecond: undefined,
-            };
+            return undefined;
           }
           const rawSeconds = components.seconds;
           let secondForField = rawSeconds;
@@ -222,12 +217,13 @@ export const InputDuration = (props) => {
             secondForField = Math.floor(rawSeconds);
             millisecondForField = Math.round((rawSeconds % 1) * 1000);
           }
-          return {
+          const fieldMap = {
             hour: components.hours,
             minute: components.minutes,
             second: secondForField,
             millisecond: millisecondForField,
           };
+          return fieldMap[childUIStateController.name];
         },
       },
     );

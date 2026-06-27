@@ -130,6 +130,7 @@
               <TableOfContents />
               <SearchableDemo />
               <BasicDemo />
+              <ListValueDemo />
               <ReadOnlyDemo />
               <ExternalControlDemo />
               <FormDemo />
@@ -160,6 +161,9 @@
               </li>
               <li>
                 <a href="#basic">Basic (with Selectable.Input)</a>
+              </li>
+              <li>
+                <a href="#list-value">List-level value / defaultValue</a>
               </li>
               <li>
                 <a href="#readonly">ReadOnly items</a>
@@ -378,6 +382,145 @@
                   ))}
                 </List>
                 <CallLog entries={multipleLog} />
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      // ── List-level value / defaultValue ───────────────────────────────────────
+
+      const ListValueDemo = () => {
+        const [selectedSingle, setSelectedSingle] = useState("Apple");
+        const [selectedMultiple, setSelectedMultiple] = useState([
+          "Apple",
+          "Cherry",
+        ]);
+        const [singleLog, pushSingleLog] = useCallLog();
+        const [multipleLog, pushMultipleLog] = useCallLog();
+        return (
+          <div id="list-value" className="demo-section">
+            <h2>List-level value / defaultValue</h2>
+            <p>
+              Instead of putting <code>selected</code> on each item,{" "}
+              <code>value</code> or <code>defaultValue</code> is set on{" "}
+              <code>List</code>. The list derives each item's selected state
+              internally — items don't need a <code>selected</code> prop.
+            </p>
+            <div className="two-col">
+              <div>
+                <div className="col-label">Single — controlled (value)</div>
+                <List
+                  selectable
+                  value={selectedSingle}
+                  action={(v) => {
+                    setSelectedSingle(v);
+                    pushSingleLog("action", v ?? "(none)");
+                  }}
+                  expandX
+                >
+                  {FRUITS.map((fruit, i) => (
+                    <List.Item
+                      selectable
+                      key={fruit}
+                      index={i}
+                      id={`lv_s_${fruit.toLowerCase()}`}
+                      value={fruit}
+                      flex
+                      spacing="s"
+                    >
+                      <SelectableInput />
+                      {fruit}
+                    </List.Item>
+                  ))}
+                </List>
+                <CallLog entries={singleLog} />
+              </div>
+              <div>
+                <div className="col-label">Multiple — controlled (value)</div>
+                <List
+                  selectable
+                  multiple
+                  value={selectedMultiple}
+                  action={(v) => {
+                    setSelectedMultiple(v ?? []);
+                    pushMultipleLog(
+                      "action",
+                      v && v.length ? v.join(", ") : "(none)",
+                    );
+                  }}
+                  expandX
+                >
+                  {FRUITS.map((fruit, i) => (
+                    <List.Item
+                      selectable
+                      key={fruit}
+                      index={i}
+                      id={`lv_m_${fruit.toLowerCase()}`}
+                      value={fruit}
+                      flex
+                      spacing="s"
+                    >
+                      <SelectableInput />
+                      {fruit}
+                    </List.Item>
+                  ))}
+                </List>
+                <CallLog entries={multipleLog} />
+              </div>
+            </div>
+            <h3 style={{ marginTop: 24, marginBottom: 8 }}>
+              Uncontrolled (defaultValue)
+            </h3>
+            <p>
+              <code>defaultValue</code> sets the initial selection without
+              external state — items stay uncontrolled after that.
+            </p>
+            <div className="two-col">
+              <div>
+                <div className="col-label">Single — defaultValue="Cherry"</div>
+                <List selectable defaultValue="Cherry" expandX>
+                  {FRUITS.map((fruit, i) => (
+                    <List.Item
+                      selectable
+                      key={fruit}
+                      index={i}
+                      id={`lvd_s_${fruit.toLowerCase()}`}
+                      value={fruit}
+                      flex
+                      spacing="s"
+                    >
+                      <SelectableInput />
+                      {fruit}
+                    </List.Item>
+                  ))}
+                </List>
+              </div>
+              <div>
+                <div className="col-label">
+                  Multiple — defaultValue={`{["Banana", "Date"]}`}
+                </div>
+                <List
+                  selectable
+                  multiple
+                  defaultValue={["Banana", "Date"]}
+                  expandX
+                >
+                  {FRUITS.map((fruit, i) => (
+                    <List.Item
+                      selectable
+                      key={fruit}
+                      index={i}
+                      id={`lvd_m_${fruit.toLowerCase()}`}
+                      value={fruit}
+                      flex
+                      spacing="s"
+                    >
+                      <SelectableInput />
+                      {fruit}
+                    </List.Item>
+                  ))}
+                </List>
               </div>
             </div>
           </div>
