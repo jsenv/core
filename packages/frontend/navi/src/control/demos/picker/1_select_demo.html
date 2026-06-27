@@ -115,6 +115,7 @@
     </div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
+      import { useState } from "preact/hooks";
       import { useSignal } from "@preact/signals";
       import { CallLog, useCallLog } from "../utils/call_log.jsx";
       import {
@@ -227,6 +228,7 @@
             <InteractivitySection />
             <SearchableSelectSection />
             <PlacePickerSection />
+            <ClipboardSection />
           </Box>
         </NaviDebug>
       );
@@ -270,6 +272,9 @@
             </li>
             <li>
               <a href="#section-3">3. Place picker</a>
+            </li>
+            <li>
+              <a href="#section-4">4. Clipboard</a>
             </li>
           </ol>
         </div>
@@ -773,7 +778,155 @@
         );
       };
 
-      // ── Renumbered sections ──────────────────────────────────────────
+      // ── 4. Clipboard ─────────────────────────────────────────────────
+
+      const INSPECT_TYPES = ["text/plain", "application/x-navi"];
+
+      const ClipboardSection = () => {
+        const [clipEntries, setClipEntries] = useState(null);
+
+        const onPaste = (e) => {
+          e.preventDefault();
+          const entries = INSPECT_TYPES.map((type) => ({
+            type,
+            value: e.clipboardData.getData(type),
+          }));
+          setClipEntries(entries);
+        };
+
+        return (
+          <div id="section-4" class="demo-section">
+            <h2>4. Clipboard</h2>
+            <p>
+              Select a value in the source picker then press{" "}
+              <kbd>Ctrl+C</kbd> / <kbd>⌘C</kbd> to copy it. Paste into the
+              target picker with <kbd>Ctrl+V</kbd> / <kbd>⌘V</kbd> while it is
+              focused.
+            </p>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "24px",
+                alignItems: "start",
+              }}
+            >
+              <Box flex="y" spacing="s" alignX="start">
+                <Text size="s" color="secondary">
+                  Source — pre-filled with <strong>Cherry</strong>
+                </Text>
+                <Picker
+                  name="clipboard_source"
+                  placeholder="Select a fruit…"
+                  defaultValue="Cherry"
+                  minWidth="200"
+                >
+                  <List selectable command="--navi-send">
+                    {FRUIT_OPTIONS.map((opt, i) => (
+                      <List.Item
+                        selectable
+                        key={opt}
+                        id={`csrc_${opt}`}
+                        index={i}
+                        value={opt}
+                        padding="s"
+                        spacing="s"
+                      >
+                        {opt}
+                      </List.Item>
+                    ))}
+                  </List>
+                </Picker>
+              </Box>
+              <Box flex="y" spacing="s" alignX="start">
+                <Text size="s" color="secondary">
+                  Target — paste here
+                </Text>
+                <Picker
+                  name="clipboard_target"
+                  placeholder="Select a fruit…"
+                  minWidth="200"
+                >
+                  <List selectable command="--navi-send">
+                    {FRUIT_OPTIONS.map((opt, i) => (
+                      <List.Item
+                        selectable
+                        key={opt}
+                        id={`ctgt_${opt}`}
+                        index={i}
+                        value={opt}
+                        padding="s"
+                        spacing="s"
+                      >
+                        {opt}
+                      </List.Item>
+                    ))}
+                  </List>
+                </Picker>
+              </Box>
+            </div>
+            <Box flex="y" spacing="xs" style={{ marginTop: "16px" }}>
+              <Text size="s" color="secondary">
+                Paste here to inspect clipboard content
+              </Text>
+              <textarea
+                rows={2}
+                style={{
+                  fontFamily: "monospace",
+                  fontSize: "13px",
+                  width: "100%",
+                  boxSizing: "border-box",
+                  padding: "6px 8px",
+                  border: "1px solid #ccc",
+                  borderRadius: "4px",
+                }}
+                placeholder="paste here…"
+                onPaste={onPaste}
+              />
+              {clipEntries ? (
+                <table
+                  style={{
+                    borderCollapse: "collapse",
+                    fontSize: "13px",
+                    width: "100%",
+                  }}
+                >
+                  {clipEntries.map(({ type, value }) => (
+                    <tr key={type} style={{ borderTop: "1px solid #e8e8e8" }}>
+                      <td
+                        style={{
+                          padding: "4px 10px 4px 0",
+                          fontFamily: "monospace",
+                          color: "#888",
+                          whiteSpace: "nowrap",
+                          verticalAlign: "top",
+                        }}
+                      >
+                        {type}
+                      </td>
+                      <td
+                        style={{
+                          padding: "4px 0",
+                          fontFamily: "monospace",
+                          wordBreak: "break-all",
+                        }}
+                      >
+                        {value ? (
+                          JSON.stringify(value)
+                        ) : (
+                          <span style={{ color: "#bbb" }}>(empty)</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </table>
+              ) : null}
+            </Box>
+          </div>
+        );
+      };
+
+      // ── Render ───────────────────────────────────────────────────────
 
       render(<App />, document.getElementById("app"));
     </script>

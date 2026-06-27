@@ -513,20 +513,21 @@ const isWithinPickerContent = (el, pickerEl) => {
 };
 
 const PickerInput = (props) => {
-  const { ui } = props;
+  const { ui, readOnly } = props;
 
   // After type resolution: force readOnly when the input type would open the
   // mobile keyboard. We also suppress the visual ":read-only" state so the
   // picker still looks interactive (it is — just not keyboard-typeable).
-  if (MOBILE_KEYBOARD_TYPES.has(props.type) && !props.readOnly) {
-    props.readOnly = true;
-    props["data-readonly-forced"] = "";
-  }
+  const readOnlyForced = readOnly
+    ? false
+    : MOBILE_KEYBOARD_TYPES.has(props.type);
 
   return (
     <Box
       as="input"
       {...props}
+      readOnly={readOnlyForced ? true : readOnly}
+      data-readonly-forced={readOnlyForced ? "" : undefined}
       ui={undefined}
       className="navi_picker_input"
       pseudoClasses={PickerInputPseudoClasses}
