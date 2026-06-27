@@ -23,6 +23,7 @@ import { useDebugScroll } from "../../navi_debug.jsx";
 import { naviI18n } from "../../text/navi_i18n.js";
 import { useItemTracker } from "../../utils/item_tracker/use_item_tracker.js";
 import { useDisplayedLayoutEffect } from "../../utils/use_displayed_layout_effect.js";
+import { getUIStateControllerById } from "../controller_registry.js";
 import { ListItemHeaderOrFooterResolver } from "./list_item_header_footer.jsx";
 import {
   ListItemSelectableResolver,
@@ -746,7 +747,13 @@ const useListScrollSync = ({
       }
       hasBeenDisplayedRef.current = true;
       const items = tracker.itemsSignal.peek();
-      const firstSelected = items.find((i) => i.selected);
+      const firstSelected = items.find((i) => {
+        if (i.selected) {
+          return true;
+        }
+        const inputController = getUIStateControllerById(`${i.id}_input`);
+        return inputController ? inputController.uiStateSignal.peek() : false;
+      });
       if (firstSelected) {
         scrollToItem(firstSelected, {
           event: new CustomEvent("navi_displayed", {

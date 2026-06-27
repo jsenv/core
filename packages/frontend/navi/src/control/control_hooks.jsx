@@ -271,7 +271,6 @@ export const useControlProps = (
     };
     const wasCheckedAtMousedownRef = useRef(false);
 
-
     const getDefaultEventReactionDefinitions = () => {
       const keyDownDefault = (e) => {
         const defaultAction = getKeyboardEventDefaultAction(e);
@@ -738,8 +737,10 @@ export const useControlProps = (
           const selEnd = el.selectionEnd ?? el.value.length;
           const newValue =
             el.value.slice(0, selStart) + pastedText + el.value.slice(selEnd);
-          const guardResult =
-            uiStateController.rules.guard.checkUIState(newValue, e);
+          const guardResult = uiStateController.rules.guard.checkUIState(
+            newValue,
+            e,
+          );
           if (guardResult?.blocked) {
             e.preventDefault();
             return;
@@ -956,17 +957,18 @@ export const useControlgroupProps = (
   // group read-only so children don't appear interactive when they can't change.
   const implicitReadOnly =
     uiGroupStateController.hasValueProp && !action && !props.uiAction;
-  if (import.meta.dev && implicitReadOnly && !props.readOnly) {
-    console.warn(
-      `[${controlType}] is controlled (has "value" prop) but has no action handler. ` +
-        `Use "defaultValue" for uncontrolled mode, or provide "action"/"uiAction".`,
-    );
+  if (implicitReadOnly && !props.readOnly) {
+    if (import.meta.dev) {
+      console.warn(
+        `[${controlType}] is controlled (has "value" prop) but has no action handler. ` +
+          `Use "defaultValue" for uncontrolled mode, or provide "action"/"uiAction".`,
+      );
+    }
+    props.readOnly = true;
   }
-  const effectiveProps = implicitReadOnly
-    ? { ...props, readOnly: props.readOnly || true }
-    : props;
+
   const [actionRequester, setActionRequester] = useState();
-  const [controlRootProps, controlgroupProps] = useInteractiveProps(effectiveProps, {
+  const [controlRootProps, controlgroupProps] = useInteractiveProps(props, {
     uiStateController: uiGroupStateController,
     boundAction,
     // here the state is derived from the children
