@@ -50,6 +50,10 @@ import {
   createComponentResolver,
   useNextResolver,
 } from "@jsenv/navi/src/resolver/resolver.jsx";
+import {
+  resolveCharClass,
+  resolveInputModeFromAllowedChars,
+} from "../char_guard_presets.js";
 import { ControlChildrenWrapper, useControlProps } from "../control_hooks.jsx";
 import { InputModeResolver } from "./input_resolver_mode.jsx";
 import { InputTypeResolver } from "./input_resolver_type.jsx";
@@ -57,10 +61,7 @@ import { InputTextualContext } from "./input_textual_context.js";
 import { InputWithListResolver } from "./input_with_list.jsx";
 import { InputWithSuggestionsResolver } from "./input_with_suggestions.jsx";
 import { resolveInputProps } from "./resolve_input_props.js";
-import {
-  resolveCharClass,
-  resolveInputModeFromAllowedChars,
-} from "../char_guard_presets.js";
+import { useAutoSelectReadOnly } from "./use_autoselect_read_only.js";
 
 const css = /* css */ `
   @layer navi {
@@ -446,30 +447,14 @@ export const InputTextual = createComponentResolver([
 ]);
 
 const RealInput = (props) => {
+  const autoSelectReadOnlyProps = useAutoSelectReadOnly(props);
+
   return (
     <Box
       {...props}
       as="input"
       baseClassName="navi_control_input"
-      // When readonly focus and mousedown should select input content
-      // (the only relevant interaction to perform on readonly is copying the value)
-      // Nice side effect is that input_group.jsx will see all input is selected
-      // and arrow left/right will always nav between inputs.
-      // (Otherwise we would prevent left/right + show calllout about readonly)
-      onFocus={(e) => {
-        props.onFocus(e);
-        if (!e.defaultPrevented && e.target.readOnly) {
-          e.preventDefault();
-          e.target.select();
-        }
-      }}
-      onMouseDown={(e) => {
-        props.onMouseDown(e);
-        if (!e.defaultPrevented && e.target.readOnly) {
-          e.preventDefault();
-          e.target.select();
-        }
-      }}
+      {...autoSelectReadOnlyProps}
       // Never set native maxLength — our guard handles it. maxLength stays in
       // inputControlHostProps so form validation constraints still read it.
       maxLength={undefined}
