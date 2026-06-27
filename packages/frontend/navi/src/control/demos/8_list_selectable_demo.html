@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <link rel="icon" href="data:," />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Selectable List Demo</title>
+    <title>List Selectable Demo</title>
     <style>
       body {
         max-width: 1000px;
@@ -143,6 +143,7 @@
                 <BgColorDemo />
                 <ManualAreaDemo />
                 <LegendDemo />
+                <HorizontalDemo />
               </div>
             </div>
           </NaviDebug>
@@ -1705,97 +1706,135 @@
       };
 
       const SIZES = ["XS", "S", "M", "L", "XL"];
-      const HorizontalDemo = () => {
-        const [selectedSingle, setSelectedSingle] = useState("M");
-        const [selectedMultiple, setSelectedMultiple] = useState(["S", "L"]);
+
+      const HorizontalSingleDemo = () => {
+        const [selected, setSelected] = useState("M");
         return (
-          <div id="horizontal" className="demo-section">
-            <h2>Horizontal</h2>
-            <p>
-              La prop <code>horizontal</code> sur <code>SelectableList</code>{" "}
-              dispose les items en ligne. Ici sans <code>Selectable.Input</code>{" "}
-              visible : la sélection est indiquée uniquement par la couleur de
-              fond.
-            </p>
-            <Box flex="y" spacing="m" alignX="start">
-              <div>
-                <p
-                  style={{
-                    margin: "0 0 6px",
-                    fontSize: "0.85rem",
-                    color: "#555",
-                  }}
-                >
-                  Single
-                </p>
-                <List
+          <div className="demo-section">
+            <h3>Single</h3>
+            <List
+              selectable
+              horizontal
+              spacing="xs"
+              borderWidth="0"
+              selectedIndicator="backgroundColor"
+              action={(v) => {
+                setSelected(v ?? null);
+              }}
+            >
+              {SIZES.map((size, i) => (
+                <List.Item
                   selectable
-                  horizontal
-                  spacing="xs"
-                  borderWidth="0"
-                  selectedIndicator="backgroundColor"
-                  action={(v) => {
-                    setSelectedSingle(v ?? null);
-                  }}
+                  key={size}
+                  index={i}
+                  id={`h_s_${size}`}
+                  value={size}
+                  selected={selected === size}
+                  paddingX="m"
+                  paddingY="s"
+                  borderRadius="s"
+                  borderWidth="1"
                 >
-                  {SIZES.map((size, i) => (
-                    <List.Item
-                      selectable
-                      key={size}
-                      index={i}
-                      id={`h_s_${size}`}
-                      value={size}
-                      selected={selectedSingle === size}
-                      paddingX="m"
-                      paddingY="s"
-                      borderRadius="s"
-                      borderWidth="1"
-                    >
-                      {size}
-                    </List.Item>
-                  ))}
-                </List>
-              </div>
-              <div>
-                <p
-                  style={{
-                    margin: "0 0 6px",
-                    fontSize: "0.85rem",
-                    color: "#555",
-                  }}
-                >
-                  Multiple
-                </p>
-                <List
+                  {size}
+                </List.Item>
+              ))}
+            </List>
+          </div>
+        );
+      };
+
+      const HorizontalMultipleDemo = () => {
+        const [selected, setSelected] = useState(["S", "L"]);
+        return (
+          <div className="demo-section">
+            <h3>Multiple</h3>
+            <List
+              selectable
+              horizontal
+              multiple
+              spacing="xs"
+              borderWidth="0"
+              selectedIndicator="backgroundColor"
+              action={(v) => {
+                setSelected(v ?? []);
+              }}
+            >
+              {SIZES.map((size, i) => (
+                <List.Item
                   selectable
-                  horizontal
-                  multiple
-                  spacing="xs"
-                  borderWidth="0"
-                  selectedIndicator="backgroundColor"
-                  action={(v) => {
-                    setSelectedMultiple(v ?? []);
-                  }}
+                  key={size}
+                  index={i}
+                  id={`h_m_${size}`}
+                  value={size}
+                  selected={selected.includes(size)}
+                  paddingX="m"
+                  paddingY="s"
+                  borderRadius="s"
+                  borderWidth="1"
                 >
-                  {SIZES.map((size, i) => (
-                    <List.Item
-                      selectable
-                      key={size}
-                      index={i}
-                      id={`h_m_${size}`}
-                      value={size}
-                      selected={selectedMultiple.includes(size)}
-                      paddingX="m"
-                      paddingY="s"
-                      borderRadius="s"
-                      borderWidth="1"
-                    >
-                      {size}
-                    </List.Item>
-                  ))}
-                </List>
-              </div>
-            </Box>
+                  {size}
+                </List.Item>
+              ))}
+            </List>
+          </div>
+        );
+      };
+
+      const HorizontalYellowOutlineDemo = () => {
+        const [selected, setSelected] = useState("M");
+        return (
+          <div className="demo-section">
+            <h3>Yellow outline + forced focus-visible on "M"</h3>
+            <List
+              selectable
+              horizontal
+              spacing="xs"
+              borderWidth="0"
+              selectedIndicator="backgroundColor"
+              style={{ "--navi-outline-color": "yellow" }}
+              action={(v) => {
+                setSelected(v ?? null);
+              }}
+            >
+              {SIZES.map((size, i) => (
+                <List.Item
+                  selectable
+                  key={size}
+                  index={i}
+                  id={`h_fo_${size}`}
+                  value={size}
+                  selected={selected === size}
+                  paddingX="m"
+                  paddingY="s"
+                  borderRadius="s"
+                  borderWidth="1"
+                  basePseudoState={
+                    size === "M" ? { ":focus-visible": true } : undefined
+                  }
+                >
+                  {size}
+                </List.Item>
+              ))}
+            </List>
+          </div>
+        );
+      };
+
+      const HorizontalDemo = () => {
+        return (
+          <div id="horizontal">
+            <div className="demo-section">
+              <h2>Horizontal</h2>
+              <p>
+                La prop <code>horizontal</code> sur <code>SelectableList</code>{" "}
+                dispose les items en ligne. Ici sans{" "}
+                <code>Selectable.Input</code> visible : la sélection est
+                indiquée uniquement par la couleur de fond.
+              </p>
+            </div>
+            <HorizontalSingleDemo />
+            <HorizontalMultipleDemo />
+            <HorizontalYellowOutlineDemo />
           </div>
         );
       };
