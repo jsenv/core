@@ -15447,7 +15447,12 @@ const asControlHostValue = (
     if (type === "datetime-local") {
       return asDatetimeLocalString(jsValue);
     }
-    if (type === "number" || type === "range" || inputMode === "numeric") {
+    if (
+      type === "number" ||
+      type === "range" ||
+      inputMode === "numeric" ||
+      inputMode === "decimal"
+    ) {
       return asNumberString(jsValue);
     }
     if (type === "color") {
@@ -15521,7 +15526,8 @@ const readControlValue = (controlHost) => {
     if (
       type === "number" ||
       type === "range" ||
-      controlHost.inputMode === "numeric"
+      controlHost.inputMode === "numeric" ||
+      controlHost.inputMode === "decimal"
     ) {
       return readNumberFromInput(controlHost);
     }
@@ -19426,7 +19432,11 @@ const REQUIRED_CONSTRAINT = {
       return naviI18n("constraint.required.time");
     }
     const inputMode = field.controlHostProps.inputMode;
-    if (type === "number" || inputMode === "numeric") {
+    if (
+      type === "number" ||
+      inputMode === "numeric" ||
+      inputMode === "decimal"
+    ) {
       return naviI18n("constraint.required.number");
     }
     if (type === "datetime-local") {
@@ -19587,7 +19597,8 @@ const MAX_LENGTH_CONSTRAINT = {
     } else if (!isTextarea) {
       return null;
     }
-    const maxLength = field.controlHostProps.maxLength ?? field.props?.maxLengthGuard;
+    const maxLength =
+      field.controlHostProps.maxLength ?? field.props?.maxLengthGuard;
     if (maxLength === undefined) {
       return null;
     }
@@ -19630,7 +19641,8 @@ const TYPE_NUMBER_CONSTRAINT = {
     }
     const type = field.controlHostProps.type;
     const inputMode = field.controlHostProps.inputMode;
-    const isNumber = type === "number" || inputMode === "numeric";
+    const isNumber =
+      type === "number" || inputMode === "numeric" || inputMode === "decimal";
     if (!isNumber) {
       return null;
     }
@@ -19711,7 +19723,8 @@ const MIN_CONSTRAINT = {
     if (!valueAsString) {
       return null;
     }
-    const isNumber = type === "number" || inputMode === "numeric";
+    const isNumber =
+      type === "number" || inputMode === "numeric" || inputMode === "decimal";
     if (isNumber) {
       const minNumber = parseFloat(minString);
       if (isNaN(minNumber)) {
@@ -19818,7 +19831,8 @@ const MAX_CONSTRAINT = {
     if (!valueAsString) {
       return null;
     }
-    const isNumber = type === "number" || inputMode === "numeric";
+    const isNumber =
+      type === "number" || inputMode === "numeric" || inputMode === "decimal";
     if (isNumber) {
       const maxNumber = parseFloat(maxString);
       if (isNaN(maxNumber)) {
@@ -19940,7 +19954,8 @@ const STEP_CONSTRAINT = {
     }
     const type = field.controlHostProps.type;
     const inputMode = field.controlHostProps.inputMode;
-    const isNumericText = type === "text" && inputMode === "numeric";
+    const isNumericText =
+      type === "text" && (inputMode === "numeric" || inputMode === "decimal");
     if (!isNumericText && !STEP_SUPPORTED_TYPE_SET.has(type)) {
       return null;
     }
@@ -32124,7 +32139,6 @@ const NAVI_TYPE_DEFAULTS = {
   },
   navi_number: {
     type: "text",
-    inputMode: "numeric",
     autoCorrect: "off",
     spellcheck: false,
     autoComplete: "off",
@@ -32202,6 +32216,16 @@ const resolveInputProps = (props) => {
   const currentTypeDefaults = NAVI_TYPE_DEFAULTS[currentType];
   if (!currentTypeDefaults) {
     return;
+  }
+  // For navi_number: choose inputMode based on whether step/min/max suggest decimals.
+  // inputMode="numeric" (integer keyboard) vs "decimal" (keyboard with decimal separator).
+  if (currentType === "navi_number" && props.inputMode === undefined) {
+    props.inputMode =
+      hasDecimalPlaces(props.step) ||
+      hasDecimalPlaces(props.min) ||
+      hasDecimalPlaces(props.max)
+        ? "decimal"
+        : "numeric";
   }
   for (const key of Object.keys(currentTypeDefaults)) {
     if (props[key] === undefined) {
@@ -32295,6 +32319,14 @@ const STEP_FORMATTER_BY_TYPE = {
   "time": timeStringToSeconds,
   "datetime-local": timeStringToSeconds,
   "datetime": timeStringToSeconds,
+};
+
+const hasDecimalPlaces = (value) => {
+  if (value === undefined || value === null) {
+    return false;
+  }
+  const num = Number(value);
+  return !isNaN(num) && !Number.isInteger(num);
 };
 
 installImportMetaCssBuild(import.meta);const css$y = /* css */`
@@ -32669,7 +32701,7 @@ const RangePseudoElements = ["::-navi-loader"];
 
 const InputModeResolver = props => {
   const Next = useNextResolver();
-  if (props.inputMode === "numeric") {
+  if (props.inputMode === "numeric" || props.inputMode === "decimal") {
     return jsx(InputModeNumeric, {
       ...props
     });
@@ -35087,7 +35119,11 @@ const InputDurationPart = ({
   return jsxs(Label, {
     flex: "y",
     "data-separator": separator || undefined,
-    children: [jsx(Input, {
+    children: [jsx(Input
+    // When autofocused this field should be selected
+    // this help to modify the value on mobile
+    , {
+      autoSelect: true,
       type: "navi_number",
       "navi-input-type": unit,
       name: unit,

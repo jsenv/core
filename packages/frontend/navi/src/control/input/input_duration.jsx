@@ -617,6 +617,9 @@ const InputDurationPart = ({ unit, label, separator, ...props }) => {
   return (
     <Label flex="y" data-separator={separator || undefined}>
       <Input
+        // When autofocused this field should be selected
+        // this help to modify the value on mobile
+        autoSelect
         type="navi_number"
         navi-input-type={unit}
         name={unit}
