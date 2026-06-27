@@ -701,7 +701,7 @@
                 name={`date_numeric_${i}`}
                 type="date"
                 defaultValue={d}
-                ui={<Picker.UI.Date numeric />}
+                ui={<Picker.UI.Date format="numeric" />}
               />
             ))}
           </Box>
@@ -713,7 +713,9 @@
               borderTop: "1px solid #eee",
             }}
           />
-          <h3 class="states-col-header">Sizing, padding, border-radius, text-align</h3>
+          <h3 class="states-col-header">
+            Sizing, padding, border-radius, text-align
+          </h3>
           <p class="desc">
             Le picker accepte <code>size</code> ("s", "m", "l"…), du padding via{" "}
             <code>paddingX</code> / <code>paddingY</code>, un border-radius via{" "}
@@ -815,10 +817,11 @@
               <p class="desc" style={{ margin: "0 0 8px" }}>
                 <strong>Interactivité de la bordure et du border-radius</strong>
                 <br />
-                Cliquer sur la bordure elle-même ouvre le picker (la bordure fait
-                partie de la surface cliquable). En revanche, les coins arrondis
-                créés par le border-radius ne sont pas interactifs — le hit-area
-                suit la forme rectangulaire de l'élément avant arrondissement.
+                Cliquer sur la bordure elle-même ouvre le picker (la bordure
+                fait partie de la surface cliquable). En revanche, les coins
+                arrondis créés par le border-radius ne sont pas interactifs — le
+                hit-area suit la forme rectangulaire de l'élément avant
+                arrondissement.
               </p>
               <Picker
                 name="date_border_demo"

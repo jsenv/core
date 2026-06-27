@@ -214,17 +214,13 @@ const css = /* css */ `
       }
     }
     .navi_picker_input {
-      position: absolute;
-      top: calc(-1 * var(--picker-border-width));
-      right: calc(-1 * var(--picker-border-width));
-      bottom: calc(-1 * var(--picker-border-width));
-      left: calc(-1 * var(--picker-border-width));
       box-sizing: border-box;
       margin: 0;
       padding: 0;
       background: none;
       border: none;
       border-radius: inherit;
+      outline: none;
       cursor: inherit;
       pointer-events: auto;
 
@@ -235,6 +231,12 @@ const css = /* css */ `
 
     &[navi-ui-custom] {
       .navi_picker_input {
+        position: absolute;
+        top: calc(-1 * var(--picker-border-width));
+        right: calc(-1 * var(--picker-border-width));
+        bottom: calc(-1 * var(--picker-border-width));
+        left: calc(-1 * var(--picker-border-width));
+
         opacity: 0;
         appearance: none;
       }
@@ -491,7 +493,7 @@ const PickerButton = (props) => {
           </PickerContext.Provider>
         </Text>
       )}
-      {variant === "headless" || ui === 'default' ? null : (
+      {variant === "headless" || ui === "default" ? null : (
         <span className="navi_picker_right_slot">
           <Icon size="m">{icon === undefined ? <ChevronDownSvg /> : icon}</Icon>
         </span>
