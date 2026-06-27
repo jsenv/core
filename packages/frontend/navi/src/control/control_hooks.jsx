@@ -71,7 +71,7 @@ import {
 } from "./controller_registry.js";
 import { FormContext } from "./form_context.js";
 import { addInputEffect } from "./input_effect.js";
-import { isTypingIntent } from "./prevent_invalid_input.js";
+import { isTypingIntent } from "./control_guard.js";
 import {
   ParentUIStateControllerContext,
   useUIFacadeStateController,
