@@ -73,21 +73,6 @@
                   <Button>Click me</Button>
                 </Box>
                 <Box flex="x" alignY="center">
-                  <Input
-                    type="range"
-                    min={0}
-                    max={100}
-                    value={50}
-                    uiAction={() => {}}
-                  />
-                  <Input type="checkbox" margin="0" />
-                  <Input type="radio" margin="0" />
-                </Box>
-                <Box flex="x" alignY="center">
-                  <Picker name="date_picker_side" type="date" defaultValue={DEFAULT_DATE} />
-                  <Picker name="color_picker_native" type="color" defaultValue="#4f81e0" />
-                </Box>
-                <Box flex="x" alignY="center">
                   <Button>Click me</Button>
                   <Picker
                     name="color_picker_a"
@@ -133,6 +118,14 @@
                       ))}
                     </List>
                   </Picker>
+                  <Picker name="date_picker_side" type="date" defaultValue={DEFAULT_DATE} />
+                </Box>
+                <Box flex="x" alignY="center">
+                  <Picker name="date_picker_side_2" type="date" defaultValue={DEFAULT_DATE} />
+                  <Picker name="color_picker_native" type="color" defaultValue="#4f81e0" />
+                </Box>
+                <Box flex="x" alignY="center">
+                  <Picker name="color_picker_native_2" type="color" defaultValue="#4f81e0" />
                   <List
                     selectable
                     horizontal
@@ -156,6 +149,17 @@
                       </List.Item>
                     ))}
                   </List>
+                </Box>
+                <Box flex="x" alignY="center">
+                  <Input
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={50}
+                    uiAction={() => {}}
+                  />
+                  <Input type="checkbox" margin="0" />
+                  <Input type="radio" margin="0" />
                 </Box>
               </Box>
             </div>
