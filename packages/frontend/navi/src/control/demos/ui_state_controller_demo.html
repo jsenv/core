@@ -145,6 +145,8 @@
             <ControlGroupValueDemo />
             <PickerListDefaultValueDemo />
             <PickerListValueDemo />
+            <PickerTextDefaultValueDemo />
+            <PickerTextValueDemo />
             <PickerControlGroupDefaultValueDemo />
             <PickerControlGroupValueDemo />
 
@@ -284,6 +286,16 @@
                 <li>
                   <a href="#distribute-picker-list-value">
                     Picker (List) — value on Picker (controlled)
+                  </a>
+                </li>
+                <li>
+                  <a href="#distribute-picker-text-defaultvalue">
+                    Picker (Input text) — defaultValue on Picker
+                  </a>
+                </li>
+                <li>
+                  <a href="#distribute-picker-text-value">
+                    Picker (Input text) — value on Picker (controlled)
                   </a>
                 </li>
                 <li>
@@ -1738,6 +1750,108 @@
                       </List.Item>
                     ))}
                   </List>
+                </Picker>
+              </fieldset>
+              <CallLog entries={entries} onClear={clearEntries} />
+            </Box>
+          </div>
+        );
+      };
+
+      const PickerTextDefaultValueDemo = () => {
+        const [entries, pushEntry, clearEntries] = useCallLog();
+        return (
+          <div class="demo-section" id="distribute-picker-text-defaultvalue">
+            <h2>Picker (Input text) — defaultValue on Picker</h2>
+            <Box flex="y" spacing="m" alignX="start">
+              <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+                <code>defaultValue="initial label"</code> sur le{" "}
+                <code>Picker</code> — l'<code>Input</code> interne n'a pas de{" "}
+                <code>defaultValue</code>. À l'ouverture, le champ doit afficher{" "}
+                <em>initial label</em> pré-rempli sans déclencher{" "}
+                <code>uiAction</code>.
+              </p>
+              <fieldset>
+                <legend>label</legend>
+                <Picker
+                  name="label"
+                  placeholder="Saisir un label"
+                  defaultValue="initial label"
+                  uiAction={(v) => {
+                    pushEntry("uiAction (picker)", v);
+                  }}
+                  action={(v) => {
+                    pushEntry("action (picker)", v);
+                  }}
+                >
+                  <Box flex="y" spacing="s" padding="s" alignX="start">
+                    <fieldset>
+                      <legend>label</legend>
+                      <Input
+                        name="label"
+                        placeholder="Texte libre"
+                        uiAction={(v) => {
+                          pushEntry("uiAction (input)", v);
+                        }}
+                      />
+                    </fieldset>
+                    <Box flex="x" spacing="s">
+                      <Button command="--navi-cancel">Annuler</Button>
+                      <Button command="--navi-send">Confirmer</Button>
+                    </Box>
+                  </Box>
+                </Picker>
+              </fieldset>
+              <CallLog entries={entries} onClear={clearEntries} />
+            </Box>
+          </div>
+        );
+      };
+
+      const PickerTextValueDemo = () => {
+        const [entries, pushEntry, clearEntries] = useCallLog();
+        const [label, setLabel] = useState("initial label");
+        return (
+          <div class="demo-section" id="distribute-picker-text-value">
+            <h2>Picker (Input text) — value on Picker (controlled)</h2>
+            <Box flex="y" spacing="m" alignX="start">
+              <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
+                <code>value={"{label}"}</code> sur le <code>Picker</code> — l'
+                <code>Input</code> interne n'a pas de <code>value</code>.
+                Confirmer met à jour l'état React et l'input se synchronise à la
+                prochaine ouverture. Vérifier que l'<code>uiAction</code> de
+                l'input ne se déclenche pas sur le montage.
+              </p>
+              <fieldset>
+                <legend>label</legend>
+                <Picker
+                  name="label"
+                  placeholder="Saisir un label"
+                  value={label}
+                  uiAction={(v) => {
+                    pushEntry("uiAction (picker)", v);
+                  }}
+                  action={(v) => {
+                    pushEntry("action (picker)", v);
+                    setLabel(v);
+                  }}
+                >
+                  <Box flex="y" spacing="s" padding="s" alignX="start">
+                    <fieldset>
+                      <legend>label</legend>
+                      <Input
+                        name="label"
+                        placeholder="Texte libre"
+                        uiAction={(v) => {
+                          pushEntry("uiAction (input)", v);
+                        }}
+                      />
+                    </fieldset>
+                    <Box flex="x" spacing="s">
+                      <Button command="--navi-cancel">Annuler</Button>
+                      <Button command="--navi-send">Confirmer</Button>
+                    </Box>
+                  </Box>
                 </Picker>
               </fieldset>
               <CallLog entries={entries} onClear={clearEntries} />

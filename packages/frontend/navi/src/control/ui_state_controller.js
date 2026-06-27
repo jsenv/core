@@ -403,13 +403,17 @@ export const useUIStateController = (
             );
           }
         }
-        // Still fire uiAction so external listeners (e.g. signals) stay in
-        // sync, but do NOT fire the command and do NOT notify the parent —
-        // both would cause an infinite loop when a parent cascades state
-        // down to its children (child command would re-trigger the cascade).
-        uiStateController.onUIAction(e, {
-          skipCommand: true,
-        });
+        // initial_state_push is pure initialization (equivalent to defaultValue on the
+        // child itself): skip uiAction entirely so no side effects fire on mount.
+        if (e.type !== "initial_state_push") {
+          // Still fire uiAction so external listeners (e.g. signals) stay in
+          // sync, but do NOT fire the command and do NOT notify the parent —
+          // both would cause an infinite loop when a parent cascades state
+          // down to its children (child command would re-trigger the cascade).
+          uiStateController.onUIAction(e, {
+            skipCommand: true,
+          });
+        }
         // Exception: when the facade propagates a child state change up to the
         // real picker input, also notify the parent group (e.g. Form) so it
         // keeps its cached aggregated state in sync and fires its own uiAction.
@@ -966,10 +970,15 @@ export const useUIGroupStateController = (
         );
         return;
       }
-      const propagateDownEvent = new CustomEvent(
-        "propagate_down_set_ui_state",
-        { detail: {} },
-      );
+      // initial_state_push propagates silently (no uiAction anywhere in the chain);
+      // regular updates use propagate_down_set_ui_state which fires uiAction on children.
+      const propagateEventType =
+        e.type === "initial_state_push"
+          ? "initial_state_push"
+          : "propagate_down_set_ui_state";
+      const propagateDownEvent = new CustomEvent(propagateEventType, {
+        detail: {},
+      });
       chainEvent(propagateDownEvent, e);
       for (const childUIStateController of childUIStateControllerArray) {
         if (!shouldPropagateStateToChild(childUIStateController)) {
@@ -992,6 +1001,11 @@ export const useUIGroupStateController = (
       );
       const groupUIState =
         aggChildState === undefined ? fallbackState : aggChildState;
+      if (e.type === "initial_state_push") {
+        // Silent initialization: update state without firing uiAction or notifying parent.
+        groupUIStateController.syncInternalState(groupUIState);
+        return;
+      }
       applyState(groupUIState, e, { internalBehavior: true });
     },
     // Called on mount/unmount/render-batch: updates state silently with no external reactions.
@@ -1046,11 +1060,11 @@ export const useUIGroupStateController = (
       );
       // Auto-derive child's initial state from the group's value/defaultValue
       // when the child has no individually-controlled state prop.
+      // Use initial_state_push so uiAction does not fire during mount initialization.
       if (!childUIStateController.hasStateProp) {
-        const propagateDownEvent = new CustomEvent(
-          "propagate_down_set_ui_state",
-          { detail: {} },
-        );
+        const initialEvent = new CustomEvent("initial_state_push", {
+          detail: {},
+        });
         if (groupUIStateController.hasValueProp) {
           // Controlled: always cascade current group value (even undefined = deselect all).
           const childNewState = resolvedDistributeChildUIState(
@@ -1058,10 +1072,7 @@ export const useUIGroupStateController = (
             childUIStateController,
           );
           if (childNewState !== CANNOT_DERIVE) {
-            childUIStateController.setUIState(
-              childNewState,
-              propagateDownEvent,
-            );
+            childUIStateController.setUIState(childNewState, initialEvent);
           }
         } else if (groupUIStateController.hasDefaultValueProp) {
           // Uncontrolled: set initial state from defaultValue on mount.
@@ -1070,10 +1081,7 @@ export const useUIGroupStateController = (
             childUIStateController,
           );
           if (childNewState !== CANNOT_DERIVE) {
-            childUIStateController.setUIState(
-              childNewState,
-              propagateDownEvent,
-            );
+            childUIStateController.setUIState(childNewState, initialEvent);
           }
         }
       }
@@ -1328,6 +1336,18 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
         );
         firstChildControllerRef.current = child;
         realUIStateController.facadeChild = child;
+        // If the picker already has a meaningful state (from value or defaultValue),
+        // push it to the child on registration so it reflects the pre-set value
+        // without firing uiAction (equivalent to defaultValue on the child itself).
+        const initialState = realUIStateController.uiState;
+        if (initialState !== undefined) {
+          updatingRef.current = true;
+          const initialEvent = new CustomEvent("initial_state_push", {
+            detail: {},
+          });
+          child.setUIState(initialState, initialEvent);
+          updatingRef.current = false;
+        }
       }
     },
     unregisterChild: (child) => {
@@ -1420,6 +1440,10 @@ const INTERNAL_EVENT_SET = new Set([
   // so the picker knows the child's current value (e.g. for "store value at open"),
   // but no action pipeline, command, or synthetic input event should fire.
   "facade_child_mount_sync",
+  // Facade pushing its current state (from value/defaultValue) down to the first child
+  // on registration, and group pushing value/defaultValue to children on registerChild.
+  // Equivalent to defaultValue initialization: no uiAction, no commands, no parent notification.
+  "initial_state_push",
 ]);
 const isInternalEvent = (e) => {
   return INTERNAL_EVENT_SET.has(e.type);
