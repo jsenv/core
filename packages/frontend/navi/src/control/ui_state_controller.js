@@ -871,6 +871,15 @@ export const useUIGroupStateController = (
     }
     return true;
   };
+  const shouldPropagateStateToChild = (childUIStateController) => {
+    if (!isMonitoringChild(childUIStateController)) {
+      return false;
+    }
+    if (childUIStateController.controlType === "button") {
+      return false;
+    }
+    return true;
+  };
 
   const existingController = controllerRef.current;
   if (existingController) {
@@ -888,20 +897,20 @@ export const useUIGroupStateController = (
         { detail: {} },
       );
       for (const childUIStateController of childUIStateControllerArray) {
-        if (!isMonitoringChild(childUIStateController)) continue;
-        if (childUIStateController.controlType === "button") continue;
-        if (!childUIStateController.hasStateProp) {
-          const childNewState = existingController.distributeChildUIState(
-            value,
-            childUIStateController,
-          );
-          if (childNewState !== CANNOT_DERIVE) {
-            childUIStateController.setUIState(
-              childNewState,
-              propagateDownEvent,
-            );
-          }
+        if (!shouldPropagateStateToChild(childUIStateController)) {
+          continue;
         }
+        if (childUIStateController.hasStateProp) {
+          continue;
+        }
+        const childNewState = existingController.distributeChildUIState(
+          value,
+          childUIStateController,
+        );
+        if (childNewState === CANNOT_DERIVE) {
+          continue;
+        }
+        childUIStateController.setUIState(childNewState, propagateDownEvent);
       }
       existingController.syncInternalState(value);
     }
@@ -952,19 +961,17 @@ export const useUIGroupStateController = (
       );
       chainEvent(propagateDownEvent, e);
       for (const childUIStateController of childUIStateControllerArray) {
-        if (!isMonitoringChild(childUIStateController)) {
-          continue;
-        }
-        if (childUIStateController.controlType === "button") {
+        if (!shouldPropagateStateToChild(childUIStateController)) {
           continue;
         }
         const childNewState = resolvedDistributeChildUIState(
           newUIState,
           childUIStateController,
         );
-        if (childNewState !== CANNOT_DERIVE) {
-          childUIStateController.setUIState(childNewState, propagateDownEvent);
+        if (childNewState === CANNOT_DERIVE) {
+          continue;
         }
+        childUIStateController.setUIState(childNewState, propagateDownEvent);
       }
       // Re-aggregate from children and apply — do NOT call onChange to avoid a loop
       // (onChange would call setUIState again, which would cascade again).
@@ -1136,10 +1143,7 @@ export const useUIGroupStateController = (
       );
       chainEvent(propagateDownResetEvent, e);
       for (const childUIStateController of childUIStateControllerArray) {
-        if (!isMonitoringChild(childUIStateController)) {
-          continue;
-        }
-        if (childUIStateController.controlType === "button") {
+        if (!shouldPropagateStateToChild(childUIStateController)) {
           continue;
         }
         childUIStateController.resetUIState(propagateDownResetEvent);
