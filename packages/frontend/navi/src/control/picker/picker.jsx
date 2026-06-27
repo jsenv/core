@@ -215,14 +215,16 @@ const css = /* css */ `
     }
     .navi_picker_input {
       position: absolute;
-      inset: 0;
+      top: calc(-1 * var(--picker-border-width));
+      right: calc(-1 * var(--picker-border-width));
+      bottom: calc(-1 * var(--picker-border-width));
+      left: calc(-1 * var(--picker-border-width));
       box-sizing: border-box;
-      width: 100%;
-      height: 100%;
       margin: 0;
       padding: 0;
       background: none;
       border: none;
+      border-radius: inherit;
       cursor: inherit;
       pointer-events: auto;
 
@@ -474,7 +476,9 @@ const PickerButton = (props) => {
           e.preventDefault();
         }}
       />
-      {variant === "icon" || variant === "headless" ? null : (
+      {variant === "icon" ||
+      variant === "headless" ||
+      ui === "default" ? null : (
         <Text
           className="navi_picker_value"
           navi-placeholder={

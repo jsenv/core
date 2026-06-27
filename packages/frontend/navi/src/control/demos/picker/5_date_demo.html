@@ -705,6 +705,171 @@
               />
             ))}
           </Box>
+
+          <hr
+            style={{
+              margin: "20px 0",
+              border: "none",
+              borderTop: "1px solid #eee",
+            }}
+          />
+          <div class="states-col-header">
+            Sizing, padding, border-radius, text-align
+          </div>
+          <p class="desc">
+            Le picker accepte <code>size</code> ("s", "m", "l"…), du padding via{" "}
+            <code>--picker-padding</code>, un border-radius via{" "}
+            <code>--picker-border-radius</code>, et <code>textAlign</code>.
+          </p>
+          <Box flex="y" spacing="s" alignX="start">
+            <span style={{ color: "#888", fontSize: "12px" }}>
+              size s / m / l
+            </span>
+
+            <Box flex spacing="s" alignX="start" alignY="center">
+              <Picker
+                name="date_size_s"
+                type="date"
+                defaultValue={DEMO_DATES[0]}
+                size="s"
+              />
+              <Picker
+                name="date_size_m"
+                type="date"
+                defaultValue={DEMO_DATES[0]}
+                size="m"
+              />
+              <Picker
+                name="date_size_l"
+                type="date"
+                defaultValue={DEMO_DATES[0]}
+                size="l"
+              />
+            </Box>
+            <Box flex="y" spacing="s" alignX="start" alignY="center">
+              <span style={{ color: "#888", fontSize: "12px" }}>
+                padding x+xs / l+m
+              </span>
+
+              <Picker
+                name="date_padding_xs"
+                type="date"
+                defaultValue={DEMO_DATES[0]}
+                paddingX="s"
+                paddingY="xs"
+              />
+              <Picker
+                name="date_padding_m"
+                type="date"
+                defaultValue={DEMO_DATES[0]}
+                paddingX="l"
+                paddingY="m"
+              />
+            </Box>
+            <Box flex="y" spacing="s" alignX="start" alignY="center">
+              <span style={{ color: "#888", fontSize: "12px" }}>
+                padding + border-radius 0 / m
+              </span>
+
+              <Picker
+                name="date_radius_0"
+                type="date"
+                defaultValue={DEMO_DATES[0]}
+                borderRadius="0"
+                padding="m"
+              />
+              <Picker
+                name="date_radius_full"
+                type="date"
+                defaultValue={DEMO_DATES[0]}
+                borderRadius="m"
+                padding="m"
+              />
+            </Box>
+            <Box flex="y" spacing="s" alignX="start" alignY="center">
+              <span style={{ color: "#888", fontSize: "12px" }}>
+                textAlign left / center / right
+              </span>
+
+              <Picker
+                name="date_align_left"
+                type="date"
+                defaultValue={DEMO_DATES[0]}
+                width="200px"
+                textAlign="left"
+              />
+              <Picker
+                name="date_align_center"
+                type="date"
+                defaultValue={DEMO_DATES[0]}
+                width="200px"
+                textAlign="center"
+              />
+              <Picker
+                name="date_align_right"
+                type="date"
+                defaultValue={DEMO_DATES[0]}
+                width="200px"
+                textAlign="right"
+              />
+            </Box>
+            <Picker
+              name="date_align_right"
+              type="date"
+              defaultValue={DEMO_DATES[0]}
+              borderWidth="20"
+              borderRadius="m"
+            />
+            <Box></Box>
+          </Box>
+
+          <hr
+            style={{
+              margin: "20px 0",
+              border: "none",
+              borderTop: "1px solid #eee",
+            }}
+          />
+          <div class="states-col-header">ui="default" — UI du navigateur</div>
+          <p class="desc">
+            Passer <code>ui="default"</code> conserve l'UI native du navigateur
+            tout en bénéficiant du système navi (validation, action, états
+            loading…).
+          </p>
+          <div class="states-grid">
+            <div>
+              <p
+                class="desc"
+                style={{ margin: "0 0 8px", fontStyle: "italic" }}
+              >
+                Picker ui="default"
+              </p>
+              <Box flex="y" spacing="xs" alignX="start">
+                {DEMO_DATES.map((d, i) => (
+                  <Picker
+                    key={i}
+                    name={`date_browser_${i}`}
+                    type="date"
+                    defaultValue={d}
+                    ui="default"
+                  />
+                ))}
+              </Box>
+            </div>
+            <div>
+              <p
+                class="desc"
+                style={{ margin: "0 0 8px", fontStyle: "italic" }}
+              >
+                input natif (référence)
+              </p>
+              <Box flex="y" spacing="xs" alignX="start">
+                {DEMO_DATES.map((d, i) => (
+                  <input key={i} type="date" defaultValue={d} />
+                ))}
+              </Box>
+            </div>
+          </div>
         </div>
       );
 
