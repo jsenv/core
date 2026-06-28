@@ -1,8 +1,5 @@
 import { isSignal } from "../../utils/is_signal.js";
-import {
-  resolveCharClass,
-  resolveInputModeFromAllowedChars,
-} from "../char_guard_presets.js";
+import { CHAR_CLASS_PRESETS } from "../char_guard_presets.js";
 import { timeStringToSeconds } from "../picker/time_helpers.js";
 
 // Maps validity type names → navi input type names
@@ -136,20 +133,18 @@ export const resolveInputProps = (props) => {
       if (charGuardResolved !== undefined) {
         props.charGuard = charGuardResolved;
       }
-    } else if (props.inputMode === undefined) {
-      // Explicit preset: derive inputMode from it.
-      const autoMode = resolveInputModeFromAllowedChars(props.charGuard);
+    }
+    // charGuard is now resolved: derive inputMode from it if not already set.
+    if (props.inputMode === undefined && props.charGuard) {
+      const autoMode = INPUT_MODE_FROM_CHAR_GUARD[props.charGuard];
       if (autoMode) {
         props.inputMode = autoMode;
       }
     }
-    // Set pattern for the (now-resolved) charGuard so the mobile keyboard and
-    // constraint system see the correct character class.
-    if (props.pattern === undefined) {
-      const charClass = resolveCharClass(props.charGuard);
-      if (charClass) {
-        props.pattern = `${charClass}*`;
-      }
+    // Build pattern from the resolved charGuard (preset name → class, or raw class passthrough).
+    if (props.pattern === undefined && props.charGuard) {
+      const charClass = CHAR_CLASS_PRESETS[props.charGuard] ?? props.charGuard;
+      props.pattern = `${charClass}*`;
     }
   }
 
@@ -162,11 +157,13 @@ export const resolveInputProps = (props) => {
   ) {
     const { min, max, step = 1 } = props;
     const integerDigits = String(Math.floor(Math.abs(max))).length;
-    const stepStr = String(step);
-    const dotIndex = stepStr.indexOf(".");
-    const decimalDigits = dotIndex === -1 ? 0 : stepStr.length - dotIndex - 1;
     const canBeNegative = min !== undefined ? min < 0 : max < 0;
     const signChar = canBeNegative ? 1 : 0;
+    let decimalDigits = 0;
+    if (props.inputMode === "decimal" && hasDecimalPlaces(step)) {
+      const stepStr = String(step);
+      decimalDigits = stepStr.length - stepStr.indexOf(".") - 1;
+    }
     props.maxLength =
       signChar + integerDigits + (decimalDigits > 0 ? 1 + decimalDigits : 0);
   }
@@ -190,6 +187,15 @@ export const resolveInputProps = (props) => {
   const targetType = currentTypeDefaults.type;
   props.type = targetType;
   resolveInputProps(props);
+};
+
+// Presets that imply a specific mobile keyboard inputMode.
+const INPUT_MODE_FROM_CHAR_GUARD = {
+  numeric: "numeric",
+  pin: "numeric",
+  card: "numeric",
+  tel: "tel",
+  decimal: "decimal",
 };
 
 const normalizeToDate = (value) => {

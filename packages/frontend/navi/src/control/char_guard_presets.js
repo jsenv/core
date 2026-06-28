@@ -18,14 +18,6 @@ export const CHAR_CLASS_PRESETS = {
   slug: "[a-z0-9-]", // URL slug
 };
 
-// Presets that imply a specific mobile keyboard layout
-const INPUT_MODE_FROM_PRESET = {
-  numeric: "numeric",
-  pin: "numeric",
-  card: "numeric",
-  tel: "tel",
-};
-
 // Specific i18n keys per preset — more informative than the generic fallback
 const MESSAGE_KEY_FROM_PRESET = {
   numeric: "constraint.guard.number",
@@ -45,13 +37,6 @@ const MESSAGE_KEY_FROM_PRESET = {
 export const resolveCharClass = (value) => {
   if (!value) return null;
   return CHAR_CLASS_PRESETS[value] ?? value;
-};
-
-/**
- * Returns the inputMode to auto-apply for the given preset, or null.
- */
-export const resolveInputModeFromAllowedChars = (value) => {
-  return INPUT_MODE_FROM_PRESET[value] ?? null;
 };
 
 /**
