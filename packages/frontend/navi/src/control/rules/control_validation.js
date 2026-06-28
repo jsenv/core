@@ -84,21 +84,21 @@ export const NAVI_VALIDITY_CHANGE_CUSTOM_EVENT = "navi_validity_change";
 
 const VALIDATION_TOKEN = createOpenToken();
 
+// the order matters here, the first constraint is picked first when multiple constraints fail
+// so it's better to keep the most complex constraints at the end of the list
+// so the more basic ones shows up first
 const STANDARD_CONSTRAINT_SET = new Set([
   REQUIRED_CONSTRAINT,
   PATTERN_CONSTRAINT,
   TYPE_EMAIL_CONSTRAINT,
   TYPE_NUMBER_CONSTRAINT,
-  MIN_LENGTH_CONSTRAINT,
-  MAX_LENGTH_CONSTRAINT,
-  STEP_CONSTRAINT,
   MIN_CONSTRAINT,
   MAX_CONSTRAINT,
+  STEP_CONSTRAINT,
+  MIN_LENGTH_CONSTRAINT,
+  MAX_LENGTH_CONSTRAINT,
 ]);
 const NAVI_CONSTRAINT_SET = new Set([
-  // the order matters here, the last constraint is picked first when multiple constraints fail
-  // so it's better to keep the most complex constraints at the beginning of the list
-  // so the more basic ones shows up first
   MIN_SPECIAL_CHAR_CONSTRAINT,
   SINGLE_SPACE_CONSTRAINT,
   MIN_DIGIT_CONSTRAINT,
