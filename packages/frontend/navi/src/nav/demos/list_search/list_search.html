@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>List Search Fallback Demo</title>
+    <style>
+      body {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 40px 20px;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: #f5f5f5;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import {
+        NaviDebug,
+        List,
+        Input,
+        Link,
+        Text,
+        useSearchText,
+        stateSignal,
+        route,
+        setupRoutes,
+      } from "@jsenv/navi";
+
+      const GAMES = [
+        "Chess",
+        "Checkers",
+        "Go",
+        "Backgammon",
+        "Scrabble",
+        "Monopoly",
+        "Risk",
+        "Catan",
+        "Dominion",
+        "Pandemic",
+      ];
+
+      const searchSignal = stateSignal("", {
+        id: "search",
+        type: "string",
+      });
+
+      const GAME_LIST_PAGE = route("", {
+        searchParams: {
+          search: searchSignal,
+        },
+      });
+
+      setupRoutes([GAME_LIST_PAGE]);
+
+      const App = () => {
+        const searchText = searchSignal.value;
+        const [matchingGames, getMatchInfo] = useSearchText(searchText, GAMES);
+
+        return (
+          <NaviDebug debugAll>
+            <div>
+              <Text as="h1" size="l" marginBottom="m">
+                Game Library
+              </Text>
+              <Input
+                type="search"
+                placeholder="Search games…"
+                value={searchText}
+                action={(v) => {
+                  searchSignal.value = v ?? "";
+                }}
+                expandX
+                marginBottom="m"
+              />
+              <List
+                expandX
+                separator
+                searchText={searchText}
+                searchFallback={
+                  <Text
+                    flex="y"
+                    textAlign="center"
+                    spacing="s"
+                    expandX
+                    size="m"
+                    padding="s"
+                  >
+                    <Text>Aucun résultat ne correspond à votre recherche.</Text>
+                    <Link
+                      route={GAME_LIST_PAGE}
+                      routeParams={{ search: undefined }}
+                      paddingX="s"
+                      paddingY="xs"
+                    >
+                      Revenir à la liste complète
+                    </Link>
+                  </Text>
+                }
+              >
+                {matchingGames.map((game, i) => {
+                  const { match, ranges } = getMatchInfo(game);
+                  return (
+                    <List.Item
+                      key={game}
+                      index={i}
+                      id={`game_${game.toLowerCase()}`}
+                      match={match}
+                      highlight={ranges}
+                      padding="s"
+                    >
+                      {game}
+                    </List.Item>
+                  );
+                })}
+              </List>
+            </div>
+          </NaviDebug>
+        );
+      };
+
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>

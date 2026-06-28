@@ -552,41 +552,32 @@ const ListFirstResolver = (props) => {
 
   return <Next {...props} />;
 };
+
 /**
  * List — generic virtualized scroll container.
+ * Items must use <List.Item> to participate in tracking.
  *
- * Renders children inside a scrollable container with an optional render budget
- * for virtual scrolling. Items must use <List.Item> to participate in tracking.
- *
- * Props:
- *   selectable           — enables selection: items get aria roles, action/uiAction callbacks,
- *                          and keyboard navigation (arrow keys, enter, escape).
- *   action               — called with the selected value when the user confirms a selection.
- *   uiAction             — called on every interaction (hover, keyboard navigation, confirm).
- *                          When provided the list tracks hovered/pointed state via ListInteractionContext.
- *   popover              — when true, renders as a managed popover positioned near
- *                          an anchor element via navi_list_open / navi_list_close events.
- *   renderBudget         — max items in DOM at once (default 100, virtual scroll when exceeded).
- *   virtualItemSize      — fixed px size per item (width if horizontal, height otherwise).
- *                          Enables precise virtual-scroll filler sizing without a DOM
- *                          measurement pass. Useful when renderBudget is active and
- *                          all items have the same known height.
- *   fallback             — content shown when the list has no items at all.
- *   searchFallback       — content shown when every matchable item (those with a match prop)
- *                          has match=false. Defaults to a "no results" message.
- *                          Pass false/null/'' to disable.
- *   searchText           — current search string, used to trigger scroll-to-top when
- *                          search becomes active and to drive search highlight.
- *   searchNoMatchMode    — controls how List.Item behaves when match=false (default "remove"):
- *                            "remove"              — remove from DOM
- *                            "invisible_and_inert" — keep in DOM, invisible and non-interactive (preserves layout)
- *                            "muted"               — keep in DOM, visible but opacified and still interactive
- *   separator            — element or function(index, { previousItem, currentItem }) inserted between visible items.
- *   lockSize             — captures the container's dimensions on first render so filtering
- *                          cannot collapse the layout (sets min-width/min-height).
- *   horizontal           — lays items out in a row instead of a column.
- *   spacing              — gap between items (forwarded to Box spacing prop).
- *   ...rest              — forwarded to the outer container <Box>.
+ * @type {import("preact").FunctionComponent<{
+ *   selectable?: boolean,
+ *   action?: (value: any) => void,
+ *   uiAction?: (value: any) => void,
+ *   popover?: boolean,
+ *   renderBudget?: number,
+ *   virtualItemSize?: number,
+ *   fallback?: import("preact").ComponentChildren,
+ *   searchFallback?: import("preact").ComponentChildren,
+ *   searchText?: string,
+ *   searchNoMatchMode?: "remove" | "invisible_and_inert" | "muted",
+ *   separator?: boolean | import("preact").ComponentChildren,
+ *   lockSize?: boolean,
+ *   horizontal?: boolean,
+ *   spacing?: string,
+ *   expandX?: boolean,
+ *   expand?: boolean,
+ *   maxHeight?: string | number,
+ *   children?: import("preact").ComponentChildren,
+ *   [key: string]: any,
+ * }>}
  */
 export const List = createComponentResolver([
   ListFirstResolver,
