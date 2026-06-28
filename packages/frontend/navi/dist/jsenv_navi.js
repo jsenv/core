@@ -8869,11 +8869,11 @@ import.meta.css = [/* css */`
     }
   }
   /*
-
-  It's very common to declare a display on component as follow
+  To set display on component, code usually do something like: 
   .component_class { display: component_display; }
 
-  This kill the default behavior of [hidden] attribute and we need to explicitly handle it with:
+  It overrides the default behavior of [hidden] attribute!
+  This needs to be explicitly handled with:
   .component_class[hidden] { display: none; }
 
   To avoid this extra work and potential mistakes we force the default behavior of [hidden] attribute.
@@ -37257,7 +37257,7 @@ const createItemTracker = (onChange) => {
   const visibleItemsSignal = signal([]);
   const countSignal = signal(0);
   const visibleCountSignal = signal(0);
-  const matchCountSignal = signal(0);
+  const noMatchCountSignal = signal(0);
 
   let notifyScheduled = false;
   const runNotify = () => {
@@ -37279,7 +37279,7 @@ const createItemTracker = (onChange) => {
       let visibleItemsChanged = false;
       const allItems = [];
       const visibleItems = [];
-      let newMatchCount = 0;
+      let newNoMatchCount = 0;
       for (let i = 0; i < allOrderedKeys.length; i++) {
         const key = allOrderedKeys[i];
         const item = allRegistrations.get(key);
@@ -37288,12 +37288,12 @@ const createItemTracker = (onChange) => {
         if (!allItemsChanged && item !== prevAllItems[i]) {
           allItemsChanged = true;
         }
-        if (!item.filtered && !item.hidden) {
+        if (item.match === false) {
+          newNoMatchCount++;
+        }
+        if (!item.hidden) {
           const visibleIdx = visibleItems.length;
           visibleItems.push(item);
-          if (item.matchScore > 0) {
-            newMatchCount++;
-          }
           if (!visibleItemsChanged && item !== prevVisibleItems[visibleIdx]) {
             visibleItemsChanged = true;
           }
@@ -37315,9 +37315,9 @@ const createItemTracker = (onChange) => {
         visibleItemsSignal.value = visibleItems;
         someChange = true;
       }
-      const matchCountModified = matchCountSignal.peek() !== newMatchCount;
-      if (matchCountModified) {
-        matchCountSignal.value = newMatchCount;
+      const noMatchCountModified = noMatchCountSignal.peek() !== newNoMatchCount;
+      if (noMatchCountModified) {
+        noMatchCountSignal.value = newNoMatchCount;
         someChange = true;
       }
       if (someChange) {
@@ -37516,7 +37516,7 @@ const createItemTracker = (onChange) => {
     visibleItemsSignal,
     countSignal,
     visibleCountSignal,
-    matchCountSignal,
+    noMatchCountSignal,
     _flushSync,
   };
 };
@@ -37583,8 +37583,8 @@ installImportMetaCssBuild(import.meta);const css$n = /* css */`
       --list-item-outline-color: var(--navi-focus-outline-color);
       /* Focus outline end */
       --list-item-border-color: var(--navi-control-border-color);
-      --list-item-padding-x-default: var(--navi-control-padding-x-default);
-      --list-item-padding-y-default: var(--navi-control-padding-y-default);
+      --list-item-padding-x-default: var(--navi-list-item-padding-x-default);
+      --list-item-padding-y-default: var(--navi-list-item-padding-y-default);
 
       /* Hover (mouse) */
       --list-item-background-color-hover: light-dark(#f5f5f5, #2a2a2a);
@@ -37633,6 +37633,14 @@ installImportMetaCssBuild(import.meta);const css$n = /* css */`
     }
   }
 
+  .navi_list_container[navi-selectable] {
+    .navi_list_fallback,
+    .navi_list_no_match_fallback {
+      --list-item-padding-x-default: inherit;
+      --list-item-padding-y-default: inherit;
+    }
+  }
+
   .navi_list_item[navi-selectable] {
     --list-item-padding-x-default: inherit;
     --list-item-padding-y-default: inherit;
@@ -37641,6 +37649,13 @@ installImportMetaCssBuild(import.meta);const css$n = /* css */`
     outline-color: var(--list-item-outline-color);
     outline-offset: var(--list-item-outline-offset);
     cursor: var(--x-list-item-cursor);
+
+    .navi_checkbox {
+      --margin: 0;
+    }
+    .navi_radio {
+      --margin: 0;
+    }
 
     &[navi-selectable] {
       user-select: none;
@@ -38253,6 +38268,11 @@ const applySearchHighlight = (el, highlight) => {
 installImportMetaCssBuild(import.meta);const ListItemTrackerContext = createContext(null);
 const GroupItemTrackerContext = createContext(null);
 const PendingScrollRefContext = createContext(null);
+// Controls how List.Item behaves when match=false (set via List searchNoMatchMode prop):
+//   "remove"    — remove from DOM (default)
+//   "invisible_and_inert" — keep in DOM, invisible and non-interactive (preserves layout, no content visible)
+//   "muted"               — keep in DOM, visible but opacified and still interactive
+const SearchNoMatchModeContext = createContext("remove");
 
 // When total rendered items exceeds renderBudget, a render window [start, end)
 // is activated to cap the number of DOM nodes. Items outside the window return
@@ -38454,6 +38474,14 @@ const css$m = /* css */`
     scroll-margin-right: var(--x-list-scroll-spacing-right);
     scroll-margin-bottom: var(--x-list-scroll-spacing-bottom);
     scroll-margin-left: var(--x-list-scroll-spacing-left);
+
+    &[aria-hidden="true"] {
+      opacity: 0;
+    }
+
+    &[navi-muted] {
+      opacity: 0.35;
+    }
   }
 
   /* Virtual scroll fillers — must remain invisible.
@@ -38479,10 +38507,10 @@ const css$m = /* css */`
      Using order ensures fallbacks always appear after items regardless of DOM order.
      matchFallback intentionally shares the same order as fallback so it appears
      at the same visual position — after an input if present but before any items
-     still displayed (non-matching items remain in DOM with hidden prop):
+     still displayed (non-matching items remain in DOM, invisible_and_inert or muted):
        1. Input (sticky header, order: -2)
-       2. matchFallback (order: -1)
-       3. hidden items (regular order, after DOM flow)
+       2. searchFallback (order: -1)
+       3. invisible/dim items (regular order, after DOM flow)
        4. HOT FIX OF THE DEAD for bottom filler + preact issue: order: 1
        5. sticky footer (order: 2)
   */
@@ -38496,12 +38524,39 @@ const css$m = /* css */`
     order: -2;
   }
   .navi_list_fallback,
-  .navi_list_no_match_fallback {
+  .navi_list_search_fallback {
     order: -1;
     color: light-dark(#888, #aaa);
     &[navi-default] {
       display: inline;
-      padding: var(--list-item-padding);
+      padding-top: var(
+        --list-item-padding-top,
+        var(
+          --list-item-padding-y,
+          var(--list-item-padding, var(--list-item-padding-y-default))
+        )
+      );
+      padding-right: var(
+        --list-item-padding-right,
+        var(
+          --list-item-padding-x,
+          var(--list-item-padding, var(--list-item-padding-x-default))
+        )
+      );
+      padding-bottom: var(
+        --list-item-padding-bottom,
+        var(
+          --list-item-padding-y,
+          var(--list-item-padding, var(--list-item-padding-y-default))
+        )
+      );
+      padding-left: var(
+        --list-item-padding-left,
+        var(
+          --list-item-padding-x,
+          var(--list-item-padding, var(--list-item-padding-x-default))
+        )
+      );
       text-align: center;
       user-select: none;
     }
@@ -38575,37 +38630,6 @@ const css$m = /* css */`
     }
   }
 `;
-
-/**
- * List — generic virtualized scroll container.
- *
- * Renders children inside a scrollable container with an optional render budget
- * for virtual scrolling. Items must use <ListItem> to participate in tracking.
- *
- * Props:
- *   keyboardInteractions  — when true, attaches arrow/enter/escape keyboard shortcuts
- *                          that dispatch navi_list_nav / navi_list_confirm / navi_list_clear
- *                          to the list container. Pair with uiAction for a full keyboard-
- *                          navigable list.
- *   uiAction             — called with the selected value on confirm. When provided
- *                          the list becomes interactive: tracks hover and keyboard-
- *                          pointed state, handles navi_list_nav / navi_list_clear /
- *                          navi_list_confirm custom events via ListInteractionContext.
- *   popover              — when true, renders as a managed popover positioned near
- *                          an anchor element via navi_list_open / navi_list_close events.
- *   renderBudget         — max items in DOM at once (default 100, virtual scroll when exceeded)
- *   virtualItemSize     — fixed px size per item (width if horizontal, height otherwise) when all items have the same size.
- *                          Enables precise virtual-scroll filler sizing without a DOM
- *                          measurement pass. Required when renderBudget is active and
- *                          item height is known up-front.
- *   fallback             — content shown when no items exist at all
- *   matchFallback         — content shown when items exist but all are hidden (e.g. no search match)
- *   separator            — element or function(index, { previousItem, currentItem }) inserted between visible items
- *   lockSize             — when true, captures the container's dimensions on first render
- *                          (always in unfiltered state). Those values become min-width/
- *                          min-height so filtering cannot collapse the layout.
- *   ...rest              — forwarded to the outer scroll container <Box>
- */
 const ListUI = props => {
   import.meta.css = [css$m, "@jsenv/navi/src/control/list/list.jsx"];
   const {
@@ -38614,7 +38638,7 @@ const ListUI = props => {
     renderBudgetSkipCheck,
     role,
     fallback,
-    noMatchFallback,
+    searchFallback,
     separator,
     children,
     popover,
@@ -38625,6 +38649,7 @@ const ListUI = props => {
     virtualItemSize,
     lockSize,
     searchText,
+    searchNoMatchMode = "remove",
     horizontal,
     spacing,
     ...rest
@@ -38714,8 +38739,8 @@ const ListUI = props => {
     children: jsx(ListContent, {
       role: role,
       fallback: fallback,
-      noMatchFallback: noMatchFallback,
-      searchText: searchText,
+      searchFallback: searchFallback,
+      searchNoMatchMode: searchNoMatchMode,
       separator: separator,
       expandX: expandX,
       expand: expand,
@@ -38739,12 +38764,48 @@ const ListFirstResolver = props => {
     ...props
   });
 };
+/**
+ * List — generic virtualized scroll container.
+ *
+ * Renders children inside a scrollable container with an optional render budget
+ * for virtual scrolling. Items must use <List.Item> to participate in tracking.
+ *
+ * Props:
+ *   selectable           — enables selection: items get aria roles, action/uiAction callbacks,
+ *                          and keyboard navigation (arrow keys, enter, escape).
+ *   action               — called with the selected value when the user confirms a selection.
+ *   uiAction             — called on every interaction (hover, keyboard navigation, confirm).
+ *                          When provided the list tracks hovered/pointed state via ListInteractionContext.
+ *   popover              — when true, renders as a managed popover positioned near
+ *                          an anchor element via navi_list_open / navi_list_close events.
+ *   renderBudget         — max items in DOM at once (default 100, virtual scroll when exceeded).
+ *   virtualItemSize      — fixed px size per item (width if horizontal, height otherwise).
+ *                          Enables precise virtual-scroll filler sizing without a DOM
+ *                          measurement pass. Useful when renderBudget is active and
+ *                          all items have the same known height.
+ *   fallback             — content shown when the list has no items at all.
+ *   searchFallback       — content shown when every matchable item (those with a match prop)
+ *                          has match=false. Defaults to a "no results" message.
+ *                          Pass false/null/'' to disable.
+ *   searchText           — current search string, used to trigger scroll-to-top when
+ *                          search becomes active and to drive search highlight.
+ *   searchNoMatchMode    — controls how List.Item behaves when match=false (default "remove"):
+ *                            "remove"              — remove from DOM
+ *                            "invisible_and_inert" — keep in DOM, invisible and non-interactive (preserves layout)
+ *                            "muted"               — keep in DOM, visible but opacified and still interactive
+ *   separator            — element or function(index, { previousItem, currentItem }) inserted between visible items.
+ *   lockSize             — captures the container's dimensions on first render so filtering
+ *                          cannot collapse the layout (sets min-width/min-height).
+ *   horizontal           — lays items out in a row instead of a column.
+ *   spacing              — gap between items (forwarded to Box spacing prop).
+ *   ...rest              — forwarded to the outer container <Box>.
+ */
 const List = createComponentResolver([ListFirstResolver, ListSelectableResolver, ListUI]);
 const ListContent = ({
   role,
   fallback,
-  noMatchFallback,
-  searchText,
+  searchFallback,
+  searchNoMatchMode,
   separator,
   expandX,
   expand,
@@ -38762,8 +38823,8 @@ const ListContent = ({
     children: jsx(UnorderedList, {
       role: role,
       fallback: fallback,
-      noMatchFallback: noMatchFallback,
-      searchText: searchText,
+      searchFallback: searchFallback,
+      searchNoMatchMode: searchNoMatchMode,
       separator: separator === true ? jsx(Separator, {
         margin: "0"
       }) : separator,
@@ -39190,8 +39251,8 @@ const UnorderedList = ({
   renderWindow,
   virtualItemSizeSignal,
   fallback,
-  noMatchFallback,
-  searchText,
+  searchFallback,
+  searchNoMatchMode,
   separator,
   horizontal,
   spacing,
@@ -39208,20 +39269,22 @@ const UnorderedList = ({
     children: [jsx(BeforeFiller, {
       virtualItemSizeSignal: virtualItemSizeSignal,
       renderWindowStart: renderWindow.start
-    }), jsx(NoMatchFallback, {
-      noMatchFallback: noMatchFallback,
-      tracker: tracker,
-      searchText: searchText
+    }), jsx(SearchFallback, {
+      searchFallback: searchFallback,
+      tracker: tracker
     }), jsx(Fallback, {
       fallback: fallback,
       tracker: tracker
-    }), jsx(RenderWindowContext.Provider, {
-      value: renderWindow,
-      children: jsx(SeparatorContext.Provider, {
-        value: separator ?? null,
-        children: jsx(ListItemTrackerContext.Provider, {
-          value: tracker,
-          children: children
+    }), jsx(SearchNoMatchModeContext.Provider, {
+      value: searchNoMatchMode,
+      children: jsx(RenderWindowContext.Provider, {
+        value: renderWindow,
+        children: jsx(SeparatorContext.Provider, {
+          value: separator ?? null,
+          children: jsx(ListItemTrackerContext.Provider, {
+            value: tracker,
+            children: children
+          })
         })
       })
     }), jsx(AfterFiller, {
@@ -39231,31 +39294,33 @@ const UnorderedList = ({
     })]
   });
 };
-const NoMatchFallback = ({
+
+// Show when all matchable items (those with a match prop) are non-matching.
+// The match prop on List.Item signals participation in a matching system
+// (search, filter, etc.). searchFallback appears when every such item has match=false.
+const SearchFallback = ({
   tracker,
-  noMatchFallback,
-  searchText
+  searchFallback
 }) => {
   const itemCount = tracker.countSignal.value;
-  const visibleItemCount = tracker.visibleCountSignal.value;
-  const matchCount = tracker.matchCountSignal.value;
-  // Show when all items are filtered out (filtered prop), or when search is
-  // active but no visible item has a positive match score.
-  const allHidden = itemCount > 0 && visibleItemCount === 0;
-  const noneMatch = searchText && visibleItemCount > 0 && matchCount === 0;
-  const showMatchFallback = allHidden || noneMatch;
-  if (noMatchFallback === undefined) {
-    noMatchFallback = allHidden ? naviI18n("list.no_match") : naviI18n("list.no_match_rest_shown");
+  const noMatchCount = tracker.noMatchCountSignal.value;
+  const showMatchFallback = noMatchCount > 0 && noMatchCount === itemCount;
+  if (searchFallback === undefined) {
+    searchFallback = naviI18n("list.no_match");
+  }
+  if (!searchFallback) {
+    // explicitely disabled by user (<List searchFallback={false|null|''}>)
+    return null;
   }
   if (!showMatchFallback) {
     return null;
   }
   return jsx(ListItem, {
     role: "presentation",
-    className: "navi_list_item navi_list_no_match_fallback",
+    className: "navi_list_item navi_list_search_fallback",
     hidden: !showMatchFallback,
-    "navi-default": typeof noMatchFallback === "string" ? "" : undefined,
-    children: noMatchFallback
+    "navi-default": typeof searchFallback === "string" ? "" : undefined,
+    children: searchFallback
   });
 };
 const Fallback = ({
@@ -39360,6 +39425,18 @@ const ListItemUI = props => {
   props.id = props.id || idDefault;
   const renderWindow = useContext(RenderWindowContext);
   const tracker = useContext(ListItemTrackerContext);
+  const searchNoMatchMode = useContext(SearchNoMatchModeContext);
+  // Derive filtered/hidden/nonMatching from the `match` prop + searchNoMatchMode context.
+  // The `match` prop replaces the older `filtered`/`hidden` per-item props.
+  if (props.match === false) {
+    if (searchNoMatchMode === "remove") {
+      props.filtered = true;
+    } else if (searchNoMatchMode === "invisible_and_inert") {
+      props.hidden = true;
+    } else if (searchNoMatchMode === "muted") {
+      props.muted = true;
+    }
+  }
   const item = props;
   const visibleIndex = tracker.useTrackItem(item);
   const groupTracker = useContext(GroupItemTrackerContext);
@@ -39419,6 +39496,7 @@ const ListItemReal = props => {
     ref,
     id,
     hidden,
+    muted,
     highlight,
     children,
     ...rest
@@ -39451,7 +39529,15 @@ const ListItemReal = props => {
     index: undefined,
     selected: undefined,
     matchScore: undefined,
-    hidden: hidden,
+    match: undefined
+    // We use aria-hidden and not hidden because hidden would be forced to
+    // display: none while here we want to keep it in the DOM to avoid layout shift
+    // but visually hidden
+    ,
+
+    "aria-hidden": hidden,
+    inert: hidden ? true : undefined,
+    "navi-muted": muted ? "" : undefined,
     ref: ref,
     children: children
   });
