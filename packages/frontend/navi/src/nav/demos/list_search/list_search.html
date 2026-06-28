@@ -93,7 +93,7 @@
                     placeholder="Search games…"
                     value={searchText}
                     action={(v) => {
-                      searchSignal.value = v ?? "";
+                      searchSignal.value = v;
                     }}
                     expandX
                     navi-list="game_list"
