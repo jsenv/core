@@ -150,23 +150,27 @@ export const resolveInputProps = (props) => {
 
   // Compute maxLength from max when inputMode is numeric/decimal.
   // Done here (after inputMode is set) so controller.props has the resolved value.
-  if (
-    props.maxLength === undefined &&
-    props.max !== undefined &&
-    (props.inputMode === "numeric" || props.inputMode === "decimal")
-  ) {
+  if (props.maxLength === undefined) {
     if (props.inputMode === "numeric") {
       const { min, max } = props;
-      const canBeNegative = min === undefined ? max < 0 : min < 0;
-      const signCharCount = canBeNegative ? 1 : 0;
-      const integerDigitCount = String(Math.floor(Math.abs(max))).length;
-      props.maxLength = signCharCount + integerDigitCount;
+      if (max === undefined) {
+        // cannot infeer max length without a max prop
+      } else {
+        const canBeNegative = min === undefined ? max < 0 : min < 0;
+        const signCharCount = canBeNegative ? 1 : 0;
+        const integerDigitCount = String(Math.floor(Math.abs(max))).length;
+        props.maxLength = signCharCount + integerDigitCount;
+      }
     } else if (props.inputMode === "decimal") {
       const { min, max, step } = props;
-      const stepStr = String(step);
-      const dotIndex = stepStr.indexOf(".");
-      if (dotIndex !== -1) {
-        decimalDigits = stepStr.length - dotIndex - 1;
+      if (max === undefined) {
+        // cannot infeer max length without a max prop
+      } else {
+        const stepStr = String(step);
+        const dotIndex = stepStr.indexOf(".");
+        if (dotIndex !== -1) {
+          decimalDigits = stepStr.length - dotIndex - 1;
+        }
       }
     }
   }
