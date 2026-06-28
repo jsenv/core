@@ -60,6 +60,7 @@
       const GAME_LIST_PAGE = route("", {
         searchParams: {
           game: selectedGameSignal,
+          search: searchSignal,
         },
       });
 
@@ -118,12 +119,9 @@
                         </Text>
                         <Link
                           route={GAME_LIST_PAGE}
-                          routeParams={{ game: undefined }}
+                          routeParams={{ search: undefined }}
                           paddingX="s"
                           paddingY="xs"
-                          onClick={() => {
-                            searchSignal.value = "";
-                          }}
                         >
                           Revenir à la liste complète
                         </Link>
