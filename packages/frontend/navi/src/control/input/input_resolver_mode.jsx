@@ -7,12 +7,12 @@ export const InputModeResolver = (props) => {
   const Next = useNextResolver();
 
   if (props.inputMode === "numeric" || props.inputMode === "decimal") {
-    return <InputModeNumeric {...props} />;
+    return <InputModeNumericOrDecimal {...props} />;
   }
   return <Next {...props} />;
 };
 
-const InputModeNumeric = (props) => {
+const InputModeNumericOrDecimal = (props) => {
   const Next = useNextResolver();
 
   const { min, max, step = 1 } = props;
@@ -30,10 +30,19 @@ const InputModeNumeric = (props) => {
       signChar + integerDigits + (decimalDigits > 0 ? 1 + decimalDigits : 0);
   }
 
+  let resolvedMaxLengthGuard = props.maxLengthGuard;
+  if (
+    (resolvedMaxLengthGuard === true || resolvedMaxLengthGuard === "auto") &&
+    maxLength !== undefined
+  ) {
+    resolvedMaxLengthGuard = maxLength;
+  }
+
   return (
     <Next
       maxLength={maxLength}
       {...props}
+      maxLengthGuard={resolvedMaxLengthGuard}
       onInput={(e) => {
         props.onInput?.(e);
         if (e.defaultPrevented) {

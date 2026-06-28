@@ -106,13 +106,15 @@ export const resolveInputProps = (props) => {
   }
   // For navi_number: choose inputMode based on whether step/min/max suggest decimals.
   // inputMode="numeric" (integer keyboard) vs "decimal" (keyboard with decimal separator).
-  if (currentType === "navi_number" && props.inputMode === undefined) {
-    props.inputMode =
-      hasDecimalPlaces(props.step) ||
-      hasDecimalPlaces(props.min) ||
-      hasDecimalPlaces(props.max)
-        ? "decimal"
-        : "numeric";
+  if (currentType === "navi_number") {
+    if (props.inputMode === undefined) {
+      props.inputMode =
+        hasDecimalPlaces(props.step) ||
+        hasDecimalPlaces(props.min) ||
+        hasDecimalPlaces(props.max)
+          ? "decimal"
+          : "numeric";
+    }
   }
   for (const key of Object.keys(currentTypeDefaults)) {
     if (props[key] === undefined) {

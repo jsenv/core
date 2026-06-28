@@ -89,7 +89,14 @@ export const InputDuration = (props) => {
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
   props.max = props.max || "23h59";
-  const { ref, uiAction, action, unitHour, textAlign = "auto" } = props;
+  const {
+    ref,
+    uiAction,
+    action,
+    unitHour,
+    textAlign = "auto",
+    maxLengthGuard,
+  } = props;
   const minDuration = parseDuration(props.min);
   const maxDuration = parseDuration(props.max);
   const stepDuration = parseDuration(props.step);
@@ -296,6 +303,7 @@ export const InputDuration = (props) => {
             stepSeconds={stepSeconds}
             unitHour={unitHour}
             textAlign={textAlign}
+            maxLengthGuard={maxLengthGuard}
             required={required}
             readOnly={readOnly}
             disabled={disabled}
