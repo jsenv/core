@@ -32,6 +32,7 @@
         stateSignal,
         route,
         setupRoutes,
+        Box,
       } from "@jsenv/navi";
 
       const GAMES = [
@@ -85,64 +86,68 @@
                 mode="dialog"
                 minWidth="200"
               >
-                <Input
-                  type="search"
-                  placeholder="Search games…"
-                  value={searchText}
-                  action={(v) => {
-                    searchSignal.value = v ?? "";
-                  }}
-                  expandX
-                />
-                <List
-                  selectable
-                  command="--navi-send"
-                  expandX
-                  separator
-                  searchText={searchText}
-                  searchFallback={
-                    <Text
-                      flex="y"
-                      textAlign="center"
-                      spacing="s"
-                      expandX
-                      size="m"
-                      padding="s"
-                    >
-                      <Text>Aucun résultat ne correspond à votre recherche.</Text>
-                      <Link
-                        route={GAME_LIST_PAGE}
-                        routeParams={{ game: undefined }}
-                        paddingX="s"
-                        paddingY="xs"
-                        onClick={() => {
-                          searchSignal.value = "";
-                        }}
-                      >
-                        Revenir à la liste complète
-                      </Link>
-                    </Text>
-                  }
-                >
-                  {matchingGames.map((game, i) => {
-                    const { match, ranges } = getMatchInfo(game);
-                    return (
-                      <List.Item
-                        selectable
-                        key={game}
-                        index={i}
-                        id={`game_${game.toLowerCase()}`}
-                        value={game}
-                        selected={selectedGame === game}
-                        match={match}
-                        highlight={ranges}
+                <Box flex="y" spacing="m" padding="m">
+                  <Input
+                    type="search"
+                    placeholder="Search games…"
+                    value={searchText}
+                    action={(v) => {
+                      searchSignal.value = v ?? "";
+                    }}
+                    expandX
+                  />
+                  <List
+                    selectable
+                    command="--navi-send"
+                    expandX
+                    separator
+                    searchText={searchText}
+                    searchFallback={
+                      <Text
+                        flex="y"
+                        textAlign="center"
+                        spacing="s"
+                        expandX
+                        size="m"
                         padding="s"
                       >
-                        {game}
-                      </List.Item>
-                    );
-                  })}
-                </List>
+                        <Text>
+                          Aucun résultat ne correspond à votre recherche.
+                        </Text>
+                        <Link
+                          route={GAME_LIST_PAGE}
+                          routeParams={{ game: undefined }}
+                          paddingX="s"
+                          paddingY="xs"
+                          onClick={() => {
+                            searchSignal.value = "";
+                          }}
+                        >
+                          Revenir à la liste complète
+                        </Link>
+                      </Text>
+                    }
+                  >
+                    {matchingGames.map((game, i) => {
+                      const { match, ranges } = getMatchInfo(game);
+                      return (
+                        <List.Item
+                          selectable
+                          key={game}
+                          index={i}
+                          id={`game_${game.toLowerCase()}`}
+                          value={game}
+                          selected={selectedGame === game}
+                          match={match}
+                          highlight={ranges}
+                          padding="s"
+                        >
+                          {game}
+                        </List.Item>
+                      );
+                    })}
+                  </List>
+                </Box>
               </Picker>
             </div>
           </NaviDebug>
