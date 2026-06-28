@@ -48,11 +48,11 @@
         "Pandemic",
       ];
 
-      const selectedGameSignal = stateSignal("", {
+      const selectedGameSignal = stateSignal(undefined, {
         id: "selected_game",
         type: "string",
       });
-      const searchSignal = stateSignal("", {
+      const searchSignal = stateSignal(undefined, {
         id: "search",
         type: "string",
       });
@@ -95,8 +95,10 @@
                       searchSignal.value = v ?? "";
                     }}
                     expandX
+                    navi-list="game_list"
                   />
                   <List
+                    id="game_list"
                     selectable
                     command="--navi-send"
                     expandX
