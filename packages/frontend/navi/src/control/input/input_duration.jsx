@@ -265,6 +265,8 @@ export const InputDuration = (props) => {
       className="navi_input_duration"
       data-callout-arrow-x="center"
       width="fit-content"
+      flex
+      spacing="xxs"
       {...groupRootProps}
       unit={undefined}
       unitHour={undefined}
@@ -283,36 +285,34 @@ export const InputDuration = (props) => {
           ? { value: initialIsoString }
           : { defaultValue: initialIsoString })}
       />
-      <Box flex spacing="xxs" width="fit-content">
-        <ControlgroupChildrenWrapper {...childrenWrapperProps} name={undefined}>
-          <InputDurationFields
-            showHours={showHours}
-            showMinutes={showMinutes}
-            showSeconds={showSeconds}
-            showMilliseconds={showMilliseconds}
-            minutesReadOnly={minutesReadOnly}
-            secondsReadOnly={secondsReadOnly}
-            millisecondsReadOnly={millisecondsReadOnly}
-            stepHasMilliseconds={stepHasMilliseconds}
-            controlled={hasValue}
-            hourValue={hourValue}
-            minuteValue={minuteValue}
-            secondValue={secondValue}
-            millisecondValue={millisecondValue}
-            minSeconds={minSeconds}
-            maxSeconds={maxSeconds}
-            stepSeconds={stepSeconds}
-            unitHour={unitHour}
-            textAlign={textAlign}
-            maxLengthGuard={maxLengthGuard}
-            charGuard={charGuard}
-            required={required}
-            readOnly={readOnly}
-            disabled={disabled}
-            basePseudoState={basePseudoState}
-          />
-        </ControlgroupChildrenWrapper>
-      </Box>
+      <ControlgroupChildrenWrapper {...childrenWrapperProps} name={undefined}>
+        <InputDurationFields
+          showHours={showHours}
+          showMinutes={showMinutes}
+          showSeconds={showSeconds}
+          showMilliseconds={showMilliseconds}
+          minutesReadOnly={minutesReadOnly}
+          secondsReadOnly={secondsReadOnly}
+          millisecondsReadOnly={millisecondsReadOnly}
+          stepHasMilliseconds={stepHasMilliseconds}
+          controlled={hasValue}
+          hourValue={hourValue}
+          minuteValue={minuteValue}
+          secondValue={secondValue}
+          millisecondValue={millisecondValue}
+          minSeconds={minSeconds}
+          maxSeconds={maxSeconds}
+          stepSeconds={stepSeconds}
+          unitHour={unitHour}
+          textAlign={textAlign}
+          maxLengthGuard={maxLengthGuard}
+          charGuard={charGuard}
+          required={required}
+          readOnly={readOnly}
+          disabled={disabled}
+          basePseudoState={basePseudoState}
+        />
+      </ControlgroupChildrenWrapper>
     </Box>
   );
 };
@@ -377,7 +377,13 @@ const useClipboardProps = (groupRef) => {
     e.preventDefault();
   };
 
+  const isFromDurationField = (e) =>
+    Boolean(e.target.closest("[navi-input-type]"));
+
   const onCopy = (e) => {
+    if (!isFromDurationField(e)) {
+      return;
+    }
     const payload = getClipboardPayload();
     if (!payload) {
       return;
@@ -388,6 +394,9 @@ const useClipboardProps = (groupRef) => {
   };
 
   const onCut = (e) => {
+    if (!isFromDurationField(e)) {
+      return;
+    }
     const payload = getClipboardPayload();
     if (!payload) {
       return;
@@ -398,6 +407,9 @@ const useClipboardProps = (groupRef) => {
   };
 
   const onPaste = (e) => {
+    if (!isFromDurationField(e)) {
+      return;
+    }
     const naviData = e.clipboardData.getData("application/x-navi");
     const textData = e.clipboardData.getData("text/plain");
 
