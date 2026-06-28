@@ -236,6 +236,10 @@ const css = /* css */ `
     scroll-margin-right: var(--x-list-scroll-spacing-right);
     scroll-margin-bottom: var(--x-list-scroll-spacing-bottom);
     scroll-margin-left: var(--x-list-scroll-spacing-left);
+
+    &[aria-hidden="true"] {
+      opacity: 0;
+    }
   }
 
   /* Virtual scroll fillers — must remain invisible.
@@ -1307,7 +1311,11 @@ const ListItemReal = (props) => {
       index={undefined}
       selected={undefined}
       matchScore={undefined}
-      hidden={hidden}
+      // We use aria-hidden and not hidden because hidden would be forced to
+      // display: none while here we want to keep it in the DOM to avoid layout shift
+      // but visually hidden
+      aria-hidden={hidden}
+      inert={hidden ? "" : undefined}
       ref={ref}
     >
       {children}
