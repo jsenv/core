@@ -217,7 +217,7 @@
           FRUITS,
         );
         const [log, pushLog] = useCallLog();
-        const [filterMode, setFilterMode] = useState("filter");
+        const [searchNoMatchMode, setFilterMode] = useState("filter");
         return (
           <div id="searchable" className="demo-section">
             <h2>Searchable</h2>
@@ -238,7 +238,7 @@
                 color: "#555",
               }}
             >
-              <legend style={{ padding: "0 4px", fontWeight: 600 }}>filterMode</legend>
+              <legend style={{ padding: "0 4px", fontWeight: 600 }}>searchNoMatchMode</legend>
               {[
                 { mode: "filter", desc: "removes non-matching items from DOM" },
                 { mode: "hide", desc: "keeps items in DOM but invisible (no layout shift)" },
@@ -247,9 +247,9 @@
                 <label key={mode} style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
                   <input
                     type="radio"
-                    name="filterMode"
+                    name="searchNoMatchMode"
                     value={mode}
-                    checked={filterMode === mode}
+                    checked={searchNoMatchMode === mode}
                     onChange={() => setFilterMode(mode)}
                   />
                   <code>{mode}</code>
@@ -274,7 +274,7 @@
             <List
               selectable
               id="searchable-list"
-              filterMode={filterMode}
+              searchNoMatchMode={searchNoMatchMode}
               action={(v) => {
                 fruitSignal.value = v;
                 pushLog("action", v ?? "(none)");
@@ -1161,7 +1161,7 @@
               }}
               expandX
               separator
-              noMatchFallback={
+              searchFallback={
                 <div
                   style={{ padding: 12, color: "#666", fontStyle: "italic" }}
                 >

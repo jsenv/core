@@ -34,11 +34,11 @@ import { useSearchHighlight } from "./search_highlight.js";
 const ListItemTrackerContext = createContext(null);
 const GroupItemTrackerContext = createContext(null);
 const PendingScrollRefContext = createContext(null);
-// Controls how List.Item behaves when match=false:
+// Controls how List.Item behaves when match=false (set via List searchNoMatchMode prop):
 //   "filter" — remove from DOM (default)
 //   "hide"   — keep in DOM but invisible (no layout shift, no visible content)
 //   "dim"    — keep in DOM, visible but opacified (items remain interactive)
-const NonMatchBehaviorContext = createContext("filter");
+const SearchNoMatchModeContext = createContext("filter");
 
 // When total rendered items exceeds renderBudget, a render window [start, end)
 // is activated to cap the number of DOM nodes. Items outside the window return
@@ -291,7 +291,7 @@ const css = /* css */ `
     order: -2;
   }
   .navi_list_fallback,
-  .navi_list_no_match_fallback {
+  .navi_list_search_fallback {
     order: -1;
     color: light-dark(#888, #aaa);
     &[navi-default] {
@@ -436,7 +436,7 @@ const ListUI = (props) => {
     renderBudgetSkipCheck,
     role,
     fallback,
-    noMatchFallback,
+    searchFallback,
     separator,
     children,
     popover,
@@ -447,7 +447,7 @@ const ListUI = (props) => {
     virtualItemSize,
     lockSize,
     searchText,
-    filterMode = "filter",
+    searchNoMatchMode = "filter",
     horizontal,
     spacing,
     ...rest
@@ -556,8 +556,8 @@ const ListUI = (props) => {
       <ListContent
         role={role}
         fallback={fallback}
-        noMatchFallback={noMatchFallback}
-        filterMode={filterMode}
+        searchFallback={searchFallback}
+        searchNoMatchMode={searchNoMatchMode}
         separator={separator}
         expandX={expandX}
         expand={expand}
@@ -590,8 +590,8 @@ export const List = createComponentResolver([
 const ListContent = ({
   role,
   fallback,
-  noMatchFallback,
-  filterMode,
+  searchFallback,
+  searchNoMatchMode,
   separator,
   expandX,
   expand,
@@ -609,8 +609,8 @@ const ListContent = ({
       <UnorderedList
         role={role}
         fallback={fallback}
-        noMatchFallback={noMatchFallback}
-        filterMode={filterMode}
+        searchFallback={searchFallback}
+        searchNoMatchMode={searchNoMatchMode}
         separator={separator === true ? <Separator margin="0" /> : separator}
         expandX={expandX || expand}
         horizontal={horizontal}
@@ -1087,8 +1087,8 @@ const UnorderedList = ({
   renderWindow,
   virtualItemSizeSignal,
   fallback,
-  noMatchFallback,
-  filterMode,
+  searchFallback,
+  searchNoMatchMode,
   separator,
   horizontal,
   spacing,
@@ -1108,9 +1108,9 @@ const UnorderedList = ({
         virtualItemSizeSignal={virtualItemSizeSignal}
         renderWindowStart={renderWindow.start}
       />
-      <NoMatchFallback noMatchFallback={noMatchFallback} tracker={tracker} />
+      <SearchFallback searchFallback={searchFallback} tracker={tracker} />
       <Fallback fallback={fallback} tracker={tracker} />
-      <NonMatchBehaviorContext.Provider value={filterMode}>
+      <SearchNoMatchModeContext.Provider value={searchNoMatchMode}>
         <RenderWindowContext.Provider value={renderWindow}>
           <SeparatorContext.Provider value={separator ?? null}>
             <ListItemTrackerContext.Provider value={tracker}>
@@ -1118,7 +1118,7 @@ const UnorderedList = ({
             </ListItemTrackerContext.Provider>
           </SeparatorContext.Provider>
         </RenderWindowContext.Provider>
-      </NonMatchBehaviorContext.Provider>
+      </SearchNoMatchModeContext.Provider>
       <AfterFiller
         virtualItemSizeSignal={virtualItemSizeSignal}
         renderWindowEnd={renderWindow.end}
@@ -1130,17 +1130,17 @@ const UnorderedList = ({
 
 // Show when all matchable items (those with a match prop) are non-matching.
 // The match prop on List.Item signals participation in a matching system
-// (search, filter, etc.). noMatchFallback appears when every such item has match=false.
-const NoMatchFallback = ({ tracker, noMatchFallback }) => {
+// (search, filter, etc.). searchFallback appears when every such item has match=false.
+const SearchFallback = ({ tracker, searchFallback }) => {
   const itemCount = tracker.countSignal.value;
   const noMatchCount = tracker.noMatchCountSignal.value;
   const showMatchFallback = noMatchCount > 0 && noMatchCount === itemCount;
 
-  if (noMatchFallback === undefined) {
-    noMatchFallback = naviI18n("list.no_match");
+  if (searchFallback === undefined) {
+    searchFallback = naviI18n("list.no_match");
   }
-  if (!noMatchFallback) {
-    // explicitely disabled by user (<List noMatchFallback={false|null|''}>)
+  if (!searchFallback) {
+    // explicitely disabled by user (<List searchFallback={false|null|''}>)
     return null;
   }
   if (!showMatchFallback) {
@@ -1149,11 +1149,11 @@ const NoMatchFallback = ({ tracker, noMatchFallback }) => {
   return (
     <ListItem
       role="presentation"
-      className="navi_list_item navi_list_no_match_fallback"
+      className="navi_list_item navi_list_search_fallback"
       hidden={!showMatchFallback}
-      navi-default={typeof noMatchFallback === "string" ? "" : undefined}
+      navi-default={typeof searchFallback === "string" ? "" : undefined}
     >
-      {noMatchFallback}
+      {searchFallback}
     </ListItem>
   );
 };
@@ -1253,15 +1253,15 @@ const ListItemUI = (props) => {
   props.id = props.id || idDefault;
   const renderWindow = useContext(RenderWindowContext);
   const tracker = useContext(ListItemTrackerContext);
-  const filterMode = useContext(NonMatchBehaviorContext);
-  // Derive filtered/hidden/nonMatching from the `match` prop + filterMode context.
+  const searchNoMatchMode = useContext(SearchNoMatchModeContext);
+  // Derive filtered/hidden/nonMatching from the `match` prop + searchNoMatchMode context.
   // The `match` prop replaces the older `filtered`/`hidden` per-item props.
   if (props.match === false) {
-    if (filterMode === "filter") {
+    if (searchNoMatchMode === "filter") {
       props.filtered = true;
-    } else if (filterMode === "hide") {
+    } else if (searchNoMatchMode === "hide") {
       props.hidden = true;
-    } else if (filterMode === "dim") {
+    } else if (searchNoMatchMode === "dim") {
       props.dimmed = true;
     }
   }
