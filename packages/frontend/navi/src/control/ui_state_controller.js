@@ -272,7 +272,7 @@ export const useUIStateController = (
       const currentUIState = uiStateController.uiState;
       const stateIsTheSame = compareTwoJsValues(newUIState, currentUIState);
       if (stateIsTheSame) {
-        if (controlType === "button") {
+        if (controlType === "button" || controlType === "link") {
           if (!isInternalEvent(e)) {
             uiStateController.onUIAction(e);
           }
@@ -884,6 +884,9 @@ export const useUIGroupStateController = (
     if (childUIStateController.controlType === "button") {
       return false;
     }
+    if (childUIStateController.controlType === "link") {
+      return false;
+    }
     return true;
   };
 
@@ -1183,6 +1186,9 @@ export const useUIGroupStateController = (
         if (childUIStateController.controlType === "button") {
           continue;
         }
+        if (childUIStateController.controlType === "link") {
+          continue;
+        }
         childUIStateController.clearUIState(propagateDownClearEvent);
       }
       onChange(e, { notifyExternal: true });
@@ -1279,6 +1285,9 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
 
   const canRegisterAsFacadeChild = (childController) => {
     if (childController.controlType === "button") {
+      return false;
+    }
+    if (childController.controlType === "link") {
       return false;
     }
     if (childController.controlType === "facade") {
