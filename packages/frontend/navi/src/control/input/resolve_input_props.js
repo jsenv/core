@@ -2,8 +2,12 @@ import { isSignal } from "../../utils/is_signal.js";
 import { CHAR_CLASS_PRESETS } from "../char_guard_presets.js";
 import { timeStringToSeconds } from "../picker/time_helpers.js";
 
-// Maps validity type names → navi input type names
+// Maps validity type names → navi input type names.
+// Numeric signal types must not fall through to the native type="number"
+// (which adds spinner buttons and has poor UX) — they map to navi_number instead.
 const VALIDITY_TYPE_TO_INPUT_TYPE = {
+  number: "navi_number",
+  integer: "navi_number",
   percentage: "navi_percentage",
 };
 
