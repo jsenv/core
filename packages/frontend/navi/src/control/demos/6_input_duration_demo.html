@@ -706,12 +706,8 @@
         <div class="demo-section">
           <h2>charGuard</h2>
           <p class="desc">
-            <code>charGuard</code> — when set to <code>true</code> (or{" "}
-            <code>"auto"</code>), the allowed character class is inferred from
-            the input context: <code>inputMode="numeric"</code> → digits only,{" "}
-            <code>inputMode="decimal"</code> → digits + decimal separator +
-            minus. InputDuration sub-fields use <code>inputMode="numeric"</code>
-            , so <code>charGuard</code> blocks any non-digit key automatically.
+            <code>charGuard</code> — blocks non-digit keystrokes on all
+            sub-fields. Just pass the prop to enable it.
           </p>
           <div class="states-grid">
             <span class="legend">without</span>
