@@ -11349,26 +11349,6 @@ const visibleRectEffect = (
       }
     }
     {
-      // visualViewport resize fires when the virtual keyboard opens/closes on mobile.
-      // window resize catches cases visualViewport misses, notably the browser input
-      // accessory bar (password/autocomplete suggestions) on iOS Safari which changes
-      // the available height without always firing a visualViewport resize event.
-      // We listen to both simultaneously; the check is idempotent so duplicates are harmless.
-      const onResize = (e) => {
-        autoCheck(e);
-      };
-      if (window.visualViewport) {
-        window.visualViewport.addEventListener("resize", onResize);
-        addTeardown(() => {
-          window.visualViewport.removeEventListener("resize", onResize);
-        });
-      }
-      window.addEventListener("resize", onResize);
-      addTeardown(() => {
-        window.removeEventListener("resize", onResize);
-      });
-    }
-    {
       // visualViewport scroll fires when the visual viewport pans independently
       // of the layout viewport (e.g. during pinch-zoom). This is distinct from
       // document scroll and must be observed separately.
@@ -11387,6 +11367,42 @@ const visibleRectEffect = (
           );
         });
       }
+    }
+    {
+      if (window.visualViewport) {
+        // visualViewport resize fires when the virtual keyboard opens/closes on mobile.
+        // On mobile, tapping from one input to another triggers a resize because
+        // the virtual keyboard briefly starts to close before the new input receives
+        // focus and the keyboard reopens. Debouncing prevents repositioning the
+        // during that transient state, which would cause a visible flicker.
+        let resizeTimeout;
+        const cancelDelayedAutoCheck = () => {
+          clearTimeout(resizeTimeout);
+        };
+        const onVisualViewportResize = (e) => {
+          cancelDelayedAutoCheck();
+          resizeTimeout = setTimeout(() => {
+            autoCheck(e);
+          }, 100);
+        };
+        window.visualViewport.addEventListener(
+          "resize",
+          onVisualViewportResize,
+        );
+        addTeardown(() => {
+          window.visualViewport.removeEventListener(
+            "resize",
+            onVisualViewportResize,
+          );
+        });
+      }
+      const onWindowResize = (e) => {
+        autoCheck(e);
+      };
+      window.addEventListener("resize", onWindowResize);
+      addTeardown(() => {
+        window.removeEventListener("resize", onWindowResize);
+      });
     }
     on_element_resize: {
       if (skipElementResize) {
@@ -11529,8 +11545,20 @@ const visibleRectEffect = (
             }
           };
           ancestor.addEventListener("toggle", onToggle);
+
+          const onNaviPositionUpdate = (e) => {
+            autoCheck(e);
+          };
+          ancestor.addEventListener(
+            "navi_position_update",
+            onNaviPositionUpdate,
+          );
           addTeardown(() => {
             ancestor.removeEventListener("toggle", onToggle);
+            ancestor.removeEventListener(
+              "navi_position_update",
+              onNaviPositionUpdate,
+            );
           });
         }
         current = current.parentElement;

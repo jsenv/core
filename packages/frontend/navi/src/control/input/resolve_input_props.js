@@ -173,6 +173,8 @@ export const resolveInputProps = (props) => {
         const integerDigitCount = String(Math.floor(Math.abs(max))).length;
         const stepStr = String(step);
         const dotIndex = stepStr.indexOf(".");
+        // integer step + decimal inputMode is an unusual combo, but we stay consistent:
+        // no decimal part in maxLength since valid values are whole numbers anyway
         const isIntegerStep = dotIndex === -1;
         const decimalSignCharCount = isIntegerStep ? 0 : 1;
         const decimalDigitCount = isIntegerStep

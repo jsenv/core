@@ -19687,11 +19687,6 @@ const MIN_CONSTRAINT = {
   name: "min",
   messageAttribute: "data-min-message",
   check: (field) => {
-    // Sub-inputs inside a duration_group: min/max is validated at the group level, not per-field.
-    // Per-field min/max attributes are kept for arrow-key navigation bounds only.
-    if (field.parentUIStateController?.controlType === "duration_group") {
-      return null;
-    }
     if (field.controlType === "duration_group") {
       const min = field.controlHostProps.min;
       if (min === undefined || min === null) {
@@ -19795,11 +19790,6 @@ const MAX_CONSTRAINT = {
   name: "max",
   messageAttribute: "data-max-message",
   check: (field) => {
-    // Sub-inputs inside a duration_group: min/max is validated at the group level, not per-field.
-    // Per-field min/max attributes are kept for arrow-key navigation bounds only.
-    if (field.parentUIStateController?.controlType === "duration_group") {
-      return null;
-    }
     if (field.controlType === "duration_group") {
       const max = field.controlHostProps.max;
       if (max === undefined || max === null) {
@@ -20171,21 +20161,21 @@ const NAVI_VALIDITY_CHANGE_CUSTOM_EVENT = "navi_validity_change";
 
 const VALIDATION_TOKEN = createOpenToken();
 
+// the order matters here, the first constraint is picked first when multiple constraints fail
+// so it's better to keep the most complex constraints at the end of the list
+// so the more basic ones shows up first
 const STANDARD_CONSTRAINT_SET = new Set([
   REQUIRED_CONSTRAINT,
   PATTERN_CONSTRAINT,
   TYPE_EMAIL_CONSTRAINT,
   TYPE_NUMBER_CONSTRAINT,
-  MIN_LENGTH_CONSTRAINT,
-  MAX_LENGTH_CONSTRAINT,
   MIN_CONSTRAINT,
   MAX_CONSTRAINT,
   STEP_CONSTRAINT,
+  MIN_LENGTH_CONSTRAINT,
+  MAX_LENGTH_CONSTRAINT,
 ]);
 const NAVI_CONSTRAINT_SET = new Set([
-  // the order matters here, the last constraint is picked first when multiple constraints fail
-  // so it's better to keep the most complex constraints at the beginning of the list
-  // so the more basic ones shows up first
   MIN_SPECIAL_CHAR_CONSTRAINT,
   SINGLE_SPACE_CONSTRAINT,
   MIN_DIGIT_CONSTRAINT,
@@ -20483,10 +20473,10 @@ const createControlValidation = (
 const pickConstraintFailureInfo = (a, b) => {
   const aPrio = getConstraintFailureInfoPriority(a);
   const bPrio = getConstraintFailureInfoPriority(b);
-  if (aPrio > bPrio) {
-    return a;
+  if (bPrio > aPrio) {
+    return b;
   }
-  return b;
+  return a;
 };
 const getConstraintFailureInfoPriority = (failureInfo) => {
   if (failureInfo.status === "error") {
@@ -21972,36 +21962,30 @@ const FormContext = createContext();
  * Each value is a regex character class (including the [ ] delimiters).
  */
 const CHAR_CLASS_PRESETS = {
-  numeric:      "[0-9]",         // digits only
-  alpha:        "[A-Za-z]",      // letters only
-  alphanumeric: "[0-9A-Za-z]",   // letters and digits
-  uppercase:    "[A-Z]",         // uppercase letters only
-  tel:          "[-0-9+() ]",    // phone: digits, +, -, parens, space
-  card:         "[0-9 ]",        // credit card: digits and spaces
-  hex:          "[0-9A-Fa-f]",   // hexadecimal digits
-  pin:          "[0-9]",         // numeric PIN
-  postal:       "[0-9A-Za-z -]", // postal code (FR, UK, US)
-  iban:         "[0-9A-Z]",      // IBAN: uppercase and digits
-  slug:         "[a-z0-9-]",     // URL slug
-};
-
-// Presets that imply a specific mobile keyboard layout
-const INPUT_MODE_FROM_PRESET = {
-  numeric: "numeric",
-  pin:     "numeric",
-  card:    "numeric",
-  tel:     "tel",
+  numeric: "[0-9]", // digits only
+  alpha: "[A-Za-z]", // letters only
+  alphanumeric: "[0-9A-Za-z]", // letters and digits
+  decimal: "[-0-9.,]", // digits, minus, dot, comma
+  uppercase: "[A-Z]", // uppercase letters only
+  tel: "[-0-9+() ]", // phone: digits, +, -, parens, space
+  email: "[a-zA-Z0-9._%+@-]", // email characters
+  card: "[0-9 ]", // credit card: digits and spaces
+  hex: "[0-9A-Fa-f]", // hexadecimal digits
+  pin: "[0-9]", // numeric PIN
+  postal: "[0-9A-Za-z -]", // postal code (FR, UK, US)
+  iban: "[0-9A-Z]", // IBAN: uppercase and digits
+  slug: "[a-z0-9-]", // URL slug
 };
 
 // Specific i18n keys per preset — more informative than the generic fallback
 const MESSAGE_KEY_FROM_PRESET = {
-  numeric:      "constraint.guard.number",
-  pin:          "constraint.guard.number",
-  alpha:        "constraint.guard.alpha",
+  numeric: "constraint.guard.number",
+  pin: "constraint.guard.number",
+  alpha: "constraint.guard.alpha",
   alphanumeric: "constraint.guard.alphanumeric",
-  uppercase:    "constraint.guard.uppercase",
-  hex:          "constraint.guard.hex",
-  slug:         "constraint.guard.slug",
+  uppercase: "constraint.guard.uppercase",
+  hex: "constraint.guard.hex",
+  slug: "constraint.guard.slug",
   // tel, card, postal, iban, custom → generic fallback
 };
 
@@ -22012,13 +21996,6 @@ const MESSAGE_KEY_FROM_PRESET = {
 const resolveCharClass = (value) => {
   if (!value) return null;
   return CHAR_CLASS_PRESETS[value] ?? value;
-};
-
-/**
- * Returns the inputMode to auto-apply for the given preset, or null.
- */
-const resolveInputModeFromAllowedChars = (value) => {
-  return INPUT_MODE_FROM_PRESET[value] ?? null;
 };
 
 /**
@@ -32213,20 +32190,99 @@ const resolveInputProps = (props) => {
   if (currentTypeStepFormatter) {
     props.step = currentTypeStepFormatter(props.step);
   }
+
+  // For navi_number: choose inputMode based on whether step/min/max suggest decimals.
+  // inputMode="numeric" (integer keyboard) vs "decimal" (keyboard with decimal separator).
+  if (currentType === "navi_number") {
+    if (props.inputMode === undefined) {
+      props.inputMode =
+        hasDecimalPlaces(props.step) ||
+        hasDecimalPlaces(props.min) ||
+        hasDecimalPlaces(props.max)
+          ? "decimal"
+          : "numeric";
+    }
+  }
+
+  const { charGuard } = props;
+  if (charGuard) {
+    if (charGuard === true || charGuard === "auto") {
+      // Auto-resolve charGuard from context.
+      let charGuardResolved;
+      const inputMode = props.inputMode;
+      if (inputMode === "numeric") {
+        charGuardResolved = "numeric";
+      } else if (inputMode === "decimal") {
+        charGuardResolved = "decimal";
+      } else if (currentType === "tel") {
+        charGuardResolved = "tel";
+      } else if (currentType === "email") {
+        charGuardResolved = "email";
+      }
+      if (charGuardResolved !== undefined) {
+        props.charGuard = charGuardResolved;
+      }
+    }
+    // charGuard is now resolved: derive inputMode from it if not already set.
+    if (props.inputMode === undefined && props.charGuard) {
+      const autoMode = INPUT_MODE_FROM_CHAR_GUARD[props.charGuard];
+      if (autoMode) {
+        props.inputMode = autoMode;
+      }
+    }
+    // Build pattern from the resolved charGuard (preset name → class, or raw class passthrough).
+    if (props.pattern === undefined && props.charGuard) {
+      const charClass = CHAR_CLASS_PRESETS[props.charGuard] ?? props.charGuard;
+      props.pattern = `${charClass}*`;
+    }
+  }
+
+  // Compute maxLength from max when inputMode is numeric/decimal.
+  // Done here (after inputMode is set) so controller.props has the resolved value.
+  if (props.maxLength === undefined) {
+    if (props.inputMode === "numeric") {
+      const { min, max } = props;
+      if (max === undefined) ; else {
+        const canBeNegative = min === undefined ? max < 0 : min < 0;
+        const signCharCount = canBeNegative ? 1 : 0;
+        const integerDigitCount = String(Math.floor(Math.abs(max))).length;
+        props.maxLength = signCharCount + integerDigitCount;
+      }
+    } else if (props.inputMode === "decimal") {
+      const { min, max, step } = props;
+      if (max === undefined) ; else if (step === undefined) ; else {
+        const canBeNegative = min === undefined ? max < 0 : min < 0;
+        const signCharCount = canBeNegative ? 1 : 0;
+        const integerDigitCount = String(Math.floor(Math.abs(max))).length;
+        const stepStr = String(step);
+        const dotIndex = stepStr.indexOf(".");
+        // integer step + decimal inputMode is an unusual combo, but we stay consistent:
+        // no decimal part in maxLength since valid values are whole numbers anyway
+        const isIntegerStep = dotIndex === -1;
+        const decimalSignCharCount = isIntegerStep ? 0 : 1;
+        const decimalDigitCount = isIntegerStep
+          ? 0
+          : stepStr.length - dotIndex - 1;
+        props.maxLength =
+          signCharCount +
+          integerDigitCount +
+          decimalSignCharCount +
+          decimalDigitCount;
+      }
+    }
+  }
+
+  // Resolve maxLengthGuard boolean/auto → the computed maxLength number.
+  if (props.maxLengthGuard === true || props.maxLengthGuard === "auto") {
+    props.maxLengthGuard =
+      typeof props.maxLength === "number" ? props.maxLength : undefined;
+  }
+
   const currentTypeDefaults = NAVI_TYPE_DEFAULTS[currentType];
   if (!currentTypeDefaults) {
     return;
   }
-  // For navi_number: choose inputMode based on whether step/min/max suggest decimals.
-  // inputMode="numeric" (integer keyboard) vs "decimal" (keyboard with decimal separator).
-  if (currentType === "navi_number" && props.inputMode === undefined) {
-    props.inputMode =
-      hasDecimalPlaces(props.step) ||
-      hasDecimalPlaces(props.min) ||
-      hasDecimalPlaces(props.max)
-        ? "decimal"
-        : "numeric";
-  }
+
   for (const key of Object.keys(currentTypeDefaults)) {
     if (props[key] === undefined) {
       props[key] = currentTypeDefaults[key];
@@ -32235,6 +32291,15 @@ const resolveInputProps = (props) => {
   const targetType = currentTypeDefaults.type;
   props.type = targetType;
   resolveInputProps(props);
+};
+
+// Presets that imply a specific mobile keyboard inputMode.
+const INPUT_MODE_FROM_CHAR_GUARD = {
+  numeric: "numeric",
+  pin: "numeric",
+  card: "numeric",
+  tel: "tel",
+  decimal: "decimal",
 };
 
 const normalizeToDate = (value) => {
@@ -32702,7 +32767,7 @@ const RangePseudoElements = ["::-navi-loader"];
 const InputModeResolver = props => {
   const Next = useNextResolver();
   if (props.inputMode === "numeric" || props.inputMode === "decimal") {
-    return jsx(InputModeNumeric, {
+    return jsx(InputModeNumericOrDecimal, {
       ...props
     });
   }
@@ -32710,37 +32775,26 @@ const InputModeResolver = props => {
     ...props
   });
 };
-const InputModeNumeric = props => {
+const InputModeNumericOrDecimal = props => {
   const Next = useNextResolver();
-  const {
-    min,
-    max,
-    step = 1
-  } = props;
-  let maxLength;
-  if (max !== undefined) {
-    const integerDigits = String(Math.floor(max)).length;
-    // If step has decimal places, the value can contain a separator + those digits
-    const stepStr = String(step);
-    const dotIndex = stepStr.indexOf(".");
-    const decimalDigits = dotIndex === -1 ? 0 : stepStr.length - dotIndex - 1;
-    // If min is negative (or unknown and max itself is negative), a "-" sign can appear
-    const canBeNegative = min !== undefined ? min < 0 : max < 0;
-    const signChar = canBeNegative ? 1 : 0;
-    maxLength = signChar + integerDigits + (decimalDigits > 0 ? 1 + decimalDigits : 0);
-  }
   return jsx(Next, {
-    maxLength: maxLength,
     ...props,
     onInput: e => {
       props.onInput?.(e);
       if (e.defaultPrevented) {
         return;
       }
-      if (maxLength === undefined) {
-        return;
-      }
       const input = e.currentTarget;
+      let maxLength;
+      const maxLengthProp = input.maxLength;
+      if (maxLengthProp === -1) {
+        const naviMaxLengthAttr = input.getAttribute("navi-max-length");
+        if (naviMaxLengthAttr === null) {
+          // no max length
+          return;
+        }
+        maxLength = Number(naviMaxLengthAttr);
+      }
       if (input.value.length < maxLength) {
         return;
       }
@@ -33705,18 +33759,6 @@ const InputTextualFirstResolver = props => {
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
   resolveInputProps(props);
-
-  // charGuard → auto inputMode + auto pattern for mobile keyboard hints
-  if (props.charGuard) {
-    if (props.inputMode === undefined) {
-      const autoMode = resolveInputModeFromAllowedChars(props.charGuard);
-      if (autoMode) props.inputMode = autoMode;
-    }
-    if (props.pattern === undefined) {
-      const charClass = resolveCharClass(props.charGuard);
-      props.pattern = `${charClass}*`;
-    }
-  }
   return jsx(Next, {
     ...props
   });
@@ -33732,6 +33774,10 @@ const RealInput = props => {
     // Never set native maxLength — our guard handles it. maxLength stays in
     // inputControlHostProps so form validation constraints still read it.
     maxLength: undefined
+    // But do expose it (needed by navi_input_full event)
+    ,
+
+    "navi-max-length": props.maxLength
   });
 };
 const InputStyleCSSVars = {
@@ -34671,7 +34717,9 @@ const InputDuration = props => {
     uiAction,
     action,
     unitHour,
-    textAlign = "auto"
+    textAlign = "auto",
+    maxLengthGuard,
+    charGuard
   } = props;
   const minDuration = parseDuration(props.min);
   const maxDuration = parseDuration(props.max);
@@ -34799,6 +34847,8 @@ const InputDuration = props => {
     className: "navi_input_duration",
     "data-callout-arrow-x": "center",
     width: "fit-content",
+    flex: true,
+    spacing: "xxs",
     ...groupRootProps,
     unit: undefined,
     unitHour: undefined,
@@ -34818,37 +34868,34 @@ const InputDuration = props => {
       } : {
         defaultValue: initialIsoString
       })
-    }), jsx(Box, {
-      flex: true,
-      spacing: "xxs",
-      width: "fit-content",
-      children: jsx(ControlgroupChildrenWrapper, {
-        ...childrenWrapperProps,
-        name: undefined,
-        children: jsx(InputDurationFields, {
-          showHours: showHours,
-          showMinutes: showMinutes,
-          showSeconds: showSeconds,
-          showMilliseconds: showMilliseconds,
-          minutesReadOnly: minutesReadOnly,
-          secondsReadOnly: secondsReadOnly,
-          millisecondsReadOnly: millisecondsReadOnly,
-          stepHasMilliseconds: stepHasMilliseconds,
-          controlled: hasValue,
-          hourValue: hourValue,
-          minuteValue: minuteValue,
-          secondValue: secondValue,
-          millisecondValue: millisecondValue,
-          minSeconds: minSeconds,
-          maxSeconds: maxSeconds,
-          stepSeconds: stepSeconds,
-          unitHour: unitHour,
-          textAlign: textAlign,
-          required: required,
-          readOnly: readOnly,
-          disabled: disabled,
-          basePseudoState: basePseudoState
-        })
+    }), jsx(ControlgroupChildrenWrapper, {
+      ...childrenWrapperProps,
+      name: undefined,
+      children: jsx(InputDurationFields, {
+        showHours: showHours,
+        showMinutes: showMinutes,
+        showSeconds: showSeconds,
+        showMilliseconds: showMilliseconds,
+        minutesReadOnly: minutesReadOnly,
+        secondsReadOnly: secondsReadOnly,
+        millisecondsReadOnly: millisecondsReadOnly,
+        stepHasMilliseconds: stepHasMilliseconds,
+        controlled: hasValue,
+        hourValue: hourValue,
+        minuteValue: minuteValue,
+        secondValue: secondValue,
+        millisecondValue: millisecondValue,
+        minSeconds: minSeconds,
+        maxSeconds: maxSeconds,
+        stepSeconds: stepSeconds,
+        unitHour: unitHour,
+        textAlign: textAlign,
+        maxLengthGuard: maxLengthGuard,
+        charGuard: charGuard,
+        required: required,
+        readOnly: readOnly,
+        disabled: disabled,
+        basePseudoState: basePseudoState
       })
     })]
   });
@@ -34908,7 +34955,20 @@ const useClipboardProps = groupRef => {
     });
     e.preventDefault();
   };
+  const isFromDurationField = e => {
+    const target = e.target;
+    if (!target.matches) {
+      return false;
+    }
+    if (!target.matches(".navi_duration_part")) {
+      return false;
+    }
+    return true;
+  };
   const onCopy = e => {
+    if (!isFromDurationField(e)) {
+      return;
+    }
     const payload = getClipboardPayload();
     if (!payload) {
       return;
@@ -34918,6 +34978,9 @@ const useClipboardProps = groupRef => {
     e.preventDefault();
   };
   const onCut = e => {
+    if (!isFromDurationField(e)) {
+      return;
+    }
     const payload = getClipboardPayload();
     if (!payload) {
       return;
@@ -34927,6 +34990,9 @@ const useClipboardProps = groupRef => {
     applyToGroup("", e);
   };
   const onPaste = e => {
+    if (!isFromDurationField(e)) {
+      return;
+    }
     const naviData = e.clipboardData.getData("application/x-navi");
     const textData = e.clipboardData.getData("text/plain");
     let isoValue = null;
@@ -35119,10 +35185,12 @@ const InputDurationPart = ({
   return jsxs(Label, {
     flex: "y",
     "data-separator": separator || undefined,
-    children: [jsx(Input
-    // When autofocused this field should be selected
-    // this help to modify the value on mobile
-    , {
+    children: [jsx(Input, {
+      className: "navi_duration_part"
+      // When autofocused this field should be selected
+      // this help to modify the value on mobile
+      ,
+
       autoFocusSelect: true,
       type: "navi_number",
       "navi-input-type": unit,
@@ -35396,6 +35464,7 @@ const Dialog = props => {
         const topOffset = vv.offsetTop;
         const marginTop = availableHeight > dialogHeight ? topOffset + (availableHeight - dialogHeight) / 2 : topOffset;
         dialogEl.style.setProperty("--dialog-top-inset", `${snapToPixel(marginTop)}px`);
+        dispatchCustomEvent(dialogEl, "navi_position_change");
       };
       const onScroll = () => {
         updatePosition();
@@ -40454,6 +40523,7 @@ installImportMetaCssBuild(import.meta);const css$i = /* css */`
       outline: none;
       cursor: inherit;
       pointer-events: auto;
+      user-select: all;
 
       &::-webkit-calendar-picker-indicator {
         cursor: inherit;
