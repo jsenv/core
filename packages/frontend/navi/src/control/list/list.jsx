@@ -1139,7 +1139,10 @@ const NoMatchFallback = ({ tracker, noMatchFallback }) => {
   if (noMatchFallback === undefined) {
     noMatchFallback = naviI18n("list.no_match");
   }
-
+  if (!noMatchFallback) {
+    // explicitely disabled by user (<List noMatchFallback={false|null|''}>)
+    return null;
+  }
   if (!showMatchFallback) {
     return null;
   }
