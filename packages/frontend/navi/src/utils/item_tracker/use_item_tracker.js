@@ -96,7 +96,7 @@ const createItemTracker = (onChange) => {
   const visibleItemsSignal = signal([]);
   const countSignal = signal(0);
   const visibleCountSignal = signal(0);
-  const matchCountSignal = signal(0);
+  const noMatchCountSignal = signal(0);
 
   let notifyScheduled = false;
   const runNotify = () => {
@@ -118,7 +118,7 @@ const createItemTracker = (onChange) => {
       let visibleItemsChanged = false;
       const allItems = [];
       const visibleItems = [];
-      let newMatchCount = 0;
+      let newNoMatchCount = 0;
       for (let i = 0; i < allOrderedKeys.length; i++) {
         const key = allOrderedKeys[i];
         const item = allRegistrations.get(key);
@@ -127,12 +127,12 @@ const createItemTracker = (onChange) => {
         if (!allItemsChanged && item !== prevAllItems[i]) {
           allItemsChanged = true;
         }
-        if (item.match) {
+        if (item.match === false) {
+          newNoMatchCount++;
+        }
+        if (!item.hidden) {
           const visibleIdx = visibleItems.length;
           visibleItems.push(item);
-          if (item.matchScore > 0) {
-            newMatchCount++;
-          }
           if (!visibleItemsChanged && item !== prevVisibleItems[visibleIdx]) {
             visibleItemsChanged = true;
           }
@@ -154,9 +154,9 @@ const createItemTracker = (onChange) => {
         visibleItemsSignal.value = visibleItems;
         someChange = true;
       }
-      const matchCountModified = matchCountSignal.peek() !== newMatchCount;
-      if (matchCountModified) {
-        matchCountSignal.value = newMatchCount;
+      const noMatchCountModified = noMatchCountSignal.peek() !== newNoMatchCount;
+      if (noMatchCountModified) {
+        noMatchCountSignal.value = newNoMatchCount;
         someChange = true;
       }
       if (someChange) {
@@ -355,7 +355,7 @@ const createItemTracker = (onChange) => {
     visibleItemsSignal,
     countSignal,
     visibleCountSignal,
-    matchCountSignal,
+    noMatchCountSignal,
     _flushSync,
   };
 };

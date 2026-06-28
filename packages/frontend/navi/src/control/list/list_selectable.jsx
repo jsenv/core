@@ -34,8 +34,8 @@ const css = /* css */ `
       --list-item-outline-color: var(--navi-focus-outline-color);
       /* Focus outline end */
       --list-item-border-color: var(--navi-control-border-color);
-      --list-item-padding-x-default: var(--navi-control-padding-x-default);
-      --list-item-padding-y-default: var(--navi-control-padding-y-default);
+      --list-item-padding-x-default: var(--navi-list-item-padding-x-default);
+      --list-item-padding-y-default: var(--navi-list-item-padding-y-default);
 
       /* Hover (mouse) */
       --list-item-background-color-hover: light-dark(#f5f5f5, #2a2a2a);
@@ -84,6 +84,14 @@ const css = /* css */ `
     }
   }
 
+  .navi_list_container[navi-selectable] {
+    .navi_list_fallback,
+    .navi_list_no_match_fallback {
+      --list-item-padding-x-default: inherit;
+      --list-item-padding-y-default: inherit;
+    }
+  }
+
   .navi_list_item[navi-selectable] {
     --list-item-padding-x-default: inherit;
     --list-item-padding-y-default: inherit;
@@ -92,6 +100,13 @@ const css = /* css */ `
     outline-color: var(--list-item-outline-color);
     outline-offset: var(--list-item-outline-offset);
     cursor: var(--x-list-item-cursor);
+
+    .navi_checkbox {
+      --margin: 0;
+    }
+    .navi_radio {
+      --margin: 0;
+    }
 
     &[navi-selectable] {
       user-select: none;

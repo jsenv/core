@@ -296,7 +296,34 @@ const css = /* css */ `
     color: light-dark(#888, #aaa);
     &[navi-default] {
       display: inline;
-      padding: var(--list-item-padding, var(--navi-s));
+      padding-top: var(
+        --list-item-padding-top,
+        var(
+          --list-item-padding-y,
+          var(--list-item-padding, var(--list-item-padding-y-default))
+        )
+      );
+      padding-right: var(
+        --list-item-padding-right,
+        var(
+          --list-item-padding-x,
+          var(--list-item-padding, var(--list-item-padding-x-default))
+        )
+      );
+      padding-bottom: var(
+        --list-item-padding-bottom,
+        var(
+          --list-item-padding-y,
+          var(--list-item-padding, var(--list-item-padding-y-default))
+        )
+      );
+      padding-left: var(
+        --list-item-padding-left,
+        var(
+          --list-item-padding-x,
+          var(--list-item-padding, var(--list-item-padding-x-default))
+        )
+      );
       text-align: center;
       user-select: none;
     }
@@ -530,7 +557,6 @@ const ListUI = (props) => {
         role={role}
         fallback={fallback}
         noMatchFallback={noMatchFallback}
-        searchText={searchText}
         filterMode={filterMode}
         separator={separator}
         expandX={expandX}
@@ -565,7 +591,6 @@ const ListContent = ({
   role,
   fallback,
   noMatchFallback,
-  searchText,
   filterMode,
   separator,
   expandX,
@@ -585,7 +610,6 @@ const ListContent = ({
         role={role}
         fallback={fallback}
         noMatchFallback={noMatchFallback}
-        searchText={searchText}
         filterMode={filterMode}
         separator={separator === true ? <Separator margin="0" /> : separator}
         expandX={expandX || expand}
@@ -1064,7 +1088,6 @@ const UnorderedList = ({
   virtualItemSizeSignal,
   fallback,
   noMatchFallback,
-  searchText,
   filterMode,
   separator,
   horizontal,
@@ -1085,11 +1108,7 @@ const UnorderedList = ({
         virtualItemSizeSignal={virtualItemSizeSignal}
         renderWindowStart={renderWindow.start}
       />
-      <NoMatchFallback
-        noMatchFallback={noMatchFallback}
-        tracker={tracker}
-        searchText={searchText}
-      />
+      <NoMatchFallback noMatchFallback={noMatchFallback} tracker={tracker} />
       <Fallback fallback={fallback} tracker={tracker} />
       <NonMatchBehaviorContext.Provider value={filterMode}>
         <RenderWindowContext.Provider value={renderWindow}>
@@ -1109,20 +1128,16 @@ const UnorderedList = ({
   );
 };
 
-const NoMatchFallback = ({ tracker, noMatchFallback, searchText }) => {
+// Show when all matchable items (those with a match prop) are non-matching.
+// The match prop on List.Item signals participation in a matching system
+// (search, filter, etc.). noMatchFallback appears when every such item has match=false.
+const NoMatchFallback = ({ tracker, noMatchFallback }) => {
   const itemCount = tracker.countSignal.value;
-  const visibleItemCount = tracker.visibleCountSignal.value;
-  const matchCount = tracker.matchCountSignal.value;
-  // Show when all items are filtered out (filtered prop), or when search is
-  // active but no visible item has a positive match score.
-  const allHidden = itemCount > 0 && visibleItemCount === 0;
-  const noneMatch = searchText && visibleItemCount > 0 && matchCount === 0;
-  const showMatchFallback = allHidden || noneMatch;
+  const noMatchCount = tracker.noMatchCountSignal.value;
+  const showMatchFallback = noMatchCount > 0 && noMatchCount === itemCount;
 
   if (noMatchFallback === undefined) {
-    noMatchFallback = allHidden
-      ? naviI18n("list.no_match")
-      : naviI18n("list.no_match_rest_shown");
+    noMatchFallback = naviI18n("list.no_match");
   }
 
   if (!showMatchFallback) {
