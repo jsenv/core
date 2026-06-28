@@ -143,11 +143,11 @@ import.meta.css = /* css */ `
     }
   }
   /*
-
-  It's very common to declare a display on component as follow
+  To set display on component, code usually do something like: 
   .component_class { display: component_display; }
 
-  This kill the default behavior of [hidden] attribute and we need to explicitly handle it with:
+  It overrides the default behavior of [hidden] attribute!
+  This needs to be explicitly handled with:
   .component_class[hidden] { display: none; }
 
   To avoid this extra work and potential mistakes we force the default behavior of [hidden] attribute.
