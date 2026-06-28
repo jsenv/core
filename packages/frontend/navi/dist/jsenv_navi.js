@@ -22459,7 +22459,7 @@ const useUIStateController = (
       const currentUIState = uiStateController.uiState;
       const stateIsTheSame = compareTwoJsValues(newUIState, currentUIState);
       if (stateIsTheSame) {
-        if (controlType === "button") {
+        if (controlType === "button" || controlType === "link") {
           if (!isInternalEvent(e)) {
             uiStateController.onUIAction(e);
           }
@@ -23071,6 +23071,9 @@ const useUIGroupStateController = (
     if (childUIStateController.controlType === "button") {
       return false;
     }
+    if (childUIStateController.controlType === "link") {
+      return false;
+    }
     return true;
   };
 
@@ -23367,6 +23370,9 @@ const useUIGroupStateController = (
         if (childUIStateController.controlType === "button") {
           continue;
         }
+        if (childUIStateController.controlType === "link") {
+          continue;
+        }
         childUIStateController.clearUIState(propagateDownClearEvent);
       }
       onChange(e, { notifyExternal: true });
@@ -23463,6 +23469,9 @@ const useUIFacadeStateController = (props, realUIStateController) => {
 
   const canRegisterAsFacadeChild = (childController) => {
     if (childController.controlType === "button") {
+      return false;
+    }
+    if (childController.controlType === "link") {
       return false;
     }
     if (childController.controlType === "facade") {
@@ -32091,8 +32100,12 @@ const getNowHoursRoundedToStep = (stepMinutes, offsetMinutes = 0) => {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 };
 
-// Maps validity type names → navi input type names
+// Maps validity type names → navi input type names.
+// Numeric signal types must not fall through to the native type="number"
+// (which adds spinner buttons and has poor UX) — they map to navi_number instead.
 const VALIDITY_TYPE_TO_INPUT_TYPE = {
+  number: "navi_number",
+  integer: "navi_number",
   percentage: "navi_percentage",
 };
 
@@ -36318,6 +36331,10 @@ const PickerCustom = props => {
       Object.assign(pickerProps, {
         eventReactionDefinitions: {
           mouseDown: e => {
+            const popupEl = popupRef.current;
+            if (popupEl && popupEl.contains(e.target)) {
+              return null;
+            }
             if (expandedRef.current) {
               return {
                 name: "mousedown to close picker",
@@ -36334,6 +36351,10 @@ const PickerCustom = props => {
             };
           },
           click: e => {
+            const popupEl = popupRef.current;
+            if (popupEl && popupEl.contains(e.target)) {
+              return null;
+            }
             // When a label is clicked it transfers focus to the select
             // in that case we want to open it (otherwise we have already opened on mousedown interaction)
             return {
@@ -36349,40 +36370,6 @@ const PickerCustom = props => {
           },
           keyDown: e => {
             return onKeyDownShortcuts(e);
-          }
-        }
-      });
-      Object.assign(popupProps, {
-        onMouseDown: e => {
-          if (e.button !== 0) {
-            return;
-          }
-          // mousedown inside popover should not bubble to the select (would re-open it if that mousedown closes it)
-          debugPopup(e, `"mousedown" received on popup -> prevent bubbling to picker (e.stopPropagation())`);
-          e.stopPropagation();
-        },
-        onClick: e => {
-          if (e.button !== 0) {
-            return;
-          }
-          // click inside popover should not bubble to the picker (would re-open it if that click closes it)
-          debugPopup(e, `"click" received on popup -> prevent bubbling to picker (e.stopPropagation())`);
-          e.stopPropagation();
-          // Here we can't preventDefault because the click might be needed to check a radio for instance.
-          // As a result we have to let it go through which means it could trigger form submission
-          // but we've put type="button" on the picker to ensure it can't submit the form
-          // so browser won't submit eventual form for clicks inside the popover/dialog
-          // e.preventDefault();
-        },
-        onKeyDown: e => {
-          // some keys pressed inside popover should not reach the picker button
-          // (like enter that would try to request action of closest form otherwise for instance)
-          if (e.key === "Enter") {
-            debugPopup(e, `"enter" received on popup -> prevent bubbling to picker (e.stopPropagation())`);
-            e.stopPropagation();
-            // preventDefault prevents the browser from dispatching a "click" on the
-            // picker button when focus moves to it synchronously during enterEffect
-            e.preventDefault();
           }
         }
       });
@@ -38764,41 +38751,32 @@ const ListFirstResolver = props => {
     ...props
   });
 };
+
 /**
  * List — generic virtualized scroll container.
+ * Items must use <List.Item> to participate in tracking.
  *
- * Renders children inside a scrollable container with an optional render budget
- * for virtual scrolling. Items must use <List.Item> to participate in tracking.
- *
- * Props:
- *   selectable           — enables selection: items get aria roles, action/uiAction callbacks,
- *                          and keyboard navigation (arrow keys, enter, escape).
- *   action               — called with the selected value when the user confirms a selection.
- *   uiAction             — called on every interaction (hover, keyboard navigation, confirm).
- *                          When provided the list tracks hovered/pointed state via ListInteractionContext.
- *   popover              — when true, renders as a managed popover positioned near
- *                          an anchor element via navi_list_open / navi_list_close events.
- *   renderBudget         — max items in DOM at once (default 100, virtual scroll when exceeded).
- *   virtualItemSize      — fixed px size per item (width if horizontal, height otherwise).
- *                          Enables precise virtual-scroll filler sizing without a DOM
- *                          measurement pass. Useful when renderBudget is active and
- *                          all items have the same known height.
- *   fallback             — content shown when the list has no items at all.
- *   searchFallback       — content shown when every matchable item (those with a match prop)
- *                          has match=false. Defaults to a "no results" message.
- *                          Pass false/null/'' to disable.
- *   searchText           — current search string, used to trigger scroll-to-top when
- *                          search becomes active and to drive search highlight.
- *   searchNoMatchMode    — controls how List.Item behaves when match=false (default "remove"):
- *                            "remove"              — remove from DOM
- *                            "invisible_and_inert" — keep in DOM, invisible and non-interactive (preserves layout)
- *                            "muted"               — keep in DOM, visible but opacified and still interactive
- *   separator            — element or function(index, { previousItem, currentItem }) inserted between visible items.
- *   lockSize             — captures the container's dimensions on first render so filtering
- *                          cannot collapse the layout (sets min-width/min-height).
- *   horizontal           — lays items out in a row instead of a column.
- *   spacing              — gap between items (forwarded to Box spacing prop).
- *   ...rest              — forwarded to the outer container <Box>.
+ * @type {import("ignore:preact").FunctionComponent<{
+ *   selectable?: boolean,
+ *   action?: (value: any) => void,
+ *   uiAction?: (value: any) => void,
+ *   popover?: boolean,
+ *   renderBudget?: number,
+ *   virtualItemSize?: number,
+ *   fallback?: import("ignore:preact").ComponentChildren,
+ *   searchFallback?: import("ignore:preact").ComponentChildren,
+ *   searchText?: string,
+ *   searchNoMatchMode?: "remove" | "invisible_and_inert" | "muted",
+ *   separator?: boolean | import("ignore:preact").ComponentChildren,
+ *   lockSize?: boolean,
+ *   horizontal?: boolean,
+ *   spacing?: string,
+ *   expandX?: boolean,
+ *   expand?: boolean,
+ *   maxHeight?: string | number,
+ *   children?: import("ignore:preact").ComponentChildren,
+ *   [key: string]: any,
+ * }>}
  */
 const List = createComponentResolver([ListFirstResolver, ListSelectableResolver, ListUI]);
 const ListContent = ({

@@ -549,6 +549,10 @@ const PickerCustom = (props) => {
       Object.assign(pickerProps, {
         eventReactionDefinitions: {
           mouseDown: (e) => {
+            const popupEl = popupRef.current;
+            if (popupEl && popupEl.contains(e.target)) {
+              return null;
+            }
             if (expandedRef.current) {
               return {
                 name: "mousedown to close picker",
@@ -568,6 +572,10 @@ const PickerCustom = (props) => {
             };
           },
           click: (e) => {
+            const popupEl = popupRef.current;
+            if (popupEl && popupEl.contains(e.target)) {
+              return null;
+            }
             // When a label is clicked it transfers focus to the select
             // in that case we want to open it (otherwise we have already opened on mousedown interaction)
             return {
@@ -587,49 +595,6 @@ const PickerCustom = (props) => {
           keyDown: (e) => {
             return onKeyDownShortcuts(e);
           },
-        },
-      });
-      Object.assign(popupProps, {
-        onMouseDown: (e) => {
-          if (e.button !== 0) {
-            return;
-          }
-          // mousedown inside popover should not bubble to the select (would re-open it if that mousedown closes it)
-          debugPopup(
-            e,
-            `"mousedown" received on popup -> prevent bubbling to picker (e.stopPropagation())`,
-          );
-          e.stopPropagation();
-        },
-        onClick: (e) => {
-          if (e.button !== 0) {
-            return;
-          }
-          // click inside popover should not bubble to the picker (would re-open it if that click closes it)
-          debugPopup(
-            e,
-            `"click" received on popup -> prevent bubbling to picker (e.stopPropagation())`,
-          );
-          e.stopPropagation();
-          // Here we can't preventDefault because the click might be needed to check a radio for instance.
-          // As a result we have to let it go through which means it could trigger form submission
-          // but we've put type="button" on the picker to ensure it can't submit the form
-          // so browser won't submit eventual form for clicks inside the popover/dialog
-          // e.preventDefault();
-        },
-        onKeyDown: (e) => {
-          // some keys pressed inside popover should not reach the picker button
-          // (like enter that would try to request action of closest form otherwise for instance)
-          if (e.key === "Enter") {
-            debugPopup(
-              e,
-              `"enter" received on popup -> prevent bubbling to picker (e.stopPropagation())`,
-            );
-            e.stopPropagation();
-            // preventDefault prevents the browser from dispatching a "click" on the
-            // picker button when focus moves to it synchronously during enterEffect
-            e.preventDefault();
-          }
         },
       });
     }
