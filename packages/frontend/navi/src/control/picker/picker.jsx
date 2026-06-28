@@ -224,6 +224,7 @@ const css = /* css */ `
       outline: none;
       cursor: inherit;
       pointer-events: auto;
+      user-select: all;
 
       &::-webkit-calendar-picker-indicator {
         cursor: inherit;

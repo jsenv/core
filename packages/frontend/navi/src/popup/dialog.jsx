@@ -79,6 +79,7 @@ export const Dialog = (props) => {
           "--dialog-top-inset",
           `${snapToPixel(marginTop)}px`,
         );
+        dispatchCustomEvent(dialogEl, "navi_position_change");
       };
       const onScroll = () => {
         updatePosition();

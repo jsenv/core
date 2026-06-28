@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/navi",
-  "version": "0.27.49",
+  "version": "0.27.50",
   "type": "module",
   "description": "Library of components including navigation to create frontend applications",
   "repository": {
@@ -28,7 +28,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@jsenv/dom": "0.14.6",
+    "@jsenv/dom": "0.14.7",
     "@jsenv/humanize": "1.7.8",
     "@jsenv/validity": "0.3.0"
   },

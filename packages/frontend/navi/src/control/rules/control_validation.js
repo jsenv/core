@@ -91,9 +91,9 @@ const STANDARD_CONSTRAINT_SET = new Set([
   TYPE_NUMBER_CONSTRAINT,
   MIN_LENGTH_CONSTRAINT,
   MAX_LENGTH_CONSTRAINT,
+  STEP_CONSTRAINT,
   MIN_CONSTRAINT,
   MAX_CONSTRAINT,
-  STEP_CONSTRAINT,
 ]);
 const NAVI_CONSTRAINT_SET = new Set([
   // the order matters here, the last constraint is picked first when multiple constraints fail
