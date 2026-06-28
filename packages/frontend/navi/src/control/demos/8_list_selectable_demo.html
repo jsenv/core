@@ -241,8 +241,8 @@
               <legend style={{ padding: "0 4px", fontWeight: 600 }}>searchNoMatchMode</legend>
               {[
                 { mode: "remove", desc: "removes non-matching items from DOM" },
-                { mode: "invisible", desc: "keeps items in DOM but invisible (no layout shift)" },
-                { mode: "dim", desc: "keeps items visible but opacified" },
+                { mode: "invisible_and_inert", desc: "keeps layout but invisible and non-interactive" },
+                { mode: "muted", desc: "keeps items visible, opacified, and still interactive" },
               ].map(({ mode, desc }) => (
                 <label key={mode} style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
                   <input

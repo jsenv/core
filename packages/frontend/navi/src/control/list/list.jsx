@@ -36,8 +36,8 @@ const GroupItemTrackerContext = createContext(null);
 const PendingScrollRefContext = createContext(null);
 // Controls how List.Item behaves when match=false (set via List searchNoMatchMode prop):
 //   "remove"    — remove from DOM (default)
-//   "invisible" — keep in DOM but invisible (no layout shift, no visible content)
-//   "dim"       — keep in DOM, visible but opacified (items remain interactive)
+//   "invisible_and_inert" — keep in DOM, invisible and non-interactive (preserves layout, no content visible)
+//   "muted"               — keep in DOM, visible but opacified and still interactive
 const SearchNoMatchModeContext = createContext("remove");
 
 // When total rendered items exceeds renderBudget, a render window [start, end)
@@ -246,7 +246,7 @@ const css = /* css */ `
       opacity: 0;
     }
 
-    &[navi-dimmed] {
+    &[navi-muted] {
       opacity: 0.35;
     }
   }
@@ -274,10 +274,10 @@ const css = /* css */ `
      Using order ensures fallbacks always appear after items regardless of DOM order.
      matchFallback intentionally shares the same order as fallback so it appears
      at the same visual position — after an input if present but before any items
-     still displayed (non-matching items remain in DOM with hidden prop):
+     still displayed (non-matching items remain in DOM, invisible_and_inert or muted):
        1. Input (sticky header, order: -2)
-       2. matchFallback (order: -1)
-       3. hidden items (regular order, after DOM flow)
+       2. searchFallback (order: -1)
+       3. invisible/dim items (regular order, after DOM flow)
        4. HOT FIX OF THE DEAD for bottom filler + preact issue: order: 1
        5. sticky footer (order: 2)
   */
@@ -398,36 +398,6 @@ const css = /* css */ `
   }
 `;
 
-/**
- * List — generic virtualized scroll container.
- *
- * Renders children inside a scrollable container with an optional render budget
- * for virtual scrolling. Items must use <ListItem> to participate in tracking.
- *
- * Props:
- *   keyboardInteractions  — when true, attaches arrow/enter/escape keyboard shortcuts
- *                          that dispatch navi_list_nav / navi_list_confirm / navi_list_clear
- *                          to the list container. Pair with uiAction for a full keyboard-
- *                          navigable list.
- *   uiAction             — called with the selected value on confirm. When provided
- *                          the list becomes interactive: tracks hover and keyboard-
- *                          pointed state, handles navi_list_nav / navi_list_clear /
- *                          navi_list_confirm custom events via ListInteractionContext.
- *   popover              — when true, renders as a managed popover positioned near
- *                          an anchor element via navi_list_open / navi_list_close events.
- *   renderBudget         — max items in DOM at once (default 100, virtual scroll when exceeded)
- *   virtualItemSize     — fixed px size per item (width if horizontal, height otherwise) when all items have the same size.
- *                          Enables precise virtual-scroll filler sizing without a DOM
- *                          measurement pass. Required when renderBudget is active and
- *                          item height is known up-front.
- *   fallback             — content shown when no items exist at all
- *   matchFallback         — content shown when items exist but all are hidden (e.g. no search match)
- *   separator            — element or function(index, { previousItem, currentItem }) inserted between visible items
- *   lockSize             — when true, captures the container's dimensions on first render
- *                          (always in unfiltered state). Those values become min-width/
- *                          min-height so filtering cannot collapse the layout.
- *   ...rest              — forwarded to the outer scroll container <Box>
- */
 const ListUI = (props) => {
   import.meta.css = css;
   const {
@@ -582,6 +552,36 @@ const ListFirstResolver = (props) => {
 
   return <Next {...props} />;
 };
+/**
+ * List — generic virtualized scroll container.
+ *
+ * Renders children inside a scrollable container with an optional render budget
+ * for virtual scrolling. Items must use <ListItem> to participate in tracking.
+ *
+ * Props:
+ *   keyboardInteractions  — when true, attaches arrow/enter/escape keyboard shortcuts
+ *                          that dispatch navi_list_nav / navi_list_confirm / navi_list_clear
+ *                          to the list container. Pair with uiAction for a full keyboard-
+ *                          navigable list.
+ *   uiAction             — called with the selected value on confirm. When provided
+ *                          the list becomes interactive: tracks hover and keyboard-
+ *                          pointed state, handles navi_list_nav / navi_list_clear /
+ *                          navi_list_confirm custom events via ListInteractionContext.
+ *   popover              — when true, renders as a managed popover positioned near
+ *                          an anchor element via navi_list_open / navi_list_close events.
+ *   renderBudget         — max items in DOM at once (default 100, virtual scroll when exceeded)
+ *   virtualItemSize     — fixed px size per item (width if horizontal, height otherwise) when all items have the same size.
+ *                          Enables precise virtual-scroll filler sizing without a DOM
+ *                          measurement pass. Required when renderBudget is active and
+ *                          item height is known up-front.
+ *   fallback             — content shown when no items exist at all
+ *   matchFallback         — content shown when items exist but all are hidden (e.g. no search match)
+ *   separator            — element or function(index, { previousItem, currentItem }) inserted between visible items
+ *   lockSize             — when true, captures the container's dimensions on first render
+ *                          (always in unfiltered state). Those values become min-width/
+ *                          min-height so filtering cannot collapse the layout.
+ *   ...rest              — forwarded to the outer scroll container <Box>
+ */
 export const List = createComponentResolver([
   ListFirstResolver,
   ListSelectableResolver,
@@ -1259,10 +1259,10 @@ const ListItemUI = (props) => {
   if (props.match === false) {
     if (searchNoMatchMode === "remove") {
       props.filtered = true;
-    } else if (searchNoMatchMode === "invisible") {
+    } else if (searchNoMatchMode === "invisible_and_inert") {
       props.hidden = true;
-    } else if (searchNoMatchMode === "dim") {
-      props.dimmed = true;
+    } else if (searchNoMatchMode === "muted") {
+      props.muted = true;
     }
   }
   const item = props;
@@ -1326,7 +1326,7 @@ const ListItemVoid = () => {
   return null;
 };
 const ListItemReal = (props) => {
-  const { ref, id, hidden, dimmed, highlight, children, ...rest } = props;
+  const { ref, id, hidden, muted, highlight, children, ...rest } = props;
   const pendingScrollRef = useContext(PendingScrollRefContext);
   const pendingScroll = pendingScrollRef.current;
   const needScrollOnMount = pendingScroll && pendingScroll.id === id;
@@ -1363,7 +1363,7 @@ const ListItemReal = (props) => {
       // but visually hidden
       aria-hidden={hidden}
       inert={hidden ? true : undefined}
-      navi-dimmed={dimmed ? "" : undefined}
+      navi-muted={muted ? "" : undefined}
       ref={ref}
     >
       {children}
