@@ -154,7 +154,7 @@ export const resolveInputProps = (props) => {
     if (props.inputMode === "numeric") {
       const { min, max } = props;
       if (max === undefined) {
-        // cannot infeer max length without a max prop
+        // cannot infer maxLength without max
       } else {
         const canBeNegative = min === undefined ? max < 0 : min < 0;
         const signCharCount = canBeNegative ? 1 : 0;
@@ -164,13 +164,25 @@ export const resolveInputProps = (props) => {
     } else if (props.inputMode === "decimal") {
       const { min, max, step } = props;
       if (max === undefined) {
-        // cannot infeer max length without a max prop
+        // cannot infer maxLength without max
+      } else if (step === undefined) {
+        // cannot infer maxLength without step: decimal precision is unknown
       } else {
+        const canBeNegative = min === undefined ? max < 0 : min < 0;
+        const signCharCount = canBeNegative ? 1 : 0;
+        const integerDigitCount = String(Math.floor(Math.abs(max))).length;
         const stepStr = String(step);
         const dotIndex = stepStr.indexOf(".");
-        if (dotIndex !== -1) {
-          decimalDigits = stepStr.length - dotIndex - 1;
-        }
+        const isIntegerStep = dotIndex === -1;
+        const decimalSignCharCount = isIntegerStep ? 0 : 1;
+        const decimalDigitCount = isIntegerStep
+          ? 0
+          : stepStr.length - dotIndex - 1;
+        props.maxLength =
+          signCharCount +
+          integerDigitCount +
+          decimalSignCharCount +
+          decimalDigitCount;
       }
     }
   }
