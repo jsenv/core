@@ -34,6 +34,11 @@ import { useSearchHighlight } from "./search_highlight.js";
 const ListItemTrackerContext = createContext(null);
 const GroupItemTrackerContext = createContext(null);
 const PendingScrollRefContext = createContext(null);
+// Controls how List.Item behaves when match=false:
+//   "filter" — remove from DOM (default)
+//   "hide"   — keep in DOM but invisible (no layout shift, no visible content)
+//   "dim"    — keep in DOM, visible but opacified (items remain interactive)
+const NonMatchBehaviorContext = createContext("filter");
 
 // When total rendered items exceeds renderBudget, a render window [start, end)
 // is activated to cap the number of DOM nodes. Items outside the window return
@@ -240,6 +245,10 @@ const css = /* css */ `
     &[aria-hidden="true"] {
       opacity: 0;
     }
+
+    &[navi-dimmed] {
+      opacity: 0.35;
+    }
   }
 
   /* Virtual scroll fillers — must remain invisible.
@@ -411,6 +420,7 @@ const ListUI = (props) => {
     virtualItemSize,
     lockSize,
     searchText,
+    filterMode = "filter",
     horizontal,
     spacing,
     ...rest
@@ -521,6 +531,7 @@ const ListUI = (props) => {
         fallback={fallback}
         noMatchFallback={noMatchFallback}
         searchText={searchText}
+        filterMode={filterMode}
         separator={separator}
         expandX={expandX}
         expand={expand}
@@ -555,6 +566,7 @@ const ListContent = ({
   fallback,
   noMatchFallback,
   searchText,
+  filterMode,
   separator,
   expandX,
   expand,
@@ -574,6 +586,7 @@ const ListContent = ({
         fallback={fallback}
         noMatchFallback={noMatchFallback}
         searchText={searchText}
+        filterMode={filterMode}
         separator={separator === true ? <Separator margin="0" /> : separator}
         expandX={expandX || expand}
         horizontal={horizontal}
@@ -1052,6 +1065,7 @@ const UnorderedList = ({
   fallback,
   noMatchFallback,
   searchText,
+  filterMode,
   separator,
   horizontal,
   spacing,
@@ -1077,13 +1091,15 @@ const UnorderedList = ({
         searchText={searchText}
       />
       <Fallback fallback={fallback} tracker={tracker} />
-      <RenderWindowContext.Provider value={renderWindow}>
-        <SeparatorContext.Provider value={separator ?? null}>
-          <ListItemTrackerContext.Provider value={tracker}>
-            {children}
-          </ListItemTrackerContext.Provider>
-        </SeparatorContext.Provider>
-      </RenderWindowContext.Provider>
+      <NonMatchBehaviorContext.Provider value={filterMode}>
+        <RenderWindowContext.Provider value={renderWindow}>
+          <SeparatorContext.Provider value={separator ?? null}>
+            <ListItemTrackerContext.Provider value={tracker}>
+              {children}
+            </ListItemTrackerContext.Provider>
+          </SeparatorContext.Provider>
+        </RenderWindowContext.Provider>
+      </NonMatchBehaviorContext.Provider>
       <AfterFiller
         virtualItemSizeSignal={virtualItemSizeSignal}
         renderWindowEnd={renderWindow.end}
@@ -1219,6 +1235,18 @@ const ListItemUI = (props) => {
   props.id = props.id || idDefault;
   const renderWindow = useContext(RenderWindowContext);
   const tracker = useContext(ListItemTrackerContext);
+  const filterMode = useContext(NonMatchBehaviorContext);
+  // Derive filtered/hidden/nonMatching from the `match` prop + filterMode context.
+  // The `match` prop replaces the older `filtered`/`hidden` per-item props.
+  if (props.match === false) {
+    if (filterMode === "filter") {
+      props.filtered = true;
+    } else if (filterMode === "hide") {
+      props.hidden = true;
+    } else if (filterMode === "dim") {
+      props.dimmed = true;
+    }
+  }
   const item = props;
   const visibleIndex = tracker.useTrackItem(item);
   const groupTracker = useContext(GroupItemTrackerContext);
@@ -1280,7 +1308,7 @@ const ListItemVoid = () => {
   return null;
 };
 const ListItemReal = (props) => {
-  const { ref, id, hidden, highlight, children, ...rest } = props;
+  const { ref, id, hidden, dimmed, highlight, children, ...rest } = props;
   const pendingScrollRef = useContext(PendingScrollRefContext);
   const pendingScroll = pendingScrollRef.current;
   const needScrollOnMount = pendingScroll && pendingScroll.id === id;
@@ -1311,11 +1339,13 @@ const ListItemReal = (props) => {
       index={undefined}
       selected={undefined}
       matchScore={undefined}
+      match={undefined}
       // We use aria-hidden and not hidden because hidden would be forced to
       // display: none while here we want to keep it in the DOM to avoid layout shift
       // but visually hidden
       aria-hidden={hidden}
       inert={hidden ? "" : undefined}
+      navi-dimmed={dimmed ? "" : undefined}
       ref={ref}
     >
       {children}

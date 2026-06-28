@@ -217,7 +217,7 @@
           FRUITS,
         );
         const [log, pushLog] = useCallLog();
-        const [preferHidden, setPreferHidden] = useState(false);
+        const [filterMode, setFilterMode] = useState("filter");
         return (
           <div id="searchable" className="demo-section">
             <h2>Searchable</h2>
@@ -225,26 +225,38 @@
               A <code>stateSignal</code> persists the search text in the URL.
               <code>useSearchText</code> filters and ranks items.
             </p>
-            <label
+            <fieldset
               style={{
                 display: "inline-flex",
-                alignItems: "center",
+                flexDirection: "column",
                 gap: 6,
                 marginBottom: 12,
+                padding: "8px 12px",
+                border: "1px solid #ddd",
+                borderRadius: 6,
                 fontSize: "0.85rem",
                 color: "#555",
-                cursor: "pointer",
-                userSelect: "none",
               }}
             >
-              <input
-                type="checkbox"
-                checked={preferHidden}
-                onChange={(e) => setPreferHidden(e.currentTarget.checked)}
-              />
-              Prefer <code>hidden</code> over <code>filtered</code> (Avoid
-              vertical size changes)
-            </label>
+              <legend style={{ padding: "0 4px", fontWeight: 600 }}>filterMode</legend>
+              {[
+                { mode: "filter", desc: "removes non-matching items from DOM" },
+                { mode: "hide", desc: "keeps items in DOM but invisible (no layout shift)" },
+                { mode: "dim", desc: "keeps items visible but opacified" },
+              ].map(({ mode, desc }) => (
+                <label key={mode} style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+                  <input
+                    type="radio"
+                    name="filterMode"
+                    value={mode}
+                    checked={filterMode === mode}
+                    onChange={() => setFilterMode(mode)}
+                  />
+                  <code>{mode}</code>
+                  <span style={{ color: "#999" }}>({desc})</span>
+                </label>
+              ))}
+            </fieldset>
             <Input
               type="search"
               placeholder="Search fruits…"
@@ -262,6 +274,7 @@
             <List
               selectable
               id="searchable-list"
+              filterMode={filterMode}
               action={(v) => {
                 fruitSignal.value = v;
                 pushLog("action", v ?? "(none)");
@@ -283,8 +296,7 @@
                     selected={selected === fruit}
                     highlight={ranges}
                     matchScore={score}
-                    filtered={preferHidden ? false : !match}
-                    hidden={preferHidden ? !match : false}
+                    match={match}
                     flex
                     spacing="s"
                   >

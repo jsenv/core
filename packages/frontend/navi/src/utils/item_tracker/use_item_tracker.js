@@ -127,7 +127,7 @@ const createItemTracker = (onChange) => {
         if (!allItemsChanged && item !== prevAllItems[i]) {
           allItemsChanged = true;
         }
-        if (!item.filtered && !item.hidden) {
+        if (item.match) {
           const visibleIdx = visibleItems.length;
           visibleItems.push(item);
           if (item.matchScore > 0) {
