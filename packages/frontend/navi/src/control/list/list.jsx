@@ -556,31 +556,37 @@ const ListFirstResolver = (props) => {
  * List — generic virtualized scroll container.
  *
  * Renders children inside a scrollable container with an optional render budget
- * for virtual scrolling. Items must use <ListItem> to participate in tracking.
+ * for virtual scrolling. Items must use <List.Item> to participate in tracking.
  *
  * Props:
- *   keyboardInteractions  — when true, attaches arrow/enter/escape keyboard shortcuts
- *                          that dispatch navi_list_nav / navi_list_confirm / navi_list_clear
- *                          to the list container. Pair with uiAction for a full keyboard-
- *                          navigable list.
- *   uiAction             — called with the selected value on confirm. When provided
- *                          the list becomes interactive: tracks hover and keyboard-
- *                          pointed state, handles navi_list_nav / navi_list_clear /
- *                          navi_list_confirm custom events via ListInteractionContext.
+ *   selectable           — enables selection: items get aria roles, action/uiAction callbacks,
+ *                          and keyboard navigation (arrow keys, enter, escape).
+ *   action               — called with the selected value when the user confirms a selection.
+ *   uiAction             — called on every interaction (hover, keyboard navigation, confirm).
+ *                          When provided the list tracks hovered/pointed state via ListInteractionContext.
  *   popover              — when true, renders as a managed popover positioned near
  *                          an anchor element via navi_list_open / navi_list_close events.
- *   renderBudget         — max items in DOM at once (default 100, virtual scroll when exceeded)
- *   virtualItemSize     — fixed px size per item (width if horizontal, height otherwise) when all items have the same size.
+ *   renderBudget         — max items in DOM at once (default 100, virtual scroll when exceeded).
+ *   virtualItemSize      — fixed px size per item (width if horizontal, height otherwise).
  *                          Enables precise virtual-scroll filler sizing without a DOM
- *                          measurement pass. Required when renderBudget is active and
- *                          item height is known up-front.
- *   fallback             — content shown when no items exist at all
- *   matchFallback         — content shown when items exist but all are hidden (e.g. no search match)
- *   separator            — element or function(index, { previousItem, currentItem }) inserted between visible items
- *   lockSize             — when true, captures the container's dimensions on first render
- *                          (always in unfiltered state). Those values become min-width/
- *                          min-height so filtering cannot collapse the layout.
- *   ...rest              — forwarded to the outer scroll container <Box>
+ *                          measurement pass. Useful when renderBudget is active and
+ *                          all items have the same known height.
+ *   fallback             — content shown when the list has no items at all.
+ *   searchFallback       — content shown when every matchable item (those with a match prop)
+ *                          has match=false. Defaults to a "no results" message.
+ *                          Pass false/null/'' to disable.
+ *   searchText           — current search string, used to trigger scroll-to-top when
+ *                          search becomes active and to drive search highlight.
+ *   searchNoMatchMode    — controls how List.Item behaves when match=false (default "remove"):
+ *                            "remove"              — remove from DOM
+ *                            "invisible_and_inert" — keep in DOM, invisible and non-interactive (preserves layout)
+ *                            "muted"               — keep in DOM, visible but opacified and still interactive
+ *   separator            — element or function(index, { previousItem, currentItem }) inserted between visible items.
+ *   lockSize             — captures the container's dimensions on first render so filtering
+ *                          cannot collapse the layout (sets min-width/min-height).
+ *   horizontal           — lays items out in a row instead of a column.
+ *   spacing              — gap between items (forwarded to Box spacing prop).
+ *   ...rest              — forwarded to the outer container <Box>.
  */
 export const List = createComponentResolver([
   ListFirstResolver,
