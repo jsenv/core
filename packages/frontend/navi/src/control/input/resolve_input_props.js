@@ -116,6 +116,20 @@ export const resolveInputProps = (props) => {
           : "numeric";
     }
   }
+  const { charGuard } = props;
+  if (charGuard === true || charGuard === "auto") {
+    let charGuardResolved;
+    if (props.inputMode === "decimal") {
+      charGuardResolved = "decimal";
+    } else if (props.inputMode === "numeric") {
+      charGuardResolved = "numeric";
+    } else if (props.type === "tel") {
+      charGuardResolved = "tel";
+    } else {
+    }
+    props.charGuardResolved = charGuardResolved;
+  }
+
   for (const key of Object.keys(currentTypeDefaults)) {
     if (props[key] === undefined) {
       props[key] = currentTypeDefaults[key];

@@ -45,10 +45,17 @@ const InputModeNumericOrDecimal = (props) => {
         if (e.defaultPrevented) {
           return;
         }
-        if (maxLength === undefined) {
-          return;
-        }
         const input = e.currentTarget;
+        let maxLength;
+        const maxLengthProp = input.maxLength;
+        if (maxLengthProp === -1) {
+          const naviMaxLengthAttr = input.getAttribute("navi-max-length");
+          if (naviMaxLengthAttr === null) {
+            // no max length
+            return;
+          }
+          maxLength = Number(naviMaxLengthAttr);
+        }
         if (input.value.length < maxLength) {
           return;
         }

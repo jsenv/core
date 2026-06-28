@@ -3,36 +3,37 @@
  * Each value is a regex character class (including the [ ] delimiters).
  */
 export const CHAR_CLASS_PRESETS = {
-  numeric:      "[0-9]",         // digits only
-  alpha:        "[A-Za-z]",      // letters only
-  alphanumeric: "[0-9A-Za-z]",   // letters and digits
-  uppercase:    "[A-Z]",         // uppercase letters only
-  tel:          "[-0-9+() ]",    // phone: digits, +, -, parens, space
-  card:         "[0-9 ]",        // credit card: digits and spaces
-  hex:          "[0-9A-Fa-f]",   // hexadecimal digits
-  pin:          "[0-9]",         // numeric PIN
-  postal:       "[0-9A-Za-z -]", // postal code (FR, UK, US)
-  iban:         "[0-9A-Z]",      // IBAN: uppercase and digits
-  slug:         "[a-z0-9-]",     // URL slug
+  numeric: "[0-9]", // digits only
+  alpha: "[A-Za-z]", // letters only
+  alphanumeric: "[0-9A-Za-z]", // letters and digits
+  decimal: "[-0-9.,]", // digits, minus, dot, comma
+  uppercase: "[A-Z]", // uppercase letters only
+  tel: "[-0-9+() ]", // phone: digits, +, -, parens, space
+  card: "[0-9 ]", // credit card: digits and spaces
+  hex: "[0-9A-Fa-f]", // hexadecimal digits
+  pin: "[0-9]", // numeric PIN
+  postal: "[0-9A-Za-z -]", // postal code (FR, UK, US)
+  iban: "[0-9A-Z]", // IBAN: uppercase and digits
+  slug: "[a-z0-9-]", // URL slug
 };
 
 // Presets that imply a specific mobile keyboard layout
 const INPUT_MODE_FROM_PRESET = {
   numeric: "numeric",
-  pin:     "numeric",
-  card:    "numeric",
-  tel:     "tel",
+  pin: "numeric",
+  card: "numeric",
+  tel: "tel",
 };
 
 // Specific i18n keys per preset — more informative than the generic fallback
 const MESSAGE_KEY_FROM_PRESET = {
-  numeric:      "constraint.guard.number",
-  pin:          "constraint.guard.number",
-  alpha:        "constraint.guard.alpha",
+  numeric: "constraint.guard.number",
+  pin: "constraint.guard.number",
+  alpha: "constraint.guard.alpha",
   alphanumeric: "constraint.guard.alphanumeric",
-  uppercase:    "constraint.guard.uppercase",
-  hex:          "constraint.guard.hex",
-  slug:         "constraint.guard.slug",
+  uppercase: "constraint.guard.uppercase",
+  hex: "constraint.guard.hex",
+  slug: "constraint.guard.slug",
   // tel, card, postal, iban, custom → generic fallback
 };
 

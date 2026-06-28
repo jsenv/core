@@ -163,6 +163,7 @@
             </ul>
           </li>
           <li><a href="#validation">Validation</a></li>
+          <li><a href="#guards">Guards (maxLengthGuard + charGuard)</a></li>
           <li>
             <a href="#customization">Customization</a>
             <ul>
@@ -260,6 +261,12 @@
             <ValidationMinDemo />
             <ValidationMaxDemo />
             <ValidationCombinedDemo />
+          </div>
+
+          <div class="demo-group" id="guards">
+            <h2>Guards</h2>
+            <GuardMaxLengthDemo />
+            <GuardCharDemo />
           </div>
 
           <TextAlignDemo />
@@ -654,6 +661,54 @@
           </div>
         );
       };
+
+      // ── Guards ───────────────────────────────────────────────────────────
+
+      const GuardMaxLengthDemo = () => (
+        <div class="demo-section">
+          <h2>maxLengthGuard</h2>
+          <p class="desc">
+            <code>maxLengthGuard</code> — passed as <code>true</code>, the DOM{" "}
+            <code>maxlength</code> attribute is automatically derived from{" "}
+            <code>max</code> so typing more digits than the max allows is
+            blocked. Values set externally above <code>max</code> still show
+            the <em>max</em> constraint message (not a maxLength message).
+          </p>
+          <div class="states-grid">
+            <span class="legend">without</span>
+            <InputDuration max="59min" defaultValue="5min" />
+            <span class="legend">maxLengthGuard</span>
+            <InputDuration max="59min" defaultValue="5min" maxLengthGuard />
+          </div>
+        </div>
+      );
+
+      const GuardCharDemo = () => (
+        <div class="demo-section">
+          <h2>charGuard</h2>
+          <p class="desc">
+            <code>charGuard</code> — when set to <code>true</code> (or{" "}
+            <code>"auto"</code>), the allowed character class is inferred from
+            the input context: <code>inputMode="numeric"</code> → digits only,{" "}
+            <code>inputMode="decimal"</code> → digits + decimal separator +
+            minus. InputDuration sub-fields use <code>inputMode="numeric"</code>
+            , so <code>charGuard</code> blocks any non-digit key automatically.
+          </p>
+          <div class="states-grid">
+            <span class="legend">without</span>
+            <InputDuration max="59min" defaultValue="5min" />
+            <span class="legend">charGuard</span>
+            <InputDuration max="59min" defaultValue="5min" charGuard />
+            <span class="legend">both</span>
+            <InputDuration
+              max="59min"
+              defaultValue="5min"
+              maxLengthGuard
+              charGuard
+            />
+          </div>
+        </div>
+      );
 
       // ── Customization ─────────────────────────────────────────────────────
 

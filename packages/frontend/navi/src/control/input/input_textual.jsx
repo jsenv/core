@@ -458,6 +458,8 @@ const RealInput = (props) => {
       // Never set native maxLength — our guard handles it. maxLength stays in
       // inputControlHostProps so form validation constraints still read it.
       maxLength={undefined}
+      // But do expose it (needed by navi_input_full event)
+      navi-max-length={props.maxLength}
     />
   );
 };

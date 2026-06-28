@@ -96,6 +96,7 @@ export const InputDuration = (props) => {
     unitHour,
     textAlign = "auto",
     maxLengthGuard,
+    charGuard,
   } = props;
   const minDuration = parseDuration(props.min);
   const maxDuration = parseDuration(props.max);
@@ -304,6 +305,7 @@ export const InputDuration = (props) => {
             unitHour={unitHour}
             textAlign={textAlign}
             maxLengthGuard={maxLengthGuard}
+            charGuard={charGuard}
             required={required}
             readOnly={readOnly}
             disabled={disabled}
