@@ -15,30 +15,8 @@ export const InputModeResolver = (props) => {
 const InputModeNumericOrDecimal = (props) => {
   const Next = useNextResolver();
 
-  const { min, max, step = 1, maxLength = "auto", maxLengthGuard } = props;
-  let maxLengthResolved;
-  if (maxLength === "auto" || (maxLength === true && max !== undefined)) {
-    const integerDigits = String(Math.floor(max)).length;
-    // If step has decimal places, the value can contain a separator + those digits
-    const stepStr = String(step);
-    const dotIndex = stepStr.indexOf(".");
-    const decimalDigits = dotIndex === -1 ? 0 : stepStr.length - dotIndex - 1;
-    // If min is negative (or unknown and max itself is negative), a "-" sign can appear
-    const canBeNegative = min !== undefined ? min < 0 : max < 0;
-    const signChar = canBeNegative ? 1 : 0;
-    maxLengthResolved =
-      signChar + integerDigits + (decimalDigits > 0 ? 1 + decimalDigits : 0);
-  }
-
-  let maxLengthGuardResolved;
-  if (maxLengthGuard === true || maxLengthGuard === "auto") {
-    maxLengthGuardResolved = maxLengthResolved;
-  }
-
   return (
     <Next
-      maxLength={maxLengthResolved}
-      maxLengthGuard={maxLengthGuardResolved}
       {...props}
       onInput={(e) => {
         props.onInput?.(e);

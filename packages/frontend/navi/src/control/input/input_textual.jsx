@@ -50,10 +50,6 @@ import {
   createComponentResolver,
   useNextResolver,
 } from "@jsenv/navi/src/resolver/resolver.jsx";
-import {
-  resolveCharClass,
-  resolveInputModeFromAllowedChars,
-} from "../char_guard_presets.js";
 import { ControlChildrenWrapper, useControlProps } from "../control_hooks.jsx";
 import { InputModeResolver } from "./input_resolver_mode.jsx";
 import { InputTypeResolver } from "./input_resolver_type.jsx";
@@ -422,18 +418,6 @@ const InputTextualFirstResolver = (props) => {
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
   resolveInputProps(props);
-
-  // charGuard → auto inputMode + auto pattern for mobile keyboard hints
-  if (props.charGuard) {
-    if (props.inputMode === undefined) {
-      const autoMode = resolveInputModeFromAllowedChars(props.charGuard);
-      if (autoMode) props.inputMode = autoMode;
-    }
-    if (props.pattern === undefined) {
-      const charClass = resolveCharClass(props.charGuard);
-      props.pattern = `${charClass}*`;
-    }
-  }
   return <Next {...props} />;
 };
 export const InputTextual = createComponentResolver([

@@ -1,4 +1,8 @@
 import { isSignal } from "../../utils/is_signal.js";
+import {
+  resolveCharClass,
+  resolveInputModeFromAllowedChars,
+} from "../char_guard_presets.js";
 import { timeStringToSeconds } from "../picker/time_helpers.js";
 
 // Maps validity type names → navi input type names
@@ -114,25 +118,63 @@ export const resolveInputProps = (props) => {
     }
   }
 
-  // Auto-resolve charGuard from context before any early return.
-  // Runs for all input types (native and navi). For navi_number/navi_percentage,
-  // inputMode is not yet set here so we derive from step/min/max directly.
   const { charGuard } = props;
-  if (charGuard === true || charGuard === "auto") {
-    let charGuardResolved;
-    const inputMode = props.inputMode;
-    if (inputMode === "numeric") {
-      charGuardResolved = "numeric";
-    } else if (inputMode === "decimal") {
-      charGuardResolved = "decimal";
-    } else if (currentType === "tel") {
-      charGuardResolved = "tel";
-    } else if (currentType === "email") {
-      charGuardResolved = "email";
+  if (charGuard) {
+    if (charGuard === true || charGuard === "auto") {
+      // Auto-resolve charGuard from context.
+      let charGuardResolved;
+      const inputMode = props.inputMode;
+      if (inputMode === "numeric") {
+        charGuardResolved = "numeric";
+      } else if (inputMode === "decimal") {
+        charGuardResolved = "decimal";
+      } else if (currentType === "tel") {
+        charGuardResolved = "tel";
+      } else if (currentType === "email") {
+        charGuardResolved = "email";
+      }
+      if (charGuardResolved !== undefined) {
+        props.charGuard = charGuardResolved;
+      }
+    } else if (props.inputMode === undefined) {
+      // Explicit preset: derive inputMode from it.
+      const autoMode = resolveInputModeFromAllowedChars(props.charGuard);
+      if (autoMode) {
+        props.inputMode = autoMode;
+      }
     }
-    if (charGuardResolved !== undefined) {
-      props.charGuard = charGuardResolved;
+    // Set pattern for the (now-resolved) charGuard so the mobile keyboard and
+    // constraint system see the correct character class.
+    if (props.pattern === undefined) {
+      const charClass = resolveCharClass(props.charGuard);
+      if (charClass) {
+        props.pattern = `${charClass}*`;
+      }
     }
+  }
+
+  // Compute maxLength from max when inputMode is numeric/decimal.
+  // Done here (after inputMode is set) so controller.props has the resolved value.
+  if (
+    props.maxLength === undefined &&
+    props.max !== undefined &&
+    (props.inputMode === "numeric" || props.inputMode === "decimal")
+  ) {
+    const { min, max, step = 1 } = props;
+    const integerDigits = String(Math.floor(Math.abs(max))).length;
+    const stepStr = String(step);
+    const dotIndex = stepStr.indexOf(".");
+    const decimalDigits = dotIndex === -1 ? 0 : stepStr.length - dotIndex - 1;
+    const canBeNegative = min !== undefined ? min < 0 : max < 0;
+    const signChar = canBeNegative ? 1 : 0;
+    props.maxLength =
+      signChar + integerDigits + (decimalDigits > 0 ? 1 + decimalDigits : 0);
+  }
+
+  // Resolve maxLengthGuard boolean/auto → the computed maxLength number.
+  if (props.maxLengthGuard === true || props.maxLengthGuard === "auto") {
+    props.maxLengthGuard =
+      typeof props.maxLength === "number" ? props.maxLength : undefined;
   }
 
   const currentTypeDefaults = NAVI_TYPE_DEFAULTS[currentType];
