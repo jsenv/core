@@ -283,7 +283,7 @@ const css = /* css */ `
     color: light-dark(#888, #aaa);
     &[navi-default] {
       display: inline;
-      padding: var(--list-item-padding);
+      padding: var(--list-item-padding, var(--navi-s));
       text-align: center;
       user-select: none;
     }
