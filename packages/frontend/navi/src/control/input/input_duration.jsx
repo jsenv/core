@@ -377,8 +377,16 @@ const useClipboardProps = (groupRef) => {
     e.preventDefault();
   };
 
-  const isFromDurationField = (e) =>
-    Boolean(e.target.closest("[navi-input-type]"));
+  const isFromDurationField = (e) => {
+    const target = e.target;
+    if (!target.matches) {
+      return false;
+    }
+    if (!target.matches(".navi_duration_part")) {
+      return false;
+    }
+    return true;
+  };
 
   const onCopy = (e) => {
     if (!isFromDurationField(e)) {
@@ -639,6 +647,7 @@ const InputDurationPart = ({ unit, label, separator, ...props }) => {
   return (
     <Label flex="y" data-separator={separator || undefined}>
       <Input
+        className="navi_duration_part"
         // When autofocused this field should be selected
         // this help to modify the value on mobile
         autoFocusSelect
