@@ -217,7 +217,7 @@
           FRUITS,
         );
         const [log, pushLog] = useCallLog();
-        const [searchNoMatchMode, setFilterMode] = useState("filter");
+        const [searchNoMatchMode, setSearchNoMatchMode] = useState("remove");
         return (
           <div id="searchable" className="demo-section">
             <h2>Searchable</h2>
@@ -240,8 +240,8 @@
             >
               <legend style={{ padding: "0 4px", fontWeight: 600 }}>searchNoMatchMode</legend>
               {[
-                { mode: "filter", desc: "removes non-matching items from DOM" },
-                { mode: "hide", desc: "keeps items in DOM but invisible (no layout shift)" },
+                { mode: "remove", desc: "removes non-matching items from DOM" },
+                { mode: "invisible", desc: "keeps items in DOM but invisible (no layout shift)" },
                 { mode: "dim", desc: "keeps items visible but opacified" },
               ].map(({ mode, desc }) => (
                 <label key={mode} style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
@@ -250,7 +250,7 @@
                     name="searchNoMatchMode"
                     value={mode}
                     checked={searchNoMatchMode === mode}
-                    onChange={() => setFilterMode(mode)}
+                    onChange={() => setSearchNoMatchMode(mode)}
                   />
                   <code>{mode}</code>
                   <span style={{ color: "#999" }}>({desc})</span>

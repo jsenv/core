@@ -35,10 +35,10 @@ const ListItemTrackerContext = createContext(null);
 const GroupItemTrackerContext = createContext(null);
 const PendingScrollRefContext = createContext(null);
 // Controls how List.Item behaves when match=false (set via List searchNoMatchMode prop):
-//   "filter" — remove from DOM (default)
-//   "hide"   — keep in DOM but invisible (no layout shift, no visible content)
-//   "dim"    — keep in DOM, visible but opacified (items remain interactive)
-const SearchNoMatchModeContext = createContext("filter");
+//   "remove"    — remove from DOM (default)
+//   "invisible" — keep in DOM but invisible (no layout shift, no visible content)
+//   "dim"       — keep in DOM, visible but opacified (items remain interactive)
+const SearchNoMatchModeContext = createContext("remove");
 
 // When total rendered items exceeds renderBudget, a render window [start, end)
 // is activated to cap the number of DOM nodes. Items outside the window return
@@ -447,7 +447,7 @@ const ListUI = (props) => {
     virtualItemSize,
     lockSize,
     searchText,
-    searchNoMatchMode = "filter",
+    searchNoMatchMode = "remove",
     horizontal,
     spacing,
     ...rest
@@ -1257,9 +1257,9 @@ const ListItemUI = (props) => {
   // Derive filtered/hidden/nonMatching from the `match` prop + searchNoMatchMode context.
   // The `match` prop replaces the older `filtered`/`hidden` per-item props.
   if (props.match === false) {
-    if (searchNoMatchMode === "filter") {
+    if (searchNoMatchMode === "remove") {
       props.filtered = true;
-    } else if (searchNoMatchMode === "hide") {
+    } else if (searchNoMatchMode === "invisible") {
       props.hidden = true;
     } else if (searchNoMatchMode === "dim") {
       props.dimmed = true;
@@ -1362,7 +1362,7 @@ const ListItemReal = (props) => {
       // display: none while here we want to keep it in the DOM to avoid layout shift
       // but visually hidden
       aria-hidden={hidden}
-      inert={hidden ? "" : undefined}
+      inert={hidden ? true : undefined}
       navi-dimmed={dimmed ? "" : undefined}
       ref={ref}
     >
