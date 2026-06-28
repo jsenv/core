@@ -414,10 +414,10 @@ export const requestCloseValidityCallout = (
 const pickConstraintFailureInfo = (a, b) => {
   const aPrio = getConstraintFailureInfoPriority(a);
   const bPrio = getConstraintFailureInfoPriority(b);
-  if (aPrio > bPrio) {
-    return a;
+  if (bPrio > aPrio) {
+    return b;
   }
-  return b;
+  return a;
 };
 const getConstraintFailureInfoPriority = (failureInfo) => {
   if (failureInfo.status === "error") {
