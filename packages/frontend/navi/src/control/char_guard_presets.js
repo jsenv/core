@@ -9,6 +9,7 @@ export const CHAR_CLASS_PRESETS = {
   decimal: "[-0-9.,]", // digits, minus, dot, comma
   uppercase: "[A-Z]", // uppercase letters only
   tel: "[-0-9+() ]", // phone: digits, +, -, parens, space
+  email: "[a-zA-Z0-9._%+@-]", // email characters
   card: "[0-9 ]", // credit card: digits and spaces
   hex: "[0-9A-Fa-f]", // hexadecimal digits
   pin: "[0-9]", // numeric PIN

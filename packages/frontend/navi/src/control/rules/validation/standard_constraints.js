@@ -359,11 +359,6 @@ export const MIN_CONSTRAINT = {
   name: "min",
   messageAttribute: "data-min-message",
   check: (field) => {
-    // Sub-inputs inside a duration_group: min/max is validated at the group level, not per-field.
-    // Per-field min/max attributes are kept for arrow-key navigation bounds only.
-    if (field.parentUIStateController?.controlType === "duration_group") {
-      return null;
-    }
     if (field.controlType === "duration_group") {
       const min = field.controlHostProps.min;
       if (min === undefined || min === null) {
@@ -467,11 +462,6 @@ export const MAX_CONSTRAINT = {
   name: "max",
   messageAttribute: "data-max-message",
   check: (field) => {
-    // Sub-inputs inside a duration_group: min/max is validated at the group level, not per-field.
-    // Per-field min/max attributes are kept for arrow-key navigation bounds only.
-    if (field.parentUIStateController?.controlType === "duration_group") {
-      return null;
-    }
     if (field.controlType === "duration_group") {
       const max = field.controlHostProps.max;
       if (max === undefined || max === null) {

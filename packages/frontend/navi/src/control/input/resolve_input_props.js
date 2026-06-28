@@ -100,10 +100,7 @@ export const resolveInputProps = (props) => {
   if (currentTypeStepFormatter) {
     props.step = currentTypeStepFormatter(props.step);
   }
-  const currentTypeDefaults = NAVI_TYPE_DEFAULTS[currentType];
-  if (!currentTypeDefaults) {
-    return;
-  }
+
   // For navi_number: choose inputMode based on whether step/min/max suggest decimals.
   // inputMode="numeric" (integer keyboard) vs "decimal" (keyboard with decimal separator).
   if (currentType === "navi_number") {
@@ -116,18 +113,31 @@ export const resolveInputProps = (props) => {
           : "numeric";
     }
   }
+
+  // Auto-resolve charGuard from context before any early return.
+  // Runs for all input types (native and navi). For navi_number/navi_percentage,
+  // inputMode is not yet set here so we derive from step/min/max directly.
   const { charGuard } = props;
   if (charGuard === true || charGuard === "auto") {
     let charGuardResolved;
-    if (props.inputMode === "decimal") {
-      charGuardResolved = "decimal";
-    } else if (props.inputMode === "numeric") {
+    const inputMode = props.inputMode;
+    if (inputMode === "numeric") {
       charGuardResolved = "numeric";
-    } else if (props.type === "tel") {
+    } else if (inputMode === "decimal") {
+      charGuardResolved = "decimal";
+    } else if (currentType === "tel") {
       charGuardResolved = "tel";
-    } else {
+    } else if (currentType === "email") {
+      charGuardResolved = "email";
     }
-    props.charGuardResolved = charGuardResolved;
+    if (charGuardResolved !== undefined) {
+      props.charGuard = charGuardResolved;
+    }
+  }
+
+  const currentTypeDefaults = NAVI_TYPE_DEFAULTS[currentType];
+  if (!currentTypeDefaults) {
+    return;
   }
 
   for (const key of Object.keys(currentTypeDefaults)) {
