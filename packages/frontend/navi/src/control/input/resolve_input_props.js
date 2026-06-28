@@ -155,17 +155,20 @@ export const resolveInputProps = (props) => {
     props.max !== undefined &&
     (props.inputMode === "numeric" || props.inputMode === "decimal")
   ) {
-    const { min, max, step = 1 } = props;
-    const integerDigits = String(Math.floor(Math.abs(max))).length;
-    const canBeNegative = min !== undefined ? min < 0 : max < 0;
-    const signChar = canBeNegative ? 1 : 0;
-    let decimalDigits = 0;
-    if (props.inputMode === "decimal" && hasDecimalPlaces(step)) {
+    if (props.inputMode === "numeric") {
+      const { min, max } = props;
+      const canBeNegative = min === undefined ? max < 0 : min < 0;
+      const signCharCount = canBeNegative ? 1 : 0;
+      const integerDigitCount = String(Math.floor(Math.abs(max))).length;
+      props.maxLength = signCharCount + integerDigitCount;
+    } else if (props.inputMode === "decimal") {
+      const { min, max, step } = props;
       const stepStr = String(step);
-      decimalDigits = stepStr.length - stepStr.indexOf(".") - 1;
+      const dotIndex = stepStr.indexOf(".");
+      if (dotIndex !== -1) {
+        decimalDigits = stepStr.length - dotIndex - 1;
+      }
     }
-    props.maxLength =
-      signChar + integerDigits + (decimalDigits > 0 ? 1 + decimalDigits : 0);
   }
 
   // Resolve maxLengthGuard boolean/auto → the computed maxLength number.
