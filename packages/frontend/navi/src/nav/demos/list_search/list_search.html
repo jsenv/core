@@ -88,7 +88,7 @@
                 minWidth="200"
                 dialogExpandY
               >
-                <Box flex="y" spacing="m" padding="m" expandY shrink>
+                <Box flex="y" spacing="m" padding="m" expandY minHeight="0">
                   <Input
                     type="search"
                     placeholder="Search games…"
@@ -103,7 +103,7 @@
                     id="game_list"
                     selectable
                     command="--navi-send"
-                    expand
+                    expandX
                     separator
                     searchText={searchText}
                     // searchNoMatchMode="invisible_and_inert"

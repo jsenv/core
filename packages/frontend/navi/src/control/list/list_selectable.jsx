@@ -64,10 +64,6 @@ const css = /* css */ `
     }
   }
 
-  fieldset.navi_list_container[navi-selectable] {
-    margin: 0; /* Reset margin that might come from fieldset */
-    padding: 0; /* Reset padding that might come from fieldset */
-  }
   .navi_list_container[navi-selectable] {
     &[data-callout] {
       --x-list-border-color: var(--callout-color);
@@ -314,7 +310,6 @@ const ListSelectable = (props) => {
 
   const listVnode = (
     <Next
-      as="fieldset"
       navi-selectable=""
       navi-has-selected-background={
         selectedIndicator === "backgroundColor" ? "" : undefined

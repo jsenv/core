@@ -35510,7 +35510,7 @@ const Dialog = props => {
       focusedBeforeOpen
     });
   };
-  const close = e => {
+  const close = (e, detail = {}) => {
     debugPopup(`"${e.type}" on ${getElementSignature(e.target)} -> closeDialog`);
     const dialogEl = ref.current;
     markAutofocusRestoreOnClose(dialogEl);
@@ -35518,7 +35518,8 @@ const Dialog = props => {
     cleanup();
     openedRef.current = false;
     dispatchCustomEvent(dialogEl, "navi_close", {
-      event: e
+      event: e,
+      ...detail
     });
   };
   const onRequestOpen = (e, {
@@ -35535,7 +35536,7 @@ const Dialog = props => {
       anchor
     });
   };
-  const onRequestClose = e => {
+  const onRequestClose = (e, detail = {}) => {
     const dialogEl = ref.current;
     if (!dialogEl) {
       return;
@@ -35553,15 +35554,15 @@ const Dialog = props => {
           denied = false;
         }
       };
-      closeRequestHandler(e, closePermission);
+      closeRequestHandler(e, closePermission, detail);
       if (denied) {
         closePermission.allow = () => {
-          close(e);
+          close(e, detail);
         };
         return;
       }
     }
-    close(e);
+    close(e, detail);
   };
   return jsx(Box, {
     ...rest,
@@ -35575,7 +35576,9 @@ const Dialog = props => {
       // The <dialog> element covers the full viewport; clicking the backdrop
       // hits the dialog itself (not any child). Close when that happens.
       if (!pointerTrap && e.button === 0 && e.target === ref.current) {
-        onRequestClose(e);
+        onRequestClose(e, {
+          isClickOutside: true
+        });
       }
     },
     onCancel: e => {
@@ -35735,7 +35738,7 @@ const Popover = props => {
       focusedBeforeOpen
     });
   };
-  const close = e => {
+  const close = (e, detail = {}) => {
     debugPopup(e, `closePopover()`);
     const popoverEl = ref.current;
     markAutofocusRestoreOnClose(popoverEl);
@@ -35744,7 +35747,8 @@ const Popover = props => {
     openedRef.current = false;
     setOpened(false);
     dispatchCustomEvent(popoverEl, "navi_close", {
-      event: e
+      event: e,
+      ...detail
     });
   };
   const onRequestOpen = (e, {
@@ -35761,7 +35765,7 @@ const Popover = props => {
       anchor
     });
   };
-  const onRequestClose = e => {
+  const onRequestClose = (e, detail = {}) => {
     const popoverEl = ref.current;
     if (!popoverEl) {
       return;
@@ -35779,15 +35783,15 @@ const Popover = props => {
           denied = false;
         }
       };
-      closeRequestHandler(e, closePermission);
+      closeRequestHandler(e, closePermission, detail);
       if (denied) {
         closePermission.allow = () => {
-          close(e);
+          close(e, detail);
         };
         return;
       }
     }
-    close(e);
+    close(e, detail);
   };
   return jsxs(Box, {
     id: id,
@@ -35819,7 +35823,9 @@ const Popover = props => {
           e.preventDefault();
           return;
         }
-        onRequestClose(e);
+        onRequestClose(e, {
+          isClickOutside: true
+        });
       }
     }), children]
   });
@@ -35836,7 +35842,7 @@ installImportMetaCssBuild(import.meta);const css$p = /* css */`
         min-width: var(--anchor-width, 0px);
         max-width: 95vw;
         /* max-height covers the placeholder + list; the list scrolls internally */
-        max-height: var(--space-available, 95dvh);
+        max-height: min(var(--picker-popup-max-height, 300px), var(--space-available, 95dvh));
         margin: 0;
         padding: 0;
         background: var(--picker-background-color);
@@ -35928,8 +35934,12 @@ installImportMetaCssBuild(import.meta);const css$p = /* css */`
     /* dialog */
     &[aria-haspopup="dialog"] {
       .navi_picker_dialog {
+        --dialog-max-width: 95dvw;
+        --dialog-max-height: 95dvh;
+
         min-width: var(--anchor-width, 0px);
-        max-height: 95dvh;
+        max-width: var(--dialog-max-width);
+        max-height: var(--dialog-max-height);
         padding: 0;
         background: var(--picker-background-color);
         border: var(--picker-border-width) solid var(--x-picker-border-color);
@@ -35942,6 +35952,13 @@ installImportMetaCssBuild(import.meta);const css$p = /* css */`
           0 12px 40px rgba(0, 0, 0, 0.22);
         cursor: default; /* Reset pointer cursor within the select */
         /* overscroll-behavior: contain; */
+
+        &[data-expand-x] {
+          width: var(--dialog-max-width);
+        }
+        &[data-expand-y] {
+          height: var(--dialog-max-height);
+        }
 
         &[open] {
           display: flex;
@@ -36084,15 +36101,9 @@ const PickerCustom = props => {
     expandedRef.current = expanded;
     const valueAtOpenRef = useRef(null);
     const activeElementAtOpenRef = useRef(null);
-    // Tracks whether a uiAction has occurred since the last close denial.
-    // true  = no pending denial (initial state, or user has interacted since)
-    // false = close was denied and user hasn't interacted yet
-    // When false, a second close attempt is treated as cancel.
-    const uiActionSinceDeniedRef = useRef(true);
     const onOpen = e => {
       expandedRef.current = true;
       setExpanded(true);
-      uiActionSinceDeniedRef.current = true;
       const focusedBeforeOpen = e.detail.focusedBeforeOpen;
       activeElementAtOpenRef.current = focusedBeforeOpen;
       debugFocus(e, "picked opened, store element focused", focusedBeforeOpen);
@@ -36198,44 +36209,29 @@ const PickerCustom = props => {
           }
         });
       },
-      // Intercept uiAction to detect user interaction after a close denial.
       "uiAction": (v, e) => {
-        uiActionSinceDeniedRef.current = true;
         uiActionProp?.(v, e);
       },
       children
     });
     Object.assign(popupProps, {
-      closeRequestHandler: (requestCloseEvent, closePermission) => {
+      closeRequestHandler: (requestCloseEvent, closePermission, {
+        isClickOutside
+      } = {}) => {
         const cancelEvent = findEvent(requestCloseEvent, eInChain => eInChain.type === "navi_request_close" && eInChain.detail.isCancel);
-        const isCancel = Boolean(cancelEvent);
+        const isCancel = isClickOutside || Boolean(cancelEvent);
+        if (isCancel) {
+          const pickerEl = ref.current;
+          const inputEl = getPickerInput(pickerEl);
+          const valueAtOpen = valueAtOpenRef.current;
+          debugPopup(requestCloseEvent, `picker cancel, restoring value at open ${JSON.stringify(valueAtOpen)}`);
+          dispatchRequestSetUIState(inputEl, valueAtOpen, {
+            event: requestCloseEvent
+          });
+          return;
+        }
         const pickerEl = ref.current;
         const inputEl = getPickerInput(pickerEl);
-        const valueAtOpen = valueAtOpenRef.current;
-        if (isCancel) {
-          uiActionSinceDeniedRef.current = true;
-          dispatchRequestSetUIState(inputEl, valueAtOpen, {
-            event: requestCloseEvent
-          });
-          return;
-        }
-
-        // If close was previously denied and the user hasn't interacted since,
-        // treat this re-attempt as a cancel so they are not trapped.
-        if (!uiActionSinceDeniedRef.current) {
-          debugPopup(requestCloseEvent, `picker close was denied and user did not interact, treating re-attempt as cancel (restoring ${JSON.stringify(valueAtOpen)})`);
-          uiActionSinceDeniedRef.current = true;
-          dispatchRequestSetUIState(inputEl, valueAtOpen, {
-            event: requestCloseEvent
-          });
-          return;
-        }
-        const valueAtClose = getPickerInputUIState(pickerEl);
-        if (compareTwoJsValues(valueAtClose, valueAtOpen)) {
-          debugPopup(requestCloseEvent, `picker closed with same value as when it opened (${JSON.stringify(valueAtClose)}), no action dispatched`);
-          return;
-        }
-        debugPopup(requestCloseEvent, `picker attempt to close with value (${JSON.stringify(valueAtClose)}) wait for picker action to close picker`);
         dispatchRequestAction(inputEl, {
           event: requestCloseEvent,
           name: "picker close",
@@ -36246,10 +36242,8 @@ const PickerCustom = props => {
           // user sees what is wrong, even if the picker has no action prop.
           reportOnInvalid: true,
           onInvalid: () => {
-            uiActionSinceDeniedRef.current = false;
             closePermission.deny();
-          },
-          allowed: () => {}
+          }
         });
       },
       onnavi_open: e => {
@@ -36338,7 +36332,9 @@ const PickerCustom = props => {
             if (expandedRef.current) {
               return {
                 name: "mousedown to close picker",
-                allowed: () => requestClose(e)
+                allowed: () => requestClose(e, {
+                  isCancel: true
+                })
               };
             }
             return {
@@ -36431,7 +36427,8 @@ const PickerContentInsidePopover = props => {
         category: "interaction",
         allowed: () => {
           dispatchCustomEvent(popoverEl, "navi_request_close", {
-            event: e
+            event: e,
+            isCancel: true
           });
         }
       });
@@ -36457,7 +36454,8 @@ const PickerContentInsidePopover = props => {
           }
           const popupEl = popupProps.ref.current;
           dispatchCustomEvent(popupEl, "navi_request_close", {
-            event: e
+            event: e,
+            isCancel: true
           });
         },
         children: props.trigger
@@ -36472,8 +36470,13 @@ const PickerContentInsideDialog = props => {
     children,
     scrollTrap,
     pointerTrap,
+    dialogExpand,
+    dialogExpandX,
+    dialogExpandY,
     ...rest
   } = props;
+  const expandX = dialogExpand || dialogExpandX;
+  const expandY = dialogExpand || dialogExpandY;
   return jsx(Next, {
     "aria-haspopup": "dialog",
     ...rest,
@@ -36484,6 +36487,8 @@ const PickerContentInsideDialog = props => {
       pointerTrap: pointerTrap,
       centerInVisualViewport: true,
       autoFocus: "fallback",
+      "data-expand-x": expandX ? "" : undefined,
+      "data-expand-y": expandY ? "" : undefined,
       children: children
     })
   });
@@ -37600,10 +37605,6 @@ installImportMetaCssBuild(import.meta);const css$n = /* css */`
     }
   }
 
-  fieldset.navi_list_container[navi-selectable] {
-    margin: 0; /* Reset margin that might come from fieldset */
-    padding: 0; /* Reset padding that might come from fieldset */
-  }
   .navi_list_container[navi-selectable] {
     &[data-callout] {
       --x-list-border-color: var(--callout-color);
@@ -37847,7 +37848,6 @@ const ListSelectable = props => {
     setCurrentId(initialEl.id);
   }, []);
   const listVnode = jsx(Next, {
-    as: "fieldset",
     "navi-selectable": "",
     "navi-has-selected-background": selectedIndicator === "backgroundColor" ? "" : undefined,
     ...listControlRootProps,
@@ -38256,9 +38256,10 @@ installImportMetaCssBuild(import.meta);const ListItemTrackerContext = createCont
 const GroupItemTrackerContext = createContext(null);
 const PendingScrollRefContext = createContext(null);
 // Controls how List.Item behaves when match=false (set via List searchNoMatchMode prop):
-//   "remove"    — remove from DOM (default)
+//   "remove"              — remove from DOM (default)
 //   "invisible_and_inert" — keep in DOM, invisible and non-interactive (preserves layout, no content visible)
 //   "muted"               — keep in DOM, visible but opacified and still interactive
+//   "below"               — keep in DOM, fully visible, pushed below matching items via CSS order
 const SearchNoMatchModeContext = createContext("remove");
 
 // When total rendered items exceeds renderBudget, a render window [start, end)
@@ -38285,7 +38286,6 @@ const css$m = /* css */`
       --list-border-width: 1px;
       --list-border-color: light-dark(#ccc, #555);
       --list-background-color: light-dark(#fff, #1e1e1e);
-      --list-max-height: 220px;
     }
     .navi_list_item {
       --list-item-padding-x-default: 0px;
@@ -38356,14 +38356,20 @@ const css$m = /* css */`
     .navi_list_scroll_container {
       width: inherit;
       min-width: inherit;
-      max-width: inherit;
-      max-height: var(--list-max-height);
+      max-width: var(--list-max-width, inherit);
+      max-height: var(--list-max-height, inherit);
       overflow: auto;
       overscroll-behavior: inherit; /* inherit select behavior */
     }
 
     &[data-expand-x] {
       width: 100%;
+    }
+    &[data-expand-y] {
+      --list-max-height: none;
+    }
+    &[navi-nothing-to-display] {
+      display: none;
     }
     &[popover] {
       position: absolute;
@@ -38481,6 +38487,8 @@ const css$m = /* css */`
     /* background: pink; */
   }
   &[data-horizontal] {
+    --list-max-height: none;
+
     .navi_list_virtual_filler {
       width: var(--size-to-fill, 0px);
       height: 100%;
@@ -38630,8 +38638,8 @@ const ListUI = props => {
     children,
     popover,
     expandX,
+    expandY,
     expand,
-    maxHeight,
     onListVisibleItemsChange,
     virtualItemSize,
     lockSize,
@@ -38696,6 +38704,12 @@ const ListUI = props => {
   const getItemById = itemId => {
     return tracker.itemsSignal.peek().find(item => item.id === itemId);
   };
+  const noMatchCount = tracker.noMatchCountSignal.value;
+  const itemCount = tracker.countSignal.value;
+  const allNoMatch = noMatchCount > 0 && noMatchCount === itemCount;
+  const fallbackDisabled = fallback !== undefined && !fallback;
+  const searchFallbackDisabled = searchFallback !== undefined && !searchFallback;
+  const nothingToDisplay = allNoMatch && searchFallbackDisabled && searchNoMatchMode === "remove" || itemCount === 0 && fallbackDisabled;
   return jsx(Box, {
     ...rest,
     ref: ref,
@@ -38703,9 +38717,12 @@ const ListUI = props => {
     popover: popover,
     "data-horizontal": horizontal ? "" : undefined,
     "data-expand-x": expandX || expand ? "" : undefined,
+    "data-expand-y": expandY || expand ? "" : undefined,
     expandX: expandX,
+    expandY: expandY,
     expand: expand,
-    maxHeight: maxHeight,
+    "navi-zero-match": allNoMatch ? "" : undefined,
+    "navi-nothing-to-display": nothingToDisplay ? "" : undefined,
     styleCSSVars: LIST_STYLE_CSS_VARS,
     pseudoClasses: LIST_PSEUDO_CLASSES,
     hasChildUsingForwardedProps: true,
@@ -38730,6 +38747,7 @@ const ListUI = props => {
       searchNoMatchMode: searchNoMatchMode,
       separator: separator,
       expandX: expandX,
+      expandY: expandY,
       expand: expand,
       horizontal: horizontal,
       spacing: spacing,
@@ -38766,14 +38784,14 @@ const ListFirstResolver = props => {
  *   fallback?: import("ignore:preact").ComponentChildren,
  *   searchFallback?: import("ignore:preact").ComponentChildren,
  *   searchText?: string,
- *   searchNoMatchMode?: "remove" | "invisible_and_inert" | "muted",
+ *   searchNoMatchMode?: "remove" | "invisible_and_inert" | "muted" | "below",
  *   separator?: boolean | import("ignore:preact").ComponentChildren,
  *   lockSize?: boolean,
  *   horizontal?: boolean,
  *   spacing?: string,
  *   expandX?: boolean,
+ *   expandY?: boolean,
  *   expand?: boolean,
- *   maxHeight?: string | number,
  *   children?: import("ignore:preact").ComponentChildren,
  *   [key: string]: any,
  * }>}
@@ -38786,6 +38804,7 @@ const ListContent = ({
   searchNoMatchMode,
   separator,
   expandX,
+  expandY,
   expand,
   horizontal,
   spacing,
@@ -38807,6 +38826,7 @@ const ListContent = ({
         margin: "0"
       }) : separator,
       expandX: expandX || expand,
+      expandY: expandY || expand,
       horizontal: horizontal,
       spacing: spacing,
       ...listProps,
@@ -38822,6 +38842,7 @@ const ListContent = ({
 };
 const LIST_STYLE_CSS_VARS = {
   maxHeight: "--list-max-height",
+  maxWidth: "--list-max-width",
   borderColor: "--list-border-color",
   borderRadius: "--list-border-radius",
   borderWidth: "--list-border-width"
@@ -39240,7 +39261,6 @@ const UnorderedList = ({
   return jsxs(Box, {
     as: "ul",
     flex: horizontal ? "x" : "y",
-    flexWrap: true,
     ...rest,
     spacing: spacing,
     baseClassName: "navi_list",
@@ -40672,38 +40692,6 @@ installImportMetaCssBuild(import.meta);const css$i = /* css */`
     }
   }
 `;
-
-/**
- * A button-like trigger that opens a picker when clicked.
- *
- * Use the `type` prop to choose what kind of picker to open:
- *   "date"      — calendar day
- *   "month"    — year + month
- *   "week"     — ISO week
- *   "time"     — hours + minutes
- *   "datetime" — date + time
- *   "color"    — color chooser
- *   "hour"     — fixed time slots (derived from min/max/step)
- *
- * When `children` are provided, the picker opens a popover or dialog instead
- * of the browser-native picker. On small screens a dialog is used automatically;
- * on larger screens a popover is used. Pass `mode="dialog"` or `mode="popover"`
- * to force one. The children are rendered inside the popup.
- *
- * Props:
- *   type        — picker variant (see above)
- *   value       — controlled value
- *   uiAction    — called with the new value when the user picks one
- *   name        — form field name
- *   placeholder — shown when no value is selected
- *   required    — marks the field as required
- *   min         — minimum allowed value; accepts a Date or a raw string
- *   max         — maximum allowed value; accepts a Date or a raw string
- *   step        — step interval
- *   disabled    — disables the picker
- *   children    — content to display inside the popup (enables popover/dialog mode)
- *   mode        — "popover" or "dialog"; auto-detected from screen size when omitted
- */
 const PickerButton = props => {
   import.meta.css = [css$i, "@jsenv/navi/src/control/picker/picker.jsx"];
   if (typeof props.maxLines === "string") {
@@ -40961,6 +40949,40 @@ const PickerFirstResolver = props => {
     ...props
   });
 };
+
+/**
+ * Button-like trigger that opens a picker (native or custom popup) when clicked.
+ *
+ * Without `children`, opens the browser-native picker for the given `type`.
+ * With `children`, opens a popover (desktop) or dialog (mobile) containing the children.
+ * Pass `mode="popover"` or `mode="dialog"` to override the automatic choice.
+ *
+ * @type {import("ignore:preact").FunctionComponent<{
+ *   type?: "date" | "month" | "week" | "time" | "datetime" | "color" | "hour" | "navi_time" | "navi_number" | "navi_percentage",
+ *   value?: any,
+ *   defaultValue?: any,
+ *   name?: string,
+ *   placeholder?: import("ignore:preact").ComponentChildren,
+ *   required?: boolean,
+ *   min?: Date | string | number,
+ *   max?: Date | string | number,
+ *   step?: string | number,
+ *   disabled?: boolean,
+ *   readOnly?: boolean,
+ *   uiAction?: (value: any, event: Event) => void,
+ *   action?: (value: any, event: Event) => void,
+ *   children?: import("ignore:preact").ComponentChildren,
+ *   mode?: "popover" | "dialog",
+ *   variant?: "icon" | "headless",
+ *   icon?: import("ignore:preact").ComponentChildren,
+ *   maxLines?: number,
+ *   dialogExpand?: boolean,
+ *   dialogExpandX?: boolean,
+ *   dialogExpandY?: boolean,
+ *   ref?: import("ignore:preact").RefObject<HTMLElement>,
+ *   [key: string]: any,
+ * }>}
+ */
 const Picker = createComponentResolver([PickerFirstResolver, PickerPresetResolver, PickerCustomResolver, PickerTypeResolver, PickerButton]);
 Picker.UI = PickerDefaultUI;
 Picker.UI.Date = PickerDateUI;
