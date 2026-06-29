@@ -1,5 +1,5 @@
 import { dispatchCustomEvent, findEvent } from "@jsenv/dom";
-import { useId, useLayoutEffect, useRef } from "preact/hooks";
+import { useLayoutEffect, useRef } from "preact/hooks";
 
 import { createOnKeyDownForShortcuts } from "@jsenv/navi/src/keyboard/keyboard_shortcuts.js";
 import { windowWidthSignal } from "@jsenv/navi/src/layout/responsive.js";
@@ -300,8 +300,7 @@ const PickerCustom = (props) => {
   const popupRef = useRef(null);
   popupProps.ref = popupRef;
   // aria-controls + id
-  const autoId = useId();
-  const popupId = `picker_popup_${autoId}`;
+  const popupId = `${props.id}_picker_popup`;
   id: {
     Object.assign(pickerProps, {
       "aria-controls": popupId,
