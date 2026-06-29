@@ -485,7 +485,7 @@ const PickerCustom = (props) => {
     });
     Object.assign(popupProps, {
       anchorRef: props.ref,
-      open: Boolean(expanded),
+      requestClose,
       closeRequestHandler: (requestCloseEvent, closePermission) => {
         const isCancel = requestCloseEvent.detail.isCancel;
         if (isCancel) {
