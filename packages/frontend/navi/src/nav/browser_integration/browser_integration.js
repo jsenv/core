@@ -176,9 +176,7 @@ const useNavStateBasic = (
   // Hooks must be called unconditionally — before the !id early return.
   const state = documentStateSignal.value;
   // Key presence is the flag — the value may be anything, including undefined.
-  const keyInState = Boolean(
-    id && state !== null && Object.hasOwn(state, id),
-  );
+  const keyInState = Boolean(id && state && Object.hasOwn(state, id));
   const onLeaveRef = useRef(onLeave);
   onLeaveRef.current = onLeave;
   const prevKeyInStateRef = useRef(keyInState);
@@ -211,14 +209,14 @@ const useNavStateBasic = (
   // extra data with the entry when needed.
   const enter = (value = "on") => {
     enteredRef.current = true;
-    const currentState = browserIntegration.getDocumentState() || {};
-    if (Object.hasOwn(currentState, id) && currentState[id] === value) {
+    const currentStateCopy = browserIntegration.getDocumentState() || {};
+    if (Object.hasOwn(currentStateCopy, id) && currentStateCopy[id] === value) {
       return;
     }
-    const newState = { ...currentState, [id]: value };
+    currentStateCopy[id] = value;
     navTo(window.location.href, {
       replace: type !== "push",
-      state: newState,
+      state: currentStateCopy,
     });
   };
 
@@ -229,16 +227,18 @@ const useNavStateBasic = (
   //   current URL state (e.g. a new picker value) while removing the popup key.
   const leave = ({ isBack } = {}) => {
     enteredRef.current = false;
-    const currentState = browserIntegration.getDocumentState() || {};
-    if (!Object.hasOwn(currentState, id)) {
+    const currentStateCopy = browserIntegration.getDocumentState() || {};
+    if (!Object.hasOwn(currentStateCopy, id)) {
       return;
     }
     if (type === "push" && isBack) {
       browserIntegration.navBack();
     } else {
-      const newState = { ...currentState };
-      delete newState[id];
-      navTo(window.location.href, { replace: true, state: newState });
+      delete currentStateCopy[id];
+      navTo(window.location.href, {
+        replace: true,
+        state: currentStateCopy,
+      });
     }
   };
 
