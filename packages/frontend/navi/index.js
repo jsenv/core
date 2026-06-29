@@ -64,9 +64,9 @@ export { UITransition } from "./src/transition/ui_transition.jsx";
 
 // Navigation/routing
 export {
-  actionIntegratedVia,
   navBack,
   navForward,
+  navIntegratedVia,
   navTo,
   reload,
   stopLoad,

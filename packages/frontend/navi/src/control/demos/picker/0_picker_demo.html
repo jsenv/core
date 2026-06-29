@@ -77,6 +77,7 @@
         route,
         setupRoutes,
       } from "@jsenv/navi";
+      import { NavInspect } from "@jsenv/navi/src/control/demos/utils/nav_inspect.jsx";
 
       // ── State signals (persisted in URL search params) ────────────────────
 
@@ -732,6 +733,7 @@
                     {["xs", "m", "xl", "xxl"].map((size) => (
                       <Picker
                         key={`icon_size_default_${size}`}
+                        id={`icon_size_default_${size}`}
                         name={`icon_size_default_${size}`}
                         value="Hello world"
                         action={() => {}}
@@ -745,6 +747,7 @@
                     {["xs", "m", "xl", "xxl"].map((size) => (
                       <Picker
                         key={`icon_size_custom_${size}`}
+                        id={`icon_size_custom_${size}`}
                         name={`icon_size_custom_${size}`}
                         value="Hello world"
                         action={() => {}}
@@ -759,6 +762,7 @@
                     {["xs", "m", "xl", "xxl"].map((size) => (
                       <Picker
                         key={`icon_size_calendar_${size}`}
+                        id={`icon_size_calendar_${size}`}
                         name={`icon_size_calendar_${size}`}
                         value="Hello world"
                         action={() => {}}
@@ -816,19 +820,28 @@
 
         return (
           <div id="section-6" class="demo-section">
-            <h2>6. Popover vs Dialog mode</h2>
+            <h2>6. Popover vs Dialog mode — back-button close</h2>
             <p>
               The <code>mode</code> prop controls where the picker's popup
               appears. <code>"popover"</code> positions it next to the trigger
               (default), while <code>"dialog"</code> shows a full-screen modal
               centered on the page.
             </p>
+            <p>
+              In <strong>dialog mode</strong> the picker pushes a new browser
+              history entry when it opens (via <code>useNavState</code> with{" "}
+              <code>type="push"</code>). Pressing the browser back button — or
+              the Android back gesture — closes the dialog and restores the
+              previous history entry, without navigating away from the page.
+              Popover mode uses <code>type="replace"</code> so it never adds a
+              history entry.
+            </p>
             <Box flex="y" spacing="m">
               <Field vertical>
                 <Label>
                   Popover mode{" "}
                   <code style={{ fontWeight: "normal" }}>
-                    (mode="popover" or default)
+                    (mode="popover" — replaces state, no history entry)
                   </code>
                 </Label>
                 <Picker
@@ -851,13 +864,17 @@
                   }}
                 >
                   Opens as a dropdown next to the trigger button. Great for
-                  compact interfaces where space is available.
+                  compact interfaces where space is available. Back button
+                  navigates as usual.
                 </p>
               </Field>
+              <NavInspect />
               <Field vertical>
                 <Label>
                   Dialog mode{" "}
-                  <code style={{ fontWeight: "normal" }}>(mode="dialog")</code>
+                  <code style={{ fontWeight: "normal" }}>
+                    (mode="dialog" — pushes history entry, back closes)
+                  </code>
                 </Label>
                 <Picker
                   name="mode_dialog"
@@ -878,10 +895,13 @@
                     fontStyle: "italic",
                   }}
                 >
-                  Opens as a full-screen modal centered on the page. Ideal for
-                  mobile or when you need the picker to stand out.
+                  Opens as a modal. A history entry is pushed so the browser
+                  back button (or Android back gesture) closes the dialog
+                  instead of leaving the page. Try it: open the dialog then
+                  press browser back.
                 </p>
               </Field>
+              <NavInspect />
             </Box>
           </div>
         );

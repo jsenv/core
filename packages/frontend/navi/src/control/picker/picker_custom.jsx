@@ -1,8 +1,9 @@
 import { dispatchCustomEvent, findEvent } from "@jsenv/dom";
-import { useId, useRef, useState } from "preact/hooks";
+import { useId, useRef } from "preact/hooks";
 
 import { createOnKeyDownForShortcuts } from "@jsenv/navi/src/keyboard/keyboard_shortcuts.js";
 import { windowWidthSignal } from "@jsenv/navi/src/layout/responsive.js";
+import { useNavState } from "@jsenv/navi/src/nav/browser_integration/browser_integration.js";
 import { useDebugFocus, useDebugPopup } from "@jsenv/navi/src/navi_debug.jsx";
 import { Dialog } from "@jsenv/navi/src/popup/dialog.jsx";
 import { Popover } from "@jsenv/navi/src/popup/popover.jsx";
@@ -299,8 +300,9 @@ const PickerCustom = (props) => {
   const popupRef = useRef(null);
   popupProps.ref = popupRef;
   // aria-controls + id
+  const autoId = useId();
+  const popupId = `picker_popup_${autoId}`;
   id: {
-    const popupId = useId();
     Object.assign(pickerProps, {
       "aria-controls": popupId,
     });
@@ -312,15 +314,30 @@ const PickerCustom = (props) => {
   open_close: {
     const debugFocus = useDebugFocus();
     const debugPopup = useDebugPopup();
-    const [expanded, setExpanded] = useState(false);
-    const expandedRef = useRef(expanded);
-    expandedRef.current = expanded;
+    // In "dialog" mode, enterExpanded() pushes a history entry so the back button closes.
+    // In "popover" mode, it replaces the current history state (no history entry added).
+    const pickerNavType = mode === "dialog" ? "push" : "replace";
+    const expandedRef = useRef(false);
+    const [expanded, enterExpanded, leaveExpanded] = useNavState(
+      popupId,
+      false,
+      {
+        type: pickerNavType,
+        // onLeave fires only when the state key disappears externally (back button/gesture most of the time).
+        onLeave: () => {
+          requestClose(new CustomEvent("navi_nav_away", { detail: {} }), {
+            isCancel: true,
+          });
+        },
+      },
+    );
+    expandedRef.current = Boolean(expanded);
     const valueAtOpenRef = useRef(null);
     const activeElementAtOpenRef = useRef(null);
 
     const onOpen = (e) => {
       expandedRef.current = true;
-      setExpanded(true);
+      enterExpanded();
 
       const focusedBeforeOpen = e.detail.focusedBeforeOpen;
       activeElementAtOpenRef.current = focusedBeforeOpen;
@@ -375,7 +392,7 @@ const PickerCustom = (props) => {
         }
       }
       expandedRef.current = false;
-      setExpanded(false);
+      leaveExpanded();
       // Reset so the next opening re-evaluates screen size
       defaultModeRef.current = null;
       restoreFocus(e);
@@ -390,7 +407,6 @@ const PickerCustom = (props) => {
       const popupEl = popupRef.current;
       return dispatchCustomEvent(popupEl, "navi_request_open", {
         event: e,
-        anchor: pickerEl,
       });
     };
     const requestClose = (
@@ -410,7 +426,7 @@ const PickerCustom = (props) => {
 
     const { onActionStart, children, uiAction: uiActionProp } = props;
     Object.assign(pickerProps, {
-      "aria-expanded": expanded,
+      "aria-expanded": Boolean(expanded),
       "onActionStart": (e) => {
         onActionStart?.(e);
         // requestClose(e);
@@ -441,6 +457,8 @@ const PickerCustom = (props) => {
       children,
     });
     Object.assign(popupProps, {
+      anchorRef: props.ref,
+      open: Boolean(expanded),
       closeRequestHandler: (
         requestCloseEvent,
         closePermission,

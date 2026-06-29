@@ -7,7 +7,7 @@ import {
   trapScrollInside,
   visibleRectEffect,
 } from "@jsenv/dom";
-import { useId, useRef, useState } from "preact/hooks";
+import { useId, useLayoutEffect, useRef } from "preact/hooks";
 
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import { Box } from "../box/box.jsx";
@@ -46,6 +46,8 @@ const css = /* css */ `
 export const Popover = (props) => {
   import.meta.css = css;
   const {
+    open: openProp = false,
+    anchorRef,
     scrollTrap,
     pointerTrap,
     focusTrap,
@@ -68,16 +70,18 @@ export const Popover = (props) => {
   const debugFocus = useDebugFocus();
   const autoFocusProps = useAutoFocus(ref, props.autoFocus);
 
-  const [opened, setOpened] = useState(false);
-  const openedRef = useRef(opened);
-  openedRef.current = opened;
+  // Tracks actual DOM state (open/closed), updated only by open() and close().
+  // Intentionally NOT synced to openProp on every render so the useEffect guard
+  // below can detect whether a prop change requires action.
+  const openedRef = useRef(false);
   const [addCleanup, cleanup] = useCleanup();
-  const open = (e, { anchor }) => {
+  const open = (e) => {
     debugPopup(e, `openPopover()`);
     const popoverEl = ref.current;
     const focusedBeforeOpen = getFocusedBeforeTransfer(e);
     popoverEl.showPopover();
     transferFocus(popoverEl, debugFocus, e, focusedBeforeOpen);
+    const anchor = anchorRef?.current ?? null;
     const effectiveAnchor = anchor || document.documentElement;
     const positionPopover = (positionEvent) => {
       const { width, height } = effectiveAnchor.getBoundingClientRect();
@@ -161,7 +165,6 @@ export const Popover = (props) => {
       rectEffect.disconnect();
     });
     openedRef.current = true;
-    setOpened(true);
     dispatchCustomEvent(popoverEl, "navi_open", {
       event: e,
       focusedBeforeOpen,
@@ -174,14 +177,13 @@ export const Popover = (props) => {
     popoverEl.hidePopover();
     cleanup();
     openedRef.current = false;
-    setOpened(false);
     dispatchCustomEvent(popoverEl, "navi_close", {
       event: e,
       ...detail,
     });
   };
 
-  const onRequestOpen = (e, { anchor }) => {
+  const onRequestOpen = (e) => {
     const popoverEl = ref.current;
     if (!popoverEl) {
       return;
@@ -189,7 +191,7 @@ export const Popover = (props) => {
     if (openedRef.current) {
       return;
     }
-    open(e, { anchor });
+    open(e);
   };
   const onRequestClose = (e, detail = {}) => {
     const popoverEl = ref.current;
@@ -219,6 +221,27 @@ export const Popover = (props) => {
     }
     close(e, detail);
   };
+
+  useLayoutEffect(() => {
+    if (openProp === undefined) {
+      return;
+    }
+    // Skip when the popover is already in the desired state.
+    // This avoids a feedback loop: our own close/open dispatches navi_close/navi_open,
+    // the parent updates the prop, and the effect would fire again for a change we
+    // already handled. Comparing against openedRef is the authoritative check because
+    // it reflects the actual DOM state, not the React render cycle.
+    if (openProp === openedRef.current) {
+      return;
+    }
+    const e = new CustomEvent("open_prop_change", { detail: {} });
+    if (openProp) {
+      onRequestOpen(e);
+    } else {
+      onRequestClose(e);
+    }
+  }, [openProp]);
+
   return (
     <Box
       id={id}
@@ -229,8 +252,7 @@ export const Popover = (props) => {
       baseClassName="navi_popover"
       pseudoClasses={POPOVER_PSEUDO_CLASSES}
       onnavi_request_open={(e) => {
-        const { anchor } = e.detail;
-        onRequestOpen(e, { anchor });
+        onRequestOpen(e);
       }}
       onnavi_request_close={(e) => {
         onRequestClose(e);
