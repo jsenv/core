@@ -185,31 +185,37 @@ const parseISODuration = (s) => {
 
   const result = {};
 
-  // Date components: scan largest → smallest, consuming the string left-to-right.
-  // lastIndexOfCI finds the LAST occurrence of a marker so that a marker letter
-  // appearing inside a bizarre value (e.g. "aY" before the real "Y") is treated
-  // as part of the value, not as the unit delimiter.
+  // Date components: bracket-aware search so encoded values like "[2Y]" in a
+  // months field are not split on the 'Y' inside the brackets.
   for (const [marker, key] of ISO_DATE_MARKERS) {
-    const idx = lastIndexOfCI(datePart, marker);
+    const idx = lastIndexOfCIOutsideBrackets(datePart, marker);
     if (idx === -1) {
       continue;
     }
-    const rawValue = datePart.slice(0, idx);
+    let rawValue = datePart.slice(0, idx);
     datePart = datePart.slice(idx + 1);
+    if (rawValue.startsWith("[") && rawValue.endsWith("]")) {
+      rawValue = rawValue.slice(1, -1);
+    }
     if (rawValue !== "") {
       const num = Number(rawValue);
       result[key] = isFinite(num) ? num : rawValue;
     }
   }
 
-  // Time components: same strategy.
+  // Time components: use bracket-aware search so that encoded values like
+  // "[34h]" are not split on the 'h' inside the brackets.
   for (const [marker, key] of ISO_TIME_MARKERS) {
-    const idx = lastIndexOfCI(timePart, marker);
+    const idx = lastIndexOfCIOutsideBrackets(timePart, marker);
     if (idx === -1) {
       continue;
     }
-    const rawValue = timePart.slice(0, idx);
+    let rawValue = timePart.slice(0, idx);
     timePart = timePart.slice(idx + 1);
+    // Strip bracket escaping added by encodeTimeValue
+    if (rawValue.startsWith("[") && rawValue.endsWith("]")) {
+      rawValue = rawValue.slice(1, -1);
+    }
     if (rawValue !== "") {
       const num = Number(rawValue);
       result[key] = isFinite(num) ? num : rawValue;
@@ -221,6 +227,43 @@ const parseISODuration = (s) => {
   }
   return result;
 };
+// When a non-numeric field value contains any ISO duration unit marker letter
+// (Y/M/W/D/H/S, case-insensitive), wrapping it in [...] prevents
+// parseISODuration from mistaking those letters for unit delimiters.
+// Example: "34h" in minutes → "[34h]M" so the parser keeps it as minutes.
+// Purely numeric values or values without marker chars are returned unchanged.
+const encodeISOValue = (v) => {
+  if (typeof v !== "string") return v;
+  for (const ch of v) {
+    const lo = ch.toLowerCase();
+    if (
+      lo === "y" ||
+      lo === "m" ||
+      lo === "w" ||
+      lo === "d" ||
+      lo === "h" ||
+      lo === "s"
+    )
+      return `[${v}]`;
+  }
+  return v;
+};
+
+// Like lastIndexOfCI but skips characters inside [...] brackets so that
+// escaped values (e.g. "[34h]") are never mistaken for ISO markers.
+const lastIndexOfCIOutsideBrackets = (s, ch) => {
+  const upper = ch.toUpperCase();
+  const lower = ch.toLowerCase();
+  let depth = 0;
+  let lastFound = -1;
+  for (let i = 0; i < s.length; i++) {
+    if (s[i] === "[") { depth++; continue; }
+    if (s[i] === "]") { if (depth > 0) depth--; continue; }
+    if (depth === 0 && (s[i] === upper || s[i] === lower)) lastFound = i;
+  }
+  return lastFound;
+};
+
 // Case-insensitive indexOf for a single character.
 const indexOfCI = (s, ch) => {
   const upper = ch.toUpperCase();
@@ -232,17 +275,7 @@ const indexOfCI = (s, ch) => {
   }
   return -1;
 };
-// Case-insensitive lastIndexOf for a single character.
-const lastIndexOfCI = (s, ch) => {
-  const upper = ch.toUpperCase();
-  const lower = ch.toLowerCase();
-  for (let i = s.length - 1; i >= 0; i--) {
-    if (s[i] === upper || s[i] === lower) {
-      return i;
-    }
-  }
-  return -1;
-};
+
 const ISO_DATE_MARKERS = [
   ["Y", "years"],
   ["M", "months"],
@@ -400,27 +433,27 @@ export const durationToISOString = (value) => {
   const ms = resolveValue("milliseconds");
   let date = "";
   if (years !== null) {
-    date += `${years}Y`;
+    date += `${encodeISOValue(years)}Y`;
   }
   if (months !== null) {
-    date += `${months}M`;
+    date += `${encodeISOValue(months)}M`;
   }
   if (weeks !== null) {
-    date += `${weeks}W`;
+    date += `${encodeISOValue(weeks)}W`;
   }
   if (days !== null) {
-    date += `${days}D`;
+    date += `${encodeISOValue(days)}D`;
   }
   let time = "";
   if (hours !== null) {
-    time += `${hours}H`;
+    time += `${encodeISOValue(hours)}H`;
   }
   if (minutes !== null) {
-    time += `${minutes}M`;
+    time += `${encodeISOValue(minutes)}M`;
   }
   if (typeof secs === "string") {
-    // Non-numeric seconds — embed as-is; ms has no ISO marker so it is ignored
-    time += `${secs}S`;
+    // Non-numeric seconds — embed with bracket escaping if needed
+    time += `${encodeISOValue(secs)}S`;
   } else {
     // Numeric path — fold ms into seconds; include even if total is 0 so that
     // an explicitly-set field (user typed "0") is preserved in the output

@@ -177,6 +177,16 @@ await snapshotTests(import.meta.url, ({ test }) => {
       // non-numeric mid-edit values embedded as-is between markers
       { hours: "ab", minutes: 30 },
       { hours: "aH", minutes: 30 },
+      // non-numeric values containing ISO marker letters are bracket-escaped so
+      // the field association is preserved through the round-trip
+      // time markers (H/M/S)
+      { minutes: "34h" },
+      { minutes: "30m" },
+      { hours: "2", minutes: "34h" },
+      // date markers (Y/M/W/D)
+      { months: "2Y" },
+      { weeks: "3M" },
+      { days: "5W" },
       // empty / null → null
       {},
       null,
@@ -224,6 +234,10 @@ await snapshotTests(import.meta.url, ({ test }) => {
       {
         label: 'user replaces minutes with "30"',
         durationObj: { hours: "2", minutes: "30" },
+      },
+      {
+        label: 'user types "34h" into minutes — preserved as minutes: "34h"',
+        durationObj: { minutes: "34h" },
       },
     ];
 

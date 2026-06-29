@@ -1,3 +1,5 @@
+import { signal, computed, effect } from "@preact/signals";
+
 const installImportMetaCssBuild = (importMeta) => {
   const IMPORT_META_CSS_BUILD = "jsenv_import_meta_css_build";
 
@@ -48,10 +50,37 @@ const installImportMetaCssBuild = (importMeta) => {
   });
 };
 
+const windowWidthSignal = signal(window.innerWidth);
+const windowHeightSignal = signal(window.innerHeight);
+
+window.addEventListener("resize", () => {
+  windowWidthSignal.value = window.innerWidth;
+  windowHeightSignal.value = window.innerHeight;
+});
+
+// Visual viewport dimensions — update when the virtual keyboard opens/closes or
+// when the browser UI (address bar) shows/hides.
+// When visualViewport is not available, derived from window signals so they
+// stay live without any extra listeners.
+const vv = window.visualViewport;
+const visualViewportWidthSignal = vv
+  ? signal(vv.width)
+  : computed(() => windowWidthSignal.value);
+const visualViewportHeightSignal = vv
+  ? signal(vv.height)
+  : computed(() => windowHeightSignal.value);
+if (vv) {
+  const update = () => {
+    visualViewportWidthSignal.value = vv.width;
+    visualViewportHeightSignal.value = vv.height;
+  };
+  vv.addEventListener("resize", update);
+  vv.addEventListener("scroll", update);
+}
+
 installImportMetaCssBuild(import.meta);/**
  * Regroup CSS vars that makes sense to share across all navi components.
  */
-
 const button = document.createElement("button");
 button.style.display = "none";
 document.body.appendChild(button);
@@ -62,6 +91,11 @@ document.body.removeChild(button);
 const css = /* css */`
   @layer navi {
     :root {
+      /* Overridden at runtime with precise VisualViewport pixel values so that dvw/dvh 
+      (which don't track the virtual keyboard dimensions) are never used in practice on supported browsers. */
+      --navi-vvw: 100dvw;
+      --navi-vvh: 100dvh;
+
       --navi-focus-outline-width: 2px;
       --navi-focus-outline-color: light-dark(#4476ff, #3b82f6);
       --navi-loader-color: light-dark(#355fcc, #3b82f6);
@@ -161,6 +195,10 @@ const css = /* css */`
   }
 `;
 import.meta.css = [css, "@jsenv/navi/src/navi_css_vars.js"];
+effect(() => {
+  document.documentElement.style.setProperty("--navi-vvw", `${visualViewportWidthSignal.value}px`);
+  document.documentElement.style.setProperty("--navi-vvh", `${visualViewportHeightSignal.value}px`);
+});
 
-export { installImportMetaCssBuild };
+export { installImportMetaCssBuild, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi_side_effects.js.map

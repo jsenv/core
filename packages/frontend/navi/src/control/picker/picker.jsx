@@ -559,6 +559,7 @@ const PickerStyleCSSVars = {
   "popoverMaxHeight": "--picker-popover-max-height",
   "popupBackgroundColor": "--picker-popup-background-color",
   "popupBorderRadius": "--picker-popup-border-radius",
+  "dialogBorderWidth": "--picker-dialog-border-width",
   "padding": "--picker-padding",
   "paddingX": "--picker-padding-x",
   "paddingY": "--picker-padding-y",
