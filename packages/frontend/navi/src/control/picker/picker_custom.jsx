@@ -330,6 +330,7 @@ const PickerCustom = (props) => {
         },
       },
     );
+    expandedRef.current = Boolean(expanded);
     const valueAtOpenRef = useRef(null);
     const activeElementAtOpenRef = useRef(null);
 
