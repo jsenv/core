@@ -111,6 +111,14 @@
               );
             })}
           </List>
+          <Box flex="x" spacing="s" alignX="end">
+            <Button variant="secondary" command="--navi-cancel">
+              Cancel
+            </Button>
+            <Button variant="primary" command="--navi-send">
+              Define
+            </Button>
+          </Box>
         </>
       );
 
@@ -144,14 +152,6 @@
                       matchingGames={matchingGames}
                       getMatchInfo={getMatchInfo}
                     />
-                    <Box flex="x" spacing="s" justifyContent="flex-end">
-                      <Button variant="secondary" command="--navi-cancel">
-                        Cancel
-                      </Button>
-                      <Button variant="primary" command="--navi-send">
-                        Define
-                      </Button>
-                    </Box>
                   </Box>
                 </Picker>
               </Box>
