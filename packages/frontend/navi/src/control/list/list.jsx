@@ -35,9 +35,10 @@ const ListItemTrackerContext = createContext(null);
 const GroupItemTrackerContext = createContext(null);
 const PendingScrollRefContext = createContext(null);
 // Controls how List.Item behaves when match=false (set via List searchNoMatchMode prop):
-//   "remove"    — remove from DOM (default)
+//   "remove"              — remove from DOM (default)
 //   "invisible_and_inert" — keep in DOM, invisible and non-interactive (preserves layout, no content visible)
 //   "muted"               — keep in DOM, visible but opacified and still interactive
+//   "below"               — keep in DOM, fully visible, pushed below matching items via CSS order
 const SearchNoMatchModeContext = createContext("remove");
 
 // When total rendered items exceeds renderBudget, a render window [start, end)
@@ -565,7 +566,7 @@ const ListFirstResolver = (props) => {
  *   fallback?: import("preact").ComponentChildren,
  *   searchFallback?: import("preact").ComponentChildren,
  *   searchText?: string,
- *   searchNoMatchMode?: "remove" | "invisible_and_inert" | "muted",
+ *   searchNoMatchMode?: "remove" | "invisible_and_inert" | "muted" | "below",
  *   separator?: boolean | import("preact").ComponentChildren,
  *   lockSize?: boolean,
  *   horizontal?: boolean,

@@ -167,7 +167,7 @@ export const Popover = (props) => {
       focusedBeforeOpen,
     });
   };
-  const close = (e) => {
+  const close = (e, detail = {}) => {
     debugPopup(e, `closePopover()`);
     const popoverEl = ref.current;
     markAutofocusRestoreOnClose(popoverEl);
@@ -177,6 +177,7 @@ export const Popover = (props) => {
     setOpened(false);
     dispatchCustomEvent(popoverEl, "navi_close", {
       event: e,
+      ...detail,
     });
   };
 
@@ -190,7 +191,7 @@ export const Popover = (props) => {
     }
     open(e, { anchor });
   };
-  const onRequestClose = (e) => {
+  const onRequestClose = (e, detail = {}) => {
     const popoverEl = ref.current;
     if (!popoverEl) {
       return;
@@ -208,15 +209,15 @@ export const Popover = (props) => {
           denied = false;
         },
       };
-      closeRequestHandler(e, closePermission);
+      closeRequestHandler(e, closePermission, detail);
       if (denied) {
         closePermission.allow = () => {
-          close(e);
+          close(e, detail);
         };
         return;
       }
     }
-    close(e);
+    close(e, detail);
   };
   return (
     <Box
@@ -283,7 +284,7 @@ export const Popover = (props) => {
             e.preventDefault();
             return;
           }
-          onRequestClose(e);
+          onRequestClose(e, { isClickOutside: true });
         }}
       />
       {children}

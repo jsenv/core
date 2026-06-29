@@ -7,7 +7,6 @@ import { useDebugFocus, useDebugPopup } from "@jsenv/navi/src/navi_debug.jsx";
 import { Dialog } from "@jsenv/navi/src/popup/dialog.jsx";
 import { Popover } from "@jsenv/navi/src/popup/popover.jsx";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
-import { compareTwoJsValues } from "@jsenv/navi/src/utils/compare_two_js_values.js";
 import { dispatchRequestAction } from "../rules/control_action.js";
 import { dispatchRequestInteraction } from "../rules/control_interaction.js";
 import {
@@ -277,16 +276,10 @@ const PickerCustom = (props) => {
     expandedRef.current = expanded;
     const valueAtOpenRef = useRef(null);
     const activeElementAtOpenRef = useRef(null);
-    // Tracks whether a uiAction has occurred since the last close denial.
-    // true  = no pending denial (initial state, or user has interacted since)
-    // false = close was denied and user hasn't interacted yet
-    // When false, a second close attempt is treated as cancel.
-    const uiActionSinceDeniedRef = useRef(true);
 
     const onOpen = (e) => {
       expandedRef.current = true;
       setExpanded(true);
-      uiActionSinceDeniedRef.current = true;
 
       const focusedBeforeOpen = e.detail.focusedBeforeOpen;
       activeElementAtOpenRef.current = focusedBeforeOpen;
@@ -401,59 +394,38 @@ const PickerCustom = (props) => {
           },
         });
       },
-      // Intercept uiAction to detect user interaction after a close denial.
       "uiAction": (v, e) => {
-        uiActionSinceDeniedRef.current = true;
         uiActionProp?.(v, e);
       },
       children,
     });
     Object.assign(popupProps, {
-      closeRequestHandler: (requestCloseEvent, closePermission) => {
+      closeRequestHandler: (
+        requestCloseEvent,
+        closePermission,
+        { isClickOutside } = {},
+      ) => {
         const cancelEvent = findEvent(
           requestCloseEvent,
           (eInChain) =>
             eInChain.type === "navi_request_close" && eInChain.detail.isCancel,
         );
-        const isCancel = Boolean(cancelEvent);
+        const isCancel = isClickOutside || Boolean(cancelEvent);
+        if (isCancel) {
+          const pickerEl = ref.current;
+          const inputEl = getPickerInput(pickerEl);
+          const valueAtOpen = valueAtOpenRef.current;
+          debugPopup(
+            requestCloseEvent,
+            `picker cancel, restoring value at open ${JSON.stringify(valueAtOpen)}`,
+          );
+          dispatchRequestSetUIState(inputEl, valueAtOpen, {
+            event: requestCloseEvent,
+          });
+          return;
+        }
         const pickerEl = ref.current;
         const inputEl = getPickerInput(pickerEl);
-        const valueAtOpen = valueAtOpenRef.current;
-
-        if (isCancel) {
-          uiActionSinceDeniedRef.current = true;
-          dispatchRequestSetUIState(inputEl, valueAtOpen, {
-            event: requestCloseEvent,
-          });
-          return;
-        }
-
-        // If close was previously denied and the user hasn't interacted since,
-        // treat this re-attempt as a cancel so they are not trapped.
-        if (!uiActionSinceDeniedRef.current) {
-          debugPopup(
-            requestCloseEvent,
-            `picker close was denied and user did not interact, treating re-attempt as cancel (restoring ${JSON.stringify(valueAtOpen)})`,
-          );
-          uiActionSinceDeniedRef.current = true;
-          dispatchRequestSetUIState(inputEl, valueAtOpen, {
-            event: requestCloseEvent,
-          });
-          return;
-        }
-
-        const valueAtClose = getPickerInputUIState(pickerEl);
-        if (compareTwoJsValues(valueAtClose, valueAtOpen)) {
-          debugPopup(
-            requestCloseEvent,
-            `picker closed with same value as when it opened (${JSON.stringify(valueAtClose)}), no action dispatched`,
-          );
-          return;
-        }
-        debugPopup(
-          requestCloseEvent,
-          `picker attempt to close with value (${JSON.stringify(valueAtClose)}) wait for picker action to close picker`,
-        );
         dispatchRequestAction(inputEl, {
           event: requestCloseEvent,
           name: "picker close",
@@ -464,10 +436,8 @@ const PickerCustom = (props) => {
           // user sees what is wrong, even if the picker has no action prop.
           reportOnInvalid: true,
           onInvalid: () => {
-            uiActionSinceDeniedRef.current = false;
             closePermission.deny();
           },
-          allowed: () => {},
         });
       },
       onnavi_open: (e) => {
@@ -556,7 +526,7 @@ const PickerCustom = (props) => {
             if (expandedRef.current) {
               return {
                 name: "mousedown to close picker",
-                allowed: () => requestClose(e),
+                allowed: () => requestClose(e, { isCancel: true }),
               };
             }
             return {
@@ -657,7 +627,10 @@ const PickerContentInsidePopover = (props) => {
           name: "blur",
           category: "interaction",
           allowed: () => {
-            dispatchCustomEvent(popoverEl, "navi_request_close", { event: e });
+            dispatchCustomEvent(popoverEl, "navi_request_close", {
+              event: e,
+              isCancel: true,
+            });
           },
         });
       }}
@@ -687,7 +660,10 @@ const PickerContentInsidePopover = (props) => {
                 return;
               }
               const popupEl = popupProps.ref.current;
-              dispatchCustomEvent(popupEl, "navi_request_close", { event: e });
+              dispatchCustomEvent(popupEl, "navi_request_close", {
+                event: e,
+                isCancel: true,
+              });
             }}
           >
             {props.trigger}

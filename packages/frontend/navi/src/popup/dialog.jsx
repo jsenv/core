@@ -113,7 +113,7 @@ export const Dialog = (props) => {
       focusedBeforeOpen,
     });
   };
-  const close = (e) => {
+  const close = (e, detail = {}) => {
     debugPopup(
       `"${e.type}" on ${getElementSignature(e.target)} -> closeDialog`,
     );
@@ -124,6 +124,7 @@ export const Dialog = (props) => {
     openedRef.current = false;
     dispatchCustomEvent(dialogEl, "navi_close", {
       event: e,
+      ...detail,
     });
   };
 
@@ -137,7 +138,7 @@ export const Dialog = (props) => {
     }
     open(e, { anchor });
   };
-  const onRequestClose = (e) => {
+  const onRequestClose = (e, detail = {}) => {
     const dialogEl = ref.current;
     if (!dialogEl) {
       return;
@@ -155,15 +156,15 @@ export const Dialog = (props) => {
           denied = false;
         },
       };
-      closeRequestHandler(e, closePermission);
+      closeRequestHandler(e, closePermission, detail);
       if (denied) {
         closePermission.allow = () => {
-          close(e);
+          close(e, detail);
         };
         return;
       }
     }
-    close(e);
+    close(e, detail);
   };
 
   return (
@@ -179,7 +180,7 @@ export const Dialog = (props) => {
         // The <dialog> element covers the full viewport; clicking the backdrop
         // hits the dialog itself (not any child). Close when that happens.
         if (!pointerTrap && e.button === 0 && e.target === ref.current) {
-          onRequestClose(e);
+          onRequestClose(e, { isClickOutside: true });
         }
       }}
       onCancel={(e) => {
