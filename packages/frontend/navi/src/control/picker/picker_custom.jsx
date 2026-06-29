@@ -51,7 +51,7 @@ const css = /* css */ `
           0 4px 8px rgba(0, 0, 0, 0.08),
           0 12px 40px rgba(0, 0, 0, 0.22);
         cursor: default; /* Reset pointer cursor within the select */
-        overflow: hidden;
+        overflow: auto;
         overscroll-behavior: none;
 
         /* The anchor placeholder is a non-interactive visual clone of the
