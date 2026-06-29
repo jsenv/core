@@ -786,13 +786,10 @@
       const ContainerBox = ({ fixedHeight, children }) => (
         <Box
           flex="y"
-          style={{
-            maxHeight: "100px",
-            height: fixedHeight ? "100px" : undefined,
-            overflow: "hidden",
-            border: "2px dashed #94a3b8",
-            borderRadius: "4px",
-          }}
+          maxHeight="100"
+          height={fixedHeight ? "100" : undefined}
+          border="2px dashed #94a3b8"
+          borderRadius="4px"
         >
           {children}
         </Box>
@@ -805,10 +802,9 @@
             <h2>Dimension within container</h2>
             <p>
               The dashed border represents the container constraint. Without{" "}
-              <code>expandY</code> the list keeps its own internal scroll at
-              220 px — a smaller container just clips it. With{" "}
-              <code>expandY</code> the list defers to the container's size and
-              scrolls within it.
+              <code>expandY</code> the list keeps its own internal scroll at 220
+              px — a smaller container just clips it. With <code>expandY</code>{" "}
+              the list defers to the container's size and scrolls within it.
             </p>
             <label
               style={{
@@ -823,7 +819,9 @@
               <input
                 type="checkbox"
                 checked={expandY}
-                onChange={(e) => { setExpandY(e.target.checked); }}
+                onChange={(e) => {
+                  setExpandY(e.target.checked);
+                }}
               />
               <code>expandY</code>
             </label>
@@ -831,31 +829,77 @@
               <thead>
                 <tr>
                   <th style={{ width: "1%" }} />
-                  <th style={{ padding: "6px 16px", fontWeight: 600, fontSize: "0.85rem", color: "#555", textAlign: "left" }}>Small list</th>
-                  <th style={{ padding: "6px 16px", fontWeight: 600, fontSize: "0.85rem", color: "#555", textAlign: "left" }}>Large list</th>
+                  <th
+                    style={{
+                      padding: "6px 16px",
+                      fontWeight: 600,
+                      fontSize: "0.85rem",
+                      color: "#555",
+                      textAlign: "left",
+                    }}
+                  >
+                    Small list
+                  </th>
+                  <th
+                    style={{
+                      padding: "6px 16px",
+                      fontWeight: 600,
+                      fontSize: "0.85rem",
+                      color: "#555",
+                      textAlign: "left",
+                    }}
+                  >
+                    Large list
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td style={{ padding: "8px 0", fontWeight: 600, fontSize: "0.8rem", color: "#555", whiteSpace: "nowrap", paddingRight: "16px" }}>
+                  <td
+                    style={{
+                      padding: "8px 0",
+                      fontWeight: 600,
+                      fontSize: "0.8rem",
+                      color: "#555",
+                      whiteSpace: "nowrap",
+                      paddingRight: "16px",
+                    }}
+                  >
                     max-height only
                   </td>
                   <td style={{ padding: "8px 16px" }}>
-                    <ContainerBox><SmallList expandY={expandY} /></ContainerBox>
+                    <ContainerBox>
+                      <SmallList expandY={expandY} />
+                    </ContainerBox>
                   </td>
                   <td style={{ padding: "8px 16px" }}>
-                    <ContainerBox><LargeList expandY={expandY} /></ContainerBox>
+                    <ContainerBox>
+                      <LargeList expandY={expandY} />
+                    </ContainerBox>
                   </td>
                 </tr>
                 <tr>
-                  <td style={{ padding: "8px 0", fontWeight: 600, fontSize: "0.8rem", color: "#555", whiteSpace: "nowrap", paddingRight: "16px" }}>
+                  <td
+                    style={{
+                      padding: "8px 0",
+                      fontWeight: 600,
+                      fontSize: "0.8rem",
+                      color: "#555",
+                      whiteSpace: "nowrap",
+                      paddingRight: "16px",
+                    }}
+                  >
                     max-height + height: 100px
                   </td>
                   <td style={{ padding: "8px 16px" }}>
-                    <ContainerBox fixedHeight><SmallList expandY={expandY} /></ContainerBox>
+                    <ContainerBox fixedHeight>
+                      <SmallList expandY={expandY} />
+                    </ContainerBox>
                   </td>
                   <td style={{ padding: "8px 16px" }}>
-                    <ContainerBox fixedHeight><LargeList expandY={expandY} /></ContainerBox>
+                    <ContainerBox fixedHeight>
+                      <LargeList expandY={expandY} />
+                    </ContainerBox>
                   </td>
                 </tr>
               </tbody>
