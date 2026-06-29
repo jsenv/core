@@ -293,7 +293,7 @@
         }
         #document {
           width: 100%;
-          padding: 15mm 18mm;
+          padding: 0;
           box-shadow: none;
         }
 
@@ -315,7 +315,7 @@
 
         @page {
           size: A4;
-          margin: 0;
+          margin: 15mm 18mm;
         }
       }
     </style>
@@ -375,19 +375,9 @@
               value="1691 Avenue de la République, 06550 La Roquette-sur-Siagne, France"
             />
           </div>
-          <div class="field-row-3">
-            <div class="field">
-              <label>Entreprise</label>
-              <input id="inp-entreprise" value="" />
-            </div>
-            <div class="field">
-              <label>Commentaire</label>
-              <input id="inp-comment" value="" />
-            </div>
-            <div class="field">
-              <label>Distance (km)</label>
-              <input id="inp-dist" type="number" value="38" />
-            </div>
+          <div class="field">
+            <label>Distance (km)</label>
+            <input id="inp-dist" type="number" value="38" />
           </div>
           <div class="checkbox-row">
             <input type="checkbox" id="skip-weekends" checked />
@@ -438,8 +428,6 @@
             <tr>
               <th>Date du trajet</th>
               <th>Destination</th>
-              <th>Entreprise</th>
-              <th>Commentaire</th>
               <th class="col-dist">Distance</th>
               <th class="no-print" style="width: 32px"></th>
             </tr>
@@ -447,12 +435,12 @@
           <tbody id="trips-body"></tbody>
           <tfoot>
             <tr class="total-row">
-              <td colspan="4">Total kilométrique</td>
+              <td colspan="2">Total kilométrique</td>
               <td class="col-dist" id="total-km">0 km</td>
               <td class="no-print"></td>
             </tr>
             <tr class="total-row">
-              <td colspan="4" id="total-indemnite-label">Indemnité totale</td>
+              <td colspan="2" id="total-indemnite-label">Indemnité totale</td>
               <td class="col-dist" id="total-indemnite">0,00 €</td>
               <td class="no-print"></td>
             </tr>
@@ -540,8 +528,6 @@
         }
         $("gen-error").textContent = "";
         const dest = $("inp-dest").value.trim();
-        const entreprise = $("inp-entreprise").value.trim();
-        const comment = $("inp-comment").value.trim();
         const dist = $("inp-dist").value.trim();
         const skipWeekends = $("skip-weekends").checked;
 
@@ -555,14 +541,14 @@
           const d = new Date(t);
           const dow = d.getDay();
           if (!skipWeekends || (dow !== 0 && dow !== 6)) {
-            tbody.appendChild(createRow(formatDate(d), dest, entreprise, comment, dist));
+            tbody.appendChild(createRow(formatDate(d), dest, dist));
           }
         }
         updateTotal();
       };
 
       window.addEmptyRow = () => {
-        $("trips-body").appendChild(createRow("", "", "", "", ""));
+        $("trips-body").appendChild(createRow("", "", ""));
         updateTotal();
       };
 
@@ -580,13 +566,11 @@
         updateTotal();
       };
 
-      function createRow(date, dest, entreprise, comment, dist) {
+      function createRow(date, dest, dist) {
         const tr = document.createElement("tr");
         tr.innerHTML = `
           <td contenteditable="true">${escHtml(date)}</td>
           <td contenteditable="true">${escHtml(dest)}</td>
-          <td contenteditable="true">${escHtml(entreprise)}</td>
-          <td contenteditable="true">${escHtml(comment)}</td>
           <td contenteditable="true" class="col-dist">${escHtml(dist)}</td>
           <td class="row-actions no-print">
             <button class="btn-del" title="Supprimer" onclick="deleteRow(this)">×</button>
