@@ -130,7 +130,7 @@ export const visitedUrlsSignal = browserIntegration.visitedUrlsSignal;
 export const handleActionTask = browserIntegration.handleActionTask;
 
 const idUsageMap = new Map();
-const useNavStateWithWarnings = (id, initialValue, options) => {
+const useNavStateWithWarnings = (id, options) => {
   const idRef = useRef(undefined);
   if (idRef.current !== id) {
     const oldId = idRef.current;
@@ -158,7 +158,7 @@ Consider using unique IDs for each component instance.`,
     };
   }, [id]);
 
-  return useNavStateBasic(id, initialValue, options);
+  return useNavStateBasic(id, options);
 };
 
 if (import.meta.hot) {
@@ -171,41 +171,35 @@ const NO_OP = () => {};
 const NO_ID_GIVEN = [undefined, NO_OP, NO_OP];
 const useNavStateBasic = (
   id,
-  initialValue,
-  { debug, type = "replace", onLeave } = {},
+  { debug, type = "replace", onLeave, defaultValue } = {},
 ) => {
   // Hooks must be called unconditionally — before the !id early return.
   const state = documentStateSignal.value;
-  const valueInState = id
-    ? state !== null
-      ? state[id]
-      : undefined
-    : undefined;
+  // Key presence is the flag — the value may be anything, including undefined.
+  const keyInState = Boolean(
+    id && state !== null && Object.hasOwn(state, id),
+  );
   const onLeaveRef = useRef(onLeave);
   onLeaveRef.current = onLeave;
-  const prevValueInStateRef = useRef(valueInState);
+  const prevKeyInStateRef = useRef(keyInState);
   // enteredRef tracks whether enter() was called without a matching leave() yet.
   // It lets the effect distinguish an external disappearance (back button → fire onLeave)
   // from a programmatic one (leave() already set it to false before the state updates).
   const enteredRef = useRef(false);
   useEffect(() => {
-    const prevValue = prevValueInStateRef.current;
-    prevValueInStateRef.current = valueInState;
-    if (
-      prevValue !== undefined &&
-      valueInState === undefined &&
-      enteredRef.current
-    ) {
+    const prevKeyInState = prevKeyInStateRef.current;
+    prevKeyInStateRef.current = keyInState;
+    if (prevKeyInState && !keyInState && enteredRef.current) {
       enteredRef.current = false;
       onLeaveRef.current?.();
     }
-  }, [valueInState]);
+  }, [keyInState]);
 
   if (!id) {
     return NO_ID_GIVEN;
   }
 
-  const currentValue = valueInState !== undefined ? valueInState : initialValue;
+  const currentValue = keyInState ? state[id] : defaultValue;
 
   if (debug) {
     console.debug(`useNavState(${id}) current value is ${currentValue}`);
@@ -218,7 +212,7 @@ const useNavStateBasic = (
   const enter = (value = "on") => {
     enteredRef.current = true;
     const currentState = browserIntegration.getDocumentState() || {};
-    if (currentState[id] === value) {
+    if (Object.hasOwn(currentState, id) && currentState[id] === value) {
       return;
     }
     const newState = { ...currentState, [id]: value };
@@ -258,9 +252,6 @@ const useNavStateBasic = (
  * @param {string} id
  *   Unique key used to store the value in document state. Must be stable across renders.
  *
- * @param {*} initialValue
- *   Value returned when `id` is absent from document state (e.g. before enter() is called).
- *
  * @param {object} [options]
  * @param {"push"|"replace"} [options.type="replace"]
  *   Controls how enter() adds the state to browser history.
@@ -269,9 +260,11 @@ const useNavStateBasic = (
  * @param {() => void} [options.onLeave]
  *   Called when the state key disappears **externally** — e.g. the user presses the browser
  *   back button. Not called when leave() is invoked programmatically.
+ * @param {*} [options.defaultValue]
+ *   Value returned when `id` is absent from document state. Defaults to `undefined`.
  *
  * @returns {[value, enter, leave]}
- *   - `value`: current value from document state, or `initialValue` when the key is absent.
+ *   - `value`: current value from document state, or `defaultValue` when the key is absent.
  *   - `enter(value = "on")`: navigate TO this state (stores `value` under `id`).
  *     Calling without an argument stores `"on"` — the presence of the key is enough to match;
  *     the value allows associating extra data when needed.

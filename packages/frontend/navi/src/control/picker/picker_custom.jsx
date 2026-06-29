@@ -317,19 +317,15 @@ const PickerCustom = (props) => {
     // In "popover" mode, it replaces the current history state (no history entry added).
     const pickerNavType = mode === "dialog" ? "push" : "replace";
     const expandedRef = useRef(false);
-    const [expanded, enterExpanded, leaveExpanded] = useNavState(
-      popupId,
-      false,
-      {
-        type: pickerNavType,
-        // onLeave fires only when the state key disappears externally (back button/gesture most of the time).
-        onLeave: () => {
-          requestClose(new CustomEvent("navi_nav_away", { detail: {} }), {
-            isCancel: true,
-          });
-        },
+    const [expanded, enterExpanded, leaveExpanded] = useNavState(popupId, {
+      type: pickerNavType,
+      // onLeave fires only when the state key disappears externally (back button/gesture most of the time).
+      onLeave: () => {
+        requestClose(new CustomEvent("navi_nav_away", { detail: {} }), {
+          isCancel: true,
+        });
       },
-    );
+    });
     // expandedRef tracks actual open/close state, updated only by onOpen/onClose.
     // NOT synced to expanded on every render so the useLayoutEffect guard below works.
     const valueAtOpenRef = useRef(null);
