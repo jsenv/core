@@ -146,6 +146,9 @@ const css = /* css */ `
     &[data-expand-x] {
       width: 100%;
     }
+    &[data-expand-y] {
+      --list-max-height: none;
+    }
     &[popover] {
       position: absolute;
       inset: unset;
@@ -262,6 +265,8 @@ const css = /* css */ `
     /* background: pink; */
   }
   &[data-horizontal] {
+    --list-max-height: none;
+
     .navi_list_virtual_filler {
       width: var(--size-to-fill, 0px);
       height: 100%;
@@ -412,6 +417,7 @@ const ListUI = (props) => {
     children,
     popover,
     expandX,
+    expandY,
     expand,
     onListVisibleItemsChange,
     virtualItemSize,
@@ -501,7 +507,9 @@ const ListUI = (props) => {
       popover={popover}
       data-horizontal={horizontal ? "" : undefined}
       data-expand-x={expandX || expand ? "" : undefined}
+      data-expand-y={expandY || expand ? "" : undefined}
       expandX={expandX}
+      expandY={expandY}
       expand={expand}
       styleCSSVars={LIST_STYLE_CSS_VARS}
       pseudoClasses={LIST_PSEUDO_CLASSES}
@@ -529,6 +537,7 @@ const ListUI = (props) => {
         searchNoMatchMode={searchNoMatchMode}
         separator={separator}
         expandX={expandX}
+        expandY={expandY}
         expand={expand}
         horizontal={horizontal}
         spacing={spacing}
@@ -572,6 +581,7 @@ const ListFirstResolver = (props) => {
  *   horizontal?: boolean,
  *   spacing?: string,
  *   expandX?: boolean,
+ *   expandY?: boolean,
  *   expand?: boolean,
  *   children?: import("preact").ComponentChildren,
  *   [key: string]: any,
@@ -589,6 +599,7 @@ const ListContent = ({
   searchNoMatchMode,
   separator,
   expandX,
+  expandY,
   expand,
   horizontal,
   spacing,
@@ -608,6 +619,7 @@ const ListContent = ({
         searchNoMatchMode={searchNoMatchMode}
         separator={separator === true ? <Separator margin="0" /> : separator}
         expandX={expandX || expand}
+        expandY={expandY || expand}
         horizontal={horizontal}
         spacing={spacing}
         {...listProps}
