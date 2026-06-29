@@ -441,12 +441,10 @@ const PickerCustom = (props) => {
       if (open) {
         requestOpen(new CustomEvent("open_by_prop", { detail: {} }), {
           isCancel: true,
-          cancelReason: "open by prop",
         });
       } else {
         requestClose(new CustomEvent("close_by_prop", { detail: {} }), {
           isCancel: true,
-          cancelReason: "close by prop",
         });
       }
     }, [open]);
