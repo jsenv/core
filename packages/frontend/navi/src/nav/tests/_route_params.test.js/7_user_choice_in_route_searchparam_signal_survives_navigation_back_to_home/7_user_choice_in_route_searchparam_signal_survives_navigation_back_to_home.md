@@ -6,10 +6,7 @@ const HOME_ROUTE = route("/");
 const CITY_ROUTE = route("/city-selection/", {
   searchParams: { city: citySignal },
 });
-const { updateRoutes, clearRoutes } = setupRoutes([
-  HOME_ROUTE,
-  CITY_ROUTE,
-]);
+const { updateRoutes, clearRoutes } = setupRoutes([HOME_ROUTE, CITY_ROUTE]);
 
 try {
   // Start on home
@@ -53,7 +50,7 @@ try {
     "city": "Paris"
   },
   "back_on_home": {
-    "city": undefined
+    "city": "Paris"
   }
 }
 ```

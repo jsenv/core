@@ -646,9 +646,14 @@ This prevents cross-test pollution and ensures clean state.`,
               // 1. We're navigating within the same route family (not to completely unrelated routes)
               // 2. AND no matching route extracts this parameter from URL
               // 3. AND parameter has no default value (making it truly optional)
+              // 4. AND parameter is a path segment (not a search param)
+              //    Search params represent user preferences/choices and must survive
+              //    navigation away — only path segments are explicitly removed from
+              //    the URL when the route stops matching.
               if (
                 matchingRouteInSameFamily &&
-                !parameterExtractedByMatchingRoute
+                !parameterExtractedByMatchingRoute &&
+                pathConnectionMap.has(paramName)
               ) {
                 const defaultValue = connection.getDefaultValue();
                 if (defaultValue === undefined) {
@@ -669,6 +674,10 @@ This prevents cross-test pollution and ensures clean state.`,
                 if (!matchingRouteInSameFamily) {
                   console.debug(
                     `[route] Different route family: preserving ${paramName} signal value: ${paramSignal.value}`,
+                  );
+                } else if (queryConnectionMap.has(paramName)) {
+                  console.debug(
+                    `[route] Search param ${paramName}: preserving signal value (user choice): ${paramSignal.value}`,
                   );
                 } else {
                   console.debug(
