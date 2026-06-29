@@ -177,10 +177,19 @@ export const Dialog = (props) => {
       pseudoClasses={DIALOG_PSEUDO_CLASSES}
       onMouseDown={(e) => {
         rest.onMouseDown?.(e);
-        // The <dialog> element covers the full viewport; clicking the backdrop
-        // hits the dialog itself (not any child). Close when that happens.
+        // Detect backdrop click: the click must land outside the dialog's
+        // bounding rect. Checking coordinates is necessary because clicking
+        // on the dialog's own padding also sets e.target === ref.current.
         if (!pointerTrap && e.button === 0 && e.target === ref.current) {
-          onRequestClose(e, { isClickOutside: true });
+          const rect = ref.current.getBoundingClientRect();
+          const isBackdrop =
+            e.clientX < rect.left ||
+            e.clientX > rect.right ||
+            e.clientY < rect.top ||
+            e.clientY > rect.bottom;
+          if (isBackdrop) {
+            onRequestClose(e, { isClickOutside: true });
+          }
         }
       }}
       onCancel={(e) => {
