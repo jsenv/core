@@ -410,10 +410,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     const CITY_ROUTE = route("/city-selection/", {
       searchParams: { city: citySignal },
     });
-    const { updateRoutes, clearRoutes } = setupRoutes([
-      HOME_ROUTE,
-      CITY_ROUTE,
-    ]);
+    const { updateRoutes, clearRoutes } = setupRoutes([HOME_ROUTE, CITY_ROUTE]);
 
     try {
       // Start on home
