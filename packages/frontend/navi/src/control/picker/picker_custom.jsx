@@ -21,10 +21,18 @@ const css = /* css */ `
     --picker-popup-border-radius: var(--picker-border-radius);
     --picker-popup-border-width: var(--picker-border-width);
     /* Popover */
-    --picker-popover-max-height: 300px;
+    --picker-popover-max-height: 300px; /* soft: user-configurable preferred max-height */
+    --picker-popover-maxmax-height: calc(0.95 * var(--navi-vvh));
+    --picker-popover-maxmax-width: calc(0.95 * var(--navi-vvw));
+    /* --picker-popover-max-width: soft, leave unset to rely on maxmax */
     /* Dialog */
-    --picker-dialog-max-width: calc(0.95 * var(--navi-vvw));
-    --picker-dialog-max-height: calc(0.95 * var(--navi-vvh));
+    --picker-dialog-margin: 3dvw; /* min gap between dialog edges and viewport */
+    --picker-dialog-maxmax-width: calc(
+      var(--navi-vvw) - 2 * var(--picker-dialog-margin)
+    );
+    --picker-dialog-maxmax-height: calc(
+      var(--navi-vvh) - 2 * var(--picker-dialog-margin)
+    );
     --picker-dialog-border-width: 0px; /* Dialog do not need border like popover (they stand out more) */
 
     /* popover */
@@ -33,11 +41,15 @@ const css = /* css */ `
         position: absolute;
         inset: unset;
         min-width: var(--anchor-width, 0px);
-        max-width: 95vw;
+        max-width: min(
+          var(--picker-popover-max-width, var(--picker-popover-maxmax-width)),
+          var(--picker-popover-maxmax-width)
+        );
         /* max-height covers the placeholder + list; the list scrolls internally */
         max-height: min(
           var(--picker-popover-max-height),
-          var(--space-available, calc(0.95 * var(--navi-vvh)))
+          var(--space-available, var(--picker-popover-maxmax-height)),
+          var(--picker-popover-maxmax-height)
         );
         margin: 0;
         padding: 0;
@@ -131,8 +143,14 @@ const css = /* css */ `
     &[aria-haspopup="dialog"] {
       .navi_picker_dialog {
         min-width: var(--anchor-width, 0px);
-        max-width: var(--picker-dialog-max-width);
-        max-height: var(--picker-dialog-max-height);
+        max-width: min(
+          var(--picker-dialog-max-width, var(--picker-dialog-maxmax-width)),
+          var(--picker-dialog-maxmax-width)
+        );
+        max-height: min(
+          var(--picker-dialog-max-height, var(--picker-dialog-maxmax-height)),
+          var(--picker-dialog-maxmax-height)
+        );
         padding: 0;
         background: var(--picker-popup-background-color);
         border: var(--picker-dialog-border-width) solid
@@ -148,10 +166,10 @@ const css = /* css */ `
         /* overscroll-behavior: contain; */
 
         &[data-expand-x] {
-          width: var(--picker-dialog-max-width);
+          width: var(--picker-dialog-maxmax-width);
         }
         &[data-expand-y] {
-          height: var(--picker-dialog-max-height);
+          height: var(--picker-dialog-maxmax-height);
         }
 
         &[open] {
