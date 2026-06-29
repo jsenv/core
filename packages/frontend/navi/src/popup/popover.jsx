@@ -7,7 +7,7 @@ import {
   trapScrollInside,
   visibleRectEffect,
 } from "@jsenv/dom";
-import { useId, useRef, useState } from "preact/hooks";
+import { useEffect, useId, useRef } from "preact/hooks";
 
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import { Box } from "../box/box.jsx";
@@ -46,6 +46,8 @@ const css = /* css */ `
 export const Popover = (props) => {
   import.meta.css = css;
   const {
+    open: openProp = false,
+    anchorRef,
     scrollTrap,
     pointerTrap,
     focusTrap,
@@ -68,9 +70,8 @@ export const Popover = (props) => {
   const debugFocus = useDebugFocus();
   const autoFocusProps = useAutoFocus(ref, props.autoFocus);
 
-  const [opened, setOpened] = useState(false);
-  const openedRef = useRef(opened);
-  openedRef.current = opened;
+  const openedRef = useRef(openProp);
+  openedRef.current = openProp;
   const [addCleanup, cleanup] = useCleanup();
   const open = (e, { anchor }) => {
     debugPopup(e, `openPopover()`);
@@ -161,7 +162,6 @@ export const Popover = (props) => {
       rectEffect.disconnect();
     });
     openedRef.current = true;
-    setOpened(true);
     dispatchCustomEvent(popoverEl, "navi_open", {
       event: e,
       focusedBeforeOpen,
@@ -174,7 +174,6 @@ export const Popover = (props) => {
     popoverEl.hidePopover();
     cleanup();
     openedRef.current = false;
-    setOpened(false);
     dispatchCustomEvent(popoverEl, "navi_close", {
       event: e,
       ...detail,
@@ -219,6 +218,17 @@ export const Popover = (props) => {
     }
     close(e, detail);
   };
+
+  useEffect(() => {
+    if (openProp === undefined) return;
+    const e = new CustomEvent("open_prop_change");
+    if (openProp) {
+      onRequestOpen(e, { anchor: anchorRef?.current ?? null });
+    } else {
+      onRequestClose(e);
+    }
+  }, [openProp]);
+
   return (
     <Box
       id={id}

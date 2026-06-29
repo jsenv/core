@@ -4,7 +4,7 @@ import {
   snapToPixel,
   trapScrollInside,
 } from "@jsenv/dom";
-import { useRef } from "preact/hooks";
+import { useEffect, useRef } from "preact/hooks";
 
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import { Box } from "../box/box.jsx";
@@ -26,6 +26,7 @@ const css = /* css */ `
       margin-top: var(--dialog-top-inset, auto);
       margin-bottom: auto;
       flex-direction: column;
+      transition: margin-top 0.1s ease-in-out;
     }
 
     &::backdrop {
@@ -37,6 +38,7 @@ const css = /* css */ `
 export const Dialog = (props) => {
   import.meta.css = css;
   const {
+    open: openProp = false,
     children,
     scrollTrap,
     pointerTrap,
@@ -50,7 +52,8 @@ export const Dialog = (props) => {
   const debugFocus = useDebugFocus();
   const autoFocusProps = useAutoFocus(ref, props.autoFocus);
 
-  const openedRef = useRef(false);
+  const openedRef = useRef(openProp);
+  openedRef.current = openProp;
   const [addCleanup, cleanup] = useCleanup();
   const open = (e, { anchor }) => {
     const effectiveAnchor = anchor || document.documentElement;
@@ -167,10 +170,21 @@ export const Dialog = (props) => {
     close(e, detail);
   };
 
+  useEffect(() => {
+    if (openProp === undefined) return;
+    const e = new CustomEvent("open_prop_change");
+    if (openProp) {
+      onRequestOpen(e, { anchor: null });
+    } else {
+      onRequestClose(e);
+    }
+  }, [openProp]);
+
   return (
     <Box
       {...rest}
       {...autoFocusProps}
+      anchorRef={undefined}
       as="dialog"
       ref={ref}
       baseClassName="navi_dialog"

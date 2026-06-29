@@ -457,6 +457,8 @@ const PickerCustom = (props) => {
       children,
     });
     Object.assign(popupProps, {
+      anchorRef: props.ref, // used only by popover but could be useful to dialog
+      open: Boolean(expanded),
       closeRequestHandler: (
         requestCloseEvent,
         closePermission,
