@@ -1,5 +1,6 @@
 import { signal } from "@preact/signals";
 import { useEffect, useRef } from "preact/hooks";
+import { navIntegratedVia } from "@jsenv/navi";
 
 const TYPE_COLORS = {
   initial: { bg: "#f1f5f9", text: "#64748b", label: "initial" },
@@ -53,30 +54,38 @@ const relativeUrl = (url) => {
 const history = window.history;
 export const NavInspect = () => {
   useEffect(() => {
-    // Patch history.pushState / replaceState to intercept via_history.js calls.
-    // When via_navigation.js is adopted, replace this with a "navigate" event
-    // listener on window.navigation instead.
-    const origPush = history.pushState.bind(history);
-    history.pushState = (state, title, url) => {
-      origPush(state, title, url);
-      addEntry("push", String(url ?? window.location.href), state);
-    };
+    if (navIntegratedVia === "browser_history_api") {
+      const origPush = history.pushState.bind(history);
+      history.pushState = (state, title, url) => {
+        origPush(state, title, url);
+        addEntry("push", String(url ?? window.location.href), state);
+      };
 
-    const origReplace = history.replaceState.bind(history);
-    history.replaceState = (state, title, url) => {
-      origReplace(state, title, url);
-      addEntry("replace", String(url ?? window.location.href), state);
-    };
+      const origReplace = history.replaceState.bind(history);
+      history.replaceState = (state, title, url) => {
+        origReplace(state, title, url);
+        addEntry("replace", String(url ?? window.location.href), state);
+      };
 
-    const onPopstate = (e) => {
-      addEntry("traverse", window.location.href, e.state);
-    };
-    window.addEventListener("popstate", onPopstate);
+      const onPopstate = (e) => {
+        addEntry("traverse", window.location.href, e.state);
+      };
+      window.addEventListener("popstate", onPopstate);
 
+      return () => {
+        history.pushState = origPush;
+        history.replaceState = origReplace;
+        window.removeEventListener("popstate", onPopstate);
+      };
+    }
+
+    // Navigation API (future via_navigation.js integration)
+    const onNavigate = (e) => {
+      addEntry(e.navigationType, e.destination.url, e.destination.getState?.());
+    };
+    window.navigation.addEventListener("navigate", onNavigate);
     return () => {
-      history.pushState = origPush;
-      history.replaceState = origReplace;
-      window.removeEventListener("popstate", onPopstate);
+      window.navigation.removeEventListener("navigate", onNavigate);
     };
   }, []);
 
