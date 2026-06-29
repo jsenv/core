@@ -56,6 +56,25 @@ const css = /* css */ `
   }
 `;
 
+/**
+ * @type {import("preact").FunctionComponent<{
+ *   children?: number | string,
+ *   unit?: string,
+ *   unitPosition?: "right" | "bottom",
+ *   unitSize?: string,
+ *   unitSizeRatio?: number,
+ *   unitColor?: string,
+ *   label?: string,
+ *   size?: string,
+ *   lang?: string,
+ *   integer?: boolean,
+ *   loading?: boolean,
+ *   readOnly?: boolean,
+ *   disabled?: boolean,
+ *   bold?: boolean,
+ *   [key: string]: any,
+ * }>}
+ */
 export const Quantity = ({
   children,
   unit,

@@ -1,6 +1,19 @@
 import { naviI18n } from "./navi_i18n.js";
 import { Text } from "./text.jsx";
 
+/**
+ * @type {import("preact").FunctionComponent<{
+ *   unit: string,
+ *   plural?: boolean,
+ *   format?: "long" | "short" | "narrow",
+ *   lang?: string,
+ *   label?: string,
+ *   size?: string,
+ *   sizeRatio?: number,
+ *   style?: import("preact").JSX.CSSProperties,
+ *   [key: string]: any,
+ * }>}
+ */
 export const Unit = ({
   unit,
   plural,
