@@ -66,9 +66,14 @@ export const setupBrowserIntegrationViaHistory = ({
     const isSameUrl = url === window.location.href;
 
     if (navigationType === "push" || navigationType === "replace") {
-      // Pre-merge visited URLs so push/replaceState is called only once.
+      // Merge onto the current state so existing useNavState entries (e.g. an
+      // open dialog/popover) survive URL changes triggered by signal updates.
+      // "traverse" is intentionally excluded: it restores the exact historical
+      // state from the history entry, which is the source of truth for back/forward.
+      const currentState = getDocumentState() || {};
       markUrlAsVisited(url);
       const effectiveState = {
+        ...currentState,
         ...(state || {}),
         jsenv_visited_urls: Array.from(visitedUrlSet),
       };
