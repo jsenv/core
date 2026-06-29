@@ -165,6 +165,9 @@ export const Dialog = (props) => {
       };
       closeRequestHandler(e, closePermission, detail);
       if (denied) {
+        if (e.type === "cancel") {
+          e.preventDefault();
+        }
         closePermission.allow = () => {
           close(e, detail);
         };
@@ -220,9 +223,6 @@ export const Dialog = (props) => {
         }
       }}
       onCancel={(e) => {
-        // The browser fires "cancel" (then closes the dialog) when the user presses Escape.
-        // Prevent the native close so we control the close flow and dispatch navi_dialog_close.
-        e.preventDefault();
         onRequestClose(e);
       }}
       onnavi_request_open={(e) => {
