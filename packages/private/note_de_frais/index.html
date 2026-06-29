@@ -452,7 +452,7 @@
               <td class="no-print"></td>
             </tr>
             <tr class="total-row">
-              <td colspan="4" id="total-indemnite-label">Indemnité totale (0,606 €/km)</td>
+              <td colspan="4" id="total-indemnite-label">Indemnité totale</td>
               <td class="col-dist" id="total-indemnite">0,00 €</td>
               <td class="no-print"></td>
             </tr>
@@ -615,8 +615,7 @@
 
         const rate = parseFloat($("inp-rate").value.replace(",", ".")) || 0;
         const indemnite = totalKm * rate;
-        const rateLabel = rate.toFixed(3).replace(".", ",");
-        $("total-indemnite-label").textContent = `Indemnité totale (${rateLabel} €/km)`;
+        $("total-indemnite-label").textContent = "Indemnité totale";
         $("total-indemnite").textContent = `${indemnite.toFixed(2).replace(".", ",")} €`;
       }
 
