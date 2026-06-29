@@ -136,8 +136,8 @@ const css = /* css */ `
     .navi_list_scroll_container {
       width: inherit;
       min-width: inherit;
-      max-width: inherit;
-      max-height: var(--list-max-height);
+      max-width: var(--list-max-width, inherit);
+      max-height: var(--list-max-height, inherit);
       overflow: auto;
       overscroll-behavior: inherit; /* inherit select behavior */
     }
@@ -412,7 +412,6 @@ const ListUI = (props) => {
     popover,
     expandX,
     expand,
-    maxHeight,
     onListVisibleItemsChange,
     virtualItemSize,
     lockSize,
@@ -503,7 +502,6 @@ const ListUI = (props) => {
       data-expand-x={expandX || expand ? "" : undefined}
       expandX={expandX}
       expand={expand}
-      maxHeight={maxHeight}
       styleCSSVars={LIST_STYLE_CSS_VARS}
       pseudoClasses={LIST_PSEUDO_CLASSES}
       hasChildUsingForwardedProps
@@ -574,7 +572,6 @@ const ListFirstResolver = (props) => {
  *   spacing?: string,
  *   expandX?: boolean,
  *   expand?: boolean,
- *   maxHeight?: string | number,
  *   children?: import("preact").ComponentChildren,
  *   [key: string]: any,
  * }>}
@@ -626,6 +623,7 @@ const ListContent = ({
 };
 const LIST_STYLE_CSS_VARS = {
   maxHeight: "--list-max-height",
+  maxWidth: "--list-max-width",
   borderColor: "--list-border-color",
   borderRadius: "--list-border-radius",
   borderWidth: "--list-border-width",
