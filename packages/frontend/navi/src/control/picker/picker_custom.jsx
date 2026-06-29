@@ -1,8 +1,9 @@
 import { dispatchCustomEvent, findEvent } from "@jsenv/dom";
-import { useId, useRef, useState } from "preact/hooks";
+import { useEffect, useId, useRef } from "preact/hooks";
 
 import { createOnKeyDownForShortcuts } from "@jsenv/navi/src/keyboard/keyboard_shortcuts.js";
 import { windowWidthSignal } from "@jsenv/navi/src/layout/responsive.js";
+import { useNavState } from "@jsenv/navi/src/nav/browser_integration/browser_integration.js";
 import { useDebugFocus, useDebugPopup } from "@jsenv/navi/src/navi_debug.jsx";
 import { Dialog } from "@jsenv/navi/src/popup/dialog.jsx";
 import { Popover } from "@jsenv/navi/src/popup/popover.jsx";
@@ -299,8 +300,9 @@ const PickerCustom = (props) => {
   const popupRef = useRef(null);
   popupProps.ref = popupRef;
   // aria-controls + id
+  const autoId = useId();
+  const popupId = `picker_popup_${autoId}`;
   id: {
-    const popupId = useId();
     Object.assign(pickerProps, {
       "aria-controls": popupId,
     });
@@ -312,9 +314,17 @@ const PickerCustom = (props) => {
   open_close: {
     const debugFocus = useDebugFocus();
     const debugPopup = useDebugPopup();
-    const [expanded, setExpanded] = useState(false);
-    const expandedRef = useRef(expanded);
-    expandedRef.current = expanded;
+    // pickerStateId is stable: uses props.name if provided, otherwise a component-instance id.
+    // In "dialog" mode, setExpanded(true) pushes a history entry so the back button closes.
+    // In "popover" mode, it replaces the current history state (no history entry added).
+    const pickerNavType = mode === "dialog" ? "push" : "replace";
+    const [expanded, setExpanded, clearExpanded] = useNavState(popupId, false, {
+      type: pickerNavType,
+    });
+    // expandedRef tracks whether the popup is actually open (set in onOpen / onClose).
+    // It is NOT auto-synced to `expanded` so that the useEffect below can detect
+    // when `expanded` goes false externally (back button) while the popup is still open.
+    const expandedRef = useRef(false);
     const valueAtOpenRef = useRef(null);
     const activeElementAtOpenRef = useRef(null);
 
@@ -375,7 +385,10 @@ const PickerCustom = (props) => {
         }
       }
       expandedRef.current = false;
-      setExpanded(false);
+      // clearExpanded() handles the right navigation internally:
+      // push mode (dialog) → navBack() to pop the history entry;
+      // replace mode (popover) → replaceState to remove the key.
+      clearExpanded();
       // Reset so the next opening re-evaluates screen size
       defaultModeRef.current = null;
       restoreFocus(e);
@@ -403,6 +416,14 @@ const PickerCustom = (props) => {
         isCancel,
       });
     };
+
+    // When `expanded` goes false externally (e.g. user presses the browser back
+    // button), close the popup if it is still physically open.
+    useEffect(() => {
+      if (!expanded && expandedRef.current) {
+        requestClose(new PopStateEvent("popstate"));
+      }
+    }, [expanded]);
 
     const requestInteraction = (options) => {
       dispatchRequestInteraction(ref.current, options);

@@ -8,6 +8,7 @@ import {
   windowIsLoadingSignal,
   workingWhile,
 } from "./document_loading_signal.js";
+import { documentStateSignal } from "./document_state_signal.js";
 import { documentUrlSignal } from "./document_url_signal.js";
 import { setupBrowserIntegrationViaHistory } from "./via_history.js";
 
@@ -158,76 +159,59 @@ if (import.meta.hot) {
   });
 }
 
-const NOT_SET = {};
 const NO_OP = () => {};
 const NO_ID_GIVEN = [undefined, NO_OP, NO_OP];
-const useNavStateBasic = (id, initialValue, { debug } = {}) => {
-  const navStateRef = useRef(NOT_SET);
+const useNavStateBasic = (id, initialValue, { debug, type = "replace" } = {}) => {
   if (!id) {
     return NO_ID_GIVEN;
   }
 
-  if (navStateRef.current === NOT_SET) {
-    const documentState = browserIntegration.getDocumentState();
-    const valueInDocumentState = documentState ? documentState[id] : undefined;
-    if (valueInDocumentState === undefined) {
-      navStateRef.current = initialValue;
-      if (initialValue !== undefined) {
-        console.debug(
-          `useNavState(${id}) initial value is ${initialValue} (from initialValue passed in as argument)`,
-        );
-      }
-    } else {
-      navStateRef.current = valueInDocumentState;
-      if (debug) {
-        console.debug(
-          `useNavState(${id}) initial value is ${initialValue} (from nav state)`,
-        );
-      }
-    }
+  // Reading documentStateSignal.value subscribes the component to state changes,
+  // so it re-renders whenever the browser state changes (back/forward, programmatic update).
+  const state = documentStateSignal.value;
+  const valueInState = state !== null ? state[id] : undefined;
+  const currentValue = valueInState !== undefined ? valueInState : initialValue;
+
+  if (debug) {
+    console.debug(`useNavState(${id}) current value is ${currentValue}`);
   }
 
   const set = (value) => {
-    const currentValue = navStateRef.current;
     if (typeof value === "function") {
       value = value(currentValue);
     }
-    if (debug) {
-      console.debug(
-        `useNavState(${id}) set ${value} (previous was ${currentValue})`,
-      );
-    }
-
     const currentState = browserIntegration.getDocumentState() || {};
-
     if (value === undefined) {
-      if (!Object.hasOwn(currentState, id)) {
-        return;
+      if (!Object.hasOwn(currentState, id)) return;
+      if (type === "push") {
+        // The value was added via pushState → go back to pop that history entry.
+        browserIntegration.navBack();
+      } else {
+        const newState = { ...currentState };
+        delete newState[id];
+        browserIntegration.replaceDocumentState(newState, {
+          reason: `delete "${id}" from browser state`,
+        });
       }
-      delete currentState[id];
-      browserIntegration.replaceDocumentState(currentState, {
-        reason: `delete "${id}" from browser state`,
+      return;
+    }
+    const valueInCurrentState = currentState[id];
+    if (valueInCurrentState === value) return;
+    const newState = { ...currentState, [id]: value };
+    if (type === "push") {
+      // Use the internal navTo (bypasses the url === currentUrl guard in the
+      // exported navTo) to push a state-only history entry on the same URL.
+      browserIntegration.navTo(window.location.href, {
+        state: newState,
       });
-      return;
+    } else {
+      browserIntegration.replaceDocumentState(newState, {
+        reason: `set { ${id}: ${value} } in browser state`,
+      });
     }
-
-    const valueInBrowserState = currentState[id];
-    if (valueInBrowserState === value) {
-      return;
-    }
-    currentState[id] = value;
-    browserIntegration.replaceDocumentState(currentState, {
-      reason: `set { ${id}: ${value} } in browser state`,
-    });
   };
 
-  return [
-    navStateRef.current,
-    set,
-    () => {
-      set(undefined);
-    },
-  ];
+  return [currentValue, set, () => set(undefined)];
 };
 
 export const useNavState = import.meta.dev
