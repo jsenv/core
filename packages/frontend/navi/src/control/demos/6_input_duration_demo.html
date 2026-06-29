@@ -569,6 +569,10 @@
                     <Text bold>Enter a duration</Text>
                     <InputDuration
                       value={pickerSignal.value}
+                      min="15min"
+                      max="4h30"
+                      step="5min"
+                      required
                       uiAction={(v) => {
                         pickerSignal.value = v;
                       }}
@@ -686,7 +690,11 @@
               </span>
               <Form action={(v) => push("action", v)}>
                 <Box flex="x" spacing="s" alignX="start">
-                  <InputDuration name="duration" max="59min" defaultValue="5min" />
+                  <InputDuration
+                    name="duration"
+                    max="59min"
+                    defaultValue="5min"
+                  />
                   <Button type="submit">Submit</Button>
                 </Box>
               </Form>
