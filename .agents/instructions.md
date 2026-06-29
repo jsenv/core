@@ -64,7 +64,9 @@
 #### JSDoc
 
 - Use `@type {import("preact").FunctionComponent<{ ... }>}` on exported components so VSCode can autocomplete prop types
-- See `packages/frontend/navi/src/control/list/list.jsx` for a reference example
+- For non-obvious props, add `@param` entries after the `@type` block to provide textual descriptions — VSCode shows both in the hover tooltip
+- See `packages/frontend/navi/src/control/list/list.jsx` for a `@type`-only reference example
+- See `packages/frontend/navi/src/text/text.jsx` for a combined `@type` + `@param` example
 
 ### CSS
 
