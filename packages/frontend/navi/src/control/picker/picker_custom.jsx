@@ -131,6 +131,15 @@ const css = /* css */ `
         cursor: default; /* Reset pointer cursor within the select */
         /* overscroll-behavior: contain; */
 
+        &[data-expand-x] {
+          width: 100dvw;
+          max-width: 100dvw;
+        }
+        &[data-expand-y] {
+          height: 100dvh;
+          max-height: 100dvh;
+        }
+
         &[open] {
           display: flex;
           flex-direction: column;
@@ -677,7 +686,18 @@ const PickerContentInsidePopover = (props) => {
 
 const PickerContentInsideDialog = (props) => {
   const Next = useNextResolver();
-  const { popupProps, children, scrollTrap, pointerTrap, ...rest } = props;
+  const {
+    popupProps,
+    children,
+    scrollTrap,
+    pointerTrap,
+    dialogExpand,
+    dialogExpandX,
+    dialogExpandY,
+    ...rest
+  } = props;
+  const expandX = dialogExpand || dialogExpandX;
+  const expandY = dialogExpand || dialogExpandY;
 
   return (
     <Next aria-haspopup="dialog" {...rest}>
@@ -688,6 +708,8 @@ const PickerContentInsideDialog = (props) => {
         pointerTrap={pointerTrap}
         centerInVisualViewport
         autoFocus="fallback"
+        data-expand-x={expandX ? "" : undefined}
+        data-expand-y={expandY ? "" : undefined}
       >
         {children}
       </Dialog>

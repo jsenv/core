@@ -310,37 +310,6 @@ const css = /* css */ `
   }
 `;
 
-/**
- * A button-like trigger that opens a picker when clicked.
- *
- * Use the `type` prop to choose what kind of picker to open:
- *   "date"      — calendar day
- *   "month"    — year + month
- *   "week"     — ISO week
- *   "time"     — hours + minutes
- *   "datetime" — date + time
- *   "color"    — color chooser
- *   "hour"     — fixed time slots (derived from min/max/step)
- *
- * When `children` are provided, the picker opens a popover or dialog instead
- * of the browser-native picker. On small screens a dialog is used automatically;
- * on larger screens a popover is used. Pass `mode="dialog"` or `mode="popover"`
- * to force one. The children are rendered inside the popup.
- *
- * Props:
- *   type        — picker variant (see above)
- *   value       — controlled value
- *   uiAction    — called with the new value when the user picks one
- *   name        — form field name
- *   placeholder — shown when no value is selected
- *   required    — marks the field as required
- *   min         — minimum allowed value; accepts a Date or a raw string
- *   max         — maximum allowed value; accepts a Date or a raw string
- *   step        — step interval
- *   disabled    — disables the picker
- *   children    — content to display inside the popup (enables popover/dialog mode)
- *   mode        — "popover" or "dialog"; auto-detected from screen size when omitted
- */
 const PickerButton = (props) => {
   import.meta.css = css;
   if (typeof props.maxLines === "string") {
@@ -633,6 +602,43 @@ const PickerFirstResolver = (props) => {
 
   return <Next {...props} />;
 };
+
+/**
+ * A button-like trigger that opens a picker when clicked.
+ *
+ * Use the `type` prop to choose what kind of picker to open:
+ *   "date"      — calendar day
+ *   "month"    — year + month
+ *   "week"     — ISO week
+ *   "time"     — hours + minutes
+ *   "datetime" — date + time
+ *   "color"    — color chooser
+ *   "hour"     — fixed time slots (derived from min/max/step)
+ *
+ * When `children` are provided, the picker opens a popover or dialog instead
+ * of the browser-native picker. On small screens a dialog is used automatically;
+ * on larger screens a popover is used. Pass `mode="dialog"` or `mode="popover"`
+ * to force one. The children are rendered inside the popup.
+ *
+ * Props:
+ *   type          — picker variant (see above)
+ *   value         — controlled value
+ *   uiAction      — called with the new value when the user picks one
+ *   name          — form field name
+ *   placeholder   — shown when no value is selected
+ *   required      — marks the field as required
+ *   min           — minimum allowed value; accepts a Date or a raw string
+ *   max           — maximum allowed value; accepts a Date or a raw string
+ *   step          — step interval
+ *   disabled      — disables the picker
+ *   children      — content to display inside the popup (enables popover/dialog mode)
+ *   mode          — "popover" or "dialog"; auto-detected from screen size when omitted
+ *
+ * Dialog sizing (only apply when mode="dialog" or auto-selected as dialog):
+ *   dialogExpand  — makes the dialog fill the full viewport width and height
+ *   dialogExpandX — makes the dialog fill the full viewport width
+ *   dialogExpandY — makes the dialog fill the full viewport height
+ */
 export const Picker = createComponentResolver([
   PickerFirstResolver,
   PickerPresetResolver,
