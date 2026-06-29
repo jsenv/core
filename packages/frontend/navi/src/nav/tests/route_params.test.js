@@ -400,4 +400,48 @@ await snapshotTests(import.meta.url, ({ test }) => {
       globalSignalRegistry.clear();
     }
   });
+
+  // Same scenario but with citySignal connected as a searchParam of CITY_ROUTE.
+  // The signal is set programmatically (not via URL) and must survive
+  // navigation back to home even though it is bound to the non-matching route.
+  test("user choice in route searchParam signal survives navigation back to home", () => {
+    const citySignal = stateSignal(undefined);
+    const HOME_ROUTE = route("/");
+    const CITY_ROUTE = route("/city-selection/", {
+      searchParams: { city: citySignal },
+    });
+    const { updateRoutes, clearRoutes } = setupRoutes([
+      HOME_ROUTE,
+      CITY_ROUTE,
+    ]);
+
+    try {
+      // Start on home
+      updateRoutes("http://localhost:3000/");
+      const onHome = { city: citySignal.value };
+
+      // Navigate to city selection page (no city in URL yet)
+      updateRoutes("http://localhost:3000/city-selection/");
+      const onCityPage = { city: citySignal.value };
+
+      // User picks a city via UI (signal updated, not reflected in URL)
+      citySignal.value = "Paris";
+      const afterPicking = { city: citySignal.value };
+
+      // User navigates back to home
+      updateRoutes("http://localhost:3000/");
+      const backOnHome = { city: citySignal.value };
+
+      return {
+        on_home: onHome,
+        on_city_page: onCityPage,
+        after_picking: afterPicking,
+        // Expected: "Paris" — must not be reset by the !newMatching logic
+        back_on_home: backOnHome,
+      };
+    } finally {
+      clearRoutes();
+      globalSignalRegistry.clear();
+    }
+  });
 });
