@@ -19,9 +19,8 @@ document.body.removeChild(button);
 const css = /* css */ `
   @layer navi {
     :root {
-      /* Overridden at runtime by the effect below with precise VisualViewport
-         pixel values so that dvw/dvh (which don't track the virtual keyboard on
-         iOS Safari) are never used in practice on supported browsers. */
+      /* Overridden at runtime with precise VisualViewport pixel values so that dvw/dvh 
+      (which don't track the virtual keyboard dimensions) are never used in practice on supported browsers. */
       --navi-visual-viewport-width: 100dvw;
       --navi-visual-viewport-height: 100dvh;
 
