@@ -329,6 +329,10 @@
         <div class="editor-section">
           <h2>Informations personnelles</h2>
           <div class="field">
+            <label>Taux d'indemnité kilométrique (€/km)</label>
+            <input id="inp-rate" type="number" step="0.001" value="0.606" />
+          </div>
+          <div class="field">
             <label>Nom</label>
             <input id="inp-name" value="DAMIEN MAILLARD" />
           </div>
@@ -399,6 +403,7 @@
         <button class="btn-primary" onclick="generateRows()">
           Générer les trajets
         </button>
+        <span id="gen-error" style="color:#c0392b;font-size:12px"></span>
         <button class="btn-print" onclick="window.print()">
           🖨 Imprimer / Exporter PDF
         </button>
@@ -442,8 +447,13 @@
           <tbody id="trips-body"></tbody>
           <tfoot>
             <tr class="total-row">
-              <td colspan="4">Total</td>
+              <td colspan="4">Total kilométrique</td>
               <td class="col-dist" id="total-km">0 km</td>
+              <td class="no-print"></td>
+            </tr>
+            <tr class="total-row">
+              <td colspan="4" id="total-indemnite-label">Indemnité totale (0,606 €/km)</td>
+              <td class="col-dist" id="total-indemnite">0,00 €</td>
               <td class="no-print"></td>
             </tr>
           </tfoot>
@@ -506,6 +516,7 @@
         $("doc-date").textContent = d ? formatDate(d) : "";
       });
       $("inp-month").addEventListener("input", updateTitle);
+      $("inp-rate").addEventListener("input", updateTotal);
 
       function updateTitle() {
         const monthVal = $("inp-month").value;
@@ -518,12 +529,100 @@
       }
       updateTitle();
 
+      // ---- Generate rows ----
+      // Exposed on window so inline onclick attributes can call them.
+      window.generateRows = () => {
+        const start = parseDateInput($("inp-start").value);
+        const end = parseDateInput($("inp-end").value);
+        if (!start || !end || start > end) {
+          $("gen-error").textContent = "Veuillez saisir une plage de dates valide.";
+          return;
+        }
+        $("gen-error").textContent = "";
+        const dest = $("inp-dest").value.trim();
+        const entreprise = $("inp-entreprise").value.trim();
+        const comment = $("inp-comment").value.trim();
+        const dist = $("inp-dist").value.trim();
+        const skipWeekends = $("skip-weekends").checked;
+
+        const tbody = $("trips-body");
+        tbody.innerHTML = "";
+
+        const startTime = start.getTime();
+        const endTime = end.getTime();
+        const dayMs = 24 * 60 * 60 * 1000;
+        for (let t = startTime; t <= endTime; t += dayMs) {
+          const d = new Date(t);
+          const dow = d.getDay();
+          if (!skipWeekends || (dow !== 0 && dow !== 6)) {
+            tbody.appendChild(createRow(formatDate(d), dest, entreprise, comment, dist));
+          }
+        }
+        updateTotal();
+      };
+
+      window.addEmptyRow = () => {
+        $("trips-body").appendChild(createRow("", "", "", "", ""));
+        updateTotal();
+      };
+
+      window.deleteRow = (btn) => {
+        btn.closest("tr").remove();
+        updateTotal();
+      };
+
+      window.resetDocument = () => {
+        // eslint-disable-next-line no-alert
+        if (!window.confirm("Réinitialiser le document ? Les trajets seront supprimés.")) {
+          return;
+        }
+        $("trips-body").innerHTML = "";
+        updateTotal();
+      };
+
+      function createRow(date, dest, entreprise, comment, dist) {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td contenteditable="true">${escHtml(date)}</td>
+          <td contenteditable="true">${escHtml(dest)}</td>
+          <td contenteditable="true">${escHtml(entreprise)}</td>
+          <td contenteditable="true">${escHtml(comment)}</td>
+          <td contenteditable="true" class="col-dist">${escHtml(dist)}</td>
+          <td class="row-actions no-print">
+            <button class="btn-del" title="Supprimer" onclick="deleteRow(this)">×</button>
+          </td>
+        `;
+        tr.querySelectorAll("td[contenteditable]").forEach((td) => {
+          td.addEventListener("input", updateTotal);
+        });
+        return tr;
+      }
+
+      function updateTotal() {
+        let totalKm = 0;
+        $("trips-body").querySelectorAll("tr").forEach((tr) => {
+          const distCell = tr.querySelector(".col-dist");
+          if (distCell) {
+            const val = parseFloat(distCell.textContent.replace(",", "."));
+            if (!isNaN(val)) {
+              totalKm += val;
+            }
+          }
+        });
+
+        const kmLabel = totalKm % 1 === 0 ? `${totalKm} km` : `${totalKm.toFixed(1)} km`;
+        $("total-km").textContent = kmLabel;
+
+        const rate = parseFloat($("inp-rate").value.replace(",", ".")) || 0;
+        const indemnite = totalKm * rate;
+        const rateLabel = rate.toFixed(3).replace(".", ",");
+        $("total-indemnite-label").textContent = `Indemnité totale (${rateLabel} €/km)`;
+        $("total-indemnite").textContent = `${indemnite.toFixed(2).replace(".", ",")} €`;
+      }
+
       // ---- Helpers ----
       function toISODate(d) {
-        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
-          2,
-          "0",
-        )}-${String(d.getDate()).padStart(2, "0")}`;
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
       }
       function toISOMonth(d) {
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -536,9 +635,13 @@
         return new Date(y, m - 1, day);
       }
       function formatDate(d) {
-        return `${String(d.getDate()).padStart(2, "0")}/${String(
-          d.getMonth() + 1,
-        ).padStart(2, "0")}/${d.getFullYear()}`;
+        return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+      }
+      function escHtml(str) {
+        return String(str)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;");
       }
     </script>
   </body>
