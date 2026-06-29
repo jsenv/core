@@ -53,8 +53,10 @@ export const Dialog = (props) => {
   const debugFocus = useDebugFocus();
   const autoFocusProps = useAutoFocus(ref, props.autoFocus);
 
-  const openedRef = useRef(openProp);
-  openedRef.current = openProp;
+  // Tracks actual DOM state (open/closed), updated only by open() and close().
+  // Intentionally NOT synced to openProp on every render so the useEffect guard
+  // below can detect whether a prop change requires action.
+  const openedRef = useRef(false);
   const [addCleanup, cleanup] = useCleanup();
   const open = (e) => {
     const anchor = anchorRef?.current ?? null;
