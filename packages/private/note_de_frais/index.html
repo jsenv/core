@@ -1,0 +1,545 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Note de frais kilométrique</title>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      /* ===================== SCREEN ===================== */
+      body {
+        color: #222;
+        font-size: 13px;
+        font-family: Arial, sans-serif;
+        background: #e8ecf0;
+      }
+
+      /* ---- Editor panel ---- */
+      #editor {
+        max-width: 900px;
+        margin: 16px auto;
+        padding: 20px 24px;
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+      }
+      #editor h1 {
+        margin-bottom: 16px;
+        padding-bottom: 8px;
+        color: #2a6496;
+        font-size: 16px;
+        border-bottom: 2px solid #d0dce8;
+      }
+      .editor-grid {
+        display: grid;
+        margin-bottom: 16px;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+      }
+      .editor-section h2 {
+        margin-bottom: 10px;
+        padding-bottom: 4px;
+        color: #666;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border-bottom: 1px solid #eee;
+      }
+      .field {
+        display: flex;
+        margin-bottom: 8px;
+        flex-direction: column;
+        gap: 3px;
+      }
+      .field label {
+        color: #555;
+        font-weight: bold;
+        font-size: 11px;
+      }
+      .field input,
+      .field select {
+        width: 100%;
+        padding: 5px 8px;
+        font-size: 13px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        outline: none;
+        transition: border-color 0.15s;
+      }
+      .field input:focus,
+      .field select:focus {
+        border-color: #2a6496;
+        box-shadow: 0 0 0 2px rgba(42, 100, 150, 0.12);
+      }
+      .field-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+      .field-row-3 {
+        display: grid;
+        grid-template-columns: 1fr 1fr 80px;
+        gap: 8px;
+      }
+      .checkbox-row {
+        display: flex;
+        margin-top: 4px;
+        align-items: center;
+        gap: 6px;
+        color: #444;
+        font-size: 12px;
+      }
+      .checkbox-row input[type="checkbox"] {
+        width: 14px;
+        height: 14px;
+        accent-color: #2a6496;
+      }
+      .editor-actions {
+        display: flex;
+        margin-top: 4px;
+        padding-top: 12px;
+        align-items: center;
+        gap: 10px;
+        border-top: 1px solid #eee;
+      }
+      button {
+        padding: 8px 18px;
+        font-weight: bold;
+        font-size: 13px;
+        border: none;
+        border-radius: 5px;
+        transition:
+          background 0.15s,
+          transform 0.1s;
+        cursor: pointer;
+      }
+      button:active {
+        transform: scale(0.97);
+      }
+      .btn-primary {
+        color: #fff;
+        background: #2a6496;
+      }
+      .btn-primary:hover {
+        background: #1e4f78;
+      }
+      .btn-secondary {
+        color: #333;
+        background: #e2e8f0;
+      }
+      .btn-secondary:hover {
+        background: #cbd5e1;
+      }
+      .btn-print {
+        margin-left: auto;
+        color: #fff;
+        background: #217a3c;
+      }
+      .btn-print:hover {
+        background: #195e2d;
+      }
+
+      /* ---- Document wrapper ---- */
+      #doc-wrapper {
+        max-width: 900px;
+        margin: 0 auto 40px;
+      }
+
+      /* ---- Document ---- */
+      #document {
+        width: 100%;
+        padding: 28mm 24mm;
+        background: #fff;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+      }
+
+      /* ===================== DOCUMENT STYLES (screen + print) ===================== */
+      .doc-title {
+        margin-bottom: 24px;
+        color: #2a6496;
+        font-weight: bold;
+        font-size: 18px;
+        text-align: center;
+        line-height: 1.3;
+        outline: none;
+      }
+      .doc-header {
+        display: flex;
+        margin-bottom: 24px;
+        align-items: flex-start;
+        justify-content: space-between;
+      }
+      .doc-header-left div,
+      .doc-header-right {
+        min-width: 1ch;
+        outline: none;
+      }
+      .doc-header-left div {
+        line-height: 1.6;
+      }
+      .doc-made-on {
+        color: #555;
+      }
+
+      .doc-section-title {
+        display: inline-block;
+        min-width: 1ch;
+        margin-bottom: 10px;
+        font-weight: bold;
+        outline: none;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      thead tr {
+        background: #4a9dc9;
+      }
+      th {
+        padding: 9px 10px;
+        color: #fff;
+        font-weight: bold;
+        font-size: 12px;
+        text-align: left;
+        white-space: nowrap;
+      }
+      th.col-dist,
+      td.col-dist {
+        text-align: right;
+      }
+      td {
+        min-height: 24px;
+        padding: 7px 10px;
+        font-size: 12.5px;
+        line-height: 1.4;
+        vertical-align: top;
+        border-bottom: 1px solid #e8e8e8;
+        outline: none;
+      }
+      td[contenteditable="true"]:focus {
+        background: #f0f6ff;
+      }
+      tr:last-child td {
+        border-bottom: none;
+      }
+      .row-actions {
+        width: 28px;
+        padding: 2px 4px;
+        vertical-align: middle;
+      }
+      .btn-del {
+        padding: 2px 4px;
+        color: #c0392b;
+        font-weight: bold;
+        font-size: 16px;
+        line-height: 1;
+        background: none;
+        border: none;
+        border-radius: 3px;
+        cursor: pointer;
+      }
+      .btn-del:hover {
+        background: #fde8e8;
+      }
+
+      .table-footer {
+        display: flex;
+        margin-top: 10px;
+        align-items: center;
+        gap: 10px;
+      }
+      .btn-add-row {
+        padding: 4px 12px;
+        color: #666;
+        font-weight: normal;
+        font-size: 12px;
+        background: none;
+        border: 1px dashed #aaa;
+        border-radius: 4px;
+      }
+      .btn-add-row:hover {
+        color: #333;
+        background: #f5f5f5;
+        border-color: #888;
+      }
+
+      .total-row td {
+        padding-top: 9px;
+        font-weight: bold;
+        border-top: 2px solid #4a9dc9;
+        border-bottom: none;
+      }
+
+      /* ===================== PRINT ===================== */
+      @media print {
+        body {
+          background: white;
+        }
+
+        #editor {
+          display: none;
+        }
+        #doc-wrapper {
+          max-width: none;
+          margin: 0;
+        }
+        #document {
+          width: 100%;
+          padding: 15mm 18mm;
+          box-shadow: none;
+        }
+
+        .no-print {
+          display: none !important;
+        }
+
+        td[contenteditable],
+        .doc-title,
+        .doc-header-left div,
+        .doc-header-right,
+        .doc-section-title {
+          outline: none !important;
+        }
+
+        td[contenteditable="true"]:focus {
+          background: transparent;
+        }
+
+        @page {
+          size: A4;
+          margin: 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ======================== EDITOR ======================== -->
+    <div id="editor">
+      <h1>Note de frais kilométrique — Paramètres</h1>
+
+      <div class="editor-grid">
+        <div class="editor-section">
+          <h2>Informations personnelles</h2>
+          <div class="field">
+            <label>Nom</label>
+            <input id="inp-name" value="DAMIEN MAILLARD" />
+          </div>
+          <div class="field">
+            <label>Email</label>
+            <input id="inp-email" type="email" value="dmaillard06@gmail.com" />
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label>Véhicule</label>
+              <input id="inp-vehicle" value="Toyota Yaris" />
+            </div>
+            <div class="field">
+              <label>Date du document</label>
+              <input id="inp-doc-date" type="date" />
+            </div>
+          </div>
+          <div class="field">
+            <label>Mois / Année du rapport</label>
+            <input id="inp-month" type="month" />
+          </div>
+        </div>
+
+        <div class="editor-section">
+          <h2>Générer des trajets</h2>
+          <div class="field-row">
+            <div class="field">
+              <label>Du</label>
+              <input id="inp-start" type="date" />
+            </div>
+            <div class="field">
+              <label>Au</label>
+              <input id="inp-end" type="date" />
+            </div>
+          </div>
+          <div class="field">
+            <label>Destination par défaut</label>
+            <input
+              id="inp-dest"
+              value="1691 Avenue de la République, 06550 La Roquette-sur-Siagne, France"
+            />
+          </div>
+          <div class="field-row-3">
+            <div class="field">
+              <label>Entreprise</label>
+              <input id="inp-entreprise" value="" />
+            </div>
+            <div class="field">
+              <label>Commentaire</label>
+              <input id="inp-comment" value="" />
+            </div>
+            <div class="field">
+              <label>Distance (km)</label>
+              <input id="inp-dist" type="number" value="38" />
+            </div>
+          </div>
+          <div class="checkbox-row">
+            <input type="checkbox" id="skip-weekends" checked />
+            <label for="skip-weekends">Exclure les week-ends</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="editor-actions">
+        <button class="btn-secondary" onclick="resetDocument()">
+          Réinitialiser
+        </button>
+        <button class="btn-primary" onclick="generateRows()">
+          Générer les trajets
+        </button>
+        <button class="btn-print" onclick="window.print()">
+          🖨 Imprimer / Exporter PDF
+        </button>
+      </div>
+    </div>
+
+    <!-- ======================== DOCUMENT ======================== -->
+    <div id="doc-wrapper">
+      <div id="document">
+        <div class="doc-title" id="doc-title" contenteditable="true">
+          Note de frais kilométrique
+        </div>
+
+        <div class="doc-header">
+          <div class="doc-header-left">
+            <div id="doc-name" contenteditable="true">DAMIEN MAILLARD</div>
+            <div id="doc-email" contenteditable="true">
+              dmaillard06@gmail.com
+            </div>
+          </div>
+          <div class="doc-made-on">
+            Fait le&nbsp;: <span id="doc-date" contenteditable="true"></span>
+          </div>
+        </div>
+
+        <div class="doc-section-title" id="doc-vehicle">
+          Trajets : Toyota Yaris
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Date du trajet</th>
+              <th>Destination</th>
+              <th>Entreprise</th>
+              <th>Commentaire</th>
+              <th class="col-dist">Distance</th>
+              <th class="no-print" style="width: 32px"></th>
+            </tr>
+          </thead>
+          <tbody id="trips-body"></tbody>
+          <tfoot>
+            <tr class="total-row">
+              <td colspan="4">Total</td>
+              <td class="col-dist" id="total-km">0 km</td>
+              <td class="no-print"></td>
+            </tr>
+          </tfoot>
+        </table>
+
+        <div class="table-footer no-print">
+          <button class="btn-add-row" onclick="addEmptyRow()">
+            + Ajouter un trajet
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const MONTHS_FR = [
+        "Janvier",
+        "Février",
+        "Mars",
+        "Avril",
+        "Mai",
+        "Juin",
+        "Juillet",
+        "Août",
+        "Septembre",
+        "Octobre",
+        "Novembre",
+        "Décembre",
+      ];
+
+      const $ = (id) => document.getElementById(id);
+
+      // ---- Init default dates ----
+      const today = new Date();
+      const todayStr = toISODate(today);
+      const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      const lastOfMonth = new Date(
+        today.getFullYear(),
+        today.getMonth() + 1,
+        0,
+      );
+
+      $("inp-doc-date").value = todayStr;
+      $("inp-month").value = toISOMonth(today);
+      $("inp-start").value = toISODate(firstOfMonth);
+      $("inp-end").value = toISODate(lastOfMonth);
+      $("doc-date").textContent = formatDate(today);
+
+      // ---- Live sync: personal info → document ----
+      $("inp-name").addEventListener("input", () => {
+        $("doc-name").textContent = $("inp-name").value;
+      });
+      $("inp-email").addEventListener("input", () => {
+        $("doc-email").textContent = $("inp-email").value;
+      });
+      $("inp-vehicle").addEventListener("input", () => {
+        $("doc-vehicle").textContent = `Trajets : ${$("inp-vehicle").value}`;
+      });
+      $("inp-doc-date").addEventListener("input", () => {
+        const d = parseDateInput($("inp-doc-date").value);
+        $("doc-date").textContent = d ? formatDate(d) : "";
+      });
+      $("inp-month").addEventListener("input", updateTitle);
+
+      function updateTitle() {
+        const monthVal = $("inp-month").value;
+        if (!monthVal) {
+          return;
+        }
+        const [year, month] = monthVal.split("-").map(Number);
+        const label = `${MONTHS_FR[month - 1]} ${year}`;
+        $("doc-title").textContent = `Note de frais kilométrique ${label}`;
+      }
+      updateTitle();
+
+      // ---- Helpers ----
+      function toISODate(d) {
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
+          2,
+          "0",
+        )}-${String(d.getDate()).padStart(2, "0")}`;
+      }
+      function toISOMonth(d) {
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      }
+      function parseDateInput(str) {
+        if (!str) {
+          return null;
+        }
+        const [y, m, day] = str.split("-").map(Number);
+        return new Date(y, m - 1, day);
+      }
+      function formatDate(d) {
+        return `${String(d.getDate()).padStart(2, "0")}/${String(
+          d.getMonth() + 1,
+        ).padStart(2, "0")}/${d.getFullYear()}`;
+      }
+    </script>
+  </body>
+</html>
