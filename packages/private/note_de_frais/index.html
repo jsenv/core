@@ -13,6 +13,8 @@
         padding: 0;
       }
 
+      #jsenv_ribbon_container { display: none !important; }
+
       /* ===================== SCREEN ===================== */
       body {
         color: #222;
@@ -503,7 +505,10 @@
         const d = parseDateInput($("inp-doc-date").value);
         $("doc-date").textContent = d ? formatDate(d) : "";
       });
-      $("inp-month").addEventListener("input", updateTitle);
+      $("inp-month").addEventListener("input", () => {
+        updateTitle();
+        updateDateRangeFromMonth();
+      });
       $("inp-rate").addEventListener("input", updateTotal);
 
       function updateTitle() {
@@ -515,7 +520,21 @@
         const label = `${MONTHS_FR[month - 1]} ${year}`;
         $("doc-title").textContent = `Note de frais kilométrique ${label}`;
       }
+
+      function updateDateRangeFromMonth() {
+        const monthVal = $("inp-month").value;
+        if (!monthVal) {
+          return;
+        }
+        const [year, month] = monthVal.split("-").map(Number);
+        const first = new Date(year, month - 1, 1);
+        const last = new Date(year, month, 0);
+        $("inp-start").value = toISODate(first);
+        $("inp-end").value = toISODate(last);
+      }
+
       updateTitle();
+      updateDateRangeFromMonth();
 
       // ---- Generate rows ----
       // Exposed on window so inline onclick attributes can call them.
