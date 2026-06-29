@@ -119,6 +119,7 @@
             <HorizontalDemo />
             <WidthDemo />
             <WidthExpandXDemo />
+            <OverflowDemo />
             <SearchableExternalInputDemo />
             <SearchableDemo />
             <GroupedSearchDemo />
@@ -144,6 +145,11 @@
               </li>
               <li>
                 <a href="#width-expand-x">Width behaviour — with expandX</a>
+              </li>
+              <li>
+                <a href="#overflow">
+                  Overflow — expandY inside constrained container
+                </a>
               </li>
               <li>
                 <a href="#search-external">
@@ -300,11 +306,7 @@
 
       const PlaceItem = ({ maxLines }) => (
         <Box flex="y" expandX spacing="xs" minWidth="0">
-          <Text
-            bold
-            noWrap={Boolean(maxLines)}
-            maxLines={maxLines}
-          >
+          <Text bold noWrap={Boolean(maxLines)} maxLines={maxLines}>
             Boulangerie Artisanale et Pâtisserie du Vieux Marché de Lyon
           </Text>
           <Text
@@ -761,6 +763,31 @@
         );
       };
 
+      // ── 2c. Overflow — expandY inside constrained container ───────────────────
+
+      const OverflowDemo = () => {
+        return (
+          <div id="overflow" className="demo-section">
+            <h2>Overflow — expandY inside constrained container</h2>
+            <p>
+              With <code>expandY</code> the list removes its own max-height and
+              fills its container. Wrap it in a container with{" "}
+              <code>max-height</code> to control how much space it occupies —
+              the list scrolls inside that constraint.
+            </p>
+            <div style={{ maxHeight: "100px", overflow: "hidden" }}>
+              <List expandY>
+                {FRUITS.map((fruit, i) => (
+                  <ListItem key={fruit} index={i} id={fruit} value={fruit}>
+                    {fruit}
+                  </ListItem>
+                ))}
+              </List>
+            </div>
+          </div>
+        );
+      };
+
       // ── 3. Searchable list — input outside list (listId) ──────────────────────
 
       const SearchableExternalInputDemo = () => {
@@ -793,6 +820,7 @@
                 borderRadius="m"
                 id="searchable-fruits-list"
                 expandX
+                maxHeight="200"
               >
                 {fruits.map((fruit, i) => {
                   const { match, ranges } = getItemMatchInfo(fruit);

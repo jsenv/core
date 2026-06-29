@@ -66,7 +66,6 @@ const css = /* css */ `
       --list-border-width: 1px;
       --list-border-color: light-dark(#ccc, #555);
       --list-background-color: light-dark(#fff, #1e1e1e);
-      --list-max-height: 220px;
     }
     .navi_list_item {
       --list-item-padding-x-default: 0px;
