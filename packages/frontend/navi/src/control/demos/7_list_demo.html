@@ -765,7 +765,7 @@
 
       const SmallList = ({ expandY }) => (
         <List expandY={expandY}>
-          {FRUITS.slice(0, 4).map((fruit, i) => (
+          {FRUITS.slice(0, 2).map((fruit, i) => (
             <ListItem key={fruit} index={i} id={fruit} value={fruit}>
               {fruit}
             </ListItem>
@@ -795,8 +795,172 @@
         </Box>
       );
 
-      const OverflowDemo = () => {
+      const ExpandYCheckbox = ({ expandY, setExpandY }) => (
+        <label
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "6px",
+            marginBottom: "16px",
+            fontSize: "0.9rem",
+            cursor: "pointer",
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={expandY}
+            onChange={(e) => {
+              setExpandY(e.target.checked);
+            }}
+          />
+          <code>expandY</code>
+        </label>
+      );
+
+      const DimensionTable = ({ expandY, renderContent }) => (
+        <table style={{ borderCollapse: "collapse", width: "100%" }}>
+          <thead>
+            <tr>
+              <th style={{ width: "1%" }} />
+              <th
+                style={{
+                  width: "50%",
+                  padding: "6px 16px",
+                  fontWeight: 600,
+                  fontSize: "0.85rem",
+                  color: "#555",
+                  textAlign: "left",
+                }}
+              >
+                Small list
+              </th>
+              <th
+                style={{
+                  width: "50%",
+                  padding: "6px 16px",
+                  fontWeight: 600,
+                  fontSize: "0.85rem",
+                  color: "#555",
+                  textAlign: "left",
+                }}
+              >
+                Large list
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td
+                style={{
+                  padding: "8px 0",
+                  fontWeight: 600,
+                  fontSize: "0.8rem",
+                  color: "#555",
+                  whiteSpace: "nowrap",
+                  paddingRight: "16px",
+                  verticalAlign: "top",
+                }}
+              >
+                max-height only
+              </td>
+              <td style={{ padding: "8px 16px", verticalAlign: "top" }}>
+                <ContainerBox>
+                  {renderContent({ expandY, large: false })}
+                </ContainerBox>
+              </td>
+              <td style={{ padding: "8px 16px", verticalAlign: "top" }}>
+                <ContainerBox>
+                  {renderContent({ expandY, large: true })}
+                </ContainerBox>
+              </td>
+            </tr>
+            <tr>
+              <td
+                style={{
+                  padding: "8px 0",
+                  fontWeight: 600,
+                  fontSize: "0.8rem",
+                  color: "#555",
+                  whiteSpace: "nowrap",
+                  paddingRight: "16px",
+                  verticalAlign: "top",
+                }}
+              >
+                max-height + height: 100px
+              </td>
+              <td style={{ padding: "8px 16px", verticalAlign: "top" }}>
+                <ContainerBox fixedHeight>
+                  {renderContent({ expandY, large: false })}
+                </ContainerBox>
+              </td>
+              <td style={{ padding: "8px 16px", verticalAlign: "top" }}>
+                <ContainerBox fixedHeight>
+                  {renderContent({ expandY, large: true })}
+                </ContainerBox>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      );
+
+      const SimpleContainerSection = () => {
         const [expandY, setExpandY] = useState(false);
+        return (
+          <>
+            <ExpandYCheckbox expandY={expandY} setExpandY={setExpandY} />
+            <DimensionTable
+              expandY={expandY}
+              renderContent={({ expandY, large }) =>
+                large ? (
+                  <LargeList expandY={expandY} />
+                ) : (
+                  <SmallList expandY={expandY} />
+                )
+              }
+            />
+          </>
+        );
+      };
+
+      const SiblingContainerSection = () => {
+        const [expandY, setExpandY] = useState(false);
+        return (
+          <>
+            <h3
+              style={{
+                margin: "24px 0 8px",
+                fontSize: "0.95rem",
+                color: "#444",
+              }}
+            >
+              With sibling element
+            </h3>
+            <p>
+              The container is a flex column with spacing. The first child is a
+              fixed-height red bar; the second is the list. With{" "}
+              <code>expandY</code> the list takes the remaining space.
+            </p>
+            <ExpandYCheckbox expandY={expandY} setExpandY={setExpandY} />
+            <DimensionTable
+              expandY={expandY}
+              renderContent={({ expandY, large }) => (
+                <Box flex="y" spacing="m" expandY minHeight="0">
+                  <div
+                    style={{ height: "20px", background: "red", flexShrink: 0 }}
+                  />
+                  {large ? (
+                    <LargeList expandY={expandY} />
+                  ) : (
+                    <SmallList expandY={expandY} />
+                  )}
+                </Box>
+              )}
+            />
+          </>
+        );
+      };
+
+      const OverflowDemo = () => {
         return (
           <div id="overflow" className="demo-section">
             <h2>Dimension within container</h2>
@@ -806,169 +970,8 @@
               px — a smaller container just clips it. With <code>expandY</code>{" "}
               the list defers to the container's size and scrolls within it.
             </p>
-            <label
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                marginBottom: "16px",
-                fontSize: "0.9rem",
-                cursor: "pointer",
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={expandY}
-                onChange={(e) => {
-                  setExpandY(e.target.checked);
-                }}
-              />
-              <code>expandY</code>
-            </label>
-            <table style={{ borderCollapse: "collapse", width: "100%" }}>
-              <thead>
-                <tr>
-                  <th style={{ width: "1%" }} />
-                  <th
-                    style={{
-                      padding: "6px 16px",
-                      fontWeight: 600,
-                      fontSize: "0.85rem",
-                      color: "#555",
-                      textAlign: "left",
-                    }}
-                  >
-                    Small list
-                  </th>
-                  <th
-                    style={{
-                      padding: "6px 16px",
-                      fontWeight: 600,
-                      fontSize: "0.85rem",
-                      color: "#555",
-                      textAlign: "left",
-                    }}
-                  >
-                    Large list
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td
-                    style={{
-                      padding: "8px 0",
-                      fontWeight: 600,
-                      fontSize: "0.8rem",
-                      color: "#555",
-                      whiteSpace: "nowrap",
-                      paddingRight: "16px",
-                      verticalAlign: "top",
-                    }}
-                  >
-                    max-height only
-                  </td>
-                  <td style={{ padding: "8px 16px", verticalAlign: "top" }}>
-                    <ContainerBox>
-                      <SmallList expandY={expandY} />
-                    </ContainerBox>
-                  </td>
-                  <td style={{ padding: "8px 16px", verticalAlign: "top" }}>
-                    <ContainerBox>
-                      <LargeList expandY={expandY} />
-                    </ContainerBox>
-                  </td>
-                </tr>
-                <tr>
-                  <td
-                    style={{
-                      padding: "8px 0",
-                      fontWeight: 600,
-                      fontSize: "0.8rem",
-                      color: "#555",
-                      whiteSpace: "nowrap",
-                      paddingRight: "16px",
-                      verticalAlign: "top",
-                    }}
-                  >
-                    max-height + height: 100px
-                  </td>
-                  <td style={{ padding: "8px 16px", verticalAlign: "top" }}>
-                    <ContainerBox fixedHeight>
-                      <SmallList expandY={expandY} />
-                    </ContainerBox>
-                  </td>
-                  <td style={{ padding: "8px 16px", verticalAlign: "top" }}>
-                    <ContainerBox fixedHeight>
-                      <LargeList expandY={expandY} />
-                    </ContainerBox>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-
-            <h3 style={{ margin: "24px 0 8px", fontSize: "0.95rem", color: "#444" }}>
-              With sibling element
-            </h3>
-            <p>
-              The container is a flex column with spacing. The first child is a
-              fixed-height red bar; the second is the list. With{" "}
-              <code>expandY</code> the list takes the remaining space inside the
-              container.
-            </p>
-            <table style={{ borderCollapse: "collapse", width: "100%" }}>
-              <thead>
-                <tr>
-                  <th style={{ width: "1%" }} />
-                  <th style={{ padding: "6px 16px", fontWeight: 600, fontSize: "0.85rem", color: "#555", textAlign: "left" }}>Small list</th>
-                  <th style={{ padding: "6px 16px", fontWeight: 600, fontSize: "0.85rem", color: "#555", textAlign: "left" }}>Large list</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td style={{ padding: "8px 0", fontWeight: 600, fontSize: "0.8rem", color: "#555", whiteSpace: "nowrap", paddingRight: "16px", verticalAlign: "top" }}>
-                    max-height only
-                  </td>
-                  <td style={{ padding: "8px 16px", verticalAlign: "top" }}>
-                    <ContainerBox>
-                      <Box flex="y" spacing="m" style={{ height: "100%" }}>
-                        <div style={{ height: "20px", background: "red", flexShrink: 0 }} />
-                        <SmallList expandY={expandY} />
-                      </Box>
-                    </ContainerBox>
-                  </td>
-                  <td style={{ padding: "8px 16px", verticalAlign: "top" }}>
-                    <ContainerBox>
-                      <Box flex="y" spacing="m" style={{ height: "100%" }}>
-                        <div style={{ height: "20px", background: "red", flexShrink: 0 }} />
-                        <LargeList expandY={expandY} />
-                      </Box>
-                    </ContainerBox>
-                  </td>
-                </tr>
-                <tr>
-                  <td style={{ padding: "8px 0", fontWeight: 600, fontSize: "0.8rem", color: "#555", whiteSpace: "nowrap", paddingRight: "16px", verticalAlign: "top" }}>
-                    max-height + height: 100px
-                  </td>
-                  <td style={{ padding: "8px 16px", verticalAlign: "top" }}>
-                    <ContainerBox fixedHeight>
-                      <Box flex="y" spacing="m" style={{ height: "100%" }}>
-                        <div style={{ height: "20px", background: "red", flexShrink: 0 }} />
-                        <SmallList expandY={expandY} />
-                      </Box>
-                    </ContainerBox>
-                  </td>
-                  <td style={{ padding: "8px 16px", verticalAlign: "top" }}>
-                    <ContainerBox fixedHeight>
-                      <Box flex="y" spacing="m" style={{ height: "100%" }}>
-                        <div style={{ height: "20px", background: "red", flexShrink: 0 }} />
-                        <LargeList expandY={expandY} />
-                      </Box>
-                    </ContainerBox>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+            <SimpleContainerSection />
+            <SiblingContainerSection />
           </div>
         );
       };
