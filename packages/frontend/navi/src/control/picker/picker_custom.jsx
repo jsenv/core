@@ -331,7 +331,8 @@ const PickerCustom = (props) => {
         },
       },
     );
-    expandedRef.current = Boolean(expanded);
+    // expandedRef tracks actual open/close state, updated only by onOpen/onClose.
+    // NOT synced to expanded on every render so the useLayoutEffect guard below works.
     const valueAtOpenRef = useRef(null);
     const activeElementAtOpenRef = useRef(null);
 
@@ -422,17 +423,14 @@ const PickerCustom = (props) => {
     };
 
     const open = Boolean(expanded);
-    const openedRef = useRef(false);
     useLayoutEffect(() => {
       if (open === undefined) {
         return;
       }
-      // Skip when the popover is already in the desired state.
-      // This avoids a feedback loop: our own close/open dispatches navi_close/navi_open,
-      // the parent updates the prop, and the effect would fire again for a change we
-      // already handled. Comparing against openedRef is the authoritative check because
-      // it reflects the actual DOM state, not the React render cycle.
-      if (open === openedRef.current) {
+      // Skip when the popup is already in the desired state.
+      // expandedRef tracks actual open/close (updated by onOpen/onClose, not by renders)
+      // so it is the authoritative check against feedback loops.
+      if (open === expandedRef.current) {
         return;
       }
       // open_prop_change means the parent is driving the open state directly

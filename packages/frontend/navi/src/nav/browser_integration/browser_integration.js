@@ -229,10 +229,10 @@ const useNavStateBasic = (
   };
 
   // leave(): navigate AWAY FROM this state (navBack in push mode, replace in replace mode).
-  // collapse: when true (confirmed close), replace the pushed entry instead of going back.
-  //   This preserves the current URL state (e.g. a picker value set while open) while
-  //   removing the popup key. The open_prop_change feedback loop is harmless here because
-  //   openedRef.current is already false by the time the replace fires.
+  // isBack: when true (cancel close in push mode), call history.back() to restore the
+  //   pre-open state — discards any in-progress edits.
+  //   When false (confirmed close), replace the pushed entry instead: preserves the
+  //   current URL state (e.g. a new picker value) while removing the popup key.
   const leave = ({ isBack } = {}) => {
     enteredRef.current = false;
     const currentState = browserIntegration.getDocumentState() || {};
