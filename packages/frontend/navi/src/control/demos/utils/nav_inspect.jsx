@@ -1,5 +1,5 @@
 import { signal } from "@preact/signals";
-import { useEffect } from "preact/hooks";
+import { useEffect, useRef } from "preact/hooks";
 
 const TYPE_COLORS = {
   initial: { bg: "#f1f5f9", text: "#64748b", label: "initial" },
@@ -11,9 +11,9 @@ const TYPE_COLORS = {
 let nextId = 1;
 const addEntry = (type, url, state) => {
   navEntriesSignal.value = [
-    { id: nextId++, type, url, state },
     ...navEntriesSignal.value,
-  ].slice(0, 30);
+    { id: nextId++, type, url, state },
+  ].slice(-30);
 };
 
 // Capture the document state before any component mounts.
@@ -36,10 +36,15 @@ const formatState = (state) => {
   return JSON.stringify(display, null, 2);
 };
 
-const shortUrl = (url) => {
+const baseDir = window.location.pathname.replace(/\/[^/]*$/, "/");
+const relativeUrl = (url) => {
   try {
     const u = new URL(url);
-    return u.pathname + u.search + u.hash || "/";
+    if (u.origin !== window.location.origin) return url;
+    const path = u.pathname.startsWith(baseDir)
+      ? u.pathname.slice(baseDir.length) || "."
+      : u.pathname;
+    return path + u.search + u.hash;
   } catch {
     return url;
   }
@@ -76,6 +81,11 @@ export const NavInspect = () => {
   }, []);
 
   const entries = navEntriesSignal.value;
+  const scrollRef = useRef(null);
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [entries]);
 
   return (
     <div
@@ -102,6 +112,7 @@ export const NavInspect = () => {
         Nav Inspect
       </div>
       <div
+        ref={scrollRef}
         style={{
           maxHeight: "320px",
           overflowY: "auto",
@@ -156,7 +167,7 @@ export const NavInspect = () => {
                   }}
                   title={entry.url}
                 >
-                  {shortUrl(entry.url)}
+                  {relativeUrl(entry.url)}
                 </span>
                 {stateStr ? (
                   <pre

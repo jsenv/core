@@ -93,7 +93,7 @@ setOnAllRouteReady((v) => {
 });
 setRouteIntegration(browserIntegration);
 
-export const actionIntegratedVia = browserIntegration.integration;
+export const navIntegratedVia = browserIntegration.integration;
 export const navTo = (target, options) => {
   const url = new URL(target, window.location.href).href;
   const currentUrl = documentUrlSignal.peek();
