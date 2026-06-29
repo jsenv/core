@@ -149,6 +149,9 @@ const css = /* css */ `
     &[data-expand-y] {
       --list-max-height: none;
     }
+    &[navi-nothing-to-display] {
+      display: none;
+    }
     &[popover] {
       position: absolute;
       inset: unset;
@@ -499,6 +502,16 @@ const ListUI = (props) => {
     return tracker.itemsSignal.peek().find((item) => item.id === itemId);
   };
 
+  const noMatchCount = tracker.noMatchCountSignal.value;
+  const itemCount = tracker.countSignal.value;
+  const allNoMatch = noMatchCount > 0 && noMatchCount === itemCount;
+  const fallbackDisabled = fallback !== undefined && !fallback;
+  const searchFallbackDisabled =
+    searchFallback !== undefined && !searchFallback;
+  const nothingToDisplay =
+    (allNoMatch && searchFallbackDisabled && searchNoMatchMode === "remove") ||
+    (itemCount === 0 && fallbackDisabled);
+
   return (
     <Box
       {...rest}
@@ -511,6 +524,8 @@ const ListUI = (props) => {
       expandX={expandX}
       expandY={expandY}
       expand={expand}
+      navi-zero-match={allNoMatch ? "" : undefined}
+      navi-nothing-to-display={nothingToDisplay ? "" : undefined}
       styleCSSVars={LIST_STYLE_CSS_VARS}
       pseudoClasses={LIST_PSEUDO_CLASSES}
       hasChildUsingForwardedProps
@@ -1107,7 +1122,6 @@ const UnorderedList = ({
     <Box
       as="ul"
       flex={horizontal ? "x" : "y"}
-      flexWrap
       {...rest}
       spacing={spacing}
       baseClassName="navi_list"

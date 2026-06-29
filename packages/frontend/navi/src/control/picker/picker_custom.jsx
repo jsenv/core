@@ -24,7 +24,7 @@ const css = /* css */ `
         min-width: var(--anchor-width, 0px);
         max-width: 95vw;
         /* max-height covers the placeholder + list; the list scrolls internally */
-        max-height: var(--space-available, 95dvh);
+        max-height: min(var(--picker-popup-max-height, 300px), var(--space-available, 95dvh));
         margin: 0;
         padding: 0;
         background: var(--picker-background-color);
