@@ -51,19 +51,7 @@ export const setupBrowserIntegrationViaHistory = ({
       return;
     }
     visitedUrlSet.add(url);
-    visitedUrlsSignal.value++; // Increment signal to notify subscribers that visited URLs changed
-
-    const historyState = getDocumentState() || {};
-    const historyStateWithVisitedUrls = {
-      ...historyState,
-      jsenv_visited_urls: Array.from(visitedUrlSet),
-    };
-    window.history.replaceState(
-      historyStateWithVisitedUrls,
-      null,
-      window.location.href,
-    );
-    updateDocumentState(historyStateWithVisitedUrls);
+    visitedUrlsSignal.value++;
   };
 
   let abortController = null;
@@ -77,15 +65,26 @@ export const setupBrowserIntegrationViaHistory = ({
   ) => {
     const isSameUrl = url === window.location.href;
 
-    if (navigationType === "push") {
-      window.history.pushState(state, null, url);
-    } else if (navigationType === "replace") {
-      window.history.replaceState(state, null, url);
+    if (navigationType === "push" || navigationType === "replace") {
+      // Pre-merge visited URLs so push/replaceState is called only once.
+      markUrlAsVisited(url);
+      const effectiveState = {
+        ...(state || {}),
+        jsenv_visited_urls: Array.from(visitedUrlSet),
+      };
+      if (navigationType === "push") {
+        window.history.pushState(effectiveState, null, url);
+      } else {
+        window.history.replaceState(effectiveState, null, url);
+      }
+      updateDocumentUrl(url);
+      updateDocumentState(effectiveState);
+    } else {
+      // traverse / reload: state comes from the history entry, no push/replace needed.
+      markUrlAsVisited(url);
+      updateDocumentUrl(url);
+      updateDocumentState(state);
     }
-
-    updateDocumentUrl(url);
-    updateDocumentState(state);
-    markUrlAsVisited(url);
 
     // Routes only match on URL — skip route matching for state-only changes.
     if (isSameUrl && navigationType !== "reload") {
