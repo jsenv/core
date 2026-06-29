@@ -212,7 +212,10 @@ const useNavStateBasic = (
   }
 
   // enter(value): navigate TO this state (push or replace depending on type).
-  const enter = (value) => {
+  // Calling enter() without a value stores "on" — the mere presence of the key
+  // in the document state is enough to match; the value just allows associating
+  // extra data with the entry when needed.
+  const enter = (value = "on") => {
     enteredRef.current = true;
     const currentState = browserIntegration.getDocumentState() || {};
     if (currentState[id] === value) {
@@ -244,6 +247,33 @@ const useNavStateBasic = (
   return [currentValue, enter, leave];
 };
 
+/**
+ * Stores a named value in the browser's document state and returns it reactively.
+ * The component re-renders whenever the value changes (navigation, back/forward button).
+ *
+ * @param {string} id
+ *   Unique key used to store the value in document state. Must be stable across renders.
+ *
+ * @param {*} initialValue
+ *   Value returned when `id` is absent from document state (e.g. before enter() is called).
+ *
+ * @param {object} [options]
+ * @param {"push"|"replace"} [options.type="replace"]
+ *   Controls how enter() adds the state to browser history.
+ *   - "push": creates a new history entry — pressing the back button removes it and calls onLeave.
+ *   - "replace": updates the current history entry — no extra history entry is created.
+ * @param {() => void} [options.onLeave]
+ *   Called when the state key disappears **externally** — e.g. the user presses the browser
+ *   back button. Not called when leave() is invoked programmatically.
+ *
+ * @returns {[value, enter, leave]}
+ *   - `value`: current value from document state, or `initialValue` when the key is absent.
+ *   - `enter(value = "on")`: navigate TO this state (stores `value` under `id`).
+ *     Calling without an argument stores `"on"` — the presence of the key is enough to match;
+ *     the value allows associating extra data when needed.
+ *   - `leave()`: navigate AWAY FROM this state (removes `id` from document state,
+ *     or goes back in history when `type` is "push").
+ */
 export const useNavState = import.meta.dev
   ? useNavStateWithWarnings
   : useNavStateBasic;

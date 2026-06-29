@@ -318,20 +318,24 @@ const PickerCustom = (props) => {
     // In "popover" mode, it replaces the current history state (no history entry added).
     const pickerNavType = mode === "dialog" ? "push" : "replace";
     const expandedRef = useRef(false);
-    const [expanded, enterExpanded, leaveExpanded] = useNavState(popupId, false, {
-      type: pickerNavType,
-      // onLeave fires only when the state key disappears externally (back button).
-      // useNavState tracks this internally via enteredRef, so no need to check expandedRef here.
-      onLeave: () => {
-        requestClose(new PopStateEvent("popstate"), { isCancel: true });
+    const [expanded, enterExpanded, leaveExpanded] = useNavState(
+      popupId,
+      false,
+      {
+        type: pickerNavType,
+        // onLeave fires only when the state key disappears externally (back button).
+        // useNavState tracks this internally via enteredRef, so no need to check expandedRef here.
+        onLeave: () => {
+          requestClose(new PopStateEvent("popstate"), { isCancel: true });
+        },
       },
-    });
+    );
     const valueAtOpenRef = useRef(null);
     const activeElementAtOpenRef = useRef(null);
 
     const onOpen = (e) => {
       expandedRef.current = true;
-      enterExpanded(true);
+      enterExpanded();
 
       const focusedBeforeOpen = e.detail.focusedBeforeOpen;
       activeElementAtOpenRef.current = focusedBeforeOpen;
@@ -421,7 +425,7 @@ const PickerCustom = (props) => {
 
     const { onActionStart, children, uiAction: uiActionProp } = props;
     Object.assign(pickerProps, {
-      "aria-expanded": expanded,
+      "aria-expanded": Boolean(expanded),
       "onActionStart": (e) => {
         onActionStart?.(e);
         // requestClose(e);
