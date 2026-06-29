@@ -469,7 +469,12 @@ const PickerCustom = (props) => {
           (eInChain) =>
             eInChain.type === "navi_request_close" && eInChain.detail.isCancel,
         );
-        const isCancel = isClickOutside || Boolean(cancelEvent);
+        // open_prop_change means the parent is driving the open state directly
+        // (e.g. back-button navigation flipped openProp to false before onLeave fires).
+        // Always treat it as cancel — the user's in-progress edit should be discarded.
+        const isPropDrivenClose = requestCloseEvent.type === "open_prop_change";
+        const isCancel =
+          isClickOutside || Boolean(cancelEvent) || isPropDrivenClose;
         if (isCancel) {
           const pickerEl = ref.current;
           const inputEl = getPickerInput(pickerEl);

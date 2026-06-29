@@ -14707,9 +14707,14 @@ const setupBrowserIntegrationViaHistory = ({
     const isSameUrl = url === window.location.href;
 
     if (navigationType === "push" || navigationType === "replace") {
-      // Pre-merge visited URLs so push/replaceState is called only once.
+      // Merge onto the current state so existing useNavState entries (e.g. an
+      // open dialog/popover) survive URL changes triggered by signal updates.
+      // "traverse" is intentionally excluded: it restores the exact historical
+      // state from the history entry, which is the source of truth for back/forward.
+      const currentState = getDocumentState() || {};
       markUrlAsVisited(url);
       const effectiveState = {
+        ...currentState,
         ...(state || {}),
         jsenv_visited_urls: Array.from(visitedUrlSet),
       };
@@ -36412,7 +36417,11 @@ const PickerCustom = props => {
         isClickOutside
       } = {}) => {
         const cancelEvent = findEvent(requestCloseEvent, eInChain => eInChain.type === "navi_request_close" && eInChain.detail.isCancel);
-        const isCancel = isClickOutside || Boolean(cancelEvent);
+        // open_prop_change means the parent is driving the open state directly
+        // (e.g. back-button navigation flipped openProp to false before onLeave fires).
+        // Always treat it as cancel — the user's in-progress edit should be discarded.
+        const isPropDrivenClose = requestCloseEvent.type === "open_prop_change";
+        const isCancel = isClickOutside || Boolean(cancelEvent) || isPropDrivenClose;
         if (isCancel) {
           const pickerEl = ref.current;
           const inputEl = getPickerInput(pickerEl);
