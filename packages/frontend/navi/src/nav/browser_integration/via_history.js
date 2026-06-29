@@ -32,18 +32,6 @@ export const setupBrowserIntegrationViaHistory = ({
     return window.history.state ? { ...window.history.state } : null;
   };
 
-  const replaceDocumentState = (
-    newState,
-    { reason = "replaceDocumentState called" } = {},
-  ) => {
-    const url = window.location.href;
-    handleRoutingTask(url, {
-      reason,
-      navigationType: "replace",
-      state: newState,
-    });
-  };
-
   const historyStartAtStart = getDocumentState();
   const visitedUrlSet = historyStartAtStart
     ? new Set(historyStartAtStart.jsenv_visited_urls || [])
@@ -87,6 +75,8 @@ export const setupBrowserIntegrationViaHistory = ({
       state,
     },
   ) => {
+    const isSameUrl = url === window.location.href;
+
     if (navigationType === "push") {
       window.history.pushState(state, null, url);
     } else if (navigationType === "replace") {
@@ -96,6 +86,12 @@ export const setupBrowserIntegrationViaHistory = ({
     updateDocumentUrl(url);
     updateDocumentState(state);
     markUrlAsVisited(url);
+
+    // Routes only match on URL — skip route matching for state-only changes.
+    if (isSameUrl && navigationType !== "reload") {
+      return undefined;
+    }
+
     if (abortController) {
       abortController.abort(`navigating to ${url}`);
     }
@@ -229,7 +225,6 @@ export const setupBrowserIntegrationViaHistory = ({
     navBack,
     navForward,
     getDocumentState,
-    replaceDocumentState,
     isVisited,
     visitedUrlsSignal,
   };

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "preact/hooks";
 
 import { updateActions } from "../../action/actions.js";
+import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 import { setOnAllRouteReady, setRouteIntegration } from "../route.js";
 import {
   documentIsBusySignal,
@@ -97,7 +98,14 @@ export const navTo = (target, options) => {
   const url = new URL(target, window.location.href).href;
   const currentUrl = documentUrlSignal.peek();
   if (url === currentUrl) {
-    return null;
+    if (options?.state === undefined) {
+      return null;
+    }
+    // State-only update on same URL: skip if state is identical to current.
+    const currentState = browserIntegration.getDocumentState();
+    if (compareTwoJsValues(options.state, currentState)) {
+      return null;
+    }
   }
   return browserIntegration.navTo(url, options);
 };
@@ -161,15 +169,39 @@ if (import.meta.hot) {
 
 const NO_OP = () => {};
 const NO_ID_GIVEN = [undefined, NO_OP, NO_OP];
-const useNavStateBasic = (id, initialValue, { debug, type = "replace" } = {}) => {
+const useNavStateBasic = (
+  id,
+  initialValue,
+  { debug, type = "replace", onLeave } = {},
+) => {
+  // Hooks must be called unconditionally — before the !id early return.
+  const state = documentStateSignal.value;
+  const valueInState = id
+    ? state !== null
+      ? state[id]
+      : undefined
+    : undefined;
+  const onLeaveRef = useRef(onLeave);
+  onLeaveRef.current = onLeave;
+  const prevValueInStateRef = useRef(valueInState);
+  // Detect when the state key disappears externally (e.g. back-button navigation)
+  // and notify the caller so it can react (e.g. close a dialog in cancel mode).
+  useEffect(() => {
+    const prevValue = prevValueInStateRef.current;
+    prevValueInStateRef.current = valueInState;
+    if (
+      onLeaveRef.current &&
+      prevValue !== undefined &&
+      valueInState === undefined
+    ) {
+      onLeaveRef.current();
+    }
+  }, [valueInState]);
+
   if (!id) {
     return NO_ID_GIVEN;
   }
 
-  // Reading documentStateSignal.value subscribes the component to state changes,
-  // so it re-renders whenever the browser state changes (back/forward, programmatic update).
-  const state = documentStateSignal.value;
-  const valueInState = state !== null ? state[id] : undefined;
   const currentValue = valueInState !== undefined ? valueInState : initialValue;
 
   if (debug) {
@@ -182,33 +214,27 @@ const useNavStateBasic = (id, initialValue, { debug, type = "replace" } = {}) =>
     }
     const currentState = browserIntegration.getDocumentState() || {};
     if (value === undefined) {
-      if (!Object.hasOwn(currentState, id)) return;
+      // Key already absent — nothing to undo (e.g. back button already fired).
+      if (!Object.hasOwn(currentState, id)) {
+        return;
+      }
       if (type === "push") {
-        // The value was added via pushState → go back to pop that history entry.
+        // Value was pushed as a history entry → go back to pop it.
         browserIntegration.navBack();
       } else {
         const newState = { ...currentState };
         delete newState[id];
-        browserIntegration.replaceDocumentState(newState, {
-          reason: `delete "${id}" from browser state`,
-        });
+        navTo(window.location.href, { replace: true, state: newState });
       }
       return;
     }
     const valueInCurrentState = currentState[id];
     if (valueInCurrentState === value) return;
     const newState = { ...currentState, [id]: value };
-    if (type === "push") {
-      // Use the internal navTo (bypasses the url === currentUrl guard in the
-      // exported navTo) to push a state-only history entry on the same URL.
-      browserIntegration.navTo(window.location.href, {
-        state: newState,
-      });
-    } else {
-      browserIntegration.replaceDocumentState(newState, {
-        reason: `set { ${id}: ${value} } in browser state`,
-      });
-    }
+    navTo(window.location.href, {
+      replace: type !== "push",
+      state: newState,
+    });
   };
 
   return [currentValue, set, () => set(undefined)];

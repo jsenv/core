@@ -1,5 +1,5 @@
 import { dispatchCustomEvent, findEvent } from "@jsenv/dom";
-import { useEffect, useId, useRef } from "preact/hooks";
+import { useId, useRef } from "preact/hooks";
 
 import { createOnKeyDownForShortcuts } from "@jsenv/navi/src/keyboard/keyboard_shortcuts.js";
 import { windowWidthSignal } from "@jsenv/navi/src/layout/responsive.js";
@@ -314,17 +314,25 @@ const PickerCustom = (props) => {
   open_close: {
     const debugFocus = useDebugFocus();
     const debugPopup = useDebugPopup();
-    // pickerStateId is stable: uses props.name if provided, otherwise a component-instance id.
     // In "dialog" mode, setExpanded(true) pushes a history entry so the back button closes.
     // In "popover" mode, it replaces the current history state (no history entry added).
     const pickerNavType = mode === "dialog" ? "push" : "replace";
+    // expandedRef tracks whether the popup is actually open (set in onOpen / onClose).
+    // It is intentionally NOT synced to `expanded` on every render so that onLeave
+    // (called when the state key disappears externally via back button) can distinguish
+    // an external close from a programmatic one.
+    const expandedRef = useRef(false);
     const [expanded, setExpanded, clearExpanded] = useNavState(popupId, false, {
       type: pickerNavType,
+      onLeave: () => {
+        // Back button removed the state key → force close in cancel mode.
+        // expandedRef.current is false when onClose already ran (programmatic close),
+        // so we only act when the popup is still physically open.
+        if (expandedRef.current) {
+          requestClose(new PopStateEvent("popstate"), { isCancel: true });
+        }
+      },
     });
-    // expandedRef tracks whether the popup is actually open (set in onOpen / onClose).
-    // It is NOT auto-synced to `expanded` so that the useEffect below can detect
-    // when `expanded` goes false externally (back button) while the popup is still open.
-    const expandedRef = useRef(false);
     const valueAtOpenRef = useRef(null);
     const activeElementAtOpenRef = useRef(null);
 
@@ -416,14 +424,6 @@ const PickerCustom = (props) => {
         isCancel,
       });
     };
-
-    // When `expanded` goes false externally (e.g. user presses the browser back
-    // button), close the popup if it is still physically open.
-    useEffect(() => {
-      if (!expanded && expandedRef.current) {
-        requestClose(new PopStateEvent("popstate"));
-      }
-    }, [expanded]);
 
     const requestInteraction = (options) => {
       dispatchRequestInteraction(ref.current, options);
