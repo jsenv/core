@@ -519,6 +519,8 @@
         const [year, month] = monthVal.split("-").map(Number);
         const label = `${MONTHS_FR[month - 1]} ${year}`;
         $("doc-title").textContent = `Note de frais kilométrique ${label}`;
+        const mm = String(month).padStart(2, "0");
+        document.title = `note_de_frais_kilometrique_${mm}_${year}`;
       }
 
       function updateDateRangeFromMonth() {
