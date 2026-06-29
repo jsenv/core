@@ -539,11 +539,15 @@ const PickerCustom = (props) => {
         },
       });
 
+      const isWithinPopup = (el) => {
+        const popupEl = popupRef.current;
+        return el === popupEl || popupEl.contains(el);
+      };
+
       Object.assign(pickerProps, {
         eventReactionDefinitions: {
           mouseDown: (e) => {
-            const popupEl = popupRef.current;
-            if (popupEl && popupEl.contains(e.target)) {
+            if (isWithinPopup(e.target)) {
               return null;
             }
             if (expandedRef.current) {
@@ -565,8 +569,7 @@ const PickerCustom = (props) => {
             };
           },
           click: (e) => {
-            const popupEl = popupRef.current;
-            if (popupEl && popupEl.contains(e.target)) {
+            if (isWithinPopup(e.target)) {
               return null;
             }
             // When a label is clicked it transfers focus to the select
