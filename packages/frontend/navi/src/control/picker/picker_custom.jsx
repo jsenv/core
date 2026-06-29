@@ -392,7 +392,7 @@ const PickerCustom = (props) => {
         }
       }
       expandedRef.current = false;
-      leaveExpanded({ collapse: !e.detail.isCancel });
+      leaveExpanded({ isBack: e.detail.isCancel });
       // Reset so the next opening re-evaluates screen size
       defaultModeRef.current = null;
       restoreFocus(e);

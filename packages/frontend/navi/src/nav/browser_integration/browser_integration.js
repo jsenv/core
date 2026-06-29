@@ -233,13 +233,13 @@ const useNavStateBasic = (
   //   This preserves the current URL state (e.g. a picker value set while open) while
   //   removing the popup key. The open_prop_change feedback loop is harmless here because
   //   openedRef.current is already false by the time the replace fires.
-  const leave = ({ collapse = false } = {}) => {
+  const leave = ({ isBack } = {}) => {
     enteredRef.current = false;
     const currentState = browserIntegration.getDocumentState() || {};
     if (!Object.hasOwn(currentState, id)) {
       return;
     }
-    if (type === "push" && !collapse) {
+    if (type === "push" && isBack) {
       browserIntegration.navBack();
     } else {
       const newState = { ...currentState };
