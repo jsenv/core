@@ -23,8 +23,8 @@ const css = /* css */ `
     /* Popover */
     --picker-popover-max-height: 300px;
     /* Dialog */
-    --picker-dialog-max-width: 95dvw;
-    --picker-dialog-max-height: 95dvh;
+    --picker-dialog-max-width: calc(0.95 * var(--navi-visual-viewport-width));
+    --picker-dialog-max-height: calc(0.95 * var(--navi-visual-viewport-height));
     --picker-dialog-border-width: 0px; /* Dialog do not need border like popover (they stand out more) */
 
     /* popover */
@@ -37,7 +37,7 @@ const css = /* css */ `
         /* max-height covers the placeholder + list; the list scrolls internally */
         max-height: min(
           var(--picker-popover-max-height),
-          var(--space-available, 95dvh)
+          var(--space-available, calc(0.95 * var(--navi-visual-viewport-height)))
         );
         margin: 0;
         padding: 0;

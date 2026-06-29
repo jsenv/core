@@ -1,6 +1,12 @@
 /**
  * Regroup CSS vars that makes sense to share across all navi components.
  */
+import { effect } from "@preact/signals";
+
+import {
+  visualViewportHeightSignal,
+  visualViewportWidthSignal,
+} from "./layout/responsive.js";
 
 const button = document.createElement("button");
 button.style.display = "none";
@@ -13,6 +19,12 @@ document.body.removeChild(button);
 const css = /* css */ `
   @layer navi {
     :root {
+      /* Overridden at runtime by the effect below with precise VisualViewport
+         pixel values so that dvw/dvh (which don't track the virtual keyboard on
+         iOS Safari) are never used in practice on supported browsers. */
+      --navi-visual-viewport-width: 100dvw;
+      --navi-visual-viewport-height: 100dvh;
+
       --navi-focus-outline-width: 2px;
       --navi-focus-outline-color: light-dark(#4476ff, #3b82f6);
       --navi-loader-color: light-dark(#355fcc, #3b82f6);
@@ -112,3 +124,14 @@ const css = /* css */ `
   }
 `;
 import.meta.css = css;
+
+effect(() => {
+  document.documentElement.style.setProperty(
+    "--navi-visual-viewport-width",
+    `${visualViewportWidthSignal.value}px`,
+  );
+  document.documentElement.style.setProperty(
+    "--navi-visual-viewport-height",
+    `${visualViewportHeightSignal.value}px`,
+  );
+});
