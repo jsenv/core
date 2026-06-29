@@ -105,28 +105,30 @@
                     expandX
                     separator
                     searchText={searchText}
-                    searchFallback={
-                      <Text
-                        flex="y"
-                        textAlign="center"
-                        spacing="s"
-                        expandX
-                        size="m"
-                        padding="s"
-                      >
-                        <Text>
-                          Aucun résultat ne correspond à votre recherche.
-                        </Text>
-                        <Link
-                          route={GAME_LIST_PAGE}
-                          routeParams={{ search: undefined }}
-                          paddingX="s"
-                          paddingY="xs"
-                        >
-                          Revenir à la liste complète
-                        </Link>
-                      </Text>
-                    }
+                    searchNoMatchMode="invisible_and_inert"
+                    searchFallback={false}
+                    // searchFallback={
+                    //   <Text
+                    //     flex="y"
+                    //     textAlign="center"
+                    //     spacing="s"
+                    //     expandX
+                    //     size="m"
+                    //     padding="s"
+                    //   >
+                    //     <Text>
+                    //       Aucun résultat ne correspond à votre recherche.
+                    //     </Text>
+                    //     <Link
+                    //       route={GAME_LIST_PAGE}
+                    //       routeParams={{ search: undefined }}
+                    //       paddingX="s"
+                    //       paddingY="xs"
+                    //     >
+                    //       Revenir à la liste complète
+                    //     </Link>
+                    //   </Text>
+                    // }
                   >
                     {matchingGames.map((game, i) => {
                       const { match, ranges } = getMatchInfo(game);
