@@ -45,6 +45,7 @@ const shortUrl = (url) => {
   }
 };
 
+const history = window.history;
 export const NavInspect = () => {
   useEffect(() => {
     // Patch history.pushState / replaceState to intercept via_history.js calls.
