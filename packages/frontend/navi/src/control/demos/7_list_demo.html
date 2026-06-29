@@ -775,8 +775,17 @@
               <code>max-height</code> to control how much space it occupies —
               the list scrolls inside that constraint.
             </p>
-            <div style={{ maxHeight: "100px", overflow: "hidden" }}>
-              <List expandY>
+            <div
+              style={{
+                display: "flex",
+                padding: "10px",
+                border: "1px dotted gray",
+                maxHeight: "100px",
+                overflow: "hidden",
+                width: "fit-content",
+              }}
+            >
+              <List>
                 {FRUITS.map((fruit, i) => (
                   <ListItem key={fruit} index={i} id={fruit} value={fruit}>
                     {fruit}
