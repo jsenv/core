@@ -25,7 +25,7 @@
         NaviDebug,
         List,
         Input,
-        Link,
+        Button,
         Picker,
         Text,
         useSearchText,
@@ -66,6 +66,54 @@
 
       setupRoutes([GAME_LIST_PAGE]);
 
+      const GameList = ({
+        selectedGame,
+        searchText,
+        getMatchInfo,
+        matchingGames,
+      }) => (
+        <>
+          <Input
+            type="search"
+            placeholder="Search games…"
+            value={searchSignal}
+            action={(v) => {
+              searchSignal.value = v;
+            }}
+            expandX
+            navi-list="game_list"
+          />
+          <List
+            id="game_list"
+            selectable
+            command="--navi-send"
+            expandX
+            separator
+            searchText={searchText}
+            searchFallback={false}
+          >
+            {matchingGames.map((game, i) => {
+              const { match, ranges } = getMatchInfo(game);
+              return (
+                <List.Item
+                  selectable
+                  key={game}
+                  index={i}
+                  id={`game_${game.toLowerCase()}`}
+                  value={game}
+                  selected={selectedGame === game}
+                  match={match}
+                  highlight={ranges}
+                  padding="s"
+                >
+                  {game}
+                </List.Item>
+              );
+            })}
+          </List>
+        </>
+      );
+
       const App = () => {
         const selectedGame = selectedGameSignal.value;
         const searchText = searchSignal.value;
@@ -73,86 +121,66 @@
 
         return (
           <NaviDebug debugAll>
-            <div>
-              <Text as="h1" size="l" marginBottom="m">
-                Game Library
-              </Text>
-              <Picker
-                name="game_picker"
-                placeholder="Select a game…"
-                value={selectedGame}
-                action={(v) => {
-                  selectedGameSignal.value = v ?? "";
-                }}
-                // mode="dialog"
-                minWidth="200"
-                dialogExpandY
-              >
-                <Box flex="y" spacing="m" padding="m" expandY minHeight="0">
-                  <Input
-                    type="search"
-                    placeholder="Search games…"
-                    value={searchSignal}
-                    action={(v) => {
-                      searchSignal.value = v;
-                    }}
-                    expandX
-                    navi-list="game_list"
-                  />
-                  <List
-                    id="game_list"
-                    selectable
-                    command="--navi-send"
-                    expandX
-                    separator
-                    searchText={searchText}
-                    // searchNoMatchMode="invisible_and_inert"
-                    searchFallback={false}
-                    // searchFallback={
-                    //   <Text
-                    //     flex="y"
-                    //     textAlign="center"
-                    //     spacing="s"
-                    //     expandX
-                    //     size="m"
-                    //     padding="s"
-                    //   >
-                    //     <Text>
-                    //       Aucun résultat ne correspond à votre recherche.
-                    //     </Text>
-                    //     <Link
-                    //       route={GAME_LIST_PAGE}
-                    //       routeParams={{ search: undefined }}
-                    //       paddingX="s"
-                    //       paddingY="xs"
-                    //     >
-                    //       Revenir à la liste complète
-                    //     </Link>
-                    //   </Text>
-                    // }
-                  >
-                    {matchingGames.map((game, i) => {
-                      const { match, ranges } = getMatchInfo(game);
-                      return (
-                        <List.Item
-                          selectable
-                          key={game}
-                          index={i}
-                          id={`game_${game.toLowerCase()}`}
-                          value={game}
-                          selected={selectedGame === game}
-                          match={match}
-                          highlight={ranges}
-                          padding="s"
-                        >
-                          {game}
-                        </List.Item>
-                      );
-                    })}
-                  </List>
-                </Box>
-              </Picker>
-            </div>
+            <Box flex="y" spacing="xl">
+              <Box flex="y" spacing="m" alignX="start">
+                <Text as="h2" size="l">
+                  Dialog mode
+                </Text>
+                <Picker
+                  name="game_picker_dialog"
+                  placeholder="Select a game…"
+                  value={selectedGame}
+                  action={(v) => {
+                    selectedGameSignal.value = v ?? "";
+                  }}
+                  mode="dialog"
+                  minWidth="200"
+                  dialogExpandY
+                >
+                  <Box flex="y" spacing="m" padding="m" expandY minHeight="0">
+                    <GameList
+                      selectedGame={selectedGame}
+                      searchText={searchText}
+                      matchingGames={matchingGames}
+                      getMatchInfo={getMatchInfo}
+                    />
+                    <Box flex="x" spacing="s" justifyContent="flex-end">
+                      <Button variant="secondary" command="--navi-cancel">
+                        Cancel
+                      </Button>
+                      <Button variant="primary" command="--navi-send">
+                        Define
+                      </Button>
+                    </Box>
+                  </Box>
+                </Picker>
+              </Box>
+
+              <Box flex="y" spacing="m" alignX="start">
+                <Text as="h2" size="l">
+                  Popover mode
+                </Text>
+                <Picker
+                  name="game_picker_popover"
+                  placeholder="Select a game…"
+                  value={selectedGame}
+                  action={(v) => {
+                    selectedGameSignal.value = v ?? "";
+                  }}
+                  mode="popover"
+                  minWidth="200"
+                >
+                  <Box flex="y" spacing="m" padding="m" expandY minHeight="0">
+                    <GameList
+                      selectedGame={selectedGame}
+                      searchText={searchText}
+                      matchingGames={matchingGames}
+                      getMatchInfo={getMatchInfo}
+                    />
+                  </Box>
+                </Picker>
+              </Box>
+            </Box>
           </NaviDebug>
         );
       };
