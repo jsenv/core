@@ -177,9 +177,9 @@ await snapshotTests(import.meta.url, ({ test }) => {
       // non-numeric mid-edit values embedded as-is between markers
       { hours: "ab", minutes: 30 },
       { hours: "aH", minutes: 30 },
-      // field value is a complete duration string (e.g. "34h" typed in the minutes input)
-      // → must produce a round-trippable ISO string, not embed "34h" verbatim (which would
-      //   make parseDuration misread the "h" as an hours marker: "PT34hM" → { hours: 34 })
+      // non-numeric values containing ISO time marker letters are bracket-escaped
+      // so the field association is preserved: { minutes: "34h" } → "PT[34h]M"
+      // → parseDuration → { minutes: "34h" }  (not { hours: 34 })
       { minutes: "34h" },
       { minutes: "30m" },
       { hours: "2", minutes: "34h" },
@@ -232,7 +232,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
         durationObj: { hours: "2", minutes: "30" },
       },
       {
-        label: 'user types "34h" into minutes (unit suffix in wrong field)',
+        label: 'user types "34h" into minutes — preserved as minutes: "34h"',
         durationObj: { minutes: "34h" },
       },
     ];

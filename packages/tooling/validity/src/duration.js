@@ -202,14 +202,19 @@ const parseISODuration = (s) => {
     }
   }
 
-  // Time components: same strategy.
+  // Time components: use bracket-aware search so that encoded values like
+  // "[34h]" are not split on the 'h' inside the brackets.
   for (const [marker, key] of ISO_TIME_MARKERS) {
-    const idx = lastIndexOfCI(timePart, marker);
+    const idx = lastIndexOfCIOutsideBrackets(timePart, marker);
     if (idx === -1) {
       continue;
     }
-    const rawValue = timePart.slice(0, idx);
+    let rawValue = timePart.slice(0, idx);
     timePart = timePart.slice(idx + 1);
+    // Strip bracket escaping added by encodeTimeValue
+    if (rawValue.startsWith("[") && rawValue.endsWith("]")) {
+      rawValue = rawValue.slice(1, -1);
+    }
     if (rawValue !== "") {
       const num = Number(rawValue);
       result[key] = isFinite(num) ? num : rawValue;
@@ -221,6 +226,35 @@ const parseISODuration = (s) => {
   }
   return result;
 };
+// When a non-numeric time value contains ISO time marker letters (H/M/S,
+// case-insensitive), wrapping it in [...] prevents parseISODuration from
+// mistaking those letters for unit markers (e.g. "34h" in minutes must not
+// look like an hours value).  Purely numeric values or values without marker
+// chars are returned unchanged.
+const encodeTimeValue = (v) => {
+  if (typeof v !== "string") return v;
+  for (const ch of v) {
+    const lo = ch.toLowerCase();
+    if (lo === "h" || lo === "m" || lo === "s") return `[${v}]`;
+  }
+  return v;
+};
+
+// Like lastIndexOfCI but skips characters inside [...] brackets so that
+// escaped values (e.g. "[34h]") are never mistaken for ISO markers.
+const lastIndexOfCIOutsideBrackets = (s, ch) => {
+  const upper = ch.toUpperCase();
+  const lower = ch.toLowerCase();
+  let depth = 0;
+  let lastFound = -1;
+  for (let i = 0; i < s.length; i++) {
+    if (s[i] === "[") { depth++; continue; }
+    if (s[i] === "]") { if (depth > 0) depth--; continue; }
+    if (depth === 0 && (s[i] === upper || s[i] === lower)) lastFound = i;
+  }
+  return lastFound;
+};
+
 // Case-insensitive indexOf for a single character.
 const indexOfCI = (s, ch) => {
   const upper = ch.toUpperCase();
@@ -382,23 +416,6 @@ export const durationToISOString = (value) => {
   if (!duration) {
     return null;
   }
-  // If any field value is a complete duration string (e.g. "34h" typed into the
-  // minutes input), parse it and use it as the full result. Without this, "34h"
-  // would be embedded verbatim producing "PT34hM", and parseDuration would then
-  // misread the "h" as an ISO hours marker, breaking the round-trip.
-  for (const { key } of UNITS) {
-    const v = duration[key];
-    if (v === undefined || v === null) {
-      continue;
-    }
-    if (isFinite(Number(v))) {
-      continue;
-    }
-    const parsed = parseDuration(String(v));
-    if (parsed) {
-      return durationToISOString(parsed);
-    }
-  }
   const resolveValue = (key) => {
     const v = duration[key];
     if (v === undefined || v === null) {
@@ -430,14 +447,14 @@ export const durationToISOString = (value) => {
   }
   let time = "";
   if (hours !== null) {
-    time += `${hours}H`;
+    time += `${encodeTimeValue(hours)}H`;
   }
   if (minutes !== null) {
-    time += `${minutes}M`;
+    time += `${encodeTimeValue(minutes)}M`;
   }
   if (typeof secs === "string") {
-    // Non-numeric seconds — embed as-is; ms has no ISO marker so it is ignored
-    time += `${secs}S`;
+    // Non-numeric seconds — embed with bracket escaping if needed
+    time += `${encodeTimeValue(secs)}S`;
   } else {
     // Numeric path — fold ms into seconds; include even if total is 0 so that
     // an explicitly-set field (user typed "0") is preserved in the output

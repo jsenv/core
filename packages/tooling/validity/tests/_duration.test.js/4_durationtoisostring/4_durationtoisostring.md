@@ -13,9 +13,9 @@ const cases = [
   // non-numeric mid-edit values embedded as-is between markers
   { hours: "ab", minutes: 30 },
   { hours: "aH", minutes: 30 },
-  // field value is a complete duration string (e.g. "34h" typed in the minutes input)
-  // → must produce a round-trippable ISO string, not embed "34h" verbatim (which would
-  //   make parseDuration misread the "h" as an hours marker: "PT34hM" → { hours: 34 })
+  // non-numeric values containing ISO time marker letters are bracket-escaped
+  // so the field association is preserved: { minutes: "34h" } → "PT[34h]M"
+  // → parseDuration → { minutes: "34h" }  (not { hours: 34 })
   { minutes: "34h" },
   { minutes: "30m" },
   { hours: "2", minutes: "34h" },
@@ -72,20 +72,20 @@ return renderTable(
 │   "minutes": 30       │                       │
 │ }                     │                       │
 ├───────────────────────┼───────────────────────┤
-│ {                     │ "PTaHH30M"            │
+│ {                     │ "PT[aH]H30M"          │
 │   "hours": "aH",      │                       │
 │   "minutes": 30       │                       │
 │ }                     │                       │
 ├───────────────────────┼───────────────────────┤
-│ {                     │ "PT34H"               │
+│ {                     │ "PT[34h]M"            │
 │   "minutes": "34h"    │                       │
 │ }                     │                       │
 ├───────────────────────┼───────────────────────┤
-│ {                     │ "PT30M"               │
+│ {                     │ "PT[30m]M"            │
 │   "minutes": "30m"    │                       │
 │ }                     │                       │
 ├───────────────────────┼───────────────────────┤
-│ {                     │ "PT34H"               │
+│ {                     │ "PT2H[34h]M"          │
 │   "hours": "2",       │                       │
 │   "minutes": "34h"    │                       │
 │ }                     │                       │
