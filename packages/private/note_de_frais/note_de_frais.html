@@ -1,0 +1,585 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Note de frais</title>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      #jsenv_ribbon_container { display: none !important; }
+
+      /* ===================== SCREEN ===================== */
+      body {
+        color: #222;
+        font-size: 13px;
+        font-family: Arial, sans-serif;
+        background: #e8ecf0;
+      }
+
+      /* ---- Editor panel ---- */
+      #editor {
+        max-width: 900px;
+        margin: 16px auto;
+        padding: 20px 24px;
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+      }
+      #editor h1 {
+        margin-bottom: 16px;
+        padding-bottom: 8px;
+        color: #b5651d;
+        font-size: 16px;
+        border-bottom: 2px solid #f0dcc8;
+      }
+      .editor-grid {
+        display: grid;
+        margin-bottom: 16px;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+      }
+      .editor-section h2 {
+        margin-bottom: 10px;
+        padding-bottom: 4px;
+        color: #666;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border-bottom: 1px solid #eee;
+      }
+      .field {
+        display: flex;
+        margin-bottom: 8px;
+        flex-direction: column;
+        gap: 3px;
+      }
+      .field label {
+        color: #555;
+        font-weight: bold;
+        font-size: 11px;
+      }
+      .field input,
+      .field select {
+        width: 100%;
+        padding: 5px 8px;
+        font-size: 13px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        outline: none;
+        transition: border-color 0.15s;
+      }
+      .field input:focus,
+      .field select:focus {
+        border-color: #b5651d;
+        box-shadow: 0 0 0 2px rgba(181, 101, 29, 0.12);
+      }
+      .field-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+      .editor-actions {
+        display: flex;
+        margin-top: 4px;
+        padding-top: 12px;
+        align-items: center;
+        gap: 10px;
+        border-top: 1px solid #eee;
+      }
+      button {
+        padding: 8px 18px;
+        font-weight: bold;
+        font-size: 13px;
+        border: none;
+        border-radius: 5px;
+        transition: background 0.15s, transform 0.1s;
+        cursor: pointer;
+      }
+      button:active { transform: scale(0.97); }
+      .btn-primary { color: #fff; background: #b5651d; }
+      .btn-primary:hover { background: #8f4e17; }
+      .btn-secondary { color: #333; background: #e2e8f0; }
+      .btn-secondary:hover { background: #cbd5e1; }
+      .btn-print { margin-left: auto; color: #fff; background: #217a3c; }
+      .btn-print:hover { background: #195e2d; }
+
+      /* ---- Fixed expenses editor ---- */
+      .fixed-section {
+        margin-bottom: 16px;
+      }
+      .fixed-section h2 {
+        margin-bottom: 10px;
+        padding-bottom: 4px;
+        color: #666;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .fixed-section h2 button {
+        padding: 3px 10px;
+        font-size: 11px;
+        font-weight: bold;
+        color: #fff;
+        background: #b5651d;
+        border-radius: 4px;
+        text-transform: none;
+        letter-spacing: 0;
+      }
+      .fixed-section h2 button:hover { background: #8f4e17; }
+
+      .expenses-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+        margin-bottom: 6px;
+      }
+      .expenses-table th {
+        background: #f5ebe0;
+        color: #555;
+        font-weight: bold;
+        padding: 5px 7px;
+        text-align: left;
+        white-space: nowrap;
+      }
+      .expenses-table th.col-num, .expenses-table td.col-num { width: 40px; }
+      .expenses-table th.col-chk, .expenses-table td.col-chk { width: 28px; text-align: center; }
+      .expenses-table th.col-del, .expenses-table td.col-del { width: 28px; }
+      .expenses-table th.col-amount, .expenses-table td.col-amount { text-align: right; width: 90px; }
+      .expenses-table th.col-tva, .expenses-table td.col-tva { width: 60px; }
+      .expenses-table td {
+        padding: 3px 4px;
+        border-bottom: 1px solid #f0e8e0;
+        vertical-align: middle;
+      }
+      .expenses-table input[type="text"],
+      .expenses-table input[type="number"] {
+        width: 100%;
+        padding: 3px 5px;
+        font-size: 12px;
+        border: 1px solid #ddd;
+        border-radius: 3px;
+        outline: none;
+      }
+      .expenses-table input[type="text"]:focus,
+      .expenses-table input[type="number"]:focus {
+        border-color: #b5651d;
+      }
+      .expenses-table input[type="checkbox"] {
+        accent-color: #b5651d;
+        width: 14px;
+        height: 14px;
+      }
+      .btn-del-exp {
+        background: none;
+        border: none;
+        color: #c0392b;
+        font-size: 15px;
+        cursor: pointer;
+        padding: 2px 4px;
+        border-radius: 3px;
+        font-weight: bold;
+        line-height: 1;
+      }
+      .btn-del-exp:hover { background: #fde8e8; }
+
+      /* ---- Document wrapper ---- */
+      #doc-wrapper {
+        max-width: 900px;
+        margin: 0 auto 40px;
+      }
+
+      /* ---- Document ---- */
+      #document {
+        width: 100%;
+        padding: 28mm 24mm;
+        background: #fff;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+      }
+
+      /* ===================== DOCUMENT STYLES ===================== */
+      .doc-title {
+        margin-bottom: 24px;
+        color: #333;
+        font-weight: bold;
+        font-size: 20px;
+        text-align: center;
+        line-height: 1.3;
+        outline: none;
+      }
+      .doc-header {
+        display: flex;
+        margin-bottom: 28px;
+        align-items: flex-start;
+        justify-content: space-between;
+      }
+      .doc-header-left div,
+      .doc-header-right {
+        min-width: 1ch;
+        outline: none;
+      }
+      .doc-header-left div { line-height: 1.6; }
+      .doc-made-on { color: #555; }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      thead tr { background: #c87941; }
+      th {
+        padding: 9px 10px;
+        color: #fff;
+        font-weight: bold;
+        font-size: 12px;
+        text-align: left;
+        white-space: nowrap;
+      }
+      th.col-r, td.col-r { text-align: right; }
+      th.col-tva, td.col-tva { width: 60px; }
+      th.col-amount, td.col-amount { width: 110px; text-align: right; }
+      td {
+        min-height: 24px;
+        padding: 7px 10px;
+        font-size: 12.5px;
+        line-height: 1.4;
+        vertical-align: top;
+        border-bottom: 1px solid #e8e8e8;
+        outline: none;
+      }
+      td[contenteditable="true"]:focus { background: #fdf5ec; }
+      tr:last-child td { border-bottom: none; }
+
+      .row-actions { width: 28px; padding: 2px 4px; vertical-align: middle; }
+      .btn-del {
+        padding: 2px 4px;
+        color: #c0392b;
+        font-weight: bold;
+        font-size: 16px;
+        line-height: 1;
+        background: none;
+        border: none;
+        border-radius: 3px;
+        cursor: pointer;
+      }
+      .btn-del:hover { background: #fde8e8; }
+
+      .table-footer {
+        display: flex;
+        margin-top: 10px;
+        align-items: center;
+        gap: 10px;
+      }
+      .btn-add-row {
+        padding: 4px 12px;
+        color: #666;
+        font-weight: normal;
+        font-size: 12px;
+        background: none;
+        border: 1px dashed #aaa;
+        border-radius: 4px;
+      }
+      .btn-add-row:hover { color: #333; background: #f5f5f5; border-color: #888; }
+
+      .total-row td {
+        padding-top: 10px;
+        font-weight: bold;
+        border-top: 2px solid #c87941;
+        border-bottom: none;
+      }
+
+      /* ===================== PRINT ===================== */
+      @media print {
+        body { background: white; }
+        #editor { display: none; }
+        #doc-wrapper { max-width: none; margin: 0; }
+        #document { width: 100%; padding: 0; box-shadow: none; }
+        .no-print { display: none !important; }
+        td[contenteditable], .doc-title, .doc-header-left div,
+        .doc-header-right { outline: none !important; }
+        td[contenteditable="true"]:focus { background: transparent; }
+
+        @page {
+          size: A4;
+          margin: 15mm 18mm;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ======================== EDITOR ======================== -->
+    <div id="editor">
+      <h1>Note de frais — Paramètres</h1>
+
+      <div class="editor-grid">
+        <div class="editor-section">
+          <h2>Informations personnelles</h2>
+          <div class="field">
+            <label>Nom</label>
+            <input id="inp-name" value="DAMIEN MAILLARD" />
+          </div>
+          <div class="field">
+            <label>Email</label>
+            <input id="inp-email" type="email" value="dmaillard06@gmail.com" />
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label>Mois / Année du rapport</label>
+              <input id="inp-month" type="month" />
+            </div>
+            <div class="field">
+              <label>Date du document</label>
+              <input id="inp-doc-date" type="date" />
+            </div>
+          </div>
+        </div>
+
+        <div class="editor-section">
+          <h2>Actions</h2>
+          <p style="font-size:12px;color:#666;margin-bottom:12px">
+            Configurez les dépenses ci-dessous, cochez celles à inclure ce mois,
+            puis cliquez sur <strong>Générer</strong>.
+          </p>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <button class="btn-primary" style="width:100%" onclick="generateRows()">Générer le document</button>
+            <button class="btn-secondary" style="width:100%" onclick="resetDocument()">Réinitialiser</button>
+            <button class="btn-print" style="width:100%;margin-left:0" onclick="window.print()">🖨 Imprimer / Exporter PDF</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fixed expenses -->
+      <div class="fixed-section">
+        <h2>
+          Dépenses
+          <button onclick="addExpenseTemplate()">+ Ajouter</button>
+        </h2>
+        <table class="expenses-table">
+          <thead>
+            <tr>
+              <th class="col-chk" title="Inclure ce mois">✓</th>
+              <th class="col-num">Jour</th>
+              <th>Catégorie</th>
+              <th>Commentaire</th>
+              <th class="col-tva">TVA</th>
+              <th class="col-amount">Montant TTC</th>
+              <th class="col-del"></th>
+            </tr>
+          </thead>
+          <tbody id="templates-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ======================== DOCUMENT ======================== -->
+    <div id="doc-wrapper">
+      <div id="document">
+        <div class="doc-title" id="doc-title" contenteditable="true">Note de frais</div>
+
+        <div class="doc-header">
+          <div class="doc-header-left">
+            <div id="doc-name" contenteditable="true">DAMIEN MAILLARD</div>
+            <div id="doc-email" contenteditable="true">dmaillard06@gmail.com</div>
+          </div>
+          <div class="doc-made-on">
+            Fait le&nbsp;: <span id="doc-date" contenteditable="true"></span>
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Date de l'opération</th>
+              <th>Catégorie</th>
+              <th>Commentaire</th>
+              <th class="col-tva">TVA</th>
+              <th class="col-amount">Montant TTC</th>
+              <th class="no-print" style="width:32px"></th>
+            </tr>
+          </thead>
+          <tbody id="trips-body"></tbody>
+          <tfoot>
+            <tr class="total-row">
+              <td colspan="3">Total TTC</td>
+              <td class="col-tva"></td>
+              <td class="col-r" id="total-ttc">0,00 €</td>
+              <td class="no-print"></td>
+            </tr>
+          </tfoot>
+        </table>
+
+        <div class="table-footer no-print">
+          <button class="btn-add-row" onclick="addEmptyRow()">+ Ajouter une ligne</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const MONTHS_FR = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+
+      // Default fixed expenses — edit in the editor table
+      let templates = [
+        { enabled: true, day: 2,  category: "LOYERS ET CHARGES", comment: "1/7 Prêt",     tva: "", amount: "251,28" },
+        { enabled: true, day: 5,  category: "INTERNET",          comment: "⅔ Internet",    tva: "", amount: "20,45"  },
+        { enabled: true, day: 5,  category: "TÉLÉPHONE",         comment: "⅔ Téléphone",   tva: "", amount: "6,90"   },
+        { enabled: true, day: 5,  category: "LOYERS ET CHARGES", comment: "1/7 Gaz",        tva: "", amount: "18,06"  },
+        { enabled: false, day: 5, category: "LOYERS ET CHARGES", comment: "Électricité",    tva: "", amount: ""       },
+      ];
+
+      const $ = (id) => document.getElementById(id);
+
+      // ---- Init dates ----
+      const today = new Date();
+      $("inp-doc-date").value = toISODate(today);
+      $("inp-month").value = toISOMonth(today);
+      $("doc-date").textContent = formatDate(today);
+      updateTitle();
+
+      // ---- Live sync ----
+      $("inp-name").addEventListener("input", () => { $("doc-name").textContent = $("inp-name").value; });
+      $("inp-email").addEventListener("input", () => { $("doc-email").textContent = $("inp-email").value; });
+      $("inp-doc-date").addEventListener("input", () => {
+        const d = parseDateInput($("inp-doc-date").value);
+        $("doc-date").textContent = d ? formatDate(d) : "";
+      });
+      $("inp-month").addEventListener("input", updateTitle);
+
+      function updateTitle() {
+        const monthVal = $("inp-month").value;
+        if (!monthVal) { return; }
+        const [year, month] = monthVal.split("-").map(Number);
+        const label = `${MONTHS_FR[month - 1]} ${year}`;
+        $("doc-title").textContent = `Note de frais ${label}`;
+        const mm = String(month).padStart(2, "0");
+        document.title = `note_de_frais_${mm}_${year}`;
+      }
+
+      // ---- Render template editor ----
+      function renderTemplates() {
+        const tbody = $("templates-body");
+        tbody.innerHTML = "";
+        templates.forEach((t, i) => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td class="col-chk"><input type="checkbox" ${t.enabled ? "checked" : ""} onchange="templates[${i}].enabled = this.checked"></td>
+            <td class="col-num"><input type="number" min="1" max="31" value="${t.day}" style="width:44px" onchange="templates[${i}].day = +this.value"></td>
+            <td><input type="text" value="${escHtml(t.category)}" oninput="templates[${i}].category = this.value"></td>
+            <td><input type="text" value="${escHtml(t.comment)}" oninput="templates[${i}].comment = this.value"></td>
+            <td class="col-tva"><input type="text" value="${escHtml(t.tva)}" style="width:54px" oninput="templates[${i}].tva = this.value"></td>
+            <td class="col-amount"><input type="text" value="${escHtml(t.amount)}" style="text-align:right" oninput="templates[${i}].amount = this.value"></td>
+            <td class="col-del"><button class="btn-del-exp" onclick="deleteTemplate(${i})">×</button></td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+      renderTemplates();
+
+      window.addExpenseTemplate = () => {
+        templates.push({ enabled: true, day: 1, category: "", comment: "", tva: "", amount: "" });
+        renderTemplates();
+      };
+
+      window.deleteTemplate = (i) => {
+        templates.splice(i, 1);
+        renderTemplates();
+      };
+
+      // ---- Generate document rows ----
+      window.generateRows = () => {
+        const monthVal = $("inp-month").value;
+        if (!monthVal) {
+          $("doc-title").style.color = "#c0392b";
+          return;
+        }
+        const [year, month] = monthVal.split("-").map(Number);
+        const tbody = $("trips-body");
+        tbody.innerHTML = "";
+
+        templates
+          .filter((t) => t.enabled)
+          .forEach((t) => {
+            const dayInMonth = new Date(year, month - 1, t.day).getDate();
+            // Clamp to last day of month if needed
+            const d = new Date(year, month - 1, dayInMonth > 0 ? t.day : 0);
+            tbody.appendChild(createRow(formatDate(d), t.category, t.comment, t.tva, t.amount));
+          });
+        updateTotal();
+      };
+
+      window.addEmptyRow = () => {
+        $("trips-body").appendChild(createRow("", "", "", "", ""));
+        updateTotal();
+      };
+
+      window.deleteRow = (btn) => {
+        btn.closest("tr").remove();
+        updateTotal();
+      };
+
+      function createRow(date, category, comment, tva, amount) {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td contenteditable="true">${escHtml(date)}</td>
+          <td contenteditable="true">${escHtml(category)}</td>
+          <td contenteditable="true">${escHtml(comment)}</td>
+          <td contenteditable="true" class="col-tva">${escHtml(tva)}</td>
+          <td contenteditable="true" class="col-r col-amount">${escHtml(amount)}</td>
+          <td class="row-actions no-print">
+            <button class="btn-del" title="Supprimer" onclick="deleteRow(this)">×</button>
+          </td>
+        `;
+        tr.querySelectorAll("td[contenteditable]").forEach((td) => {
+          td.addEventListener("input", updateTotal);
+        });
+        return tr;
+      }
+
+      function updateTotal() {
+        let total = 0;
+        $("trips-body").querySelectorAll("tr").forEach((tr) => {
+          const cell = tr.querySelector(".col-amount");
+          if (cell) {
+            const val = parseFloat(cell.textContent.replace(/\s/g, "").replace(",", "."));
+            if (!isNaN(val)) { total += val; }
+          }
+        });
+        $("total-ttc").textContent = `${total.toFixed(2).replace(".", ",")} €`;
+      }
+
+      window.resetDocument = () => {
+        // eslint-disable-next-line no-alert
+        if (!window.confirm("Réinitialiser le document ?")) { return; }
+        $("trips-body").innerHTML = "";
+        updateTotal();
+      };
+
+      // ---- Helpers ----
+      function toISODate(d) {
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      }
+      function toISOMonth(d) {
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      }
+      function parseDateInput(str) {
+        if (!str) { return null; }
+        const [y, m, day] = str.split("-").map(Number);
+        return new Date(y, m - 1, day);
+      }
+      function formatDate(d) {
+        return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+      }
+      function escHtml(str) {
+        return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      }
+    </script>
+  </body>
+</html>
