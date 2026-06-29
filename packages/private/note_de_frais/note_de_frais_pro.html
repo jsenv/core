@@ -13,8 +13,6 @@
         padding: 0;
       }
 
-      #jsenv_ribbon_container { display: none !important; }
-
       /* ===================== SCREEN ===================== */
       body {
         color: #222;
@@ -300,6 +298,7 @@
       /* ===================== PRINT ===================== */
       @media print {
         body { background: white; }
+        jsenv-ribbon { display: none !important; }
         #editor { display: none; }
         #doc-wrapper { max-width: none; margin: 0; }
         #document { width: 100%; padding: 0; box-shadow: none; }
