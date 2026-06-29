@@ -16,6 +16,11 @@ import {
 
 const css = /* css */ `
   .navi_picker {
+    --picker-popover-max-height: 300px;
+
+    --picker-dialog-max-width: 95dvw;
+    --picker-dialog-max-height: 95dvh;
+
     /* popover */
     &[aria-haspopup="listbox"] {
       .navi_picker_popover {
@@ -24,7 +29,10 @@ const css = /* css */ `
         min-width: var(--anchor-width, 0px);
         max-width: 95vw;
         /* max-height covers the placeholder + list; the list scrolls internally */
-        max-height: min(var(--picker-popup-max-height, 300px), var(--space-available, 95dvh));
+        max-height: min(
+          var(--picker-popover-max-height),
+          var(--space-available, 95dvh)
+        );
         margin: 0;
         padding: 0;
         background: var(--picker-background-color);
@@ -116,12 +124,9 @@ const css = /* css */ `
     /* dialog */
     &[aria-haspopup="dialog"] {
       .navi_picker_dialog {
-        --dialog-max-width: 95dvw;
-        --dialog-max-height: 95dvh;
-
         min-width: var(--anchor-width, 0px);
-        max-width: var(--dialog-max-width);
-        max-height: var(--dialog-max-height);
+        max-width: var(--picker-dialog-max-width);
+        max-height: var(--picker-dialog-max-height);
         padding: 0;
         background: var(--picker-background-color);
         border: var(--picker-border-width) solid var(--x-picker-border-color);
@@ -136,10 +141,10 @@ const css = /* css */ `
         /* overscroll-behavior: contain; */
 
         &[data-expand-x] {
-          width: var(--dialog-max-width);
+          width: var(--picker-dialog-max-width);
         }
         &[data-expand-y] {
-          height: var(--dialog-max-height);
+          height: var(--picker-dialog-max-height);
         }
 
         &[open] {
