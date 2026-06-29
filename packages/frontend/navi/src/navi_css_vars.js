@@ -21,8 +21,8 @@ const css = /* css */ `
     :root {
       /* Overridden at runtime with precise VisualViewport pixel values so that dvw/dvh 
       (which don't track the virtual keyboard dimensions) are never used in practice on supported browsers. */
-      --navi-visual-viewport-width: 100dvw;
-      --navi-visual-viewport-height: 100dvh;
+      --navi-vvw: 100dvw;
+      --navi-vvh: 100dvh;
 
       --navi-focus-outline-width: 2px;
       --navi-focus-outline-color: light-dark(#4476ff, #3b82f6);
@@ -126,11 +126,11 @@ import.meta.css = css;
 
 effect(() => {
   document.documentElement.style.setProperty(
-    "--navi-visual-viewport-width",
+    "--navi-vvw",
     `${visualViewportWidthSignal.value}px`,
   );
   document.documentElement.style.setProperty(
-    "--navi-visual-viewport-height",
+    "--navi-vvh",
     `${visualViewportHeightSignal.value}px`,
   );
 });
