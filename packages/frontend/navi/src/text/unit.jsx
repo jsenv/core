@@ -22,15 +22,9 @@ export const Unit = ({
   let unitText = unit;
   if (label) {
     unitText = label;
-  } else {
+  } else if (naviI18n.has(unit, { lang })) {
     const singularText = naviI18n(unit, undefined, { lang });
-    if (singularText === unit) {
-      // naviI18n has no translation — try Intl.NumberFormat with style:"unit"
-      const intlText = formatIntlUnit(unit, { plural, lang, format });
-      if (intlText !== null) {
-        unitText = intlText;
-      }
-    } else if (format === "short" || format === "narrow") {
+    if (format === "short" || format === "narrow") {
       const shortKey = `${unit}__short`;
       const shortText = naviI18n(shortKey, undefined, { lang });
       unitText = shortText === shortKey ? singularText : shortText;
@@ -41,6 +35,14 @@ export const Unit = ({
       unitText = pluralText !== pluralKey ? pluralText : singularText;
     } else {
       unitText = singularText;
+    }
+  } else {
+    // naviI18n has no translation — try Intl.NumberFormat with style:"unit"
+    const intlText = formatIntlUnit(unit, { plural, lang, format });
+    if (intlText === null) {
+      unitText = unit;
+    } else {
+      unitText = intlText;
     }
   }
 
