@@ -73,12 +73,13 @@ export const Popover = (props) => {
   const openedRef = useRef(openProp);
   openedRef.current = openProp;
   const [addCleanup, cleanup] = useCleanup();
-  const open = (e, { anchor }) => {
+  const open = (e) => {
     debugPopup(e, `openPopover()`);
     const popoverEl = ref.current;
     const focusedBeforeOpen = getFocusedBeforeTransfer(e);
     popoverEl.showPopover();
     transferFocus(popoverEl, debugFocus, e, focusedBeforeOpen);
+    const anchor = anchorRef?.current ?? null;
     const effectiveAnchor = anchor || document.documentElement;
     const positionPopover = (positionEvent) => {
       const { width, height } = effectiveAnchor.getBoundingClientRect();
@@ -180,7 +181,7 @@ export const Popover = (props) => {
     });
   };
 
-  const onRequestOpen = (e, { anchor }) => {
+  const onRequestOpen = (e) => {
     const popoverEl = ref.current;
     if (!popoverEl) {
       return;
@@ -188,7 +189,7 @@ export const Popover = (props) => {
     if (openedRef.current) {
       return;
     }
-    open(e, { anchor });
+    open(e);
   };
   const onRequestClose = (e, detail = {}) => {
     const popoverEl = ref.current;
@@ -223,7 +224,7 @@ export const Popover = (props) => {
     if (openProp === undefined) return;
     const e = new CustomEvent("open_prop_change");
     if (openProp) {
-      onRequestOpen(e, { anchor: anchorRef?.current ?? null });
+      onRequestOpen(e);
     } else {
       onRequestClose(e);
     }
@@ -239,8 +240,7 @@ export const Popover = (props) => {
       baseClassName="navi_popover"
       pseudoClasses={POPOVER_PSEUDO_CLASSES}
       onnavi_request_open={(e) => {
-        const { anchor } = e.detail;
-        onRequestOpen(e, { anchor });
+        onRequestOpen(e);
       }}
       onnavi_request_close={(e) => {
         onRequestClose(e);
