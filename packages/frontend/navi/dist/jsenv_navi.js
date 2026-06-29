@@ -14691,7 +14691,7 @@ const setupBrowserIntegrationViaHistory = ({
     url,
     {
       reason,
-      navigationType, // "push", "reload", "replace", "traverse"
+      navigationType, // "load", "reload", "replace", "push", "traverse"
       state,
     },
   ) => {
@@ -14719,7 +14719,7 @@ const setupBrowserIntegrationViaHistory = ({
     }
 
     // Routes only match on URL — skip route matching for state-only changes.
-    if (isSameUrl && navigationType !== "reload") {
+    if (isSameUrl && navigationType !== "reload" && navigationType !== "load") {
       return undefined;
     }
 
@@ -14842,7 +14842,7 @@ const setupBrowserIntegrationViaHistory = ({
     const state = history.state;
     handleRoutingTask(url, {
       reason: "routing initialization",
-      navigationType: "replace",
+      navigationType: "load",
       state,
     });
   };
