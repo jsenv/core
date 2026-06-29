@@ -7,7 +7,7 @@ import {
   trapScrollInside,
   visibleRectEffect,
 } from "@jsenv/dom";
-import { useId, useLayoutEffect, useRef } from "preact/hooks";
+import { useId, useRef } from "preact/hooks";
 
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import { Box } from "../box/box.jsx";
@@ -46,7 +46,7 @@ const css = /* css */ `
 export const Popover = (props) => {
   import.meta.css = css;
   const {
-    open: openProp = false,
+    requestClose,
     anchorRef,
     scrollTrap,
     pointerTrap,
@@ -170,7 +170,7 @@ export const Popover = (props) => {
       focusedBeforeOpen,
     });
   };
-  const close = (e, detail = {}) => {
+  const close = (e) => {
     debugPopup(e, `closePopover()`);
     const popoverEl = ref.current;
     markAutofocusRestoreOnClose(popoverEl);
@@ -179,68 +179,8 @@ export const Popover = (props) => {
     openedRef.current = false;
     dispatchCustomEvent(popoverEl, "navi_close", {
       event: e,
-      ...detail,
     });
   };
-
-  const onRequestOpen = (e) => {
-    const popoverEl = ref.current;
-    if (!popoverEl) {
-      return;
-    }
-    if (openedRef.current) {
-      return;
-    }
-    open(e);
-  };
-  const onRequestClose = (e, detail = {}) => {
-    const popoverEl = ref.current;
-    if (!popoverEl) {
-      return;
-    }
-    if (!openedRef.current) {
-      return;
-    }
-    if (closeRequestHandler) {
-      let denied = false;
-      const closePermission = {
-        deny: () => {
-          denied = true;
-        },
-        allow: () => {
-          denied = false;
-        },
-      };
-      closeRequestHandler(e, closePermission, detail);
-      if (denied) {
-        closePermission.allow = () => {
-          close(e, detail);
-        };
-        return;
-      }
-    }
-    close(e, detail);
-  };
-
-  useLayoutEffect(() => {
-    if (openProp === undefined) {
-      return;
-    }
-    // Skip when the popover is already in the desired state.
-    // This avoids a feedback loop: our own close/open dispatches navi_close/navi_open,
-    // the parent updates the prop, and the effect would fire again for a change we
-    // already handled. Comparing against openedRef is the authoritative check because
-    // it reflects the actual DOM state, not the React render cycle.
-    if (openProp === openedRef.current) {
-      return;
-    }
-    const e = new CustomEvent("open_prop_change", { detail: {} });
-    if (openProp) {
-      onRequestOpen(e);
-    } else {
-      onRequestClose(e);
-    }
-  }, [openProp]);
 
   return (
     <Box
@@ -252,10 +192,42 @@ export const Popover = (props) => {
       baseClassName="navi_popover"
       pseudoClasses={POPOVER_PSEUDO_CLASSES}
       onnavi_request_open={(e) => {
-        onRequestOpen(e);
+        const popoverEl = ref.current;
+        if (!popoverEl) {
+          return;
+        }
+        if (openedRef.current) {
+          return;
+        }
+        open(e);
       }}
       onnavi_request_close={(e) => {
-        onRequestClose(e);
+        const popoverEl = ref.current;
+        if (!popoverEl) {
+          return;
+        }
+        if (!openedRef.current) {
+          return;
+        }
+        if (closeRequestHandler) {
+          let denied = false;
+          const closePermission = {
+            deny: () => {
+              denied = true;
+            },
+            allow: () => {
+              denied = false;
+            },
+          };
+          closeRequestHandler(e, closePermission);
+          if (denied) {
+            closePermission.allow = () => {
+              close(e);
+            };
+            return;
+          }
+        }
+        close(e);
       }}
     >
       {/*
@@ -306,7 +278,7 @@ export const Popover = (props) => {
             e.preventDefault();
             return;
           }
-          onRequestClose(e, { isClickOutside: true });
+          requestClose(e, { isCancel: true });
         }}
       />
       {children}
