@@ -87,7 +87,7 @@ export const Quantity = ({
     <Text
       baseClassName="navi_quantity"
       data-unit-bottom={unitBottom ? "" : undefined}
-      propsCSSVars={QuantityPropsCSSVars}
+      styleCSSVars={QuantityStyleCSSVars}
       basePseudoState={{
         ":read-only": readOnly,
         ":disabled": disabled,
@@ -127,7 +127,7 @@ export const Quantity = ({
     </Text>
   );
 };
-const QuantityPropsCSSVars = {
+const QuantityStyleCSSVars = {
   unitColor: "--unit-color",
 };
 const QuantityPseudoClasses = [
