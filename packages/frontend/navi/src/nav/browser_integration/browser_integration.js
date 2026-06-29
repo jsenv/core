@@ -184,17 +184,20 @@ const useNavStateBasic = (
   const onLeaveRef = useRef(onLeave);
   onLeaveRef.current = onLeave;
   const prevValueInStateRef = useRef(valueInState);
-  // Detect when the state key disappears externally (e.g. back-button navigation)
-  // and notify the caller so it can react (e.g. close a dialog in cancel mode).
+  // enteredRef tracks whether enter() was called without a matching leave() yet.
+  // It lets the effect distinguish an external disappearance (back button → fire onLeave)
+  // from a programmatic one (leave() already set it to false before the state updates).
+  const enteredRef = useRef(false);
   useEffect(() => {
     const prevValue = prevValueInStateRef.current;
     prevValueInStateRef.current = valueInState;
     if (
-      onLeaveRef.current &&
       prevValue !== undefined &&
-      valueInState === undefined
+      valueInState === undefined &&
+      enteredRef.current
     ) {
-      onLeaveRef.current();
+      enteredRef.current = false;
+      onLeaveRef.current?.();
     }
   }, [valueInState]);
 
@@ -208,28 +211,13 @@ const useNavStateBasic = (
     console.debug(`useNavState(${id}) current value is ${currentValue}`);
   }
 
-  const set = (value) => {
-    if (typeof value === "function") {
-      value = value(currentValue);
-    }
+  // enter(value): navigate TO this state (push or replace depending on type).
+  const enter = (value) => {
+    enteredRef.current = true;
     const currentState = browserIntegration.getDocumentState() || {};
-    if (value === undefined) {
-      // Key already absent — nothing to undo (e.g. back button already fired).
-      if (!Object.hasOwn(currentState, id)) {
-        return;
-      }
-      if (type === "push") {
-        // Value was pushed as a history entry → go back to pop it.
-        browserIntegration.navBack();
-      } else {
-        const newState = { ...currentState };
-        delete newState[id];
-        navTo(window.location.href, { replace: true, state: newState });
-      }
+    if (currentState[id] === value) {
       return;
     }
-    const valueInCurrentState = currentState[id];
-    if (valueInCurrentState === value) return;
     const newState = { ...currentState, [id]: value };
     navTo(window.location.href, {
       replace: type !== "push",
@@ -237,7 +225,23 @@ const useNavStateBasic = (
     });
   };
 
-  return [currentValue, set, () => set(undefined)];
+  // leave(): navigate AWAY FROM this state (navBack in push mode, replace in replace mode).
+  const leave = () => {
+    enteredRef.current = false;
+    const currentState = browserIntegration.getDocumentState() || {};
+    if (!Object.hasOwn(currentState, id)) {
+      return;
+    }
+    if (type === "push") {
+      browserIntegration.navBack();
+    } else {
+      const newState = { ...currentState };
+      delete newState[id];
+      navTo(window.location.href, { replace: true, state: newState });
+    }
+  };
+
+  return [currentValue, enter, leave];
 };
 
 export const useNavState = import.meta.dev

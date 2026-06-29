@@ -314,23 +314,16 @@ const PickerCustom = (props) => {
   open_close: {
     const debugFocus = useDebugFocus();
     const debugPopup = useDebugPopup();
-    // In "dialog" mode, setExpanded(true) pushes a history entry so the back button closes.
+    // In "dialog" mode, enterExpanded() pushes a history entry so the back button closes.
     // In "popover" mode, it replaces the current history state (no history entry added).
     const pickerNavType = mode === "dialog" ? "push" : "replace";
-    // expandedRef tracks whether the popup is actually open (set in onOpen / onClose).
-    // It is intentionally NOT synced to `expanded` on every render so that onLeave
-    // (called when the state key disappears externally via back button) can distinguish
-    // an external close from a programmatic one.
     const expandedRef = useRef(false);
-    const [expanded, setExpanded, clearExpanded] = useNavState(popupId, false, {
+    const [expanded, enterExpanded, leaveExpanded] = useNavState(popupId, false, {
       type: pickerNavType,
+      // onLeave fires only when the state key disappears externally (back button).
+      // useNavState tracks this internally via enteredRef, so no need to check expandedRef here.
       onLeave: () => {
-        // Back button removed the state key → force close in cancel mode.
-        // expandedRef.current is false when onClose already ran (programmatic close),
-        // so we only act when the popup is still physically open.
-        if (expandedRef.current) {
-          requestClose(new PopStateEvent("popstate"), { isCancel: true });
-        }
+        requestClose(new PopStateEvent("popstate"), { isCancel: true });
       },
     });
     const valueAtOpenRef = useRef(null);
@@ -338,7 +331,7 @@ const PickerCustom = (props) => {
 
     const onOpen = (e) => {
       expandedRef.current = true;
-      setExpanded(true);
+      enterExpanded(true);
 
       const focusedBeforeOpen = e.detail.focusedBeforeOpen;
       activeElementAtOpenRef.current = focusedBeforeOpen;
@@ -393,10 +386,7 @@ const PickerCustom = (props) => {
         }
       }
       expandedRef.current = false;
-      // clearExpanded() handles the right navigation internally:
-      // push mode (dialog) → navBack() to pop the history entry;
-      // replace mode (popover) → replaceState to remove the key.
-      clearExpanded();
+      leaveExpanded();
       // Reset so the next opening re-evaluates screen size
       defaultModeRef.current = null;
       restoreFocus(e);
