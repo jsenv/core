@@ -382,6 +382,23 @@ export const durationToISOString = (value) => {
   if (!duration) {
     return null;
   }
+  // If any field value is a complete duration string (e.g. "34h" typed into the
+  // minutes input), parse it and use it as the full result. Without this, "34h"
+  // would be embedded verbatim producing "PT34hM", and parseDuration would then
+  // misread the "h" as an ISO hours marker, breaking the round-trip.
+  for (const { key } of UNITS) {
+    const v = duration[key];
+    if (v === undefined || v === null) {
+      continue;
+    }
+    if (isFinite(Number(v))) {
+      continue;
+    }
+    const parsed = parseDuration(String(v));
+    if (parsed) {
+      return durationToISOString(parsed);
+    }
+  }
   const resolveValue = (key) => {
     const v = duration[key];
     if (v === undefined || v === null) {
