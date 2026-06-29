@@ -180,7 +180,7 @@ export const SidePanel = ({
     <SidePanelCloseContext.Provider value={onClose}>
       <Box
         baseClassName="navi_side_panel"
-        propsCSSVars={SidePanelStyleCSSVars}
+        styleCSSVars={SidePanelStyleCSSVars}
         width={width}
         data-opening={phase === "opening" ? "" : undefined}
         data-closing={phase === "closing" ? "" : undefined}

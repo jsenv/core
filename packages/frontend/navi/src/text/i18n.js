@@ -127,11 +127,32 @@ export const createI18n = ({
     return interpolateText(template, values);
   };
 
+  const has = (key, { lang = activeLang } = {}) => {
+    const resolvedLang = lang ? matchLang(lang, languageMap) : null;
+    if (resolvedLang) {
+      const translations = languageMap.get(resolvedLang);
+      if (translations && key in translations) {
+        return true;
+      }
+    }
+    if (fallbackLang) {
+      const resolvedFallbackLang = matchLang(fallbackLang, languageMap);
+      if (resolvedFallbackLang) {
+        const fallbackTranslations = languageMap.get(resolvedFallbackLang);
+        if (fallbackTranslations && key in fallbackTranslations) {
+          return true;
+        }
+      }
+    }
+    return false;
+  };
+
   // The i18n instance is itself a callable function
   const i18n = (key, values, opts) => format(key, values, opts);
   i18n.add = add;
   i18n.addAll = addAll;
   i18n.addLangKeys = addLangKeys;
+  i18n.has = has;
   i18n.format = format;
   i18n.languageMap = languageMap;
 

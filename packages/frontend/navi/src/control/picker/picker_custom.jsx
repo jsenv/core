@@ -16,6 +16,15 @@ import {
 
 const css = /* css */ `
   .navi_picker {
+    /* Shared by popover and dialog */
+    --picker-popup-background-color: var(--picker-background-color);
+    --picker-popup-border-radius: var(--picker-border-radius);
+    /* Popover */
+    --picker-popover-max-height: 300px;
+    /* Dialog */
+    --picker-dialog-max-width: 95dvw;
+    --picker-dialog-max-height: 95dvh;
+
     /* popover */
     &[aria-haspopup="listbox"] {
       .navi_picker_popover {
@@ -24,14 +33,17 @@ const css = /* css */ `
         min-width: var(--anchor-width, 0px);
         max-width: 95vw;
         /* max-height covers the placeholder + list; the list scrolls internally */
-        max-height: min(var(--picker-popup-max-height, 300px), var(--space-available, 95dvh));
+        max-height: min(
+          var(--picker-popover-max-height),
+          var(--space-available, 95dvh)
+        );
         margin: 0;
         padding: 0;
-        background: var(--picker-background-color);
+        background: var(--picker-popup-background-color);
         border-width: var(--picker-border-width);
         border-style: solid;
         border-color: var(--x-picker-border-color);
-        border-radius: var(--picker-border-radius);
+        border-radius: var(--picker-popup-border-radius);
         outline-width: var(--picker-outline-width);
         outline-color: var(--picker-outline-color);
         outline-offset: 0px;
@@ -39,7 +51,7 @@ const css = /* css */ `
           0 4px 8px rgba(0, 0, 0, 0.08),
           0 12px 40px rgba(0, 0, 0, 0.22);
         cursor: default; /* Reset pointer cursor within the select */
-        overflow: hidden;
+        overflow: auto;
         overscroll-behavior: none;
 
         /* The anchor placeholder is a non-interactive visual clone of the
@@ -87,7 +99,7 @@ const css = /* css */ `
           width: 100%;
           border-radius: max(
             0px,
-            var(--picker-border-radius) - var(--picker-border-width)
+            var(--picker-popup-border-radius) - var(--picker-border-width)
           );
           overflow: auto;
           overscroll-behavior: none;
@@ -116,16 +128,13 @@ const css = /* css */ `
     /* dialog */
     &[aria-haspopup="dialog"] {
       .navi_picker_dialog {
-        --dialog-max-width: 95dvw;
-        --dialog-max-height: 95dvh;
-
         min-width: var(--anchor-width, 0px);
-        max-width: var(--dialog-max-width);
-        max-height: var(--dialog-max-height);
+        max-width: var(--picker-dialog-max-width);
+        max-height: var(--picker-dialog-max-height);
         padding: 0;
-        background: var(--picker-background-color);
+        background: var(--picker-popup-background-color);
         border: var(--picker-border-width) solid var(--x-picker-border-color);
-        border-radius: var(--picker-border-radius);
+        border-radius: var(--picker-popup-border-radius);
         outline-width: var(--picker-outline-width);
         outline-color: var(--picker-outline-color);
         outline-offset: 0;
@@ -136,10 +145,10 @@ const css = /* css */ `
         /* overscroll-behavior: contain; */
 
         &[data-expand-x] {
-          width: var(--dialog-max-width);
+          width: var(--picker-dialog-max-width);
         }
         &[data-expand-y] {
-          height: var(--dialog-max-height);
+          height: var(--picker-dialog-max-height);
         }
 
         &[open] {
@@ -160,7 +169,7 @@ const css = /* css */ `
         width: 100%;
         border-radius: max(
           0px,
-          var(--picker-border-radius) - var(--picker-border-width)
+          var(--picker-popup-border-radius) - var(--picker-border-width)
         );
         overflow: auto;
         overscroll-behavior: none;

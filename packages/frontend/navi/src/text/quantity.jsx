@@ -56,6 +56,25 @@ const css = /* css */ `
   }
 `;
 
+/**
+ * @type {import("preact").FunctionComponent<{
+ *   children?: number | string,
+ *   unit?: string,
+ *   unitPosition?: "right" | "bottom",
+ *   unitSize?: string,
+ *   unitSizeRatio?: number,
+ *   unitColor?: string,
+ *   label?: string,
+ *   size?: string,
+ *   lang?: string,
+ *   integer?: boolean,
+ *   loading?: boolean,
+ *   readOnly?: boolean,
+ *   disabled?: boolean,
+ *   bold?: boolean,
+ *   [key: string]: any,
+ * }>}
+ */
 export const Quantity = ({
   children,
   unit,
@@ -87,7 +106,7 @@ export const Quantity = ({
     <Text
       baseClassName="navi_quantity"
       data-unit-bottom={unitBottom ? "" : undefined}
-      propsCSSVars={QuantityPropsCSSVars}
+      styleCSSVars={QuantityStyleCSSVars}
       basePseudoState={{
         ":read-only": readOnly,
         ":disabled": disabled,
@@ -127,7 +146,7 @@ export const Quantity = ({
     </Text>
   );
 };
-const QuantityPropsCSSVars = {
+const QuantityStyleCSSVars = {
   unitColor: "--unit-color",
 };
 const QuantityPseudoClasses = [

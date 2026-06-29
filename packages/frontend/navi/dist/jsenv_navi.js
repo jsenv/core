@@ -8891,11 +8891,35 @@ import.meta.css = [/* css */`
 const PSEUDO_CLASSES_DEFAULT = [];
 const PSEUDO_ELEMENTS_DEFAULT = [];
 const STYLE_CSS_VARS_DEFAULT = {};
-const PROPS_CSS_VARS_DEFAULT = {};
 // When only pseudoStateSelector is set (no visualSelector), the box owns its
 // visual identity. Only event handlers and these explicit props are forwarded
 // to the inner semantic/interactive child element.
 const PSEUDO_STATE_CHILD_PROP_SET = new Set(["tabIndex", "tabindex"]);
+
+/**
+ * @type {import("ignore:preact").FunctionComponent<{
+ *   as?: string,
+ *   className?: string,
+ *   style?: import("ignore:preact").JSX.CSSProperties & { [pseudo: string]: import("ignore:preact").JSX.CSSProperties },
+ *   styleCSSVars?: { [stylePropName: string]: string },
+ *   inline?: boolean,
+ *   block?: boolean,
+ *   flex?: "x" | "y" | boolean,
+ *   grid?: boolean,
+ *   display?: "inherit",
+ *   pseudoState?: { [stateName: string]: boolean },
+ *   pseudoClasses?: string[],
+ *   pseudoElements?: string[],
+ *   visualSelector?: string,
+ *   pseudoStateSelector?: string,
+ *   hasChildUsingForwardedProps?: boolean,
+ *   childPropSet?: Set<string>,
+ *   preventInitialTransition?: boolean,
+ *   separator?: import("ignore:preact").ComponentChildren | ((index: number) => import("ignore:preact").ComponentChildren),
+ *   children?: import("ignore:preact").ComponentChildren,
+ *   [key: string]: any,
+ * }>}
+ */
 const Box = props => {
   const {
     ref,
@@ -8906,7 +8930,6 @@ const Box = props => {
     // style management
     style,
     styleCSSVars = STYLE_CSS_VARS_DEFAULT,
-    propsCSSVars = PROPS_CSS_VARS_DEFAULT,
     basePseudoState,
     pseudoState,
     // for demo purposes it's possible to control pseudo state from props
@@ -9165,13 +9188,6 @@ const Box = props => {
         addStyle(value, name, styleContext, boxStylesTarget, context);
         return;
       }
-      const propCssVar = propsCSSVars[name];
-      if (propCssVar) {
-        if (value !== undefined) {
-          addCSSVar(value, propCssVar, boxStylesTarget);
-        }
-        return;
-      }
       const isPseudoStyle = styleOrigin === "pseudo_style";
       if (isStyleProp(name)) {
         // it's a style prop, we need first to check if we have css var to handle them
@@ -9202,6 +9218,13 @@ const Box = props => {
           if (isPseudoStyle) ; else {
             childForwardedProps[name] = value;
           }
+        }
+        return;
+      }
+      const cssVarName = styleCSSVars[name];
+      if (cssVarName) {
+        if (value !== undefined) {
+          addCSSVar(value, cssVarName, boxStylesTarget);
         }
         return;
       }
@@ -17601,11 +17624,32 @@ const createI18n = ({
     return interpolateText(template, values);
   };
 
+  const has = (key, { lang = activeLang } = {}) => {
+    const resolvedLang = lang ? matchLang(lang, languageMap) : null;
+    if (resolvedLang) {
+      const translations = languageMap.get(resolvedLang);
+      if (translations && key in translations) {
+        return true;
+      }
+    }
+    if (fallbackLang) {
+      const resolvedFallbackLang = matchLang(fallbackLang, languageMap);
+      if (resolvedFallbackLang) {
+        const fallbackTranslations = languageMap.get(resolvedFallbackLang);
+        if (fallbackTranslations && key in fallbackTranslations) {
+          return true;
+        }
+      }
+    }
+    return false;
+  };
+
   // The i18n instance is itself a callable function
   const i18n = (key, values, opts) => format(key, values, opts);
   i18n.add = add;
   i18n.addAll = addAll;
   i18n.addLangKeys = addLangKeys;
+  i18n.has = has;
   i18n.format = format;
   i18n.languageMap = languageMap;
 
@@ -27347,57 +27391,74 @@ const shouldInjectSpacingBetween = (left, right) => {
 };
 
 /**
- * Text component for rendering inline or block text with layout-stable style changes.
+ * @type {import("ignore:preact").FunctionComponent<{
+ *   children?: import("ignore:preact").ComponentChildren,
+ *   as?: string,
+ *   className?: string,
+ *   style?: import("ignore:preact").JSX.CSSProperties,
+ *   bold?: boolean,
+ *   noWrap?: boolean,
+ *   maxLines?: number,
+ *   spacing?: string | number | import("ignore:preact").ComponentChildren,
+ *   loading?: boolean,
+ *   skeleton?: boolean,
+ *   preventSpaceUnderlines?: boolean,
+ *   holdSpaceForStyle?: import("ignore:preact").JSX.CSSProperties,
+ *   boldStable?: boolean,
+ *   shrinkWrap?: boolean,
+ *   capitalize?: boolean,
+ *   selectRange?: string | [number, number],
+ *   childrenOutsideFlow?: import("ignore:preact").ComponentChildren,
+ *   [key: string]: any,
+ * }>}
  *
- * Most props are forwarded to the underlying `Box` component (as, style, bold, noWrap, …).
- * The props listed below are specific to Text.
+ * @param {number} [maxLines]
+ *   Truncates overflowing text with an ellipsis. `maxLines={1}` produces a
+ *   single-line truncation; `maxLines={n}` (n > 1) uses `-webkit-line-clamp`
+ *   to allow up to n lines before clipping.
  *
- * @param {object} props
+ * @param {string|number} [spacing]
+ *   Separator injected between child nodes. Accepts a size token (`"s"`, `"m"`, …),
+ *   a CSS length string, a number (interpreted as px), or `"pre"` / `0` to
+ *   disable spacing entirely. Defaults to a regular space character.
  *
- * @param {number} [props.maxLines]
- *   Truncates overflowing text with an ellipsis after at most N lines.
- *   `maxLines={1}` truncates after one line (single-line ellipsis).
- *   `maxLines={n}` (n > 1) truncates after n lines (multi-line clamp).
+ * @param {boolean} [loading]
+ *   Renders a shimmer skeleton animation in place of the text content.
  *
- * @param {string} [props.spacing]
- *   Controls the separator injected between child nodes.
- *   Accepts a size/spacing scale key, a CSS length, or `"pre"` / `0` to disable.
- *   Defaults to a regular space character (or a padding-based fake space when
- *   `preventSpaceUnderlines` is active).
+ * @param {boolean} [skeleton]
+ *   Same as `loading` but without the shimmer animation — a static grey bar.
  *
- * @param {boolean} [props.loading]
- *   Renders a shimmer skeleton in place of the text.
+ * @param {boolean} [preventSpaceUnderlines]
+ *   Replaces real space characters between children with padding-based spaces.
+ *   Useful inside `<a>` elements where browsers draw an underline under spaces.
  *
- * @param {boolean} [props.skeleton]
- *   Same as `loading` but without the shimmer animation.
+ * @param {import("ignore:preact").JSX.CSSProperties} [holdSpaceForStyle]
+ *   Prevents layout shifts when text styles change (e.g. font-weight, font-size).
+ *   Pass the CSS properties representing the "largest" visual state of the text.
+ *   An invisible placeholder rendered with those styles reserves the space; the
+ *   real visible text is layered on top via `position: absolute`.
+ *   Best combined with `noWrap` — does not work reliably on multi-line text.
  *
- * @param {boolean} [props.preventSpaceUnderlines]
- *   Replaces real space characters between children with padding-based spaces
- *   to avoid the underline browsers draw under spaces inside links.
+ * @param {boolean} [boldStable]
+ *   Alternative to `holdSpaceForStyle` for multi-line text. Keeps a consistent
+ *   visual width across bold/normal transitions by painting normal-weight text
+ *   over a bold background using `background-clip: text`. Does not handle
+ *   font-size changes.
  *
- * @param {object} [props.holdSpaceForStyle]
- *   Prevents layout shifts when text styles change (font-weight, font-size, …).
- *   Pass an object of CSS-in-JS style properties representing the "maximum" state of the text.
- *   An invisible placeholder is rendered with those styles to reserve the space,
- *   and the real visible text is layered on top via `position: absolute`.
- *   Only works reliably with single-line (`noWrap`) text.
- *   Example: `holdSpaceForStyle={{ fontWeight: "bold", fontSize: "1.5rem" }}`
+ * @param {boolean} [shrinkWrap]
+ *   Forces the element width to match its longest visual line, preventing the
+ *   text block from being wider than its content when inside a flex/grid container.
  *
- * @param {boolean} [props.boldStable]
- *   Alternative to `holdSpaceForStyle` for multi-line text.
- *   Keeps a consistent visual width regardless of font-weight by painting normal-weight
- *   text on top of a bold background using `background-clip: text`.
- *   Does not support font-size changes.
+ * @param {boolean} [capitalize]
+ *   Uppercases the first letter of the text content via CSS.
  *
- * @param {boolean} [props.capitalize]
- *   Applies `text-transform: uppercase` to the first letter via CSS.
+ * @param {string|[number,number]} [selectRange]
+ *   Selects a portion of the text on mount. Pass a substring to search for, or
+ *   a `[start, end]` character-offset tuple.
  *
- * @param {string|Array} [props.selectRange]
- *   Selects a portion of the text on mount. Forwarded to `useInitialTextSelection`.
- *
- * @param {*} [props.childrenOutsideFlow]
- *   Rendered after children but outside the text flow (useful for overlays
- *   like the skeleton container).
+ * @param {import("ignore:preact").ComponentChildren} [childrenOutsideFlow]
+ *   Rendered after children but outside the text spacing/flow logic. Used
+ *   internally for overlays such as the skeleton container.
  */
 const Text = props => {
   const defaultRef = useRef();
@@ -34374,21 +34435,13 @@ const Unit = ({
   let unitText = unit;
   if (label) {
     unitText = label;
-  } else {
+  } else if (naviI18n.has(unit, {
+    lang
+  })) {
     const singularText = naviI18n(unit, undefined, {
       lang
     });
-    if (singularText === unit) {
-      // naviI18n has no translation — try Intl.NumberFormat with style:"unit"
-      const intlText = formatIntlUnit(unit, {
-        plural,
-        lang,
-        format
-      });
-      if (intlText !== null) {
-        unitText = intlText;
-      }
-    } else if (format === "short" || format === "narrow") {
+    if (format === "short" || format === "narrow") {
       const shortKey = `${unit}__short`;
       const shortText = naviI18n(shortKey, undefined, {
         lang
@@ -34403,6 +34456,18 @@ const Unit = ({
       unitText = pluralText !== pluralKey ? pluralText : singularText;
     } else {
       unitText = singularText;
+    }
+  } else {
+    // naviI18n has no translation — try Intl.NumberFormat with style:"unit"
+    const intlText = formatIntlUnit(unit, {
+      plural,
+      lang,
+      format
+    });
+    if (intlText === null) {
+      unitText = unit;
+    } else {
+      unitText = intlText;
     }
   }
   return jsx(Text, {
@@ -35834,6 +35899,15 @@ const POPOVER_PSEUDO_CLASSES = [":hover", ":active", ":focus", ":focus-visible",
 
 installImportMetaCssBuild(import.meta);const css$p = /* css */`
   .navi_picker {
+    /* Shared by popover and dialog */
+    --picker-popup-background-color: var(--picker-background-color);
+    --picker-popup-border-radius: var(--picker-border-radius);
+    /* Popover */
+    --picker-popover-max-height: 300px;
+    /* Dialog */
+    --picker-dialog-max-width: 95dvw;
+    --picker-dialog-max-height: 95dvh;
+
     /* popover */
     &[aria-haspopup="listbox"] {
       .navi_picker_popover {
@@ -35842,14 +35916,17 @@ installImportMetaCssBuild(import.meta);const css$p = /* css */`
         min-width: var(--anchor-width, 0px);
         max-width: 95vw;
         /* max-height covers the placeholder + list; the list scrolls internally */
-        max-height: min(var(--picker-popup-max-height, 300px), var(--space-available, 95dvh));
+        max-height: min(
+          var(--picker-popover-max-height),
+          var(--space-available, 95dvh)
+        );
         margin: 0;
         padding: 0;
-        background: var(--picker-background-color);
+        background: var(--picker-popup-background-color);
         border-width: var(--picker-border-width);
         border-style: solid;
         border-color: var(--x-picker-border-color);
-        border-radius: var(--picker-border-radius);
+        border-radius: var(--picker-popup-border-radius);
         outline-width: var(--picker-outline-width);
         outline-color: var(--picker-outline-color);
         outline-offset: 0px;
@@ -35857,7 +35934,7 @@ installImportMetaCssBuild(import.meta);const css$p = /* css */`
           0 4px 8px rgba(0, 0, 0, 0.08),
           0 12px 40px rgba(0, 0, 0, 0.22);
         cursor: default; /* Reset pointer cursor within the select */
-        overflow: hidden;
+        overflow: auto;
         overscroll-behavior: none;
 
         /* The anchor placeholder is a non-interactive visual clone of the
@@ -35905,7 +35982,7 @@ installImportMetaCssBuild(import.meta);const css$p = /* css */`
           width: 100%;
           border-radius: max(
             0px,
-            var(--picker-border-radius) - var(--picker-border-width)
+            var(--picker-popup-border-radius) - var(--picker-border-width)
           );
           overflow: auto;
           overscroll-behavior: none;
@@ -35934,16 +36011,13 @@ installImportMetaCssBuild(import.meta);const css$p = /* css */`
     /* dialog */
     &[aria-haspopup="dialog"] {
       .navi_picker_dialog {
-        --dialog-max-width: 95dvw;
-        --dialog-max-height: 95dvh;
-
         min-width: var(--anchor-width, 0px);
-        max-width: var(--dialog-max-width);
-        max-height: var(--dialog-max-height);
+        max-width: var(--picker-dialog-max-width);
+        max-height: var(--picker-dialog-max-height);
         padding: 0;
-        background: var(--picker-background-color);
+        background: var(--picker-popup-background-color);
         border: var(--picker-border-width) solid var(--x-picker-border-color);
-        border-radius: var(--picker-border-radius);
+        border-radius: var(--picker-popup-border-radius);
         outline-width: var(--picker-outline-width);
         outline-color: var(--picker-outline-color);
         outline-offset: 0;
@@ -35954,10 +36028,10 @@ installImportMetaCssBuild(import.meta);const css$p = /* css */`
         /* overscroll-behavior: contain; */
 
         &[data-expand-x] {
-          width: var(--dialog-max-width);
+          width: var(--picker-dialog-max-width);
         }
         &[data-expand-y] {
-          height: var(--dialog-max-height);
+          height: var(--picker-dialog-max-height);
         }
 
         &[open] {
@@ -35978,7 +36052,7 @@ installImportMetaCssBuild(import.meta);const css$p = /* css */`
         width: 100%;
         border-radius: max(
           0px,
-          var(--picker-border-radius) - var(--picker-border-width)
+          var(--picker-popup-border-radius) - var(--picker-border-width)
         );
         overflow: auto;
         overscroll-behavior: none;
@@ -40902,6 +40976,9 @@ const PickerStyleCSSVars = {
   "outlineWidth": "--picker-outline-width",
   "borderWidth": "--picker-border-width",
   "borderRadius": "--picker-border-radius",
+  "popoverMaxHeight": "--picker-popover-max-height",
+  "popupBackgroundColor": "--picker-popup-background-color",
+  "popupBorderRadius": "--picker-popup-border-radius",
   "padding": "--picker-padding",
   "paddingX": "--picker-padding-x",
   "paddingY": "--picker-padding-y",
@@ -40976,6 +41053,9 @@ const PickerFirstResolver = props => {
  *   variant?: "icon" | "headless",
  *   icon?: import("ignore:preact").ComponentChildren,
  *   maxLines?: number,
+ *   popoverMaxHeight?: number | string,
+ *   popupBackgroundColor?: string,
+ *   popupBorderRadius?: number | string,
  *   dialogExpand?: boolean,
  *   dialogExpandX?: boolean,
  *   dialogExpandY?: boolean,
@@ -45854,6 +45934,26 @@ installImportMetaCssBuild(import.meta);const css$7 = /* css */`
     }
   }
 `;
+
+/**
+ * @type {import("ignore:preact").FunctionComponent<{
+ *   children?: number | string,
+ *   unit?: string,
+ *   unitPosition?: "right" | "bottom",
+ *   unitSize?: string,
+ *   unitSizeRatio?: number,
+ *   unitColor?: string,
+ *   label?: string,
+ *   size?: string,
+ *   lang?: string,
+ *   integer?: boolean,
+ *   loading?: boolean,
+ *   readOnly?: boolean,
+ *   disabled?: boolean,
+ *   bold?: boolean,
+ *   [key: string]: any,
+ * }>}
+ */
 const Quantity = ({
   children,
   unit,
@@ -45881,7 +45981,7 @@ const Quantity = ({
   return jsxs(Text, {
     baseClassName: "navi_quantity",
     "data-unit-bottom": unitBottom ? "" : undefined,
-    propsCSSVars: QuantityPropsCSSVars,
+    styleCSSVars: QuantityStyleCSSVars,
     basePseudoState: {
       ":read-only": readOnly,
       ":disabled": disabled,
@@ -45915,7 +46015,7 @@ const Quantity = ({
     })]
   });
 };
-const QuantityPropsCSSVars = {
+const QuantityStyleCSSVars = {
   unitColor: "--unit-color"
 };
 const QuantityPseudoClasses = [":hover", ":active", ":read-only", ":disabled", ":-navi-loading"];
@@ -46795,7 +46895,7 @@ const SidePanel = ({
     value: onClose,
     children: jsxs(Box, {
       baseClassName: "navi_side_panel",
-      propsCSSVars: SidePanelStyleCSSVars,
+      styleCSSVars: SidePanelStyleCSSVars,
       width: width,
       "data-opening": phase === "opening" ? "" : undefined,
       "data-closing": phase === "closing" ? "" : undefined,

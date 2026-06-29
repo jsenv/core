@@ -166,12 +166,35 @@ import.meta.css = /* css */ `
 const PSEUDO_CLASSES_DEFAULT = [];
 const PSEUDO_ELEMENTS_DEFAULT = [];
 const STYLE_CSS_VARS_DEFAULT = {};
-const PROPS_CSS_VARS_DEFAULT = {};
 // When only pseudoStateSelector is set (no visualSelector), the box owns its
 // visual identity. Only event handlers and these explicit props are forwarded
 // to the inner semantic/interactive child element.
 const PSEUDO_STATE_CHILD_PROP_SET = new Set(["tabIndex", "tabindex"]);
 
+/**
+ * @type {import("preact").FunctionComponent<{
+ *   as?: string,
+ *   className?: string,
+ *   style?: import("preact").JSX.CSSProperties & { [pseudo: string]: import("preact").JSX.CSSProperties },
+ *   styleCSSVars?: { [stylePropName: string]: string },
+ *   inline?: boolean,
+ *   block?: boolean,
+ *   flex?: "x" | "y" | boolean,
+ *   grid?: boolean,
+ *   display?: "inherit",
+ *   pseudoState?: { [stateName: string]: boolean },
+ *   pseudoClasses?: string[],
+ *   pseudoElements?: string[],
+ *   visualSelector?: string,
+ *   pseudoStateSelector?: string,
+ *   hasChildUsingForwardedProps?: boolean,
+ *   childPropSet?: Set<string>,
+ *   preventInitialTransition?: boolean,
+ *   separator?: import("preact").ComponentChildren | ((index: number) => import("preact").ComponentChildren),
+ *   children?: import("preact").ComponentChildren,
+ *   [key: string]: any,
+ * }>}
+ */
 export const Box = (props) => {
   const {
     ref,
@@ -183,7 +206,6 @@ export const Box = (props) => {
     // style management
     style,
     styleCSSVars = STYLE_CSS_VARS_DEFAULT,
-    propsCSSVars = PROPS_CSS_VARS_DEFAULT,
     basePseudoState,
     pseudoState, // for demo purposes it's possible to control pseudo state from props
     pseudoClasses = PSEUDO_CLASSES_DEFAULT,
@@ -484,13 +506,6 @@ export const Box = (props) => {
         addStyle(value, name, styleContext, boxStylesTarget, context);
         return;
       }
-      const propCssVar = propsCSSVars[name];
-      if (propCssVar) {
-        if (value !== undefined) {
-          addCSSVar(value, propCssVar, boxStylesTarget);
-        }
-        return;
-      }
       const isPseudoStyle = styleOrigin === "pseudo_style";
       if (isStyleProp(name)) {
         // it's a style prop, we need first to check if we have css var to handle them
@@ -541,6 +556,13 @@ export const Box = (props) => {
           } else {
             childForwardedProps[name] = value;
           }
+        }
+        return;
+      }
+      const cssVarName = styleCSSVars[name];
+      if (cssVarName) {
+        if (value !== undefined) {
+          addCSSVar(value, cssVarName, boxStylesTarget);
         }
         return;
       }

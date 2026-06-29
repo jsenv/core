@@ -121,6 +121,9 @@
             <li>
               <a href="#section-6">6. Popover vs Dialog mode</a>
             </li>
+            <li>
+              <a href="#section-7">7. Popup sizing</a>
+            </li>
           </ol>
         </div>
       );
@@ -141,6 +144,7 @@
             <DefaultValueDemo />
             <CustomUIDemo />
             <PopoverDialogDemo />
+            <PopupSizingDemo />
           </Box>
         </NaviDebug>
       );
@@ -882,6 +886,86 @@
           </div>
         );
       };
+
+      const TallPickerContent = () => (
+        <div style={{ padding: "16px" }}>
+          {Array.from({ length: 12 }, (_, i) => (
+            <p
+              key={i}
+              style={{ margin: "0 0 10px", fontSize: "14px", color: "#444" }}
+            >
+              Item {i + 1} — some content to make the popup tall enough to
+              scroll.
+            </p>
+          ))}
+        </div>
+      );
+
+      const PopupSizingDemo = () => (
+        <div id="section-7" class="demo-section">
+          <h2>7. Popup sizing</h2>
+
+          <h3 style={{ marginTop: "24px" }}>Popover</h3>
+          <p>
+            In popover mode the popup is capped at <code>300px</code> tall by
+            default — enough to show a handful of options without overwhelming
+            the page. It will automatically shrink further if there isn't enough
+            space above or below the trigger.
+          </p>
+          <p>
+            Use <code>popoverMaxHeight</code> to raise or lower that cap.
+          </p>
+          <Box flex="y" spacing="m">
+            <Field vertical>
+              <Label>
+                Default{" "}
+                <code style={{ fontWeight: "normal" }}>(300px max)</code>
+              </Label>
+              <Picker placeholder="Open me…" mode="popover">
+                <TallPickerContent />
+              </Picker>
+            </Field>
+            <Field vertical>
+              <Label>
+                <code>popoverMaxHeight={150}</code>
+              </Label>
+              <Picker
+                placeholder="Open me…"
+                mode="popover"
+                popoverMaxHeight="150px"
+              >
+                <TallPickerContent />
+              </Picker>
+            </Field>
+          </Box>
+
+          <h3 style={{ marginTop: "24px" }}>Dialog</h3>
+          <p>
+            In dialog mode the popup sizes itself to its content — it takes only
+            the space it needs, up to the available viewport height.
+          </p>
+          <p>
+            Pass <code>dialogExpandY</code> to make it fill the full available
+            height regardless of content size.
+          </p>
+          <Box flex="y" spacing="m">
+            <Field vertical>
+              <Label>Default — sizes to content</Label>
+              <Picker placeholder="Open me…" mode="dialog">
+                <TallPickerContent />
+              </Picker>
+            </Field>
+            <Field vertical>
+              <Label>
+                <code>dialogExpandY</code> — fills available height
+              </Label>
+              <Picker placeholder="Open me…" mode="dialog" dialogExpandY>
+                <TallPickerContent />
+              </Picker>
+            </Field>
+          </Box>
+        </div>
+      );
 
       render(
         <App />,

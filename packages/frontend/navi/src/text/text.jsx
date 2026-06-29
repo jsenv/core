@@ -310,57 +310,74 @@ const shouldInjectSpacingBetween = (left, right) => {
 };
 
 /**
- * Text component for rendering inline or block text with layout-stable style changes.
+ * @type {import("preact").FunctionComponent<{
+ *   children?: import("preact").ComponentChildren,
+ *   as?: string,
+ *   className?: string,
+ *   style?: import("preact").JSX.CSSProperties,
+ *   bold?: boolean,
+ *   noWrap?: boolean,
+ *   maxLines?: number,
+ *   spacing?: string | number | import("preact").ComponentChildren,
+ *   loading?: boolean,
+ *   skeleton?: boolean,
+ *   preventSpaceUnderlines?: boolean,
+ *   holdSpaceForStyle?: import("preact").JSX.CSSProperties,
+ *   boldStable?: boolean,
+ *   shrinkWrap?: boolean,
+ *   capitalize?: boolean,
+ *   selectRange?: string | [number, number],
+ *   childrenOutsideFlow?: import("preact").ComponentChildren,
+ *   [key: string]: any,
+ * }>}
  *
- * Most props are forwarded to the underlying `Box` component (as, style, bold, noWrap, …).
- * The props listed below are specific to Text.
+ * @param {number} [maxLines]
+ *   Truncates overflowing text with an ellipsis. `maxLines={1}` produces a
+ *   single-line truncation; `maxLines={n}` (n > 1) uses `-webkit-line-clamp`
+ *   to allow up to n lines before clipping.
  *
- * @param {object} props
+ * @param {string|number} [spacing]
+ *   Separator injected between child nodes. Accepts a size token (`"s"`, `"m"`, …),
+ *   a CSS length string, a number (interpreted as px), or `"pre"` / `0` to
+ *   disable spacing entirely. Defaults to a regular space character.
  *
- * @param {number} [props.maxLines]
- *   Truncates overflowing text with an ellipsis after at most N lines.
- *   `maxLines={1}` truncates after one line (single-line ellipsis).
- *   `maxLines={n}` (n > 1) truncates after n lines (multi-line clamp).
+ * @param {boolean} [loading]
+ *   Renders a shimmer skeleton animation in place of the text content.
  *
- * @param {string} [props.spacing]
- *   Controls the separator injected between child nodes.
- *   Accepts a size/spacing scale key, a CSS length, or `"pre"` / `0` to disable.
- *   Defaults to a regular space character (or a padding-based fake space when
- *   `preventSpaceUnderlines` is active).
+ * @param {boolean} [skeleton]
+ *   Same as `loading` but without the shimmer animation — a static grey bar.
  *
- * @param {boolean} [props.loading]
- *   Renders a shimmer skeleton in place of the text.
+ * @param {boolean} [preventSpaceUnderlines]
+ *   Replaces real space characters between children with padding-based spaces.
+ *   Useful inside `<a>` elements where browsers draw an underline under spaces.
  *
- * @param {boolean} [props.skeleton]
- *   Same as `loading` but without the shimmer animation.
+ * @param {import("preact").JSX.CSSProperties} [holdSpaceForStyle]
+ *   Prevents layout shifts when text styles change (e.g. font-weight, font-size).
+ *   Pass the CSS properties representing the "largest" visual state of the text.
+ *   An invisible placeholder rendered with those styles reserves the space; the
+ *   real visible text is layered on top via `position: absolute`.
+ *   Best combined with `noWrap` — does not work reliably on multi-line text.
  *
- * @param {boolean} [props.preventSpaceUnderlines]
- *   Replaces real space characters between children with padding-based spaces
- *   to avoid the underline browsers draw under spaces inside links.
+ * @param {boolean} [boldStable]
+ *   Alternative to `holdSpaceForStyle` for multi-line text. Keeps a consistent
+ *   visual width across bold/normal transitions by painting normal-weight text
+ *   over a bold background using `background-clip: text`. Does not handle
+ *   font-size changes.
  *
- * @param {object} [props.holdSpaceForStyle]
- *   Prevents layout shifts when text styles change (font-weight, font-size, …).
- *   Pass an object of CSS-in-JS style properties representing the "maximum" state of the text.
- *   An invisible placeholder is rendered with those styles to reserve the space,
- *   and the real visible text is layered on top via `position: absolute`.
- *   Only works reliably with single-line (`noWrap`) text.
- *   Example: `holdSpaceForStyle={{ fontWeight: "bold", fontSize: "1.5rem" }}`
+ * @param {boolean} [shrinkWrap]
+ *   Forces the element width to match its longest visual line, preventing the
+ *   text block from being wider than its content when inside a flex/grid container.
  *
- * @param {boolean} [props.boldStable]
- *   Alternative to `holdSpaceForStyle` for multi-line text.
- *   Keeps a consistent visual width regardless of font-weight by painting normal-weight
- *   text on top of a bold background using `background-clip: text`.
- *   Does not support font-size changes.
+ * @param {boolean} [capitalize]
+ *   Uppercases the first letter of the text content via CSS.
  *
- * @param {boolean} [props.capitalize]
- *   Applies `text-transform: uppercase` to the first letter via CSS.
+ * @param {string|[number,number]} [selectRange]
+ *   Selects a portion of the text on mount. Pass a substring to search for, or
+ *   a `[start, end]` character-offset tuple.
  *
- * @param {string|Array} [props.selectRange]
- *   Selects a portion of the text on mount. Forwarded to `useInitialTextSelection`.
- *
- * @param {*} [props.childrenOutsideFlow]
- *   Rendered after children but outside the text flow (useful for overlays
- *   like the skeleton container).
+ * @param {import("preact").ComponentChildren} [childrenOutsideFlow]
+ *   Rendered after children but outside the text spacing/flow logic. Used
+ *   internally for overlays such as the skeleton container.
  */
 export const Text = (props) => {
   const defaultRef = useRef();
