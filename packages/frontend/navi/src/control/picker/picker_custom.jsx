@@ -116,8 +116,12 @@ const css = /* css */ `
     /* dialog */
     &[aria-haspopup="dialog"] {
       .navi_picker_dialog {
+        --dialog-max-width: 95dvw;
+        --dialog-max-height: 95dvh;
+
         min-width: var(--anchor-width, 0px);
-        max-height: 95dvh;
+        max-width: var(--dialog-max-width);
+        max-height: var(--dialog-max-height);
         padding: 0;
         background: var(--picker-background-color);
         border: var(--picker-border-width) solid var(--x-picker-border-color);
@@ -132,12 +136,10 @@ const css = /* css */ `
         /* overscroll-behavior: contain; */
 
         &[data-expand-x] {
-          width: 100dvw;
-          max-width: 100dvw;
+          width: var(--dialog-max-width);
         }
         &[data-expand-y] {
-          height: 100dvh;
-          max-height: 100dvh;
+          height: var(--dialog-max-height);
         }
 
         &[open] {
