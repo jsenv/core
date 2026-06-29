@@ -13,12 +13,16 @@ const cases = [
   // non-numeric mid-edit values embedded as-is between markers
   { hours: "ab", minutes: 30 },
   { hours: "aH", minutes: 30 },
-  // non-numeric values containing ISO time marker letters are bracket-escaped
-  // so the field association is preserved: { minutes: "34h" } → "PT[34h]M"
-  // → parseDuration → { minutes: "34h" }  (not { hours: 34 })
+  // non-numeric values containing ISO marker letters are bracket-escaped so
+  // the field association is preserved through the round-trip
+  // time markers (H/M/S)
   { minutes: "34h" },
   { minutes: "30m" },
   { hours: "2", minutes: "34h" },
+  // date markers (Y/M/W/D)
+  { months: "2Y" },
+  { weeks: "3M" },
+  { days: "5W" },
   // empty / null → null
   {},
   null,
@@ -88,6 +92,18 @@ return renderTable(
 │ {                     │ "PT2H[34h]M"          │
 │   "hours": "2",       │                       │
 │   "minutes": "34h"    │                       │
+│ }                     │                       │
+├───────────────────────┼───────────────────────┤
+│ {                     │ "P[2Y]M"              │
+│   "months": "2Y"      │                       │
+│ }                     │                       │
+├───────────────────────┼───────────────────────┤
+│ {                     │ "P[3M]W"              │
+│   "weeks": "3M"       │                       │
+│ }                     │                       │
+├───────────────────────┼───────────────────────┤
+│ {                     │ "P[5W]D"              │
+│   "days": "5W"        │                       │
 │ }                     │                       │
 ├───────────────────────┼───────────────────────┤
 │ {}                    │ null                  │
