@@ -1,5 +1,28 @@
 # AI Agent Instructions for @jsenv/core
 
+- [Communication Style](#communication-style)
+- [Constraints](#constraints)
+- [Project Overview](#project-overview)
+- [Key Architectural Principles](#key-architectural-principles)
+- [File Naming](#file-naming)
+- [Coding Conventions](#coding-conventions)
+- [@jsenv/navi Specifics](#jsenvnavi-specifics)
+
+## Communication Style
+
+- **Concise Updates**: Brief status updates, single-sentence explanations when helpful
+- **Code-First**: Lead with implementation, provide short context when beneficial
+- **Minimal Ceremony**: Skip unnecessary scaffolding like extensive test suites during initial development
+- **Action-Oriented**: Show progress through working code rather than lengthy discussions
+- **Defer Documentation**: Tests and comprehensive documentation come later in the development cycle
+
+## Constraints
+
+- **Never write tests on your initiative**
+- **Never write documentation on your initiative**
+- **Backward Compatibility**: Do not try to maintain it. Breaking changes are fine and desired. Always. So always write code targeting what we want even if that means renaming usages in the codebase.
+- **Migration Guides**: Do not proactively document upgrade paths for breaking changes — only on request
+
 ## Project Overview
 
 **@jsenv/core** is a comprehensive JavaScript development toolkit that prioritizes web standards and simplicity. Organized as a monorepo with packages in `packages/`:
@@ -68,18 +91,3 @@ const userProxy = createActionProxy(getUserAction, {
 ```
 
 Key features: automatic memoization, request deduplication, concurrent loading control, progressive loading.
-
-## Communication Style
-
-- **Concise Updates**: Brief status updates, single-sentence explanations when helpful
-- **Code-First**: Lead with implementation, provide short context when beneficial
-- **Minimal Ceremony**: Skip unnecessary scaffolding like extensive test suites during initial development
-- **Action-Oriented**: Show progress through working code rather than lengthy discussions
-- **Defer Documentation**: Tests and comprehensive documentation come later in the development cycle
-
-## Constraints
-
-- **Never write tests on your initiative**
-- **Never write documentation on your initiative**
-- **Backward Compatibility**: Do not try to maintain it. Breaking changes are fine and desired. Always. So always write code targeting what we want even if that means renaming usages in the codebase.
-- **Migration Guides**: Do not proactively document upgrade paths for breaking changes — only on request
