@@ -14718,8 +14718,15 @@ const setupBrowserIntegrationViaHistory = ({
       updateDocumentState(state);
     }
 
-    // Routes only match on URL — skip route matching for state-only changes.
-    if (isSameUrl && navigationType !== "reload" && navigationType !== "load") {
+    // Skip route matching for state-only changes: push/replace to the same URL
+    // (e.g. useNavState updating document state without changing the route).
+    // Do NOT apply for "traverse" — window.location.href is already updated by
+    // the browser before the popstate handler runs, so isSameUrl is always true
+    // for back/forward navigation regardless of whether the URL actually changed.
+    if (
+      isSameUrl &&
+      (navigationType === "push" || navigationType === "replace")
+    ) {
       return undefined;
     }
 
