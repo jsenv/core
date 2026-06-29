@@ -863,16 +863,17 @@
                       color: "#555",
                       whiteSpace: "nowrap",
                       paddingRight: "16px",
+                      verticalAlign: "top",
                     }}
                   >
                     max-height only
                   </td>
-                  <td style={{ padding: "8px 16px" }}>
+                  <td style={{ padding: "8px 16px", verticalAlign: "top" }}>
                     <ContainerBox>
                       <SmallList expandY={expandY} />
                     </ContainerBox>
                   </td>
-                  <td style={{ padding: "8px 16px" }}>
+                  <td style={{ padding: "8px 16px", verticalAlign: "top" }}>
                     <ContainerBox>
                       <LargeList expandY={expandY} />
                     </ContainerBox>
@@ -887,18 +888,82 @@
                       color: "#555",
                       whiteSpace: "nowrap",
                       paddingRight: "16px",
+                      verticalAlign: "top",
                     }}
                   >
                     max-height + height: 100px
                   </td>
-                  <td style={{ padding: "8px 16px" }}>
+                  <td style={{ padding: "8px 16px", verticalAlign: "top" }}>
                     <ContainerBox fixedHeight>
                       <SmallList expandY={expandY} />
                     </ContainerBox>
                   </td>
-                  <td style={{ padding: "8px 16px" }}>
+                  <td style={{ padding: "8px 16px", verticalAlign: "top" }}>
                     <ContainerBox fixedHeight>
                       <LargeList expandY={expandY} />
+                    </ContainerBox>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            <h3 style={{ margin: "24px 0 8px", fontSize: "0.95rem", color: "#444" }}>
+              With sibling element
+            </h3>
+            <p>
+              The container is a flex column with spacing. The first child is a
+              fixed-height red bar; the second is the list. With{" "}
+              <code>expandY</code> the list takes the remaining space inside the
+              container.
+            </p>
+            <table style={{ borderCollapse: "collapse", width: "100%" }}>
+              <thead>
+                <tr>
+                  <th style={{ width: "1%" }} />
+                  <th style={{ padding: "6px 16px", fontWeight: 600, fontSize: "0.85rem", color: "#555", textAlign: "left" }}>Small list</th>
+                  <th style={{ padding: "6px 16px", fontWeight: 600, fontSize: "0.85rem", color: "#555", textAlign: "left" }}>Large list</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style={{ padding: "8px 0", fontWeight: 600, fontSize: "0.8rem", color: "#555", whiteSpace: "nowrap", paddingRight: "16px", verticalAlign: "top" }}>
+                    max-height only
+                  </td>
+                  <td style={{ padding: "8px 16px", verticalAlign: "top" }}>
+                    <ContainerBox>
+                      <Box flex="y" spacing="m" style={{ height: "100%" }}>
+                        <div style={{ height: "20px", background: "red", flexShrink: 0 }} />
+                        <SmallList expandY={expandY} />
+                      </Box>
+                    </ContainerBox>
+                  </td>
+                  <td style={{ padding: "8px 16px", verticalAlign: "top" }}>
+                    <ContainerBox>
+                      <Box flex="y" spacing="m" style={{ height: "100%" }}>
+                        <div style={{ height: "20px", background: "red", flexShrink: 0 }} />
+                        <LargeList expandY={expandY} />
+                      </Box>
+                    </ContainerBox>
+                  </td>
+                </tr>
+                <tr>
+                  <td style={{ padding: "8px 0", fontWeight: 600, fontSize: "0.8rem", color: "#555", whiteSpace: "nowrap", paddingRight: "16px", verticalAlign: "top" }}>
+                    max-height + height: 100px
+                  </td>
+                  <td style={{ padding: "8px 16px", verticalAlign: "top" }}>
+                    <ContainerBox fixedHeight>
+                      <Box flex="y" spacing="m" style={{ height: "100%" }}>
+                        <div style={{ height: "20px", background: "red", flexShrink: 0 }} />
+                        <SmallList expandY={expandY} />
+                      </Box>
+                    </ContainerBox>
+                  </td>
+                  <td style={{ padding: "8px 16px", verticalAlign: "top" }}>
+                    <ContainerBox fixedHeight>
+                      <Box flex="y" spacing="m" style={{ height: "100%" }}>
+                        <div style={{ height: "20px", background: "red", flexShrink: 0 }} />
+                        <LargeList expandY={expandY} />
+                      </Box>
                     </ContainerBox>
                   </td>
                 </tr>
