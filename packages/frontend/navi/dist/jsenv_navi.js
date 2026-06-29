@@ -14530,6 +14530,14 @@ computed(() => {
   return reasonArray;
 });
 
+const documentStateSignal = signal(null);
+const useDocumentState = () => {
+  return documentStateSignal.value;
+};
+const updateDocumentState = (value) => {
+  documentStateSignal.value = value;
+};
+
 const documentUrlSignal = signal(
   typeof window === "undefined" ? "http://localhost" : window.location.href,
 );
@@ -14572,14 +14580,6 @@ const urlToScheme = (url) => {
   }
   const scheme = urlString.slice(0, colonIndex);
   return scheme;
-};
-
-const documentStateSignal = signal(null);
-const useDocumentState = () => {
-  return documentStateSignal.value;
-};
-const updateDocumentState = (value) => {
-  documentStateSignal.value = value;
 };
 
 const getHrefTargetInfo = (href) => {
@@ -14664,18 +14664,6 @@ const setupBrowserIntegrationViaHistory = ({
     return window.history.state ? { ...window.history.state } : null;
   };
 
-  const replaceDocumentState = (
-    newState,
-    { reason = "replaceDocumentState called" } = {},
-  ) => {
-    const url = window.location.href;
-    handleRoutingTask(url, {
-      reason,
-      navigationType: "replace",
-      state: newState,
-    });
-  };
-
   const historyStartAtStart = getDocumentState();
   const visitedUrlSet = historyStartAtStart
     ? new Set(historyStartAtStart.jsenv_visited_urls || [])
@@ -14695,19 +14683,7 @@ const setupBrowserIntegrationViaHistory = ({
       return;
     }
     visitedUrlSet.add(url);
-    visitedUrlsSignal.value++; // Increment signal to notify subscribers that visited URLs changed
-
-    const historyState = getDocumentState() || {};
-    const historyStateWithVisitedUrls = {
-      ...historyState,
-      jsenv_visited_urls: Array.from(visitedUrlSet),
-    };
-    window.history.replaceState(
-      historyStateWithVisitedUrls,
-      null,
-      window.location.href,
-    );
-    updateDocumentState(historyStateWithVisitedUrls);
+    visitedUrlsSignal.value++;
   };
 
   let abortController = null;
@@ -14719,15 +14695,34 @@ const setupBrowserIntegrationViaHistory = ({
       state,
     },
   ) => {
-    if (navigationType === "push") {
-      window.history.pushState(state, null, url);
-    } else if (navigationType === "replace") {
-      window.history.replaceState(state, null, url);
+    const isSameUrl = url === window.location.href;
+
+    if (navigationType === "push" || navigationType === "replace") {
+      // Pre-merge visited URLs so push/replaceState is called only once.
+      markUrlAsVisited(url);
+      const effectiveState = {
+        ...(state || {}),
+        jsenv_visited_urls: Array.from(visitedUrlSet),
+      };
+      if (navigationType === "push") {
+        window.history.pushState(effectiveState, null, url);
+      } else {
+        window.history.replaceState(effectiveState, null, url);
+      }
+      updateDocumentUrl(url);
+      updateDocumentState(effectiveState);
+    } else {
+      // traverse / reload: state comes from the history entry, no push/replace needed.
+      markUrlAsVisited(url);
+      updateDocumentUrl(url);
+      updateDocumentState(state);
     }
 
-    updateDocumentUrl(url);
-    updateDocumentState(state);
-    markUrlAsVisited(url);
+    // Routes only match on URL — skip route matching for state-only changes.
+    if (isSameUrl && navigationType !== "reload") {
+      return undefined;
+    }
+
     if (abortController) {
       abortController.abort(`navigating to ${url}`);
     }
@@ -14861,7 +14856,6 @@ const setupBrowserIntegrationViaHistory = ({
     navBack,
     navForward,
     getDocumentState,
-    replaceDocumentState,
     isVisited,
     visitedUrlsSignal,
   };
@@ -14947,12 +14941,19 @@ setOnAllRouteReady((v) => {
 });
 setRouteIntegration(browserIntegration);
 
-const actionIntegratedVia = browserIntegration.integration;
+const navIntegratedVia = browserIntegration.integration;
 const navTo = (target, options) => {
   const url = new URL(target, window.location.href).href;
   const currentUrl = documentUrlSignal.peek();
   if (url === currentUrl) {
-    return null;
+    if (options?.state === undefined) {
+      return null;
+    }
+    // State-only update on same URL: skip if state is identical to current.
+    const currentState = browserIntegration.getDocumentState();
+    if (compareTwoJsValues(options.state, currentState)) {
+      return null;
+    }
   }
   return browserIntegration.navTo(url, options);
 };
@@ -14973,78 +14974,113 @@ const isVisited = browserIntegration.isVisited;
 const visitedUrlsSignal = browserIntegration.visitedUrlsSignal;
 browserIntegration.handleActionTask;
 
-const NOT_SET = {};
 const NO_OP = () => {};
 const NO_ID_GIVEN = [undefined, NO_OP, NO_OP];
-const useNavStateBasic = (id, initialValue, { debug } = {}) => {
-  const navStateRef = useRef(NOT_SET);
+const useNavStateBasic = (
+  id,
+  initialValue,
+  { debug, type = "replace", onLeave } = {},
+) => {
+  // Hooks must be called unconditionally — before the !id early return.
+  const state = documentStateSignal.value;
+  const valueInState = id
+    ? state !== null
+      ? state[id]
+      : undefined
+    : undefined;
+  const onLeaveRef = useRef(onLeave);
+  onLeaveRef.current = onLeave;
+  const prevValueInStateRef = useRef(valueInState);
+  // enteredRef tracks whether enter() was called without a matching leave() yet.
+  // It lets the effect distinguish an external disappearance (back button → fire onLeave)
+  // from a programmatic one (leave() already set it to false before the state updates).
+  const enteredRef = useRef(false);
+  useEffect(() => {
+    const prevValue = prevValueInStateRef.current;
+    prevValueInStateRef.current = valueInState;
+    if (
+      prevValue !== undefined &&
+      valueInState === undefined &&
+      enteredRef.current
+    ) {
+      enteredRef.current = false;
+      onLeaveRef.current?.();
+    }
+  }, [valueInState]);
+
   if (!id) {
     return NO_ID_GIVEN;
   }
 
-  if (navStateRef.current === NOT_SET) {
-    const documentState = browserIntegration.getDocumentState();
-    const valueInDocumentState = documentState ? documentState[id] : undefined;
-    if (valueInDocumentState === undefined) {
-      navStateRef.current = initialValue;
-      if (initialValue !== undefined) {
-        console.debug(
-          `useNavState(${id}) initial value is ${initialValue} (from initialValue passed in as argument)`,
-        );
-      }
-    } else {
-      navStateRef.current = valueInDocumentState;
-      if (debug) {
-        console.debug(
-          `useNavState(${id}) initial value is ${initialValue} (from nav state)`,
-        );
-      }
-    }
+  const currentValue = valueInState !== undefined ? valueInState : initialValue;
+
+  if (debug) {
+    console.debug(`useNavState(${id}) current value is ${currentValue}`);
   }
 
-  const set = (value) => {
-    const currentValue = navStateRef.current;
-    if (typeof value === "function") {
-      value = value(currentValue);
-    }
-    if (debug) {
-      console.debug(
-        `useNavState(${id}) set ${value} (previous was ${currentValue})`,
-      );
-    }
-
+  // enter(value): navigate TO this state (push or replace depending on type).
+  // Calling enter() without a value stores "on" — the mere presence of the key
+  // in the document state is enough to match; the value just allows associating
+  // extra data with the entry when needed.
+  const enter = (value = "on") => {
+    enteredRef.current = true;
     const currentState = browserIntegration.getDocumentState() || {};
-
-    if (value === undefined) {
-      if (!Object.hasOwn(currentState, id)) {
-        return;
-      }
-      delete currentState[id];
-      browserIntegration.replaceDocumentState(currentState, {
-        reason: `delete "${id}" from browser state`,
-      });
+    if (currentState[id] === value) {
       return;
     }
-
-    const valueInBrowserState = currentState[id];
-    if (valueInBrowserState === value) {
-      return;
-    }
-    currentState[id] = value;
-    browserIntegration.replaceDocumentState(currentState, {
-      reason: `set { ${id}: ${value} } in browser state`,
+    const newState = { ...currentState, [id]: value };
+    navTo(window.location.href, {
+      replace: type !== "push",
+      state: newState,
     });
   };
 
-  return [
-    navStateRef.current,
-    set,
-    () => {
-      set(undefined);
-    },
-  ];
+  // leave(): navigate AWAY FROM this state (navBack in push mode, replace in replace mode).
+  const leave = () => {
+    enteredRef.current = false;
+    const currentState = browserIntegration.getDocumentState() || {};
+    if (!Object.hasOwn(currentState, id)) {
+      return;
+    }
+    if (type === "push") {
+      browserIntegration.navBack();
+    } else {
+      const newState = { ...currentState };
+      delete newState[id];
+      navTo(window.location.href, { replace: true, state: newState });
+    }
+  };
+
+  return [currentValue, enter, leave];
 };
 
+/**
+ * Stores a named value in the browser's document state and returns it reactively.
+ * The component re-renders whenever the value changes (navigation, back/forward button).
+ *
+ * @param {string} id
+ *   Unique key used to store the value in document state. Must be stable across renders.
+ *
+ * @param {*} initialValue
+ *   Value returned when `id` is absent from document state (e.g. before enter() is called).
+ *
+ * @param {object} [options]
+ * @param {"push"|"replace"} [options.type="replace"]
+ *   Controls how enter() adds the state to browser history.
+ *   - "push": creates a new history entry — pressing the back button removes it and calls onLeave.
+ *   - "replace": updates the current history entry — no extra history entry is created.
+ * @param {() => void} [options.onLeave]
+ *   Called when the state key disappears **externally** — e.g. the user presses the browser
+ *   back button. Not called when leave() is invoked programmatically.
+ *
+ * @returns {[value, enter, leave]}
+ *   - `value`: current value from document state, or `initialValue` when the key is absent.
+ *   - `enter(value = "on")`: navigate TO this state (stores `value` under `id`).
+ *     Calling without an argument stores `"on"` — the presence of the key is enough to match;
+ *     the value allows associating extra data when needed.
+ *   - `leave()`: navigate AWAY FROM this state (removes `id` from document state,
+ *     or goes back in history when `type` is "push").
+ */
 const useNavState = useNavStateBasic;
 
 const NEVER_SET = {};
@@ -35382,14 +35418,17 @@ const markAutofocusRestoreOnClose = (containerEl) => {
 // meaning the focus did not yet reach the element receiving the mousedown
 // as a result document.activeElement is not up-to-date (can be document.body for instance)
 const getFocusedBeforeTransfer = (e) => {
-  const initiator = e.detail.eventChain[0];
-  if (initiator.type === "mousedown") {
-    // if we we had let browser give focus, the element would be the one that would be focused
-    return initiator.currentTarget;
-  }
-  if (initiator.type === "click") {
-    // label use case
-    return initiator.currentTarget;
+  const initiator =
+    e.detail && e.detail.eventChain ? e.detail.eventChain[0] : null;
+  if (initiator) {
+    if (initiator.type === "mousedown") {
+      // if we we had let browser give focus, the element would be the one that would be focused
+      return initiator.currentTarget;
+    }
+    if (initiator.type === "click") {
+      // label use case
+      return initiator.currentTarget;
+    }
   }
   return document.activeElement;
 };
@@ -35486,6 +35525,7 @@ installImportMetaCssBuild(import.meta);const css$r = /* css */`
       margin-top: var(--dialog-top-inset, auto);
       margin-bottom: auto;
       flex-direction: column;
+      transition: margin-top 0.1s ease-in-out;
     }
 
     &::backdrop {
@@ -35496,6 +35536,8 @@ installImportMetaCssBuild(import.meta);const css$r = /* css */`
 const Dialog = props => {
   import.meta.css = [css$r, "@jsenv/navi/src/popup/dialog.jsx"];
   const {
+    open: openProp = false,
+    anchorRef,
     children,
     scrollTrap,
     pointerTrap,
@@ -35508,11 +35550,14 @@ const Dialog = props => {
   const debugPopup = useDebugPopup();
   const debugFocus = useDebugFocus();
   const autoFocusProps = useAutoFocus(ref, props.autoFocus);
+
+  // Tracks actual DOM state (open/closed), updated only by open() and close().
+  // Intentionally NOT synced to openProp on every render so the useEffect guard
+  // below can detect whether a prop change requires action.
   const openedRef = useRef(false);
   const [addCleanup, cleanup] = useCleanup();
-  const open = (e, {
-    anchor
-  }) => {
+  const open = e => {
+    const anchor = anchorRef?.current ?? null;
     const effectiveAnchor = anchor || document.documentElement;
     debugPopup(`"${e.type}" on ${getElementSignature(e.target)} -> openDialog`);
     const dialogEl = ref.current;
@@ -35581,9 +35626,7 @@ const Dialog = props => {
       ...detail
     });
   };
-  const onRequestOpen = (e, {
-    anchor
-  }) => {
+  const onRequestOpen = e => {
     const dialogEl = ref.current;
     if (!dialogEl) {
       return;
@@ -35591,9 +35634,7 @@ const Dialog = props => {
     if (openedRef.current) {
       return;
     }
-    open(e, {
-      anchor
-    });
+    open(e);
   };
   const onRequestClose = (e, detail = {}) => {
     const dialogEl = ref.current;
@@ -35623,6 +35664,25 @@ const Dialog = props => {
     }
     close(e, detail);
   };
+  useLayoutEffect(() => {
+    if (openProp === undefined) {
+      return;
+    }
+    // Skip when the popover is already in the desired state.
+    // This avoids a feedback loop: our own close/open dispatches navi_close/navi_open,
+    // the parent updates the prop, and the effect would fire again for a change we
+    // already handled. Comparing against openedRef is the authoritative check because
+    // it reflects the actual DOM state, not the React render cycle.
+    if (openProp === openedRef.current) {
+      return;
+    }
+    const e = new CustomEvent("open_prop_change");
+    if (openProp) {
+      onRequestOpen(e);
+    } else {
+      onRequestClose(e);
+    }
+  }, [openProp]);
   return jsx(Box, {
     ...rest,
     ...autoFocusProps,
@@ -35652,12 +35712,7 @@ const Dialog = props => {
       onRequestClose(e);
     },
     onnavi_request_open: e => {
-      const {
-        anchor
-      } = e.detail;
-      onRequestOpen(e, {
-        anchor
-      });
+      onRequestOpen(e);
     },
     onnavi_request_close: e => {
       onRequestClose(e);
@@ -35692,6 +35747,8 @@ installImportMetaCssBuild(import.meta);const css$q = /* css */`
 const Popover = props => {
   import.meta.css = [css$q, "@jsenv/navi/src/popup/popover.jsx"];
   const {
+    open: openProp = false,
+    anchorRef,
     scrollTrap,
     pointerTrap,
     focusTrap,
@@ -35712,18 +35769,19 @@ const Popover = props => {
   const debugPopup = useDebugPopup();
   const debugFocus = useDebugFocus();
   const autoFocusProps = useAutoFocus(ref, props.autoFocus);
-  const [opened, setOpened] = useState(false);
-  const openedRef = useRef(opened);
-  openedRef.current = opened;
+
+  // Tracks actual DOM state (open/closed), updated only by open() and close().
+  // Intentionally NOT synced to openProp on every render so the useEffect guard
+  // below can detect whether a prop change requires action.
+  const openedRef = useRef(false);
   const [addCleanup, cleanup] = useCleanup();
-  const open = (e, {
-    anchor
-  }) => {
+  const open = e => {
     debugPopup(e, `openPopover()`);
     const popoverEl = ref.current;
     const focusedBeforeOpen = getFocusedBeforeTransfer(e);
     popoverEl.showPopover();
     transferFocus(popoverEl, debugFocus, e, focusedBeforeOpen);
+    const anchor = anchorRef?.current ?? null;
     const effectiveAnchor = anchor || document.documentElement;
     const positionPopover = positionEvent => {
       const {
@@ -35796,7 +35854,6 @@ const Popover = props => {
       rectEffect.disconnect();
     });
     openedRef.current = true;
-    setOpened(true);
     dispatchCustomEvent(popoverEl, "navi_open", {
       event: e,
       focusedBeforeOpen
@@ -35809,15 +35866,12 @@ const Popover = props => {
     popoverEl.hidePopover();
     cleanup();
     openedRef.current = false;
-    setOpened(false);
     dispatchCustomEvent(popoverEl, "navi_close", {
       event: e,
       ...detail
     });
   };
-  const onRequestOpen = (e, {
-    anchor
-  }) => {
+  const onRequestOpen = e => {
     const popoverEl = ref.current;
     if (!popoverEl) {
       return;
@@ -35825,9 +35879,7 @@ const Popover = props => {
     if (openedRef.current) {
       return;
     }
-    open(e, {
-      anchor
-    });
+    open(e);
   };
   const onRequestClose = (e, detail = {}) => {
     const popoverEl = ref.current;
@@ -35857,6 +35909,27 @@ const Popover = props => {
     }
     close(e, detail);
   };
+  useLayoutEffect(() => {
+    if (openProp === undefined) {
+      return;
+    }
+    // Skip when the popover is already in the desired state.
+    // This avoids a feedback loop: our own close/open dispatches navi_close/navi_open,
+    // the parent updates the prop, and the effect would fire again for a change we
+    // already handled. Comparing against openedRef is the authoritative check because
+    // it reflects the actual DOM state, not the React render cycle.
+    if (openProp === openedRef.current) {
+      return;
+    }
+    const e = new CustomEvent("open_prop_change", {
+      detail: {}
+    });
+    if (openProp) {
+      onRequestOpen(e);
+    } else {
+      onRequestClose(e);
+    }
+  }, [openProp]);
   return jsxs(Box, {
     id: id,
     popover: "manual",
@@ -35866,12 +35939,7 @@ const Popover = props => {
     baseClassName: "navi_popover",
     pseudoClasses: POPOVER_PSEUDO_CLASSES,
     onnavi_request_open: e => {
-      const {
-        anchor
-      } = e.detail;
-      onRequestOpen(e, {
-        anchor
-      });
+      onRequestOpen(e);
     },
     onnavi_request_close: e => {
       onRequestClose(e);
@@ -36177,8 +36245,9 @@ const PickerCustom = props => {
   const popupRef = useRef(null);
   popupProps.ref = popupRef;
   // aria-controls + id
+  const autoId = useId();
+  const popupId = `picker_popup_${autoId}`;
   {
-    const popupId = useId();
     Object.assign(pickerProps, {
       "aria-controls": popupId
     });
@@ -36190,14 +36259,27 @@ const PickerCustom = props => {
   {
     const debugFocus = useDebugFocus();
     const debugPopup = useDebugPopup();
-    const [expanded, setExpanded] = useState(false);
-    const expandedRef = useRef(expanded);
-    expandedRef.current = expanded;
+    // In "dialog" mode, enterExpanded() pushes a history entry so the back button closes.
+    // In "popover" mode, it replaces the current history state (no history entry added).
+    const pickerNavType = mode === "dialog" ? "push" : "replace";
+    const expandedRef = useRef(false);
+    const [expanded, enterExpanded, leaveExpanded] = useNavState(popupId, false, {
+      type: pickerNavType,
+      // onLeave fires only when the state key disappears externally (back button/gesture most of the time).
+      onLeave: () => {
+        requestClose(new CustomEvent("navi_nav_away", {
+          detail: {}
+        }), {
+          isCancel: true
+        });
+      }
+    });
+    expandedRef.current = Boolean(expanded);
     const valueAtOpenRef = useRef(null);
     const activeElementAtOpenRef = useRef(null);
     const onOpen = e => {
       expandedRef.current = true;
-      setExpanded(true);
+      enterExpanded();
       const focusedBeforeOpen = e.detail.focusedBeforeOpen;
       activeElementAtOpenRef.current = focusedBeforeOpen;
       debugFocus(e, "picked opened, store element focused", focusedBeforeOpen);
@@ -36240,7 +36322,7 @@ const PickerCustom = props => {
         }
       }
       expandedRef.current = false;
-      setExpanded(false);
+      leaveExpanded();
       // Reset so the next opening re-evaluates screen size
       defaultModeRef.current = null;
       restoreFocus(e);
@@ -36256,8 +36338,7 @@ const PickerCustom = props => {
       });
       const popupEl = popupRef.current;
       return dispatchCustomEvent(popupEl, "navi_request_open", {
-        event: e,
-        anchor: pickerEl
+        event: e
       });
     };
     const requestClose = (e = new CustomEvent("programmatic"), {
@@ -36278,7 +36359,7 @@ const PickerCustom = props => {
       uiAction: uiActionProp
     } = props;
     Object.assign(pickerProps, {
-      "aria-expanded": expanded,
+      "aria-expanded": Boolean(expanded),
       "onActionStart": e => {
         onActionStart?.(e);
         // requestClose(e);
@@ -36309,6 +36390,8 @@ const PickerCustom = props => {
       children
     });
     Object.assign(popupProps, {
+      anchorRef: props.ref,
+      open: Boolean(expanded),
       closeRequestHandler: (requestCloseEvent, closePermission, {
         isClickOutside
       } = {}) => {
@@ -47089,5 +47172,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, Details, Dialog, DialogLayout, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Field, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, Paragraph, Picker, Popover, Quantity, RadioGroup, Route, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Thead, Time, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, actionIntegratedVia, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isToday, langSignal, localStorageSignal, moveArrayItemByIndex, navBack, navForward, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSidePanelClose, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage, windowWidthSignal };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, Details, Dialog, DialogLayout, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Field, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, Paragraph, Picker, Popover, Quantity, RadioGroup, Route, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Thead, Time, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isToday, langSignal, localStorageSignal, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSidePanelClose, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi.js.map

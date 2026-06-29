@@ -323,10 +323,11 @@ const PickerCustom = (props) => {
       false,
       {
         type: pickerNavType,
-        // onLeave fires only when the state key disappears externally (back button).
-        // useNavState tracks this internally via enteredRef, so no need to check expandedRef here.
+        // onLeave fires only when the state key disappears externally (back button/gesture most of the time).
         onLeave: () => {
-          requestClose(new PopStateEvent("popstate"), { isCancel: true });
+          requestClose(new CustomEvent("navi_nav_away", { detail: {} }), {
+            isCancel: true,
+          });
         },
       },
     );
