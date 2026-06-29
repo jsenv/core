@@ -4,7 +4,7 @@ import {
   snapToPixel,
   trapScrollInside,
 } from "@jsenv/dom";
-import { useEffect, useRef } from "preact/hooks";
+import { useLayoutEffect, useRef } from "preact/hooks";
 
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import { Box } from "../box/box.jsx";
@@ -39,6 +39,7 @@ export const Dialog = (props) => {
   import.meta.css = css;
   const {
     open: openProp = false,
+    anchorRef,
     children,
     scrollTrap,
     pointerTrap,
@@ -55,7 +56,8 @@ export const Dialog = (props) => {
   const openedRef = useRef(openProp);
   openedRef.current = openProp;
   const [addCleanup, cleanup] = useCleanup();
-  const open = (e, { anchor }) => {
+  const open = (e) => {
+    const anchor = anchorRef?.current ?? null;
     const effectiveAnchor = anchor || document.documentElement;
     debugPopup(`"${e.type}" on ${getElementSignature(e.target)} -> openDialog`);
     const dialogEl = ref.current;
@@ -131,7 +133,7 @@ export const Dialog = (props) => {
     });
   };
 
-  const onRequestOpen = (e, { anchor }) => {
+  const onRequestOpen = (e) => {
     const dialogEl = ref.current;
     if (!dialogEl) {
       return;
@@ -139,7 +141,7 @@ export const Dialog = (props) => {
     if (openedRef.current) {
       return;
     }
-    open(e, { anchor });
+    open(e);
   };
   const onRequestClose = (e, detail = {}) => {
     const dialogEl = ref.current;
@@ -170,11 +172,21 @@ export const Dialog = (props) => {
     close(e, detail);
   };
 
-  useEffect(() => {
-    if (openProp === undefined) return;
+  useLayoutEffect(() => {
+    if (openProp === undefined) {
+      return;
+    }
+    // Skip when the popover is already in the desired state.
+    // This avoids a feedback loop: our own close/open dispatches navi_close/navi_open,
+    // the parent updates the prop, and the effect would fire again for a change we
+    // already handled. Comparing against openedRef is the authoritative check because
+    // it reflects the actual DOM state, not the React render cycle.
+    if (openProp === openedRef.current) {
+      return;
+    }
     const e = new CustomEvent("open_prop_change");
     if (openProp) {
-      onRequestOpen(e, { anchor: null });
+      onRequestOpen(e);
     } else {
       onRequestClose(e);
     }
@@ -184,7 +196,6 @@ export const Dialog = (props) => {
     <Box
       {...rest}
       {...autoFocusProps}
-      anchorRef={undefined}
       as="dialog"
       ref={ref}
       baseClassName="navi_dialog"
@@ -213,8 +224,7 @@ export const Dialog = (props) => {
         onRequestClose(e);
       }}
       onnavi_request_open={(e) => {
-        const { anchor } = e.detail;
-        onRequestOpen(e, { anchor });
+        onRequestOpen(e);
       }}
       onnavi_request_close={(e) => {
         onRequestClose(e);

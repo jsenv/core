@@ -7,7 +7,7 @@ import {
   trapScrollInside,
   visibleRectEffect,
 } from "@jsenv/dom";
-import { useEffect, useId, useRef } from "preact/hooks";
+import { useId, useLayoutEffect, useRef } from "preact/hooks";
 
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import { Box } from "../box/box.jsx";
@@ -220,8 +220,18 @@ export const Popover = (props) => {
     close(e, detail);
   };
 
-  useEffect(() => {
-    if (openProp === undefined) return;
+  useLayoutEffect(() => {
+    if (openProp === undefined) {
+      return;
+    }
+    // Skip when the popover is already in the desired state.
+    // This avoids a feedback loop: our own close/open dispatches navi_close/navi_open,
+    // the parent updates the prop, and the effect would fire again for a change we
+    // already handled. Comparing against openedRef is the authoritative check because
+    // it reflects the actual DOM state, not the React render cycle.
+    if (openProp === openedRef.current) {
+      return;
+    }
     const e = new CustomEvent("open_prop_change");
     if (openProp) {
       onRequestOpen(e);

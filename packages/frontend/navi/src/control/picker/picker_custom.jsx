@@ -406,7 +406,6 @@ const PickerCustom = (props) => {
       const popupEl = popupRef.current;
       return dispatchCustomEvent(popupEl, "navi_request_open", {
         event: e,
-        anchor: pickerEl,
       });
     };
     const requestClose = (
@@ -457,7 +456,7 @@ const PickerCustom = (props) => {
       children,
     });
     Object.assign(popupProps, {
-      anchorRef: props.ref, // used only by popover but could be useful to dialog
+      anchorRef: props.ref,
       open: Boolean(expanded),
       closeRequestHandler: (
         requestCloseEvent,
