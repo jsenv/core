@@ -146,7 +146,6 @@
             <CustomUIDemo />
             <PopoverDialogDemo />
             <PopupSizingDemo />
-            <NavInspect />
           </Box>
         </NaviDebug>
       );
@@ -734,6 +733,7 @@
                     {["xs", "m", "xl", "xxl"].map((size) => (
                       <Picker
                         key={`icon_size_default_${size}`}
+                        id={`icon_size_default_${size}`}
                         name={`icon_size_default_${size}`}
                         value="Hello world"
                         action={() => {}}
@@ -747,6 +747,7 @@
                     {["xs", "m", "xl", "xxl"].map((size) => (
                       <Picker
                         key={`icon_size_custom_${size}`}
+                        id={`icon_size_custom_${size}`}
                         name={`icon_size_custom_${size}`}
                         value="Hello world"
                         action={() => {}}
@@ -761,6 +762,7 @@
                     {["xs", "m", "xl", "xxl"].map((size) => (
                       <Picker
                         key={`icon_size_calendar_${size}`}
+                        id={`icon_size_calendar_${size}`}
                         name={`icon_size_calendar_${size}`}
                         value="Hello world"
                         action={() => {}}
@@ -866,6 +868,7 @@
                   navigates as usual.
                 </p>
               </Field>
+              <NavInspect />
               <Field vertical>
                 <Label>
                   Dialog mode{" "}
@@ -898,6 +901,7 @@
                   press browser back.
                 </p>
               </Field>
+              <NavInspect />
             </Box>
           </div>
         );
