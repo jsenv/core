@@ -19,11 +19,13 @@ const css = /* css */ `
     /* Shared by popover and dialog */
     --picker-popup-background-color: var(--picker-background-color);
     --picker-popup-border-radius: var(--picker-border-radius);
+    --picker-popup-border-width: var(--picker-border-width);
     /* Popover */
     --picker-popover-max-height: 300px;
     /* Dialog */
     --picker-dialog-max-width: 95dvw;
     --picker-dialog-max-height: 95dvh;
+    --picker-dialog-border-width: 0px; /* Dialog do not need border like popover (they stand out more) */
 
     /* popover */
     &[aria-haspopup="listbox"] {
@@ -133,7 +135,8 @@ const css = /* css */ `
         max-height: var(--picker-dialog-max-height);
         padding: 0;
         background: var(--picker-popup-background-color);
-        border: var(--picker-border-width) solid var(--x-picker-border-color);
+        border: var(--picker-dialog-border-width) solid
+          var(--x-picker-border-color);
         border-radius: var(--picker-popup-border-radius);
         outline-width: var(--picker-outline-width);
         outline-color: var(--picker-outline-color);
