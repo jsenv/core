@@ -121,6 +121,9 @@
             <li>
               <a href="#section-6">6. Popover vs Dialog mode</a>
             </li>
+            <li>
+              <a href="#section-7">7. Popup sizing</a>
+            </li>
           </ol>
         </div>
       );
@@ -141,6 +144,7 @@
             <DefaultValueDemo />
             <CustomUIDemo />
             <PopoverDialogDemo />
+            <PopupSizingDemo />
           </Box>
         </NaviDebug>
       );
@@ -882,6 +886,62 @@
           </div>
         );
       };
+
+      const TallPickerContent = () => (
+        <div style={{ padding: "16px" }}>
+          {Array.from({ length: 12 }, (_, i) => (
+            <p key={i} style={{ margin: "0 0 10px", fontSize: "14px", color: "#444" }}>
+              Item {i + 1} — some content to make the popup tall enough to scroll.
+            </p>
+          ))}
+        </div>
+      );
+
+      const PopupSizingDemo = () => (
+        <div id="section-7" class="demo-section">
+          <h2>7. Popup sizing</h2>
+          <p>
+            <code>popoverMaxHeight</code> limits the popover height (respects
+            available space). <code>dialogExpandY</code> makes the dialog fill
+            the available viewport height.
+          </p>
+          <Box flex="y" spacing="m">
+            <Field vertical>
+              <Label>
+                Default popover{" "}
+                <code style={{ fontWeight: "normal" }}>(300px)</code>
+              </Label>
+              <Picker placeholder="Open me…" mode="popover">
+                <TallPickerContent />
+              </Picker>
+            </Field>
+            <Field vertical>
+              <Label>
+                <code>popoverMaxHeight={150}</code>
+              </Label>
+              <Picker placeholder="Open me…" mode="popover" popoverMaxHeight={150}>
+                <TallPickerContent />
+              </Picker>
+            </Field>
+            <Field vertical>
+              <Label>
+                Dialog — default
+              </Label>
+              <Picker placeholder="Open me…" mode="dialog">
+                <TallPickerContent />
+              </Picker>
+            </Field>
+            <Field vertical>
+              <Label>
+                Dialog — <code>dialogExpandY</code>
+              </Label>
+              <Picker placeholder="Open me…" mode="dialog" dialogExpandY>
+                <TallPickerContent />
+              </Picker>
+            </Field>
+          </Box>
+        </div>
+      );
 
       render(
         <App />,

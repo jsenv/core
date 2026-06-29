@@ -172,6 +172,31 @@ const PROPS_CSS_VARS_DEFAULT = {};
 // to the inner semantic/interactive child element.
 const PSEUDO_STATE_CHILD_PROP_SET = new Set(["tabIndex", "tabindex"]);
 
+/**
+ * @type {import("preact").FunctionComponent<{
+ *   as?: string,
+ *   className?: string,
+ *   style?: import("preact").JSX.CSSProperties & { [pseudo: string]: import("preact").JSX.CSSProperties },
+ *   styleCSSVars?: { [stylePropName: string]: string },
+ *   propsCSSVars?: { [propName: string]: string },
+ *   inline?: boolean,
+ *   block?: boolean,
+ *   flex?: "x" | "y" | boolean,
+ *   grid?: boolean,
+ *   display?: "inherit",
+ *   pseudoState?: { [stateName: string]: boolean },
+ *   pseudoClasses?: string[],
+ *   pseudoElements?: string[],
+ *   visualSelector?: string,
+ *   pseudoStateSelector?: string,
+ *   hasChildUsingForwardedProps?: boolean,
+ *   childPropSet?: Set<string>,
+ *   preventInitialTransition?: boolean,
+ *   separator?: import("preact").ComponentChildren | ((index: number) => import("preact").ComponentChildren),
+ *   children?: import("preact").ComponentChildren,
+ *   [key: string]: any,
+ * }>}
+ */
 export const Box = (props) => {
   const {
     ref,

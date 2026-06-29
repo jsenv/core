@@ -16,8 +16,12 @@ import {
 
 const css = /* css */ `
   .navi_picker {
+    /* Shared by popover and dialog */
+    --picker-popup-background-color: var(--picker-background-color);
+    --picker-popup-border-radius: var(--picker-border-radius);
+    /* Popover */
     --picker-popover-max-height: 300px;
-
+    /* Dialog */
     --picker-dialog-max-width: 95dvw;
     --picker-dialog-max-height: 95dvh;
 
@@ -35,11 +39,11 @@ const css = /* css */ `
         );
         margin: 0;
         padding: 0;
-        background: var(--picker-background-color);
+        background: var(--picker-popup-background-color);
         border-width: var(--picker-border-width);
         border-style: solid;
         border-color: var(--x-picker-border-color);
-        border-radius: var(--picker-border-radius);
+        border-radius: var(--picker-popup-border-radius);
         outline-width: var(--picker-outline-width);
         outline-color: var(--picker-outline-color);
         outline-offset: 0px;
@@ -95,7 +99,7 @@ const css = /* css */ `
           width: 100%;
           border-radius: max(
             0px,
-            var(--picker-border-radius) - var(--picker-border-width)
+            var(--picker-popup-border-radius) - var(--picker-border-width)
           );
           overflow: auto;
           overscroll-behavior: none;
@@ -128,9 +132,9 @@ const css = /* css */ `
         max-width: var(--picker-dialog-max-width);
         max-height: var(--picker-dialog-max-height);
         padding: 0;
-        background: var(--picker-background-color);
+        background: var(--picker-popup-background-color);
         border: var(--picker-border-width) solid var(--x-picker-border-color);
-        border-radius: var(--picker-border-radius);
+        border-radius: var(--picker-popup-border-radius);
         outline-width: var(--picker-outline-width);
         outline-color: var(--picker-outline-color);
         outline-offset: 0;
@@ -165,7 +169,7 @@ const css = /* css */ `
         width: 100%;
         border-radius: max(
           0px,
-          var(--picker-border-radius) - var(--picker-border-width)
+          var(--picker-popup-border-radius) - var(--picker-border-width)
         );
         overflow: auto;
         overscroll-behavior: none;
