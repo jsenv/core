@@ -29,20 +29,19 @@
       .expected {
         margin: 0 0 16px;
         padding: 10px 14px;
+        font-size: 13px;
         background: #fff8e1;
         border: 1px solid #ffe082;
         border-radius: 6px;
-        font-size: 13px;
       }
     </style>
   </head>
   <body>
     <h1>BUG repro: RadioGroup's "action" prop never fires</h1>
     <p class="expected">
-      Click a radio that is <strong>not</strong> currently selected.
-      Expected: both <code>uiAction</code> and <code>action</code> entries
-      appear in the log below. Actual (bug): only <code>uiAction</code>{" "}
-      appears.
+      Click a radio that is <strong>not</strong> currently selected. Expected:
+      both <code>uiAction</code> and <code>action</code> entries appear in the
+      log below. Actual (bug): only <code>uiAction</code>{" "} appears.
     </p>
     <div id="root"></div>
 
@@ -63,54 +62,56 @@
         const valueSignal = useSignal("a");
 
         return (
-          <NaviDebug debugAction debugInteraction>
+          <NaviDebug debugAction debugInteraction debugUIState>
             <div class="demo-section">
               <h2>RadioGroup with both uiAction and action</h2>
+
               <Suspense fallback="loading…">
+                <RadioGroup
+                  name="style"
+                  value={valueSignal.value}
+                  flex="y"
+                  alignX="start"
+                  uiAction={(value) => {
+                    push("uiAction", value);
+                    valueSignal.value = value;
+                  }}
+                  action={(value) => {
+                    push("action", value);
+                  }}
+                >
+                  <legend>Pick an option</legend>
+                  <Field
+                    as="label"
+                    flex
+                    alignY="center"
+                    spacing="s"
+                    border="1px dotted #ccc"
+                  >
+                    <Input type="radio" value="a" />A
+                  </Field>
+                  <Field
+                    as="label"
+                    flex
+                    alignY="center"
+                    spacing="s"
+                    border="1px dotted #ccc"
+                  >
+                    <Input type="radio" value="b" />B
+                  </Field>
+                  <Field
+                    as="label"
+                    flex
+                    alignY="center"
+                    spacing="s"
+                    border="1px dotted #ccc"
+                  >
+                    <Input type="radio" value="c" />C
+                  </Field>
+                </RadioGroup>
+
                 <Mapbox />
               </Suspense>
-              <RadioGroup
-                name="style"
-                value={valueSignal.value}
-                flex="y"
-                alignX="start"
-                uiAction={(value) => {
-                  push("uiAction", value);
-                  valueSignal.value = value;
-                }}
-                action={(value) => {
-                  push("action", value);
-                }}
-              >
-                <legend>Pick an option</legend>
-                <Field
-                  as="label"
-                  flex
-                  alignY="center"
-                  spacing="s"
-                  border="1px dotted #ccc"
-                >
-                  <Input type="radio" value="a" />A
-                </Field>
-                <Field
-                  as="label"
-                  flex
-                  alignY="center"
-                  spacing="s"
-                  border="1px dotted #ccc"
-                >
-                  <Input type="radio" value="b" />B
-                </Field>
-                <Field
-                  as="label"
-                  flex
-                  alignY="center"
-                  spacing="s"
-                  border="1px dotted #ccc"
-                >
-                  <Input type="radio" value="c" />C
-                </Field>
-              </RadioGroup>
 
               <CallLog entries={entries} onClear={clear} />
             </div>
