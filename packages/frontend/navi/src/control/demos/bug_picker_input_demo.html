@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BUG: Picker + Input text ref staleness</title>
+    <style>
+      body {
+        max-width: 700px;
+        margin: 0 auto;
+        padding: 20px;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: #f5f5f5;
+      }
+      h1 {
+        margin-bottom: 12px;
+        color: #333;
+        font-size: 1.6rem;
+      }
+      .demo-section {
+        margin-bottom: 24px;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      .expected {
+        margin: 0 0 16px;
+        padding: 10px 14px;
+        font-size: 13px;
+        background: #fff8e1;
+        border: 1px solid #ffe082;
+        border-radius: 6px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>BUG repro: Picker + Input text ref staleness</h1>
+    <p class="expected">
+      Open the picker, type something, then confirm (<code>--navi-send</code>).
+      Expected: both <code>uiAction</code> (on type) and <code>action</code> (on
+      confirm) appear in the log. Both directions (input→picker and
+      picker→input) should sync correctly.
+    </p>
+    <div id="root"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { lazy, Suspense } from "preact/compat";
+      import { useSignal } from "@preact/signals";
+      import { CallLog, useCallLog } from "./utils/call_log.jsx";
+      import {
+        Box,
+        Button,
+        Field,
+        Input,
+        Label,
+        NaviDebug,
+        Picker,
+      } from "@jsenv/navi";
+
+      const LazyNeighbor = lazy(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        return "LazyNeighbor";
+      });
+
+      const App = () => {
+        const [entries, push, clear] = useCallLog();
+        const valueSignal = useSignal("");
+
+        return (
+          <NaviDebug debugAll>
+            <div class="demo-section">
+              <h2>Picker + text input inside shared Suspense</h2>
+
+              <Suspense fallback="loading…">
+                <Field vertical>
+                  <Label>Value</Label>
+                  <Picker
+                    type="text"
+                    name="text_picker"
+                    value={valueSignal.value}
+                    placeholder="Click to edit…"
+                    uiAction={(v) => {
+                      push("uiAction", v);
+                      valueSignal.value = v;
+                    }}
+                    action={(v) => {
+                      push("action", v);
+                    }}
+                  >
+                    <Box flex="y" spacing="s" padding="s" minWidth="200">
+                      <Input
+                        type="text"
+                        command="--navi-update"
+                        placeholder="Type here…"
+                        autoFocus
+                      />
+                      <Box flex spacing="s">
+                        <Button command="--navi-cancel">Cancel</Button>
+                        <Button command="--navi-send">Confirm</Button>
+                      </Box>
+                    </Box>
+                  </Picker>
+                </Field>
+
+                <LazyNeighbor />
+              </Suspense>
+
+              <CallLog entries={entries} onClear={clear} />
+            </div>
+          </NaviDebug>
+        );
+      };
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>
