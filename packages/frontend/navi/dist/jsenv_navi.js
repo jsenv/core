@@ -6494,9 +6494,6 @@ const DIMENSION_PROPS = {
     if (parentBoxFlow === "flex-y" || parentBoxFlow === "inline-flex-y") {
       return {
         alignSelf: "stretch",
-        // ensure we override any with: 'fit-content' for instance
-        // also useful for ".navi_text_sizer" to inherit the full size
-        width: "100%",
       };
     }
     // Can't use flexGrow — parent is not flex-x
@@ -6515,9 +6512,6 @@ const DIMENSION_PROPS = {
     if (parentBoxFlow === "flex-x" || parentBoxFlow === "inline-flex-x") {
       return {
         alignSelf: "stretch",
-        // ensure we override any with: 'fit-content' for instance
-        // also useful for ".navi_text_sizer" to inherit the full size
-        height: "100%",
       };
     }
     // Can't use flexGrow — parent is not flex-y
@@ -28315,6 +28309,7 @@ installImportMetaCssBuild(import.meta);const css$J = /* css */`
       --button-color-disabled: var(--button-color-readonly);
 
       /* Here to be easy to override */
+      display: inline-block; /* So box css can override when wanting to put button inline flex */
       font-size: var(--button-font-size);
       font-family: var(--button-font-family);
     }
@@ -28347,7 +28342,6 @@ installImportMetaCssBuild(import.meta);const css$J = /* css */`
     touch-action: manipulation;
     user-select: none;
     -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
-    display: inline-flex;
 
     .navi_button_content {
       position: relative;
@@ -28535,6 +28529,7 @@ installImportMetaCssBuild(import.meta);const css$J = /* css */`
     }
     &[data-icon] {
       --button-padding: 0;
+      display: inline-flex;
     }
     /* cta: call-to-action — special background, border matches background */
     &[data-cta] {
@@ -28623,7 +28618,7 @@ const ButtonUI = props => {
   });
   return jsxs(Box, {
     inline: true,
-    flex: true,
+    block: true,
     ...buttonControlRootProps,
     ...buttonControlHostProps,
     // eslint-disable-next-line react/no-children-prop
@@ -36115,6 +36110,11 @@ const PickerCustom = props => {
     ref,
     mode: modeProp
   } = props;
+  // Resolve the id the same way useControlProps does (own id > Field's id > generated id)
+  // before computing popupId below, so two Pickers without an explicit id never collide.
+  const idDefault = useId();
+  const controlId = useContext(ControlIdContext);
+  props.id = props.id || controlId || idDefault;
   // Freeze the mode for the lifetime of an opening: compute it when closed,
   // keep it stable while open so a screen resize mid-session doesn't switch
   // between Popover and Dialog.
@@ -39962,7 +39962,7 @@ installImportMetaCssBuild(import.meta);const css$l = /* css */`
     --x-color: var(--color, white);
 
     position: relative;
-    display: inline-flex;
+    display: inline;
     max-width: 200px;
     padding-top: var(--padding-y);
     padding-right: var(--padding-x);
@@ -39971,7 +39971,6 @@ installImportMetaCssBuild(import.meta);const css$l = /* css */`
     align-items: stretch;
     color: var(--x-color);
     font-size: var(--font-size);
-    line-height: normal;
     background: var(--x-background);
     background-color: var(--x-background-color);
     border-radius: 1em;
@@ -39982,7 +39981,7 @@ installImportMetaCssBuild(import.meta);const css$l = /* css */`
     }
 
     &[data-text-overflow] {
-      display: flex;
+      display: inline;
 
       .navi_text_overflow_wrapper {
         /* Keep badge text and button together */
@@ -39994,10 +39993,13 @@ installImportMetaCssBuild(import.meta);const css$l = /* css */`
       display: inline-flex;
       margin-top: calc(-1 * var(--padding-y));
       margin-bottom: calc(-1 * var(--padding-y));
+      padding-top: var(--padding-y);
       padding-right: calc(var(--padding-x) / 2);
+      padding-bottom: var(--padding-y);
       padding-left: calc(var(--padding-x) / 2);
       align-items: center;
       cursor: pointer;
+      pointer-events: auto;
       user-select: none;
 
       &:first-child {
@@ -40109,6 +40111,11 @@ const BadgeList = ({
     const measure = () => {
       visibleEl.style.width = "";
       if (shrinkWrap) {
+        // Clone the already-rendered DOM nodes instead of letting React/Preact
+        // render the children a second time into the ghost: re-rendering would
+        // instantiate Badge/Badge.Button a second time, double-registering
+        // their controllers (and any other mount side effect) under the same id.
+        measureEl.replaceChildren(...Array.from(visibleEl.children, child => child.cloneNode(true)));
         const optimalWidth = measureWidestChildRow(measureEl);
         if (optimalWidth !== null) {
           visibleEl.style.width = `${Math.ceil(optimalWidth)}px`;
@@ -40150,8 +40157,7 @@ const BadgeList = ({
       ...sharedProps,
       ref: measureRef,
       "aria-hidden": "true",
-      "navi-badge-list-clone": "",
-      children: childArray
+      "navi-badge-list-clone": ""
     }), jsxs(Box, {
       baseClassName: "navi_badge_list",
       ...sharedProps,
