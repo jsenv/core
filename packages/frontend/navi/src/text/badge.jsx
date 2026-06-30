@@ -58,6 +58,7 @@ const css = /* css */ `
       padding-left: calc(var(--padding-x) / 2);
       align-items: center;
       cursor: pointer;
+      pointer-events: auto;
       user-select: none;
 
       &:first-child {

@@ -48,6 +48,13 @@ export const BadgeList = ({
     const measure = () => {
       visibleEl.style.width = "";
       if (shrinkWrap) {
+        // Clone the already-rendered DOM nodes instead of letting React/Preact
+        // render the children a second time into the ghost: re-rendering would
+        // instantiate Badge/Badge.Button a second time, double-registering
+        // their controllers (and any other mount side effect) under the same id.
+        measureEl.replaceChildren(
+          ...Array.from(visibleEl.children, (child) => child.cloneNode(true)),
+        );
         const optimalWidth = measureWidestChildRow(measureEl);
         if (optimalWidth !== null) {
           visibleEl.style.width = `${Math.ceil(optimalWidth)}px`;
@@ -88,16 +95,16 @@ export const BadgeList = ({
 
   return (
     <Box relative>
-      {/* Measurement ghost: all children, invisible, out-of-flow */}
+      {/* Measurement ghost: populated by cloning the visible element's DOM
+          nodes in the layout effect above — not rendered by React — so the
+          children's components are never instantiated twice. */}
       <Box
         baseClassName="navi_badge_list"
         {...sharedProps}
         ref={measureRef}
         aria-hidden="true"
         navi-badge-list-clone=""
-      >
-        {childArray}
-      </Box>
+      />
       {/* Visible element */}
       <Box baseClassName="navi_badge_list" {...sharedProps} ref={visibleRef}>
         {visibleChildren.length ? visibleChildren : fallback}
