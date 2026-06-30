@@ -61,7 +61,9 @@
         return (
           <NaviDebug debugAction debugInteraction>
             <div>
+              <TableOfContents />
               <StandaloneDemo />
+              <ImageButtonDemo />
               <InFormDemo />
               <RequiredDemo />
               <WithReadonlyDemo />
@@ -70,10 +72,35 @@
         );
       };
 
+      const TableOfContents = () => {
+        return (
+          <div class="demo-section">
+            <h2>Table of contents</h2>
+            <ol style={{ margin: 0, paddingLeft: "20px", lineHeight: "2" }}>
+              <li>
+                <a href="#standalone">Standalone</a>
+              </li>
+              <li>
+                <a href="#image-buttons">Horizontal, image buttons</a>
+              </li>
+              <li>
+                <a href="#in-form">In a form</a>
+              </li>
+              <li>
+                <a href="#required">With required validation</a>
+              </li>
+              <li>
+                <a href="#readonly">With readonly options</a>
+              </li>
+            </ol>
+          </div>
+        );
+      };
+
       const StandaloneDemo = () => {
         const [entries, push, clear] = useCallLog();
         return (
-          <div class="demo-section">
+          <div class="demo-section" id="standalone">
             <h2>Standalone</h2>
             <p style={{ margin: "0 0 12px", color: "#555" }}>
               <code>uiAction</code> fires on every interaction (even re-clicking
@@ -130,10 +157,85 @@
         );
       };
 
+      const ImageButtonDemo = () => {
+        const [entries, push, clear] = useCallLog();
+        return (
+          <div class="demo-section" id="image-buttons">
+            <h2>Horizontal, image buttons</h2>
+            <p style={{ margin: "0 0 12px", color: "#555" }}>
+              <code>RadioGroup</code> laid out horizontally (<code>flex</code> +{" "}
+              <code>spacing</code>), each option an{" "}
+              <code>Input type="radio"</code> with{" "}
+              <code>appearance="button"</code> and an image in the{" "}
+              <code>icon</code> prop.
+            </p>
+
+            <RadioGroup
+              name="map_style"
+              flex
+              spacing="s"
+              uiAction={(value) => {
+                push("uiAction", value);
+              }}
+              action={(value) => {
+                push("action", value);
+              }}
+            >
+              <legend>Map style</legend>
+              <Input
+                type="radio"
+                value="street"
+                appearance="button"
+                borderRadius="s"
+                icon={
+                  <img
+                    width="60"
+                    height="60"
+                    src="./radio_list_image/map_ui_street.avif"
+                    alt="Street"
+                  />
+                }
+                defaultChecked
+              />
+              <Input
+                type="radio"
+                value="satellite"
+                appearance="button"
+                borderRadius="s"
+                icon={
+                  <img
+                    width="60"
+                    height="60"
+                    src="./radio_list_image/map_ui_satellite.avif"
+                    alt="Satellite"
+                  />
+                }
+              />
+              <Input
+                type="radio"
+                value="discrete"
+                appearance="button"
+                borderRadius="s"
+                icon={
+                  <img
+                    width="60"
+                    height="60"
+                    src="./radio_list_image/map_ui_discrete.avif"
+                    alt="Discrete"
+                  />
+                }
+              />
+            </RadioGroup>
+
+            <CallLog entries={entries} onClear={clear} />
+          </div>
+        );
+      };
+
       const InFormDemo = () => {
         const [submitted, setSubmitted] = useState(null);
         return (
-          <div class="demo-section">
+          <div class="demo-section" id="in-form">
             <h2>In a form</h2>
             <p style={{ margin: "0 0 12px", color: "#555" }}>
               A <code>RadioGroup</code> inside a <code>Form</code>. The selected
@@ -203,7 +305,7 @@
       const RequiredDemo = () => {
         const [submitted, setSubmitted] = useState(null);
         return (
-          <div class="demo-section">
+          <div class="demo-section" id="required">
             <h2>With required validation</h2>
             <p style={{ margin: "0 0 12px", color: "#555" }}>
               The <code>required</code> attribute on a <code>RadioGroup</code>{" "}
@@ -277,7 +379,7 @@
       const WithReadonlyDemo = () => {
         const ro = "This option is currently unavailable.";
         return (
-          <div class="demo-section">
+          <div class="demo-section" id="readonly">
             <h2>With readonly options</h2>
             <p style={{ margin: "0 0 12px", color: "#555" }}>
               Mix of normal and <code>readOnly</code> radios. Clicking a
