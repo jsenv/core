@@ -1177,7 +1177,7 @@ const useInteractiveProps = (
           }),
         );
       }
-    }, [disabledResolved, readOnlyResolved]);
+    }, [disabledResolved, readOnlyResolved, ref]);
     useLayoutEffect(() => {
       return () => {
         const element = ref.current;
