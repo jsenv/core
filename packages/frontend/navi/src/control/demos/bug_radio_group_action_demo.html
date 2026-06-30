@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BUG: RadioGroup action never fires</title>
+    <style>
+      body {
+        max-width: 700px;
+        margin: 0 auto;
+        padding: 20px;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: #f5f5f5;
+      }
+      h1 {
+        margin-bottom: 12px;
+        color: #333;
+        font-size: 1.6rem;
+      }
+      .demo-section {
+        margin-bottom: 24px;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      .expected {
+        margin: 0 0 16px;
+        padding: 10px 14px;
+        background: #fff8e1;
+        border: 1px solid #ffe082;
+        border-radius: 6px;
+        font-size: 13px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>BUG repro: RadioGroup's "action" prop never fires</h1>
+    <p class="expected">
+      Click a radio that is <strong>not</strong> currently selected.
+      Expected: both <code>uiAction</code> and <code>action</code> entries
+      appear in the log below. Actual (bug): only <code>uiAction</code>{" "}
+      appears.
+    </p>
+    <div id="root"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useSignal } from "@preact/signals";
+      import { CallLog, useCallLog } from "./utils/call_log.jsx";
+      import { RadioGroup, Field, Label, Input, NaviDebug } from "@jsenv/navi";
+
+      const App = () => {
+        const [entries, push, clear] = useCallLog();
+        const valueSignal = useSignal("a");
+
+        return (
+          <NaviDebug debugAction debugInteraction>
+            <div class="demo-section">
+              <h2>RadioGroup with both uiAction and action</h2>
+              <RadioGroup
+                name="style"
+                value={valueSignal.value}
+                flex="y"
+                alignX="start"
+                uiAction={(value) => {
+                  push("uiAction", value);
+                  valueSignal.value = value;
+                }}
+                action={(value) => {
+                  push("action", value);
+                }}
+              >
+                <legend>Pick an option</legend>
+                <Field
+                  as="label"
+                  flex
+                  alignY="center"
+                  spacing="s"
+                  border="1px dotted #ccc"
+                >
+                  <Input type="radio" value="a" />A
+                </Field>
+                <Field
+                  as="label"
+                  flex
+                  alignY="center"
+                  spacing="s"
+                  border="1px dotted #ccc"
+                >
+                  <Input type="radio" value="b" />B
+                </Field>
+                <Field
+                  as="label"
+                  flex
+                  alignY="center"
+                  spacing="s"
+                  border="1px dotted #ccc"
+                >
+                  <Input type="radio" value="c" />C
+                </Field>
+              </RadioGroup>
+
+              <CallLog entries={entries} onClear={clear} />
+            </div>
+          </NaviDebug>
+        );
+      };
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>
