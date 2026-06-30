@@ -32244,6 +32244,7 @@ const getNowHoursRoundedToStep = (stepMinutes, offsetMinutes = 0) => {
 // Numeric signal types must not fall through to the native type="number"
 // (which adds spinner buttons and has poor UX) — they map to navi_number instead.
 const VALIDITY_TYPE_TO_INPUT_TYPE = {
+  boolean: "checkbox",
   number: "navi_number",
   integer: "navi_number",
   percentage: "navi_percentage",
@@ -33102,7 +33103,9 @@ const InputSearchUI = ({
 const InputEmail = props => {
   const Next = useNextResolver();
   return jsx(Next, {
-    ui: jsx(InputEmailUI, {}),
+    ui: jsx(InputEmailUI, {
+      icon: props.icon
+    }),
     ...props
   });
 };
@@ -33652,6 +33655,19 @@ const css$x = /* css */`
       outline: none;
       -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
 
+      &::placeholder {
+        color: var(--x-placeholder-color);
+      }
+      &:-webkit-autofill {
+        -webkit-box-shadow: 0 0 0 1000px var(--x-background-color) inset;
+      }
+      &:-internal-autofill-selected {
+        /* Webkit is putting some nasty styles after automplete that look as follow */
+        /* input:-internal-autofill-selected { color: FieldText !important; } */
+        /* Fortunately we can override it as follow */
+        -webkit-text-fill-color: var(--x-color) !important;
+      }
+
       &[type="search"] {
         -webkit-appearance: textfield;
 
@@ -33768,16 +33784,6 @@ const css$x = /* css */`
         --x-background-color: transparent;
       }
     }
-  }
-
-  .navi_input .navi_control_input::placeholder {
-    color: var(--x-placeholder-color);
-  }
-  .navi_input .navi_control_input:-internal-autofill-selected {
-    /* Webkit is putting some nasty styles after automplete that look as follow */
-    /* input:-internal-autofill-selected { color: FieldText !important; } */
-    /* Fortunately we can override it as follow */
-    -webkit-text-fill-color: var(--x-color) !important;
   }
 `;
 const InputHeadlessResolver = props => {

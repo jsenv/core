@@ -69,7 +69,7 @@ const InputSearchUI = ({ icon }) => {
 const InputEmail = (props) => {
   const Next = useNextResolver();
 
-  return <Next ui={<InputEmailUI />} {...props} />;
+  return <Next ui={<InputEmailUI icon={props.icon} />} {...props} />;
 };
 const InputEmailUI = ({ icon }) => {
   if (icon !== undefined) {

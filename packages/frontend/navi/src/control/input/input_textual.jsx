@@ -173,6 +173,22 @@ const css = /* css */ `
       outline: none;
       -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
 
+      &::placeholder {
+        color: var(--x-placeholder-color);
+      }
+      /* Webkit is putting a slight blue bckground on autofilled input */
+      /* For now we override with out custom background color */
+      /* Ideally we'll later provide a custom data attribute with ability to see styles when autofilled */
+      &:-webkit-autofill {
+        -webkit-box-shadow: 0 0 0 1000px var(--x-background-color) inset;
+      }
+      /* Webkit is putting some nasty styles after automplete that look as follow */
+      /* input:-internal-autofill-selected { color: FieldText !important; } */
+      /* Fortunately we can override it as follow */
+      &:-internal-autofill-selected {
+        -webkit-text-fill-color: var(--x-color) !important;
+      }
+
       &[type="search"] {
         -webkit-appearance: textfield;
 
@@ -289,16 +305,6 @@ const css = /* css */ `
         --x-background-color: transparent;
       }
     }
-  }
-
-  .navi_input .navi_control_input::placeholder {
-    color: var(--x-placeholder-color);
-  }
-  .navi_input .navi_control_input:-internal-autofill-selected {
-    /* Webkit is putting some nasty styles after automplete that look as follow */
-    /* input:-internal-autofill-selected { color: FieldText !important; } */
-    /* Fortunately we can override it as follow */
-    -webkit-text-fill-color: var(--x-color) !important;
   }
 `;
 
@@ -418,6 +424,7 @@ const InputTextualFirstResolver = (props) => {
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
   resolveInputProps(props);
+
   return <Next {...props} />;
 };
 export const InputTextual = createComponentResolver([

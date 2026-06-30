@@ -6,6 +6,7 @@ import { timeStringToSeconds } from "../picker/time_helpers.js";
 // Numeric signal types must not fall through to the native type="number"
 // (which adds spinner buttons and has poor UX) — they map to navi_number instead.
 const VALIDITY_TYPE_TO_INPUT_TYPE = {
+  boolean: "checkbox",
   number: "navi_number",
   integer: "navi_number",
   percentage: "navi_percentage",
