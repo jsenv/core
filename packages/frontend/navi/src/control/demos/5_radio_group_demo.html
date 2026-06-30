@@ -55,7 +55,19 @@
         Label,
         Input,
         NaviDebug,
+        route,
+        setupRoutes,
+        stateSignal,
       } from "@jsenv/navi";
+
+      const mapStyleSignal = stateSignal("street", {
+        id: "map_style",
+        oneOf: ["street", "satellite", "discrete"],
+      });
+      const DEMO_ROUTE = route("", {
+        searchParams: { map_style: mapStyleSignal },
+      });
+      setupRoutes([DEMO_ROUTE]);
 
       const App = () => {
         return (
@@ -159,6 +171,7 @@
 
       const ImageButtonDemo = () => {
         const [entries, push, clear] = useCallLog();
+        const mapStyle = mapStyleSignal.value;
         return (
           <div class="demo-section" id="image-buttons">
             <h2>Horizontal, image buttons</h2>
@@ -167,15 +180,18 @@
               <code>spacing</code>), each option an{" "}
               <code>Input type="radio"</code> with{" "}
               <code>appearance="button"</code> and an image in the{" "}
-              <code>icon</code> prop.
+              <code>icon</code> prop. Selection is synced to the{" "}
+              <code>?map_style=</code> URL search param.
             </p>
 
             <RadioGroup
               name="map_style"
               flex
               spacing="s"
+              value={mapStyle}
               uiAction={(value) => {
                 push("uiAction", value);
+                mapStyleSignal.value = value;
               }}
               action={(value) => {
                 push("action", value);
@@ -195,7 +211,6 @@
                     alt="Street"
                   />
                 }
-                defaultChecked
               />
               <Input
                 type="radio"
