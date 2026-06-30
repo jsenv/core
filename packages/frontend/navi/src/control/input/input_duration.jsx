@@ -382,7 +382,10 @@ const useClipboardProps = (groupRef) => {
     if (!target.matches) {
       return false;
     }
-    if (!target.matches(".navi_duration_part")) {
+    if (!target.matches(`[navi-control-host="input"`)) {
+      return false;
+    }
+    if (!target.closest(".navi_duration_part")) {
       return false;
     }
     return true;
