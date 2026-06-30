@@ -68,12 +68,12 @@ export const Popover = (props) => {
   const debugFocus = useDebugFocus();
   const autoFocusProps = useAutoFocus(ref, props.autoFocus);
 
-  // Register the DOM-specific open/close mechanics with the controller, fresh
-  // on every render so they close over the latest props (scrollTrap, etc.).
-  // The controller (owned by picker_custom.jsx) decides *when* these run.
-  // onopen runs outside of render (triggered by openController.open()), so it
-  // cannot call hooks — cleanup is a plain pub/sub.
-  openController.onopen = (e) => {
+  // Sync the DOM open and return how to sync it back closed, fresh on every
+  // render so it closes over the latest props (scrollTrap, etc.). The
+  // controller (owned by picker_custom.jsx) decides *when* this runs.
+  // openEffect runs outside of render (triggered by openController.open()), so
+  // it cannot call hooks — cleanup is a plain pub/sub.
+  openController.openEffect = (e) => {
     const popoverEl = ref.current;
     if (!popoverEl) {
       return undefined;
@@ -166,8 +166,8 @@ export const Popover = (props) => {
     addCleanup(() => {
       rectEffect.disconnect();
     });
-    // Picker's openController.requestOpen() reads this back synchronously
-    // right after onopen() returns (see picker_custom.jsx useOpenController).
+    // Picker's openController.open() reads this back synchronously right
+    // after openEffect() returns (see picker_custom.jsx useOpenController).
     e.detail.focusedBeforeOpen = focusedBeforeOpen;
 
     return () => {

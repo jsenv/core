@@ -810,7 +810,7 @@ const useIgnoreClickForMousedown = (elementRef, onIgnore) => {
 // Created once per picker instance: openHandler is wrapped in a stable callback
 // so the controller identity never changes across renders, even though
 // Dialog/Popover read fresh closures (scrollTrap, etc.) via
-// openController.onopen on every render.
+// openController.openEffect on every render.
 const useOpenController = (openHandler) => {
   const stableOpenHandler = useStableCallback(openHandler);
   const controllerRef = useRef(null);
@@ -832,14 +832,22 @@ const useOpenController = (openHandler) => {
  * Owns open/close decision-making for a picker popup (Dialog or Popover):
  * guards against duplicate requests and notifies the picker's own reactions.
  *
- * Dialog/Popover provide the DOM-specific mechanics by registering
- * `openController.onopen` (reassigned on every render, mirroring native
- * EventTarget.onopen) and calling `openController.requestClose(e, { isCancel })`
- * for their own internal triggers (backdrop click, Escape). `onopen` may
- * return a close callback, used as `onclose` for that opening.
+ * `controller.openEffect` is implemented by the controlled element (Dialog or
+ * Popover), reassigned on every render so it always closes over the latest
+ * props (scrollTrap, anchorRef, etc.). It performs whatever DOM side effects
+ * are needed to make the element actually open (`showModal()`/`showPopover()`,
+ * focus transfer, positioning, traps...) and returns its cleanup —
+ * the matching side effects to sync back to closed (`close()`/
+ * `hidePopover()`, releasing traps...). That cleanup is kept private to the
+ * controller (not exposed as a property) and invoked when the popup actually
+ * closes, however that happens.
  *
- * `openHandler`'s return value is `{ onRequestClose, onClose }`, in the
- * spirit of CloseWatcher
+ * Dialog/Popover also call `openController.requestClose(e, { isCancel })` for
+ * their own internal triggers (backdrop click, Escape).
+ *
+ * `openHandler` is the picker's own business logic, passed once to
+ * `createOpenController`. Its return value is `{ onRequestClose, onClose }`,
+ * in the spirit of CloseWatcher
  * (https://developer.mozilla.org/en-US/docs/Web/API/CloseWatcher) but with
  * clearer naming than its cancel/close pair:
  * - `onRequestClose(e)`: about to close — call `e.preventDefault()` to stay
@@ -847,7 +855,7 @@ const useOpenController = (openHandler) => {
  * - `onClose(e)`: actually closing, not preventable — final reactions live here.
  *
  * The controller exposes matching action methods:
- * - `open()`: requests opening.
+ * - `open()`: requests opening — runs `openEffect`, then `openHandler`.
  * - `requestClose()`: requests closing — calls `onRequestClose` then `onClose`,
  *   stopping after the first if denied. The popup may choose to stay open.
  * - `close()`: closes for real — calls only `onClose`, skipping
@@ -856,23 +864,23 @@ const useOpenController = (openHandler) => {
  */
 const createOpenController = (openHandler) => {
   let closeHandlers = null; // { onRequestClose, onClose } returned by openHandler
+  let openEffectCleanup = null; // function returned by openEffect, undoes its DOM side effects
   const performClose = (closeEvent) => {
     controller.opened = false;
-    // DOM mechanics close first (dialogEl.close()/popoverEl.hidePopover(),
-    // releasing the focus trap) — only then run the picker's own reaction
-    // (onClose may restore focus to an element outside the popup, which the
-    // focus trap would otherwise fight while still active).
-    controller.onclose?.(closeEvent);
-    controller.onclose = null;
+    // Sync the DOM closed first (releasing the focus trap) — only then run
+    // the picker's own reaction (onClose may restore focus to an element
+    // outside the popup, which the focus trap would otherwise fight while
+    // still active).
+    openEffectCleanup?.(closeEvent);
+    openEffectCleanup = null;
     closeHandlers?.onClose?.(closeEvent);
     closeHandlers = null;
   };
   const controller = {
     opened: false,
-    onopen: null,
-    onclose: null,
+    openEffect: null,
     open: (e, detail) => {
-      if (controller.opened || !controller.onopen) {
+      if (controller.opened || !controller.openEffect) {
         return;
       }
       const requestOpenEvent = new CustomEvent("navi_request_open", {
@@ -881,9 +889,9 @@ const createOpenController = (openHandler) => {
       });
       chainEvent(requestOpenEvent, e);
       controller.opened = true;
-      // onopen may populate requestOpenEvent.detail (e.g. focusedBeforeOpen)
+      // openEffect may populate requestOpenEvent.detail (e.g. focusedBeforeOpen)
       // by mutating it — openHandler reads it right after, synchronously.
-      controller.onclose = controller.onopen(requestOpenEvent) || null;
+      openEffectCleanup = controller.openEffect(requestOpenEvent) || null;
       closeHandlers = openHandler(requestOpenEvent) || null;
     },
     requestClose: (
