@@ -17418,7 +17418,7 @@ const createCalloutManager = (
       return;
     }
     const resolvedAnchorElement =
-      anchorElement || controller.elementRef.current;
+      anchorElement || controller.ref.current;
     const removeCloseOnCleanup = addTeardown?.(() => {
       requestCloseCallout(new CustomEvent("cleanup"), "cleanup");
     });
@@ -17443,7 +17443,7 @@ const createCalloutManager = (
           tokenData.onClose?.();
         }
         tokens.clear();
-        const element = controller.elementRef.current;
+        const element = controller.ref.current;
         if (
           shouldTransferFocusFromCallout &&
           element &&
@@ -19491,7 +19491,7 @@ const REQUIRED_CONSTRAINT = {
       }
       return {
         message: naviI18n("constraint.required.radio"),
-        target: field.elementRef.current,
+        target: field.ref.current,
       };
     }
     if (type === "radio") {
@@ -19505,7 +19505,7 @@ const REQUIRED_CONSTRAINT = {
       }
       return {
         message: naviI18n("constraint.required.radio"),
-        target: field.elementRef.current,
+        target: field.ref.current,
       };
     }
 
@@ -19517,7 +19517,7 @@ const REQUIRED_CONSTRAINT = {
       }
       return {
         message: naviI18n("constraint.required.checkbox_group"),
-        target: field.elementRef.current,
+        target: field.ref.current,
       };
     }
     if (type === "checkbox") {
@@ -20356,7 +20356,7 @@ const createControlValidation = (
 
   const checkValidity = ({
     event,
-    requester = controller.elementRef.current,
+    requester = controller.ref.current,
     fromRequestAction,
   } = {}) => {
     if (fromRequestAction) {
@@ -20399,7 +20399,7 @@ const createControlValidation = (
       ...DEFAULT_CONSTRAINT_SET,
       ...dynamicConstraintSet,
     ]);
-    const elementSig = getElementSignature(controller.elementRef.current);
+    const elementSig = getElementSignature(controller.ref.current);
     debugUIState(
       event,
       `check ${elementSig}: ${constraintSet.size} constraints`,
@@ -20454,7 +20454,7 @@ const createControlValidation = (
     if (activeFailedConstraintInfo) {
       const titleLess = controller.controlHostProps.title === undefined;
       if (titleLess) {
-        const element = controller.elementRef.current;
+        const element = controller.ref.current;
         if (element) {
           element.setAttribute(
             "title",
@@ -20465,7 +20465,7 @@ const createControlValidation = (
     } else {
       const titleLess = controller.controlHostProps.title === undefined;
       if (titleLess) {
-        const element = controller.elementRef.current;
+        const element = controller.ref.current;
         if (element) {
           element.removeAttribute("title");
         }
@@ -20479,7 +20479,7 @@ const createControlValidation = (
       !compareTwoJsValues(constraintValidityState, newConstraintValidityState)
     ) {
       constraintValidityState = newConstraintValidityState;
-      const element = controller.elementRef.current;
+      const element = controller.ref.current;
       if (element) {
         debugUIState(
           event,
@@ -20529,7 +20529,7 @@ const createControlValidation = (
     event,
     { report = false, fromRequestAction = false } = {},
   ) => {
-    const elementSig = getElementSignature(controller.elementRef.current);
+    const elementSig = getElementSignature(controller.ref.current);
     const isValid = checkValidity({ event, fromRequestAction });
     if (failingManagedControlValidity) {
       // Group/form case: find the actual failing leaf and report on it.
@@ -21022,7 +21022,7 @@ const createControlInteraction = (
     // Keep title attribute in sync for accessibility.
     const titleLess = !controller.controlHostProps?.title;
     if (titleLess) {
-      const element = controller.elementRef.current;
+      const element = controller.ref.current;
       if (element) {
         if (interactionFailedConstraintInfo) {
           element.setAttribute(
@@ -21236,7 +21236,7 @@ const tryActionAfterInteractionAllowed = (
   if (controller) {
     const proxyTargetController = findControlProxyTargetController(controller);
     if (proxyTargetController) {
-      elementForAction = proxyTargetController.elementRef.current;
+      elementForAction = proxyTargetController.ref.current;
     }
     const activeController = proxyTargetController ?? controller;
     uiState = activeController?.uiState;
@@ -22359,7 +22359,7 @@ const createControlRules = (
  *   onChildUIAction(child, e, { stateChanged: boolean }): void; // Called when a child fires a UI action
  *   unregisterChild(child): void; // Called on child unmount
  *   props: Object;
- *   elementRef: Ref; // Used to dispatch DOM events
+ *   ref: Ref; // Used to dispatch DOM events
  *   getManagedControls(): UIStateController[]; // Returns controls whose validity is managed by this controller
  * }
  * ```
@@ -22395,7 +22395,7 @@ const ParentUIStateControllerContext = createContext();
  * **internalBehavior events** (e.g. radio_sibling_uncheck, state_prop re-sync):
  * skip reactions and parent notification — they are programmatic, not user-initiated.
  *
- * The controller exposes `elementRef` so parent groups can dispatch DOM events on children
+ * The controller exposes `ref` so parent groups can dispatch DOM events on children
  * (e.g. `resetUIState` cascading `navi_reset_ui_state`).
  */
 const useUIStateController = (
@@ -22417,7 +22417,6 @@ const useUIStateController = (
   const parentUIStateController = useContext(ParentUIStateControllerContext);
   const formContext = useContext(FormContext);
   const { id, uiAction } = props;
-  const ref = props.ref;
   const isProxy = Boolean(props["navi-control-proxy-for"]);
   if (persists === undefined && formContext) {
     persists = true;
@@ -22436,7 +22435,7 @@ const useUIStateController = (
   );
   useLayoutEffect(() => {
     const controller = uiStateControllerRef.current;
-    const el = ref.current;
+    const el = controller.ref.current;
     if (el) {
       el.__uiStateController__ = controller;
     }
@@ -22483,6 +22482,13 @@ const useUIStateController = (
       // not the resolved/curated host props. useInteractiveProps overwrites
       // uiStateController.controlHostProps with the resolved subset on every render.
       uiStateController.props = props;
+      // Re-sync to this render's ref object. It's normally stable, but it can
+      // legitimately change identity (e.g. switching from an internal fallback
+      // ref to a forwarded one, or across an interrupted/resumed render such as
+      // a Suspense boundary resolving) — if we kept the original ref forever,
+      // `ref.current` would be stuck at whatever it was at creation time, even
+      // after the controller has moved on to a different, live DOM node.
+      uiStateController.ref = props.ref;
       uiStateController.id = props.id; // never suppoed to changed, not supported for now
       uiStateController.name = props.name;
 
@@ -22508,11 +22514,12 @@ const useUIStateController = (
     parentUIStateController,
     isProxy,
     allowNameless,
-    elementRef: ref,
-    props,
 
+    props,
+    ref: props.ref,
     id: props.id,
     name: props.name,
+
     state: stateInitial,
     uiState: stateInitial,
     uiStateSignal,
@@ -22557,7 +22564,7 @@ const useUIStateController = (
       if (skipCommand) ; else {
         const command = uiStateController.controlHostProps.command;
         if (command) {
-          const element = uiStateController.elementRef.current;
+          const element = uiStateController.ref.current;
           if (element) {
             debugUIState(
               `triggering command "${command}" for "${controlType}"`,
@@ -22580,7 +22587,9 @@ const useUIStateController = (
           return false;
         }
       }
-      const controllerSig = getElementSignature(e.currentTarget || ref.current);
+      const controllerSig = getElementSignature(
+        e.currentTarget || uiStateController.ref.current,
+      );
       // if (persists) {
       //   setNavState(prop);
       // }
@@ -22664,7 +22673,7 @@ const useUIStateController = (
       }
       debugUIState(e, `publishUIState(${JSON.stringify(newUIState)})`);
       publishUIState(newUIState, e);
-      const el = ref.current;
+      const el = uiStateController.ref.current;
       // Always notify the element that its UI state changed.
       // Listeners use this to stay in sync (e.g. input_effect.js tracks currentState,
       // useUIState subscribes for reactive updates). Separate from navi_set_ui_state
@@ -22767,7 +22776,7 @@ const useUIStateController = (
         if (targetController) {
           debugUIState(
             e,
-            `forwarding set_ui_state "${newUIState}" to ${getElementSignature(targetController.elementRef.current)}`,
+            `forwarding set_ui_state "${newUIState}" to ${getElementSignature(targetController.ref.current)}`,
           );
           const forwardEvent = new CustomEvent("proxy_forward_set_ui_state", {
             detail: {},
@@ -23227,6 +23236,10 @@ const useUIGroupStateController = (
     const prevValue = existingController.value;
     const prevHasValueProp = existingController.hasValueProp;
     existingController.props = props;
+    // Re-sync to this render's ref object — see the matching comment in
+    // useUIStateController._checkForUpdates for why this can't be captured
+    // once at creation time and left untouched.
+    existingController.ref = ref;
     existingController.id = id;
     existingController.name = name;
     existingController.value = value;
@@ -23282,7 +23295,7 @@ const useUIGroupStateController = (
     uiState: fallbackState,
     uiStateSignal,
     wantRequesterButtonState,
-    elementRef: ref,
+    ref,
     getPropFromState: (uiState) => uiState,
     distributeChildUIState: resolvedDistributeChildUIState,
     // Cascades newUIState to each monitored child via resolvedDistributeChildUIState,
@@ -23655,7 +23668,7 @@ const useUIFacadeStateController = (props, realUIStateController) => {
   const facadeUIStateController = {
     controlType: "facade",
     props,
-    elementRef: realUIStateController.elementRef,
+    ref: realUIStateController.ref,
     uiStateSignal: realUIStateController.uiStateSignal,
     registerChild: (child) => {
       if (!canRegisterAsFacadeChild(child)) {
@@ -23977,7 +23990,7 @@ const useControlProps = (props, {
       return true;
     };
     const syncUIStateWithDOM = e => {
-      const controlEl = e.currentTarget || uiStateController.elementRef.current;
+      const controlEl = e.currentTarget || uiStateController.ref.current;
       const value = readControlValue(controlEl);
       uiStateController.setUIState(value, e);
     };
@@ -23987,7 +24000,6 @@ const useControlProps = (props, {
     const triggerUIAction = e => {
       syncUIStateWithDOM(e);
     };
-    const wasCheckedAtMousedownRef = useRef(false);
     const getDefaultEventReactionDefinitions = () => {
       const keyDownDefault = e => {
         const defaultAction = getKeyboardEventDefaultAction(e);
@@ -24202,16 +24214,20 @@ const useControlProps = (props, {
             }
             return keyDownDefault(e);
           },
-          mouseDown: e => {
-            wasCheckedAtMousedownRef.current = e.currentTarget.checked;
-          },
           click: e => {
-            if (isRadio && wasCheckedAtMousedownRef.current) {
-              // When a radio is already checked and gets clicked, the browser does NOT
-              // fire an input event (state doesn't change), so asAction never runs.
-              // We still want uiAction + command to fire. We can tell whether the click
-              // is on an already-checked radio by looking at wasCheckedAtMousedownRef:
-              // if it was checked at mousedown, the input event won't come, so we do it here.
+            // When a radio is already checked and gets clicked, the browser does NOT
+            // fire an input event (state doesn't change), so syncUIStateWithDOM never
+            // runs. We still want uiAction + command to fire. We can tell whether the
+            // click is on an already-checked radio by comparing our own tracked
+            // uiState (value when checked, undefined when not — see toDomProps) to
+            // this radio's value: it's still the PRE-click value here, since it's
+            // only updated later by the "input" handler. Reading the DOM `.checked`
+            // instead would not work: the browser applies the checked toggle before
+            // dispatching "click", so `.checked` is already the POST-click value
+            // whether or not this was already the checked radio — and worse, a click
+            // that lands on the <label> (not the <input>) never fires "mousedown" on
+            // the input at all, so a DOM-snapshot-at-mousedown approach misses it.
+            if (isRadio && uiStateController.uiState !== undefined) {
               return {
                 name: `click on checked radio`,
                 allowed: () => triggerUIAction(e),
@@ -24800,7 +24816,7 @@ const useInteractiveProps = (props, {
           }
         }));
       }
-    }, [disabledResolved, readOnlyResolved]);
+    }, [disabledResolved, readOnlyResolved, ref]);
     useLayoutEffect(() => {
       return () => {
         const element = ref.current;
@@ -25002,7 +25018,7 @@ const useInteractiveProps = (props, {
         // already aggregated the new state by now, so uiStateSignal is correct.
         const parentController = uiStateController.parentUIStateController;
         if (parentController && (parentController.controlType === "radio_group" || parentController.controlType === "checkbox_group")) {
-          const parentEl = parentController.elementRef.current;
+          const parentEl = parentController.ref.current;
           if (parentEl) {
             const originalEvent = e.detail.eventChain[0];
             dispatchRequestAction(parentEl, {

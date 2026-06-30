@@ -35,7 +35,7 @@ export const REQUIRED_CONSTRAINT = {
       }
       return {
         message: naviI18n("constraint.required.radio"),
-        target: field.elementRef.current,
+        target: field.ref.current,
       };
     }
     if (type === "radio") {
@@ -49,7 +49,7 @@ export const REQUIRED_CONSTRAINT = {
       }
       return {
         message: naviI18n("constraint.required.radio"),
-        target: field.elementRef.current,
+        target: field.ref.current,
       };
     }
 
@@ -61,7 +61,7 @@ export const REQUIRED_CONSTRAINT = {
       }
       return {
         message: naviI18n("constraint.required.checkbox_group"),
-        target: field.elementRef.current,
+        target: field.ref.current,
       };
     }
     if (type === "checkbox") {

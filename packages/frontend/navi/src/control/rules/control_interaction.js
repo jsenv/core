@@ -98,7 +98,7 @@ export const createControlInteraction = (
     // Keep title attribute in sync for accessibility.
     const titleLess = !controller.controlHostProps?.title;
     if (titleLess) {
-      const element = controller.elementRef.current;
+      const element = controller.ref.current;
       if (element) {
         if (interactionFailedConstraintInfo) {
           element.setAttribute(
