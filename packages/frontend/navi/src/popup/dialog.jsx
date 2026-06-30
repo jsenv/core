@@ -54,10 +54,9 @@ export const Dialog = (props) => {
 
   // Register the DOM-specific open/close mechanics with the controller, fresh
   // on every render so they close over the latest props (scrollTrap, etc.).
-  // The controller (owned by picker_custom.jsx, including the unmount safety
-  // net) decides *when* these run. onopen runs outside of render (triggered
-  // by openController.requestOpen()), so it cannot call hooks — cleanup uses
-  // a plain pub/sub instead of a hook-based one.
+  // The controller (owned by picker_custom.jsx) decides *when* these run.
+  // onopen runs outside of render (triggered by openController.open()), so it
+  // cannot call hooks — cleanup is a plain pub/sub.
   openController.onopen = (e) => {
     const dialogEl = ref.current;
     if (!dialogEl) {

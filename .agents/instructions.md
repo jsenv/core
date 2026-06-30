@@ -60,6 +60,7 @@
 - To add debug logs: use `console.debug` with plain sentences, not objects (easier to copy-paste)
 - **Optional Chaining**: Only use `?.` when the value can genuinely be undefined. If you control the data structure and know values exist, access them directly
 - **Always use `{}` block bodies**: Never single-expression `if` without braces. Always `if (x) { return y; }` not `if (x) return y;` — makes it easy to add `console.log` or `debugger` without restructuring
+- **No history-referencing comments**: Never write comments explaining what used to be there, what changed, or that something "no longer" happens (e.g. "no more X round-trip", "replaces the old Y", "instead of a hook-based one"). Comments describe the current code, not its diff against a previous version — that belongs in the commit message/PR description. A comment should make sense to someone who has never seen the old code.
 
 #### JSDoc
 

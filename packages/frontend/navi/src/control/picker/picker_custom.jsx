@@ -330,20 +330,10 @@ const PickerCustom = (props) => {
     const disableClickFor = useIgnoreClickForMousedown(ref, (e) => {
       debugPopup(e, `click ignored`);
     });
-    // openController centralizes the open/close decision-making (guards,
-    // validation, focus/value bookkeeping) here in the picker. Dialog/Popover
-    // only provide the DOM-specific "how to actually open/close" (registered via
-    // openController.onopen, returning its own close callback) — no more
-    // navi_open/navi_close/navi_request_open/navi_request_close round-trip
-    // through DOM events.
-    // openHandler's return value is { requestClose, close } (CloseWatcher-ish,
-    // see https://developer.mozilla.org/en-US/docs/Web/API/CloseWatcher):
-    // - requestClose(e): about to close — call e.preventDefault() to stay open
-    //   (validation lives here, replacing the old closeRequestHandler).
-    // - close(e): actually closing, not preventable — final reactions live here
-    //   (replacing the old onClosed). Runs whether we got here through
-    //   requestClose() being granted, or through forceClose() skipping it
-    //   entirely (e.g. the popup unmounting).
+    // openController centralizes open/close decision-making (validation,
+    // focus and value bookkeeping) for the picker. The returned
+    // { onRequestClose, onClose } pair is the picker's reaction to close
+    // requests — see createOpenController below for the full contract.
     const openController = useOpenController((openEvent) => {
       enterExpanded();
 
@@ -839,24 +829,22 @@ const useOpenController = (openHandler) => {
 };
 
 /**
- * Owns the open/close decision-making for a picker popup (Dialog or Popover):
+ * Owns open/close decision-making for a picker popup (Dialog or Popover):
  * guards against duplicate requests and notifies the picker's own reactions.
  *
- * Dialog/Popover only provide the DOM-specific mechanics — they register them
- * via `openController.onopen` (reassigned on every render, mirroring native
- * EventTarget.onopen) and call `openController.requestClose(e, { isCancel })`
+ * Dialog/Popover provide the DOM-specific mechanics by registering
+ * `openController.onopen` (reassigned on every render, mirroring native
+ * EventTarget.onopen) and calling `openController.requestClose(e, { isCancel })`
  * for their own internal triggers (backdrop click, Escape). `onopen` may
- * optionally return a close callback, which becomes `onclose` for that
- * opening — there's nothing to clean up if it doesn't (e.g. open failed).
+ * return a close callback, used as `onclose` for that opening.
  *
  * `openHandler`'s return value is `{ onRequestClose, onClose }`, in the
  * spirit of CloseWatcher
  * (https://developer.mozilla.org/en-US/docs/Web/API/CloseWatcher) but with
  * clearer naming than its cancel/close pair:
  * - `onRequestClose(e)`: about to close — call `e.preventDefault()` to stay
- *   open. This is where validation lives (replaces the old closeRequestHandler).
- * - `onClose(e)`: actually closing, not preventable — final reactions live
- *   here (replaces the old onClosed).
+ *   open. Validation lives here.
+ * - `onClose(e)`: actually closing, not preventable — final reactions live here.
  *
  * The controller exposes matching action methods:
  * - `open()`: requests opening.
@@ -865,18 +853,18 @@ const useOpenController = (openHandler) => {
  * - `close()`: closes for real — calls only `onClose`, skipping
  *   `onRequestClose` entirely. Used when there really is no choice (e.g. the
  *   popup unmounting).
- *
- * There is no DOM CustomEvent round-trip (navi_open/navi_close/
- * navi_request_open/navi_request_close) anymore — everything goes through
- * direct calls on this controller.
  */
 const createOpenController = (openHandler) => {
   let closeHandlers = null; // { onRequestClose, onClose } returned by openHandler
   const performClose = (closeEvent) => {
     controller.opened = false;
-    closeHandlers?.onClose?.(closeEvent);
+    // DOM mechanics close first (dialogEl.close()/popoverEl.hidePopover(),
+    // releasing the focus trap) — only then run the picker's own reaction
+    // (onClose may restore focus to an element outside the popup, which the
+    // focus trap would otherwise fight while still active).
     controller.onclose?.(closeEvent);
     controller.onclose = null;
+    closeHandlers?.onClose?.(closeEvent);
     closeHandlers = null;
   };
   const controller = {
