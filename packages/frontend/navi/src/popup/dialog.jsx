@@ -38,14 +38,12 @@ const css = /* css */ `
 export const Dialog = (props) => {
   import.meta.css = css;
   const {
-    // requestOpen,
-    requestClose,
+    openController,
     anchorRef,
     children,
     scrollTrap,
     pointerTrap,
     centerInVisualViewport: centerInVisualViewportProp,
-    closeRequestHandler,
     ...rest
   } = props;
   const defaultRef = useRef();
@@ -54,16 +52,18 @@ export const Dialog = (props) => {
   const debugFocus = useDebugFocus();
   const autoFocusProps = useAutoFocus(ref, props.autoFocus);
 
-  // Tracks actual DOM state (open/closed), updated only by open() and close().
-  // Intentionally NOT synced to openProp on every render so the useEffect guard
-  // below can detect whether a prop change requires action.
-  const openedRef = useRef(false);
-  const [addCleanup, cleanup] = useCleanup();
-  const open = (e) => {
+  // Register the DOM-specific open/close mechanics with the controller, fresh
+  // on every render so they close over the latest props (scrollTrap, etc.).
+  // The controller (owned by picker_custom.jsx) decides *when* these run.
+  openController.onopen = (e) => {
+    const dialogEl = ref.current;
+    if (!dialogEl) {
+      return undefined;
+    }
+    const [addCleanup, cleanup] = useCleanup();
     const anchor = anchorRef?.current ?? null;
     const effectiveAnchor = anchor || document.documentElement;
     debugPopup(`"${e.type}" on ${getElementSignature(e.target)} -> openDialog`);
-    const dialogEl = ref.current;
     const { width, height } = effectiveAnchor.getBoundingClientRect();
     dialogEl.style.setProperty("--anchor-width", `${snapToPixel(width)}px`);
     dialogEl.style.setProperty("--anchor-height", `${snapToPixel(height)}px`);
@@ -115,22 +115,18 @@ export const Dialog = (props) => {
         dialogEl.style.removeProperty("--dialog-top-inset");
       });
     }
-    openedRef.current = true;
-    dispatchCustomEvent(dialogEl, "navi_open", {
-      event: e,
-      focusedBeforeOpen,
-    });
-  };
-  const close = (e) => {
-    debugPopup(
-      `"${e.type}" on ${getElementSignature(e.target)} -> closeDialog`,
-    );
-    const dialogEl = ref.current;
-    markAutofocusRestoreOnClose(dialogEl);
-    dialogEl.close();
-    cleanup();
-    openedRef.current = false;
-    dispatchCustomEvent(dialogEl, "navi_close", { event: e });
+    // Picker's openController.requestOpen() reads this back synchronously
+    // right after onopen() returns (see picker_custom.jsx useOpenController).
+    e.detail.focusedBeforeOpen = focusedBeforeOpen;
+
+    return () => {
+      debugPopup(
+        `"${e.type}" on ${getElementSignature(e.target)} -> closeDialog`,
+      );
+      markAutofocusRestoreOnClose(dialogEl);
+      dialogEl.close();
+      cleanup();
+    };
   };
 
   return (
@@ -154,53 +150,12 @@ export const Dialog = (props) => {
             e.clientY < rect.top ||
             e.clientY > rect.bottom;
           if (isBackdrop) {
-            requestClose(e, { isCancel: true });
+            openController.requestClose(e, { isCancel: true });
           }
         }
       }}
       onCancel={(e) => {
-        requestClose(e, { isCancel: true });
-      }}
-      onnavi_request_open={(e) => {
-        const dialogEl = ref.current;
-        if (!dialogEl) {
-          return;
-        }
-        if (openedRef.current) {
-          return;
-        }
-        open(e);
-      }}
-      onnavi_request_close={(e) => {
-        const dialogEl = ref.current;
-        if (!dialogEl) {
-          return;
-        }
-        if (!openedRef.current) {
-          return;
-        }
-        if (closeRequestHandler) {
-          let denied = false;
-          const closePermission = {
-            deny: () => {
-              denied = true;
-            },
-            allow: () => {
-              denied = false;
-            },
-          };
-          closeRequestHandler(e, closePermission);
-          if (denied) {
-            if (e.type === "cancel") {
-              e.preventDefault();
-            }
-            closePermission.allow = () => {
-              close(e);
-            };
-            return;
-          }
-        }
-        close(e);
+        openController.requestClose(e, { isCancel: true });
       }}
     >
       {children}

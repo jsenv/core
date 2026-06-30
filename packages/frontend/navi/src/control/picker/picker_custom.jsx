@@ -1,4 +1,4 @@
-import { dispatchCustomEvent, findEvent } from "@jsenv/dom";
+import { chainEvent, findEvent } from "@jsenv/dom";
 import { useLayoutEffect, useRef } from "preact/hooks";
 
 import { createOnKeyDownForShortcuts } from "@jsenv/navi/src/keyboard/keyboard_shortcuts.js";
@@ -316,7 +316,6 @@ const PickerCustom = (props) => {
     // In "dialog" mode, enterExpanded() pushes a history entry so the back button closes.
     // In "popover" mode, it replaces the current history state (no history entry added).
     const pickerNavType = mode === "dialog" ? "push" : "replace";
-    const expandedRef = useRef(false);
     const [expanded, enterExpanded, leaveExpanded] = useNavState(popupId, {
       type: pickerNavType,
       // onLeave fires only when the state key disappears externally (back button/gesture most of the time).
@@ -326,23 +325,9 @@ const PickerCustom = (props) => {
         });
       },
     });
-    // expandedRef tracks actual open/close state, updated only by onOpen/onClose.
-    // NOT synced to expanded on every render so the useLayoutEffect guard below works.
     const valueAtOpenRef = useRef(null);
     const activeElementAtOpenRef = useRef(null);
 
-    const onOpen = (e) => {
-      expandedRef.current = true;
-      enterExpanded();
-
-      const focusedBeforeOpen = e.detail.focusedBeforeOpen;
-      activeElementAtOpenRef.current = focusedBeforeOpen;
-      debugFocus(e, "picked opened, store element focused", focusedBeforeOpen);
-
-      const valueAtOpen = getPickerInputUIState(ref.current);
-      valueAtOpenRef.current = valueAtOpen;
-      debugPopup(e, `picker opened, store value at open`, valueAtOpen);
-    };
     const restoreFocus = (e) => {
       const activeElementAtOpen = activeElementAtOpenRef.current;
       activeElementAtOpenRef.current = null;
@@ -369,118 +354,53 @@ const PickerCustom = (props) => {
       activeElementAtOpen.focus({ preventScroll: true });
       return;
     };
-    const onClose = (e) => {
-      const mousedownEvent = findEvent(e, "mousedown");
-      if (mousedownEvent) {
-        debugPopup(e, `closed by mousedown -> disable next click`);
-        disableClickFor();
-      } else {
-        const spaceEvent = findEvent(
-          e,
-          (e) => e.type === "keydown" && e.key === " ",
-        );
-        if (spaceEvent) {
-          // space would trigger a click on the picker button causing it to re-open immediatly after closing
-          debugPopup(e, `closed by space key -> prevent browser click`);
-          // browser won't try to dispatch click
-          // and our "space_to_open" will see e.defaultPrevented too and won't try to open picker
-          spaceEvent.preventDefault();
-        }
-      }
-      expandedRef.current = false;
-      leaveExpanded({ isBack: e.detail.isCancel });
-      // Reset so the next opening re-evaluates screen size
-      defaultModeRef.current = null;
-      restoreFocus(e);
-    };
     const disableClickFor = useIgnoreClickForMousedown(ref, (e) => {
       debugPopup(e, `click ignored`);
     });
-    const requestOpen = (e, detail) => {
-      // scroll <button> of the picker into view when opening it
-      const pickerEl = ref.current;
-      pickerEl.scrollIntoView({ block: "nearest" });
-      const popupEl = popupRef.current;
-      return dispatchCustomEvent(popupEl, "navi_request_open", {
-        event: e,
-        ...detail,
-      });
-    };
-    const requestClose = (
-      e = new CustomEvent("programmatic", { detail: {} }),
-      detail,
-    ) => {
-      const popupEl = popupRef.current;
-      return dispatchCustomEvent(popupEl, "navi_request_close", {
-        event: e,
-        ...detail,
-      });
-    };
+    // openController centralizes the open/close decision-making (guards,
+    // validation, focus/value bookkeeping) here in the picker. Dialog/Popover
+    // only provide the DOM-specific "how to actually open/close" (registered via
+    // openController.onopen/onclose) — no more navi_open/navi_close/
+    // navi_request_open/navi_request_close round-trip through DOM events.
+    const openController = useOpenController({
+      onOpened: (e) => {
+        enterExpanded();
 
-    const open = Boolean(expanded);
-    useLayoutEffect(() => {
-      if (open === undefined) {
-        return;
-      }
-      // Skip when the popup is already in the desired state.
-      // expandedRef tracks actual open/close (updated by onOpen/onClose, not by renders)
-      // so it is the authoritative check against feedback loops.
-      if (open === expandedRef.current) {
-        return;
-      }
-      // open_prop_change means the parent is driving the open state directly
-      // (e.g. back-button navigation flipped openProp to false before onLeave fires).
-      // Always treat it as cancel — the user's in-progress edit should be discarded.
-      if (open) {
-        requestOpen(new CustomEvent("open_by_prop", { detail: {} }), {
-          isCancel: true,
-        });
-      } else {
-        requestClose(new CustomEvent("close_by_prop", { detail: {} }), {
-          isCancel: true,
-        });
-      }
-    }, [open]);
+        const focusedBeforeOpen = e.detail.focusedBeforeOpen;
+        activeElementAtOpenRef.current = focusedBeforeOpen;
+        debugFocus(
+          e,
+          "picked opened, store element focused",
+          focusedBeforeOpen,
+        );
 
-    const requestInteraction = (options) => {
-      dispatchRequestInteraction(ref.current, options);
-    };
-
-    const { onActionStart, children, uiAction: uiActionProp } = props;
-    Object.assign(pickerProps, {
-      "aria-expanded": Boolean(expanded),
-      "onActionStart": (e) => {
-        onActionStart?.(e);
-        // requestClose(e);
+        const valueAtOpen = getPickerInputUIState(ref.current);
+        valueAtOpenRef.current = valueAtOpen;
+        debugPopup(e, `picker opened, store value at open`, valueAtOpen);
       },
-      "onnavi_request_open": (e) => {
-        if (expandedRef.current) {
-          return;
+      onClosed: (e) => {
+        const mousedownEvent = findEvent(e, "mousedown");
+        if (mousedownEvent) {
+          debugPopup(e, `closed by mousedown -> disable next click`);
+          disableClickFor();
+        } else {
+          const spaceEvent = findEvent(
+            e,
+            (e) => e.type === "keydown" && e.key === " ",
+          );
+          if (spaceEvent) {
+            // space would trigger a click on the picker button causing it to re-open immediatly after closing
+            debugPopup(e, `closed by space key -> prevent browser click`);
+            // browser won't try to dispatch click
+            // and our "space_to_open" will see e.defaultPrevented too and won't try to open picker
+            spaceEvent.preventDefault();
+          }
         }
-        requestInteraction({
-          event: e,
-          name: "navi_request_open_event",
-          allowed: () => {
-            requestOpen(e);
-          },
-        });
+        leaveExpanded({ isBack: e.detail.isCancel });
+        // Reset so the next opening re-evaluates screen size
+        defaultModeRef.current = null;
+        restoreFocus(e);
       },
-      "onnavi_request_close": (e) => {
-        requestInteraction({
-          event: e,
-          allowed: () => {
-            requestClose(e);
-          },
-        });
-      },
-      "uiAction": (v, e) => {
-        uiActionProp?.(v, e);
-      },
-      children,
-    });
-    Object.assign(popupProps, {
-      anchorRef: props.ref,
-      requestClose,
       closeRequestHandler: (requestCloseEvent, closePermission) => {
         const isCancel = requestCloseEvent.detail.isCancel;
         if (isCancel) {
@@ -512,12 +432,79 @@ const PickerCustom = (props) => {
           },
         });
       },
-      onnavi_open: (e) => {
-        onOpen(e);
+    });
+    const requestOpen = (e, detail) => {
+      // scroll <button> of the picker into view when opening it
+      const pickerEl = ref.current;
+      pickerEl.scrollIntoView({ block: "nearest" });
+      openController.requestOpen(e, detail);
+    };
+    const requestClose = openController.requestClose;
+
+    const open = Boolean(expanded);
+    useLayoutEffect(() => {
+      if (open === undefined) {
+        return;
+      }
+      // Skip when the popup is already in the desired state.
+      // openController.openedRef tracks actual open/close (updated by onopen/onclose,
+      // not by renders) so it is the authoritative check against feedback loops.
+      if (open === openController.openedRef.current) {
+        return;
+      }
+      // open_prop_change means the parent is driving the open state directly
+      // (e.g. back-button navigation flipped openProp to false before onLeave fires).
+      // Always treat it as cancel — the user's in-progress edit should be discarded.
+      if (open) {
+        requestOpen(new CustomEvent("open_by_prop", { detail: {} }), {
+          isCancel: true,
+        });
+      } else {
+        requestClose(new CustomEvent("close_by_prop", { detail: {} }), {
+          isCancel: true,
+        });
+      }
+    }, [open]);
+
+    const requestInteraction = (options) => {
+      dispatchRequestInteraction(ref.current, options);
+    };
+
+    const { onActionStart, children, uiAction: uiActionProp } = props;
+    Object.assign(pickerProps, {
+      "aria-expanded": Boolean(expanded),
+      "onActionStart": (e) => {
+        onActionStart?.(e);
+        // requestClose(e);
       },
-      onnavi_close: (e) => {
-        onClose(e);
+      "onnavi_request_open": (e) => {
+        if (openController.openedRef.current) {
+          return;
+        }
+        requestInteraction({
+          event: e,
+          name: "navi_request_open_event",
+          allowed: () => {
+            requestOpen(e);
+          },
+        });
       },
+      "onnavi_request_close": (e) => {
+        requestInteraction({
+          event: e,
+          allowed: () => {
+            requestClose(e, { isCancel: e.detail.isCancel });
+          },
+        });
+      },
+      "uiAction": (v, e) => {
+        uiActionProp?.(v, e);
+      },
+      children,
+    });
+    Object.assign(popupProps, {
+      anchorRef: props.ref,
+      openController,
     });
 
     interactions: {
@@ -575,7 +562,7 @@ const PickerCustom = (props) => {
           };
         },
         "escape": (e) => {
-          if (!expandedRef.current) {
+          if (!openController.openedRef.current) {
             return null;
           }
           return {
@@ -599,7 +586,7 @@ const PickerCustom = (props) => {
             if (isWithinPopup(e.target)) {
               return null;
             }
-            if (expandedRef.current) {
+            if (openController.openedRef.current) {
               return {
                 name: "mousedown to close picker",
                 allowed: () => requestClose(e, { isCancel: true }),
@@ -702,10 +689,7 @@ const PickerContentInsidePopover = (props) => {
           name: "blur",
           category: "interaction",
           allowed: () => {
-            dispatchCustomEvent(popoverEl, "navi_request_close", {
-              event: e,
-              isCancel: true,
-            });
+            popupProps.openController.requestClose(e, { isCancel: true });
           },
         });
       }}
@@ -734,11 +718,7 @@ const PickerContentInsidePopover = (props) => {
               if (e.button !== 0) {
                 return;
               }
-              const popupEl = popupProps.ref.current;
-              dispatchCustomEvent(popupEl, "navi_request_close", {
-                event: e,
-                isCancel: true,
-              });
+              popupProps.openController.requestClose(e, { isCancel: true });
             }}
           >
             {props.trigger}
@@ -822,4 +802,83 @@ const useIgnoreClickForMousedown = (elementRef, onIgnore) => {
     document.addEventListener("click", suppressClick, { capture: true });
   };
   return disableClickFor;
+};
+
+/**
+ * Owns the open/close decision-making for a picker popup (Dialog or Popover):
+ * guards against duplicate requests, runs closeRequestHandler validation, and
+ * notifies the picker's own onOpened/onClosed reactions.
+ *
+ * Dialog/Popover only provide the DOM-specific mechanics — they register them
+ * via `openController.onopen`/`openController.onclose` (reassigned on every
+ * render, mirroring native EventTarget.onopen/onclose) and call
+ * `openController.requestClose(e, { isCancel })` for their own internal
+ * triggers (backdrop click, Escape). There is no DOM CustomEvent round-trip
+ * (navi_open/navi_close/navi_request_open/navi_request_close) anymore —
+ * everything goes through direct calls on this controller.
+ */
+const useOpenController = ({ onOpened, onClosed, closeRequestHandler }) => {
+  const openedRef = useRef(false);
+  const controller = {
+    openedRef,
+    onopen: null,
+    onclose: null,
+    requestOpen: (e, detail) => {
+      if (openedRef.current || !controller.onopen) {
+        return;
+      }
+      const requestOpenEvent = new CustomEvent("navi_request_open", {
+        detail: { event: e, ...detail },
+      });
+      chainEvent(requestOpenEvent, e);
+      openedRef.current = true;
+      // onopen may populate requestOpenEvent.detail (e.g. focusedBeforeOpen)
+      // by mutating it — onOpened reads it right after, synchronously.
+      controller.onopen(requestOpenEvent);
+      onOpened(requestOpenEvent);
+    },
+    requestClose: (
+      e = new CustomEvent("programmatic", { detail: {} }),
+      detail,
+    ) => {
+      if (!openedRef.current || !controller.onclose) {
+        return;
+      }
+      const requestCloseEvent = new CustomEvent("navi_request_close", {
+        detail: { event: e, ...detail },
+      });
+      chainEvent(requestCloseEvent, e);
+      const performClose = () => {
+        openedRef.current = false;
+        controller.onclose(requestCloseEvent);
+        onClosed(requestCloseEvent);
+      };
+      if (!closeRequestHandler) {
+        performClose();
+        return;
+      }
+      let denied = false;
+      const closePermission = {
+        deny: () => {
+          denied = true;
+        },
+        allow: () => {
+          denied = false;
+        },
+      };
+      closeRequestHandler(requestCloseEvent, closePermission);
+      if (!denied) {
+        performClose();
+        return;
+      }
+      // The native <dialog> "cancel" event (Escape key) closes the dialog by
+      // default; prevent that default so denial actually keeps it open.
+      const nativeCancelEvent = findEvent(requestCloseEvent, "cancel");
+      if (nativeCancelEvent) {
+        nativeCancelEvent.preventDefault();
+      }
+      closePermission.allow = performClose;
+    },
+  };
+  return controller;
 };

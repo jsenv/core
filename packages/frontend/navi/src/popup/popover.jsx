@@ -1,5 +1,4 @@
 import {
-  dispatchCustomEvent,
   getBorderSizes,
   pickPositionRelativeTo,
   snapToPixel,
@@ -46,7 +45,7 @@ const css = /* css */ `
 export const Popover = (props) => {
   import.meta.css = css;
   const {
-    requestClose,
+    openController,
     anchorRef,
     scrollTrap,
     pointerTrap,
@@ -58,7 +57,6 @@ export const Popover = (props) => {
     positionYFixed,
     spacing = 0,
     viewportSpacing = 0,
-    closeRequestHandler,
     ...rest
   } = props;
 
@@ -70,14 +68,16 @@ export const Popover = (props) => {
   const debugFocus = useDebugFocus();
   const autoFocusProps = useAutoFocus(ref, props.autoFocus);
 
-  // Tracks actual DOM state (open/closed), updated only by open() and close().
-  // Intentionally NOT synced to openProp on every render so the useEffect guard
-  // below can detect whether a prop change requires action.
-  const openedRef = useRef(false);
-  const [addCleanup, cleanup] = useCleanup();
-  const open = (e) => {
-    debugPopup(e, `openPopover()`);
+  // Register the DOM-specific open/close mechanics with the controller, fresh
+  // on every render so they close over the latest props (scrollTrap, etc.).
+  // The controller (owned by picker_custom.jsx) decides *when* these run.
+  openController.onopen = (e) => {
     const popoverEl = ref.current;
+    if (!popoverEl) {
+      return undefined;
+    }
+    const [addCleanup, cleanup] = useCleanup();
+    debugPopup(e, `openPopover()`);
     const focusedBeforeOpen = getFocusedBeforeTransfer(e);
     popoverEl.showPopover();
     transferFocus(popoverEl, debugFocus, e, focusedBeforeOpen);
@@ -164,22 +164,16 @@ export const Popover = (props) => {
     addCleanup(() => {
       rectEffect.disconnect();
     });
-    openedRef.current = true;
-    dispatchCustomEvent(popoverEl, "navi_open", {
-      event: e,
-      focusedBeforeOpen,
-    });
-  };
-  const close = (e) => {
-    debugPopup(e, `closePopover()`);
-    const popoverEl = ref.current;
-    markAutofocusRestoreOnClose(popoverEl);
-    popoverEl.hidePopover();
-    cleanup();
-    openedRef.current = false;
-    dispatchCustomEvent(popoverEl, "navi_close", {
-      event: e,
-    });
+    // Picker's openController.requestOpen() reads this back synchronously
+    // right after onopen() returns (see picker_custom.jsx useOpenController).
+    e.detail.focusedBeforeOpen = focusedBeforeOpen;
+
+    return () => {
+      debugPopup(e, `closePopover()`);
+      markAutofocusRestoreOnClose(popoverEl);
+      popoverEl.hidePopover();
+      cleanup();
+    };
   };
 
   return (
@@ -191,44 +185,6 @@ export const Popover = (props) => {
       ref={ref}
       baseClassName="navi_popover"
       pseudoClasses={POPOVER_PSEUDO_CLASSES}
-      onnavi_request_open={(e) => {
-        const popoverEl = ref.current;
-        if (!popoverEl) {
-          return;
-        }
-        if (openedRef.current) {
-          return;
-        }
-        open(e);
-      }}
-      onnavi_request_close={(e) => {
-        const popoverEl = ref.current;
-        if (!popoverEl) {
-          return;
-        }
-        if (!openedRef.current) {
-          return;
-        }
-        if (closeRequestHandler) {
-          let denied = false;
-          const closePermission = {
-            deny: () => {
-              denied = true;
-            },
-            allow: () => {
-              denied = false;
-            },
-          };
-          closeRequestHandler(e, closePermission);
-          if (denied) {
-            closePermission.allow = () => {
-              close(e);
-            };
-            return;
-          }
-        }
-        close(e);
-      }}
     >
       {/*
         The backdrop is placed inside the popover element rather than appended to
@@ -278,7 +234,7 @@ export const Popover = (props) => {
             e.preventDefault();
             return;
           }
-          requestClose(e, { isCancel: true });
+          openController.requestClose(e, { isCancel: true });
         }}
       />
       {children}
