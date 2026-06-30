@@ -259,7 +259,7 @@ export const useControlProps = (
       return true;
     };
     const syncUIStateWithDOM = (e) => {
-      const controlEl = e.currentTarget || uiStateController.elementRef.current;
+      const controlEl = e.currentTarget || uiStateController.ref.current;
       const value = readControlValue(controlEl);
       uiStateController.setUIState(value, e);
     };
@@ -1379,7 +1379,7 @@ const useInteractiveProps = (
           (parentController.controlType === "radio_group" ||
             parentController.controlType === "checkbox_group")
         ) {
-          const parentEl = parentController.elementRef.current;
+          const parentEl = parentController.ref.current;
           if (parentEl) {
             const originalEvent = e.detail.eventChain[0];
             dispatchRequestAction(parentEl, {

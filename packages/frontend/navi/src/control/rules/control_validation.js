@@ -151,7 +151,7 @@ export const createControlValidation = (
 
   const checkValidity = ({
     event,
-    requester = controller.elementRef.current,
+    requester = controller.ref.current,
     fromRequestAction,
   } = {}) => {
     if (fromRequestAction) {
@@ -194,7 +194,7 @@ export const createControlValidation = (
       ...DEFAULT_CONSTRAINT_SET,
       ...dynamicConstraintSet,
     ]);
-    const elementSig = getElementSignature(controller.elementRef.current);
+    const elementSig = getElementSignature(controller.ref.current);
     debugUIState(
       event,
       `check ${elementSig}: ${constraintSet.size} constraints`,
@@ -251,7 +251,7 @@ export const createControlValidation = (
     if (activeFailedConstraintInfo) {
       const titleLess = controller.controlHostProps.title === undefined;
       if (titleLess) {
-        const element = controller.elementRef.current;
+        const element = controller.ref.current;
         if (element) {
           element.setAttribute(
             "title",
@@ -262,7 +262,7 @@ export const createControlValidation = (
     } else {
       const titleLess = controller.controlHostProps.title === undefined;
       if (titleLess) {
-        const element = controller.elementRef.current;
+        const element = controller.ref.current;
         if (element) {
           element.removeAttribute("title");
         }
@@ -276,7 +276,7 @@ export const createControlValidation = (
       !compareTwoJsValues(constraintValidityState, newConstraintValidityState)
     ) {
       constraintValidityState = newConstraintValidityState;
-      const element = controller.elementRef.current;
+      const element = controller.ref.current;
       if (element) {
         debugUIState(
           event,
@@ -326,7 +326,7 @@ export const createControlValidation = (
     event,
     { report = false, fromRequestAction = false } = {},
   ) => {
-    const elementSig = getElementSignature(controller.elementRef.current);
+    const elementSig = getElementSignature(controller.ref.current);
     const isValid = checkValidity({ event, fromRequestAction });
     if (failingManagedControlValidity) {
       // Group/form case: find the actual failing leaf and report on it.

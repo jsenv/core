@@ -82,7 +82,7 @@ export const tryActionAfterInteractionAllowed = (
   if (controller) {
     const proxyTargetController = findControlProxyTargetController(controller);
     if (proxyTargetController) {
-      elementForAction = proxyTargetController.elementRef.current;
+      elementForAction = proxyTargetController.ref.current;
     }
     const activeController = proxyTargetController ?? controller;
     uiState = activeController?.uiState;

@@ -98,7 +98,7 @@ export const createCalloutManager = (
       return;
     }
     const resolvedAnchorElement =
-      anchorElement || controller.elementRef.current;
+      anchorElement || controller.ref.current;
     const removeCloseOnCleanup = addTeardown?.(() => {
       requestCloseCallout(new CustomEvent("cleanup"), "cleanup");
     });
@@ -123,7 +123,7 @@ export const createCalloutManager = (
           tokenData.onClose?.();
         }
         tokens.clear();
-        const element = controller.elementRef.current;
+        const element = controller.ref.current;
         if (
           shouldTransferFocusFromCallout &&
           element &&
