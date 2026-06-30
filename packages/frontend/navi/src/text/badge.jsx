@@ -21,7 +21,7 @@ const css = /* css */ `
     --x-color: var(--color, white);
 
     position: relative;
-    display: inline-flex;
+    display: inline;
     max-width: 200px;
     padding-top: var(--padding-y);
     padding-right: var(--padding-x);
@@ -30,7 +30,6 @@ const css = /* css */ `
     align-items: stretch;
     color: var(--x-color);
     font-size: var(--font-size);
-    line-height: normal;
     background: var(--x-background);
     background-color: var(--x-background-color);
     border-radius: 1em;
@@ -41,7 +40,7 @@ const css = /* css */ `
     }
 
     &[data-text-overflow] {
-      display: flex;
+      display: inline;
 
       .navi_text_overflow_wrapper {
         /* Keep badge text and button together */
@@ -53,7 +52,9 @@ const css = /* css */ `
       display: inline-flex;
       margin-top: calc(-1 * var(--padding-y));
       margin-bottom: calc(-1 * var(--padding-y));
+      padding-top: var(--padding-y);
       padding-right: calc(var(--padding-x) / 2);
+      padding-bottom: var(--padding-y);
       padding-left: calc(var(--padding-x) / 2);
       align-items: center;
       cursor: pointer;

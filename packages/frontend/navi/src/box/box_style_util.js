@@ -139,9 +139,6 @@ const DIMENSION_PROPS = {
     if (parentBoxFlow === "flex-y" || parentBoxFlow === "inline-flex-y") {
       return {
         alignSelf: "stretch",
-        // ensure we override any with: 'fit-content' for instance
-        // also useful for ".navi_text_sizer" to inherit the full size
-        width: "100%",
       };
     }
     // Can't use flexGrow — parent is not flex-x
@@ -160,9 +157,6 @@ const DIMENSION_PROPS = {
     if (parentBoxFlow === "flex-x" || parentBoxFlow === "inline-flex-x") {
       return {
         alignSelf: "stretch",
-        // ensure we override any with: 'fit-content' for instance
-        // also useful for ".navi_text_sizer" to inherit the full size
-        height: "100%",
       };
     }
     // Can't use flexGrow — parent is not flex-y
