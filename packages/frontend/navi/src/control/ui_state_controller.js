@@ -422,6 +422,23 @@ export const useUIStateController = (
         if (e.type === "facade_propagate_up") {
           notifyParentAboutChildUIAction(e, { stateChanged: true });
         }
+        // Exception: state_prop_change can only fire on a control with its own
+        // controlled state/value prop (see hasStateProp above) — groups never
+        // cascade state down into such children (they're explicitly skipped,
+        // see shouldPropagateStateToChild/hasStateProp checks), so this change
+        // can never be an echo of the parent's own cascade. The loop risk this
+        // suppression exists for only applies when the parent itself just pushed
+        // this value down, which requires the parent to be controlled (have its
+        // own state/value prop). When the parent is "stateless" (uncontrolled),
+        // notifying it is always safe and necessary — otherwise its aggregated
+        // state silently drifts out of sync with this child.
+        if (
+          e.type === "state_prop_change" &&
+          parentUIStateController &&
+          !parentUIStateController.hasStateProp
+        ) {
+          notifyParentAboutChildUIAction(e, { stateChanged: true });
+        }
         return true;
       }
       notifyParentAboutChildUIAction(e, { stateChanged: true });

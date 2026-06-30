@@ -9,6 +9,7 @@
 - [route.params comparison between static and dynamic defaults](5_route_params_comparison_between_static_and_dynamic_defaults/5_route_params_comparison_between_static_and_dynamic_defaults.md)
 - [route.params with dynamic defaults inheritance bug](6_route_params_with_dynamic_defaults_inheritance_bug/6_route_params_with_dynamic_defaults_inheritance_bug.md)
 - [user choice in route searchParam signal survives navigation back to home](7_user_choice_in_route_searchparam_signal_survives_navigation_back_to_home/7_user_choice_in_route_searchparam_signal_survives_navigation_back_to_home.md)
+- [explicit navigation to a route URL without its searchParam resets the signal to default](8_explicit_navigation_to_a_route_url_without_its_searchparam_resets_the_signal_to_default/8_explicit_navigation_to_a_route_url_without_its_searchparam_resets_the_signal_to_default.md)
 
 ---
 

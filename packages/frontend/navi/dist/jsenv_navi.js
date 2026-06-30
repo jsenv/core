@@ -14696,28 +14696,37 @@ const setupBrowserIntegrationViaHistory = ({
   };
 
   let abortController = null;
-  const handleRoutingTask = (
-    url,
-    {
+  const handleRoutingTask = (url, options) => {
+    const isSameUrl = url === window.location.href;
+    const {
       reason,
       navigationType, // "load", "reload", "replace", "push", "traverse"
       state,
-    },
-  ) => {
-    const isSameUrl = url === window.location.href;
+    } = options;
 
     if (navigationType === "push" || navigationType === "replace") {
-      // Merge onto the current state so existing useNavState entries (e.g. an
-      // open dialog/popover) survive URL changes triggered by signal updates.
-      // "traverse" is intentionally excluded: it restores the exact historical
-      // state from the history entry, which is the source of truth for back/forward.
-      const currentState = getDocumentState() || {};
       markUrlAsVisited(url);
-      const effectiveState = {
-        ...currentState,
-        ...(state || {}),
+      // undefined → inherit current state (link click, neutral navigation)
+      // null     → explicit reset (no nav-state keys carried over)
+      // {...}    → explicit state from enter()/leave(), already built from currentState
+      // When state is given it's responsability of the caller to ensure it inherits document state (or not, you want it 99% of the time)
+      let effectiveState;
+      const sharedState = {
         jsenv_visited_urls: Array.from(visitedUrlSet),
       };
+      if (state === undefined) {
+        effectiveState = {
+          ...(getDocumentState() || {}),
+          ...sharedState,
+        };
+      } else if (state === null) {
+        effectiveState = sharedState;
+      } else if (state) {
+        effectiveState = {
+          ...state,
+          ...sharedState,
+        };
+      }
       if (navigationType === "push") {
         window.history.pushState(effectiveState, null, url);
       } else {
@@ -14803,7 +14812,6 @@ const setupBrowserIntegrationViaHistory = ({
       handleRoutingTask(href, {
         reason: `"click" on a[href="${href}"]`,
         navigationType: "push",
-        state: null,
       });
     },
     { capture: true },
@@ -14828,7 +14836,7 @@ const setupBrowserIntegrationViaHistory = ({
     });
   });
 
-  const navTo = async (url, { replace, state = null } = {}) => {
+  const navTo = async (url, { replace, state } = {}) => {
     handleRoutingTask(url, {
       reason: `navTo called with "${url}"`,
       navigationType: replace ? "replace" : "push",
@@ -14999,41 +15007,33 @@ const NO_OP = () => {};
 const NO_ID_GIVEN = [undefined, NO_OP, NO_OP];
 const useNavStateBasic = (
   id,
-  initialValue,
-  { debug, type = "replace", onLeave } = {},
+  { debug, type = "replace", onLeave, defaultValue } = {},
 ) => {
   // Hooks must be called unconditionally — before the !id early return.
   const state = documentStateSignal.value;
-  const valueInState = id
-    ? state !== null
-      ? state[id]
-      : undefined
-    : undefined;
+  // Key presence is the flag — the value may be anything, including undefined.
+  const keyInState = Boolean(id && state && Object.hasOwn(state, id));
   const onLeaveRef = useRef(onLeave);
   onLeaveRef.current = onLeave;
-  const prevValueInStateRef = useRef(valueInState);
+  const prevKeyInStateRef = useRef(keyInState);
   // enteredRef tracks whether enter() was called without a matching leave() yet.
   // It lets the effect distinguish an external disappearance (back button → fire onLeave)
   // from a programmatic one (leave() already set it to false before the state updates).
   const enteredRef = useRef(false);
   useEffect(() => {
-    const prevValue = prevValueInStateRef.current;
-    prevValueInStateRef.current = valueInState;
-    if (
-      prevValue !== undefined &&
-      valueInState === undefined &&
-      enteredRef.current
-    ) {
+    const prevKeyInState = prevKeyInStateRef.current;
+    prevKeyInStateRef.current = keyInState;
+    if (prevKeyInState && !keyInState && enteredRef.current) {
       enteredRef.current = false;
       onLeaveRef.current?.();
     }
-  }, [valueInState]);
+  }, [keyInState]);
 
   if (!id) {
     return NO_ID_GIVEN;
   }
 
-  const currentValue = valueInState !== undefined ? valueInState : initialValue;
+  const currentValue = keyInState ? state[id] : defaultValue;
 
   if (debug) {
     console.debug(`useNavState(${id}) current value is ${currentValue}`);
@@ -15045,30 +15045,36 @@ const useNavStateBasic = (
   // extra data with the entry when needed.
   const enter = (value = "on") => {
     enteredRef.current = true;
-    const currentState = browserIntegration.getDocumentState() || {};
-    if (currentState[id] === value) {
+    const currentStateCopy = browserIntegration.getDocumentState() || {};
+    if (Object.hasOwn(currentStateCopy, id) && currentStateCopy[id] === value) {
       return;
     }
-    const newState = { ...currentState, [id]: value };
+    currentStateCopy[id] = value;
     navTo(window.location.href, {
       replace: type !== "push",
-      state: newState,
+      state: currentStateCopy,
     });
   };
 
   // leave(): navigate AWAY FROM this state (navBack in push mode, replace in replace mode).
-  const leave = () => {
+  // isBack: when true (cancel close in push mode), call history.back() to restore the
+  //   pre-open state — discards any in-progress edits.
+  //   When false (confirmed close), replace the pushed entry instead: preserves the
+  //   current URL state (e.g. a new picker value) while removing the popup key.
+  const leave = ({ isBack } = {}) => {
     enteredRef.current = false;
-    const currentState = browserIntegration.getDocumentState() || {};
-    if (!Object.hasOwn(currentState, id)) {
+    const currentStateCopy = browserIntegration.getDocumentState() || {};
+    if (!Object.hasOwn(currentStateCopy, id)) {
       return;
     }
-    if (type === "push") {
+    if (type === "push" && isBack) {
       browserIntegration.navBack();
     } else {
-      const newState = { ...currentState };
-      delete newState[id];
-      navTo(window.location.href, { replace: true, state: newState });
+      delete currentStateCopy[id];
+      navTo(window.location.href, {
+        replace: true,
+        state: currentStateCopy,
+      });
     }
   };
 
@@ -15082,9 +15088,6 @@ const useNavStateBasic = (
  * @param {string} id
  *   Unique key used to store the value in document state. Must be stable across renders.
  *
- * @param {*} initialValue
- *   Value returned when `id` is absent from document state (e.g. before enter() is called).
- *
  * @param {object} [options]
  * @param {"push"|"replace"} [options.type="replace"]
  *   Controls how enter() adds the state to browser history.
@@ -15093,9 +15096,11 @@ const useNavStateBasic = (
  * @param {() => void} [options.onLeave]
  *   Called when the state key disappears **externally** — e.g. the user presses the browser
  *   back button. Not called when leave() is invoked programmatically.
+ * @param {*} [options.defaultValue]
+ *   Value returned when `id` is absent from document state. Defaults to `undefined`.
  *
  * @returns {[value, enter, leave]}
- *   - `value`: current value from document state, or `initialValue` when the key is absent.
+ *   - `value`: current value from document state, or `defaultValue` when the key is absent.
  *   - `enter(value = "on")`: navigate TO this state (stores `value` under `id`).
  *     Calling without an argument stores `"on"` — the presence of the key is enough to match;
  *     the value allows associating extra data when needed.
@@ -22708,6 +22713,23 @@ const useUIStateController = (
         // This is consistent with how a direct Input inside a Form behaves:
         // the Form's uiAction fires on every value change.
         if (e.type === "facade_propagate_up") {
+          notifyParentAboutChildUIAction(e, { stateChanged: true });
+        }
+        // Exception: state_prop_change can only fire on a control with its own
+        // controlled state/value prop (see hasStateProp above) — groups never
+        // cascade state down into such children (they're explicitly skipped,
+        // see shouldPropagateStateToChild/hasStateProp checks), so this change
+        // can never be an echo of the parent's own cascade. The loop risk this
+        // suppression exists for only applies when the parent itself just pushed
+        // this value down, which requires the parent to be controlled (have its
+        // own state/value prop). When the parent is "stateless" (uncontrolled),
+        // notifying it is always safe and necessary — otherwise its aggregated
+        // state silently drifts out of sync with this child.
+        if (
+          e.type === "state_prop_change" &&
+          parentUIStateController &&
+          !parentUIStateController.hasStateProp
+        ) {
           notifyParentAboutChildUIAction(e, { stateChanged: true });
         }
         return true;
@@ -35557,7 +35579,8 @@ installImportMetaCssBuild(import.meta);const css$r = /* css */`
 const Dialog = props => {
   import.meta.css = [css$r, "@jsenv/navi/src/popup/dialog.jsx"];
   const {
-    open: openProp = false,
+    // requestOpen,
+    requestClose,
     anchorRef,
     children,
     scrollTrap,
@@ -35635,7 +35658,7 @@ const Dialog = props => {
       focusedBeforeOpen
     });
   };
-  const close = (e, detail = {}) => {
+  const close = e => {
     debugPopup(`"${e.type}" on ${getElementSignature(e.target)} -> closeDialog`);
     const dialogEl = ref.current;
     markAutofocusRestoreOnClose(dialogEl);
@@ -35643,70 +35666,9 @@ const Dialog = props => {
     cleanup();
     openedRef.current = false;
     dispatchCustomEvent(dialogEl, "navi_close", {
-      event: e,
-      ...detail
+      event: e
     });
   };
-  const onRequestOpen = e => {
-    const dialogEl = ref.current;
-    if (!dialogEl) {
-      return;
-    }
-    if (openedRef.current) {
-      return;
-    }
-    open(e);
-  };
-  const onRequestClose = (e, detail = {}) => {
-    const dialogEl = ref.current;
-    if (!dialogEl) {
-      return;
-    }
-    if (!openedRef.current) {
-      return;
-    }
-    if (closeRequestHandler) {
-      let denied = false;
-      const closePermission = {
-        deny: () => {
-          denied = true;
-        },
-        allow: () => {
-          denied = false;
-        }
-      };
-      closeRequestHandler(e, closePermission, detail);
-      if (denied) {
-        if (e.type === "cancel") {
-          e.preventDefault();
-        }
-        closePermission.allow = () => {
-          close(e, detail);
-        };
-        return;
-      }
-    }
-    close(e, detail);
-  };
-  useLayoutEffect(() => {
-    if (openProp === undefined) {
-      return;
-    }
-    // Skip when the popover is already in the desired state.
-    // This avoids a feedback loop: our own close/open dispatches navi_close/navi_open,
-    // the parent updates the prop, and the effect would fire again for a change we
-    // already handled. Comparing against openedRef is the authoritative check because
-    // it reflects the actual DOM state, not the React render cycle.
-    if (openProp === openedRef.current) {
-      return;
-    }
-    const e = new CustomEvent("open_prop_change");
-    if (openProp) {
-      onRequestOpen(e);
-    } else {
-      onRequestClose(e);
-    }
-  }, [openProp]);
   return jsx(Box, {
     ...rest,
     ...autoFocusProps,
@@ -35723,20 +35685,57 @@ const Dialog = props => {
         const rect = ref.current.getBoundingClientRect();
         const isBackdrop = e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom;
         if (isBackdrop) {
-          onRequestClose(e, {
-            isClickOutside: true
+          requestClose(e, {
+            isCancel: true
           });
         }
       }
     },
     onCancel: e => {
-      onRequestClose(e);
+      requestClose(e, {
+        isCancel: true
+      });
     },
     onnavi_request_open: e => {
-      onRequestOpen(e);
+      const dialogEl = ref.current;
+      if (!dialogEl) {
+        return;
+      }
+      if (openedRef.current) {
+        return;
+      }
+      open(e);
     },
     onnavi_request_close: e => {
-      onRequestClose(e);
+      const dialogEl = ref.current;
+      if (!dialogEl) {
+        return;
+      }
+      if (!openedRef.current) {
+        return;
+      }
+      if (closeRequestHandler) {
+        let denied = false;
+        const closePermission = {
+          deny: () => {
+            denied = true;
+          },
+          allow: () => {
+            denied = false;
+          }
+        };
+        closeRequestHandler(e, closePermission);
+        if (denied) {
+          if (e.type === "cancel") {
+            e.preventDefault();
+          }
+          closePermission.allow = () => {
+            close(e);
+          };
+          return;
+        }
+      }
+      close(e);
     },
     children: children
   });
@@ -35768,7 +35767,7 @@ installImportMetaCssBuild(import.meta);const css$q = /* css */`
 const Popover = props => {
   import.meta.css = [css$q, "@jsenv/navi/src/popup/popover.jsx"];
   const {
-    open: openProp = false,
+    requestClose,
     anchorRef,
     scrollTrap,
     pointerTrap,
@@ -35880,7 +35879,7 @@ const Popover = props => {
       focusedBeforeOpen
     });
   };
-  const close = (e, detail = {}) => {
+  const close = e => {
     debugPopup(e, `closePopover()`);
     const popoverEl = ref.current;
     markAutofocusRestoreOnClose(popoverEl);
@@ -35888,69 +35887,9 @@ const Popover = props => {
     cleanup();
     openedRef.current = false;
     dispatchCustomEvent(popoverEl, "navi_close", {
-      event: e,
-      ...detail
+      event: e
     });
   };
-  const onRequestOpen = e => {
-    const popoverEl = ref.current;
-    if (!popoverEl) {
-      return;
-    }
-    if (openedRef.current) {
-      return;
-    }
-    open(e);
-  };
-  const onRequestClose = (e, detail = {}) => {
-    const popoverEl = ref.current;
-    if (!popoverEl) {
-      return;
-    }
-    if (!openedRef.current) {
-      return;
-    }
-    if (closeRequestHandler) {
-      let denied = false;
-      const closePermission = {
-        deny: () => {
-          denied = true;
-        },
-        allow: () => {
-          denied = false;
-        }
-      };
-      closeRequestHandler(e, closePermission, detail);
-      if (denied) {
-        closePermission.allow = () => {
-          close(e, detail);
-        };
-        return;
-      }
-    }
-    close(e, detail);
-  };
-  useLayoutEffect(() => {
-    if (openProp === undefined) {
-      return;
-    }
-    // Skip when the popover is already in the desired state.
-    // This avoids a feedback loop: our own close/open dispatches navi_close/navi_open,
-    // the parent updates the prop, and the effect would fire again for a change we
-    // already handled. Comparing against openedRef is the authoritative check because
-    // it reflects the actual DOM state, not the React render cycle.
-    if (openProp === openedRef.current) {
-      return;
-    }
-    const e = new CustomEvent("open_prop_change", {
-      detail: {}
-    });
-    if (openProp) {
-      onRequestOpen(e);
-    } else {
-      onRequestClose(e);
-    }
-  }, [openProp]);
   return jsxs(Box, {
     id: id,
     popover: "manual",
@@ -35960,10 +35899,42 @@ const Popover = props => {
     baseClassName: "navi_popover",
     pseudoClasses: POPOVER_PSEUDO_CLASSES,
     onnavi_request_open: e => {
-      onRequestOpen(e);
+      const popoverEl = ref.current;
+      if (!popoverEl) {
+        return;
+      }
+      if (openedRef.current) {
+        return;
+      }
+      open(e);
     },
     onnavi_request_close: e => {
-      onRequestClose(e);
+      const popoverEl = ref.current;
+      if (!popoverEl) {
+        return;
+      }
+      if (!openedRef.current) {
+        return;
+      }
+      if (closeRequestHandler) {
+        let denied = false;
+        const closePermission = {
+          deny: () => {
+            denied = true;
+          },
+          allow: () => {
+            denied = false;
+          }
+        };
+        closeRequestHandler(e, closePermission);
+        if (denied) {
+          closePermission.allow = () => {
+            close(e);
+          };
+          return;
+        }
+      }
+      close(e);
     },
     children: [jsx("div", {
       className: "navi_popover_backdrop",
@@ -35976,8 +35947,8 @@ const Popover = props => {
           e.preventDefault();
           return;
         }
-        onRequestClose(e, {
-          isClickOutside: true
+        requestClose(e, {
+          isCancel: true
         });
       }
     }), children]
@@ -36266,8 +36237,7 @@ const PickerCustom = props => {
   const popupRef = useRef(null);
   popupProps.ref = popupRef;
   // aria-controls + id
-  const autoId = useId();
-  const popupId = `picker_popup_${autoId}`;
+  const popupId = `${props.id}_picker_popup`;
   {
     Object.assign(pickerProps, {
       "aria-controls": popupId
@@ -36284,7 +36254,7 @@ const PickerCustom = props => {
     // In "popover" mode, it replaces the current history state (no history entry added).
     const pickerNavType = mode === "dialog" ? "push" : "replace";
     const expandedRef = useRef(false);
-    const [expanded, enterExpanded, leaveExpanded] = useNavState(popupId, false, {
+    const [expanded, enterExpanded, leaveExpanded] = useNavState(popupId, {
       type: pickerNavType,
       // onLeave fires only when the state key disappears externally (back button/gesture most of the time).
       onLeave: () => {
@@ -36295,7 +36265,8 @@ const PickerCustom = props => {
         });
       }
     });
-    expandedRef.current = Boolean(expanded);
+    // expandedRef tracks actual open/close state, updated only by onOpen/onClose.
+    // NOT synced to expanded on every render so the useLayoutEffect guard below works.
     const valueAtOpenRef = useRef(null);
     const activeElementAtOpenRef = useRef(null);
     const onOpen = e => {
@@ -36343,7 +36314,9 @@ const PickerCustom = props => {
         }
       }
       expandedRef.current = false;
-      leaveExpanded();
+      leaveExpanded({
+        isBack: e.detail.isCancel
+      });
       // Reset so the next opening re-evaluates screen size
       defaultModeRef.current = null;
       restoreFocus(e);
@@ -36351,7 +36324,7 @@ const PickerCustom = props => {
     const disableClickFor = useIgnoreClickForMousedown(ref, e => {
       debugPopup(e, `click ignored`);
     });
-    const requestOpen = e => {
+    const requestOpen = (e, detail) => {
       // scroll <button> of the picker into view when opening it
       const pickerEl = ref.current;
       pickerEl.scrollIntoView({
@@ -36359,18 +36332,47 @@ const PickerCustom = props => {
       });
       const popupEl = popupRef.current;
       return dispatchCustomEvent(popupEl, "navi_request_open", {
-        event: e
+        event: e,
+        ...detail
       });
     };
-    const requestClose = (e = new CustomEvent("programmatic"), {
-      isCancel = false
-    } = {}) => {
+    const requestClose = (e = new CustomEvent("programmatic", {
+      detail: {}
+    }), detail) => {
       const popupEl = popupRef.current;
       return dispatchCustomEvent(popupEl, "navi_request_close", {
         event: e,
-        isCancel
+        ...detail
       });
     };
+    const open = Boolean(expanded);
+    useLayoutEffect(() => {
+      if (open === undefined) {
+        return;
+      }
+      // Skip when the popup is already in the desired state.
+      // expandedRef tracks actual open/close (updated by onOpen/onClose, not by renders)
+      // so it is the authoritative check against feedback loops.
+      if (open === expandedRef.current) {
+        return;
+      }
+      // open_prop_change means the parent is driving the open state directly
+      // (e.g. back-button navigation flipped openProp to false before onLeave fires).
+      // Always treat it as cancel — the user's in-progress edit should be discarded.
+      if (open) {
+        requestOpen(new CustomEvent("open_by_prop", {
+          detail: {}
+        }), {
+          isCancel: true
+        });
+      } else {
+        requestClose(new CustomEvent("close_by_prop", {
+          detail: {}
+        }), {
+          isCancel: true
+        });
+      }
+    }, [open]);
     const requestInteraction = options => {
       dispatchRequestInteraction(ref.current, options);
     };
@@ -36412,16 +36414,9 @@ const PickerCustom = props => {
     });
     Object.assign(popupProps, {
       anchorRef: props.ref,
-      open: Boolean(expanded),
-      closeRequestHandler: (requestCloseEvent, closePermission, {
-        isClickOutside
-      } = {}) => {
-        const cancelEvent = findEvent(requestCloseEvent, eInChain => eInChain.type === "navi_request_close" && eInChain.detail.isCancel);
-        // open_prop_change means the parent is driving the open state directly
-        // (e.g. back-button navigation flipped openProp to false before onLeave fires).
-        // Always treat it as cancel — the user's in-progress edit should be discarded.
-        const isPropDrivenClose = requestCloseEvent.type === "open_prop_change";
-        const isCancel = isClickOutside || Boolean(cancelEvent) || isPropDrivenClose;
+      requestClose,
+      closeRequestHandler: (requestCloseEvent, closePermission) => {
+        const isCancel = requestCloseEvent.detail.isCancel;
         if (isCancel) {
           const pickerEl = ref.current;
           const inputEl = getPickerInput(pickerEl);
