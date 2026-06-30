@@ -88,17 +88,6 @@
       const Demo = () => {
         return (
           <div style={{ padding: "20px", fontFamily: "system-ui, sans-serif" }}>
-            <Box
-              as="header"
-              flex
-              alignY="center"
-              height="60"
-              background="white"
-              style={{ marginBottom: "20px", border: "1px solid #e4e4e7" }}
-            >
-              <MapControls />
-            </Box>
-
             <h1>Flex Layout Demo</h1>
 
             <nav
@@ -120,6 +109,16 @@
                 Table des matières
               </strong>
               <ul style={{ margin: 0, paddingLeft: "20px", lineHeight: "2" }}>
+                <li>
+                  <strong>Real-World Example</strong>
+                  <ul style={{ paddingLeft: "16px" }}>
+                    <li>
+                      <a href="#s0">
+                        0. Header with map controls (advanced flex usage)
+                      </a>
+                    </li>
+                  </ul>
+                </li>
                 <li>
                   <strong>Column Layout</strong>
                   <ul style={{ paddingLeft: "16px" }}>
@@ -217,6 +216,27 @@
                 </li>
               </ul>
             </nav>
+
+            <h2>Real-World Example</h2>
+
+            <section className="demo-section">
+              <h3 id="s0">0. Header with map controls (advanced flex usage)</h3>
+              <p style={{ fontSize: "14px", marginBottom: "10px" }}>
+                A flex row (<code>alignY="center"</code>) containing a flex
+                row of "controls", each itself a flex row. Useful to check for
+                regressions in nested flex layouts.
+              </p>
+              <Box
+                as="header"
+                flex
+                alignY="center"
+                height="60"
+                background="white"
+                style={{ border: "1px solid #e4e4e7" }}
+              >
+                <MapControls />
+              </Box>
+            </section>
 
             <h2>Column Layout</h2>
 
