@@ -36,11 +36,7 @@
         </div>
       );
 
-      const FlexRow = () => {};
-      const FlexColumn = () => {};
-      const FlexItem = () => {};
-
-      const SelectorBox = ({ background, children }) => (
+      const SelectorBox = (props) => (
         <Box
           flex
           spacing="s"
@@ -50,23 +46,24 @@
           paddingLeft="m"
           alignY="center"
           height="36"
-          backgroundColor={background}
-        >
-          {children}
-        </Box>
+          {...props}
+        />
       );
 
       const MapStyleSelector = () => (
-        <SelectorBox background="#e3f2fd">Style</SelectorBox>
+        <SelectorBox background="#e3f2fd">
+          <Box height="30">Map</Box>
+        </SelectorBox>
       );
       const MapZoneSelector = () => (
-        <SelectorBox background="#e8f5e8">Zone</SelectorBox>
+        <SelectorBox background="#e8f5e8">
+          <Box height="40">Zone</Box>
+        </SelectorBox>
       );
       const MapDivisionSelectField = () => (
-        <SelectorBox background="#fff3e0">Division</SelectorBox>
-      );
-      const ScenarioButton = () => (
-        <SelectorBox background="#f3e5f5">Scénario</SelectorBox>
+        <SelectorBox background="#fff3e0">
+          <Box height="50">Division</Box>
+        </SelectorBox>
       );
 
       const MapControls = () => (
@@ -81,7 +78,6 @@
           <MapStyleSelector />
           <MapZoneSelector />
           <MapDivisionSelectField />
-          <ScenarioButton />
         </Box>
       );
 
@@ -222,8 +218,8 @@
             <section className="demo-section">
               <h3 id="s0">0. Header with map controls (advanced flex usage)</h3>
               <p style={{ fontSize: "14px", marginBottom: "10px" }}>
-                A flex row (<code>alignY="center"</code>) containing a flex
-                row of "controls", each itself a flex row. Useful to check for
+                A flex row (<code>alignY="center"</code>) containing a flex row
+                of "controls", each itself a flex row. Useful to check for
                 regressions in nested flex layouts.
               </p>
               <Box
