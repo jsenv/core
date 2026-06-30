@@ -41,7 +41,7 @@ import { createControlRules } from "./rules/control_rules.js";
  *   onChildUIAction(child, e, { stateChanged: boolean }): void; // Called when a child fires a UI action
  *   unregisterChild(child): void; // Called on child unmount
  *   props: Object;
- *   elementRef: Ref; // Used to dispatch DOM events
+ *   ref: Ref; // Used to dispatch DOM events
  *   getManagedControls(): UIStateController[]; // Returns controls whose validity is managed by this controller
  * }
  * ```
@@ -77,7 +77,7 @@ export const ParentUIStateControllerContext = createContext();
  * **internalBehavior events** (e.g. radio_sibling_uncheck, state_prop re-sync):
  * skip reactions and parent notification — they are programmatic, not user-initiated.
  *
- * The controller exposes `elementRef` so parent groups can dispatch DOM events on children
+ * The controller exposes `ref` so parent groups can dispatch DOM events on children
  * (e.g. `resetUIState` cascading `navi_reset_ui_state`).
  */
 export const useUIStateController = (
@@ -99,7 +99,6 @@ export const useUIStateController = (
   const parentUIStateController = useContext(ParentUIStateControllerContext);
   const formContext = useContext(FormContext);
   const { id, uiAction } = props;
-  const elementRef = props.ref;
   const isProxy = Boolean(props["navi-control-proxy-for"]);
   if (persists === undefined && formContext) {
     persists = true;
@@ -118,7 +117,7 @@ export const useUIStateController = (
   );
   useLayoutEffect(() => {
     const controller = uiStateControllerRef.current;
-    const el = elementRef.current;
+    const el = controller.ref.current;
     if (el) {
       el.__uiStateController__ = controller;
     }
@@ -165,6 +164,13 @@ export const useUIStateController = (
       // not the resolved/curated host props. useInteractiveProps overwrites
       // uiStateController.controlHostProps with the resolved subset on every render.
       uiStateController.props = props;
+      // Re-sync to this render's ref object. It's normally stable, but it can
+      // legitimately change identity (e.g. switching from an internal fallback
+      // ref to a forwarded one, or across an interrupted/resumed render such as
+      // a Suspense boundary resolving) — if we kept the original ref forever,
+      // `ref.current` would be stuck at whatever it was at creation time, even
+      // after the controller has moved on to a different, live DOM node.
+      uiStateController.ref = props.ref;
       uiStateController.id = props.id; // never suppoed to changed, not supported for now
       uiStateController.name = props.name;
 
@@ -192,11 +198,12 @@ export const useUIStateController = (
     parentUIStateController,
     isProxy,
     allowNameless,
-    elementRef,
-    props,
 
+    props,
+    ref: props.ref,
     id: props.id,
     name: props.name,
+
     state: stateInitial,
     uiState: stateInitial,
     uiStateSignal,
@@ -242,7 +249,7 @@ export const useUIStateController = (
       } else {
         const command = uiStateController.controlHostProps.command;
         if (command) {
-          const element = uiStateController.elementRef.current;
+          const element = uiStateController.ref.current;
           if (element) {
             debugUIState(
               `triggering command "${command}" for "${controlType}"`,
@@ -266,7 +273,7 @@ export const useUIStateController = (
         }
       }
       const controllerSig = getElementSignature(
-        e.currentTarget || elementRef.current,
+        e.currentTarget || uiStateController.ref.current,
       );
       // if (persists) {
       //   setNavState(prop);
@@ -351,7 +358,7 @@ export const useUIStateController = (
       }
       debugUIState(e, `publishUIState(${JSON.stringify(newUIState)})`);
       publishUIState(newUIState, e);
-      const el = elementRef.current;
+      const el = uiStateController.ref.current;
       // Always notify the element that its UI state changed.
       // Listeners use this to stay in sync (e.g. input_effect.js tracks currentState,
       // useUIState subscribes for reactive updates). Separate from navi_set_ui_state
@@ -454,7 +461,7 @@ export const useUIStateController = (
         if (targetController) {
           debugUIState(
             e,
-            `forwarding set_ui_state "${newUIState}" to ${getElementSignature(targetController.elementRef.current)}`,
+            `forwarding set_ui_state "${newUIState}" to ${getElementSignature(targetController.ref.current)}`,
           );
           const forwardEvent = new CustomEvent("proxy_forward_set_ui_state", {
             detail: {},
@@ -914,6 +921,10 @@ export const useUIGroupStateController = (
     const prevValue = existingController.value;
     const prevHasValueProp = existingController.hasValueProp;
     existingController.props = props;
+    // Re-sync to this render's ref object — see the matching comment in
+    // useUIStateController._checkForUpdates for why this can't be captured
+    // once at creation time and left untouched.
+    existingController.ref = ref;
     existingController.id = id;
     existingController.name = name;
     existingController.value = value;
@@ -969,7 +980,7 @@ export const useUIGroupStateController = (
     uiState: fallbackState,
     uiStateSignal,
     wantRequesterButtonState,
-    elementRef: ref,
+    ref,
     getPropFromState: (uiState) => uiState,
     distributeChildUIState: resolvedDistributeChildUIState,
     // Cascades newUIState to each monitored child via resolvedDistributeChildUIState,
@@ -1345,7 +1356,7 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
   const facadeUIStateController = {
     controlType: "facade",
     props,
-    elementRef: realUIStateController.elementRef,
+    ref: realUIStateController.ref,
     uiStateSignal: realUIStateController.uiStateSignal,
     registerChild: (child) => {
       if (!canRegisterAsFacadeChild(child)) {
