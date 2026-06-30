@@ -87,9 +87,6 @@ export const Field = (props) => {
 const FieldAsLabel = (props) => {
   const { vertical, children } = props;
   props.paddingWithControl = resolveSpacingSize(props.paddingWithControl, "s");
-  const [messageProps, remainingProps] = extractMessageAndRemainingProps(props);
-  const messagePropsRef = useRef();
-  messagePropsRef.current = messageProps;
 
   return (
     <Label
@@ -98,14 +95,10 @@ const FieldAsLabel = (props) => {
       flex={vertical ? "y" : undefined}
       alignX={vertical ? "start" : undefined}
       data-vertical={vertical ? "" : undefined}
-      {...remainingProps}
+      {...props}
       vertical={undefined}
     >
-      <MessagePropsRefContext.Provider value={messagePropsRef}>
-        <ControlIdContext.Provider value={props.htmlFor}>
-          {children}
-        </ControlIdContext.Provider>
-      </MessagePropsRefContext.Provider>
+      {children}
     </Label>
   );
 };
@@ -154,13 +147,16 @@ const FIELD_PSEUDO_CLASSES = [
 
 export const Label = (props) => {
   import.meta.css = css;
-  const { children, ...rest } = props;
+  const { children } = props;
   const controlId = useContext(ControlIdContext);
   const [disabled, setDisabled] = useState(false);
   const [readOnly, setReadOnly] = useState(false);
   const [connected, setConnected] = useState(false);
   const defaultId = useId();
   const htmlFor = props.htmlFor || controlId || `label_auto_${defaultId}`;
+  const [messageProps, remainingProps] = extractMessageAndRemainingProps(props);
+  const messagePropsRef = useRef();
+  messagePropsRef.current = messageProps;
 
   return (
     <Box
@@ -173,7 +169,7 @@ export const Label = (props) => {
         ":disabled": disabled,
         ":read-only": readOnly,
       }}
-      {...rest}
+      {...remainingProps}
       onnavi_control_state={(e) => {
         setConnected(true);
         setDisabled(e.detail.disabled);
@@ -185,9 +181,11 @@ export const Label = (props) => {
         setReadOnly(false);
       }}
     >
-      <ControlIdContext.Provider value={htmlFor}>
-        {children}
-      </ControlIdContext.Provider>
+      <MessagePropsRefContext.Provider value={messagePropsRef}>
+        <ControlIdContext.Provider value={htmlFor}>
+          {children}
+        </ControlIdContext.Provider>
+      </MessagePropsRefContext.Provider>
     </Box>
   );
 };
