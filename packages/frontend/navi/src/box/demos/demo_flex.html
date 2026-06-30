@@ -40,9 +40,65 @@
       const FlexColumn = () => {};
       const FlexItem = () => {};
 
+      const SelectorBox = ({ background, children }) => (
+        <Box
+          flex
+          spacing="s"
+          border="1px solid #e4e4e7"
+          borderRadius="0.5em"
+          padding="xs"
+          paddingLeft="m"
+          alignY="center"
+          height="36"
+          backgroundColor={background}
+        >
+          {children}
+        </Box>
+      );
+
+      const MapStyleSelector = () => (
+        <SelectorBox background="#e3f2fd">Style</SelectorBox>
+      );
+      const MapZoneSelector = () => (
+        <SelectorBox background="#e8f5e8">Zone</SelectorBox>
+      );
+      const MapDivisionSelectField = () => (
+        <SelectorBox background="#fff3e0">Division</SelectorBox>
+      );
+      const ScenarioButton = () => (
+        <SelectorBox background="#f3e5f5">Scénario</SelectorBox>
+      );
+
+      const MapControls = () => (
+        <Box
+          flex
+          background="white"
+          spacing="s"
+          expandX
+          paddingX="s"
+          paddingY="s"
+        >
+          <MapStyleSelector />
+          <MapZoneSelector />
+          <MapDivisionSelectField />
+          <ScenarioButton />
+        </Box>
+      );
+
       const Demo = () => {
         return (
           <div style={{ padding: "20px", fontFamily: "system-ui, sans-serif" }}>
+            <Box
+              as="header"
+              flex
+              alignY="center"
+              height="60"
+              background="white"
+              style={{ marginBottom: "20px", border: "1px solid #e4e4e7" }}
+            >
+              <MapControls />
+            </Box>
+
             <h1>Flex Layout Demo</h1>
 
             <nav

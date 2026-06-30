@@ -139,6 +139,7 @@ const DIMENSION_PROPS = {
     if (parentBoxFlow === "flex-y" || parentBoxFlow === "inline-flex-y") {
       return {
         alignSelf: "stretch",
+        width: "100%",
       };
     }
     // Can't use flexGrow — parent is not flex-x
