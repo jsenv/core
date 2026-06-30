@@ -167,6 +167,7 @@
         EyeSvg,
         EyeClosedSvg,
         NaviDebug,
+        BadgeCount,
       } from "@jsenv/navi";
 
       const App = () => {
@@ -1888,6 +1889,31 @@
                 </Button>
               </div>
             </fieldset>
+
+            <h3 style={{ margin: "24px 0 12px" }}>With badge</h3>
+
+            <Box flex spacing="s" alignY="start">
+              <Button>
+                Tâches
+                <BadgeCount background="#2196f3" color="white">
+                  5
+                </BadgeCount>
+              </Button>
+
+              <Button>
+                Tâches
+                <BadgeCount background="#2196f3" color="white" size="s">
+                  5
+                </BadgeCount>
+              </Button>
+
+              <Button>
+                Tâches
+                <BadgeCount background="#2196f3" color="white" size="xxl">
+                  5
+                </BadgeCount>
+              </Button>
+            </Box>
 
             {/* ── Dimension ─────────────────────────────────────────────── */}
             <h3 id="customization-dimension" style={{ margin: "24px 0 12px" }}>

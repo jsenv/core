@@ -79,6 +79,7 @@ const css = /* css */ `
       --button-color-disabled: var(--button-color-readonly);
 
       /* Here to be easy to override */
+      display: inline-block; /* So box css can override when wanting to put button inline flex */
       font-size: var(--button-font-size);
       font-family: var(--button-font-family);
     }
@@ -111,7 +112,6 @@ const css = /* css */ `
     touch-action: manipulation;
     user-select: none;
     -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
-    display: inline-flex;
 
     .navi_button_content {
       position: relative;
@@ -399,7 +399,7 @@ export const ButtonUI = (props) => {
   return (
     <Box
       inline
-      flex
+      block
       {...buttonControlRootProps}
       {...buttonControlHostProps}
       // eslint-disable-next-line react/no-children-prop
