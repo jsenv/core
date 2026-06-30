@@ -269,7 +269,6 @@ export const useControlProps = (
     const triggerUIAction = (e) => {
       syncUIStateWithDOM(e);
     };
-    const wasCheckedAtMousedownRef = useRef(false);
 
     const getDefaultEventReactionDefinitions = () => {
       const keyDownDefault = (e) => {
@@ -501,16 +500,20 @@ export const useControlProps = (
             }
             return keyDownDefault(e);
           },
-          mouseDown: (e) => {
-            wasCheckedAtMousedownRef.current = e.currentTarget.checked;
-          },
           click: (e) => {
-            if (isRadio && wasCheckedAtMousedownRef.current) {
-              // When a radio is already checked and gets clicked, the browser does NOT
-              // fire an input event (state doesn't change), so asAction never runs.
-              // We still want uiAction + command to fire. We can tell whether the click
-              // is on an already-checked radio by looking at wasCheckedAtMousedownRef:
-              // if it was checked at mousedown, the input event won't come, so we do it here.
+            // When a radio is already checked and gets clicked, the browser does NOT
+            // fire an input event (state doesn't change), so syncUIStateWithDOM never
+            // runs. We still want uiAction + command to fire. We can tell whether the
+            // click is on an already-checked radio by comparing our own tracked
+            // uiState (value when checked, undefined when not — see toDomProps) to
+            // this radio's value: it's still the PRE-click value here, since it's
+            // only updated later by the "input" handler. Reading the DOM `.checked`
+            // instead would not work: the browser applies the checked toggle before
+            // dispatching "click", so `.checked` is already the POST-click value
+            // whether or not this was already the checked radio — and worse, a click
+            // that lands on the <label> (not the <input>) never fires "mousedown" on
+            // the input at all, so a DOM-snapshot-at-mousedown approach misses it.
+            if (isRadio && uiStateController.uiState !== undefined) {
               return {
                 name: `click on checked radio`,
                 allowed: () => triggerUIAction(e),
