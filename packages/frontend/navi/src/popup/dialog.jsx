@@ -4,7 +4,7 @@ import {
   snapToPixel,
   trapScrollInside,
 } from "@jsenv/dom";
-import { useLayoutEffect, useRef } from "preact/hooks";
+import { useRef } from "preact/hooks";
 
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import { Box } from "../box/box.jsx";
@@ -38,7 +38,8 @@ const css = /* css */ `
 export const Dialog = (props) => {
   import.meta.css = css;
   const {
-    open: openProp = false,
+    // requestOpen,
+    requestClose,
     anchorRef,
     children,
     scrollTrap,
@@ -120,7 +121,7 @@ export const Dialog = (props) => {
       focusedBeforeOpen,
     });
   };
-  const close = (e, detail = {}) => {
+  const close = (e) => {
     debugPopup(
       `"${e.type}" on ${getElementSignature(e.target)} -> closeDialog`,
     );
@@ -129,73 +130,8 @@ export const Dialog = (props) => {
     dialogEl.close();
     cleanup();
     openedRef.current = false;
-    dispatchCustomEvent(dialogEl, "navi_close", {
-      event: e,
-      ...detail,
-    });
+    dispatchCustomEvent(dialogEl, "navi_close", { event: e });
   };
-
-  const onRequestOpen = (e) => {
-    const dialogEl = ref.current;
-    if (!dialogEl) {
-      return;
-    }
-    if (openedRef.current) {
-      return;
-    }
-    open(e);
-  };
-  const onRequestClose = (e, detail = {}) => {
-    const dialogEl = ref.current;
-    if (!dialogEl) {
-      return;
-    }
-    if (!openedRef.current) {
-      return;
-    }
-    if (closeRequestHandler) {
-      let denied = false;
-      const closePermission = {
-        deny: () => {
-          denied = true;
-        },
-        allow: () => {
-          denied = false;
-        },
-      };
-      closeRequestHandler(e, closePermission, detail);
-      if (denied) {
-        if (e.type === "cancel") {
-          e.preventDefault();
-        }
-        closePermission.allow = () => {
-          close(e, detail);
-        };
-        return;
-      }
-    }
-    close(e, detail);
-  };
-
-  useLayoutEffect(() => {
-    if (openProp === undefined) {
-      return;
-    }
-    // Skip when the popover is already in the desired state.
-    // This avoids a feedback loop: our own close/open dispatches navi_close/navi_open,
-    // the parent updates the prop, and the effect would fire again for a change we
-    // already handled. Comparing against openedRef is the authoritative check because
-    // it reflects the actual DOM state, not the React render cycle.
-    if (openProp === openedRef.current) {
-      return;
-    }
-    const e = new CustomEvent("open_prop_change");
-    if (openProp) {
-      onRequestOpen(e);
-    } else {
-      onRequestClose(e);
-    }
-  }, [openProp]);
 
   return (
     <Box
@@ -218,18 +154,53 @@ export const Dialog = (props) => {
             e.clientY < rect.top ||
             e.clientY > rect.bottom;
           if (isBackdrop) {
-            onRequestClose(e, { isClickOutside: true });
+            requestClose(e, { isCancel: true });
           }
         }
       }}
       onCancel={(e) => {
-        onRequestClose(e);
+        requestClose(e, { isCancel: true });
       }}
       onnavi_request_open={(e) => {
-        onRequestOpen(e);
+        const dialogEl = ref.current;
+        if (!dialogEl) {
+          return;
+        }
+        if (openedRef.current) {
+          return;
+        }
+        open(e);
       }}
       onnavi_request_close={(e) => {
-        onRequestClose(e);
+        const dialogEl = ref.current;
+        if (!dialogEl) {
+          return;
+        }
+        if (!openedRef.current) {
+          return;
+        }
+        if (closeRequestHandler) {
+          let denied = false;
+          const closePermission = {
+            deny: () => {
+              denied = true;
+            },
+            allow: () => {
+              denied = false;
+            },
+          };
+          closeRequestHandler(e, closePermission);
+          if (denied) {
+            if (e.type === "cancel") {
+              e.preventDefault();
+            }
+            closePermission.allow = () => {
+              close(e);
+            };
+            return;
+          }
+        }
+        close(e);
       }}
     >
       {children}

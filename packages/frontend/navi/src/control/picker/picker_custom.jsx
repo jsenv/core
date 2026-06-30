@@ -1,5 +1,5 @@
 import { dispatchCustomEvent, findEvent } from "@jsenv/dom";
-import { useId, useRef } from "preact/hooks";
+import { useLayoutEffect, useRef } from "preact/hooks";
 
 import { createOnKeyDownForShortcuts } from "@jsenv/navi/src/keyboard/keyboard_shortcuts.js";
 import { windowWidthSignal } from "@jsenv/navi/src/layout/responsive.js";
@@ -300,8 +300,7 @@ const PickerCustom = (props) => {
   const popupRef = useRef(null);
   popupProps.ref = popupRef;
   // aria-controls + id
-  const autoId = useId();
-  const popupId = `picker_popup_${autoId}`;
+  const popupId = `${props.id}_picker_popup`;
   id: {
     Object.assign(pickerProps, {
       "aria-controls": popupId,
@@ -318,20 +317,17 @@ const PickerCustom = (props) => {
     // In "popover" mode, it replaces the current history state (no history entry added).
     const pickerNavType = mode === "dialog" ? "push" : "replace";
     const expandedRef = useRef(false);
-    const [expanded, enterExpanded, leaveExpanded] = useNavState(
-      popupId,
-      false,
-      {
-        type: pickerNavType,
-        // onLeave fires only when the state key disappears externally (back button/gesture most of the time).
-        onLeave: () => {
-          requestClose(new CustomEvent("navi_nav_away", { detail: {} }), {
-            isCancel: true,
-          });
-        },
+    const [expanded, enterExpanded, leaveExpanded] = useNavState(popupId, {
+      type: pickerNavType,
+      // onLeave fires only when the state key disappears externally (back button/gesture most of the time).
+      onLeave: () => {
+        requestClose(new CustomEvent("navi_nav_away", { detail: {} }), {
+          isCancel: true,
+        });
       },
-    );
-    expandedRef.current = Boolean(expanded);
+    });
+    // expandedRef tracks actual open/close state, updated only by onOpen/onClose.
+    // NOT synced to expanded on every render so the useLayoutEffect guard below works.
     const valueAtOpenRef = useRef(null);
     const activeElementAtOpenRef = useRef(null);
 
@@ -392,7 +388,7 @@ const PickerCustom = (props) => {
         }
       }
       expandedRef.current = false;
-      leaveExpanded();
+      leaveExpanded({ isBack: e.detail.isCancel });
       // Reset so the next opening re-evaluates screen size
       defaultModeRef.current = null;
       restoreFocus(e);
@@ -400,25 +396,51 @@ const PickerCustom = (props) => {
     const disableClickFor = useIgnoreClickForMousedown(ref, (e) => {
       debugPopup(e, `click ignored`);
     });
-    const requestOpen = (e) => {
+    const requestOpen = (e, detail) => {
       // scroll <button> of the picker into view when opening it
       const pickerEl = ref.current;
       pickerEl.scrollIntoView({ block: "nearest" });
       const popupEl = popupRef.current;
       return dispatchCustomEvent(popupEl, "navi_request_open", {
         event: e,
+        ...detail,
       });
     };
     const requestClose = (
-      e = new CustomEvent("programmatic"),
-      { isCancel = false } = {},
+      e = new CustomEvent("programmatic", { detail: {} }),
+      detail,
     ) => {
       const popupEl = popupRef.current;
       return dispatchCustomEvent(popupEl, "navi_request_close", {
         event: e,
-        isCancel,
+        ...detail,
       });
     };
+
+    const open = Boolean(expanded);
+    useLayoutEffect(() => {
+      if (open === undefined) {
+        return;
+      }
+      // Skip when the popup is already in the desired state.
+      // expandedRef tracks actual open/close (updated by onOpen/onClose, not by renders)
+      // so it is the authoritative check against feedback loops.
+      if (open === expandedRef.current) {
+        return;
+      }
+      // open_prop_change means the parent is driving the open state directly
+      // (e.g. back-button navigation flipped openProp to false before onLeave fires).
+      // Always treat it as cancel — the user's in-progress edit should be discarded.
+      if (open) {
+        requestOpen(new CustomEvent("open_by_prop", { detail: {} }), {
+          isCancel: true,
+        });
+      } else {
+        requestClose(new CustomEvent("close_by_prop", { detail: {} }), {
+          isCancel: true,
+        });
+      }
+    }, [open]);
 
     const requestInteraction = (options) => {
       dispatchRequestInteraction(ref.current, options);
@@ -458,23 +480,9 @@ const PickerCustom = (props) => {
     });
     Object.assign(popupProps, {
       anchorRef: props.ref,
-      open: Boolean(expanded),
-      closeRequestHandler: (
-        requestCloseEvent,
-        closePermission,
-        { isClickOutside } = {},
-      ) => {
-        const cancelEvent = findEvent(
-          requestCloseEvent,
-          (eInChain) =>
-            eInChain.type === "navi_request_close" && eInChain.detail.isCancel,
-        );
-        // open_prop_change means the parent is driving the open state directly
-        // (e.g. back-button navigation flipped openProp to false before onLeave fires).
-        // Always treat it as cancel — the user's in-progress edit should be discarded.
-        const isPropDrivenClose = requestCloseEvent.type === "open_prop_change";
-        const isCancel =
-          isClickOutside || Boolean(cancelEvent) || isPropDrivenClose;
+      requestClose,
+      closeRequestHandler: (requestCloseEvent, closePermission) => {
+        const isCancel = requestCloseEvent.detail.isCancel;
         if (isCancel) {
           const pickerEl = ref.current;
           const inputEl = getPickerInput(pickerEl);

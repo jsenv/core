@@ -441,4 +441,42 @@ await snapshotTests(import.meta.url, ({ test }) => {
       globalSignalRegistry.clear();
     }
   });
+
+  // Unlike navigating away to an unrelated route (see test above), explicitly
+  // navigating to the URL that owns this searchParam — without the param present —
+  // must reset the signal to its default. The app preserves params in the URL, so
+  // their absence on an explicit navigation means the user asked for the default.
+  test("explicit navigation to a route URL without its searchParam resets the signal to default", () => {
+    const citySignal = stateSignal(undefined);
+    const HOME_ROUTE = route("/");
+    const CITY_ROUTE = route("/city-selection/", {
+      searchParams: { city: citySignal },
+    });
+    const { updateRoutes, clearRoutes } = setupRoutes([HOME_ROUTE, CITY_ROUTE]);
+
+    try {
+      // Navigate to city selection page (no city in URL yet)
+      updateRoutes("http://localhost:3000/city-selection/");
+      const onCityPage = { city: citySignal.value };
+
+      // User picks a city via UI (signal updated, not reflected in URL)
+      citySignal.value = "Paris";
+      const afterPicking = { city: citySignal.value };
+
+      // User explicitly navigates (e.g. types/loads the URL) to city-selection/
+      // again, with no city param this time — same route, param now absent.
+      updateRoutes("http://localhost:3000/city-selection/");
+      const afterExplicitNavWithoutParam = { city: citySignal.value };
+
+      return {
+        on_city_page: onCityPage,
+        after_picking: afterPicking,
+        // Expected: undefined — explicit navigation without the param resets it.
+        after_explicit_nav_without_param: afterExplicitNavWithoutParam,
+      };
+    } finally {
+      clearRoutes();
+      globalSignalRegistry.clear();
+    }
+  });
 });

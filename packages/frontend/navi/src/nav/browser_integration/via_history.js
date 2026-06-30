@@ -55,28 +55,37 @@ export const setupBrowserIntegrationViaHistory = ({
   };
 
   let abortController = null;
-  const handleRoutingTask = (
-    url,
-    {
+  const handleRoutingTask = (url, options) => {
+    const isSameUrl = url === window.location.href;
+    const {
       reason,
       navigationType, // "load", "reload", "replace", "push", "traverse"
       state,
-    },
-  ) => {
-    const isSameUrl = url === window.location.href;
+    } = options;
 
     if (navigationType === "push" || navigationType === "replace") {
-      // Merge onto the current state so existing useNavState entries (e.g. an
-      // open dialog/popover) survive URL changes triggered by signal updates.
-      // "traverse" is intentionally excluded: it restores the exact historical
-      // state from the history entry, which is the source of truth for back/forward.
-      const currentState = getDocumentState() || {};
       markUrlAsVisited(url);
-      const effectiveState = {
-        ...currentState,
-        ...(state || {}),
+      // undefined → inherit current state (link click, neutral navigation)
+      // null     → explicit reset (no nav-state keys carried over)
+      // {...}    → explicit state from enter()/leave(), already built from currentState
+      // When state is given it's responsability of the caller to ensure it inherits document state (or not, you want it 99% of the time)
+      let effectiveState;
+      const sharedState = {
         jsenv_visited_urls: Array.from(visitedUrlSet),
       };
+      if (state === undefined) {
+        effectiveState = {
+          ...(getDocumentState() || {}),
+          ...sharedState,
+        };
+      } else if (state === null) {
+        effectiveState = sharedState;
+      } else if (state) {
+        effectiveState = {
+          ...state,
+          ...sharedState,
+        };
+      }
       if (navigationType === "push") {
         window.history.pushState(effectiveState, null, url);
       } else {
@@ -162,7 +171,6 @@ export const setupBrowserIntegrationViaHistory = ({
       handleRoutingTask(href, {
         reason: `"click" on a[href="${href}"]`,
         navigationType: "push",
-        state: null,
       });
     },
     { capture: true },
@@ -187,7 +195,7 @@ export const setupBrowserIntegrationViaHistory = ({
     });
   });
 
-  const navTo = async (url, { replace, state = null } = {}) => {
+  const navTo = async (url, { replace, state } = {}) => {
     handleRoutingTask(url, {
       reason: `navTo called with "${url}"`,
       navigationType: replace ? "replace" : "push",
