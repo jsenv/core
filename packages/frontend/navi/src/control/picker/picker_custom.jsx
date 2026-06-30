@@ -1,7 +1,8 @@
 import { chainEvent, findEvent } from "@jsenv/dom";
-import { useLayoutEffect, useRef } from "preact/hooks";
+import { useContext, useId, useLayoutEffect, useRef } from "preact/hooks";
 
 import { createOnKeyDownForShortcuts } from "@jsenv/navi/src/keyboard/keyboard_shortcuts.js";
+import { ControlIdContext } from "../control_context.js";
 import { windowWidthSignal } from "@jsenv/navi/src/layout/responsive.js";
 import { useNavState } from "@jsenv/navi/src/nav/browser_integration/browser_integration.js";
 import { useDebugFocus, useDebugPopup } from "@jsenv/navi/src/navi_debug.jsx";
@@ -276,6 +277,11 @@ const PickerNative = (props) => {
 
 const PickerCustom = (props) => {
   const { ref, mode: modeProp } = props;
+  // Resolve the id the same way useControlProps does (own id > Field's id > generated id)
+  // before computing popupId below, so two Pickers without an explicit id never collide.
+  const idDefault = useId();
+  const controlId = useContext(ControlIdContext);
+  props.id = props.id || controlId || idDefault;
   // Freeze the mode for the lifetime of an opening: compute it when closed,
   // keep it stable while open so a screen resize mid-session doesn't switch
   // between Popover and Dialog.

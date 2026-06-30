@@ -353,7 +353,7 @@
                   type="array"
                   name="multiselect_chips_simple"
                   value={selectedArray}
-                  ui={<ChipsUI arr={selectedArray} />}
+                  ui={<ChipsUI />}
                   uiAction={(v) => {
                     selectedSignal.value = v;
                   }}
@@ -394,7 +394,7 @@
                   type="array"
                   name="multiselect_chips_simple_mr1"
                   value={selectedArrayMr1}
-                  ui={<ChipsUI arr={selectedArrayMr1} />}
+                  ui={<ChipsUI />}
                   uiAction={(v) => {
                     selectedSignalMr1.value = v;
                   }}
@@ -467,6 +467,7 @@
                 <Badge key={opt} inline flex>
                   <Text>{opt}</Text>
                   <Badge.Button
+                    id={`remove_${opt}`}
                     command="--navi-unselect"
                     commandFor="skills_list_delete"
                     value={opt}
@@ -560,6 +561,7 @@
                         <Badge key={opt} inline flex>
                           <Text>{opt}</Text>
                           <Badge.Button
+                            id={`remove_mr1_${opt}`}
                             command="--navi-unselect"
                             commandFor="skills_list_delete_mr1"
                             value={opt}
