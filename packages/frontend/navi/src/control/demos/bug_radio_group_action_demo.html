@@ -48,9 +48,15 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
+      import { lazy, Suspense } from "preact/compat";
       import { useSignal } from "@preact/signals";
       import { CallLog, useCallLog } from "./utils/call_log.jsx";
       import { RadioGroup, Field, Label, Input, NaviDebug } from "@jsenv/navi";
+
+      const Mapbox = lazy(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        return "Coucou";
+      });
 
       const App = () => {
         const [entries, push, clear] = useCallLog();
@@ -60,6 +66,9 @@
           <NaviDebug debugAction debugInteraction>
             <div class="demo-section">
               <h2>RadioGroup with both uiAction and action</h2>
+              <Suspense fallback="loading…">
+                <Mapbox />
+              </Suspense>
               <RadioGroup
                 name="style"
                 value={valueSignal.value}
