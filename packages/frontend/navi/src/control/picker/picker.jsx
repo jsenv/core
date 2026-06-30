@@ -315,7 +315,15 @@ const PickerButton = (props) => {
   if (typeof props.maxLines === "string") {
     props.maxLines = parseInt(props.maxLines);
   }
-  const { ref, variant, icon, placeholder, ui, maxLines = 1 } = props;
+  const {
+    ref,
+    variant,
+    icon,
+    iconSize = "m",
+    placeholder,
+    ui,
+    maxLines = 1,
+  } = props;
   const isSingleLine = maxLines === 1;
   const inputRef = useRef(null);
   const [pickerRemainingProps, inputProps, facadeChildrenProps] =
@@ -348,6 +356,7 @@ const PickerButton = (props) => {
       styleCSSVars={PickerStyleCSSVars}
       variant={undefined}
       icon={undefined}
+      iconSize={undefined}
       ui={undefined}
       maxLines={undefined}
       dayLabel={undefined}
@@ -470,7 +479,9 @@ const PickerButton = (props) => {
       )}
       {variant === "headless" || ui === "default" ? null : (
         <span className="navi_picker_right_slot">
-          <Icon size="m">{icon === undefined ? <ChevronDownSvg /> : icon}</Icon>
+          <Icon size={iconSize}>
+            {icon === undefined ? <ChevronDownSvg /> : icon}
+          </Icon>
         </span>
       )}
       <ControlFacadeChildrenWrapper {...facadeChildrenProps}>
