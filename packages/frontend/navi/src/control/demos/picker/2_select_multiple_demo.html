@@ -309,24 +309,14 @@
         const selectedSignalMr1 = useSignal(["HTML", "React", "Vue"]);
         const selectedArrayMr1 = selectedSignalMr1.value;
 
-        const ChipsUI = ({ arr }) => {
-          return (
-            <BadgeList
-              fallback={
-                <Badge
-                  background="transparent"
-                  color="var(--picker-placeholder-color)"
-                >
-                  Select skills…
-                </Badge>
-              }
-            >
-              {arr.map((opt) => (
-                <Badge key={opt}>{opt}</Badge>
-              ))}
-            </BadgeList>
-          );
-        };
+        const chipsFallback = (
+          <Badge
+            background="transparent"
+            color="var(--picker-placeholder-color)"
+          >
+            Select skills…
+          </Badge>
+        );
 
         return (
           <div class="demo-section">
@@ -353,7 +343,13 @@
                   type="array"
                   name="multiselect_chips_simple"
                   value={selectedArray}
-                  ui={<ChipsUI />}
+                  ui={
+                    <BadgeList fallback={chipsFallback}>
+                      {selectedArray.map((opt) => (
+                        <Badge key={opt}>{opt}</Badge>
+                      ))}
+                    </BadgeList>
+                  }
                   uiAction={(v) => {
                     selectedSignal.value = v;
                   }}
@@ -394,7 +390,13 @@
                   type="array"
                   name="multiselect_chips_simple_mr1"
                   value={selectedArrayMr1}
-                  ui={<ChipsUI />}
+                  ui={
+                    <BadgeList fallback={chipsFallback}>
+                      {selectedArrayMr1.map((opt) => (
+                        <Badge key={opt}>{opt}</Badge>
+                      ))}
+                    </BadgeList>
+                  }
                   uiAction={(v) => {
                     selectedSignalMr1.value = v;
                   }}
@@ -435,7 +437,7 @@
 
       // ── 3. Chips display (with delete button on badge) ────────────────────
 
-      const ChipsWithDeleteDisplay = () => {
+      const ChipsWithDeleteDefault = () => {
         const selectedSignal = useSignal([
           "HTML",
           "CSS",
@@ -449,6 +451,81 @@
         const listRef = useRef(null);
         const selectedArray = selectedSignal.value;
 
+        return (
+          <Field vertical>
+            <Label>
+              Skills <code style="font-weight:normal">(default)</code>
+            </Label>
+            <Picker
+              type="array"
+              name="multiselect_chips_delete"
+              value={selectedArray}
+              ui={
+                selectedArray.length === 0 ? (
+                  <span style="color: #999">Select skills…</span>
+                ) : (
+                  <BadgeList>
+                    {selectedArray.map((opt) => (
+                      <Badge key={opt} inline flex>
+                        <Text>{opt}</Text>
+                        <Badge.Button
+                          id={`remove_${opt}`}
+                          command="--navi-unselect"
+                          commandFor="skills_list_delete"
+                          value={opt}
+                          actionOnMouseDown
+                          aria-label={`Remove ${opt}`}
+                          onMouseDown={(e) => {
+                            e.stopPropagation();
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                          }}
+                        >
+                          ×
+                        </Badge.Button>
+                      </Badge>
+                    ))}
+                  </BadgeList>
+                )
+              }
+              uiAction={(v) => {
+                selectedSignal.value = v;
+              }}
+              action={(v) => {
+                selectedSignal.value = v;
+              }}
+              maxWidth="200"
+            >
+              <List
+                selectable
+                ref={listRef}
+                multiple
+                id="skills_list_delete"
+                command="--navi-update"
+                style="min-width: 180px"
+              >
+                {SKILL_OPTIONS.map((opt, i) => (
+                  <List.Item
+                    selectable
+                    key={opt}
+                    id={opt}
+                    index={i}
+                    value={opt}
+                    selected={selectedArray.includes(opt)}
+                    padding="s"
+                    spacing="s"
+                  >
+                    {opt}
+                  </List.Item>
+                ))}
+              </List>
+            </Picker>
+          </Field>
+        );
+      };
+
+      const ChipsWithDeleteMaxLines1 = () => {
         const selectedSignalMr1 = useSignal([
           "HTML",
           "CSS",
@@ -457,37 +534,73 @@
         ]);
         const selectedArrayMr1 = selectedSignalMr1.value;
 
-        const ChipsUI = () => {
-          if (selectedArray.length === 0) {
-            return <span style="color: #999">Select skills…</span>;
-          }
-          return (
-            <BadgeList>
-              {selectedArray.map((opt) => (
-                <Badge key={opt} inline flex>
-                  <Text>{opt}</Text>
-                  <Badge.Button
-                    id={`remove_${opt}`}
-                    command="--navi-unselect"
-                    commandFor="skills_list_delete"
+        return (
+          <Field vertical>
+            <Label>
+              Skills <code style="font-weight:normal">(maxLines=1)</code>
+            </Label>
+            <Picker
+              type="array"
+              name="multiselect_chips_delete_mr1"
+              value={selectedArrayMr1}
+              ui={
+                <BadgeList>
+                  {selectedArrayMr1.map((opt) => (
+                    <Badge key={opt} inline flex>
+                      <Text>{opt}</Text>
+                      <Badge.Button
+                        id={`remove_mr1_${opt}`}
+                        command="--navi-unselect"
+                        commandFor="skills_list_delete_mr1"
+                        value={opt}
+                        actionOnMouseDown
+                        aria-label={`Remove ${opt}`}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        ×
+                      </Badge.Button>
+                    </Badge>
+                  ))}
+                </BadgeList>
+              }
+              uiAction={(v) => {
+                selectedSignalMr1.value = v;
+              }}
+              action={(v) => {
+                selectedSignalMr1.value = v;
+              }}
+              maxWidth="200"
+              maxLines={1}
+            >
+              <List
+                selectable
+                multiple
+                id="skills_list_delete_mr1"
+                command="--navi-update"
+                style="min-width: 180px"
+              >
+                {SKILL_OPTIONS.map((opt, i) => (
+                  <List.Item
+                    selectable
+                    key={opt}
+                    id={`mr1_${opt}`}
+                    index={i}
                     value={opt}
-                    actionOnMouseDown
-                    aria-label={`Remove ${opt}`}
-                    onMouseDown={(e) => {
-                      e.stopPropagation();
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                    }}
+                    selected={selectedArrayMr1.includes(opt)}
+                    padding="s"
+                    spacing="s"
                   >
-                    ×
-                  </Badge.Button>
-                </Badge>
-              ))}
-            </BadgeList>
-          );
-        };
+                    {opt}
+                  </List.Item>
+                ))}
+              </List>
+            </Picker>
+          </Field>
+        );
+      };
 
+      const ChipsWithDeleteDisplay = () => {
         return (
           <div class="demo-section">
             <h2>3. Chips with delete button</h2>
@@ -505,110 +618,8 @@
               instead.
             </p>
             <Box flex="y" spacing="m">
-              <Field vertical>
-                <Label>
-                  Skills <code style="font-weight:normal">(default)</code>
-                </Label>
-                <Picker
-                  type="array"
-                  name="multiselect_chips_delete"
-                  value={selectedArray}
-                  ui={<ChipsUI />}
-                  uiAction={(v) => {
-                    selectedSignal.value = v;
-                  }}
-                  action={(v) => {
-                    selectedSignal.value = v;
-                  }}
-                  maxWidth="200"
-                >
-                  <List
-                    selectable
-                    ref={listRef}
-                    multiple
-                    id="skills_list_delete"
-                    command="--navi-update"
-                    style="min-width: 180px"
-                  >
-                    {SKILL_OPTIONS.map((opt, i) => (
-                      <List.Item
-                        selectable
-                        key={opt}
-                        id={opt}
-                        index={i}
-                        value={opt}
-                        selected={selectedArray.includes(opt)}
-                        padding="s"
-                        spacing="s"
-                      >
-                        {opt}
-                      </List.Item>
-                    ))}
-                  </List>
-                </Picker>
-              </Field>
-              <Field vertical>
-                <Label>
-                  Skills <code style="font-weight:normal">(maxLines=1)</code>
-                </Label>
-                <Picker
-                  type="array"
-                  name="multiselect_chips_delete_mr1"
-                  value={selectedArrayMr1}
-                  ui={
-                    <BadgeList>
-                      {selectedArrayMr1.map((opt) => (
-                        <Badge key={opt} inline flex>
-                          <Text>{opt}</Text>
-                          <Badge.Button
-                            id={`remove_mr1_${opt}`}
-                            command="--navi-unselect"
-                            commandFor="skills_list_delete_mr1"
-                            value={opt}
-                            actionOnMouseDown
-                            aria-label={`Remove ${opt}`}
-                            onMouseDown={(e) => e.stopPropagation()}
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            ×
-                          </Badge.Button>
-                        </Badge>
-                      ))}
-                    </BadgeList>
-                  }
-                  uiAction={(v) => {
-                    selectedSignalMr1.value = v;
-                  }}
-                  action={(v) => {
-                    selectedSignalMr1.value = v;
-                  }}
-                  maxWidth="200"
-                  maxLines={1}
-                >
-                  <List
-                    selectable
-                    multiple
-                    id="skills_list_delete_mr1"
-                    command="--navi-update"
-                    style="min-width: 180px"
-                  >
-                    {SKILL_OPTIONS.map((opt, i) => (
-                      <List.Item
-                        selectable
-                        key={opt}
-                        id={`mr1_${opt}`}
-                        index={i}
-                        value={opt}
-                        selected={selectedArrayMr1.includes(opt)}
-                        padding="s"
-                        spacing="s"
-                      >
-                        {opt}
-                      </List.Item>
-                    ))}
-                  </List>
-                </Picker>
-              </Field>
+              <ChipsWithDeleteDefault />
+              <ChipsWithDeleteMaxLines1 />
             </Box>
           </div>
         );
