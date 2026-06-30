@@ -6369,6 +6369,16 @@ const applyOnTwoCSSProps = (cssStyleA, cssStyleB) => {
     };
   };
 };
+const applyOnFourCSSProps = (cssStyleA, cssStyleB, cssStyleC, cssStyleD) => {
+  return (value) => {
+    return {
+      [cssStyleA]: value,
+      [cssStyleB]: value,
+      [cssStyleC]: value,
+      [cssStyleD]: value,
+    };
+  };
+};
 const applyToCssPropWhenTruthy = (
   cssProp,
   cssPropValue,
@@ -6420,7 +6430,16 @@ const LAYOUT_PROPS = {
   column: () => {},
 };
 const OUTER_PROPS = {
-  margin: PASS_THROUGH,
+  // expanded into longhands (not PASS_THROUGH) so the shorthand "margin" CSS
+  // property is never written to the DOM: setting element.style.margin resets
+  // all four margin-* longhands, which would silently wipe out an explicit
+  // marginLeft/marginRight/marginTop/marginBottom applied alongside it.
+  margin: applyOnFourCSSProps(
+    "marginTop",
+    "marginRight",
+    "marginBottom",
+    "marginLeft",
+  ),
   marginLeft: PASS_THROUGH,
   marginRight: PASS_THROUGH,
   marginTop: PASS_THROUGH,
@@ -6433,7 +6452,15 @@ const OUTER_PROPS = {
   viewTransitionName: PASS_THROUGH,
 };
 const INNER_PROPS = {
-  padding: PASS_THROUGH,
+  // expanded into longhands for the same reason as "margin" above: the
+  // shorthand would otherwise reset paddingLeft/Right/Top/Bottom when both
+  // are applied on the same element (e.g. padding="xs" paddingLeft="m").
+  padding: applyOnFourCSSProps(
+    "paddingTop",
+    "paddingRight",
+    "paddingBottom",
+    "paddingLeft",
+  ),
   paddingLeft: PASS_THROUGH,
   paddingRight: PASS_THROUGH,
   paddingTop: PASS_THROUGH,
@@ -6494,6 +6521,7 @@ const DIMENSION_PROPS = {
     if (parentBoxFlow === "flex-y" || parentBoxFlow === "inline-flex-y") {
       return {
         alignSelf: "stretch",
+        width: "100%",
       };
     }
     // Can't use flexGrow — parent is not flex-x
@@ -28703,7 +28731,6 @@ const ButtonStyleCSSVars = {
   "borderWidth": "--button-border-width",
   "borderRadius": "--button-border-radius",
   "border": "--button-border",
-  "padding": "--button-padding",
   "paddingX": "--button-padding-x",
   "paddingY": "--button-padding-y",
   "paddingTop": "--button-padding-top",

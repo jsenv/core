@@ -479,7 +479,6 @@ const ButtonStyleCSSVars = {
   "borderWidth": "--button-border-width",
   "borderRadius": "--button-border-radius",
   "border": "--button-border",
-  "padding": "--button-padding",
   "paddingX": "--button-padding-x",
   "paddingY": "--button-padding-y",
   "paddingTop": "--button-padding-top",

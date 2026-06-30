@@ -51,20 +51,19 @@
 
       const MapStyleSelector = () => (
         <SelectorBox background="#e3f2fd">
-          <Box height="30">Map</Box>
+          <Box lineHeight="15px">Map</Box>
         </SelectorBox>
       );
       const MapZoneSelector = () => (
         <SelectorBox background="#e8f5e8">
-          <Box height="40">Zone</Box>
+          <Box lineHeight="30px">Zone</Box>
         </SelectorBox>
       );
       const MapDivisionSelectField = () => (
         <SelectorBox background="#fff3e0">
-          <Box height="50">Division</Box>
+          <Box lineHeight="25px">Division</Box>
         </SelectorBox>
       );
-
       const MapControls = () => (
         <Box
           flex
@@ -79,6 +78,20 @@
           <MapDivisionSelectField />
         </Box>
       );
+      const HeaderControls = () => {
+        return (
+          <Box
+            as="header"
+            flex
+            alignY="center"
+            height="60"
+            background="white"
+            border="1px solid black"
+          >
+            <MapControls />
+          </Box>
+        );
+      };
 
       const Demo = () => {
         return (
@@ -221,16 +234,7 @@
                 of "controls", each itself a flex row. Useful to check for
                 regressions in nested flex layouts.
               </p>
-              <Box
-                as="header"
-                flex
-                alignY="center"
-                height="60"
-                background="white"
-                style={{ border: "1px solid #e4e4e7" }}
-              >
-                <MapControls />
-              </Box>
+              <HeaderControls />
             </section>
 
             <h2>Column Layout</h2>
