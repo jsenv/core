@@ -99,7 +99,7 @@ export const useUIStateController = (
   const parentUIStateController = useContext(ParentUIStateControllerContext);
   const formContext = useContext(FormContext);
   const { id, uiAction } = props;
-  const ref = props.ref;
+  const elementRef = props.ref;
   const isProxy = Boolean(props["navi-control-proxy-for"]);
   if (persists === undefined && formContext) {
     persists = true;
@@ -118,7 +118,7 @@ export const useUIStateController = (
   );
   useLayoutEffect(() => {
     const controller = uiStateControllerRef.current;
-    const el = ref.current;
+    const el = elementRef.current;
     if (el) {
       el.__uiStateController__ = controller;
     }
@@ -192,7 +192,7 @@ export const useUIStateController = (
     parentUIStateController,
     isProxy,
     allowNameless,
-    elementRef: ref,
+    elementRef,
     props,
 
     id: props.id,
@@ -265,7 +265,9 @@ export const useUIStateController = (
           return false;
         }
       }
-      const controllerSig = getElementSignature(e.currentTarget || ref.current);
+      const controllerSig = getElementSignature(
+        e.currentTarget || elementRef.current,
+      );
       // if (persists) {
       //   setNavState(prop);
       // }
@@ -349,7 +351,7 @@ export const useUIStateController = (
       }
       debugUIState(e, `publishUIState(${JSON.stringify(newUIState)})`);
       publishUIState(newUIState, e);
-      const el = ref.current;
+      const el = elementRef.current;
       // Always notify the element that its UI state changed.
       // Listeners use this to stay in sync (e.g. input_effect.js tracks currentState,
       // useUIState subscribes for reactive updates). Separate from navi_set_ui_state
