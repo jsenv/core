@@ -299,6 +299,7 @@ const css = /* css */ `
     }
     &[data-icon] {
       --button-padding: 0;
+      display: inline-flex;
     }
     /* cta: call-to-action — special background, border matches background */
     &[data-cta] {
