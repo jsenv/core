@@ -1,4 +1,5 @@
 import {
+  createPubSub,
   getBorderSizes,
   pickPositionRelativeTo,
   snapToPixel,
@@ -17,7 +18,6 @@ import {
   markAutofocusRestoreOnClose,
   transferFocus,
 } from "../utils/focus/focus_transfer.js";
-import { useCleanup } from "../utils/use_cleanup.js";
 
 const css = /* css */ `
   .navi_popover {
@@ -70,13 +70,16 @@ export const Popover = (props) => {
 
   // Register the DOM-specific open/close mechanics with the controller, fresh
   // on every render so they close over the latest props (scrollTrap, etc.).
-  // The controller (owned by picker_custom.jsx) decides *when* these run.
+  // The controller (owned by picker_custom.jsx, including the unmount safety
+  // net) decides *when* these run. onopen runs outside of render (triggered
+  // by openController.requestOpen()), so it cannot call hooks — cleanup uses
+  // a plain pub/sub instead of a hook-based one.
   openController.onopen = (e) => {
     const popoverEl = ref.current;
     if (!popoverEl) {
       return undefined;
     }
-    const [addCleanup, cleanup] = useCleanup();
+    const [cleanup, addCleanup] = createPubSub(true);
     debugPopup(e, `openPopover()`);
     const focusedBeforeOpen = getFocusedBeforeTransfer(e);
     popoverEl.showPopover();
