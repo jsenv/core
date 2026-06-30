@@ -31500,24 +31500,15 @@ const FieldAsLabel = props => {
     children
   } = props;
   props.paddingWithControl = resolveSpacingSize(props.paddingWithControl, "s");
-  const [messageProps, remainingProps] = extractMessageAndRemainingProps(props);
-  const messagePropsRef = useRef();
-  messagePropsRef.current = messageProps;
   return jsx(Label, {
     "navi-field": "",
     styleCSSVars: FieldCSSVars,
     flex: vertical ? "y" : undefined,
     alignX: vertical ? "start" : undefined,
     "data-vertical": vertical ? "" : undefined,
-    ...remainingProps,
+    ...props,
     vertical: undefined,
-    children: jsx(MessagePropsRefContext.Provider, {
-      value: messagePropsRef,
-      children: jsx(ControlIdContext.Provider, {
-        value: props.htmlFor,
-        children: children
-      })
-    })
+    children: children
   });
 };
 const FieldCSSVars = {
@@ -31557,8 +31548,7 @@ const FIELD_PSEUDO_CLASSES = [":hover", ":active", ":focus", ":focus-visible", "
 const Label = props => {
   import.meta.css = [css$A, "@jsenv/navi/src/control/field.jsx"];
   const {
-    children,
-    ...rest
+    children
   } = props;
   const controlId = useContext(ControlIdContext);
   const [disabled, setDisabled] = useState(false);
@@ -31566,6 +31556,9 @@ const Label = props => {
   const [connected, setConnected] = useState(false);
   const defaultId = useId();
   const htmlFor = props.htmlFor || controlId || `label_auto_${defaultId}`;
+  const [messageProps, remainingProps] = extractMessageAndRemainingProps(props);
+  const messagePropsRef = useRef();
+  messagePropsRef.current = messageProps;
   return jsx(Box, {
     as: "label",
     htmlFor: htmlFor,
@@ -31576,7 +31569,7 @@ const Label = props => {
       ":disabled": disabled,
       ":read-only": readOnly
     },
-    ...rest,
+    ...remainingProps,
     onnavi_control_state: e => {
       setConnected(true);
       setDisabled(e.detail.disabled);
@@ -31587,9 +31580,12 @@ const Label = props => {
       setDisabled(false);
       setReadOnly(false);
     },
-    children: jsx(ControlIdContext.Provider, {
-      value: htmlFor,
-      children: children
+    children: jsx(MessagePropsRefContext.Provider, {
+      value: messagePropsRef,
+      children: jsx(ControlIdContext.Provider, {
+        value: htmlFor,
+        children: children
+      })
     })
   });
 };
@@ -40947,6 +40943,7 @@ const PickerButton = props => {
     ref,
     variant,
     icon,
+    iconSize = "m",
     placeholder,
     ui,
     maxLines = 1
@@ -40980,6 +40977,7 @@ const PickerButton = props => {
     styleCSSVars: PickerStyleCSSVars,
     variant: undefined,
     icon: undefined,
+    iconSize: undefined,
     ui: undefined,
     maxLines: undefined,
     dayLabel: undefined
@@ -41091,7 +41089,7 @@ const PickerButton = props => {
     }), variant === "headless" || ui === "default" ? null : jsx("span", {
       className: "navi_picker_right_slot",
       children: jsx(Icon, {
-        size: "m",
+        size: iconSize,
         children: icon === undefined ? jsx(ChevronDownSvg, {}) : icon
       })
     }), jsx(ControlFacadeChildrenWrapper, {

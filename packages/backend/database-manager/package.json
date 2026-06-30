@@ -42,7 +42,7 @@
     "@jsenv/navi": "../../frontend/navi",
     "@jsenv/plugin-preact": "../../related/plugin-preact",
     "@jsenv/server": "../../server",
-    "@preact/signals": "2.9.0",
+    "@preact/signals": "2.9.2",
     "preact": "11.0.0-beta.1"
   },
   "publishConfig": {
