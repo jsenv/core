@@ -1258,41 +1258,14 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
   const debugUIState = useDebugUIState();
   const debugFocus = useDebugFocus();
 
-  // The facade controller object below is created once and cached across
-  // renders (see the `controllerRef.current` early return). Its closures
-  // (registerChild/unregisterChild/onChildUIAction) must not capture
-  // `realUIStateController` directly: that parameter can legitimately point
-  // to a different controller instance on a later render (e.g. the picker's
-  // own controller getting recreated), and those closures would otherwise
-  // stay bound to the original instance forever. Indirecting through a ref
-  // that's refreshed on every render keeps every closure pointed at the
-  // current instance.
-  const realUIStateControllerRef = useRef(realUIStateController);
-  realUIStateControllerRef.current = realUIStateController;
-
-  useLayoutEffect(() => {
-    return realUIStateController.subscribe((newUIState, e) => {
-      if (updatingRef.current) {
-        return;
-      }
-      const child = firstChildControllerRef.current;
-      if (!child) {
-        return;
-      }
-      updatingRef.current = true;
-      const propagateDownEvent = new CustomEvent(
-        "propagate_down_set_ui_state",
-        { detail: {} },
-      );
-      chainEvent(propagateDownEvent, e);
-      child.setUIState(newUIState, propagateDownEvent);
-      updatingRef.current = false;
-    });
-  }, [realUIStateController]);
-
+  // The facade controller's closures (registerChild/unregisterChild/onChildUIAction)
+  // must not capture `realUIStateController` directly: that parameter can legitimately
+  // point to a different controller instance on a later render (e.g. the picker's own
+  // controller getting recreated). Instead, closures read `s.realUIStateController`
+  // from the stable scope object, which is kept current by `update` on every render.
   const scope = useRenderScope(
     // ── init: runs once on mount ───────────────────────────────────────────
-    () => {
+    (s) => {
       const canRegisterAsFacadeChild = (childController) => {
         if (childController.controlType === "button") return false;
         if (childController.controlType === "link") return false;
@@ -1342,11 +1315,11 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
               `[useUIFacadeStateController] "${childType}"${child.name ? ` name="${child.name}"` : ""} registered as the first child in the picker facade.`,
             );
             firstChildControllerRef.current = child;
-            realUIStateControllerRef.current.facadeChild = child;
+            s.realUIStateController.facadeChild = child;
             // If the picker already has a meaningful state (from value or defaultValue),
             // push it to the child on registration so it reflects the pre-set value
             // without firing uiAction (equivalent to defaultValue on the child itself).
-            const initialState = realUIStateControllerRef.current.uiState;
+            const initialState = s.realUIStateController.uiState;
             if (initialState !== undefined) {
               updatingRef.current = true;
               const initialEvent = new CustomEvent("initial_state_push", {
@@ -1360,7 +1333,7 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
         unregisterChild: (child) => {
           if (firstChildControllerRef.current === child) {
             firstChildControllerRef.current = null;
-            realUIStateControllerRef.current.facadeChild = null;
+            s.realUIStateController.facadeChild = null;
           }
         },
         getManagedControls: () => {
@@ -1387,10 +1360,7 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
             detail: {},
           });
           chainEvent(propagateUpEvent, e);
-          realUIStateControllerRef.current.setUIState(
-            child.uiState,
-            propagateUpEvent,
-          );
+          s.realUIStateController.setUIState(child.uiState, propagateUpEvent);
           updatingRef.current = false;
         },
       };
@@ -1405,7 +1375,10 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
       // No initial checkValidity() here — the facade has no controlHostProps and no children
       // have registered yet, so any check would be a no-op. The real validity check happens
       // when child controllers trigger UI actions through the facade.
-      return { controller: facadeUIStateController };
+      return {
+        controller: facadeUIStateController,
+        realUIStateController,
+      };
     },
     // ── update: runs every render after the first ─────────────────────────
     (s) => {
@@ -1413,9 +1386,32 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
       s.controller.ref = realUIStateController.ref;
       s.controller.uiStateSignal = realUIStateController.uiStateSignal;
       s.controller.controlHostProps = realUIStateController.controlHostProps;
-      return {};
+
+      return {
+        realUIStateController,
+      };
     },
   );
+
+  useLayoutEffect(() => {
+    return realUIStateController.subscribe((newUIState, e) => {
+      if (updatingRef.current) {
+        return;
+      }
+      const child = firstChildControllerRef.current;
+      if (!child) {
+        return;
+      }
+      updatingRef.current = true;
+      const propagateDownEvent = new CustomEvent(
+        "propagate_down_set_ui_state",
+        { detail: {} },
+      );
+      chainEvent(propagateDownEvent, e);
+      child.setUIState(newUIState, propagateDownEvent);
+      updatingRef.current = false;
+    });
+  }, [realUIStateController]);
 
   return scope.controller;
 };
