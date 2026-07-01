@@ -1263,7 +1263,7 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
 
   const scope = useRenderScope(
     // ── init: runs once on mount ───────────────────────────────────────────
-    (s) => {
+    () => {
       const canRegisterAsFacadeChild = (childController) => {
         if (childController.controlType === "button") return false;
         if (childController.controlType === "link") return false;
