@@ -97,6 +97,10 @@ export const useUIStateController = (
 
   const uiStateControllerRef = useRef();
   const parentUIStateController = useContext(ParentUIStateControllerContext);
+  // Always-current parent ref used by pass-through methods in the controller
+  // object literal (which is created once and can't be re-closed-over).
+  const parentUIStateControllerRef = useRef(parentUIStateController);
+  parentUIStateControllerRef.current = parentUIStateController;
   const formContext = useContext(FormContext);
   const { id, uiAction } = props;
   const isProxy = Boolean(props["navi-control-proxy-for"]);
@@ -360,7 +364,7 @@ export const useUIStateController = (
             }
             if (
               siblingController.parentUIStateController !==
-              parentUIStateController
+              parentUIStateControllerRef.current
             ) {
               continue;
             }
@@ -455,8 +459,8 @@ export const useUIStateController = (
         // state silently drifts out of sync with this child.
         if (
           e.type === "state_prop_change" &&
-          parentUIStateController &&
-          !parentUIStateController.hasStateProp
+          parentUIStateControllerRef.current &&
+          !parentUIStateControllerRef.current.hasStateProp
         ) {
           notifyParentAboutChildUIAction(e, { stateChanged: true });
         }
@@ -558,24 +562,23 @@ export const useUIStateController = (
     // Leaf controls don't aggregate children, but they act as a transparent
     // pass-through so that controls nested inside them (e.g. an Input inside
     // a List.Item) can bubble up registration to the nearest group ancestor.
+    // Uses parentUIStateControllerRef.current (not the closure-captured variable)
+    // so calls always reach the live parent even after a Suspense-driven swap.
     registerChild: (childUIStateController, options) => {
-      if (parentUIStateController) {
-        parentUIStateController.registerChild(childUIStateController, options);
-      }
+      parentUIStateControllerRef.current?.registerChild(
+        childUIStateController,
+        options,
+      );
     },
     unregisterChild: (childUIStateController) => {
-      if (parentUIStateController) {
-        parentUIStateController.unregisterChild(childUIStateController);
-      }
+      parentUIStateControllerRef.current?.unregisterChild(childUIStateController);
     },
     onChildUIAction: (childUIStateController, e, options) => {
-      if (parentUIStateController) {
-        parentUIStateController.onChildUIAction(
-          childUIStateController,
-          e,
-          options,
-        );
-      }
+      parentUIStateControllerRef.current?.onChildUIAction(
+        childUIStateController,
+        e,
+        options,
+      );
     },
   };
   uiStateControllerRef.current = uiStateController;
@@ -800,9 +803,11 @@ export const useUIGroupStateController = (
     );
   }
   const parentUIStateController = useContext(ParentUIStateControllerContext);
+  const parentUIStateControllerRef = useRef(parentUIStateController);
+  parentUIStateControllerRef.current = parentUIStateController;
   const hasValueProp = Object.hasOwn(props, "value");
   const hasDefaultValueProp = Object.hasOwn(props, "defaultValue");
-  const { id, name, value, defaultValue, uiAction, command } = props;
+  const { id, name, value, defaultValue, uiAction } = props;
   const ref = props.ref;
   const uiActionRef = useRef(uiAction);
   const fallbackState =
@@ -901,7 +906,9 @@ export const useUIGroupStateController = (
     groupUIStateController.onUIAction(e, {
       skipCommand: internalBehavior,
     });
-    const el = ref.current;
+    // Use controllerRef.current.ref rather than the closure `ref` so we always
+    // get the live ref even after a Suspense-driven remount updated the ref identity.
+    const el = controllerRef.current.ref.current;
     if (el) {
       dispatchInternalCustomEvent(el, "navi_ui_state_change", {
         event: e,
@@ -1090,10 +1097,10 @@ export const useUIGroupStateController = (
       if (skipCommand) {
         // Fire uiAction only — skip command to avoid re-triggering the same command
         // that caused this setUIState call in the first place.
-      } else if (command) {
-        const el = ref.current;
+      } else if (controllerRef.current.props.command) {
+        const el = controllerRef.current.ref.current;
         if (el) {
-          triggerNaviCommand(el, command, e);
+          triggerNaviCommand(el, controllerRef.current.props.command, e);
         }
       }
     },
@@ -1103,13 +1110,11 @@ export const useUIGroupStateController = (
     ) => {
       if (!isMonitoringChild(childUIStateController)) {
         // Filter rejected this child.
-        if (!allowCapture && parentUIStateController) {
+        const currentParent = parentUIStateControllerRef.current;
+        if (!allowCapture && currentParent) {
           // Not a boundary — bubble the child up to the nearest ancestor.
-          delegatedChildrenRef.current.set(
-            childUIStateController,
-            parentUIStateController,
-          );
-          parentUIStateController.registerChild(childUIStateController);
+          delegatedChildrenRef.current.set(childUIStateController, currentParent);
+          currentParent.registerChild(childUIStateController);
         }
         // allowCapture=true: hard boundary, stop bubbling and drop silently.
         // No parent: end of chain, drop silently.
