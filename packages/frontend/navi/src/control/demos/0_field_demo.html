@@ -24,8 +24,8 @@
           <h1 style={{ margin: 0 }}>Field</h1>
           <p style={{ margin: 0, color: "#555" }}>
             <code>Field</code> connects a label to a form control so clicking
-            the label focuses or activates the control. The dotted outline
-            shows the interactive zone.
+            the label focuses or activates the control. The dotted outline shows
+            the interactive zone.
           </p>
 
           <AsLabelDemo />
@@ -42,11 +42,11 @@
       const AsLabelDemo = () => (
         <Box flex="y" spacing="s">
           <h2 style={{ margin: 0 }}>
-            <code>{"<Field as=\"label\">"}</code>
+            <code>{'<Field as="label">'}</code>
           </h2>
           <p style={{ margin: 0, color: "#555" }}>
-            The <code>{"<label>"}</code> element wraps the control directly.
-            The browser connects them automatically — no <code>id</code>/
+            The <code>{"<label>"}</code> element wraps the control directly. The
+            browser connects them automatically — no <code>id</code>/
             <code>htmlFor</code> wiring needed. The whole label area is
             interactive.
           </p>
@@ -64,14 +64,18 @@
               label right (checkbox / radio)
             </span>
             <Field as="label" flex alignY="center" spacing="s" style={dotted}>
-              <Input type="checkbox" name="agree" />
-              I agree to the terms
+              <Input type="checkbox" name="agree" />I agree to the terms
             </Field>
 
             <span style={{ fontSize: "0.85em", color: "#888" }}>
               label above (vertical)
             </span>
-            <Field as="label" vertical spacing="s" style={{ ...dotted, alignSelf: "flex-start" }}>
+            <Field
+              as="label"
+              vertical
+              spacing="s"
+              style={{ ...dotted, alignSelf: "flex-start" }}
+            >
               Username
               <Input type="text" name="uv_above" placeholder="Enter username" />
             </Field>
@@ -79,7 +83,12 @@
             <span style={{ fontSize: "0.85em", color: "#888" }}>
               label below (vertical)
             </span>
-            <Field as="label" vertical spacing="s" style={{ ...dotted, alignSelf: "flex-start" }}>
+            <Field
+              as="label"
+              vertical
+              spacing="s"
+              style={{ ...dotted, alignSelf: "flex-start" }}
+            >
               <Input type="text" name="uv_below" placeholder="Enter username" />
               Username
             </Field>
@@ -88,51 +97,29 @@
       );
 
       /* ------------------------------------------------------------------ */
-      /* 2. Interactive zone and when to use Field as container              */
+      /* 2. Vertical interactive zone                                        */
       /* ------------------------------------------------------------------ */
       const InteractiveZoneDemo = () => (
         <Box flex="y" spacing="s">
-          <h2 style={{ margin: 0 }}>Interactive zone</h2>
+          <h2 style={{ margin: 0 }}>Vertical — interactive zone</h2>
           <p style={{ margin: 0, color: "#555" }}>
-            Because <code>as="label"</code> wraps everything, the interactive
-            zone is as wide as the widest child. In the vertical example below
-            the input is wider than the label text, so the space to the right
-            of "Short label" is also clickable — try it.
-          </p>
-
-          <Box flex="y" spacing="xs" alignX="start">
-            <Field
-              as="label"
-              vertical
-              spacing="s"
-              style={{ ...dotted, alignSelf: "flex-start" }}
-            >
-              Short label
-              <Input
-                type="text"
-                name="wide_input"
-                placeholder="wider than the label text"
-                style={{ width: "220px" }}
-              />
-            </Field>
-          </Box>
-
-          <p style={{ margin: 0, color: "#555" }}>
-            When the interactive zone should only cover the label text, use{" "}
-            <code>{"<Field>"}</code> as a container with a{" "}
-            <code>{"<Label>"}</code> inside. The field generates a shared id so
-            clicking the label still focuses the input, but the hit area is
-            limited to the label element. Use <code>paddingWithControl</code>{" "}
-            to set the gap — it becomes part of the label's click area, unlike
-            a flex <code>gap</code> or CSS <code>margin</code> which would
-            leave a dead zone.
+            In vertical layout the interactive zone stretches to the width of
+            the widest child. The space next to the label text is also clickable
+            — which can surprise. Use <code>{"<Field>"}</code> with a{" "}
+            <code>{"<Label>"}</code> inside to limit the hit area to the label
+            text only. The <code>paddingWithControl</code> gap stays clickable
+            (unlike a flex <code>gap</code> which would be a dead zone).
           </p>
 
           <Box flex="y" spacing="xs" alignX="start">
             <span style={{ fontSize: "0.85em", color: "#888" }}>
               vertical — label area only
             </span>
-            <Field vertical paddingWithControl="s" style={{ alignSelf: "flex-start" }}>
+            <Field
+              vertical
+              paddingWithControl="s"
+              style={{ alignSelf: "flex-start" }}
+            >
               <Label style={dotted}>Short label</Label>
               <Input
                 type="text"
@@ -160,15 +147,22 @@
         <Box flex="y" spacing="s">
           <h2 style={{ margin: 0 }}>Label in a separate component</h2>
           <p style={{ margin: 0, color: "#555" }}>
-            When the label cannot wrap the input — for instance the input is
-            in a child component loaded separately — pass an explicit{" "}
-            <code>htmlFor</code> to <code>{"<Field as=\"label\">"}</code>.
-            The inner control will receive the matching <code>id</code> via
-            context so the wiring stays automatic.
+            When the label cannot wrap the input — for instance the input is in
+            a child component loaded separately — pass an explicit{" "}
+            <code>htmlFor</code> to <code>{'<Field as="label">'}</code>. The
+            inner control will receive the matching <code>id</code> via context
+            so the wiring stays automatic.
           </p>
 
-          <Box flex="y" spacing="xs" alignX="start">
-            <Field as="label" flex alignY="center" spacing="s" style={dotted} htmlFor="my_separate_input">
+          <Box flex="y" alignX="start">
+            <Field
+              as="label"
+              flex
+              alignY="center"
+              spacing="s"
+              style={dotted}
+              htmlFor="my_separate_input"
+            >
               Password
             </Field>
             {/* The input lives elsewhere, receives id="my_separate_input" from context */}
@@ -294,7 +288,12 @@
           <Box flex="y" spacing="xs" alignX="start">
             <Field as="label" flex alignY="center" spacing="s" style={dotted}>
               Disabled
-              <Input type="text" name="dis1" defaultValue="cannot edit" disabled />
+              <Input
+                type="text"
+                name="dis1"
+                defaultValue="cannot edit"
+                disabled
+              />
             </Field>
             <Field as="label" flex alignY="center" spacing="s" style={dotted}>
               Read-only
@@ -302,7 +301,12 @@
             </Field>
             <Field flex alignY="center">
               <Label style={dotted}>Disabled (container)</Label>
-              <Input type="text" name="dis2" defaultValue="cannot edit" disabled />
+              <Input
+                type="text"
+                name="dis2"
+                defaultValue="cannot edit"
+                disabled
+              />
             </Field>
             <Field flex alignY="center">
               <Label style={dotted}>Read-only (container)</Label>
