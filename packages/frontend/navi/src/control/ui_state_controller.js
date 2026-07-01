@@ -27,29 +27,29 @@ import { FormContext } from "./form_context.js";
 import { createControlRules } from "./rules/control_rules.js";
 
 /**
- * Returns a stable object that is mutated in-place on every render.
+ * Returns a stable object that is mutated across renders.
  * Closures that capture the returned reference always read current values
- * because Object.assign updates the same object — no stale captures.
+ * because the same object reference is reused — no stale captures.
  *
- * The optional `init` function is called **once** when the scope is first
- * created. Use it to initialise values that must persist across renders
- * without being overwritten (e.g. signals, refs created at mount time).
+ * - `init(scope)` — called **once** on mount. Receives the (initially empty)
+ *   stable scope object and returns properties to assign to it. Use this to
+ *   create anything that must live for the component's full lifetime: signals,
+ *   pubsub pairs, the controller object itself, etc.
  *
- * @example
- * const scope = useRenderScope(
- *   { ref: props.ref, uiAction: props.uiAction },
- *   (scope) => { scope.mySignal = signal(initialValue); },
- * );
- * scope.mySignal.value = currentValue; // update the persistent signal each render
- * scope.uiAction(...)                  // always the current uiAction
+ * - `update(scope)` — called on every subsequent render. Receives the current
+ *   scope and returns properties to update. Use this to sync mutable values
+ *   (current props, parent controller, etc.) and run side-effectful logic like
+ *   checking whether a controlled `state` prop changed.
  */
-const useRenderScope = (state, init) => {
+const useRenderScope = (init, update) => {
   const scopeRef = useRef();
   if (!scopeRef.current) {
     scopeRef.current = {};
-    init?.(scopeRef.current);
+    Object.assign(scopeRef.current, init(scopeRef.current));
+  } else {
+    Object.assign(scopeRef.current, update(scopeRef.current));
   }
-  return Object.assign(scopeRef.current, state);
+  return scopeRef.current;
 };
 
 /**
@@ -121,7 +121,6 @@ export const useUIStateController = (
   const debugUIState = useDebugUIState();
   const debugFocus = useDebugFocus();
 
-  const uiStateControllerRef = useRef();
   const parentUIStateController = useContext(ParentUIStateControllerContext);
   const formContext = useContext(FormContext);
   if (persists === undefined && formContext) {
@@ -132,34 +131,381 @@ export const useUIStateController = (
   const isProxy = Boolean(props["navi-control-proxy-for"]);
 
   const scope = useRenderScope(
-    {
-      ref: props.ref,
-      id: props.id,
-      name: props.name,
-      props,
-      controlInfo,
-      uiAction: props.uiAction,
-      uiActionInternal,
-      parentUIStateController,
-    },
-    // init: called once at mount — creates the signal that lets the
-    // button-inheritance computed() re-subscribe when parent changes identity.
+    // ── init: runs once on mount ───────────────────────────────────────────
+    // Creates the controller and all long-lived objects. Captures first-render
+    // values for stable config (controlType, isRadio…); live values are read
+    // through `s` which is always updated by `update` before any method call.
     (s) => {
       s.parentUiStateSignalHolder = signal(
         parentUIStateController?.uiStateSignal ?? null,
       );
+
+      const { stateInitial } = controlInfo;
+      debugUIState(
+        `Creating "${controlType}" ui state controller - initial state:`,
+        JSON.stringify(stateInitial),
+      );
+      const [publishUIState, subscribeUIState] = createPubSub();
+      const ownUIStateSignal = signal(stateInitial);
+      const inherit =
+        controlType === "button" &&
+        !controlInfo.hasStateProp &&
+        parentUIStateController;
+      const uiStateSignal = inherit
+        ? computed(() => {
+            const parentSig = s.parentUiStateSignalHolder.value;
+            const parentUIState = parentSig?.value;
+            const ownUIState = ownUIStateSignal.value;
+            return ownUIState || parentUIState;
+          })
+        : ownUIStateSignal;
+
+      const controller = {
+        controlType,
+        parentUIStateController,
+        isProxy,
+        allowNameless,
+
+        props,
+        ref: props.ref,
+        id: props.id,
+        name: props.name,
+
+        state: stateInitial,
+        uiState: stateInitial,
+        uiStateSignal,
+        value: controlInfo.value,
+
+        facadeChild: null,
+        getManagedControls: () => {
+          if (controller.facadeChild) {
+            const child = controller.facadeChild;
+            const childManaged = child.getManagedControls();
+            if (childManaged.length > 0) return childManaged;
+            return [child];
+          }
+          return [];
+        },
+        onUIAction: (e, { skipCommand } = {}) => {
+          if (controlType === "button" && controller.controlHostProps.name) {
+            const buttonName = controller.controlHostProps.name;
+            const parentController = controller.parentUIStateController;
+            if (parentController && parentController.wantRequesterButtonState) {
+              const currentState = parentController.uiState;
+              const mergedState = {
+                ...currentState,
+                [buttonName]: controller.uiState,
+              };
+              parentController.syncInternalState(mergedState);
+              debugUIState(
+                `merging button state into parent control group:`,
+                mergedState,
+              );
+            }
+          }
+          const currentUIState = controller.uiState;
+          s.uiActionInternal?.(currentUIState, e);
+          if (s.uiAction) {
+            debugUIState(`calling uiAction for ${controlType}`, currentUIState);
+            s.uiAction(currentUIState, e);
+          }
+          if (skipCommand) {
+          } else {
+            const command = controller.controlHostProps.command;
+            if (command) {
+              const element = controller.ref.current;
+              if (element) {
+                debugUIState(
+                  `triggering command "${command}" for "${controlType}"`,
+                );
+                triggerNaviCommand(element, command, e);
+              }
+            }
+          }
+        },
+        setUIState: (newUIState, e) => {
+          const guardResult = controller.rules.guard.checkUIState(newUIState, e);
+          if (guardResult) {
+            if (Object.hasOwn(guardResult, "fixedValue")) {
+              newUIState = guardResult.fixedValue;
+            } else {
+              return false;
+            }
+          }
+          const controllerSig = getElementSignature(
+            e.currentTarget || controller.ref.current,
+          );
+          const currentUIState = controller.uiState;
+          const stateIsTheSame = compareTwoJsValues(newUIState, currentUIState);
+          if (stateIsTheSame) {
+            if (controlType === "button" || controlType === "link") {
+              if (!isInternalEvent(e)) controller.onUIAction(e);
+              return true;
+            }
+            debugUIState(
+              e,
+              `${controllerSig}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> state unchanged, no update needed`,
+            );
+            if (
+              controlType === "input" &&
+              controller.controlHostProps.type === "radio" &&
+              !isInternalEvent(e)
+            ) {
+              s.parentUIStateController?.onChildUIAction(controller, e, {
+                stateChanged: false,
+              });
+            }
+            if (e.currentTarget === null) return false;
+            if (e.type === "state_prop_change") return false;
+            if (e.type === "change") return false;
+            controller.onUIAction(e);
+            return false;
+          }
+          syncDomState(newUIState, e);
+          controller.uiState = newUIState;
+          ownUIStateSignal.value = newUIState;
+          const controlProxyFor =
+            controller.controlHostProps["navi-control-proxy-for"];
+          if (isRadio && newUIState && controller.name && !controlProxyFor) {
+            const siblings = getRadioSiblings(controller);
+            if (siblings) {
+              const siblingUncheckEvent = new CustomEvent(
+                "radio_sibling_uncheck",
+                { detail: {} },
+              );
+              chainEvent(siblingUncheckEvent, e);
+              for (const siblingController of siblings) {
+                if (siblingController === controller) continue;
+                if (
+                  siblingController.parentUIStateController !==
+                  s.parentUIStateController
+                ) {
+                  continue;
+                }
+                siblingController.setUIState(undefined, siblingUncheckEvent);
+              }
+            }
+          }
+          debugUIState(e, `publishUIState(${JSON.stringify(newUIState)})`);
+          publishUIState(newUIState, e);
+          const el = controller.ref.current;
+          if (el) {
+            dispatchInternalCustomEvent(el, "navi_ui_state_change", {
+              event: e,
+              value: newUIState,
+            });
+          }
+          if (!controlProxyFor) {
+            const proxyController = findProxyController(s.id);
+            if (proxyController) {
+              const mirrorEvent = new CustomEvent("proxy_mirror_state", {
+                detail: {},
+              });
+              chainEvent(mirrorEvent, e);
+              proxyController.setUIState(newUIState, mirrorEvent);
+            }
+          }
+          if (isInternalEvent(e)) {
+            if (e.type === "facade_child_mount_sync") {
+              const wasEmptyString =
+                currentUIState === "" && newUIState === undefined;
+              const wasUndefinedNowEmpty =
+                currentUIState === undefined && newUIState === "";
+              if (wasEmptyString) {
+                console.warn(
+                  `[navi] Picker mount sync changed state from "" to undefined. ` +
+                    `This will call uiAction on mount, which is likely unintended. ` +
+                    `Initialise the signal with undefined instead of "" to avoid this.`,
+                );
+              } else if (wasUndefinedNowEmpty) {
+                console.warn(
+                  `[navi] Picker mount sync changed state from undefined to "". ` +
+                    `This will call uiAction on mount, which is likely unintended. ` +
+                    `The child component is emitting "" for an empty value — it should emit undefined instead.`,
+                );
+              }
+            }
+            if (e.type !== "initial_state_push") {
+              controller.onUIAction(e, { skipCommand: true });
+            }
+            if (e.type === "facade_propagate_up") {
+              s.parentUIStateController?.onChildUIAction(controller, e, {
+                stateChanged: true,
+              });
+            }
+            if (
+              e.type === "state_prop_change" &&
+              s.parentUIStateController &&
+              !s.parentUIStateController.hasStateProp
+            ) {
+              s.parentUIStateController.onChildUIAction(controller, e, {
+                stateChanged: true,
+              });
+            }
+            return true;
+          }
+          s.parentUIStateController?.onChildUIAction(controller, e, {
+            stateChanged: true,
+          });
+          if (controlProxyFor) {
+            const targetController = getUIStateControllerById(controlProxyFor);
+            if (targetController) {
+              debugUIState(
+                e,
+                `forwarding set_ui_state "${newUIState}" to ${getElementSignature(targetController.ref.current)}`,
+              );
+              const forwardEvent = new CustomEvent(
+                "proxy_forward_set_ui_state",
+                { detail: {} },
+              );
+              chainEvent(forwardEvent, e);
+              targetController.setUIState(newUIState, forwardEvent);
+            }
+          }
+          let syntheticInputFired = false;
+          if (el) {
+            const existingInputEvent = findEvent(e, (eInChain) => {
+              return eInChain.type === "input" && eInChain.target === el;
+            });
+            if (!existingInputEvent) {
+              if (el.tagName === "INPUT") {
+                if (el.type === "radio" || el.type === "checkbox") {
+                  debugUIState(
+                    e,
+                    "dispatching synthetic input event without data for checkbox/radio",
+                  );
+                  el.dispatchEvent(new Event("input", { bubbles: true }));
+                  syntheticInputFired = true;
+                } else {
+                  debugUIState(
+                    e,
+                    `dispatching synthetic input event with data "${newUIState}" for input`,
+                  );
+                  el.dispatchEvent(
+                    new InputEvent("input", {
+                      bubbles: true,
+                      cancelable: true,
+                      inputType: "insertText",
+                      data: newUIState,
+                    }),
+                  );
+                  syntheticInputFired = true;
+                }
+              }
+              // TODO: select, textarea
+            }
+          }
+          if (!syntheticInputFired) controller.onUIAction(e);
+          if (isInternalEvent(e)) {
+            controller.rules.validation.checkValidity({ event: e });
+          } else {
+            controller.rules.validation.syncValidity(e);
+          }
+          return true;
+        },
+        clearUIState: (e) => {
+          const isCheckable =
+            controlType === "input" &&
+            (props.type === "radio" || props.type === "checkbox");
+          controller.setUIState(isCheckable ? undefined : "", e);
+        },
+        resetUIState: (e) => {
+          controller.setUIState(controller.state, e);
+        },
+        onActionEnd: async (e) => {
+          debugUIState(`"${controlType}" actionEnd called`);
+          controller.rules.validation.syncValidity(e);
+        },
+        onActionError: (e) => {
+          debugUIState(`"${controlType}" actionError called`);
+          controller.rules.validation.syncValidity(e, { report: true });
+        },
+        subscribe: subscribeUIState,
+        // Leaf controls act as a transparent pass-through so that controls
+        // nested inside them (e.g. an Input inside a List.Item) can bubble
+        // up registration to the nearest group ancestor.
+        registerChild: (childUIStateController, options) => {
+          s.parentUIStateController?.registerChild(
+            childUIStateController,
+            options,
+          );
+        },
+        unregisterChild: (childUIStateController) => {
+          s.parentUIStateController?.unregisterChild(childUIStateController);
+        },
+        onChildUIAction: (childUIStateController, e, options) => {
+          s.parentUIStateController?.onChildUIAction(
+            childUIStateController,
+            e,
+            options,
+          );
+        },
+      };
+
+      const rules = createControlRules(controller, {
+        debugPopup,
+        debugInteraction,
+        debugUIState,
+        debugFocus,
+      });
+      controller.rules = rules;
+      // Include all values that controller methods read from the scope so they
+      // are available immediately — even if no re-render happens before the
+      // first user interaction (update only runs on re-renders, not on mount).
+      return {
+        controller,
+        ref: props.ref,
+        id: props.id,
+        name: props.name,
+        props,
+        controlInfo,
+        uiAction: props.uiAction,
+        uiActionInternal,
+        parentUIStateController,
+      };
+    },
+    // ── update: runs every render after the first ─────────────────────────
+    // Syncs public-facing fields and handles controlled state prop changes.
+    (s) => {
+      const { controller } = s;
+      controller.ref = props.ref;
+      controller.id = props.id;
+      controller.name = props.name;
+      controller.props = props;
+      controller.parentUIStateController = parentUIStateController;
+      const { value, hasStateProp, state, stateInitial } = controlInfo;
+      controller.value = value;
+      if (hasStateProp) {
+        controller.hasStateProp = true;
+        const currentState = controller.state;
+        if (!compareTwoJsValues(state, currentState)) {
+          controller.state = state;
+          controller.setUIState(state, new CustomEvent("state_prop_change"));
+        }
+      } else if (controller.hasStateProp) {
+        controller.hasStateProp = false;
+        controller.state = stateInitial;
+      }
+      return {
+        ref: props.ref,
+        id: props.id,
+        name: props.name,
+        props,
+        controlInfo,
+        uiAction: props.uiAction,
+        uiActionInternal,
+        parentUIStateController,
+      };
     },
   );
   scope.parentUiStateSignalHolder.value =
     parentUIStateController?.uiStateSignal ?? null;
 
-  // DOM binding: runs once on mount, cleans up on unmount.
+  const { controller } = scope;
+
   useLayoutEffect(() => {
-    const controller = uiStateControllerRef.current;
     const el = controller.ref.current;
-    if (el) {
-      el.__uiStateController__ = controller;
-    }
+    if (el) el.__uiStateController__ = controller;
     return () => {
       if (el && el.__uiStateController__ === controller) {
         delete el.__uiStateController__;
@@ -167,469 +513,20 @@ export const useUIStateController = (
       onUIStateControllerDestroyed(controller);
     };
   }, []);
-  // Parent registration: re-runs when parent controller changes identity.
-  // The parent is captured locally at effect-run time so the cleanup always
-  // unregisters from the correct (old) parent, not whatever parent is current
-  // at cleanup time.
   useLayoutEffect(() => {
     const parent = scope.parentUIStateController;
     if (!parent) return undefined;
-    const controller = uiStateControllerRef.current;
     debugUIState(`"${controlType}" registering into "${parent.controlType}"`);
     parent.registerChild(controller);
     return () => {
-      debugUIState(`"${controlType}" unregistering from "${parent.controlType}"`);
+      debugUIState(
+        `"${controlType}" unregistering from "${parent.controlType}"`,
+      );
       parent.unregisterChild(controller);
     };
   }, [parentUIStateController]);
 
-  const existingUIStateController = uiStateControllerRef.current;
-  if (existingUIStateController) {
-    // Sync all public-facing fields for external callers (control_validation.js,
-    // control_callout.js, etc.) from the render scope — one place, not scattered.
-    existingUIStateController.ref = scope.ref;
-    existingUIStateController.id = scope.id;
-    existingUIStateController.name = scope.name;
-    existingUIStateController.props = scope.props;
-    const { value, hasStateProp, state, stateInitial } = controlInfo;
-    existingUIStateController.value = value;
-    if (hasStateProp) {
-      existingUIStateController.hasStateProp = true;
-      const currentState = existingUIStateController.state;
-      if (!compareTwoJsValues(state, currentState)) {
-        existingUIStateController.state = state;
-        existingUIStateController.setUIState(
-          state,
-          new CustomEvent("state_prop_change"),
-        );
-      }
-    } else if (existingUIStateController.hasStateProp) {
-      existingUIStateController.hasStateProp = false;
-      existingUIStateController.state = stateInitial;
-    }
-    return existingUIStateController;
-  }
-  const { stateInitial } = controlInfo;
-  debugUIState(
-    `Creating "${controlType}" ui state controller - initial state:`,
-    JSON.stringify(stateInitial),
-  );
-  const [publishUIState, subscribeUIState] = createPubSub();
-  const ownUIStateSignal = signal(stateInitial);
-  const inherit =
-    controlType === "button" &&
-    !controlInfo.hasStateProp &&
-    parentUIStateController;
-  const uiStateSignal = inherit
-    ? computed(() => {
-        // Read through the holder signal (reactive) so that when the parent
-        // controller changes identity and we update the holder, this computed
-        // re-subscribes to the NEW parent's uiStateSignal automatically.
-        const parentSig = scope.parentUiStateSignalHolder.value;
-        const parentUIState = parentSig?.value;
-        const ownUIState = ownUIStateSignal.value;
-        return ownUIState || parentUIState;
-      })
-    : ownUIStateSignal;
-
-  const uiStateController = {
-    controlType,
-    parentUIStateController,
-    isProxy,
-    allowNameless,
-
-    props,
-    ref: props.ref,
-    id: props.id,
-    name: props.name,
-
-    state: stateInitial,
-    uiState: stateInitial,
-    uiStateSignal,
-    value: controlInfo.value,
-
-    facadeChild: null,
-    getManagedControls: () => {
-      if (uiStateController.facadeChild) {
-        const child = uiStateController.facadeChild;
-        const childManaged = child.getManagedControls();
-        if (childManaged.length > 0) {
-          return childManaged;
-        }
-        return [child];
-      }
-      return [];
-    },
-    onUIAction: (e, { skipCommand } = {}) => {
-      if (controlType === "button" && uiStateController.controlHostProps.name) {
-        const buttonName = uiStateController.controlHostProps.name;
-        const parentController = uiStateController.parentUIStateController;
-        if (parentController && parentController.wantRequesterButtonState) {
-          const currentState = parentController.uiState;
-          const mergedState = {
-            ...currentState,
-            [buttonName]: uiStateController.uiState,
-          };
-          parentController.syncInternalState(mergedState);
-          debugUIState(
-            `merging button state into parent control group:`,
-            mergedState,
-          );
-        }
-      }
-      // Trigger uiAction/command side effects without changing UI state.
-      const currentUIState = uiStateController.uiState;
-      scope.uiActionInternal?.(currentUIState, e);
-      if (scope.uiAction) {
-        debugUIState(`calling uiAction for ${controlType}`, currentUIState);
-        scope.uiAction(currentUIState, e);
-      }
-      if (skipCommand) {
-      } else {
-        const command = uiStateController.controlHostProps.command;
-        if (command) {
-          const element = uiStateController.ref.current;
-          if (element) {
-            debugUIState(
-              `triggering command "${command}" for "${controlType}"`,
-            );
-            triggerNaviCommand(element, command, e);
-          }
-        }
-      }
-    },
-    setUIState: (newUIState, e) => {
-      const guardResult = uiStateController.rules.guard.checkUIState(
-        newUIState,
-        e,
-      );
-      if (guardResult) {
-        if (Object.hasOwn(guardResult, "fixedValue")) {
-          newUIState = guardResult.fixedValue;
-          // fall through — continue with truncated value (callout already shown by guard)
-        } else {
-          return false;
-        }
-      }
-      const controllerSig = getElementSignature(
-        e.currentTarget || uiStateController.ref.current,
-      );
-      // if (persists) {
-      //   setNavState(prop);
-      // }
-      const currentUIState = uiStateController.uiState;
-      const stateIsTheSame = compareTwoJsValues(newUIState, currentUIState);
-      if (stateIsTheSame) {
-        if (controlType === "button" || controlType === "link") {
-          if (!isInternalEvent(e)) {
-            uiStateController.onUIAction(e);
-          }
-          return true;
-        }
-        debugUIState(
-          e,
-          `${controllerSig}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> state unchanged, no update needed`,
-        );
-        if (
-          controlType === "input" &&
-          uiStateController.controlHostProps.type === "radio" &&
-          !isInternalEvent(e)
-        ) {
-          scope.parentUIStateController?.onChildUIAction(
-            uiStateController,
-            e,
-            { stateChanged: false },
-          );
-        }
-        // A stale/reused event (currentTarget is null) means this is a debounced
-        // callback firing the original input event after a timeout. The state hasn't
-        // changed and this is not a scope user gesture — skip uiAction and command.
-        if (e.currentTarget === null) {
-          return false;
-        }
-        // state_prop_change with the same uiState means the state prop was updated
-        // to match what the user already has in the UI (e.g. action completed and
-        // synced state back). No real user gesture — skip uiAction and command.
-        if (e.type === "state_prop_change") {
-          return false;
-        }
-        // "change" fires after "input" for native inputs (date, color, etc.).
-        // The "input" event already updated the state and fired uiAction.
-        // When state is unchanged here it means "input" already ran — skip to
-        // avoid a duplicate uiAction on the same user gesture.
-        if (e.type === "change") {
-          return false;
-        }
-        uiStateController.onUIAction(e);
-        return false;
-      }
-      // set immediatly (don't wait for preact re-render) so ui is in the right state for:
-      // - side effect
-      // - any "input" event that might be dispatched below
-      syncDomState(newUIState, e);
-      uiStateController.uiState = newUIState;
-      ownUIStateSignal.value = newUIState;
-      // Radio group: when a radio becomes checked, uncheck all siblings.
-      // We only update their UIState — no parent notification, no synthetic
-      // input event (the browser never fires input on the unchecked radios,
-      // and we don't want to trigger their action flow with a stale DOM value).
-      // Uses the in-memory registry instead of DOM queries so this works even
-      // when sibling items are virtualized (not in the DOM).
-      // Form scoping is preserved by comparing parentUIStateController references.
-      const controlProxyFor =
-        uiStateController.controlHostProps["navi-control-proxy-for"];
-      if (isRadio && newUIState && uiStateController.name && !controlProxyFor) {
-        const siblings = getRadioSiblings(uiStateController);
-        if (siblings) {
-          const siblingUncheckEvent = new CustomEvent("radio_sibling_uncheck", {
-            detail: {},
-          });
-          chainEvent(siblingUncheckEvent, e);
-          for (const siblingController of siblings) {
-            if (siblingController === uiStateController) {
-              continue;
-            }
-            if (
-              siblingController.parentUIStateController !==
-              scope.parentUIStateController
-            ) {
-              continue;
-            }
-            siblingController.setUIState(undefined, siblingUncheckEvent);
-          }
-        }
-      }
-      debugUIState(e, `publishUIState(${JSON.stringify(newUIState)})`);
-      publishUIState(newUIState, e);
-      const el = uiStateController.ref.current;
-      // Always notify the element that its UI state changed.
-      // Listeners use this to stay in sync (e.g. input_effect.js tracks currentState,
-      // useUIState subscribes for reactive updates). Separate from navi_set_ui_state
-      // which is the command; navi_ui_state_change is the notification.
-      if (el) {
-        dispatchInternalCustomEvent(el, "navi_ui_state_change", {
-          event: e,
-          value: newUIState,
-        });
-      }
-      // When this controller is a real input that has a visible proxy
-      // (linked via `navi-control-proxy-for`), mirror the new state to the
-      // proxy DOM synchronously. Otherwise the proxy would only catch up
-      // later through a React re-render — visible as e.g. two radios
-      // appearing checked at once between the real input update and the
-      // next render (radio_sibling_uncheck case).
-      if (!controlProxyFor) {
-        // Find any mounted controller that declared itself as a proxy for this one.
-        // Communicates directly to the proxy controller — no DOM query needed.
-        const proxyController = findProxyController(scope.id);
-        if (proxyController) {
-          const mirrorEvent = new CustomEvent("proxy_mirror_state", {
-            detail: {},
-          });
-          chainEvent(mirrorEvent, e);
-          proxyController.setUIState(newUIState, mirrorEvent);
-        }
-      }
-      if (isInternalEvent(e)) {
-        if (e.type === "facade_child_mount_sync") {
-          // Warn when the picker's initial signal value is "" but the list
-          // resolved to undefined (no selection). These are semantically
-          // equivalent but technically different, so the mount-sync registers
-          // as a state change and fires uiAction unexpectedly.
-          // Fix: initialise the signal with undefined instead of "".
-          const wasEmptyString =
-            currentUIState === "" && newUIState === undefined;
-          const wasUndefinedNowEmpty =
-            currentUIState === undefined && newUIState === "";
-          if (wasEmptyString) {
-            console.warn(
-              `[navi] Picker mount sync changed state from "" to undefined. ` +
-                `This will call uiAction on mount, which is likely unintended. ` +
-                `Initialise the signal with undefined instead of "" to avoid this.`,
-            );
-          } else if (wasUndefinedNowEmpty) {
-            console.warn(
-              `[navi] Picker mount sync changed state from undefined to "". ` +
-                `This will call uiAction on mount, which is likely unintended. ` +
-                `The child component is emitting "" for an empty value — it should emit undefined instead.`,
-            );
-          }
-        }
-        // initial_state_push is pure initialization (equivalent to defaultValue on the
-        // child itself): skip uiAction entirely so no side effects fire on mount.
-        if (e.type !== "initial_state_push") {
-          // Still fire uiAction so external listeners (e.g. signals) stay in
-          // sync, but do NOT fire the command and do NOT notify the parent —
-          // both would cause an infinite loop when a parent cascades state
-          // down to its children (child command would re-trigger the cascade).
-          uiStateController.onUIAction(e, {
-            skipCommand: true,
-          });
-        }
-        // Exception: when the facade propagates a child state change up to the
-        // real picker input, also notify the parent group (e.g. Form) so it
-        // keeps its cached aggregated state in sync and fires its own uiAction.
-        // This is consistent with how a direct Input inside a Form behaves:
-        // the Form's uiAction fires on every value change.
-        if (e.type === "facade_propagate_up") {
-          scope.parentUIStateController?.onChildUIAction(
-            uiStateController,
-            e,
-            { stateChanged: true },
-          );
-        }
-        // Exception: state_prop_change can only fire on a control with its own
-        // controlled state/value prop (see hasStateProp above) — groups never
-        // cascade state down into such children (they're explicitly skipped,
-        // see shouldPropagateStateToChild/hasStateProp checks), so this change
-        // can never be an echo of the parent's own cascade. The loop risk this
-        // suppression exists for only applies when the parent itself just pushed
-        // this value down, which requires the parent to be controlled (have its
-        // own state/value prop). When the parent is "stateless" (uncontrolled),
-        // notifying it is always safe and necessary — otherwise its aggregated
-        // state silently drifts out of sync with this child.
-        if (
-          e.type === "state_prop_change" &&
-          scope.parentUIStateController &&
-          !scope.parentUIStateController.hasStateProp
-        ) {
-          scope.parentUIStateController.onChildUIAction(
-            uiStateController,
-            e,
-            { stateChanged: true },
-          );
-        }
-        return true;
-      }
-      scope.parentUIStateController?.onChildUIAction(
-        uiStateController,
-        e,
-        { stateChanged: true },
-      );
-      if (controlProxyFor) {
-        // Proxy: forward the state change to the real input.
-        // Use a dedicated internal event so that when the real input's setUIState
-        // sees stateIsTheSame=true (already updated by the real input's own flow),
-        // it does NOT fire notifyParentAboutChildUIAction(stateChanged=false) back
-        // to the group — which would trigger the group action with a stale value.
-        const targetController = getUIStateControllerById(controlProxyFor);
-        if (targetController) {
-          debugUIState(
-            e,
-            `forwarding set_ui_state "${newUIState}" to ${getElementSignature(targetController.ref.current)}`,
-          );
-          const forwardEvent = new CustomEvent("proxy_forward_set_ui_state", {
-            detail: {},
-          });
-          chainEvent(forwardEvent, e);
-          targetController.setUIState(newUIState, forwardEvent);
-        }
-      }
-      let syntheticInputFired = false;
-      if (el) {
-        // Dispatch a synthetic "input" event so external listeners see the new
-        // value. Skip when an input event on this element already exists in the chain.
-        const existingInputEvent = findEvent(e, (eInChain) => {
-          return eInChain.type === "input" && eInChain.target === el;
-        });
-        if (!existingInputEvent) {
-          if (el.tagName === "INPUT") {
-            if (el.type === "radio" || el.type === "checkbox") {
-              debugUIState(
-                e,
-                "dispatching synthetic input event without data for checkbox/radio",
-              );
-              el.dispatchEvent(new Event("input", { bubbles: true }));
-              syntheticInputFired = true;
-            } else {
-              debugUIState(
-                e,
-                `dispatching synthetic input event with data "${newUIState}" for input`,
-              );
-              el.dispatchEvent(
-                new InputEvent("input", {
-                  bubbles: true,
-                  cancelable: true,
-                  inputType: "insertText",
-                  data: newUIState,
-                }),
-              );
-              syntheticInputFired = true;
-            }
-          }
-          // TODO: select, textarea
-        }
-      }
-      // When a synthetic "input" event was dispatched, the stateIsTheSame path
-      // already called onUIAction via the input event handler — skip here to
-      // avoid a duplicate uiAction on the same user gesture.
-      if (!syntheticInputFired) {
-        uiStateController.onUIAction(e);
-      }
-      // Sync validity after state change: re-check constraints against the new value.
-      // Internal events (programmatic) → silent check only.
-      // User events → full sync (may open/close callout).
-      if (isInternalEvent(e)) {
-        uiStateController.rules.validation.checkValidity({ event: e });
-      } else {
-        uiStateController.rules.validation.syncValidity(e);
-      }
-      return true;
-    },
-    clearUIState: (e) => {
-      // Radio and checkbox "unchecked" state is `undefined`, not `""`.
-      // Passing `""` would set checked=true because `"" !== undefined`.
-      const isCheckable =
-        controlType === "input" &&
-        (props.type === "radio" || props.type === "checkbox");
-      uiStateController.setUIState(isCheckable ? undefined : "", e);
-    },
-    resetUIState: (e) => {
-      uiStateController.setUIState(uiStateController.state, e);
-    },
-    onActionEnd: async (e) => {
-      debugUIState(`"${controlType}" actionEnd called`);
-      // wait for preact to re-render to update readonly as action end side effects are runned
-      // await new Promise((r) => requestAnimationFrame(r));
-      uiStateController.rules.validation.syncValidity(e);
-    },
-    onActionError: (e) => {
-      debugUIState(`"${controlType}" actionError called`);
-      uiStateController.rules.validation.syncValidity(e, { report: true });
-    },
-    subscribe: subscribeUIState,
-    // Leaf controls don't aggregate children, but they act as a transparent
-    // pass-through so that controls nested inside them (e.g. an Input inside
-    // a List.Item) can bubble up registration to the nearest group ancestor.
-    // Reads from the render scope so calls always reach the current parent.
-    registerChild: (childUIStateController, options) => {
-      scope.parentUIStateController?.registerChild(
-        childUIStateController,
-        options,
-      );
-    },
-    unregisterChild: (childUIStateController) => {
-      scope.parentUIStateController?.unregisterChild(
-        childUIStateController,
-      );
-    },
-    onChildUIAction: (childUIStateController, e, options) => {
-      scope.parentUIStateController?.onChildUIAction(
-        childUIStateController,
-        e,
-        options,
-      );
-    },
-  };
-  uiStateControllerRef.current = uiStateController;
-  const rules = createControlRules(uiStateController, {
-    debugPopup,
-    debugInteraction,
-    debugUIState,
-    debugFocus,
-  });
-  uiStateController.rules = rules;
-  return uiStateController;
+  return controller;
 };
 
 /**
@@ -786,7 +683,6 @@ export const useUIGroupStateController = (
   const hasDefaultValueProp = Object.hasOwn(props, "defaultValue");
   const { id, name, value, defaultValue, uiAction } = props;
   const ref = props.ref;
-  const uiActionRef = useRef(uiAction);
   const fallbackState =
     stateType === "array"
       ? EMPTY_ARRAY
@@ -795,9 +691,7 @@ export const useUIGroupStateController = (
         : undefined;
   const childUIStateControllerArrayRef = useRef([]);
   const childUIStateControllerArray = childUIStateControllerArrayRef.current;
-  const controllerRef = useRef();
-  // Tracks children this controller rejected and delegated upward (bubble-up
-  // registration). Used to forward onChildUIAction and unregisterChild.
+  // Tracks children rejected by the filter and delegated upward (bubble-up).
   const delegatedChildrenRef = useRef(new Map());
 
   const groupIsRenderingRef = useRef(false);
@@ -805,21 +699,387 @@ export const useUIGroupStateController = (
   groupIsRenderingRef.current = true;
   pendingChangeRef.current = false;
 
-  const scope = useRenderScope({ ref, parentUIStateController });
+  const isMonitoringChild = (childUIStateController) => {
+    if (childUIStateController.isProxy) return false;
+    if (
+      resolvedChildControlFilter &&
+      !resolvedChildControlFilter(childUIStateController)
+    ) {
+      return false;
+    }
+    return true;
+  };
+  const shouldPropagateStateToChild = (childUIStateController) => {
+    if (!isMonitoringChild(childUIStateController)) return false;
+    if (childUIStateController.controlType === "button") return false;
+    if (childUIStateController.controlType === "link") return false;
+    return true;
+  };
+
+  const scope = useRenderScope(
+    // ── init: runs once on mount ───────────────────────────────────────────
+    (s) => {
+      debugUIGroup(
+        `Creating "${controlType}" ui state controller (monitoring some descendants ui state(s))"`,
+      );
+      const [publishUIState, subscribeUIState] = createPubSub();
+      const uiStateSignal = signal(fallbackState);
+
+      // onChange and applyState live inside init so they close over the stable
+      // signals/pubsub without needing external refs.
+      const onChange = (e, { notifyExternal }) => {
+        if (groupIsRenderingRef.current) {
+          pendingChangeRef.current = true;
+          return;
+        }
+        const aggChildState = resolvedAggregateChildStates(
+          childUIStateControllerArray,
+          fallbackState,
+        );
+        const groupUIState =
+          aggChildState === undefined ? fallbackState : aggChildState;
+        debugUIGroup(
+          e,
+          `${controlType}.getUIState -> ${JSON.stringify(groupUIState)}`,
+        );
+        const { controller } = s;
+        if (notifyExternal === true) {
+          applyState(groupUIState, e);
+        } else if (notifyExternal === "silent") {
+          controller.syncInternalState(groupUIState, e);
+          s.parentUIStateController?.onChildUIAction(controller, e, {
+            stateChanged: true,
+            silent: true,
+          });
+        } else {
+          controller.syncInternalState(groupUIState, e);
+        }
+      };
+
+      const applyState = (newUIState, e, { internalBehavior = false } = {}) => {
+        const { controller } = s;
+        const currentUIState = controller.uiState;
+        controller.uiState = newUIState;
+        uiStateSignal.value = newUIState;
+        debugUIGroup(
+          e,
+          `${controlType}.applyState(${JSON.stringify(newUIState)}, "${e.type}") -> updates from ${JSON.stringify(currentUIState)} to ${JSON.stringify(newUIState)}`,
+        );
+        publishUIState(newUIState);
+        s.parentUIStateController?.onChildUIAction(controller, e, {
+          stateChanged: true,
+        });
+        controller.onUIAction(e, { skipCommand: internalBehavior });
+        const el = controller.ref.current;
+        if (el) {
+          dispatchInternalCustomEvent(el, "navi_ui_state_change", {
+            event: e,
+            value: newUIState,
+          });
+        }
+      };
+
+      const controller = {
+        controlType,
+        id,
+        name,
+        value,
+        defaultValue,
+        hasValueProp,
+        hasDefaultValueProp,
+        props,
+        uiState: fallbackState,
+        uiStateSignal,
+        wantRequesterButtonState,
+        ref,
+        getPropFromState: (uiState) => uiState,
+        distributeChildUIState: resolvedDistributeChildUIState,
+        setUIState: (newUIState, e) => {
+          if (
+            stateType === "object" &&
+            (newUIState === null || typeof newUIState !== "object")
+          ) {
+            console.warn(
+              `[${controlType}] setUIState received a non-object value: ${JSON.stringify(newUIState)} (expected an object). Ignoring.`,
+              newUIState,
+            );
+            return;
+          }
+          if (stateType === "array" && !Array.isArray(newUIState)) {
+            console.warn(
+              `[${controlType}] setUIState received a non-array value: ${JSON.stringify(newUIState)} (expected an array). Ignoring.`,
+              newUIState,
+            );
+            return;
+          }
+          const propagateEventType =
+            e.type === "initial_state_push"
+              ? "initial_state_push"
+              : "propagate_down_set_ui_state";
+          const propagateDownEvent = new CustomEvent(propagateEventType, {
+            detail: {},
+          });
+          chainEvent(propagateDownEvent, e);
+          for (const childUIStateController of childUIStateControllerArray) {
+            if (!shouldPropagateStateToChild(childUIStateController)) continue;
+            const childNewState = resolvedDistributeChildUIState(
+              newUIState,
+              childUIStateController,
+            );
+            if (childNewState === CANNOT_DERIVE) continue;
+            childUIStateController.setUIState(childNewState, propagateDownEvent);
+          }
+          const aggChildState = resolvedAggregateChildStates(
+            childUIStateControllerArray,
+            fallbackState,
+          );
+          const groupUIState =
+            aggChildState === undefined ? fallbackState : aggChildState;
+          if (e.type === "initial_state_push") {
+            controller.syncInternalState(groupUIState);
+            return;
+          }
+          applyState(groupUIState, e, { internalBehavior: true });
+        },
+        syncInternalState: (newUIState) => {
+          const currentUIState = controller.uiState;
+          if (newUIState === currentUIState) return;
+          controller.uiState = newUIState;
+          uiStateSignal.value = newUIState;
+          publishUIState(newUIState);
+        },
+        onUIAction: (e, { skipCommand } = {}) => {
+          const currentUIState = controller.uiState;
+          s.uiAction?.(currentUIState, e);
+          s.uiActionInternal?.(currentUIState, e);
+          if (!skipCommand && controller.props.command) {
+            const el = controller.ref.current;
+            if (el) triggerNaviCommand(el, controller.props.command, e);
+          }
+        },
+        registerChild: (childUIStateController) => {
+          if (!isMonitoringChild(childUIStateController)) {
+            const currentParent = s.parentUIStateController;
+            if (!allowCapture && currentParent) {
+              delegatedChildrenRef.current.set(
+                childUIStateController,
+                currentParent,
+              );
+              currentParent.registerChild(childUIStateController);
+            }
+            return;
+          }
+          const childControlType = childUIStateController.controlType;
+          childUIStateControllerArray.push(childUIStateController);
+          debugUIGroup(
+            `${controlType}.registerChild("${childControlType}") -> registered (total: ${childUIStateControllerArray.length})`,
+          );
+          if (!childUIStateController.hasStateProp) {
+            const initialEvent = new CustomEvent("initial_state_push", {
+              detail: {},
+            });
+            if (controller.hasValueProp) {
+              const childNewState = resolvedDistributeChildUIState(
+                controller.value,
+                childUIStateController,
+              );
+              if (childNewState !== CANNOT_DERIVE) {
+                childUIStateController.setUIState(childNewState, initialEvent);
+              }
+            } else if (controller.hasDefaultValueProp) {
+              const childNewState = resolvedDistributeChildUIState(
+                controller.defaultValue,
+                childUIStateController,
+              );
+              if (childNewState !== CANNOT_DERIVE) {
+                childUIStateController.setUIState(childNewState, initialEvent);
+              }
+            }
+          }
+          onChange(new CustomEvent(`${childControlType}_mount`), {
+            notifyExternal: "silent",
+          });
+        },
+        onChildUIAction: (
+          childUIStateController,
+          e,
+          { stateChanged, silent },
+        ) => {
+          const delegatedTo = delegatedChildrenRef.current.get(
+            childUIStateController,
+          );
+          if (delegatedTo) {
+            delegatedTo.onChildUIAction(childUIStateController, e, {
+              stateChanged,
+              silent,
+            });
+            return;
+          }
+          if (!isMonitoringChild(childUIStateController)) return;
+          const childControlType = childUIStateController.controlType;
+          debugUIGroup(
+            `${controlType}.onChildUIAction("${childControlType}") stateChanged=${stateChanged} -> child state: ${JSON.stringify(
+              childUIStateController.uiState,
+            )}`,
+          );
+          if (stateChanged) {
+            onChange(e, { notifyExternal: silent ? "silent" : true });
+          } else {
+            controller.onUIAction(e);
+          }
+        },
+        unregisterChild: (childUIStateController) => {
+          const delegatedTo = delegatedChildrenRef.current.get(
+            childUIStateController,
+          );
+          if (delegatedTo) {
+            delegatedChildrenRef.current.delete(childUIStateController);
+            delegatedTo.unregisterChild(childUIStateController);
+            return;
+          }
+          if (!isMonitoringChild(childUIStateController)) return;
+          const childControlType = childUIStateController.controlType;
+          const index =
+            childUIStateControllerArray.indexOf(childUIStateController);
+          if (index === -1) {
+            debugUIGroup(
+              `${controlType}.unregisterChild("${childControlType}") -> not found`,
+            );
+            return;
+          }
+          childUIStateControllerArray.splice(index, 1);
+          debugUIGroup(
+            `${controlType}.unregisterChild("${childControlType}") -> unregisteed (remaining: ${childUIStateControllerArray.length})`,
+          );
+          onChange(new CustomEvent(`${childControlType}_unmount`), {
+            notifyExternal: "silent",
+          });
+        },
+        resetUIState: (e) => {
+          const ev = new CustomEvent("propagate_down_reset_ui_state", {
+            detail: {},
+          });
+          chainEvent(ev, e);
+          for (const c of childUIStateControllerArray) {
+            if (shouldPropagateStateToChild(c)) c.resetUIState(ev);
+          }
+          onChange(e, { notifyExternal: true });
+        },
+        clearUIState: (e) => {
+          const ev = new CustomEvent("propagate_down_clear_ui_state", {
+            detail: {},
+          });
+          chainEvent(ev, e);
+          for (const c of childUIStateControllerArray) {
+            if (
+              !isMonitoringChild(c) ||
+              c.controlType === "button" ||
+              c.controlType === "link"
+            ) {
+              continue;
+            }
+            c.clearUIState(ev);
+          }
+          onChange(e, { notifyExternal: true });
+        },
+        onActionEnd: (e) => {
+          controller.rules.validation.syncValidity(e);
+        },
+        onActionError: (e) => {
+          controller.rules.validation.syncValidity(e, { report: true });
+        },
+        findChildById: (searchId) => {
+          for (const c of childUIStateControllerArray) {
+            if (c.id === searchId) return c;
+          }
+          return null;
+        },
+        getChildControllers: () => childUIStateControllerArray,
+        getManagedControls: () => {
+          if (!cascadeValidationToChildren) return [];
+          return childUIStateControllerArray.slice();
+        },
+        subscribe: subscribeUIState,
+      };
+
+      const rules = createControlRules(controller, {
+        debugPopup,
+        debugInteraction,
+        debugUIState: debugUIGroup,
+        debugFocus,
+      });
+      controller.rules = rules;
+      // Include all values read by controller methods so they are immediately
+      // available, even if the user interacts before the first re-render.
+      return {
+        controller,
+        _onChange: onChange,
+        ref,
+        parentUIStateController,
+        uiAction,
+        uiActionInternal,
+      };
+    },
+    // ── update: runs every render after the first ─────────────────────────
+    (s) => {
+      const { controller } = s;
+      const prevValue = controller.value;
+      const prevHasValueProp = controller.hasValueProp;
+      controller.props = props;
+      controller.ref = ref;
+      controller.id = id;
+      controller.name = name;
+      controller.value = value;
+      controller.defaultValue = defaultValue;
+      controller.hasValueProp = hasValueProp;
+      controller.hasDefaultValueProp = hasDefaultValueProp;
+      if (
+        hasValueProp &&
+        (!prevHasValueProp || !compareTwoJsValues(value, prevValue))
+      ) {
+        const propagateDownEvent = new CustomEvent(
+          "propagate_down_set_ui_state",
+          { detail: {} },
+        );
+        for (const childUIStateController of childUIStateControllerArray) {
+          if (!shouldPropagateStateToChild(childUIStateController)) continue;
+          if (childUIStateController.hasStateProp) continue;
+          const childNewState = controller.distributeChildUIState(
+            value,
+            childUIStateController,
+          );
+          if (childNewState === CANNOT_DERIVE) continue;
+          childUIStateController.setUIState(childNewState, propagateDownEvent);
+        }
+        controller.syncInternalState(value);
+      }
+      return {
+        ref,
+        parentUIStateController,
+        uiAction,
+        uiActionInternal,
+        id,
+        name,
+        value,
+        defaultValue,
+        hasValueProp,
+        hasDefaultValueProp,
+        props,
+      };
+    },
+  );
+
+  const { controller } = scope;
 
   useLayoutEffect(() => {
-    const controller = controllerRef.current;
     const el = ref.current;
-    if (el) {
-      el.__uiStateController__ = controller;
-    }
+    if (el) el.__uiStateController__ = controller;
     return () => {
       onUIStateControllerDestroyed(controller);
     };
   }, []);
   useLayoutEffect(() => {
     const parent = scope.parentUIStateController;
-    const controller = controllerRef.current;
     if (!parent) return undefined;
     debugUIGroup(`"${controlType}" registering into "${parent.controlType}"`);
     parent.registerChild(controller);
@@ -830,446 +1090,18 @@ export const useUIGroupStateController = (
       parent.unregisterChild(controller);
     };
   }, [parentUIStateController]);
-
-  const onChange = (e, { notifyExternal }) => {
-    if (groupIsRenderingRef.current) {
-      pendingChangeRef.current = true;
-      return;
-    }
-    const aggChildState = resolvedAggregateChildStates(
-      childUIStateControllerArray,
-      fallbackState,
-    );
-    const groupUIState =
-      aggChildState === undefined ? fallbackState : aggChildState;
-    debugUIGroup(
-      e,
-      `${controlType}.getUIState -> ${JSON.stringify(groupUIState)}`,
-    );
-    const groupUIStateController = controllerRef.current;
-    if (notifyExternal === true) {
-      applyState(groupUIState, e);
-    } else if (notifyExternal === "silent") {
-      // Silent mount/unmount sync: update state without triggering uiAction/command,
-      // but still notify parent (e.g. facade) so it can track the current child state.
-      groupUIStateController.syncInternalState(groupUIState, e);
-      scope.parentUIStateController?.onChildUIAction(
-        controllerRef.current,
-        e,
-        { stateChanged: true, silent: true },
-      );
-    } else {
-      groupUIStateController.syncInternalState(groupUIState, e);
-    }
-  };
-
-  // Applies the aggregated state: updates signal, fires uiAction/command/navi_ui_state_change,
-  // and notifies the parent. Called both from onChange (after child UI action) and from
-  // setUIState (after cascading to children).
-  const applyState = (newUIState, e, { internalBehavior = false } = {}) => {
-    const groupUIStateController = controllerRef.current;
-    const currentUIState = groupUIStateController.uiState;
-    groupUIStateController.uiState = newUIState;
-    uiStateSignal.value = newUIState;
-    debugUIGroup(
-      e,
-      `${controlType}.applyState(${JSON.stringify(newUIState)}, "${e.type}") -> updates from ${JSON.stringify(currentUIState)} to ${JSON.stringify(newUIState)}`,
-    );
-    publishUIState(newUIState);
-    // Notify the parent (facade) BEFORE firing the command so that when a
-    // command like --navi-send closes the picker, the picker input already
-    // holds the new value.
-    scope.parentUIStateController?.onChildUIAction(
-      controllerRef.current,
-      e,
-      { stateChanged: true },
-    );
-    groupUIStateController.onUIAction(e, {
-      skipCommand: internalBehavior,
-    });
-    // Use controllerRef.current.ref rather than the closure `ref` so we always
-    // get the current ref even after a Suspense-driven remount updated its identity.
-    const el = controllerRef.current.ref.current;
-    if (el) {
-      dispatchInternalCustomEvent(el, "navi_ui_state_change", {
-        event: e,
-        value: newUIState,
-      });
-    }
-  };
-
   useLayoutEffect(() => {
     groupIsRenderingRef.current = false;
     if (pendingChangeRef.current) {
       pendingChangeRef.current = false;
-      onChange(new CustomEvent(`${controlType}_batched_ui_state_update`), {
-        notifyExternal: "silent",
-      });
+      scope._onChange(
+        new CustomEvent(`${controlType}_batched_ui_state_update`),
+        { notifyExternal: "silent" },
+      );
     }
   });
 
-  const isMonitoringChild = (childUIStateController) => {
-    if (childUIStateController.isProxy) {
-      return false;
-    }
-    if (
-      resolvedChildControlFilter &&
-      !resolvedChildControlFilter(childUIStateController)
-    ) {
-      return false;
-    }
-    return true;
-  };
-  const shouldPropagateStateToChild = (childUIStateController) => {
-    if (!isMonitoringChild(childUIStateController)) {
-      return false;
-    }
-    if (childUIStateController.controlType === "button") {
-      return false;
-    }
-    if (childUIStateController.controlType === "link") {
-      return false;
-    }
-    return true;
-  };
-
-  const existingController = controllerRef.current;
-  if (existingController) {
-    const prevValue = existingController.value;
-    const prevHasValueProp = existingController.hasValueProp;
-    existingController.props = props;
-    // Re-sync to this render's ref object — see the matching comment in
-    // useUIStateController._checkForUpdates for why this can't be captured
-    // once at creation time and left untouched.
-    existingController.ref = ref;
-    existingController.id = id;
-    existingController.name = name;
-    existingController.value = value;
-    existingController.defaultValue = defaultValue;
-    existingController.hasValueProp = hasValueProp;
-    existingController.hasDefaultValueProp = hasDefaultValueProp;
-    uiActionRef.current = uiAction;
-    // When the controlled value prop changes (or when becoming controlled for the
-    // first time), silently cascade to children that have no individual state prop.
-    if (
-      hasValueProp &&
-      (!prevHasValueProp || !compareTwoJsValues(value, prevValue))
-    ) {
-      const propagateDownEvent = new CustomEvent(
-        "propagate_down_set_ui_state",
-        { detail: {} },
-      );
-      for (const childUIStateController of childUIStateControllerArray) {
-        if (!shouldPropagateStateToChild(childUIStateController)) {
-          continue;
-        }
-        if (childUIStateController.hasStateProp) {
-          continue;
-        }
-        const childNewState = existingController.distributeChildUIState(
-          value,
-          childUIStateController,
-        );
-        if (childNewState === CANNOT_DERIVE) {
-          continue;
-        }
-        childUIStateController.setUIState(childNewState, propagateDownEvent);
-      }
-      existingController.syncInternalState(value);
-    }
-    return existingController;
-  }
-  debugUIGroup(
-    `Creating "${controlType}" ui state controller (monitoring some descendants ui state(s))"`,
-  );
-
-  const [publishUIState, subscribeUIState] = createPubSub();
-  const uiStateSignal = signal(fallbackState);
-  const groupUIStateController = {
-    controlType,
-    id,
-    name,
-    value,
-    defaultValue,
-    hasValueProp,
-    hasDefaultValueProp,
-    props,
-    uiState: fallbackState,
-    uiStateSignal,
-    wantRequesterButtonState,
-    ref,
-    getPropFromState: (uiState) => uiState,
-    distributeChildUIState: resolvedDistributeChildUIState,
-    // Cascades newUIState to each monitored child via resolvedDistributeChildUIState,
-    // then re-aggregates and fires this group's own reactions.
-    setUIState: (newUIState, e) => {
-      if (
-        stateType === "object" &&
-        (newUIState === null || typeof newUIState !== "object")
-      ) {
-        console.warn(
-          `[${controlType}] setUIState received a non-object value: ${JSON.stringify(newUIState)} (expected an object). Ignoring.`,
-          newUIState,
-        );
-        return;
-      }
-      if (stateType === "array" && !Array.isArray(newUIState)) {
-        console.warn(
-          `[${controlType}] setUIState received a non-array value: ${JSON.stringify(newUIState)} (expected an array). Ignoring.`,
-          newUIState,
-        );
-        return;
-      }
-      // initial_state_push propagates silently (no uiAction anywhere in the chain);
-      // regular updates use propagate_down_set_ui_state which fires uiAction on children.
-      const propagateEventType =
-        e.type === "initial_state_push"
-          ? "initial_state_push"
-          : "propagate_down_set_ui_state";
-      const propagateDownEvent = new CustomEvent(propagateEventType, {
-        detail: {},
-      });
-      chainEvent(propagateDownEvent, e);
-      for (const childUIStateController of childUIStateControllerArray) {
-        if (!shouldPropagateStateToChild(childUIStateController)) {
-          continue;
-        }
-        const childNewState = resolvedDistributeChildUIState(
-          newUIState,
-          childUIStateController,
-        );
-        if (childNewState === CANNOT_DERIVE) {
-          continue;
-        }
-        childUIStateController.setUIState(childNewState, propagateDownEvent);
-      }
-      // Re-aggregate from children and apply — do NOT call onChange to avoid a loop
-      // (onChange would call setUIState again, which would cascade again).
-      const aggChildState = resolvedAggregateChildStates(
-        childUIStateControllerArray,
-        fallbackState,
-      );
-      const groupUIState =
-        aggChildState === undefined ? fallbackState : aggChildState;
-      if (e.type === "initial_state_push") {
-        // Silent initialization: update state without firing uiAction or notifying parent.
-        groupUIStateController.syncInternalState(groupUIState);
-        return;
-      }
-      applyState(groupUIState, e, { internalBehavior: true });
-    },
-    // Called on mount/unmount/render-batch: updates state silently with no external reactions.
-    syncInternalState: (newUIState) => {
-      const currentUIState = groupUIStateController.uiState;
-      if (newUIState === currentUIState) {
-        return;
-      }
-      groupUIStateController.uiState = newUIState;
-      uiStateSignal.value = newUIState;
-      publishUIState(newUIState);
-    },
-    // Called when a child UI action does NOT change the aggregated value (e.g. radio re-clicked).
-    // Fires uiAction + command without touching state or the action pipeline.
-    onUIAction: (e, { skipCommand } = {}) => {
-      const currentUIState = groupUIStateController.uiState;
-      const uiAction = uiActionRef.current;
-      uiAction?.(currentUIState, e);
-      uiActionInternal?.(currentUIState, e);
-      if (skipCommand) {
-        // Fire uiAction only — skip command to avoid re-triggering the same command
-        // that caused this setUIState call in the first place.
-      } else if (controllerRef.current.props.command) {
-        const el = controllerRef.current.ref.current;
-        if (el) {
-          triggerNaviCommand(el, controllerRef.current.props.command, e);
-        }
-      }
-    },
-    registerChild: (
-      childUIStateController,
-      // { bubbled = false } = {}
-    ) => {
-      if (!isMonitoringChild(childUIStateController)) {
-        // Filter rejected this child.
-        const currentParent = scope.parentUIStateController;
-        if (!allowCapture && currentParent) {
-          // Not a boundary — bubble the child up to the nearest ancestor.
-          delegatedChildrenRef.current.set(childUIStateController, currentParent);
-          currentParent.registerChild(childUIStateController);
-        }
-        // allowCapture=true: hard boundary, stop bubbling and drop silently.
-        // No parent: end of chain, drop silently.
-        return;
-      }
-      const childControlType = childUIStateController.controlType;
-      childUIStateControllerArray.push(childUIStateController);
-      debugUIGroup(
-        `${controlType}.registerChild("${childControlType}") -> registered (total: ${childUIStateControllerArray.length})`,
-      );
-      // Auto-derive child's initial state from the group's value/defaultValue
-      // when the child has no individually-controlled state prop.
-      // Use initial_state_push so uiAction does not fire during mount initialization.
-      if (!childUIStateController.hasStateProp) {
-        const initialEvent = new CustomEvent("initial_state_push", {
-          detail: {},
-        });
-        if (groupUIStateController.hasValueProp) {
-          // Controlled: always cascade current group value (even undefined = deselect all).
-          const childNewState = resolvedDistributeChildUIState(
-            groupUIStateController.value,
-            childUIStateController,
-          );
-          if (childNewState !== CANNOT_DERIVE) {
-            childUIStateController.setUIState(childNewState, initialEvent);
-          }
-        } else if (groupUIStateController.hasDefaultValueProp) {
-          // Uncontrolled: set initial state from defaultValue on mount.
-          const childNewState = resolvedDistributeChildUIState(
-            groupUIStateController.defaultValue,
-            childUIStateController,
-          );
-          if (childNewState !== CANNOT_DERIVE) {
-            childUIStateController.setUIState(childNewState, initialEvent);
-          }
-        }
-      }
-      onChange(new CustomEvent(`${childControlType}_mount`), {
-        notifyExternal: "silent",
-        // childUIStateController,
-      });
-    },
-    onChildUIAction: (childUIStateController, e, { stateChanged, silent }) => {
-      const delegatedTo = delegatedChildrenRef.current.get(
-        childUIStateController,
-      );
-      if (delegatedTo) {
-        // Forward UI action for delegated children — we don't aggregate them,
-        // but their parent (who adopted them) needs to know about the change.
-        delegatedTo.onChildUIAction(childUIStateController, e, {
-          stateChanged,
-          silent,
-        });
-        return;
-      }
-      if (!isMonitoringChild(childUIStateController)) {
-        return;
-      }
-      const childControlType = childUIStateController.controlType;
-      debugUIGroup(
-        `${controlType}.onChildUIAction("${childControlType}") stateChanged=${stateChanged} -> child state: ${JSON.stringify(
-          childUIStateController.uiState,
-        )}`,
-      );
-      if (stateChanged) {
-        if (silent) {
-          // Silent update: keep the group's cached state in sync without firing
-          // uiAction, command, or action pipeline. Used when e.g. the picker facade
-          // propagates a child state change up through an internal event path.
-          onChange(e, { notifyExternal: "silent" });
-        } else {
-          // Value changed: re-aggregate and fire all reactions (uiAction, command, action pipeline).
-          onChange(e, { notifyExternal: true });
-        }
-      } else {
-        // Value unchanged (e.g. radio re-clicked): fire uiAction + command only.
-        groupUIStateController.onUIAction(e);
-      }
-    },
-    unregisterChild: (childUIStateController) => {
-      const delegatedTo = delegatedChildrenRef.current.get(
-        childUIStateController,
-      );
-      if (delegatedTo) {
-        delegatedChildrenRef.current.delete(childUIStateController);
-        delegatedTo.unregisterChild(childUIStateController);
-        return;
-      }
-      if (!isMonitoringChild(childUIStateController)) {
-        return;
-      }
-      const childControlType = childUIStateController.controlType;
-      const index = childUIStateControllerArray.indexOf(childUIStateController);
-      if (index === -1) {
-        debugUIGroup(
-          `${controlType}.unregisterChild("${childControlType}") -> not found`,
-        );
-        return;
-      }
-      childUIStateControllerArray.splice(index, 1);
-      debugUIGroup(
-        `${controlType}.unregisterChild("${childControlType}") -> unregisteed (remaining: ${childUIStateControllerArray.length})`,
-      );
-      onChange(new CustomEvent(`${childControlType}_unmount`), {
-        notifyExternal: "silent",
-        // childUIStateController,
-      });
-    },
-    resetUIState: (e) => {
-      const propagateDownResetEvent = new CustomEvent(
-        "propagate_down_reset_ui_state",
-        { detail: {} },
-      );
-      chainEvent(propagateDownResetEvent, e);
-      for (const childUIStateController of childUIStateControllerArray) {
-        if (!shouldPropagateStateToChild(childUIStateController)) {
-          continue;
-        }
-        childUIStateController.resetUIState(propagateDownResetEvent);
-      }
-      onChange(e, { notifyExternal: true });
-    },
-    clearUIState: (e) => {
-      const propagateDownClearEvent = new CustomEvent(
-        "propagate_down_clear_ui_state",
-        { detail: {} },
-      );
-      chainEvent(propagateDownClearEvent, e);
-      for (const childUIStateController of childUIStateControllerArray) {
-        if (!isMonitoringChild(childUIStateController)) {
-          continue;
-        }
-        if (childUIStateController.controlType === "button") {
-          continue;
-        }
-        if (childUIStateController.controlType === "link") {
-          continue;
-        }
-        childUIStateController.clearUIState(propagateDownClearEvent);
-      }
-      onChange(e, { notifyExternal: true });
-    },
-    onActionEnd: (e) => {
-      groupUIStateController.rules.validation.syncValidity(e);
-    },
-    onActionError: (e) => {
-      groupUIStateController.rules.validation.syncValidity(e, { report: true });
-    },
-    findChildById: (id) => {
-      for (const childUIStateController of childUIStateControllerArray) {
-        if (childUIStateController.id === id) {
-          return childUIStateController;
-        }
-      }
-      return null;
-    },
-    getChildControllers: () => childUIStateControllerArray,
-    getManagedControls: () => {
-      if (!cascadeValidationToChildren) {
-        return [];
-      }
-      return childUIStateControllerArray.slice();
-    },
-    subscribe: subscribeUIState,
-  };
-  controllerRef.current = groupUIStateController;
-  const rules = createControlRules(groupUIStateController, {
-    debugPopup,
-    debugInteraction,
-    debugUIState: debugUIGroup,
-    debugFocus,
-  });
-  groupUIStateController.rules = rules;
-  return groupUIStateController;
+  return controller;
 };
 // Stable reference for an empty selection so the action always receives an
 // array (never undefined) and callers don't get a new reference each render.
