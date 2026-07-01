@@ -21,6 +21,7 @@ import {
   findProxyController,
   getRadioSiblings,
   getUIStateControllerById,
+  onUIStateControllerCreated,
   onUIStateControllerDestroyed,
 } from "./controller_registry.js";
 import { FormContext } from "./form_context.js";
@@ -607,6 +608,10 @@ export const useUIStateController = (
     if (el) {
       el.__uiStateController__ = controller;
     }
+    // Re-register so the radio registry stays in sync when props.ref changes
+    // identity (e.g. across a Suspense boundary). The render-phase call in
+    // control_hooks.jsx handles the initial mount; this call handles re-runs.
+    onUIStateControllerCreated(controller);
     return () => {
       if (el && el.__uiStateController__ === controller) {
         delete el.__uiStateController__;
