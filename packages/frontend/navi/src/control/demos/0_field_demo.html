@@ -5,31 +5,79 @@
     <link rel="icon" href="data:," />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Field Demo</title>
+    <style>
+      body {
+        max-width: 700px;
+        margin: 0 auto;
+        padding: 20px;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: #f5f5f5;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 2rem;
+        color: #333;
+      }
+      .demo-section {
+        margin-bottom: 32px;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      }
+      .demo-section h2 {
+        margin: 0 0 16px;
+        padding-bottom: 10px;
+        font-size: 1.3rem;
+        color: #333;
+        border-bottom: 2px solid #eee;
+      }
+      .demo-section p {
+        margin: 0 0 14px;
+        font-size: 0.875rem;
+        color: #555;
+        line-height: 1.5;
+      }
+      .row-label {
+        font-size: 0.8rem;
+        color: #999;
+        margin-bottom: 4px;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { Box, Field, Input, Label } from "@jsenv/navi";
+      import { Box, Field, Icon, Input, Label } from "@jsenv/navi";
 
       const dotted = { outline: "1px dotted #999" };
 
       const App = () => (
-        <Box
-          flex="y"
-          spacing="m"
-          style={{ padding: "20px", maxWidth: "620px" }}
-        >
-          <h1 style={{ margin: 0 }}>Field</h1>
+        <Box flex="y" spacing="m">
+          <h1>Field</h1>
           <p style={{ margin: 0, color: "#555" }}>
             <code>Field</code> connects a label to a form control so clicking
             the label focuses or activates the control. The dotted outline shows
             the interactive zone.
           </p>
 
+          <nav>
+            <ol style={{ margin: 0, paddingLeft: "20px", lineHeight: 2 }}>
+              <li><a href="#as-label">Field as="label"</a></li>
+              <li><a href="#vertical-zone">Vertical — interactive zone</a></li>
+              <li><a href="#advanced-vertical">Advanced vertical label</a></li>
+              <li><a href="#separate-label">Label in a separate component</a></li>
+              <li><a href="#sizing">Sizing</a></li>
+              <li><a href="#states">Disabled &amp; read-only</a></li>
+            </ol>
+          </nav>
+
           <AsLabelDemo />
           <InteractiveZoneDemo />
+          <AdvancedVerticalDemo />
           <SeparateLabelDemo />
           <SizingDemo />
           <DisabledReadonlyDemo />
@@ -37,39 +85,34 @@
       );
 
       /* ------------------------------------------------------------------ */
-      /* 1. Field as="label" — base case                                     */
+      /* 1. Field as="label"                                                  */
       /* ------------------------------------------------------------------ */
       const AsLabelDemo = () => (
-        <Box flex="y" spacing="s">
-          <h2 style={{ margin: 0 }}>
+        <div class="demo-section" id="as-label">
+          <h2>
             <code>{'<Field as="label">'}</code>
           </h2>
-          <p style={{ margin: 0, color: "#555" }}>
+          <p>
             The <code>{"<label>"}</code> element wraps the control directly. The
             browser connects them automatically — no <code>id</code>/
             <code>htmlFor</code> wiring needed. The whole label area is
             interactive.
           </p>
 
-          <Box flex="y" spacing="xs" alignX="start">
-            <span style={{ fontSize: "0.85em", color: "#888" }}>
-              label left
-            </span>
+          <Box flex="y" spacing="s" alignX="start">
+            <p class="row-label">label left</p>
             <Field as="label" flex alignY="center" spacing="s" style={dotted}>
               Email
               <Input type="email" name="email_l" placeholder="Enter email" />
             </Field>
 
-            <span style={{ fontSize: "0.85em", color: "#888" }}>
-              label right (checkbox / radio)
-            </span>
+            <p class="row-label">label right (checkbox / radio)</p>
             <Field as="label" flex alignY="center" spacing="s" style={dotted}>
-              <Input type="checkbox" name="agree" />I agree to the terms
+              <Input type="checkbox" name="agree" />
+              I agree to the terms
             </Field>
 
-            <span style={{ fontSize: "0.85em", color: "#888" }}>
-              label above (vertical)
-            </span>
+            <p class="row-label">label above (vertical)</p>
             <Field
               as="label"
               vertical
@@ -80,9 +123,7 @@
               <Input type="text" name="uv_above" placeholder="Enter username" />
             </Field>
 
-            <span style={{ fontSize: "0.85em", color: "#888" }}>
-              label below (vertical)
-            </span>
+            <p class="row-label">label below (vertical)</p>
             <Field
               as="label"
               vertical
@@ -93,28 +134,44 @@
               Username
             </Field>
           </Box>
-        </Box>
+        </div>
       );
 
       /* ------------------------------------------------------------------ */
-      /* 2. Vertical interactive zone                                        */
+      /* 2. Vertical — interactive zone                                       */
       /* ------------------------------------------------------------------ */
       const InteractiveZoneDemo = () => (
-        <Box flex="y" spacing="s">
-          <h2 style={{ margin: 0 }}>Vertical — interactive zone</h2>
-          <p style={{ margin: 0, color: "#555" }}>
+        <div class="demo-section" id="vertical-zone">
+          <h2>Vertical — interactive zone</h2>
+          <p>
             In vertical layout the interactive zone stretches to the width of
-            the widest child. The space next to the label text is also clickable
-            — which can surprise. Use <code>{"<Field>"}</code> with a{" "}
-            <code>{"<Label>"}</code> inside to limit the hit area to the label
-            text only. The <code>paddingWithControl</code> gap stays clickable
-            (unlike a flex <code>gap</code> which would be a dead zone).
+            the widest child. When the input is wider than the label text, the
+            space next to the label is also clickable — which can surprise.
           </p>
 
-          <Box flex="y" spacing="xs" alignX="start">
-            <span style={{ fontSize: "0.85em", color: "#888" }}>
-              vertical — label area only
-            </span>
+          <Box flex="y" spacing="s" alignX="start">
+            <p class="row-label">
+              as="label" — full width interactive (try clicking next to the
+              label text)
+            </p>
+            <Field
+              as="label"
+              vertical
+              spacing="s"
+              style={{ ...dotted, alignSelf: "flex-start" }}
+            >
+              Short label
+              <Input
+                type="text"
+                name="wide_input"
+                placeholder="wider than the label text"
+                style={{ width: "240px" }}
+              />
+            </Field>
+
+            <p class="row-label">
+              without as — only the label text is interactive
+            </p>
             <Field
               vertical
               paddingWithControl="s"
@@ -125,36 +182,73 @@
                 type="text"
                 name="precise_v"
                 placeholder="wider than the label text"
-                style={{ width: "220px" }}
+                style={{ width: "240px" }}
               />
             </Field>
-
-            <span style={{ fontSize: "0.85em", color: "#888" }}>
-              horizontal — gap between label and input is clickable
-            </span>
-            <Field flex alignY="center" paddingWithControl="l">
-              <Label style={dotted}>Label</Label>
-              <Input type="text" name="precise_h" placeholder="…" />
-            </Field>
           </Box>
-        </Box>
+
+          <p style={{ marginTop: "14px", marginBottom: 0 }}>
+            Without <code>as</code>, <code>{"<Field>"}</code> generates a
+            shared id between the <code>{"<Label>"}</code> and the control.
+            Use <code>paddingWithControl</code> for the gap — it stays part of
+            the label's hit area (unlike a flex <code>gap</code> which creates
+            a dead zone).
+          </p>
+        </div>
       );
 
       /* ------------------------------------------------------------------ */
-      /* 3. Label in a separate component — explicit htmlFor                 */
+      /* 3. Advanced vertical label                                           */
       /* ------------------------------------------------------------------ */
-      const SeparateLabelDemo = () => (
-        <Box flex="y" spacing="s">
-          <h2 style={{ margin: 0 }}>Label in a separate component</h2>
-          <p style={{ margin: 0, color: "#555" }}>
-            When the label cannot wrap the input — for instance the input is in
-            a child component loaded separately — pass an explicit{" "}
-            <code>htmlFor</code> to <code>{'<Field as="label">'}</code>. The
-            inner control will receive the matching <code>id</code> via context
-            so the wiring stays automatic.
+      const AdvancedVerticalDemo = () => (
+        <div class="demo-section" id="advanced-vertical">
+          <h2>Advanced vertical label</h2>
+          <p>
+            Because the label and the control are separate elements, the label
+            can use any layout or styling — icon, size, font, spacing — without
+            affecting the control's hit area.
           </p>
 
-          <Box flex="y" alignX="start">
+          <Field vertical paddingWithControl="s" style={{ alignSelf: "flex-start", minWidth: "280px" }}>
+            <Label
+              flex
+              alignY="center"
+              spacing="xs"
+              paddingBottom="s"
+              size="l"
+              bold
+            >
+              <Icon height="1cap">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                </svg>
+              </Icon>
+              Location
+            </Label>
+            <Input type="text" name="location" placeholder="Enter a location…" />
+          </Field>
+        </div>
+      );
+
+      /* ------------------------------------------------------------------ */
+      /* 4. Label in a separate component                                     */
+      /* ------------------------------------------------------------------ */
+      const SeparateLabelDemo = () => (
+        <div class="demo-section" id="separate-label">
+          <h2>Label in a separate component</h2>
+          <p>
+            When the label cannot wrap the input — the input is in a child
+            component loaded lazily, or in a different part of the tree — pass
+            an explicit <code>htmlFor</code> to{" "}
+            <code>{'<Field as="label">'}</code>. The inner control receives the
+            matching <code>id</code> via context.
+          </p>
+
+          <Box flex="y" spacing="xs" alignX="start">
             <Field
               as="label"
               flex
@@ -165,10 +259,10 @@
             >
               Password
             </Field>
-            {/* The input lives elsewhere, receives id="my_separate_input" from context */}
+            {/* input lives in a separate component, gets id="my_separate_input" from context */}
             <SeparateInput />
           </Box>
-        </Box>
+        </div>
       );
 
       const SeparateInput = () => (
@@ -181,16 +275,14 @@
       );
 
       /* ------------------------------------------------------------------ */
-      /* 4. Sizing                                                            */
+      /* 5. Sizing                                                            */
       /* ------------------------------------------------------------------ */
       const SizingDemo = () => (
-        <Box flex="y" spacing="s">
-          <h2 style={{ margin: 0 }}>Sizing</h2>
+        <div class="demo-section" id="sizing">
+          <h2>Sizing</h2>
           <Box flex="y" spacing="s">
             <Box flex="y" spacing="xs">
-              <span style={{ fontSize: "0.85em", color: "#888" }}>
-                flex + block
-              </span>
+              <p class="row-label">flex + block</p>
               <div
                 style={{
                   width: "200px",
@@ -207,9 +299,7 @@
             </Box>
 
             <Box flex="y" spacing="xs">
-              <span style={{ fontSize: "0.85em", color: "#888" }}>
-                flex + width 100%
-              </span>
+              <p class="row-label">flex + width 100%</p>
               <div
                 style={{
                   width: "200px",
@@ -226,9 +316,7 @@
             </Box>
 
             <Box flex="y" spacing="xs">
-              <span style={{ fontSize: "0.85em", color: "#888" }}>
-                flex only
-              </span>
+              <p class="row-label">flex only</p>
               <div
                 style={{
                   width: "200px",
@@ -245,9 +333,7 @@
             </Box>
 
             <Box flex="y" spacing="xs">
-              <span style={{ fontSize: "0.85em", color: "#888" }}>
-                flex + expandX
-              </span>
+              <p class="row-label">flex + expandX</p>
               <div
                 style={{
                   width: "200px",
@@ -263,7 +349,7 @@
               </div>
             </Box>
           </Box>
-        </Box>
+        </div>
       );
 
       const FieldRow = ({ children, ...props }) => (
@@ -276,44 +362,41 @@
       );
 
       /* ------------------------------------------------------------------ */
-      /* 5. Disabled / read-only                                             */
+      /* 6. Disabled / read-only                                             */
       /* ------------------------------------------------------------------ */
       const DisabledReadonlyDemo = () => (
-        <Box flex="y" spacing="s">
-          <h2 style={{ margin: 0 }}>Disabled &amp; read-only</h2>
-          <p style={{ margin: 0, color: "#555" }}>
+        <div class="demo-section" id="states">
+          <h2>Disabled &amp; read-only</h2>
+          <p>
             The label reflects the control's state automatically — dimmed text
             and default cursor when disabled or read-only.
           </p>
           <Box flex="y" spacing="xs" alignX="start">
+            <p class="row-label">disabled</p>
             <Field as="label" flex alignY="center" spacing="s" style={dotted}>
               Disabled
-              <Input
-                type="text"
-                name="dis1"
-                defaultValue="cannot edit"
-                disabled
-              />
+              <Input type="text" name="dis1" defaultValue="cannot edit" disabled />
             </Field>
+
+            <p class="row-label">read-only</p>
             <Field as="label" flex alignY="center" spacing="s" style={dotted}>
               Read-only
               <Input type="text" name="ro1" defaultValue="read only" readOnly />
             </Field>
+
+            <p class="row-label">disabled (container)</p>
             <Field flex alignY="center">
-              <Label style={dotted}>Disabled (container)</Label>
-              <Input
-                type="text"
-                name="dis2"
-                defaultValue="cannot edit"
-                disabled
-              />
+              <Label style={dotted}>Disabled</Label>
+              <Input type="text" name="dis2" defaultValue="cannot edit" disabled />
             </Field>
+
+            <p class="row-label">read-only (container)</p>
             <Field flex alignY="center">
-              <Label style={dotted}>Read-only (container)</Label>
+              <Label style={dotted}>Read-only</Label>
               <Input type="text" name="ro2" defaultValue="read only" readOnly />
             </Field>
           </Box>
-        </Box>
+        </div>
       );
 
       render(<App />, document.querySelector("#root"));
