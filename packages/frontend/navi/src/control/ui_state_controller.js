@@ -43,13 +43,17 @@ import { createControlRules } from "./rules/control_rules.js";
  */
 const useRenderScope = (init, update) => {
   const scopeRef = useRef();
-  if (!scopeRef.current) {
-    scopeRef.current = {};
-    Object.assign(scopeRef.current, init(scopeRef.current));
+  let scope = scopeRef.current;
+  if (!scope) {
+    scope = {};
+    scopeRef.current = scope;
+    const initScope = init(scope);
+    Object.assign(scope, initScope);
   } else {
-    Object.assign(scopeRef.current, update(scopeRef.current));
+    const updateScope = update(scope);
+    Object.assign(scope, updateScope);
   }
-  return scopeRef.current;
+  return scope;
 };
 
 /**
@@ -136,10 +140,9 @@ export const useUIStateController = (
     // values for stable config (controlType, isRadio…); live values are read
     // through `s` which is always updated by `update` before any method call.
     (s) => {
-      s.parentUiStateSignalHolder = signal(
+      const parentUiStateSignalHolder = signal(
         parentUIStateController?.uiStateSignal ?? null,
       );
-
       const { stateInitial } = controlInfo;
       debugUIState(
         `Creating "${controlType}" ui state controller - initial state:`,
@@ -153,7 +156,7 @@ export const useUIStateController = (
         parentUIStateController;
       const uiStateSignal = inherit
         ? computed(() => {
-            const parentSig = s.parentUiStateSignalHolder.value;
+            const parentSig = parentUiStateSignalHolder.value;
             const parentUIState = parentSig?.value;
             const ownUIState = ownUIStateSignal.value;
             return ownUIState || parentUIState;
@@ -163,6 +166,7 @@ export const useUIStateController = (
       const controller = {
         controlType,
         parentUIStateController,
+        parentUiStateSignalHolder,
         isProxy,
         allowNameless,
 
@@ -224,7 +228,10 @@ export const useUIStateController = (
           }
         },
         setUIState: (newUIState, e) => {
-          const guardResult = controller.rules.guard.checkUIState(newUIState, e);
+          const guardResult = controller.rules.guard.checkUIState(
+            newUIState,
+            e,
+          );
           if (guardResult) {
             if (Object.hasOwn(guardResult, "fixedValue")) {
               newUIState = guardResult.fixedValue;
@@ -441,7 +448,6 @@ export const useUIStateController = (
           );
         },
       };
-
       const rules = createControlRules(controller, {
         debugPopup,
         debugInteraction,
@@ -449,6 +455,7 @@ export const useUIStateController = (
         debugFocus,
       });
       controller.rules = rules;
+
       // Include all values that controller methods read from the scope so they
       // are available immediately — even if no re-render happens before the
       // first user interaction (update only runs on re-renders, not on mount).
@@ -462,6 +469,7 @@ export const useUIStateController = (
         uiAction: props.uiAction,
         uiActionInternal,
         parentUIStateController,
+        parentUiStateSignalHolder,
       };
     },
     // ── update: runs every render after the first ─────────────────────────
@@ -502,29 +510,35 @@ export const useUIStateController = (
     parentUIStateController?.uiStateSignal ?? null;
 
   const { controller } = scope;
-
+  const controllerRef = controller.ref;
   useLayoutEffect(() => {
-    const el = controller.ref.current;
-    if (el) el.__uiStateController__ = controller;
+    const el = controllerRef.current;
+    if (el) {
+      el.__uiStateController__ = controller;
+    }
     return () => {
       if (el && el.__uiStateController__ === controller) {
         delete el.__uiStateController__;
       }
       onUIStateControllerDestroyed(controller);
     };
-  }, []);
+  }, [controllerRef]);
+
+  const { parentUIStateController: parentController } = scope;
   useLayoutEffect(() => {
-    const parent = scope.parentUIStateController;
-    if (!parent) return undefined;
+    if (!parentController) {
+      return undefined;
+    }
+
     debugUIState(`"${controlType}" registering into "${parent.controlType}"`);
-    parent.registerChild(controller);
+    parentController.registerChild(controller);
     return () => {
       debugUIState(
         `"${controlType}" unregistering from "${parent.controlType}"`,
       );
-      parent.unregisterChild(controller);
+      parentController.unregisterChild(controller);
     };
-  }, [parentUIStateController]);
+  }, [parentController]);
 
   return controller;
 };
@@ -827,7 +841,10 @@ export const useUIGroupStateController = (
               childUIStateController,
             );
             if (childNewState === CANNOT_DERIVE) continue;
-            childUIStateController.setUIState(childNewState, propagateDownEvent);
+            childUIStateController.setUIState(
+              childNewState,
+              propagateDownEvent,
+            );
           }
           const aggChildState = resolvedAggregateChildStates(
             childUIStateControllerArray,
@@ -939,8 +956,9 @@ export const useUIGroupStateController = (
           }
           if (!isMonitoringChild(childUIStateController)) return;
           const childControlType = childUIStateController.controlType;
-          const index =
-            childUIStateControllerArray.indexOf(childUIStateController);
+          const index = childUIStateControllerArray.indexOf(
+            childUIStateController,
+          );
           if (index === -1) {
             debugUIGroup(
               `${controlType}.unregisterChild("${childControlType}") -> not found`,
@@ -1001,7 +1019,6 @@ export const useUIGroupStateController = (
         },
         subscribe: subscribeUIState,
       };
-
       const rules = createControlRules(controller, {
         debugPopup,
         debugInteraction,
@@ -1009,6 +1026,7 @@ export const useUIGroupStateController = (
         debugFocus,
       });
       controller.rules = rules;
+
       // Include all values read by controller methods so they are immediately
       // available, even if the user interacts before the first re-render.
       return {
@@ -1053,6 +1071,7 @@ export const useUIGroupStateController = (
         }
         controller.syncInternalState(value);
       }
+
       return {
         ref,
         parentUIStateController,
@@ -1070,26 +1089,34 @@ export const useUIGroupStateController = (
   );
 
   const { controller } = scope;
-
   useLayoutEffect(() => {
     const el = ref.current;
-    if (el) el.__uiStateController__ = controller;
+    if (el) {
+      el.__uiStateController__ = controller;
+    }
     return () => {
       onUIStateControllerDestroyed(controller);
     };
   }, []);
+
+  const { parentUIStateController: parentController } = scope;
   useLayoutEffect(() => {
-    const parent = scope.parentUIStateController;
-    if (!parent) return undefined;
-    debugUIGroup(`"${controlType}" registering into "${parent.controlType}"`);
-    parent.registerChild(controller);
+    if (!parentController) {
+      return undefined;
+    }
+
+    debugUIGroup(
+      `"${controlType}" registering into "${parentController.controlType}"`,
+    );
+    parentController.registerChild(controller);
     return () => {
       debugUIGroup(
-        `"${controlType}" unregistering from "${parent.controlType}"`,
+        `"${controlType}" unregistering from "${parentController.controlType}"`,
       );
-      parent.unregisterChild(controller);
+      parentController.unregisterChild(controller);
     };
-  }, [parentUIStateController]);
+  }, [parentController]);
+
   useLayoutEffect(() => {
     groupIsRenderingRef.current = false;
     if (pendingChangeRef.current) {
@@ -1304,6 +1331,7 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
   facadeUIStateController.rules = rules;
   facadeUIStateController.controlHostProps =
     realUIStateController.controlHostProps;
+
   // No initial checkValidity() here — the facade has no controlHostProps and no children
   // have registered yet, so any check would be a no-op. The real validity check happens
   // when child controllers trigger UI actions through the facade.
