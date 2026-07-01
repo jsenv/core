@@ -115,21 +115,33 @@ export const useUIStateController = (
     controlType,
     debugUIState,
   );
+  // DOM binding + final destruction: runs once on mount, cleans up on unmount.
   useLayoutEffect(() => {
     const controller = uiStateControllerRef.current;
     const el = controller.ref.current;
     if (el) {
       el.__uiStateController__ = controller;
     }
-    notifyParentAboutChildMount();
     return () => {
       if (el && el.__uiStateController__ === controller) {
         delete el.__uiStateController__;
       }
-      notifyParentAboutChildUnmount();
       onUIStateControllerDestroyed(controller);
     };
   }, []);
+  // Parent registration: re-runs whenever the parent controller identity
+  // changes. The notifier functions are stable (useMemo [], reading
+  // parentRef.current), so we key on parentUIStateController directly.
+  // This matters when a Suspense boundary resolves and remounts the parent
+  // (e.g. PickerButton creating a fresh facade) while THIS child fiber is
+  // reused from an earlier render attempt — without this dep the child stays
+  // registered with the original parent and never migrates to the new one.
+  useLayoutEffect(() => {
+    notifyParentAboutChildMount();
+    return () => {
+      notifyParentAboutChildUnmount();
+    };
+  }, [parentUIStateController]);
 
   const existingUIStateController = uiStateControllerRef.current;
   if (existingUIStateController) {
@@ -583,38 +595,49 @@ const useParentControllerNotifiers = (
   controlType,
   debugUIState,
 ) => {
+  // A ref that always holds the CURRENT parent so function closures created
+  // once via useMemo([], []) can still call the right parent even after a
+  // Suspense-driven re-mount that swaps the parent controller identity while
+  // the child fiber is reused (and its closed-over variables are frozen).
+  const parentRef = useRef(parentUIStateController);
+  parentRef.current = parentUIStateController;
+
   return useMemo(() => {
     if (!parentUIStateController) {
       return NO_PARENT;
     }
 
-    const parentControlType = parentUIStateController.controlType;
     const notifyParentAboutChildMount = () => {
+      const parent = parentRef.current;
+      if (!parent) return;
       const uiStateController = uiStateControllerRef.current;
-      debugUIState(`"${controlType}" registering into "${parentControlType}"`);
-      parentUIStateController.registerChild(uiStateController);
+      debugUIState(
+        `"${controlType}" registering into "${parent.controlType}"`,
+      );
+      parent.registerChild(uiStateController);
     };
 
     const notifyParentAboutChildUIAction = (
       e,
       { stateChanged, silent = false },
     ) => {
+      const parent = parentRef.current;
+      if (!parent) return;
       const uiStateController = uiStateControllerRef.current;
       debugUIState(
-        `"${controlType}" notifying "${parentControlType}" of child ui action (stateChanged: ${stateChanged})`,
+        `"${controlType}" notifying "${parent.controlType}" of child ui action (stateChanged: ${stateChanged})`,
       );
-      parentUIStateController.onChildUIAction(uiStateController, e, {
-        stateChanged,
-        silent,
-      });
+      parent.onChildUIAction(uiStateController, e, { stateChanged, silent });
     };
 
     const notifyParentAboutChildUnmount = () => {
+      const parent = parentRef.current;
+      if (!parent) return;
       const uiStateController = uiStateControllerRef.current;
       debugUIState(
-        `"${controlType}" unregistering from "${parentControlType}"`,
+        `"${controlType}" unregistering from "${parent.controlType}"`,
       );
-      parentUIStateController.unregisterChild(uiStateController);
+      parent.unregisterChild(uiStateController);
     };
 
     return [
@@ -622,6 +645,8 @@ const useParentControllerNotifiers = (
       notifyParentAboutChildUIAction,
       notifyParentAboutChildUnmount,
     ];
+    // deps [] — the functions themselves are stable references and always call
+    // parentRef.current which is kept up-to-date on every render above.
   }, []);
 };
 
@@ -814,12 +839,16 @@ export const useUIGroupStateController = (
     if (el) {
       el.__uiStateController__ = controller;
     }
-    notifyParentAboutChildMount();
     return () => {
-      notifyParentAboutChildUnmount();
       onUIStateControllerDestroyed(controller);
     };
   }, []);
+  useLayoutEffect(() => {
+    notifyParentAboutChildMount();
+    return () => {
+      notifyParentAboutChildUnmount();
+    };
+  }, [parentUIStateController]);
 
   const onChange = (e, { notifyExternal }) => {
     if (groupIsRenderingRef.current) {
