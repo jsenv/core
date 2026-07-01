@@ -20,18 +20,16 @@
           <Box
             flex="y"
             spacing="m"
-            style={{ padding: "20px", maxWidth: "520px" }}
+            style={{ padding: "20px", maxWidth: "600px" }}
           >
             <h1>Field</h1>
             <p style={{ margin: 0, color: "#555" }}>
-              <code>Field</code> auto-wires a <code>Label</code> to its input
-              via a generated id — no manual <code>htmlFor</code>/
-              <code>id</code> needed. It also reflects the input's interactive /
-              disabled / read-only state onto the label. The dotted border shows
-              the label's clickable area.
+              <code>Field</code> connects a label to a form control. The dotted
+              border shows the label's clickable area.
             </p>
             <TableOfContents />
-            <DefaultDemo />
+            <FieldAsContainerDemo />
+            <FieldAsLabelDemo />
             <DisabledDemo />
             <ReadOnlyDemo />
             <SizingDemo />
@@ -40,11 +38,13 @@
         );
       };
 
-      // Default: label to the left, input to the right (horizontal row layout)
       const TableOfContents = () => (
         <ol style={{ margin: 0, paddingLeft: "20px", lineHeight: "2" }}>
           <li>
-            <a href="#default">Default (label to the left)</a>
+            <a href="#container">Field as container — auto-wired via generated id</a>
+          </li>
+          <li>
+            <a href="#as-label">Field as label — implicit association (no htmlFor)</a>
           </li>
           <li>
             <a href="#disabled">Disabled</a>
@@ -61,38 +61,99 @@
         </ol>
       );
 
-      // Default: label to the left, input to the right (horizontal row layout)
-      const DefaultDemo = () => (
-        <Box flex="y" spacing="s" alignX="start" id="default">
-          <h2 style={{ margin: 0 }}>Default (label to the left)</h2>
-          <Field
-            as="label"
-            flex
-            alignY="center"
-            spacing="s"
-            style={labelDotted}
-          >
-            Email
-            <Input type="email" name="email" placeholder="Enter email" />
-          </Field>
+      // Field as a container: generates a controlId shared by the first Label (as htmlFor)
+      // and the first control (as id). No manual wiring needed.
+      const FieldAsContainerDemo = () => (
+        <Box flex="y" spacing="s" alignX="start" id="container">
+          <h2 style={{ margin: 0 }}>Field as container (auto-wired)</h2>
+          <p style={{ margin: 0, fontSize: "0.85em", color: "#555" }}>
+            <code>{"<Field>"}</code> auto-generates a shared id. The{" "}
+            <code>{"<Label>"}</code> uses it as <code>htmlFor</code> and the
+            input uses it as its <code>id</code> — clicking the label focuses
+            the input.
+          </p>
           <Field flex alignY="center">
             <Label style={labelDotted}>Username</Label>
             <Input type="text" name="username" placeholder="Enter username" />
           </Field>
+          <Field flex alignY="center">
+            <Label style={labelDotted}>Email</Label>
+            <Input type="email" name="email" placeholder="Enter email" />
+          </Field>
         </Box>
       );
 
-      const VerticalDemo = () => (
-        <Box flex="y" spacing="s" id="vertical">
-          <h2 style={{ margin: 0 }}>Vertical (label above or below)</h2>
-          <Field vertical>
-            <Label style={labelDotted}>Username</Label>
-            <Input type="text" name="username_v" placeholder="Enter username" />
-          </Field>
-          <Field vertical>
-            <Input type="email" name="email_v" placeholder="Enter email" />
-            <Label style={labelDotted}>Email</Label>
-          </Field>
+      // Field as a label: the <label> element wraps the control directly (implicit
+      // HTML association). No htmlFor needed — and none should be generated.
+      //
+      // With explicit htmlFor: the label's for= points to the given id, and the
+      // control inside gets that id via ControlIdContext (explicit association).
+      const FieldAsLabelDemo = () => (
+        <Box flex="y" spacing="s" alignX="start" id="as-label">
+          <h2 style={{ margin: 0 }}>Field as label</h2>
+
+          <Box flex="y" spacing="xs" alignX="start">
+            <strong style={{ fontSize: "0.9em" }}>
+              Without <code>htmlFor</code> — implicit association (label wraps
+              input)
+            </strong>
+            <p style={{ margin: 0, fontSize: "0.85em", color: "#555" }}>
+              The <code>{"<label>"}</code> element wraps the input so no{" "}
+              <code>for</code> attribute is needed. Click the label text to focus
+              the input.
+            </p>
+            <Field
+              as="label"
+              flex
+              alignY="center"
+              spacing="s"
+              style={labelDotted}
+            >
+              Email
+              <Input type="email" name="email_implicit" placeholder="Enter email" />
+            </Field>
+            <Field
+              as="label"
+              flex
+              alignY="center"
+              spacing="s"
+              style={labelDotted}
+              vertical
+            >
+              Username (vertical)
+              <Input
+                type="text"
+                name="username_implicit"
+                placeholder="Enter username"
+              />
+            </Field>
+          </Box>
+
+          <Box flex="y" spacing="xs" alignX="start">
+            <strong style={{ fontSize: "0.9em" }}>
+              With explicit <code>htmlFor</code> — explicit association
+            </strong>
+            <p style={{ margin: 0, fontSize: "0.85em", color: "#555" }}>
+              When <code>htmlFor</code> is provided, the label gets a{" "}
+              <code>for=</code> attribute and the inner control gets the
+              matching <code>id</code> via context.
+            </p>
+            <Field
+              as="label"
+              flex
+              alignY="center"
+              spacing="s"
+              style={labelDotted}
+              htmlFor="my_explicit_input"
+            >
+              Password
+              <Input
+                type="password"
+                name="password_explicit"
+                placeholder="Enter password"
+              />
+            </Field>
+          </Box>
         </Box>
       );
 
@@ -103,10 +164,25 @@
             The label dims automatically when the input is disabled.
           </p>
           <Field flex alignY="center">
-            <Label style={labelDotted}>Username</Label>
+            <Label style={labelDotted}>Username (container)</Label>
             <Input
               type="text"
               name="username_disabled"
+              defaultValue="john_doe"
+              disabled
+            />
+          </Field>
+          <Field
+            as="label"
+            flex
+            alignY="center"
+            spacing="s"
+            style={labelDotted}
+          >
+            Username (as label)
+            <Input
+              type="text"
+              name="username_disabled_aslabel"
               defaultValue="john_doe"
               disabled
             />
@@ -121,10 +197,25 @@
             The label dims automatically when the input is read-only.
           </p>
           <Field flex alignY="center" spacing="s">
-            <Label style={labelDotted}>Username</Label>
+            <Label style={labelDotted}>Username (container)</Label>
             <Input
               type="text"
               name="username_readonly"
+              defaultValue="john_doe"
+              readOnly
+            />
+          </Field>
+          <Field
+            as="label"
+            flex
+            alignY="center"
+            spacing="s"
+            style={labelDotted}
+          >
+            Username (as label)
+            <Input
+              type="text"
+              name="username_readonly_aslabel"
               defaultValue="john_doe"
               readOnly
             />
@@ -204,6 +295,28 @@
               </div>
             </Box>
           </Box>
+        </Box>
+      );
+
+      const VerticalDemo = () => (
+        <Box flex="y" spacing="s" id="vertical">
+          <h2 style={{ margin: 0 }}>Vertical (label above or below)</h2>
+          <Field vertical>
+            <Label style={labelDotted}>Username</Label>
+            <Input type="text" name="username_v" placeholder="Enter username" />
+          </Field>
+          <Field vertical>
+            <Input type="email" name="email_v" placeholder="Enter email" />
+            <Label style={labelDotted}>Email</Label>
+          </Field>
+          <Field as="label" vertical style={labelDotted}>
+            Username (as label, vertical)
+            <Input
+              type="text"
+              name="username_v_aslabel"
+              placeholder="Enter username"
+            />
+          </Field>
         </Box>
       );
 

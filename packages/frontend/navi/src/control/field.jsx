@@ -87,6 +87,10 @@ export const Field = (props) => {
 const FieldAsLabel = (props) => {
   const { vertical, children } = props;
   props.paddingWithControl = resolveSpacingSize(props.paddingWithControl, "s");
+  // When used as a label wrapper (implicit association), no htmlFor is needed unless
+  // the user explicitly passes one to link to a specific control by id.
+  // Pass htmlFor={undefined} explicitly so Label skips auto-generation.
+  const htmlFor = Object.hasOwn(props, "htmlFor") ? props.htmlFor : undefined;
 
   return (
     <Label
@@ -96,6 +100,7 @@ const FieldAsLabel = (props) => {
       alignX={vertical ? "start" : undefined}
       data-vertical={vertical ? "" : undefined}
       {...props}
+      htmlFor={htmlFor}
       vertical={undefined}
     >
       {children}
@@ -153,7 +158,11 @@ export const Label = (props) => {
   const [readOnly, setReadOnly] = useState(false);
   const [connected, setConnected] = useState(false);
   const defaultId = useId();
-  const htmlFor = props.htmlFor || controlId || `label_auto_${defaultId}`;
+  // If htmlFor is explicitly passed (even as undefined), use it as-is so callers
+  // (e.g. FieldAsLabel) can opt out of auto-generation by passing undefined explicitly.
+  const htmlFor = Object.hasOwn(props, "htmlFor")
+    ? props.htmlFor
+    : controlId || `label_auto_${defaultId}`;
   const [messageProps, remainingProps] = extractMessageAndRemainingProps(props);
   const messagePropsRef = useRef();
   messagePropsRef.current = messageProps;
