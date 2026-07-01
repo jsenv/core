@@ -129,6 +129,14 @@ const css = /* css */ `
       pointer-events: none;
     }
 
+    .navi_checkbox_icon {
+      display: flex;
+      aspect-ratio: inherit;
+      height: 1em;
+      align-items: center;
+      justify-content: center;
+    }
+
     /* Focus */
     &[data-focus-visible] {
       z-index: 1;

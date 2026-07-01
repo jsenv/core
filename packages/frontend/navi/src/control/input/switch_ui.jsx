@@ -4,11 +4,11 @@ const css = /* css */ `
   @layer navi {
     .navi_checkbox {
       --switch-margin: 2px; /* Useful to reserve space for outline */
-      --switch-width: 2em;
-      --switch-thumb-size: 1.2em;
       /* Padding uses px and not em otherwise it can be resolved to a float which does not play well */
       /* With the translation calc in some configurations. In the end 2px is nice in all sizes and can still be configured for exceptions */
       --switch-padding: 2px;
+      --switch-thumb-size: calc(1em - var(--switch-padding) * 2);
+      --switch-width: calc(1.4em - var(--switch-padding) * 2);
       --switch-border-radius: calc(
         var(--switch-thumb-size) / 2 + calc(var(--switch-padding) * 2)
       );

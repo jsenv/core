@@ -817,7 +817,7 @@
                       <Label>Navi</Label>
                     </Field>
                     <label style="border: 1px dotted grey;">
-                      <input type="checkbox" autofocus defaultChecked />
+                      <input type="checkbox" defaultChecked />
                       User Agent
                     </label>
                   </Box>
@@ -1543,25 +1543,34 @@
 
               <Box flex spacing="s">
                 <fieldset>
-                  <legend>Small</legend>
+                  <legend>xs</legend>
+                  <Box flex="y" spacing="s" alignX="start" alignY="center">
+                    <Field as="label" flex alignY="center" spacing="s">
+                      <Input type="checkbox" switch size="xs" />
+                      Label
+                    </Field>
+                    <Field as="label" flex alignY="center" spacing="s">
+                      <Input type="checkbox" switch size="xs" defaultChecked />
+                      Label
+                    </Field>
+                  </Box>
+                </fieldset>
+
+                <fieldset>
+                  <legend>s</legend>
                   <Box flex="y" spacing="s" alignX="start" alignY="center">
                     <Field column alignY="center" spacing="s">
-                      <Input type="checkbox" appearance="switch" size="s" />
+                      <Input type="checkbox" switch size="s" />
                       Label
                     </Field>
                     <Field column alignY="center" spacing="s">
-                      <Input
-                        type="checkbox"
-                        appearance="switch"
-                        size="s"
-                        defaultChecked
-                      />
+                      <Input type="checkbox" switch size="s" defaultChecked />
                       Label
                     </Field>
                   </Box>
                 </fieldset>
                 <fieldset>
-                  <legend>Medium (Default)</legend>
+                  <legend>m</legend>
                   <Box flex="y" spacing="s" alignX="start" alignY="center">
                     <Field column alignY="center" spacing="s">
                       <Input type="checkbox" appearance="switch" />
@@ -1577,20 +1586,45 @@
                     </Field>
                   </Box>
                 </fieldset>
+              </Box>
+              <Box flex spacing="s">
                 <fieldset>
-                  <legend>Large</legend>
+                  <legend>l</legend>
                   <Box flex="y" spacing="s" alignX="start" alignY="center">
                     <Field column alignY="center" spacing="s">
-                      <Input type="checkbox" appearance="switch" size="l" />
+                      <Input type="checkbox" switch size="l" />
                       Label
                     </Field>
                     <Field column alignY="center" spacing="s">
-                      <Input
-                        type="checkbox"
-                        appearance="switch"
-                        size="l"
-                        defaultChecked
-                      />
+                      <Input type="checkbox" switch size="l" defaultChecked />
+                      Label
+                    </Field>
+                  </Box>
+                </fieldset>
+
+                <fieldset>
+                  <legend>xl</legend>
+                  <Box flex="y" spacing="s" alignX="start" alignY="center">
+                    <Field column alignY="center" spacing="s">
+                      <Input type="checkbox" switch size="xl" />
+                      Label
+                    </Field>
+                    <Field column alignY="center" spacing="s">
+                      <Input type="checkbox" switch size="xl" defaultChecked />
+                      Label
+                    </Field>
+                  </Box>
+                </fieldset>
+
+                <fieldset>
+                  <legend>xxl</legend>
+                  <Box flex="y" spacing="s" alignX="start" alignY="center">
+                    <Field column alignY="center" spacing="s">
+                      <Input type="checkbox" switch size="xxl" />
+                      Label
+                    </Field>
+                    <Field column alignY="center" spacing="s">
+                      <Input type="checkbox" switch size="xxl" defaultChecked />
                       Label
                     </Field>
                   </Box>
@@ -1671,17 +1705,25 @@
 
               <Box flex="y" spacing="s">
                 <fieldset>
-                  <legend>Big Padding</legend>
+                  <legend>padding="l" + width="40" + size="l"</legend>
                   <Box flex spacing="s" alignX="start" alignY="center">
                     <Field flex alignY="center" spacing="s">
-                      <Input type="checkbox" appearance="switch" padding="l" />
+                      <Input
+                        type="checkbox"
+                        switch
+                        padding="l"
+                        width="40"
+                        size="l"
+                      />
                       Label
                     </Field>
                     <Field flex alignY="center" spacing="s">
                       <Input
                         type="checkbox"
-                        appearance="switch"
+                        switch
                         padding="l"
+                        width="40"
+                        size="l"
                         defaultChecked
                       />
                       Label
@@ -1696,7 +1738,7 @@
 
       const HeartIconOpacityDemo = () => {
         return (
-          <Field column spacing="s" alignY="center">
+          <Field as="label" flex spacing="s" alignY="center">
             <Input
               type="checkbox"
               style={{
@@ -1724,7 +1766,7 @@
               <Box flex="y" spacing="s" alignY="start">
                 <HeartIconOpacityDemo />
 
-                <Field column spacing="s" alignY="center">
+                <Field as="label" flex spacing="s" alignY="center">
                   <Input
                     type="checkbox"
                     icon={[<span>⭐</span>, <span>❤️</span>]}
@@ -1732,7 +1774,7 @@
                   Star or Heart icon (array of icons for different states)
                 </Field>
 
-                <Field column spacing="s" alignY="center">
+                <Field as="label" flex spacing="s" alignY="center">
                   <Input
                     type="checkbox"
                     icon={[
@@ -1814,55 +1856,57 @@
               Checkboxes with icons can also take the appearance of a button:
             </p>
 
-            <Field flex spacing="s" alignY="center">
-              <Input
-                type="checkbox"
-                appearance="button"
-                checked={eyeChecked}
-                action={(checked) => {
-                  setEyeChecked(checked);
-                }}
-                icon={[
-                  <Icon>
-                    <EyeClosedSvg />
-                  </Icon>,
-                  <Icon>
-                    <EyeSvg />
-                  </Icon>,
-                ]}
-              />
-              Toggle visibility
-            </Field>
+            <Box flex="y" alignX="start" spacing="s">
+              <Field as="label" flex spacing="s" alignY="center">
+                <Input
+                  type="checkbox"
+                  appearance="button"
+                  checked={eyeChecked}
+                  action={(checked) => {
+                    setEyeChecked(checked);
+                  }}
+                  icon={[
+                    <Icon>
+                      <EyeClosedSvg />
+                    </Icon>,
+                    <Icon>
+                      <EyeSvg />
+                    </Icon>,
+                  ]}
+                />
+                Toggle visibility
+              </Field>
 
-            <Field flex spacing="s" alignY="center" marginTop="s">
-              <Input
-                type="checkbox"
-                appearance="button"
-                flex
-                align="center"
-                circle
-                checked={eyeChecked}
-                action={(checked) => {
-                  setEyeChecked(checked);
-                }}
-                icon={[
-                  <Icon>
-                    <EyeClosedSvg />
-                  </Icon>,
-                  <Icon>
-                    <EyeSvg />
-                  </Icon>,
-                ]}
-              />
-              Toggle visibility
-            </Field>
+              <Field as="label" flex spacing="s" alignY="center">
+                <Input
+                  type="checkbox"
+                  appearance="button"
+                  flex
+                  align="center"
+                  circle
+                  checked={eyeChecked}
+                  action={(checked) => {
+                    setEyeChecked(checked);
+                  }}
+                  icon={[
+                    <Icon>
+                      <EyeClosedSvg />
+                    </Icon>,
+                    <Icon>
+                      <EyeSvg />
+                    </Icon>,
+                  ]}
+                />
+                Toggle visibility
+              </Field>
+            </Box>
           </fieldset>
         );
       };
 
       const HeartField = (props) => {
         return (
-          <Field column spacing="s" alignY="center">
+          <Field as="label" flex spacing="s" alignY="center">
             <Input
               type="checkbox"
               icon={[
@@ -1940,7 +1984,7 @@
                 >
                   Checkbox (the actual field)
                 </div>
-                <Field>
+                <Field as="label">
                   <Input
                     type="checkbox"
                     id="checkbox_being_proxied"
