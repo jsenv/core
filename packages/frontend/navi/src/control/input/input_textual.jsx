@@ -437,20 +437,23 @@ export const InputTextual = createComponentResolver([
   InputTextualUI,
 ]);
 
-const RealInput = (props) => {
-  const autoSelectReadOnlyProps = useAutoSelectReadOnly(props);
+const RealInput = ({ maxLength, ...domProps }) => {
+  const autoSelectReadOnlyProps = useAutoSelectReadOnly(domProps);
 
   return (
     <Box
-      {...props}
+      {...domProps}
       as="input"
       baseClassName="navi_control_input"
       {...autoSelectReadOnlyProps}
-      // Never set native maxLength — our guard handles it. maxLength stays in
-      // inputControlHostProps so form validation constraints still read it.
-      maxLength={undefined}
-      // But do expose it (needed by navi_input_full event)
-      navi-max-length={props.maxLength}
+      // Never set native maxLength — our guard handles it. Omitting it entirely
+      // avoids a Preact quirk: setting maxLength={undefined} on a fresh DOM element
+      // (e.g. after a Suspense remount) causes Preact to run `el.maxLength = ""`
+      // which coerces to 0 (Number("") = 0), capping the input at 0 characters.
+      // see https://github.com/preactjs/preact/issues/2677
+      // The JS value stays accessible via the navi-max-length attribute and via
+      // inputControlHostProps (which the validation system reads directly).
+      navi-max-length={maxLength}
     />
   );
 };

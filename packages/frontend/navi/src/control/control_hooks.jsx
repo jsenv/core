@@ -724,6 +724,7 @@ export const useControlProps = (
         actionAfterChange,
         actionDebounce,
         hasNaviChangeEventReaction,
+        ref,
       ],
     );
     const refComposed = useComposeElementRef(refCallback, ref);
