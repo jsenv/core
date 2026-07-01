@@ -207,6 +207,7 @@ export const useUIStateController = (
               );
             }
           }
+          // Trigger uiAction/command side effects without changing UI state.
           const currentUIState = controller.uiState;
           s.uiActionInternal?.(currentUIState, e);
           if (s.uiAction) {
@@ -235,6 +236,7 @@ export const useUIStateController = (
           if (guardResult) {
             if (Object.hasOwn(guardResult, "fixedValue")) {
               newUIState = guardResult.fixedValue;
+              // fall through — continue with truncated value (callout already shown by guard)
             } else {
               return false;
             }
@@ -286,11 +288,21 @@ export const useUIStateController = (
             controller.onUIAction(e);
             return false;
           }
+          // set immediatly (don't wait for preact re-render) so ui is in the right state for:
+          // - side effect
+          // - any "input" event that might be dispatched below
           syncDomState(newUIState, e);
           controller.uiState = newUIState;
           ownUIStateSignal.value = newUIState;
           const controlProxyFor =
             controller.controlHostProps["navi-control-proxy-for"];
+          // Radio group: when a radio becomes checked, uncheck all siblings.
+          // We only update their UIState — no parent notification, no synthetic
+          // input event (the browser never fires input on the unchecked radios,
+          // and we don't want to trigger their action flow with a stale DOM value).
+          // Uses the in-memory registry instead of DOM queries so this works even
+          // when sibling items are virtualized (not in the DOM).
+          // Form scoping is preserved by comparing parentUIStateController references.
           if (isRadio && newUIState && controller.name && !controlProxyFor) {
             const siblings = getRadioSiblings(controller);
             if (siblings) {
@@ -314,6 +326,10 @@ export const useUIStateController = (
           debugUIState(e, `publishUIState(${JSON.stringify(newUIState)})`);
           publishUIState(newUIState, e);
           const el = controller.ref.current;
+          // Always notify the element that its UI state changed.
+          // Listeners use this to stay in sync (e.g. input_effect.js tracks currentState,
+          // useUIState subscribes for reactive updates). Separate from navi_set_ui_state
+          // which is the command; navi_ui_state_change is the notification.
           if (el) {
             dispatchInternalCustomEvent(el, "navi_ui_state_change", {
               event: e,
@@ -358,9 +374,9 @@ export const useUIStateController = (
                 );
               }
             }
+            // initial_state_push is pure initialization (equivalent to defaultValue on the
+            // child itself): skip uiAction entirely so no side effects fire on mount.
             if (e.type !== "initial_state_push") {
-              // initial_state_push is pure initialization (equivalent to defaultValue on the
-              // child itself): skip uiAction entirely so no side effects fire on mount.
               // Still fire uiAction so external listeners (e.g. signals) stay in
               // sync, but do NOT fire the command and do NOT notify the parent —
               // both would cause an infinite loop when a parent cascades state
@@ -473,6 +489,8 @@ export const useUIStateController = (
           return true;
         },
         clearUIState: (e) => {
+          // Radio and checkbox "unchecked" state is `undefined`, not `""`.
+          // Passing `""` would set checked=true because `"" !== undefined`.
           const isCheckable =
             controlType === "input" &&
             (props.type === "radio" || props.type === "checkbox");
@@ -483,6 +501,8 @@ export const useUIStateController = (
         },
         onActionEnd: async (e) => {
           debugUIState(`"${controlType}" actionEnd called`);
+          // wait for preact to re-render to update readonly as action end side effects are runned
+          // await new Promise((r) => requestAnimationFrame(r));
           controller.rules.validation.syncValidity(e);
         },
         onActionError: (e) => {
@@ -538,10 +558,19 @@ export const useUIStateController = (
     // Syncs public-facing fields and handles controlled state prop changes.
     (s) => {
       const { controller } = s;
-      controller.ref = props.ref;
-      controller.id = props.id;
-      controller.name = props.name;
+      // Raw Preact props from the current render. These are the component's input props,
+      // not the resolved/curated host props. useInteractiveProps overwrites
+      // uiStateController.controlHostProps with the resolved subset on every render.
       controller.props = props;
+      // Re-sync to this render's ref object. It's normally stable, but it can
+      // legitimately change identity (e.g. switching from an internal fallback
+      // ref to a forwarded one, or across an interrupted/resumed render such as
+      // a Suspense boundary resolving) — if we kept the original ref forever,
+      // `ref.current` would be stuck at whatever it was at creation time, even
+      // after the controller has moved on to a different, live DOM node.
+      controller.ref = props.ref;
+      controller.id = props.id; // never supposed to change, not supported for now
+      controller.name = props.name;
       controller.parentUIStateController = parentUIStateController;
       const { value, hasStateProp, state, stateInitial } = controlInfo;
       controller.value = value;
