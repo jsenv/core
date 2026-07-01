@@ -69,7 +69,6 @@
               <li><a href="#as-label">Field as="label"</a></li>
               <li><a href="#vertical-zone">Vertical — interactive zone</a></li>
               <li><a href="#advanced-vertical">Advanced vertical label</a></li>
-              <li><a href="#separate-label">Label in a separate component</a></li>
               <li><a href="#sizing">Sizing</a></li>
               <li><a href="#states">Disabled &amp; read-only</a></li>
             </ol>
@@ -78,7 +77,6 @@
           <AsLabelDemo />
           <InteractiveZoneDemo />
           <AdvancedVerticalDemo />
-          <SeparateLabelDemo />
           <SizingDemo />
           <DisabledReadonlyDemo />
         </Box>
@@ -187,13 +185,49 @@
             </Field>
           </Box>
 
-          <p style={{ marginTop: "14px", marginBottom: 0 }}>
-            Without <code>as</code>, <code>{"<Field>"}</code> generates a
-            shared id between the <code>{"<Label>"}</code> and the control.
-            Use <code>paddingWithControl</code> for the gap — it stays part of
-            the label's hit area (unlike a flex <code>gap</code> which creates
-            a dead zone).
+          <p>
+            <code>paddingWithControl</code> controls the spacing between the
+            label and the control. Because the spacing is a padding on the
+            label element, clicking in it still activates the control. With a
+            flex <code>gap</code> the space between them is outside the label
+            and does nothing.
           </p>
+
+          <Box flex spacing="l" alignY="start">
+            <Box flex="y" spacing="xs" alignX="start">
+              <p class="row-label">paddingWithControl — space is clickable</p>
+              <Field
+                vertical
+                paddingWithControl="xl"
+                style={{ alignSelf: "flex-start" }}
+              >
+                <Label style={dotted}>Label</Label>
+                <Input type="text" name="pad_demo" placeholder="…" style={{ width: "160px" }} />
+              </Field>
+            </Box>
+
+            <Box flex="y" spacing="xs" alignX="start">
+              <p class="row-label">gap — space is a dead zone</p>
+              <Box
+                flex="y"
+                style={{ alignSelf: "flex-start", gap: "var(--navi-xl)" }}
+              >
+                <label
+                  htmlFor="gap_demo_input"
+                  style={{ ...dotted, cursor: "pointer", userSelect: "none" }}
+                >
+                  Label
+                </label>
+                <Input
+                  id="gap_demo_input"
+                  type="text"
+                  name="gap_demo"
+                  placeholder="…"
+                  style={{ width: "160px" }}
+                />
+              </Box>
+            </Box>
+          </Box>
         </div>
       );
 
@@ -235,47 +269,7 @@
       );
 
       /* ------------------------------------------------------------------ */
-      /* 4. Label in a separate component                                     */
-      /* ------------------------------------------------------------------ */
-      const SeparateLabelDemo = () => (
-        <div class="demo-section" id="separate-label">
-          <h2>Label in a separate component</h2>
-          <p>
-            When the label cannot wrap the input — the input is in a child
-            component loaded lazily, or in a different part of the tree — pass
-            an explicit <code>htmlFor</code> to{" "}
-            <code>{'<Field as="label">'}</code>. The inner control receives the
-            matching <code>id</code> via context.
-          </p>
-
-          <Box flex="y" spacing="xs" alignX="start">
-            <Field
-              as="label"
-              flex
-              alignY="center"
-              spacing="s"
-              style={dotted}
-              htmlFor="my_separate_input"
-            >
-              Password
-            </Field>
-            {/* input lives in a separate component, gets id="my_separate_input" from context */}
-            <SeparateInput />
-          </Box>
-        </div>
-      );
-
-      const SeparateInput = () => (
-        <Input
-          id="my_separate_input"
-          type="password"
-          name="password_sep"
-          placeholder="separate component"
-        />
-      );
-
-      /* ------------------------------------------------------------------ */
-      /* 5. Sizing                                                            */
+      /* 4. Sizing                                                            */
       /* ------------------------------------------------------------------ */
       const SizingDemo = () => (
         <div class="demo-section" id="sizing">
