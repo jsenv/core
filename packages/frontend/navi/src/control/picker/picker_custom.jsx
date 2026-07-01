@@ -2,7 +2,6 @@ import { chainEvent, findEvent } from "@jsenv/dom";
 import { useContext, useId, useLayoutEffect, useRef } from "preact/hooks";
 
 import { createOnKeyDownForShortcuts } from "@jsenv/navi/src/keyboard/keyboard_shortcuts.js";
-import { ControlIdContext } from "../control_context.js";
 import { windowWidthSignal } from "@jsenv/navi/src/layout/responsive.js";
 import { useNavState } from "@jsenv/navi/src/nav/browser_integration/browser_integration.js";
 import { useDebugFocus, useDebugPopup } from "@jsenv/navi/src/navi_debug.jsx";
@@ -10,6 +9,8 @@ import { Dialog } from "@jsenv/navi/src/popup/dialog.jsx";
 import { Popover } from "@jsenv/navi/src/popup/popover.jsx";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { useStableCallback } from "@jsenv/navi/src/utils/use_stable_callback.js";
+import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
+import { ControlIdContext } from "../control_context.js";
 import { dispatchRequestAction } from "../rules/control_action.js";
 import { dispatchRequestInteraction } from "../rules/control_interaction.js";
 import {
@@ -358,9 +359,14 @@ const PickerCustom = (props) => {
             // Cancelling always succeeds — nothing to validate.
             return;
           }
-
           const pickerEl = ref.current;
           const inputEl = getPickerInput(pickerEl);
+          const valueAtClose = getUIStateFromElement(inputEl);
+          if (compareTwoJsValues(valueAtClose, valueAtOpen)) {
+            // Value unchanged — no action to run, but still allow the close.
+            return;
+          }
+
           dispatchRequestAction(inputEl, {
             event: requestCloseEvent,
             name: "picker request close",
