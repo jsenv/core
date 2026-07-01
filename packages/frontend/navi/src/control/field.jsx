@@ -157,12 +157,15 @@ export const Label = (props) => {
   const [disabled, setDisabled] = useState(false);
   const [readOnly, setReadOnly] = useState(false);
   const [connected, setConnected] = useState(false);
-  const defaultId = useId();
-  // If htmlFor is explicitly passed (even as undefined), use it as-is so callers
-  // (e.g. FieldAsLabel) can opt out of auto-generation by passing undefined explicitly.
+  // Set htmlFor only when we know the correct target id:
+  //   - caller explicitly provided one (even undefined to opt out)
+  //   - a parent Field provided one via ControlIdContext
+  // When neither is present the label either wraps the control directly
+  // (implicit HTML association) or is disconnected — either way, a
+  // randomly generated id would point to nothing and cause confusion.
   const htmlFor = Object.hasOwn(props, "htmlFor")
     ? props.htmlFor
-    : controlId || `label_auto_${defaultId}`;
+    : controlId;
   const [messageProps, remainingProps] = extractMessageAndRemainingProps(props);
   const messagePropsRef = useRef();
   messagePropsRef.current = messageProps;

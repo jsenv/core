@@ -85,6 +85,9 @@
               <li>
                 <a href="#states">Disabled &amp; read-only</a>
               </li>
+              <li>
+                <a href="#explicit-id">Input with explicit id</a>
+              </li>
             </ol>
           </nav>
 
@@ -93,6 +96,7 @@
           <AdvancedVerticalDemo />
           <SizingDemo />
           <DisabledReadonlyDemo />
+          <ExplicitIdDemo />
         </Box>
       );
 
@@ -425,6 +429,45 @@
               <Input type="text" name="ro2" defaultValue="read only" readOnly />
             </Field>
           </Box>
+        </div>
+      );
+
+      /* ------------------------------------------------------------------ */
+      /* 7. Input with explicit id                                            */
+      /* ------------------------------------------------------------------ */
+      const ExplicitIdDemo = () => (
+        <div class="demo-section" id="explicit-id">
+          <h2>Input with explicit id</h2>
+          <p>
+            When an input inside <code>{'<Field as="label">'}</code> has its own{" "}
+            <code>id</code>, the label must not generate a mismatched{" "}
+            <code>htmlFor</code>. Since the label wraps the input, no{" "}
+            <code>for</code> attribute is needed — implicit association handles
+            it. Clicking the label still focuses the input.
+          </p>
+
+          <h3>as="label" + input with id="my_email"</h3>
+          <Field as="label" flex alignY="center" spacing="s" style={dotted}>
+            Email
+            <Input
+              type="email"
+              id="my_email"
+              name="email_explicit"
+              placeholder="Enter email"
+            />
+          </Field>
+
+          <h3>Field container + Label + input with id="my_username"</h3>
+
+          <Label style={dotted}>
+            Username
+            <Input
+              type="text"
+              id="my_username"
+              name="username_explicit"
+              placeholder="Enter username"
+            />
+          </Label>
         </div>
       );
 
