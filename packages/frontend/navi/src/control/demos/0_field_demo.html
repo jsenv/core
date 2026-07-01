@@ -439,11 +439,11 @@
         <div class="demo-section" id="explicit-id">
           <h2>Input with explicit id</h2>
           <p>
-            When an input inside <code>{'<Field as="label">'}</code> has its own{" "}
-            <code>id</code>, the label must not generate a mismatched{" "}
-            <code>htmlFor</code>. Since the label wraps the input, no{" "}
-            <code>for</code> attribute is needed — implicit association handles
-            it. Clicking the label still focuses the input.
+            When a label wraps an input that has its own <code>id</code>, no{" "}
+            <code>htmlFor</code> should be generated — implicit association
+            handles the connection. These cases verify that neither{" "}
+            <code>{"<Field as=\"label\">"}</code> nor <code>{"<Label>"}</code>{" "}
+            used standalone produce a mismatched <code>for</code> attribute.
           </p>
 
           <h3>as="label" + input with id="my_email"</h3>
@@ -457,9 +457,8 @@
             />
           </Field>
 
-          <h3>Field container + Label + input with id="my_username"</h3>
-
-          <Label style={dotted}>
+          <h3>Label directly wrapping input with id="my_username"</h3>
+          <Label flex alignY="center" spacing="s" style={dotted}>
             Username
             <Input
               type="text"
