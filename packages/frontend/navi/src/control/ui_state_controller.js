@@ -101,6 +101,17 @@ export const useUIStateController = (
   // object literal (which is created once and can't be re-closed-over).
   const parentUIStateControllerRef = useRef(parentUIStateController);
   parentUIStateControllerRef.current = parentUIStateController;
+  // A reactive signal holding the current parent's uiStateSignal object.
+  // Updated every render so that the button-inheritance computed() can
+  // re-subscribe to the NEW parent's signal when the parent changes identity.
+  const parentUiStateSignalHolderRef = useRef(null);
+  if (!parentUiStateSignalHolderRef.current) {
+    parentUiStateSignalHolderRef.current = signal(
+      parentUIStateController?.uiStateSignal ?? null,
+    );
+  }
+  parentUiStateSignalHolderRef.current.value =
+    parentUIStateController?.uiStateSignal ?? null;
   const formContext = useContext(FormContext);
   const { id, uiAction } = props;
   const isProxy = Boolean(props["navi-control-proxy-for"]);
@@ -168,7 +179,11 @@ export const useUIStateController = (
     parentUIStateController;
   const uiStateSignal = inherit
     ? computed(() => {
-        const parentUIState = parentUIStateController.uiStateSignal.value;
+        // Read through the holder signal (reactive) so that when the parent
+        // controller changes identity and we update the holder, this computed
+        // re-subscribes to the NEW parent's uiStateSignal automatically.
+        const parentSig = parentUiStateSignalHolderRef.current.value;
+        const parentUIState = parentSig?.value;
         const ownUIState = ownUIStateSignal.value;
         return ownUIState || parentUIState;
       })
