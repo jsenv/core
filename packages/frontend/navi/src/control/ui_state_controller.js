@@ -7,7 +7,7 @@ import {
 } from "@jsenv/dom";
 import { computed, signal } from "@preact/signals";
 import { createContext } from "preact";
-import { useContext, useLayoutEffect, useMemo, useRef } from "preact/hooks";
+import { useContext, useLayoutEffect, useRef } from "preact/hooks";
 
 import {
   useDebugFocus,
@@ -97,40 +97,40 @@ export const useUIStateController = (
 
   const uiStateControllerRef = useRef();
   const parentUIStateController = useContext(ParentUIStateControllerContext);
-  // Always-current parent ref used by pass-through methods in the controller
-  // object literal (which is created once and can't be re-closed-over).
-  const parentUIStateControllerRef = useRef(parentUIStateController);
-  parentUIStateControllerRef.current = parentUIStateController;
-  // A reactive signal holding the current parent's uiStateSignal object.
-  // Updated every render so that the button-inheritance computed() can
-  // re-subscribe to the NEW parent's signal when the parent changes identity.
-  const parentUiStateSignalHolderRef = useRef(null);
-  if (!parentUiStateSignalHolderRef.current) {
-    parentUiStateSignalHolderRef.current = signal(
-      parentUIStateController?.uiStateSignal ?? null,
-    );
-  }
-  parentUiStateSignalHolderRef.current.value =
-    parentUIStateController?.uiStateSignal ?? null;
   const formContext = useContext(FormContext);
-  const { id, uiAction } = props;
-  const isProxy = Boolean(props["navi-control-proxy-for"]);
   if (persists === undefined && formContext) {
     persists = true;
   }
   const controlType = controlInfo.controlType;
   const isRadio = controlType === "input" && props.type === "radio";
-  const [
-    notifyParentAboutChildMount,
-    notifyParentAboutChildUIAction,
-    notifyParentAboutChildUnmount,
-  ] = useParentControllerNotifiers(
+  const isProxy = Boolean(props["navi-control-proxy-for"]);
+
+  // Single "live context" ref — mutated in place on every render before any
+  // early-return.  Controller methods close over `live` (= liveRef.current).
+  // Because Object.assign mutates the same object reference, every closure
+  // always reads the latest values — no stale captures.
+  const liveRef = useRef();
+  if (!liveRef.current) liveRef.current = {};
+  const live = liveRef.current;
+  if (!live.parentUiStateSignalHolder) {
+    live.parentUiStateSignalHolder = signal(
+      parentUIStateController?.uiStateSignal ?? null,
+    );
+  }
+  live.parentUiStateSignalHolder.value =
+    parentUIStateController?.uiStateSignal ?? null;
+  Object.assign(live, {
+    ref: props.ref,
+    id: props.id,
+    name: props.name,
+    props,
+    controlInfo,
+    uiAction: props.uiAction,
+    uiActionInternal,
     parentUIStateController,
-    uiStateControllerRef,
-    controlType,
-    debugUIState,
-  );
-  // DOM binding + final destruction: runs once on mount, cleans up on unmount.
+  });
+
+  // DOM binding: runs once on mount, cleans up on unmount.
   useLayoutEffect(() => {
     const controller = uiStateControllerRef.current;
     const el = controller.ref.current;
@@ -144,26 +144,46 @@ export const useUIStateController = (
       onUIStateControllerDestroyed(controller);
     };
   }, []);
-  // Parent registration: re-runs whenever the parent controller identity
-  // changes. The notifier functions are stable (useMemo [], reading
-  // parentRef.current), so we key on parentUIStateController directly.
-  // This matters when a Suspense boundary resolves and remounts the parent
-  // (e.g. PickerButton creating a fresh facade) while THIS child fiber is
-  // reused from an earlier render attempt — without this dep the child stays
-  // registered with the original parent and never migrates to the new one.
+  // Parent registration: re-runs when parent controller changes identity.
+  // The parent is captured locally at effect-run time so the cleanup always
+  // unregisters from the correct (old) parent, not whatever parent is current
+  // at cleanup time.
   useLayoutEffect(() => {
-    notifyParentAboutChildMount();
+    const parent = live.parentUIStateController;
+    if (!parent) return undefined;
+    const controller = uiStateControllerRef.current;
+    debugUIState(`"${controlType}" registering into "${parent.controlType}"`);
+    parent.registerChild(controller);
     return () => {
-      notifyParentAboutChildUnmount();
+      debugUIState(`"${controlType}" unregistering from "${parent.controlType}"`);
+      parent.unregisterChild(controller);
     };
   }, [parentUIStateController]);
 
   const existingUIStateController = uiStateControllerRef.current;
   if (existingUIStateController) {
-    existingUIStateController._checkForUpdates({
-      props,
-      controlInfo,
-    });
+    // Sync all public-facing fields for external callers (control_validation.js,
+    // control_callout.js, etc.) from liveRef — one place, not scattered.
+    existingUIStateController.ref = live.ref;
+    existingUIStateController.id = live.id;
+    existingUIStateController.name = live.name;
+    existingUIStateController.props = live.props;
+    const { value, hasStateProp, state, stateInitial } = controlInfo;
+    existingUIStateController.value = value;
+    if (hasStateProp) {
+      existingUIStateController.hasStateProp = true;
+      const currentState = existingUIStateController.state;
+      if (!compareTwoJsValues(state, currentState)) {
+        existingUIStateController.state = state;
+        existingUIStateController.setUIState(
+          state,
+          new CustomEvent("state_prop_change"),
+        );
+      }
+    } else if (existingUIStateController.hasStateProp) {
+      existingUIStateController.hasStateProp = false;
+      existingUIStateController.state = stateInitial;
+    }
     return existingUIStateController;
   }
   const { stateInitial } = controlInfo;
@@ -182,7 +202,7 @@ export const useUIStateController = (
         // Read through the holder signal (reactive) so that when the parent
         // controller changes identity and we update the holder, this computed
         // re-subscribes to the NEW parent's uiStateSignal automatically.
-        const parentSig = parentUiStateSignalHolderRef.current.value;
+        const parentSig = live.parentUiStateSignalHolder.value;
         const parentUIState = parentSig?.value;
         const ownUIState = ownUIStateSignal.value;
         return ownUIState || parentUIState;
@@ -190,41 +210,6 @@ export const useUIStateController = (
     : ownUIStateSignal;
 
   const uiStateController = {
-    _checkForUpdates: ({ props, controlInfo }) => {
-      // Raw Preact props from the current render. These are the component's input props,
-      // not the resolved/curated host props. useInteractiveProps overwrites
-      // uiStateController.controlHostProps with the resolved subset on every render.
-      uiStateController.props = props;
-      // Re-sync to this render's ref object. It's normally stable, but it can
-      // legitimately change identity (e.g. switching from an internal fallback
-      // ref to a forwarded one, or across an interrupted/resumed render such as
-      // a Suspense boundary resolving) — if we kept the original ref forever,
-      // `ref.current` would be stuck at whatever it was at creation time, even
-      // after the controller has moved on to a different, live DOM node.
-      uiStateController.ref = props.ref;
-      uiStateController.id = props.id; // never suppoed to changed, not supported for now
-      uiStateController.name = props.name;
-
-      const { value, hasStateProp, state } = controlInfo;
-      uiStateController.value = value;
-      if (hasStateProp) {
-        uiStateController.hasStateProp = true;
-        const currentState = uiStateController.state;
-        if (compareTwoJsValues(state, currentState)) {
-          // state is the same, nothing to do
-        } else {
-          uiStateController.state = state;
-          uiStateController.setUIState(
-            state,
-            new CustomEvent("state_prop_change"),
-          );
-        }
-      } else if (uiStateController.hasStateProp) {
-        uiStateController.hasStateProp = false;
-        uiStateController.state = stateInitial;
-      }
-    },
-
     controlType,
     parentUIStateController,
     isProxy,
@@ -271,10 +256,10 @@ export const useUIStateController = (
       }
       // Trigger uiAction/command side effects without changing UI state.
       const currentUIState = uiStateController.uiState;
-      uiActionInternal?.(currentUIState, e);
-      if (uiAction) {
+      live.uiActionInternal?.(currentUIState, e);
+      if (live.uiAction) {
         debugUIState(`calling uiAction for ${controlType}`, currentUIState);
-        uiAction(currentUIState, e);
+        live.uiAction(currentUIState, e);
       }
       if (skipCommand) {
       } else {
@@ -327,7 +312,11 @@ export const useUIStateController = (
           uiStateController.controlHostProps.type === "radio" &&
           !isInternalEvent(e)
         ) {
-          notifyParentAboutChildUIAction(e, { stateChanged: false });
+          live.parentUIStateController?.onChildUIAction(
+            uiStateController,
+            e,
+            { stateChanged: false },
+          );
         }
         // A stale/reused event (currentTarget is null) means this is a debounced
         // callback firing the original input event after a timeout. The state hasn't
@@ -379,7 +368,7 @@ export const useUIStateController = (
             }
             if (
               siblingController.parentUIStateController !==
-              parentUIStateControllerRef.current
+              live.parentUIStateController
             ) {
               continue;
             }
@@ -409,7 +398,7 @@ export const useUIStateController = (
       if (!controlProxyFor) {
         // Find any mounted controller that declared itself as a proxy for this one.
         // Communicates directly to the proxy controller — no DOM query needed.
-        const proxyController = findProxyController(id);
+        const proxyController = findProxyController(live.id);
         if (proxyController) {
           const mirrorEvent = new CustomEvent("proxy_mirror_state", {
             detail: {},
@@ -460,7 +449,11 @@ export const useUIStateController = (
         // This is consistent with how a direct Input inside a Form behaves:
         // the Form's uiAction fires on every value change.
         if (e.type === "facade_propagate_up") {
-          notifyParentAboutChildUIAction(e, { stateChanged: true });
+          live.parentUIStateController?.onChildUIAction(
+            uiStateController,
+            e,
+            { stateChanged: true },
+          );
         }
         // Exception: state_prop_change can only fire on a control with its own
         // controlled state/value prop (see hasStateProp above) — groups never
@@ -474,14 +467,22 @@ export const useUIStateController = (
         // state silently drifts out of sync with this child.
         if (
           e.type === "state_prop_change" &&
-          parentUIStateControllerRef.current &&
-          !parentUIStateControllerRef.current.hasStateProp
+          live.parentUIStateController &&
+          !live.parentUIStateController.hasStateProp
         ) {
-          notifyParentAboutChildUIAction(e, { stateChanged: true });
+          live.parentUIStateController.onChildUIAction(
+            uiStateController,
+            e,
+            { stateChanged: true },
+          );
         }
         return true;
       }
-      notifyParentAboutChildUIAction(e, { stateChanged: true });
+      live.parentUIStateController?.onChildUIAction(
+        uiStateController,
+        e,
+        { stateChanged: true },
+      );
       if (controlProxyFor) {
         // Proxy: forward the state change to the real input.
         // Use a dedicated internal event so that when the real input's setUIState
@@ -577,19 +578,20 @@ export const useUIStateController = (
     // Leaf controls don't aggregate children, but they act as a transparent
     // pass-through so that controls nested inside them (e.g. an Input inside
     // a List.Item) can bubble up registration to the nearest group ancestor.
-    // Uses parentUIStateControllerRef.current (not the closure-captured variable)
-    // so calls always reach the live parent even after a Suspense-driven swap.
+    // Reads from liveRef.current so calls always reach the live parent.
     registerChild: (childUIStateController, options) => {
-      parentUIStateControllerRef.current?.registerChild(
+      live.parentUIStateController?.registerChild(
         childUIStateController,
         options,
       );
     },
     unregisterChild: (childUIStateController) => {
-      parentUIStateControllerRef.current?.unregisterChild(childUIStateController);
+      live.parentUIStateController?.unregisterChild(
+        childUIStateController,
+      );
     },
     onChildUIAction: (childUIStateController, e, options) => {
-      parentUIStateControllerRef.current?.onChildUIAction(
+      live.parentUIStateController?.onChildUIAction(
         childUIStateController,
         e,
         options,
@@ -605,67 +607,6 @@ export const useUIStateController = (
   });
   uiStateController.rules = rules;
   return uiStateController;
-};
-const NO_PARENT = [() => {}, () => {}, () => {}];
-const useParentControllerNotifiers = (
-  parentUIStateController,
-  uiStateControllerRef,
-  controlType,
-  debugUIState,
-) => {
-  // A ref that always holds the CURRENT parent so function closures created
-  // once via useMemo([], []) can still call the right parent even after a
-  // Suspense-driven re-mount that swaps the parent controller identity while
-  // the child fiber is reused (and its closed-over variables are frozen).
-  const parentRef = useRef(parentUIStateController);
-  parentRef.current = parentUIStateController;
-
-  return useMemo(() => {
-    if (!parentUIStateController) {
-      return NO_PARENT;
-    }
-
-    const notifyParentAboutChildMount = () => {
-      const parent = parentRef.current;
-      if (!parent) return;
-      const uiStateController = uiStateControllerRef.current;
-      debugUIState(
-        `"${controlType}" registering into "${parent.controlType}"`,
-      );
-      parent.registerChild(uiStateController);
-    };
-
-    const notifyParentAboutChildUIAction = (
-      e,
-      { stateChanged, silent = false },
-    ) => {
-      const parent = parentRef.current;
-      if (!parent) return;
-      const uiStateController = uiStateControllerRef.current;
-      debugUIState(
-        `"${controlType}" notifying "${parent.controlType}" of child ui action (stateChanged: ${stateChanged})`,
-      );
-      parent.onChildUIAction(uiStateController, e, { stateChanged, silent });
-    };
-
-    const notifyParentAboutChildUnmount = () => {
-      const parent = parentRef.current;
-      if (!parent) return;
-      const uiStateController = uiStateControllerRef.current;
-      debugUIState(
-        `"${controlType}" unregistering from "${parent.controlType}"`,
-      );
-      parent.unregisterChild(uiStateController);
-    };
-
-    return [
-      notifyParentAboutChildMount,
-      notifyParentAboutChildUIAction,
-      notifyParentAboutChildUnmount,
-    ];
-    // deps [] — the functions themselves are stable references and always call
-    // parentRef.current which is kept up-to-date on every render above.
-  }, []);
 };
 
 /**
@@ -818,8 +759,6 @@ export const useUIGroupStateController = (
     );
   }
   const parentUIStateController = useContext(ParentUIStateControllerContext);
-  const parentUIStateControllerRef = useRef(parentUIStateController);
-  parentUIStateControllerRef.current = parentUIStateController;
   const hasValueProp = Object.hasOwn(props, "value");
   const hasDefaultValueProp = Object.hasOwn(props, "defaultValue");
   const { id, name, value, defaultValue, uiAction } = props;
@@ -843,16 +782,12 @@ export const useUIGroupStateController = (
   groupIsRenderingRef.current = true;
   pendingChangeRef.current = false;
 
-  const [
-    notifyParentAboutChildMount,
-    notifyParentAboutChildUIAction,
-    notifyParentAboutChildUnmount,
-  ] = useParentControllerNotifiers(
-    parentUIStateController,
-    controllerRef,
-    controlType,
-    debugUIGroup,
-  );
+  // Single live context ref — same pattern as useUIStateController.
+  const liveRef = useRef();
+  if (!liveRef.current) liveRef.current = {};
+  const live = liveRef.current;
+  Object.assign(live, { ref, parentUIStateController });
+
   useLayoutEffect(() => {
     const controller = controllerRef.current;
     const el = ref.current;
@@ -864,9 +799,16 @@ export const useUIGroupStateController = (
     };
   }, []);
   useLayoutEffect(() => {
-    notifyParentAboutChildMount();
+    const parent = live.parentUIStateController;
+    const controller = controllerRef.current;
+    if (!parent) return undefined;
+    debugUIGroup(`"${controlType}" registering into "${parent.controlType}"`);
+    parent.registerChild(controller);
     return () => {
-      notifyParentAboutChildUnmount();
+      debugUIGroup(
+        `"${controlType}" unregistering from "${parent.controlType}"`,
+      );
+      parent.unregisterChild(controller);
     };
   }, [parentUIStateController]);
 
@@ -892,10 +834,11 @@ export const useUIGroupStateController = (
       // Silent mount/unmount sync: update state without triggering uiAction/command,
       // but still notify parent (e.g. facade) so it can track the current child state.
       groupUIStateController.syncInternalState(groupUIState, e);
-      notifyParentAboutChildUIAction(e, {
-        stateChanged: true,
-        silent: true,
-      });
+      live.parentUIStateController?.onChildUIAction(
+        controllerRef.current,
+        e,
+        { stateChanged: true, silent: true },
+      );
     } else {
       groupUIStateController.syncInternalState(groupUIState, e);
     }
@@ -917,7 +860,11 @@ export const useUIGroupStateController = (
     // Notify the parent (facade) BEFORE firing the command so that when a
     // command like --navi-send closes the picker, the picker input already
     // holds the new value.
-    notifyParentAboutChildUIAction(e, { stateChanged: true });
+    live.parentUIStateController?.onChildUIAction(
+      controllerRef.current,
+      e,
+      { stateChanged: true },
+    );
     groupUIStateController.onUIAction(e, {
       skipCommand: internalBehavior,
     });
@@ -1125,7 +1072,7 @@ export const useUIGroupStateController = (
     ) => {
       if (!isMonitoringChild(childUIStateController)) {
         // Filter rejected this child.
-        const currentParent = parentUIStateControllerRef.current;
+        const currentParent = live.parentUIStateController;
         if (!allowCapture && currentParent) {
           // Not a boundary — bubble the child up to the nearest ancestor.
           delegatedChildrenRef.current.set(childUIStateController, currentParent);
