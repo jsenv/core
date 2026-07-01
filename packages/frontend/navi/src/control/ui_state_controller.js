@@ -246,7 +246,9 @@ export const useUIStateController = (
           const stateIsTheSame = compareTwoJsValues(newUIState, currentUIState);
           if (stateIsTheSame) {
             if (controlType === "button" || controlType === "link") {
-              if (!isInternalEvent(e)) controller.onUIAction(e);
+              if (!isInternalEvent(e)) {
+                controller.onUIAction(e);
+              }
               return true;
             }
             debugUIState(
@@ -262,9 +264,25 @@ export const useUIStateController = (
                 stateChanged: false,
               });
             }
-            if (e.currentTarget === null) return false;
-            if (e.type === "state_prop_change") return false;
-            if (e.type === "change") return false;
+            if (e.currentTarget === null) {
+              // A stale/reused event (currentTarget is null) means this is a debounced
+              // callback firing the original input event after a timeout. The state hasn't
+              // changed and this is not a live user gesture — skip uiAction and command.
+              return false;
+            }
+            if (e.type === "state_prop_change") {
+              // state_prop_change with the same uiState means the state prop was updated
+              // to match what the user already has in the UI (e.g. action completed and
+              // synced state back). No real user gesture — skip uiAction and command.
+              return false;
+            }
+            if (e.type === "change") {
+              // "change" fires after "input" for native inputs (date, color, etc.).
+              // The "input" event already updated the state and fired uiAction.
+              // When state is unchanged here it means "input" already ran — skip to
+              // avoid a duplicate uiAction on the same user gesture.
+              return false;
+            }
             controller.onUIAction(e);
             return false;
           }
@@ -303,8 +321,16 @@ export const useUIStateController = (
             });
           }
           if (!controlProxyFor) {
+            // When this controller is a real input that has a visible proxy
+            // (linked via `navi-control-proxy-for`), mirror the new state to the
+            // proxy DOM synchronously. Otherwise the proxy would only catch up
+            // later through a React re-render — visible as e.g. two radios
+            // appearing checked at once between the real input update and the
+            // next render (radio_sibling_uncheck case).
             const proxyController = findProxyController(s.id);
             if (proxyController) {
+              // Find any mounted controller that declared itself as a proxy for this one.
+              // Communicates directly to the proxy controller — no DOM query needed.
               const mirrorEvent = new CustomEvent("proxy_mirror_state", {
                 detail: {},
               });
@@ -333,9 +359,20 @@ export const useUIStateController = (
               }
             }
             if (e.type !== "initial_state_push") {
+              // initial_state_push is pure initialization (equivalent to defaultValue on the
+              // child itself): skip uiAction entirely so no side effects fire on mount.
+              // Still fire uiAction so external listeners (e.g. signals) stay in
+              // sync, but do NOT fire the command and do NOT notify the parent —
+              // both would cause an infinite loop when a parent cascades state
+              // down to its children (child command would re-trigger the cascade).
               controller.onUIAction(e, { skipCommand: true });
             }
             if (e.type === "facade_propagate_up") {
+              // Exception: when the facade propagates a child state change up to the
+              // real picker input, also notify the parent group (e.g. Form) so it
+              // keeps its cached aggregated state in sync and fires its own uiAction.
+              // This is consistent with how a direct Input inside a Form behaves:
+              // the Form's uiAction fires on every value change.
               s.parentUIStateController?.onChildUIAction(controller, e, {
                 stateChanged: true,
               });
@@ -345,6 +382,16 @@ export const useUIStateController = (
               s.parentUIStateController &&
               !s.parentUIStateController.hasStateProp
             ) {
+              // Exception: state_prop_change can only fire on a control with its own
+              // controlled state/value prop (see hasStateProp above) — groups never
+              // cascade state down into such children (they're explicitly skipped,
+              // see shouldPropagateStateToChild/hasStateProp checks), so this change
+              // can never be an echo of the parent's own cascade. The loop risk this
+              // suppression exists for only applies when the parent itself just pushed
+              // this value down, which requires the parent to be controlled (have its
+              // own state/value prop). When the parent is "stateless" (uncontrolled),
+              // notifying it is always safe and necessary — otherwise its aggregated
+              // state silently drifts out of sync with this child.
               s.parentUIStateController.onChildUIAction(controller, e, {
                 stateChanged: true,
               });
@@ -355,6 +402,11 @@ export const useUIStateController = (
             stateChanged: true,
           });
           if (controlProxyFor) {
+            // Proxy: forward the state change to the real input.
+            // Use a dedicated internal event so that when the real input's setUIState
+            // sees stateIsTheSame=true (already updated by the real input's own flow),
+            // it does NOT fire notifyParentAboutChildUIAction(stateChanged=false) back
+            // to the group — which would trigger the group action with a stale value.
             const targetController = getUIStateControllerById(controlProxyFor);
             if (targetController) {
               debugUIState(
@@ -369,6 +421,8 @@ export const useUIStateController = (
               targetController.setUIState(newUIState, forwardEvent);
             }
           }
+          // Dispatch a synthetic "input" event so external listeners see the new
+          // value. Skip when an input event on this element already exists in the chain.
           let syntheticInputFired = false;
           if (el) {
             const existingInputEvent = findEvent(e, (eInChain) => {
@@ -402,7 +456,15 @@ export const useUIStateController = (
               // TODO: select, textarea
             }
           }
-          if (!syntheticInputFired) controller.onUIAction(e);
+          if (!syntheticInputFired) {
+            // When a synthetic "input" event was dispatched, the stateIsTheSame path
+            // already called onUIAction via the input event handler — skip here to
+            // avoid a duplicate uiAction on the same user gesture.
+            controller.onUIAction(e);
+          }
+          // Sync validity after state change: re-check constraints against the new value.
+          // Internal events (programmatic) → silent check only.
+          // User events → full sync (may open/close callout).
           if (isInternalEvent(e)) {
             controller.rules.validation.checkValidity({ event: e });
           } else {
@@ -1199,143 +1261,134 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
     });
   }, [realUIStateController]);
 
-  const canRegisterAsFacadeChild = (childController) => {
-    if (childController.controlType === "button") {
-      return false;
-    }
-    if (childController.controlType === "link") {
-      return false;
-    }
-    if (childController.controlType === "facade") {
-      return false;
-    }
-    if (childController.isProxy) {
-      return false;
-    }
-    if (childController.props["navi-list"]) {
-      // Controls with navi-list act as standalone list navigators and should
-      // not be treated as the picker's synced child.
-      return false;
-    }
-    if (
-      props.type === "controlgroup" &&
-      childController.controlType !== "control_group"
-    ) {
-      // ignore non control group registration (input outside the control group for instance)
-      return false;
-    }
-    if (
-      props.type === "array" &&
-      childController.controlType !== "checkbox_group"
-    ) {
-      // only selectable list expose array, ignore others
-      return false;
-    }
-    return true;
-  };
+  const scope = useRenderScope(
+    // ── init: runs once on mount ───────────────────────────────────────────
+    (s) => {
+      const canRegisterAsFacadeChild = (childController) => {
+        if (childController.controlType === "button") return false;
+        if (childController.controlType === "link") return false;
+        if (childController.controlType === "facade") return false;
+        if (childController.isProxy) return false;
+        if (childController.props["navi-list"]) {
+          // Controls with navi-list act as standalone list navigators and should
+          // not be treated as the picker's synced child.
+          return false;
+        }
+        if (
+          props.type === "controlgroup" &&
+          childController.controlType !== "control_group"
+        ) {
+          // ignore non control group registration (input outside the control group for instance)
+          return false;
+        }
+        if (
+          props.type === "array" &&
+          childController.controlType !== "checkbox_group"
+        ) {
+          // only selectable list expose array, ignore others
+          return false;
+        }
+        return true;
+      };
 
-  const controllerRef = useRef();
-  if (controllerRef.current) {
-    // Same reasoning as useUIStateController._checkForUpdates and
-    // useUIGroupStateController's existing-controller branch: re-sync the
-    // fields read directly (not through realUIStateControllerRef.current) so
-    // they don't stay frozen on the instance that existed when this facade
-    // was first created.
-    controllerRef.current.ref = realUIStateController.ref;
-    controllerRef.current.uiStateSignal = realUIStateController.uiStateSignal;
-    controllerRef.current.controlHostProps =
-      realUIStateController.controlHostProps;
-    return controllerRef.current;
-  }
-
-  const facadeUIStateController = {
-    controlType: "facade",
-    props,
-    ref: realUIStateController.ref,
-    uiStateSignal: realUIStateController.uiStateSignal,
-    registerChild: (child) => {
-      if (!canRegisterAsFacadeChild(child)) {
-        return;
-      }
-      const childType = child.controlType;
-      if (firstChildControllerRef.current) {
-        console.warn(
-          `[useUIFacadeStateController] A second child ("${childType}"${child.name ? ` name="${child.name}"` : ""}) tried to register in the picker facade. ` +
-            `The facade only syncs with the first child — wrap multiple controls in a single ControlGroup.`,
-          child,
-        );
-      } else {
-        debugUIState(
-          `[useUIFacadeStateController] "${childType}"${child.name ? ` name="${child.name}"` : ""} registered as the first child in the picker facade.`,
-        );
-        firstChildControllerRef.current = child;
-        realUIStateControllerRef.current.facadeChild = child;
-        // If the picker already has a meaningful state (from value or defaultValue),
-        // push it to the child on registration so it reflects the pre-set value
-        // without firing uiAction (equivalent to defaultValue on the child itself).
-        const initialState = realUIStateControllerRef.current.uiState;
-        if (initialState !== undefined) {
+      const facadeUIStateController = {
+        controlType: "facade",
+        props,
+        ref: realUIStateController.ref,
+        uiStateSignal: realUIStateController.uiStateSignal,
+        controlHostProps: realUIStateController.controlHostProps,
+        registerChild: (child) => {
+          if (!canRegisterAsFacadeChild(child)) {
+            return;
+          }
+          const childType = child.controlType;
+          if (firstChildControllerRef.current) {
+            console.warn(
+              `[useUIFacadeStateController] A second child ("${childType}"${child.name ? ` name="${child.name}"` : ""}) tried to register in the picker facade. ` +
+                `The facade only syncs with the first child — wrap multiple controls in a single ControlGroup.`,
+              child,
+            );
+          } else {
+            debugUIState(
+              `[useUIFacadeStateController] "${childType}"${child.name ? ` name="${child.name}"` : ""} registered as the first child in the picker facade.`,
+            );
+            firstChildControllerRef.current = child;
+            realUIStateControllerRef.current.facadeChild = child;
+            // If the picker already has a meaningful state (from value or defaultValue),
+            // push it to the child on registration so it reflects the pre-set value
+            // without firing uiAction (equivalent to defaultValue on the child itself).
+            const initialState = realUIStateControllerRef.current.uiState;
+            if (initialState !== undefined) {
+              updatingRef.current = true;
+              const initialEvent = new CustomEvent("initial_state_push", {
+                detail: {},
+              });
+              child.setUIState(initialState, initialEvent);
+              updatingRef.current = false;
+            }
+          }
+        },
+        unregisterChild: (child) => {
+          if (firstChildControllerRef.current === child) {
+            firstChildControllerRef.current = null;
+            realUIStateControllerRef.current.facadeChild = null;
+          }
+        },
+        getManagedControls: () => {
+          const child = firstChildControllerRef.current;
+          if (!child) {
+            return [];
+          }
+          return child.getManagedControls();
+        },
+        onChildUIAction: (child, e, { stateChanged, silent = false }) => {
+          if (!stateChanged) {
+            return;
+          }
+          if (child !== firstChildControllerRef.current) {
+            return;
+          }
           updatingRef.current = true;
-          const initialEvent = new CustomEvent("initial_state_push", {
+          // Use a different event type for silent (mount/unmount) syncs so that
+          // the picker's setUIState does not fire navi_change or action pipelines.
+          const eventType = silent
+            ? "facade_child_mount_sync"
+            : "facade_propagate_up";
+          const propagateUpEvent = new CustomEvent(eventType, {
             detail: {},
           });
-          child.setUIState(initialState, initialEvent);
+          chainEvent(propagateUpEvent, e);
+          realUIStateControllerRef.current.setUIState(
+            child.uiState,
+            propagateUpEvent,
+          );
           updatingRef.current = false;
-        }
-      }
-    },
-    unregisterChild: (child) => {
-      if (firstChildControllerRef.current === child) {
-        firstChildControllerRef.current = null;
-        realUIStateControllerRef.current.facadeChild = null;
-      }
-    },
-    getManagedControls: () => {
-      const child = firstChildControllerRef.current;
-      if (!child) {
-        return [];
-      }
-      return child.getManagedControls();
-    },
-    onChildUIAction: (child, e, { stateChanged, silent = false }) => {
-      if (!stateChanged) {
-        return;
-      }
-      if (child !== firstChildControllerRef.current) {
-        return;
-      }
-      updatingRef.current = true;
-      // Use a different event type for silent (mount/unmount) syncs so that
-      // the picker's setUIState does not fire navi_change or action pipelines.
-      const eventType = silent
-        ? "facade_child_mount_sync"
-        : "facade_propagate_up";
-      const propagateUpEvent = new CustomEvent(eventType, {
-        detail: {},
+        },
+      };
+      const rules = createControlRules(facadeUIStateController, {
+        debugPopup,
+        debugInteraction,
+        debugUIState,
+        debugFocus,
       });
-      chainEvent(propagateUpEvent, e);
-      realUIStateControllerRef.current.setUIState(
-        child.uiState,
-        propagateUpEvent,
-      );
-      updatingRef.current = false;
-    },
-  };
-  controllerRef.current = facadeUIStateController;
-  const rules = createControlRules(facadeUIStateController, {
-    debugPopup,
-    debugInteraction,
-    debugUIState,
-    debugFocus,
-  });
-  facadeUIStateController.rules = rules;
-  facadeUIStateController.controlHostProps =
-    realUIStateController.controlHostProps;
+      facadeUIStateController.rules = rules;
 
-  // No initial checkValidity() here — the facade has no controlHostProps and no children
-  // have registered yet, so any check would be a no-op. The real validity check happens
-  // when child controllers trigger UI actions through the facade.
-  return facadeUIStateController;
+      // No initial checkValidity() here — the facade has no controlHostProps and no children
+      // have registered yet, so any check would be a no-op. The real validity check happens
+      // when child controllers trigger UI actions through the facade.
+      return { controller: facadeUIStateController };
+    },
+    // ── update: runs every render after the first ─────────────────────────
+    (s) => {
+      s.controller.props = props;
+      s.controller.ref = realUIStateController.ref;
+      s.controller.uiStateSignal = realUIStateController.uiStateSignal;
+      s.controller.controlHostProps = realUIStateController.controlHostProps;
+      return {};
+    },
+  );
+
+  return scope.controller;
 };
 
 /**
