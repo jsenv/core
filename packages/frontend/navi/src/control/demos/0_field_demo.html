@@ -16,8 +16,8 @@
       }
       h1 {
         margin: 0 0 8px;
-        font-size: 2rem;
         color: #333;
+        font-size: 2rem;
       }
       .demo-section {
         margin-bottom: 32px;
@@ -29,20 +29,24 @@
       .demo-section h2 {
         margin: 0 0 16px;
         padding-bottom: 10px;
-        font-size: 1.3rem;
         color: #333;
+        font-size: 1.3rem;
         border-bottom: 2px solid #eee;
       }
       .demo-section p {
         margin: 0 0 14px;
-        font-size: 0.875rem;
         color: #555;
+        font-size: 0.875rem;
         line-height: 1.5;
       }
-      .row-label {
-        font-size: 0.8rem;
-        color: #999;
-        margin-bottom: 4px;
+      h3 {
+        margin: 20px 0 4px;
+        color: #666;
+        font-weight: 600;
+        font-size: 0.85rem;
+      }
+      h3:first-child {
+        margin-top: 0;
       }
     </style>
   </head>
@@ -66,11 +70,21 @@
 
           <nav>
             <ol style={{ margin: 0, paddingLeft: "20px", lineHeight: 2 }}>
-              <li><a href="#as-label">Field as="label"</a></li>
-              <li><a href="#vertical-zone">Vertical — interactive zone</a></li>
-              <li><a href="#advanced-vertical">Advanced vertical label</a></li>
-              <li><a href="#sizing">Sizing</a></li>
-              <li><a href="#states">Disabled &amp; read-only</a></li>
+              <li>
+                <a href="#as-label">Field as="label"</a>
+              </li>
+              <li>
+                <a href="#vertical-zone">Vertical — interactive zone</a>
+              </li>
+              <li>
+                <a href="#advanced-vertical">Advanced vertical label</a>
+              </li>
+              <li>
+                <a href="#sizing">Sizing</a>
+              </li>
+              <li>
+                <a href="#states">Disabled &amp; read-only</a>
+              </li>
             </ol>
           </nav>
 
@@ -98,19 +112,18 @@
           </p>
 
           <Box flex="y" spacing="s" alignX="start">
-            <p class="row-label">label left</p>
+            <h3>label left</h3>
             <Field as="label" flex alignY="center" spacing="s" style={dotted}>
               Email
               <Input type="email" name="email_l" placeholder="Enter email" />
             </Field>
 
-            <p class="row-label">label right (checkbox / radio)</p>
+            <h3>label right (checkbox / radio)</h3>
             <Field as="label" flex alignY="center" spacing="s" style={dotted}>
-              <Input type="checkbox" name="agree" />
-              I agree to the terms
+              <Input type="checkbox" name="agree" />I agree to the terms
             </Field>
 
-            <p class="row-label">label above (vertical)</p>
+            <h3>label above (vertical)</h3>
             <Field
               as="label"
               vertical
@@ -121,7 +134,7 @@
               <Input type="text" name="uv_above" placeholder="Enter username" />
             </Field>
 
-            <p class="row-label">label below (vertical)</p>
+            <h3>label below (vertical)</h3>
             <Field
               as="label"
               vertical
@@ -148,10 +161,10 @@
           </p>
 
           <Box flex="y" spacing="s" alignX="start">
-            <p class="row-label">
+            <h3>
               as="label" — full width interactive (try clicking next to the
               label text)
-            </p>
+            </h3>
             <Field
               as="label"
               vertical
@@ -167,9 +180,7 @@
               />
             </Field>
 
-            <p class="row-label">
-              without as — only the label text is interactive
-            </p>
+            <h3>without as — only the label text is interactive</h3>
             <Field
               vertical
               paddingWithControl="s"
@@ -187,27 +198,32 @@
 
           <p>
             <code>paddingWithControl</code> controls the spacing between the
-            label and the control. Because the spacing is a padding on the
-            label element, clicking in it still activates the control. With a
-            flex <code>gap</code> the space between them is outside the label
-            and does nothing.
+            label and the control. Because the spacing is a padding on the label
+            element, clicking in it still activates the control. With a flex{" "}
+            <code>gap</code> the space between them is outside the label and
+            does nothing.
           </p>
 
           <Box flex spacing="l" alignY="start">
             <Box flex="y" spacing="xs" alignX="start">
-              <p class="row-label">paddingWithControl — space is clickable</p>
+              <h3>paddingWithControl — space is clickable</h3>
               <Field
                 vertical
                 paddingWithControl="xl"
                 style={{ alignSelf: "flex-start" }}
               >
                 <Label style={dotted}>Label</Label>
-                <Input type="text" name="pad_demo" placeholder="…" style={{ width: "160px" }} />
+                <Input
+                  type="text"
+                  name="pad_demo"
+                  placeholder="…"
+                  style={{ width: "160px" }}
+                />
               </Field>
             </Box>
 
             <Box flex="y" spacing="xs" alignX="start">
-              <p class="row-label">gap — space is a dead zone</p>
+              <h3>gap — space is a dead zone</h3>
               <Box
                 flex="y"
                 style={{ alignSelf: "flex-start", gap: "var(--navi-xl)" }}
@@ -243,7 +259,11 @@
             affecting the control's hit area.
           </p>
 
-          <Field vertical paddingWithControl="s" style={{ alignSelf: "flex-start", minWidth: "280px" }}>
+          <Field
+            vertical
+            paddingWithControl="s"
+            style={{ alignSelf: "flex-start", minWidth: "280px" }}
+          >
             <Label
               flex
               alignY="center"
@@ -251,6 +271,7 @@
               paddingBottom="s"
               size="l"
               bold
+              border="1px dotted gray"
             >
               <Icon height="1cap">
                 <svg
@@ -263,7 +284,11 @@
               </Icon>
               Location
             </Label>
-            <Input type="text" name="location" placeholder="Enter a location…" />
+            <Input
+              type="text"
+              name="location"
+              placeholder="Enter a location…"
+            />
           </Field>
         </div>
       );
@@ -276,7 +301,7 @@
           <h2>Sizing</h2>
           <Box flex="y" spacing="s">
             <Box flex="y" spacing="xs">
-              <p class="row-label">flex + block</p>
+              <h3>flex + block</h3>
               <div
                 style={{
                   width: "200px",
@@ -293,7 +318,7 @@
             </Box>
 
             <Box flex="y" spacing="xs">
-              <p class="row-label">flex + width 100%</p>
+              <h3>flex + width 100%</h3>
               <div
                 style={{
                   width: "200px",
@@ -310,7 +335,7 @@
             </Box>
 
             <Box flex="y" spacing="xs">
-              <p class="row-label">flex only</p>
+              <h3>flex only</h3>
               <div
                 style={{
                   width: "200px",
@@ -327,7 +352,7 @@
             </Box>
 
             <Box flex="y" spacing="xs">
-              <p class="row-label">flex + expandX</p>
+              <h3>flex + expandX</h3>
               <div
                 style={{
                   width: "200px",
@@ -366,25 +391,35 @@
             and default cursor when disabled or read-only.
           </p>
           <Box flex="y" spacing="xs" alignX="start">
-            <p class="row-label">disabled</p>
+            <h3>disabled</h3>
             <Field as="label" flex alignY="center" spacing="s" style={dotted}>
               Disabled
-              <Input type="text" name="dis1" defaultValue="cannot edit" disabled />
+              <Input
+                type="text"
+                name="dis1"
+                defaultValue="cannot edit"
+                disabled
+              />
             </Field>
 
-            <p class="row-label">read-only</p>
+            <h3>read-only</h3>
             <Field as="label" flex alignY="center" spacing="s" style={dotted}>
               Read-only
               <Input type="text" name="ro1" defaultValue="read only" readOnly />
             </Field>
 
-            <p class="row-label">disabled (container)</p>
+            <h3>disabled (container)</h3>
             <Field flex alignY="center">
               <Label style={dotted}>Disabled</Label>
-              <Input type="text" name="dis2" defaultValue="cannot edit" disabled />
+              <Input
+                type="text"
+                name="dis2"
+                defaultValue="cannot edit"
+                disabled
+              />
             </Field>
 
-            <p class="row-label">read-only (container)</p>
+            <h3>read-only (container)</h3>
             <Field flex alignY="center">
               <Label style={dotted}>Read-only</Label>
               <Input type="text" name="ro2" defaultValue="read only" readOnly />
