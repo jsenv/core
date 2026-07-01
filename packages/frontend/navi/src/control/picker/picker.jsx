@@ -205,7 +205,6 @@ const css = /* css */ `
       pointer-events: none;
 
       .navi_icon {
-        height: 100%;
         max-height: 100%;
       }
     }
@@ -319,7 +318,7 @@ const PickerButton = (props) => {
     ref,
     variant,
     icon,
-    iconSize = "m",
+    iconSize = "inherit",
     placeholder,
     ui,
     maxLines = 1,
