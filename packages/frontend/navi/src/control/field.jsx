@@ -20,21 +20,21 @@ const css = /* css */ `
     }
 
     [navi-field] {
-      --padding-with-control: var(--navi-xs);
+      --spacing-with-control: var(--navi-xs);
 
       > [navi-control] + .navi_label {
-        padding-left: var(--padding-with-control);
+        padding-left: var(--spacing-with-control);
       }
       > .navi_label:first-child {
-        padding-right: var(--padding-with-control);
+        padding-right: var(--spacing-with-control);
       }
       &[data-vertical] {
         > .navi_label:first-child {
           padding-right: 0;
-          padding-bottom: var(--padding-with-control);
+          padding-bottom: var(--spacing-with-control);
         }
         > [navi-control] + .navi_label {
-          padding-top: var(--padding-with-control);
+          padding-top: var(--spacing-with-control);
           padding-left: 0;
         }
       }
@@ -45,6 +45,10 @@ const css = /* css */ `
       .navi_radio {
         --margin: 0;
       }
+    }
+
+    label[navi-field] {
+      gap: var(--spacing-with-control);
     }
   }
 `;
@@ -67,7 +71,7 @@ const css = /* css */ `
  *   ...rest   — forwarded to the wrapping `<div>` (className, style, flex, spacing, …)
  *
  * @example
- * <Field flex paddingWithControl="s">
+ * <Field flex spacingWithControl="s">
  *   Date de début
  *   <Input name="start_date" required />
  * </Field>
@@ -86,7 +90,7 @@ export const Field = (props) => {
 
 const FieldAsLabel = (props) => {
   const { vertical, children } = props;
-  props.paddingWithControl = resolveSpacingSize(props.paddingWithControl, "s");
+  props.spacingWithControl = resolveSpacingSize(props.spacingWithControl, "s");
   // When used as a label wrapper (implicit association), no htmlFor is needed unless
   // the user explicitly passes one to link to a specific control by id.
   // Pass htmlFor={undefined} explicitly so Label skips auto-generation.
@@ -108,12 +112,12 @@ const FieldAsLabel = (props) => {
   );
 };
 const FieldCSSVars = {
-  paddingWithControl: "--padding-with-control",
+  spacingWithControl: "--spacing-with-control",
 };
 const FieldAsContainer = (props) => {
   import.meta.css = css;
   const { vertical, children } = props;
-  props.paddingWithControl = resolveSpacingSize(props.paddingWithControl, "s");
+  props.spacingWithControl = resolveSpacingSize(props.spacingWithControl, "s");
   const [messageProps, remainingProps] = extractMessageAndRemainingProps(props);
   const messagePropsRef = useRef();
   messagePropsRef.current = messageProps;
@@ -163,9 +167,7 @@ export const Label = (props) => {
   // When neither is present the label either wraps the control directly
   // (implicit HTML association) or is disconnected — either way, a
   // randomly generated id would point to nothing and cause confusion.
-  const htmlFor = Object.hasOwn(props, "htmlFor")
-    ? props.htmlFor
-    : controlId;
+  const htmlFor = Object.hasOwn(props, "htmlFor") ? props.htmlFor : controlId;
   const [messageProps, remainingProps] = extractMessageAndRemainingProps(props);
   const messagePropsRef = useRef();
   messagePropsRef.current = messageProps;

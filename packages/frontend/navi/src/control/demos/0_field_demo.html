@@ -187,7 +187,7 @@
             <h3>without as — only the label text is interactive</h3>
             <Field
               vertical
-              paddingWithControl="s"
+              spacingWithControl="s"
               style={{ alignSelf: "flex-start" }}
             >
               <Label style={dotted}>Short label</Label>
@@ -201,7 +201,7 @@
           </Box>
 
           <p>
-            <code>paddingWithControl</code> controls the spacing between the
+            <code>spacingWithControl</code> controls the spacing between the
             label and the control. Because the spacing is a padding on the label
             element, clicking in it still activates the control. With a flex{" "}
             <code>gap</code> the space between them is outside the label and
@@ -210,10 +210,10 @@
 
           <Box flex spacing="l" alignY="start">
             <Box flex="y" spacing="xs" alignX="start">
-              <h3>paddingWithControl — space is clickable</h3>
+              <h3>spacingWithControl — space is clickable</h3>
               <Field
                 vertical
-                paddingWithControl="xl"
+                spacingWithControl="xl"
                 style={{ alignSelf: "flex-start" }}
               >
                 <Label style={dotted}>Label</Label>
@@ -248,6 +248,71 @@
               </Box>
             </Box>
           </Box>
+
+          <h3>explicit padding overrides spacingWithControl</h3>
+          <p>
+            <code>spacingWithControl</code> is a default — an explicit{" "}
+            <code>padding</code> prop on the Field always wins. Here{" "}
+            <code>paddingBottom="0"</code> removes the gap entirely even though{" "}
+            <code>spacingWithControl="xl"</code> is set.
+          </p>
+          <Box flex="y" spacing="l" alignY="start">
+            <Box flex="y" spacing="xs" alignX="start">
+              <h3>spacingWithControl="xl"</h3>
+              <Field
+                as="label"
+                vertical
+                spacingWithControl="xl"
+                style={{ ...dotted, alignSelf: "flex-start" }}
+              >
+                Label
+                <Input
+                  type="text"
+                  name="pad_override_default"
+                  placeholder="…"
+                  style={{ width: "160px" }}
+                />
+              </Field>
+            </Box>
+
+            <Box flex="y" spacing="xs" alignX="start">
+              <h3>+ paddingBottom="0" (overrides)</h3>
+              <Field
+                as="label"
+                vertical
+                spacingWithControl="xl"
+                paddingBottom="0"
+                style={{ ...dotted, alignSelf: "flex-start" }}
+              >
+                Label
+                <Input
+                  type="text"
+                  name="pad_override_zero"
+                  placeholder="…"
+                  style={{ width: "160px" }}
+                />
+              </Field>
+            </Box>
+
+            <Box flex="y" spacing="xs" alignX="start">
+              <h3>+ padding="m" (overrides all sides)</h3>
+              <Field
+                as="label"
+                vertical
+                spacingWithControl="xl"
+                padding="m"
+                style={{ ...dotted, alignSelf: "flex-start" }}
+              >
+                Label
+                <Input
+                  type="text"
+                  name="pad_override_m"
+                  placeholder="…"
+                  style={{ width: "160px" }}
+                />
+              </Field>
+            </Box>
+          </Box>
         </div>
       );
 
@@ -265,7 +330,7 @@
 
           <Field
             vertical
-            paddingWithControl="s"
+            spacingWithControl="s"
             style={{ alignSelf: "flex-start", minWidth: "280px" }}
           >
             <Label
@@ -442,7 +507,7 @@
             When a label wraps an input that has its own <code>id</code>, no{" "}
             <code>htmlFor</code> should be generated — implicit association
             handles the connection. These cases verify that neither{" "}
-            <code>{"<Field as=\"label\">"}</code> nor <code>{"<Label>"}</code>{" "}
+            <code>{'<Field as="label">'}</code> nor <code>{"<Label>"}</code>{" "}
             used standalone produce a mismatched <code>for</code> attribute.
           </p>
 
