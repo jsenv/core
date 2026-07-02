@@ -205,7 +205,7 @@ export const MIN_LENGTH_CONSTRAINT = {
     }
     const valueAsString =
       field.uiState === undefined ? "" : String(field.uiState);
-    if (!valueAsString) {
+    if (!valueAsString && !field.controlHostProps.required) {
       return null;
     }
     const valueLength = valueAsString.length;
