@@ -59,7 +59,7 @@ const css = /* css */ `
 /**
  * @type {import("preact").FunctionComponent<{
  *   children?: number | string,
- *   unit?: string,
+ *   unit?: string | [string, string],
  *   unitPosition?: "right" | "bottom",
  *   unitSize?: string,
  *   unitSizeRatio?: number,
@@ -101,6 +101,12 @@ export const Quantity = ({
       ? formatNumber(valueRounded, { lang })
       : valueRounded;
   const unitBottom = unitPosition === "bottom";
+  const isPlural = typeof value === "number" ? value > 1 : false;
+  const unitResolved = Array.isArray(unit)
+    ? isPlural
+      ? (unit[1] ?? unit[0])
+      : unit[0]
+    : unit;
 
   return (
     <Text
@@ -134,8 +140,8 @@ export const Quantity = ({
         </span>
         {unit && (
           <Unit
-            unit={unit}
-            plural={typeof value === "number" ? value > 1 : false}
+            unit={unitResolved}
+            plural={isPlural}
             lang={lang}
             size={unitSize}
             sizeRatio={unitSizeRatio}
