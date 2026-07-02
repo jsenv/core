@@ -30833,11 +30833,11 @@ installImportMetaCssBuild(import.meta);const css$C = /* css */`
   @layer navi {
     .navi_checkbox {
       --switch-margin: 2px; /* Useful to reserve space for outline */
-      --switch-width: 2em;
-      --switch-thumb-size: 1.2em;
       /* Padding uses px and not em otherwise it can be resolved to a float which does not play well */
       /* With the translation calc in some configurations. In the end 2px is nice in all sizes and can still be configured for exceptions */
       --switch-padding: 2px;
+      --switch-thumb-size: calc(1em - var(--switch-padding) * 2);
+      --switch-width: calc(1.4em - var(--switch-padding) * 2);
       --switch-border-radius: calc(
         var(--switch-thumb-size) / 2 + calc(var(--switch-padding) * 2)
       );
@@ -31093,6 +31093,14 @@ installImportMetaCssBuild(import.meta);const css$B = /* css */`
       background-color: var(--accent-color);
       visibility: hidden;
       pointer-events: none;
+    }
+
+    .navi_checkbox_icon {
+      display: flex;
+      aspect-ratio: inherit;
+      height: 1em;
+      align-items: center;
+      justify-content: center;
     }
 
     /* Focus */
@@ -31428,30 +31436,33 @@ installImportMetaCssBuild(import.meta);const css$A = /* css */`
     }
 
     [navi-field] {
-      --padding-with-control: var(--navi-xs);
-
-      > [navi-control] + .navi_label {
-        padding-left: var(--padding-with-control);
-      }
-      > .navi_label:first-child {
-        padding-right: var(--padding-with-control);
-      }
-      &[data-vertical] {
-        > .navi_label:first-child {
-          padding-right: 0;
-          padding-bottom: var(--padding-with-control);
-        }
-        > [navi-control] + .navi_label {
-          padding-top: var(--padding-with-control);
-          padding-left: 0;
-        }
-      }
+      --spacing-with-control: var(--navi-xs);
 
       .navi_checkbox {
         --margin: 0;
       }
       .navi_radio {
         --margin: 0;
+      }
+    }
+
+    /* Field container: padding on Label extends its interactive zone */
+    :not(label)[navi-field] {
+      > [navi-control] + .navi_label {
+        padding-left: var(--spacing-with-control);
+      }
+      > .navi_label:first-child {
+        padding-right: var(--spacing-with-control);
+      }
+      &[data-vertical] {
+        > .navi_label:first-child {
+          padding-right: 0;
+          padding-bottom: var(--spacing-with-control);
+        }
+        > [navi-control] + .navi_label {
+          padding-top: var(--spacing-with-control);
+          padding-left: 0;
+        }
       }
     }
   }
@@ -31470,12 +31481,12 @@ installImportMetaCssBuild(import.meta);const css$A = /* css */`
  *
  * Props:
  *   id        — optional explicit id used as the field id instead of the auto-generated one
- *   vertical  — shorthand for flex="y" + alignX="start"
+ *   flex="y"  — vertical layout; automatically sets alignX="start" and data-vertical
  *   children  — any JSX; should contain a `Label` and a form control
- *   ...rest   — forwarded to the wrapping `<div>` (className, style, flex, spacing, …)
+ *   ...rest   — forwarded to the wrapping element (className, style, flex, spacing, …)
  *
  * @example
- * <Field flex paddingWithControl="s">
+ * <Field flex spacingWithControl="s">
  *   Date de début
  *   <Input name="start_date" required />
  * </Field>
@@ -31498,31 +31509,32 @@ const Field = props => {
 };
 const FieldAsLabel = props => {
   const {
-    vertical,
+    spacingWithControl = "s",
     children
   } = props;
-  props.paddingWithControl = resolveSpacingSize(props.paddingWithControl, "s");
+  const isVertical = props.flex === "y";
+  const htmlFor = Object.hasOwn(props, "htmlFor") ? props.htmlFor : undefined;
   return jsx(Label, {
     "navi-field": "",
-    styleCSSVars: FieldCSSVars,
-    flex: vertical ? "y" : undefined,
-    alignX: vertical ? "start" : undefined,
-    "data-vertical": vertical ? "" : undefined,
+    alignX: isVertical ? "start" : undefined,
+    spacing: spacingWithControl,
     ...props,
-    vertical: undefined,
+    spacingWithControl: undefined,
+    "data-vertical": isVertical ? "" : undefined,
+    htmlFor: htmlFor,
     children: children
   });
 };
 const FieldCSSVars = {
-  paddingWithControl: "--padding-with-control"
+  spacingWithControl: "--spacing-with-control"
 };
 const FieldAsContainer = props => {
   import.meta.css = [css$A, "@jsenv/navi/src/control/field.jsx"];
   const {
-    vertical,
     children
   } = props;
-  props.paddingWithControl = resolveSpacingSize(props.paddingWithControl, "s");
+  props.spacingWithControl = resolveSpacingSize(props.spacingWithControl);
+  const isVertical = props.flex === "y";
   const [messageProps, remainingProps] = extractMessageAndRemainingProps(props);
   const messagePropsRef = useRef();
   messagePropsRef.current = messageProps;
@@ -31531,11 +31543,9 @@ const FieldAsContainer = props => {
   return jsx(Box, {
     "navi-field": "",
     styleCSSVars: FieldCSSVars,
-    flex: vertical ? "y" : undefined,
-    alignX: vertical ? "start" : undefined,
-    "data-vertical": vertical ? "" : undefined,
+    alignX: isVertical ? "start" : undefined,
     ...remainingProps,
-    vertical: undefined,
+    "data-vertical": isVertical ? "" : undefined,
     fieldId: undefined,
     children: jsx(MessagePropsRefContext.Provider, {
       value: messagePropsRef,
@@ -31556,8 +31566,13 @@ const Label = props => {
   const [disabled, setDisabled] = useState(false);
   const [readOnly, setReadOnly] = useState(false);
   const [connected, setConnected] = useState(false);
-  const defaultId = useId();
-  const htmlFor = props.htmlFor || controlId || `label_auto_${defaultId}`;
+  // Set htmlFor only when we know the correct target id:
+  //   - caller explicitly provided one (even undefined to opt out)
+  //   - a parent Field provided one via ControlIdContext
+  // When neither is present the label either wraps the control directly
+  // (implicit HTML association) or is disconnected — either way, a
+  // randomly generated id would point to nothing and cause confusion.
+  const htmlFor = Object.hasOwn(props, "htmlFor") ? props.htmlFor : controlId;
   const [messageProps, remainingProps] = extractMessageAndRemainingProps(props);
   const messagePropsRef = useRef();
   messagePropsRef.current = messageProps;
@@ -40841,7 +40856,6 @@ installImportMetaCssBuild(import.meta);const css$i = /* css */`
       pointer-events: none;
 
       .navi_icon {
-        height: 100%;
         max-height: 100%;
       }
     }
@@ -40954,7 +40968,7 @@ const PickerButton = props => {
     ref,
     variant,
     icon,
-    iconSize = "m",
+    iconSize = "inherit",
     placeholder,
     ui,
     maxLines = 1
