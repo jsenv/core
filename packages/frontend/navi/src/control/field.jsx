@@ -22,6 +22,21 @@ const css = /* css */ `
     [navi-field] {
       --spacing-with-control: var(--navi-xs);
 
+      .navi_checkbox {
+        --margin: 0;
+      }
+      .navi_radio {
+        --margin: 0;
+      }
+    }
+
+    /* Field as="label": whole label is interactive, gap is enough */
+    label[navi-field] {
+      gap: var(--spacing-with-control);
+    }
+
+    /* Field container: padding on Label extends its interactive zone */
+    :not(label)[navi-field] {
       > [navi-control] + .navi_label {
         padding-left: var(--spacing-with-control);
       }
@@ -38,17 +53,6 @@ const css = /* css */ `
           padding-left: 0;
         }
       }
-
-      .navi_checkbox {
-        --margin: 0;
-      }
-      .navi_radio {
-        --margin: 0;
-      }
-    }
-
-    label[navi-field] {
-      gap: var(--spacing-with-control);
     }
   }
 `;
@@ -66,9 +70,9 @@ const css = /* css */ `
  *
  * Props:
  *   id        — optional explicit id used as the field id instead of the auto-generated one
- *   vertical  — shorthand for flex="y" + alignX="start"
+ *   flex="y"  — vertical layout; automatically sets alignX="start" and data-vertical
  *   children  — any JSX; should contain a `Label` and a form control
- *   ...rest   — forwarded to the wrapping `<div>` (className, style, flex, spacing, …)
+ *   ...rest   — forwarded to the wrapping element (className, style, flex, spacing, …)
  *
  * @example
  * <Field flex spacingWithControl="s">
@@ -89,23 +93,19 @@ export const Field = (props) => {
 };
 
 const FieldAsLabel = (props) => {
-  const { vertical, children } = props;
+  const { children } = props;
   props.spacingWithControl = resolveSpacingSize(props.spacingWithControl, "s");
-  // When used as a label wrapper (implicit association), no htmlFor is needed unless
-  // the user explicitly passes one to link to a specific control by id.
-  // Pass htmlFor={undefined} explicitly so Label skips auto-generation.
+  const isVertical = props.flex === "y";
   const htmlFor = Object.hasOwn(props, "htmlFor") ? props.htmlFor : undefined;
 
   return (
     <Label
       navi-field=""
       styleCSSVars={FieldCSSVars}
-      flex={vertical ? "y" : undefined}
-      alignX={vertical ? "start" : undefined}
-      data-vertical={vertical ? "" : undefined}
+      alignX={isVertical ? "start" : undefined}
       {...props}
+      data-vertical={isVertical ? "" : undefined}
       htmlFor={htmlFor}
-      vertical={undefined}
     >
       {children}
     </Label>
@@ -116,8 +116,9 @@ const FieldCSSVars = {
 };
 const FieldAsContainer = (props) => {
   import.meta.css = css;
-  const { vertical, children } = props;
+  const { children } = props;
   props.spacingWithControl = resolveSpacingSize(props.spacingWithControl, "s");
+  const isVertical = props.flex === "y";
   const [messageProps, remainingProps] = extractMessageAndRemainingProps(props);
   const messagePropsRef = useRef();
   messagePropsRef.current = messageProps;
@@ -128,11 +129,9 @@ const FieldAsContainer = (props) => {
     <Box
       navi-field=""
       styleCSSVars={FieldCSSVars}
-      flex={vertical ? "y" : undefined}
-      alignX={vertical ? "start" : undefined}
-      data-vertical={vertical ? "" : undefined}
+      alignX={isVertical ? "start" : undefined}
       {...remainingProps}
-      vertical={undefined}
+      data-vertical={isVertical ? "" : undefined}
       fieldId={undefined}
     >
       <MessagePropsRefContext.Provider value={messagePropsRef}>

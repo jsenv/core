@@ -130,8 +130,8 @@
             <h3>label above (vertical)</h3>
             <Field
               as="label"
-              vertical
-              spacing="s"
+              flex="y"
+              spacingWithControl="s"
               style={{ ...dotted, alignSelf: "flex-start" }}
             >
               Username
@@ -141,8 +141,8 @@
             <h3>label below (vertical)</h3>
             <Field
               as="label"
-              vertical
-              spacing="s"
+              flex="y"
+              spacingWithControl="s"
               style={{ ...dotted, alignSelf: "flex-start" }}
             >
               <Input type="text" name="uv_below" placeholder="Enter username" />
@@ -159,160 +159,60 @@
         <div class="demo-section" id="vertical-zone">
           <h2>Vertical — interactive zone</h2>
           <p>
-            In vertical layout the interactive zone stretches to the width of
-            the widest child. When the input is wider than the label text, the
-            space next to the label is also clickable — which can surprise.
+            In vertical layout with <code>as="label"</code>, the whole label
+            element is interactive — the space next to the label text (between
+            text and input) is also clickable. This can surprise.
           </p>
-
-          <Box flex="y" spacing="s" alignX="start">
-            <h3>
-              as="label" — full width interactive (try clicking next to the
-              label text)
-            </h3>
-            <Field
-              as="label"
-              vertical
-              spacing="s"
-              style={{ ...dotted, alignSelf: "flex-start" }}
-            >
-              Short label
-              <Input
-                type="text"
-                name="wide_input"
-                placeholder="wider than the label text"
-                style={{ width: "240px" }}
-              />
-            </Field>
-
-            <h3>without as — only the label text is interactive</h3>
-            <Field
-              vertical
-              spacingWithControl="s"
-              style={{ alignSelf: "flex-start" }}
-            >
-              <Label style={dotted}>Short label</Label>
-              <Input
-                type="text"
-                name="precise_v"
-                placeholder="wider than the label text"
-                style={{ width: "240px" }}
-              />
-            </Field>
-          </Box>
-
           <p>
-            <code>spacingWithControl</code> controls the spacing between the
-            label and the control. Because the spacing is a padding on the label
-            element, clicking in it still activates the control. With a flex{" "}
-            <code>gap</code> the space between them is outside the label and
-            does nothing.
+            Without <code>as</code>, the label is a separate element so only
+            its own area is interactive. The spacing between label and control
+            is a padding on the label, which extends that interactive zone.
           </p>
 
           <Box flex spacing="l" alignY="start">
             <Box flex="y" spacing="xs" alignX="start">
-              <h3>spacingWithControl — space is clickable</h3>
+              <h3>as="label" — full width interactive</h3>
               <Field
-                vertical
+                as="label"
+                flex="y"
+                spacingWithControl="xl"
+                style={{ ...dotted, alignSelf: "flex-start" }}
+              >
+                Short label
+                <Input
+                  type="text"
+                  name="wide_input"
+                  placeholder="wider than label"
+                  style={{ width: "200px" }}
+                />
+              </Field>
+            </Box>
+
+            <Box flex="y" spacing="xs" alignX="start">
+              <h3>without as — label text only</h3>
+              <Field
+                flex="y"
                 spacingWithControl="xl"
                 style={{ alignSelf: "flex-start" }}
               >
-                <Label style={dotted}>Label</Label>
+                <Label style={dotted}>Short label</Label>
                 <Input
                   type="text"
-                  name="pad_demo"
-                  placeholder="…"
-                  style={{ width: "160px" }}
+                  name="precise_v"
+                  placeholder="wider than label"
+                  style={{ width: "200px" }}
                 />
               </Field>
             </Box>
-
-            <Box flex="y" spacing="xs" alignX="start">
-              <h3>gap — space is a dead zone</h3>
-              <Box
-                flex="y"
-                style={{ alignSelf: "flex-start", gap: "var(--navi-xl)" }}
-              >
-                <label
-                  htmlFor="gap_demo_input"
-                  style={{ ...dotted, cursor: "pointer", userSelect: "none" }}
-                >
-                  Label
-                </label>
-                <Input
-                  id="gap_demo_input"
-                  type="text"
-                  name="gap_demo"
-                  placeholder="…"
-                  style={{ width: "160px" }}
-                />
-              </Box>
-            </Box>
           </Box>
 
-          <h3>explicit padding overrides spacingWithControl</h3>
-          <p>
-            <code>spacingWithControl</code> is a default — an explicit{" "}
-            <code>padding</code> prop on the Field always wins. Here{" "}
-            <code>paddingBottom="0"</code> removes the gap entirely even though{" "}
-            <code>spacingWithControl="xl"</code> is set.
+          <p style={{ marginTop: "16px" }}>
+            For <code>as="label"</code>, <code>spacingWithControl</code> sets
+            the gap between children. For the container form, it adds a padding
+            to the label element — so clicking in the space still activates the
+            control, unlike a CSS <code>gap</code> which would be outside the
+            label's hit area.
           </p>
-          <Box flex="y" spacing="l" alignY="start">
-            <Box flex="y" spacing="xs" alignX="start">
-              <h3>spacingWithControl="xl"</h3>
-              <Field
-                as="label"
-                vertical
-                spacingWithControl="xl"
-                style={{ ...dotted, alignSelf: "flex-start" }}
-              >
-                Label
-                <Input
-                  type="text"
-                  name="pad_override_default"
-                  placeholder="…"
-                  style={{ width: "160px" }}
-                />
-              </Field>
-            </Box>
-
-            <Box flex="y" spacing="xs" alignX="start">
-              <h3>+ paddingBottom="0" (overrides)</h3>
-              <Field
-                as="label"
-                vertical
-                spacingWithControl="xl"
-                paddingBottom="0"
-                style={{ ...dotted, alignSelf: "flex-start" }}
-              >
-                Label
-                <Input
-                  type="text"
-                  name="pad_override_zero"
-                  placeholder="…"
-                  style={{ width: "160px" }}
-                />
-              </Field>
-            </Box>
-
-            <Box flex="y" spacing="xs" alignX="start">
-              <h3>+ padding="m" (overrides all sides)</h3>
-              <Field
-                as="label"
-                vertical
-                spacingWithControl="xl"
-                padding="m"
-                style={{ ...dotted, alignSelf: "flex-start" }}
-              >
-                Label
-                <Input
-                  type="text"
-                  name="pad_override_m"
-                  placeholder="…"
-                  style={{ width: "160px" }}
-                />
-              </Field>
-            </Box>
-          </Box>
         </div>
       );
 
@@ -329,7 +229,7 @@
           </p>
 
           <Field
-            vertical
+            flex="y"
             spacingWithControl="s"
             style={{ alignSelf: "flex-start", minWidth: "280px" }}
           >
@@ -450,7 +350,7 @@
       );
 
       /* ------------------------------------------------------------------ */
-      /* 6. Disabled / read-only                                             */
+      /* 5. Disabled / read-only                                             */
       /* ------------------------------------------------------------------ */
       const DisabledReadonlyDemo = () => (
         <div class="demo-section" id="states">
@@ -498,7 +398,7 @@
       );
 
       /* ------------------------------------------------------------------ */
-      /* 7. Input with explicit id                                            */
+      /* 6. Input with explicit id                                            */
       /* ------------------------------------------------------------------ */
       const ExplicitIdDemo = () => (
         <div class="demo-section" id="explicit-id">
