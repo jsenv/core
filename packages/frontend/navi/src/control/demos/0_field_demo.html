@@ -82,9 +82,7 @@
               <li>
                 <a href="#advanced">Advanced layout examples</a>
               </li>
-              <li>
-                <a href="#sizing">Sizing</a>
-              </li>
+
               <li>
                 <a href="#states">Disabled &amp; read-only</a>
               </li>
@@ -98,7 +96,7 @@
           <InteractiveZoneDemo />
           <SpacingDemo />
           <AdvancedVerticalDemo />
-          <SizingDemo />
+
           <DisabledReadonlyDemo />
           <ExplicitIdDemo />
         </Box>
@@ -393,97 +391,6 @@
         </div>
       );
 
-      /* ------------------------------------------------------------------ */
-      /* 4. Sizing                                                            */
-      /* ------------------------------------------------------------------ */
-      const SizingDemo = () => (
-        <div class="demo-section" id="sizing">
-          <h2>Sizing</h2>
-          <Box flex="y" spacing="s">
-            <Box flex="y" spacing="xs">
-              <h3>flex + block</h3>
-              <div
-                style={{
-                  width: "200px",
-                  background: "rgba(255,200,0,0.3)",
-                  padding: "8px",
-                }}
-              >
-                <FieldRow block>Short label</FieldRow>
-                <FieldRow block>A much longer label text</FieldRow>
-                <FieldRow block>
-                  This text is much much longer than the container width
-                </FieldRow>
-              </div>
-            </Box>
-
-            <Box flex="y" spacing="xs">
-              <h3>flex + width 100%</h3>
-              <div
-                style={{
-                  width: "200px",
-                  background: "rgba(255,200,0,0.3)",
-                  padding: "8px",
-                }}
-              >
-                <FieldRow width="100%">Short label</FieldRow>
-                <FieldRow width="100%">A much longer label text</FieldRow>
-                <FieldRow width="100%">
-                  This text is much much longer than the container width
-                </FieldRow>
-              </div>
-            </Box>
-
-            <Box flex="y" spacing="xs">
-              <h3>flex only</h3>
-              <div
-                style={{
-                  width: "200px",
-                  background: "rgba(255,200,0,0.3)",
-                  padding: "8px",
-                }}
-              >
-                <FieldRow>Short label</FieldRow>
-                <FieldRow>A much longer label text</FieldRow>
-                <FieldRow>
-                  This text is much much longer than the container width
-                </FieldRow>
-              </div>
-            </Box>
-
-            <Box flex="y" spacing="xs">
-              <h3>flex + expandX</h3>
-              <div
-                style={{
-                  width: "200px",
-                  background: "rgba(255,200,0,0.3)",
-                  padding: "8px",
-                }}
-              >
-                <FieldRow expandX>Short label</FieldRow>
-                <FieldRow expandX>A much longer label text</FieldRow>
-                <FieldRow expandX>
-                  This text is much much longer than the container width
-                </FieldRow>
-              </div>
-            </Box>
-          </Box>
-        </div>
-      );
-
-      const FieldRow = ({ children, ...props }) => (
-        <Field
-          as="label"
-          flex
-          alignY="center"
-          {...props}
-          style={dotted}
-          expandX
-        >
-          <Text maxLines={1}>{children}</Text>
-          <Input type="checkbox" switch selfAlignX="end" size="xs" />
-        </Field>
-      );
 
       /* ------------------------------------------------------------------ */
       /* 5. Disabled / read-only                                             */
