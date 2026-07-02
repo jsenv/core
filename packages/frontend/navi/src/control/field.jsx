@@ -30,11 +30,6 @@ const css = /* css */ `
       }
     }
 
-    /* Field as="label": whole label is interactive, gap is enough */
-    label[navi-field] {
-      gap: var(--spacing-with-control);
-    }
-
     /* Field container: padding on Label extends its interactive zone */
     :not(label)[navi-field] {
       > [navi-control] + .navi_label {
@@ -93,17 +88,17 @@ export const Field = (props) => {
 };
 
 const FieldAsLabel = (props) => {
-  const { children } = props;
-  props.spacingWithControl = resolveSpacingSize(props.spacingWithControl, "s");
+  const { spacingWithControl = "s", children } = props;
   const isVertical = props.flex === "y";
   const htmlFor = Object.hasOwn(props, "htmlFor") ? props.htmlFor : undefined;
 
   return (
     <Label
       navi-field=""
-      styleCSSVars={FieldCSSVars}
       alignX={isVertical ? "start" : undefined}
+      spacing={spacingWithControl}
       {...props}
+      spacingWithControl={undefined}
       data-vertical={isVertical ? "" : undefined}
       htmlFor={htmlFor}
     >
@@ -117,7 +112,7 @@ const FieldCSSVars = {
 const FieldAsContainer = (props) => {
   import.meta.css = css;
   const { children } = props;
-  props.spacingWithControl = resolveSpacingSize(props.spacingWithControl, "s");
+  props.spacingWithControl = resolveSpacingSize(props.spacingWithControl);
   const isVertical = props.flex === "y";
   const [messageProps, remainingProps] = extractMessageAndRemainingProps(props);
   const messagePropsRef = useRef();
