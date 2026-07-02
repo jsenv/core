@@ -149,6 +149,52 @@ await snapshotTests(import.meta.url, ({ test }) => {
     return { results };
   });
 
+  test("persistence_array", () => {
+    clearAll();
+    const results = [];
+
+    const arrSig = stateSignal([], {
+      id: "array_persist",
+      persists: true,
+      type: "array",
+    });
+
+    results.push({
+      step: "initial value",
+      value: arrSig.value,
+      storage: mockLocalStorage.getItem("array_persist"),
+    });
+
+    arrSig.value = ["a", "b", "c"];
+    results.push({
+      step: "after setting explicit array",
+      value: arrSig.value,
+      storage: mockLocalStorage.getItem("array_persist"),
+    });
+
+    arrSig.value = undefined;
+    results.push({
+      step: "after reset to default",
+      value: arrSig.value,
+      storage: mockLocalStorage.getItem("array_persist"),
+    });
+
+    // Re-read from storage on a fresh signal with the same id
+    arrSig.value = [1, 2, 3];
+    globalSignalRegistry.clear();
+    const arrSigReloaded = stateSignal([], {
+      id: "array_persist",
+      persists: true,
+      type: "array",
+    });
+    results.push({
+      step: "reloaded signal reads persisted array",
+      value: arrSigReloaded.value,
+    });
+
+    return { results };
+  });
+
   test("persistence_with_validation", () => {
     clearAll();
     const results = [];
