@@ -260,26 +260,21 @@
         <div class="demo-section" id="vertical-zone">
           <h2>Vertical — interactive zone</h2>
           <p>
-            In vertical layout with <code>as="label"</code>, the whole label
-            element is interactive — the space next to the label text (between
-            text and input) is also clickable. This can surprise.
-          </p>
-          <p>
-            Without <code>as</code>, the label is a separate element so only its
-            own area is interactive. The spacing between label and control is a
-            padding on the label, which extends that interactive zone.
+            In vertical layout, <code>as="label"</code> makes the entire element
+            interactive — including the space next to the label text. To
+            restrict the interactive area to the label text only, use a
+            container <code>Field</code> with a <code>{"<Label>"}</code> inside.
           </p>
 
           <Box flex spacing="l" alignY="start">
             <Box flex="y" spacing="xs" alignX="start">
-              <h3>as="label" — full width interactive</h3>
+              <h3>as="label" — full area interactive</h3>
               <Field
                 as="label"
                 flex="y"
-                spacingWithControl="xl"
                 style={{ ...dotted, alignSelf: "flex-start" }}
               >
-                Short label
+                Short label text
                 <Input
                   type="text"
                   name="wide_input"
@@ -290,13 +285,9 @@
             </Box>
 
             <Box flex="y" spacing="xs" alignX="start">
-              <h3>without as — label text only</h3>
-              <Field
-                flex="y"
-                spacingWithControl="xl"
-                style={{ alignSelf: "flex-start" }}
-              >
-                <Label style={dotted}>Short label</Label>
+              <h3>container Field — label text only</h3>
+              <Field flex="y" style={{ alignSelf: "flex-start" }}>
+                <Label style={dotted}>Short label text</Label>
                 <Input
                   type="text"
                   name="precise_v"
@@ -307,13 +298,39 @@
             </Box>
           </Box>
 
-          <p style={{ marginTop: "16px" }}>
-            For <code>as="label"</code>, <code>spacingWithControl</code> sets
-            the gap between children. For the container form, it adds a padding
-            to the label element — so clicking in the space still activates the
-            control, unlike a CSS <code>gap</code> which would be outside the
-            label's hit area.
+          <h3>dead zone with gap / margin</h3>
+          <p>
+            Most sites separate label and input with a CSS gap or margin. The
+            space between them is then outside any interactive element — a dead
+            zone of a few pixels where nothing happens.
           </p>
+          <Box
+            flex="y"
+            style={{
+              alignItems: "flex-start",
+              alignSelf: "flex-start",
+              gap: "8px",
+            }}
+          >
+            <label
+              htmlFor="dead_zone_input"
+              style={{
+                ...dotted,
+                cursor: "pointer",
+                userSelect: "none",
+                display: "block",
+              }}
+            >
+              Short label text
+            </label>
+            <Input
+              id="dead_zone_input"
+              type="text"
+              name="dead_zone"
+              placeholder="wider than label"
+              style={{ width: "200px" }}
+            />
+          </Box>
         </div>
       );
 
@@ -390,7 +407,6 @@
           </Box>
         </div>
       );
-
 
       /* ------------------------------------------------------------------ */
       /* 5. Disabled / read-only                                             */
