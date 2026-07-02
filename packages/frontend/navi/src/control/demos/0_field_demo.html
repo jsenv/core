@@ -55,7 +55,7 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { Box, Field, Icon, Input, Label } from "@jsenv/navi";
+      import { Box, Text, Field, Icon, Input, Label } from "@jsenv/navi";
 
       const dotted = { outline: "1px dotted #999" };
 
@@ -171,7 +171,13 @@
           </Field>
 
           <h3>spacingWithControl="l"</h3>
-          <Field as="label" flex alignY="center" spacingWithControl="l" style={dotted}>
+          <Field
+            as="label"
+            flex
+            alignY="center"
+            spacingWithControl="l"
+            style={dotted}
+          >
             Email <Input type="email" name="sp_ll_l" placeholder="…" />
           </Field>
 
@@ -181,18 +187,39 @@
           </Field>
 
           <h3>as="label" — vertical</h3>
-          <Field as="label" flex="y" style={{ ...dotted, alignSelf: "flex-start" }}>
+          <Field
+            as="label"
+            flex="y"
+            style={{ ...dotted, alignSelf: "flex-start" }}
+          >
             Username
-            <Input type="text" name="sp_v_d" placeholder="…" style={{ width: "160px" }} />
+            <Input
+              type="text"
+              name="sp_v_d"
+              placeholder="…"
+              style={{ width: "160px" }}
+            />
           </Field>
 
           <h3>vertical — spacingWithControl="l"</h3>
-          <Field as="label" flex="y" spacingWithControl="l" style={{ ...dotted, alignSelf: "flex-start" }}>
+          <Field
+            as="label"
+            flex="y"
+            spacingWithControl="l"
+            style={{ ...dotted, alignSelf: "flex-start" }}
+          >
             Username
-            <Input type="text" name="sp_v_l" placeholder="…" style={{ width: "160px" }} />
+            <Input
+              type="text"
+              name="sp_v_l"
+              placeholder="…"
+              style={{ width: "160px" }}
+            />
           </Field>
 
-          <h3>vertical — Label inside Field (interactive zone = label text only)</h3>
+          <h3>
+            vertical — Label inside Field (interactive zone = label text only)
+          </h3>
           <p>
             With <code>as="label"</code> the whole element is the hit area. If
             you want only the label text to be interactive, use a{" "}
@@ -200,9 +227,18 @@
             <code>spacingWithControl</code> then becomes a padding on the label,
             so the space between text and input stays inside the hit area.
           </p>
-          <Field flex="y" spacingWithControl="l" style={{ alignSelf: "flex-start" }}>
+          <Field
+            flex="y"
+            spacingWithControl="l"
+            style={{ alignSelf: "flex-start" }}
+          >
             <Label style={dotted}>Username</Label>
-            <Input type="text" name="sp_cv_l" placeholder="…" style={{ width: "160px" }} />
+            <Input
+              type="text"
+              name="sp_cv_l"
+              placeholder="…"
+              style={{ width: "160px" }}
+            />
           </Field>
 
           <p style={{ marginTop: "16px", fontStyle: "italic" }}>
@@ -408,10 +444,15 @@
       );
 
       const FieldRow = ({ children, ...props }) => (
-        <Field flex alignY="center" {...props}>
-          <Label expandX style={dotted} maxLines={1} noWrap>
-            {children}
-          </Label>
+        <Field
+          as="label"
+          flex
+          alignY="center"
+          {...props}
+          style={dotted}
+          expandX
+        >
+          <Text maxLines={1}>{children}</Text>
           <Input type="checkbox" switch selfAlignX="end" size="xs" />
         </Field>
       );
