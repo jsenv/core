@@ -120,18 +120,18 @@
           </p>
 
           <Box flex="y" spacing="s" alignX="start">
-            <h3>label left</h3>
+            <h3>label text left</h3>
             <Field as="label" flex alignY="center" spacing="s" style={dotted}>
               Email
               <Input type="email" name="email_l" placeholder="Enter email" />
             </Field>
 
-            <h3>label right (checkbox / radio)</h3>
+            <h3>label text right (checkbox / radio)</h3>
             <Field as="label" flex alignY="center" spacing="s" style={dotted}>
               <Input type="checkbox" name="agree" />I agree to the terms
             </Field>
 
-            <h3>label above (vertical)</h3>
+            <h3>label text above (vertical)</h3>
             <Field
               as="label"
               flex="y"
@@ -142,7 +142,7 @@
               <Input type="text" name="uv_above" placeholder="Enter username" />
             </Field>
 
-            <h3>label below (vertical)</h3>
+            <h3>label text below (vertical)</h3>
             <Field
               as="label"
               flex="y"
@@ -159,370 +159,63 @@
       /* ------------------------------------------------------------------ */
       /* 2. spacingWithControl                                                */
       /* ------------------------------------------------------------------ */
-      const SpacingRow = ({ label, ...fieldProps }) => (
-        <Box flex="y" spacing="xs" alignX="start">
-          <h4
-            style={{
-              margin: "0 0 4px",
-              fontWeight: 500,
-              fontSize: "0.8rem",
-              color: "#888",
-            }}
-          >
-            {label}
-          </h4>
-          {fieldProps.children}
-        </Box>
-      );
-
       const SpacingDemo = () => (
         <div class="demo-section" id="spacing">
           <h2>
             <code>spacingWithControl</code>
           </h2>
-          <p>
-            Controls the space between label and control. For{" "}
-            <code>as="label"</code> it maps to a flex gap. For the container
-            form, it adds a padding on the <code>Label</code> element — so the
-            space remains inside the label's interactive zone.
-          </p>
 
-          <h3>as="label" with text before control</h3>
-          <Box flex="y" spacing="s" alignY="start">
-            <Box flex="y" spacing="xs" alignX="start">
-              <h4
-                style={{
-                  margin: "0 0 4px",
-                  fontWeight: 500,
-                  fontSize: "0.8rem",
-                  color: "#888",
-                }}
-              >
-                default
-              </h4>
-              <Field as="label" flex alignY="center" style={dotted}>
-                Email <Input type="email" name="sp_ll_d" placeholder="…" />
-              </Field>
-            </Box>
-            <Box flex="y" spacing="xs" alignX="start">
-              <h4
-                style={{
-                  margin: "0 0 4px",
-                  fontWeight: 500,
-                  fontSize: "0.8rem",
-                  color: "#888",
-                }}
-              >
-                spacingWithControl="xl"
-              </h4>
-              <Field
-                as="label"
-                flex
-                alignY="center"
-                spacingWithControl="xl"
-                style={dotted}
-              >
-                Email <Input type="email" name="sp_ll_xl" placeholder="…" />
-              </Field>
-            </Box>
-            <Box flex="y" spacing="xs" alignX="start">
-              <h4
-                style={{
-                  margin: "0 0 4px",
-                  fontWeight: 500,
-                  fontSize: "0.8rem",
-                  color: "#888",
-                }}
-              >
-                spacing="xl" (override)
-              </h4>
-              <Field
-                as="label"
-                flex
-                alignY="center"
-                spacingWithControl="xs"
-                spacing="xl"
-                style={dotted}
-              >
-                Email <Input type="email" name="sp_ll_ov" placeholder="…" />
-              </Field>
-            </Box>
-          </Box>
+          <h3>as="label" — label text left</h3>
+          <Field as="label" flex alignY="center" style={dotted}>
+            Email <Input type="email" name="sp_ll_d" placeholder="…" />
+          </Field>
 
-          <h3>as="label" with text after control</h3>
-          <Box flex="y" spacing="s" alignY="start">
-            <Box flex="y" spacing="xs" alignX="start">
-              <h4
-                style={{
-                  margin: "0 0 4px",
-                  fontWeight: 500,
-                  fontSize: "0.8rem",
-                  color: "#888",
-                }}
-              >
-                default
-              </h4>
-              <Field as="label" flex alignY="center" style={dotted}>
-                <Input type="checkbox" name="sp_lr_d" /> I agree
-              </Field>
-            </Box>
-            <Box flex="y" spacing="xs" alignX="start">
-              <h4
-                style={{
-                  margin: "0 0 4px",
-                  fontWeight: 500,
-                  fontSize: "0.8rem",
-                  color: "#888",
-                }}
-              >
-                spacingWithControl="xl"
-              </h4>
-              <Field
-                as="label"
-                flex
-                alignY="center"
-                spacingWithControl="xl"
-                style={dotted}
-              >
-                <Input type="checkbox" name="sp_lr_xl" /> I agree
-              </Field>
-            </Box>
-            <Box flex="y" spacing="xs" alignX="start">
-              <h4
-                style={{
-                  margin: "0 0 4px",
-                  fontWeight: 500,
-                  fontSize: "0.8rem",
-                  color: "#888",
-                }}
-              >
-                spacing="xl" (override)
-              </h4>
-              <Field
-                as="label"
-                flex
-                alignY="center"
-                spacingWithControl="xs"
-                spacing="xl"
-                style={dotted}
-              >
-                <Input type="checkbox" name="sp_lr_ov" /> I agree
-              </Field>
-            </Box>
-          </Box>
+          <h3>spacingWithControl="l"</h3>
+          <Field as="label" flex alignY="center" spacingWithControl="l" style={dotted}>
+            Email <Input type="email" name="sp_ll_l" placeholder="…" />
+          </Field>
+
+          <h3>as="label" — label text right (checkbox)</h3>
+          <Field as="label" flex alignY="center" style={dotted}>
+            <Input type="checkbox" name="sp_lr_d" /> I agree
+          </Field>
 
           <h3>as="label" — vertical</h3>
-          <Box flex spacing="l" alignY="start">
-            <Box flex="y" spacing="xs" alignX="start">
-              <h4
-                style={{
-                  margin: "0 0 4px",
-                  fontWeight: 500,
-                  fontSize: "0.8rem",
-                  color: "#888",
-                }}
-              >
-                default
-              </h4>
-              <Field
-                as="label"
-                flex="y"
-                style={{ ...dotted, alignSelf: "flex-start" }}
-              >
-                Label{" "}
-                <Input
-                  type="text"
-                  name="sp_v_d"
-                  placeholder="…"
-                  style={{ width: "120px" }}
-                />
-              </Field>
-            </Box>
-            <Box flex="y" spacing="xs" alignX="start">
-              <h4
-                style={{
-                  margin: "0 0 4px",
-                  fontWeight: 500,
-                  fontSize: "0.8rem",
-                  color: "#888",
-                }}
-              >
-                spacingWithControl="xl"
-              </h4>
-              <Field
-                as="label"
-                flex="y"
-                spacingWithControl="xl"
-                style={{ ...dotted, alignSelf: "flex-start" }}
-              >
-                Label{" "}
-                <Input
-                  type="text"
-                  name="sp_v_xl"
-                  placeholder="…"
-                  style={{ width: "120px" }}
-                />
-              </Field>
-            </Box>
-            <Box flex="y" spacing="xs" alignX="start">
-              <h4
-                style={{
-                  margin: "0 0 4px",
-                  fontWeight: 500,
-                  fontSize: "0.8rem",
-                  color: "#888",
-                }}
-              >
-                spacing="xl" (override)
-              </h4>
-              <Field
-                as="label"
-                flex="y"
-                spacingWithControl="xs"
-                spacing="xl"
-                style={{ ...dotted, alignSelf: "flex-start" }}
-              >
-                Label{" "}
-                <Input
-                  type="text"
-                  name="sp_v_ov"
-                  placeholder="…"
-                  style={{ width: "120px" }}
-                />
-              </Field>
-            </Box>
-          </Box>
+          <Field as="label" flex="y" style={{ ...dotted, alignSelf: "flex-start" }}>
+            Username
+            <Input type="text" name="sp_v_d" placeholder="…" style={{ width: "160px" }} />
+          </Field>
 
-          <h3>Field container — horizontal</h3>
-          <Box flex spacing="l" alignY="start">
-            <Box flex="y" spacing="xs" alignX="start">
-              <h4
-                style={{
-                  margin: "0 0 4px",
-                  fontWeight: 500,
-                  fontSize: "0.8rem",
-                  color: "#888",
-                }}
-              >
-                default
-              </h4>
-              <Field flex alignY="center">
-                <Label style={dotted}>Label</Label>
-                <Input type="text" name="sp_ch_d" placeholder="…" />
-              </Field>
-            </Box>
-            <Box flex="y" spacing="xs" alignX="start">
-              <h4
-                style={{
-                  margin: "0 0 4px",
-                  fontWeight: 500,
-                  fontSize: "0.8rem",
-                  color: "#888",
-                }}
-              >
-                spacingWithControl="xl"
-              </h4>
-              <Field flex alignY="center" spacingWithControl="xl">
-                <Label style={dotted}>Label</Label>
-                <Input type="text" name="sp_ch_xl" placeholder="…" />
-              </Field>
-            </Box>
-            <Box flex="y" spacing="xs" alignX="start">
-              <h4
-                style={{
-                  margin: "0 0 4px",
-                  fontWeight: 500,
-                  fontSize: "0.8rem",
-                  color: "#888",
-                }}
-              >
-                paddingRight="0" on Label
-              </h4>
-              <Field flex alignY="center" spacingWithControl="xl">
-                <Label style={dotted} paddingRight="0">
-                  Label
-                </Label>
-                <Input type="text" name="sp_ch_ov" placeholder="…" />
-              </Field>
-            </Box>
-          </Box>
+          <h3>vertical — spacingWithControl="l"</h3>
+          <Field as="label" flex="y" spacingWithControl="l" style={{ ...dotted, alignSelf: "flex-start" }}>
+            Username
+            <Input type="text" name="sp_v_l" placeholder="…" style={{ width: "160px" }} />
+          </Field>
 
-          <h3>Field container — vertical</h3>
-          <Box flex spacing="l" alignY="start">
-            <Box flex="y" spacing="xs" alignX="start">
-              <h4
-                style={{
-                  margin: "0 0 4px",
-                  fontWeight: 500,
-                  fontSize: "0.8rem",
-                  color: "#888",
-                }}
-              >
-                default
-              </h4>
-              <Field flex="y" style={{ alignSelf: "flex-start" }}>
-                <Label style={dotted}>Label</Label>
-                <Input
-                  type="text"
-                  name="sp_cv_d"
-                  placeholder="…"
-                  style={{ width: "120px" }}
-                />
-              </Field>
-            </Box>
-            <Box flex="y" spacing="xs" alignX="start">
-              <h4
-                style={{
-                  margin: "0 0 4px",
-                  fontWeight: 500,
-                  fontSize: "0.8rem",
-                  color: "#888",
-                }}
-              >
-                spacingWithControl="xl"
-              </h4>
-              <Field
-                flex="y"
-                spacingWithControl="xl"
-                style={{ alignSelf: "flex-start" }}
-              >
-                <Label style={dotted}>Label</Label>
-                <Input
-                  type="text"
-                  name="sp_cv_xl"
-                  placeholder="…"
-                  style={{ width: "120px" }}
-                />
-              </Field>
-            </Box>
-            <Box flex="y" spacing="xs" alignX="start">
-              <h4
-                style={{
-                  margin: "0 0 4px",
-                  fontWeight: 500,
-                  fontSize: "0.8rem",
-                  color: "#888",
-                }}
-              >
-                paddingBottom="0" on Label
-              </h4>
-              <Field
-                flex="y"
-                spacingWithControl="xl"
-                style={{ alignSelf: "flex-start" }}
-              >
-                <Label style={dotted} paddingBottom="0">
-                  Label
-                </Label>
-                <Input
-                  type="text"
-                  name="sp_cv_ov"
-                  placeholder="…"
-                  style={{ width: "120px" }}
-                />
-              </Field>
-            </Box>
-          </Box>
+          <h3>vertical — Label inside Field (interactive zone = label text only)</h3>
+          <p>
+            With <code>as="label"</code> the whole element is the hit area. If
+            you want only the label text to be interactive, use a{" "}
+            <code>{"<Label>"}</code> inside a container <code>Field</code>. The{" "}
+            <code>spacingWithControl</code> then becomes a padding on the label,
+            so the space between text and input stays inside the hit area.
+          </p>
+          <Field flex="y" spacingWithControl="l" style={{ alignSelf: "flex-start" }}>
+            <Label style={dotted}>Username</Label>
+            <Input type="text" name="sp_cv_l" placeholder="…" style={{ width: "160px" }} />
+          </Field>
+
+          <p style={{ marginTop: "16px", fontStyle: "italic" }}>
+            For <code>as="label"</code>, <code>spacingWithControl</code> is
+            internally a flex gap — <code>spacing</code> is interchangeable and
+            wins if both are set.
+          </p>
+          <p style={{ fontStyle: "italic" }}>
+            The container form also works horizontally (
+            <code>{"<Field flex><Label /><Input /></Field>"}</code>) but{" "}
+            <code>as="label"</code> is simpler in that case — the container
+            variant is supported for completeness.
+          </p>
         </div>
       );
 
