@@ -2,6 +2,7 @@
 
 
 - [array type validation](0_array_type_validation/0_array_type_validation.md)
+- [array type localStorage representation](1_array_type_localstorage_representation/1_array_type_localstorage_representation.md)
 
 ---
 

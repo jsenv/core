@@ -39,4 +39,17 @@ await snapshotTests(import.meta.url, ({ test }) => {
       { borderCollapse: true },
     );
   });
+
+  test("array type localStorage representation", () => {
+    const [validity, applyOn] = createValidity({
+      type: "array",
+    });
+
+    applyOn(["a", "b", "c"]);
+
+    return {
+      value: validity.value,
+      localStorageValue: validity.representations.localStorage.value,
+    };
+  });
 });
