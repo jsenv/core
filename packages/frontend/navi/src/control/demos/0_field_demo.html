@@ -74,13 +74,13 @@
                 <a href="#as-label">Field as="label"</a>
               </li>
               <li>
-                <a href="#spacing">spacingWithControl</a>
-              </li>
-              <li>
                 <a href="#vertical-zone">Vertical — interactive zone</a>
               </li>
               <li>
-                <a href="#advanced-vertical">Advanced vertical label</a>
+                <a href="#spacing">spacingWithControl</a>
+              </li>
+              <li>
+                <a href="#advanced">Advanced layout examples</a>
               </li>
               <li>
                 <a href="#sizing">Sizing</a>
@@ -95,8 +95,8 @@
           </nav>
 
           <AsLabelDemo />
-          <SpacingDemo />
           <InteractiveZoneDemo />
+          <SpacingDemo />
           <AdvancedVerticalDemo />
           <SizingDemo />
           <DisabledReadonlyDemo />
@@ -320,17 +320,13 @@
       );
 
       /* ------------------------------------------------------------------ */
-      /* 3. Advanced vertical label                                           */
+      /* 4. Advanced layout examples                                          */
       /* ------------------------------------------------------------------ */
       const AdvancedVerticalDemo = () => (
-        <div class="demo-section" id="advanced-vertical">
-          <h2>Advanced vertical label</h2>
-          <p>
-            Because the label and the control are separate elements, the label
-            can use any layout or styling — icon, size, font, spacing — without
-            affecting the control's hit area.
-          </p>
+        <div class="demo-section" id="advanced">
+          <h2>Advanced layout examples</h2>
 
+          <h3>Icon + label text above input</h3>
           <Field
             flex="y"
             spacingWithControl="s"
@@ -362,6 +358,38 @@
               placeholder="Enter a location…"
             />
           </Field>
+
+          <h3>Label text left — overflow ellipsis</h3>
+          <Box flex="y" width="260">
+            <Field as="label" flex alignY="center" style={dotted} paddingY="s">
+              <Text expandX maxLines={1}>
+                A very long label text that overflows with ellipsis
+              </Text>
+              <Input type="checkbox" switch selfAlignX="end" />
+            </Field>
+            <Field as="label" flex alignY="center" style={dotted} paddingY="s">
+              <Text expandX maxLines={1}>
+                A shorter text
+              </Text>
+              <Input type="checkbox" switch selfAlignX="end" />
+            </Field>
+          </Box>
+
+          <h3>Label text right — overflow ellipsis</h3>
+          <Box flex="y" width="260">
+            <Field as="label" flex alignY="center" style={dotted} paddingY="s">
+              <Input type="checkbox" switch />
+              <Text expandX maxLines={1}>
+                A very long label text that overflows with ellipsis
+              </Text>
+            </Field>
+            <Field as="label" flex alignY="center" style={dotted} paddingY="s">
+              <Input type="checkbox" switch />
+              <Text expandX maxLines={1}>
+                A shorter text
+              </Text>
+            </Field>
+          </Box>
         </div>
       );
 
