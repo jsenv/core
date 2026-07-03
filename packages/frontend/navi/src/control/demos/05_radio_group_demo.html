@@ -46,6 +46,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
+      import { lazy, Suspense } from "preact/compat";
       import { CallLog, useCallLog } from "./utils/call_log.jsx";
       import {
         Button,
@@ -79,6 +80,7 @@
               <InFormDemo />
               <RequiredDemo />
               <WithReadonlyDemo />
+              <LazyNeighborDemo />
             </div>
           </NaviDebug>
         );
@@ -103,6 +105,11 @@
               </li>
               <li>
                 <a href="#readonly">With readonly options</a>
+              </li>
+              <li>
+                <a href="#lazy-neighbor">
+                  BUG repro: RadioGroup + lazy neighbor
+                </a>
               </li>
             </ol>
           </div>
@@ -465,6 +472,84 @@
                 Epsilon (normal)
               </Field>
             </RadioGroup>
+          </div>
+        );
+      };
+
+      const LazyNeighbor = lazy(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        return "LazyNeighbor";
+      });
+
+      const LazyNeighborDemo = () => {
+        const [entries, push, clear] = useCallLog();
+        return (
+          <div class="demo-section" id="lazy-neighbor">
+            <h2>BUG repro: RadioGroup + lazy neighbor</h2>
+            <p style={{ margin: "0 0 12px", color: "#555" }}>
+              <code>RadioGroup</code> inside a shared <code>Suspense</code>{" "}
+              boundary with a lazy neighbor. Click a radio. Expected:{" "}
+              <code>uiAction</code> appears in the log, and the underlying{" "}
+              <code>{"<fieldset>"}</code> never gets a stray{" "}
+              <code>name="undefined"</code>/<code>name=""</code> attribute
+              (RadioGroup explicitly sets <code>name={"{undefined}"}</code> on
+              its fieldset — the same prop shape that triggered the{" "}
+              <code>{'<Field as="label">'}</code>{" "}
+              <a href="00_field_demo.html#lazy-neighbor">
+                <code>htmlFor</code> bug
+              </a>
+              ).
+            </p>
+
+            <Suspense fallback="loading…">
+              <RadioGroup
+                name="lazy_neighbor_option"
+                flex="y"
+                alignX="start"
+                uiAction={(value) => {
+                  push("uiAction", value);
+                }}
+                action={(value) => {
+                  push("action", value);
+                }}
+              >
+                <legend>Pick an option</legend>
+                <Field
+                  as="label"
+                  flex
+                  alignY="center"
+                  spacing="s"
+                  border="1px dotted #ccc"
+                >
+                  <Input type="radio" value="alpha" />
+                  Alpha
+                </Field>
+                <Field
+                  as="label"
+                  flex
+                  alignY="center"
+                  spacing="s"
+                  border="1px dotted #ccc"
+                >
+                  <Input type="radio" value="beta" />
+                  Beta
+                </Field>
+                <Field
+                  as="label"
+                  flex
+                  alignY="center"
+                  spacing="s"
+                  border="1px dotted #ccc"
+                >
+                  <Input type="radio" value="gamma" />
+                  Gamma
+                </Field>
+              </RadioGroup>
+
+              <LazyNeighbor />
+            </Suspense>
+
+            <CallLog entries={entries} onClear={clear} />
           </div>
         );
       };
