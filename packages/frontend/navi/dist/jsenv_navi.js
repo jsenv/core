@@ -31513,7 +31513,6 @@ const FieldAsLabel = props => {
     children
   } = props;
   const isVertical = props.flex === "y";
-  const htmlFor = Object.hasOwn(props, "htmlFor") ? props.htmlFor : undefined;
   return jsx(Label, {
     "navi-field": "",
     alignX: isVertical ? "start" : undefined,
@@ -31521,7 +31520,6 @@ const FieldAsLabel = props => {
     ...props,
     spacingWithControl: undefined,
     "data-vertical": isVertical ? "" : undefined,
-    htmlFor: htmlFor,
     children: children
   });
 };
@@ -31572,13 +31570,14 @@ const Label = props => {
   // When neither is present the label either wraps the control directly
   // (implicit HTML association) or is disconnected — either way, a
   // randomly generated id would point to nothing and cause confusion.
-  const htmlFor = Object.hasOwn(props, "htmlFor") ? props.htmlFor : controlId;
+  if (!Object.hasOwn(props, "htmlFor") && controlId) {
+    props.htmlFor = controlId;
+  }
   const [messageProps, remainingProps] = extractMessageAndRemainingProps(props);
   const messagePropsRef = useRef();
   messagePropsRef.current = messageProps;
   return jsx(Box, {
     as: "label",
-    htmlFor: htmlFor,
     baseClassName: "navi_label",
     pseudoClasses: FIELD_PSEUDO_CLASSES,
     "data-control-connected": connected ? "" : undefined,
@@ -31600,7 +31599,7 @@ const Label = props => {
     children: jsx(MessagePropsRefContext.Provider, {
       value: messagePropsRef,
       children: jsx(ControlIdContext.Provider, {
-        value: htmlFor,
+        value: props.htmlFor,
         children: children
       })
     })

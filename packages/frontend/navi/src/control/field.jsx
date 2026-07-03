@@ -90,7 +90,6 @@ export const Field = (props) => {
 const FieldAsLabel = (props) => {
   const { spacingWithControl = "s", children } = props;
   const isVertical = props.flex === "y";
-  const htmlFor = Object.hasOwn(props, "htmlFor") ? props.htmlFor : undefined;
 
   return (
     <Label
@@ -100,7 +99,6 @@ const FieldAsLabel = (props) => {
       {...props}
       spacingWithControl={undefined}
       data-vertical={isVertical ? "" : undefined}
-      htmlFor={htmlFor}
     >
       {children}
     </Label>
@@ -161,7 +159,9 @@ export const Label = (props) => {
   // When neither is present the label either wraps the control directly
   // (implicit HTML association) or is disconnected — either way, a
   // randomly generated id would point to nothing and cause confusion.
-  const htmlFor = Object.hasOwn(props, "htmlFor") ? props.htmlFor : controlId;
+  if (!Object.hasOwn(props, "htmlFor") && controlId) {
+    props.htmlFor = controlId;
+  }
   const [messageProps, remainingProps] = extractMessageAndRemainingProps(props);
   const messagePropsRef = useRef();
   messagePropsRef.current = messageProps;
@@ -169,7 +169,6 @@ export const Label = (props) => {
   return (
     <Box
       as="label"
-      htmlFor={htmlFor}
       baseClassName="navi_label"
       pseudoClasses={FIELD_PSEUDO_CLASSES}
       data-control-connected={connected ? "" : undefined}
@@ -190,7 +189,7 @@ export const Label = (props) => {
       }}
     >
       <MessagePropsRefContext.Provider value={messagePropsRef}>
-        <ControlIdContext.Provider value={htmlFor}>
+        <ControlIdContext.Provider value={props.htmlFor}>
           {children}
         </ControlIdContext.Provider>
       </MessagePropsRefContext.Provider>
