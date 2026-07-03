@@ -326,7 +326,13 @@ const css = /* css */ `
 
         box-shadow:
           inset 0 2px 4px rgba(0, 0, 0, 0.15),
-          inset 0 0 0 1px var(--button-border-color-checked);
+          inset 0 0 0 1px var(--button-border-color-checked),
+          0 0 0 3px
+            color-mix(
+              in srgb,
+              var(--button-border-color-checked) 25%,
+              transparent
+            );
       }
       &[data-disabled] {
         --x-border-color: var(--button-border-color-disabled);
