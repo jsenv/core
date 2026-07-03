@@ -55,7 +55,9 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
+      import { lazy, Suspense } from "preact/compat";
       import { Box, Text, Field, Icon, Input, Label } from "@jsenv/navi";
+      import { CallLog, useCallLog } from "./utils/call_log.jsx";
 
       const dotted = { outline: "1px dotted #999" };
 
@@ -89,6 +91,11 @@
               <li>
                 <a href="#explicit-id">Input with explicit id</a>
               </li>
+              <li>
+                <a href="#lazy-neighbor">
+                  BUG repro: Field as="label" + lazy neighbor
+                </a>
+              </li>
             </ol>
           </nav>
 
@@ -99,6 +106,7 @@
 
           <DisabledReadonlyDemo />
           <ExplicitIdDemo />
+          <LazyNeighborDemo />
         </Box>
       );
 
@@ -494,6 +502,53 @@
           </Label>
         </div>
       );
+
+      /* ------------------------------------------------------------------ */
+      /* 7. BUG repro: Field as="label" + lazy neighbor                       */
+      /* ------------------------------------------------------------------ */
+      const LazyNeighbor = lazy(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        return "LazyNeighbor";
+      });
+
+      const LazyNeighborDemo = () => {
+        const [entries, push, clear] = useCallLog();
+
+        return (
+          <div class="demo-section" id="lazy-neighbor">
+            <h2>
+              BUG repro: <code>{'<Field as="label">'}</code> + lazy neighbor
+            </h2>
+            <p>
+              <code>Field as="label"</code> wrapping an <code>Input</code>{" "}
+              inside a shared <code>Suspense</code> boundary with a lazy
+              neighbor. Type in the input. Expected: <code>uiAction</code>{" "}
+              appears in the log on each keystroke.
+            </p>
+
+            <Suspense fallback="loading…">
+              <Field as="label" flex alignY="center" spacing="s" style={dotted}>
+                Name
+                <Input
+                  type="text"
+                  name="lazy_neighbor_name"
+                  placeholder="Type here…"
+                  uiAction={(v) => {
+                    push("uiAction", v);
+                  }}
+                  action={(v) => {
+                    push("action", v);
+                  }}
+                />
+              </Field>
+
+              <LazyNeighbor />
+            </Suspense>
+
+            <CallLog entries={entries} onClear={clear} />
+          </div>
+        );
+      };
 
       render(<App />, document.querySelector("#root"));
     </script>
