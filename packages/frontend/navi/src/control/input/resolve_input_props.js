@@ -92,30 +92,31 @@ export const resolveInputProps = (props) => {
     const checkedProp = props.checked;
     const checkedPropIsSignal = isSignal(checkedProp);
     if (checkedPropIsSignal) {
+      const checkedSignalOptions = checkedProp.options;
       // If no explicit defaultChecked, derive it from the signal's default
       // value so that resetUIState restores to the original default.
-      if (!Object.hasOwn(props, "defaultChecked") && checkedProp.options) {
-        const defaultVal = checkedProp.options.getDefaultValue(false);
-        if (defaultVal !== undefined) {
-          if (props.type === "radio") {
-            if (defaultVal === true) {
-              props.defaultChecked = true;
-            } else if (
-              Object.hasOwn(props, "value") &&
-              defaultVal === props.value
-            ) {
-              props.defaultChecked = true;
-            }
-          } else if (typeof defaultVal === "boolean") {
-            // Standalone checkbox bound to a boolean signal.
-            props.defaultChecked = defaultVal;
-          } else {
-            // Checkbox is a group member: defaultVal is the array of
-            // selected item values.
-            const itemValue = props.value;
-            props.defaultChecked =
-              Array.isArray(defaultVal) && defaultVal.includes(itemValue);
+      if (checkedSignalOptions && !Object.hasOwn(props, "defaultChecked")) {
+        const defaultVal = checkedSignalOptions.getDefaultValue(false);
+        if (defaultVal === undefined) {
+          // no defaultChecked, and no default value from the signal: leave
+        } else if (props.type === "radio") {
+          if (defaultVal === true) {
+            props.defaultChecked = true;
+          } else if (
+            Object.hasOwn(props, "value") &&
+            defaultVal === props.value
+          ) {
+            props.defaultChecked = true;
           }
+        } else if (typeof defaultVal === "boolean") {
+          // Standalone checkbox bound to a boolean signal.
+          props.defaultChecked = defaultVal;
+        } else {
+          // Checkbox is a group member: defaultVal is the array of
+          // selected item values.
+          const checkboxValue = props.value;
+          props.defaultChecked =
+            Array.isArray(defaultVal) && defaultVal.includes(checkboxValue);
         }
       }
       wireUIActionToSignal(props, checkedProp, (v) => Boolean(v));
@@ -128,23 +129,28 @@ export const resolveInputProps = (props) => {
   const valueProp = props.value;
   const valuePropIsSignal = isSignal(valueProp);
   if (valuePropIsSignal) {
-    const signalOptions = valueProp.options;
-    if (signalOptions) {
+    const valueSignalOptions = valueProp.options;
+    if (valueSignalOptions) {
       for (const key of ["min", "max", "step"]) {
-        if (props[key] === undefined && signalOptions[key] !== undefined) {
-          props[key] = signalOptions[key];
+        if (props[key] === undefined && valueSignalOptions[key] !== undefined) {
+          props[key] = valueSignalOptions[key];
         }
       }
-      if (props.type === undefined && signalOptions.type !== undefined) {
+      if (props.type === undefined && valueSignalOptions.type !== undefined) {
         props.type =
-          VALIDITY_TYPE_TO_INPUT_TYPE[signalOptions.type] ?? signalOptions.type;
+          VALIDITY_TYPE_TO_INPUT_TYPE[valueSignalOptions.type] ??
+          valueSignalOptions.type;
       }
       // If no explicit defaultValue, snapshot the signal's current default
       // so that resetUIState restores to the original default — not the
       // value the signal had at the time of the last re-render.
-      if (!Object.hasOwn(props, "defaultValue")) {
-        const defaultVal = signalOptions.getDefaultValue(false);
-        if (defaultVal !== undefined) {
+      if (Object.hasOwn(props, "defaultValue")) {
+        // already got a defaultValue prop
+      } else {
+        const defaultVal = valueSignalOptions.getDefaultValue(false);
+        if (defaultVal === undefined) {
+          // no default value on the signal
+        } else {
           props.defaultValue = defaultVal;
         }
       }
