@@ -100,17 +100,25 @@ const ControlledPopover = (props) => {
   const {
     openController,
     anchor: anchorProp,
-    anchorRelativeTo = "viewport",
+    // position="top"/"top-right"/etc is the friendly, common-case way to
+    // describe placement — one of the 9 compass values in POSITION_TO_XY,
+    // loosely inspired by CSS position-area. positionX/positionY (and their
+    // Fixed variants) are the lower-level escape hatch for placements the
+    // compass model can't express — e.g. "left-aligned" + "below-overlap"
+    // for a combobox popup that overlaps its trigger (see picker_custom.jsx)
+    // — and win over position/positionFixed when explicitly provided.
+    position = "bottom",
+    positionFixed,
+    positionX,
+    positionY,
+    positionXFixed,
+    positionYFixed,
     scrollLock,
     pointerInteractionOutsideEffect = "none",
     focusTrap,
     animation,
     fadeAnimation,
     children,
-    positionX,
-    positionY,
-    positionXFixed,
-    positionYFixed,
     spacing = 0,
     viewportSpacing = 0,
     ...rest
@@ -152,48 +160,46 @@ const ControlledPopover = (props) => {
       return undefined;
     }
     const [cleanup, addCleanup] = createPubSub(true);
-    // anchor="ignore" forces the popover to behave as anchorless even when
-    // the request carries one (e.g. a --navi-toggle button that should not
-    // double as the visual anchor). anchor="top"/"top-left"/"center"/etc pins
-    // the popover to that point instead of a real element — relative to the
-    // viewport by default, or to the popover's own nearest positioned
-    // ancestor when anchorRelativeTo="offsetParent" (see below). Otherwise a
-    // ref/DOM element wins; then the anchor carried by the request (e.g. the
-    // button that triggered a --navi-toggle/--navi-open command, forwarded
-    // as detail.source).
+    // `anchor` describes *what* to position against: a ref/DOM element (a
+    // real anchor), "viewport", or "offsetParent" (the popover's own nearest
+    // positioned DOM ancestor — see relativeContainer below). If it's set at
+    // all (to anything), the request's own carried anchor (e.g. a
+    // --navi-toggle button, forwarded as detail.source) is never consulted —
+    // only when the prop is left undefined does the request get to supply
+    // one. There is no "ignore" value any more: to force viewport-relative
+    // placement even though the request carries an anchor, pass
+    // anchor="viewport" explicitly.
     let anchor;
-    let anchorPoint; // e.g. "top-right" — set when anchorProp is one of ANCHOR_POINT_VALUES
-    if (anchorProp === "ignore") {
-      // anchorless, centered — nothing to resolve
+    let anchorReference; // "viewport" | "offsetParent" — set when not a real anchor
+    if (anchorProp === "viewport" || anchorProp === "offsetParent") {
+      anchorReference = anchorProp;
     } else if (typeof anchorProp === "string") {
-      if (ANCHOR_POINT_VALUES.has(anchorProp)) {
-        anchorPoint = anchorProp;
-      } else {
-        console.warn(`Popover: unknown anchor="${anchorProp}"`);
-      }
+      console.warn(
+        `Popover: unknown anchor="${anchorProp}" (expected "viewport", "offsetParent", a ref, or a DOM element)`,
+      );
     } else if (anchorProp) {
       // anchor prop is a ref or a DOM element
       anchor = anchorProp.current ?? anchorProp;
     } else if (e.detail.anchor) {
       anchor = e.detail.anchor;
     }
-    // The popover's own nearest positioned DOM ancestor — for this to
-    // resolve to anything but document.body, the popover must be rendered
-    // inside that ancestor in the DOM (the trigger button doesn't have to
-    // be). Only meaningful for an anchor point: a real anchor element
-    // already carries its own position. Not `popoverEl.offsetParent`: an
-    // open [popover] element sits in the top layer, whose containing block
-    // is always the initial containing block (the viewport) — no DOM
-    // ancestor ever qualifies as its containing block, so offsetParent is
-    // spec'd to return null regardless of DOM position or timing.
-    // getPositionedParent walks the plain DOM ancestor chain instead, so
-    // it's unaffected by that.
+    if (!anchor && !anchorReference) {
+      anchorReference = "viewport";
+    }
+    // For this to resolve to anything but document.body, the popover must be
+    // rendered inside that ancestor in the DOM (the trigger button doesn't
+    // have to be). Not `popoverEl.offsetParent`: an open [popover] element
+    // sits in the top layer, whose containing block is always the initial
+    // containing block (the viewport) — no DOM ancestor ever qualifies as
+    // its containing block, so offsetParent is spec'd to return null
+    // regardless of DOM position or timing. getPositionedParent walks the
+    // plain DOM ancestor chain instead, so it's unaffected by that.
     const relativeContainer =
-      anchorPoint && anchorRelativeTo === "offsetParent"
+      anchorReference === "offsetParent"
         ? getPositionedParent(popoverEl)
         : null;
     const resolvedAnimation = isAutoAnimation
-      ? anchorPoint && anchorPoint !== "center"
+      ? anchorReference && position !== "center"
         ? "slide"
         : "clip"
       : animation;
@@ -208,23 +214,48 @@ const ControlledPopover = (props) => {
     popoverEl.setAttribute("navi-animation", resolvedAnimation);
     // "clip" reveals vertically only by default (grows out of the anchor's
     // edge), which only makes sense against a real anchor element. Without
-    // one — anchorPoint (e.g. anchor="center") or nothing at all — it clips
-    // both axes around a point instead (see popup_animation.js).
+    // one — anchorReference (viewport/offsetParent) or nothing at all — it
+    // clips both axes around a point instead (see popup_animation.js).
     if (anchor) {
       popoverEl.removeAttribute("data-clip-axis");
     } else {
       popoverEl.setAttribute("data-clip-axis", "xy");
     }
-    // Mirrors how the anchor was resolved, in DOM-inspectable form: one of
-    // the 9 anchor points, "viewport" (no anchor at all), a structural
+    // Mirrors how the anchor was resolved, in DOM-inspectable form: the
+    // `position` compass value when anchorReference is set, a structural
     // relation to the popover ("previousSibling"/"nextSibling"/"parent" —
     // the only relations worth naming; anything else is too indirect to be
     // useful at a glance), "#id" when the anchor element has one, or
     // "custom" as the last resort.
     popoverEl.setAttribute(
       "data-anchor",
-      resolveAnchorAttrValue(popoverEl, anchor, anchorPoint),
+      resolveAnchorAttrValue(popoverEl, anchor, anchorReference && position),
     );
+    // `position`/`positionFixed` (the compass shorthand) translate to an
+    // (x, y) pair via POSITION_TO_XY; positionX/positionY (the escape hatch
+    // for placements the compass model can't express, e.g. an "-overlap"
+    // corner — see picker_custom.jsx) win when explicitly provided. Only
+    // meaningful against a real anchor (pickPositionRelativeTo below) —
+    // anchorReference mode passes `position` straight through to
+    // computeStickToPosition instead, which already speaks the same 9
+    // compass values natively.
+    const positionFromKeyword = POSITION_TO_XY[position];
+    if (!positionFromKeyword) {
+      console.warn(`Popover: unknown position="${position}"`);
+    }
+    const effectivePositionX = positionX ?? positionFromKeyword?.x ?? "center";
+    const effectivePositionY = positionY ?? positionFromKeyword?.y ?? "below";
+    let effectivePositionXFixed = positionXFixed;
+    let effectivePositionYFixed = positionYFixed;
+    if (positionFixed) {
+      const positionFixedFromKeyword = POSITION_TO_XY[positionFixed];
+      if (!positionFixedFromKeyword) {
+        console.warn(`Popover: unknown positionFixed="${positionFixed}"`);
+      } else {
+        effectivePositionXFixed = positionXFixed ?? positionFixedFromKeyword.x;
+        effectivePositionYFixed = positionYFixed ?? positionFixedFromKeyword.y;
+      }
+    }
     // pickPositionRelativeTo persists data-position-y/x-current across calls
     // on purpose (it avoids flicker while *this* popover stays open and
     // repositions on scroll/resize). But the attribute lingers on the DOM
@@ -243,13 +274,19 @@ const ControlledPopover = (props) => {
     // moment the box starts rendering. Waiting for pickPositionRelativeTo to
     // set it (it only runs once the popover already has a layout box, after
     // showPopover()) is too late for that first snapshot.
-    if (positionYFixed) {
-      popoverEl.setAttribute("data-position-y-current", positionYFixed);
+    if (effectivePositionYFixed) {
+      popoverEl.setAttribute(
+        "data-position-y-current",
+        effectivePositionYFixed,
+      );
     } else {
       popoverEl.removeAttribute("data-position-y-current");
     }
-    if (positionXFixed) {
-      popoverEl.setAttribute("data-position-x-current", positionXFixed);
+    if (effectivePositionXFixed) {
+      popoverEl.setAttribute(
+        "data-position-x-current",
+        effectivePositionXFixed,
+      );
     } else {
       popoverEl.removeAttribute("data-position-x-current");
     }
@@ -264,14 +301,14 @@ const ControlledPopover = (props) => {
     const restoreFocus = openController.transferFocusOnOpen(popoverEl);
     debugPopup(
       e,
-      `openPopover() -> anchor: ${anchor?.tagName}, anchorPoint: ${anchorPoint}, relativeContainer: ${relativeContainer?.tagName}`,
+      `openPopover() -> anchor: ${anchor?.tagName}, anchorReference: ${anchorReference}, relativeContainer: ${relativeContainer?.tagName}`,
     );
 
     const positionPopover = (positionEvent) => {
       let appliedLeft;
       let top;
 
-      if (anchorPoint) {
+      if (anchorReference) {
         const containerRect = relativeContainer
           ? relativeContainer.getBoundingClientRect()
           : {
@@ -283,14 +320,14 @@ const ControlledPopover = (props) => {
               height: document.documentElement.clientHeight,
             };
         const spacingPx = resolveSpacingSize(spacing);
-        const position = computeStickToPosition(
+        const stickPosition = computeStickToPosition(
           popoverEl,
           containerRect,
-          anchorPoint,
+          position,
           spacingPx,
         );
-        appliedLeft = position.left;
-        top = position.top;
+        appliedLeft = stickPosition.left;
+        top = stickPosition.top;
       } else {
         const { width, height } = effectiveAnchor.getBoundingClientRect();
         const {
@@ -316,8 +353,6 @@ const ControlledPopover = (props) => {
           `${snapToPixel(height - borderTop - borderBottom)}px`,
         );
         const minLeft = 1;
-        const effectivePositionX = anchor ? positionX : "center";
-        const effectivePositionY = anchor ? positionY : "center";
         // Remove max-height constraint so pickPositionRelativeTo measures the natural
         // (unconstrained) height of the popover. This ensures the 60% flip threshold
         // compares against the real content height, not the already-truncated one.
@@ -331,8 +366,8 @@ const ControlledPopover = (props) => {
         } = pickPositionRelativeTo(popoverEl, effectiveAnchor, {
           positionX: effectivePositionX,
           positionY: effectivePositionY,
-          positionXFixed,
-          positionYFixed,
+          positionXFixed: effectivePositionXFixed,
+          positionYFixed: effectivePositionYFixed,
           spacing: resolveSpacingSize(spacing),
           viewportSpacing: resolveSpacingSize(viewportSpacing),
           minLeft,
@@ -576,26 +611,29 @@ const resolveAnchorAttrValue = (popoverEl, anchor, anchorPoint) => {
   return "viewport";
 };
 
-// Values the `anchor` prop accepts besides a ref/DOM element, "ignore", or
-// undefined — pins the popover to that point instead of a real element.
-// Relative to the viewport by default, or to the popover's own nearest
-// positioned ancestor when anchorRelativeTo="offsetParent".
-const ANCHOR_POINT_VALUES = new Set([
-  "top",
-  "top-right",
-  "right",
-  "bottom-right",
-  "bottom",
-  "bottom-left",
-  "left",
-  "top-left",
-  "center",
-]);
+// The 9 compass values `position`/`positionFixed` accept, loosely inspired
+// by CSS position-area: https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/position-area
+// Each maps to an (x, y) pair for the lower-level positionX/positionY escape
+// hatch (see the ControlledPopover destructuring comment), and — for
+// anchorReference ("viewport"/"offsetParent") mode — the compass value
+// itself is also what computeStickToPosition below consumes directly, since
+// it already speaks this same vocabulary natively.
+const POSITION_TO_XY = {
+  "top": { x: "center", y: "above" },
+  "top-right": { x: "right-aligned", y: "above" },
+  "right": { x: "to-the-right", y: "center" },
+  "bottom-right": { x: "right-aligned", y: "below" },
+  "bottom": { x: "center", y: "below" },
+  "bottom-left": { x: "left-aligned", y: "below" },
+  "left": { x: "to-the-left", y: "center" },
+  "top-left": { x: "left-aligned", y: "above" },
+  "center": { x: "center", y: "center" },
+};
 
 /**
  * Places the popover pinned to an anchor point of `containerRect` (the
  * viewport by default, or the popover's own positioned ancestor when
- * anchorRelativeTo="offsetParent") instead of relative to an anchor. Returns
+ * anchor="offsetParent") instead of relative to an anchor. Returns
  * { left, top } in whatever coordinate space popoverEl's own computed
  * position needs (see getPositioningScrollOffset), matching
  * pickPositionRelativeTo's convention — viewport rect math, converted at the
