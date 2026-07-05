@@ -106,6 +106,7 @@ const ControlledDialog = (props) => {
     scrollLock,
     pointerLock,
     animation,
+    fadeAnimation = true,
     centerInVisualViewport: centerInVisualViewportProp,
     ...rest
   } = props;
@@ -226,6 +227,7 @@ const ControlledDialog = (props) => {
       as="dialog"
       ref={ref}
       navi-animation={isAutoAnimation ? undefined : animation}
+      navi-fade-animation={fadeAnimation ? "" : undefined}
       styleCSSVars={DIALOG_STYLE_CSS_VARS}
       baseClassName="navi_dialog"
       pseudoClasses={DIALOG_PSEUDO_CLASSES}

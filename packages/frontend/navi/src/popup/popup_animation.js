@@ -18,8 +18,11 @@
  * Box's styleCSSVars) without touching this file: `--popup-animation-duration`,
  * `--popup-slide-distance`.
  *
- * Three animation kinds:
- * - "fade": opacity only.
+ * Fading is a separate, independent concern from `animation` — see
+ * `[navi-fade-animation]` below, driven by the `fadeAnimation` prop. It
+ * combines with any `animation` kind (or with none at all, for a plain fade).
+ *
+ * Two `animation` kinds:
  * - "clip": reveals via `clip-path` rather than a `scale` transform, so child
  *   content never visually shrinks/distorts and the box's real layout size
  *   is never touched — only what's painted changes. Two modes, chosen by
@@ -55,22 +58,24 @@ export const buildPopupAnimationCss = (selector) => {
       }
     }
 
-    ${selector}[navi-animation] {
+    ${selector}[navi-animation],
+    ${selector}[navi-fade-animation] {
       transition-property: display, overlay, opacity, translate, clip-path;
       transition-duration: var(--popup-animation-duration);
       transition-timing-function: ease;
       transition-behavior: allow-discrete;
     }
 
-    /* fade */
-    ${selector}[navi-animation="fade"] {
+    /* fade — independent of "animation", combines with any kind (or none,
+       for a plain fade in/out). */
+    ${selector}[navi-fade-animation] {
       opacity: 1;
     }
-    ${closed}[navi-animation="fade"] {
+    ${closed}[navi-fade-animation] {
       opacity: 0;
     }
     @starting-style {
-      ${open}[navi-animation="fade"] {
+      ${open}[navi-fade-animation] {
         opacity: 0;
       }
     }
@@ -78,12 +83,10 @@ export const buildPopupAnimationCss = (selector) => {
     /* clip — vertical-only by default (anchored case): reveals out of the
        anchor's edge, top when placed below it, bottom when placed above it. */
     ${selector}[navi-animation="clip"] {
-      opacity: 1;
       clip-path: inset(0 0 0 0);
       translate: 0 0;
     }
     ${closed}[navi-animation="clip"] {
-      opacity: 0;
       clip-path: inset(0 0 100% 0);
     }
     ${closed}[navi-animation="clip"][data-position-y-current="above"],
@@ -92,7 +95,6 @@ export const buildPopupAnimationCss = (selector) => {
     }
     @starting-style {
       ${open}[navi-animation="clip"] {
-        opacity: 0;
         clip-path: inset(0 0 100% 0);
       }
       ${open}[navi-animation="clip"][data-position-y-current="above"],
@@ -182,7 +184,6 @@ export const buildPopupAnimationCss = (selector) => {
     ${selector}[navi-animation="slide-from-bottom"],
     ${selector}[navi-animation="slide-from-left"],
     ${selector}[navi-animation="slide-from-right"] {
-      opacity: 1;
       translate: 0 0;
     }
     ${closed}[navi-animation="slide"],
@@ -190,7 +191,6 @@ export const buildPopupAnimationCss = (selector) => {
     ${closed}[navi-animation="slide-from-bottom"],
     ${closed}[navi-animation="slide-from-left"],
     ${closed}[navi-animation="slide-from-right"] {
-      opacity: 0;
       translate: calc(var(--popup-slide-x, 0) * var(--popup-slide-distance))
         calc(var(--popup-slide-y, -1) * var(--popup-slide-distance));
     }
@@ -200,7 +200,6 @@ export const buildPopupAnimationCss = (selector) => {
       ${open}[navi-animation="slide-from-bottom"],
       ${open}[navi-animation="slide-from-left"],
       ${open}[navi-animation="slide-from-right"] {
-        opacity: 0;
         translate: calc(var(--popup-slide-x, 0) * var(--popup-slide-distance))
           calc(var(--popup-slide-y, -1) * var(--popup-slide-distance));
       }

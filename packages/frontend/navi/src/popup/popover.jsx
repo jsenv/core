@@ -98,6 +98,7 @@ const ControlledPopover = (props) => {
     pointerLock,
     focusTrap,
     animation,
+    fadeAnimation = true,
     children,
     positionX,
     positionY,
@@ -410,6 +411,7 @@ const ControlledPopover = (props) => {
       id={id}
       popover="manual"
       navi-animation={isAutoAnimation ? undefined : animation}
+      navi-fade-animation={fadeAnimation ? "" : undefined}
       styleCSSVars={POPUP_STYLE_CSS_VARS}
       {...rest}
       {...autoFocusProps}

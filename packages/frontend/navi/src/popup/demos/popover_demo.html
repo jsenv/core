@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Popover demo</title>
+    <style>
+      body {
+        margin: 20px;
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+      }
+      .demo-toc {
+        margin-bottom: 32px;
+        padding: 12px 16px;
+        background: #f6f6f6;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+      }
+      .demo-toc ol {
+        margin: 8px 0 0;
+        padding-left: 20px;
+      }
+      .demo-toc li {
+        margin-bottom: 4px;
+      }
+      .demo-section {
+        margin-bottom: 32px;
+        scroll-margin-top: 16px;
+      }
+      .demo-subsection {
+        margin-top: 20px;
+        margin-left: 8px;
+      }
+      .demo-row {
+        display: flex;
+        margin-top: 8px;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+      .demo_popover_box {
+        max-width: 220px;
+        padding: 12px 16px;
+        background: white;
+        border: 1px solid #d0d0d0;
+        border-radius: 8px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+      }
+      /* pushes the "flips to above" anchors near the bottom of the viewport
+         so the popover is forced to open above them instead */
+      .bottom-anchor-spacer {
+        height: 70vh;
+      }
+      .demo-container {
+        position: relative;
+        width: 500px;
+        max-width: 100%;
+        height: 260px;
+        border: 1px dashed #999;
+        border-radius: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useId, useRef } from "preact/hooks";
+      import { Button, Popover, NaviDebug } from "@jsenv/navi";
+
+      const App = () => {
+        const containerRef = useRef(null);
+        return (
+          <div>
+            <h1>Popover demo</h1>
+
+            <nav class="demo-toc">
+              <strong>Contents</strong>
+              <ol>
+                <li>
+                  <a href="#anchor-behavior">Anchor behavior</a>
+                </li>
+                <li>
+                  <a href="#anchor-point">Anchor as a point</a>
+                </li>
+                <li>
+                  <a href="#anchor-placement">
+                    Placement relative to the anchor
+                  </a>
+                </li>
+                <li>
+                  <a href="#animation">Animation</a>
+                  <ol>
+                    <li>
+                      <a href="#animation-fade">Fading</a>
+                    </li>
+                    <li>
+                      <a href="#animation-prop">The animation prop</a>
+                    </li>
+                  </ol>
+                </li>
+              </ol>
+            </nav>
+
+            <section id="anchor-behavior" class="demo-section">
+              <h2>1. Anchor behavior</h2>
+              <p>
+                A popover opened via a <code>--navi-toggle</code> command
+                anchors itself to the button that triggered it automatically —
+                no anchorRef to wire up. Set <code>anchor="ignore"</code> to opt
+                out and have it center itself in the viewport instead.
+              </p>
+              <div class="demo-row">
+                <AnchoredPopover label="anchored (default)" />
+                <AnchorlessPopover label='anchor="ignore"' />
+              </div>
+            </section>
+
+            <section id="anchor-point" class="demo-section">
+              <h2>2. Anchor as a point</h2>
+              <p>
+                <code>anchor="&lt;point&gt;"</code> pins the popover to a point
+                of the viewport (a corner, an edge center, or "center") instead
+                of a real element — one of <code>top</code>,
+                <code>top-right</code>, <code>right</code>,
+                <code>bottom-right</code>, <code>bottom</code>,
+                <code>bottom-left</code>, <code>left</code>,
+                <code>top-left</code>, <code>center</code>.
+              </p>
+              <div class="demo-row">
+                <AnchorPointPopover
+                  label="top-left"
+                  anchor="top-left"
+                  spacing={16}
+                />
+                <AnchorPointPopover label="top" anchor="top" spacing={16} />
+                <AnchorPointPopover
+                  label="top-right"
+                  anchor="top-right"
+                  spacing={16}
+                />
+                <AnchorPointPopover label="left" anchor="left" spacing={16} />
+                <AnchorPointPopover label="right" anchor="right" spacing={16} />
+                <AnchorPointPopover
+                  label="bottom-left"
+                  anchor="bottom-left"
+                  spacing={16}
+                />
+                <AnchorPointPopover
+                  label="bottom"
+                  anchor="bottom"
+                  spacing={16}
+                />
+                <AnchorPointPopover
+                  label="bottom-right"
+                  anchor="bottom-right"
+                  spacing={16}
+                />
+                <AnchorPointPopover label="center" anchor="center" />
+              </div>
+
+              <div class="demo-subsection">
+                <h3>anchor="relative-&lt;point&gt;"</h3>
+                <p>
+                  Same as above, but relative to a container instead of the
+                  viewport (<code>stickToContainerRef</code>, 100px spacing into
+                  the container).
+                </p>
+                <div class="demo-row">
+                  <div class="demo-container" ref={containerRef}>
+                    <AnchorPointPopover
+                      label="relative-top-right"
+                      anchor="relative-top-right"
+                      stickToContainerRef={containerRef}
+                      spacing={100}
+                    />
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section id="anchor-placement" class="demo-section">
+              <h2>3. Placement relative to the anchor</h2>
+              <p>
+                <code>positionY</code> (above/below the anchor) and
+                <code>positionX</code> (left/right of the anchor) — both
+                auto-flip to the opposite side when there isn't enough room.
+              </p>
+              <div class="demo-subsection">
+                <h3>positionY</h3>
+                <div class="demo-row">
+                  <AnchoredPopover label="above" positionY="above" />
+                  <AnchoredPopover
+                    label="above-overlap"
+                    positionY="above-overlap"
+                  />
+                  <AnchoredPopover label="center" positionY="center" />
+                  <AnchoredPopover
+                    label="below-overlap"
+                    positionY="below-overlap"
+                  />
+                  <AnchoredPopover label="below (default)" positionY="below" />
+                </div>
+              </div>
+              <div class="demo-subsection">
+                <h3>positionX</h3>
+                <div class="demo-row">
+                  <AnchoredPopover
+                    label="to-the-left"
+                    positionX="to-the-left"
+                  />
+                  <AnchoredPopover
+                    label="left-aligned"
+                    positionX="left-aligned"
+                  />
+                  <AnchoredPopover
+                    label="center (default)"
+                    positionX="center"
+                  />
+                  <AnchoredPopover
+                    label="right-aligned"
+                    positionX="right-aligned"
+                  />
+                  <AnchoredPopover
+                    label="to-the-right"
+                    positionX="to-the-right"
+                  />
+                </div>
+              </div>
+            </section>
+
+            <section id="animation" class="demo-section">
+              <h2>4. Animation</h2>
+
+              <div id="animation-fade" class="demo-subsection">
+                <h3>4.1 Fading</h3>
+                <p>
+                  <code>fadeAnimation</code> (defaults to <code>true</code>)
+                  controls opacity fading independently of
+                  <code>animation</code> — it combines with any animation kind,
+                  or works on its own with no <code>animation</code> at all.
+                </p>
+                <div class="demo-row">
+                  <AnchoredPopover label="fade only (no animation)" />
+                  <AnchoredPopover
+                    label="fadeAnimation={false} (no animation either — pops instantly)"
+                    fadeAnimation={false}
+                  />
+                  <AnchoredPopover
+                    label="clip + fade (default)"
+                    animation="clip"
+                    animationDuration="0.6s"
+                    positionY="below"
+                  />
+                  <AnchoredPopover
+                    label="clip, fadeAnimation={false}"
+                    animation="clip"
+                    animationDuration="0.6s"
+                    positionY="below"
+                    fadeAnimation={false}
+                  />
+                </div>
+              </div>
+
+              <div id="animation-prop" class="demo-subsection">
+                <h3>4.2 The animation prop</h3>
+                <p>
+                  Just turning animation on (<code>animation</code>) in a few
+                  different contexts:
+                </p>
+                <div class="demo-row">
+                  <AnchoredPopover
+                    label="anchored to a real element"
+                    animation
+                    animationDuration="0.6s"
+                    positionY="below"
+                  />
+                  <AnchorPointPopover
+                    label='anchor="right"'
+                    anchor="right"
+                    animation
+                    animationDuration="0.6s"
+                  />
+                  <AnchorlessPopover
+                    label="no anchor"
+                    animation
+                    animationDuration="0.6s"
+                  />
+                </div>
+
+                <div class="bottom-anchor-spacer" />
+
+                <p>
+                  Same as the first one above, but forced near the viewport
+                  bottom — the clip flips to originate from the bottom edge
+                  instead of the top:
+                </p>
+                <div class="demo-row">
+                  <AnchoredPopover
+                    label="anchored, forced near viewport bottom"
+                    animation
+                    animationDuration="0.6s"
+                    positionY="below"
+                  />
+                </div>
+
+                <p>
+                  Now controlling <code>animation</code> explicitly instead of
+                  letting it resolve on its own — forcing "slide" or "clip"
+                  regardless of context:
+                </p>
+                <div class="demo-row">
+                  <AnchoredPopover
+                    label='anchored, animation="slide-from-top"'
+                    animation="slide-from-top"
+                  />
+                  <AnchoredPopover
+                    label='anchored, animation="slide-from-bottom"'
+                    animation="slide-from-bottom"
+                  />
+                  <AnchoredPopover
+                    label='anchored, animation="slide-from-left"'
+                    animation="slide-from-left"
+                  />
+                  <AnchoredPopover
+                    label='anchored, animation="slide-from-right"'
+                    animation="slide-from-right"
+                  />
+                  <AnchorPointPopover
+                    label='anchor="center", animation="clip"'
+                    anchor="center"
+                    animation="clip"
+                  />
+                </div>
+              </div>
+            </section>
+          </div>
+        );
+      };
+
+      // No openController here: without one, Popover creates its own (see
+      // open_controller.js). It self-wires to --navi-toggle/--navi-close
+      // commands, and the button that triggers --navi-toggle is forwarded
+      // as the anchor automatically (the command's "source" ends up as
+      // navi_request_open's detail.source).
+      const AnchoredPopover = ({
+        label,
+        animation,
+        animationDuration,
+        fadeAnimation,
+        positionX,
+        positionY,
+      }) => {
+        const popoverId = useId();
+
+        return (
+          <>
+            <Button command="--navi-toggle" commandFor={popoverId}>
+              {label}
+            </Button>
+            <Popover
+              id={popoverId}
+              animation={animation}
+              animationDuration={animationDuration}
+              fadeAnimation={fadeAnimation}
+              positionX={positionX}
+              positionY={positionY}
+              className="demo_popover_box"
+            >
+              <p style={{ marginTop: 0 }}>{label}</p>
+              <Button command="--navi-close">Close</Button>
+            </Popover>
+          </>
+        );
+      };
+
+      // Still command-driven (--navi-toggle), but anchor="ignore" tells the
+      // popover not to use the toggle button as its anchor, so it centers
+      // itself in the viewport instead.
+      const AnchorlessPopover = ({
+        label,
+        animation,
+        animationDuration,
+        fadeAnimation,
+      }) => {
+        const popoverId = useId();
+
+        return (
+          <>
+            <Button command="--navi-toggle" commandFor={popoverId}>
+              {label}
+            </Button>
+            <Popover
+              id={popoverId}
+              animation={animation}
+              animationDuration={animationDuration}
+              fadeAnimation={fadeAnimation}
+              anchor="ignore"
+              className="demo_popover_box"
+            >
+              <p style={{ marginTop: 0 }}>{label}</p>
+              <Button command="--navi-close">Close</Button>
+            </Popover>
+          </>
+        );
+      };
+
+      // anchor="top"/"top-left"/"relative-right"/etc pins the popover to an
+      // anchor point of the viewport (or of stickToContainerRef, when the
+      // "relative-" prefix is used) instead of positioning relative to a
+      // real element. animation defaults to "auto", which resolves to
+      // "slide" whenever anchor is one of these anchor point values.
+      const AnchorPointPopover = ({
+        label,
+        anchor,
+        stickToContainerRef,
+        spacing,
+        animation = "auto",
+        animationDuration,
+      }) => {
+        const popoverId = useId();
+
+        return (
+          <>
+            <Button command="--navi-toggle" commandFor={popoverId}>
+              {label}
+            </Button>
+            <Popover
+              id={popoverId}
+              animation={animation}
+              animationDuration={animationDuration}
+              anchor={anchor}
+              stickToContainerRef={stickToContainerRef}
+              spacing={spacing}
+              className="demo_popover_box"
+            >
+              <p style={{ marginTop: 0 }}>{label}</p>
+              <Button command="--navi-close">Close</Button>
+            </Popover>
+          </>
+        );
+      };
+
+      render(
+        <NaviDebug debugAll>
+          <App />
+        </NaviDebug>,
+        document.querySelector("#root"),
+      );
+    </script>
+  </body>
+</html>

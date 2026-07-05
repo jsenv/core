@@ -17,13 +17,13 @@
       }
       .demo-row {
         display: flex;
+        margin-top: 8px;
         flex-wrap: wrap;
         gap: 12px;
-        margin-top: 8px;
       }
       .demo_dialog_box {
-        padding: 20px 24px;
         width: 280px;
+        padding: 20px 24px;
         background: white;
         border: none;
         border-radius: 10px;
@@ -35,68 +35,27 @@
     <div id="root"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useRef, useState } from "preact/hooks";
-      import { Dialog } from "@jsenv/navi";
+      import { useId } from "preact/hooks";
+      import { Button, Dialog } from "@jsenv/navi";
 
-      // Minimal open controller for this demo — just enough to drive
-      // Dialog's openEffect (showModal/close, focus transfer).
-      // The real one (with requestClose validation, focus restore, etc.)
-      // lives in picker_custom.jsx / side_panel.jsx.
-      const useOpenController = () => {
-        const ref = useRef(null);
-        if (!ref.current) {
-          let cleanup = null;
-          ref.current = {
-            opened: false,
-            openEffect: null,
-            open(e = new CustomEvent("open", { detail: {} })) {
-              if (this.opened || !this.openEffect) {
-                return;
-              }
-              this.opened = true;
-              cleanup = this.openEffect(e) || null;
-            },
-            requestClose(e = new CustomEvent("close", { detail: {} })) {
-              if (!this.opened) {
-                return;
-              }
-              this.opened = false;
-              cleanup?.(e);
-              cleanup = null;
-            },
-          };
-        }
-        return ref.current;
-      };
-
-      const TriggeredDialog = ({ label, animation }) => {
-        const anchorRef = useRef(null);
-        const openController = useOpenController();
-        const [open, setOpen] = useState(false);
-
-        const toggle = () => {
-          if (open) {
-            openController.requestClose();
-            setOpen(false);
-          } else {
-            openController.open();
-            setOpen(true);
-          }
-        };
+      // No openController here: without one, Dialog creates its own and
+      // self-wires to --navi-toggle/--navi-close commands.
+      const TriggeredDialog = ({ label, animation, fadeAnimation }) => {
+        const dialogId = useId();
 
         return (
           <>
-            <button ref={anchorRef} onClick={toggle}>
+            <Button command="--navi-toggle" commandFor={dialogId}>
               {label}
-            </button>
+            </Button>
             <Dialog
-              openController={openController}
-              anchorRef={anchorRef}
+              id={dialogId}
               animation={animation}
+              fadeAnimation={fadeAnimation}
               className="demo_dialog_box"
             >
-              <p style={{ marginTop: 0 }}>animation="{animation}"</p>
-              <button onClick={toggle}>Close</button>
+              <p style={{ marginTop: 0 }}>{label}</p>
+              <Button command="--navi-close">Close</Button>
             </Dialog>
           </>
         );
@@ -110,28 +69,37 @@
             <div class="demo-section">
               <h3>none (default)</h3>
               <div class="demo-row">
-                <TriggeredDialog label="no animation" animation={undefined} />
+                <TriggeredDialog label="no animation" />
               </div>
             </div>
 
             <div class="demo-section">
-              <h3>fade</h3>
+              <h3>
+                fadeAnimation — controls opacity fading independently of
+                animation; defaults to true
+              </h3>
               <div class="demo-row">
-                <TriggeredDialog label="fade" animation="fade" />
+                <TriggeredDialog label="fade only (default)" />
+                <TriggeredDialog
+                  label="fadeAnimation={false} (pops instantly)"
+                  fadeAnimation={false}
+                />
               </div>
             </div>
 
             <div class="demo-section">
-              <h3>scale (grows from the dialog's own center)</h3>
+              <h3>clip (grows from the dialog's own center)</h3>
               <div class="demo-row">
-                <TriggeredDialog label="scale" animation="scale" />
+                <TriggeredDialog label="clip" animation="clip" />
               </div>
             </div>
 
             <div class="demo-section">
-              <h3>slide — explicit direction (dialogs are centered, so "auto"
+              <h3>
+                slide — explicit direction (dialogs are centered, so "auto"
                 direction from an anchor doesn't apply — only explicit
-                directions are supported)</h3>
+                directions are supported)
+              </h3>
               <div class="demo-row">
                 <TriggeredDialog
                   label="slide-from-top"
