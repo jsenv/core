@@ -30,8 +30,8 @@
  * - "slide"/"slide-from-*": a real translate-based entrance, sized to the
  *   element's own dimensions (--popup-slide-distance defaults to 100%, i.e.
  *   it travels its own width/height) so it looks like it enters from just
- *   past its final position. Direction comes from `data-anchor-side` (set
- *   when Popover's `anchor` prop is a sided/stickTo value like "right" or
+ *   past its final position. Direction comes from `data-anchor-point` (set
+ *   when Popover's `anchor` prop is an anchor point value like "right" or
  *   "top-left") or from the explicit slide-from-top/bottom/left/right variant.
  */
 
@@ -116,40 +116,40 @@ export const buildPopupAnimationCss = (selector) => {
       }
     }
 
-    /* slide — direction multipliers. data-anchor-side (set when Popover's
-       anchor prop is a sided value, e.g. "right", "top-left") drives it
-       automatically; slide-from-top/bottom/left/right set it directly,
+    /* slide — direction multipliers. data-anchor-point (set when Popover's
+       anchor prop is an anchor point value, e.g. "right", "top-left") drives
+       it automatically; slide-from-top/bottom/left/right set it directly,
        ignoring anchor/position entirely. Falls back to "from the top" when
        neither is present. */
-    ${selector}[data-anchor-side="top"] {
+    ${selector}[data-anchor-point="top"] {
       --popup-slide-x: 0;
       --popup-slide-y: -1;
     }
-    ${selector}[data-anchor-side="top-right"] {
+    ${selector}[data-anchor-point="top-right"] {
       --popup-slide-x: 1;
       --popup-slide-y: -1;
     }
-    ${selector}[data-anchor-side="right"] {
+    ${selector}[data-anchor-point="right"] {
       --popup-slide-x: 1;
       --popup-slide-y: 0;
     }
-    ${selector}[data-anchor-side="bottom-right"] {
+    ${selector}[data-anchor-point="bottom-right"] {
       --popup-slide-x: 1;
       --popup-slide-y: 1;
     }
-    ${selector}[data-anchor-side="bottom"] {
+    ${selector}[data-anchor-point="bottom"] {
       --popup-slide-x: 0;
       --popup-slide-y: 1;
     }
-    ${selector}[data-anchor-side="bottom-left"] {
+    ${selector}[data-anchor-point="bottom-left"] {
       --popup-slide-x: -1;
       --popup-slide-y: 1;
     }
-    ${selector}[data-anchor-side="left"] {
+    ${selector}[data-anchor-point="left"] {
       --popup-slide-x: -1;
       --popup-slide-y: 0;
     }
-    ${selector}[data-anchor-side="top-left"] {
+    ${selector}[data-anchor-point="top-left"] {
       --popup-slide-x: -1;
       --popup-slide-y: -1;
     }

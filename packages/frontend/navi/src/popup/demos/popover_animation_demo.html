@@ -161,34 +161,42 @@
 
             <div class="demo-section">
               <h3>
-                anchor="&lt;side&gt;" — pins to a corner/edge of the viewport
-                instead of a real element. This is what makes "slide" (or
-                "auto", which resolves to "slide" here) meaningful without an
-                anchor: it slides in from just outside its own footprint on that
-                side.
+                anchor="&lt;point&gt;" — pins to an anchor point of the viewport
+                (a corner, an edge center, or "center") instead of a real
+                element. This is what makes "slide" (or "auto", which resolves
+                to "slide" here) meaningful without an anchor: it slides in from
+                just outside its own footprint on that side.
               </h3>
               <div class="demo-row">
-                <SidedPopover label="top-left" anchor="top-left" spacing={16} />
-                <SidedPopover label="top" anchor="top" spacing={16} />
-                <SidedPopover
+                <AnchorPointPopover
+                  label="top-left"
+                  anchor="top-left"
+                  spacing={16}
+                />
+                <AnchorPointPopover label="top" anchor="top" spacing={16} />
+                <AnchorPointPopover
                   label="top-right"
                   anchor="top-right"
                   spacing={16}
                 />
-                <SidedPopover label="left" anchor="left" spacing={16} />
-                <SidedPopover label="right" anchor="right" spacing={16} />
-                <SidedPopover
+                <AnchorPointPopover label="left" anchor="left" spacing={16} />
+                <AnchorPointPopover label="right" anchor="right" spacing={16} />
+                <AnchorPointPopover
                   label="bottom-left"
                   anchor="bottom-left"
                   spacing={16}
                 />
-                <SidedPopover label="bottom" anchor="bottom" spacing={16} />
-                <SidedPopover
+                <AnchorPointPopover
+                  label="bottom"
+                  anchor="bottom"
+                  spacing={16}
+                />
+                <AnchorPointPopover
                   label="bottom-right"
                   anchor="bottom-right"
                   spacing={16}
                 />
-                <SidedPopover
+                <AnchorPointPopover
                   label="center"
                   anchor="center"
                   animation="scale"
@@ -198,13 +206,13 @@
 
             <div class="demo-section">
               <h3>
-                anchor="relative-&lt;side&gt;" — same as above, but relative to
+                anchor="relative-&lt;point&gt;" — same as above, but relative to
                 a container instead of the viewport (stickToContainerRef, 100px
                 spacing into the container)
               </h3>
               <div class="demo-row">
                 <div class="demo-container" ref={containerRef}>
-                  <SidedPopover
+                  <AnchorPointPopover
                     label="relative-top-right"
                     anchor="relative-top-right"
                     stickToContainerRef={containerRef}
@@ -276,12 +284,12 @@
         );
       };
 
-      // anchor="top"/"top-left"/"relative-right"/etc pins the popover to a
-      // corner/edge of the viewport (or of stickToContainerRef, when the
+      // anchor="top"/"top-left"/"relative-right"/etc pins the popover to an
+      // anchor point of the viewport (or of stickToContainerRef, when the
       // "relative-" prefix is used) instead of positioning relative to a
       // real element. animation defaults to "auto", which resolves to
-      // "slide" whenever anchor is one of these sided values.
-      const SidedPopover = ({
+      // "slide" whenever anchor is one of these anchor point values.
+      const AnchorPointPopover = ({
         label,
         anchor,
         stickToContainerRef,
