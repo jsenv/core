@@ -126,7 +126,7 @@ const resolveCommandValue = (source, event) => {
   return getUIStateFromElement(source);
 };
 
-export const onNaviCommand = (e, { debugCommand }) => {
+export const onNaviCommand = (e, { debugCommand = () => {} } = {}) => {
   const { command, event, source, implementation } = e.detail;
   if (typeof command !== "string") {
     console.warn(`navi_command event is missing detail.command`, e);

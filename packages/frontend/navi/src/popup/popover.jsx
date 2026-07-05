@@ -10,6 +10,7 @@ import {
 } from "@jsenv/dom";
 import { useId, useLayoutEffect, useRef } from "preact/hooks";
 
+import { onNaviCommand } from "@jsenv/navi/src/control/commands.js";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import { Box } from "../box/box.jsx";
 import { resolveSpacingSize } from "../box/box_style_util.js";
@@ -55,6 +56,7 @@ const css = /* css */ `
  */
 export const Popover = (props) => {
   import.meta.css = css;
+
   if (props.openController) {
     return <ControlledPopover {...props} />;
   }
@@ -363,6 +365,9 @@ const ControlledPopover = (props) => {
       ref={ref}
       baseClassName="navi_popover"
       pseudoClasses={POPOVER_PSEUDO_CLASSES}
+      onnavi_command={(e) => {
+        onNaviCommand(e);
+      }}
     >
       {/*
         The backdrop is placed inside the popover element rather than appended to
