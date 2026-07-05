@@ -131,11 +131,13 @@
             <h1>Popover demo</h1>
 
             <p>
-              Each section below has an "Animated" part: the same buttons, with{" "}
-              <code>animation</code> turned on — the best animation for that
-              context gets picked automatically. Animations are quick by
-              default; check the box below to slow them down so you can actually
-              see them play out.
+              Most sections below have an "Animated" part: the same buttons,
+              with <code>animation</code> turned on — the best animation for
+              that context gets picked automatically (the Fading section is the
+              one exception, since it only demonstrates{" "}
+              <code>fadeAnimation</code>). Animations are quick by default;
+              check the box below to slow them down so you can actually see them
+              play out.
             </p>
             <SlowDownToggle slowDown={slowDown} onChange={setSlowDown} />
 
@@ -407,9 +409,7 @@
           <p>
             <code>anchorRelativeTo="offsetParent"</code> — positions the popover
             relative to its nearest positioned ancestor (the dotted box below)
-            instead of the viewport. Click-outside-to-close is disabled in this
-            section (<code>pointerLock</code>) since the container is small and
-            easy to click past.
+            instead of the viewport.
           </p>
           <AnchorPointRelativeDemo spacing={16} />
 
@@ -459,7 +459,6 @@
                   anchor={point}
                   anchorRelativeTo="offsetParent"
                   spacing={spacing}
-                  pointerLock
                   className="demo_popover_box"
                 >
                   <p style={{ marginTop: 0 }}>{point}</p>
