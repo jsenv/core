@@ -11,24 +11,29 @@
  * (imperatively, in sync with showPopover()/hidePopover() or
  * showModal()/close()) so this file can key off a single "is currently
  * open/shown" selector without needing to know which one it's styling.
+ *
+ * Timing/distance/scale are CSS variables (with defaults below) rather than
+ * JS constants, so any consumer can override them per-instance from CSS
+ * without touching this file: `--popup-animation-duration`,
+ * `--popup-slide-distance`, `--popup-scale-from`.
  */
-
-const DURATION = "0.18s";
-const SLIDE_DISTANCE = "10px";
-const SCALE_FROM = 0.92;
 
 export const buildPopupAnimationCss = (selector) => {
   const open = `${selector}[aria-expanded="true"]`;
   const closed = `${selector}[aria-expanded="false"]`;
+  const duration = "var(--popup-animation-duration, 0.18s)";
+  const slideDistance = "var(--popup-slide-distance, 10px)";
+  const negativeSlideDistance = `calc(-1 * ${slideDistance})`;
+  const scaleFrom = "var(--popup-scale-from, 0.92)";
 
   return /* css */ `
     ${selector}[navi-animation] {
       transition:
-        display ${DURATION} allow-discrete,
-        overlay ${DURATION} allow-discrete,
-        opacity ${DURATION} ease,
-        translate ${DURATION} ease,
-        scale ${DURATION} ease;
+        display ${duration} allow-discrete,
+        overlay ${duration} allow-discrete,
+        opacity ${duration} ease,
+        translate ${duration} ease,
+        scale ${duration} ease;
     }
 
     /* fade */
@@ -55,12 +60,12 @@ export const buildPopupAnimationCss = (selector) => {
     }
     ${closed}[navi-animation="scale"] {
       opacity: 0;
-      scale: ${SCALE_FROM};
+      scale: ${scaleFrom};
     }
     @starting-style {
       ${open}[navi-animation="scale"] {
         opacity: 0;
-        scale: ${SCALE_FROM};
+        scale: ${scaleFrom};
       }
     }
 
@@ -73,56 +78,56 @@ export const buildPopupAnimationCss = (selector) => {
     }
     ${closed}[navi-animation="slide"] {
       opacity: 0;
-      translate: 0 -${SLIDE_DISTANCE};
+      translate: 0 ${negativeSlideDistance};
     }
     ${closed}[navi-animation="slide"][data-position-y-current="above"],
     ${closed}[navi-animation="slide"][data-position-y-current="above-overlap"] {
-      translate: 0 ${SLIDE_DISTANCE};
+      translate: 0 ${slideDistance};
     }
     @starting-style {
       ${open}[navi-animation="slide"] {
         opacity: 0;
-        translate: 0 -${SLIDE_DISTANCE};
+        translate: 0 ${negativeSlideDistance};
       }
       ${open}[navi-animation="slide"][data-position-y-current="above"],
       ${open}[navi-animation="slide"][data-position-y-current="above-overlap"] {
-        translate: 0 ${SLIDE_DISTANCE};
+        translate: 0 ${slideDistance};
       }
     }
 
     /* slide — explicit direction, ignores anchor placement entirely */
     ${closed}[navi-animation="slide-from-top"] {
       opacity: 0;
-      translate: 0 -${SLIDE_DISTANCE};
+      translate: 0 ${negativeSlideDistance};
     }
     ${closed}[navi-animation="slide-from-bottom"] {
       opacity: 0;
-      translate: 0 ${SLIDE_DISTANCE};
+      translate: 0 ${slideDistance};
     }
     ${closed}[navi-animation="slide-from-left"] {
       opacity: 0;
-      translate: -${SLIDE_DISTANCE} 0;
+      translate: ${negativeSlideDistance} 0;
     }
     ${closed}[navi-animation="slide-from-right"] {
       opacity: 0;
-      translate: ${SLIDE_DISTANCE} 0;
+      translate: ${slideDistance} 0;
     }
     @starting-style {
       ${open}[navi-animation="slide-from-top"] {
         opacity: 0;
-        translate: 0 -${SLIDE_DISTANCE};
+        translate: 0 ${negativeSlideDistance};
       }
       ${open}[navi-animation="slide-from-bottom"] {
         opacity: 0;
-        translate: 0 ${SLIDE_DISTANCE};
+        translate: 0 ${slideDistance};
       }
       ${open}[navi-animation="slide-from-left"] {
         opacity: 0;
-        translate: -${SLIDE_DISTANCE} 0;
+        translate: ${negativeSlideDistance} 0;
       }
       ${open}[navi-animation="slide-from-right"] {
         opacity: 0;
-        translate: ${SLIDE_DISTANCE} 0;
+        translate: ${slideDistance} 0;
       }
     }
   `;

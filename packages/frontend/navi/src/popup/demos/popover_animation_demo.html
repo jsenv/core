@@ -48,91 +48,8 @@
     <div id="root"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useId, useRef, useState } from "preact/hooks";
+      import { useId, useRef } from "preact/hooks";
       import { Button, Popover } from "@jsenv/navi";
-
-      // No openController here: without one, Popover creates its own (see
-      // open_controller.js). It self-wires to --navi-toggle/--navi-close
-      // commands, and the button that triggers --navi-toggle is forwarded
-      // as the anchor automatically (the command's "source" ends up as
-      // navi_request_open's detail.source).
-      const AnchoredPopover = ({ label, animation, positionX, positionY }) => {
-        const popoverId = useId();
-
-        return (
-          <>
-            <Button command="--navi-toggle" commandFor={popoverId}>
-              {label}
-            </Button>
-            <Popover
-              id={popoverId}
-              animation={animation}
-              positionX={positionX}
-              positionY={positionY}
-              className="demo_popover_box"
-            >
-              <p style={{ marginTop: 0 }}>animation="{animation}"</p>
-              <Button command="--navi-close">Close</Button>
-            </Popover>
-          </>
-        );
-      };
-
-      // No anchor and no commands here: the `open` prop drives Popover's
-      // default open controller directly, so the popover just centers
-      // itself in the viewport instead of anchoring to a trigger element.
-      const AnchorlessPopover = ({ label, animation }) => {
-        const [open, setOpen] = useState(false);
-
-        return (
-          <>
-            <button onClick={() => setOpen((o) => !o)}>{label}</button>
-            <Popover
-              animation={animation}
-              open={open}
-              className="demo_popover_box"
-            >
-              <p style={{ marginTop: 0 }}>animation="{animation}"</p>
-              <button onClick={() => setOpen(false)}>Close</button>
-            </Popover>
-          </>
-        );
-      };
-
-      // `stickTo` pins the popover to a corner/edge of its container (the
-      // viewport by default, or `stickToContainerRef` when given) instead of
-      // positioning relative to an anchor. This is what makes `slide` (auto
-      // direction) meaningful without an anchor: top-* sides slide down,
-      // bottom-* sides slide up (see data-position-y-current wiring in
-      // popover.jsx).
-      const StickToPopover = ({
-        label,
-        animation,
-        stickTo,
-        stickToContainerRef,
-        spacing,
-      }) => {
-        const popoverId = useId();
-
-        return (
-          <>
-            <Button command="--navi-toggle" commandFor={popoverId}>
-              {label}
-            </Button>
-            <Popover
-              id={popoverId}
-              animation={animation}
-              stickTo={stickTo}
-              stickToContainerRef={stickToContainerRef}
-              spacing={spacing}
-              className="demo_popover_box"
-            >
-              <p style={{ marginTop: 0 }}>stickTo="{stickTo}"</p>
-              <Button command="--navi-close">Close</Button>
-            </Popover>
-          </>
-        );
-      };
 
       const App = () => {
         const containerRef = useRef(null);
@@ -262,6 +179,92 @@
               </div>
             </div>
           </div>
+        );
+      };
+
+      // No openController here: without one, Popover creates its own (see
+      // open_controller.js). It self-wires to --navi-toggle/--navi-close
+      // commands, and the button that triggers --navi-toggle is forwarded
+      // as the anchor automatically (the command's "source" ends up as
+      // navi_request_open's detail.source).
+      const AnchoredPopover = ({ label, animation, positionX, positionY }) => {
+        const popoverId = useId();
+
+        return (
+          <>
+            <Button command="--navi-toggle" commandFor={popoverId}>
+              {label}
+            </Button>
+            <Popover
+              id={popoverId}
+              animation={animation}
+              positionX={positionX}
+              positionY={positionY}
+              className="demo_popover_box"
+            >
+              <p style={{ marginTop: 0 }}>animation="{animation}"</p>
+              <Button command="--navi-close">Close</Button>
+            </Popover>
+          </>
+        );
+      };
+
+      // Still command-driven (--navi-toggle), but anchor="ignore" tells the
+      // popover not to use the toggle button as its anchor, so it centers
+      // itself in the viewport instead.
+      const AnchorlessPopover = ({ label, animation }) => {
+        const popoverId = useId();
+
+        return (
+          <>
+            <Button command="--navi-toggle" commandFor={popoverId}>
+              {label}
+            </Button>
+            <Popover
+              id={popoverId}
+              animation={animation}
+              anchor="ignore"
+              className="demo_popover_box"
+            >
+              <p style={{ marginTop: 0 }}>animation="{animation}"</p>
+              <Button command="--navi-close">Close</Button>
+            </Popover>
+          </>
+        );
+      };
+
+      // `stickTo` pins the popover to a corner/edge of its container (the
+      // viewport by default, or `stickToContainerRef` when given) instead of
+      // positioning relative to an anchor. This is what makes `slide` (auto
+      // direction) meaningful without an anchor: top-* sides slide down,
+      // bottom-* sides slide up (see data-position-y-current wiring in
+      // popover.jsx).
+      const StickToPopover = ({
+        label,
+        animation,
+        stickTo,
+        stickToContainerRef,
+        spacing,
+      }) => {
+        const popoverId = useId();
+
+        return (
+          <>
+            <Button command="--navi-toggle" commandFor={popoverId}>
+              {label}
+            </Button>
+            <Popover
+              id={popoverId}
+              animation={animation}
+              stickTo={stickTo}
+              stickToContainerRef={stickToContainerRef}
+              spacing={spacing}
+              className="demo_popover_box"
+            >
+              <p style={{ marginTop: 0 }}>stickTo="{stickTo}"</p>
+              <Button command="--navi-close">Close</Button>
+            </Popover>
+          </>
         );
       };
 

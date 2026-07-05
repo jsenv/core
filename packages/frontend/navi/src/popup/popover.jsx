@@ -105,6 +105,7 @@ const ControlledPopover = (props) => {
   const {
     openController,
     anchorRef,
+    anchor: anchorProp,
     stickTo,
     stickToContainerRef,
     scrollTrap,
@@ -154,11 +155,16 @@ const ControlledPopover = (props) => {
     popoverEl.showPopover();
     popoverEl.setAttribute("aria-expanded", "true");
     transferFocus(popoverEl, debugFocus, e, focusedBeforeOpen);
-    // anchorRef (set by the parent component) wins; otherwise fall back to
-    // the anchor carried by the request (e.g. the button that triggered a
-    // --navi-toggle/--navi-open command, forwarded as detail.source).
+    // anchor="ignore" forces the popover to behave as anchorless even when
+    // the request carries one (e.g. a --navi-toggle button that should not
+    // double as the visual anchor). Otherwise anchorRef (set by the parent
+    // component) wins; then the anchor carried by the request (e.g. the
+    // button that triggered a --navi-toggle/--navi-open command, forwarded
+    // as detail.source).
     const anchor =
-      anchorRef?.current ?? e.detail?.anchor ?? e.detail?.source ?? null;
+      anchorProp === "ignore"
+        ? null
+        : (anchorRef?.current ?? e.detail?.anchor ?? e.detail?.source ?? null);
     const stickToContainer = stickToContainerRef?.current ?? null;
     // What we observe for repositioning on resize/scroll/visibility changes:
     // the anchor when anchored, otherwise the stickTo container (or the

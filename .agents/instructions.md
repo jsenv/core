@@ -23,6 +23,8 @@
 - **Never verify on your own initiative**: don't run regression checks against unrelated demos/features, and don't open a demo file you just wrote/edited in Playwright or a browser to confirm it works. The user drives verification and will explicitly ask (e.g. "test this in the browser", "run the demo") when they want it. This applies even when a skill (e.g. demo-files) says to prefer checking behavior over reading code — that guidance only kicks in once the user has asked for verification.
 - **Backward Compatibility**: Do not try to maintain it. Breaking changes are fine and desired. Always. So always write code targeting what we want even if that means renaming usages in the codebase.
 - **Migration Guides**: Do not proactively document upgrade paths for breaking changes — only on request
+- **Don't run the test suite defensively**: only run it (`npm run test`, `npm run test:packages`, etc.) when the task is actually about tests — writing new ones or working on existing ones. The goal of a session is to iterate quickly, not necessarily to reach zero errors; time-consuming verification should happen when it concretely makes sense for the task, not by default. Same spirit as the "never verify on your own initiative" rule above.
+- **Persistent preferences belong in this repo, not in agent-specific memory**: when a durable preference, workflow rule, or constraint is established, write it into `.agents/instructions.md` or a relevant file under `.agents/skills/` and get it committed — don't rely solely on a tool-specific memory/notes system tied to one machine or one agent. This repo is worked on by multiple agents/tools across machines; instructions written here are the ones that actually persist and apply everywhere.
 
 ## Project Overview
 
