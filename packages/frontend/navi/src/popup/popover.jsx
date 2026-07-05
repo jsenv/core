@@ -117,9 +117,10 @@ const ControlledPopover = (props) => {
   const autoFocusProps = useAutoFocus(ref, props.autoFocus);
   // animation={true} or "auto" picks the animation that best fits the anchor
   // resolved dynamically in openEffect (below) once it's actually known for
-  // *this* open: "grow" when anchored to a real element, "slide" when
-  // anchored to a point (anchor="right", "top-left", ...), "scale" when
-  // there's no anchor at all.
+  // *this* open: "slide" when anchored to a point (anchor="right",
+  // "top-left", ...), "clip" otherwise — whether anchored to a real element
+  // (vertical-only clip out of its edge) or not (clip both axes, see
+  // data-clip-axis below).
   const isAutoAnimation = animation === true || animation === "auto";
 
   // aria-expanded lives on the popover element itself (not driven through

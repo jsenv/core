@@ -39,9 +39,9 @@ const css = /* css */ `
   ${buildPopupAnimationCss(
     ".navi_dialog",
   )}/* Dialogs aren't anchored the same way popovers are (they're centered in
-     the viewport) — scale always animates from the dialog's own center, not
-     an anchor's or the pointer's, so no --popup-animation-origin-x/y wiring
-     is needed here. */
+     the viewport) — "clip" always uses data-clip-axis="xy" (see below) and
+     always grows from the dialog's own center, not an anchor's or the
+     pointer's, so no --popup-animation-origin-x/y wiring is needed here. */
 `;
 
 /**
@@ -114,9 +114,9 @@ const ControlledDialog = (props) => {
   const debugPopup = useDebugPopup();
   const debugFocus = useDebugFocus();
   const autoFocusProps = useAutoFocus(ref, props.autoFocus);
-  // animation={true} or "auto" always resolves to "scale": dialogs are
+  // animation={true} or "auto" always resolves to "clip": dialogs are
   // always centered in the viewport (unlike Popover, they don't track an
-  // anchor edge to "grow" out of or a side to "slide" in from).
+  // anchor edge to grow out of or a side to "slide" in from).
   const isAutoAnimation = animation === true || animation === "auto";
 
   // aria-expanded lives on the dialog element itself (not driven through
@@ -150,8 +150,11 @@ const ControlledDialog = (props) => {
     dialogEl.style.setProperty("--anchor-width", `${snapToPixel(width)}px`);
     dialogEl.style.setProperty("--anchor-height", `${snapToPixel(height)}px`);
     if (isAutoAnimation) {
-      dialogEl.setAttribute("navi-animation", "scale");
+      dialogEl.setAttribute("navi-animation", "clip");
     }
+    // "clip" always clips both axes for a dialog (see popup_animation.js) —
+    // there's no anchor edge to grow out of the way a Popover has.
+    dialogEl.setAttribute("data-clip-axis", "xy");
     const focusedBeforeOpen = getFocusedBeforeTransfer(e);
     dialogEl.showModal();
     dialogEl.setAttribute("aria-expanded", "true");

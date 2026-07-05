@@ -67,34 +67,16 @@
 
             <div class="demo-section">
               <h3>
-                scale (grows from a point — anchor center when anchored, pointer
-                position when not; slowed down here via animationDuration to
-                make the growth visible)
+                clip, anchored to a real element: clips vertically only (out of
+                the anchor's edge) via clip-path — never a scale/transform, so
+                the content inside never visually shrinks or distorts, and the
+                box's real layout size is never touched, only what's painted.
+                Slowed down here via animationDuration to make it visible.
               </h3>
               <div class="demo-row">
                 <AnchoredPopover
-                  label="scale (anchored)"
-                  animation="scale"
-                  animationDuration="0.6s"
-                />
-                <AnchorlessPopover
-                  label="scale (no anchor — grows from the pointer)"
-                  animation="scale"
-                  animationDuration="0.6s"
-                />
-              </div>
-            </div>
-
-            <div class="demo-section">
-              <h3>
-                grow — the natural animation for a real anchor: only the height
-                scales out of the anchor's edge, so it *reads* as "sliding down"
-                without anything actually translating
-              </h3>
-              <div class="demo-row">
-                <AnchoredPopover
-                  label="grow (opens below anchor)"
-                  animation="grow"
+                  label="clip (opens below anchor)"
+                  animation="clip"
                   animationDuration="0.6s"
                   positionY="below"
                 />
@@ -105,13 +87,13 @@
 
             <div class="demo-section">
               <h3>
-                grow — flips to originate from the bottom edge when the popover
+                clip — flips to originate from the bottom edge when the popover
                 ends up placed above the anchor (near the viewport bottom)
               </h3>
               <div class="demo-row">
                 <AnchoredPopover
-                  label="grow (forced near viewport bottom)"
-                  animation="grow"
+                  label="clip (forced near viewport bottom)"
+                  animation="clip"
                   animationDuration="0.6s"
                   positionY="below"
                 />
@@ -120,17 +102,34 @@
 
             <div class="demo-section">
               <h3>
-                animation="auto" — picks "grow" when anchored to a real element,
-                "scale" otherwise
+                clip, no anchor: clips both axes around a point (the click
+                position), combined with a translate from that point to the
+                final resting position — the whole thing glides from the click
+                to where it ends up while it grows.
+              </h3>
+              <div class="demo-row">
+                <AnchorlessPopover
+                  label="clip (no anchor — grows from + glides in from the pointer)"
+                  animation="clip"
+                  animationDuration="0.6s"
+                />
+              </div>
+            </div>
+
+            <div class="demo-section">
+              <h3>
+                animation="auto" — picks "clip" either way (vertical-only when
+                anchored to a real element, both axes otherwise); "slide"
+                instead when anchored to a point (see further down)
               </h3>
               <div class="demo-row">
                 <AnchoredPopover
-                  label="auto (anchored → grow)"
+                  label="auto (anchored → clip, vertical)"
                   animation="auto"
                   animationDuration="0.6s"
                 />
                 <AnchorlessPopover
-                  label="auto (no anchor → scale)"
+                  label="auto (no anchor → clip, both axes)"
                   animation="auto"
                   animationDuration="0.6s"
                 />
@@ -199,7 +198,7 @@
                 <AnchorPointPopover
                   label="center"
                   anchor="center"
-                  animation="scale"
+                  animation="clip"
                 />
               </div>
             </div>
