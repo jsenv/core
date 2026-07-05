@@ -21,19 +21,21 @@
 export const buildPopupAnimationCss = (selector) => {
   const open = `${selector}[aria-expanded="true"]`;
   const closed = `${selector}[aria-expanded="false"]`;
-  const duration = "var(--popup-animation-duration, 0.18s)";
-  const slideDistance = "var(--popup-slide-distance, 10px)";
-  const negativeSlideDistance = `calc(-1 * ${slideDistance})`;
-  const scaleFrom = "var(--popup-scale-from, 0.92)";
 
   return /* css */ `
+    @layer navi {
+      ${selector} {
+        --popup-animation-duration: 0.18s;
+        --popup-slide-distance: 10px;
+        --popup-scale: 0.92;
+      }
+    }
+
     ${selector}[navi-animation] {
-      transition:
-        display ${duration} allow-discrete,
-        overlay ${duration} allow-discrete,
-        opacity ${duration} ease,
-        translate ${duration} ease,
-        scale ${duration} ease;
+      transition-property: display, overlay, opacity, translate, scale;
+      transition-duration: var(--popup-animation-duration);
+      transition-timing-function: ease;
+      transition-behavior: allow-discrete;
     }
 
     /* fade */
@@ -60,12 +62,12 @@ export const buildPopupAnimationCss = (selector) => {
     }
     ${closed}[navi-animation="scale"] {
       opacity: 0;
-      scale: ${scaleFrom};
+      scale: var(--popup-scale);
     }
     @starting-style {
       ${open}[navi-animation="scale"] {
         opacity: 0;
-        scale: ${scaleFrom};
+        scale: var(--popup-scale);
       }
     }
 
@@ -78,56 +80,56 @@ export const buildPopupAnimationCss = (selector) => {
     }
     ${closed}[navi-animation="slide"] {
       opacity: 0;
-      translate: 0 ${negativeSlideDistance};
+      translate: 0 calc(var(--popup-slide-distance) * -1);
     }
     ${closed}[navi-animation="slide"][data-position-y-current="above"],
     ${closed}[navi-animation="slide"][data-position-y-current="above-overlap"] {
-      translate: 0 ${slideDistance};
+      translate: 0 var(--popup-slide-distance);
     }
     @starting-style {
       ${open}[navi-animation="slide"] {
         opacity: 0;
-        translate: 0 ${negativeSlideDistance};
+        translate: 0 calc(var(--popup-slide-distance) * -1);
       }
       ${open}[navi-animation="slide"][data-position-y-current="above"],
       ${open}[navi-animation="slide"][data-position-y-current="above-overlap"] {
-        translate: 0 ${slideDistance};
+        translate: 0 var(--popup-slide-distance);
       }
     }
 
     /* slide — explicit direction, ignores anchor placement entirely */
     ${closed}[navi-animation="slide-from-top"] {
       opacity: 0;
-      translate: 0 ${negativeSlideDistance};
+      translate: 0 calc(var(--popup-slide-distance) * -1);
     }
     ${closed}[navi-animation="slide-from-bottom"] {
       opacity: 0;
-      translate: 0 ${slideDistance};
+      translate: 0 var(--popup-slide-distance);
     }
     ${closed}[navi-animation="slide-from-left"] {
       opacity: 0;
-      translate: ${negativeSlideDistance} 0;
+      translate: calc(var(--popup-slide-distance) * -1) 0;
     }
     ${closed}[navi-animation="slide-from-right"] {
       opacity: 0;
-      translate: ${slideDistance} 0;
+      translate: var(--popup-slide-distance) 0;
     }
     @starting-style {
       ${open}[navi-animation="slide-from-top"] {
         opacity: 0;
-        translate: 0 ${negativeSlideDistance};
+        translate: 0 calc(var(--popup-slide-distance) * -1);
       }
       ${open}[navi-animation="slide-from-bottom"] {
         opacity: 0;
-        translate: 0 ${slideDistance};
+        translate: 0 var(--popup-slide-distance);
       }
       ${open}[navi-animation="slide-from-left"] {
         opacity: 0;
-        translate: ${negativeSlideDistance} 0;
+        translate: calc(var(--popup-slide-distance) * -1) 0;
       }
       ${open}[navi-animation="slide-from-right"] {
         opacity: 0;
-        translate: ${slideDistance} 0;
+        translate: var(--popup-slide-distance) 0;
       }
     }
   `;
