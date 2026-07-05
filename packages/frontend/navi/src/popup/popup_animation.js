@@ -18,9 +18,8 @@ const SLIDE_DISTANCE = "10px";
 const SCALE_FROM = 0.92;
 
 export const buildPopupAnimationCss = (selector) => {
-  const openSelector = `[aria-expanded="true"]`;
-  const open = `${selector}${openSelector}`;
-  const closed = `${selector}:not(${openSelector})`;
+  const open = `${selector}[aria-expanded="true"]`;
+  const closed = `${selector}[aria-expanded="false"]`;
   return /* css */ `
     ${selector}[navi-animation] {
       transition:
