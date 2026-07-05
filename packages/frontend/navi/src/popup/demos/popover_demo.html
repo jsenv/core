@@ -186,46 +186,55 @@
               <p>
                 <code>positionY</code> (above/below the anchor) and
                 <code>positionX</code> (left/right of the anchor) — both
-                auto-flip to the opposite side when there isn't enough room.
+                auto-flip to the opposite side when there isn't enough room,
+                which is why this demo uses
+                <code>positionYFixed</code>/<code>positionXFixed</code>
+                instead: same values, but they skip the fit check, so what you
+                pick is what you always get (useful here to see each value
+                unambiguously; <code>positionY</code>/<code>positionX</code>
+                are what you want in real usage).
               </p>
               <div class="demo-subsection">
-                <h3>positionY</h3>
+                <h3>positionY / positionYFixed</h3>
                 <div class="demo-row">
-                  <AnchoredPopover label="above" positionY="above" />
+                  <AnchoredPopover label="above" positionYFixed="above" />
                   <AnchoredPopover
                     label="above-overlap"
-                    positionY="above-overlap"
+                    positionYFixed="above-overlap"
                   />
-                  <AnchoredPopover label="center" positionY="center" />
+                  <AnchoredPopover label="center" positionYFixed="center" />
                   <AnchoredPopover
                     label="below-overlap"
-                    positionY="below-overlap"
+                    positionYFixed="below-overlap"
                   />
-                  <AnchoredPopover label="below (default)" positionY="below" />
+                  <AnchoredPopover
+                    label="below (default)"
+                    positionYFixed="below"
+                  />
                 </div>
               </div>
               <div class="demo-subsection">
-                <h3>positionX</h3>
+                <h3>positionX / positionXFixed</h3>
                 <div class="demo-row">
                   <AnchoredPopover
                     label="to-the-left"
-                    positionX="to-the-left"
+                    positionXFixed="to-the-left"
                   />
                   <AnchoredPopover
                     label="left-aligned"
-                    positionX="left-aligned"
+                    positionXFixed="left-aligned"
                   />
                   <AnchoredPopover
                     label="center (default)"
-                    positionX="center"
+                    positionXFixed="center"
                   />
                   <AnchoredPopover
                     label="right-aligned"
-                    positionX="right-aligned"
+                    positionXFixed="right-aligned"
                   />
                   <AnchoredPopover
                     label="to-the-right"
-                    positionX="to-the-right"
+                    positionXFixed="to-the-right"
                   />
                 </div>
               </div>
@@ -352,6 +361,8 @@
         fadeAnimation,
         positionX,
         positionY,
+        positionXFixed,
+        positionYFixed,
       }) => {
         const popoverId = useId();
 
@@ -367,6 +378,8 @@
               fadeAnimation={fadeAnimation}
               positionX={positionX}
               positionY={positionY}
+              positionXFixed={positionXFixed}
+              positionYFixed={positionYFixed}
               className="demo_popover_box"
             >
               <p style={{ marginTop: 0 }}>{label}</p>
