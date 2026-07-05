@@ -15,11 +15,6 @@ import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import { Box } from "../box/box.jsx";
 import { resolveSpacingSize } from "../box/box_style_util.js";
 import { useDebugFocus, useDebugPopup } from "../navi_debug.jsx";
-import {
-  getFocusedBeforeTransfer,
-  markAutofocusRestoreOnClose,
-  transferFocus,
-} from "../utils/focus/focus_transfer.js";
 import { useOpenControllerByProps } from "./open_controller.js";
 import { buildPopupAnimationCss } from "./popup_animation.js";
 
@@ -122,10 +117,11 @@ const ControlledPopover = (props) => {
   const autoFocusProps = useAutoFocus(ref, props.autoFocus);
   // animation={true} or "auto" picks the animation that best fits the anchor
   // resolved dynamically in openEffect (below) once it's actually known for
-  // *this* open: "slide" when anchored to a point (anchor="right",
-  // "top-left", ...), "clip" otherwise — whether anchored to a real element
-  // (vertical-only clip out of its edge) or not (clip both axes, see
-  // data-clip-axis below).
+  // *this* open: "slide" when anchored to a point other than "center"
+  // (anchor="right", "top-left", ...) — sliding in to land exactly centered
+  // would look odd, so "center" gets "clip" too — "clip" otherwise, whether
+  // anchored to a real element (vertical-only clip out of its edge) or not
+  // (clip both axes, see data-clip-axis below).
   const isAutoAnimation = animation === true || animation === "auto";
 
   // aria-expanded lives on the popover element itself (not driven through
@@ -148,7 +144,6 @@ const ControlledPopover = (props) => {
       return undefined;
     }
     const [cleanup, addCleanup] = createPubSub(true);
-    const focusedBeforeOpen = getFocusedBeforeTransfer(e);
     // anchor="ignore" forces the popover to behave as anchorless even when
     // the request carries one (e.g. a --navi-toggle button that should not
     // double as the visual anchor). anchor="top"/"top-left"/"center"/etc
@@ -188,7 +183,7 @@ const ControlledPopover = (props) => {
     const effectiveAnchor =
       anchor || stickToContainer || document.documentElement;
     const resolvedAnimation = isAutoAnimation
-      ? anchorPoint
+      ? anchorPoint && anchorPoint !== "center"
         ? "slide"
         : "clip"
       : animation;
@@ -223,8 +218,7 @@ const ControlledPopover = (props) => {
 
     popoverEl.showPopover();
     popoverEl.setAttribute("aria-expanded", "true");
-    transferFocus(popoverEl, debugFocus, e, focusedBeforeOpen);
-
+    const restoreFocus = openController.transferFocusOnOpen(popoverEl);
     debugPopup(
       e,
       `openPopover() -> anchor: ${anchor?.tagName}, anchorPoint: ${anchorPoint}, stickToContainer: ${stickToContainer?.tagName}`,
@@ -391,37 +385,12 @@ const ControlledPopover = (props) => {
     addCleanup(() => {
       rectEffect.disconnect();
     });
-    // Picker's openController.open() reads this back synchronously right
-    // after openEffect() returns (see picker_custom.jsx useOpenController).
-    e.detail.focusedBeforeOpen = focusedBeforeOpen;
 
     return (closeEvent) => {
       debugPopup(closeEvent, `closePopover()`);
-      markAutofocusRestoreOnClose(popoverEl);
       popoverEl.setAttribute("aria-expanded", "false");
       popoverEl.hidePopover();
-
-      restore_focus: {
-        const focusoutEvent = findEvent(closeEvent, "focusout");
-        if (focusoutEvent) {
-          debugFocus(closeEvent, `closed by focusout -> let focus go away`);
-        } else {
-          const mousedownEvent = findEvent(closeEvent, "mousedown");
-          if (mousedownEvent) {
-            debugFocus(
-              closeEvent,
-              "closed by mousedown -> prevent browser focus (mousedown.preventDefault())",
-            );
-            mousedownEvent.preventDefault();
-          }
-          debugFocus(
-            closeEvent,
-            `restore focus to previously focused element`,
-            focusedBeforeOpen,
-          );
-          focusedBeforeOpen.focus({ preventScroll: true });
-        }
-      }
+      restoreFocus(closeEvent);
 
       cleanup();
     };
@@ -520,10 +489,13 @@ const POPOVER_PSEUDO_CLASSES = [
   ":focus-within",
 ];
 
-// Lets consumers pass animationDuration="0.5s" as a regular prop; Box maps
-// it to the CSS var for us (see box.jsx's styleCSSVars handling).
+// Lets consumers pass animationDuration="0.5s"/borderRadius="8px" as regular
+// props; Box maps them to the CSS vars for us (see box.jsx's styleCSSVars
+// handling). borderRadius drives both the popover's own visible corners and
+// what "clip" animations round their clip-path to (see popup_animation.js).
 const POPUP_STYLE_CSS_VARS = {
   animationDuration: "--popup-animation-duration",
+  borderRadius: "--popup-border-radius",
 };
 
 const resolveAnchorAttrValue = (popoverEl, anchor, anchorPoint) => {

@@ -2,6 +2,11 @@ import { chainEvent, findEvent } from "@jsenv/dom";
 import { useLayoutEffect, useRef } from "preact/hooks";
 
 import { useDebugInteraction } from "@jsenv/navi/src/navi_debug.jsx";
+import {
+  getFocusedBeforeTransfer,
+  markAutofocusRestoreOnClose,
+  transferFocus,
+} from "../utils/focus/focus_transfer.js";
 import { useStableCallback } from "../utils/use_stable_callback.js";
 
 /**
@@ -152,7 +157,43 @@ export const createOpenController = (
       controller.opened = true;
       // openEffect may populate requestOpenEvent.detail (e.g. focusedBeforeOpen)
       // by mutating it — openHandler reads it right after, synchronously.
-      openEffectCleanup = controller.openEffect(requestOpenEvent) || null;
+      controller.transferFocusOnOpen = (el) => {
+        const focusedBeforeOpen = getFocusedBeforeTransfer(e);
+        // Picker's openController.open() reads this back synchronously right
+        // after openEffect() returns (see picker_custom.jsx useOpenController).
+        e.detail.focusedBeforeOpen = focusedBeforeOpen;
+        transferFocus(el, debugInteraction, e, focusedBeforeOpen);
+        return (closeEvent) => {
+          markAutofocusRestoreOnClose(el);
+          const focusoutEvent = findEvent(closeEvent, "focusout");
+          if (focusoutEvent) {
+            debugInteraction(
+              closeEvent,
+              `closed by focusout -> let focus go away`,
+            );
+          } else {
+            const mousedownEvent = findEvent(closeEvent, "mousedown");
+            if (mousedownEvent) {
+              debugInteraction(
+                closeEvent,
+                "closed by mousedown -> prevent browser focus (mousedown.preventDefault())",
+              );
+              mousedownEvent.preventDefault();
+            }
+            debugInteraction(
+              closeEvent,
+              `restore focus to previously focused element`,
+              focusedBeforeOpen,
+            );
+            focusedBeforeOpen.focus({ preventScroll: true });
+          }
+        };
+      };
+      const openEffectReturnValue =
+        controller.openEffect(requestOpenEvent) || null;
+      openEffectCleanup = (closeEvent) => {
+        openEffectReturnValue?.(closeEvent);
+      };
       closeHandlers = openHandler(requestOpenEvent) || null;
     },
     requestClose: (
