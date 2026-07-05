@@ -1,8 +1,9 @@
+import { chainEvent, findEvent } from "@jsenv/dom";
 import { useLayoutEffect, useRef, useState } from "preact/hooks";
 
-import { Box } from "../box/box.jsx";
 import { useKeyboardShortcuts } from "../keyboard/keyboard_shortcuts.js";
 import { useStableCallback } from "../utils/use_stable_callback.js";
+import { Popover } from "./popover.jsx";
 
 const css = /* css */ `
   @layer navi {
@@ -15,14 +16,15 @@ const css = /* css */ `
   }
 
   .navi_side_panel {
-    /* Reset the UA [popover] defaults (margin: auto, inset: 0, border: solid,
-       padding: 0.25em, width/height: fit-content, background: Canvas) so the
-       popover behaves like a plain fixed-position wrapper. */
-    position: fixed;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    left: auto;
+    /* Popover.jsx positions itself relative to an anchor (inline top/left,
+       recomputed via ResizeObserver/positionPopover). The side panel has no
+       anchor — it always docks full-height to the right edge — so override
+       with !important to win over those inline styles. */
+    position: fixed !important;
+    top: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    left: auto !important;
     width: auto;
     height: auto;
     margin: 0;
@@ -33,11 +35,11 @@ const css = /* css */ `
     pointer-events: none;
     overflow: visible;
 
-    .navi_side_panel_overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.3);
-      pointer-events: auto;
+    /* Popover's own backdrop always becomes pointer-events:auto while open,
+       which would block interaction with the rest of the page. Restore
+       click-through unless the panel is acting as a modal. */
+    &:not([data-close-on-click-outside]) .navi_popover_backdrop {
+      pointer-events: none !important;
     }
 
     .navi_side_panel_dialog {
@@ -59,12 +61,6 @@ const css = /* css */ `
     &[data-opening] {
       .navi_side_panel_dialog {
         animation-name: navi_side_panel_slide_in;
-      }
-    }
-
-    &[data-closing] {
-      .navi_side_panel_dialog {
-        animation-name: navi_side_panel_slide_out;
       }
     }
   }
@@ -103,15 +99,6 @@ const css = /* css */ `
       transform: translateX(0);
     }
   }
-
-  @keyframes navi_side_panel_slide_out {
-    from {
-      transform: translateX(0);
-    }
-    to {
-      transform: translateX(100%);
-    }
-  }
 `;
 
 const SidePanelStyleCSSVars = {
@@ -132,96 +119,86 @@ export const SidePanel = ({
   const panelRef = useRef(null);
   const dialogRef = useRef(null);
   const [phase, setPhase] = useState(isOpen ? "open" : "closed");
-  const previousFocusRef = useRef(null);
   const isMountedRef = useRef(false);
+
+  // openController centralizes open/close decision-making (focus transfer on
+  // open via Popover, focus restore on close here) — same contract as
+  // picker_custom.jsx's controller, duplicated for now.
+  const openController = useOpenController((openEvent) => {
+    const focusedBeforeOpen = openEvent.detail.focusedBeforeOpen;
+    return {
+      onRequestClose: () => {
+        // The side panel never denies a close request.
+      },
+      onClose: (closeEvent) => {
+        setPhase("closed");
+        onClose(closeEvent);
+        if (focusedBeforeOpen && document.contains(focusedBeforeOpen)) {
+          focusedBeforeOpen.focus({ preventScroll: true });
+        }
+      },
+    };
+  });
 
   useLayoutEffect(() => {
     if (!isMountedRef.current) {
       isMountedRef.current = true;
+      if (isOpen) {
+        openController.open(new CustomEvent("open_on_mount", { detail: {} }));
+      }
+      return;
+    }
+    if (isOpen === openController.opened) {
       return;
     }
     if (isOpen) {
       setPhase("opening");
-    } else if (phase !== "closed") {
-      setPhase("closing");
+      openController.open(new CustomEvent("open_by_prop", { detail: {} }));
+    } else {
+      openController.requestClose(
+        new CustomEvent("close_by_prop", { detail: {} }),
+        { isCancel: true },
+      );
     }
   }, [isOpen]);
-
-  useLayoutEffect(() => {
-    const panelEl = panelRef.current;
-    if (!panelEl) {
-      return;
-    }
-    // "manual" popovers stay hidden (UA default: display: none) until shown —
-    // this is what promotes the element into the top layer, replacing the
-    // createPortal(..., document.body) this component used to need.
-    if (phase !== "closed" && !panelEl.matches(":popover-open")) {
-      panelEl.showPopover();
-    }
-  }, [phase]);
-
-  useLayoutEffect(() => {
-    if (phase === "opening" && dialogRef.current) {
-      previousFocusRef.current = document.activeElement;
-      dialogRef.current.focus();
-    }
-  }, [phase]);
 
   useKeyboardShortcuts(dialogRef, [
     {
       key: "escape",
-      handler: () => {
-        onClose();
+      handler: (e) => {
+        openController.requestClose(e, { isCancel: true });
         return true;
       },
     },
   ]);
 
-  if (phase === "closed") {
-    return null;
-  }
-
   const onAnimationEnd = () => {
     if (phase === "opening") {
       setPhase("open");
-    } else if (phase === "closing") {
-      setPhase("closed");
-      const prev = previousFocusRef.current;
-      if (prev && document.contains(prev)) {
-        prev.focus({
-          preventScroll: true,
-        });
-      }
-      previousFocusRef.current = null;
     }
   };
 
   return (
-    <Box
+    <Popover
       ref={panelRef}
-      popover="manual"
-      baseClassName="navi_side_panel"
+      openController={openController}
+      className="navi_side_panel"
       styleCSSVars={SidePanelStyleCSSVars}
       width={width}
+      pointerTrap={!closeOnClickOutside}
+      focusTrap={closeOnClickOutside}
+      autoFocus="fallback"
       aria-expanded={phase !== "closed" ? "true" : "false"}
       data-opening={phase === "opening" ? "" : undefined}
-      data-closing={phase === "closing" ? "" : undefined}
+      data-close-on-click-outside={closeOnClickOutside ? "" : undefined}
       onnavi_request_close={(e) => {
-        onClose(e);
+        openController.requestClose(e, { isCancel: e.detail?.isCancel });
       }}
       {...rest}
     >
-      {closeOnClickOutside && (
-        <div
-          className="navi_side_panel_overlay"
-          onClick={(e) => {
-            onClose(e);
-          }}
-        />
-      )}
-      <Box
+      <div
         ref={dialogRef}
-        baseClassName="navi_side_panel_dialog"
+        className="navi_side_panel_dialog"
         tabIndex={-1}
         role={closeOnClickOutside ? "dialog" : "complementary"}
         aria-modal={closeOnClickOutside ? "true" : undefined}
@@ -231,13 +208,98 @@ export const SidePanel = ({
           <button
             className="navi_side_panel_close_button"
             aria-label="Close panel"
-            onClick={() => onClose()}
+            onClick={(e) => openController.requestClose(e, { isCancel: true })}
           >
             ×
           </button>
         )}
         {children}
-      </Box>
-    </Box>
+      </div>
+    </Popover>
   );
+};
+
+// Duplicated from picker_custom.jsx's useOpenController/createOpenController.
+// Owns open/close lifecycle for a Popover-backed popup: guards against
+// duplicate requests, runs Popover's openEffect (showPopover, focus
+// transfer, traps, positioning) and the side panel's own onClose reaction
+// (focus restore) in the right order.
+const useOpenController = (openHandler) => {
+  const stableOpenHandler = useStableCallback(openHandler);
+  const controllerRef = useRef(null);
+  if (!controllerRef.current) {
+    controllerRef.current = createOpenController(stableOpenHandler);
+  }
+  useLayoutEffect(() => {
+    return () => {
+      controllerRef.current.close();
+    };
+  }, []);
+  return controllerRef.current;
+};
+
+const createOpenController = (openHandler) => {
+  let closeHandlers = null;
+  let openEffectCleanup = null;
+  const performClose = (closeEvent) => {
+    controller.opened = false;
+    // Sync the DOM closed first (releasing the focus trap) — only then run
+    // the side panel's own reaction (onClose may restore focus to an element
+    // outside the popup, which the focus trap would otherwise fight while
+    // still active).
+    openEffectCleanup?.(closeEvent);
+    openEffectCleanup = null;
+    closeHandlers?.onClose?.(closeEvent);
+    closeHandlers = null;
+  };
+  const controller = {
+    opened: false,
+    openEffect: null,
+    open: (e, detail) => {
+      if (controller.opened || !controller.openEffect) {
+        return;
+      }
+      const requestOpenEvent = new CustomEvent("navi_request_open", {
+        detail: { event: e, ...detail },
+        cancelable: true,
+      });
+      chainEvent(requestOpenEvent, e);
+      controller.opened = true;
+      openEffectCleanup = controller.openEffect(requestOpenEvent) || null;
+      closeHandlers = openHandler(requestOpenEvent) || null;
+    },
+    requestClose: (
+      e = new CustomEvent("programmatic", { detail: {} }),
+      detail,
+    ) => {
+      if (!controller.opened) {
+        return;
+      }
+      const requestCloseEvent = new CustomEvent("navi_request_close", {
+        detail: { event: e, ...detail },
+        cancelable: true,
+      });
+      chainEvent(requestCloseEvent, e);
+      closeHandlers?.onRequestClose?.(requestCloseEvent);
+      if (requestCloseEvent.defaultPrevented) {
+        const nativeCancelEvent = findEvent(requestCloseEvent, "cancel");
+        if (nativeCancelEvent) {
+          nativeCancelEvent.preventDefault();
+        }
+        return;
+      }
+      performClose(requestCloseEvent);
+    },
+    close: (e = new CustomEvent("programmatic", { detail: {} }), detail) => {
+      if (!controller.opened) {
+        return;
+      }
+      const closeEvent = new CustomEvent("navi_close", {
+        detail: { event: e, ...detail },
+      });
+      chainEvent(closeEvent, e);
+      performClose(closeEvent);
+    },
+  };
+  return controller;
 };
