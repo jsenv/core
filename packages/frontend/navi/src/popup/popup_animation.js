@@ -27,7 +27,10 @@ export const buildPopupAnimationCss = (selector) => {
       ${selector} {
         --popup-animation-duration: 0.18s;
         --popup-slide-distance: 10px;
-        --popup-scale: 0.92;
+        /* Low enough to read as "growing from a point" rather than a subtle
+           zoom — combined with transform-origin, this is what makes the
+           scale animation look like it originates from the anchor/pointer. */
+        --popup-scale: 0.1;
       }
     }
 

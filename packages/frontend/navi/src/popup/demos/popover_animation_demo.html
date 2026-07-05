@@ -66,12 +66,39 @@
             </div>
 
             <div class="demo-section">
-              <h3>scale (grows from the anchor)</h3>
+              <h3>
+                scale (grows from a point — anchor center when anchored, pointer
+                position when not; slowed down here via animationDuration to
+                make the growth visible)
+              </h3>
               <div class="demo-row">
-                <AnchoredPopover label="scale (anchored)" animation="scale" />
-                <AnchorlessPopover
-                  label="scale (no anchor — grows from its own center)"
+                <AnchoredPopover
+                  label="scale (anchored)"
                   animation="scale"
+                  animationDuration="0.6s"
+                />
+                <AnchorlessPopover
+                  label="scale (no anchor — grows from the pointer)"
+                  animation="scale"
+                  animationDuration="0.6s"
+                />
+              </div>
+            </div>
+
+            <div class="demo-section">
+              <h3>
+                animation="auto" — picks slide when anchored, scale when not
+              </h3>
+              <div class="demo-row">
+                <AnchoredPopover
+                  label="auto (anchored → slide)"
+                  animation="auto"
+                  animationDuration="0.6s"
+                />
+                <AnchorlessPopover
+                  label="auto (no anchor → scale)"
+                  animation="auto"
+                  animationDuration="0.6s"
                 />
               </div>
             </div>
@@ -188,7 +215,13 @@
       // commands, and the button that triggers --navi-toggle is forwarded
       // as the anchor automatically (the command's "source" ends up as
       // navi_request_open's detail.source).
-      const AnchoredPopover = ({ label, animation, positionX, positionY }) => {
+      const AnchoredPopover = ({
+        label,
+        animation,
+        animationDuration,
+        positionX,
+        positionY,
+      }) => {
         const popoverId = useId();
 
         return (
@@ -199,6 +232,7 @@
             <Popover
               id={popoverId}
               animation={animation}
+              animationDuration={animationDuration}
               positionX={positionX}
               positionY={positionY}
               className="demo_popover_box"
@@ -213,7 +247,7 @@
       // Still command-driven (--navi-toggle), but anchor="ignore" tells the
       // popover not to use the toggle button as its anchor, so it centers
       // itself in the viewport instead.
-      const AnchorlessPopover = ({ label, animation }) => {
+      const AnchorlessPopover = ({ label, animation, animationDuration }) => {
         const popoverId = useId();
 
         return (
@@ -224,6 +258,7 @@
             <Popover
               id={popoverId}
               animation={animation}
+              animationDuration={animationDuration}
               anchor="ignore"
               className="demo_popover_box"
             >

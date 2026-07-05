@@ -99,6 +99,7 @@ const ControlledPopover = (props) => {
     pointerTrap,
     focusTrap,
     animation,
+    animationDuration,
     children,
     positionX,
     positionY,
@@ -116,6 +117,11 @@ const ControlledPopover = (props) => {
   const debugPopup = useDebugPopup();
   const debugFocus = useDebugFocus();
   const autoFocusProps = useAutoFocus(ref, props.autoFocus);
+  // animation={true} or "auto" picks the animation that best fits whether
+  // there is an anchor, resolved dynamically in openEffect (below) once the
+  // anchor for *this* open is actually known: "slide" when anchored (grows
+  // out of the anchor's edge), "scale" when not (grows from the pointer).
+  const isAutoAnimation = animation === true || animation === "auto";
 
   // aria-expanded lives on the popover element itself (not driven through
   // Preact's vdom — openEffect/its cleanup toggle it imperatively in sync
@@ -166,6 +172,20 @@ const ControlledPopover = (props) => {
     // whole document when stickTo is viewport-relative).
     const effectiveAnchor =
       anchor || stickToContainer || document.documentElement;
+    const resolvedAnimation = isAutoAnimation
+      ? anchor
+        ? "slide"
+        : "scale"
+      : animation;
+    if (isAutoAnimation) {
+      popoverEl.setAttribute("navi-animation", resolvedAnimation);
+    }
+    if (animationDuration) {
+      popoverEl.style.setProperty(
+        "--popup-animation-duration",
+        animationDuration,
+      );
+    }
 
     debugPopup(
       e,
@@ -270,9 +290,17 @@ const ControlledPopover = (props) => {
       popoverEl.style.top = `${top}px`;
       popoverEl.style.left = `${appliedLeft}px`;
 
-      if (animation !== "scale") {
+      if (resolvedAnimation !== "scale") {
         return;
       }
+      // appliedLeft/top are document-relative (pickPositionRelativeTo/
+      // computeStickToPosition both add the current scroll offset, since the
+      // popover is position: absolute). anchorRect/clientX/clientY below are
+      // viewport-relative (getBoundingClientRect()/MouseEvent), so the scroll
+      // offset must be added to them too before diffing — otherwise the
+      // computed transform-origin drifts off by the scroll amount as soon as
+      // the page isn't scrolled to the top.
+      const { scrollLeft, scrollTop } = document.documentElement;
       if (anchor) {
         // Scale origin = the anchor's center, so the popover visually grows
         // out of whatever triggered it rather than from its own center.
@@ -281,8 +309,10 @@ const ControlledPopover = (props) => {
         // the anchor edge it's attached to, not from wherever the user
         // happened to click.
         const anchorRect = effectiveAnchor.getBoundingClientRect();
-        const anchorCenterX = anchorRect.left + anchorRect.width / 2;
-        const anchorCenterY = anchorRect.top + anchorRect.height / 2;
+        const anchorCenterX =
+          anchorRect.left + anchorRect.width / 2 + scrollLeft;
+        const anchorCenterY =
+          anchorRect.top + anchorRect.height / 2 + scrollTop;
         popoverEl.style.setProperty(
           "--popup-animation-origin-x",
           `${snapToPixel(anchorCenterX - appliedLeft)}px`,
@@ -302,11 +332,11 @@ const ControlledPopover = (props) => {
       if (pointerEvent) {
         popoverEl.style.setProperty(
           "--popup-animation-origin-x",
-          `${snapToPixel(pointerEvent.clientX - appliedLeft)}px`,
+          `${snapToPixel(pointerEvent.clientX + scrollLeft - appliedLeft)}px`,
         );
         popoverEl.style.setProperty(
           "--popup-animation-origin-y",
-          `${snapToPixel(pointerEvent.clientY - top)}px`,
+          `${snapToPixel(pointerEvent.clientY + scrollTop - top)}px`,
         );
       } else {
         popoverEl.style.removeProperty("--popup-animation-origin-x");
@@ -357,7 +387,7 @@ const ControlledPopover = (props) => {
     <Box
       id={id}
       popover="manual"
-      navi-animation={animation}
+      navi-animation={isAutoAnimation ? undefined : animation}
       navi-stick-to={stickTo}
       {...rest}
       {...autoFocusProps}
