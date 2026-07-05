@@ -42,7 +42,13 @@ const css = /* css */ `
       pointer-events: none;
     }
 
-    &:popover-open {
+    /* Default ("none"): the backdrop never intercepts anything — outside
+       pointer interactions pass straight through to whatever's behind the
+       popover, and it never auto-closes from them. "lock"/"close" both need
+       the backdrop to actually intercept pointer events while open; only
+       "close" also acts on them (see the backdrop's onMouseDown below). */
+    &:popover-open[data-pointer-interaction-outside="lock"],
+    &:popover-open[data-pointer-interaction-outside="close"] {
       .navi_popover_backdrop {
         pointer-events: auto;
       }
@@ -96,7 +102,7 @@ const ControlledPopover = (props) => {
     anchor: anchorProp,
     anchorRelativeTo = "viewport",
     scrollLock,
-    pointerLock,
+    pointerInteractionOutsideEffect = "none",
     focusTrap,
     animation,
     fadeAnimation,
@@ -441,6 +447,11 @@ const ControlledPopover = (props) => {
       popover="manual"
       navi-animation={isAutoAnimation ? undefined : animation}
       navi-fade-animation={fadeAnimation ? "" : undefined}
+      data-pointer-interaction-outside={
+        pointerInteractionOutsideEffect === "none"
+          ? undefined
+          : pointerInteractionOutsideEffect
+      }
       styleCSSVars={POPUP_STYLE_CSS_VARS}
       {...rest}
       {...autoFocusProps}
@@ -496,8 +507,14 @@ const ControlledPopover = (props) => {
           if (e.button !== 0) {
             return;
           }
-          if (pointerLock) {
-            e.preventDefault();
+          if (pointerInteractionOutsideEffect !== "close") {
+            // "lock" absorbs the click so it doesn't reach whatever's behind
+            // the popover, without closing it; "none" never reaches here at
+            // all (the backdrop has pointer-events: none in that case, see
+            // the CSS above) — this check is just a safety net.
+            if (pointerInteractionOutsideEffect === "lock") {
+              e.preventDefault();
+            }
             return;
           }
           // Ignore clicks that land inside the popover's bounding rect

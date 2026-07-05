@@ -352,7 +352,7 @@
                   anchor={point}
                   anchorRelativeTo="offsetParent"
                   spacing={16}
-                  pointerLock
+                  pointerInteractionOutsideEffect="lock"
                   className="demo_popover_box"
                 >
                   <p style={{ marginTop: 0 }}>{point}</p>
@@ -369,7 +369,7 @@
                   anchor={point}
                   anchorRelativeTo="offsetParent"
                   spacing={16}
-                  pointerLock
+                  pointerInteractionOutsideEffect="lock"
                   className="demo_popover_box"
                 >
                   <p style={{ marginTop: 0 }}>{point}</p>
@@ -505,6 +505,7 @@
               positionY={positionY}
               positionXFixed={positionXFixed}
               positionYFixed={positionYFixed}
+              pointerInteractionOutsideEffect="close"
               className="demo_popover_box"
             >
               <p style={{ marginTop: 0 }}>{label}</p>
@@ -531,6 +532,7 @@
               animationDuration={animationDuration}
               borderRadius="8px"
               anchor="ignore"
+              pointerInteractionOutsideEffect="close"
               className="demo_popover_box"
             >
               <p style={{ marginTop: 0 }}>{label}</p>
@@ -569,6 +571,7 @@
               borderRadius="8px"
               anchor={anchor}
               spacing={spacing}
+              pointerInteractionOutsideEffect="close"
               className="demo_popover_box"
             >
               <p style={{ marginTop: 0 }}>{label}</p>

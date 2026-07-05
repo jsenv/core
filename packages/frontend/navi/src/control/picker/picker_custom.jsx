@@ -664,7 +664,7 @@ const PickerContentInsidePopover = (props) => {
         spacing={popoverSpacing}
         viewportSpacing={viewportSpacing}
         scrollLock={scrollLock}
-        pointerLock={pointerLock}
+        pointerInteractionOutsideEffect={pointerLock ? "lock" : "close"}
         focusTrap={focusTrap}
         /* make popover focusable so it can be the first focus target when opening */
         tabIndex={-1}
