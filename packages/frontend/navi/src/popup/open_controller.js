@@ -10,7 +10,7 @@ import { useStableCallback } from "../utils/use_stable_callback.js";
  *
  * `controller.openEffect` is implemented by the controlled element (Dialog or
  * Popover), reassigned on every render so it always closes over the latest
- * props (scrollTrap, anchorRef, etc.). It performs whatever DOM side effects
+ * props (scrollLock, anchorRef, etc.). It performs whatever DOM side effects
  * are needed to make the element actually open (`showModal()`/`showPopover()`,
  * focus transfer, positioning, traps...) and returns its cleanup —
  * the matching side effects to sync back to closed (`close()`/
@@ -104,21 +104,23 @@ export const createOpenController = (
           `closed by mousedown -> ignore next click`,
         );
         armSuppressNextOpenRequest();
-      } else {
-        const spaceEvent = findEvent(
+        break prevent_reopen;
+      }
+
+      const spaceEvent = findEvent(
+        closeEvent,
+        (e) => e.type === "keydown" && e.key === " ",
+      );
+      if (spaceEvent) {
+        // space would trigger a click on the picker button causing it to re-open immediatly after closing
+        debugInteraction(
           closeEvent,
-          (e) => e.type === "keydown" && e.key === " ",
+          `closed by space key -> prevent browser click`,
         );
-        if (spaceEvent) {
-          // space would trigger a click on the picker button causing it to re-open immediatly after closing
-          debugInteraction(
-            closeEvent,
-            `closed by space key -> prevent browser click`,
-          );
-          // browser won't try to dispatch click
-          // and our "space_to_open" will see e.defaultPrevented too and won't try to open picker
-          spaceEvent.preventDefault();
-        }
+        // browser won't try to dispatch click
+        // and our "space_to_open" will see e.defaultPrevented too and won't try to open picker
+        spaceEvent.preventDefault();
+        break prevent_reopen;
       }
     }
 

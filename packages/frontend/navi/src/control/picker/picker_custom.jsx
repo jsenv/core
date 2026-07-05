@@ -616,8 +616,8 @@ const PickerContentInsidePopover = (props) => {
   const {
     popupProps,
     children,
-    pointerTrap,
-    scrollTrap,
+    pointerLock,
+    scrollLock,
     focusTrap = true,
     popoverMode = "nearby",
     popoverSpacing = popoverMode === "nearby" ? 5 : 0,
@@ -663,8 +663,8 @@ const PickerContentInsidePopover = (props) => {
         positionY={popoverMode === "nearby" ? "below" : "below-overlap"}
         spacing={popoverSpacing}
         viewportSpacing={viewportSpacing}
-        scrollTrap={scrollTrap}
-        pointerTrap={pointerTrap}
+        scrollLock={scrollLock}
+        pointerLock={pointerLock}
         focusTrap={focusTrap}
         /* make popover focusable so it can be the first focus target when opening */
         tabIndex={-1}
@@ -697,8 +697,8 @@ const PickerContentInsideDialog = (props) => {
   const {
     popupProps,
     children,
-    scrollTrap,
-    pointerTrap,
+    scrollLock,
+    pointerLock,
     dialogExpand,
     dialogExpandX,
     dialogExpandY,
@@ -712,8 +712,8 @@ const PickerContentInsideDialog = (props) => {
       <Dialog
         {...popupProps}
         className="navi_picker_dialog"
-        scrollTrap={scrollTrap}
-        pointerTrap={pointerTrap}
+        scrollLock={scrollLock}
+        pointerLock={pointerLock}
         centerInVisualViewport
         autoFocus="fallback"
         data-expand-x={expandX ? "" : undefined}

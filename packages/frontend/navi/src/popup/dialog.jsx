@@ -103,8 +103,8 @@ const ControlledDialog = (props) => {
     openController,
     anchorRef,
     children,
-    scrollTrap,
-    pointerTrap,
+    scrollLock,
+    pointerLock,
     animation,
     centerInVisualViewport: centerInVisualViewportProp,
     ...rest
@@ -128,7 +128,7 @@ const ControlledDialog = (props) => {
   }, []);
 
   // Sync the DOM open and return how to sync it back closed, fresh on every
-  // render so it closes over the latest props (scrollTrap, etc.). The
+  // render so it closes over the latest props (scrollLock, etc.). The
   // controller (owned by the caller, or by UncontrolledDialog) decides
   // *when* this runs. openEffect runs outside of render (triggered by
   // openController.open()), so it cannot call hooks — cleanup is a plain
@@ -156,7 +156,7 @@ const ControlledDialog = (props) => {
     dialogEl.showModal();
     dialogEl.setAttribute("aria-expanded", "true");
     transferFocus(dialogEl, debugFocus, e, focusedBeforeOpen);
-    if (scrollTrap) {
+    if (scrollLock) {
       addCleanup(trapScrollInside(dialogEl));
     }
     if (centerInVisualViewportProp && window.visualViewport) {
@@ -231,7 +231,7 @@ const ControlledDialog = (props) => {
         // Detect backdrop click: the click must land outside the dialog's
         // bounding rect. Checking coordinates is necessary because clicking
         // on the dialog's own padding also sets e.target === ref.current.
-        if (!pointerTrap && e.button === 0 && e.target === ref.current) {
+        if (!pointerLock && e.button === 0 && e.target === ref.current) {
           const rect = ref.current.getBoundingClientRect();
           const isBackdrop =
             e.clientX < rect.left ||

@@ -94,8 +94,8 @@ const ControlledPopover = (props) => {
     openController,
     anchor: anchorProp,
     stickToContainerRef,
-    scrollTrap,
-    pointerTrap,
+    scrollLock,
+    pointerLock,
     focusTrap,
     animation,
     children,
@@ -131,7 +131,7 @@ const ControlledPopover = (props) => {
   }, []);
 
   // Sync the DOM open and return how to sync it back closed, fresh on every
-  // render so it closes over the latest props (scrollTrap, etc.). The
+  // render so it closes over the latest props (scrollLock, etc.). The
   // controller (owned by the caller, or by UncontrolledPopover) decides
   // *when* this runs. openEffect runs outside of render (triggered by
   // openController.open()), so it cannot call hooks — cleanup is a plain
@@ -349,7 +349,7 @@ const ControlledPopover = (props) => {
       }
     };
 
-    if (scrollTrap) {
+    if (scrollLock) {
       addCleanup(trapScrollInside(popoverEl));
     }
     if (focusTrap) {
@@ -471,7 +471,7 @@ const ControlledPopover = (props) => {
           if (e.button !== 0) {
             return;
           }
-          if (pointerTrap) {
+          if (pointerLock) {
             e.preventDefault();
             return;
           }
