@@ -305,6 +305,26 @@ registerNaviCommand("--navi-send", (source, event) => {
   };
 });
 
+registerNaviCommand("--navi-toggle", (source, event) => {
+  const target =
+    resolveExplicitTarget(source) || resolveClosestExpandable(source);
+  if (!target) {
+    return undefined;
+  }
+  return {
+    target,
+    implementation: () => {
+      const isExpanded = target.getAttribute("aria-expanded") === "true";
+      const customEventName = isExpanded
+        ? "navi_request_close"
+        : "navi_request_open";
+      return dispatchCustomEvent(target, customEventName, {
+        event,
+        source,
+      });
+    },
+  };
+});
 registerNaviCommand("--navi-open", (source, event) => {
   const target =
     resolveExplicitTarget(source) || resolveClosestExpandable(source);
@@ -318,24 +338,6 @@ registerNaviCommand("--navi-open", (source, event) => {
         event,
         source,
       });
-    },
-  };
-});
-registerNaviCommand("--navi-toggle", (source, event) => {
-  const target =
-    resolveExplicitTarget(source) || resolveClosestExpandable(source);
-  if (!target) {
-    return undefined;
-  }
-  return {
-    target,
-    implementation: () => {
-      const isExpanded = target.getAttribute("aria-expanded") === "true";
-      return dispatchCustomEvent(
-        target,
-        isExpanded ? "navi_request_close" : "navi_request_open",
-        { event, source },
-      );
     },
   };
 });
