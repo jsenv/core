@@ -115,7 +115,7 @@ export const createOpenController = (
         // space would trigger a click on the picker button causing it to re-open immediatly after closing
         debugInteraction(
           closeEvent,
-          `closed by space key -> prevent browser click`,
+          `closed by space key -> prevent browser click (spaceEvent.preventDefault())`,
         );
         // browser won't try to dispatch click
         // and our "space_to_open" will see e.defaultPrevented too and won't try to open picker
