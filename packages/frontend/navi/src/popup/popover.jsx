@@ -20,7 +20,7 @@ import {
   markAutofocusRestoreOnClose,
   transferFocus,
 } from "../utils/focus/focus_transfer.js";
-import { useOpenController } from "./open_controller.js";
+import { useOpenControllerByProps } from "./open_controller.js";
 import { buildPopupAnimationCss } from "./popup_animation.js";
 
 const css = /* css */ `
@@ -69,29 +69,12 @@ export const Popover = (props) => {
 // by --navi-toggle/--navi-open/--navi-close commands, or by the `open` prop)
 // rather than owned by a parent component.
 const UncontrolledPopover = (props) => {
-  const { open, ...rest } = props;
-  const openController = useOpenController(() => undefined);
-
-  useLayoutEffect(() => {
-    if (open === undefined) {
-      return;
-    }
-    if (open === openController.opened) {
-      return;
-    }
-    if (open) {
-      openController.open(new CustomEvent("open_by_prop", { detail: {} }));
-    } else {
-      openController.requestClose(
-        new CustomEvent("close_by_prop", { detail: {} }),
-        { isCancel: true },
-      );
-    }
-  }, [open]);
+  const openController = useOpenControllerByProps(props);
 
   return (
     <ControlledPopover
-      {...rest}
+      {...props}
+      open={undefined}
       openController={openController}
       onnavi_request_open={(e) => {
         openController.open(e, {

@@ -128,3 +128,27 @@ export const useOpenController = (openHandler) => {
   }, []);
   return controllerRef.current;
 };
+
+export const useOpenControllerByProps = (props) => {
+  const openController = useOpenController(() => undefined);
+  const { open } = props;
+
+  useLayoutEffect(() => {
+    if (open === undefined) {
+      return;
+    }
+    if (open === openController.opened) {
+      return;
+    }
+    if (open) {
+      openController.open(new CustomEvent("open_by_prop", { detail: {} }));
+    } else {
+      openController.requestClose(
+        new CustomEvent("close_by_prop", { detail: {} }),
+        { isCancel: true },
+      );
+    }
+  }, [open]);
+
+  return openController;
+};
