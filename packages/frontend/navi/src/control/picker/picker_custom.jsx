@@ -518,7 +518,7 @@ const PickerCustom = (props) => {
       children,
     });
     Object.assign(popupProps, {
-      anchorRef: props.ref,
+      anchor: props.ref,
       openController,
     });
 

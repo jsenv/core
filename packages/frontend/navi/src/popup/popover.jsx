@@ -25,7 +25,9 @@ import { buildPopupAnimationCss } from "./popup_animation.js";
 
 const css = /* css */ `
   .navi_popover {
-    &[data-anchor-hidden] {
+    inset: unset;
+
+    &[data-anchor-out-of-view] {
       opacity: 0;
       pointer-events: none;
     }
@@ -337,10 +339,10 @@ const ControlledPopover = (props) => {
       effectiveAnchor,
       ({ visibilityRatio }, { event }) => {
         if (visibilityRatio <= 0.2) {
-          popoverEl.setAttribute("data-anchor-hidden", "");
+          popoverEl.setAttribute("data-anchor-out-of-view", "");
           return;
         }
-        popoverEl.removeAttribute("data-anchor-hidden");
+        popoverEl.removeAttribute("data-anchor-out-of-view");
         positionPopover(event);
       },
       {
