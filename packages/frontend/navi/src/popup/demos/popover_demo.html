@@ -156,6 +156,7 @@
             <AnchorPointRelativeSection animatedDuration={animatedDuration} />
             <AnchorIgnoreSection animatedDuration={animatedDuration} />
             <FadingSection />
+            <PointerInteractionOutsideSection />
           </div>
         );
       };
@@ -194,6 +195,11 @@
             </li>
             <li>
               <a href="#fading">Fading</a>
+            </li>
+            <li>
+              <a href="#pointer-interaction-outside">
+                pointerInteractionOutsideEffect
+              </a>
             </li>
           </ol>
         </nav>
@@ -251,8 +257,19 @@
 
           <div class="demo-subsection">
             <h3>positionX / positionXFixed</h3>
-            {POSITION_X_CASES.map(({ value, label }) => (
-              <div class="demo-row" key={value}>
+            {POSITION_X_CASES.map(({ value, label }, index) => (
+              // "right-aligned"/"to-the-left" extend leftward from the
+              // button, and a row here starts flush with the page's left
+              // edge — without room to their left they'd have nowhere to
+              // render. Shifting each row further right than the last (the
+              // first, "to-the-right", needs room on its right instead, so
+              // it stays put) gives every case the space its own direction
+              // actually needs.
+              <div
+                class="demo-row"
+                key={value}
+                style={{ marginLeft: `${index * 15}%` }}
+              >
                 <AnchoredPopover label={label} positionXFixed={value} />
                 <AnchoredPopover
                   label={`${label} (animated)`}
@@ -278,6 +295,15 @@
               </div>
             ))}
           </div>
+
+          <p>
+            <em>
+              Note: <code>positionXFixed</code>/<code>positionYFixed</code>{" "}
+              exist specifically for when you don't want that
+              auto-flip-based-on-available-space behavior — a bit of an unusual
+              thing to want, but here we are.
+            </em>
+          </p>
         </section>
       );
 
@@ -440,6 +466,46 @@
         </section>
       );
 
+      const PointerInteractionOutsideSection = () => (
+        <section id="pointer-interaction-outside" class="demo-section">
+          <h2>7. pointerInteractionOutsideEffect</h2>
+          <p>
+            Controls what a pointer interaction (mousedown) landing outside the
+            popover does while it's open:
+          </p>
+          <ul>
+            <li>
+              <code>"none"</code> (default) — nothing special: the popover
+              doesn't intercept it at all (no backdrop), and never closes from
+              it.
+            </li>
+            <li>
+              <code>"close"</code> — closes the popover.
+            </li>
+            <li>
+              <code>"lock"</code> — prevents interacting with the rest of the
+              document (the click is absorbed) without closing the popover.
+            </li>
+          </ul>
+          <p>
+            Open a popover below, then click "Click the rest of the page" — the
+            counter and the popover's open/closed state show which one actually
+            happened.
+          </p>
+          <div class="demo-row">
+            <PointerInteractionOutsideDemo label="none (default)" />
+            <PointerInteractionOutsideDemo
+              label="close"
+              pointerInteractionOutsideEffect="close"
+            />
+            <PointerInteractionOutsideDemo
+              label="lock"
+              pointerInteractionOutsideEffect="lock"
+            />
+          </div>
+        </section>
+      );
+
       // Positions a point-grid button's label within its own box to match
       // the point it represents — "top-left" reads in the top-left corner
       // of its button, "bottom" reads bottom-center, etc.
@@ -483,8 +549,6 @@
         animation,
         animationDuration,
         fadeAnimation,
-        positionX,
-        positionY,
         positionXFixed,
         positionYFixed,
       }) => {
@@ -501,8 +565,6 @@
               animationDuration={animationDuration}
               fadeAnimation={fadeAnimation}
               borderRadius="8px"
-              positionX={positionX}
-              positionY={positionY}
               positionXFixed={positionXFixed}
               positionYFixed={positionYFixed}
               pointerInteractionOutsideEffect="close"
@@ -539,6 +601,44 @@
               <Button command="--navi-close">Close</Button>
             </Popover>
           </>
+        );
+      };
+
+      // The counter button represents "the rest of the document" — clicking
+      // it while the popover is open exercises whatever
+      // pointerInteractionOutsideEffect actually does: increments and
+      // closes the popover ("close"), doesn't increment and keeps it open
+      // ("lock"), or increments and keeps it open, same as if the popover
+      // weren't there at all ("none").
+      const PointerInteractionOutsideDemo = ({
+        label,
+        pointerInteractionOutsideEffect,
+      }) => {
+        const popoverId = useId();
+        const [count, setCount] = useState(0);
+
+        return (
+          <div>
+            <Button command="--navi-toggle" commandFor={popoverId}>
+              {label}
+            </Button>
+            <Popover
+              id={popoverId}
+              borderRadius="8px"
+              pointerInteractionOutsideEffect={pointerInteractionOutsideEffect}
+              className="demo_popover_box"
+            >
+              <p style={{ marginTop: 0 }}>{label}</p>
+              <Button command="--navi-close">Close</Button>
+            </Popover>
+            <p>
+              Background clicks: {count}
+              <br />
+              <Button onClick={() => setCount((c) => c + 1)}>
+                Click the rest of the page
+              </Button>
+            </p>
+          </div>
         );
       };
 
