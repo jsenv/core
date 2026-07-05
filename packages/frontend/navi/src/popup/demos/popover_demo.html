@@ -52,10 +52,13 @@
       }
       .demo-container {
         position: relative;
+        display: flex;
         width: 300px;
         max-width: 100%;
         height: 180px;
         margin-bottom: 8px;
+        align-items: center;
+        justify-content: center;
         border: 1px dotted #999;
         border-radius: 8px;
       }
@@ -384,31 +387,25 @@
         </section>
       );
 
+      // stickToContainerRef only needs *a* container element for its
+      // getBoundingClientRect() math — it doesn't have to be a DOM ancestor
+      // of the trigger button. We still render the triggers inside it here
+      // because that's the clearer demo, not because it's required (a
+      // container-as-CSS-selector option, so a popover could reference any
+      // container without needing a ref threaded down to it, is a possible
+      // future addition — not needed yet).
       const AnchorPointRelativeSection = ({ animatedDuration }) => {
         const containerRef = useRef(null);
+        const animatedContainerRef = useRef(null);
         return (
           <section id="anchor-point-relative" class="demo-section">
             <h2>4. Anchor as a relative point</h2>
             <p>
               <code>anchor="relative-&lt;point&gt;"</code> — same as above, but
               relative to a container (<code>stickToContainerRef</code>) instead
-              of the viewport. The triggering buttons don't need to be inside
-              the container — only the container itself matters for positioning.
+              of the viewport.
             </p>
-            <div class="demo-container" ref={containerRef} />
-            <PointGrid
-              renderCell={(point) => (
-                <AnchorPointPopover
-                  label={point}
-                  anchor={`relative-${point}`}
-                  stickToContainerRef={containerRef}
-                  spacing={16}
-                />
-              )}
-            />
-
-            <div class="demo-subsection">
-              <h3>Animated</h3>
+            <div class="demo-container" ref={containerRef}>
               <PointGrid
                 renderCell={(point) => (
                   <AnchorPointPopover
@@ -416,11 +413,29 @@
                     anchor={`relative-${point}`}
                     stickToContainerRef={containerRef}
                     spacing={16}
-                    animation
-                    animationDuration={animatedDuration}
+                    pointerLock
                   />
                 )}
               />
+            </div>
+
+            <div class="demo-subsection">
+              <h3>Animated</h3>
+              <div class="demo-container" ref={animatedContainerRef}>
+                <PointGrid
+                  renderCell={(point) => (
+                    <AnchorPointPopover
+                      label={point}
+                      anchor={`relative-${point}`}
+                      stickToContainerRef={animatedContainerRef}
+                      spacing={16}
+                      pointerLock
+                      animation
+                      animationDuration={animatedDuration}
+                    />
+                  )}
+                />
+              </div>
             </div>
           </section>
         );
@@ -576,6 +591,7 @@
         spacing,
         animation,
         animationDuration,
+        pointerLock,
       }) => {
         const popoverId = useId();
 
@@ -597,6 +613,7 @@
               anchor={anchor}
               stickToContainerRef={stickToContainerRef}
               spacing={spacing}
+              pointerLock={pointerLock}
               className="demo_popover_box"
             >
               <p style={{ marginTop: 0 }}>{label}</p>

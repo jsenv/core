@@ -514,7 +514,9 @@ export const visibleRectEffect = (
  *
  * The resolved X and Y are persisted as data-position-x-current / data-position-y-current
  * on the element so subsequent calls start from the last resolved position (avoids
- * flickering when the element is near the flip threshold). Fixed axes are not persisted.
+ * flickering when the element is near the flip threshold) and so other CSS/JS can read
+ * "which side is this on right now" — including for a fixed axis, even though a fixed
+ * axis never reads the attribute back itself (positionXFixed/positionYFixed always win).
  *
  * @param {HTMLElement} element - The element to position (must be document-relative)
  * @param {HTMLElement} anchor - The anchor element to position against
@@ -848,14 +850,15 @@ export const pickPositionRelativeTo = (
     }
   }
 
-  // Persist resolved X/Y so subsequent calls start from here (avoids flickering).
-  // Fixed axes are not persisted.
-  if (!xIsFixed) {
-    element.setAttribute("data-position-x-current", finalX);
-  }
-  if (!yIsFixed) {
-    element.setAttribute("data-position-y-current", finalY);
-  }
+  // Persist resolved X/Y so subsequent calls start from here (avoids
+  // flickering) — and so CSS consumers (e.g. Popover's "clip" animation,
+  // which reads data-position-y-current to pick which edge to reveal from)
+  // can rely on it always reflecting the current side, fixed or not. A fixed
+  // axis is never read back from this attribute (xIsFixed/yIsFixed always
+  // wins over the stored value above), so persisting it here is purely for
+  // those outside readers, not for this function's own flip logic.
+  element.setAttribute("data-position-x-current", finalX);
+  element.setAttribute("data-position-y-current", finalY);
 
   // Get document scroll for final coordinate conversion. The element is
   // document-relative position: absolute (see popover.jsx), so the current
