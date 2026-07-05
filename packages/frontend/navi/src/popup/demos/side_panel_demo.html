@@ -33,6 +33,7 @@
 
       const PanelContent = () => {
         const [innerCount, setInnerCount] = useState(0);
+
         return (
           <div style={{ padding: "24px" }}>
             <h2 style={{ marginTop: 0 }}>Side Panel</h2>
@@ -53,10 +54,7 @@
                 Increment panel counter
               </button>
             </div>
-            {/* No SidePanelCloseContext needed: --navi-close resolves its target
-                by walking up to the closest [aria-expanded] ancestor, which the
-                side panel's root element carries while open. */}
-            <Button command="--navi-close" style={{ marginTop: "12px" }}>
+            <Button command="--navi-close" marginTop="m">
               Close panel
             </Button>
           </div>
