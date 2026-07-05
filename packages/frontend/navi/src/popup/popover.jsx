@@ -169,20 +169,6 @@ const ControlledPopover = (props) => {
     } else if (e.detail.anchor) {
       anchor = e.detail.anchor;
     }
-    // offsetParent is the popover's own nearest positioned ancestor — for
-    // this to resolve to anything other than null, the popover must be
-    // rendered inside that ancestor in the DOM (the trigger button doesn't
-    // have to be). Only meaningful for an anchor point: a real anchor element
-    // already carries its own position.
-    const relativeContainer =
-      anchorPoint && anchorRelativeTo === "offsetParent"
-        ? popoverEl.offsetParent
-        : null;
-    // What we observe for repositioning on resize/scroll/visibility changes:
-    // the anchor when anchored, otherwise the relative container (or the
-    // whole document when the anchor point is viewport-relative).
-    const effectiveAnchor =
-      anchor || relativeContainer || document.documentElement;
     const resolvedAnimation = isAutoAnimation
       ? anchorPoint && anchorPoint !== "center"
         ? "slide"
@@ -247,6 +233,22 @@ const ControlledPopover = (props) => {
 
     popoverEl.showPopover();
     popoverEl.setAttribute("aria-expanded", "true");
+    // offsetParent is the popover's own nearest positioned ancestor — for
+    // this to resolve to anything other than null, the popover must be
+    // rendered inside that ancestor in the DOM (the trigger button doesn't
+    // have to be). Only meaningful for an anchor point: a real anchor element
+    // already carries its own position. Read only *after* showPopover(): a
+    // popover not yet shown is display:none (UA stylesheet), which always
+    // reports a null offsetParent regardless of where it lives in the DOM.
+    const relativeContainer =
+      anchorPoint && anchorRelativeTo === "offsetParent"
+        ? popoverEl.offsetParent
+        : null;
+    // What we observe for repositioning on resize/scroll/visibility changes:
+    // the anchor when anchored, otherwise the relative container (or the
+    // whole document when the anchor point is viewport-relative).
+    const effectiveAnchor =
+      anchor || relativeContainer || document.documentElement;
     const restoreFocus = openController.transferFocusOnOpen(popoverEl);
     debugPopup(
       e,
