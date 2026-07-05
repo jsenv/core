@@ -66,6 +66,13 @@
         color: #999;
         font-size: 12px;
       }
+      .demo-side-by-side {
+        display: flex;
+        margin-top: 8px;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        gap: 24px;
+      }
       .demo-point-grid {
         display: grid;
         width: fit-content;
@@ -170,22 +177,12 @@
           <ol>
             <li>
               <a href="#anchor">Anchor</a>
-              <ol>
-                <li>
-                  <a href="#anchor-animation">Animated</a>
-                </li>
-              </ol>
             </li>
             <li>
               <a href="#anchor-placement">Placement relative to the anchor</a>
             </li>
             <li>
               <a href="#anchor-point">Anchor as a point</a>
-              <ol>
-                <li>
-                  <a href="#anchor-point-animation">Animated</a>
-                </li>
-              </ol>
             </li>
             <li>
               <a href="#anchor-point-relative">
@@ -194,11 +191,6 @@
             </li>
             <li>
               <a href="#anchor-ignore">Ignoring the anchor</a>
-              <ol>
-                <li>
-                  <a href="#anchor-ignore-animation">Animated</a>
-                </li>
-              </ol>
             </li>
             <li>
               <a href="#fading">Fading</a>
@@ -217,20 +209,31 @@
           </p>
           <div class="demo-row">
             <AnchoredPopover label="anchored (default)" />
-          </div>
-
-          <div id="anchor-animation" class="demo-subsection">
-            <h3>Animated</h3>
-            <div class="demo-row">
-              <AnchoredPopover
-                label="animated"
-                animation
-                animationDuration={animatedDuration}
-              />
-            </div>
+            <AnchoredPopover
+              label="animated"
+              animation
+              animationDuration={animatedDuration}
+            />
           </div>
         </section>
       );
+
+      // One row per case (rather than every case in a single row) so each
+      // row can hold its plain/animated pair side by side.
+      const POSITION_X_CASES = [
+        { value: "to-the-right", label: "to-the-right" },
+        { value: "left-aligned", label: "left-aligned" },
+        { value: "center", label: "center (default)" },
+        { value: "right-aligned", label: "right-aligned" },
+        { value: "to-the-left", label: "to-the-left" },
+      ];
+      const POSITION_Y_CASES = [
+        { value: "above", label: "above" },
+        { value: "above-overlap", label: "above-overlap" },
+        { value: "center", label: "center" },
+        { value: "below-overlap", label: "below-overlap" },
+        { value: "below", label: "below (default)" },
+      ];
 
       const AnchorPlacementSection = ({ animatedDuration }) => (
         <section id="anchor-placement" class="demo-section">
@@ -248,115 +251,32 @@
 
           <div class="demo-subsection">
             <h3>positionX / positionXFixed</h3>
-            <div class="demo-row">
-              <AnchoredPopover
-                label="to-the-right"
-                positionXFixed="to-the-right"
-              />
-              <AnchoredPopover
-                label="left-aligned"
-                positionXFixed="left-aligned"
-              />
-              <AnchoredPopover
-                label="center (default)"
-                positionXFixed="center"
-              />
-              <AnchoredPopover
-                label="right-aligned"
-                positionXFixed="right-aligned"
-              />
-              <AnchoredPopover
-                label="to-the-left"
-                positionXFixed="to-the-left"
-              />
-            </div>
-            <div class="demo-subsection">
-              <h4>Animated</h4>
-              <div class="demo-row">
+            {POSITION_X_CASES.map(({ value, label }) => (
+              <div class="demo-row" key={value}>
+                <AnchoredPopover label={label} positionXFixed={value} />
                 <AnchoredPopover
-                  label="to-the-right"
-                  positionXFixed="to-the-right"
-                  animation
-                  animationDuration={animatedDuration}
-                />
-                <AnchoredPopover
-                  label="left-aligned"
-                  positionXFixed="left-aligned"
-                  animation
-                  animationDuration={animatedDuration}
-                />
-                <AnchoredPopover
-                  label="center"
-                  positionXFixed="center"
-                  animation
-                  animationDuration={animatedDuration}
-                />
-                <AnchoredPopover
-                  label="right-aligned"
-                  positionXFixed="right-aligned"
-                  animation
-                  animationDuration={animatedDuration}
-                />
-                <AnchoredPopover
-                  label="to-the-left"
-                  positionXFixed="to-the-left"
+                  label={`${label} (animated)`}
+                  positionXFixed={value}
                   animation
                   animationDuration={animatedDuration}
                 />
               </div>
-            </div>
+            ))}
           </div>
 
           <div class="demo-subsection">
             <h3>positionY / positionYFixed</h3>
-            <div class="demo-row">
-              <AnchoredPopover label="above" positionYFixed="above" />
-              <AnchoredPopover
-                label="above-overlap"
-                positionYFixed="above-overlap"
-              />
-              <AnchoredPopover label="center" positionYFixed="center" />
-              <AnchoredPopover
-                label="below-overlap"
-                positionYFixed="below-overlap"
-              />
-              <AnchoredPopover label="below (default)" positionYFixed="below" />
-            </div>
-            <div class="demo-subsection">
-              <h4>Animated</h4>
-              <div class="demo-row">
+            {POSITION_Y_CASES.map(({ value, label }) => (
+              <div class="demo-row" key={value}>
+                <AnchoredPopover label={label} positionYFixed={value} />
                 <AnchoredPopover
-                  label="above"
-                  positionYFixed="above"
-                  animation
-                  animationDuration={animatedDuration}
-                />
-                <AnchoredPopover
-                  label="above-overlap"
-                  positionYFixed="above-overlap"
-                  animation
-                  animationDuration={animatedDuration}
-                />
-                <AnchoredPopover
-                  label="center"
-                  positionYFixed="center"
-                  animation
-                  animationDuration={animatedDuration}
-                />
-                <AnchoredPopover
-                  label="below-overlap"
-                  positionYFixed="below-overlap"
-                  animation
-                  animationDuration={animatedDuration}
-                />
-                <AnchoredPopover
-                  label="below"
-                  positionYFixed="below"
+                  label={`${label} (animated)`}
+                  positionYFixed={value}
                   animation
                   animationDuration={animatedDuration}
                 />
               </div>
-            </div>
+            ))}
           </div>
         </section>
       );
@@ -372,14 +292,12 @@
             <code>bottom-left</code>, <code>left</code>,<code>top-left</code>,{" "}
             <code>center</code>.
           </p>
-          <PointGrid
-            renderCell={(point) => (
-              <AnchorPointPopover label={point} anchor={point} spacing={16} />
-            )}
-          />
-
-          <div id="anchor-point-animation" class="demo-subsection">
-            <h3>Animated</h3>
+          <div class="demo-side-by-side">
+            <PointGrid
+              renderCell={(point) => (
+                <AnchorPointPopover label={point} anchor={point} spacing={16} />
+              )}
+            />
             <PointGrid
               renderCell={(point) => (
                 <AnchorPointPopover
@@ -408,38 +326,26 @@
           <h2>4. Anchor relative to nearest positioned ancestor</h2>
           <p>
             <code>anchorRelativeTo="offsetParent"</code> — positions the popover
-            relative to its nearest positioned ancestor (the dotted box below)
-            instead of the viewport.
+            relative to its nearest positioned ancestor (the dotted box in the
+            middle) instead of the viewport.
           </p>
-          <AnchorPointRelativeDemo spacing={16} />
-
-          <div class="demo-subsection">
-            <h3>Animated</h3>
-            <AnchorPointRelativeDemo
-              spacing={16}
-              animation
-              animationDuration={animatedDuration}
-            />
-          </div>
+          <AnchorPointRelativeDemo animatedDuration={animatedDuration} />
         </section>
       );
 
       // Buttons live outside .demo-container (they don't need an
-      // offsetParent); the popovers they control live inside it, one per
-      // point, invisible until opened.
-      const AnchorPointRelativeDemo = ({
-        spacing,
-        animation,
-        animationDuration,
-      }) => {
+      // offsetParent); the popovers they control live inside it, invisible
+      // until opened — one container serves both the plain grid (left) and
+      // the animated grid (right) so they can sit side by side.
+      const AnchorPointRelativeDemo = ({ animatedDuration }) => {
         const baseId = useId();
         return (
-          <>
+          <div class="demo-side-by-side">
             <PointGrid
               renderCell={(point) => (
                 <Button
                   command="--navi-toggle"
-                  commandFor={`${baseId}-${point}`}
+                  commandFor={`${baseId}-plain-${point}`}
                   className="demo-point-button"
                   style={pointAlignStyle(point)}
                 >
@@ -451,14 +357,30 @@
               <span class="demo-container-label">container</span>
               {POINTS.map((point) => (
                 <Popover
-                  key={point}
-                  id={`${baseId}-${point}`}
-                  animation={animation}
-                  animationDuration={animationDuration}
+                  key={`plain-${point}`}
+                  id={`${baseId}-plain-${point}`}
                   borderRadius="8px"
                   anchor={point}
                   anchorRelativeTo="offsetParent"
-                  spacing={spacing}
+                  spacing={16}
+                  pointerLock
+                  className="demo_popover_box"
+                >
+                  <p style={{ marginTop: 0 }}>{point}</p>
+                  <Button command="--navi-close">Close</Button>
+                </Popover>
+              ))}
+              {POINTS.map((point) => (
+                <Popover
+                  key={`animated-${point}`}
+                  id={`${baseId}-animated-${point}`}
+                  animation
+                  animationDuration={animatedDuration}
+                  borderRadius="8px"
+                  anchor={point}
+                  anchorRelativeTo="offsetParent"
+                  spacing={16}
+                  pointerLock
                   className="demo_popover_box"
                 >
                   <p style={{ marginTop: 0 }}>{point}</p>
@@ -466,7 +388,19 @@
                 </Popover>
               ))}
             </div>
-          </>
+            <PointGrid
+              renderCell={(point) => (
+                <Button
+                  command="--navi-toggle"
+                  commandFor={`${baseId}-animated-${point}`}
+                  className="demo-point-button"
+                  style={pointAlignStyle(point)}
+                >
+                  {point}
+                </Button>
+              )}
+            />
+          </div>
         );
       };
 
@@ -479,17 +413,11 @@
           </p>
           <div class="demo-row">
             <AnchorlessPopover label='anchor="ignore"' />
-          </div>
-
-          <div id="anchor-ignore-animation" class="demo-subsection">
-            <h3>Animated</h3>
-            <div class="demo-row">
-              <AnchorlessPopover
-                label="animated"
-                animation
-                animationDuration={animatedDuration}
-              />
-            </div>
+            <AnchorlessPopover
+              label="animated"
+              animation
+              animationDuration={animatedDuration}
+            />
           </div>
         </section>
       );
