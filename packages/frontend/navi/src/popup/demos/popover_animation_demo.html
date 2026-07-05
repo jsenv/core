@@ -49,7 +49,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useId, useRef } from "preact/hooks";
-      import { Button, Popover } from "@jsenv/navi";
+      import { Button, Popover, NaviDebug } from "@jsenv/navi";
 
       const App = () => {
         const containerRef = useRef(null);
@@ -268,7 +268,12 @@
         );
       };
 
-      render(<App />, document.querySelector("#root"));
+      render(
+        <NaviDebug debugAll>
+          <App />
+        </NaviDebug>,
+        document.querySelector("#root"),
+      );
     </script>
   </body>
 </html>
