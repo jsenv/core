@@ -97,7 +97,7 @@ const ControlledPopover = (props) => {
     pointerLock,
     focusTrap,
     animation,
-    fadeAnimation = true,
+    fadeAnimation,
     children,
     positionX,
     positionY,
