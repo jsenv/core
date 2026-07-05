@@ -572,9 +572,20 @@ export const pickPositionRelativeTo = (
 
   const viewportWidth = document.documentElement.clientWidth;
   const viewportHeight = document.documentElement.clientHeight;
+  // document.documentElement is used as a sentinel "no real anchor" value
+  // (see popover.jsx's effectiveAnchor fallback): an anchorless popup should
+  // center/place itself against the visual viewport, not against <html>'s own
+  // box — which, unlike the viewport, grows with document content and can be
+  // far taller than what's on screen (its top is also negative once the page
+  // is scrolled). Using the viewport rect here fixes that; the scroll offset
+  // is still added below like any other case, since the element is
+  // document-relative position: absolute, not position: fixed.
+  const anchorIsViewport = anchor === document.documentElement;
   // Get viewport-relative positions
   const elementRect = element.getBoundingClientRect();
-  const anchorRect = anchor.getBoundingClientRect();
+  const anchorRect = anchorIsViewport
+    ? { left: 0, top: 0, right: viewportWidth, bottom: viewportHeight }
+    : anchor.getBoundingClientRect();
   const {
     left: elementLeft,
     right: elementRight,
@@ -846,7 +857,12 @@ export const pickPositionRelativeTo = (
     element.setAttribute("data-position-y-current", finalY);
   }
 
-  // Get document scroll for final coordinate conversion
+  // Get document scroll for final coordinate conversion. The element is
+  // document-relative position: absolute (see popover.jsx), so the current
+  // scroll offset is always added — including when anchorIsViewport, so the
+  // result lands at the visual center of the viewport at its current scroll
+  // position. visibleRectEffect recomputes this on every scroll tick, which
+  // is what keeps it looking anchored to the viewport as the page scrolls.
   const { scrollLeft, scrollTop } = document.documentElement;
   const elementDocumentLeft = snapToPixel(elementPositionLeft + scrollLeft);
   const elementDocumentTop = snapToPixel(elementPositionTop + scrollTop);
