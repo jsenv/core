@@ -185,13 +185,20 @@ const ControlledPopover = (props) => {
     const effectiveAnchor =
       anchor || stickToContainer || document.documentElement;
     const resolvedAnimation = isAutoAnimation
-      ? anchor
-        ? "grow"
-        : anchorPoint
-          ? "slide"
-          : "scale"
+      ? anchorPoint
+        ? "slide"
+        : "clip"
       : animation;
     popoverEl.setAttribute("navi-animation", resolvedAnimation);
+    // "clip" reveals vertically only by default (grows out of the anchor's
+    // edge), which only makes sense against a real anchor element. Without
+    // one — anchorPoint (e.g. anchor="center") or nothing at all — it clips
+    // both axes around a point instead (see popup_animation.js).
+    if (anchor) {
+      popoverEl.removeAttribute("data-clip-axis");
+    } else {
+      popoverEl.setAttribute("data-clip-axis", "xy");
+    }
     // Mirrors how the anchor was resolved, in DOM-inspectable form: one of
     // the 9 anchor points, "viewport" (no anchor at all), a structural
     // relation to the popover ("previousSibling"/"nextSibling"/"parent" —
@@ -295,58 +302,44 @@ const ControlledPopover = (props) => {
       popoverEl.style.top = `${top}px`;
       popoverEl.style.left = `${appliedLeft}px`;
 
-      if (resolvedAnimation !== "scale") {
+      if (resolvedAnimation !== "clip" || anchor) {
+        // Anchored "clip" is vertical-only (see popup_animation.js): it
+        // reads data-position-y-current directly, no origin/translate to
+        // compute here.
         return;
       }
-      // appliedLeft/top are document-relative (pickPositionRelativeTo/
-      // computeStickToPosition both add the current scroll offset, since the
-      // popover is position: absolute). anchorRect/clientX/clientY below are
-      // viewport-relative (getBoundingClientRect()/MouseEvent), so the scroll
-      // offset must be added to them too before diffing — otherwise the
-      // computed transform-origin drifts off by the scroll amount as soon as
-      // the page isn't scrolled to the top.
-      const { scrollLeft, scrollTop } = document.documentElement;
-      if (anchor) {
-        // Scale origin = the anchor's center, so the popover visually grows
-        // out of whatever triggered it rather than from its own center.
-        // When anchored, animating from the pointer instead would be
-        // misleading for stuff like pickers: the content should grow from
-        // the anchor edge it's attached to, not from wherever the user
-        // happened to click.
-        const anchorRect = effectiveAnchor.getBoundingClientRect();
-        const anchorCenterX =
-          anchorRect.left + anchorRect.width / 2 + scrollLeft;
-        const anchorCenterY =
-          anchorRect.top + anchorRect.height / 2 + scrollTop;
-        popoverEl.style.setProperty(
-          "--popup-animation-origin-x",
-          `${snapToPixel(anchorCenterX - appliedLeft)}px`,
-        );
-        popoverEl.style.setProperty(
-          "--popup-animation-origin-y",
-          `${snapToPixel(anchorCenterY - top)}px`,
-        );
-        return;
-      }
-      // Not anchored: animate from the pointer that triggered the open, so
-      // the popover feels like it grows out from under the click.
+      // Not anchored: translate from the click/pointer position — expressed
+      // as an offset from the box's own center, since that's what the CSS
+      // translates back to 0 0 — to the final resting position, while
+      // clip-path grows outward from the box's own center (in local
+      // percentages, so no JS measurement needed for that part). Falls back
+      // to growing in place (no translate) when there's no pointer to read.
       const pointerEvent = findEvent(
         e,
         (candidate) => typeof candidate.clientX === "number",
       );
-      if (pointerEvent) {
-        popoverEl.style.setProperty(
-          "--popup-animation-origin-x",
-          `${snapToPixel(pointerEvent.clientX + scrollLeft - appliedLeft)}px`,
-        );
-        popoverEl.style.setProperty(
-          "--popup-animation-origin-y",
-          `${snapToPixel(pointerEvent.clientY + scrollTop - top)}px`,
-        );
-      } else {
+      if (!pointerEvent) {
         popoverEl.style.removeProperty("--popup-animation-origin-x");
         popoverEl.style.removeProperty("--popup-animation-origin-y");
+        return;
       }
+      // appliedLeft/top are document-relative (pickPositionRelativeTo/
+      // computeStickToPosition both add the current scroll offset, since the
+      // popover is position: absolute), while clientX/clientY are
+      // viewport-relative — the scroll offset must be added to them too
+      // before diffing, otherwise the computed origin drifts off by the
+      // scroll amount as soon as the page isn't scrolled to the top.
+      const { scrollLeft, scrollTop } = document.documentElement;
+      const boxCenterX = appliedLeft + popoverEl.offsetWidth / 2;
+      const boxCenterY = top + popoverEl.offsetHeight / 2;
+      popoverEl.style.setProperty(
+        "--popup-animation-origin-x",
+        `${snapToPixel(pointerEvent.clientX + scrollLeft - boxCenterX)}px`,
+      );
+      popoverEl.style.setProperty(
+        "--popup-animation-origin-y",
+        `${snapToPixel(pointerEvent.clientY + scrollTop - boxCenterY)}px`,
+      );
     };
 
     if (scrollLock) {
@@ -560,7 +553,12 @@ const computeStickToPosition = (
   anchorPoint,
   spacingPx,
 ) => {
-  const { width, height } = popoverEl.getBoundingClientRect();
+  // offsetWidth/offsetHeight (layout box), not getBoundingClientRect(): the
+  // popover may have an active CSS scale transform mid-animation (e.g.
+  // animation="scale"), which would otherwise report a shrunk size and throw
+  // off the position math (see the matching fix in pickPositionRelativeTo).
+  const width = popoverEl.offsetWidth;
+  const height = popoverEl.offsetHeight;
   const { scrollLeft, scrollTop } = document.documentElement;
 
   let left;

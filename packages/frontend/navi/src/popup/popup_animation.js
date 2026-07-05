@@ -12,21 +12,29 @@
  * showModal()/close()) so this file can key off a single "is currently
  * open/shown" selector without needing to know which one it's styling.
  *
- * Timing/distance/scale are CSS variables (with defaults below) rather than
- * JS constants, so any consumer can override them per-instance from CSS
- * (or via the `animationDuration` prop, wired to --popup-animation-duration
- * through Box's styleCSSVars) without touching this file:
- * `--popup-animation-duration`, `--popup-slide-distance`, `--popup-scale`.
+ * Timing/distance are CSS variables (with defaults below) rather than JS
+ * constants, so any consumer can override them per-instance from CSS (or via
+ * the `animationDuration` prop, wired to --popup-animation-duration through
+ * Box's styleCSSVars) without touching this file: `--popup-animation-duration`,
+ * `--popup-slide-distance`.
  *
- * Four animation kinds:
+ * Three animation kinds:
  * - "fade": opacity only.
- * - "scale": uniform grow from a point (--popup-animation-origin-x/y — the
- *   anchor's center when anchored, the click/pointer position otherwise).
- * - "grow": grows only vertically out of the anchor's edge (transform-origin
- *   "top"/"bottom" from data-position-y-current) — this is what a popover
- *   anchored to a trigger element should use: it *reads* like a slide-down
- *   without anything visually translating, which looks more natural for
- *   dropdown-like content than an actual translation would.
+ * - "clip": reveals via `clip-path` rather than a `scale` transform, so child
+ *   content never visually shrinks/distorts and the box's real layout size
+ *   is never touched — only what's painted changes. Two modes, chosen by
+ *   `data-clip-axis`:
+ *   - default (no `data-clip-axis`, set when Popover has a real anchor
+ *     element): clips vertically only, revealing out of the anchor's edge —
+ *     top when placed below it, bottom when placed above it
+ *     (data-position-y-current, set by pickPositionRelativeTo). *Reads* like
+ *     the popup's height is growing without any translation happening.
+ *   - `data-clip-axis="xy"` (no real anchor — an anchor point like "center",
+ *     or no anchor at all): clips both axes around a point, combined with a
+ *     `translate` from that point to the final resting position
+ *     (--popup-animation-origin-x/y — the click/pointer position when
+ *     available, else the box's own center, in which case the translate is
+ *     a no-op and it just grows in place).
  * - "slide"/"slide-from-*": a real translate-based entrance, sized to the
  *   element's own dimensions (--popup-slide-distance defaults to 100%, i.e.
  *   it travels its own width/height) so it looks like it enters from just
@@ -44,16 +52,11 @@ export const buildPopupAnimationCss = (selector) => {
       ${selector} {
         --popup-animation-duration: 0.18s;
         --popup-slide-distance: 100%;
-        /* Low enough to read as "growing from a point" rather than a subtle
-           zoom — combined with transform-origin, this is what makes the
-           scale/grow animations look like they originate from the
-           anchor/pointer. */
-        --popup-scale: 0.1;
       }
     }
 
     ${selector}[navi-animation] {
-      transition-property: display, overlay, opacity, translate, scale;
+      transition-property: display, overlay, opacity, translate, clip-path;
       transition-duration: var(--popup-animation-duration);
       transition-timing-function: ease;
       transition-behavior: allow-discrete;
@@ -72,47 +75,51 @@ export const buildPopupAnimationCss = (selector) => {
       }
     }
 
-    /* scale — grows from transform-origin, set via
-       --popup-animation-origin-x/y (anchor point when anchored, pointer
-       position when not; defaults to the element's own center) */
-    ${selector}[navi-animation="scale"] {
+    /* clip — vertical-only by default (anchored case): reveals out of the
+       anchor's edge, top when placed below it, bottom when placed above it. */
+    ${selector}[navi-animation="clip"] {
       opacity: 1;
-      transform-origin: var(--popup-animation-origin-x, center)
-        var(--popup-animation-origin-y, center);
-      scale: 1;
+      clip-path: inset(0 0 0 0);
+      translate: 0 0;
     }
-    ${closed}[navi-animation="scale"] {
+    ${closed}[navi-animation="clip"] {
       opacity: 0;
-      scale: var(--popup-scale);
+      clip-path: inset(0 0 100% 0);
+    }
+    ${closed}[navi-animation="clip"][data-position-y-current="above"],
+    ${closed}[navi-animation="clip"][data-position-y-current="above-overlap"] {
+      clip-path: inset(100% 0 0 0);
     }
     @starting-style {
-      ${open}[navi-animation="scale"] {
+      ${open}[navi-animation="clip"] {
         opacity: 0;
-        scale: var(--popup-scale);
+        clip-path: inset(0 0 100% 0);
+      }
+      ${open}[navi-animation="clip"][data-position-y-current="above"],
+      ${open}[navi-animation="clip"][data-position-y-current="above-overlap"] {
+        clip-path: inset(100% 0 0 0);
       }
     }
 
-    /* grow — vertical-only scale out of the anchor's edge: top when the
-       popup is placed below the anchor, bottom when placed above it
-       (data-position-y-current, set by pickPositionRelativeTo). No JS
-       computation needed, unlike "scale". */
-    ${selector}[navi-animation="grow"] {
-      opacity: 1;
-      transform-origin: center top;
-      scale: 1 1;
+    /* clip — both axes (no real anchor): a point-sized rect (the box's own
+       center, in local percentages — no JS measurement needed) growing to
+       fill the box, translated from --popup-animation-origin-x/y (the
+       click/pointer position, expressed as an offset from the box's own
+       center) back to 0 0, so the whole thing glides from the click point to
+       its final resting position while it grows. */
+    ${selector}[navi-animation="clip"][data-clip-axis="xy"] {
+      clip-path: inset(0 0 0 0);
     }
-    ${selector}[navi-animation="grow"][data-position-y-current="above"],
-    ${selector}[navi-animation="grow"][data-position-y-current="above-overlap"] {
-      transform-origin: center bottom;
-    }
-    ${closed}[navi-animation="grow"] {
-      opacity: 0;
-      scale: 1 var(--popup-scale);
+    ${closed}[navi-animation="clip"][data-clip-axis="xy"] {
+      clip-path: inset(50% 50% 50% 50%);
+      translate: var(--popup-animation-origin-x, 0px)
+        var(--popup-animation-origin-y, 0px);
     }
     @starting-style {
-      ${open}[navi-animation="grow"] {
-        opacity: 0;
-        scale: 1 var(--popup-scale);
+      ${open}[navi-animation="clip"][data-clip-axis="xy"] {
+        clip-path: inset(50% 50% 50% 50%);
+        translate: var(--popup-animation-origin-x, 0px)
+          var(--popup-animation-origin-y, 0px);
       }
     }
 

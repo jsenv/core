@@ -582,22 +582,22 @@ export const pickPositionRelativeTo = (
   // document-relative position: absolute, not position: fixed.
   const anchorIsViewport = anchor === document.documentElement;
   // Get viewport-relative positions
-  const elementRect = element.getBoundingClientRect();
   const anchorRect = anchorIsViewport
     ? { left: 0, top: 0, right: viewportWidth, bottom: viewportHeight }
     : anchor.getBoundingClientRect();
-  const {
-    left: elementLeft,
-    right: elementRight,
-    top: elementTop,
-    bottom: elementBottom,
-  } = elementRect;
   const anchorLeft = snapToPixel(anchorRect.left);
   const anchorTop = snapToPixel(anchorRect.top);
   const anchorRight = snapToPixel(anchorRect.right);
   const anchorBottom = snapToPixel(anchorRect.bottom);
-  const elementWidth = elementRight - elementLeft;
-  const elementHeight = elementBottom - elementTop;
+  // offsetWidth/offsetHeight (layout box), not getBoundingClientRect() (the
+  // painted/transformed box): the element being positioned may have an
+  // active CSS `scale`/`translate` transform mid-animation (e.g. a popover
+  // using animation="scale"/"grow", still at its @starting-style value the
+  // instant it's first shown) — getBoundingClientRect() would then report
+  // its *shrunk* transformed size, throwing off any math that centers/fits
+  // against the element's own dimensions.
+  const elementWidth = element.offsetWidth;
+  const elementHeight = element.offsetHeight;
   const anchorWidth = anchorRight - anchorLeft;
   const anchorHeight = anchorBottom - anchorTop;
 
