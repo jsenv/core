@@ -45,7 +45,10 @@
         padding: 12px 16px;
         background: white;
         border: 1px solid #d0d0d0;
-        border-radius: 8px;
+        /* Set --popup-border-radius (not border-radius directly): Popover
+           reads it back for its own border-radius, and "clip" animations
+           round their clip-path to match it — see popup_animation.js. */
+        --popup-border-radius: 8px;
         box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
       }
       /* pushes the "flips to above" anchors near the bottom of the viewport
@@ -412,14 +415,14 @@
       // anchor="top"/"top-left"/"relative-right"/etc pins the popover to an
       // anchor point of the viewport (or of stickToContainerRef, when the
       // "relative-" prefix is used) instead of positioning relative to a
-      // real element. animation defaults to "auto", which resolves to
-      // "slide" whenever anchor is one of these anchor point values.
+      // real element. No animation by default — that's what the animation
+      // section further down is for.
       const AnchorPointPopover = ({
         label,
         anchor,
         stickToContainerRef,
         spacing,
-        animation = "auto",
+        animation,
         animationDuration,
         fadeAnimation,
       }) => {

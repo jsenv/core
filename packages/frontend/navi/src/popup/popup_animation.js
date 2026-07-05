@@ -16,7 +16,13 @@
  * constants, so any consumer can override them per-instance from CSS (or via
  * the `animationDuration` prop, wired to --popup-animation-duration through
  * Box's styleCSSVars) without touching this file: `--popup-animation-duration`,
- * `--popup-slide-distance`.
+ * `--popup-slide-distance`, `--popup-border-radius`.
+ *
+ * `--popup-border-radius` rounds the `clip-path: inset(... round <radius>)`
+ * shapes used by "clip" (see below) to match the popup's own border-radius —
+ * set it instead of `border-radius` directly on your popup so the two never
+ * drift out of sync (Popover's own base CSS reads it back for its actual
+ * `border-radius`, see popover.jsx).
  *
  * Fading is a separate, independent concern from `animation` — see
  * `[navi-fade-animation]` below, driven by the `fadeAnimation` prop. It
@@ -55,6 +61,7 @@ export const buildPopupAnimationCss = (selector) => {
       ${selector} {
         --popup-animation-duration: 0.18s;
         --popup-slide-distance: 100%;
+        --popup-border-radius: 0;
       }
     }
 
@@ -83,23 +90,23 @@ export const buildPopupAnimationCss = (selector) => {
     /* clip — vertical-only by default (anchored case): reveals out of the
        anchor's edge, top when placed below it, bottom when placed above it. */
     ${selector}[navi-animation="clip"] {
-      clip-path: inset(0 0 0 0);
+      clip-path: inset(0 0 0 0 round var(--popup-border-radius, 0));
       translate: 0 0;
     }
     ${closed}[navi-animation="clip"] {
-      clip-path: inset(0 0 100% 0);
+      clip-path: inset(0 0 100% 0 round var(--popup-border-radius, 0));
     }
     ${closed}[navi-animation="clip"][data-position-y-current="above"],
     ${closed}[navi-animation="clip"][data-position-y-current="above-overlap"] {
-      clip-path: inset(100% 0 0 0);
+      clip-path: inset(100% 0 0 0 round var(--popup-border-radius, 0));
     }
     @starting-style {
       ${open}[navi-animation="clip"] {
-        clip-path: inset(0 0 100% 0);
+        clip-path: inset(0 0 100% 0 round var(--popup-border-radius, 0));
       }
       ${open}[navi-animation="clip"][data-position-y-current="above"],
       ${open}[navi-animation="clip"][data-position-y-current="above-overlap"] {
-        clip-path: inset(100% 0 0 0);
+        clip-path: inset(100% 0 0 0 round var(--popup-border-radius, 0));
       }
     }
 
@@ -110,16 +117,16 @@ export const buildPopupAnimationCss = (selector) => {
        center) back to 0 0, so the whole thing glides from the click point to
        its final resting position while it grows. */
     ${selector}[navi-animation="clip"][data-clip-axis="xy"] {
-      clip-path: inset(0 0 0 0);
+      clip-path: inset(0 0 0 0 round var(--popup-border-radius, 0));
     }
     ${closed}[navi-animation="clip"][data-clip-axis="xy"] {
-      clip-path: inset(50% 50% 50% 50%);
+      clip-path: inset(50% 50% 50% 50% round var(--popup-border-radius, 0));
       translate: var(--popup-animation-origin-x, 0px)
         var(--popup-animation-origin-y, 0px);
     }
     @starting-style {
       ${open}[navi-animation="clip"][data-clip-axis="xy"] {
-        clip-path: inset(50% 50% 50% 50%);
+        clip-path: inset(50% 50% 50% 50% round var(--popup-border-radius, 0));
         translate: var(--popup-animation-origin-x, 0px)
           var(--popup-animation-origin-y, 0px);
       }

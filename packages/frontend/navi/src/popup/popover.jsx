@@ -27,6 +27,10 @@ const css = /* css */ `
   .navi_popover {
     position: absolute;
     inset: unset;
+    /* Set --popup-border-radius instead of border-radius directly: it's
+       also what the "clip" animation rounds its clip-path shape to (see
+       popup_animation.js), so the two can never drift out of sync. */
+    border-radius: var(--popup-border-radius, 0);
 
     &[data-anchor-out-of-view] {
       opacity: 0;
@@ -145,9 +149,6 @@ const ControlledPopover = (props) => {
     }
     const [cleanup, addCleanup] = createPubSub(true);
     const focusedBeforeOpen = getFocusedBeforeTransfer(e);
-    popoverEl.showPopover();
-    popoverEl.setAttribute("aria-expanded", "true");
-    transferFocus(popoverEl, debugFocus, e, focusedBeforeOpen);
     // anchor="ignore" forces the popover to behave as anchorless even when
     // the request carries one (e.g. a --navi-toggle button that should not
     // double as the visual anchor). anchor="top"/"top-left"/"center"/etc
@@ -191,6 +192,14 @@ const ControlledPopover = (props) => {
         ? "slide"
         : "clip"
       : animation;
+    // These must be set *before* showPopover()/aria-expanded below: the
+    // element is about to go from not-rendered to rendered (that's what
+    // makes @starting-style apply at all), and the "before" state it
+    // captures is whatever these attributes say at that exact moment. Set
+    // them after instead, and the first open silently skips the animation
+    // (the browser already treated it as "no navi-animation" at first
+    // paint) — only later opens/closes, once the attributes persist
+    // between renders, actually animate.
     popoverEl.setAttribute("navi-animation", resolvedAnimation);
     // "clip" reveals vertically only by default (grows out of the anchor's
     // edge), which only makes sense against a real anchor element. Without
@@ -211,6 +220,10 @@ const ControlledPopover = (props) => {
       "data-anchor",
       resolveAnchorAttrValue(popoverEl, anchor, anchorPoint),
     );
+
+    popoverEl.showPopover();
+    popoverEl.setAttribute("aria-expanded", "true");
+    transferFocus(popoverEl, debugFocus, e, focusedBeforeOpen);
 
     debugPopup(
       e,
@@ -353,7 +366,15 @@ const ControlledPopover = (props) => {
     const rectEffect = visibleRectEffect(
       effectiveAnchor,
       ({ visibilityRatio }, { event }) => {
-        if (visibilityRatio <= 0.2) {
+        // Only a real anchor element can meaningfully scroll "out of view" —
+        // document.documentElement (used for anchorless/anchor-point popups)
+        // is a huge, mostly-off-screen box on any tall page, so its own
+        // visibilityRatio is often well under the 0.2 threshold even though
+        // there's nothing actually hidden. Applying this gate there would
+        // skip positionPopover() on scroll (stale top/left/origin — wrong
+        // place on close, wrong transform origin on the next open) and even
+        // on the very first synchronous check right after opening.
+        if (anchor && visibilityRatio <= 0.2) {
           popoverEl.setAttribute("data-anchor-out-of-view", "");
           return;
         }
