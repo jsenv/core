@@ -28,6 +28,13 @@
  * `[navi-fade-animation]` below, driven by the `fadeAnimation` prop. It
  * combines with any `animation` kind (or with none at all, for a plain fade).
  *
+ * Whenever either `animation` or `fadeAnimation` is active, `box-shadow` is
+ * also transitioned to/from `none` (open/closed, and its own
+ * `@starting-style`) — the consumer's own box-shadow (e.g. Popover's
+ * `demo_popover_box` class) only takes effect once fully open, so the shadow
+ * fades in/out along with the rest instead of looking flat while the popup is
+ * still moving/clipping.
+ *
  * Two `animation` kinds:
  * - "clip": reveals via `clip-path` rather than a `scale` transform, so child
  *   content never visually shrinks/distorts and the box's real layout size
@@ -67,7 +74,8 @@ export const buildPopupAnimationCss = (selector) => {
 
     ${selector}[navi-animation],
     ${selector}[navi-fade-animation] {
-      transition-property: display, overlay, opacity, translate, clip-path;
+      transition-property:
+        display, overlay, opacity, translate, clip-path, box-shadow;
       transition-duration: var(--popup-animation-duration);
       transition-timing-function: ease;
       transition-behavior: allow-discrete;
@@ -84,6 +92,19 @@ export const buildPopupAnimationCss = (selector) => {
     @starting-style {
       ${open}[navi-fade-animation] {
         opacity: 0;
+      }
+    }
+
+    /* box-shadow fades in/out alongside any animation kind, instead of
+       staying flat while the popup is still moving/clipping. */
+    ${closed}[navi-animation],
+    ${closed}[navi-fade-animation] {
+      box-shadow: none;
+    }
+    @starting-style {
+      ${open}[navi-animation],
+      ${open}[navi-fade-animation] {
+        box-shadow: none;
       }
     }
 

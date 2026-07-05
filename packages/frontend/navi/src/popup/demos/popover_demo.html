@@ -62,6 +62,10 @@
         border: 1px dotted #999;
         border-radius: 8px;
       }
+      .demo-container-label {
+        color: #999;
+        font-size: 12px;
+      }
       .demo-point-grid {
         display: grid;
         width: fit-content;
@@ -92,7 +96,7 @@
     <div id="root"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useId, useRef, useState, useEffect } from "preact/hooks";
+      import { useId, useState, useEffect } from "preact/hooks";
       import { Button, Popover, NaviDebug } from "@jsenv/navi";
 
       const POINTS = [
@@ -182,7 +186,9 @@
               </ol>
             </li>
             <li>
-              <a href="#anchor-point-relative">Anchor as a relative point</a>
+              <a href="#anchor-point-relative">
+                Anchor relative to nearest positioned ancestor
+              </a>
             </li>
             <li>
               <a href="#anchor-ignore">Ignoring the anchor</a>
@@ -387,56 +393,81 @@
         </section>
       );
 
-      // stickToContainerRef only needs *a* container element for its
-      // getBoundingClientRect() math — it doesn't have to be a DOM ancestor
-      // of the trigger button. We still render the triggers inside it here
-      // because that's the clearer demo, not because it's required (a
-      // container-as-CSS-selector option, so a popover could reference any
-      // container without needing a ref threaded down to it, is a possible
-      // future addition — not needed yet).
-      const AnchorPointRelativeSection = ({ animatedDuration }) => {
-        const containerRef = useRef(null);
-        const animatedContainerRef = useRef(null);
-        return (
-          <section id="anchor-point-relative" class="demo-section">
-            <h2>4. Anchor as a relative point</h2>
-            <p>
-              <code>anchor="relative-&lt;point&gt;"</code> — same as above, but
-              relative to a container (<code>stickToContainerRef</code>) instead
-              of the viewport.
-            </p>
-            <div class="demo-container" ref={containerRef}>
-              <PointGrid
-                renderCell={(point) => (
-                  <AnchorPointPopover
-                    label={point}
-                    anchor={`relative-${point}`}
-                    stickToContainerRef={containerRef}
-                    spacing={16}
-                  />
-                )}
-              />
-            </div>
+      // anchorRelativeTo="offsetParent" positions the popover relative to
+      // its own nearest positioned ancestor instead of the viewport — the
+      // popover must be rendered inside that ancestor to find it (that's
+      // .demo-container below, which has position: relative), but the
+      // trigger button doesn't have to be (a possible future addition would
+      // let a container be referenced by CSS selector instead, so a popover
+      // could target one without being a DOM descendant of it — not needed
+      // yet since offsetParent already covers today's case).
+      const AnchorPointRelativeSection = ({ animatedDuration }) => (
+        <section id="anchor-point-relative" class="demo-section">
+          <h2>4. Anchor relative to nearest positioned ancestor</h2>
+          <p>
+            <code>anchorRelativeTo="offsetParent"</code> — positions the popover
+            relative to its nearest positioned ancestor (the dotted box below)
+            instead of the viewport. Click-outside-to-close is disabled in this
+            section (<code>pointerLock</code>) since the container is small and
+            easy to click past.
+          </p>
+          <AnchorPointRelativeDemo spacing={16} />
 
-            <div class="demo-subsection">
-              <h3>Animated</h3>
-              <div class="demo-container" ref={animatedContainerRef}>
-                <PointGrid
-                  renderCell={(point) => (
-                    <AnchorPointPopover
-                      label={point}
-                      anchor={`relative-${point}`}
-                      stickToContainerRef={animatedContainerRef}
-                      spacing={16}
-                      pointerLock
-                      animation
-                      animationDuration={animatedDuration}
-                    />
-                  )}
-                />
-              </div>
+          <div class="demo-subsection">
+            <h3>Animated</h3>
+            <AnchorPointRelativeDemo
+              spacing={16}
+              animation
+              animationDuration={animatedDuration}
+            />
+          </div>
+        </section>
+      );
+
+      // Buttons live outside .demo-container (they don't need an
+      // offsetParent); the popovers they control live inside it, one per
+      // point, invisible until opened.
+      const AnchorPointRelativeDemo = ({
+        spacing,
+        animation,
+        animationDuration,
+      }) => {
+        const baseId = useId();
+        return (
+          <>
+            <PointGrid
+              renderCell={(point) => (
+                <Button
+                  command="--navi-toggle"
+                  commandFor={`${baseId}-${point}`}
+                  className="demo-point-button"
+                  style={pointAlignStyle(point)}
+                >
+                  {point}
+                </Button>
+              )}
+            />
+            <div class="demo-container">
+              <span class="demo-container-label">container</span>
+              {POINTS.map((point) => (
+                <Popover
+                  key={point}
+                  id={`${baseId}-${point}`}
+                  animation={animation}
+                  animationDuration={animationDuration}
+                  borderRadius="8px"
+                  anchor={point}
+                  anchorRelativeTo="offsetParent"
+                  spacing={spacing}
+                  pointerLock
+                  className="demo_popover_box"
+                >
+                  <p style={{ marginTop: 0 }}>{point}</p>
+                  <Button command="--navi-close">Close</Button>
+                </Popover>
+              ))}
             </div>
-          </section>
+          </>
         );
       };
 
@@ -579,18 +610,15 @@
         );
       };
 
-      // anchor="top"/"top-left"/"relative-right"/etc pins the popover to an
-      // anchor point of the viewport (or of stickToContainerRef, when the
-      // "relative-" prefix is used) instead of positioning relative to a
-      // real element. No animation by default.
+      // anchor="top"/"top-left"/etc pins the popover to an anchor point of
+      // the viewport instead of positioning relative to a real element. No
+      // animation by default.
       const AnchorPointPopover = ({
         label,
         anchor,
-        stickToContainerRef,
         spacing,
         animation,
         animationDuration,
-        pointerLock,
       }) => {
         const popoverId = useId();
 
@@ -610,9 +638,7 @@
               animationDuration={animationDuration}
               borderRadius="8px"
               anchor={anchor}
-              stickToContainerRef={stickToContainerRef}
               spacing={spacing}
-              pointerLock={pointerLock}
               className="demo_popover_box"
             >
               <p style={{ marginTop: 0 }}>{label}</p>

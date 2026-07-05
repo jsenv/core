@@ -92,7 +92,7 @@ const ControlledPopover = (props) => {
   const {
     openController,
     anchor: anchorProp,
-    stickToContainerRef,
+    anchorRelativeTo = "viewport",
     scrollLock,
     pointerLock,
     focusTrap,
@@ -146,25 +146,20 @@ const ControlledPopover = (props) => {
     const [cleanup, addCleanup] = createPubSub(true);
     // anchor="ignore" forces the popover to behave as anchorless even when
     // the request carries one (e.g. a --navi-toggle button that should not
-    // double as the visual anchor). anchor="top"/"top-left"/"center"/etc
-    // (optionally "relative-" prefixed, see below) pins the popover to that
-    // anchor point instead of a real element. Otherwise a ref/DOM element
-    // wins; then the anchor carried by the request (e.g. the button that
-    // triggered a --navi-toggle/--navi-open command, forwarded as
-    // detail.source).
+    // double as the visual anchor). anchor="top"/"top-left"/"center"/etc pins
+    // the popover to that point instead of a real element — relative to the
+    // viewport by default, or to the popover's own nearest positioned
+    // ancestor when anchorRelativeTo="offsetParent" (see below). Otherwise a
+    // ref/DOM element wins; then the anchor carried by the request (e.g. the
+    // button that triggered a --navi-toggle/--navi-open command, forwarded
+    // as detail.source).
     let anchor;
     let anchorPoint; // e.g. "top-right" — set when anchorProp is one of ANCHOR_POINT_VALUES
-    let anchorPointIsRelative = false; // anchorPoint was "relative-<point>"
     if (anchorProp === "ignore") {
       // anchorless, centered — nothing to resolve
     } else if (typeof anchorProp === "string") {
-      const isRelative = anchorProp.startsWith("relative-");
-      const point = isRelative
-        ? anchorProp.slice("relative-".length)
-        : anchorProp;
-      if (ANCHOR_POINT_VALUES.has(point)) {
-        anchorPoint = point;
-        anchorPointIsRelative = isRelative;
+      if (ANCHOR_POINT_VALUES.has(anchorProp)) {
+        anchorPoint = anchorProp;
       } else {
         console.warn(`Popover: unknown anchor="${anchorProp}"`);
       }
@@ -174,14 +169,20 @@ const ControlledPopover = (props) => {
     } else if (e.detail.anchor) {
       anchor = e.detail.anchor;
     }
-    const stickToContainer = anchorPointIsRelative
-      ? (stickToContainerRef?.current ?? null)
-      : null;
+    // offsetParent is the popover's own nearest positioned ancestor — for
+    // this to resolve to anything other than null, the popover must be
+    // rendered inside that ancestor in the DOM (the trigger button doesn't
+    // have to be). Only meaningful for an anchor point: a real anchor element
+    // already carries its own position.
+    const relativeContainer =
+      anchorPoint && anchorRelativeTo === "offsetParent"
+        ? popoverEl.offsetParent
+        : null;
     // What we observe for repositioning on resize/scroll/visibility changes:
-    // the anchor when anchored, otherwise the stickTo container (or the
+    // the anchor when anchored, otherwise the relative container (or the
     // whole document when the anchor point is viewport-relative).
     const effectiveAnchor =
-      anchor || stickToContainer || document.documentElement;
+      anchor || relativeContainer || document.documentElement;
     const resolvedAnimation = isAutoAnimation
       ? anchorPoint && anchorPoint !== "center"
         ? "slide"
@@ -225,16 +226,31 @@ const ControlledPopover = (props) => {
     // open can take a couple of open/close cycles to actually take effect
     // (the clip animation reads data-position-y-current too, so it lags in
     // sync). Clearing them here makes every open decide the side from
-    // scratch, matching the current scroll/viewport state right away.
-    popoverEl.removeAttribute("data-position-y-current");
-    popoverEl.removeAttribute("data-position-x-current");
+    // scratch, matching the current scroll/viewport state right away — except
+    // when Fixed, in which case the final side is already known synchronously
+    // (no measurement needed) and must be set right here, same as
+    // navi-animation/data-anchor above: it's read by the "clip" animation's
+    // @starting-style rules, which snapshot whatever this attribute says the
+    // moment the box starts rendering. Waiting for pickPositionRelativeTo to
+    // set it (it only runs once the popover already has a layout box, after
+    // showPopover()) is too late for that first snapshot.
+    if (positionYFixed) {
+      popoverEl.setAttribute("data-position-y-current", positionYFixed);
+    } else {
+      popoverEl.removeAttribute("data-position-y-current");
+    }
+    if (positionXFixed) {
+      popoverEl.setAttribute("data-position-x-current", positionXFixed);
+    } else {
+      popoverEl.removeAttribute("data-position-x-current");
+    }
 
     popoverEl.showPopover();
     popoverEl.setAttribute("aria-expanded", "true");
     const restoreFocus = openController.transferFocusOnOpen(popoverEl);
     debugPopup(
       e,
-      `openPopover() -> anchor: ${anchor?.tagName}, anchorPoint: ${anchorPoint}, stickToContainer: ${stickToContainer?.tagName}`,
+      `openPopover() -> anchor: ${anchor?.tagName}, anchorPoint: ${anchorPoint}, relativeContainer: ${relativeContainer?.tagName}`,
     );
 
     const positionPopover = (positionEvent) => {
@@ -242,8 +258,8 @@ const ControlledPopover = (props) => {
       let top;
 
       if (anchorPoint) {
-        const containerRect = stickToContainer
-          ? stickToContainer.getBoundingClientRect()
+        const containerRect = relativeContainer
+          ? relativeContainer.getBoundingClientRect()
           : {
               left: 0,
               top: 0,
@@ -535,8 +551,8 @@ const resolveAnchorAttrValue = (popoverEl, anchor, anchorPoint) => {
 
 // Values the `anchor` prop accepts besides a ref/DOM element, "ignore", or
 // undefined — pins the popover to that point instead of a real element.
-// Optionally "relative-" prefixed (e.g. "relative-right") to make it relative
-// to `stickToContainerRef` instead of the viewport.
+// Relative to the viewport by default, or to the popover's own nearest
+// positioned ancestor when anchorRelativeTo="offsetParent".
 const ANCHOR_POINT_VALUES = new Set([
   "top",
   "top-right",
@@ -551,10 +567,11 @@ const ANCHOR_POINT_VALUES = new Set([
 
 /**
  * Places the popover pinned to an anchor point of `containerRect` (the
- * viewport by default, or a `stickToContainerRef` element) instead of
- * relative to an anchor. Returns document-relative { left, top }, matching
- * pickPositionRelativeTo's convention (viewport rect math + current scroll,
- * continuously recomputed by visibleRectEffect on scroll/resize).
+ * viewport by default, or the popover's own offsetParent when
+ * anchorRelativeTo="offsetParent") instead of relative to an anchor. Returns
+ * document-relative { left, top }, matching pickPositionRelativeTo's
+ * convention (viewport rect math + current scroll, continuously recomputed
+ * by visibleRectEffect on scroll/resize).
  */
 const computeStickToPosition = (
   popoverEl,
