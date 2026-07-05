@@ -5,7 +5,7 @@ import {
   snapToPixel,
   trapScrollInside,
 } from "@jsenv/dom";
-import { useRef } from "preact/hooks";
+import { useLayoutEffect, useRef } from "preact/hooks";
 
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import { Box } from "../box/box.jsx";
@@ -15,6 +15,7 @@ import {
   markAutofocusRestoreOnClose,
   transferFocus,
 } from "../utils/focus/focus_transfer.js";
+import { useOpenController } from "./open_controller.js";
 import { buildPopupAnimationCss } from "./popup_animation.js";
 
 const css = /* css */ `
@@ -37,7 +38,6 @@ const css = /* css */ `
 
   ${buildPopupAnimationCss(
     ".navi_dialog",
-    "[open]",
   )}/* Dialogs aren't anchored the same way popovers are (they're centered in
      the viewport) — scale animates from the dialog's own center, not an
      anchor's, so no --navi-animation-origin-x/y wiring is needed here. */
@@ -46,8 +46,9 @@ const css = /* css */ `
 export const Dialog = (props) => {
   import.meta.css = css;
   const {
-    openController,
+    openController: openControllerProp,
     anchorRef,
+    open,
     children,
     scrollTrap,
     pointerTrap,
@@ -61,6 +62,39 @@ export const Dialog = (props) => {
   const debugFocus = useDebugFocus();
   const autoFocusProps = useAutoFocus(ref, props.autoFocus);
 
+  // No openController passed: this Dialog is used declaratively (e.g. driven
+  // by --navi-toggle/--navi-open/--navi-close commands, or by the `open`
+  // prop) rather than owned by a parent component (picker_custom.jsx) that
+  // manages its own controller.
+  const defaultOpenController = useOpenController(() => undefined);
+  const openController = openControllerProp || defaultOpenController;
+  const isDefaultController = !openControllerProp;
+
+  useLayoutEffect(() => {
+    if (!isDefaultController || open === undefined) {
+      return;
+    }
+    if (open === openController.opened) {
+      return;
+    }
+    if (open) {
+      openController.open(new CustomEvent("open_by_prop", { detail: {} }));
+    } else {
+      openController.requestClose(
+        new CustomEvent("close_by_prop", { detail: {} }),
+        { isCancel: true },
+      );
+    }
+  }, [open, isDefaultController]);
+
+  // aria-expanded lives on the dialog element itself (not driven through
+  // Preact's vdom — openEffect/its cleanup toggle it imperatively in sync
+  // with showModal()/close(), see below) so popup_animation.js can key its
+  // CSS off a single selector regardless of Popover vs Dialog.
+  useLayoutEffect(() => {
+    ref.current?.setAttribute("aria-expanded", "false");
+  }, []);
+
   // Sync the DOM open and return how to sync it back closed, fresh on every
   // render so it closes over the latest props (scrollTrap, etc.). The
   // controller (owned by picker_custom.jsx) decides *when* this runs.
@@ -72,7 +106,11 @@ export const Dialog = (props) => {
       return undefined;
     }
     const [cleanup, addCleanup] = createPubSub(true);
-    const anchor = anchorRef?.current ?? null;
+    // anchorRef (set by the parent component) wins; otherwise fall back to
+    // the anchor carried by the request (e.g. the button that triggered a
+    // --navi-toggle/--navi-open command, forwarded as detail.source).
+    const anchor =
+      anchorRef?.current ?? e.detail?.anchor ?? e.detail?.source ?? null;
     const effectiveAnchor = anchor || document.documentElement;
     debugPopup(`"${e.type}" on ${getElementSignature(e.target)} -> openDialog`);
     const { width, height } = effectiveAnchor.getBoundingClientRect();
@@ -80,6 +118,7 @@ export const Dialog = (props) => {
     dialogEl.style.setProperty("--anchor-height", `${snapToPixel(height)}px`);
     const focusedBeforeOpen = getFocusedBeforeTransfer(e);
     dialogEl.showModal();
+    dialogEl.setAttribute("aria-expanded", "true");
     transferFocus(dialogEl, debugFocus, e, focusedBeforeOpen);
     if (scrollTrap) {
       addCleanup(trapScrollInside(dialogEl));
@@ -135,6 +174,7 @@ export const Dialog = (props) => {
         `"${e.type}" on ${getElementSignature(e.target)} -> closeDialog`,
       );
       markAutofocusRestoreOnClose(dialogEl);
+      dialogEl.setAttribute("aria-expanded", "false");
       dialogEl.close();
       cleanup();
     };
@@ -142,6 +182,20 @@ export const Dialog = (props) => {
 
   return (
     <Box
+      {...(isDefaultController
+        ? {
+            onnavi_request_open: (e) => {
+              openController.open(e, {
+                anchor: e.detail?.anchor ?? e.detail?.source,
+              });
+            },
+            onnavi_request_close: (e) => {
+              openController.requestClose(e, {
+                isCancel: e.detail?.isCancel,
+              });
+            },
+          }
+        : null)}
       {...rest}
       {...autoFocusProps}
       as="dialog"

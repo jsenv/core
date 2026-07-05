@@ -1,8 +1,8 @@
-import { chainEvent, findEvent } from "@jsenv/dom";
 import { useLayoutEffect, useRef, useState } from "preact/hooks";
 
 import { useKeyboardShortcuts } from "../keyboard/keyboard_shortcuts.js";
 import { useStableCallback } from "../utils/use_stable_callback.js";
+import { useOpenController } from "./open_controller.js";
 import { Popover } from "./popover.jsx";
 
 const css = /* css */ `
@@ -188,7 +188,6 @@ export const SidePanel = ({
       pointerTrap={!closeOnClickOutside}
       focusTrap={closeOnClickOutside}
       autoFocus="fallback"
-      aria-expanded={phase !== "closed" ? "true" : "false"}
       data-opening={phase === "opening" ? "" : undefined}
       data-close-on-click-outside={closeOnClickOutside ? "" : undefined}
       onnavi_request_close={(e) => {
@@ -217,89 +216,4 @@ export const SidePanel = ({
       </div>
     </Popover>
   );
-};
-
-// Duplicated from picker_custom.jsx's useOpenController/createOpenController.
-// Owns open/close lifecycle for a Popover-backed popup: guards against
-// duplicate requests, runs Popover's openEffect (showPopover, focus
-// transfer, traps, positioning) and the side panel's own onClose reaction
-// (focus restore) in the right order.
-const useOpenController = (openHandler) => {
-  const stableOpenHandler = useStableCallback(openHandler);
-  const controllerRef = useRef(null);
-  if (!controllerRef.current) {
-    controllerRef.current = createOpenController(stableOpenHandler);
-  }
-  useLayoutEffect(() => {
-    return () => {
-      controllerRef.current.close();
-    };
-  }, []);
-  return controllerRef.current;
-};
-
-const createOpenController = (openHandler) => {
-  let closeHandlers = null;
-  let openEffectCleanup = null;
-  const performClose = (closeEvent) => {
-    controller.opened = false;
-    // Sync the DOM closed first (releasing the focus trap) — only then run
-    // the side panel's own reaction (onClose may restore focus to an element
-    // outside the popup, which the focus trap would otherwise fight while
-    // still active).
-    openEffectCleanup?.(closeEvent);
-    openEffectCleanup = null;
-    closeHandlers?.onClose?.(closeEvent);
-    closeHandlers = null;
-  };
-  const controller = {
-    opened: false,
-    openEffect: null,
-    open: (e, detail) => {
-      if (controller.opened || !controller.openEffect) {
-        return;
-      }
-      const requestOpenEvent = new CustomEvent("navi_request_open", {
-        detail: { event: e, ...detail },
-        cancelable: true,
-      });
-      chainEvent(requestOpenEvent, e);
-      controller.opened = true;
-      openEffectCleanup = controller.openEffect(requestOpenEvent) || null;
-      closeHandlers = openHandler(requestOpenEvent) || null;
-    },
-    requestClose: (
-      e = new CustomEvent("programmatic", { detail: {} }),
-      detail,
-    ) => {
-      if (!controller.opened) {
-        return;
-      }
-      const requestCloseEvent = new CustomEvent("navi_request_close", {
-        detail: { event: e, ...detail },
-        cancelable: true,
-      });
-      chainEvent(requestCloseEvent, e);
-      closeHandlers?.onRequestClose?.(requestCloseEvent);
-      if (requestCloseEvent.defaultPrevented) {
-        const nativeCancelEvent = findEvent(requestCloseEvent, "cancel");
-        if (nativeCancelEvent) {
-          nativeCancelEvent.preventDefault();
-        }
-        return;
-      }
-      performClose(requestCloseEvent);
-    },
-    close: (e = new CustomEvent("programmatic", { detail: {} }), detail) => {
-      if (!controller.opened) {
-        return;
-      }
-      const closeEvent = new CustomEvent("navi_close", {
-        detail: { event: e, ...detail },
-      });
-      chainEvent(closeEvent, e);
-      performClose(closeEvent);
-    },
-  };
-  return controller;
 };

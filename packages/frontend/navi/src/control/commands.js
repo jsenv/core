@@ -321,6 +321,24 @@ registerNaviCommand("--navi-open", (source, event) => {
     },
   };
 });
+registerNaviCommand("--navi-toggle", (source, event) => {
+  const target =
+    resolveExplicitTarget(source) || resolveClosestExpandable(source);
+  if (!target) {
+    return undefined;
+  }
+  return {
+    target,
+    implementation: () => {
+      const isExpanded = target.getAttribute("aria-expanded") === "true";
+      return dispatchCustomEvent(
+        target,
+        isExpanded ? "navi_request_close" : "navi_request_open",
+        { event, source },
+      );
+    },
+  };
+});
 registerNaviCommand("--navi-close", (source, event) => {
   const target =
     resolveExplicitTarget(source) || resolveClosestExpandable(source);

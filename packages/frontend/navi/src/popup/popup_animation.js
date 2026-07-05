@@ -7,15 +7,18 @@
  * needed, `showPopover()`/`hidePopover()` (or `showModal()`/`close()`) can
  * stay perfectly synchronous.
  *
- * `openSelector` is the CSS fragment meaning "is currently open/shown":
- * `:popover-open` for Popover, `[open]` for Dialog.
+ * Both Popover and Dialog set `aria-expanded="true"`/`"false"` on themselves
+ * (imperatively, in sync with showPopover()/hidePopover() or
+ * showModal()/close()) so this file can key off a single "is currently
+ * open/shown" selector without needing to know which one it's styling.
  */
 
 const DURATION = "0.18s";
 const SLIDE_DISTANCE = "10px";
 const SCALE_FROM = 0.92;
 
-export const buildPopupAnimationCss = (selector, openSelector) => {
+export const buildPopupAnimationCss = (selector) => {
+  const openSelector = `[aria-expanded="true"]`;
   const open = `${selector}${openSelector}`;
   const closed = `${selector}:not(${openSelector})`;
   return /* css */ `
