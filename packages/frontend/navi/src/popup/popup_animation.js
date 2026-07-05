@@ -44,12 +44,13 @@ export const buildPopupAnimationCss = (selector) => {
       }
     }
 
-    /* scale — grows from transform-origin (anchor center for Popover, set via
-       --navi-animation-origin-x/y; defaults to the element's own center) */
+    /* scale — grows from transform-origin, set via
+       --popup-animation-origin-x/y (anchor point when anchored, pointer
+       position when not; defaults to the element's own center) */
     ${selector}[navi-animation="scale"] {
       opacity: 1;
-      transform-origin: var(--navi-animation-origin-x, center)
-        var(--navi-animation-origin-y, center);
+      transform-origin: var(--popup-animation-origin-x, center)
+        var(--popup-animation-origin-y, center);
       scale: 1;
     }
     ${closed}[navi-animation="scale"] {

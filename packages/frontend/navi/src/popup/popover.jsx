@@ -1,5 +1,6 @@
 import {
   createPubSub,
+  findEvent,
   getBorderSizes,
   pickPositionRelativeTo,
   snapToPixel,
@@ -46,12 +47,66 @@ const css = /* css */ `
   ${buildPopupAnimationCss(".navi_popover")}
 `;
 
+/**
+ * Entry point: picks between an internally-managed open controller
+ * (UncontrolledPopover) and one owned by the caller (ControlledPopover, used
+ * by picker_custom.jsx/side_panel.jsx) so we don't instantiate a default
+ * controller when it would just be thrown away.
+ */
 export const Popover = (props) => {
   import.meta.css = css;
+  if (props.openController) {
+    return <ControlledPopover {...props} />;
+  }
+  return <UncontrolledPopover {...props} />;
+};
+
+// No openController passed: this Popover is used declaratively (e.g. driven
+// by --navi-toggle/--navi-open/--navi-close commands, or by the `open` prop)
+// rather than owned by a parent component.
+const UncontrolledPopover = (props) => {
+  const { open, ...rest } = props;
+  const openController = useOpenController(() => undefined);
+
+  useLayoutEffect(() => {
+    if (open === undefined) {
+      return;
+    }
+    if (open === openController.opened) {
+      return;
+    }
+    if (open) {
+      openController.open(new CustomEvent("open_by_prop", { detail: {} }));
+    } else {
+      openController.requestClose(
+        new CustomEvent("close_by_prop", { detail: {} }),
+        { isCancel: true },
+      );
+    }
+  }, [open]);
+
+  return (
+    <ControlledPopover
+      {...rest}
+      openController={openController}
+      onnavi_request_open={(e) => {
+        openController.open(e, {
+          anchor: e.detail?.anchor ?? e.detail?.source,
+        });
+      }}
+      onnavi_request_close={(e) => {
+        openController.requestClose(e, { isCancel: e.detail?.isCancel });
+      }}
+    />
+  );
+};
+
+const ControlledPopover = (props) => {
   const {
-    openController: openControllerProp,
+    openController,
     anchorRef,
-    open,
+    stickTo,
+    stickToContainerRef,
     scrollTrap,
     pointerTrap,
     focusTrap,
@@ -74,31 +129,6 @@ export const Popover = (props) => {
   const debugFocus = useDebugFocus();
   const autoFocusProps = useAutoFocus(ref, props.autoFocus);
 
-  // No openController passed: this Popover is used declaratively (e.g. driven
-  // by --navi-toggle/--navi-open/--navi-close commands, or by the `open`
-  // prop) rather than owned by a parent component (picker_custom.jsx,
-  // side_panel.jsx) that manages its own controller.
-  const defaultOpenController = useOpenController(() => undefined);
-  const openController = openControllerProp || defaultOpenController;
-  const isDefaultController = !openControllerProp;
-
-  useLayoutEffect(() => {
-    if (!isDefaultController || open === undefined) {
-      return;
-    }
-    if (open === openController.opened) {
-      return;
-    }
-    if (open) {
-      openController.open(new CustomEvent("open_by_prop", { detail: {} }));
-    } else {
-      openController.requestClose(
-        new CustomEvent("close_by_prop", { detail: {} }),
-        { isCancel: true },
-      );
-    }
-  }, [open, isDefaultController]);
-
   // aria-expanded lives on the popover element itself (not driven through
   // Preact's vdom — openEffect/its cleanup toggle it imperatively in sync
   // with showPopover()/hidePopover(), see below) so popup_animation.js can
@@ -109,9 +139,10 @@ export const Popover = (props) => {
 
   // Sync the DOM open and return how to sync it back closed, fresh on every
   // render so it closes over the latest props (scrollTrap, etc.). The
-  // controller (owned by picker_custom.jsx) decides *when* this runs.
-  // openEffect runs outside of render (triggered by openController.open()), so
-  // it cannot call hooks — cleanup is a plain pub/sub.
+  // controller (owned by the caller, or by UncontrolledPopover) decides
+  // *when* this runs. openEffect runs outside of render (triggered by
+  // openController.open()), so it cannot call hooks — cleanup is a plain
+  // pub/sub.
   openController.openEffect = (e) => {
     const popoverEl = ref.current;
     if (!popoverEl) {
@@ -128,75 +159,151 @@ export const Popover = (props) => {
     // --navi-toggle/--navi-open command, forwarded as detail.source).
     const anchor =
       anchorRef?.current ?? e.detail?.anchor ?? e.detail?.source ?? null;
-    const effectiveAnchor = anchor || document.documentElement;
+    const stickToContainer = stickToContainerRef?.current ?? null;
+    // What we observe for repositioning on resize/scroll/visibility changes:
+    // the anchor when anchored, otherwise the stickTo container (or the
+    // whole document when stickTo is viewport-relative).
+    const effectiveAnchor =
+      anchor || stickToContainer || document.documentElement;
+
     const positionPopover = (positionEvent) => {
-      const { width, height } = effectiveAnchor.getBoundingClientRect();
-      const {
-        left: borderLeft,
-        right: borderRight,
-        top: borderTop,
-        bottom: borderBottom,
-      } = getBorderSizes(effectiveAnchor);
-      popoverEl.style.setProperty("--anchor-width", `${snapToPixel(width)}px`);
-      popoverEl.style.setProperty(
-        "--anchor-height",
-        `${snapToPixel(height)}px`,
-      );
-      popoverEl.style.setProperty(
-        "--anchor-inner-width",
-        `${snapToPixel(width - borderLeft - borderRight)}px`,
-      );
-      popoverEl.style.setProperty(
-        "--anchor-inner-height",
-        `${snapToPixel(height - borderTop - borderBottom)}px`,
-      );
-      const minLeft = 1;
-      const effectivePositionX = anchor ? positionX : "center";
-      // Remove max-height constraint so pickPositionRelativeTo measures the natural
-      // (unconstrained) height of the popover. This ensures the 60% flip threshold
-      // compares against the real content height, not the already-truncated one.
-      popoverEl.style.removeProperty("--space-available");
-      const {
-        left,
-        top,
-        positionY: finalPositionY,
-        spaceAbove,
-        spaceBelow,
-      } = pickPositionRelativeTo(popoverEl, effectiveAnchor, {
-        positionX: effectivePositionX,
-        positionY,
-        positionXFixed,
-        positionYFixed,
-        spacing: resolveSpacingSize(spacing),
-        viewportSpacing: resolveSpacingSize(viewportSpacing),
-        minLeft,
-      });
-      const spaceAvailable =
-        finalPositionY === "above" || finalPositionY === "above-overlap"
-          ? spaceAbove
-          : spaceBelow;
-      popoverEl.style.setProperty("--space-available", `${spaceAvailable}px`);
+      let appliedLeft;
+      let top;
+      let finalPositionY;
+
+      if (stickTo) {
+        const containerRect = stickToContainer
+          ? stickToContainer.getBoundingClientRect()
+          : {
+              left: 0,
+              top: 0,
+              right: document.documentElement.clientWidth,
+              bottom: document.documentElement.clientHeight,
+              width: document.documentElement.clientWidth,
+              height: document.documentElement.clientHeight,
+            };
+        const spacingPx = resolveSpacingSize(spacing);
+        const position = computeStickToPosition(
+          popoverEl,
+          containerRect,
+          stickTo,
+          spacingPx,
+        );
+        appliedLeft = position.left;
+        top = position.top;
+        finalPositionY = stickTo.startsWith("bottom")
+          ? "above"
+          : stickTo.startsWith("top")
+            ? "below"
+            : undefined;
+        if (finalPositionY) {
+          popoverEl.setAttribute("data-position-y-current", finalPositionY);
+        } else {
+          popoverEl.removeAttribute("data-position-y-current");
+        }
+      } else {
+        const { width, height } = effectiveAnchor.getBoundingClientRect();
+        const {
+          left: borderLeft,
+          right: borderRight,
+          top: borderTop,
+          bottom: borderBottom,
+        } = getBorderSizes(effectiveAnchor);
+        popoverEl.style.setProperty(
+          "--anchor-width",
+          `${snapToPixel(width)}px`,
+        );
+        popoverEl.style.setProperty(
+          "--anchor-height",
+          `${snapToPixel(height)}px`,
+        );
+        popoverEl.style.setProperty(
+          "--anchor-inner-width",
+          `${snapToPixel(width - borderLeft - borderRight)}px`,
+        );
+        popoverEl.style.setProperty(
+          "--anchor-inner-height",
+          `${snapToPixel(height - borderTop - borderBottom)}px`,
+        );
+        const minLeft = 1;
+        const effectivePositionX = anchor ? positionX : "center";
+        // Remove max-height constraint so pickPositionRelativeTo measures the natural
+        // (unconstrained) height of the popover. This ensures the 60% flip threshold
+        // compares against the real content height, not the already-truncated one.
+        popoverEl.style.removeProperty("--space-available");
+        const {
+          left,
+          top: pickedTop,
+          positionY: pickedPositionY,
+          spaceAbove,
+          spaceBelow,
+        } = pickPositionRelativeTo(popoverEl, effectiveAnchor, {
+          positionX: effectivePositionX,
+          positionY,
+          positionXFixed,
+          positionYFixed,
+          spacing: resolveSpacingSize(spacing),
+          viewportSpacing: resolveSpacingSize(viewportSpacing),
+          minLeft,
+        });
+        finalPositionY = pickedPositionY;
+        const spaceAvailable =
+          finalPositionY === "above" || finalPositionY === "above-overlap"
+            ? spaceAbove
+            : spaceBelow;
+        popoverEl.style.setProperty("--space-available", `${spaceAvailable}px`);
+        appliedLeft = Math.max(left, minLeft);
+        top = pickedTop;
+      }
+
       debugPopup(
         positionEvent,
-        `positionPopover() -> left: ${left}, top: ${top}`,
+        `positionPopover() -> left: ${appliedLeft}, top: ${top}`,
       );
-      const appliedLeft = Math.max(left, minLeft);
       popoverEl.style.top = `${top}px`;
       popoverEl.style.left = `${appliedLeft}px`;
-      if (animation === "scale" && anchor) {
+
+      if (animation !== "scale") {
+        return;
+      }
+      if (anchor) {
         // Scale origin = the anchor's center, so the popover visually grows
         // out of whatever triggered it rather than from its own center.
+        // When anchored, animating from the pointer instead would be
+        // misleading for stuff like pickers: the content should grow from
+        // the anchor edge it's attached to, not from wherever the user
+        // happened to click.
         const anchorRect = effectiveAnchor.getBoundingClientRect();
         const anchorCenterX = anchorRect.left + anchorRect.width / 2;
         const anchorCenterY = anchorRect.top + anchorRect.height / 2;
         popoverEl.style.setProperty(
-          "--navi-animation-origin-x",
+          "--popup-animation-origin-x",
           `${snapToPixel(anchorCenterX - appliedLeft)}px`,
         );
         popoverEl.style.setProperty(
-          "--navi-animation-origin-y",
+          "--popup-animation-origin-y",
           `${snapToPixel(anchorCenterY - top)}px`,
         );
+        return;
+      }
+      // Not anchored: animate from the pointer that triggered the open, so
+      // the popover feels like it grows out from under the click.
+      const pointerEvent = findEvent(
+        e,
+        (candidate) => typeof candidate.clientX === "number",
+      );
+      if (pointerEvent) {
+        popoverEl.style.setProperty(
+          "--popup-animation-origin-x",
+          `${snapToPixel(pointerEvent.clientX - appliedLeft)}px`,
+        );
+        popoverEl.style.setProperty(
+          "--popup-animation-origin-y",
+          `${snapToPixel(pointerEvent.clientY - top)}px`,
+        );
+      } else {
+        popoverEl.style.removeProperty("--popup-animation-origin-x");
+        popoverEl.style.removeProperty("--popup-animation-origin-y");
       }
     };
 
@@ -244,20 +351,7 @@ export const Popover = (props) => {
       id={id}
       popover="manual"
       navi-animation={animation}
-      {...(isDefaultController
-        ? {
-            onnavi_request_open: (e) => {
-              openController.open(e, {
-                anchor: e.detail?.anchor ?? e.detail?.source,
-              });
-            },
-            onnavi_request_close: (e) => {
-              openController.requestClose(e, {
-                isCancel: e.detail?.isCancel,
-              });
-            },
-          }
-        : null)}
+      navi-stick-to={stickTo}
       {...rest}
       {...autoFocusProps}
       ref={ref}
@@ -327,3 +421,59 @@ const POPOVER_PSEUDO_CLASSES = [
   ":focus-visible",
   ":focus-within",
 ];
+
+/**
+ * Places the popover pinned to a corner/edge of `containerRect` (the
+ * viewport by default, or a `stickToContainerRef` element) instead of
+ * relative to an anchor. Returns document-relative { left, top }, matching
+ * pickPositionRelativeTo's convention (viewport rect math + current scroll,
+ * continuously recomputed by visibleRectEffect on scroll/resize).
+ */
+const computeStickToPosition = (
+  popoverEl,
+  containerRect,
+  stickTo,
+  spacingPx,
+) => {
+  const { width, height } = popoverEl.getBoundingClientRect();
+  const { scrollLeft, scrollTop } = document.documentElement;
+
+  let left;
+  if (
+    stickTo === "top-left" ||
+    stickTo === "bottom-left" ||
+    stickTo === "left-center"
+  ) {
+    left = containerRect.left + spacingPx;
+  } else if (
+    stickTo === "top-right" ||
+    stickTo === "bottom-right" ||
+    stickTo === "right-center"
+  ) {
+    left = containerRect.right - spacingPx - width;
+  } else {
+    left = containerRect.left + containerRect.width / 2 - width / 2;
+  }
+
+  let top;
+  if (
+    stickTo === "top-left" ||
+    stickTo === "top-center" ||
+    stickTo === "top-right"
+  ) {
+    top = containerRect.top + spacingPx;
+  } else if (
+    stickTo === "bottom-left" ||
+    stickTo === "bottom-center" ||
+    stickTo === "bottom-right"
+  ) {
+    top = containerRect.bottom - spacingPx - height;
+  } else {
+    top = containerRect.top + containerRect.height / 2 - height / 2;
+  }
+
+  return {
+    left: snapToPixel(left + scrollLeft),
+    top: snapToPixel(top + scrollTop),
+  };
+};

@@ -34,13 +34,21 @@
       .bottom-anchor-spacer {
         height: 70vh;
       }
+      .demo-container {
+        position: relative;
+        width: 500px;
+        max-width: 100%;
+        height: 260px;
+        border: 1px dashed #999;
+        border-radius: 8px;
+      }
     </style>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useId, useState } from "preact/hooks";
+      import { useId, useRef, useState } from "preact/hooks";
       import { Button, Popover } from "@jsenv/navi";
 
       // No openController here: without one, Popover creates its own (see
@@ -91,7 +99,43 @@
         );
       };
 
+      // `stickTo` pins the popover to a corner/edge of its container (the
+      // viewport by default, or `stickToContainerRef` when given) instead of
+      // positioning relative to an anchor. This is what makes `slide` (auto
+      // direction) meaningful without an anchor: top-* sides slide down,
+      // bottom-* sides slide up (see data-position-y-current wiring in
+      // popover.jsx).
+      const StickToPopover = ({
+        label,
+        animation,
+        stickTo,
+        stickToContainerRef,
+        spacing,
+      }) => {
+        const popoverId = useId();
+
+        return (
+          <>
+            <Button command="--navi-toggle" commandFor={popoverId}>
+              {label}
+            </Button>
+            <Popover
+              id={popoverId}
+              animation={animation}
+              stickTo={stickTo}
+              stickToContainerRef={stickToContainerRef}
+              spacing={spacing}
+              className="demo_popover_box"
+            >
+              <p style={{ marginTop: 0 }}>stickTo="{stickTo}"</p>
+              <Button command="--navi-close">Close</Button>
+            </Popover>
+          </>
+        );
+      };
+
       const App = () => {
+        const containerRef = useRef(null);
         return (
           <div>
             <h1>Popover animation demo</h1>
@@ -159,6 +203,62 @@
                   animation="slide"
                   positionY="below"
                 />
+              </div>
+            </div>
+
+            <div class="demo-section">
+              <h3>
+                stickTo — sided to the viewport (slide only makes sense here,
+                there's no anchor to slide relative to)
+              </h3>
+              <div class="demo-row">
+                <StickToPopover
+                  label="top-left"
+                  animation="slide"
+                  stickTo="top-left"
+                  spacing={16}
+                />
+                <StickToPopover
+                  label="top-right"
+                  animation="slide"
+                  stickTo="top-right"
+                  spacing={16}
+                />
+                <StickToPopover
+                  label="bottom-left"
+                  animation="slide"
+                  stickTo="bottom-left"
+                  spacing={16}
+                />
+                <StickToPopover
+                  label="bottom-right"
+                  animation="slide"
+                  stickTo="bottom-right"
+                  spacing={16}
+                />
+                <StickToPopover
+                  label="center"
+                  animation="scale"
+                  stickTo="center"
+                />
+              </div>
+            </div>
+
+            <div class="demo-section">
+              <h3>
+                stickTo — sided to a container instead of the viewport
+                (stickToContainerRef, 100px spacing into the container)
+              </h3>
+              <div class="demo-row">
+                <div class="demo-container" ref={containerRef}>
+                  <StickToPopover
+                    label="top-right in container"
+                    animation="slide"
+                    stickTo="top-right"
+                    stickToContainerRef={containerRef}
+                    spacing={100}
+                  />
+                </div>
               </div>
             </div>
           </div>

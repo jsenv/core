@@ -39,39 +39,34 @@ const css = /* css */ `
   ${buildPopupAnimationCss(
     ".navi_dialog",
   )}/* Dialogs aren't anchored the same way popovers are (they're centered in
-     the viewport) — scale animates from the dialog's own center, not an
-     anchor's, so no --navi-animation-origin-x/y wiring is needed here. */
+     the viewport) — scale always animates from the dialog's own center, not
+     an anchor's or the pointer's, so no --popup-animation-origin-x/y wiring
+     is needed here. */
 `;
 
+/**
+ * Entry point: picks between an internally-managed open controller
+ * (UncontrolledDialog) and one owned by the caller (ControlledDialog, used
+ * by picker_custom.jsx) so we don't instantiate a default controller when it
+ * would just be thrown away.
+ */
 export const Dialog = (props) => {
   import.meta.css = css;
-  const {
-    openController: openControllerProp,
-    anchorRef,
-    open,
-    children,
-    scrollTrap,
-    pointerTrap,
-    animation,
-    centerInVisualViewport: centerInVisualViewportProp,
-    ...rest
-  } = props;
-  const defaultRef = useRef();
-  const ref = rest.ref || defaultRef;
-  const debugPopup = useDebugPopup();
-  const debugFocus = useDebugFocus();
-  const autoFocusProps = useAutoFocus(ref, props.autoFocus);
+  if (props.openController) {
+    return <ControlledDialog {...props} />;
+  }
+  return <UncontrolledDialog {...props} />;
+};
 
-  // No openController passed: this Dialog is used declaratively (e.g. driven
-  // by --navi-toggle/--navi-open/--navi-close commands, or by the `open`
-  // prop) rather than owned by a parent component (picker_custom.jsx) that
-  // manages its own controller.
-  const defaultOpenController = useOpenController(() => undefined);
-  const openController = openControllerProp || defaultOpenController;
-  const isDefaultController = !openControllerProp;
+// No openController passed: this Dialog is used declaratively (e.g. driven
+// by --navi-toggle/--navi-open/--navi-close commands, or by the `open` prop)
+// rather than owned by a parent component.
+const UncontrolledDialog = (props) => {
+  const { open, ...rest } = props;
+  const openController = useOpenController(() => undefined);
 
   useLayoutEffect(() => {
-    if (!isDefaultController || open === undefined) {
+    if (open === undefined) {
       return;
     }
     if (open === openController.opened) {
@@ -85,7 +80,40 @@ export const Dialog = (props) => {
         { isCancel: true },
       );
     }
-  }, [open, isDefaultController]);
+  }, [open]);
+
+  return (
+    <ControlledDialog
+      {...rest}
+      openController={openController}
+      onnavi_request_open={(e) => {
+        openController.open(e, {
+          anchor: e.detail?.anchor ?? e.detail?.source,
+        });
+      }}
+      onnavi_request_close={(e) => {
+        openController.requestClose(e, { isCancel: e.detail?.isCancel });
+      }}
+    />
+  );
+};
+
+const ControlledDialog = (props) => {
+  const {
+    openController,
+    anchorRef,
+    children,
+    scrollTrap,
+    pointerTrap,
+    animation,
+    centerInVisualViewport: centerInVisualViewportProp,
+    ...rest
+  } = props;
+  const defaultRef = useRef();
+  const ref = rest.ref || defaultRef;
+  const debugPopup = useDebugPopup();
+  const debugFocus = useDebugFocus();
+  const autoFocusProps = useAutoFocus(ref, props.autoFocus);
 
   // aria-expanded lives on the dialog element itself (not driven through
   // Preact's vdom — openEffect/its cleanup toggle it imperatively in sync
@@ -97,9 +125,10 @@ export const Dialog = (props) => {
 
   // Sync the DOM open and return how to sync it back closed, fresh on every
   // render so it closes over the latest props (scrollTrap, etc.). The
-  // controller (owned by picker_custom.jsx) decides *when* this runs.
-  // openEffect runs outside of render (triggered by openController.open()), so
-  // it cannot call hooks — cleanup is a plain pub/sub.
+  // controller (owned by the caller, or by UncontrolledDialog) decides
+  // *when* this runs. openEffect runs outside of render (triggered by
+  // openController.open()), so it cannot call hooks — cleanup is a plain
+  // pub/sub.
   openController.openEffect = (e) => {
     const dialogEl = ref.current;
     if (!dialogEl) {
@@ -182,20 +211,6 @@ export const Dialog = (props) => {
 
   return (
     <Box
-      {...(isDefaultController
-        ? {
-            onnavi_request_open: (e) => {
-              openController.open(e, {
-                anchor: e.detail?.anchor ?? e.detail?.source,
-              });
-            },
-            onnavi_request_close: (e) => {
-              openController.requestClose(e, {
-                isCancel: e.detail?.isCancel,
-              });
-            },
-          }
-        : null)}
       {...rest}
       {...autoFocusProps}
       as="dialog"
