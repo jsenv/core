@@ -57,7 +57,7 @@
         width: 500px;
         max-width: 100%;
         height: 260px;
-        border: 1px dashed #999;
+        border: 2px dotted #999;
         border-radius: 8px;
       }
     </style>
@@ -71,7 +71,6 @@
 
       const App = () => {
         const containerRef = useRef(null);
-        const animatedContainerRef = useRef(null);
         return (
           <div>
             <h1>Popover demo</h1>
@@ -109,11 +108,6 @@
                   <a href="#anchor-point-relative">
                     Anchor as a relative point
                   </a>
-                  <ol>
-                    <li>
-                      <a href="#anchor-point-relative-animation">Animation</a>
-                    </li>
-                  </ol>
                 </li>
                 <li>
                   <a href="#anchor-ignore">Ignoring the anchor</a>
@@ -442,36 +436,150 @@
               <h2>4. Anchor as a relative point</h2>
               <p>
                 <code>anchor="relative-&lt;point&gt;"</code> — same as above,
-                but relative to a container instead of the viewport (
-                <code>stickToContainerRef</code>, 100px spacing into the
-                container).
+                but relative to a container (<code>stickToContainerRef</code>)
+                instead of the viewport. The triggering buttons don't need to be
+                inside the container — only the container itself matters for
+                positioning. Each point has a plain trigger and an animated one
+                (simpler to click through than a checkbox toggling the same
+                button).
               </p>
               <div class="demo-row">
-                <div class="demo-container" ref={containerRef}>
-                  <AnchorPointPopover
-                    label="relative-top-right"
-                    anchor="relative-top-right"
-                    stickToContainerRef={containerRef}
-                    spacing={100}
-                  />
-                </div>
+                <div class="demo-container" ref={containerRef} />
               </div>
-
-              <div id="anchor-point-relative-animation" class="demo-subsection">
-                <h3>Animation</h3>
-                <div class="demo-row">
-                  <div class="demo-container" ref={animatedContainerRef}>
-                    <AnchorPointPopover
-                      label="relative-top-right"
-                      anchor="relative-top-right"
-                      stickToContainerRef={animatedContainerRef}
-                      spacing={100}
-                      animation
-                      animationDuration="0.6s"
-                      fadeAnimation={false}
-                    />
-                  </div>
-                </div>
+              <div class="demo-row">
+                <AnchorPointPopover
+                  label="relative-top-left"
+                  anchor="relative-top-left"
+                  stickToContainerRef={containerRef}
+                  spacing={16}
+                />
+                <AnchorPointPopover
+                  label="relative-top-left (animated)"
+                  anchor="relative-top-left"
+                  stickToContainerRef={containerRef}
+                  spacing={16}
+                  animation
+                  animationDuration="0.6s"
+                  fadeAnimation={false}
+                />
+                <AnchorPointPopover
+                  label="relative-top"
+                  anchor="relative-top"
+                  stickToContainerRef={containerRef}
+                  spacing={16}
+                />
+                <AnchorPointPopover
+                  label="relative-top (animated)"
+                  anchor="relative-top"
+                  stickToContainerRef={containerRef}
+                  spacing={16}
+                  animation
+                  animationDuration="0.6s"
+                  fadeAnimation={false}
+                />
+                <AnchorPointPopover
+                  label="relative-top-right"
+                  anchor="relative-top-right"
+                  stickToContainerRef={containerRef}
+                  spacing={16}
+                />
+                <AnchorPointPopover
+                  label="relative-top-right (animated)"
+                  anchor="relative-top-right"
+                  stickToContainerRef={containerRef}
+                  spacing={16}
+                  animation
+                  animationDuration="0.6s"
+                  fadeAnimation={false}
+                />
+                <AnchorPointPopover
+                  label="relative-left"
+                  anchor="relative-left"
+                  stickToContainerRef={containerRef}
+                  spacing={16}
+                />
+                <AnchorPointPopover
+                  label="relative-left (animated)"
+                  anchor="relative-left"
+                  stickToContainerRef={containerRef}
+                  spacing={16}
+                  animation
+                  animationDuration="0.6s"
+                  fadeAnimation={false}
+                />
+                <AnchorPointPopover
+                  label="relative-right"
+                  anchor="relative-right"
+                  stickToContainerRef={containerRef}
+                  spacing={16}
+                />
+                <AnchorPointPopover
+                  label="relative-right (animated)"
+                  anchor="relative-right"
+                  stickToContainerRef={containerRef}
+                  spacing={16}
+                  animation
+                  animationDuration="0.6s"
+                  fadeAnimation={false}
+                />
+                <AnchorPointPopover
+                  label="relative-bottom-left"
+                  anchor="relative-bottom-left"
+                  stickToContainerRef={containerRef}
+                  spacing={16}
+                />
+                <AnchorPointPopover
+                  label="relative-bottom-left (animated)"
+                  anchor="relative-bottom-left"
+                  stickToContainerRef={containerRef}
+                  spacing={16}
+                  animation
+                  animationDuration="0.6s"
+                  fadeAnimation={false}
+                />
+                <AnchorPointPopover
+                  label="relative-bottom"
+                  anchor="relative-bottom"
+                  stickToContainerRef={containerRef}
+                  spacing={16}
+                />
+                <AnchorPointPopover
+                  label="relative-bottom (animated)"
+                  anchor="relative-bottom"
+                  stickToContainerRef={containerRef}
+                  spacing={16}
+                  animation
+                  animationDuration="0.6s"
+                  fadeAnimation={false}
+                />
+                <AnchorPointPopover
+                  label="relative-bottom-right"
+                  anchor="relative-bottom-right"
+                  stickToContainerRef={containerRef}
+                  spacing={16}
+                />
+                <AnchorPointPopover
+                  label="relative-bottom-right (animated)"
+                  anchor="relative-bottom-right"
+                  stickToContainerRef={containerRef}
+                  spacing={16}
+                  animation
+                  animationDuration="0.6s"
+                  fadeAnimation={false}
+                />
+                <AnchorPointPopover
+                  label="relative-center"
+                  anchor="relative-center"
+                  stickToContainerRef={containerRef}
+                />
+                <AnchorPointPopover
+                  label="relative-center (animated)"
+                  anchor="relative-center"
+                  stickToContainerRef={containerRef}
+                  animation
+                  animationDuration="0.6s"
+                  fadeAnimation={false}
+                />
               </div>
             </section>
 
