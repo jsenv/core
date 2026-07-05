@@ -118,8 +118,8 @@ const ControlledPopover = (props) => {
   // animation={true} or "auto" picks the animation that best fits the anchor
   // resolved dynamically in openEffect (below) once it's actually known for
   // *this* open: "grow" when anchored to a real element, "slide" when
-  // anchored to a side/corner (anchor="right", "top-left", ...), "scale"
-  // when there's no anchor at all.
+  // anchored to a point (anchor="right", "top-left", ...), "scale" when
+  // there's no anchor at all.
   const isAutoAnimation = animation === true || animation === "auto";
 
   // aria-expanded lives on the popover element itself (not driven through
@@ -148,24 +148,25 @@ const ControlledPopover = (props) => {
     transferFocus(popoverEl, debugFocus, e, focusedBeforeOpen);
     // anchor="ignore" forces the popover to behave as anchorless even when
     // the request carries one (e.g. a --navi-toggle button that should not
-    // double as the visual anchor). anchor="top"/"top-left"/etc (optionally
-    // "relative-" prefixed, see below) pins to a corner/edge instead of a
-    // real element. Otherwise a ref/DOM element wins; then the anchor
-    // carried by the request (e.g. the button that triggered a
-    // --navi-toggle/--navi-open command, forwarded as detail.source).
+    // double as the visual anchor). anchor="top"/"top-left"/"center"/etc
+    // (optionally "relative-" prefixed, see below) pins the popover to that
+    // anchor point instead of a real element. Otherwise a ref/DOM element
+    // wins; then the anchor carried by the request (e.g. the button that
+    // triggered a --navi-toggle/--navi-open command, forwarded as
+    // detail.source).
     let anchor;
-    let anchorSide; // e.g. "top-right" — set when anchorProp is a sided value
-    let anchorSideIsRelative = false; // sided value was "relative-<side>"
+    let anchorPoint; // e.g. "top-right" — set when anchorProp is one of ANCHOR_POINT_VALUES
+    let anchorPointIsRelative = false; // anchorPoint was "relative-<point>"
     if (anchorProp === "ignore") {
       // anchorless, centered — nothing to resolve
     } else if (typeof anchorProp === "string") {
       const isRelative = anchorProp.startsWith("relative-");
-      const side = isRelative
+      const point = isRelative
         ? anchorProp.slice("relative-".length)
         : anchorProp;
-      if (SIDED_ANCHOR_VALUES.has(side)) {
-        anchorSide = side;
-        anchorSideIsRelative = isRelative;
+      if (ANCHOR_POINT_VALUES.has(point)) {
+        anchorPoint = point;
+        anchorPointIsRelative = isRelative;
       } else {
         console.warn(`Popover: unknown anchor="${anchorProp}"`);
       }
@@ -175,38 +176,38 @@ const ControlledPopover = (props) => {
     } else if (e.detail.anchor) {
       anchor = e.detail.anchor;
     }
-    const stickToContainer = anchorSideIsRelative
+    const stickToContainer = anchorPointIsRelative
       ? (stickToContainerRef?.current ?? null)
       : null;
     // What we observe for repositioning on resize/scroll/visibility changes:
     // the anchor when anchored, otherwise the stickTo container (or the
-    // whole document when the sided anchor is viewport-relative).
+    // whole document when the anchor point is viewport-relative).
     const effectiveAnchor =
       anchor || stickToContainer || document.documentElement;
     const resolvedAnimation = isAutoAnimation
       ? anchor
         ? "grow"
-        : anchorSide
+        : anchorPoint
           ? "slide"
           : "scale"
       : animation;
     popoverEl.setAttribute("navi-animation", resolvedAnimation);
-    if (anchorSide) {
-      popoverEl.setAttribute("data-anchor-side", anchorSide);
+    if (anchorPoint) {
+      popoverEl.setAttribute("data-anchor-point", anchorPoint);
     } else {
-      popoverEl.removeAttribute("data-anchor-side");
+      popoverEl.removeAttribute("data-anchor-point");
     }
 
     debugPopup(
       e,
-      `openPopover() -> anchor: ${anchor?.tagName}, anchorSide: ${anchorSide}, stickToContainer: ${stickToContainer?.tagName}`,
+      `openPopover() -> anchor: ${anchor?.tagName}, anchorPoint: ${anchorPoint}, stickToContainer: ${stickToContainer?.tagName}`,
     );
 
     const positionPopover = (positionEvent) => {
       let appliedLeft;
       let top;
 
-      if (anchorSide) {
+      if (anchorPoint) {
         const containerRect = stickToContainer
           ? stickToContainer.getBoundingClientRect()
           : {
@@ -221,7 +222,7 @@ const ControlledPopover = (props) => {
         const position = computeStickToPosition(
           popoverEl,
           containerRect,
-          anchorSide,
+          anchorPoint,
           spacingPx,
         );
         appliedLeft = position.left;
@@ -491,10 +492,10 @@ const POPUP_STYLE_CSS_VARS = {
 };
 
 // Values the `anchor` prop accepts besides a ref/DOM element, "ignore", or
-// undefined — pins the popover to a corner/edge instead of a real element.
+// undefined — pins the popover to that point instead of a real element.
 // Optionally "relative-" prefixed (e.g. "relative-right") to make it relative
 // to `stickToContainerRef` instead of the viewport.
-const SIDED_ANCHOR_VALUES = new Set([
+const ANCHOR_POINT_VALUES = new Set([
   "top",
   "top-right",
   "right",
@@ -507,7 +508,7 @@ const SIDED_ANCHOR_VALUES = new Set([
 ]);
 
 /**
- * Places the popover pinned to a corner/edge of `containerRect` (the
+ * Places the popover pinned to an anchor point of `containerRect` (the
  * viewport by default, or a `stickToContainerRef` element) instead of
  * relative to an anchor. Returns document-relative { left, top }, matching
  * pickPositionRelativeTo's convention (viewport rect math + current scroll,
@@ -516,7 +517,7 @@ const SIDED_ANCHOR_VALUES = new Set([
 const computeStickToPosition = (
   popoverEl,
   containerRect,
-  anchorSide,
+  anchorPoint,
   spacingPx,
 ) => {
   const { width, height } = popoverEl.getBoundingClientRect();
@@ -524,15 +525,15 @@ const computeStickToPosition = (
 
   let left;
   if (
-    anchorSide === "top-left" ||
-    anchorSide === "bottom-left" ||
-    anchorSide === "left"
+    anchorPoint === "top-left" ||
+    anchorPoint === "bottom-left" ||
+    anchorPoint === "left"
   ) {
     left = containerRect.left + spacingPx;
   } else if (
-    anchorSide === "top-right" ||
-    anchorSide === "bottom-right" ||
-    anchorSide === "right"
+    anchorPoint === "top-right" ||
+    anchorPoint === "bottom-right" ||
+    anchorPoint === "right"
   ) {
     left = containerRect.right - spacingPx - width;
   } else {
@@ -541,15 +542,15 @@ const computeStickToPosition = (
 
   let top;
   if (
-    anchorSide === "top-left" ||
-    anchorSide === "top" ||
-    anchorSide === "top-right"
+    anchorPoint === "top-left" ||
+    anchorPoint === "top" ||
+    anchorPoint === "top-right"
   ) {
     top = containerRect.top + spacingPx;
   } else if (
-    anchorSide === "bottom-left" ||
-    anchorSide === "bottom" ||
-    anchorSide === "bottom-right"
+    anchorPoint === "bottom-left" ||
+    anchorPoint === "bottom" ||
+    anchorPoint === "bottom-right"
   ) {
     top = containerRect.bottom - spacingPx - height;
   } else {

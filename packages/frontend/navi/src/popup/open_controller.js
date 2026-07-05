@@ -48,7 +48,7 @@ export const createOpenController = (openHandler) => {
       const mousedownEvent = findEvent(closeEvent, "mousedown");
       if (mousedownEvent) {
         // debugPopup(closeEvent, `closed by mousedown -> disable next click`);
-        suppressNextClick(closeEvent.target);
+        suppressNextClick(closeEvent.currentTarget);
       } else {
         const spaceEvent = findEvent(
           closeEvent,
