@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dialog animation demo</title>
+    <style>
+      body {
+        margin: 20px;
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+      }
+      .demo-section {
+        margin-bottom: 32px;
+      }
+      .demo-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 8px;
+      }
+      .demo_dialog_box {
+        padding: 20px 24px;
+        width: 280px;
+        background: white;
+        border: none;
+        border-radius: 10px;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useRef, useState } from "preact/hooks";
+      import { Dialog } from "@jsenv/navi";
+
+      // Minimal open controller for this demo — just enough to drive
+      // Dialog's openEffect (showModal/close, focus transfer).
+      // The real one (with requestClose validation, focus restore, etc.)
+      // lives in picker_custom.jsx / side_panel.jsx.
+      const useOpenController = () => {
+        const ref = useRef(null);
+        if (!ref.current) {
+          let cleanup = null;
+          ref.current = {
+            opened: false,
+            openEffect: null,
+            open(e = new CustomEvent("open", { detail: {} })) {
+              if (this.opened || !this.openEffect) {
+                return;
+              }
+              this.opened = true;
+              cleanup = this.openEffect(e) || null;
+            },
+            requestClose(e = new CustomEvent("close", { detail: {} })) {
+              if (!this.opened) {
+                return;
+              }
+              this.opened = false;
+              cleanup?.(e);
+              cleanup = null;
+            },
+          };
+        }
+        return ref.current;
+      };
+
+      const TriggeredDialog = ({ label, animation }) => {
+        const anchorRef = useRef(null);
+        const openController = useOpenController();
+        const [open, setOpen] = useState(false);
+
+        const toggle = () => {
+          if (open) {
+            openController.requestClose();
+            setOpen(false);
+          } else {
+            openController.open();
+            setOpen(true);
+          }
+        };
+
+        return (
+          <>
+            <button ref={anchorRef} onClick={toggle}>
+              {label}
+            </button>
+            <Dialog
+              openController={openController}
+              anchorRef={anchorRef}
+              animation={animation}
+              className="demo_dialog_box"
+            >
+              <p style={{ marginTop: 0 }}>animation="{animation}"</p>
+              <button onClick={toggle}>Close</button>
+            </Dialog>
+          </>
+        );
+      };
+
+      const App = () => {
+        return (
+          <div>
+            <h1>Dialog animation demo</h1>
+
+            <div class="demo-section">
+              <h3>none (default)</h3>
+              <div class="demo-row">
+                <TriggeredDialog label="no animation" animation={undefined} />
+              </div>
+            </div>
+
+            <div class="demo-section">
+              <h3>fade</h3>
+              <div class="demo-row">
+                <TriggeredDialog label="fade" animation="fade" />
+              </div>
+            </div>
+
+            <div class="demo-section">
+              <h3>scale (grows from the dialog's own center)</h3>
+              <div class="demo-row">
+                <TriggeredDialog label="scale" animation="scale" />
+              </div>
+            </div>
+
+            <div class="demo-section">
+              <h3>slide — explicit direction (dialogs are centered, so "auto"
+                direction from an anchor doesn't apply — only explicit
+                directions are supported)</h3>
+              <div class="demo-row">
+                <TriggeredDialog
+                  label="slide-from-top"
+                  animation="slide-from-top"
+                />
+                <TriggeredDialog
+                  label="slide-from-bottom"
+                  animation="slide-from-bottom"
+                />
+                <TriggeredDialog
+                  label="slide-from-left"
+                  animation="slide-from-left"
+                />
+                <TriggeredDialog
+                  label="slide-from-right"
+                  animation="slide-from-right"
+                />
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>

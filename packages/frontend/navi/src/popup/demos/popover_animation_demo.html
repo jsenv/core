@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Popover animation demo</title>
+    <style>
+      body {
+        margin: 20px;
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+      }
+      .demo-section {
+        margin-bottom: 32px;
+      }
+      .demo-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 8px;
+      }
+      .demo_popover_box {
+        padding: 12px 16px;
+        max-width: 220px;
+        background: white;
+        border: 1px solid #d0d0d0;
+        border-radius: 8px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+      }
+      /* pushes the "auto direction" anchors near the bottom of the viewport
+         so the popover is forced to flip and open above them instead */
+      .bottom-anchor-spacer {
+        height: 70vh;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useRef, useState } from "preact/hooks";
+      import { Popover } from "@jsenv/navi";
+
+      // Minimal open controller for this demo — just enough to drive
+      // Popover's openEffect (showPopover/hidePopover, focus transfer).
+      // The real one (with requestClose validation, focus restore, etc.)
+      // lives in picker_custom.jsx / side_panel.jsx.
+      const useOpenController = () => {
+        const ref = useRef(null);
+        if (!ref.current) {
+          let cleanup = null;
+          ref.current = {
+            opened: false,
+            openEffect: null,
+            open(e = new CustomEvent("open", { detail: {} })) {
+              if (this.opened || !this.openEffect) {
+                return;
+              }
+              this.opened = true;
+              cleanup = this.openEffect(e) || null;
+            },
+            requestClose(e = new CustomEvent("close", { detail: {} })) {
+              if (!this.opened) {
+                return;
+              }
+              this.opened = false;
+              cleanup?.(e);
+              cleanup = null;
+            },
+          };
+        }
+        return ref.current;
+      };
+
+      const AnchoredPopover = ({
+        label,
+        animation,
+        positionX,
+        positionY,
+        anchorless,
+      }) => {
+        const anchorRef = useRef(null);
+        const openController = useOpenController();
+        const [open, setOpen] = useState(false);
+
+        const toggle = () => {
+          if (open) {
+            openController.requestClose();
+            setOpen(false);
+          } else {
+            openController.open();
+            setOpen(true);
+          }
+        };
+
+        return (
+          <>
+            <button ref={anchorRef} onClick={toggle}>
+              {label}
+            </button>
+            <Popover
+              openController={openController}
+              anchorRef={anchorless ? undefined : anchorRef}
+              animation={animation}
+              positionX={positionX}
+              positionY={positionY}
+              className="demo_popover_box"
+            >
+              <p style={{ marginTop: 0 }}>
+                animation="{animation}"
+              </p>
+              <button onClick={toggle}>Close</button>
+            </Popover>
+          </>
+        );
+      };
+
+      const App = () => {
+        return (
+          <div>
+            <h1>Popover animation demo</h1>
+
+            <div class="demo-section">
+              <h3>fade</h3>
+              <div class="demo-row">
+                <AnchoredPopover label="fade" animation="fade" />
+              </div>
+            </div>
+
+            <div class="demo-section">
+              <h3>scale (grows from the anchor)</h3>
+              <div class="demo-row">
+                <AnchoredPopover label="scale (anchored)" animation="scale" />
+                <AnchoredPopover
+                  label="scale (no anchor — grows from its own center)"
+                  animation="scale"
+                  anchorless
+                />
+              </div>
+            </div>
+
+            <div class="demo-section">
+              <h3>slide — auto direction (flips based on available space)</h3>
+              <div class="demo-row">
+                <AnchoredPopover
+                  label="slide (opens below → slides down from top)"
+                  animation="slide"
+                  positionY="below"
+                />
+              </div>
+            </div>
+
+            <div class="demo-section">
+              <h3>slide — explicit direction</h3>
+              <div class="demo-row">
+                <AnchoredPopover
+                  label="slide-from-top"
+                  animation="slide-from-top"
+                />
+                <AnchoredPopover
+                  label="slide-from-bottom"
+                  animation="slide-from-bottom"
+                />
+                <AnchoredPopover
+                  label="slide-from-left"
+                  animation="slide-from-left"
+                />
+                <AnchoredPopover
+                  label="slide-from-right"
+                  animation="slide-from-right"
+                />
+              </div>
+            </div>
+
+            <div class="bottom-anchor-spacer" />
+
+            <div class="demo-section">
+              <h3>slide — auto direction flips to "above" near the bottom edge</h3>
+              <div class="demo-row">
+                <AnchoredPopover
+                  label="slide (forced near viewport bottom)"
+                  animation="slide"
+                  positionY="below"
+                />
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>

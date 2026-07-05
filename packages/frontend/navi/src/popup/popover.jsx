@@ -18,6 +18,7 @@ import {
   markAutofocusRestoreOnClose,
   transferFocus,
 } from "../utils/focus/focus_transfer.js";
+import { buildPopupAnimationCss } from "./popup_animation.js";
 
 const css = /* css */ `
   .navi_popover {
@@ -40,6 +41,8 @@ const css = /* css */ `
       }
     }
   }
+
+  ${buildPopupAnimationCss(".navi_popover", ":popover-open")}
 `;
 
 export const Popover = (props) => {
@@ -50,6 +53,7 @@ export const Popover = (props) => {
     scrollTrap,
     pointerTrap,
     focusTrap,
+    animation,
     children,
     positionX,
     positionY,
@@ -136,8 +140,24 @@ export const Popover = (props) => {
         positionEvent,
         `positionPopover() -> left: ${left}, top: ${top}`,
       );
+      const appliedLeft = Math.max(left, minLeft);
       popoverEl.style.top = `${top}px`;
-      popoverEl.style.left = `${Math.max(left, minLeft)}px`;
+      popoverEl.style.left = `${appliedLeft}px`;
+      if (animation === "scale" && anchor) {
+        // Scale origin = the anchor's center, so the popover visually grows
+        // out of whatever triggered it rather than from its own center.
+        const anchorRect = effectiveAnchor.getBoundingClientRect();
+        const anchorCenterX = anchorRect.left + anchorRect.width / 2;
+        const anchorCenterY = anchorRect.top + anchorRect.height / 2;
+        popoverEl.style.setProperty(
+          "--navi-animation-origin-x",
+          `${snapToPixel(anchorCenterX - appliedLeft)}px`,
+        );
+        popoverEl.style.setProperty(
+          "--navi-animation-origin-y",
+          `${snapToPixel(anchorCenterY - top)}px`,
+        );
+      }
     };
 
     if (scrollTrap) {
@@ -182,6 +202,7 @@ export const Popover = (props) => {
     <Box
       id={id}
       popover="manual"
+      data-navi-animation={animation}
       {...rest}
       {...autoFocusProps}
       ref={ref}
