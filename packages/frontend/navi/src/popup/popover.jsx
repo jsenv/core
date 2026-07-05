@@ -106,7 +106,6 @@ const UncontrolledPopover = (props) => {
 const ControlledPopover = (props) => {
   const {
     openController,
-    anchorRef,
     anchor: anchorProp,
     stickTo,
     stickToContainerRef,
@@ -152,7 +151,6 @@ const ControlledPopover = (props) => {
       return undefined;
     }
     const [cleanup, addCleanup] = createPubSub(true);
-    debugPopup(e, `openPopover()`);
     const focusedBeforeOpen = getFocusedBeforeTransfer(e);
     popoverEl.showPopover();
     popoverEl.setAttribute("aria-expanded", "true");
@@ -163,16 +161,30 @@ const ControlledPopover = (props) => {
     // component) wins; then the anchor carried by the request (e.g. the
     // button that triggered a --navi-toggle/--navi-open command, forwarded
     // as detail.source).
-    const anchor =
-      anchorProp === "ignore"
-        ? null
-        : (anchorRef?.current ?? e.detail?.anchor ?? e.detail?.source ?? null);
+    let anchor;
+    if (anchorProp === "ignore") {
+    } else if (anchorProp) {
+      if (anchorProp.current) {
+        anchor = anchorProp.current;
+        // anchor prop is a ref
+      } else {
+        // anchor is assumed to be a DOM element
+        anchor = anchorProp;
+      }
+    } else if (e.detail.anchor) {
+      anchor = e.detail.anchor;
+    }
     const stickToContainer = stickToContainerRef?.current ?? null;
     // What we observe for repositioning on resize/scroll/visibility changes:
     // the anchor when anchored, otherwise the stickTo container (or the
     // whole document when stickTo is viewport-relative).
     const effectiveAnchor =
       anchor || stickToContainer || document.documentElement;
+
+    debugPopup(
+      e,
+      `openPopover() -> anchor: ${anchor?.tagName}, stickTo: ${stickTo}, stickToContainer: ${stickToContainer?.tagName}`,
+    );
 
     const positionPopover = (positionEvent) => {
       let appliedLeft;
