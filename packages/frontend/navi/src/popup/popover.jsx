@@ -475,6 +475,18 @@ const ControlledPopover = (props) => {
             e.preventDefault();
             return;
           }
+          // Ignore clicks that land inside the popover's bounding rect
+          // (padding and border area are part of the popover box but can
+          // forward pointer events to the backdrop behind them).
+          const rect = ref.current.getBoundingClientRect();
+          const isOutside =
+            e.clientX < rect.left ||
+            e.clientX > rect.right ||
+            e.clientY < rect.top ||
+            e.clientY > rect.bottom;
+          if (!isOutside) {
+            return;
+          }
           openController.requestClose(e, { isCancel: true });
         }}
       />
