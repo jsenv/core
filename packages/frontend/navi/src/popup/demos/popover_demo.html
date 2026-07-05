@@ -195,6 +195,31 @@
                 are what you want in real usage).
               </p>
               <div class="demo-subsection">
+                <h3>positionX / positionXFixed</h3>
+                <div class="demo-row">
+                  <AnchoredPopover
+                    label="to-the-right"
+                    positionXFixed="to-the-right"
+                  />
+                  <AnchoredPopover
+                    label="left-aligned"
+                    positionXFixed="left-aligned"
+                  />
+                  <AnchoredPopover
+                    label="center (default)"
+                    positionXFixed="center"
+                  />
+                  <AnchoredPopover
+                    label="right-aligned"
+                    positionXFixed="right-aligned"
+                  />
+                  <AnchoredPopover
+                    label="to-the-left"
+                    positionXFixed="to-the-left"
+                  />
+                </div>
+              </div>
+              <div class="demo-subsection">
                 <h3>positionY / positionYFixed</h3>
                 <div class="demo-row">
                   <AnchoredPopover label="above" positionYFixed="above" />
@@ -213,31 +238,6 @@
                   />
                 </div>
               </div>
-              <div class="demo-subsection">
-                <h3>positionX / positionXFixed</h3>
-                <div class="demo-row">
-                  <AnchoredPopover
-                    label="to-the-left"
-                    positionXFixed="to-the-left"
-                  />
-                  <AnchoredPopover
-                    label="left-aligned"
-                    positionXFixed="left-aligned"
-                  />
-                  <AnchoredPopover
-                    label="center (default)"
-                    positionXFixed="center"
-                  />
-                  <AnchoredPopover
-                    label="right-aligned"
-                    positionXFixed="right-aligned"
-                  />
-                  <AnchoredPopover
-                    label="to-the-right"
-                    positionXFixed="to-the-right"
-                  />
-                </div>
-              </div>
             </section>
 
             <section id="animation" class="demo-section">
@@ -249,27 +249,11 @@
                   <code>fadeAnimation</code> (defaults to <code>true</code>)
                   controls opacity fading independently of
                   <code>animation</code> — it combines with any animation kind,
-                  or works on its own with no <code>animation</code> at all.
+                  or works on its own with no <code>animation</code> at all. To
+                  disable it, simply don't pass the prop.
                 </p>
                 <div class="demo-row">
-                  <AnchoredPopover label="fade only (no animation)" />
-                  <AnchoredPopover
-                    label="fadeAnimation={false} (no animation either — pops instantly)"
-                    fadeAnimation={false}
-                  />
-                  <AnchoredPopover
-                    label="clip + fade (default)"
-                    animation="clip"
-                    animationDuration="0.6s"
-                    positionY="below"
-                  />
-                  <AnchoredPopover
-                    label="clip, fadeAnimation={false}"
-                    animation="clip"
-                    animationDuration="0.6s"
-                    positionY="below"
-                    fadeAnimation={false}
-                  />
+                  <AnchoredPopover label="fade" />
                 </div>
               </div>
 
@@ -277,7 +261,8 @@
                 <h3>4.2 The animation prop</h3>
                 <p>
                   Just turning animation on (<code>animation</code>) in a few
-                  different contexts:
+                  different contexts — fadeAnimation is off here so only the
+                  animation effect itself shows:
                 </p>
                 <div class="demo-row">
                   <AnchoredPopover
@@ -285,17 +270,20 @@
                     animation
                     animationDuration="0.6s"
                     positionY="below"
+                    fadeAnimation={false}
+                  />
+                  <AnchorlessPopover
+                    label="no anchor"
+                    animation
+                    animationDuration="0.6s"
+                    fadeAnimation={false}
                   />
                   <AnchorPointPopover
                     label='anchor="right"'
                     anchor="right"
                     animation
                     animationDuration="0.6s"
-                  />
-                  <AnchorlessPopover
-                    label="no anchor"
-                    animation
-                    animationDuration="0.6s"
+                    fadeAnimation={false}
                   />
                 </div>
 
@@ -312,6 +300,7 @@
                     animation
                     animationDuration="0.6s"
                     positionY="below"
+                    fadeAnimation={false}
                   />
                 </div>
 
@@ -432,6 +421,7 @@
         spacing,
         animation = "auto",
         animationDuration,
+        fadeAnimation,
       }) => {
         const popoverId = useId();
 
@@ -444,6 +434,7 @@
               id={popoverId}
               animation={animation}
               animationDuration={animationDuration}
+              fadeAnimation={fadeAnimation}
               anchor={anchor}
               stickToContainerRef={stickToContainerRef}
               spacing={spacing}
