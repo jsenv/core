@@ -1,6 +1,6 @@
 ---
 name: demo-files
-description: How to run and verify the `*_demo.html` files scattered across packages (e.g. packages/frontend/navi/src/control/demos/). Use when adding a demo, or when a task calls for actually loading a demo in a browser to check it works (not just reading the JSX).
+description: How to run and verify the `*_demo.html` files scattered across packages (e.g. packages/frontend/navi/src/control/demos/). Use when the user explicitly asks to load a demo in a browser / Playwright to check it works — not proactively (see .agents/instructions.md's "never verify on your own initiative" constraint).
 ---
 
 ## Overview
@@ -66,4 +66,5 @@ Run it with plain `node` from anywhere inside the repo tree (so `playwright` res
 ## Notes
 
 - Demo files import from the package's source directly (e.g. `@jsenv/navi`), so edits to source are reflected on browser reload — no rebuild step.
-- Prefer checking a demo actually renders/behaves correctly over trusting the JSX by inspection alone, especially for anything involving events, focus, or async (Suspense/lazy) — those are exactly the class of bugs these demo files exist to catch.
+- When the user does ask for verification, prefer checking a demo actually renders/behaves correctly over trusting the JSX by inspection alone, especially for anything involving events, focus, or async (Suspense/lazy) — those are exactly the class of bugs these demo files exist to catch.
+- Do NOT run this on your own initiative — not for a demo you just wrote, not as a "regression check" against unrelated existing demos after touching shared code (e.g. Popover/Dialog). The user drives when verification happens; wait for an explicit ask.

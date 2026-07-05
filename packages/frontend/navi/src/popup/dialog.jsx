@@ -35,9 +35,10 @@ const css = /* css */ `
     }
   }
 
-  ${buildPopupAnimationCss(".navi_dialog", "[open]")}
-
-  /* Dialogs aren't anchored the same way popovers are (they're centered in
+  ${buildPopupAnimationCss(
+    ".navi_dialog",
+    "[open]",
+  )}/* Dialogs aren't anchored the same way popovers are (they're centered in
      the viewport) — scale animates from the dialog's own center, not an
      anchor's, so no --navi-animation-origin-x/y wiring is needed here. */
 `;
@@ -145,7 +146,7 @@ export const Dialog = (props) => {
       {...autoFocusProps}
       as="dialog"
       ref={ref}
-      data-navi-animation={animation}
+      navi-animation={animation}
       baseClassName="navi_dialog"
       pseudoClasses={DIALOG_PSEUDO_CLASSES}
       onMouseDown={(e) => {

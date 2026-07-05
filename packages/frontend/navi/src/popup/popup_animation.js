@@ -11,8 +11,6 @@
  * `:popover-open` for Popover, `[open]` for Dialog.
  */
 
-export const ANIMATION_ATTRIBUTE = "data-navi-animation";
-
 const DURATION = "0.18s";
 const SLIDE_DISTANCE = "10px";
 const SCALE_FROM = 0.92;
@@ -21,7 +19,7 @@ export const buildPopupAnimationCss = (selector, openSelector) => {
   const open = `${selector}${openSelector}`;
   const closed = `${selector}:not(${openSelector})`;
   return /* css */ `
-    ${selector}[${ANIMATION_ATTRIBUTE}] {
+    ${selector}[navi-animation] {
       transition:
         display ${DURATION} allow-discrete,
         overlay ${DURATION} allow-discrete,
@@ -31,32 +29,32 @@ export const buildPopupAnimationCss = (selector, openSelector) => {
     }
 
     /* fade */
-    ${selector}[${ANIMATION_ATTRIBUTE}="fade"] {
+    ${selector}[navi-animation="fade"] {
       opacity: 1;
     }
-    ${closed}[${ANIMATION_ATTRIBUTE}="fade"] {
+    ${closed}[navi-animation="fade"] {
       opacity: 0;
     }
     @starting-style {
-      ${open}[${ANIMATION_ATTRIBUTE}="fade"] {
+      ${open}[navi-animation="fade"] {
         opacity: 0;
       }
     }
 
     /* scale — grows from transform-origin (anchor center for Popover, set via
        --navi-animation-origin-x/y; defaults to the element's own center) */
-    ${selector}[${ANIMATION_ATTRIBUTE}="scale"] {
+    ${selector}[navi-animation="scale"] {
       opacity: 1;
-      scale: 1;
       transform-origin: var(--navi-animation-origin-x, center)
         var(--navi-animation-origin-y, center);
+      scale: 1;
     }
-    ${closed}[${ANIMATION_ATTRIBUTE}="scale"] {
+    ${closed}[navi-animation="scale"] {
       opacity: 0;
       scale: ${SCALE_FROM};
     }
     @starting-style {
-      ${open}[${ANIMATION_ATTRIBUTE}="scale"] {
+      ${open}[navi-animation="scale"] {
         opacity: 0;
         scale: ${SCALE_FROM};
       }
@@ -65,60 +63,60 @@ export const buildPopupAnimationCss = (selector, openSelector) => {
     /* slide — auto direction from data-position-y-current (set by
        pickPositionRelativeTo): slides down from the top by default, flips to
        sliding up from the bottom when placed "above" the anchor. */
-    ${selector}[${ANIMATION_ATTRIBUTE}="slide"] {
+    ${selector}[navi-animation="slide"] {
       opacity: 1;
       translate: 0 0;
     }
-    ${closed}[${ANIMATION_ATTRIBUTE}="slide"] {
+    ${closed}[navi-animation="slide"] {
       opacity: 0;
       translate: 0 -${SLIDE_DISTANCE};
     }
-    ${closed}[${ANIMATION_ATTRIBUTE}="slide"][data-position-y-current="above"],
-    ${closed}[${ANIMATION_ATTRIBUTE}="slide"][data-position-y-current="above-overlap"] {
+    ${closed}[navi-animation="slide"][data-position-y-current="above"],
+    ${closed}[navi-animation="slide"][data-position-y-current="above-overlap"] {
       translate: 0 ${SLIDE_DISTANCE};
     }
     @starting-style {
-      ${open}[${ANIMATION_ATTRIBUTE}="slide"] {
+      ${open}[navi-animation="slide"] {
         opacity: 0;
         translate: 0 -${SLIDE_DISTANCE};
       }
-      ${open}[${ANIMATION_ATTRIBUTE}="slide"][data-position-y-current="above"],
-      ${open}[${ANIMATION_ATTRIBUTE}="slide"][data-position-y-current="above-overlap"] {
+      ${open}[navi-animation="slide"][data-position-y-current="above"],
+      ${open}[navi-animation="slide"][data-position-y-current="above-overlap"] {
         translate: 0 ${SLIDE_DISTANCE};
       }
     }
 
     /* slide — explicit direction, ignores anchor placement entirely */
-    ${closed}[${ANIMATION_ATTRIBUTE}="slide-from-top"] {
+    ${closed}[navi-animation="slide-from-top"] {
       opacity: 0;
       translate: 0 -${SLIDE_DISTANCE};
     }
-    ${closed}[${ANIMATION_ATTRIBUTE}="slide-from-bottom"] {
+    ${closed}[navi-animation="slide-from-bottom"] {
       opacity: 0;
       translate: 0 ${SLIDE_DISTANCE};
     }
-    ${closed}[${ANIMATION_ATTRIBUTE}="slide-from-left"] {
+    ${closed}[navi-animation="slide-from-left"] {
       opacity: 0;
       translate: -${SLIDE_DISTANCE} 0;
     }
-    ${closed}[${ANIMATION_ATTRIBUTE}="slide-from-right"] {
+    ${closed}[navi-animation="slide-from-right"] {
       opacity: 0;
       translate: ${SLIDE_DISTANCE} 0;
     }
     @starting-style {
-      ${open}[${ANIMATION_ATTRIBUTE}="slide-from-top"] {
+      ${open}[navi-animation="slide-from-top"] {
         opacity: 0;
         translate: 0 -${SLIDE_DISTANCE};
       }
-      ${open}[${ANIMATION_ATTRIBUTE}="slide-from-bottom"] {
+      ${open}[navi-animation="slide-from-bottom"] {
         opacity: 0;
         translate: 0 ${SLIDE_DISTANCE};
       }
-      ${open}[${ANIMATION_ATTRIBUTE}="slide-from-left"] {
+      ${open}[navi-animation="slide-from-left"] {
         opacity: 0;
         translate: -${SLIDE_DISTANCE} 0;
       }
-      ${open}[${ANIMATION_ATTRIBUTE}="slide-from-right"] {
+      ${open}[navi-animation="slide-from-right"] {
         opacity: 0;
         translate: ${SLIDE_DISTANCE} 0;
       }

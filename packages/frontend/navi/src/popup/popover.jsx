@@ -202,7 +202,7 @@ export const Popover = (props) => {
     <Box
       id={id}
       popover="manual"
-      data-navi-animation={animation}
+      navi-animation={animation}
       {...rest}
       {...autoFocusProps}
       ref={ref}
