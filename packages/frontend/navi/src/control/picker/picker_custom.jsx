@@ -1,4 +1,3 @@
-import { findEvent } from "@jsenv/dom";
 import { useContext, useId, useLayoutEffect, useRef } from "preact/hooks";
 
 import { createOnKeyDownForShortcuts } from "@jsenv/navi/src/keyboard/keyboard_shortcuts.js";
@@ -334,9 +333,6 @@ const PickerCustom = (props) => {
       },
     });
 
-    const disableClickFor = useIgnoreClickForMousedown(ref, (e) => {
-      debugPopup(e, `click ignored`);
-    });
     // openController centralizes open/close decision-making (validation,
     // focus and value bookkeeping) for the picker. The returned
     // { onRequestClose, onClose } pair is the picker's reaction to close
@@ -393,33 +389,6 @@ const PickerCustom = (props) => {
               event: closeEvent,
             });
           }
-
-          prevent_reopen: {
-            const mousedownEvent = findEvent(closeEvent, "mousedown");
-            if (mousedownEvent) {
-              debugPopup(
-                closeEvent,
-                `closed by mousedown -> disable next click`,
-              );
-              disableClickFor();
-            } else {
-              const spaceEvent = findEvent(
-                closeEvent,
-                (e) => e.type === "keydown" && e.key === " ",
-              );
-              if (spaceEvent) {
-                // space would trigger a click on the picker button causing it to re-open immediatly after closing
-                debugPopup(
-                  closeEvent,
-                  `closed by space key -> prevent browser click`,
-                );
-                // browser won't try to dispatch click
-                // and our "space_to_open" will see e.defaultPrevented too and won't try to open picker
-                spaceEvent.preventDefault();
-              }
-            }
-          }
-
           leaveExpanded({ isBack: closeEvent.detail.isCancel });
           // Reset so the next opening re-evaluates screen size
           defaultModeRef.current = null;
@@ -754,45 +723,4 @@ const PickerContentInsideDialog = (props) => {
       </Dialog>
     </Next>
   );
-};
-
-/**
- * Returns a `disableClickFor` function that suppresses the next `click` event
- * that lands on a specific element after a `mousedown` already handled an
- * open/close action.
- *
- * Problem: when the popover backdrop closes on mousedown, the browser then
- * dispatches a `click` on whatever element is under the pointer. If that element
- * is the picker button, it would immediately re-open the picker.
- *
- * We cannot call `stopPropagation()` or `preventDefault()` on the backdrop
- * `mousedown` to prevent that click — the browser dispatches it regardless.
- *
- * Solution: register a self-removing capture-phase `click` listener on `document`
- * and suppress the click only if it lands inside the given element (the picker
- * button). Clicks on any other element (e.g. a submit button) pass through
- * normally.
- *
- * Note: the popover backdrop stays in the DOM (with pointer-events:none) so that
- * the browser always finds a target for the mousedown → click sequence. If the
- * backdrop were removed from the DOM between mousedown and mouseup, the browser
- * would not dispatch a click at all, which would leave this listener armed
- * forever and cause it to swallow the next unrelated user click.
- */
-const useIgnoreClickForMousedown = (elementRef, onIgnore) => {
-  const disableClickFor = () => {
-    const suppressClick = (clickEvent) => {
-      document.removeEventListener("click", suppressClick, { capture: true });
-      const el = elementRef.current;
-      if (!el || !el.contains(clickEvent.target)) {
-        // Click landed outside the element we are guarding — let it through.
-        return;
-      }
-      clickEvent.stopPropagation();
-      clickEvent.preventDefault();
-      onIgnore?.(clickEvent);
-    };
-    document.addEventListener("click", suppressClick, { capture: true });
-  };
-  return disableClickFor;
 };

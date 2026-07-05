@@ -40,8 +40,33 @@ import { useStableCallback } from "../utils/use_stable_callback.js";
 export const createOpenController = (openHandler) => {
   let closeHandlers = null; // { onRequestClose, onClose } returned by openHandler
   let openEffectCleanup = null; // function returned by openEffect, undoes its DOM side effects
+
   const performClose = (closeEvent) => {
     controller.opened = false;
+
+    prevent_reopen: {
+      const mousedownEvent = findEvent(closeEvent, "mousedown");
+      if (mousedownEvent) {
+        // debugPopup(closeEvent, `closed by mousedown -> disable next click`);
+        suppressNextClick(closeEvent.target);
+      } else {
+        const spaceEvent = findEvent(
+          closeEvent,
+          (e) => e.type === "keydown" && e.key === " ",
+        );
+        if (spaceEvent) {
+          // space would trigger a click on the picker button causing it to re-open immediatly after closing
+          // debugPopup(
+          //   closeEvent,
+          //   `closed by space key -> prevent browser click`,
+          // );
+          // browser won't try to dispatch click
+          // and our "space_to_open" will see e.defaultPrevented too and won't try to open picker
+          spaceEvent.preventDefault();
+        }
+      }
+    }
+
     // Sync the DOM closed first (releasing the focus trap) — only then run
     // the owner's own reaction (onClose may restore focus to an element
     // outside the popup, which the focus trap would otherwise fight while
@@ -106,6 +131,48 @@ export const createOpenController = (openHandler) => {
     },
   };
   return controller;
+};
+
+/**
+ * Returns a `disableClickFor` function that suppresses the next `click` event
+ * that lands on a specific element after a `mousedown` already handled an
+ * open/close action.
+ *
+ * Problem: when the popover backdrop closes on mousedown, the browser then
+ * dispatches a `click` on whatever element is under the pointer. If that element
+ * is the picker button, it would immediately re-open the picker.
+ *
+ * We cannot call `stopPropagation()` or `preventDefault()` on the backdrop
+ * `mousedown` to prevent that click — the browser dispatches it regardless.
+ *
+ * Solution: register a self-removing capture-phase `click` listener on `document`
+ * and suppress the click only if it lands inside the given element (the picker
+ * button). Clicks on any other element (e.g. a submit button) pass through
+ * normally.
+ *
+ * Note: the popover backdrop stays in the DOM (with pointer-events:none) so that
+ * the browser always finds a target for the mousedown → click sequence. If the
+ * backdrop were removed from the DOM between mousedown and mouseup, the browser
+ * would not dispatch a click at all, which would leave this listener armed
+ * forever and cause it to swallow the next unrelated user click.
+ */
+const suppressNextClick = (element) => {
+  const cleanup = () => {
+    document.removeEventListener("click", suppressClick, { capture: true });
+  };
+
+  const suppressClick = (clickEvent) => {
+    cleanup();
+    const clickTarget = clickEvent.target;
+    if (clickTarget !== element && !element.contains(clickEvent.target)) {
+      // Click landed outside the element we are guarding — let it through.
+      return;
+    }
+    clickEvent.stopPropagation();
+    clickEvent.preventDefault();
+  };
+  document.addEventListener("click", suppressClick, { capture: true });
+  return cleanup;
 };
 
 // Created once per popup instance: openHandler is wrapped in a stable callback

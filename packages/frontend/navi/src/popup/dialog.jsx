@@ -223,6 +223,7 @@ const ControlledDialog = (props) => {
       as="dialog"
       ref={ref}
       navi-animation={isAutoAnimation ? undefined : animation}
+      styleCSSVars={DIALOG_STYLE_CSS_VARS}
       baseClassName="navi_dialog"
       pseudoClasses={DIALOG_PSEUDO_CLASSES}
       onMouseDown={(e) => {
@@ -258,3 +259,9 @@ const DIALOG_PSEUDO_CLASSES = [
   ":focus-visible",
   ":focus-within",
 ];
+
+// Lets consumers pass animationDuration="0.5s" as a regular prop; Box maps
+// it to the CSS var for us (see box.jsx's styleCSSVars handling).
+const DIALOG_STYLE_CSS_VARS = {
+  animationDuration: "--popup-animation-duration",
+};

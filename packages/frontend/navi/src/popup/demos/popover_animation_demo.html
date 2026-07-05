@@ -29,8 +29,8 @@
         border-radius: 8px;
         box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
       }
-      /* pushes the "auto direction" anchors near the bottom of the viewport
-         so the popover is forced to flip and open above them instead */
+      /* pushes the "flips to above" anchors near the bottom of the viewport
+         so the popover is forced to open above them instead */
       .bottom-anchor-spacer {
         height: 70vh;
       }
@@ -87,11 +87,45 @@
 
             <div class="demo-section">
               <h3>
-                animation="auto" — picks slide when anchored, scale when not
+                grow — the natural animation for a real anchor: only the height
+                scales out of the anchor's edge, so it *reads* as "sliding down"
+                without anything actually translating
               </h3>
               <div class="demo-row">
                 <AnchoredPopover
-                  label="auto (anchored → slide)"
+                  label="grow (opens below anchor)"
+                  animation="grow"
+                  animationDuration="0.6s"
+                  positionY="below"
+                />
+              </div>
+            </div>
+
+            <div class="bottom-anchor-spacer" />
+
+            <div class="demo-section">
+              <h3>
+                grow — flips to originate from the bottom edge when the popover
+                ends up placed above the anchor (near the viewport bottom)
+              </h3>
+              <div class="demo-row">
+                <AnchoredPopover
+                  label="grow (forced near viewport bottom)"
+                  animation="grow"
+                  animationDuration="0.6s"
+                  positionY="below"
+                />
+              </div>
+            </div>
+
+            <div class="demo-section">
+              <h3>
+                animation="auto" — picks "grow" when anchored to a real element,
+                "scale" otherwise
+              </h3>
+              <div class="demo-row">
+                <AnchoredPopover
+                  label="auto (anchored → grow)"
                   animation="auto"
                   animationDuration="0.6s"
                 />
@@ -104,18 +138,7 @@
             </div>
 
             <div class="demo-section">
-              <h3>slide — auto direction (flips based on available space)</h3>
-              <div class="demo-row">
-                <AnchoredPopover
-                  label="slide (opens below → slides down from top)"
-                  animation="slide"
-                  positionY="below"
-                />
-              </div>
-            </div>
-
-            <div class="demo-section">
-              <h3>slide — explicit direction</h3>
+              <h3>slide — explicit direction, real translate-based entrance</h3>
               <div class="demo-row">
                 <AnchoredPopover
                   label="slide-from-top"
@@ -136,70 +159,54 @@
               </div>
             </div>
 
-            <div class="bottom-anchor-spacer" />
-
             <div class="demo-section">
               <h3>
-                slide — auto direction flips to "above" near the bottom edge
+                anchor="&lt;side&gt;" — pins to a corner/edge of the viewport
+                instead of a real element. This is what makes "slide" (or
+                "auto", which resolves to "slide" here) meaningful without an
+                anchor: it slides in from just outside its own footprint on that
+                side.
               </h3>
               <div class="demo-row">
-                <AnchoredPopover
-                  label="slide (forced near viewport bottom)"
-                  animation="slide"
-                  positionY="below"
-                />
-              </div>
-            </div>
-
-            <div class="demo-section">
-              <h3>
-                stickTo — sided to the viewport (slide only makes sense here,
-                there's no anchor to slide relative to)
-              </h3>
-              <div class="demo-row">
-                <StickToPopover
-                  label="top-left"
-                  animation="slide"
-                  stickTo="top-left"
-                  spacing={16}
-                />
-                <StickToPopover
+                <SidedPopover label="top-left" anchor="top-left" spacing={16} />
+                <SidedPopover label="top" anchor="top" spacing={16} />
+                <SidedPopover
                   label="top-right"
-                  animation="slide"
-                  stickTo="top-right"
+                  anchor="top-right"
                   spacing={16}
                 />
-                <StickToPopover
+                <SidedPopover label="left" anchor="left" spacing={16} />
+                <SidedPopover label="right" anchor="right" spacing={16} />
+                <SidedPopover
                   label="bottom-left"
-                  animation="slide"
-                  stickTo="bottom-left"
+                  anchor="bottom-left"
                   spacing={16}
                 />
-                <StickToPopover
+                <SidedPopover label="bottom" anchor="bottom" spacing={16} />
+                <SidedPopover
                   label="bottom-right"
-                  animation="slide"
-                  stickTo="bottom-right"
+                  anchor="bottom-right"
                   spacing={16}
                 />
-                <StickToPopover
+                <SidedPopover
                   label="center"
+                  anchor="center"
                   animation="scale"
-                  stickTo="center"
                 />
               </div>
             </div>
 
             <div class="demo-section">
               <h3>
-                stickTo — sided to a container instead of the viewport
-                (stickToContainerRef, 100px spacing into the container)
+                anchor="relative-&lt;side&gt;" — same as above, but relative to
+                a container instead of the viewport (stickToContainerRef, 100px
+                spacing into the container)
               </h3>
               <div class="demo-row">
                 <div class="demo-container" ref={containerRef}>
-                  <StickToPopover
-                    label="top-right in container"
-                    animation="slide"
-                    stickTo="top-right"
+                  <SidedPopover
+                    label="relative-top-right"
+                    anchor="relative-top-right"
                     stickToContainerRef={containerRef}
                     spacing={100}
                   />
@@ -269,18 +276,17 @@
         );
       };
 
-      // `stickTo` pins the popover to a corner/edge of its container (the
-      // viewport by default, or `stickToContainerRef` when given) instead of
-      // positioning relative to an anchor. This is what makes `slide` (auto
-      // direction) meaningful without an anchor: top-* sides slide down,
-      // bottom-* sides slide up (see data-position-y-current wiring in
-      // popover.jsx).
-      const StickToPopover = ({
+      // anchor="top"/"top-left"/"relative-right"/etc pins the popover to a
+      // corner/edge of the viewport (or of stickToContainerRef, when the
+      // "relative-" prefix is used) instead of positioning relative to a
+      // real element. animation defaults to "auto", which resolves to
+      // "slide" whenever anchor is one of these sided values.
+      const SidedPopover = ({
         label,
-        animation,
-        stickTo,
+        anchor,
         stickToContainerRef,
         spacing,
+        animation = "auto",
       }) => {
         const popoverId = useId();
 
@@ -292,12 +298,12 @@
             <Popover
               id={popoverId}
               animation={animation}
-              stickTo={stickTo}
+              anchor={anchor}
               stickToContainerRef={stickToContainerRef}
               spacing={spacing}
               className="demo_popover_box"
             >
-              <p style={{ marginTop: 0 }}>stickTo="{stickTo}"</p>
+              <p style={{ marginTop: 0 }}>anchor="{anchor}"</p>
               <Button command="--navi-close">Close</Button>
             </Popover>
           </>
